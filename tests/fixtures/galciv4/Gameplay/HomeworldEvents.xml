@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<GameEventList>
+  <GameEvent>
+    <InternalName>Event_PrecursorProbe_EchoCopy</InternalName>
+    <DisplayName>Event_PrecursorProbe_Name</DisplayName>
+    <Description>Event_PrecursorProbe_Dec</Description>
+    <Type>CrisisEvent</Type>
+    <Choice>
+      <InternalName>Event_PrecursorProbe_EchoCopy_choice_0</InternalName>
+      <Description>Event_PrecursorProbe_Echo_Choice</Description>
+    </Choice>
+  </GameEvent>
+</GameEventList>

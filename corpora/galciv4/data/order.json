@@ -141,7 +141,7 @@
   }
  },
  {
-  "id": "order:cosmic_eye_0_2",
+  "id": "order:cosmic_eye_seeing",
   "name": "Cosmic Eye",
   "aliases": [
    "EO_CosmicEye_Watcher_Seeing"
@@ -464,7 +464,7 @@
    "cooldown_turns": "25",
    "target": "Player",
    "effects": [
-    "-12 Loyalty (Unit) for 20 turns",
+    "-12 Loyalty (Unit, governor only not sovereign) for 20 turns",
     "Give Exhort Governor Credit Reward"
    ],
    "requires_tech": [
@@ -982,8 +982,7 @@
    "target": "Player",
    "effects": [
     "-5% Approval (Unit) for 52 turns",
-    "+400 Treasury",
-    "Modify Counter (1, Counter_ExploitsOwnPopulation)"
+    "+400 Treasury"
    ],
    "description": "Send our Gatherers through the population to take what is needed for the empire from those too weak to resist. Reduces Approval for 52 turns.",
    "source": "ExecutiveOrderDefs.xml"

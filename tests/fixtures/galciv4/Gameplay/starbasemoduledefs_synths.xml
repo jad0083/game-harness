@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StarbaseModuleList>
+  <StarbaseModule>
+    <InternalName>SynthInterstellarExchangeModule</InternalName>
+    <DisplayName>InterstellarExchangeModule_Name</DisplayName>
+    <ShortDescription>InterstellarExchangeModule_ShortDec</ShortDescription>
+    <Description>InterstellarExchangeModule_Dec</Description>
+    <SpecializationType>Culture</SpecializationType>
+    <Stats>
+      <EffectType>ModulesCost</EffectType>
+      <Target><TargetType>StarbaseModule</TargetType></Target>
+      <BonusType>OneTime</BonusType>
+      <Value>9</Value>
+    </Stats>
+  </StarbaseModule>
+  <StarbaseModule>
+    <InternalName>CyberInfiltrationModule</InternalName>
+    <DisplayName>CyberInfiltrationModule_Name</DisplayName>
+    <ShortDescription>CyberInfiltrationModule_ShortDec</ShortDescription>
+    <Description>CyberInfiltrationModule_ShortDec</Description>
+    <SpecializationType>Culture</SpecializationType>
+  </StarbaseModule>
+</StarbaseModuleList>

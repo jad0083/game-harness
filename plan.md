@@ -24,7 +24,8 @@
 - [x] CLI `corpus search|get|tech|improvement|order|strategy` and MCP `corpus_get`; lookups report missing data instead of guessing
 - [x] Get `Data/Gameplay/*.xml` + `Data/English/Text/*.xml` from the PC (`scripts/receive-file.py`)
 - [x] `scripts/extract-galciv4.py` with fixture tests → `data/tech.json` (130), `improvement.json` (528), `order.json` (66), `_meta.json`
-- [ ] Extend the extractor to ship components, policies and starbase modules as their own record kinds
+- [x] Extend the extractor to ship components, policies and starbase modules as their own record kinds → `policy.json` (203), `ship_component.json` (355), `starbase_module.json` (167)
+- [x] Extract event dialogs with every choice's exact outcome → `event.json` (994)
 - [ ] Reconcile `strategy.md` numbers with the generated data (e.g. Colonial Policies costs 24, not 27)
 - [x] Wire the autopilot to the `manifest.toml` screen signatures (`luminance_roi`/threshold, new `turn_indicator_roi`)
 - [x] Autopilot verifies a turn advanced (date readout diff), reports `NotAdvanced`, and refuses to send keys unless the game is foreground
