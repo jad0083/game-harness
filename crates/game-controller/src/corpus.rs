@@ -155,9 +155,20 @@ pub struct Record {
     pub summary: String,
     #[serde(default)]
     pub fields: BTreeMap<String, serde_json::Value>,
+    /// `normalize(name)` and normalized summary+fields, computed once at load for search.
+    #[serde(skip)]
+    norm_name: String,
+    #[serde(skip)]
+    norm_body: String,
 }
 
 impl Record {
+    fn index(&mut self) {
+        self.norm_name = normalize(&self.name);
+        let body = format!("{} {}", self.summary, self.fields.values().map(render_value).collect::<Vec<_>>().join(" "));
+        self.norm_body = normalize(&body);
+    }
+
     pub fn kind(&self) -> &str {
         self.id.split(':').next().unwrap_or("")
     }
@@ -336,6 +347,7 @@ impl GameCorpus {
         if self.by_id.contains_key(&r.id) {
             bail!("duplicate id {:?}", r.id);
         }
+        r.index();
         let idx = self.records.len();
         for key in std::iter::once(&r.name).chain(r.aliases.iter()) {
             self.by_name.entry(name_key(kind, key)).or_insert(idx);
@@ -429,17 +441,16 @@ impl GameCorpus {
         let mut hits = Vec::new();
 
         for r in &self.records {
-            let name = normalize(&r.name);
+            let name = &r.norm_name;
             let mut score = 0u32;
-            if name == norm || r.aliases.iter().any(|a| normalize(a) == norm) {
+            if *name == norm || r.aliases.iter().any(|a| normalize(a) == norm) {
                 score += 100;
             } else if name.contains(&norm) {
                 score += 70;
             } else if tokens.iter().all(|t| name.contains(t)) {
                 score += 50;
             }
-            let body = normalize(&format!("{} {}", r.summary, r.fields.values().map(render_value).collect::<Vec<_>>().join(" ")));
-            let matched = tokens.iter().filter(|t| body.contains(*t)).count();
+            let matched = tokens.iter().filter(|t| r.norm_body.contains(*t)).count();
             if matched == tokens.len() {
                 score += 20;
             }
