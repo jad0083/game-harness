@@ -27,7 +27,7 @@ This file guides LLMs and coding agents when operating in this repository.
 - Focus game window: `./target/release/game-controller focus "Galactic Civilizations"`
 - Capture screenshot: `./target/release/game-controller screenshot -o current_screen.jpg`
 - Click image coordinates: `./target/release/game-controller click <X> <Y> [--button right|left] [--count 1|2]`
-- Drag image coordinates: `./target/release/game-controller drag <X1> <Y1> <X2> <Y2> [--button left]`
+- Drag image coordinates: `./target/release/game-controller drag <X1> <Y1> <X2> <Y2> [--button left] [--hold-ms N --steps N --step-ms N --dwell-ms N --wiggle]` (slow the drag down if a drop does not register)
 - Send keypress / combo: `./target/release/game-controller key "<key>"`
 - Advance single turn: `./target/release/game-controller turn`
 - Autopilot loop (verified turns; stops on dialogs/blockers): `./target/release/game-controller autopilot --turns <N>`
