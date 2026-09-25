@@ -110,25 +110,29 @@ enum Commands {
 
 #[derive(Subcommand)]
 enum CorpusAction {
-    /// Full-text / keyword search across all techs, improvements, orders, and wiki guides
+    /// Keyword search over records and reference docs; returns ids + one-line summaries
     Search {
         query: String,
         #[arg(short, long, default_value_t = 5)]
         limit: usize,
     },
-    /// Lookup technology details from research tree
+    /// Fetch one record or prose chunk by id (e.g. tech:colonial_policies, doc:anomalies#0)
+    Get {
+        id: String,
+    },
+    /// Lookup a technology by name (exact, alias, or closest match)
     Tech {
         name: String,
     },
-    /// Lookup planetary improvement / district details
+    /// Lookup a planetary improvement / district by name
     Improvement {
         name: String,
     },
-    /// Lookup executive order details
+    /// Lookup an executive order by name
     Order {
         name: String,
     },
-    /// Display strategic deliberation playbook
+    /// Print the strategy playbook
     Strategy,
 }
 
@@ -169,89 +173,53 @@ async fn main() -> Result<()> {
         }
         Commands::Corpus { action } => {
             if let Some(c) = corpus {
+                let lookup = |kind: &str, name: &str| match c.lookup(kind, name) {
+                    Some(r) => println!("{}", r.render()),
+                    None if c.count(kind) == 0 => println!(
+                        "No {} records loaded: corpora/<game>/data/{}.json is missing. Run the extractor (see corpora/galciv4/data/README.md).",
+                        kind, kind
+                    ),
+                    None => println!("No {} named {:?}. Try `corpus search {:?}`.", kind, name, name),
+                };
                 match action {
                     Some(CorpusAction::Search { query, limit }) => {
                         let start = Instant::now();
-                        let results = c.search(&query, limit);
+                        let hits = c.search(&query, limit);
                         let elapsed_us = start.elapsed().as_micros();
-                        println!("=== Corpus Search for {:?} (took {}µs, {} results) ===", query, elapsed_us, results.len());
-                        for (i, r) in results.iter().enumerate() {
-                            println!("\n[{}] [{}] {} (score: {})", i + 1, r.source, r.title, r.score);
-                            println!("    {}", r.excerpt);
+                        println!("=== Corpus search {:?}: {} hits ({}µs) ===", query, hits.len(), elapsed_us);
+                        for h in &hits {
+                            println!("{:<40} [{}] {} — {}", h.id, h.kind, h.title, h.summary);
+                        }
+                        if !hits.is_empty() {
+                            println!("\nFetch one with: game-controller corpus get <id>");
                         }
                     }
-                    Some(CorpusAction::Tech { name }) => {
-                        if let Some(t) = c.lookup_tech(&name) {
-                            println!("=== Technology: {} ===", t.name);
-                            if !t.category.is_empty() {
-                                println!("Category:    {}", t.category);
-                            }
-                            println!("Cost:        {}", t.cost);
-                            println!("Description: {}", t.description);
-                            if !t.requirements.is_empty() {
-                                println!("Requirements:\n  {}", t.requirements.join("\n  "));
-                            }
-                            if !t.effects.is_empty() {
-                                println!("Effects:\n  {}", t.effects.join("\n  "));
-                            }
-                        } else {
-                            println!("Technology {:?} not found in corpus.", name);
-                        }
-                    }
-                    Some(CorpusAction::Improvement { name }) => {
-                        if let Some(imp) = c.lookup_improvement(&name) {
-                            println!("=== Improvement: {} ===", imp.name);
-                            println!("Cost:        {}", imp.cost);
-                            println!("Description: {}", imp.description);
-                            if !imp.base_effects.is_empty() {
-                                println!("Base Effects:\n  {}", imp.base_effects.join("\n  "));
-                            }
-                            if !imp.adjacencies.is_empty() {
-                                println!("Adjacencies:\n  {}", imp.adjacencies.join("\n  "));
-                            }
-                            if !imp.requirements.is_empty() {
-                                println!("Requirements:\n  {}", imp.requirements.join("\n  "));
-                            }
-                        } else {
-                            println!("Improvement {:?} not found in corpus.", name);
-                        }
-                    }
-                    Some(CorpusAction::Order { name }) => {
-                        if let Some(ord) = c.lookup_order(&name) {
-                            println!("=== Executive Order: {} ===", ord.name);
-                            println!("Cost:        {}", ord.cost);
-                            println!("Description: {}", ord.description);
-                            if !ord.effects.is_empty() {
-                                println!("Effects:\n  {}", ord.effects.join("\n  "));
-                            }
-                            if !ord.requirements.is_empty() {
-                                println!("Requirements:\n  {}", ord.requirements.join("\n  "));
-                            }
-                        } else {
-                            println!("Executive order {:?} not found in corpus.", name);
-                        }
-                    }
-                    Some(CorpusAction::Strategy) => {
-                        println!("{}", c.get_strategy());
-                    }
+                    Some(CorpusAction::Get { id }) => match c.get(&id) {
+                        Some(item) => println!("{}", item.render()),
+                        None => println!("No record or chunk with id {:?}.", id),
+                    },
+                    Some(CorpusAction::Tech { name }) => lookup("tech", &name),
+                    Some(CorpusAction::Improvement { name }) => lookup("improvement", &name),
+                    Some(CorpusAction::Order { name }) => lookup("order", &name),
+                    Some(CorpusAction::Strategy) => println!("{}", c.get_strategy()),
                     None => {
-                        println!("=== Game Corpus Loaded (GalCiv IV: Supernova) ===");
-                        println!("Manifest:");
-                        println!("  Hotkeys:      {} registered", c.manifest.hotkeys.len());
-                        println!("  Screens:      {} registered", c.manifest.screens.len());
-                        println!("  Macros:       {} registered", c.manifest.macros.len());
-                        println!("Knowledge Base:");
-                        println!("  Wiki Docs:    {} articles", c.wiki_articles.len());
-                        println!("  Technologies: {} parsed techs in tree", c.techs.len());
-                        println!("  Improvements: {} planetary districts/improvements", c.improvements.len());
-                        println!("  Exec Orders:  {} executive orders", c.orders.len());
-                        println!("  Strategy:     {} bytes of playbook", c.strategy.len());
-                        println!("\nCLI Commands available:");
-                        println!("  game-controller corpus search <query>");
-                        println!("  game-controller corpus tech <name>");
-                        println!("  game-controller corpus improvement <name>");
-                        println!("  game-controller corpus order <name>");
-                        println!("  game-controller corpus strategy");
+                        let st = c.stats();
+                        println!("=== Game corpus: {} ({}) ===", c.manifest.metadata.name, c.manifest.metadata.id);
+                        println!("Manifest:  {} hotkeys, {} screens, {} macros",
+                            c.manifest.hotkeys.len(), c.manifest.screens.len(), c.manifest.macros.len());
+                        if st.records.is_empty() {
+                            println!("Records:   none (data/*.json not generated yet — see corpora/galciv4/data/README.md)");
+                        } else {
+                            for (kind, n) in &st.records {
+                                println!("Records:   {:<12} {}", kind, n);
+                            }
+                        }
+                        println!("Docs:      {} reference docs in {} chunks", st.docs, st.chunks);
+                        for d in c.docs().iter().filter(|d| d.stem != "strategy") {
+                            println!("           {:<32} {:>3} chunks  {} — {}", d.stem, d.chunks, d.title, d.source.as_deref().unwrap_or("(no source)"));
+                        }
+                        println!("Strategy:  {} chars", st.strategy_chars);
+                        println!("\nCommands: corpus search <query> | get <id> | tech <name> | improvement <name> | order <name> | strategy");
                     }
                 }
             } else {

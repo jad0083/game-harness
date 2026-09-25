@@ -1,5 +1,6 @@
 # Advanced Gameplay Guide for High-Level Difficulty AI Settings
 Source: https://www.galciv4.com/article/512126/advanced-game-play-guide-for-high-level-difficulty-ai-settings
+License: not stated by the source page; kept for personal reference, verify before redistributing.
 
 Summary:
 Proven competitive strategy for beating Galactic Civilizations IV on Incredible difficulty with distant AI proximity, normal pacing, and abundant galactic sectors.

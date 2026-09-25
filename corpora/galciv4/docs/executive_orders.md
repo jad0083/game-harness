@@ -1,5 +1,6 @@
 # Executive Orders
 Source: https://wiki.galciv.com/index.php/Executive_Orders
+License: not stated by the source page; kept for personal reference, verify before redistributing.
 
 Executive Orders
 

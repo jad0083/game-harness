@@ -1,5 +1,6 @@
 # Anomalies
 Source: https://wiki.galciv.com/index.php/Anomalies
+License: not stated by the source page; kept for personal reference, verify before redistributing.
 
 For a list of events when discovering Anomalies see the Anomaly Events page.
 The darkest parts of the galaxy harbour many secrets in the form of Anomalies. These an assortment of abandoned space junk, ancient artifacts from long gone civilizations and other flotsam and jetsam found floating in the depths of space, and seeking them out is highly recommended since the pickups they provide can be very powerful. Even the lowly space junk can provide a quick cash injection to fill the coffers of an ailing treasury, while some of the more powerful artifacts can have a game-changing effect when used at critical moment.

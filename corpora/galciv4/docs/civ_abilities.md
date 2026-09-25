@@ -1,5 +1,6 @@
 # Civ Abilities
 Source: https://wiki.galciv.com/index.php/Civ_Abilities
+License: not stated by the source page; kept for personal reference, verify before redistributing.
 
 Civilization Abilities
 

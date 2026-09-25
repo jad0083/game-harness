@@ -1,5 +1,6 @@
 # Improvements GC4
 Source: https://wiki.galciv.com/index.php/Improvements_GC4
+License: not stated by the source page; kept for personal reference, verify before redistributing.
 
 Contents
 

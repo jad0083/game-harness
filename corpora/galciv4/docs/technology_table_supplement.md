@@ -1,5 +1,6 @@
 # GalCiv 4: Technology Table Reference & Prerequisites
 Source: https://wiki.galciv.com/index.php?title=GalCiv4:Technology_Table
+License: not stated by the source page; kept for personal reference, verify before redistributing.
 
 Key Tech Branches & Crucial Unlocks:
 

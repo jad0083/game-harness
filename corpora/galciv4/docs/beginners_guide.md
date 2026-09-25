@@ -1,5 +1,6 @@
 # Beginners Guide
 Source: https://wiki.galciv.com/index.php/Beginners_Guide
+License: not stated by the source page; kept for personal reference, verify before redistributing.
 
 Contents
 
