@@ -64,3 +64,23 @@ Verified 2026-09-25 (evening, autonomous play, Mar → Oct 2329):
 - Event dialogs: click the option button. Outcomes are in the game data — look them up first.
 - Galactic News (GNN) bulletins are informational; the autopilot matches the "GNN LIVE" logo
   (`templates/gnn_live.png`) and clicks Close by itself.
+- Colonial Charter → Leaders: **double-click** a recruitable card to recruit (costs credits).
+  Leader stat icons: 💡 Intelligence · 👥 Social Skills · ⚡ Diligence · ✊ Resolve.
+  Minister of Technology = +1 technology slot and research by Intelligence; Minister of
+  Exploration = moves/range by Diligence.
+- A finished colony ship opens a **boarding** dialog: click a citizen, Board, Done.
+- Idle colony ships and the "Colonize Planet? Yes/No" confirmation are handled by the
+  autopilot (known screens `idle_colony_ship`, `colonize_confirm`).
+
+### Known game bug: turn hangs in "Starting New Month"
+GC4 Supernova can hang indefinitely while processing a turn (known bug:
+[Steam thread](https://steamcommunity.com/app/1357210/discussions/0/598523169276500298/),
+[forum report](https://forums.galciv4.com/515304/bug-stuck-on-ai-turn)). Signs: the pulsing
+"Starting New Month" label (known screen `turn_processing`) stays for minutes, the date doesn't
+change, and the pause menu has **Save / Load / Main Menu greyed out**. The autopilot waits up
+to 180 s while it is visible, then reports "still processing".
+
+Recovery (done autonomously 2026-09-25, ~15 min into a hang): `esc` → **Exit Game** → Yes →
+focus the **Steam** window → green **PLAY** (Steam library page) → **Stardock Launcher** opens →
+its green **PLAY** → `esc` skips the intro → **Load Game** → newest **Auto-Save** → Load.
+The game autosaves each month; expect to replay a few turns.
