@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TechList>
+  <Tech>
+    <InternalName>HumanTechTree</InternalName>
+    <DisplayName>HumanTechTree_Name</DisplayName>
+    <TechTree>HumanTechTree</TechTree>
+    <RootNode>true</RootNode>
+    <ResearchCost>0</ResearchCost>
+  </Tech>
+  <Tech>
+    <InternalName>HumanTech_ColonialPolicies</InternalName>
+    <GenericName>Tech_ColonialPolicies</GenericName>
+    <DisplayName>HumanTech_ColonialPolicies_Name</DisplayName>
+    <TechTree>HumanTechTree</TechTree>
+    <ShortDescription>HumanTech_ColonialPolicies_ShortDec</ShortDescription>
+    <Description>HumanTech_ColonialPolicies_Dec</Description>
+    <ResearchCost>27</ResearchCost>
+    <Tags>Critical</Tags>
+    <Stats>
+      <EffectType>MaxPolicies</EffectType>
+      <Target><TargetType>Faction</TargetType></Target>
+      <BonusType>Flat</BonusType>
+      <Value>1</Value>
+    </Stats>
+    <Prerequ>
+      <Techs><Option>Tech_PlanetaryImprovements</Option></Techs>
+      <TechAge><Option>AgeOfExpansion</Option></TechAge>
+    </Prerequ>
+  </Tech>
+  <Tech>
+    <InternalName>HumanTech_PlanetaryImprovements</InternalName>
+    <GenericName>Tech_PlanetaryImprovements</GenericName>
+    <DisplayName>HumanTech_PlanetaryImprovements_Name</DisplayName>
+    <TechTree>HumanTechTree</TechTree>
+    <ResearchCost>10</ResearchCost>
+  </Tech>
+</TechList>

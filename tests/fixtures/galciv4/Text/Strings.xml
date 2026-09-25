@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StringTableList>
+  <StringTable><Label>HumanTechTree_Name</Label><String>Human Tech Tree</String></StringTable>
+  <StringTable><Label>HumanTech_ColonialPolicies_Name</Label><String>Colonial Policies</String></StringTable>
+  <StringTable><Label>HumanTech_ColonialPolicies_ShortDec</Label><String>Expand our capacity for [COLOR=Gold]policies[/COLOR].</String></StringTable>
+  <StringTable><Label>HumanTech_ColonialPolicies_Dec</Label><String>Colonial bureaucracy &lt;i&gt;grows&lt;/i&gt; with us.</String></StringTable>
+  <StringTable><Label>HumanTech_PlanetaryImprovements_Name</Label><String>Planetary Improvements</String></StringTable>
+  <StringTable><Label>ManufacturingDistrict_Name</Label><String>Manufacturing District</String></StringTable>
+  <StringTable><Label>ManufacturingDistrict_ShortDec</Label><String>Boosts production.</String></StringTable>
+  <StringTable><Label>SynthFoundry_Name</Label><String>Synth Foundry</String></StringTable>
+  <StringTable><Label>DraftColonists_Name</Label><String>Draft Colonists</String></StringTable>
+  <StringTable><Label>DraftColonists_Dec</Label><String>Sometimes we can't afford to wait for volunteers.</String></StringTable>
+  <StringTable><Label>STATNAME_MaxManufacturing</Label><String>[ICON=Stat_Manufacturing_Icon] Manufacturing</String></StringTable>
+  <StringTable><Label>STATNAME_Approval</Label><String>Approval</String></StringTable>
+  <StringTable><Label>STATNAME_MaxPolicies</Label><String>Policy Slots</String></StringTable>
+  <StringTable><Label>Project_UpgradeWealth_Name</Label><String>Upgrade Wealth</String></StringTable>
+  <StringTable><Label>PrecursorNanites_Name</Label><String>Precursor Nanites</String></StringTable>
+</StringTableList>

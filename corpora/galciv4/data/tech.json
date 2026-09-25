@@ -1,0 +1,3259 @@
+[
+ {
+  "id": "tech:abundance",
+  "name": "Abundance",
+  "aliases": [
+   "Tech_Terran_Abundance",
+   "HumanTech_Abundance"
+  ],
+  "summary": "Post-scarcity economics via interstellar trade",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 650,
+   "prerequisites": [
+    "Metaverstic Gaming"
+   ],
+   "unlocks": [
+    "Starbase module: Industrial Coordinating Station",
+    "Starbase module: Mining Headquarters"
+   ],
+   "description": "Mesh world economies through resilient routes and dynamic markets to expand specialization and drive wealth creation across our civilization."
+  }
+ },
+ {
+  "id": "tech:adamant_bulwark",
+  "name": "Adamant Bulwark",
+  "aliases": [
+   "HumanTech_AdamantBulwark",
+   "Tech_Terran_AdamantBulwark"
+  ],
+  "summary": "Cast adamant composite frames for capital-class armor belts.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 300,
+   "prerequisites": [
+    "Shield Matrix"
+   ],
+   "unlocks": [
+    "Ship component: Adamant Bulwark",
+    "Ship component: Quantum Bulwark",
+    "Starbase module: Zero Point Armor"
+   ],
+   "description": "Adamant composites fuse nano-ceramics with dense alloys, forming armor belts that shrug off repeated hits. Fleets fitted with these bulwarks can linger in the fight long enough to decide it."
+  }
+ },
+ {
+  "id": "tech:adaptive_seeker_missiles",
+  "name": "Adaptive Seeker Missiles",
+  "aliases": [
+   "Tech_Terran_AdaptiveSeekerMissiles",
+   "HumanTech_AdaptiveSeekerMissiles"
+  ],
+  "summary": "Teach every missile to re-route and reacquire mid-flight.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 175,
+   "prerequisites": [
+    "Flux Rail Arrays"
+   ],
+   "unlocks": [
+    "Ship component: Adaptive Seeker Missile",
+    "Ship component: Annihilation Tracker",
+    "Starbase module: Harpoon Salvo"
+   ],
+   "description": "Adaptive seekers blend sensor fusion with micro-thrusters, letting ordinance weave past decoys and jamming. Volley effectiveness spikes because every missile keeps learning until it hits something important."
+  }
+ },
+ {
+  "id": "tech:advanced_nexus_augments",
+  "name": "Advanced Nexus Augments",
+  "aliases": [
+   "HumanTech_UpgradedAugments",
+   "Tech_UpgradedAugments"
+  ],
+  "summary": "Allows us to build Tier 2 Nexus Augments and Stellar Gateway Megastructures .",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 1150,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Megastructure Nexi"
+   ],
+   "unlocks": [
+    "Starbase module: Blue Nexus: Astral Forge",
+    "Starbase module: Blue Nexus: Astral Mirror",
+    "Starbase module: Blue Nexus: Emergent Spire",
+    "Starbase module: Blue Nexus: Loyalty Engine",
+    "Starbase module: Purple Nexus: Astral Lens",
+    "Starbase module: Purple Nexus: Cosmic Getaway",
+    "Starbase module: Purple Nexus: Interstellar Consulate",
+    "Starbase module: Purple Nexus: Monumental Exchange",
+    "Starbase module: Red Nexus: Guardian Coordinator",
+    "Starbase module: Red Nexus: Orion's Gaze",
+    "Starbase module: Red Nexus: Surge Matrix",
+    "Starbase module: Red Nexus: Twilight Engine",
+    "Starbase module: Stellar Gateway",
+    "Starbase module: Yellow Nexus: Flourishing Garden",
+    "Starbase module: Yellow Nexus: Focus Amplifier",
+    "Starbase module: Yellow Nexus: Nimbus Cycler",
+    "Starbase module: Yellow Nexus: Unified Authority"
+   ],
+   "tags": "Production",
+   "description": "Advanced Nexus Augments provide significant enhancements to our megastructures, enabling the construction of Tier 2 augmentations and the Stellar Gateway. These advancements increase the efficiency and capacity of our interstellar infrastructure, ensuring that our expansion and resource management remain unparalleled."
+  }
+ },
+ {
+  "id": "tech:aegis_point_defense",
+  "name": "Aegis Point Defense",
+  "aliases": [
+   "Tech_Terran_AegisPointDefense",
+   "HumanTech_AegisPointDefense"
+  ],
+  "summary": "Use predictive targeting networks to intercept threats preemptively.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 325,
+   "prerequisites": [
+    "Adamant Bulwark"
+   ],
+   "unlocks": [
+    "Ship component: Aegis Grid",
+    "Ship component: Aegis Point Defense"
+   ],
+   "description": "Aegis suites draw upon fleet-wide sensor feeds and battlefield simulations to anticipate hostile trajectories seconds before they manifest. Point-defense fire becomes proactive rather than reactive, crippling enemy alpha strikes."
+  }
+ },
+ {
+  "id": "tech:alliances",
+  "name": "Alliances",
+  "aliases": [
+   "HumanTech_Alliances",
+   "Tech_Terran_Alliances"
+  ],
+  "summary": "Form powerful alliances with other civilizations",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 250,
+   "prerequisites": [
+    "Xeno Treaties"
+   ],
+   "effects": [
+    "+1 Max Enacted Policies"
+   ],
+   "unlocks": [
+    "Policy: Research Collaboration"
+   ],
+   "description": "Master the complex diplomacy required to form and maintain powerful alliances"
+  }
+ },
+ {
+  "id": "tech:anomaly_detection",
+  "name": "Anomaly Detection",
+  "aliases": [
+   "HumanTech_AnomalyDetection",
+   "Tech_AnomalyDetection"
+  ],
+  "summary": "Discover new anomalies in the universe.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 50,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Subspace Scanning"
+   ],
+   "unlocks": [
+    "Starbase module: Thulium Sensor Array"
+   ],
+   "tags": "Growth",
+   "description": "The discovery of a fresh anomaly is one of the most exciting and pivotal moments a civilization can experience. We should redouble our efforts to find more of these boons."
+  }
+ },
+ {
+  "id": "tech:armada_doctrine",
+  "name": "Armada Doctrine",
+  "aliases": [
+   "HumanTech_ArmadaDoctrine",
+   "Tech_Terran_ArmadaDoctrine"
+  ],
+  "summary": "Grand fleet operations at galactic scale",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 475,
+   "prerequisites": [
+    "Fleet Coordination"
+   ],
+   "effects": [
+    "+12 Logistics",
+    "+25% Fleet Supply Cap"
+   ],
+   "unlocks": [
+    "Improvement: Galactic Fleet HQ",
+    "Starbase module: Omega Starbase Defenses"
+   ],
+   "tags": "Critical",
+   "description": "Codify large-scale fleet warfare through theater logistics, distributed command, and cross-domain deception to deliver overwhelming power projection when it matters most."
+  }
+ },
+ {
+  "id": "tech:artificial_gravity",
+  "name": "Artificial Gravity",
+  "aliases": [
+   "Tech_ArtificialGravity",
+   "HumanTech_ArtificialGravity"
+  ],
+  "summary": "Generate artificial gravity fields",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 50,
+   "prerequisites": [
+    "Innovation"
+   ],
+   "effects": [
+    "+2 Ship Range",
+    "+1 Moves (Ship)"
+   ],
+   "unlocks": [
+    "Improvement: Harmonic Array",
+    "Policy: Experimental Drives",
+    "Ship component: Gravitic Drive"
+   ],
+   "tags": "Critical",
+   "description": "Develop technology to generate and control artificial gravity fields"
+  }
+ },
+ {
+  "id": "tech:asteroid_mining",
+  "name": "Asteroid Mining",
+  "aliases": [
+   "Tech_AsteroidMining",
+   "HumanTech_AsteroidMining"
+  ],
+  "summary": "Extract resources from asteroids",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 80,
+   "prerequisites": [
+    "Starbases"
+   ],
+   "unlocks": [
+    "Executive order: Thrall Training",
+    "Improvement: Industrial Goods",
+    "Policy: Federated Customs Union",
+    "Ship component: Mining Laser"
+   ],
+   "tags": "Critical",
+   "description": "Develop technology to extract valuable resources from asteroids and other small bodies"
+  }
+ },
+ {
+  "id": "tech:barrier_projectors",
+  "name": "Barrier Projectors",
+  "aliases": [
+   "Tech_Terran_BarrierProjectors",
+   "HumanTech_BarrierProjectors"
+  ],
+  "summary": "Convert shield tech into wide-area barriers that envelop a ship.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 350,
+   "prerequisites": [
+    "Aegis Point Defense"
+   ],
+   "unlocks": [
+    "Ship component: Absolute Barrier",
+    "Ship component: Barrier Projector",
+    "Starbase module: Invulnerability Sphere"
+   ],
+   "description": "Projectors dynamically reposition shield planes, creating a solid wall in the path of an incoming salvo. The barrier drinks the full impact before it ever reaches armor, making Terran flagships notoriously hard to crack."
+  }
+ },
+ {
+  "id": "tech:battle_engineering",
+  "name": "Battle Engineering",
+  "aliases": [
+   "HumanTech_BattleEngineering",
+   "Tech_Terran_BattleEngineering"
+  ],
+  "summary": "Capstone: Advanced engineering for larger warship designs",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 850,
+   "prerequisites": [
+    "Dreadnought Doctrine"
+   ],
+   "effects": [
+    "+5% Capacity (Ship)"
+   ],
+   "tags": "Critical",
+   "description": "Capstone : This is a technology that can be repeatedly researched to evolve your knowledge in this area. Master structural integrity fields, mass-reduction technologies, and modular construction to continuously expand ship design capacity and build ever more formidable vessels."
+  }
+ },
+ {
+  "id": "tech:battle_mastery",
+  "name": "Battle Mastery",
+  "aliases": [
+   "Tech_Terran_BattleMastery",
+   "HumanTech_BattleMastery"
+  ],
+  "summary": "Capstone: Master defensive shield optimization",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 500,
+   "prerequisites": [
+    "Barrier Projectors"
+   ],
+   "effects": [
+    "+10% Shield Strength (Ship)"
+   ],
+   "description": "Capstone : This is a technology that can be repeatedly researched to evolve your knowledge in this area. Perfect the art of shield modulation, harmonic resonance, and adaptive field geometry to dramatically enhance protective capabilities across all vessels."
+  }
+ },
+ {
+  "id": "tech:battleship_foundries",
+  "name": "Battleship Foundries",
+  "aliases": [
+   "Tech_Battleships",
+   "HumanTech_BattleshipFoundries"
+  ],
+  "summary": "Construct heavy foundries dedicated to battleship-scale hulls.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 500,
+   "prerequisites": [
+    "Systems Miniaturization"
+   ],
+   "unlocks": [
+    "Ability: Command",
+    "Ability: Precision",
+    "Policy: Federation Mobilization",
+    "Ship component: Battleship Module",
+    "Ship component: Command Ship Module",
+    "Ship hull: Large Hull"
+   ],
+   "tags": "Critical",
+   "description": "New orbital docks, magnetic crane networks, and high-capacity reactors allow the Alliance to forge gargantuan battleships with layered armor decks and entire squadrons of weapon batteries."
+  }
+ },
+ {
+  "id": "tech:biological_targeting",
+  "name": "Biological Targeting",
+  "aliases": [
+   "HumanTech_BiologicalTargeting",
+   "Tech_BiologicalTargeting"
+  ],
+  "summary": "Precision weaponry tailored to enemy vulnerabilities.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 42,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Time Dilation Weapons"
+   ],
+   "unlocks": [
+    "Ship component: Shattering Pulse",
+    "Ship component: Theron Ray"
+   ],
+   "tags": "Weapon",
+   "description": "Biological Targeting technology revolutionizes warfare by enabling the development of weapons systems that can identify and exploit the specific biological weaknesses of different alien species. This approach allows for unprecedented efficiency in combat, minimizing collateral damage and ensuring that engagements are as brief as they are decisive."
+  }
+ },
+ {
+  "id": "tech:cabinet_expansion",
+  "name": "Cabinet Expansion",
+  "aliases": [
+   "Tech_Terran_CabinetExpansion",
+   "HumanTech_CabinetExpansion"
+  ],
+  "summary": "Expand governmental cabinet to include additional ministerial positions",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 125,
+   "prerequisites": [
+    "Xeno Diplomacy"
+   ],
+   "effects": [
+    "+1 Max Enacted Policies"
+   ],
+   "unlocks": [
+    "Improvement: Office of Control",
+    "Leader: Attorney General",
+    "Policy: Colonial Bonds",
+    "Policy: Corporate Investment",
+    "Policy: Imperial Grip",
+    "Policy: Tax Efficiency Act"
+   ],
+   "description": "As human civilization expands across the galaxy, effective governance requires specialized expertise across numerous domains. Expanding the cabinet allows for dedicated ministers to oversee critical areas of interstellar administration."
+  }
+ },
+ {
+  "id": "tech:carrier_doctrine",
+  "name": "Carrier Doctrine",
+  "aliases": [
+   "Tech_Carriers",
+   "HumanTech_CarrierDoctrine"
+  ],
+  "summary": "Integrate fighter complements and logistics bays into capital hulls.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 550,
+   "prerequisites": [
+    "Extreme Miniaturization"
+   ],
+   "unlocks": [
+    "Ability: Hunter",
+    "Ship component: Bomber Bay Module",
+    "Ship component: Carrier Module",
+    "Starbase module: Interceptors"
+   ],
+   "tags": "Critical",
+   "description": "Carrier-focused design philosophies merge deck parks, launch rails, and command suites to support strikecraft wings, enabling Terran fleets to project force deep behind enemy lines."
+  }
+ },
+ {
+  "id": "tech:civilian",
+  "name": "Civilian",
+  "aliases": [
+   "Tech_Civilian",
+   "HumanTech_Civilian"
+  ],
+  "summary": "Civilian technologies: government, trade, diplomacy, and culture",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 0,
+   "prerequisites": [
+    "Master Tech Tree"
+   ],
+   "effects": [
+    "+1 Max Enacted Policies"
+   ],
+   "unlocks": [
+    "Executive order: Inspire Population",
+    "Improvement: Global Datacenter",
+    "Improvement: Manufacturing District",
+    "Improvement: Manufacturing Nexus",
+    "Improvement: Produce Modules",
+    "Leader: Explorer General"
+   ],
+   "description": "Civilian technologies: government, trade, diplomacy, and culture"
+  }
+ },
+ {
+  "id": "tech:cloaking_devices",
+  "name": "Cloaking Devices",
+  "aliases": [
+   "Tech_CloakingDevices",
+   "HumanTech_CloakingDevices"
+  ],
+  "summary": "Mastering the art of invisibility.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 75,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Exotic Energies"
+   ],
+   "unlocks": [
+    "Ability: Ghost",
+    "Ship component: Cloaking Device"
+   ],
+   "tags": "Weapon",
+   "description": "Cloaking Devices represent a pinnacle in stealth technology, enabling ships and structures to become virtually invisible to the naked eye and radar detection. This tech not only provides a strategic advantage in evading enemy surveillance and attacks but also opens up new possibilities for reconnaissance and surprise maneuvers, fundamentally altering the dynamics of warfare and espionage."
+  }
+ },
+ {
+  "id": "tech:colonial_capital_refit",
+  "name": "Colonial Capital Refit",
+  "aliases": [
+   "Tech_ColonialCapitalRefit",
+   "HumanTech_ColonialCapitalRefit"
+  ],
+  "summary": "Increases the number of citizens that can live on our worlds.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 50,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Planetary Outposts"
+   ],
+   "effects": [
+    "+1 Population Cap (Colony)"
+   ],
+   "unlocks": [
+    "Policy: Civic Renaissance"
+   ],
+   "tags": "Growth",
+   "description": "The capitals of our colonies are makeshift by nature, built on-the-fly to meet the varying demands of a rapidly growing populace. But by a certain point, they inevitably need to be refitted to bring them up to modern standards. This project will do just that."
+  }
+ },
+ {
+  "id": "tech:colonial_policies",
+  "name": "Colonial Policies",
+  "aliases": [
+   "HumanTech_ColonialPolicies",
+   "Tech_ColonialPolicies"
+  ],
+  "summary": "Establish effective governance for new colonies",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 24,
+   "prerequisites": [
+    "Civilian"
+   ],
+   "unlocks": [
+    "Improvement: Central Hub",
+    "Improvement: Crystallization Chambers",
+    "Improvement: Planetary Generator",
+    "Leader: Chief Operations Officer",
+    "Leader: Minister of Colonization",
+    "Policy: Population Levy",
+    "Ship component: Supply Module"
+   ],
+   "description": "Develop policies and administrative structures to effectively govern colonial settlements"
+  }
+ },
+ {
+  "id": "tech:conquest_evolution",
+  "name": "Conquest Evolution",
+  "aliases": [
+   "HumanTech_ConquestEvolution",
+   "Tech_Terran_ConquestEvolution"
+  ],
+  "summary": "Capstone: Evolve logistics to support ever-larger fleets",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 700,
+   "prerequisites": [
+    "Conquest Mastery"
+   ],
+   "effects": [
+    "+3 Logistics"
+   ],
+   "tags": "Critical",
+   "description": "Capstone : This is a technology that can be repeatedly researched to evolve your knowledge in this area. Refine fleet coordination, supply chain automation, and strategic deployment to command increasingly massive armadas across multiple theaters of war."
+  }
+ },
+ {
+  "id": "tech:conquest_mastery",
+  "name": "Conquest Mastery",
+  "aliases": [
+   "HumanTech_ConquestMastery",
+   "Tech_Terran_ConquestMastery"
+  ],
+  "summary": "Unified doctrine for decisive victory",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 575,
+   "prerequisites": [
+    "Armada Doctrine"
+   ],
+   "effects": [
+    "+16 Logistics",
+    "+50% Fleet Supply Cap"
+   ],
+   "tags": "Critical",
+   "description": "Harmonize strategy, logistics, and firepower into repeatable campaigns that minimize losses while securing strategic objectives across hostile theaters."
+  }
+ },
+ {
+  "id": "tech:consensus_maker",
+  "name": "Consensus Maker",
+  "aliases": [
+   "HumanTech_SanctuaryTech",
+   "Tech_Consensus"
+  ],
+  "summary": "Adopt Sanctuary’s consensus protocols for unrivaled diplomacy.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 2250,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Universal Translator"
+   ],
+   "effects": [
+    "+3 Diplomacy Bonus"
+   ],
+   "tags": "Diplomacy",
+   "description": "Wire Sanctuary’s AI mediation layer into Terran governance, delivering flat diplomacy bonuses and an ongoing self-improving envoy effect."
+  }
+ },
+ {
+  "id": "tech:coordinated_travel",
+  "name": "Coordinated Travel",
+  "aliases": [
+   "HumanTech_CoordinatedTravel",
+   "Tech_CoordinatedTravel"
+  ],
+  "summary": "Centralized navigation squeezes extra moves from every fleet.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 2750,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Universal Translator"
+   ],
+   "effects": [
+    "+1 Moves (Ship)"
+   ],
+   "description": "Link the best navigators through a persistent fleet channel, permanently adding moves to all ships and letting the buff mutate upward over time."
+  }
+ },
+ {
+  "id": "tech:cruiser_architecture",
+  "name": "Cruiser Architecture",
+  "aliases": [
+   "Tech_CruiserDoctrine",
+   "HumanTech_CruiserArchitecture"
+  ],
+  "summary": "Design modular cruiser hulls for long-range deployments.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 250,
+   "prerequisites": [
+    "Planetary Invasion"
+   ],
+   "effects": [
+    "+25% Hit Points (Ship)"
+   ],
+   "unlocks": [
+    "Ability: Assault",
+    "Ability: Focus Fire",
+    "Policy: Officer Exchange Program",
+    "Ship component: Cruiser Module",
+    "Ship component: Destroyer Module",
+    "Ship hull: Medium Hull"
+   ],
+   "tags": "Critical",
+   "description": "Shipwrights scale up frigate lessons into cruisers with redundant cores, armored hangars, and flexible hardpoints, creating ideal command ships for sustained planetary campaigns."
+  }
+ },
+ {
+  "id": "tech:cultural_conquest",
+  "name": "Cultural Conquest",
+  "aliases": [
+   "HumanTech_CulturalConquest",
+   "Tech_Terran_CulturalConquest"
+  ],
+  "summary": "Conquer worlds through cultural dominance",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 275,
+   "prerequisites": [
+    "Galactic Conglomerates"
+   ],
+   "unlocks": [
+    "Improvement: Cultural Beacon",
+    "Starbase module: Indoctrination Hub"
+   ],
+   "description": "Master the techniques to peacefully conquer civilizations through overwhelming cultural influence"
+  }
+ },
+ {
+  "id": "tech:cultural_domination",
+  "name": "Cultural Domination",
+  "aliases": [
+   "Tech_Terran_CulturalDomination",
+   "HumanTech_CulturalDomination"
+  ],
+  "summary": "Capstone: Systematically spread human culture to dominate alien civilizations",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 225,
+   "prerequisites": [
+    "Cultural Conquest"
+   ],
+   "effects": [
+    "+10% Influence Growth (Colony)"
+   ],
+   "unlocks": [
+    "Improvement: Pilgrims",
+    "Improvement: Upgrade Culture"
+   ],
+   "description": "Cultural dominance extends beyond mere influence, establishing human values and customs as the galactic standard. Through strategic cultural initiatives, humanity can reshape alien societies to align with Terran ideals."
+  }
+ },
+ {
+  "id": "tech:cultural_influence",
+  "name": "Cultural Influence",
+  "aliases": [
+   "HumanTech_CulturalInfluence",
+   "Tech_Terran_CulturalInfluence"
+  ],
+  "summary": "Spread our culture to other civilizations",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 175,
+   "prerequisites": [
+    "Interstellar Trade"
+   ],
+   "unlocks": [
+    "Improvement: Commercial Star Liner",
+    "Improvement: Orbital Museum",
+    "Improvement: Upgrade Culture",
+    "Leader: Chief Marketing Officer",
+    "Leader: Culture Secretary",
+    "Leader: Loyalty Engineer",
+    "Policy: Ban Dissent",
+    "Policy: Cultural Branding Agency",
+    "Policy: Cultural Values",
+    "Policy: Research Grants",
+    "Starbase module: Cultural Beacon"
+   ],
+   "tags": "GalacticChallenge",
+   "description": "Develop methods to spread our cultural values and influence throughout the galaxy"
+  }
+ },
+ {
+  "id": "tech:defensive_studies",
+  "name": "Defensive Studies",
+  "aliases": [
+   "HumanTech_DefensiveStudies",
+   "Tech_Terran_DefensiveStudies"
+  ],
+  "summary": "Research defensive technologies and protection systems",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 100,
+   "prerequisites": [
+    "Space Doctrine"
+   ],
+   "effects": [
+    "+3 Armor Rating (Ship)"
+   ],
+   "unlocks": [
+    "Ability: Ace",
+    "Ability: Defender",
+    "Executive order: Martial Law",
+    "Policy: Defensive Measures",
+    "Policy: Imperial Guard",
+    "Policy: Prototype Defenses",
+    "Starbase module: Interstellar Defense Module"
+   ],
+   "description": "Study defensive strategies and technologies to better protect our ships and installations"
+  }
+ },
+ {
+  "id": "tech:deflector_systems",
+  "name": "Deflector Systems",
+  "aliases": [
+   "Tech_Terran_DeflectorSystems",
+   "HumanTech_DeflectorSystems"
+  ],
+  "summary": "Project low-power deflector fields that bleed off beam energy.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 175,
+   "prerequisites": [
+    "Pulsar Interceptors"
+   ],
+   "unlocks": [
+    "Ship component: Deflector System",
+    "Ship component: Harmonic Deflector",
+    "Starbase module: Barrier Array"
+   ],
+   "description": "Borrowing from civilian traffic buoys, ships mount ringed emitters that create a shallow subspace ripple. Incoming beam weapons lose coherence as they cross the ripple, reducing their punch before armor takes the blow."
+  }
+ },
+ {
+  "id": "tech:discovery_protocols",
+  "name": "Discovery Protocols",
+  "aliases": [
+   "HumanTech_DiscoveryProtocols",
+   "Tech_Terran_DiscoveryProtocols"
+  ],
+  "summary": "Improve research efficiency and throughput",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 100,
+   "prerequisites": [
+    "Space Elevators"
+   ],
+   "unlocks": [
+    "Improvement: Gem Traders",
+    "Improvement: Upgrade Research",
+    "Policy: Genius Grants",
+    "Policy: Research Grants",
+    "Policy: The Emperor's Eye",
+    "Policy: Unregulated Research",
+    "Policy: Venture Research Labs",
+    "Starbase module: Research Coordination Hub"
+   ],
+   "tags": "Critical",
+   "description": "Deploy rigorous protocols, automation, and meta-analysis frameworks to accelerate discovery, enabling labs to operate efficiently even on far-flung worlds supported by orbital infrastructure."
+  }
+ },
+ {
+  "id": "tech:dreadlord_weapons",
+  "name": "Dreadlord Weapons",
+  "aliases": [
+   "HumanTech_DreadlordWeapons",
+   "Tech_DreadlordWeapons"
+  ],
+  "summary": "Dreadlord caches push every weapon platform beyond sane limits.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 375,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Space Exploration"
+   ],
+   "effects": [
+    "+30% Beam Attack (Ship)",
+    "+30% Missile Attack",
+    "+30% Kinetic Attack"
+   ],
+   "tags": "Kinetic",
+   "description": "Combine forbidden Arnorian matrices with Terran engineering, permanently enhancing beam, missile, and kinetic attack power empire-wide."
+  }
+ },
+ {
+  "id": "tech:dreadnought_construction",
+  "name": "Dreadnought Construction",
+  "aliases": [
+   "HumanTech_DreadnoughtConstruction",
+   "Tech_DreadnoughtDoctrine"
+  ],
+  "summary": "Commit the industrial base to building colossal dreadnought hulls.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 700,
+   "prerequisites": [
+    "Fortified Superstructures"
+   ],
+   "unlocks": [
+    "Ability: Sentinel",
+    "Policy: Federal Armament Act",
+    "Ship component: Dreadnought Module",
+    "Ship hull: Huge Hull"
+   ],
+   "tags": "Critical",
+   "description": "Only the largest spacedocks and most advanced crews can assemble these kilometer-long warships. Dreadnoughts anchor fleets, shrug off sieges, and redefine what it means to command space."
+  }
+ },
+ {
+  "id": "tech:dream_of_utopia",
+  "name": "Dream of Utopia",
+  "aliases": [
+   "HumanTech_CallOfUtopia",
+   "Tech_CallOfUtopia"
+  ],
+  "summary": "Broadcast utopian visions that anchor culture to the capital.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 4000,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Universal Translator"
+   ],
+   "tags": "NonMilitary",
+   "description": "Launch the mythic signal recovered from the event, flooding the capital world with influence per turn and minting an immediate Culture Point cache."
+  }
+ },
+ {
+  "id": "tech:dual_stage_detonations",
+  "name": "Dual Stage Detonations",
+  "aliases": [
+   "Tech_UpgradedMissiles",
+   "HumanTech_UpgradedMissiles"
+  ],
+  "summary": "Recovered warheads translate directly into harder-hitting missiles.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 100,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Adaptive Seeker Missiles"
+   ],
+   "effects": [
+    "+10% Missile Attack (Ship)"
+   ],
+   "tags": "Missile",
+   "description": "Standardize the gifted guidance cores and payload shrouds so every Terran ship enjoys a missile attack boost."
+  }
+ },
+ {
+  "id": "tech:eclipse_warheads",
+  "name": "Eclipse Warheads",
+  "aliases": [
+   "Tech_Terran_EclipseWarheads",
+   "HumanTech_EclipseWarheads"
+  ],
+  "summary": "Deploy warheads that blind sensors and tear open hulls simultaneously.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 375,
+   "prerequisites": [
+    "Singularity Cannons"
+   ],
+   "unlocks": [
+    "Ship component: Cataclysm Warhead",
+    "Ship component: Eclipse Warhead",
+    "Starbase module: Nightmare Delivery System"
+   ],
+   "description": "Each Eclipse payload couples a sensor-jamming curtain with a shaped antimatter burst. Defenders are blinded an instant before the primary detonation cores through their ships."
+  }
+ },
+ {
+  "id": "tech:economic_singularity",
+  "name": "Economic Singularity",
+  "aliases": [
+   "Tech_EconomicSingularity",
+   "HumanTech_EconomicSingularity"
+  ],
+  "summary": "Capstone: Automate and interlink all markets and production",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 325,
+   "prerequisites": [
+    "Abundance"
+   ],
+   "effects": [
+    "+10% Gross Income (Colony)"
+   ],
+   "description": "Achieve near-frictionless trade and adaptive production via self-orchestrating supply chains and AI-optimized markets, unlocking compounding prosperity across our worlds."
+  }
+ },
+ {
+  "id": "tech:engineering_mastery",
+  "name": "Engineering Mastery",
+  "aliases": [
+   "HumanTech_EngineeringMastery",
+   "Tech_Terran_EngineeringMastery"
+  ],
+  "summary": "Peak engineering practice and megastructure craft",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 525,
+   "prerequisites": [
+    "Singularity Power Plant"
+   ],
+   "unlocks": [
+    "Improvement: Antimatter Power Plant",
+    "Improvement: Engineering Mastery Center",
+    "Improvement: Giga Obelisk",
+    "Improvement: Gigamass Supplies",
+    "Improvement: Monument Of Cosmic Majesty",
+    "Improvement: Precious Gem Synthesizer",
+    "Improvement: Upgrade Manufacturing",
+    "Starbase module: Apex Research Institute"
+   ],
+   "description": "Codify elite standards for design, fault tolerance, and fabrication to enable safe operation of extreme-power systems and next-generation megaprojects."
+  }
+ },
+ {
+  "id": "tech:executive_prerogative",
+  "name": "Executive Prerogative",
+  "aliases": [
+   "Tech_Terran_ExecutivePrerogative",
+   "HumanTech_ExecutivePrerogative"
+  ],
+  "summary": "Grant executive branch enhanced decision-making authority",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 175,
+   "prerequisites": [
+    "Policy Reforms"
+   ],
+   "effects": [
+    "+1 Max Enacted Policies"
+   ],
+   "unlocks": [
+    "Policy: Meridian Security Group",
+    "Policy: Police State",
+    "Policy: Reduced Regulations",
+    "Policy: Resource Export Program",
+    "Policy: You Are Just A Number"
+   ],
+   "description": "In times of rapid galactic expansion, traditional bureaucratic processes can impede critical decisions. Executive prerogative enables swift action by granting the executive branch enhanced authority to respond to emerging threats and opportunities without lengthy deliberation."
+  }
+ },
+ {
+  "id": "tech:exotic_energies",
+  "name": "Exotic Energies",
+  "aliases": [
+   "HumanTech_ExoticEnergies",
+   "Tech_ExoticEnergies"
+  ],
+  "summary": "Harnessing the unknown for applications affective against Ammonia Based lifeforms.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 75,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Experimental Weapons"
+   ],
+   "unlocks": [
+    "Ship component: UV Field"
+   ],
+   "tags": "Weapon",
+   "description": "Exotic Energies technology represents a breakthrough in the understanding and application of energy forms beyond the standard spectrum. This advancement allows for the creation of weapons, shields, and power sources with capabilities far exceeding current limits, opening new avenues for exploration, defense, and warfare."
+  }
+ },
+ {
+  "id": "tech:exotic_world_colonization",
+  "name": "Exotic World Colonization",
+  "aliases": [
+   "Tech_ExoticWorldColonization",
+   "HumanTech_ExoticWorldColonization"
+  ],
+  "summary": "Colonize truly alien world types",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 150,
+   "prerequisites": [
+    "Terraforming"
+   ],
+   "unlocks": [
+    "Improvement: Upgrade Housing",
+    "Leader: Chief Technology Officer",
+    "Policy: Federal Asylum Charter"
+   ],
+   "description": "Develop technology to colonize truly exotic world types previously thought uninhabitable"
+  }
+ },
+ {
+  "id": "tech:experimental_weapons",
+  "name": "Experimental Weapons",
+  "aliases": [
+   "Tech_ExperimentalWeapons",
+   "HumanTech_ExperimentalWeapons"
+  ],
+  "summary": "Frontiers in armament technology produce advanced targeting systems.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 75,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Weapon Systems"
+   ],
+   "unlocks": [
+    "Ability: Long Shot",
+    "Ability: Sniper"
+   ],
+   "tags": "Weapon",
+   "description": "By harnessing the latest in quantum computing and nanomaterials, 'Experimental Weapons' offers a leap forward in armaments, enabling the creation of devices with unprecedented range and precision. This technology not only pushes the boundaries of known physics but also opens up new strategies in warfare, ensuring that our fleets hold the upper hand in any encounter."
+  }
+ },
+ {
+  "id": "tech:extreme_colonization",
+  "name": "Extreme Colonization",
+  "aliases": [
+   "Tech_ExtremeColonization",
+   "HumanTech_ExtremeColonization"
+  ],
+  "summary": "Colonize harsh and extreme environments",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 75,
+   "prerequisites": [
+    "Xeno Biology"
+   ],
+   "unlocks": [
+    "Improvement: Planetary Conversion",
+    "Improvement: Upgrade Housing",
+    "Leader: Chief Technology Officer",
+    "Policy: Galactic Migration Pact"
+   ],
+   "tags": "Critical",
+   "description": "Develop technology to establish colonies on planets with extreme environmental conditions"
+  }
+ },
+ {
+  "id": "tech:extreme_miniaturization",
+  "name": "Extreme Miniaturization",
+  "aliases": [
+   "HumanTech_ExtremeMiniaturization",
+   "Tech_ExtremeMiniaturization"
+  ],
+  "summary": "Adds additional component slots on hulls based on its total mass.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 325,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Battleship Doctrine"
+   ],
+   "effects": [
+    "+1 Capacity (Ship)",
+    "+15% Capacity (Ship)"
+   ],
+   "unlocks": [
+    "Leader: Director of Computing Centers",
+    "Policy: Civic Stability Accord"
+   ],
+   "tags": "Hulls",
+   "description": "This poorly named set of techniques, doctrines, policies and technologies is more of a policy of organizing what goes on a given ship, so that we can fit much more. Contrary to what some have argued, we are not actually shrinking things inside our ships."
+  }
+ },
+ {
+  "id": "tech:fleet_coordination",
+  "name": "Fleet Coordination",
+  "aliases": [
+   "HumanTech_FleetCoordination",
+   "Tech_Terran_FleetCoordination"
+  ],
+  "summary": "Command and control systems for managing multiple vessel formations.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 200,
+   "prerequisites": [
+    "Planetary Invasion"
+   ],
+   "effects": [
+    "+8 Logistics",
+    "+10% Hit Points (Ship)",
+    "+2 Ship Range",
+    "+10% Fleet Supply Cap"
+   ],
+   "unlocks": [
+    "Executive order: Draft Civilian Ships",
+    "Improvement: Orbital Academy",
+    "Policy: AstroDyne Defense Trust",
+    "Policy: Fleet Build Up",
+    "Ship component: Repair Bay",
+    "Starbase module: Advanced Defenses"
+   ],
+   "tags": "Critical",
+   "description": "Coordinating multiple starships in formation requires sophisticated communication protocols, synchronized navigation systems, and clear command hierarchies. Fleet coordination technology enables admirals to maneuver dozens of vessels as a unified force, concentrating firepower, protecting vulnerable ships, and executing complex tactical maneuvers. Effective fleet coordination transforms individual ships into a cohesive fighting force greater than the sum of its parts."
+  }
+ },
+ {
+  "id": "tech:flux_rail_arrays",
+  "name": "Flux Rail Arrays",
+  "aliases": [
+   "HumanTech_FluxRailArrays",
+   "Tech_Terran_FluxRailArrays"
+  ],
+  "summary": "Link capital railguns into flux-stabilized firing arrays.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 150,
+   "prerequisites": [
+    "Weapon Systems"
+   ],
+   "unlocks": [
+    "Ship component: Flux Rail Array",
+    "Ship component: Graviton Driver",
+    "Starbase module: Pulse Cannon"
+   ],
+   "description": "Flux gating bleeds excess charge between parallel rails, letting our ships fire staggered salvos without melting their own guns. The result is a rapid-fire kinetic screen that chews through armor and fighter swarms alike."
+  }
+ },
+ {
+  "id": "tech:fortified_superstructures",
+  "name": "Fortified Superstructures",
+  "aliases": [
+   "HumanTech_FortifiedSuperstructures",
+   "Tech_Terran_FortifiedSuperstructures"
+  ],
+  "summary": "Reinforce every hull spine and bulkhead for massive durability gains.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 675,
+   "prerequisites": [
+    "Quantum Miniaturization"
+   ],
+   "effects": [
+    "+50% Hit Points (Ship)"
+   ],
+   "tags": "Critical",
+   "description": "Composite girders, shock-damping mountings, and structural morph fields let Terran ships absorb punishment that would previously tear them apart, boosting survivability fleet-wide."
+  }
+ },
+ {
+  "id": "tech:frigate_engineering",
+  "name": "Frigate Engineering",
+  "aliases": [
+   "HumanTech_FrigateEngineering",
+   "Tech_Terran_FrigateEngineering"
+  ],
+  "summary": "Engineer hyperspace-rated frigate hulls capable of frontline duty.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 100,
+   "prerequisites": [
+    "Orbital Manufacturing"
+   ],
+   "effects": [
+    "+2 Ship Range",
+    "+25% Hit Points (Ship)"
+   ],
+   "unlocks": [
+    "Ability: Blitz",
+    "Leader: Director of Military Affairs",
+    "Ship component: Corvette Module",
+    "Ship component: Frigate Module",
+    "Ship component: Siege Module",
+    "Ship hull: Small Hull"
+   ],
+   "tags": "Critical",
+   "description": "New structural alloys, distributed power spines, and reinforced hyperspace frames let Terran shipyards mass-produce frigates that can take a beating while escorting fleets across subspace."
+  }
+ },
+ {
+  "id": "tech:galactic_conglomerates",
+  "name": "Galactic Conglomerates",
+  "aliases": [
+   "HumanTech_GalacticConglomerates",
+   "Tech_Terran_GalacticConglomerates"
+  ],
+  "summary": "Consolidate Terran megacorps into culture-shaping conglomerates.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 300,
+   "prerequisites": [
+    "Metaverstic Gaming"
+   ],
+   "effects": [
+    "+25% Trade Route Value",
+    "+15% Influence Growth (Colony)"
+   ],
+   "unlocks": [
+    "Improvement: Galactic Stock Exchange"
+   ],
+   "description": "Media, trade, and entertainment giants merge into galaxy-spanning conglomerates that control distribution on thousands of worlds. Their products set trends, dictate tastes, and quietly weave Terran influence into daily alien life."
+  }
+ },
+ {
+  "id": "tech:galactic_envoys",
+  "name": "Galactic Envoys",
+  "aliases": [
+   "HumanTech_GalacticEnvoys",
+   "Tech_Terran_GalacticEnvoys"
+  ],
+  "summary": "Field elite envoy teams that raise our standing with every empire.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 300,
+   "prerequisites": [
+    "Alliances"
+   ],
+   "effects": [
+    "+1 Max Enacted Policies"
+   ],
+   "unlocks": [
+    "Executive order: Goodwill Tour",
+    "Improvement: Galactic Commision",
+    "Policy: Articles of the Grand Federation",
+    "Policy: Trade Consortium"
+   ],
+   "description": "Humanity formalizes a corps of veteran diplomats, linguists, and cultural analysts who embed themselves within alien courts. Their mastery of protocol and empathy reframes the Humans as the partner everyone wants, smoothing negotiations and deepening alliances."
+  }
+ },
+ {
+  "id": "tech:gigamass_harvesting",
+  "name": "Gigamass Harvesting",
+  "aliases": [
+   "HumanTech_GigaMass",
+   "Tech_GigaMass"
+  ],
+  "summary": "Allows us to build Harvester ships to collect Gigamass from dead planets.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 375,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Gigamass Theory"
+   ],
+   "unlocks": [
+    "Improvement: Monument Of Cosmic Majesty",
+    "Improvement: Precious Gem Synthesizer",
+    "Ship component: Gigamass Drop Pods",
+    "Ship component: Gigamass Fuel Rod",
+    "Ship component: Gigamass Lining",
+    "Ship component: Gigamass Reinforcement",
+    "Ship component: Harvester Module"
+   ],
+   "tags": "Production",
+   "description": "Gigamass Harvesting technology enables the extraction of valuable resources from lifeless celestial bodies. By deploying specialized Harvester ships, we can efficiently gather Gigamass, a critical component for the construction of advanced megastructures and the enhancement of our technological capabilities."
+  }
+ },
+ {
+  "id": "tech:gigamass_theory",
+  "name": "Gigamass Theory",
+  "aliases": [
+   "Tech_GigaMassTheory",
+   "HumanTech_GigaMassTheory"
+  ],
+  "summary": "Allows us to begin detecting and using naturally occuring hyperdense materials.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 450,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Xeno Resource Extraction"
+   ],
+   "unlocks": [
+    "Improvement: Giga Obelisk",
+    "Improvement: Gigamass Supplies",
+    "Improvement: Synthetic Orbital Habitat",
+    "Ship component: Gigamass Plating",
+    "Starbase module: Precursor Relic Lab"
+   ],
+   "tags": "Production",
+   "description": "Gigamass represents a radical advancement in our understanding of material physics. By theoretically compressing ordinary matter by a factor of one billion, we hypothesize a new state of matter with unique gravitational and energetic properties. Gigamass. Gigamass, in essence, pushes atomic and subatomic particles into an ultra-dense configuration, achievable only under the most extreme cosmic conditions. While practical creation of gigamass remains beyond our current means, our sensors and analysis tools can now identify naturally occurring sources. Detecting gigamass opens the door to potential breakthroughs in energy manipulation, propulsion, and structural materials on a scale previously thought impossible."
+  }
+ },
+ {
+  "id": "tech:glorious_legacy",
+  "name": "Glorious Legacy",
+  "aliases": [
+   "Tech_GloriousLegacy",
+   "HumanTech_GloriousLegacy"
+  ],
+  "summary": "Immortalize every victory to accelerate cultural pressure.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 2750,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Universal Translator"
+   ],
+   "tags": "NonMilitary",
+   "description": "Build a living archive of Terran heroics, awarding instant Culture Points and a scaling influence-per-turn multiplier across all colonies."
+  }
+ },
+ {
+  "id": "tech:greater_anomaly_detection",
+  "name": "Greater Anomaly Detection",
+  "aliases": [
+   "Tech_AnomalyDetection_Extended",
+   "HumanTech_AnomalyDetection_Extended"
+  ],
+  "summary": "Discover new anomalies in the universe.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 50,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Anomaly Detection"
+   ],
+   "unlocks": [
+    "Ship component: Titanic Eye Sensor"
+   ],
+   "description": "The discovery of a fresh anomaly is one of the most exciting and pivotal moments a civilization can experience. We should redouble our efforts to find more of these boons."
+  }
+ },
+ {
+  "id": "tech:habitable_rings",
+  "name": "Habitable Rings",
+  "aliases": [
+   "Tech_Ringworlds",
+   "HumanTech_Ringworlds"
+  ],
+  "summary": "Unlock Ringworld Megastructure .",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 1225,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Advanced Nexus Augments"
+   ],
+   "unlocks": [
+    "Improvement: Artificial Moon",
+    "Improvement: Cosmic Orrery",
+    "Improvement: Habitat Ring",
+    "Improvement: Siege Engine Oil",
+    "Improvement: Solar Farm"
+   ],
+   "tags": "Production",
+   "description": "Habitable Rings are a marvel of engineering, creating vast, livable environments encircling a star. These Ringworlds provide immense living space and resources, supporting large populations and serving as a cornerstone for our civilization's growth and prosperity. Mastering this technology marks a new era in our expansion capabilities."
+  }
+ },
+ {
+  "id": "tech:hyperdense_impactors",
+  "name": "Hyperdense Impactors",
+  "aliases": [
+   "Tech_Terran_HyperdenseImpactors",
+   "HumanTech_HyperdenseImpactors"
+  ],
+  "summary": "Fire hyperdense penetrators that punch through any plating.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 250,
+   "prerequisites": [
+    "Particle Beams"
+   ],
+   "unlocks": [
+    "Ship component: Hyperdense Impactor",
+    "Ship component: Supermass Driver",
+    "Starbase module: Quantum Driver Array"
+   ],
+   "description": "Collapsing exotic matter into dart-sized slugs creates penetrators with ridiculous sectional density. Even glancing hits rip open cruisers, forcing enemies to respect Terran kinetic barrages again."
+  }
+ },
+ {
+  "id": "tech:hyperspace_mastery",
+  "name": "Hyperspace Mastery",
+  "aliases": [
+   "HumanTech_HyperspaceMastery",
+   "Tech_Terran_HyperspaceMastery"
+  ],
+  "summary": "Navigate subspace streams with surgical precision",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 550,
+   "prerequisites": [
+    "Improved Life Support"
+   ],
+   "effects": [
+    "+1 Moves (Ship)"
+   ],
+   "unlocks": [
+    "Ship component: Hyperspace Navigator"
+   ],
+   "description": "Integrate long-range life support, deep-space communications, and subspace cartography to unlock safe, high-speed operations far beyond conventional range."
+  }
+ },
+ {
+  "id": "tech:improved_life_support",
+  "name": "Improved Life Support",
+  "aliases": [
+   "HumanTech_ImprovedLifeSupport",
+   "Tech_Terran_ImprovedLifeSupport"
+  ],
+  "summary": "Enhanced life support systems for extended missions",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 550,
+   "prerequisites": [
+    "Slipstream Drive"
+   ],
+   "unlocks": [
+    "Improvement: Planetary Fleet Command",
+    "Improvement: Upgrade Housing",
+    "Leader: Colonial Secretary"
+   ],
+   "description": "Develop advanced life support systems to sustain crews on extended deep space missions"
+  }
+ },
+ {
+  "id": "tech:individual_divinity",
+  "name": "Individual Divinity",
+  "aliases": [
+   "HumanTech_IndividualDivinity",
+   "Tech_IndividualDivinity"
+  ],
+  "summary": "Empowering citizens to ascend to godhood. Citizens will see their stats increased every month.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 1500,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Universal Translator"
+   ],
+   "effects": [
+    "+1 Moves (Ship)"
+   ],
+   "unlocks": [
+    "Policy: Ideological Beacon"
+   ],
+   "description": "Unlocking the latent potential within every individual, the Individual Divinity technology sets our citizens on a path of continuous evolution and self-improvement. Through spiritual, mental, and physical enhancement protocols, our people grow stronger, wiser, and more attuned to the cosmos each passing day, edging ever closer to a state of divine existence."
+  }
+ },
+ {
+  "id": "tech:industrial_matrix",
+  "name": "Industrial Matrix",
+  "aliases": [
+   "Tech_Terran_IndustrialMatrix",
+   "HumanTech_IndustrialMatrix"
+  ],
+  "summary": "Networked production for compounding efficiency",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 475,
+   "prerequisites": [
+    "Technology Matrix"
+   ],
+   "unlocks": [
+    "Improvement: Industrial Matrix",
+    "Improvement: Mining Hub",
+    "Improvement: Orbital Elerium Extractor",
+    "Improvement: Upgrade Manufacturing",
+    "Starbase module: Industrial Matrix Hub",
+    "Starbase module: Mining Barracks"
+   ],
+   "description": "Establish a galaxy-spanning industrial network that shares designs, capacity, and supply to compound efficiency gains and accelerate strategic output."
+  }
+ },
+ {
+  "id": "tech:innovation",
+  "name": "Innovation",
+  "aliases": [
+   "Tech_Innovation",
+   "HumanTech_Innovation"
+  ],
+  "summary": "Innovation technologies: science, engineering, propulsion, and sensors",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 0,
+   "prerequisites": [
+    "Master Tech Tree"
+   ],
+   "unlocks": [
+    "Leader: Science Advisor"
+   ],
+   "description": "Innovation technologies: science, engineering, propulsion, and sensors"
+  }
+ },
+ {
+  "id": "tech:interstellar_investments",
+  "name": "Interstellar Investments",
+  "aliases": [
+   "HumanTech_InterstellarInvestments",
+   "Tech_InterstellarInvestments"
+  ],
+  "summary": "Advancing galactic-scale investment strategies.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 330,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Interstellar Markets"
+   ],
+   "effects": [
+    "+1 Diplomacy Bonus",
+    "+2 Trade Licenses Max"
+   ],
+   "unlocks": [
+    "Policy: Federal Prosperity Initiative",
+    "Policy: Interstellar Real Estate Trust"
+   ],
+   "tags": "NonMilitary",
+   "description": "The advent of 'Interstellar Investments' marks a significant milestone in our civilization's economic evolution. This technology encapsulates the development of sophisticated investment strategies that transcend planetary boundaries, tapping into the immense potential of a galaxy-wide economy. By leveraging advanced predictive analytics, quantum financial modeling, and decentralized blockchain networks, it allows for secure, efficient, and highly profitable investment opportunities across diverse sectors and star systems. This approach not only boosts our economy but also fosters the growth of nascent industries and emerging markets on frontier worlds, driving innovation and prosperity on a galactic scale. 'Interstellar Investments' isn't just about financial gains; it's about cultivating a thriving, interconnected galactic community where the flow of capital catalyzes progress and unity across countless star systems."
+  }
+ },
+ {
+  "id": "tech:interstellar_markets",
+  "name": "Interstellar Markets",
+  "aliases": [
+   "HumanTech_InterstellarMarkets",
+   "Tech_InterstellarMarkets"
+  ],
+  "summary": "Expansion of trade across to new civilizations.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 330,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Interstellar Trade"
+   ],
+   "effects": [
+    "+2 Trade Licenses Max",
+    "+1 Diplomacy Bonus"
+   ],
+   "unlocks": [
+    "Policy: Federal Economic Authority",
+    "Policy: Sovereign Bond Desk"
+   ],
+   "tags": "NonMilitary",
+   "description": "As our civilization grows, the need to establish robust and efficient trade networks across star systems becomes paramount. 'Interstellar Markets' represents a groundbreaking leap in economic infrastructure, enabling not just the exchange of goods, but also of ideas and innovations across vast distances. This technology lays the foundation for a network of markets that are interconnected through advanced logistics, data analytics, and AI-driven market forecasts, ensuring optimal trade routes and transactions. It allows for real-time adaptation to the dynamic needs of different worlds, promoting unprecedented economic growth and prosperity throughout our star-spanning empire. This technology is not just about commerce; it's about weaving a tapestry of cultural and economic unity across the stars, strengthening the bonds between diverse worlds and peoples."
+  }
+ },
+ {
+  "id": "tech:interstellar_trade",
+  "name": "Interstellar Trade",
+  "aliases": [
+   "HumanTech_InterstellarTrade",
+   "Tech_Terran_InterstellarTrade"
+  ],
+  "summary": "Establish trade networks across the stars",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 125,
+   "prerequisites": [
+    "Xeno Diplomacy"
+   ],
+   "effects": [
+    "+5 Trade Licenses Max",
+    "+1 Max Enacted Policies"
+   ],
+   "unlocks": [
+    "Improvement: Galactic Bazaar",
+    "Improvement: Spice Market",
+    "Improvement: Trade Port",
+    "Improvement: Upgrade Markets",
+    "Leader: Chief Commerce Officer",
+    "Leader: Chief Risk Officer",
+    "Leader: Treasury Secretary",
+    "Policy: Economic Development",
+    "Policy: Foreign Dumping",
+    "Policy: Free Trade",
+    "Policy: Freight Futures Exchange",
+    "Policy: Pan-Galactic Banking Syndicate",
+    "Policy: Unregulated Corporations",
+    "Policy: Wealth Tax",
+    "Starbase module: Starbase Trade Center"
+   ],
+   "description": "Create the infrastructure and protocols necessary for conducting trade between star systems"
+  }
+ },
+ {
+  "id": "tech:kaxx_cryptography",
+  "name": "Kaxx Cryptography",
+  "aliases": [
+   "HumanTech_KaxxCryptography",
+   "Tech_KaxxCryptography"
+  ],
+  "summary": "Adopt the Kaxx cipher stacks to read their clandestine network.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 24,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Civilian"
+   ],
+   "tags": "NonMilitary",
+   "description": "Implement the alien key exchange suite unlocked by events so Terran diplomats and analysts can tap into the Kaxx information web once Communications technology is online."
+  }
+ },
+ {
+  "id": "tech:leadership_recruiting",
+  "name": "Leadership Recruiting",
+  "aliases": [
+   "Tech_LeadershipRecruiting",
+   "HumanTech_LeadershipRecruiting"
+  ],
+  "summary": "Identify and recruit talented leaders",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 75,
+   "prerequisites": [
+    "Universal Translator"
+   ],
+   "effects": [
+    "+1 Max Enacted Policies"
+   ],
+   "unlocks": [
+    "Executive order: Invite Leaders",
+    "Improvement: Governor's Manor",
+    "Policy: Imperial Grip",
+    "Policy: Tax Exemptions"
+   ],
+   "description": "Develop systems to identify, recruit, and train exceptional leaders for our civilization"
+  }
+ },
+ {
+  "id": "tech:manufacturing_evolution",
+  "name": "Manufacturing Evolution",
+  "aliases": [
+   "HumanTech_ManufacturingEvolution",
+   "Tech_Terran_ManufacturingEvolution"
+  ],
+  "summary": "Capstone: Self-optimizing, autonomous industrial ecosystems",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 575,
+   "prerequisites": [
+    "Engineering Mastery"
+   ],
+   "effects": [
+    "+10% Manufacturing (Colony)"
+   ],
+   "unlocks": [
+    "Executive order: Forced Overtime"
+   ],
+   "description": "Capstone : This is a technology that can be repeatedly researched to evolve your knowledge in this area. Unify design, production, and logistics into adaptive systems that evolve with demand, enabling lightspeed iteration and world-spanning, self-healing supply chains."
+  }
+ },
+ {
+  "id": "tech:megapolis",
+  "name": "Megapolis",
+  "aliases": [
+   "Tech_Megapolis",
+   "HumanTech_Megapolis"
+  ],
+  "summary": "Increases the number of citizens that can live on our worlds.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 75,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Colonial Capital Refit"
+   ],
+   "effects": [
+    "+1 Population Cap (Colony)"
+   ],
+   "unlocks": [
+    "Policy: Colonial Development REIT",
+    "Policy: Federal Urbanization Program",
+    "Policy: Urban Planning"
+   ],
+   "tags": "Growth",
+   "description": "In the early stages of planetary colonization, it's natural for our people to spread out, to take advantage of the spaces in front of them. But by a certain point, economic and networking effects necessitate a bit more density. The megapolis is our plan for that."
+  }
+ },
+ {
+  "id": "tech:megastructure_nexi",
+  "name": "Megastructure Nexi",
+  "aliases": [
+   "Tech_StellarNexus",
+   "HumanTech_StellarNexus"
+  ],
+  "summary": "Unlock Stellar Nexus Megastructure . Allows us to build Tier 1 Nexus Augments .",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 1125,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Stellar Architecture"
+   ],
+   "unlocks": [
+    "Ship component: Gigamass Alloy",
+    "Ship component: Gigamass Core",
+    "Ship component: Gigamass Field Anchors",
+    "Ship component: Gigamass Grav-Pulse",
+    "Ship component: Gigamass Manifolds",
+    "Ship component: Gigamass Phase Cards",
+    "Ship component: Gigamass Transport Vehicles",
+    "Starbase module: Blue Nexus: Cosmic Mirror",
+    "Starbase module: Blue Nexus: Proto Spire",
+    "Starbase module: Blue Nexus: Stellar Smithy",
+    "Starbase module: Blue Nexus: Trust Engine",
+    "Starbase module: Purple Nexus: Colossal Market",
+    "Starbase module: Purple Nexus: Cosmic Courthouse",
+    "Starbase module: Purple Nexus: Proto Lens",
+    "Starbase module: Purple Nexus: Stellar Retreat",
+    "Starbase module: Red Nexus: Daybreak Engine",
+    "Starbase module: Red Nexus: Impulse Matrix",
+    "Starbase module: Red Nexus: Orion's Watch",
+    "Starbase module: Red Nexus: Shield Coordinator",
+    "Starbase module: Stellar Nexus",
+    "Starbase module: Yellow Nexus: Core Authority",
+    "Starbase module: Yellow Nexus: Focus Origin",
+    "Starbase module: Yellow Nexus: Nascent Garden",
+    "Starbase module: Yellow Nexus: Stratus Cycler"
+   ],
+   "tags": "Production",
+   "description": "The Stellar Nexus represents a breakthrough in megastructure technology, serving as a central hub for interstellar connectivity and energy distribution. By constructing a Stellar Nexus, we can enhance our strategic capabilities, facilitating the rapid deployment of resources and the seamless integration of advanced technologies across our empire."
+  }
+ },
+ {
+  "id": "tech:metaverstic_gaming",
+  "name": "Metaverstic Gaming",
+  "aliases": [
+   "HumanTech_MetaversticGaming",
+   "Tech_Terran_MetaversticGaming"
+  ],
+  "summary": "Flood the metaverse with immersive Terran entertainment ecosystems.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 250,
+   "prerequisites": [
+    "Xeno Entertainment"
+   ],
+   "unlocks": [
+    "Improvement: Metaverse Node",
+    "Improvement: Metaverse Stadium",
+    "Improvement: Upgrade Entertainment",
+    "Improvement: Virtual World",
+    "Starbase module: Metaverstic Nexus"
+   ],
+   "description": "Advances in neural haptics and subspace streaming spawn a metaverse where billions of aliens live, trade, and play inside Terran-owned platforms. Cultural exports become addictive experiences that gently align foreign citizens with Terran values."
+  }
+ },
+ {
+  "id": "tech:military",
+  "name": "Military",
+  "aliases": [
+   "Tech_Military",
+   "HumanTech_Military"
+  ],
+  "summary": "Military technologies: weapons, defenses, and combat systems",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 0,
+   "prerequisites": [
+    "Master Tech Tree"
+   ],
+   "description": "Military technologies: weapons, defenses, and combat systems"
+  }
+ },
+ {
+  "id": "tech:mithrilarian_insights",
+  "name": "Mithrilarian Insights",
+  "aliases": [
+   "HumanTech_MithrilarianInsights",
+   "Tech_Terran_MithrilarianInsights"
+  ],
+  "summary": "Decode the philosophies of the Mithrilar",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 300,
+   "prerequisites": [
+    "Precursor Legacy"
+   ],
+   "effects": [
+    "+5 Intelligence (Unit)"
+   ],
+   "unlocks": [
+    "Improvement: Shrine of the Mithrilar",
+    "Starbase module: Mithrilarian Archive"
+   ],
+   "description": "Study preserved Mithrilar artifacts and treatises to extract practical doctrines of subtle governance, resilient culture, and meta-engineering principles that shaped their long-lived civilization."
+  }
+ },
+ {
+  "id": "tech:neutron_manipulation",
+  "name": "Neutron Manipulation",
+  "aliases": [
+   "HumanTech_NeutronWeapons",
+   "Tech_NeutronWeapons"
+  ],
+  "summary": "Enables the distortion of subspace reducing enemy targeting abilities.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 75,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Time Dilation Weapons"
+   ],
+   "unlocks": [
+    "Ship component: Neutron Scrambler"
+   ],
+   "tags": "Weapon",
+   "description": "Neutron Manipulation marks a significant leap forward in strategic warfare, utilizing neutron emission to inflict maximum interference on enemy sensor equipment. This precision makes them particularly effective in neutralizing targets where the goal is to get close before striking. If they can't hit you, you can get closer."
+  }
+ },
+ {
+  "id": "tech:neutronium_armor",
+  "name": "Neutronium Armor",
+  "aliases": [
+   "HumanTech_NeutroniumArmor",
+   "Tech_Terran_NeutroniumArmor"
+  ],
+  "summary": "Laminate hull cores with neutronium flechettes for extreme hardness.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 200,
+   "prerequisites": [
+    "Deflector Systems"
+   ],
+   "unlocks": [
+    "Ship component: Graviton Armor",
+    "Ship component: Neutronium Armor",
+    "Starbase module: Kanvium Laminate"
+   ],
+   "description": "Captured neutronium is extruded into micro-spines that reinforce every plate seam. The resulting armor handles rail impacts and thermal wash alike, giving cruisers the staying power of yesterday’s dreadnoughts."
+  }
+ },
+ {
+  "id": "tech:nexus_mastery",
+  "name": "Nexus Mastery",
+  "aliases": [
+   "Tech_NexusMastery",
+   "HumanTech_NexusMastery"
+  ],
+  "summary": "Allows us to build Tier 3 Nexus Augments .",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 1225,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Habitable Rings"
+   ],
+   "unlocks": [
+    "Improvement: Cordiality Enhancers",
+    "Improvement: Warmongers Suite",
+    "Ship component: Gigamass Coils",
+    "Ship component: Gigamass Lens",
+    "Ship component: Gigamass Microchips",
+    "Ship component: Gigamass Rods",
+    "Ship component: Gigamass Shrapnel",
+    "Ship component: Gigamass Spearheads",
+    "Ship component: Gigamass Stabilizers",
+    "Starbase module: Blue Nexus: Allegiance Engine",
+    "Starbase module: Blue Nexus: Cosmic Foundry",
+    "Starbase module: Blue Nexus: Neoteric Spire",
+    "Starbase module: Blue Nexus: Quantum Mirror",
+    "Starbase module: Purple Nexus: Galactic Embassy",
+    "Starbase module: Purple Nexus: Galactic Resort",
+    "Starbase module: Purple Nexus: Megalithic Trade Center",
+    "Starbase module: Purple Nexus: Subspace Lens",
+    "Starbase module: Red Nexus: Acceleration Matrix",
+    "Starbase module: Red Nexus: Eclipse Engine",
+    "Starbase module: Red Nexus: Orion's Eye",
+    "Starbase module: Red Nexus: Stellar Defense Coordinator",
+    "Starbase module: Yellow Nexus: Celestial Cloud Cycler",
+    "Starbase module: Yellow Nexus: Celestial Garden",
+    "Starbase module: Yellow Nexus: Central System Authority",
+    "Starbase module: Yellow Nexus: Focus Generator"
+   ],
+   "tags": "Production",
+   "description": "Nexus Mastery is the culmination of our advancements in megastructure technology, allowing for the construction of Tier 3 Nexus Augments. These augmentations significantly enhance our strategic and logistical capabilities, ensuring our empire remains at the forefront of interstellar innovation and power."
+  }
+ },
+ {
+  "id": "tech:orbital_manufacturing",
+  "name": "Orbital Manufacturing",
+  "aliases": [
+   "Tech_Terran_OrbitalManufacturing",
+   "HumanTech_OrbitalManufacturing"
+  ],
+  "summary": "Establish manufacturing facilities in orbit",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 150,
+   "prerequisites": [
+    "Space Doctrine"
+   ],
+   "effects": [
+    "+4 Logistics",
+    "+1 Starbase Range (Starbase)"
+   ],
+   "unlocks": [
+    "Executive order: Forced Overtime",
+    "Improvement: Orbital Harmony Crystal",
+    "Improvement: Orbital Helios Ore Extractor",
+    "Improvement: Orbital Prometheus Stone Extractor",
+    "Improvement: Orbital Silicate Extractor",
+    "Improvement: Orbital Thulium Extractor",
+    "Improvement: Orbital Xanthium Extractor",
+    "Improvement: Space Port",
+    "Leader: Industry Secretary",
+    "Policy: Crown Works",
+    "Policy: Fleet Leasing Group",
+    "Policy: Imperial Foundries",
+    "Policy: Starship Specifications",
+    "Policy: Titan Industrial Consortium",
+    "Starbase module: Support Field Stabilization"
+   ],
+   "tags": "Critical",
+   "description": "Build manufacturing capabilities in zero-gravity environments for improved production"
+  }
+ },
+ {
+  "id": "tech:particle_beams",
+  "name": "Particle Beams",
+  "aliases": [
+   "HumanTech_ParticleBeams",
+   "Tech_Terran_ParticleBeams"
+  ],
+  "summary": "Arm ships with surgical particle-beam emitters.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 200,
+   "prerequisites": [
+    "Adaptive Seeker Missiles"
+   ],
+   "unlocks": [
+    "Ship component: Particle Beam",
+    "Ship component: Quantum Lance",
+    "Starbase module: Starbase Disruptor Bank"
+   ],
+   "description": "Focused particle streams slice through armor by depositing energy beneath the surface. Compact accelerators allow even escorts to mount devastating precision beams."
+  }
+ },
+ {
+  "id": "tech:phasor_weapons",
+  "name": "Phasor Weapons",
+  "aliases": [
+   "Tech_Terran_PhasorWeapons",
+   "HumanTech_PhasorWeapons"
+  ],
+  "summary": "Phase-tune beam emitters to pass straight through shielding.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 400,
+   "prerequisites": [
+    "Eclipse Warheads"
+   ],
+   "unlocks": [
+    "Ship component: Phasor Weapon",
+    "Ship component: Quantum Disruptor",
+    "Starbase module: Stationary Doom Ray"
+   ],
+   "description": "Phasor arrays oscillate between energy states faster than shields can respond, letting the beam slip inside before dumping its payload. Only the toughest hulls survive a direct phasor sweep."
+  }
+ },
+ {
+  "id": "tech:planetary_invasion",
+  "name": "Planetary Invasion",
+  "aliases": [
+   "Tech_PlanetaryInvasion",
+   "HumanTech_PlanetaryInvasion"
+  ],
+  "summary": "Techniques and technology for invading enemy worlds",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 125,
+   "prerequisites": [
+    "Frigate Engineering"
+   ],
+   "effects": [
+    "+2 Ship Range"
+   ],
+   "unlocks": [
+    "Invasion tactic: Surface Invasions",
+    "Leader: Chief Security Officer",
+    "Policy: Conscription",
+    "Policy: Federal Shipyard Authority",
+    "Policy: Vassal Suppression",
+    "Ship component: Spore Module",
+    "Ship component: Transport Module"
+   ],
+   "tags": "Critical",
+   "description": "Develop the technology and tactics necessary to successfully invade and conquer enemy planets"
+  }
+ },
+ {
+  "id": "tech:planetary_outposts",
+  "name": "Planetary Outposts",
+  "aliases": [
+   "HumanTech_PlanetaryOutposts",
+   "Tech_PlanetaryOutposts"
+  ],
+  "summary": "Unlocks a policy that improves manufacturing on core worlds.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 50,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Xeno Biology"
+   ],
+   "unlocks": [
+    "Policy: Infrastructure Support",
+    "Policy: Planetary Stimulus",
+    "Policy: Refugee Sanctuary Treaty"
+   ],
+   "description": "By establishing outposts in the less accessible corners of our new worlds, we'll be able to make better use of the land available to us."
+  }
+ },
+ {
+  "id": "tech:plasma_weapons",
+  "name": "Plasma Weapons",
+  "aliases": [
+   "Tech_Terran_PlasmaWeapons",
+   "HumanTech_PlasmaWeapons"
+  ],
+  "summary": "Weaponize magnetically bottled plasma streams.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 300,
+   "prerequisites": [
+    "Plasmatic Torpedoes"
+   ],
+   "unlocks": [
+    "Ability: Assassin",
+    "Ship component: Plasma Weapon",
+    "Ship component: Stellar Cannon",
+    "Starbase module: Starbase Plasma Turrets"
+   ],
+   "description": "Dedicated plasma injectors flood enemy hulls with superheated matter that keeps burning long after the initial strike. Plasma batteries finally give Terran fleets brute-force energy weapons to match alien dreadnoughts."
+  }
+ },
+ {
+  "id": "tech:plasmatic_torpedoes",
+  "name": "Plasmatic Torpedoes",
+  "aliases": [
+   "Tech_Terran_PlasmaticTorpedoes",
+   "HumanTech_PlasmaticTorpedoes"
+  ],
+  "summary": "Pack torpedoes with caged plasma that erupts inside targets.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 275,
+   "prerequisites": [
+    "Hyperdense Impactors"
+   ],
+   "unlocks": [
+    "Ship component: Cascade Torpedo",
+    "Ship component: Plasmatic Torpedo",
+    "Starbase module: Photonic Torpedo Array"
+   ],
+   "description": "Containment fields keep weaponized plasma stable until impact, then vent it through armor seams like a cutting torch. Even hardened starbases blister when a plasmatic salvo detonates under their skin."
+  }
+ },
+ {
+  "id": "tech:policy_reforms",
+  "name": "Policy Reforms",
+  "aliases": [
+   "HumanTech_PolicyReforms",
+   "Tech_Terran_PolicyReforms"
+  ],
+  "summary": "Streamline colonial governance through systematic policy improvements",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 100,
+   "prerequisites": [
+    "Cabinet Expansion"
+   ],
+   "effects": [
+    "+1 Max Enacted Policies"
+   ],
+   "unlocks": [
+    "Improvement: Drathian Temple",
+    "Leader: General Counsel",
+    "Policy: Emergency Coalition",
+    "Policy: Fleet Coordination",
+    "Policy: Free Housing",
+    "Policy: Officer Corps",
+    "Policy: Pax Imperialis",
+    "Policy: Security Lights"
+   ],
+   "description": "Establishing comprehensive policy frameworks enables colonial administrations to respond more effectively to local challenges while maintaining consistency across human space."
+  }
+ },
+ {
+  "id": "tech:post_sentience",
+  "name": "Post-Sentience",
+  "aliases": [
+   "Tech_PostSentience",
+   "HumanTech_PostSentience"
+  ],
+  "summary": "Plan for society after our machines achieve self-directed thought.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 2275,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Universal Translator"
+   ],
+   "unlocks": [
+    "Improvement: Augmentation Center",
+    "Leader: The Oracle"
+   ],
+   "tags": "Tech",
+   "description": "Establish post-sentience citizenship, labor, and military protocols so awakened AI work alongside humanity, rewarding the diligent crews that helped them evolve."
+  }
+ },
+ {
+  "id": "tech:precursor_anthropology",
+  "name": "Precursor Anthropology",
+  "aliases": [
+   "Tech_Terran_PrecursorAnthropology",
+   "HumanTech_PrecursorAnthropology"
+  ],
+  "summary": "Model Precursor societies to understand their rise and collapse.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 225,
+   "prerequisites": [
+    "Subfield Sensors"
+   ],
+   "unlocks": [
+    "Improvement: Coordination Temple",
+    "Improvement: Precursor Nanites",
+    "Starbase module: Precursor Relic Extractor",
+    "Starbase module: Surveillance System"
+   ],
+   "description": "Anthropologists combine Precursor artifacts with cultural simulations to reconstruct daily life among the ancients. Their insights reveal which customs seeded innovation and which missteps doomed entire empires."
+  }
+ },
+ {
+  "id": "tech:precursor_archeology",
+  "name": "Precursor Archeology",
+  "aliases": [
+   "HumanTech_PrecursorArcheology",
+   "Tech_PrecursorArcheology"
+  ],
+  "summary": "Study ancient precursor civilizations",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 225,
+   "prerequisites": [
+    "Universal Translator"
+   ],
+   "unlocks": [
+    "Improvement: Orbital Precursor Nanites",
+    "Policy: Cultural Hegemony",
+    "Starbase module: Ancient Studies Center"
+   ],
+   "tags": "Critical",
+   "description": "Develop techniques to discover and study the ruins of ancient precursor civilizations"
+  }
+ },
+ {
+  "id": "tech:precursor_legacy",
+  "name": "Precursor Legacy",
+  "aliases": [
+   "Tech_Terran_PrecursorLegacy",
+   "HumanTech_PrecursorLegacy"
+  ],
+  "summary": "Leverage Precursor wisdom to shape modern Terran policy.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 275,
+   "prerequisites": [
+    "Precursor Anthropology"
+   ],
+   "unlocks": [
+    "Improvement: Precursor Intelligence Monument",
+    "Improvement: Precursor Nanites",
+    "Improvement: Precursor Shrinking Machine",
+    "Starbase module: Advanced Relic Processor"
+   ],
+   "description": "Armed with anthropological insight, Terran leaders cherry-pick the most resilient Precursor doctrines (ethical compacts, engineering canons, and governance safeguards) and adapt them into a new legacy that unites the Alliance."
+  }
+ },
+ {
+  "id": "tech:precursor_studies",
+  "name": "Precursor Studies",
+  "aliases": [
+   "HumanTech_PrecursorStudies",
+   "Tech_PrecursorStudies"
+  ],
+  "summary": "Launch formal programs to decode Precursor languages and records.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 275,
+   "prerequisites": [
+    "Precursor Archeology"
+   ],
+   "unlocks": [
+    "Policy: Cultural Imperialism",
+    "Policy: Grand Charter of Sciences",
+    "Starbase module: Precursor Studies Center"
+   ],
+   "tags": "Critical",
+   "description": "Universal translation breakthroughs let Terran historians re-examine Precursor ruins with fresh eyes. Scholars begin compiling encyclopedias of artifacts, myths, and data cores that anchor every future excavation."
+  }
+ },
+ {
+  "id": "tech:pulsar_interceptors",
+  "name": "Pulsar Interceptors",
+  "aliases": [
+   "HumanTech_PulsarInterceptors",
+   "Tech_Terran_PulsarInterceptors"
+  ],
+  "summary": "Deploy auto-tracking interceptor pods to vaporize inbound threats.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 150,
+   "prerequisites": [
+    "Tritanium Plating"
+   ],
+   "unlocks": [
+    "Ship component: Guardian Grid",
+    "Ship component: Pulsar Interceptor",
+    "Starbase module: Fortification Module"
+   ],
+   "description": "Miniaturized plasma drivers fire rapid pulses that blossom into proximity flak. When slaved to a combat computer, these interceptors create a lethal buffer against missiles, drones, and debris."
+  }
+ },
+ {
+  "id": "tech:quantum_miniaturization",
+  "name": "Quantum Miniaturization",
+  "aliases": [
+   "HumanTech_QuantumMiniaturization",
+   "Tech_Terran_QuantumMiniaturization"
+  ],
+  "summary": "Adopt quantum-scale components to squeeze even more capability onboard.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 525,
+   "prerequisites": [
+    "Carriers"
+   ],
+   "effects": [
+    "+30% Capacity (Ship)"
+   ],
+   "tags": "Critical",
+   "description": "Quantum logic arrays and nano-scale power regulation shrink command suites and shield grids to a fraction of their previous volume, letting capital hulls bristle with new systems."
+  }
+ },
+ {
+  "id": "tech:quantum_mirrors",
+  "name": "Quantum Mirrors",
+  "aliases": [
+   "HumanTech_QuantumMirrors",
+   "Tech_Terran_QuantumMirrors"
+  ],
+  "summary": "Phase-conjugate mirrors for quantum-limited sensing",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 500,
+   "prerequisites": [
+    "Industrial Matrix"
+   ],
+   "unlocks": [
+    "Improvement: Quantum Mirrors",
+    "Starbase module: Quantum Research Array"
+   ],
+   "description": "Implement nonlinear, phase-conjugate \"quantum mirrors\" that time-reverse wavefronts and preserve quantum correlations. These mirrors undo optical aberrations, enable ghost imaging, reduce noise via squeezing, and stabilize high-power beams to improve sensor fidelity and long-range communications across our industrial network."
+  }
+ },
+ {
+  "id": "tech:sentinel_point_defense",
+  "name": "Sentinel Point Defense",
+  "aliases": [
+   "Tech_Terran_SentinelPointDefense",
+   "HumanTech_SentinelPointDefense"
+  ],
+  "summary": "Network smart point-defense turrets for overlapping missile coverage.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 225,
+   "prerequisites": [
+    "Neutronium Armor"
+   ],
+   "unlocks": [
+    "Ship component: Sentinel Matrix",
+    "Ship component: Sentinel Point Defense"
+   ],
+   "description": "Sentinel fire-control links dozens of turrets into a single firing mind. Targets are queued, prioritized, and destroyed before bridge crews even see the alerts, dramatically raising survival odds during saturation strikes."
+  }
+ },
+ {
+  "id": "tech:serrated_munitions",
+  "name": "Serrated Munitions",
+  "aliases": [
+   "HumanTech_UpgradedKinetic",
+   "Tech_UpgradedKinetic"
+  ],
+  "summary": "Quest mass drivers turn railguns into true siege weapons.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 100,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Flux Rail Arrays"
+   ],
+   "effects": [
+    "+10% Kinetic Attack (Ship)"
+   ],
+   "unlocks": [
+    "Policy: Mutual Defense Compact"
+   ],
+   "tags": "Kinetic",
+   "description": "Retrofit sabot loaders and containment coils from the prototype, granting a kinetic attack bonus to all ships."
+  }
+ },
+ {
+  "id": "tech:shield_matrix",
+  "name": "Shield Matrix",
+  "aliases": [
+   "HumanTech_ShieldMatrix",
+   "Tech_Terran_ShieldMatrix"
+  ],
+  "summary": "Layer shield emitters into a shared matrix for stable coverage.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 275,
+   "prerequisites": [
+    "Sentinel Point Defense"
+   ],
+   "unlocks": [
+    "Ship component: Lattice Shield",
+    "Ship component: Shield Matrix",
+    "Starbase module: Force Field Projector"
+   ],
+   "description": "Instead of relying on isolated shield nodes, the matrix architecture blends multiple emitters into a single waveform. When one node is stressed, the others pour energy into the gap, preventing catastrophic failures."
+  }
+ },
+ {
+  "id": "tech:singularity_cannons",
+  "name": "Singularity Cannons",
+  "aliases": [
+   "HumanTech_SingularityCannons",
+   "Tech_Terran_SingularityCannons"
+  ],
+  "summary": "Collapse ordnance into micro-singularities just before launch.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 325,
+   "prerequisites": [
+    "Plasma Weapons"
+   ],
+   "unlocks": [
+    "Ship component: Singularity Cannon",
+    "Ship component: Singularity Projector",
+    "Starbase module: Singularity Drivers"
+   ],
+   "description": "Gravitic pinch generators compress each round into a momentary singularity that detonates inside the target. Armor, shields, and atmosphere all disappear into a hungry point of nothingness."
+  }
+ },
+ {
+  "id": "tech:singularity_power_plant",
+  "name": "Singularity Power Plant",
+  "aliases": [
+   "HumanTech_SingularityPowerPlant",
+   "Tech_Terran_SingularityPowerPlant"
+  ],
+  "summary": "Harness energy from controlled singularities",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 450,
+   "prerequisites": [
+    "Quantum Mirrors"
+   ],
+   "unlocks": [
+    "Improvement: Singularity Powerplant",
+    "Starbase module: Singularity Forge"
+   ],
+   "description": "Develop power plants that harness the immense energy of controlled singularities"
+  }
+ },
+ {
+  "id": "tech:slipstream_drive",
+  "name": "Slipstream Drive",
+  "aliases": [
+   "Tech_Terran_SlipstreamDrive",
+   "HumanTech_SlipstreamDrive"
+  ],
+  "summary": "Advanced FTL propulsion system",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 525,
+   "prerequisites": [
+    "Warp Theory"
+   ],
+   "effects": [
+    "+1 Moves (Ship)"
+   ],
+   "unlocks": [
+    "Improvement: Fleet Command HQ",
+    "Ship component: Slipstream Engine"
+   ],
+   "description": "Develop advanced slipstream drives for superior faster-than-light travel capabilities"
+  }
+ },
+ {
+  "id": "tech:space_doctrine",
+  "name": "Space Doctrine",
+  "aliases": [
+   "HumanTech_SpaceDoctrine",
+   "Tech_Terran_SpaceDoctrine"
+  ],
+  "summary": "Comprehensive military strategy for space warfare",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 100,
+   "prerequisites": [
+    "Space Exploration"
+   ],
+   "effects": [
+    "+2 Logistics"
+   ],
+   "unlocks": [
+    "Ability: Defender",
+    "Ability: Rush",
+    "Executive order: Draft Civilian Ships",
+    "Executive order: Martial Law",
+    "Improvement: Doctrine Academy",
+    "Leader: Defense Secretary",
+    "Policy: Mandatory Service",
+    "Starbase module: Starbase Defense System"
+   ],
+   "description": "Establish comprehensive doctrines and strategies for conducting military operations in space"
+  }
+ },
+ {
+  "id": "tech:space_elevators",
+  "name": "Space Elevators",
+  "aliases": [
+   "Tech_Terran_SpaceElevators",
+   "HumanTech_SpaceElevators"
+  ],
+  "summary": "Build elevators connecting surface to orbit",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 75,
+   "prerequisites": [
+    "Artificial Gravity"
+   ],
+   "unlocks": [
+    "Improvement: Razar's Lift",
+    "Improvement: Space Elevator",
+    "Starbase module: Orbital Tether Network"
+   ],
+   "tags": "Critical",
+   "description": "Construct massive space elevators to efficiently transport materials between planetary surfaces and orbit"
+  }
+ },
+ {
+  "id": "tech:space_exploration",
+  "name": "Space Exploration",
+  "aliases": [
+   "Tech_Terran_SpaceExploration",
+   "HumanTech_ArmedShuttles"
+  ],
+  "summary": "Makes the Discovery Module available for exploration and survey operations",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 30,
+   "prerequisites": [
+    "Military"
+   ],
+   "effects": [
+    "+2 Ship Range"
+   ],
+   "unlocks": [
+    "Ability: Giant Slayer",
+    "Policy: Shipyard Stimulus",
+    "Ship component: Discovery Module",
+    "Ship component: Elerium Laser",
+    "Ship component: Heavy Laser",
+    "Starbase module: Perimeter Scanners"
+   ],
+   "description": "Develop the Discovery Module to enable deep space exploration and survey operations"
+  }
+ },
+ {
+  "id": "tech:spectrum_amplification",
+  "name": "Spectrum Amplification",
+  "aliases": [
+   "HumanTech_UpgradedLasers",
+   "Tech_UpgradedLasers"
+  ],
+  "summary": "Quest-grade emitters refit every beam battery with better focus.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 100,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Particle Beams"
+   ],
+   "effects": [
+    "+10% Beam Attack (Ship)"
+   ],
+   "tags": "Beam",
+   "description": "Integrate the recovered prototype laser assemblies to grant a permanent beam attack bonus across the fleet."
+  }
+ },
+ {
+  "id": "tech:starbases",
+  "name": "Starbases",
+  "aliases": [
+   "Tech_Starbases",
+   "HumanTech_Starbases"
+  ],
+  "summary": "Construct permanent space stations",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 300,
+   "prerequisites": [
+    "Xeno Utilization Doctrine"
+   ],
+   "unlocks": [
+    "Policy: Anti-Piracy Compact",
+    "Ship component: Constructor Module",
+    "Ship component: Efficient Constructor Module",
+    "Starbase module: Starbase Factory"
+   ],
+   "description": "Build permanent space stations to serve as military, economic, and research outposts"
+  }
+ },
+ {
+  "id": "tech:stellar_architecture",
+  "name": "Stellar Architecture",
+  "aliases": [
+   "Tech_DysonSpheres",
+   "HumanTech_DysonSpheres"
+  ],
+  "summary": "Allows us to build Stellar Architect ships used construct Megastructures . Unlock Dyson Sphere Megastructure.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 1100,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Gigamass Harvesting"
+   ],
+   "unlocks": [
+    "Improvement: Ironside Resonance Emitter",
+    "Improvement: Last Hope Protocol",
+    "Improvement: Preventative Maintenance",
+    "Ship component: Megastructure Architect Module"
+   ],
+   "tags": "Production",
+   "description": "Stellar Architecture is the pinnacle of engineering, allowing for the creation of monumental structures such as Dyson Spheres. These constructs harness the energy of stars, providing virtually limitless power and transforming the fabric of our civilization. Mastery of this technology is a testament to our ingenuity and ambition."
+  }
+ },
+ {
+  "id": "tech:subfield_sensors",
+  "name": "Subfield Sensors",
+  "aliases": [
+   "HumanTech_SubfieldSensors",
+   "Tech_Terran_SubfieldSensors"
+  ],
+  "summary": "Reveal new anomalies and Precursor relics",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 300,
+   "prerequisites": [
+    "Precursor Studies"
+   ],
+   "effects": [
+    "+1 Sensor Range (Ship)"
+   ],
+   "unlocks": [
+    "Ship component: Advanced Sensor Array",
+    "Starbase module: Sector Scanners"
+   ],
+   "description": "Employ tuned sensor arrays to probe subspace subfields, exposing fresh anomalies and uncovering hidden Precursor artifacts across known space."
+  }
+ },
+ {
+  "id": "tech:subspace_scanning",
+  "name": "Subspace Scanning",
+  "aliases": [
+   "Tech_SubspaceScanning",
+   "HumanTech_SubspaceScanning"
+  ],
+  "summary": "Scan through subspace for distant objects",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 150,
+   "prerequisites": [
+    "Artificial Gravity"
+   ],
+   "effects": [
+    "+2 Ship Range",
+    "+1 Moves (Ship)",
+    "+4 Logistics",
+    "+2 Sensor Range (Ship)"
+   ],
+   "unlocks": [
+    "Improvement: Eyes of the Universe",
+    "Improvement: Precursor Relic Scanner",
+    "Leader: Optimization Director",
+    "Policy: Galactic Library Pact",
+    "Ship component: Promethion Drive",
+    "Ship component: Subspace Sensor"
+   ],
+   "tags": "Critical",
+   "description": "Develop sensors capable of scanning through subspace to detect distant objects and phenomena"
+  }
+ },
+ {
+  "id": "tech:subspace_streaming",
+  "name": "Subspace Streaming",
+  "aliases": [
+   "Tech_SubspaceStreaming",
+   "HumanTech_SubspaceStreaming"
+  ],
+  "summary": "Stream data through subspace channels",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 175,
+   "prerequisites": [
+    "Subspace Scanning"
+   ],
+   "effects": [
+    "+8 Ship Range",
+    "+1 Moves (Ship)",
+    "+4 Logistics"
+   ],
+   "unlocks": [
+    "Leader: Cultural Algorithmist",
+    "Policy: Free Press Charter",
+    "Ship component: Deep Space Sensor"
+   ],
+   "tags": "Critical",
+   "description": "Develop technology to transmit data through subspace for instant communication across vast distances"
+  }
+ },
+ {
+  "id": "tech:synthetic_antibodies",
+  "name": "Synthetic Antibodies",
+  "aliases": [
+   "Tech_PlagueCure",
+   "HumanTech_PlagueCure"
+  ],
+  "summary": "Brew the antidote that ends the galactic plague storyline.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 325,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Xeno Biology"
+   ],
+   "description": "Manufacture the cure, flag the quest as resolved, scrub the growth penalty status effect, and clear the faction plague counter."
+  }
+ },
+ {
+  "id": "tech:systems_miniaturization",
+  "name": "Systems Miniaturization",
+  "aliases": [
+   "HumanTech_SystemsMiniaturization",
+   "Tech_Terran_SystemsMiniaturization"
+  ],
+  "summary": "Shrink drive, life-support, and fire-control modules to free hull space.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 275,
+   "prerequisites": [
+    "Battle Cruiser Doctrine"
+   ],
+   "effects": [
+    "+15% Capacity (Ship)",
+    "+25% Hit Points (Ship)"
+   ],
+   "unlocks": [
+    "Ability: Skirmisher"
+   ],
+   "tags": "Critical",
+   "description": "Advanced fabrication techniques compress the footprint of every major subsystem, letting designers cram more weapons, armor, and utility modules onto each chassis without sacrificing redundancy."
+  }
+ },
+ {
+  "id": "tech:technological_singularity",
+  "name": "Technological Singularity",
+  "aliases": [
+   "Tech_TechnologicalSingularity",
+   "HumanTech_TechnologicalSingularity"
+  ],
+  "summary": "Stabilize a singularity event into a repeatable research surge.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 2475,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Universal Translator"
+   ],
+   "effects": [
+    "+10% Research"
+   ],
+   "tags": "Tech",
+   "description": "Capture runaway automation breakthroughs, doubling down on capital-world research while giving every lab a stacking efficiency boost."
+  }
+ },
+ {
+  "id": "tech:technology_ascendancy",
+  "name": "Technology Ascendancy",
+  "aliases": [
+   "Tech_Terran_TechnologyAscendancy",
+   "HumanTech_TechnologyAscendancy"
+  ],
+  "summary": "Capstone: Command of frontier sciences and systems",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 600,
+   "prerequisites": [
+    "Engineering Mastery"
+   ],
+   "effects": [
+    "+10% Hit Points (Ship)"
+   ],
+   "unlocks": [
+    "Improvement: Augmentation Center",
+    "Improvement: Bob",
+    "Improvement: Cordiality Enhancers",
+    "Improvement: Kazar's Mainframe",
+    "Improvement: Warmongers Suite"
+   ],
+   "description": "Capstone : This is a technology that can be repeatedly researched to evolve your knowledge in this area. Institutionalize breakthrough pipelines and cross-discipline synthesis so each discovery accelerates the next, cementing our lead at the limits of science."
+  }
+ },
+ {
+  "id": "tech:technology_matrix",
+  "name": "Technology Matrix",
+  "aliases": [
+   "HumanTech_TechnologyMatrix",
+   "Tech_Terran_TechnologyMatrix"
+  ],
+  "summary": "Coordinate labs and factories for breakthrough output",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 225,
+   "prerequisites": [
+    "Xeno Manufacturing"
+   ],
+   "effects": [
+    "+2 Ship Range"
+   ],
+   "unlocks": [
+    "Improvement: AI Overseer",
+    "Improvement: Aid Research",
+    "Improvement: Silicate Traders",
+    "Improvement: Technological Capital",
+    "Improvement: Technology Matrix",
+    "Improvement: Upgrade Research",
+    "Starbase module: Techapod Mining Unit",
+    "Starbase module: Technology Matrix Node",
+    "Starbase module: Thulium Sensor Array",
+    "Starbase module: Zero G Scaling"
+   ],
+   "description": "Implement a cross-planet framework that integrates research, production, and logistics to accelerate prototypes into scalable manufacturing across our worlds."
+  }
+ },
+ {
+  "id": "tech:terraforming",
+  "name": "Terraforming",
+  "aliases": [
+   "Tech_Terran_Terraforming",
+   "HumanTech_Terraforming"
+  ],
+  "summary": "Reshape planets for colonization",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 125,
+   "prerequisites": [
+    "Extreme Colonization"
+   ],
+   "unlocks": [
+    "Improvement: Advanced Arnor Spice Farm",
+    "Improvement: Advanced Artocarpus Farm",
+    "Improvement: Advanced Aurorus Arboretum Farm",
+    "Improvement: Advanced Epimetheus Farm",
+    "Improvement: Advanced Monsatium Deposit Refinery",
+    "Improvement: Advanced Snuggler Farm",
+    "Improvement: Advanced Techapod Hive Farm",
+    "Improvement: Artificial Moon",
+    "Improvement: Cosmic Orrery",
+    "Improvement: Habitat Ring",
+    "Improvement: Seafloor Elevator",
+    "Improvement: Siege Engine Oil",
+    "Improvement: Solar Farm",
+    "Improvement: Upgrade Agriculture"
+   ],
+   "tags": "Critical",
+   "description": "Master the ability to reshape planetary environments to make them suitable for colonization"
+  }
+ },
+ {
+  "id": "tech:terror_stars",
+  "name": "Terror Stars",
+  "aliases": [
+   "HumanTech_TerrorStars",
+   "Tech_TerrorStars"
+  ],
+  "summary": "Allows us to construct Terror Stars. Time for some cosmic horror.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 1500,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Orbital Manufacturing"
+   ],
+   "unlocks": [
+    "Starbase module: Terror Star Command",
+    "Starbase module: Terror Star Death Beam",
+    "Starbase module: Terror Star Foundation",
+    "Starbase module: Terror Star Propulsion",
+    "Starbase module: Terror Star Storage"
+   ],
+   "tags": "Defense",
+   "description": "A superweapon of unparalleled might. Firing it at a star summons the wrath of a supernova, obliterating all that resides within the fragile embrace of a solar system. It leaves naught but the echoes of a once vibrant existence."
+  }
+ },
+ {
+  "id": "tech:time_dilation_weapons",
+  "name": "Time Dilation Weapons",
+  "aliases": [
+   "Tech_TimeDilationWeapons",
+   "HumanTech_TimeDilationWeapons"
+  ],
+  "summary": "Warping time to dominate battles.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 75,
+   "age": "Age Of Expansion",
+   "prerequisites": [
+    "Cloaking Devices"
+   ],
+   "unlocks": [
+    "Ship component: Time Dilator"
+   ],
+   "tags": "Weapon",
+   "description": "Time Dilation Weapons leverage the manipulation of time to disorient and neutralize opponents. By creating localized fields where time flows at a dramatically altered rate, these weapons can effectively incapacitate enemy forces, equipment, and defenses, providing a significant advantage in any conflict scenario."
+  }
+ },
+ {
+  "id": "tech:tritanium_plating",
+  "name": "Tritanium Plating",
+  "aliases": [
+   "Tech_Terran_TritaniumPlating",
+   "HumanTech_TritaniumPlating"
+  ],
+  "summary": "Forge tritanium-alloy hull plates to toughen baseline armor.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 95,
+   "prerequisites": [
+    "Defensive Studies"
+   ],
+   "unlocks": [
+    "Ability: Fortress",
+    "Ship component: Duranium Plating",
+    "Ship component: Tritanium Armor",
+    "Starbase module: Durantium Composite"
+   ],
+   "tags": "Critical",
+   "description": "Shipwrights weave tritanium fibers into standard hull frames, delivering an immediate boost to armor mass without crippling launch schedules. The alloy’s self-healing lattice shrugs off glancing hits that would previously scar a ship for life."
+  }
+ },
+ {
+  "id": "tech:universal_translator",
+  "name": "Universal Translator",
+  "aliases": [
+   "TranslatorTech",
+   "HumanTech_UniversalTranslator"
+  ],
+  "summary": "Advanced translation systems for alien communication",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 100,
+   "prerequisites": [
+    "Colonial Policies"
+   ],
+   "effects": [
+    "+3 Trade Licenses Max",
+    "+1 Max Enacted Policies"
+   ],
+   "unlocks": [
+    "Improvement: Cultural District",
+    "Improvement: Financial District",
+    "Improvement: Harmonious Antennae",
+    "Improvement: Heritage Center",
+    "Improvement: Prismatic Learning Matrix",
+    "Policy: Ambassadorial Privilege",
+    "Policy: Export Food",
+    "Policy: Sentient Rights Accord",
+    "Ship component: Cargo Module",
+    "Starbase module: Cultural Awareness Center"
+   ],
+   "tags": "UniversalTranslator",
+   "description": "Develop sophisticated translation technology to facilitate communication with alien species"
+  }
+ },
+ {
+  "id": "tech:warp_theory",
+  "name": "Warp Theory",
+  "aliases": [
+   "Tech_Terran_WarpTheory",
+   "HumanTech_WarpTheory"
+  ],
+  "summary": "Theoretical foundation for faster-than-light travel",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 500,
+   "prerequisites": [
+    "Subspace Streaming"
+   ],
+   "effects": [
+    "+1 Moves (Ship)",
+    "+8 Ship Range"
+   ],
+   "unlocks": [
+    "Policy: Infrastructure Support",
+    "Ship component: Warp Field Generator"
+   ],
+   "description": "Develop the theoretical framework for warping spacetime to achieve faster-than-light travel"
+  }
+ },
+ {
+  "id": "tech:weapon_systems",
+  "name": "Weapon Systems",
+  "aliases": [
+   "Tech_WeaponSystems",
+   "HumanTech_WeaponSystems"
+  ],
+  "summary": "Advanced integrated weapon systems",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 125,
+   "prerequisites": [
+    "Space Doctrine"
+   ],
+   "unlocks": [
+    "Ability: Hunter",
+    "Leader: Director of Armaments",
+    "Policy: Conscription Quota",
+    "Ship component: Ion Cannon",
+    "Ship component: Targeting Computer"
+   ],
+   "tags": "Critical",
+   "description": "Develop sophisticated integrated weapon platforms for superior combat effectiveness"
+  }
+ },
+ {
+  "id": "tech:weapons_master",
+  "name": "Weapons Master",
+  "aliases": [
+   "HumanTech_WeaponsMaster",
+   "Tech_Terran_WeaponsMaster"
+  ],
+  "summary": "Capstone: Master all weapons systems for maximum efficiency",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 500,
+   "prerequisites": [
+    "Phasor Weapons"
+   ],
+   "effects": [
+    "+5% Beam Attack (Ship)",
+    "+5% Kinetic Attack (Ship)",
+    "+5% Missile Attack (Ship)"
+   ],
+   "description": "Capstone : This is a technology that can be repeatedly researched to evolve your knowledge in this area. Integrate targeting algorithms, power distribution optimization, and weapons coordination across all combat systems to achieve superior offensive capability with beam, kinetic, and missile weapons."
+  }
+ },
+ {
+  "id": "tech:world_shaping",
+  "name": "World Shaping",
+  "aliases": [
+   "Tech_Terran_WorldShaping",
+   "HumanTech_WorldShaping"
+  ],
+  "summary": "Terraform to unlock additional usable tiles",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 200,
+   "prerequisites": [
+    "Exotic World Colonization"
+   ],
+   "unlocks": [
+    "Improvement: Continental Sculptor",
+    "Improvement: Environmental Control Station",
+    "Policy: Planetary Stimulus",
+    "Policy: Strategic Reserves"
+   ],
+   "description": "Advanced terraforming techniques that stabilize microclimates, reclaim marginal terrain, and prepare worlds for large-scale habitation, opening new tiles for development."
+  }
+ },
+ {
+  "id": "tech:xeno_biology",
+  "name": "Xeno Biology",
+  "aliases": [
+   "HumanTech_XenoBiology",
+   "Tech_Terran_XenoBiology"
+  ],
+  "summary": "Study alien life forms and ecosystems",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 50,
+   "prerequisites": [
+    "Xeno Utilization Doctrine"
+   ],
+   "unlocks": [
+    "Improvement: Arnor Spice Farm",
+    "Improvement: Artocarpus Farm",
+    "Improvement: Atmospheric Purifier",
+    "Improvement: Aurorus Arboretum Farm",
+    "Improvement: Epimetheus Farm",
+    "Improvement: Kimberly's Refuge",
+    "Improvement: Medical Center",
+    "Improvement: Monsatium Deposit Refinery",
+    "Improvement: Snuggler Farm",
+    "Improvement: Techapod Farm",
+    "Improvement: Upgrade Agriculture",
+    "Improvement: Upgrade Housing",
+    "Improvement: Xenobiology Station",
+    "Leader: Surgeon General",
+    "Policy: Genetic Manipulation",
+    "Policy: Helix Pharmaceutical Cartel",
+    "Policy: Protect the Planet"
+   ],
+   "description": "Research and understand the biology of alien life forms and their ecosystems"
+  }
+ },
+ {
+  "id": "tech:xeno_broadcasting",
+  "name": "Xeno Broadcasting",
+  "aliases": [
+   "HumanTech_XenoBroadcasting",
+   "Tech_Terran_XenoBroadcasting"
+  ],
+  "summary": "Establish cultural broadcast networks to project our values across the galaxy.",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 250,
+   "prerequisites": [
+    "Cultural Influence"
+   ],
+   "unlocks": [
+    "Improvement: Beacon of Babylon",
+    "Improvement: Subspace Trading Hub",
+    "Improvement: Upgrade Markets",
+    "Policy: Royal Charter",
+    "Starbase module: Cultural Broadcast Array"
+   ],
+   "description": "By establishing sophisticated cultural broadcast networks, we can project our civilization's values and ideals across vast distances. This technology enables us to construct starbase modules that amplify our cultural influence throughout neighboring systems."
+  }
+ },
+ {
+  "id": "tech:xeno_diplomacy",
+  "name": "Xeno Diplomacy",
+  "aliases": [
+   "HumanTech_Diplomacy",
+   "Tech_Terran_Diplomacy"
+  ],
+  "summary": "Formalize diplomatic relations with other civilizations",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 175,
+   "prerequisites": [
+    "Leadership Recruiting"
+   ],
+   "effects": [
+    "+3 Diplomacy Bonus",
+    "+1 Max Enacted Policies"
+   ],
+   "unlocks": [
+    "Executive order: Goodwill Tour",
+    "Improvement: Diplomatic Corps",
+    "Improvement: Orbital Embassy",
+    "Improvement: Temple of Whispers",
+    "Policy: Court Patronage",
+    "Policy: Galactic Mandate",
+    "Policy: The Federation Senate",
+    "Policy: Xeno Integration",
+    "Starbase module: Starbase Embassy"
+   ],
+   "description": "Establish formal diplomatic protocols and institutions for managing relations with alien civilizations"
+  }
+ },
+ {
+  "id": "tech:xeno_entertainment",
+  "name": "Xeno Entertainment",
+  "aliases": [
+   "HumanTech_XenoEntertainment",
+   "Tech_Terran_XenoEntertainment"
+  ],
+  "summary": "Create entertainment appealing to alien cultures",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 225,
+   "prerequisites": [
+    "Xeno Broadcasting"
+   ],
+   "unlocks": [
+    "Executive order: Galactic Festival",
+    "Improvement: Upgrade Entertainment",
+    "Leader: Commerce Secretary",
+    "Policy: Consumer Media Trust",
+    "Policy: Cultural Exhibition",
+    "Policy: Free Media",
+    "Policy: Orbital Luxury Resort",
+    "Starbase module: Entertainment Hub"
+   ],
+   "description": "Develop entertainment and media designed to appeal to diverse alien species"
+  }
+ },
+ {
+  "id": "tech:xeno_manufacturing",
+  "name": "Xeno Manufacturing",
+  "aliases": [
+   "Tech_Terran_XenoManufacturing",
+   "HumanTech_XenoManufacturing"
+  ],
+  "summary": "Advanced alien manufacturing techniques",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 150,
+   "prerequisites": [
+    "Discovery Protocols"
+   ],
+   "unlocks": [
+    "Improvement: Ore Traders",
+    "Improvement: Upgrade Manufacturing",
+    "Improvement: Xeno Manufacturing Hub",
+    "Leader: Chief Architect",
+    "Leader: Director of Industrial Assets",
+    "Policy: Federal Industrial Compact",
+    "Policy: Industrial Automation Fund",
+    "Starbase module: Exploration Support System",
+    "Starbase module: Xeno Manufacturing Facility"
+   ],
+   "description": "Integrate advanced alien manufacturing techniques to revolutionize our production capabilities"
+  }
+ },
+ {
+  "id": "tech:xeno_resource_extraction",
+  "name": "Xeno Resource Extraction",
+  "aliases": [
+   "HumanTech_XenoResourceExtraction",
+   "Tech_XenoResourceExtraction"
+  ],
+  "summary": "Refine and process exotic materials at scale",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 225,
+   "prerequisites": [
+    "Xeno Resource Mining"
+   ],
+   "unlocks": [
+    "Improvement: Advanced Elerium Mine",
+    "Improvement: Advanced Harmony Crystal Mine",
+    "Improvement: Advanced Helios Mine",
+    "Improvement: Advanced Prometheus Mine",
+    "Improvement: Advanced Silicate Mine",
+    "Improvement: Advanced Thulium Mine",
+    "Improvement: Advanced Xanthium Mine"
+   ],
+   "description": "Develop containment, refinement, and conversion chains for hazardous alien inputs to unlock advanced alloys, catalysts, and energy sources."
+  }
+ },
+ {
+  "id": "tech:xeno_resource_mining",
+  "name": "Xeno Resource Mining",
+  "aliases": [
+   "HumanTech_XenoResourceMining",
+   "Tech_XenoResourceMining"
+  ],
+  "summary": "Prospect and mine exotic alien deposits",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 175,
+   "prerequisites": [
+    "Asteroid Mining"
+   ],
+   "effects": [
+    "+0.25 Raw Production (Asteroid)"
+   ],
+   "unlocks": [
+    "Improvement: Crystallized Elerium Mine",
+    "Improvement: Harmony Crystal Mine",
+    "Improvement: Helios Mine",
+    "Improvement: Prometheus Stone Mine",
+    "Improvement: Silicate Mine",
+    "Improvement: Thulium Mine",
+    "Improvement: Xanthium Mine",
+    "Policy: Xeno-Resource Holdings"
+   ],
+   "description": "Field survey and extraction methods tailored to non-terran compositions, safely tapping volatile and valuable xeno resources."
+  }
+ },
+ {
+  "id": "tech:xeno_treaties",
+  "name": "Xeno Treaties",
+  "aliases": [
+   "Tech_Terran_TradePacts",
+   "HumanTech_TradePacts"
+  ],
+  "summary": "Negotiate beneficial trade agreements",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 200,
+   "prerequisites": [
+    "Executive Prerogative"
+   ],
+   "effects": [
+    "+2 Ship Range"
+   ],
+   "description": "Develop the ability to negotiate and maintain formal trade pacts with other civilizations"
+  }
+ },
+ {
+  "id": "tech:xeno_utilization_doctrine",
+  "name": "Xeno Utilization Doctrine",
+  "aliases": [
+   "HumanTech_XenoUtilizationDoctrine",
+   "Tech_Terran_XenoUtilizationDoctrine"
+  ],
+  "summary": "Systematize utilization of alien worlds",
+  "fields": {
+   "tree": "HumanTechTree",
+   "cost": 65,
+   "prerequisites": [
+    "Artificial Gravity"
+   ],
+   "unlocks": [
+    "Improvement: Gravity Laboratory",
+    "Improvement: Housing District",
+    "Improvement: Orbital Artocarpus Collector",
+    "Improvement: Orbital Aurorus",
+    "Improvement: Orbital Monsatium",
+    "Improvement: Orbital Pollen Collector",
+    "Improvement: Orbital Snuggler Shelter",
+    "Improvement: Orbital Spice Harvester",
+    "Improvement: Orbital Techapod Hatchery",
+    "Improvement: Scavengers",
+    "Improvement: Xeno Harmonics Lab",
+    "Starbase module: Orbital Trade Center",
+    "Starbase module: Xeno Research Institute"
+   ],
+   "description": "Develop a comprehensive doctrine for effectively utilizing alien planetary environments, optimizing infrastructure, workforce adaptation, and resource extraction across diverse biomes."
+  }
+ }
+]

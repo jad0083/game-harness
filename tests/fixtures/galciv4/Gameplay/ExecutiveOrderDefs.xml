@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ExecutiveOrderList>
+  <ExecutiveOrder>
+    <InternalName>EO_DraftColonists</InternalName>
+    <ArtifactPowerDef>DraftColonists</ArtifactPowerDef>
+    <ControlCost>33</ControlCost>
+    <CreditsCost>0</CreditsCost>
+    <CooldownTurns>12</CooldownTurns>
+    <Target>Player</Target>
+    <Preclusions>
+      <RaceTrait><Option>SlaversAbility</Option></RaceTrait>
+    </Preclusions>
+    <Prerequ>
+      <Techs><Option>Tech_ColonialPolicies</Option></Techs>
+    </Prerequ>
+  </ExecutiveOrder>
+  <ExecutiveOrder>
+    <InternalName>EO_DraftColonists_TutorialVariant</InternalName>
+    <ArtifactPowerDef>DraftColonists</ArtifactPowerDef>
+    <ControlCost>15</ControlCost>
+    <CooldownTurns>4</CooldownTurns>
+  </ExecutiveOrder>
+  <ExecutiveOrder>
+    <InternalName>EO_Synth_DraftColonists</InternalName>
+    <ArtifactPowerDef>DraftColonists</ArtifactPowerDef>
+    <ControlCost>99</ControlCost>
+    <CooldownTurns>1</CooldownTurns>
+  </ExecutiveOrder>
+</ExecutiveOrderList>
