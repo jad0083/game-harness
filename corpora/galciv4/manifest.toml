@@ -10,10 +10,11 @@ native_resolution = [3840, 2160]
 downscaled_resolution = [1568, 882]
 
 [hotkeys]
+# Provenance: "verified" = confirmed in play (see PLAYING.md); everything else is unverified.
 # Turn & Global Navigation
-next_action = "tab"
-end_turn = "tab"  # verified 2026-09-25: turn button tooltip "Press Tab to advance to next turn"; with pending actions TAB opens the next one instead
-cancel = "esc"
+next_action = "tab"   # verified: selects the next pending item (idle ship, empty queue, policy slot)
+end_turn = "tab"      # verified: turn button "Press Tab to advance to next turn" when nothing is pending
+cancel = "esc"        # verified: closes an open panel; on the bare map it OPENS the pause menu
 confirm_yes = "y"
 confirm_no = "n"
 homeworld = "h"
@@ -22,11 +23,10 @@ toggle_grid = "g"
 toggle_chat = "t"
 console = "`"
 
-# Ship & Unit Commands
-skip_turn = "space"
-sleep_ship = "f"
-auto_explore = "e"
-auto_colonize = "c"
+# Ship & Unit Commands (hotkeys shown in each action button's tooltip)
+standby = "j"         # verified: "Standby — remain here, skipping its turns"
+explore = "o"         # verified: "Explore — will attempt to clear the fog of war" (probes, survey ships)
+auto_colonize = "c"   # verified: colony ship "Auto Colonize"
 upgrade_ship = "u"
 rush_buy = "r"
 decommission = "delete"
@@ -143,9 +143,9 @@ actions = [
 ]
 
 [macros.auto_scout_cycle]
-description = "Cycle through survey flagships and assign auto-explore"
+description = "Select the next idle ship and order it to explore (for probes and survey ships)"
 actions = [
     { type = "key", key = "tab" },
-    { type = "wait", ms = 80 },
-    { type = "key", key = "e" },
+    { type = "wait", ms = 300 },
+    { type = "key", key = "o" },
 ]

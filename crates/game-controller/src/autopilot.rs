@@ -4,16 +4,19 @@
 
 use crate::client::AgentClient;
 use crate::imaging::{
-    crop_region, decode_rgb, detect_change_bbox, region_diff, region_mean_luminance, roi_from_norm, View,
-    DEFAULT_MODAL_ROI, MAX_SIDE,
+    crop_region, decode_rgb, detect_change_bbox, region_diff_max_strip, region_mean_luminance, roi_from_norm,
+    View, DEFAULT_MODAL_ROI, MAX_SIDE,
 };
 use anyhow::Result;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
-/// Mean-abs-diff (0..1) above which the turn indicator counts as changed.
+/// Max-strip luminance difference (0..1) above which the turn indicator counts as changed.
+/// Real frames: same date <= 0.003, one or two changed glyphs ~0.10.
 pub const TURN_CHANGE_THRESHOLD: f64 = 0.03;
+/// Strip width in frame pixels, about one glyph of the date readout at 1568x882.
+pub const TURN_STRIP_W: u32 = 6;
 const DEFAULT_MODAL_THRESHOLD: f64 = 22.0;
 
 #[derive(Debug, Clone)]
@@ -54,7 +57,7 @@ pub fn classify_turn(before: &[u8], after: &[u8], check: &TurnCheck) -> Result<T
         return Ok(TurnVerdict::Advanced { verified: false, indicator_diff: None });
     };
     let before_img = decode_rgb(before)?;
-    let diff = region_diff(&before_img, &after_img, roi);
+    let diff = region_diff_max_strip(&before_img, &after_img, roi, TURN_STRIP_W);
     if diff >= check.turn_threshold {
         Ok(TurnVerdict::Advanced { verified: true, indicator_diff: Some(diff) })
     } else {
@@ -213,7 +216,7 @@ impl Autopilot {
             let img = decode_rgb(&frame)?;
             let dimmed = region_mean_luminance(&img, check.modal_roi) < check.modal_threshold;
             let changed = match check.turn_roi {
-                Some(roi) => region_diff(&before_img, &img, roi) >= check.turn_threshold,
+                Some(roi) => region_diff_max_strip(&before_img, &img, roi, TURN_STRIP_W) >= check.turn_threshold,
                 None => true,
             };
             if dimmed || changed {

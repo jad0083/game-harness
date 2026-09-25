@@ -177,6 +177,31 @@ pub fn region_diff(a: &RgbImage, b: &RgbImage, roi: Roi) -> f64 {
     sum as f64 / (rw as f64 * rh as f64 * 3.0 * 255.0)
 }
 
+/// Largest mean luminance difference (0..1) over any `strip_w`-pixel-wide vertical strip of
+/// `roi`. Sized to one glyph, so a single changed character in a text readout scores as high
+/// as a whole-string change, while JPEG noise stays near 0.
+///
+/// Measured on real GC4 frames (date readout, 78x25 px): identical dates <= 0.003;
+/// "Apr 2" -> "Aug 2" = 0.101 (the whole-box mean was only 0.028).
+pub fn region_diff_max_strip(a: &RgbImage, b: &RgbImage, roi: Roi, strip_w: u32) -> f64 {
+    let w = a.width().min(b.width());
+    let h = a.height().min(b.height());
+    let [x0, y0, rw, rh] = clamp_roi(roi, w, h);
+    let lum = |p: &Rgb<u8>| 0.299 * p[0] as f64 + 0.587 * p[1] as f64 + 0.114 * p[2] as f64;
+    // Per-column sums of |luminance difference|, then a sliding window over columns.
+    let cols: Vec<f64> = (x0..x0 + rw)
+        .map(|x| (y0..y0 + rh).map(|y| (lum(a.get_pixel(x, y)) - lum(b.get_pixel(x, y))).abs()).sum())
+        .collect();
+    let sw = strip_w.clamp(1, rw) as usize;
+    let mut window: f64 = cols[..sw].iter().sum();
+    let mut best = window;
+    for i in sw..cols.len() {
+        window += cols[i] - cols[i - sw];
+        best = best.max(window);
+    }
+    best / (sw as f64 * rh as f64 * 255.0)
+}
+
 /// True when the mean luminance of `roi` falls below `threshold`: GC4 dims the HUD behind
 /// event dialogs, reports and choice popups, so the normally bright top bar goes dark.
 pub fn is_modal_dimmed_in(jpeg_bytes: &[u8], roi: Roi, threshold: f64) -> Result<bool> {
@@ -321,6 +346,47 @@ mod tests {
         assert!(region_diff(&a, &b, roi) > 0.1, "{}", region_diff(&a, &b, roi));
         assert_eq!(region_diff(&a, &b, [0, 50, 100, 40]), 0.0, "changes outside the roi do not count");
         assert!((region_mean_luminance(&a, roi) - 42.28).abs() < 0.5);
+    }
+
+    #[test]
+    fn max_strip_catches_a_single_changed_glyph_that_the_mean_misses() {
+        let bg = Rgb([20, 30, 50]);
+        let mut a = RgbImage::from_pixel(78, 25, bg);
+        // twelve "glyphs", 5 px wide with 1 px gaps
+        for g in 0..12 {
+            for y in 6..19 {
+                for x in (g * 6 + 1)..(g * 6 + 5) {
+                    a.put_pixel(x, y, Rgb([120, 170, 230]));
+                }
+            }
+        }
+        let mut b = a.clone();
+        for y in 6..19 {
+            for x in 13..17 {
+                b.put_pixel(x, y, bg); // one glyph changes shape
+            }
+        }
+        let roi = [0, 0, 78, 25];
+        assert!(region_diff(&a, &b, roi) < 0.03, "whole-box mean misses it: {}", region_diff(&a, &b, roi));
+        assert!(region_diff_max_strip(&a, &b, roi, 6) > 0.1, "{}", region_diff_max_strip(&a, &b, roi, 6));
+        assert_eq!(region_diff_max_strip(&a, &a, roi, 6), 0.0);
+    }
+
+    #[test]
+    fn max_strip_on_real_gc4_date_readouts() {
+        // 92x36 crops of the top-right date readout from live 1568x882 frames.
+        let load = |name: &str| {
+            let path = format!("{}/tests/fixtures/{}", env!("CARGO_MANIFEST_DIR"), name);
+            decode_rgb(&std::fs::read(path).unwrap()).unwrap()
+        };
+        let apr_a = load("date_apr2_a.jpg");
+        let roi = [10, 4, 78, 25]; // turn_indicator_roi relative to the crop origin (1476, 0)
+        let same = region_diff_max_strip(&apr_a, &load("date_apr2_b.jpg"), roi, 6);
+        assert!(same < 0.01, "same date must read as unchanged: {same}");
+        for other in ["date_aug2.jpg", "date_mar14.jpg"] {
+            let changed = region_diff_max_strip(&apr_a, &load(other), roi, 6);
+            assert!(changed > 0.06, "Apr 2 vs {other} must read as changed: {changed}");
+        }
     }
 
     #[test]
