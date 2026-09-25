@@ -17,13 +17,13 @@ Linux AI Controller (192.168.1.76)                  Windows 11 Gaming PC (192.16
 │             ▼                        │                                 ▲
 │ Controller CLI & Stdio MCP           │                                 │ GDI StretchBlt & SendInput
 │  (crates/game-controller)            │                                 │ (~8ms capture / <1ms input)
-│   ├── corpus.rs (In-Memory Engine)   │ HTTP/1.1   │                                 │
-│   ├── imaging.rs (AVX2 SIMD diff)    │ Keep-Alive │ ┌───────────────────────────────────────┐
+│   ├── corpus.rs (records + chunks)   │ HTTP/1.1   │                                 │
+│   ├── imaging.rs (diff + luminance)  │ Keep-Alive │ ┌───────────────────────────────────────┐
 │   ├── autopilot.rs (1.12s/turn loop) │───────────►│ game-agent.exe (crates/game-agent)      │
 │   └── client.rs (Reqwest pool)       │ Bearer Tok │  • Axum 0.8 HTTP API (:8765)            │
 │             │                        │◄───────────│  • GDI StretchBlt downscaler            │
-│             ▼                        │ (JPEG/JSON)│  • SIMD BGRA->RGB + JPEG encoder        │
-│ 3-Tier Game Corpus                   │ (~50ms net)│  • Per-Monitor V2 HiDPI Awareness       │
+│             ▼                        │ (JPEG/JSON)│  • BGRA->RGB + JPEG encoder             │
+│ Game Corpus (manifest/data/docs)     │ (~50ms net)│  • Per-Monitor V2 HiDPI Awareness       │
 │  (corpora/galciv4/)                  │            │  • Native Win32 SendInput / SetCursorPos│
 └──────────────────────────────────────┘            └─────────────────────────────────────────┘
 ```
@@ -93,7 +93,7 @@ The remote agent runs as a standalone compiled native Windows binary (`game-agen
    - `GetDC(None)` captures the primary monitor DC.
    - `SetStretchBltMode(mem_dc, HALFTONE)` performs high-quality bilinear hardware downscaling directly in Windows GDI memory before encoding.
    - For a 4K frame ($3840 \times 2160$), downscaling to $1568 \times 882$ reduces pixel count by $83\%$.
-   - A SIMD-accelerated RGBA-to-RGB conversion buffer feeds `jpeg-encoder`, producing a high-quality JPEG in $\sim 8\,\text{ms}$.
+   - The BGRA buffer is converted to RGB and fed to `jpeg-encoder`; capture plus encode measures about 8 ms.
 3. **HTTP Metadata Dimension Headers**:
    Every `/screenshot` response returns exact dimension metadata headers:
    - `X-Width`: Raw physical screen width ($3072$ or $3840$).
@@ -134,44 +134,35 @@ The Linux controller is structured into modular, high-performance components:
   Calculates absolute pixel differences between consecutive frames, generating tight bounding box crops around new event dialogs for the LLM.
 
 ### D. Stdio MCP Server (`mcp.rs`)
-Exposes 13 native Model Context Protocol tools over JSON-RPC stdio, allowing models like Claude Code and Gemini to interact seamlessly with zero setup.
+Exposes 19 Model Context Protocol tools over JSON-RPC stdio: screen and input tools, autopilot, and the corpus tools (`corpus_search`, `corpus_get`, `corpus_tech`, `corpus_improvement`, `corpus_order`, `corpus_info`, `corpus_strategy`).
 
 ---
 
-## 5. The 3-Tier Game Corpus Architecture (`corpora/`)
+## 5. Game Corpus (`corpora/<game>/`)
 
-All game knowledge is decoupled from the controller engine and organized into `corpora/<game-id>/`:
+All game knowledge lives under `corpora/<game>/`; the controller loads whatever is present and knows nothing game-specific. Sources of truth are multiple files because they differ in provenance and change cadence; the runtime compiles them into one in-memory index at startup (about 1 ms for ~250 KB).
 
 ```
 corpora/galciv4/
-├── game.toml        # TIER 1: Machine-Executable Manifest (Serde parsed <0.5ms)
-├── strategy.md      # TIER 2: Strategic Playbook (LLM deliberation context)
-└── wiki/            # TIER 3: Deep Domain Reference Library (13 authoritative guides)
-    ├── beginners_guide.txt
-    ├── executive_orders.txt
-    ├── planetary_management.txt
-    ├── research_tree.txt
-    ├── cultural_ideology.txt
-    ├── civ_abilities.txt
-    ├── planet_types_gc4.txt
-    ├── star_types_gc4.txt
-    ├── improvements_gc4.txt
-    ├── anomalies.txt
-    ├── high_difficulty_ai_guide.txt
-    ├── opening_meta_supernova.txt
-    └── technology_table_supplement.txt
+├── manifest.toml    # hotkeys, screen signatures, macros — hand-verified (game.toml still accepted)
+├── strategy.md      # playbook for the model; also chunked for search
+├── data/            # GENERATED records, one JSON array per kind (tech, improvement, order, …)
+│   └── README.md    # record contract; _meta.json records game version + generator
+└── docs/*.md        # reference prose with Source:/License: headers (13 files today)
 ```
 
-### In-Memory Corpus Engine (`corpus.rs`)
-At startup, `GameCorpus::load_from_dir()` indexes:
-- **150 Research Technologies**: Tree category, science cost, prerequisites, unlockables.
-- **273 Planetary Improvements**: Production cost, base output, level bonuses, adjacency rules.
-- **40 Executive Orders**: Control point cost, cooldown, civ requirements, effects.
-- **13 Wiki Reference Articles**: Full text indexed for instant multi-term keyword search.
+### Records (`data/*.json`)
+Generic records — `id`, `name`, `aliases`, `summary`, `fields` — so the extractor decides which fields each kind carries. They are generated from the game's own definition files on the Windows PC (`<install>/Data/Gameplay/*.xml`, display strings in `Data/English/Text/*.xml`), never scraped from the wiki. The loader rejects nameless records and duplicate ids at startup. The extractor is pending (it needs a copy of those XML files); until it runs, the lookup tools say so and search falls back to the docs.
 
-Search benchmarks resolve in **$<500\,\mu\text{s}$** ($0.5\,\text{ms}$), enabling instant lookups inside CLI commands and MCP tool calls.
+### Chunks (`docs/*.md`, `strategy.md`)
+Each doc's header (title, `Source:`, `License:`) is stripped; the body is grouped into paragraph chunks of at most 1,500 characters with ids like `doc:planetary_management#3` and `strategy#1`. 13 docs → 168 chunks today.
 
----
+### Lookup and search (`corpus.rs`)
+- `lookup(kind, name)`: normalized name or alias, else the closest trigram match (Dice ≥ 0.6) of that kind.
+- `search(query, limit)`: records score on name/alias/field matches; chunks must contain every query token and score on exact phrase, title, and occurrence count. Ties break on id, so results are deterministic. Returns ids and ~120-character match snippets only; bodies come from `get(id)`. Measured 50–100 µs over the current corpus.
+- `get(id)`: one compact record (heading plus one line per field) or one chunk.
+
+Known limitation: keyword search ranks by term frequency, so a page that *mentions* "Draft Colonists" three times can outrank the page that defines it until generated `order` records exist (a record's name match scores 100, above any chunk).
 
 ## 6. Strategic Architecture & Gameplay Mechanics
 
@@ -201,10 +192,10 @@ Search benchmarks resolve in **$<500\,\mu\text{s}$** ($0.5\,\text{ms}$), enablin
 | Operation | Baseline / Latency | Implementation |
 |---|---|---|
 | **Turn Advancement Rate** | **$1.12\,\text{s}$ per turn** | Rust Autopilot Macro (`game-controller`) |
-| **GDI Capture + Encode** | **$8.2\,\text{ms}$** | `StretchBlt` + SIMD JPEG (`game-agent.exe`) |
+| **GDI Capture + Encode** | ~8 ms | `StretchBlt` + `jpeg-encoder` (`game-agent.exe`) |
 | **Network RPC Roundtrip** | **$0.36\,\text{ms}$** | Local Gigabit LAN HTTP Keep-Alive |
-| **Corpus Multi-Field Search**| **$<500\,\mu\text{s}$** | In-Memory Token Index (`corpus.rs`) |
-| **Modal Luminance Check** | **$<80\,\mu\text{s}$** | AVX2 SIMD Top Bar Scan (`imaging.rs`) |
-| **Rust Test Suite** | **$0.04\,\text{s}$ (8/8 pass)** | `cargo test --workspace` |
+| **Corpus Search** | 50–100 µs measured (13 docs, 168 chunks) | Linear scan over pre-normalized chunks (`corpus.rs`) |
+| **Modal Luminance Check** | sub-millisecond | Mean luminance over the top-bar region (`imaging.rs`); no SIMD intrinsics |
+| **Rust Test Suite** | 23 tests (17 controller, 6 agent) | `cargo test --workspace` |
 | **Legacy Test Suite** | **$10.86\,\text{s}$ (40/40 pass)** | `pytest` |
-| **Compiler Warnings** | **0 warnings** | Strict Rust workspace hygiene |
+| **Compiler Warnings** | 1 clippy warning (`imaging.rs` `to_*` convention); `#![allow(dead_code, …)]` still present in several files | `cargo clippy --workspace --all-targets` |
