@@ -76,6 +76,8 @@ When a modal event or planet report halts the autonomous turn loop:
 *   **Permanent Output > Temporary Cash**: A $+10\%$ permanent manufacturing or research boost is infinitely superior to $+200$ credits.
 *   **Planet Colonization Site Choice**: On initial planet colonization (e.g., Mars Planet Report), select mineral/manufacturing extraction sites (option `2` / Delta sites) for feeder colonies supplying an industrial core world, or scientific/microbial sites (option `3`) if founding a science colony.
 *   **Expansion Over Caution**: Choices that *grant* ships, survey probes, or colonist capacity should almost always be chosen — but check the data: an "unlock" often only makes something purchasable.
+*   **Artifact vs. +200 credits** (survey finds: Tech Finder, Arnor Halo, Wormhole Generator, …): take the artifact while the treasury is above ~500 credits; sell only when cash is short. Artifacts are one-shot powers kept in the vault; 200 credits is about a turn of rush-buying.
+*   **Pay-to-choose options** (−100/−250 credits for approval or influence): take the one whose effect is *permanent* or lasts 24+ turns while the treasury stays above ~800.
 *   **Selecting an option**: clicking the option button works (verified). Number keys `1`/`2`/`3` are unverified.
 
 ---
