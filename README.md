@@ -7,19 +7,19 @@ An ultra-low-latency, 100% Rust-powered autonomous AI game harness that plays tu
  ┌─────────────────────────────────────────┐         ┌─────────────────────────────────────────┐
  │ LLM Agent (Claude / Gemini / AGY)       │         │ Galactic Civilizations IV: Supernova    │
  │   └─ game-controller (Native Rust)      │         │   (Running borderless / windowed)       │
- │      • 3-tier corpus (game.toml + wiki) │         └─────────────────────────────────────────┘
+ │      • game corpus (manifest+data+docs)│         └─────────────────────────────────────────┘
  │      • autopilot (1.12s/turn baseline)  │                              ▲
- │      • stdio MCP server (13 tools)      │  HTTP/TCP 8765               │ GDI / Win32 SendInput
- │      • AVX2 SIMD diff + 80µs classifier │ ──────────────► ┌─────────────────────────────────────────┐
+ │      • stdio MCP server (19 tools)      │  HTTP/TCP 8765               │ GDI / Win32 SendInput
+ │      • frame diff + luminance check     │ ──────────────► ┌─────────────────────────────────────────┐
  │                                         │ ◄────────────── │ game-agent.exe (Native Rust)            │
  │                                         │  (JPEG / JSON)  │   • Axum 0.8 HTTP API (:8765)           │
  │                                         │  (~50ms net)    │   • GDI StretchBlt downscaling          │
- │                                         │                 │   • SIMD BGRA->RGB + JPEG encoding      │
+ │                                         │                 │   • BGRA->RGB + JPEG encoding           │
  │                                         │                 │   • Per-Monitor V2 HiDPI Awareness      │
  └─────────────────────────────────────────┘                 └─────────────────────────────────────────┘
 ```
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for full technical documentation on system topology, SIMD luminance classification, coordinate scaling, and corpus architecture.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for system topology, the modal-detection heuristic, coordinate scaling, and the corpus layout.
 
 ---
 
@@ -28,8 +28,8 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for full technical documentation on syste
 | Component | Path / Binary | Architecture | Performance / Capabilities |
 |---|---|---|---|
 | **Windows Remote Agent** | [`crates/game-agent`](crates/game-agent) & [`windows_agent/game-agent.exe`](windows_agent/game-agent.exe) | Compiled native Rust (`x86_64-pc-windows-gnu`) | ~8ms screen capture & JPEG encode; native Win32 `SendInput`, `SetCursorPos`, and `mouse_event`; Per-Monitor V2 HiDPI aware. |
-| **Linux Native Controller** | [`crates/game-controller`](crates/game-controller) & [`target/release/game-controller`](target/release/game-controller) | Compiled native Rust (`x86_64-unknown-linux-gnu`) | 0.36ms RPC overhead, **1.12s per complete turn** autopilot advancement, in-memory corpus search (<500µs), stdio MCP server. |
-| **3-Tier Game Corpus** | [`corpora/galciv4/`](corpora/galciv4/) | Structured TOML + Markdown + Text | 33 verified hotkeys, 8 screen signatures, 3 atomic macros, 150 Techs, 273 Planetary Improvements, 40 Executive Orders, 13 Wiki guides. |
+| **Linux Native Controller** | [`crates/game-controller`](crates/game-controller) → `target/release/game-controller` (build with `cargo build --release`; `.mcp.json` points here) | Compiled native Rust (`x86_64-unknown-linux-gnu`) | ~1 ms agent round-trip, reflex autopilot macro, in-memory corpus (search 50–100 µs), stdio MCP server. |
+| **Game Corpus** | [`corpora/galciv4/`](corpora/galciv4/) | `manifest.toml` + generated `data/*.json` + `docs/*.md` + `strategy.md` | 33 hotkeys, 8 screen signatures, 3 macros; 13 reference docs chunked into 168 searchable pieces; entity records generated from the game's own XML (extractor pending, see `data/README.md`). |
 | **Legacy Pytest Suite** | [`src/harness/`](src/harness/) & [`tests/`](tests/) | Python 3.12 (FakeBackend fixtures) | 40/40 legacy tests passing in 10.86s. |
 
 ---
@@ -91,10 +91,11 @@ The compiled controller binary provides full programmatic access to all agent fu
 # 9. Autonomous Autopilot Loop (Halts on Event Dialogs / Modals)
 ./target/release/game-controller autopilot --turns 25
 
-# 10. Query 3-Tier In-Memory Game Corpus
-./target/release/game-controller corpus
-./target/release/game-controller corpus search "Sublight Drives"
-./target/release/game-controller corpus tech "Colonial Policies"
+# 10. Query the game corpus (ids from `search`, bodies from `get`)
+./target/release/game-controller corpus                       # what is loaded
+./target/release/game-controller corpus search "draft colonists" --limit 5
+./target/release/game-controller corpus get "doc:executive_orders#1"
+./target/release/game-controller corpus tech "Colonial Policies"   # needs data/tech.json (extractor)
 ./target/release/game-controller corpus improvement "Manufacturing District"
 ./target/release/game-controller corpus order "Draft Colonists"
 ./target/release/game-controller corpus strategy
@@ -138,11 +139,11 @@ To connect Claude Desktop, Claude Code, or Antigravity IDE directly to the game 
 | `diff` | `{}` | Compare current frame against previous capture and highlight changes. |
 | `autopilot_turns`| `turns` | Run high-speed autonomous turn loop until event dialog occurs. |
 | `run_macro` | `name` | Execute pre-registered macro from `game.toml` (`turn_pump`, `auto_scout_cycle`). |
-| `corpus_search` | `query, limit` | Sub-millisecond in-memory search across techs, improvements, and wiki. |
-| `corpus_tech` | `name` | Look up detailed tech prerequisites, unlocks, and costs. |
-| `corpus_improvement` | `name` | Look up planetary district stats, costs, and adjacency rules. |
-| `corpus_order` | `name` | Look up Executive Order control costs, cooldowns, and effects. |
-| `corpus_strategy` | `{}` | Retrieve the complete strategic playbook (`strategy.md`). |
+| `corpus_search` | `query, limit` | Keyword search over records, playbook and reference docs; returns ids + one-line match snippets. |
+| `corpus_get` | `id` | One compact record (`tech:colonial_policies`) or one prose chunk (`doc:anomalies#0`, `strategy#2`). |
+| `corpus_tech` / `corpus_improvement` / `corpus_order` | `name` | Name lookup (exact, alias, or closest match) in generated `data/*.json`; says so when the data has not been generated. |
+| `corpus_info` | `{}` | Loaded counts, hotkeys, macros, and screen names. |
+| `corpus_strategy` | `{}` | The complete strategic playbook (`strategy.md`). |
 | `game_state` | `{}` | Query live agent status, foreground window, and screen dimensions. |
 | `focus` | `title` | Bring target window to foreground by title substring. |
 
@@ -151,9 +152,23 @@ To connect Claude Desktop, Claude Code, or Antigravity IDE directly to the game 
 ## Testing & CI
 
 ```bash
-# Run native Rust unit tests (8/8 tests pass in ~0.04s)
-cargo test --workspace
-
-# Run legacy regression test suite (40/40 tests pass in ~10.8s)
-.venv/bin/pytest -q
+cargo test --workspace          # controller: imaging, MCP coordinate mapping, corpus; agent: batch validation
+cargo clippy --workspace --all-targets
+.venv/bin/pytest -q             # legacy Python harness (no longer deployed)
 ```
+
+## Game corpus
+
+`corpora/<game>/` is the only place game knowledge lives; the controller is game-agnostic.
+
+```
+corpora/galciv4/
+  manifest.toml   hotkeys, screen signatures, macros — hand-verified
+  strategy.md     playbook for the model, also chunked for search
+  data/           GENERATED records (tech.json, improvement.json, order.json …) — see data/README.md
+  docs/*.md       reference prose with Source:/License: headers, chunked at ~1500 chars
+```
+
+Search returns ids and match snippets; `get` returns one record or chunk. Entity records are
+generated from the game's own `Data/Gameplay/*.xml` by an extractor (pending: needs a copy of
+those files from the PC), not scraped from the wiki.

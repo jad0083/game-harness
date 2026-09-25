@@ -31,21 +31,22 @@ This file guides LLMs and coding agents when operating in this repository.
 - Send keypress / combo: `./target/release/game-controller key "<key>"`
 - Advance single turn: `./target/release/game-controller turn`
 - Fast autonomous autopilot: `./target/release/game-controller autopilot --turns <N>` (1.12s/turn)
-- Corpus search: `./target/release/game-controller corpus search "<query>"`
-- Corpus tech lookup: `./target/release/game-controller corpus tech "<name>"`
-- Corpus improvement lookup: `./target/release/game-controller corpus improvement "<name>"`
-- Corpus order lookup: `./target/release/game-controller corpus order "<name>"`
+- Corpus overview: `./target/release/game-controller corpus`
+- Corpus search (ids + snippets): `./target/release/game-controller corpus search "<query>" --limit 5`
+- Corpus fetch by id: `./target/release/game-controller corpus get "<id>"` (e.g. `doc:anomalies#0`, `strategy#1`, `tech:colonial_policies`)
+- Corpus name lookups: `./target/release/game-controller corpus tech|improvement|order "<name>"` (need generated `data/*.json`)
 - Corpus strategy playbook: `./target/release/game-controller corpus strategy`
 - Stdio MCP server: `./target/release/game-controller mcp`
-- Run Rust test suite: `cargo test --workspace` (8/8 tests pass in 0.04s)
-- Run legacy test suite: `.venv/bin/pytest -q` (40/40 tests pass in 10.86s)
+- Run Rust test suite: `cargo test --workspace`; lint: `cargo clippy --workspace --all-targets`
+- Run legacy Python test suite: `.venv/bin/pytest -q` (that code is no longer deployed)
 
 ## Golden Rules for LLMs
 1. **Prefer Hotkeys Over UI Clicks**: Keypresses (`tab`, `space`, `f`, `enter`, `1`, `2`, `3`, `esc`) are 100% deterministic, resolution-independent, and instant (<1ms).
-2. **Consult the 3-Tier Game Corpus**:
-   - `corpora/galciv4/game.toml`: Machine manifest for hotkeys, 8 screen signatures, and atomic macros.
-   - `corpora/galciv4/strategy.md`: Strategy playbook for early expansion, colony feeding, districts, ministers, and tech tree.
-   - `corpora/galciv4/wiki/`: 13 core wiki documents for exact stats, costs, and cooldowns.
+2. **Consult the game corpus** (`corpora/galciv4/`, see ARCHITECTURE.md §5):
+   - `manifest.toml`: hotkeys, 8 screen signatures, and macros (hand-verified).
+   - `strategy.md`: playbook for expansion, colony feeding, districts, ministers, and tech pathing.
+   - `data/*.json`: generated entity records from the game's own XML (extractor pending; `data/README.md` has the contract). Never hand-edit.
+   - `docs/*.md`: reference prose with `Source:`/`License:` headers. Use `corpus_search` to get ids, then `corpus_get` for one chunk; do not dump whole docs into context.
 3. **Use the Autopilot Loop**: Do NOT make individual tool calls for routine turn advancement. Use `./target/release/game-controller autopilot --turns 25` to fast-forward turns at 1.12s/turn. It automatically halts on strategic modal dialogs.
 4. **Resolution & Coordinate Mapping**: Image space is 1568x882; remote screen is 3072x1728 (or 3840x2160). Both `click` and `drag` automatically scale coordinates using live target width/height headers.
 5. **Handling Action Required Prompts**: When the turn button demands action (e.g. "Choose a region to improve" on Earth or "Colonial Charter" for policies/ministers), `Enter` navigates directly to that screen.
@@ -55,6 +56,7 @@ This file guides LLMs and coding agents when operating in this repository.
 
 ## Architecture & Code Style
 - 100% Rust architecture: Linux controller (`crates/game-controller`) and Windows agent (`crates/game-agent`).
+- The controller is game-agnostic: anything GalCiv-specific belongs under `corpora/galciv4/`, not in Rust.
 - Windows agent binary is cross-compiled via `cargo build --target x86_64-pc-windows-gnu --release --bin game-agent` and staged at `windows_agent/game-agent.exe`.
 - Zero runtime Python dependencies for active gameplay or agent execution.
 

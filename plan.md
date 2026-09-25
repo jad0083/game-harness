@@ -14,11 +14,18 @@
 - [x] GC4 corpus: `game.toml` hotkeys/screens/macros, `strategy.md`, 13 wiki articles
 - [x] Redeploy the DPI-aware agent build (installer fixed in 3e425bf; PC now reports 3840x2160)
 - [ ] Autopilot: verify a turn actually advanced before counting it; use the `game.toml` screen signatures it parses
-- [ ] Fix the corpus tech parser and add fixture tests against `research_tree.txt`
 - [ ] Restore `zoom`/`hover`/`scroll`/grid in the Rust MCP, or document why they're gone
 - [x] Tests for the Rust MCP coordinate mapping and for the agent's batch validation (`cargo test --workspace`: 18)
 - [ ] Decide the Python harness's fate: delete, or keep as the reference implementation with its tests pointed at what runs
 - [ ] Stop tracking `game-agent.exe`; publish it as a release asset
+
+## Game corpus (design: see ARCHITECTURE.md §5)
+- [x] Restructure `corpora/galciv4/`: `manifest.toml`, `docs/*.md` with Source/License headers, `data/` contract
+- [x] Corpus engine: generic records from `data/*.json`, paragraph-chunked docs, id-based `get`, alias + fuzzy lookup, deterministic search with match snippets (7 tests)
+- [x] CLI `corpus search|get|tech|improvement|order|strategy` and MCP `corpus_get`; lookups report missing data instead of guessing
+- [ ] Get `Data/Gameplay/*.xml` + `Data/English/Text/*.xml` from the PC (needs a `dir`/copy from 192.168.1.77)
+- [ ] `scripts/extract-galciv4.py` with fixture tests → `data/tech.json`, `improvement.json`, `order.json`, `_meta.json`
+- [ ] Wire the autopilot to the `manifest.toml` screen signatures it already parses
 
 ## Playing
 - [x] Record verified GC4 controls/UI positions in PLAYING.md
