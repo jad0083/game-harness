@@ -1,49 +1,64 @@
-# Installs the game agent for the current Windows user.
+# Installs or updates the game agent (native game-agent.exe) for the current Windows user.
 #
 # Remote bootstrap (files served by scripts/serve-agent.sh on the controller):
 #   $env:GA_SRC='http://<controller-ip>:8000'; irm "$env:GA_SRC/install.ps1" | iex
-# Local: run from a folder containing agent.py (and optionally agent_token.txt):
+# Local: run from a folder containing game-agent.exe (and optionally agent_token.txt):
 #   powershell -ExecutionPolicy Bypass -File install.ps1
 #
 # What it does:
-#   1. Ensures Python 3 is available (installs it per-user via winget if not).
-#   2. Copies agent.py + agent_token.txt to %LOCALAPPDATA%\GameAgent.
-#   3. Adds an inbound firewall rule for TCP 8765 from the local subnet only (one UAC prompt).
-#   4. Registers a logon task that runs the agent in your desktop session, then starts it.
+#   1. Stops any running agent (a running exe is locked and cannot be overwritten).
+#   2. Copies game-agent.exe + agent_token.txt to %LOCALAPPDATA%\GameAgent.
+#   3. Adds an inbound firewall rule for TCP 8765 from the local subnet only (one UAC prompt, first run only).
+#   4. Registers a logon task that runs the agent in your desktop session, starts it, and checks /health.
 
 $ErrorActionPreference = 'Stop'
 $Port = if ($env:GA_PORT) { [int]$env:GA_PORT } else { 8765 }
 $Dest = Join-Path $env:LOCALAPPDATA 'GameAgent'
+$Exe = Join-Path $Dest 'game-agent.exe'
+$TokenFile = Join-Path $Dest 'agent_token.txt'
 $TaskName = 'GameAgent'
 $RuleName = "Game Agent (TCP $Port)"
 
 function Step($msg) { Write-Host "==> $msg" -ForegroundColor Cyan }
 
-# --- 1. Files & Binary --------------------------------------------------------
-$Exe = Join-Path $Dest 'game-agent.exe'
-Step "Installing native Rust agent to $Dest"
-New-Item -ItemType Directory -Force -Path $Dest | Out-Null
+# --- 1. Stop the running agent ------------------------------------------------
+Step 'Stopping any running agent'
+if (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue) {
+    Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+}
+Get-Process -Name 'game-agent' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+$deadline = (Get-Date).AddSeconds(10)
+while ((Get-Process -Name 'game-agent' -ErrorAction SilentlyContinue) -and (Get-Date) -lt $deadline) {
+    Start-Sleep -Milliseconds 250
+}
+if (Get-Process -Name 'game-agent' -ErrorAction SilentlyContinue) {
+    throw 'game-agent.exe is still running and cannot be replaced. Close it and re-run.'
+}
 
+# --- 2. Files & binary --------------------------------------------------------
+Step "Installing agent to $Dest"
+New-Item -ItemType Directory -Force -Path $Dest | Out-Null
+$tmpExe = "$Exe.new"
 if ($env:GA_SRC) {
-    Invoke-WebRequest "$env:GA_SRC/game-agent.exe" -UseBasicParsing -OutFile $Exe
-    Write-Host "    downloaded native game-agent.exe"
+    Invoke-WebRequest "$env:GA_SRC/game-agent.exe" -UseBasicParsing -OutFile $tmpExe
+    Move-Item -Force $tmpExe $Exe
+    Write-Host "    downloaded game-agent.exe ($([math]::Round((Get-Item $Exe).Length / 1KB)) KB)"
     try {
-        Invoke-WebRequest "$env:GA_SRC/agent_token.txt" -UseBasicParsing -OutFile (Join-Path $Dest 'agent_token.txt')
-    } catch { Write-Host '    no token served; agent will generate one' }
+        Invoke-WebRequest "$env:GA_SRC/agent_token.txt" -UseBasicParsing -OutFile $TokenFile
+    } catch { Write-Host '    no token served; the agent will generate one' }
 } else {
     $here = if ($PSScriptRoot) { $PSScriptRoot } else { (Get-Location).Path }
     $localExe = Join-Path $here 'game-agent.exe'
-    if (Test-Path $localExe) {
-        Copy-Item $localExe $Dest -Force
-        Write-Host "    copied native game-agent.exe"
-    } else {
-        throw "game-agent.exe not found in $here. Build it via 'cargo build --target x86_64-pc-windows-gnu --release --bin game-agent'"
+    if (-not (Test-Path $localExe)) {
+        throw "game-agent.exe not found in $here. Build it with: cargo build --target x86_64-pc-windows-gnu --release --bin game-agent"
     }
+    Copy-Item $localExe $Exe -Force
+    Write-Host '    copied game-agent.exe'
     $tok = Join-Path $here 'agent_token.txt'
-    if (Test-Path $tok) { Copy-Item $tok $Dest -Force }
+    if (Test-Path $tok) { Copy-Item $tok $TokenFile -Force }
 }
 
-# --- 2. Firewall (needs admin once) --------------------------------------------
+# --- 3. Firewall (needs admin once) --------------------------------------------
 Step "Allowing inbound TCP $Port from the local subnet"
 if (-not (Get-NetFirewallRule -DisplayName $RuleName -ErrorAction SilentlyContinue)) {
     $cmd = "New-NetFirewallRule -DisplayName '$RuleName' -Direction Inbound -Protocol TCP -LocalPort $Port -RemoteAddress LocalSubnet -Action Allow -Profile Any | Out-Null"
@@ -53,7 +68,7 @@ if (-not (Get-NetFirewallRule -DisplayName $RuleName -ErrorAction SilentlyContin
     }
 } else { Write-Host '    rule already present' }
 
-# --- 3. Logon task -----------------------------------------------------------
+# --- 4. Logon task -----------------------------------------------------------
 # Runs non-elevated in the interactive session: services cannot see or drive the desktop.
 Step "Registering logon task '$TaskName'"
 $action = New-ScheduledTaskAction -Execute $Exe -Argument "--port $Port" -WorkingDirectory $Dest
@@ -62,16 +77,24 @@ $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" 
 $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 3 `
     -RestartInterval (New-TimeSpan -Minutes 1) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -MultipleInstances IgnoreNew
 Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
-
-Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
 Start-ScheduledTask -TaskName $TaskName
-Start-Sleep -Seconds 3
 
-$listening = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue
-if ($listening) {
-    Step "Agent is running on port $Port"
+# --- 5. Verify ----------------------------------------------------------------
+Step 'Checking /health'
+$health = $null
+$deadline = (Get-Date).AddSeconds(10)
+while (-not $health -and (Get-Date) -lt $deadline) {
+    Start-Sleep -Milliseconds 500
+    try {
+        $headers = @{}
+        if (Test-Path $TokenFile) { $headers['Authorization'] = "Bearer $((Get-Content $TokenFile -Raw).Trim())" }
+        $health = Invoke-RestMethod "http://127.0.0.1:$Port/health" -Headers $headers -TimeoutSec 2
+    } catch { $health = $null }
+}
+if ($health) {
+    Step "Agent v$($health.version) is running on port $Port; screen $($health.screen[0])x$($health.screen[1])"
 } else {
-    Write-Warning "Agent is not listening yet; check $Dest\agent.log"
+    Write-Warning "Agent is not answering on port $Port. Run it by hand to see its output:  & '$Exe' --port $Port"
 }
 Write-Host ''
 Write-Host 'Tips: run the game in Borderless/Windowed mode (exclusive fullscreen can capture black),'
