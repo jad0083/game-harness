@@ -5,7 +5,7 @@
 use crate::client::AgentClient;
 use crate::imaging::{
     crop_region, decode_rgb, detect_change_bbox, region_diff_max_strip, region_mean_luminance, roi_from_norm,
-    View, DEFAULT_MODAL_ROI, MAX_SIDE,
+    template_diff, View, DEFAULT_MODAL_ROI, MAX_SIDE,
 };
 use anyhow::Result;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -23,12 +23,47 @@ const DEFAULT_MODAL_THRESHOLD: f64 = 22.0;
 pub enum TurnOutcome {
     /// The turn macro ran and the turn indicator changed (`verified`), or no indicator is
     /// configured so the advance could not be checked (`verified == false`).
-    Advanced { turn: u32, elapsed_sec: f64, verified: bool },
+    Advanced { turn: u32, elapsed_sec: f64, verified: bool, dismissed: Vec<String> },
     /// The HUD is dimmed: an event, report or choice dialog is up and needs the model.
     ModalEvent { turn: u32, bbox: Option<[u32; 4]>, crop_bytes: Vec<u8>, full_bytes: Vec<u8> },
     /// The macro ran but the turn indicator did not change: something on screen is
     /// blocking end-turn (idle unit prompt, empty queue, a non-dimming popup).
     NotAdvanced { turn: u32, reason: String, full_bytes: Vec<u8> },
+}
+
+/// How many known informational screens one turn may dismiss before giving up.
+const MAX_DISMISSALS_PER_TURN: usize = 4;
+
+/// Decode every `auto_dismiss` screen's template; screens whose template is missing or
+/// unreadable are skipped (reported on stderr) so a bad file cannot stop the autopilot.
+pub fn load_known_screens(
+    manifest: &crate::corpus::GameManifest,
+) -> Vec<(String, crate::corpus::ScreenDef, image::RgbImage)> {
+    let base = manifest.base_dir.clone().unwrap_or_default();
+    let mut names: Vec<&String> = manifest.screens.keys().collect();
+    names.sort();
+    let mut out = Vec::new();
+    for name in names {
+        let def = &manifest.screens[name];
+        let (true, Some(rel)) = (def.auto_dismiss, def.template.as_ref()) else { continue };
+        match image::open(base.join(rel)) {
+            Ok(img) => out.push((name.clone(), def.clone(), img.to_rgb8())),
+            Err(e) => eprintln!("warning: screen {name}: cannot load template {rel}: {e}"),
+        }
+    }
+    out
+}
+
+/// Name of the first `auto_dismiss` screen in `screens` whose template matches `frame`.
+pub fn match_known_screen<'a>(
+    frame: &image::RgbImage,
+    screens: &'a [(String, crate::corpus::ScreenDef, image::RgbImage)],
+) -> Option<&'a (String, crate::corpus::ScreenDef, image::RgbImage)> {
+    screens.iter().find(|(_, def, tpl)| {
+        let Some(norm) = def.template_roi else { return false };
+        let roi = roi_from_norm(frame.width(), frame.height(), norm);
+        template_diff(frame, tpl, roi[0], roi[1]) <= def.template_threshold
+    })
 }
 
 /// What the classifier looks at, resolved from the manifest for a given frame size.
@@ -67,6 +102,8 @@ pub fn classify_turn(before: &[u8], after: &[u8], check: &TurnCheck) -> Result<T
 
 pub struct Autopilot {
     client: Arc<AgentClient>,
+    /// (name, definition, decoded template) for every `auto_dismiss` screen with a template.
+    known_screens: Vec<(String, crate::corpus::ScreenDef, image::RgbImage)>,
     view: Mutex<Option<View>>,
     last_frame: Mutex<Option<Vec<u8>>>,
     turn_counter: AtomicU32,
@@ -76,8 +113,10 @@ pub struct Autopilot {
 impl Autopilot {
     pub fn new(client: Arc<AgentClient>) -> Self {
         let manifest = crate::corpus::GameManifest::find_default();
+        let known_screens = manifest.as_ref().map(load_known_screens).unwrap_or_default();
         Self {
             client,
+            known_screens,
             view: Mutex::new(None),
             last_frame: Mutex::new(None),
             turn_counter: AtomicU32::new(1),
@@ -90,6 +129,7 @@ impl Autopilot {
     }
 
     pub fn with_manifest(mut self, manifest: crate::corpus::GameManifest) -> Self {
+        self.known_screens = load_known_screens(&manifest);
         self.manifest = Some(manifest);
         self
     }
@@ -162,47 +202,95 @@ impl Autopilot {
     pub async fn advance_single_turn(&self) -> Result<TurnOutcome> {
         let start = Instant::now();
         let turn = self.turn_counter.load(Ordering::SeqCst);
+        let mut dismissed: Vec<String> = Vec::new();
 
         self.require_game_foreground().await?;
 
-        // Look before acting: keys sent into an open dialog do unpredictable things.
-        let (before, view) = self.screenshot_view().await?;
-        let check = self.turn_check(view.width, view.height);
-        if let TurnVerdict::Modal = classify_turn(&before, &before, &check)? {
-            return Ok(self.modal_outcome(turn, None, before));
-        }
-
-        self.client.batch(self.turn_actions(&view)).await?;
-
-        let (timeout, threshold) = self
-            .manifest
-            .as_ref()
-            .and_then(|m| m.macros.get("turn_pump"))
-            .map(|m| (m.settle_timeout, m.settle_threshold))
-            .unwrap_or((8.0, 0.02));
-        // End-turn processing takes the game a few seconds and the map can look "settled"
-        // before it finishes, so wait for the turn indicator itself to change (or a dialog to
-        // appear) before letting the settle check and the classifier run.
-        // The frame after settle is what gets classified: a dialog that opens once the new turn
-        // starts must win over the date change that preceded it.
-        self.wait_for_turn_signal(&before, &check, timeout).await?;
-        let _ = self.client.settle(Some(timeout), Some(threshold)).await?;
-        let (after, _) = self.screenshot_view().await?;
-        match classify_turn(&before, &after, &check)? {
-            TurnVerdict::Modal => Ok(self.modal_outcome(turn, Some(&before), after)),
-            TurnVerdict::Advanced { verified, .. } => {
-                self.turn_counter.fetch_add(1, Ordering::SeqCst);
-                Ok(TurnOutcome::Advanced { turn, elapsed_sec: start.elapsed().as_secs_f64(), verified })
+        // Two attempts: a known informational screen (e.g. a news bulletin) can open at the
+        // start of a turn and swallow the end-turn key; it is dismissed and the turn retried.
+        for attempt in 0..2 {
+            // Look before acting: clear known informational screens, and never send keys into
+            // an open dialog.
+            let (mut before, mut view) = self.screenshot_view().await?;
+            while dismissed.len() < MAX_DISMISSALS_PER_TURN {
+                match self.dismiss_known_screen(&before, &view).await? {
+                    Some(name) => {
+                        dismissed.push(name);
+                        (before, view) = self.screenshot_view().await?;
+                    }
+                    None => break,
+                }
             }
-            TurnVerdict::NotAdvanced { indicator_diff } => Ok(TurnOutcome::NotAdvanced {
-                turn,
-                reason: format!(
-                    "turn indicator unchanged after the turn macro (diff {:.3} < {:.2}); something on screen is blocking end-turn",
-                    indicator_diff, check.turn_threshold
-                ),
-                full_bytes: after,
-            }),
+            let check = self.turn_check(view.width, view.height);
+            if let TurnVerdict::Modal = classify_turn(&before, &before, &check)? {
+                return Ok(self.modal_outcome(turn, None, before));
+            }
+
+            self.client.batch(self.turn_actions(&view)).await?;
+
+            let (timeout, threshold) = self
+                .manifest
+                .as_ref()
+                .and_then(|m| m.macros.get("turn_pump"))
+                .map(|m| (m.settle_timeout, m.settle_threshold))
+                .unwrap_or((8.0, 0.02));
+            // End-turn processing takes the game a few seconds and the map can look settled
+            // before it finishes, so wait for the turn indicator to change (or a dialog), then
+            // settle and classify a fresh frame: a dialog that opens once the new turn starts
+            // must win over the date change that preceded it.
+            self.wait_for_turn_signal(&before, &check, timeout).await?;
+            let _ = self.client.settle(Some(timeout), Some(threshold)).await?;
+            let (after, _) = self.screenshot_view().await?;
+            match classify_turn(&before, &after, &check)? {
+                TurnVerdict::Modal => return Ok(self.modal_outcome(turn, Some(&before), after)),
+                TurnVerdict::Advanced { verified, .. } => {
+                    self.turn_counter.fetch_add(1, Ordering::SeqCst);
+                    return Ok(TurnOutcome::Advanced {
+                        turn,
+                        elapsed_sec: start.elapsed().as_secs_f64(),
+                        verified,
+                        dismissed,
+                    });
+                }
+                TurnVerdict::NotAdvanced { .. } if attempt == 0 && self.known_screen_name(&after)?.is_some() => {
+                    continue; // dismissed at the top of the next attempt
+                }
+                TurnVerdict::NotAdvanced { indicator_diff } => {
+                    let mut reason = format!(
+                        "turn indicator unchanged after the turn macro (diff {:.3} < {:.2}); something on screen is blocking end-turn",
+                        indicator_diff, check.turn_threshold
+                    );
+                    if !dismissed.is_empty() {
+                        reason.push_str(&format!(" (already dismissed: {})", dismissed.join(", ")));
+                    }
+                    return Ok(TurnOutcome::NotAdvanced { turn, reason, full_bytes: after });
+                }
+            }
         }
+        unreachable!("the second attempt always returns")
+    }
+
+    fn known_screen_name(&self, frame: &[u8]) -> Result<Option<String>> {
+        let img = decode_rgb(frame)?;
+        Ok(match_known_screen(&img, &self.known_screens).map(|(n, _, _)| n.clone()))
+    }
+
+    /// If `frame` shows a known `auto_dismiss` screen, dismiss it and return its name.
+    async fn dismiss_known_screen(&self, frame: &[u8], view: &View) -> Result<Option<String>> {
+        let img = decode_rgb(frame)?;
+        let Some((name, def, _)) = match_known_screen(&img, &self.known_screens) else {
+            return Ok(None);
+        };
+        if let Some([nx, ny]) = def.dismiss_click {
+            let (sx, sy) = view.to_screen(nx * view.width as f64, ny * view.height as f64)?;
+            self.client.click(sx, sy, "left", 1).await?;
+        } else if let Some(key) = &def.dismiss_key {
+            self.client.key(key, 1).await?;
+        } else {
+            return Ok(None); // matched but no way to dismiss: leave it for the model
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(800)).await;
+        Ok(Some(name.clone()))
     }
 
     /// Poll until the turn indicator differs from `before` or the HUD dims, up to `timeout`
@@ -308,6 +396,23 @@ mod tests {
     fn modal_when_the_hud_is_dimmed_regardless_of_the_date() {
         let v = classify_turn(&frame(90, 0), &frame(8, 1), &check()).unwrap();
         assert_eq!(v, TurnVerdict::Modal);
+    }
+
+    #[test]
+    fn manifest_known_screens_load_and_gnn_is_auto_dismissed() {
+        let dir = format!("{}/../../corpora/galciv4", env!("CARGO_MANIFEST_DIR"));
+        let m = crate::corpus::GameManifest::load_from_file(format!("{dir}/manifest.toml")).unwrap();
+        let screens = load_known_screens(&m);
+        let gnn = screens.iter().find(|(n, _, _)| n == "gnn_news").expect("gnn_news template loads");
+        assert!(gnn.1.dismiss_click.is_some());
+        // a flat frame matches nothing
+        let blank = RgbImage::from_pixel(W, H, Rgb([30, 30, 50]));
+        assert!(match_known_screen(&blank, &screens).is_none());
+        // the template pasted at its roi matches
+        let mut frame = blank.clone();
+        let roi = roi_from_norm(W, H, gnn.1.template_roi.unwrap());
+        image::imageops::replace(&mut frame, &gnn.2, roi[0] as i64, roi[1] as i64);
+        assert_eq!(match_known_screen(&frame, &screens).map(|s| s.0.as_str()), Some("gnn_news"));
     }
 
     #[test]

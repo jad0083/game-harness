@@ -294,11 +294,12 @@ async fn main() -> Result<()> {
             }
             let outcome = ap.advance_single_turn().await?;
             match outcome {
-                autopilot::TurnOutcome::Advanced { turn, elapsed_sec, verified } => {
+                autopilot::TurnOutcome::Advanced { turn, elapsed_sec, verified, dismissed } => {
                     println!(
-                        "Turn {} advanced in {:.2}s ({})",
+                        "Turn {} advanced in {:.2}s ({}){}",
                         turn, elapsed_sec,
-                        if verified { "date readout changed" } else { "unverified: no turn_indicator_roi in manifest" }
+                        if verified { "date readout changed" } else { "unverified: no turn_indicator_roi in manifest" },
+                        if dismissed.is_empty() { String::new() } else { format!("; dismissed {}", dismissed.join(", ")) }
                     );
                     let (curr, _) = ap.screenshot_view().await?;
                     let _ = tokio::fs::write("current_screen.jpg", &curr).await;
@@ -328,9 +329,14 @@ async fn main() -> Result<()> {
             for t in 1..=turns {
                 let outcome = ap.advance_single_turn().await?;
                 match outcome {
-                    autopilot::TurnOutcome::Advanced { elapsed_sec, verified, .. } => {
+                    autopilot::TurnOutcome::Advanced { elapsed_sec, verified, dismissed, .. } => {
                         completed += 1;
-                        println!("Turn {:02}: {:.2}s | {}", t, elapsed_sec, if verified { "advanced" } else { "unverified" });
+                        println!(
+                            "Turn {:02}: {:.2}s | {}{}",
+                            t, elapsed_sec,
+                            if verified { "advanced" } else { "unverified" },
+                            if dismissed.is_empty() { String::new() } else { format!(" (dismissed {})", dismissed.join(", ")) }
+                        );
                     }
                     autopilot::TurnOutcome::ModalEvent { turn, bbox, full_bytes, .. } => {
                         println!("Turn {:02}: dialog detected (HUD dimmed); bbox: {:?}", turn, bbox);

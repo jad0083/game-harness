@@ -202,6 +202,26 @@ pub fn region_diff_max_strip(a: &RgbImage, b: &RgbImage, roi: Roi, strip_w: u32)
     best / (sw as f64 * rh as f64 * 255.0)
 }
 
+/// Mean difference (0..1) between `template` and the same-sized region of `frame` whose
+/// top-left corner is (x, y). Returns 1.0 when the region does not fit in the frame.
+pub fn template_diff(frame: &RgbImage, template: &RgbImage, x: u32, y: u32) -> f64 {
+    let (tw, th) = template.dimensions();
+    if x + tw > frame.width() || y + th > frame.height() || tw == 0 || th == 0 {
+        return 1.0;
+    }
+    let mut sum: u64 = 0;
+    for ty in 0..th {
+        for tx in 0..tw {
+            let a = frame.get_pixel(x + tx, y + ty);
+            let b = template.get_pixel(tx, ty);
+            for c in 0..3 {
+                sum += (a[c] as i32 - b[c] as i32).unsigned_abs() as u64;
+            }
+        }
+    }
+    sum as f64 / (tw as f64 * th as f64 * 3.0 * 255.0)
+}
+
 /// True when the mean luminance of `roi` falls below `threshold`: GC4 dims the HUD behind
 /// event dialogs, reports and choice popups, so the normally bright top bar goes dark.
 pub fn is_modal_dimmed_in(jpeg_bytes: &[u8], roi: Roi, threshold: f64) -> Result<bool> {
@@ -387,6 +407,23 @@ mod tests {
             let changed = region_diff_max_strip(&apr_a, &load(other), roi, 6);
             assert!(changed > 0.06, "Apr 2 vs {other} must read as changed: {changed}");
         }
+    }
+
+    #[test]
+    fn template_diff_matches_real_gnn_logo_and_rejects_the_map() {
+        let fixture = |name: &str| {
+            let path = format!("{}/tests/fixtures/{}", env!("CARGO_MANIFEST_DIR"), name);
+            decode_rgb(&std::fs::read(path).unwrap()).unwrap()
+        };
+        let tpl_path = format!("{}/../../corpora/galciv4/templates/gnn_live.png", env!("CARGO_MANIFEST_DIR"));
+        let tpl = image::open(tpl_path).unwrap().to_rgb8();
+        // fixtures are crops starting at (290, 626); the template sits at (300, 636)
+        let hit = template_diff(&fixture("gnn_region.jpg"), &tpl, 10, 10);
+        let miss = template_diff(&fixture("map_region.jpg"), &tpl, 10, 10);
+        assert!(hit < 0.03, "GNN bulletin must match its template: {hit}");
+        assert!(miss > 0.15, "ordinary map must not match: {miss}");
+        assert_eq!(template_diff(&tpl, &tpl, 0, 0), 0.0);
+        assert_eq!(template_diff(&tpl, &tpl, 1, 0), 1.0, "out of bounds never matches");
     }
 
     #[test]
