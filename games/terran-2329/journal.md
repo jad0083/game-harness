@@ -27,3 +27,19 @@ Strategy source: `corpora/galciv4/strategy.md`. Newest entries at the bottom.
 - **Jun 2331**: first contact, **Baratak Grove** (untranslatable until Universal Translator).
   Turn then hung in "Starting New Month" (game bug). Quit, relaunched through Steam and the
   Stardock Launcher, loaded the 16:26 autosave → back to **Feb 9, 2331**.
+
+## 2331–2332 (after reloading the Feb 9, 2331 autosave)
+- **Feb 2331**: Research District re-queued. Discovery ordered to **Survey (V)**.
+- **Apr 2331**: Universal Translator done → **Armed Shuttles** (11 mo with insight bonus, 2 free
+  warships) chosen before Hyperwave Radio, since we had just met another civ with no navy.
+- **Jun 2331**: *Lost Cargo: Tech Finder* → stored (artifact). Baratak Grove contact, now
+  translated → conciliatory reply. **The turn that hung before went through cleanly.**
+- **Nov 2331**: Colony Ship-2 boarded; shipyard → another Colony Ship.
+- **Dec 2331**: *Arnorian Integrity Device* → preserved (Arnor Halo artifact).
+- **Jan 2332**: *The Great Pilgrimage* → ambitious (+5% influence 24 turns, −100 cr).
+- **Feb 2332**: Armed Shuttles done → **Research Districts** tech (10 mo). Two free warships
+  (F-108 Constable, F-105 Star Eagle) on **Sentry (N)** at Earth.
+- **Mar 2332**: **Agena II** colonised (confirmation handled by the autopilot). *Collapsing Ice
+  Bridge* → save campaign (+10% approval permanent, −100 cr).
+- **May 2332**: Research District done (research 5.1). Net income fell to **+0** → Earth builds a
+  **Financial District** (10 turns).
