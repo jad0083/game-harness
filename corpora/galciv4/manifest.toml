@@ -173,3 +173,10 @@ template_roi = [0.4401, 0.3379, 0.1212, 0.0295]
 template_threshold = 0.06
 auto_dismiss = true
 dismiss_click = [0.5708, 0.5952]                    # Yes
+
+[screens.turn_processing]
+description = "'Starting New Month' label bottom-right while AI turns run (pulses; can last minutes)"
+template = "templates/starting_new_month.png"
+template_roi = [0.8048, 0.9637, 0.1084, 0.0249]
+template_threshold = 0.05   # measured: label present 0.007-0.011, absent >= 0.134
+busy = true

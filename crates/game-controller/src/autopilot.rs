@@ -33,21 +33,43 @@ pub enum TurnOutcome {
 
 /// How many known informational screens one turn may dismiss before giving up.
 const MAX_DISMISSALS_PER_TURN: usize = 4;
+/// Upper bound on waiting while a `busy` screen ("Starting New Month") is visible.
+pub const BUSY_MAX_WAIT_SECS: f64 = 180.0;
 
 /// Decode every `auto_dismiss` screen's template; screens whose template is missing or
 /// unreadable are skipped (reported on stderr) so a bad file cannot stop the autopilot.
 pub fn load_known_screens(
     manifest: &crate::corpus::GameManifest,
 ) -> Vec<(String, crate::corpus::ScreenDef, image::RgbImage)> {
-    let base = manifest.base_dir.clone().unwrap_or_default();
     let mut names: Vec<&String> = manifest.screens.keys().collect();
     names.sort();
+    load_screens_where(manifest, &names, |d| d.auto_dismiss && !d.busy)
+}
+
+/// Decode the templates of every `busy` screen (turn still processing).
+pub fn load_busy_screens(
+    manifest: &crate::corpus::GameManifest,
+) -> Vec<(String, crate::corpus::ScreenDef, image::RgbImage)> {
+    let mut names: Vec<&String> = manifest.screens.keys().collect();
+    names.sort();
+    load_screens_where(manifest, &names, |d| d.busy)
+}
+
+fn load_screens_where(
+    manifest: &crate::corpus::GameManifest,
+    names: &[&String],
+    keep: impl Fn(&crate::corpus::ScreenDef) -> bool,
+) -> Vec<(String, crate::corpus::ScreenDef, image::RgbImage)> {
+    let base = manifest.base_dir.clone().unwrap_or_default();
     let mut out = Vec::new();
     for name in names {
-        let def = &manifest.screens[name];
-        let (true, Some(rel)) = (def.auto_dismiss, def.template.as_ref()) else { continue };
+        let def = &manifest.screens[*name];
+        let Some(rel) = def.template.as_ref() else { continue };
+        if !keep(def) {
+            continue;
+        }
         match image::open(base.join(rel)) {
-            Ok(img) => out.push((name.clone(), def.clone(), img.to_rgb8())),
+            Ok(img) => out.push(((*name).clone(), def.clone(), img.to_rgb8())),
             Err(e) => eprintln!("warning: screen {name}: cannot load template {rel}: {e}"),
         }
     }
@@ -104,6 +126,8 @@ pub struct Autopilot {
     client: Arc<AgentClient>,
     /// (name, definition, decoded template) for every `auto_dismiss` screen with a template.
     known_screens: Vec<(String, crate::corpus::ScreenDef, image::RgbImage)>,
+    /// `busy` screens: while one matches, the game is still processing the turn.
+    busy_screens: Vec<(String, crate::corpus::ScreenDef, image::RgbImage)>,
     view: Mutex<Option<View>>,
     last_frame: Mutex<Option<Vec<u8>>>,
     turn_counter: AtomicU32,
@@ -114,9 +138,11 @@ impl Autopilot {
     pub fn new(client: Arc<AgentClient>) -> Self {
         let manifest = crate::corpus::GameManifest::find_default();
         let known_screens = manifest.as_ref().map(load_known_screens).unwrap_or_default();
+        let busy_screens = manifest.as_ref().map(load_busy_screens).unwrap_or_default();
         Self {
             client,
             known_screens,
+            busy_screens,
             view: Mutex::new(None),
             last_frame: Mutex::new(None),
             turn_counter: AtomicU32::new(1),
@@ -130,6 +156,7 @@ impl Autopilot {
 
     pub fn with_manifest(mut self, manifest: crate::corpus::GameManifest) -> Self {
         self.known_screens = load_known_screens(&manifest);
+        self.busy_screens = load_busy_screens(&manifest);
         self.manifest = Some(manifest);
         self
     }
@@ -262,6 +289,16 @@ impl Autopilot {
                     continue; // dismissed at the top of the next attempt
                 }
                 TurnVerdict::NotAdvanced { indicator_diff } => {
+                    if match_known_screen(&decode_rgb(&after)?, &self.busy_screens).is_some() {
+                        return Ok(TurnOutcome::NotAdvanced {
+                            turn,
+                            reason: format!(
+                                "the game is still processing the turn ('Starting New Month' visible after {:.0} s); wait and retry",
+                                start.elapsed().as_secs_f64()
+                            ),
+                            full_bytes: after,
+                        });
+                    }
                     let mut reason = format!(
                         "turn indicator unchanged after the turn macro (diff {:.3} < {:.2}); something on screen is blocking end-turn",
                         indicator_diff, check.turn_threshold
@@ -313,7 +350,10 @@ impl Autopilot {
     /// Poll until the turn indicator differs from `before` or the HUD dims, up to `timeout`
     /// seconds. Returns whether a signal was seen before the deadline.
     async fn wait_for_turn_signal(&self, before: &[u8], check: &TurnCheck, timeout: f64) -> Result<bool> {
-        let deadline = Instant::now() + std::time::Duration::from_secs_f64(timeout.max(1.0));
+        let start = Instant::now();
+        let step = std::time::Duration::from_secs_f64(timeout.max(1.0));
+        let cap = start + std::time::Duration::from_secs_f64(BUSY_MAX_WAIT_SECS);
+        let mut deadline = start + step;
         let before_img = decode_rgb(before)?;
         while Instant::now() < deadline {
             tokio::time::sleep(std::time::Duration::from_millis(300)).await;
@@ -326,6 +366,11 @@ impl Autopilot {
             };
             if dimmed || changed {
                 return Ok(true);
+            }
+            // The game shows "Starting New Month" while AI turns run; those can take far longer
+            // than the settle timeout, so keep extending the wait while it is visible.
+            if match_known_screen(&img, &self.busy_screens).is_some() {
+                deadline = (Instant::now() + step).min(cap);
             }
         }
         Ok(false)
@@ -420,8 +465,12 @@ mod tests {
         let dir = format!("{}/../../corpora/galciv4", env!("CARGO_MANIFEST_DIR"));
         let m = crate::corpus::GameManifest::load_from_file(format!("{dir}/manifest.toml")).unwrap();
         let screens = load_known_screens(&m);
-        let declared = m.screens.values().filter(|d| d.auto_dismiss && d.template.is_some()).count();
+        let declared = m.screens.values().filter(|d| d.auto_dismiss && !d.busy && d.template.is_some()).count();
         assert_eq!(screens.len(), declared, "every auto_dismiss screen's template must load");
+        let busy = load_busy_screens(&m);
+        assert_eq!(busy.len(), m.screens.values().filter(|d| d.busy).count(), "every busy template must load");
+        assert!(busy.iter().any(|(n, _, _)| n == "turn_processing"));
+        assert!(!screens.iter().any(|(n, _, _)| n == "turn_processing"), "busy screens are never dismissed");
         assert!(declared >= 3);
         let gnn = screens.iter().find(|(n, _, _)| n == "gnn_news").expect("gnn_news template loads");
         assert!(gnn.1.dismiss_click.is_some());
