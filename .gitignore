@@ -12,3 +12,4 @@ current_screen.jpg
 target/
 **/target/
 .claude/settings.local.json
+incoming/
