@@ -294,14 +294,22 @@ async fn main() -> Result<()> {
             }
             let outcome = ap.advance_single_turn().await?;
             match outcome {
-                autopilot::TurnOutcome::Advanced { turn, elapsed_sec } => {
-                    println!("Turn {} completed in {:.2}s", turn, elapsed_sec);
+                autopilot::TurnOutcome::Advanced { turn, elapsed_sec, verified } => {
+                    println!(
+                        "Turn {} advanced in {:.2}s ({})",
+                        turn, elapsed_sec,
+                        if verified { "date readout changed" } else { "unverified: no turn_indicator_roi in manifest" }
+                    );
                     let (curr, _) = ap.screenshot_view().await?;
                     let _ = tokio::fs::write("current_screen.jpg", &curr).await;
                 }
                 autopilot::TurnOutcome::ModalEvent { turn, bbox, full_bytes, .. } => {
-                    println!("Turn {}: Strategic modal event detected! Changed bbox: {:?}", turn, bbox);
+                    println!("Turn {}: dialog detected (HUD dimmed); changed bbox: {:?}", turn, bbox);
                     let _ = tokio::fs::write("modal_event.jpg", &full_bytes).await;
+                    let _ = tokio::fs::write("current_screen.jpg", &full_bytes).await;
+                }
+                autopilot::TurnOutcome::NotAdvanced { turn, reason, full_bytes } => {
+                    println!("Turn {} did NOT advance: {}", turn, reason);
                     let _ = tokio::fs::write("current_screen.jpg", &full_bytes).await;
                 }
             }
@@ -320,13 +328,18 @@ async fn main() -> Result<()> {
             for t in 1..=turns {
                 let outcome = ap.advance_single_turn().await?;
                 match outcome {
-                    autopilot::TurnOutcome::Advanced { elapsed_sec, .. } => {
+                    autopilot::TurnOutcome::Advanced { elapsed_sec, verified, .. } => {
                         completed += 1;
-                        println!("Turn {:02}: {:.2}s | OK", t, elapsed_sec);
+                        println!("Turn {:02}: {:.2}s | {}", t, elapsed_sec, if verified { "advanced" } else { "unverified" });
                     }
                     autopilot::TurnOutcome::ModalEvent { turn, bbox, full_bytes, .. } => {
-                        println!("Turn {:02}: Strategic modal event! BBox: {:?}", turn, bbox);
+                        println!("Turn {:02}: dialog detected (HUD dimmed); bbox: {:?}", turn, bbox);
                         let _ = tokio::fs::write("modal_event.jpg", &full_bytes).await;
+                        let _ = tokio::fs::write("current_screen.jpg", &full_bytes).await;
+                        break;
+                    }
+                    autopilot::TurnOutcome::NotAdvanced { turn, reason, full_bytes } => {
+                        println!("Turn {:02}: did NOT advance: {}", turn, reason);
                         let _ = tokio::fs::write("current_screen.jpg", &full_bytes).await;
                         break;
                     }

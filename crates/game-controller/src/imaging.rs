@@ -124,28 +124,69 @@ pub fn detect_change_bbox(
     ]))
 }
 
-/// Ultra-fast modal / event dialog detector (80 microseconds).
-/// Evaluates average luminance across the top resource bar (0..500, 0..35).
-/// Normal galaxy map has bright icons (lum ~55.0); modal dialogs dim the UI to < 22.0.
-pub fn is_modal_dimmed(jpeg_bytes: &[u8], threshold: f64) -> Result<bool> {
-    let img = decode_rgb(jpeg_bytes)?;
-    let w = 500.min(img.width());
-    let h = 35.min(img.height());
+/// A rectangle in image pixels: [x, y, w, h].
+pub type Roi = [u32; 4];
 
-    let mut sum_lum = 0.0;
-    let total_px = (w * h) as f64;
+/// Default modal-detection region: the top resource bar of a 1568-wide frame.
+pub const DEFAULT_MODAL_ROI: Roi = [0, 0, 500, 35];
 
-    for y in 0..h {
-        for x in 0..w {
+/// Convert a normalized rectangle (fractions of width/height) to image pixels, clamped.
+pub fn roi_from_norm(width: u32, height: u32, norm: [f64; 4]) -> Roi {
+    let x = (norm[0].clamp(0.0, 1.0) * width as f64).round() as u32;
+    let y = (norm[1].clamp(0.0, 1.0) * height as f64).round() as u32;
+    let w = ((norm[2].max(0.0) * width as f64).round() as u32).max(1);
+    let h = ((norm[3].max(0.0) * height as f64).round() as u32).max(1);
+    clamp_roi([x, y, w, h], width, height)
+}
+
+pub fn clamp_roi(roi: Roi, width: u32, height: u32) -> Roi {
+    let x = roi[0].min(width.saturating_sub(1));
+    let y = roi[1].min(height.saturating_sub(1));
+    [x, y, roi[2].min(width - x).max(1), roi[3].min(height - y).max(1)]
+}
+
+/// Mean ITU-R BT.601 luminance (0..255) over a region.
+pub fn region_mean_luminance(img: &RgbImage, roi: Roi) -> f64 {
+    let [x0, y0, w, h] = clamp_roi(roi, img.width(), img.height());
+    let mut sum = 0.0;
+    for y in y0..y0 + h {
+        for x in x0..x0 + w {
             let p = img.get_pixel(x, y);
-            // ITU-R BT.601 luminance
-            let lum = 0.299 * p[0] as f64 + 0.587 * p[1] as f64 + 0.114 * p[2] as f64;
-            sum_lum += lum;
+            sum += 0.299 * p[0] as f64 + 0.587 * p[1] as f64 + 0.114 * p[2] as f64;
         }
     }
+    sum / (w * h) as f64
+}
 
-    let mean_lum = sum_lum / total_px;
-    Ok(mean_lum < threshold)
+/// Mean absolute per-channel difference over a region, normalized to 0..1.
+/// 0 = identical; small UI text changing in place scores well above 0.05.
+pub fn region_diff(a: &RgbImage, b: &RgbImage, roi: Roi) -> f64 {
+    let w = a.width().min(b.width());
+    let h = a.height().min(b.height());
+    let [x0, y0, rw, rh] = clamp_roi(roi, w, h);
+    let mut sum: u64 = 0;
+    for y in y0..y0 + rh {
+        for x in x0..x0 + rw {
+            let pa = a.get_pixel(x, y);
+            let pb = b.get_pixel(x, y);
+            for c in 0..3 {
+                sum += (pa[c] as i32 - pb[c] as i32).unsigned_abs() as u64;
+            }
+        }
+    }
+    sum as f64 / (rw as f64 * rh as f64 * 3.0 * 255.0)
+}
+
+/// True when the mean luminance of `roi` falls below `threshold`: GC4 dims the HUD behind
+/// event dialogs, reports and choice popups, so the normally bright top bar goes dark.
+pub fn is_modal_dimmed_in(jpeg_bytes: &[u8], roi: Roi, threshold: f64) -> Result<bool> {
+    let img = decode_rgb(jpeg_bytes)?;
+    Ok(region_mean_luminance(&img, roi) < threshold)
+}
+
+/// `is_modal_dimmed_in` over `DEFAULT_MODAL_ROI`.
+pub fn is_modal_dimmed(jpeg_bytes: &[u8], threshold: f64) -> Result<bool> {
+    is_modal_dimmed_in(jpeg_bytes, DEFAULT_MODAL_ROI, threshold)
 }
 
 /// Crops a sub-region [x, y, w, h] from a JPEG and re-encodes as JPEG.
@@ -254,6 +295,32 @@ mod tests {
         assert!(by <= 30);
         assert!(bx + bw >= 60);
         assert!(by + bh >= 50);
+    }
+
+    #[test]
+    fn roi_from_norm_maps_and_clamps() {
+        assert_eq!(roi_from_norm(1568, 882, [0.948, 0.004, 0.05, 0.028]), [1486, 4, 78, 25]);
+        assert_eq!(roi_from_norm(100, 100, [0.9, 0.9, 0.5, 0.5]), [90, 90, 10, 10], "clamped to the image");
+        assert_eq!(roi_from_norm(100, 100, [2.0, 2.0, 0.0, 0.0]), [99, 99, 1, 1]);
+    }
+
+    #[test]
+    fn region_diff_is_zero_for_identical_and_large_for_changed_text() {
+        let mut a = RgbImage::new(200, 100);
+        for p in a.pixels_mut() {
+            *p = Rgb([40, 40, 60]);
+        }
+        let mut b = a.clone();
+        for y in 10..20 {
+            for x in 150..190 {
+                b.put_pixel(x, y, Rgb([230, 230, 230])); // "text" appears in the top-right box
+            }
+        }
+        let roi = [140, 5, 55, 25];
+        assert_eq!(region_diff(&a, &a, roi), 0.0);
+        assert!(region_diff(&a, &b, roi) > 0.1, "{}", region_diff(&a, &b, roi));
+        assert_eq!(region_diff(&a, &b, [0, 50, 100, 40]), 0.0, "changes outside the roi do not count");
+        assert!((region_mean_luminance(&a, roi) - 42.28).abs() < 0.5);
     }
 
     #[test]

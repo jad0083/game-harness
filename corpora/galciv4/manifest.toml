@@ -55,7 +55,7 @@ prev_idle_planet = "shift+left"
 
 [screens.event_modal]
 description = "Strategic event or planet colonization choice dialog"
-# 80-microsecond luminance signature on top resource bar (dimmed when modal appears)
+# Mean luminance of the top resource bar, in 1568x882 frame pixels; the HUD dims behind modals
 luminance_roi = [0, 0, 1568, 40]
 luminance_threshold = 22.0
 is_blocking = true
@@ -100,6 +100,8 @@ buttons.option_3 = { norm_x = 0.245, norm_y = 0.950, action = "click" }
 
 [screens.main_galaxy_map]
 description = "Main Galaxy Map HUD view"
+# Date readout ("Jan 13, 2329") top-right; changes every turn. Normalized to frame size.
+turn_indicator_roi = [0.948, 0.004, 0.05, 0.028]
 buttons.end_turn = { norm_x = 0.950, norm_y = 0.950, action = "click" }
 buttons.advisors = { norm_x = 0.950, norm_y = 0.050, action = "click" }
 buttons.research_panel = { norm_x = 0.080, norm_y = 0.020, action = "click" }
