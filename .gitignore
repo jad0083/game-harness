@@ -13,3 +13,4 @@ target/
 **/target/
 .claude/settings.local.json
 incoming/
+.claude-images/
