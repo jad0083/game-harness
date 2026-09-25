@@ -28,7 +28,8 @@
 - [ ] Reconcile `strategy.md` numbers with the generated data (e.g. Colonial Policies costs 24, not 27)
 - [x] Wire the autopilot to the `manifest.toml` screen signatures (`luminance_roi`/threshold, new `turn_indicator_roi`)
 - [x] Autopilot verifies a turn advanced (date readout diff), reports `NotAdvanced`, and refuses to send keys unless the game is foreground
-- [ ] Live-validate the turn macro (`tab/space/tab/f/enter`) and `turn_indicator_roi` against the running game
+- [x] Live-validate `turn_indicator_roi` and the `NotAdvanced` path against the running game (blocked by a pending leader prompt, correctly reported)
+- [ ] Handle "action required" blockers before end-turn: detect the turn-button state, resolve or hand the prompt to the model, then end the turn and verify `Advanced`
 
 ## Playing
 - [x] Record verified GC4 controls/UI positions in PLAYING.md

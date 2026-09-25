@@ -36,3 +36,15 @@ Verified 2026-09-25, game resolution 3840x2160 (screenshots downscaled to 1568x8
   or right-click a colonizable planet.
 - Mouse wheel down zooms the map out; hovering a ship/button shows a tooltip with its hotkey.
 - Advisors panel (top-right) lists pending to-dos; clicking an entry jumps to it.
+
+Verified 2026-09-25 (afternoon, Rust agent, turn 3):
+
+- Key injection from the Rust agent registers in-game (`esc` opened the pause menu).
+- `esc` with nothing open opens the **pause menu** (Resume/Save/Load/…); a second `esc` closes it.
+  So `esc` is not a free "cancel" — only use it when a panel or dialog is actually open.
+- The bottom-right turn button shows the current **blocking item** (⚖ = leader/policy decision,
+  green planet = colony/planet action) instead of ending the turn while "action required" items
+  are pending, e.g. "A Leader is available to be assigned". The `turn_pump` macro's `enter`
+  then navigates to that item rather than advancing; the autopilot reports `NotAdvanced`.
+- `turn_indicator_roi` (the date readout, top-right) is stable frame-to-frame when no turn
+  passes (diff 0.000), so an unchanged readout is a reliable "did not advance" signal.

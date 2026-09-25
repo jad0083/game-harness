@@ -6,7 +6,8 @@
 
 ### Rust controller (`crates/game-controller`)
 - [ ] `manifest.toml` screen fields `choice_keys`, `buttons`, `dismiss_key`, `title_ocr`, `is_blocking` are parsed but still unused (the autopilot now uses `luminance_roi`, `luminance_threshold`, `turn_indicator_roi`)
-- [ ] The `turn_pump` macro keys (`space` = skip unit, `f` = sleep unit) and the `turn_indicator_roi` box are unverified against the live game (PLAYING.md only verifies `tab`, `c`)
+- [ ] The `turn_pump` macro cannot end a turn while "action required" items are pending (leader to assign, colony action): `enter` navigates to the blocker instead. The autopilot needs a pending-action handler (or must hand off to the model) before it can advance unattended (found live 2026-09-25)
+- [ ] `space` (skip unit) and `f` (sleep unit) hotkeys remain unverified; the macro ran but no visible unit-cycling effect could be isolated
 - [ ] `autopilot.rs:105-107` `click_norm` emits image-space coords without scaling (latent: no macro uses it yet)
 - [ ] `client.rs:254-256` `focus` returns Ok on a 404 body; `settle`/`windows`/`focus` never check HTTP status (a 401 surfaces as a JSON parse error)
 - [ ] Rust MCP has no `zoom`, `hover`, `scroll`, `list_windows`, or grid overlay; `GAME_SCREENSHOT_DIR` frame archive dropped from `.mcp.json`; `PLAYING.md` documents tools that no longer exist
@@ -27,6 +28,8 @@
 - [ ] Python harness (`src/harness`, `windows_agent/agent.py`, 40 tests) is no longer deployed; its green suite covers nothing that runs (`agent.py` `settle` stub always returns `settled: True`)
 
 ## Resolved
+- [x] `turn_indicator_roi` and `NotAdvanced` detection validated live: with a pending leader prompt the date readout stayed identical (diff 0.000) and the autopilot reported the blocked turn instead of counting it (2026-09-25)
+- [x] Rust agent key injection was unproven on real hardware (only the Python agent had been); verified live 2026-09-25 (`esc` opened the game's pause menu)
 - [x] Autopilot counted turns locally with no check that a turn advanced, and hard-coded its modal ROI (2026-09-25; now diffs the manifest's `turn_indicator_roi` before/after the macro, returns `NotAdvanced` when unchanged, reads `luminance_roi`/threshold from the manifest, and refuses to send keys unless the game is foreground; 4 classifier tests)
 - [x] Docs claimed "1.12 s/turn" for the autopilot, which measured key-send time rather than game turns (2026-09-25; replaced by a description of the verification)
 - [x] Corpus keyword search ranked wiki mentions above the defining page for `draft colonists` (2026-09-25; generated `order` records now match by name and rank first)
