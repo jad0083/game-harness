@@ -60,6 +60,21 @@ enum Commands {
         y2: f64,
         #[arg(long, default_value = "left")]
         button: String,
+        /// Delay after button down before moving (agent default 30, max 3000)
+        #[arg(long)]
+        hold_ms: Option<u64>,
+        /// Interpolated moves to the target (agent default 12, clamped 2..120)
+        #[arg(long)]
+        steps: Option<i32>,
+        /// Delay between moves (agent default 15, clamped 5..200)
+        #[arg(long)]
+        step_ms: Option<u64>,
+        /// Delay at the target before release (agent default 30, max 3000)
+        #[arg(long)]
+        dwell_ms: Option<u64>,
+        /// Move +/-3 px around the target before release
+        #[arg(long)]
+        wiggle: bool,
     },
 
     /// Send a key press or combo (e.g. enter, esc, tab, space, f)
@@ -257,7 +272,7 @@ async fn main() -> Result<()> {
             let elapsed = start.elapsed().as_secs_f64() * 1000.0;
             println!("Clicked {} x{} at screen ({}, {}) in {:.1}ms", button, count, sx, sy, elapsed);
         }
-        Commands::Drag { x1, y1, x2, y2, button } => {
+        Commands::Drag { x1, y1, x2, y2, button, hold_ms, steps, step_ms, dwell_ms, wiggle } => {
             let start = Instant::now();
             let _ = client.screenshot(None, None, None, None, Some(imaging::MAX_SIDE as i32), Some(75)).await?;
             let orig_w = client.last_width.load(std::sync::atomic::Ordering::Relaxed).max(1);
@@ -269,7 +284,8 @@ async fn main() -> Result<()> {
             let sx2 = (x2 * scale).round() as i32;
             let sy2 = (y2 * scale).round() as i32;
 
-            client.drag(sx1, sy1, sx2, sy2, &button).await?;
+            let opts = client::DragOptions { hold_ms, steps, step_ms, dwell_ms, wiggle: wiggle.then_some(true) };
+            client.drag(sx1, sy1, sx2, sy2, &button, &opts).await?;
             let elapsed = start.elapsed().as_secs_f64() * 1000.0;
             println!("Dragged {} from ({}, {}) to ({}, {}) in {:.1}ms", button, sx1, sy1, sx2, sy2, elapsed);
         }
