@@ -22,12 +22,16 @@ function Step($msg) { Write-Host "==> $msg" -ForegroundColor Cyan }
 # --- 1. Python ---------------------------------------------------------------
 Step 'Checking for Python 3'
 function Find-Pythonw {
+    # Native stderr must not become a terminating error here (PowerShell 5.1 + 'Stop').
+    $ErrorActionPreference = 'Continue'
+    $probe = 'import sys; print(sys.executable)'
     foreach ($cmd in @('py', 'python')) {
-        $exe = Get-Command $cmd -ErrorAction SilentlyContinue
-        if (-not $exe) { continue }
-        # The Microsoft Store alias stub prints nothing useful; ask the real interpreter.
-        $args_ = if ($cmd -eq 'py') { @('-3', '-c') } else { @('-c') }
-        $path = & $exe.Source @args_ 'import sys; print(sys.executable)' 2>$null
+        if (-not (Get-Command $cmd -ErrorAction SilentlyContinue)) { continue }
+        # Ask the real interpreter for its path; the Microsoft Store alias stub fails this.
+        try {
+            if ($cmd -eq 'py') { $out = & py -3 -c $probe 2>$null } else { $out = & python -c $probe 2>$null }
+        } catch { continue }
+        $path = @($out) | Where-Object { $_ } | Select-Object -Last 1
         if ($LASTEXITCODE -eq 0 -and $path -and (Test-Path $path)) {
             $w = Join-Path (Split-Path $path) 'pythonw.exe'
             if (Test-Path $w) { return $w }
