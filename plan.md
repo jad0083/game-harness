@@ -13,7 +13,6 @@
 - [x] Rust Linux controller: CLI, HTTP client, imaging, stdio MCP server (18 tools)
 - [x] GC4 corpus: `game.toml` hotkeys/screens/macros, `strategy.md`, 13 wiki articles
 - [x] Redeploy the DPI-aware agent build (installer fixed in 3e425bf; PC now reports 3840x2160)
-- [ ] Autopilot: verify a turn actually advanced before counting it; use the `game.toml` screen signatures it parses
 - [ ] Restore `zoom`/`hover`/`scroll`/grid in the Rust MCP, or document why they're gone
 - [x] Tests for the Rust MCP coordinate mapping and for the agent's batch validation (`cargo test --workspace`: 18)
 - [ ] Decide the Python harness's fate: delete, or keep as the reference implementation with its tests pointed at what runs
@@ -27,7 +26,9 @@
 - [x] `scripts/extract-galciv4.py` with fixture tests → `data/tech.json` (130), `improvement.json` (528), `order.json` (66), `_meta.json`
 - [ ] Extend the extractor to ship components, policies and starbase modules as their own record kinds
 - [ ] Reconcile `strategy.md` numbers with the generated data (e.g. Colonial Policies costs 24, not 27)
-- [ ] Wire the autopilot to the `manifest.toml` screen signatures it already parses
+- [x] Wire the autopilot to the `manifest.toml` screen signatures (`luminance_roi`/threshold, new `turn_indicator_roi`)
+- [x] Autopilot verifies a turn advanced (date readout diff), reports `NotAdvanced`, and refuses to send keys unless the game is foreground
+- [ ] Live-validate the turn macro (`tab/space/tab/f/enter`) and `turn_indicator_roi` against the running game
 
 ## Playing
 - [x] Record verified GC4 controls/UI positions in PLAYING.md

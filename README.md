@@ -8,7 +8,7 @@ An ultra-low-latency, 100% Rust-powered autonomous AI game harness that plays tu
  │ LLM Agent (Claude / Gemini / AGY)       │         │ Galactic Civilizations IV: Supernova    │
  │   └─ game-controller (Native Rust)      │         │   (Running borderless / windowed)       │
  │      • game corpus (manifest+data+docs)│         └─────────────────────────────────────────┘
- │      • autopilot (1.12s/turn baseline)  │                              ▲
+ │      • autopilot (verified turn loop)   │                              ▲
  │      • stdio MCP server (19 tools)      │  HTTP/TCP 8765               │ GDI / Win32 SendInput
  │      • frame diff + luminance check     │ ──────────────► ┌─────────────────────────────────────────┐
  │                                         │ ◄────────────── │ game-agent.exe (Native Rust)            │
@@ -28,7 +28,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for system topology, the modal-detection 
 | Component | Path / Binary | Architecture | Performance / Capabilities |
 |---|---|---|---|
 | **Windows Remote Agent** | [`crates/game-agent`](crates/game-agent) & [`windows_agent/game-agent.exe`](windows_agent/game-agent.exe) | Compiled native Rust (`x86_64-pc-windows-gnu`) | ~8ms screen capture & JPEG encode; native Win32 `SendInput`, `SetCursorPos`, and `mouse_event`; Per-Monitor V2 HiDPI aware. |
-| **Linux Native Controller** | [`crates/game-controller`](crates/game-controller) → `target/release/game-controller` (build with `cargo build --release`; `.mcp.json` points here) | Compiled native Rust (`x86_64-unknown-linux-gnu`) | ~1 ms agent round-trip, reflex autopilot macro, in-memory corpus (search 50–100 µs), stdio MCP server. |
+| **Linux Native Controller** | [`crates/game-controller`](crates/game-controller) → `target/release/game-controller` (build with `cargo build --release`; `.mcp.json` points here) | Compiled native Rust (`x86_64-unknown-linux-gnu`) | ~1 ms agent round-trip; autopilot that verifies each turn by the HUD date changing and stops on dialogs or blockers; in-memory corpus (search <1 ms); stdio MCP server. |
 | **Game Corpus** | [`corpora/galciv4/`](corpora/galciv4/) | `manifest.toml` + generated `data/*.json` + `docs/*.md` + `strategy.md` | 33 hotkeys, 8 screen signatures, 3 macros; 130 techs, 528 improvements, 66 executive orders generated from the game's own XML by `scripts/extract-galciv4.py`; 13 reference docs chunked into 168 searchable pieces. |
 | **Legacy Pytest Suite** | [`src/harness/`](src/harness/) & [`tests/`](tests/) | Python 3.12 (FakeBackend fixtures) | 40/40 legacy tests passing in 10.86s. |
 
@@ -85,10 +85,12 @@ The compiled controller binary provides full programmatic access to all agent fu
 ./target/release/game-controller key "esc"
 ./target/release/game-controller key "enter"
 
-# 8. Single Turn Advancement (Tab -> Space -> Tab -> F -> Enter)
+# 8. One turn: runs the manifest's turn_pump macro, waits for the screen to settle, then
+#    reports advanced (date readout changed) / dialog (HUD dimmed) / did NOT advance.
+#    Refuses unless the game window is in the foreground (see `focus`).
 ./target/release/game-controller turn
 
-# 9. Autonomous Autopilot Loop (Halts on Event Dialogs / Modals)
+# 9. Turn loop: stops at the first dialog or blocked turn and saves current_screen.jpg
 ./target/release/game-controller autopilot --turns 25
 
 # 10. Query the game corpus (ids from `search`, bodies from `get`)
@@ -137,7 +139,7 @@ To connect Claude Desktop, Claude Code, or Antigravity IDE directly to the game 
 | `batch` | `actions: [...]` | Execute atomic multi-action sequence in a single network round-trip. |
 | `wait_settle` | `timeout, threshold` | Wait for on-screen animations or AI turns to stabilize. |
 | `diff` | `{}` | Compare current frame against previous capture and highlight changes. |
-| `autopilot_turns`| `turns` | Run high-speed autonomous turn loop until event dialog occurs. |
+| `autopilot_turns`| `turns` | Run the turn loop; each turn is verified by the date readout changing. Stops with a screenshot at the first dialog (HUD dimmed) or blocked turn (indicator unchanged). Refuses if the game is not the foreground window. |
 | `run_macro` | `name` | Execute pre-registered macro from `game.toml` (`turn_pump`, `auto_scout_cycle`). |
 | `corpus_search` | `query, limit` | Keyword search over records, playbook and reference docs; returns ids + one-line match snippets. |
 | `corpus_get` | `id` | One compact record (`tech:colonial_policies`) or one prose chunk (`doc:anomalies#0`, `strategy#2`). |
