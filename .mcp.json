@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "game": {
+      "command": ".venv/bin/python",
+      "args": ["-m", "harness.mcp_server"],
+      "env": {
+        "GAME_AGENT_URL": "http://192.168.1.77:8765",
+        "GAME_SCREENSHOT_DIR": "screenshots"
+      }
+    }
+  }
+}
