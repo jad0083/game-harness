@@ -12,7 +12,7 @@ downscaled_resolution = [1568, 882]
 [hotkeys]
 # Turn & Global Navigation
 next_action = "tab"
-end_turn = "enter"
+end_turn = "tab"  # verified 2026-09-25: turn button tooltip "Press Tab to advance to next turn"; with pending actions TAB opens the next one instead
 cancel = "esc"
 confirm_yes = "y"
 confirm_no = "n"
@@ -124,17 +124,12 @@ dismiss_key = "esc"
 
 
 [macros.turn_pump]
-description = "Cycle idle ships, skip or sleep pending units, and end turn"
+# TAB ends the turn when nothing is pending; otherwise it opens the next "action required"
+# screen and the autopilot reports NotAdvanced with that screen for the model to resolve.
+# space/f (skip/sleep unit) were removed: unverified, and they would fire into the next turn.
+description = "End the turn (TAB), or open the next pending action if something blocks it"
 actions = [
     { type = "key", key = "tab" },
-    { type = "wait", ms = 30 },
-    { type = "key", key = "space" },
-    { type = "wait", ms = 30 },
-    { type = "key", key = "tab" },
-    { type = "wait", ms = 30 },
-    { type = "key", key = "f" },
-    { type = "wait", ms = 30 },
-    { type = "key", key = "enter" },
 ]
 settle_timeout = 8.0
 settle_threshold = 0.02

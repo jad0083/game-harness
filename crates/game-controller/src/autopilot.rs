@@ -177,9 +177,13 @@ impl Autopilot {
             .and_then(|m| m.macros.get("turn_pump"))
             .map(|m| (m.settle_timeout, m.settle_threshold))
             .unwrap_or((8.0, 0.02));
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        // End-turn processing takes the game a few seconds and the map can look "settled"
+        // before it finishes, so wait for the turn indicator itself to change (or a dialog to
+        // appear) before letting the settle check and the classifier run.
+        // The frame after settle is what gets classified: a dialog that opens once the new turn
+        // starts must win over the date change that preceded it.
+        self.wait_for_turn_signal(&before, &check, timeout).await?;
         let _ = self.client.settle(Some(timeout), Some(threshold)).await?;
-
         let (after, _) = self.screenshot_view().await?;
         match classify_turn(&before, &after, &check)? {
             TurnVerdict::Modal => Ok(self.modal_outcome(turn, Some(&before), after)),
@@ -196,6 +200,27 @@ impl Autopilot {
                 full_bytes: after,
             }),
         }
+    }
+
+    /// Poll until the turn indicator differs from `before` or the HUD dims, up to `timeout`
+    /// seconds. Returns whether a signal was seen before the deadline.
+    async fn wait_for_turn_signal(&self, before: &[u8], check: &TurnCheck, timeout: f64) -> Result<bool> {
+        let deadline = Instant::now() + std::time::Duration::from_secs_f64(timeout.max(1.0));
+        let before_img = decode_rgb(before)?;
+        while Instant::now() < deadline {
+            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+            let (frame, _) = self.screenshot_view().await?;
+            let img = decode_rgb(&frame)?;
+            let dimmed = region_mean_luminance(&img, check.modal_roi) < check.modal_threshold;
+            let changed = match check.turn_roi {
+                Some(roi) => region_diff(&before_img, &img, roi) >= check.turn_threshold,
+                None => true,
+            };
+            if dimmed || changed {
+                return Ok(true);
+            }
+        }
+        Ok(false)
     }
 
     /// The turn macro is blind keystrokes; refuse to send them anywhere but the game.
