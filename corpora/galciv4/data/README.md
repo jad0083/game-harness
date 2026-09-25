@@ -1,7 +1,14 @@
 # Generated game data
 
 Files in this directory are **generated** from the game's own definition files by
-`scripts/extract-galciv4.py` and must never be edited by hand. Regenerate after every game patch.
+`scripts/extract-galciv4.py` and must never be edited by hand. Regenerate after every game patch:
+
+```bash
+python3 scripts/extract-galciv4.py <folder containing Gameplay/ and Text/> --game-version 4.1.1
+```
+
+The two folders are `<install>\Data\Gameplay` and `<install>\Data\English\Text` on the Windows PC;
+`scripts/receive-file.py` accepts a zip of them over the LAN. The XML itself is not committed.
 
 Contract:
 

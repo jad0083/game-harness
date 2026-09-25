@@ -34,7 +34,8 @@ This file guides LLMs and coding agents when operating in this repository.
 - Corpus overview: `./target/release/game-controller corpus`
 - Corpus search (ids + snippets): `./target/release/game-controller corpus search "<query>" --limit 5`
 - Corpus fetch by id: `./target/release/game-controller corpus get "<id>"` (e.g. `doc:anomalies#0`, `strategy#1`, `tech:colonial_policies`)
-- Corpus name lookups: `./target/release/game-controller corpus tech|improvement|order "<name>"` (need generated `data/*.json`)
+- Corpus name lookups: `./target/release/game-controller corpus tech|improvement|order "<name>"`
+- Regenerate game data after a patch: `python3 scripts/extract-galciv4.py <dir with Gameplay/ and Text/> --game-version <v>` (see README "Game corpus")
 - Corpus strategy playbook: `./target/release/game-controller corpus strategy`
 - Stdio MCP server: `./target/release/game-controller mcp`
 - Run Rust test suite: `cargo test --workspace`; lint: `cargo clippy --workspace --all-targets`
@@ -45,7 +46,7 @@ This file guides LLMs and coding agents when operating in this repository.
 2. **Consult the game corpus** (`corpora/galciv4/`, see ARCHITECTURE.md §5):
    - `manifest.toml`: hotkeys, 8 screen signatures, and macros (hand-verified).
    - `strategy.md`: playbook for expansion, colony feeding, districts, ministers, and tech pathing.
-   - `data/*.json`: generated entity records from the game's own XML (extractor pending; `data/README.md` has the contract). Never hand-edit.
+   - `data/*.json`: entity records generated from the game's own XML (130 techs, 528 improvements, 66 orders). Never hand-edit; when a wiki doc and a record disagree, the record wins.
    - `docs/*.md`: reference prose with `Source:`/`License:` headers. Use `corpus_search` to get ids, then `corpus_get` for one chunk; do not dump whole docs into context.
 3. **Use the Autopilot Loop**: Do NOT make individual tool calls for routine turn advancement. Use `./target/release/game-controller autopilot --turns 25` to fast-forward turns at 1.12s/turn. It automatically halts on strategic modal dialogs.
 4. **Resolution & Coordinate Mapping**: Image space is 1568x882; remote screen is 3072x1728 (or 3840x2160). Both `click` and `drag` automatically scale coordinates using live target width/height headers.

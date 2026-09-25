@@ -152,17 +152,25 @@ corpora/galciv4/
 ```
 
 ### Records (`data/*.json`)
-Generic records — `id`, `name`, `aliases`, `summary`, `fields` — so the extractor decides which fields each kind carries. They are generated from the game's own definition files on the Windows PC (`<install>/Data/Gameplay/*.xml`, display strings in `Data/English/Text/*.xml`), never scraped from the wiki. The loader rejects nameless records and duplicate ids at startup. The extractor is pending (it needs a copy of those XML files); until it runs, the lookup tools say so and search falls back to the docs.
+Generic records — `id`, `name`, `aliases`, `summary`, `fields` — so the extractor decides which fields each kind carries. `scripts/extract-galciv4.py` generates them from the game's own definition files (`<install>/Data/Gameplay/*.xml`, display strings from the 38k `StringTable` labels in `Data/English/Text/*.xml`), never from the wiki. Current output for game version 4.1.1: 130 techs (Terran `HumanTechTree`; `--tech-tree` selects another), 528 improvements, 66 executive orders.
+
+- Techs: research cost, age, prerequisites resolved to display names, typed effects, and an `unlocks` list built by reverse lookup over improvements, ship components, policies, starbase modules, executive orders, hulls, abilities, leaders and invasion tactics.
+- Improvements: build/maintenance/resource costs separated from effects, per-level effects, adjacency bonuses, tech and trait requirements, source file.
+- Executive orders: name, description, modifiers (with duration) and actions resolved through their `ArtifactPowerDef`; control/credit cost, cooldown, tech requirements, blocking traits.
+- Effects render through `StatTypeDisplayDefs` (`+20% Manufacturing (Colony)`, percentages honoured); UI markup such as `[ICON=…]` is stripped.
+- Display-name collisions are resolved deliberately: tutorial variants lose, `_Human` variants beat the base definition, other factions' variants lose, and genuine tiers (`Project_UpgradeWealth1/2/3`) are kept under suffixed ids with a `variant` field.
+
+The loader rejects nameless records and duplicate ids at startup, so a bad extract fails the build rather than a game turn. The raw XML is not committed (Stardock's data); `data/_meta.json` records the game version and generator commit for reproducibility.
 
 ### Chunks (`docs/*.md`, `strategy.md`)
 Each doc's header (title, `Source:`, `License:`) is stripped; the body is grouped into paragraph chunks of at most 1,500 characters with ids like `doc:planetary_management#3` and `strategy#1`. 13 docs → 168 chunks today.
 
 ### Lookup and search (`corpus.rs`)
 - `lookup(kind, name)`: normalized name or alias, else the closest trigram match (Dice ≥ 0.6) of that kind.
-- `search(query, limit)`: records score on name/alias/field matches; chunks must contain every query token and score on exact phrase, title, and occurrence count. Ties break on id, so results are deterministic. Returns ids and ~120-character match snippets only; bodies come from `get(id)`. Measured 50–100 µs over the current corpus.
+- `search(query, limit)`: records score on name/alias/field matches; chunks must contain every query token and score on exact phrase, title, and occurrence count. Ties break on id, so results are deterministic. Returns ids and ~120-character match snippets only; bodies come from `get(id)`. Measured 0.4–0.8 ms over 724 records and 168 chunks (text is normalized once at load).
 - `get(id)`: one compact record (heading plus one line per field) or one chunk.
 
-Known limitation: keyword search ranks by term frequency, so a page that *mentions* "Draft Colonists" three times can outrank the page that defines it until generated `order` records exist (a record's name match scores 100, above any chunk).
+A record whose name matches the query scores 100, above any prose chunk, so `draft colonists` returns `order:draft_colonists` first and the wiki mentions after it.
 
 ## 6. Strategic Architecture & Gameplay Mechanics
 
@@ -194,7 +202,7 @@ Known limitation: keyword search ranks by term frequency, so a page that *mentio
 | **Turn Advancement Rate** | **$1.12\,\text{s}$ per turn** | Rust Autopilot Macro (`game-controller`) |
 | **GDI Capture + Encode** | ~8 ms | `StretchBlt` + `jpeg-encoder` (`game-agent.exe`) |
 | **Network RPC Roundtrip** | **$0.36\,\text{ms}$** | Local Gigabit LAN HTTP Keep-Alive |
-| **Corpus Search** | 50–100 µs measured (13 docs, 168 chunks) | Linear scan over pre-normalized chunks (`corpus.rs`) |
+| **Corpus Search** | 0.4–0.8 ms measured (724 records, 168 chunks) | Linear scan over text normalized at load (`corpus.rs`) |
 | **Modal Luminance Check** | sub-millisecond | Mean luminance over the top-bar region (`imaging.rs`); no SIMD intrinsics |
 | **Rust Test Suite** | 23 tests (17 controller, 6 agent) | `cargo test --workspace` |
 | **Legacy Test Suite** | **$10.86\,\text{s}$ (40/40 pass)** | `pytest` |

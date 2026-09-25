@@ -29,7 +29,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for system topology, the modal-detection 
 |---|---|---|---|
 | **Windows Remote Agent** | [`crates/game-agent`](crates/game-agent) & [`windows_agent/game-agent.exe`](windows_agent/game-agent.exe) | Compiled native Rust (`x86_64-pc-windows-gnu`) | ~8ms screen capture & JPEG encode; native Win32 `SendInput`, `SetCursorPos`, and `mouse_event`; Per-Monitor V2 HiDPI aware. |
 | **Linux Native Controller** | [`crates/game-controller`](crates/game-controller) → `target/release/game-controller` (build with `cargo build --release`; `.mcp.json` points here) | Compiled native Rust (`x86_64-unknown-linux-gnu`) | ~1 ms agent round-trip, reflex autopilot macro, in-memory corpus (search 50–100 µs), stdio MCP server. |
-| **Game Corpus** | [`corpora/galciv4/`](corpora/galciv4/) | `manifest.toml` + generated `data/*.json` + `docs/*.md` + `strategy.md` | 33 hotkeys, 8 screen signatures, 3 macros; 13 reference docs chunked into 168 searchable pieces; entity records generated from the game's own XML (extractor pending, see `data/README.md`). |
+| **Game Corpus** | [`corpora/galciv4/`](corpora/galciv4/) | `manifest.toml` + generated `data/*.json` + `docs/*.md` + `strategy.md` | 33 hotkeys, 8 screen signatures, 3 macros; 130 techs, 528 improvements, 66 executive orders generated from the game's own XML by `scripts/extract-galciv4.py`; 13 reference docs chunked into 168 searchable pieces. |
 | **Legacy Pytest Suite** | [`src/harness/`](src/harness/) & [`tests/`](tests/) | Python 3.12 (FakeBackend fixtures) | 40/40 legacy tests passing in 10.86s. |
 
 ---
@@ -95,7 +95,7 @@ The compiled controller binary provides full programmatic access to all agent fu
 ./target/release/game-controller corpus                       # what is loaded
 ./target/release/game-controller corpus search "draft colonists" --limit 5
 ./target/release/game-controller corpus get "doc:executive_orders#1"
-./target/release/game-controller corpus tech "Colonial Policies"   # needs data/tech.json (extractor)
+./target/release/game-controller corpus tech "Colonial Policies"   # exact, alias, or closest name
 ./target/release/game-controller corpus improvement "Manufacturing District"
 ./target/release/game-controller corpus order "Draft Colonists"
 ./target/release/game-controller corpus strategy
@@ -141,7 +141,7 @@ To connect Claude Desktop, Claude Code, or Antigravity IDE directly to the game 
 | `run_macro` | `name` | Execute pre-registered macro from `game.toml` (`turn_pump`, `auto_scout_cycle`). |
 | `corpus_search` | `query, limit` | Keyword search over records, playbook and reference docs; returns ids + one-line match snippets. |
 | `corpus_get` | `id` | One compact record (`tech:colonial_policies`) or one prose chunk (`doc:anomalies#0`, `strategy#2`). |
-| `corpus_tech` / `corpus_improvement` / `corpus_order` | `name` | Name lookup (exact, alias, or closest match) in generated `data/*.json`; says so when the data has not been generated. |
+| `corpus_tech` / `corpus_improvement` / `corpus_order` | `name` | Name lookup (exact, alias, or closest match) in the generated `data/*.json` records: cost, prerequisites, effects, unlocks, adjacency, requirements. |
 | `corpus_info` | `{}` | Loaded counts, hotkeys, macros, and screen names. |
 | `corpus_strategy` | `{}` | The complete strategic playbook (`strategy.md`). |
 | `game_state` | `{}` | Query live agent status, foreground window, and screen dimensions. |
@@ -170,5 +170,15 @@ corpora/galciv4/
 ```
 
 Search returns ids and match snippets; `get` returns one record or chunk. Entity records are
-generated from the game's own `Data/Gameplay/*.xml` by an extractor (pending: needs a copy of
-those files from the PC), not scraped from the wiki.
+generated from the game's own definition files, not scraped from the wiki, so costs and
+prerequisites match the installed version. To regenerate after a game patch, copy
+`<install>\Data\Gameplay` and `<install>\Data\English\Text` from the PC (`scripts/receive-file.py`
+accepts a zip over the LAN) and run:
+
+```bash
+python3 scripts/extract-galciv4.py <folder-with-Gameplay-and-Text> --game-version 4.1.1
+```
+
+`data/_meta.json` records the game version, generator commit and counts. The wiki `docs/` can lag
+the game (the wiki lists Colonial Policies at 27 research; the game data says 24): when they
+disagree, the generated records win.
