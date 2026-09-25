@@ -72,10 +72,11 @@ Core Worlds feature hex tiles that accept **Districts** and unique **Improvement
 ## 5. Event Dialog Heuristics & Deterministic Controls
 
 When a modal event or planet report halts the autonomous turn loop:
+*   **Look the event up before choosing**: event outcomes are in the game data (`corpus_search "<event title>"`, or `Gameplay/Events/*.xml` by title). The button text rarely states the payoff; e.g. *Precursor Probe* "study" = permanent +1 sensor range on every ship, "repair" = only makes the Stargazer probe purchasable as a 900-credit mercenary, "sell" = 200 credits.
 *   **Permanent Output > Temporary Cash**: A $+10\%$ permanent manufacturing or research boost is infinitely superior to $+200$ credits.
 *   **Planet Colonization Site Choice**: On initial planet colonization (e.g., Mars Planet Report), select mineral/manufacturing extraction sites (option `2` / Delta sites) for feeder colonies supplying an industrial core world, or scientific/microbial sites (option `3`) if founding a science colony.
-*   **Expansion Over Caution**: Choices that unlock free ships, survey probes, or colonist capacity should almost always be chosen.
-*   **Use Deterministic Number Keys**: In GalCiv IV dialogs and report popups, options are triggered via keys `1`, `2`, or `3` without requiring mouse aiming.
+*   **Expansion Over Caution**: Choices that *grant* ships, survey probes, or colonist capacity should almost always be chosen — but check the data: an "unlock" often only makes something purchasable.
+*   **Selecting an option**: clicking the option button works (verified). Number keys `1`/`2`/`3` are unverified.
 
 ---
 
@@ -92,6 +93,6 @@ When a modal event or planet report halts the autonomous turn loop:
 *   **Tax Rate Management**: Keep the Tax Rate slider at Low (~33%, norm `0.120, 0.295`) early on to sustain high planetary Approval (>55–60%). High approval directly drives population growth rate and worker productivity across all core worlds.
 *   **Early Enacted Policies**: Immediately slot *Brainstorming* (+2 Research/month) into the first available policy slot (`norm_x = 0.395, norm_y = 0.448`).
 *   **Policy Slot Unlocks**: Prioritize early techs like *Hyperwave Radio* (+1 policy slot) to stack civilization-wide research and production multipliers.
-*   **Reflex Execution Performance**: Baseline Layer 1 reflex loop achieves **1.60 seconds/turn** during unblocked turns, pausing only when policy assignments or event popups require strategic input.
+*   **Autopilot pacing**: unblocked turns take about 2–3.5 s (game end-turn processing plus settle); the loop stops for policy slots, idle ships/planets and event dialogs.
 
 

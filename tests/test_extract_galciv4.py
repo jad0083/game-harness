@@ -118,3 +118,15 @@ def test_output_loads_in_the_rust_corpus(out, tmp_path):
                        capture_output=True, text=True, check=False)
     assert r.returncode == 0, r.stderr
     assert "**Colonial Policies** (tech)" in r.stdout and "- cost: 27" in r.stdout, r.stdout
+
+
+def test_corpus_cli_works_without_an_agent_token(tmp_path):
+    """`game-controller corpus ...` reads local files only and must not require GAME_AGENT_TOKEN."""
+    ctl = ROOT / "target" / "release" / "game-controller"
+    if not ctl.exists():
+        pytest.skip("release controller not built")
+    env = {k: v for k, v in __import__("os").environ.items() if k != "GAME_AGENT_TOKEN"}
+    r = subprocess.run([str(ctl), "--corpus", str(ROOT / "corpora/galciv4"), "corpus", "search", "draft colonists"],
+                       capture_output=True, text=True, cwd=tmp_path, env=env, check=False)
+    assert r.returncode == 0, r.stderr
+    assert "order:draft_colonists" in r.stdout
