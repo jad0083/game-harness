@@ -19,7 +19,7 @@ Linux AI Controller (192.168.1.76)                  Windows 11 Gaming PC (192.16
 │  (crates/game-controller)            │                                 │ (~8ms capture / <1ms input)
 │   ├── corpus.rs (records + chunks)   │ HTTP/1.1   │                                 │
 │   ├── imaging.rs (diff + luminance)  │ Keep-Alive │ ┌───────────────────────────────────────┐
-│   ├── autopilot.rs (1.12s/turn loop) │───────────►│ game-agent.exe (crates/game-agent)      │
+│   ├── autopilot.rs (verified turns)  │───────────►│ game-agent.exe (crates/game-agent)      │
 │   └── client.rs (Reqwest pool)       │ Bearer Tok │  • Axum 0.8 HTTP API (:8765)            │
 │             │                        │◄───────────│  • GDI StretchBlt downscaler            │
 │             ▼                        │ (JPEG/JSON)│  • BGRA->RGB + JPEG encoder             │
@@ -63,7 +63,7 @@ flowchart TD
 
     DetectModal -- "No (Galaxy Map Normal)" --> TurnCheck{Turn Target\nReached?}
     TurnCheck -- "No" --> L1
-    TurnCheck -- "Yes" --> SettleDone([Turn Batch Complete - 1.12s/turn])
+    TurnCheck -- "Yes" --> SettleDone([Turn Batch Complete])
 
     DetectModal -- "Yes (Event / Tech / Report)" --> L2[Layer 2: LLM Strategic Deliberation]
     L2 --> InspectCrop[Inspect Modal Crop / Bounding Box]
@@ -72,9 +72,14 @@ flowchart TD
     ExecuteChoice --> L1
 ```
 
-### Performance Metrics:
-*   **Layer 1 (Reflex Loop)**: **1.12 seconds per complete game turn** (Native Rust, zero LLM roundtrips, zero vision tokens).
-*   **Layer 2 (Strategic Deliberation)**: Interrupted only when the top resource bar luminance dips ($\mu < 22.0$) or an unhandled UI modal appears.
+### How a turn is judged (`autopilot.rs`)
+Every `advance_single_turn` call:
+1. Refuses unless the agent reports the game as the foreground window (the macro is blind keystrokes).
+2. Screenshots, and returns `ModalEvent` immediately if the HUD is already dimmed — no keys are sent into an open dialog.
+3. Sends the manifest's `turn_pump` macro, waits for the screen to settle, screenshots again.
+4. Classifies with `classify_turn` (pure, unit-tested): HUD dimmed → `ModalEvent` (with the changed-region crop); the `turn_indicator_roi` (the date readout, normalized in `manifest.toml`) changed → `Advanced { verified: true }`; unchanged → `NotAdvanced` with the frame, meaning something on screen is blocking end-turn. Without a configured indicator the advance is reported `verified: false`.
+
+Loops (`autopilot`, `autopilot_turns`) count only advances and stop at the first dialog or blocked turn, handing the model the screenshot. Per-turn wall time is dominated by the game's own end-turn processing plus the settle wait; no fixed figure is claimed.
 
 ---
 
@@ -199,11 +204,11 @@ A record whose name matches the query scores 100, above any prose chunk, so `dra
 
 | Operation | Baseline / Latency | Implementation |
 |---|---|---|
-| **Turn Advancement Rate** | **$1.12\,\text{s}$ per turn** | Rust Autopilot Macro (`game-controller`) |
+| **Turn Advancement** | game-bound (end-turn processing + settle); each turn verified | `autopilot.rs` `classify_turn` |
 | **GDI Capture + Encode** | ~8 ms | `StretchBlt` + `jpeg-encoder` (`game-agent.exe`) |
 | **Network RPC Roundtrip** | **$0.36\,\text{ms}$** | Local Gigabit LAN HTTP Keep-Alive |
 | **Corpus Search** | 0.4–0.8 ms measured (724 records, 168 chunks) | Linear scan over text normalized at load (`corpus.rs`) |
-| **Modal Luminance Check** | sub-millisecond | Mean luminance over the top-bar region (`imaging.rs`); no SIMD intrinsics |
+| **Modal Luminance Check** | sub-millisecond | Mean luminance over the manifest's `luminance_roi` (`imaging.rs`); no SIMD intrinsics |
 | **Rust Test Suite** | 23 tests (17 controller, 6 agent) | `cargo test --workspace` |
 | **Legacy Test Suite** | **$10.86\,\text{s}$ (40/40 pass)** | `pytest` |
 | **Compiler Warnings** | 1 clippy warning (`imaging.rs` `to_*` convention); `#![allow(dead_code, …)]` still present in several files | `cargo clippy --workspace --all-targets` |

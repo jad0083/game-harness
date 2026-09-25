@@ -30,7 +30,7 @@ This file guides LLMs and coding agents when operating in this repository.
 - Drag image coordinates: `./target/release/game-controller drag <X1> <Y1> <X2> <Y2> [--button left]`
 - Send keypress / combo: `./target/release/game-controller key "<key>"`
 - Advance single turn: `./target/release/game-controller turn`
-- Fast autonomous autopilot: `./target/release/game-controller autopilot --turns <N>` (1.12s/turn)
+- Autopilot loop (verified turns; stops on dialogs/blockers): `./target/release/game-controller autopilot --turns <N>`
 - Corpus overview: `./target/release/game-controller corpus`
 - Corpus search (ids + snippets): `./target/release/game-controller corpus search "<query>" --limit 5`
 - Corpus fetch by id: `./target/release/game-controller corpus get "<id>"` (e.g. `doc:anomalies#0`, `strategy#1`, `tech:colonial_policies`)
@@ -48,8 +48,9 @@ This file guides LLMs and coding agents when operating in this repository.
    - `strategy.md`: playbook for expansion, colony feeding, districts, ministers, and tech pathing.
    - `data/*.json`: entity records generated from the game's own XML (130 techs, 528 improvements, 66 orders). Never hand-edit; when a wiki doc and a record disagree, the record wins.
    - `docs/*.md`: reference prose with `Source:`/`License:` headers. Use `corpus_search` to get ids, then `corpus_get` for one chunk; do not dump whole docs into context.
-3. **Use the Autopilot Loop**: Do NOT make individual tool calls for routine turn advancement. Use `./target/release/game-controller autopilot --turns 25` to fast-forward turns at 1.12s/turn. It automatically halts on strategic modal dialogs.
+3. **Use the Autopilot Loop** for routine turn advancement instead of individual tool calls: `autopilot_turns` / `./target/release/game-controller autopilot --turns 25`. Each turn is verified by the HUD date readout changing. It stops and hands you a screenshot when a dialog is up (HUD dimmed) or a turn did **not** advance (something is blocking end-turn: idle unit, empty queue, popup); clear that, then resume. It refuses to run unless the game is the foreground window — call `focus` first.
 4. **Resolution & Coordinate Mapping**: Image space is 1568x882; remote screen is 3072x1728 (or 3840x2160). Both `click` and `drag` automatically scale coordinates using live target width/height headers.
+4b. **Screen signatures live in `corpora/galciv4/manifest.toml`** (`[screens.*]`: `luminance_roi`/`luminance_threshold` for dialog detection, `turn_indicator_roi` for turn verification). Adjust there, not in Rust, if the game's UI layout changes.
 5. **Handling Action Required Prompts**: When the turn button demands action (e.g. "Choose a region to improve" on Earth or "Colonial Charter" for policies/ministers), `Enter` navigates directly to that screen.
    - On Planet Management: click the glowing empty tile and pick the district with the highest adjacency bonus (e.g. Manufacturing District next to minerals for +3).
    - On Colonial Charter: assign recruited leaders to Ministers (Exploration for universal fleet speed, Technology for research boost).
