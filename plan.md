@@ -23,8 +23,10 @@
 - [x] Restructure `corpora/galciv4/`: `manifest.toml`, `docs/*.md` with Source/License headers, `data/` contract
 - [x] Corpus engine: generic records from `data/*.json`, paragraph-chunked docs, id-based `get`, alias + fuzzy lookup, deterministic search with match snippets (7 tests)
 - [x] CLI `corpus search|get|tech|improvement|order|strategy` and MCP `corpus_get`; lookups report missing data instead of guessing
-- [ ] Get `Data/Gameplay/*.xml` + `Data/English/Text/*.xml` from the PC (needs a `dir`/copy from 192.168.1.77)
-- [ ] `scripts/extract-galciv4.py` with fixture tests → `data/tech.json`, `improvement.json`, `order.json`, `_meta.json`
+- [x] Get `Data/Gameplay/*.xml` + `Data/English/Text/*.xml` from the PC (`scripts/receive-file.py`)
+- [x] `scripts/extract-galciv4.py` with fixture tests → `data/tech.json` (130), `improvement.json` (528), `order.json` (66), `_meta.json`
+- [ ] Extend the extractor to ship components, policies and starbase modules as their own record kinds
+- [ ] Reconcile `strategy.md` numbers with the generated data (e.g. Colonial Policies costs 24, not 27)
 - [ ] Wire the autopilot to the `manifest.toml` screen signatures it already parses
 
 ## Playing
