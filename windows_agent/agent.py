@@ -20,6 +20,7 @@ import argparse
 import hmac
 import json
 import os
+import re
 import secrets
 import struct
 import sys
@@ -30,7 +31,7 @@ from pathlib import Path
 from typing import ClassVar
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 DEFAULT_PORT = 8765
 TOKEN_FILE = Path(__file__).with_name("agent_token.txt")
 
@@ -210,6 +211,16 @@ class WindowsBackend:
         gdi32.SelectObject.argtypes = [wintypes.HDC, H]
         gdi32.SelectObject.restype = H
         gdi32.BitBlt.argtypes = [wintypes.HDC] + [ctypes.c_int] * 4 + [wintypes.HDC, ctypes.c_int, ctypes.c_int, wintypes.DWORD]
+        gdi32.StretchBlt.argtypes = [
+            wintypes.HDC, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int,
+            wintypes.HDC, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int,
+            wintypes.DWORD,
+        ]
+        gdi32.StretchBlt.restype = wintypes.BOOL
+        gdi32.SetStretchBltMode.argtypes = [wintypes.HDC, ctypes.c_int]
+        gdi32.SetStretchBltMode.restype = ctypes.c_int
+        gdi32.SetBrushOrgEx.argtypes = [wintypes.HDC, ctypes.c_int, ctypes.c_int, ctypes.c_void_p]
+        gdi32.SetBrushOrgEx.restype = wintypes.BOOL
         gdi32.GetDIBits.argtypes = [
             wintypes.HDC, wintypes.HBITMAP, wintypes.UINT, wintypes.UINT,
             ctypes.c_void_p, ctypes.POINTER(BITMAPINFO), wintypes.UINT,
@@ -243,25 +254,35 @@ class WindowsBackend:
     def screen_size(self) -> tuple[int, int]:
         return self.user32.GetSystemMetrics(0), self.user32.GetSystemMetrics(1)
 
-    def capture(self, x: int, y: int, w: int, h: int) -> bytes:
-        """Return top-down BGRA pixels for a region of the primary screen."""
+    def capture(self, x: int, y: int, w: int, h: int,
+                target_w: int | None = None, target_h: int | None = None) -> bytes:
+        """Return top-down BGRA pixels for a region of the primary screen, optionally downscaled."""
         ct, u, g = self.ct, self.user32, self.gdi32
+        tw = target_w or w
+        th = target_h or h
         SRCCOPY = 0x00CC0020
+        HALFTONE = 4
         screen_dc = u.GetDC(None)
         mem_dc = g.CreateCompatibleDC(screen_dc)
-        bmp = g.CreateCompatibleBitmap(screen_dc, w, h)
+        bmp = g.CreateCompatibleBitmap(screen_dc, tw, th)
         try:
             old = g.SelectObject(mem_dc, bmp)
-            if not g.BitBlt(mem_dc, 0, 0, w, h, screen_dc, x, y, SRCCOPY):
-                raise OSError(f"BitBlt failed: {ct.get_last_error()}")
+            if tw == w and th == h:
+                if not g.BitBlt(mem_dc, 0, 0, w, h, screen_dc, x, y, SRCCOPY):
+                    raise OSError(f"BitBlt failed: {ct.get_last_error()}")
+            else:
+                g.SetStretchBltMode(mem_dc, HALFTONE)
+                g.SetBrushOrgEx(mem_dc, 0, 0, None)
+                if not g.StretchBlt(mem_dc, 0, 0, tw, th, screen_dc, x, y, w, h, SRCCOPY):
+                    raise OSError(f"StretchBlt failed: {ct.get_last_error()}")
             g.SelectObject(mem_dc, old)  # bitmap must be deselected before GetDIBits
             bmi = self.BITMAPINFO()
             hdr = bmi.bmiHeader
             hdr.biSize = ct.sizeof(hdr)
-            hdr.biWidth, hdr.biHeight = w, -h  # negative height = top-down rows
+            hdr.biWidth, hdr.biHeight = tw, -th  # negative height = top-down rows
             hdr.biPlanes, hdr.biBitCount, hdr.biCompression = 1, 32, 0
-            buf = ct.create_string_buffer(w * h * 4)
-            if g.GetDIBits(mem_dc, bmp, 0, h, buf, ct.byref(bmi), 0) != h:
+            buf = ct.create_string_buffer(tw * th * 4)
+            if g.GetDIBits(mem_dc, bmp, 0, th, buf, ct.byref(bmi), 0) != th:
                 raise OSError(f"GetDIBits failed: {ct.get_last_error()}")
             return buf.raw
         finally:
@@ -383,6 +404,38 @@ class WindowsBackend:
         u.SetForegroundWindow(hwnd)
         return title
 
+    def game_state(self) -> dict:
+        windows = self.list_windows()
+        game_win = next((w for w in windows if "galactic civilizations" in w["title"].lower()), None)
+
+        userprofile = os.environ.get("USERPROFILE") or ""
+        save_dirs = [
+            Path(userprofile) / "Documents" / "My Games" / "GalCiv4" / "Saves",
+            Path(userprofile) / "OneDrive" / "Documents" / "My Games" / "GalCiv4" / "Saves",
+        ]
+        latest_save = None
+        save_time = None
+        turn = None
+        for sdir in save_dirs:
+            if sdir.is_dir():
+                saves = sorted(sdir.glob("*.sav"), key=lambda p: p.stat().st_mtime, reverse=True)
+                if saves:
+                    latest_save = saves[0].name
+                    save_time = saves[0].stat().st_mtime
+                    m = re.search(r"turn_?(\d+)", latest_save, re.IGNORECASE)
+                    if m:
+                        turn = int(m.group(1))
+                    break
+
+        return {
+            "game_running": game_win is not None,
+            "window_title": game_win["title"] if game_win else None,
+            "foreground": game_win["foreground"] if game_win else False,
+            "turn": turn,
+            "latest_save": latest_save,
+            "save_time": save_time,
+        }
+
 
 # ---------------------------------------------------------------------------
 # Controller: validated high-level actions on top of a backend
@@ -403,14 +456,21 @@ class Controller:
         w, h = self.b.screen_size()
         return {"ok": True, "version": VERSION, "screen": [w, h], "foreground": self.b.foreground_title()}
 
-    def screenshot(self, x: int = 0, y: int = 0, w: int | None = None, h: int | None = None) -> tuple[bytes, int, int]:
+    def screenshot(self, x: int = 0, y: int = 0, w: int | None = None, h: int | None = None,
+                   max_side: int | None = None) -> tuple[bytes, int, int]:
         sw, sh = self.b.screen_size()
         w = sw - x if w is None else w
         h = sh - y if h is None else h
         if w <= 0 or h <= 0 or x < 0 or y < 0 or x + w > sw or y + h > sh:
             raise ValueError(f"region {x},{y} {w}x{h} is outside the {sw}x{sh} screen")
-        bgra = self.b.capture(x, y, w, h)
-        return encode_png(w, h, bgra_to_rgb(bgra, w, h)), w, h
+
+        tw, th = w, h
+        if max_side and max(w, h) > max_side:
+            factor = max_side / max(w, h)
+            tw, th = max(round(w * factor), 1), max(round(h * factor), 1)
+
+        bgra = self.b.capture(x, y, w, h, tw, th)
+        return encode_png(tw, th, bgra_to_rgb(bgra, tw, th)), w, h
 
     def move(self, x: int, y: int) -> None:
         self._check_point(x, y)
@@ -477,6 +537,55 @@ class Controller:
     def focus(self, title: str) -> str:
         return self.b.focus(title)
 
+    def batch(self, actions: list[dict]) -> list[dict]:
+        if not isinstance(actions, list):
+            raise TypeError("actions must be a list")
+        if len(actions) > 100:
+            raise ValueError("batch exceeds maximum of 100 actions")
+        results = []
+        for i, act in enumerate(actions):
+            if not isinstance(act, dict):
+                raise TypeError(f"action #{i} must be an object")
+            kind = act.get("action")
+            if not kind:
+                raise ValueError(f"action #{i} missing 'action' field")
+            if kind == "move":
+                self.move(int(act["x"]), int(act["y"]))
+                results.append({"action": "move", "ok": True})
+            elif kind == "click":
+                self.click(int(act["x"]), int(act["y"]), act.get("button", "left"), int(act.get("count", 1)))
+                results.append({"action": "click", "ok": True})
+            elif kind == "drag":
+                self.drag(int(act["x1"]), int(act["y1"]), int(act["x2"]), int(act["y2"]), act.get("button", "left"))
+                results.append({"action": "drag", "ok": True})
+            elif kind == "scroll":
+                self.scroll(int(act["x"]), int(act["y"]), int(act["clicks"]))
+                results.append({"action": "scroll", "ok": True})
+            elif kind == "key":
+                self.key(str(act["combo"]), int(act.get("repeat", 1)))
+                results.append({"action": "key", "ok": True})
+            elif kind == "type":
+                self.type_text(str(act["text"]))
+                results.append({"action": "type", "ok": True})
+            elif kind == "wait":
+                sec = min(max(float(act.get("seconds", 0.5)), 0.0), 30.0)
+                if sec > 0:
+                    time.sleep(sec)
+                results.append({"action": "wait", "ok": True, "seconds": sec})
+            else:
+                raise ValueError(f"unknown action type: {kind!r}")
+        return results
+
+    def game_state(self) -> dict:
+        if hasattr(self.b, "game_state"):
+            return self.b.game_state()
+        return {"game_running": False}
+
+    def settle(self, timeout: float = 30.0, threshold: float = 0.02) -> dict:
+        if hasattr(self.b, "settle"):
+            return self.b.settle(timeout=timeout, threshold=threshold)
+        return {"settled": True, "elapsed": 0.0, "diff": 0.0}
+
 
 # ---------------------------------------------------------------------------
 # HTTP layer
@@ -501,6 +610,7 @@ def make_handler(controller: Controller, token: str, allow: set[str] | None = No
         "/key": lambda b: controller.key(str(b["combo"]), _int(b, "repeat", 1)),
         "/type": lambda b: controller.type_text(str(b["text"])),
         "/focus": lambda b: {"focused": controller.focus(str(b["title"]))},
+        "/batch": lambda b: {"results": controller.batch(b.get("actions", []))},
     }
 
     class Handler(BaseHTTPRequestHandler):
@@ -548,13 +658,19 @@ def make_handler(controller: Controller, token: str, allow: set[str] | None = No
             def go():
                 if url.path == "/health":
                     self._reply(200, controller.health())
+                elif url.path == "/state":
+                    self._reply(200, controller.game_state())
                 elif url.path == "/screenshot":
-                    args = {k: int(q[k]) for k in ("x", "y", "w", "h") if k in q}
+                    args = {k: int(q[k]) for k in ("x", "y", "w", "h", "max_side") if k in q}
                     png, w, h = controller.screenshot(**args)
                     self._reply(200, body=png, ctype="image/png",
                                 headers={"X-Width": w, "X-Height": h})
                 elif url.path == "/windows":
                     self._reply(200, {"windows": controller.windows()})
+                elif url.path == "/settle":
+                    timeout = float(q.get("timeout", 30.0))
+                    threshold = float(q.get("threshold", 0.02))
+                    self._reply(200, controller.settle(timeout=timeout, threshold=threshold))
                 else:
                     self._reply(404, {"error": f"no route {url.path}"})
 

@@ -16,15 +16,27 @@ class FakeBackend:
     def screen_size(self):
         return self.w, self.h
 
-    def capture(self, x, y, w, h):
+    def capture(self, x, y, w, h, target_w=None, target_h=None):
+        tw = target_w or w
+        th = target_h or h
         out = bytearray()
-        for row in range(y, y + h):
-            for col in range(x, x + w):
-                out += bytes([col % 256, row % 256, 200, 255])  # B, G, R, A
+        for row in range(th):
+            for col in range(tw):
+                out += bytes([(x + col) % 256, (y + row) % 256, 200, 255])  # B, G, R, A
         return bytes(out)
 
     def foreground_title(self):
         return "Galactic Civilizations IV"
+
+    def game_state(self):
+        return {
+            "game_running": True,
+            "window_title": "Galactic Civilizations IV",
+            "foreground": True,
+            "turn": 1,
+            "latest_save": "AutoSave_Turn_0001.sav",
+            "save_time": 1700000000.0,
+        }
 
     def move(self, x, y):
         self.calls.append(("move", x, y))

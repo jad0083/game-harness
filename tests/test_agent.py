@@ -139,3 +139,38 @@ def test_http_focus(agent_server):
     status, body, _ = call(base, "/focus", {"title": "galactic"})
     assert status == 200 and json.loads(body)["focused"] == "Galactic Civilizations IV"
     assert call(base, "/focus", {"title": "notepad"})[0] == 400
+
+
+def test_http_screenshot_max_side(agent_server):
+    base, _ = agent_server
+    status, body, _headers = call(base, "/screenshot?max_side=32")
+    assert status == 200
+    img = Image.open(io.BytesIO(body))
+    assert max(img.size) == 32
+
+
+def test_http_batch(agent_server):
+    base, b = agent_server
+    actions = [
+        {"action": "move", "x": 10, "y": 15},
+        {"action": "click", "x": 20, "y": 25, "button": "left"},
+        {"action": "key", "combo": "enter"},
+        {"action": "wait", "seconds": 0.01},
+    ]
+    status, body, _ = call(base, "/batch", {"actions": actions})
+    assert status == 200
+    res = json.loads(body)["results"]
+    assert len(res) == 4
+    assert ("move", 10, 15) in b.calls
+    assert ("move", 20, 25) in b.calls
+    assert ("key", 0x0D, True) in b.calls
+
+
+def test_http_state(agent_server):
+    base, _ = agent_server
+    status, body, _ = call(base, "/state")
+    assert status == 200
+    data = json.loads(body)
+    assert data["game_running"] is True
+    assert data["turn"] == 1
+

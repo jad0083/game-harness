@@ -7,6 +7,7 @@ any tool (full screenshot or zoom); the server maps them back to screen pixels.
 from __future__ import annotations
 
 import os
+import time
 from pathlib import Path
 
 from mcp.server.mcpserver import Image, MCPServer
@@ -79,51 +80,128 @@ def zoom(x: int, y: int, width: int, height: int, grid: bool = False) -> list:
 
 @server.tool(structured_output=False)
 @_guard
-def click(x: int, y: int, button: str = "left", count: int = 1, wait: float = 0.6) -> list:
+def click(x: int, y: int, button: str = "left", count: int = 1, wait: float = 0.6, screenshot: bool = True) -> list | str:
     """Click at (x, y) in last-image coords. button: left/right/middle; count=2 double-clicks.
-    Returns a fresh full screenshot taken `wait` seconds later."""
+    Returns a fresh full screenshot taken `wait` seconds later (or a short text confirmation if screenshot=False)."""
     sx, sy = session().click(x, y, button, count)
-    return _frame(f"clicked {button} x{count} at screen ({sx},{sy})", wait)
+    note = f"clicked {button} x{count} at screen ({sx},{sy})"
+    return _frame(note, wait) if screenshot else note
 
 
 @server.tool(structured_output=False)
 @_guard
-def hover(x: int, y: int, wait: float = 1.0) -> list:
+def hover(x: int, y: int, wait: float = 1.0, screenshot: bool = True) -> list | str:
     """Move the mouse to (x, y) without clicking, to reveal tooltips. Returns a screenshot."""
     sx, sy = session().move(x, y)
-    return _frame(f"hovering at screen ({sx},{sy})", wait)
+    note = f"hovering at screen ({sx},{sy})"
+    return _frame(note, wait) if screenshot else note
 
 
 @server.tool(structured_output=False)
 @_guard
-def drag(x1: int, y1: int, x2: int, y2: int, button: str = "left", wait: float = 0.6) -> list:
+def drag(x1: int, y1: int, x2: int, y2: int, button: str = "left", wait: float = 0.6, screenshot: bool = True) -> list | str:
     """Press at (x1, y1), move to (x2, y2), release. Use right button to pan in some games."""
     session().drag(x1, y1, x2, y2, button)
-    return _frame(f"dragged {button} ({x1},{y1})->({x2},{y2})", wait)
+    note = f"dragged {button} ({x1},{y1})->({x2},{y2})"
+    return _frame(note, wait) if screenshot else note
 
 
 @server.tool(structured_output=False)
 @_guard
-def scroll(x: int, y: int, clicks: int, wait: float = 0.6) -> list:
+def scroll(x: int, y: int, clicks: int, wait: float = 0.6, screenshot: bool = True) -> list | str:
     """Mouse-wheel at (x, y). Positive clicks scroll up / zoom in, negative down / zoom out."""
     session().scroll(x, y, clicks)
-    return _frame(f"scrolled {clicks} at ({x},{y})", wait)
+    note = f"scrolled {clicks} at ({x},{y})"
+    return _frame(note, wait) if screenshot else note
 
 
 @server.tool(structured_output=False)
 @_guard
-def key(combo: str, repeat: int = 1, wait: float = 0.6) -> list:
+def key(combo: str, repeat: int = 1, wait: float = 0.6, screenshot: bool = True) -> list | str:
     """Press a key or combo, e.g. "enter", "esc", "ctrl+s", "f1", "shift+tab", "ctrl+plus"."""
     session().key(combo, repeat)
-    return _frame(f"pressed {combo} x{repeat}", wait)
+    note = f"pressed {combo} x{repeat}"
+    return _frame(note, wait) if screenshot else note
 
 
 @server.tool(structured_output=False)
 @_guard
-def type_text(text: str, wait: float = 0.3) -> list:
+def type_text(text: str, wait: float = 0.3, screenshot: bool = True) -> list | str:
     """Type literal text into the focused field (click the field first)."""
     session().type_text(text)
-    return _frame(f"typed {len(text)} chars", wait)
+    note = f"typed {len(text)} chars"
+    return _frame(note, wait) if screenshot else note
+
+
+@server.tool(structured_output=False)
+@_guard
+def batch(actions: list[dict], wait: float = 0.6, grid: bool = False, screenshot: bool = True) -> list | str:
+    """Execute a list of actions in order, then take at most one screenshot at the end.
+    Drastically reduces latency and token usage when issuing multiple commands.
+
+    actions: list of dicts, supported actions:
+      - {"action": "click", "x": 100, "y": 200, "button": "left", "count": 1}
+      - {"action": "move", "x": 100, "y": 200}
+      - {"action": "drag", "x1": 100, "y1": 200, "x2": 300, "y2": 400, "button": "left"}
+      - {"action": "scroll", "x": 100, "y": 200, "clicks": -3}
+      - {"action": "key", "combo": "enter", "repeat": 1}
+      - {"action": "type", "text": "colony"}
+      - {"action": "wait", "seconds": 0.5}
+    Coordinates are in the last-image pixel space.
+    """
+    results = session().batch(actions)
+    note = f"executed batch of {len(results)} actions"
+    return _frame(note, wait, grid=grid) if screenshot else note
+
+
+@server.tool(structured_output=False)
+@_guard
+def game_state() -> str:
+    """Inspect Galactic Civilizations IV game state: running status, active window, turn counter, and autosaves."""
+    st = session().game_state()
+    running = st.get("game_running", False)
+    title = st.get("window_title") or "None"
+    fg = st.get("foreground", False)
+    turn = st.get("turn")
+    save = st.get("latest_save")
+    stime = st.get("save_time")
+    lines = [
+        f"Game running: {running} (foreground={fg}, window={title!r})",
+        f"Turn: {turn if turn is not None else 'Unknown'}",
+        f"Latest save: {save or 'None'}" + (f" ({time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(stime))})" if stime else ""),
+    ]
+    return "\n".join(lines)
+
+
+@server.tool(structured_output=False)
+@_guard
+def end_turn(timeout: float = 60.0, grid: bool = False) -> list:
+    """Send Enter (or click End Turn) and dynamically wait for the AI turn to finish processing
+    (monitored via autosaves/game state), returning a fresh screenshot of the new turn."""
+    s = session()
+    s.key("enter")
+    res = s.wait_for_turn(timeout=timeout)
+    note = f"turn transition: {res}"
+    return _frame(note, wait=0.5, grid=grid)
+
+
+@server.tool(structured_output=False)
+@_guard
+def auto_idle_ships(count: int = 5, action: str = "auto_colonize", grid: bool = False) -> list:
+    """Cycle through idle ships and assign automated orders in a single fast macro.
+    action: "auto_colonize" (presses 'c'), "sleep" (presses 'f'), or "next" (just cycles tab).
+    """
+    key_map = {"auto_colonize": "c", "sleep": "f", "next": None}
+    hotkey = key_map.get(action)
+    acts = []
+    for _ in range(count):
+        acts.append({"action": "key", "combo": "tab", "repeat": 1})
+        acts.append({"action": "wait", "seconds": 0.15})
+        if hotkey:
+            acts.append({"action": "key", "combo": hotkey, "repeat": 1})
+            acts.append({"action": "wait", "seconds": 0.15})
+    session().batch(acts)
+    return _frame(f"cycled {count} idle ships with {action}", wait=0.5, grid=grid)
 
 
 @server.tool(structured_output=False)
@@ -148,6 +226,27 @@ def list_windows() -> str:
     return "\n".join(
         f"{'*' if w['foreground'] else ' '} {w['title']}  rect={w['rect']}" for w in session().client.windows()
     )
+
+
+@server.tool(structured_output=False)
+@_guard
+def wait_settle(timeout: float = 30.0, threshold: float = 0.02, grid: bool = False) -> list:
+    """Wait dynamically until on-screen motion/animations stabilize, then return screenshot."""
+    res = session().wait_settle(timeout=timeout, threshold=threshold)
+    elapsed = res.get("elapsed", 0.0)
+    note = f"settled: {res.get('settled', True)} in {elapsed:.2f}s"
+    return _frame(note, wait=0, grid=grid)
+
+
+@server.tool(structured_output=False)
+@_guard
+def diff(threshold: int = 25, highlight: bool = True, grid: bool = False) -> list:
+    """Take a screenshot, compare with previous screenshot, and optionally highlight changed regions."""
+    s = session()
+    jpeg, view, bbox = s.diff_and_screenshot(grid=grid, highlight=highlight, threshold=threshold)
+    note = f"diff against previous frame: changed bbox {bbox}" if bbox else "diff against previous frame: no changes detected"
+    return [f"{note}\nimage {view.width}x{view.height} (1 image px = {view.scale:.2f} screen px)",
+            Image(data=jpeg, format="jpeg")]
 
 
 def main() -> None:

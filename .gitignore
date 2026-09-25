@@ -7,4 +7,8 @@ __pycache__/
 agent_token.txt
 agent.log
 screenshots/
+current_screen.jpg
+*.jpg
+target/
+**/target/
 .claude/settings.local.json

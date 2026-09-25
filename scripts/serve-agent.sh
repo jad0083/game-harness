@@ -15,6 +15,9 @@ fi
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 cp windows_agent/agent.py windows_agent/install.ps1 "$STAGE/"
+if [[ -f windows_agent/game-agent.exe ]]; then
+  cp windows_agent/game-agent.exe "$STAGE/"
+fi
 cp .agent_token "$STAGE/agent_token.txt"
 
 IP="$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}')"
