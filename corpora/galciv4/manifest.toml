@@ -149,3 +149,11 @@ actions = [
     { type = "wait", ms = 300 },
     { type = "key", key = "o" },
 ]
+
+# Known informational screens: matched by template, closed by the autopilot on its own.
+[screens.gnn_news]
+description = "Galactic News Network bulletin (rankings, headlines); informational, one Close button"
+template = "templates/gnn_live.png"          # the "GNN LIVE" logo, bottom-left of the bulletin
+template_roi = [0.1913, 0.7211, 0.1122, 0.1406]
+auto_dismiss = true
+dismiss_click = [0.7526, 0.8707]              # Close button

@@ -30,6 +30,9 @@ pub const MAX_SEARCH_LIMIT: usize = 50;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameManifest {
+    /// Directory the manifest was loaded from; screen templates resolve relative to it.
+    #[serde(skip)]
+    pub base_dir: Option<PathBuf>,
     pub metadata: GameMetadata,
     pub hotkeys: HashMap<String, String>,
     #[serde(default)]
@@ -70,6 +73,25 @@ pub struct ScreenDef {
     /// the autopilot diffs it before/after "end turn" to verify a turn actually advanced.
     #[serde(default)]
     pub turn_indicator_roi: Option<[f64; 4]>,
+    /// Reference image (path relative to the corpus dir) that identifies this screen, compared
+    /// against `template_roi` (normalized [x, y, w, h]) of the current frame.
+    #[serde(default)]
+    pub template: Option<String>,
+    #[serde(default)]
+    pub template_roi: Option<[f64; 4]>,
+    /// Max mean difference (0..1) for a template match.
+    #[serde(default = "default_template_threshold")]
+    pub template_threshold: f64,
+    /// The autopilot may close this screen on its own (informational popups only).
+    #[serde(default)]
+    pub auto_dismiss: bool,
+    /// Normalized [x, y] to click to dismiss; `dismiss_key` is used when absent.
+    #[serde(default)]
+    pub dismiss_click: Option<[f64; 2]>,
+}
+
+fn default_template_threshold() -> f64 {
+    0.08
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -118,7 +140,10 @@ impl GameManifest {
     pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
         let content = std::fs::read_to_string(path.as_ref())
             .with_context(|| format!("Failed to read game corpus manifest at {:?}", path.as_ref()))?;
-        toml::from_str(&content).with_context(|| format!("Failed to parse game corpus TOML at {:?}", path.as_ref()))
+        let mut manifest: Self = toml::from_str(&content)
+            .with_context(|| format!("Failed to parse game corpus TOML at {:?}", path.as_ref()))?;
+        manifest.base_dir = path.as_ref().parent().map(Path::to_path_buf);
+        Ok(manifest)
     }
 
     /// The manifest file inside a corpus directory, if any.
