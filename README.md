@@ -29,7 +29,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for system topology, the modal-detection 
 |---|---|---|---|
 | **Windows Remote Agent** | [`crates/game-agent`](crates/game-agent) & [`windows_agent/game-agent.exe`](windows_agent/game-agent.exe) | Compiled native Rust (`x86_64-pc-windows-gnu`) | ~8ms screen capture & JPEG encode; native Win32 `SendInput`, `SetCursorPos`, and `mouse_event`; Per-Monitor V2 HiDPI aware. |
 | **Linux Native Controller** | [`crates/game-controller`](crates/game-controller) → `target/release/game-controller` (build with `cargo build --release`; `.mcp.json` points here) | Compiled native Rust (`x86_64-unknown-linux-gnu`) | ~1 ms agent round-trip; autopilot that verifies each turn by the HUD date changing and stops on dialogs or blockers; in-memory corpus (search <1 ms); stdio MCP server. |
-| **Game Corpus** | [`corpora/galciv4/`](corpora/galciv4/) | `manifest.toml` + generated `data/*.json` + `docs/*.md` + `strategy.md` | 33 hotkeys, 8 screen signatures, 3 macros; 130 techs, 528 improvements, 66 executive orders generated from the game's own XML by `scripts/extract-galciv4.py`; 13 reference docs chunked into 168 searchable pieces. |
+| **Game Corpus** | [`corpora/galciv4/`](corpora/galciv4/) | `manifest.toml` + generated `data/*.json` + `docs/*.md` + `strategy.md` | 33 hotkeys, 8 screen signatures, 3 macros; 130 techs, 528 improvements, 66 executive orders, 203 policies, 355 ship components, 167 starbase modules and 994 events generated from the game's own XML by `scripts/extract-galciv4.py`; 13 reference docs chunked into 168 searchable pieces. |
 | **Legacy Pytest Suite** | [`src/harness/`](src/harness/) & [`tests/`](tests/) | Python 3.12 (FakeBackend fixtures) | 40/40 legacy tests passing in 10.86s. |
 
 ---
@@ -167,7 +167,8 @@ cargo clippy --workspace --all-targets
 corpora/galciv4/
   manifest.toml   hotkeys, screen signatures, macros — hand-verified
   strategy.md     playbook for the model, also chunked for search
-  data/           GENERATED records (tech.json, improvement.json, order.json …) — see data/README.md
+  data/           GENERATED records, one <kind>.json each (tech, improvement, order, policy,
+                  ship_component, starbase_module, event) — see data/README.md
   docs/*.md       reference prose with Source:/License: headers, chunked at ~1500 chars
 ```
 
@@ -180,6 +181,11 @@ accepts a zip over the LAN) and run:
 ```bash
 python3 scripts/extract-galciv4.py <folder-with-Gameplay-and-Text> --game-version 4.1.1
 ```
+
+Current counts (4.1.1): 130 techs, 528 improvements, 66 executive orders, 203 policies, 355 ship
+components, 167 starbase modules, 994 events. Only tech/improvement/order have name-lookup
+commands; reach the other kinds with `corpus search` + `corpus get` (e.g. `event:precursor_probe`,
+whose `choices` field lists each button's exact outcome).
 
 `data/_meta.json` records the game version, generator commit and counts. The wiki `docs/` can lag
 the game (the wiki lists Colonial Policies at 27 research; the game data says 24): when they

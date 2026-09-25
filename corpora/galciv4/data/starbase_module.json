@@ -1,0 +1,5683 @@
+[
+ {
+  "id": "starbase_module:advanced_defenses",
+  "name": "Advanced Defenses",
+  "aliases": [
+   "AdvancedStarbaseDefenseSystem"
+  ],
+  "summary": "More weapons, more destruction.",
+  "fields": {
+   "specialization": "Generic",
+   "module_cost": "1",
+   "resources": [
+    "1 Durantium"
+   ],
+   "effects": [
+    "+30 Beam Attack (Starbase)",
+    "+30 Missile Attack (Starbase)",
+    "+30 Kinetic Attack (Starbase)",
+    "+240 Shield Strength (Starbase)"
+   ],
+   "upgrades_from": [
+    "Starbase Defense System"
+   ],
+   "requires_tech": [
+    "Defensive Studies",
+    "Fusion Warheads",
+    "Fleet Coordination"
+   ],
+   "description": "More weapons, more destruction.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:advanced_relic_processor",
+  "name": "Advanced Relic Processor",
+  "aliases": [
+   "HumanModule_AdvancedRelicProcessor"
+  ],
+  "summary": "Further improves precursor relic extraction. Upgrades from Precursor Relic Extractor.",
+  "fields": {
+   "specialization": "Mining",
+   "maintenance": "2",
+   "module_cost": "1",
+   "resources": [
+    "20 Durantium"
+   ],
+   "effects": [
+    "+0.1 Modifier Value (StrategicResource)"
+   ],
+   "upgrades_from": [
+    "Precursor Relic Extractor"
+   ],
+   "requires_tech": [
+    "Precursor Legacy"
+   ],
+   "description": "Enhanced processing capabilities allow for even greater extraction efficiency of precursor relics.",
+   "source": "StarbaseModuleDefs_Humans.xml"
+  }
+ },
+ {
+  "id": "starbase_module:aegis_missile_grid",
+  "name": "Aegis Missile Grid",
+  "aliases": [
+   "AegisMissileGridModule"
+  ],
+  "summary": "Adds an autonomous missile battery that targets hostile fleets in range.",
+  "fields": {
+   "specialization": "Military",
+   "module_cost": "1",
+   "maintenance": "4",
+   "effects": [
+    "+12 Missile Attack (Starbase)"
+   ],
+   "requires_module_any": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase"
+   ],
+   "description": "The Sovereign Aegis lattice packs interlinked missile pods that auto-saturate any unauthorized fleet that dares enter Human Space.",
+   "source": "StarbaseModuleDefs_Humans.xml"
+  }
+ },
+ {
+  "id": "starbase_module:ancient_reliquary",
+  "name": "Ancient Reliquary",
+  "aliases": [
+   "AncientReliquaryModule"
+  ],
+  "summary": "Increases bonuses from Relics",
+  "fields": {
+   "specialization": "Generic",
+   "requires_target": "Relic",
+   "module_cost": "2",
+   "resources": [
+    "5 Precursor Nanites"
+   ],
+   "effects": [
+    "+0.05 Modifier Value (StrategicResource)",
+    "+5 Modifier Value (StrategicResource)"
+   ],
+   "upgrades_from": [
+    "Precursor Data Matrix"
+   ],
+   "requires_tech": [
+    "Precursor Artifact Mastery"
+   ],
+   "requires_trait": [
+    "Ancient Ability"
+   ],
+   "description": "Increases bonuses from Relics",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:ancient_studies_center",
+  "name": "Ancient Studies Center",
+  "aliases": [
+   "AncientStudiesCenterModule"
+  ],
+  "summary": "Increases bonuses from Relics",
+  "fields": {
+   "specialization": "Generic",
+   "requires_target": "Relic",
+   "module_cost": "1",
+   "resources": [
+    "1 Promethion"
+   ],
+   "effects": [
+    "+0.03 Modifier Value (StrategicResource)",
+    "+2 Modifier Value (StrategicResource)"
+   ],
+   "upgrades_from": [
+    "Xeno Archeology Lab"
+   ],
+   "requires_tech": [
+    "Precursor Archeology"
+   ],
+   "description": "Increases bonuses from Relics",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:apex_research_institute",
+  "name": "Apex Research Institute",
+  "aliases": [
+   "HumanModule_ApexResearchInstitute"
+  ],
+  "summary": "Premier research facility representing the pinnacle of human scientific achievement.",
+  "fields": {
+   "specialization": "Generic",
+   "maintenance": "2",
+   "module_cost": "1",
+   "resources": [
+    "4 Durantium"
+   ],
+   "effects": [
+    "+26% Research (Colony)"
+   ],
+   "requires_module_any": [
+    "Economic Starbase"
+   ],
+   "requires_tech": [
+    "Engineering Mastery"
+   ],
+   "description": "Premier research facility representing the pinnacle of human scientific achievement.",
+   "source": "StarbaseModuleDefs_Humans.xml"
+  }
+ },
+ {
+  "id": "starbase_module:barrier_array",
+  "name": "Barrier Array",
+  "aliases": [
+   "BarrierArrayModule"
+  ],
+  "summary": "Adds a Barrier Array system",
+  "fields": {
+   "specialization": "Generic",
+   "module_cost": "1",
+   "resources": [
+    "2 Elerium"
+   ],
+   "effects": [
+    "+100 Shield Strength (Starbase)"
+   ],
+   "requires_module_any": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase"
+   ],
+   "requires_tech": [
+    "Energy Deflection Theory",
+    "Crystalline Deflectors",
+    "Deflector Systems"
+   ],
+   "description": "Adds a Barrier Array system",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:blue_nexus_allegiance_engine",
+  "name": "Blue Nexus: Allegiance Engine",
+  "aliases": [
+   "SN_Augment_OptimizationEngine_L3"
+  ],
+  "summary": "Time is the sole barrier between us and mastery of the cosmos. By recovering lost moments and streamlining our operations, this gargantuan machine empowers us to realize our full potential. Exclusive to Stellar Nexuses built around Blue Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Blue Star"
+   ],
+   "turns_to_build": "12",
+   "resources": [
+    "50 Energy"
+   ],
+   "effects": [
+    "+50 Energy Consumption",
+    "+75 Armor Rating (Starbase)",
+    "+100 Shield Strength (Starbase)",
+    "+45 Loyalty (Unit)",
+    "-45% Leader Cost",
+    "+20% New Leader Chance"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Nexus Mastery"
+   ],
+   "requires_trait": [
+    "Hopeful Ability",
+    "Ravenous Ability",
+    "Fertile Ability",
+    "Empathy Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "Time is the sole barrier between us and mastery of the cosmos. By recovering lost moments and streamlining our operations, this gargantuan machine empowers us to realize our full potential. Exclusive to Stellar Nexuses built around Blue Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:blue_nexus_astral_forge",
+  "name": "Blue Nexus: Astral Forge",
+  "aliases": [
+   "SN_Augment_CosmicFoundry_L2"
+  ],
+  "summary": "With the limitless power of the stars, the finite resources of any planet can be transcended. From its celestial throne, the Cosmic Foundry provides enough resources to fuel a dozen industrial revolutions. All Workers receive bonus Diligence. Exclusive to Stellar Nexuses built around Blue Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Blue Star"
+   ],
+   "turns_to_build": "8",
+   "resources": [
+    "25 Energy"
+   ],
+   "effects": [
+    "+25 Energy Consumption",
+    "+50 Armor Rating (Starbase)",
+    "+75 Shield Strength (Starbase)",
+    "+3 Minerals (Colony)",
+    "+4 Diligence (Unit)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Advanced Nexus Augments"
+   ],
+   "requires_trait": [
+    "Telepathy Ability",
+    "Promethion Born Ability",
+    "Adaptable Ability",
+    "Exterminators Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "With the limitless power of the stars, the finite resources of any planet can be transcended. From its celestial throne, the Cosmic Foundry provides enough resources to fuel a dozen industrial revolutions. All Workers receive bonus Diligence. Exclusive to Stellar Nexuses built around Blue Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:blue_nexus_astral_mirror",
+  "name": "Blue Nexus: Astral Mirror",
+  "aliases": [
+   "SN_Augment_QuantumMirror_L2"
+  ],
+  "summary": "We seek wisdom in the vastness of the cosmos and discover it shining among the stars. The Quantum Mirror empowers us to gaze farther into the universe than ever before. All Scientists receive bonus Intelligence. Exclusive to Stellar Nexuses built around Blue Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Blue Star"
+   ],
+   "turns_to_build": "8",
+   "resources": [
+    "25 Energy"
+   ],
+   "effects": [
+    "+25 Energy Consumption",
+    "+50 Armor Rating (Starbase)",
+    "+75 Shield Strength (Starbase)",
+    "+3 Technology (Colony)",
+    "+4 Intelligence (Unit)",
+    "+6 Intelligence (Unit)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Advanced Nexus Augments"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "We seek wisdom in the vastness of the cosmos and discover it shining among the stars. The Quantum Mirror empowers us to gaze farther into the universe than ever before. All Scientists receive bonus Intelligence. Exclusive to Stellar Nexuses built around Blue Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:blue_nexus_cosmic_foundry",
+  "name": "Blue Nexus: Cosmic Foundry",
+  "aliases": [
+   "SN_Augment_CosmicFoundry_L3"
+  ],
+  "summary": "With the limitless power of the stars, the finite resources of any planet can be transcended. From its celestial throne, the Cosmic Foundry provides enough resources to fuel a dozen industrial revolutions. All Workers receive bonus Diligence. Exclusive to Stellar Nexuses built around Blue Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Blue Star"
+   ],
+   "turns_to_build": "12",
+   "resources": [
+    "50 Energy"
+   ],
+   "effects": [
+    "+50 Energy Consumption",
+    "+75 Armor Rating (Starbase)",
+    "+100 Shield Strength (Starbase)",
+    "+5 Minerals (Colony)",
+    "+6 Diligence (Unit)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Nexus Mastery"
+   ],
+   "requires_trait": [
+    "Telepathy Ability",
+    "Promethion Born Ability",
+    "Adaptable Ability",
+    "Exterminators Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "With the limitless power of the stars, the finite resources of any planet can be transcended. From its celestial throne, the Cosmic Foundry provides enough resources to fuel a dozen industrial revolutions. All Workers receive bonus Diligence. Exclusive to Stellar Nexuses built around Blue Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:blue_nexus_cosmic_mirror",
+  "name": "Blue Nexus: Cosmic Mirror",
+  "aliases": [
+   "SN_Augment_QuantumMirror_L1"
+  ],
+  "summary": "We seek wisdom in the vastness of the cosmos and discover it shining among the stars. The Quantum Mirror empowers us to gaze farther into the universe than ever before. All Scientists receive bonus Intelligence. Exclusive to Stellar Nexuses built around Blue Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Blue Star"
+   ],
+   "turns_to_build": "4",
+   "resources": [
+    "10 Energy"
+   ],
+   "effects": [
+    "+10 Energy Consumption",
+    "+25 Armor Rating (Starbase)",
+    "+50 Shield Strength (Starbase)",
+    "+1 Technology (Colony)",
+    "+2 Intelligence (Unit)",
+    "+3 Intelligence (Unit)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Megastructure Nexi"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "We seek wisdom in the vastness of the cosmos and discover it shining among the stars. The Quantum Mirror empowers us to gaze farther into the universe than ever before. All Scientists receive bonus Intelligence. Exclusive to Stellar Nexuses built around Blue Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:blue_nexus_emergent_spire",
+  "name": "Blue Nexus: Emergent Spire",
+  "aliases": [
+   "SN_Augment_NeotericSpire_L2"
+  ],
+  "summary": "The Neoteric Spire is the ultimate tool for navigating the vast expanse of our collective knowledge. By synthesizing every known data point, it ensures that no breakthrough stays beyond our grasp. Exclusive to Stellar Nexuses built around Blue Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Blue Star"
+   ],
+   "turns_to_build": "8",
+   "resources": [
+    "25 Energy"
+   ],
+   "effects": [
+    "+25 Energy Consumption",
+    "+50 Armor Rating (Starbase)",
+    "+75 Shield Strength (Starbase)",
+    "+7% Research Discount Bonus",
+    "+0.15 Modifier Value (StrategicResource)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Advanced Nexus Augments"
+   ],
+   "requires_trait": [
+    "Synthetic Life",
+    "Inspired Ability",
+    "Starfaring Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "The Neoteric Spire is the ultimate tool for navigating the vast expanse of our collective knowledge. By synthesizing every known data point, it ensures that no breakthrough stays beyond our grasp. Exclusive to Stellar Nexuses built around Blue Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:blue_nexus_loyalty_engine",
+  "name": "Blue Nexus: Loyalty Engine",
+  "aliases": [
+   "SN_Augment_OptimizationEngine_L2"
+  ],
+  "summary": "Time is the sole barrier between us and mastery of the cosmos. By recovering lost moments and streamlining our operations, this gargantuan machine empowers us to realize our full potential. Exclusive to Stellar Nexuses built around Blue Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Blue Star"
+   ],
+   "turns_to_build": "8",
+   "resources": [
+    "25 Energy"
+   ],
+   "effects": [
+    "+25 Energy Consumption",
+    "+50 Armor Rating (Starbase)",
+    "+75 Shield Strength (Starbase)",
+    "+30 Loyalty (Unit)",
+    "-30% Leader Cost",
+    "+10% New Leader Chance"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Advanced Nexus Augments"
+   ],
+   "requires_trait": [
+    "Hopeful Ability",
+    "Ravenous Ability",
+    "Fertile Ability",
+    "Empathy Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "Time is the sole barrier between us and mastery of the cosmos. By recovering lost moments and streamlining our operations, this gargantuan machine empowers us to realize our full potential. Exclusive to Stellar Nexuses built around Blue Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:blue_nexus_neoteric_spire",
+  "name": "Blue Nexus: Neoteric Spire",
+  "aliases": [
+   "SN_Augment_NeotericSpire_L3"
+  ],
+  "summary": "The Neoteric Spire is the ultimate tool for navigating the vast expanse of our collective knowledge. By synthesizing every known data point, it ensures that no breakthrough stays beyond our grasp. Exclusive to Stellar Nexuses built around Blue Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Blue Star"
+   ],
+   "turns_to_build": "12",
+   "resources": [
+    "50 Energy"
+   ],
+   "effects": [
+    "+50 Energy Consumption",
+    "+75 Armor Rating (Starbase)",
+    "+100 Shield Strength (Starbase)",
+    "+10% Research Discount Bonus",
+    "+0.2 Modifier Value (StrategicResource)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Nexus Mastery"
+   ],
+   "requires_trait": [
+    "Synthetic Life",
+    "Inspired Ability",
+    "Starfaring Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "The Neoteric Spire is the ultimate tool for navigating the vast expanse of our collective knowledge. By synthesizing every known data point, it ensures that no breakthrough stays beyond our grasp. Exclusive to Stellar Nexuses built around Blue Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:blue_nexus_proto_spire",
+  "name": "Blue Nexus: Proto Spire",
+  "aliases": [
+   "SN_Augment_NeotericSpire_L1"
+  ],
+  "summary": "The Neoteric Spire is the ultimate tool for navigating the vast expanse of our collective knowledge. By synthesizing every known data point, it ensures that no breakthrough stays beyond our grasp. Exclusive to Stellar Nexuses built around Blue Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Blue Star"
+   ],
+   "turns_to_build": "4",
+   "resources": [
+    "10 Energy"
+   ],
+   "effects": [
+    "+10 Energy Consumption",
+    "+25 Armor Rating (Starbase)",
+    "+50 Shield Strength (Starbase)",
+    "+5% Research Discount Bonus",
+    "+0.1 Modifier Value (StrategicResource)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Megastructure Nexi"
+   ],
+   "requires_trait": [
+    "Synthetic Life",
+    "Inspired Ability",
+    "Starfaring Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "The Neoteric Spire is the ultimate tool for navigating the vast expanse of our collective knowledge. By synthesizing every known data point, it ensures that no breakthrough stays beyond our grasp. Exclusive to Stellar Nexuses built around Blue Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:blue_nexus_quantum_mirror",
+  "name": "Blue Nexus: Quantum Mirror",
+  "aliases": [
+   "SN_Augment_QuantumMirror_L3"
+  ],
+  "summary": "We seek wisdom in the vastness of the cosmos and discover it shining among the stars. The Quantum Mirror empowers us to gaze farther into the universe than ever before. All Scientists receive bonus Intelligence. Exclusive to Stellar Nexuses built around Blue Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Blue Star"
+   ],
+   "turns_to_build": "12",
+   "resources": [
+    "50 Energy"
+   ],
+   "effects": [
+    "+50 Energy Consumption",
+    "+75 Armor Rating (Starbase)",
+    "+100 Shield Strength (Starbase)",
+    "+5 Technology (Colony)",
+    "+6 Intelligence (Unit)",
+    "+9 Intelligence (Unit)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Nexus Mastery"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "We seek wisdom in the vastness of the cosmos and discover it shining among the stars. The Quantum Mirror empowers us to gaze farther into the universe than ever before. All Scientists receive bonus Intelligence. Exclusive to Stellar Nexuses built around Blue Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:blue_nexus_stellar_smithy",
+  "name": "Blue Nexus: Stellar Smithy",
+  "aliases": [
+   "SN_Augment_CosmicFoundry_L1"
+  ],
+  "summary": "With the limitless power of the stars, the finite resources of any planet can be transcended. From its celestial throne, the Cosmic Foundry provides enough resources to fuel a dozen industrial revolutions. All Workers receive bonus Diligence. Exclusive to Stellar Nexuses built around Blue Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Blue Star"
+   ],
+   "turns_to_build": "4",
+   "resources": [
+    "10 Energy"
+   ],
+   "effects": [
+    "+10 Energy Consumption",
+    "+25 Armor Rating (Starbase)",
+    "+50 Shield Strength (Starbase)",
+    "+1 Minerals (Colony)",
+    "+2 Diligence (Unit)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Megastructure Nexi"
+   ],
+   "requires_trait": [
+    "Telepathy Ability",
+    "Promethion Born Ability",
+    "Adaptable Ability",
+    "Exterminators Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "With the limitless power of the stars, the finite resources of any planet can be transcended. From its celestial throne, the Cosmic Foundry provides enough resources to fuel a dozen industrial revolutions. All Workers receive bonus Diligence. Exclusive to Stellar Nexuses built around Blue Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:blue_nexus_trust_engine",
+  "name": "Blue Nexus: Trust Engine",
+  "aliases": [
+   "SN_Augment_OptimizationEngine_L1"
+  ],
+  "summary": "Time is the sole barrier between us and mastery of the cosmos. By recovering lost moments and streamlining our operations, this gargantuan machine empowers us to realize our full potential. Exclusive to Stellar Nexuses built around Blue Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Blue Star"
+   ],
+   "turns_to_build": "4",
+   "resources": [
+    "10 Energy"
+   ],
+   "effects": [
+    "+10 Energy Consumption",
+    "+25 Armor Rating (Starbase)",
+    "+50 Shield Strength (Starbase)",
+    "+15 Loyalty (Unit)",
+    "-15% Leader Cost",
+    "+5% New Leader Chance"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Megastructure Nexi"
+   ],
+   "requires_trait": [
+    "Hopeful Ability",
+    "Ravenous Ability",
+    "Fertile Ability",
+    "Empathy Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "Time is the sole barrier between us and mastery of the cosmos. By recovering lost moments and streamlining our operations, this gargantuan machine empowers us to realize our full potential. Exclusive to Stellar Nexuses built around Blue Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:communications_starbase",
+  "name": "Communications Starbase",
+  "aliases": [
+   "CultureRingModule"
+  ],
+  "summary": "Helps extend your Cultural Influence",
+  "fields": {
+   "specialization": "Culture",
+   "effects": [
+    "+10% Influence Growth (Colony)",
+    "+10 Influence Growth (Starbase)"
+   ],
+   "excludes_module": [
+    "Dyson Sphere",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Stellar Gateway",
+    "Stellar Nexus",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Master Tech Tree"
+   ],
+   "description": "Dedicates starbase to extending your cultural influence and assets.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:cultural_awareness_center",
+  "name": "Cultural Awareness Center",
+  "aliases": [
+   "CulturalAwarenessModule"
+  ],
+  "summary": "Helps extend your Cultural Influence",
+  "fields": {
+   "specialization": "Culture",
+   "module_cost": "1",
+   "resources": [
+    "1 Durantium"
+   ],
+   "effects": [
+    "+10 Influence Growth (Starbase)",
+    "+10% Influence Growth (Colony)"
+   ],
+   "requires_module_any": [
+    "Communications Starbase"
+   ],
+   "requires_tech": [
+    "Universal Translator"
+   ],
+   "description": "Helps extend your Cultural Influence",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:cultural_beacon",
+  "name": "Cultural Beacon",
+  "aliases": [
+   "HumanModule_CulturalBeacon"
+  ],
+  "summary": "Broadcasting array that spreads human culture and influence to neighboring colonies.",
+  "fields": {
+   "specialization": "Culture",
+   "module_cost": "1",
+   "resources": [
+    "1 Durantium"
+   ],
+   "effects": [
+    "+10 Influence Growth (Starbase)",
+    "+15% Influence Growth (Colony)"
+   ],
+   "requires_module_any": [
+    "Communications Starbase"
+   ],
+   "requires_tech": [
+    "Cultural Influence"
+   ],
+   "description": "Broadcasting array that spreads human culture and influence to neighboring colonies.",
+   "source": "StarbaseModuleDefs_Humans.xml"
+  }
+ },
+ {
+  "id": "starbase_module:cultural_broadcast_array",
+  "name": "Cultural Broadcast Array",
+  "aliases": [
+   "HumanModule_CulturalBroadcastArray"
+  ],
+  "summary": "Generates influence and amplifies cultural reach to nearby colonies.",
+  "fields": {
+   "specialization": "Culture",
+   "module_cost": "1",
+   "resources": [
+    "1 Durantium"
+   ],
+   "effects": [
+    "+15 Influence Growth (Starbase)",
+    "+15% Influence Growth (Colony)"
+   ],
+   "requires_module_any": [
+    "Communications Starbase"
+   ],
+   "requires_tech": [
+    "Xeno Broadcasting"
+   ],
+   "description": "Broadcasts Terran culture and values throughout the sector, expanding your civilization's influence.",
+   "source": "StarbaseModuleDefs_Humans.xml"
+  }
+ },
+ {
+  "id": "starbase_module:cultural_exchange",
+  "name": "Cultural Exchange",
+  "aliases": [
+   "CulturalExchangeModule"
+  ],
+  "summary": "Helps extend your Cultural Influence",
+  "fields": {
+   "specialization": "Culture",
+   "maintenance": "1",
+   "module_cost": "1",
+   "resources": [
+    "1 Durantium"
+   ],
+   "effects": [
+    "+10 Influence Growth (Starbase)",
+    "+10% Influence Growth (Colony)"
+   ],
+   "requires_module_any": [
+    "Communications Starbase",
+    "Economic Starbase"
+   ],
+   "requires_tech": [
+    "Diplomacy"
+   ],
+   "description": "Helps extend your Cultural Influence",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:cultural_forum",
+  "name": "Cultural Forum",
+  "aliases": [
+   "CulturalForumModule"
+  ],
+  "summary": "Helps extend your Cultural Influence",
+  "fields": {
+   "specialization": "Culture",
+   "maintenance": "1",
+   "module_cost": "1",
+   "resources": [
+    "1 Durantium"
+   ],
+   "effects": [
+    "+15 Influence Growth (Starbase)",
+    "+15% Influence Growth (Colony)"
+   ],
+   "requires_module_any": [
+    "Communications Starbase"
+   ],
+   "requires_tech": [
+    "Cultural Influence"
+   ],
+   "description": "Helps extend your Cultural Influence",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:cyber_infiltration_module",
+  "name": "Cyber Infiltration Module",
+  "aliases": [
+   "CyberInfiltrationModule"
+  ],
+  "summary": "Infiltrates foreign networks to promote your culture and sow dissent.",
+  "fields": {
+   "specialization": "Culture",
+   "maintenance": "1",
+   "module_cost": "1",
+   "effects": [
+    "+25 Influence Growth (Starbase)",
+    "+25% Influence Growth (Colony)"
+   ],
+   "requires_module_any": [
+    "Communications Starbase"
+   ],
+   "requires_tech": [
+    "Cultural OS Patterns"
+   ],
+   "description": "Infiltrates foreign networks to promote your culture and sow dissent.",
+   "source": "starbasemoduledefs_synths.xml"
+  }
+ },
+ {
+  "id": "starbase_module:durantium_composite",
+  "name": "Durantium Composite",
+  "aliases": [
+   "DurantiumCompositeModule"
+  ],
+  "summary": "Adds Durantium Composite Armor",
+  "fields": {
+   "specialization": "Generic",
+   "module_cost": "1",
+   "resources": [
+    "1 Durantium"
+   ],
+   "effects": [
+    "+5 Armor Rating (Starbase)"
+   ],
+   "requires_module_any": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase"
+   ],
+   "requires_tech": [
+    "Armor Defense Theory",
+    "Nanite Plating",
+    "Tritanium Plating"
+   ],
+   "description": "Adds Durantium Composite Armor",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:dyson_sphere_blue",
+  "name": "Dyson Sphere",
+  "aliases": [
+   "DysonSphereBaseModule_Blue"
+  ],
+  "summary": "The Dyson Sphere is the zenith of cosmic engineering, enveloping a star to harness its boundless energy. This monumental structure provides an inexhaustible energy source that fuels all other Megastructures and propels us into an era of unprecedented advancement.",
+  "fields": {
+   "specialization": "Dyson Sphere",
+   "turns_to_build": "8",
+   "maintenance": "5",
+   "effects": [
+    "+20 Energy Generation",
+    "+50 Armor Rating (Starbase)",
+    "+100 Shield Strength (Starbase)"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Dyson Sphere",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Stellar Gateway",
+    "Stellar Nexus",
+    "Terror Star Foundation"
+   ],
+   "dlc": "Mega Structures",
+   "description": "The Dyson Sphere is the zenith of cosmic engineering, enveloping a star to harness its boundless energy. This monumental structure provides an inexhaustible energy source that fuels all other Megastructures and propels us into an era of unprecedented advancement.",
+   "source": "StarbaseModuleDefs.xml",
+   "variant": "DysonSphereBaseModule_Blue"
+  }
+ },
+ {
+  "id": "starbase_module:dyson_sphere_high",
+  "name": "Dyson Sphere",
+  "aliases": [
+   "DysonSphereBaseModule_High"
+  ],
+  "summary": "The Dyson Sphere is the zenith of cosmic engineering, enveloping a star to harness its boundless energy. This monumental structure provides an inexhaustible energy source that fuels all other Megastructures and propels us into an era of unprecedented advancement.",
+  "fields": {
+   "specialization": "Dyson Sphere",
+   "turns_to_build": "8",
+   "maintenance": "5",
+   "effects": [
+    "+40 Energy Generation",
+    "+50 Armor Rating (Starbase)",
+    "+100 Shield Strength (Starbase)"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Dyson Sphere",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Stellar Gateway",
+    "Stellar Nexus",
+    "Terror Star Foundation"
+   ],
+   "dlc": "Mega Structures",
+   "description": "The Dyson Sphere is the zenith of cosmic engineering, enveloping a star to harness its boundless energy. This monumental structure provides an inexhaustible energy source that fuels all other Megastructures and propels us into an era of unprecedented advancement.",
+   "source": "StarbaseModuleDefs.xml",
+   "variant": "DysonSphereBaseModule_High"
+  }
+ },
+ {
+  "id": "starbase_module:dyson_sphere_low",
+  "name": "Dyson Sphere",
+  "aliases": [
+   "DysonSphereBaseModule_Low"
+  ],
+  "summary": "The Dyson Sphere is the zenith of cosmic engineering, enveloping a star to harness its boundless energy. This monumental structure provides an inexhaustible energy source that fuels all other Megastructures and propels us into an era of unprecedented advancement.",
+  "fields": {
+   "specialization": "Dyson Sphere",
+   "turns_to_build": "8",
+   "maintenance": "5",
+   "effects": [
+    "+20 Energy Generation",
+    "+50 Armor Rating (Starbase)",
+    "+100 Shield Strength (Starbase)"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Dyson Sphere",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Stellar Gateway",
+    "Stellar Nexus",
+    "Terror Star Foundation"
+   ],
+   "dlc": "Mega Structures",
+   "description": "The Dyson Sphere is the zenith of cosmic engineering, enveloping a star to harness its boundless energy. This monumental structure provides an inexhaustible energy source that fuels all other Megastructures and propels us into an era of unprecedented advancement.",
+   "source": "StarbaseModuleDefs.xml",
+   "variant": "DysonSphereBaseModule_Low"
+  }
+ },
+ {
+  "id": "starbase_module:dyson_sphere_mid",
+  "name": "Dyson Sphere",
+  "aliases": [
+   "DysonSphereBaseModule_Mid"
+  ],
+  "summary": "The Dyson Sphere is the zenith of cosmic engineering, enveloping a star to harness its boundless energy. This monumental structure provides an inexhaustible energy source that fuels all other Megastructures and propels us into an era of unprecedented advancement.",
+  "fields": {
+   "specialization": "Dyson Sphere",
+   "turns_to_build": "8",
+   "maintenance": "5",
+   "effects": [
+    "+20 Energy Generation",
+    "+50 Armor Rating (Starbase)",
+    "+100 Shield Strength (Starbase)"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Dyson Sphere",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Stellar Gateway",
+    "Stellar Nexus",
+    "Terror Star Foundation"
+   ],
+   "dlc": "Mega Structures",
+   "description": "The Dyson Sphere is the zenith of cosmic engineering, enveloping a star to harness its boundless energy. This monumental structure provides an inexhaustible energy source that fuels all other Megastructures and propels us into an era of unprecedented advancement.",
+   "source": "StarbaseModuleDefs.xml",
+   "variant": "DysonSphereBaseModule_Mid"
+  }
+ },
+ {
+  "id": "starbase_module:dyson_sphere_purple",
+  "name": "Dyson Sphere",
+  "aliases": [
+   "DysonSphereBaseModule_Purple"
+  ],
+  "summary": "The Dyson Sphere is the zenith of cosmic engineering, enveloping a star to harness its boundless energy. This monumental structure provides an inexhaustible energy source that fuels all other Megastructures and propels us into an era of unprecedented advancement.",
+  "fields": {
+   "specialization": "Dyson Sphere",
+   "turns_to_build": "8",
+   "maintenance": "5",
+   "effects": [
+    "+20 Energy Generation",
+    "+50 Armor Rating (Starbase)",
+    "+100 Shield Strength (Starbase)"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Dyson Sphere",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Stellar Gateway",
+    "Stellar Nexus",
+    "Terror Star Foundation"
+   ],
+   "dlc": "Mega Structures",
+   "description": "The Dyson Sphere is the zenith of cosmic engineering, enveloping a star to harness its boundless energy. This monumental structure provides an inexhaustible energy source that fuels all other Megastructures and propels us into an era of unprecedented advancement.",
+   "source": "StarbaseModuleDefs.xml",
+   "variant": "DysonSphereBaseModule_Purple"
+  }
+ },
+ {
+  "id": "starbase_module:dyson_sphere_red",
+  "name": "Dyson Sphere",
+  "aliases": [
+   "DysonSphereBaseModule_Red"
+  ],
+  "summary": "The Dyson Sphere is the zenith of cosmic engineering, enveloping a star to harness its boundless energy. This monumental structure provides an inexhaustible energy source that fuels all other Megastructures and propels us into an era of unprecedented advancement.",
+  "fields": {
+   "specialization": "Dyson Sphere",
+   "turns_to_build": "8",
+   "maintenance": "5",
+   "effects": [
+    "+20 Energy Generation",
+    "+50 Armor Rating (Starbase)",
+    "+100 Shield Strength (Starbase)"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Dyson Sphere",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Stellar Gateway",
+    "Stellar Nexus",
+    "Terror Star Foundation"
+   ],
+   "dlc": "Mega Structures",
+   "description": "The Dyson Sphere is the zenith of cosmic engineering, enveloping a star to harness its boundless energy. This monumental structure provides an inexhaustible energy source that fuels all other Megastructures and propels us into an era of unprecedented advancement.",
+   "source": "StarbaseModuleDefs.xml",
+   "variant": "DysonSphereBaseModule_Red"
+  }
+ },
+ {
+  "id": "starbase_module:dyson_sphere_yellow",
+  "name": "Dyson Sphere",
+  "aliases": [
+   "DysonSphereBaseModule_Yellow"
+  ],
+  "summary": "The Dyson Sphere is the zenith of cosmic engineering, enveloping a star to harness its boundless energy. This monumental structure provides an inexhaustible energy source that fuels all other Megastructures and propels us into an era of unprecedented advancement.",
+  "fields": {
+   "specialization": "Dyson Sphere",
+   "turns_to_build": "8",
+   "maintenance": "5",
+   "effects": [
+    "+20 Energy Generation",
+    "+50 Armor Rating (Starbase)",
+    "+100 Shield Strength (Starbase)"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Dyson Sphere",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Stellar Gateway",
+    "Stellar Nexus",
+    "Terror Star Foundation"
+   ],
+   "dlc": "Mega Structures",
+   "description": "The Dyson Sphere is the zenith of cosmic engineering, enveloping a star to harness its boundless energy. This monumental structure provides an inexhaustible energy source that fuels all other Megastructures and propels us into an era of unprecedented advancement.",
+   "source": "StarbaseModuleDefs.xml",
+   "variant": "DysonSphereBaseModule_Yellow"
+  }
+ },
+ {
+  "id": "starbase_module:economic_starbase",
+  "name": "Economic Starbase",
+  "aliases": [
+   "EconomicRingModule"
+  ],
+  "summary": "Dedicates starbase to building up the economy of your worlds.",
+  "fields": {
+   "specialization": "Economic",
+   "requires_target": "Colony",
+   "effects": [
+    "+5% Manufacturing (Colony)",
+    "+5% Gross Income (Colony)",
+    "+1 Influence Growth (Starbase)"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Dyson Sphere",
+    "Military Starbase",
+    "Mining Starbase",
+    "Stellar Gateway",
+    "Stellar Nexus",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Master Tech Tree"
+   ],
+   "description": "Dedicates starbase to building up the economy of your Core Worlds.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:entertainment_hub",
+  "name": "Entertainment Hub",
+  "aliases": [
+   "HumanModule_EntertainmentHub"
+  ],
+  "summary": "Recreation and media center that boosts morale on nearby planets.",
+  "fields": {
+   "specialization": "Culture",
+   "module_cost": "1",
+   "resources": [
+    "1 Durantium"
+   ],
+   "effects": [
+    "+8% Approval (Unit)"
+   ],
+   "requires_module_any": [
+    "Communications Starbase"
+   ],
+   "requires_tech": [
+    "Xeno Entertainment"
+   ],
+   "description": "Recreation and media center that boosts morale on nearby planets.",
+   "source": "StarbaseModuleDefs_Humans.xml"
+  }
+ },
+ {
+  "id": "starbase_module:exploration_support_system",
+  "name": "Exploration Support System",
+  "aliases": [
+   "ChaoticParticleAbsorptionSystemModule",
+   "HumanModule_ChaoticParticleAbsorptionSystem"
+  ],
+  "summary": "Extends Starbases Area of Effect by 2",
+  "fields": {
+   "specialization": "Generic",
+   "module_cost": "1",
+   "resources": [
+    "1 Durantium"
+   ],
+   "effects": [
+    "+2 Starbase Range (Starbase)",
+    "+1 Is Immune To Nebula (Ship)"
+   ],
+   "upgrades_from": [
+    "Support Field Stabilization"
+   ],
+   "requires_tech": [
+    "Xeno Manufacturing"
+   ],
+   "description": "Extends Starbases Area of Effect by 2",
+   "source": "StarbaseModuleDefs_Humans.xml"
+  }
+ },
+ {
+  "id": "starbase_module:force_field_projector",
+  "name": "Force Field Projector",
+  "aliases": [
+   "ForceFieldProjectorModule"
+  ],
+  "summary": "Adds a Force Field Projector",
+  "fields": {
+   "specialization": "Generic",
+   "module_cost": "1",
+   "resources": [
+    "3 Elerium"
+   ],
+   "effects": [
+    "+100 Shield Strength (Starbase)"
+   ],
+   "upgrades_from": [
+    "Barrier Array"
+   ],
+   "requires_tech": [
+    "Shield Augmentation",
+    "Temporal Shielding",
+    "Shield Matrix"
+   ],
+   "description": "Adds a Force Field Projector",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:fortification_module",
+  "name": "Fortification Module",
+  "aliases": [
+   "StarbaseFortificationModule"
+  ],
+  "summary": "Increases defenses of all our ships within starbase Area of Effect.",
+  "fields": {
+   "specialization": "Military",
+   "maintenance": "1",
+   "module_cost": "1",
+   "resources": [
+    "1 Durantium"
+   ],
+   "effects": [
+    "+5 Shield Strength (Ship)",
+    "+5 Armor Rating (Ship)",
+    "+5 Evasion (Ship)"
+   ],
+   "requires_module_any": [
+    "Military Starbase"
+   ],
+   "requires_tech": [
+    "Starbase Defense Grid",
+    "Crystalline Deflectors",
+    "Pulsar Interceptors"
+   ],
+   "description": "Increases defenses of allies ships within starbase Area of Effect.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:franchise_center",
+  "name": "Franchise Center",
+  "aliases": [
+   "FranchiseCenter"
+  ],
+  "summary": "Boost the Income and Influence of nearby worlds",
+  "fields": {
+   "specialization": "Economic",
+   "requires_target": "Colony",
+   "module_cost": "1",
+   "resources": [
+    "1 Durantium",
+    "1 Promethion"
+   ],
+   "effects": [
+    "+15% Gross Income (Colony)",
+    "+10 Influence Growth (Colony)"
+   ],
+   "upgrades_from": [
+    "Starbase Promenade"
+   ],
+   "requires_tech": [
+    "Financial Sectors",
+    "Neural Exchange Nodes"
+   ],
+   "description": "Boost the Income and Influence of nearby worlds",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:gravity_field_generator",
+  "name": "Gravity Field Generator",
+  "aliases": [
+   "GravityFieldGeneratorModule"
+  ],
+  "summary": "Slows nearby enemy ships",
+  "fields": {
+   "specialization": "Military",
+   "module_cost": "1",
+   "resources": [
+    "1 Promethion"
+   ],
+   "effects": [
+    "+10% Move Cost (Tile)",
+    "-5% Tactical Speed (Ship)"
+   ],
+   "requires_module_any": [
+    "Military Starbase"
+   ],
+   "requires_tech": [
+    "Warp Theory",
+    "Slipstream Engines"
+   ],
+   "description": "Slows nearby enemy ships",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:harpoon_salvo",
+  "name": "Harpoon Salvo",
+  "aliases": [
+   "HarpoonSavoModule"
+  ],
+  "summary": "Adds a Harpoon Salvo.",
+  "fields": {
+   "specialization": "Generic",
+   "module_cost": "1",
+   "resources": [
+    "2 Antimatter"
+   ],
+   "effects": [
+    "+4 Missile Attack (Starbase)"
+   ],
+   "requires_module_any": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase"
+   ],
+   "requires_tech": [
+    "Phoenix Missile System",
+    "Quantum Missiles",
+    "Adaptive Seeker Missiles"
+   ],
+   "description": "Adds a Harpoon Salvo.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:hive_mind",
+  "name": "Hive Mind",
+  "aliases": [
+   "HiveMindCenter"
+  ],
+  "summary": "Helps extend your Cultural Influence",
+  "fields": {
+   "specialization": "Culture",
+   "maintenance": "1",
+   "module_cost": "1",
+   "resources": [
+    "1 Durantium",
+    "2 Harmony Crystals",
+    "1 Snuggler Colony",
+    "2 Ultra Spice"
+   ],
+   "effects": [
+    "+25 Influence Growth (Starbase)",
+    "+15% Influence Growth (Colony)"
+   ],
+   "upgrades_from": [
+    "Indoctrination Center"
+   ],
+   "requires_tech": [
+    "Cultural Affinity"
+   ],
+   "description": "Helps extend your Cultural Influence",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:holometric_suite",
+  "name": "Holometric Suite",
+  "aliases": [
+   "HolometricSuiteModule"
+  ],
+  "summary": "Projects immersive holograms that expand your cultural reach and bolster nearby colonies.",
+  "fields": {
+   "specialization": "Culture",
+   "maintenance": "1",
+   "module_cost": "1",
+   "effects": [
+    "+10 Influence Growth (Starbase)",
+    "+10% Influence Growth (Colony)"
+   ],
+   "requires_module_any": [
+    "Communications Starbase"
+   ],
+   "requires_tech": [
+    "Holometric Culture Vistas"
+   ],
+   "description": "Projects immersive holograms that expand your cultural reach and bolster nearby colonies.",
+   "source": "starbasemoduledefs_synths.xml"
+  }
+ },
+ {
+  "id": "starbase_module:indoctrination_center",
+  "name": "Indoctrination Center",
+  "aliases": [
+   "IndoctrinationCenter"
+  ],
+  "summary": "Helps extend your Cultural Influence",
+  "fields": {
+   "specialization": "Culture",
+   "maintenance": "1",
+   "module_cost": "1",
+   "resources": [
+    "1 Durantium",
+    "1 Harmony Crystals",
+    "1 Ultra Spice"
+   ],
+   "effects": [
+    "+10 Influence Growth (Starbase)",
+    "+50% Influence Growth (Starbase)",
+    "+20% Influence Growth (Colony)"
+   ],
+   "upgrades_from": [
+    "Interstellar Ministry"
+   ],
+   "requires_tech": [
+    "Cultural Domination"
+   ],
+   "description": "Helps extend your Cultural Influence",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:indoctrination_hub",
+  "name": "Indoctrination Hub",
+  "aliases": [
+   "HumanModule_IndoctrinationHub"
+  ],
+  "summary": "Powerful influence generator with enhanced cultural projection. Upgrades from Cultural Broadcast Array.",
+  "fields": {
+   "specialization": "Culture",
+   "module_cost": "1",
+   "resources": [
+    "1 Durantium",
+    "1 Harmony Crystals",
+    "1 Ultra Spice"
+   ],
+   "effects": [
+    "+10 Influence Growth (Starbase)",
+    "+50% Influence Growth (Starbase)",
+    "+20% Influence Growth (Colony)"
+   ],
+   "upgrades_from": [
+    "Cultural Broadcast Array"
+   ],
+   "requires_tech": [
+    "Cultural Conquest"
+   ],
+   "description": "Advanced cultural conditioning facility that significantly amplifies influence projection across the sector.",
+   "source": "StarbaseModuleDefs_Humans.xml"
+  }
+ },
+ {
+  "id": "starbase_module:industrial_coordinating_station",
+  "name": "Industrial Coordinating Station",
+  "aliases": [
+   "HumanModule_IndustrialCoordinatingStation"
+  ],
+  "summary": "Logistics center that dramatically increases manufacturing efficiency on nearby worlds.",
+  "fields": {
+   "specialization": "Economic",
+   "maintenance": "2",
+   "module_cost": "1",
+   "resources": [
+    "3 Durantium"
+   ],
+   "effects": [
+    "+28% Manufacturing (Colony)"
+   ],
+   "requires_module_any": [
+    "Economic Starbase"
+   ],
+   "requires_tech": [
+    "Abundance"
+   ],
+   "description": "Logistics center that dramatically increases manufacturing efficiency on nearby worlds.",
+   "source": "StarbaseModuleDefs_Humans.xml"
+  }
+ },
+ {
+  "id": "starbase_module:industrial_matrix_hub",
+  "name": "Industrial Matrix Hub",
+  "aliases": [
+   "HumanModule_IndustrialMatrixHub"
+  ],
+  "summary": "Advanced production coordination system that significantly enhances industrial output.",
+  "fields": {
+   "specialization": "Economic",
+   "maintenance": "2",
+   "module_cost": "1",
+   "resources": [
+    "3 Durantium"
+   ],
+   "effects": [
+    "+17% Manufacturing (Colony)"
+   ],
+   "requires_module_any": [
+    "Economic Starbase"
+   ],
+   "requires_tech": [
+    "Industrial Matrix"
+   ],
+   "description": "Advanced production coordination system that significantly enhances industrial output.",
+   "source": "StarbaseModuleDefs_Humans.xml"
+  }
+ },
+ {
+  "id": "starbase_module:information_hub",
+  "name": "Information Hub",
+  "aliases": [
+   "InformationHubModule"
+  ],
+  "summary": "Helps extend your Cultural Influence",
+  "fields": {
+   "specialization": "Culture",
+   "maintenance": "1",
+   "module_cost": "1",
+   "resources": [
+    "1 Durantium"
+   ],
+   "effects": [
+    "+15 Influence Growth (Starbase)",
+    "+15% Influence Growth (Colony)"
+   ],
+   "upgrades_from": [
+    "Cultural Forum"
+   ],
+   "requires_tech": [
+    "Cultural Outreach"
+   ],
+   "description": "Helps extend your Cultural Influence",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:inspirational_network",
+  "name": "Inspirational Network",
+  "aliases": [
+   "InspirationalNetworkModule"
+  ],
+  "summary": "An advanced broadcast system that instills awe and fervor, dramatically increasing influence.",
+  "fields": {
+   "specialization": "Culture",
+   "maintenance": "1",
+   "module_cost": "1",
+   "resources": [
+    "1 Promethion"
+   ],
+   "effects": [
+    "+50 Influence Growth (Starbase)",
+    "+50% Influence Growth (Colony)"
+   ],
+   "requires_module_any": [
+    "Communications Starbase"
+   ],
+   "requires_tech": [
+    "Extraplanetary Inspiration Network"
+   ],
+   "description": "An advanced broadcast system that instills awe and fervor, dramatically increasing influence.",
+   "source": "starbasemoduledefs_synths.xml"
+  }
+ },
+ {
+  "id": "starbase_module:interceptors",
+  "name": "Interceptors",
+  "aliases": [
+   "InterceptorModule"
+  ],
+  "summary": "Give starbase 5 Interceptor Drones",
+  "fields": {
+   "specialization": "Generic",
+   "module_cost": "1",
+   "resources": [
+    "3 Elerium",
+    "3 Xanthium Deposit"
+   ],
+   "effects": [
+    "+5 Interceptor Fighters Cap (Starbase)"
+   ],
+   "requires_module_any": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase"
+   ],
+   "requires_tech": [
+    "Carriers",
+    "Drone Carriers",
+    "Terran Carrier Doctrine"
+   ],
+   "description": "Give starbase 5 Interceptor Drones",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:interstellar_collectors",
+  "name": "Interstellar Collectors",
+  "aliases": [
+   "InterstellarCollectorModule"
+  ],
+  "summary": "Boost the Manufacturing of nearby worlds",
+  "fields": {
+   "specialization": "Economic",
+   "requires_target": "Colony",
+   "module_cost": "1",
+   "maintenance": "1",
+   "resources": [
+    "4 Durantium",
+    "1 Helios Ore"
+   ],
+   "effects": [
+    "+4% Manufacturing (Colony)"
+   ],
+   "upgrades_from": [
+    "Orbital Replicators"
+   ],
+   "requires_tech": [
+    "Starbase Com Stack",
+    "Asteroid Exploitation"
+   ],
+   "description": "Boost the Manufacturing of nearby worlds",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:interstellar_defense_module",
+  "name": "Interstellar Defense Module",
+  "aliases": [
+   "InterstellarDefenseModule"
+  ],
+  "summary": "Boost moves for all our ships, and reduces the moves of enemy ships within starbase Area of Effect.",
+  "fields": {
+   "specialization": "Military",
+   "maintenance": "5",
+   "module_cost": "1",
+   "resources": [
+    "3 Durantium"
+   ],
+   "effects": [
+    "-10% Move Cost (Tile)",
+    "+10% Move Cost (Tile)"
+   ],
+   "requires_module_any": [
+    "Military Starbase"
+   ],
+   "requires_tech": [
+    "Starbase Defense Grid",
+    "Defensive Studies"
+   ],
+   "description": "Boost moves for allied ships, and reduces the moves of enemy ships within starbase Area of Effect.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:interstellar_embassy",
+  "name": "Interstellar Embassy",
+  "aliases": [
+   "InterstellarEmbassyModule"
+  ],
+  "summary": "Helps extend your Cultural Influence",
+  "fields": {
+   "specialization": "Culture",
+   "maintenance": "1",
+   "module_cost": "1",
+   "resources": [
+    "1 Durantium"
+   ],
+   "effects": [
+    "+15 Influence Growth (Starbase)",
+    "+15% Influence Growth (Colony)"
+   ],
+   "upgrades_from": [
+    "Interstellar Exchange"
+   ],
+   "requires_tech": [
+    "Stellar Emigration"
+   ],
+   "description": "Helps extend your Cultural Influence",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:interstellar_exchange",
+  "name": "Interstellar Exchange",
+  "aliases": [
+   "InterstellarExchangeModule"
+  ],
+  "summary": "Helps extend your Cultural Influence",
+  "fields": {
+   "specialization": "Culture",
+   "maintenance": "1",
+   "module_cost": "1",
+   "resources": [
+    "1 Durantium"
+   ],
+   "effects": [
+    "+15 Influence Growth (Starbase)",
+    "+15% Influence Growth (Colony)"
+   ],
+   "upgrades_from": [
+    "Information Hub"
+   ],
+   "requires_tech": [
+    "Cultural Outreach"
+   ],
+   "description": "Helps extend your Cultural Influence",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:interstellar_ministry",
+  "name": "Interstellar Ministry",
+  "aliases": [
+   "InterstellarMinistryModule"
+  ],
+  "summary": "Helps extend your Cultural Influence",
+  "fields": {
+   "specialization": "Culture",
+   "maintenance": "1",
+   "module_cost": "1",
+   "resources": [
+    "1 Durantium"
+   ],
+   "effects": [
+    "+15 Influence Growth (Starbase)",
+    "+15% Influence Growth (Colony)"
+   ],
+   "upgrades_from": [
+    "Interstellar Embassy"
+   ],
+   "requires_tech": [
+    "Cultural Assimilation"
+   ],
+   "description": "Helps extend your Cultural Influence",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:invulnerability_sphere",
+  "name": "Invulnerability Sphere",
+  "aliases": [
+   "InvulnerabilitySphereModule"
+  ],
+  "summary": "Adds an Invulnerability Sphere projector",
+  "fields": {
+   "specialization": "Generic",
+   "module_cost": "1",
+   "resources": [
+    "4 Elerium"
+   ],
+   "effects": [
+    "+150 Shield Strength (Starbase)"
+   ],
+   "upgrades_from": [
+    "Force Field Projector"
+   ],
+   "requires_tech": [
+    "Shield Focus Adaption",
+    "Gravimetric Deflection",
+    "Barrier Projectors"
+   ],
+   "description": "Adds an Invulnerability Sphere projector",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:kanvium_laminate",
+  "name": "Kanvium Laminate",
+  "aliases": [
+   "KanviumLaminateModule"
+  ],
+  "summary": "Adds Kanvium Laminate Armor",
+  "fields": {
+   "specialization": "Generic",
+   "module_cost": "1",
+   "resources": [
+    "2 Durantium"
+   ],
+   "effects": [
+    "+10 Armor Rating (Starbase)"
+   ],
+   "upgrades_from": [
+    "Durantium Composite"
+   ],
+   "requires_tech": [
+    "Armor Density Improvements",
+    "Battleframe Defense Systems",
+    "Neutronium Armor"
+   ],
+   "description": "Adds Kanvium Laminate Armor",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:metaverstic_nexus",
+  "name": "Metaverstic Nexus",
+  "aliases": [
+   "HumanModule_MetaversticNexus"
+  ],
+  "summary": "Advanced virtual reality network that massively amplifies cultural influence throughout the region.",
+  "fields": {
+   "specialization": "Culture",
+   "module_cost": "1",
+   "resources": [
+    "2 Durantium"
+   ],
+   "effects": [
+    "+18 Influence Growth (Starbase)",
+    "+20% Influence Growth (Colony)"
+   ],
+   "requires_module_any": [
+    "Communications Starbase"
+   ],
+   "requires_tech": [
+    "Metaverstic Gaming"
+   ],
+   "description": "Advanced virtual reality network that massively amplifies cultural influence throughout the region.",
+   "source": "StarbaseModuleDefs_Humans.xml"
+  }
+ },
+ {
+  "id": "starbase_module:military_starbase",
+  "name": "Military Starbase",
+  "aliases": [
+   "MilitaryRingModule"
+  ],
+  "summary": "Dedicates starbase to protecting your civilization and its assets.",
+  "fields": {
+   "specialization": "Military",
+   "effects": [
+    "+1 Beam Attack (Ship)",
+    "+1 Kinetic Attack (Ship)",
+    "+1 Missile Attack (Ship)",
+    "+8 Beam Attack (Starbase)",
+    "+8 Kinetic Attack (Starbase)",
+    "+12 Missile Attack (Starbase)",
+    "+24 Shield Strength (Starbase)",
+    "+24 Armor Rating (Starbase)"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Dyson Sphere",
+    "Economic Starbase",
+    "Mining Starbase",
+    "Stellar Gateway",
+    "Stellar Nexus",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Master Tech Tree"
+   ],
+   "description": "Dedicates starbase to protecting your civilization and its assets.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:mind_meld_chamber",
+  "name": "Mind Meld Chamber",
+  "aliases": [
+   "MindMeldChamberModule"
+  ],
+  "summary": "A shared telepathic environment enabling any species to meld minds, reinforcing cultural indoctrination.",
+  "fields": {
+   "specialization": "Culture",
+   "maintenance": "1",
+   "module_cost": "1",
+   "effects": [
+    "+15 Influence Growth (Starbase)",
+    "+25% Influence Growth (Colony)"
+   ],
+   "requires_module_any": [
+    "Communications Starbase"
+   ],
+   "requires_tech": [
+    "Mind-Meld Interfaces"
+   ],
+   "description": "A shared telepathic environment enabling any species to meld minds, reinforcing cultural indoctrination.",
+   "source": "starbasemoduledefs_synths.xml"
+  }
+ },
+ {
+  "id": "starbase_module:mining_barracks",
+  "name": "Mining Barracks",
+  "aliases": [
+   "MiningBarrackModule"
+  ],
+  "summary": "Boost Yields of attached Resources",
+  "fields": {
+   "specialization": "Mining",
+   "requires_target": "Strategic Resource",
+   "module_cost": "1",
+   "effects": [
+    "+0.1 Mining (StrategicResource)"
+   ],
+   "requires_module_any": [
+    "Mining Starbase"
+   ],
+   "requires_tech": [
+    "Asteroid Factories",
+    "Asteroid Processing",
+    "Industrial Matrix"
+   ],
+   "description": "Boost Yields of attached Resources",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:mining_drones",
+  "name": "Mining Drones",
+  "aliases": [
+   "MiningDrones"
+  ],
+  "summary": "Boost Yields of attached Resources",
+  "fields": {
+   "specialization": "Mining",
+   "requires_target": "Strategic Resource",
+   "module_cost": "1",
+   "effects": [
+    "+0.1 Mining (StrategicResource)"
+   ],
+   "upgrades_from": [
+    "Mining Starbase"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase"
+   ],
+   "requires_tech": [
+    "Master Tech Tree"
+   ],
+   "description": "Boost Yields of attached Resources",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:mining_headquarters",
+  "name": "Mining Headquarters",
+  "aliases": [
+   "MiningHeadquarterModule"
+  ],
+  "summary": "Boost Yields of attached Resources",
+  "fields": {
+   "specialization": "Mining",
+   "requires_target": "Strategic Resource",
+   "module_cost": "1",
+   "maintenance": "1",
+   "effects": [
+    "+0.1 Mining (StrategicResource)"
+   ],
+   "upgrades_from": [
+    "Mining Barracks"
+   ],
+   "requires_tech": [
+    "Starbase Refinery",
+    "Abundance"
+   ],
+   "description": "Boost Yields of attached Resources",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:mining_starbase",
+  "name": "Mining Starbase",
+  "aliases": [
+   "MiningRingModule"
+  ],
+  "summary": "Focuses on maximizing mining nearby resources",
+  "fields": {
+   "specialization": "Mining",
+   "requires_target": "Strategic Resource",
+   "effects": [
+    "+0.1 Mining (StrategicResource)",
+    "Mine Surrounding Resources"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Dyson Sphere",
+    "Economic Starbase",
+    "Military Starbase",
+    "Stellar Gateway",
+    "Stellar Nexus",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Master Tech Tree"
+   ],
+   "description": "Dedicates starbase to mining nearby Strategic Resources .",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:mithrilarian_archive",
+  "name": "Mithrilarian Archive",
+  "aliases": [
+   "HumanModule_MithrilarianArchive"
+  ],
+  "summary": "Dramatically improves precursor relic extraction. Upgrades from Advanced Relic Processor.",
+  "fields": {
+   "specialization": "Mining",
+   "maintenance": "3",
+   "module_cost": "1",
+   "resources": [
+    "30 Durantium"
+   ],
+   "effects": [
+    "+0.25 Modifier Value (StrategicResource)"
+   ],
+   "upgrades_from": [
+    "Advanced Relic Processor"
+   ],
+   "requires_tech": [
+    "Mithrilarian Insights"
+   ],
+   "description": "Utilizing ancient Mithrilarian techniques, this archive dramatically improves relic extraction and preservation.",
+   "source": "StarbaseModuleDefs_Humans.xml"
+  }
+ },
+ {
+  "id": "starbase_module:nanite_decryption_center",
+  "name": "Nanite Decryption Center",
+  "aliases": [
+   "NaniteDecryptionCenterModule"
+  ],
+  "summary": "Increases bonuses from Relics",
+  "fields": {
+   "specialization": "Generic",
+   "requires_target": "Relic",
+   "module_cost": "1",
+   "resources": [
+    "3 Precursor Nanites"
+   ],
+   "effects": [
+    "+0.05 Modifier Value (StrategicResource)",
+    "+5 Modifier Value (StrategicResource)"
+   ],
+   "upgrades_from": [
+    "Precursor Engineering Center"
+   ],
+   "requires_tech": [
+    "Precursor Artifact Studies"
+   ],
+   "requires_trait": [
+    "Ancient Ability"
+   ],
+   "description": "Increases bonuses from Relics",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:nightmare_delivery_system",
+  "name": "Nightmare Delivery System",
+  "aliases": [
+   "NightmareDeliverySystemModule"
+  ],
+  "summary": "Adds a Nightmare Delivery System.",
+  "fields": {
+   "specialization": "Generic",
+   "module_cost": "1",
+   "resources": [
+    "5 Antimatter"
+   ],
+   "effects": [
+    "+16 Missile Attack (Starbase)"
+   ],
+   "upgrades_from": [
+    "Photonic Torpedo Array"
+   ],
+   "requires_tech": [
+    "Nightmare Missile System",
+    "Zero-Point Munitions",
+    "Eclipse Warheads"
+   ],
+   "description": "Adds a Nightmare Delivery System.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:omega_starbase_defenses",
+  "name": "Omega Starbase Defenses",
+  "aliases": [
+   "OmegaStarbaseDefenseSystem"
+  ],
+  "summary": "All the weapons we can fit without specializing.",
+  "fields": {
+   "specialization": "Generic",
+   "module_cost": "1",
+   "resources": [
+    "3 Durantium",
+    "3 Elerium",
+    "3 Hyper Silicates"
+   ],
+   "effects": [
+    "+50 Beam Attack (Starbase)",
+    "+50 Missile Attack (Starbase)",
+    "+50 Kinetic Attack (Starbase)",
+    "+5 Influence Growth (Starbase)",
+    "+500 Shield Strength (Starbase)"
+   ],
+   "upgrades_from": [
+    "Advanced Defenses"
+   ],
+   "requires_tech": [
+    "Starbase Defense Grid",
+    "Quantum Missiles",
+    "Armada Doctrine"
+   ],
+   "description": "All the weapons we can fit without specializing.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:orbital_institute",
+  "name": "Orbital Institute",
+  "aliases": [
+   "OrbitalInstituteModule"
+  ],
+  "summary": "Boost the Research of nearby worlds",
+  "fields": {
+   "specialization": "Economic",
+   "requires_target": "Colony",
+   "maintenance": "3",
+   "module_cost": "1",
+   "resources": [
+    "4 Promethion",
+    "2 Hyper Silicates"
+   ],
+   "effects": [
+    "+3% Research (Colony)"
+   ],
+   "upgrades_from": [
+    "Orbital Research Center"
+   ],
+   "requires_tech": [
+    "Research Matrix",
+    "Quantum Neural Link"
+   ],
+   "description": "Boost the Research of nearby worlds",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:orbital_replicators",
+  "name": "Orbital Replicators",
+  "aliases": [
+   "OrbitalReplicatorModule"
+  ],
+  "summary": "Boost the Manufacturing of nearby worlds",
+  "fields": {
+   "specialization": "Economic",
+   "requires_target": "Colony",
+   "maintenance": "1",
+   "module_cost": "1",
+   "resources": [
+    "3 Durantium"
+   ],
+   "effects": [
+    "+3% Manufacturing (Colony)"
+   ],
+   "upgrades_from": [
+    "Zero G Scaling"
+   ],
+   "requires_tech": [
+    "Starbase Refinery"
+   ],
+   "description": "Boost the Manufacturing of nearby worlds",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:orbital_research_center",
+  "name": "Orbital Research Center",
+  "aliases": [
+   "OrbitalResearchCenterModule"
+  ],
+  "summary": "Boost the Research of nearby worlds",
+  "fields": {
+   "specialization": "Economic",
+   "requires_target": "Colony",
+   "maintenance": "1",
+   "module_cost": "1",
+   "resources": [
+    "3 Promethion"
+   ],
+   "effects": [
+    "+3% Research (Colony)"
+   ],
+   "upgrades_from": [
+    "Zero G Experimentation"
+   ],
+   "requires_tech": [
+    "Orbital Research Labs",
+    "Supra Cognition"
+   ],
+   "description": "Boost the Research of nearby worlds",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:orbital_shopping_center",
+  "name": "Orbital Shopping Center",
+  "aliases": [
+   "OrbitalShoppingCenter"
+  ],
+  "summary": "Boost the Income of nearby worlds",
+  "fields": {
+   "specialization": "Economic",
+   "requires_target": "Colony",
+   "module_cost": "1",
+   "resources": [
+    "1 Durantium",
+    "1 Promethion"
+   ],
+   "effects": [
+    "+5% Gross Income (Colony)"
+   ],
+   "upgrades_from": [
+    "Starbase Market"
+   ],
+   "requires_tech": [
+    "Xeno Economics",
+    "Zero-Latency Accounting"
+   ],
+   "description": "Boost the Income of nearby worlds",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:orbital_tether_network",
+  "name": "Orbital Tether Network",
+  "aliases": [
+   "HumanModule_OrbitalTetherNetwork"
+  ],
+  "summary": "Space elevator infrastructure that improves manufacturing capacity on connected worlds.",
+  "fields": {
+   "specialization": "Economic",
+   "module_cost": "1",
+   "resources": [
+    "2 Durantium"
+   ],
+   "effects": [
+    "+5% Manufacturing (Colony)"
+   ],
+   "requires_module_any": [
+    "Economic Starbase"
+   ],
+   "requires_tech": [
+    "Space Elevators"
+   ],
+   "description": "Space elevator infrastructure that improves manufacturing capacity on connected worlds.",
+   "source": "StarbaseModuleDefs_Humans.xml"
+  }
+ },
+ {
+  "id": "starbase_module:orbital_trade_center",
+  "name": "Orbital Trade Center",
+  "aliases": [
+   "HumanModule_OrbitalTradeCenter"
+  ],
+  "summary": "Commercial hub that significantly boosts gross income across nearby colonies.",
+  "fields": {
+   "specialization": "Economic",
+   "module_cost": "1",
+   "resources": [
+    "1 Durantium"
+   ],
+   "effects": [
+    "+20% Gross Income (Colony)"
+   ],
+   "requires_module_any": [
+    "Economic Starbase"
+   ],
+   "requires_tech": [
+    "Xeno Utilization Doctrine"
+   ],
+   "description": "Commercial hub that significantly boosts gross income across nearby colonies.",
+   "source": "StarbaseModuleDefs_Humans.xml"
+  }
+ },
+ {
+  "id": "starbase_module:perimeter_scanners",
+  "name": "Perimeter Scanners",
+  "aliases": [
+   "PerimeterScannersModule"
+  ],
+  "summary": "Increase Sensor Power by 8",
+  "fields": {
+   "specialization": "Generic",
+   "module_cost": "1",
+   "effects": [
+    "+8 Sensor Power (Starbase)",
+    "+5 Influence Growth (Starbase)"
+   ],
+   "requires_module_any": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase"
+   ],
+   "requires_tech": [
+    "Interstellar Cartography",
+    "Core Logic Matrix",
+    "Space Exploration"
+   ],
+   "description": "Increase Sensor Power by 8",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:photonic_torpedo_array",
+  "name": "Photonic Torpedo Array",
+  "aliases": [
+   "PhotonicTorpedoArrayModule"
+  ],
+  "summary": "Adds a Photonic Torpedo Array.",
+  "fields": {
+   "specialization": "Generic",
+   "module_cost": "1",
+   "resources": [
+    "3 Antimatter"
+   ],
+   "effects": [
+    "+8 Missile Attack (Starbase)"
+   ],
+   "upgrades_from": [
+    "Harpoon Salvo"
+   ],
+   "requires_tech": [
+    "Photonic Warhead System",
+    "High-Yield Torpedoes",
+    "Plasmatic Torpedoes"
+   ],
+   "description": "Adds a Photonic Torpedo Array.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:precursor_data_matrix",
+  "name": "Precursor Data Matrix",
+  "aliases": [
+   "PrecursorDataMatrixModule"
+  ],
+  "summary": "Increases bonuses from Relics",
+  "fields": {
+   "specialization": "Generic",
+   "requires_target": "Relic",
+   "module_cost": "2",
+   "resources": [
+    "2 Promethion",
+    "2 Precursor Nanites"
+   ],
+   "effects": [
+    "+0.05 Modifier Value (StrategicResource)",
+    "+5 Modifier Value (StrategicResource)"
+   ],
+   "upgrades_from": [
+    "Nanite Decryption Center"
+   ],
+   "requires_tech": [
+    "Precursor Relic Proficiency"
+   ],
+   "requires_trait": [
+    "Ancient Ability"
+   ],
+   "description": "Increases bonuses from Relics",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:precursor_engineering_center",
+  "name": "Precursor Engineering Center",
+  "aliases": [
+   "PrecursorEngineringCenterModule"
+  ],
+  "summary": "Increases bonuses from Relics",
+  "fields": {
+   "specialization": "Generic",
+   "requires_target": "Relic",
+   "module_cost": "1",
+   "resources": [
+    "1 Promethion"
+   ],
+   "effects": [
+    "+0.05 Modifier Value (StrategicResource)",
+    "+5 Modifier Value (StrategicResource)"
+   ],
+   "upgrades_from": [
+    "Precursor Studies Center"
+   ],
+   "requires_tech": [
+    "Precursor Engineering"
+   ],
+   "description": "Increases bonuses from Relics",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:precursor_relic_extractor",
+  "name": "Precursor Relic Extractor",
+  "aliases": [
+   "HumanModule_PrecursorRelicExtractor"
+  ],
+  "summary": "Improves precursor relic extraction efficiency.",
+  "fields": {
+   "specialization": "Mining",
+   "module_cost": "1",
+   "resources": [
+    "15 Durantium"
+   ],
+   "effects": [
+    "+0.1 Modifier Value (StrategicResource)"
+   ],
+   "requires_module_any": [
+    "Mining Starbase"
+   ],
+   "requires_tech": [
+    "Precursor Anthropology"
+   ],
+   "description": "Advanced excavation technology allows more efficient extraction of precursor artifacts from nearby anomalies.",
+   "source": "StarbaseModuleDefs_Humans.xml"
+  }
+ },
+ {
+  "id": "starbase_module:precursor_relic_lab",
+  "name": "Precursor Relic Lab",
+  "aliases": [
+   "PrecursorRelicLabModule"
+  ],
+  "summary": "Increases bonuses from Relics",
+  "fields": {
+   "specialization": "Generic",
+   "requires_target": "Relic",
+   "module_cost": "1",
+   "resources": [
+    "1 Gigamass"
+   ],
+   "effects": [
+    "+0.05 Modifier Value (StrategicResource)",
+    "+6 Modifier Value (StrategicResource)"
+   ],
+   "upgrades_from": [
+    "Xeno Archeology Lab"
+   ],
+   "requires_tech": [
+    "Gigamass Theory"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "Increases bonuses from Relics",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:precursor_studies_center",
+  "name": "Precursor Studies Center",
+  "aliases": [
+   "PrecursorStudiesCenterModule"
+  ],
+  "summary": "Increases bonuses from Relics",
+  "fields": {
+   "specialization": "Generic",
+   "requires_target": "Relic",
+   "module_cost": "1",
+   "effects": [
+    "+0.05 Modifier Value (StrategicResource)",
+    "+4 Modifier Value (StrategicResource)"
+   ],
+   "requires_module_any": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase"
+   ],
+   "requires_tech": [
+    "Precursor Studies"
+   ],
+   "description": "Increases bonuses from Relics",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:pulse_cannon",
+  "name": "Pulse Cannon",
+  "aliases": [
+   "MountedPulseCannonModule"
+  ],
+  "summary": "Adds a Pulse Cannon",
+  "fields": {
+   "specialization": "Generic",
+   "module_cost": "1",
+   "resources": [
+    "2 Durantium"
+   ],
+   "effects": [
+    "+6 Kinetic Attack (Starbase)"
+   ],
+   "requires_module_any": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase"
+   ],
+   "requires_tech": [
+    "Pulse Cannons",
+    "Advanced Kinetics",
+    "Flux Rail Arrays"
+   ],
+   "description": "Adds a Pulse Cannon",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:purple_nexus_astral_lens",
+  "name": "Purple Nexus: Astral Lens",
+  "aliases": [
+   "SN_Augment_SubspaceLens_L2"
+  ],
+  "summary": "The virtues of our culture are unparalleled and merit universal acclaim. The Subspace Lens broadcasts our visionary ideals to the farthest reaches of the cosmos. Exclusive to Stellar Nexuses built around Purple Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Purple Star"
+   ],
+   "turns_to_build": "8",
+   "resources": [
+    "25 Energy"
+   ],
+   "effects": [
+    "+25 Energy Consumption",
+    "+50 Armor Rating (Starbase)",
+    "+75 Shield Strength (Starbase)",
+    "+15 Influence Growth (Colony)",
+    "+30% Influence Growth (Colony)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Advanced Nexus Augments"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "The virtues of our culture are unparalleled and merit universal acclaim. The Subspace Lens broadcasts our visionary ideals to the farthest reaches of the cosmos. Exclusive to Stellar Nexuses built around Purple Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:purple_nexus_colossal_market",
+  "name": "Purple Nexus: Colossal Market",
+  "aliases": [
+   "SN_Augment_MegalithicTradeCenter_L1"
+  ],
+  "summary": "This monumental economic hub is a magnet for merchants across the galaxy and beyond. By controlling the flow of commerce, we wield the ultimate power. Exclusive to Stellar Nexuses built around Purple Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Purple Star"
+   ],
+   "turns_to_build": "4",
+   "resources": [
+    "10 Energy"
+   ],
+   "effects": [
+    "+3 Trade Licenses Max",
+    "+10 Energy Consumption",
+    "+25 Armor Rating (Starbase)",
+    "+50 Shield Strength (Starbase)",
+    "+50% Trade Route Value (TradeRoute)",
+    "+10 Diplomatic Capital Income (TradeRoute)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Megastructure Nexi"
+   ],
+   "requires_trait": [
+    "Wealthy Ability",
+    "War Profiteers Ability",
+    "Radiated Ability",
+    "Crimelord Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "This monumental economic hub is a magnet for merchants across the galaxy and beyond. By controlling the flow of commerce, we wield the ultimate power. Exclusive to Stellar Nexuses built around Purple Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:purple_nexus_cosmic_courthouse",
+  "name": "Purple Nexus: Cosmic Courthouse",
+  "aliases": [
+   "SN_Augment_GalacticEmbassy_L1"
+  ],
+  "summary": "Our words carry immense influence when we convene the galaxy's decision-makers. At the Galactic Embassy, our voice resonates, commanding attention and respect. Exclusive to Stellar Nexuses built around Purple Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Purple Star"
+   ],
+   "turns_to_build": "4",
+   "resources": [
+    "10 Energy"
+   ],
+   "effects": [
+    "+1 Diplomacy Bonus",
+    "+25 Diplomatic Capital Income",
+    "+10 Energy Consumption",
+    "+25 Armor Rating (Starbase)",
+    "+50 Shield Strength (Starbase)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Megastructure Nexi"
+   ],
+   "requires_trait": [
+    "Devout Ability",
+    "Loyal Ability",
+    "Watcher Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "Our words carry immense influence when we convene the galaxy's decision-makers. At the Galactic Embassy, our voice resonates, commanding attention and respect. Exclusive to Stellar Nexuses built around Purple Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:purple_nexus_cosmic_getaway",
+  "name": "Purple Nexus: Cosmic Getaway",
+  "aliases": [
+   "SN_Augment_GalacticResort_L2"
+  ],
+  "summary": "Bathe in eternal sunshine at this resort, where the Sun never sets. Tourists from every corner of the universe will be captivated by this unparalleled galactic-class luxury experience. Exclusive to Stellar Nexuses built around Purple Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Purple Star"
+   ],
+   "turns_to_build": "8",
+   "resources": [
+    "25 Energy"
+   ],
+   "effects": [
+    "+25 Energy Consumption",
+    "+50 Armor Rating (Starbase)",
+    "+75 Shield Strength (Starbase)",
+    "+10% Tourism (Colony)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Advanced Nexus Augments"
+   ],
+   "requires_trait": [
+    "Wealthy Ability",
+    "Nocturnal Ability",
+    "Ancient Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "Bathe in eternal sunshine at this resort, where the Sun never sets. Tourists from every corner of the universe will be captivated by this unparalleled galactic-class luxury experience. Exclusive to Stellar Nexuses built around Purple Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:purple_nexus_galactic_embassy",
+  "name": "Purple Nexus: Galactic Embassy",
+  "aliases": [
+   "SN_Augment_GalacticEmbassy_L3"
+  ],
+  "summary": "Our words carry immense influence when we convene the galaxy's decision-makers. At the Galactic Embassy, our voice resonates, commanding attention and respect. Exclusive to Stellar Nexuses built around Purple Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Purple Star"
+   ],
+   "turns_to_build": "12",
+   "resources": [
+    "50 Energy"
+   ],
+   "effects": [
+    "+3 Diplomacy Bonus",
+    "+100 Diplomatic Capital Income",
+    "+50 Energy Consumption",
+    "+75 Armor Rating (Starbase)",
+    "+100 Shield Strength (Starbase)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Nexus Mastery"
+   ],
+   "requires_trait": [
+    "Devout Ability",
+    "Loyal Ability",
+    "Watcher Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "Our words carry immense influence when we convene the galaxy's decision-makers. At the Galactic Embassy, our voice resonates, commanding attention and respect. Exclusive to Stellar Nexuses built around Purple Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:purple_nexus_galactic_resort",
+  "name": "Purple Nexus: Galactic Resort",
+  "aliases": [
+   "SN_Augment_GalacticResort_L3"
+  ],
+  "summary": "Bathe in eternal sunshine at this resort, where the Sun never sets. Tourists from every corner of the universe will be captivated by this unparalleled galactic-class luxury experience. Exclusive to Stellar Nexuses built around Purple Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Purple Star"
+   ],
+   "turns_to_build": "12",
+   "resources": [
+    "50 Energy"
+   ],
+   "effects": [
+    "+50 Energy Consumption",
+    "+75 Armor Rating (Starbase)",
+    "+100 Shield Strength (Starbase)",
+    "+15% Tourism (Colony)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Nexus Mastery"
+   ],
+   "requires_trait": [
+    "Wealthy Ability",
+    "Nocturnal Ability",
+    "Ancient Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "Bathe in eternal sunshine at this resort, where the Sun never sets. Tourists from every corner of the universe will be captivated by this unparalleled galactic-class luxury experience. Exclusive to Stellar Nexuses built around Purple Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:purple_nexus_interstellar_consulate",
+  "name": "Purple Nexus: Interstellar Consulate",
+  "aliases": [
+   "SN_Augment_GalacticEmbassy_L2"
+  ],
+  "summary": "Our words carry immense influence when we convene the galaxy's decision-makers. At the Galactic Embassy, our voice resonates, commanding attention and respect. Exclusive to Stellar Nexuses built around Purple Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Purple Star"
+   ],
+   "turns_to_build": "8",
+   "resources": [
+    "25 Energy"
+   ],
+   "effects": [
+    "+2 Diplomacy Bonus",
+    "+50 Diplomatic Capital Income",
+    "+25 Energy Consumption",
+    "+50 Armor Rating (Starbase)",
+    "+75 Shield Strength (Starbase)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Advanced Nexus Augments"
+   ],
+   "requires_trait": [
+    "Devout Ability",
+    "Loyal Ability",
+    "Watcher Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "Our words carry immense influence when we convene the galaxy's decision-makers. At the Galactic Embassy, our voice resonates, commanding attention and respect. Exclusive to Stellar Nexuses built around Purple Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:purple_nexus_megalithic_trade_center",
+  "name": "Purple Nexus: Megalithic Trade Center",
+  "aliases": [
+   "SN_Augment_MegalithicTradeCenter_L3"
+  ],
+  "summary": "This monumental economic hub is a magnet for merchants across the galaxy and beyond. By controlling the flow of commerce, we wield the ultimate power. Exclusive to Stellar Nexuses built around Purple Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Purple Star"
+   ],
+   "turns_to_build": "12",
+   "resources": [
+    "50 Energy"
+   ],
+   "effects": [
+    "+9 Trade Licenses Max",
+    "+50 Energy Consumption",
+    "+75 Armor Rating (Starbase)",
+    "+100 Shield Strength (Starbase)",
+    "+200% Trade Route Value (TradeRoute)",
+    "+30 Diplomatic Capital Income (TradeRoute)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Nexus Mastery"
+   ],
+   "requires_trait": [
+    "Wealthy Ability",
+    "War Profiteers Ability",
+    "Radiated Ability",
+    "Crimelord Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "This monumental economic hub is a magnet for merchants across the galaxy and beyond. By controlling the flow of commerce, we wield the ultimate power. Exclusive to Stellar Nexuses built around Purple Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:purple_nexus_monumental_exchange",
+  "name": "Purple Nexus: Monumental Exchange",
+  "aliases": [
+   "SN_Augment_MegalithicTradeCenter_L2"
+  ],
+  "summary": "This monumental economic hub is a magnet for merchants across the galaxy and beyond. By controlling the flow of commerce, we wield the ultimate power. Exclusive to Stellar Nexuses built around Purple Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Purple Star"
+   ],
+   "turns_to_build": "8",
+   "resources": [
+    "25 Energy"
+   ],
+   "effects": [
+    "+6 Trade Licenses Max",
+    "+25 Energy Consumption",
+    "+50 Armor Rating (Starbase)",
+    "+75 Shield Strength (Starbase)",
+    "+100% Trade Route Value (TradeRoute)",
+    "+20 Diplomatic Capital Income (TradeRoute)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Advanced Nexus Augments"
+   ],
+   "requires_trait": [
+    "Wealthy Ability",
+    "War Profiteers Ability",
+    "Radiated Ability",
+    "Crimelord Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "This monumental economic hub is a magnet for merchants across the galaxy and beyond. By controlling the flow of commerce, we wield the ultimate power. Exclusive to Stellar Nexuses built around Purple Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:purple_nexus_proto_lens",
+  "name": "Purple Nexus: Proto Lens",
+  "aliases": [
+   "SN_Augment_SubspaceLens_L1"
+  ],
+  "summary": "The virtues of our culture are unparalleled and merit universal acclaim. The Subspace Lens broadcasts our visionary ideals to the farthest reaches of the cosmos. Exclusive to Stellar Nexuses built around Purple Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Purple Star"
+   ],
+   "turns_to_build": "4",
+   "resources": [
+    "10 Energy"
+   ],
+   "effects": [
+    "+10 Energy Consumption",
+    "+25 Armor Rating (Starbase)",
+    "+50 Shield Strength (Starbase)",
+    "+5 Influence Growth (Colony)",
+    "+20% Influence Growth (Colony)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Megastructure Nexi"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "The virtues of our culture are unparalleled and merit universal acclaim. The Subspace Lens broadcasts our visionary ideals to the farthest reaches of the cosmos. Exclusive to Stellar Nexuses built around Purple Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:purple_nexus_stellar_retreat",
+  "name": "Purple Nexus: Stellar Retreat",
+  "aliases": [
+   "SN_Augment_GalacticResort_L1"
+  ],
+  "summary": "Bathe in eternal sunshine at this resort, where the Sun never sets. Tourists from every corner of the universe will be captivated by this unparalleled galactic-class luxury experience. Exclusive to Stellar Nexuses built around Purple Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Purple Star"
+   ],
+   "turns_to_build": "4",
+   "resources": [
+    "10 Energy"
+   ],
+   "effects": [
+    "+10 Energy Consumption",
+    "+25 Armor Rating (Starbase)",
+    "+50 Shield Strength (Starbase)",
+    "+5% Tourism (Colony)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Megastructure Nexi"
+   ],
+   "requires_trait": [
+    "Wealthy Ability",
+    "Nocturnal Ability",
+    "Ancient Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "Bathe in eternal sunshine at this resort, where the Sun never sets. Tourists from every corner of the universe will be captivated by this unparalleled galactic-class luxury experience. Exclusive to Stellar Nexuses built around Purple Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:purple_nexus_subspace_lens",
+  "name": "Purple Nexus: Subspace Lens",
+  "aliases": [
+   "SN_Augment_SubspaceLens_L3"
+  ],
+  "summary": "The virtues of our culture are unparalleled and merit universal acclaim. The Subspace Lens broadcasts our visionary ideals to the farthest reaches of the cosmos. Exclusive to Stellar Nexuses built around Purple Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Purple Star"
+   ],
+   "turns_to_build": "12",
+   "resources": [
+    "50 Energy"
+   ],
+   "effects": [
+    "+50 Energy Consumption",
+    "+75 Armor Rating (Starbase)",
+    "+100 Shield Strength (Starbase)",
+    "+25 Influence Growth (Colony)",
+    "+40% Influence Growth (Colony)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Nexus Mastery"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "The virtues of our culture are unparalleled and merit universal acclaim. The Subspace Lens broadcasts our visionary ideals to the farthest reaches of the cosmos. Exclusive to Stellar Nexuses built around Purple Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:quantum_driver_array",
+  "name": "Quantum Driver Array",
+  "aliases": [
+   "QuantumDriverArrayModule"
+  ],
+  "summary": "Adds a Quantum Driver",
+  "fields": {
+   "specialization": "Generic",
+   "module_cost": "1",
+   "resources": [
+    "4 Durantium"
+   ],
+   "effects": [
+    "+16 Kinetic Attack (Starbase)"
+   ],
+   "upgrades_from": [
+    "Pulse Cannon"
+   ],
+   "requires_tech": [
+    "Quantum Pulse Driver",
+    "Antimatter Accelerators",
+    "Hyperdense Impactors"
+   ],
+   "description": "Adds a Quantum Driver",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:quantum_research_array",
+  "name": "Quantum Research Array",
+  "aliases": [
+   "HumanModule_QuantumResearchArray"
+  ],
+  "summary": "Cutting-edge quantum computing network that greatly accelerates research on nearby planets.",
+  "fields": {
+   "specialization": "Generic",
+   "maintenance": "2",
+   "module_cost": "1",
+   "resources": [
+    "3 Durantium"
+   ],
+   "effects": [
+    "+20% Research (Colony)"
+   ],
+   "requires_module_any": [
+    "Economic Starbase"
+   ],
+   "requires_tech": [
+    "Quantum Mirrors"
+   ],
+   "description": "Cutting-edge quantum computing network that greatly accelerates research on nearby planets.",
+   "source": "StarbaseModuleDefs_Humans.xml"
+  }
+ },
+ {
+  "id": "starbase_module:red_nexus_acceleration_matrix",
+  "name": "Red Nexus: Acceleration Matrix",
+  "aliases": [
+   "SN_Augment_AccelerationMatrix_L3"
+  ],
+  "summary": "The Acceleration Matrix's sophisticated array of pylons and sensors delivers all-encompassing data, allowing us to precisely chart the most efficient pathways through space. Exclusive to Stellar Nexuses built around Red Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Red Star"
+   ],
+   "turns_to_build": "12",
+   "resources": [
+    "50 Energy"
+   ],
+   "effects": [
+    "+50 Energy Consumption",
+    "+75 Armor Rating (Starbase)",
+    "+100 Shield Strength (Starbase)",
+    "+50% Moves (Ship)",
+    "+50% Tactical Speed (Ship)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Nexus Mastery"
+   ],
+   "requires_trait": [
+    "Engineers Ability",
+    "Starfaring Ability",
+    "Paranoid Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "The Acceleration Matrix's sophisticated array of pylons and sensors delivers all-encompassing data, allowing us to precisely chart the most efficient pathways through space. Exclusive to Stellar Nexuses built around Red Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:red_nexus_daybreak_engine",
+  "name": "Red Nexus: Daybreak Engine",
+  "aliases": [
+   "SN_Augment_EclipseEngine_L1"
+  ],
+  "summary": "Feel the powerful heartbeat of this colossal engine, driving the relentless rhythm of our shipyard's industrial output. Our enemies will find no refuge from the unstoppable onslaught of our fleets. Exclusive to Stellar Nexuses built around Red Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Red Star"
+   ],
+   "turns_to_build": "4",
+   "resources": [
+    "10 Energy"
+   ],
+   "effects": [
+    "+10 Energy Consumption",
+    "+25 Armor Rating (Starbase)",
+    "+50 Shield Strength (Starbase)",
+    "+20% Military (Colony)",
+    "+10% Armor Rating (Ship)",
+    "+10% Shield Strength (Ship)",
+    "+10% Evasion (Ship)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Megastructure Nexi"
+   ],
+   "requires_trait": [
+    "Unrelenting Ability",
+    "Warriors Ability",
+    "Cartographer Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "Feel the powerful heartbeat of this colossal engine, driving the relentless rhythm of our shipyard's industrial output. Our enemies will find no refuge from the unstoppable onslaught of our fleets. Exclusive to Stellar Nexuses built around Red Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:red_nexus_eclipse_engine",
+  "name": "Red Nexus: Eclipse Engine",
+  "aliases": [
+   "SN_Augment_EclipseEngine_L3"
+  ],
+  "summary": "Feel the powerful heartbeat of this colossal engine, driving the relentless rhythm of our shipyard's industrial output. Our enemies will find no refuge from the unstoppable onslaught of our fleets. Exclusive to Stellar Nexuses built around Red Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Red Star"
+   ],
+   "turns_to_build": "12",
+   "resources": [
+    "50 Energy"
+   ],
+   "effects": [
+    "+50 Energy Consumption",
+    "+75 Armor Rating (Starbase)",
+    "+100 Shield Strength (Starbase)",
+    "+50% Military (Colony)",
+    "+30% Armor Rating (Ship)",
+    "+30% Shield Strength (Ship)",
+    "+30% Evasion (Ship)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Nexus Mastery"
+   ],
+   "requires_trait": [
+    "Unrelenting Ability",
+    "Warriors Ability",
+    "Cartographer Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "Feel the powerful heartbeat of this colossal engine, driving the relentless rhythm of our shipyard's industrial output. Our enemies will find no refuge from the unstoppable onslaught of our fleets. Exclusive to Stellar Nexuses built around Red Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:red_nexus_guardian_coordinator",
+  "name": "Red Nexus: Guardian Coordinator",
+  "aliases": [
+   "SN_Augment_DefenseCoordinator_L2"
+  ],
+  "summary": "Our colonies remain steadfast, impervious to the encroachment of foes on all fronts. This brilliant device exposes each enemy tactic, arming us with impeccable countermeasures. All Soldiers receive bonus Resolve. Exclusive to Stellar Nexuses built around Red Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Red Star"
+   ],
+   "turns_to_build": "8",
+   "resources": [
+    "25 Energy"
+   ],
+   "effects": [
+    "+25 Energy Consumption",
+    "+50 Armor Rating (Starbase)",
+    "+75 Shield Strength (Starbase)",
+    "+50% Planetary Defenses (Colony)",
+    "+4 Resolve (Unit)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Advanced Nexus Augments"
+   ],
+   "requires_trait": [
+    "Engineers Ability",
+    "Unwavering Ability",
+    "Experienced Ability",
+    "Vigilant Ability",
+    "Iron Born Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "Our colonies remain steadfast, impervious to the encroachment of foes on all fronts. This brilliant device exposes each enemy tactic, arming us with impeccable countermeasures. All Soldiers receive bonus Resolve. Exclusive to Stellar Nexuses built around Red Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:red_nexus_impulse_matrix",
+  "name": "Red Nexus: Impulse Matrix",
+  "aliases": [
+   "SN_Augment_AccelerationMatrix_L1"
+  ],
+  "summary": "The Acceleration Matrix's sophisticated array of pylons and sensors delivers all-encompassing data, allowing us to precisely chart the most efficient pathways through space. Exclusive to Stellar Nexuses built around Red Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Red Star"
+   ],
+   "turns_to_build": "4",
+   "resources": [
+    "10 Energy"
+   ],
+   "effects": [
+    "+10 Energy Consumption",
+    "+25 Armor Rating (Starbase)",
+    "+50 Shield Strength (Starbase)",
+    "+25% Moves (Ship)",
+    "+25% Tactical Speed (Ship)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Megastructure Nexi"
+   ],
+   "requires_trait": [
+    "Engineers Ability",
+    "Starfaring Ability",
+    "Paranoid Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "The Acceleration Matrix's sophisticated array of pylons and sensors delivers all-encompassing data, allowing us to precisely chart the most efficient pathways through space. Exclusive to Stellar Nexuses built around Red Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:red_nexus_orion_s_eye",
+  "name": "Red Nexus: Orion's Eye",
+  "aliases": [
+   "SN_Augment_OrionsEye_L3"
+  ],
+  "summary": "Drawing on the Sun's boundless energy, the interwoven rings of this vast supercomputer conduct deadly calculations. None can escape the piercing gaze of Orion's Eye. Exclusive to Stellar Nexuses built around Red Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Red Star"
+   ],
+   "turns_to_build": "12",
+   "resources": [
+    "50 Energy"
+   ],
+   "effects": [
+    "+50 Energy Consumption",
+    "+75 Armor Rating (Starbase)",
+    "+100 Shield Strength (Starbase)",
+    "+50% Beam Attack (Ship)",
+    "+50% Kinetic Attack (Ship)",
+    "+50% Missile Attack (Ship)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Nexus Mastery"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "Drawing on the Sun's boundless energy, the interwoven rings of this vast supercomputer conduct deadly calculations. None can escape the piercing gaze of Orion's Eye. Exclusive to Stellar Nexuses built around Red Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:red_nexus_orion_s_gaze",
+  "name": "Red Nexus: Orion's Gaze",
+  "aliases": [
+   "SN_Augment_OrionsEye_L2"
+  ],
+  "summary": "Drawing on the Sun's boundless energy, the interwoven rings of this vast supercomputer conduct deadly calculations. None can escape the piercing gaze of Orion's Eye. Exclusive to Stellar Nexuses built around Red Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Red Star"
+   ],
+   "turns_to_build": "8",
+   "resources": [
+    "25 Energy"
+   ],
+   "effects": [
+    "+25 Energy Consumption",
+    "+50 Armor Rating (Starbase)",
+    "+75 Shield Strength (Starbase)",
+    "+33% Beam Attack (Ship)",
+    "+33% Kinetic Attack (Ship)",
+    "+33% Missile Attack (Ship)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Advanced Nexus Augments"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "Drawing on the Sun's boundless energy, the interwoven rings of this vast supercomputer conduct deadly calculations. None can escape the piercing gaze of Orion's Eye. Exclusive to Stellar Nexuses built around Red Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:red_nexus_orion_s_watch",
+  "name": "Red Nexus: Orion's Watch",
+  "aliases": [
+   "SN_Augment_OrionsEye_L1"
+  ],
+  "summary": "Drawing on the Sun's boundless energy, the interwoven rings of this vast supercomputer conduct deadly calculations. None can escape the piercing gaze of Orion's Eye. Exclusive to Stellar Nexuses built around Red Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Red Star"
+   ],
+   "turns_to_build": "4",
+   "resources": [
+    "10 Energy"
+   ],
+   "effects": [
+    "+10 Energy Consumption",
+    "+25 Armor Rating (Starbase)",
+    "+50 Shield Strength (Starbase)",
+    "+20% Beam Attack (Ship)",
+    "+20% Kinetic Attack (Ship)",
+    "+20% Missile Attack (Ship)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Megastructure Nexi"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "Drawing on the Sun's boundless energy, the interwoven rings of this vast supercomputer conduct deadly calculations. None can escape the piercing gaze of Orion's Eye. Exclusive to Stellar Nexuses built around Red Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:red_nexus_shield_coordinator",
+  "name": "Red Nexus: Shield Coordinator",
+  "aliases": [
+   "SN_Augment_DefenseCoordinator_L1"
+  ],
+  "summary": "Our colonies remain steadfast, impervious to the encroachment of foes on all fronts. This brilliant device exposes each enemy tactic, arming us with impeccable countermeasures. All Soldiers receive bonus Resolve. Exclusive to Stellar Nexuses built around Red Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Red Star"
+   ],
+   "turns_to_build": "4",
+   "resources": [
+    "10 Energy"
+   ],
+   "effects": [
+    "+10 Energy Consumption",
+    "+25 Armor Rating (Starbase)",
+    "+50 Shield Strength (Starbase)",
+    "+35% Planetary Defenses (Colony)",
+    "+2 Resolve (Unit)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Megastructure Nexi"
+   ],
+   "requires_trait": [
+    "Engineers Ability",
+    "Unwavering Ability",
+    "Experienced Ability",
+    "Vigilant Ability",
+    "Iron Born Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "Our colonies remain steadfast, impervious to the encroachment of foes on all fronts. This brilliant device exposes each enemy tactic, arming us with impeccable countermeasures. All Soldiers receive bonus Resolve. Exclusive to Stellar Nexuses built around Red Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:red_nexus_stellar_defense_coordinator",
+  "name": "Red Nexus: Stellar Defense Coordinator",
+  "aliases": [
+   "SN_Augment_DefenseCoordinator_L3"
+  ],
+  "summary": "Our colonies remain steadfast, impervious to the encroachment of foes on all fronts. This brilliant device exposes each enemy tactic, arming us with impeccable countermeasures. All Soldiers receive bonus Resolve. Exclusive to Stellar Nexuses built around Red Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Red Star"
+   ],
+   "turns_to_build": "12",
+   "resources": [
+    "50 Energy"
+   ],
+   "effects": [
+    "+50 Energy Consumption",
+    "+75 Armor Rating (Starbase)",
+    "+100 Shield Strength (Starbase)",
+    "+75% Planetary Defenses (Colony)",
+    "+6 Resolve (Unit)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Nexus Mastery"
+   ],
+   "requires_trait": [
+    "Engineers Ability",
+    "Unwavering Ability",
+    "Experienced Ability",
+    "Vigilant Ability",
+    "Iron Born Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "Our colonies remain steadfast, impervious to the encroachment of foes on all fronts. This brilliant device exposes each enemy tactic, arming us with impeccable countermeasures. All Soldiers receive bonus Resolve. Exclusive to Stellar Nexuses built around Red Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:red_nexus_surge_matrix",
+  "name": "Red Nexus: Surge Matrix",
+  "aliases": [
+   "SN_Augment_AccelerationMatrix_L2"
+  ],
+  "summary": "The Acceleration Matrix's sophisticated array of pylons and sensors delivers all-encompassing data, allowing us to precisely chart the most efficient pathways through space. Exclusive to Stellar Nexuses built around Red Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Red Star"
+   ],
+   "turns_to_build": "8",
+   "resources": [
+    "25 Energy"
+   ],
+   "effects": [
+    "+25 Energy Consumption",
+    "+50 Armor Rating (Starbase)",
+    "+75 Shield Strength (Starbase)",
+    "+33% Moves (Ship)",
+    "+33% Tactical Speed (Ship)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Advanced Nexus Augments"
+   ],
+   "requires_trait": [
+    "Engineers Ability",
+    "Starfaring Ability",
+    "Paranoid Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "The Acceleration Matrix's sophisticated array of pylons and sensors delivers all-encompassing data, allowing us to precisely chart the most efficient pathways through space. Exclusive to Stellar Nexuses built around Red Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:red_nexus_twilight_engine",
+  "name": "Red Nexus: Twilight Engine",
+  "aliases": [
+   "SN_Augment_EclipseEngine_L2"
+  ],
+  "summary": "Feel the powerful heartbeat of this colossal engine, driving the relentless rhythm of our shipyard's industrial output. Our enemies will find no refuge from the unstoppable onslaught of our fleets. Exclusive to Stellar Nexuses built around Red Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Red Star"
+   ],
+   "turns_to_build": "8",
+   "resources": [
+    "25 Energy"
+   ],
+   "effects": [
+    "+25 Energy Consumption",
+    "+50 Armor Rating (Starbase)",
+    "+75 Shield Strength (Starbase)",
+    "+35% Military (Colony)",
+    "+20% Armor Rating (Ship)",
+    "+20% Shield Strength (Ship)",
+    "+20% Evasion (Ship)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Advanced Nexus Augments"
+   ],
+   "requires_trait": [
+    "Unrelenting Ability",
+    "Warriors Ability",
+    "Cartographer Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "Feel the powerful heartbeat of this colossal engine, driving the relentless rhythm of our shipyard's industrial output. Our enemies will find no refuge from the unstoppable onslaught of our fleets. Exclusive to Stellar Nexuses built around Red Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:relativistic_ethics_beacon",
+  "name": "Relativistic Ethics Beacon",
+  "aliases": [
+   "RelativeEthicsModule"
+  ],
+  "summary": "Boost to influence output",
+  "fields": {
+   "specialization": "Culture",
+   "module_cost": "1",
+   "effects": [
+    "+15 Influence Growth (Starbase)",
+    "+15% Influence Growth (Colony)"
+   ],
+   "upgrades_from": [
+    "Communications Starbase"
+   ],
+   "description": "Boost to influence output",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:research_coordination_hub",
+  "name": "Research Coordination Hub",
+  "aliases": [
+   "HumanModule_ResearchCoordinationHub"
+  ],
+  "summary": "Central facility that coordinates research efforts across multiple nearby colonies.",
+  "fields": {
+   "specialization": "Generic",
+   "module_cost": "1",
+   "resources": [
+    "2 Durantium"
+   ],
+   "effects": [
+    "+8% Research (Colony)"
+   ],
+   "requires_module_any": [
+    "Economic Starbase"
+   ],
+   "requires_tech": [
+    "Discovery Protocols"
+   ],
+   "description": "Central facility that coordinates research efforts across multiple nearby colonies.",
+   "source": "StarbaseModuleDefs_Humans.xml"
+  }
+ },
+ {
+  "id": "starbase_module:sanctuary_lattice",
+  "name": "Sanctuary Lattice",
+  "aliases": [
+   "SanctuaryLatticeModule"
+  ],
+  "summary": "Reduces pollution on core worlds inside the starbase’s area of effect.",
+  "fields": {
+   "specialization": "Economic",
+   "module_cost": "1",
+   "maintenance": "3",
+   "effects": [
+    "-35% Pollution (Colony)"
+   ],
+   "requires_module_any": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase"
+   ],
+   "description": "Atmospheric purifiers anchored to the starbase scrub nearby trade lanes, bleeding pollution off any colony under their shield.",
+   "source": "StarbaseModuleDefs_Humans.xml"
+  }
+ },
+ {
+  "id": "starbase_module:sector_scanners",
+  "name": "Sector Scanners",
+  "aliases": [
+   "SectorScannerModule"
+  ],
+  "summary": "Increase Sensor Power by 16",
+  "fields": {
+   "specialization": "Generic",
+   "module_cost": "1",
+   "effects": [
+    "+16 Sensor Power (Starbase)",
+    "+5 Influence Growth (Starbase)"
+   ],
+   "upgrades_from": [
+    "Perimeter Scanners"
+   ],
+   "requires_tech": [
+    "Starbase Com Stack",
+    "Planetary Compute Hubs",
+    "Subfield Sensors"
+   ],
+   "description": "Increase Sensor Power by 16",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:singularity_drivers",
+  "name": "Singularity Drivers",
+  "aliases": [
+   "CintificalSingularityDiverModule"
+  ],
+  "summary": "Adds a Singularity Driver",
+  "fields": {
+   "specialization": "Generic",
+   "module_cost": "1",
+   "resources": [
+    "5 Durantium"
+   ],
+   "effects": [
+    "+36 Kinetic Attack (Starbase)"
+   ],
+   "upgrades_from": [
+    "Quantum Driver Array"
+   ],
+   "requires_tech": [
+    "Blackhole Gun",
+    "Singularity Cannons"
+   ],
+   "description": "Adds a Singularity Driver",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:singularity_forge",
+  "name": "Singularity Forge",
+  "aliases": [
+   "HumanModule_SingularityForge"
+  ],
+  "summary": "Matter-energy conversion facility powered by contained singularities, massively boosting manufacturing.",
+  "fields": {
+   "specialization": "Economic",
+   "maintenance": "2",
+   "module_cost": "1",
+   "resources": [
+    "3 Durantium"
+   ],
+   "effects": [
+    "+23% Manufacturing (Colony)"
+   ],
+   "requires_module_any": [
+    "Economic Starbase"
+   ],
+   "requires_tech": [
+    "Singularity Power Plant"
+   ],
+   "description": "Matter-energy conversion facility powered by contained singularities, massively boosting manufacturing.",
+   "source": "StarbaseModuleDefs_Humans.xml"
+  }
+ },
+ {
+  "id": "starbase_module:slipstream_amplifier",
+  "name": "Slipstream Amplifier",
+  "aliases": [
+   "SlipstreamAmplifierModule"
+  ],
+  "summary": "Creates a gravitic slipstream that doubles ship speed in the starbase’s influence.",
+  "fields": {
+   "specialization": "Economic",
+   "module_cost": "1",
+   "maintenance": "3",
+   "resources": [
+    "8 Durantium"
+   ],
+   "effects": [
+    "+100% Moves (Ship)"
+   ],
+   "requires_module_any": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase"
+   ],
+   "description": "These amplifier rings stabilize micro-wormholes, letting every friendly craft in range vault across Human Space at twice the normal clip.",
+   "source": "StarbaseModuleDefs_Humans.xml"
+  }
+ },
+ {
+  "id": "starbase_module:slipstream_generator",
+  "name": "Slipstream Generator",
+  "aliases": [
+   "SlipstreamGeneratorModule"
+  ],
+  "summary": "Boost the Speed of our nearby ships",
+  "fields": {
+   "specialization": "Military",
+   "maintenance": "1",
+   "module_cost": "1",
+   "resources": [
+    "1 Promethion"
+   ],
+   "effects": [
+    "-25% Move Cost (Tile)",
+    "+25% Tactical Speed (Ship)"
+   ],
+   "requires_module_any": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase"
+   ],
+   "requires_tech": [
+    "Warp Theory",
+    "Slipstream Engines"
+   ],
+   "description": "Boost the Speed of our nearby ships",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:starbase_defense_system",
+  "name": "Starbase Defense System",
+  "aliases": [
+   "StarbaseDefenseSystem"
+  ],
+  "summary": "Boost the defensive capabilities of any type of starbase.",
+  "fields": {
+   "specialization": "Generic",
+   "module_cost": "1",
+   "effects": [
+    "+10 Beam Attack (Starbase)",
+    "+10 Missile Attack (Starbase)",
+    "+10 Kinetic Attack (Starbase)",
+    "+1 Influence Growth (Starbase)",
+    "+100 Shield Strength (Starbase)"
+   ],
+   "requires_module_any": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase"
+   ],
+   "requires_tech": [
+    "Defensive Studies",
+    "Basic Armaments",
+    "Space Doctrine"
+   ],
+   "description": "Boost the defensive capabilities of any type of starbase.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:starbase_disruptor_bank",
+  "name": "Starbase Disruptor Bank",
+  "aliases": [
+   "DisruptorModule"
+  ],
+  "summary": "Adds a disruptor bank",
+  "fields": {
+   "specialization": "Generic",
+   "module_cost": "1",
+   "resources": [
+    "2 Elerium"
+   ],
+   "effects": [
+    "+4 Beam Attack (Starbase)"
+   ],
+   "requires_module_any": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase"
+   ],
+   "requires_tech": [
+    "Beam Weapon Augmentation",
+    "Particle Lances",
+    "Particle Beams"
+   ],
+   "description": "Adds a disruptor bank",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:starbase_embassy",
+  "name": "Starbase Embassy",
+  "aliases": [
+   "HumanModule_StarbaseEmbassy"
+  ],
+  "summary": "Diplomatic outpost that projects influence across nearby systems.",
+  "fields": {
+   "specialization": "Culture",
+   "module_cost": "1",
+   "resources": [
+    "1 Durantium"
+   ],
+   "effects": [
+    "+12 Influence Growth (Starbase)",
+    "+10% Influence Growth (Colony)"
+   ],
+   "requires_module_any": [
+    "Communications Starbase"
+   ],
+   "requires_tech": [
+    "Xeno Diplomacy"
+   ],
+   "description": "Diplomatic outpost that projects influence across nearby systems.",
+   "source": "StarbaseModuleDefs_Humans.xml"
+  }
+ },
+ {
+  "id": "starbase_module:starbase_factory",
+  "name": "Starbase Factory",
+  "aliases": [
+   "StarbaseFactoryModule"
+  ],
+  "summary": "Boost the Manufacturing of nearby worlds",
+  "fields": {
+   "specialization": "Economic",
+   "requires_target": "Colony",
+   "maintenance": "1",
+   "module_cost": "1",
+   "resources": [
+    "1 Durantium"
+   ],
+   "effects": [
+    "+2% Manufacturing (Colony)"
+   ],
+   "requires_module_any": [
+    "Economic Starbase"
+   ],
+   "requires_tech": [
+    "Starbases"
+   ],
+   "description": "Boost the Manufacturing of nearby worlds",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:starbase_laboratory",
+  "name": "Starbase Laboratory",
+  "aliases": [
+   "StarbaseLaboratoryModule"
+  ],
+  "summary": "Boost the Research of nearby worlds",
+  "fields": {
+   "specialization": "Economic",
+   "requires_target": "Colony",
+   "module_cost": "1",
+   "resources": [
+    "1 Promethion"
+   ],
+   "effects": [
+    "+3% Research (Colony)"
+   ],
+   "requires_module_any": [
+    "Economic Starbase"
+   ],
+   "requires_tech": [
+    "Xeno Research",
+    "Self Adaptive Algorithms"
+   ],
+   "description": "Boost the Research of nearby worlds",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:starbase_market",
+  "name": "Starbase Market",
+  "aliases": [
+   "StarbaseMarket"
+  ],
+  "summary": "Boost the Income of nearby worlds",
+  "fields": {
+   "specialization": "Economic",
+   "requires_target": "Colony",
+   "module_cost": "1",
+   "resources": [
+    "1 Durantium",
+    "1 Promethion"
+   ],
+   "effects": [
+    "+5% Gross Income (Colony)"
+   ],
+   "requires_module_any": [
+    "Economic Starbase"
+   ],
+   "requires_tech": [
+    "Interstellar Currency",
+    "Organization"
+   ],
+   "description": "Boost the Income of nearby worlds",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:starbase_plasma_turrets",
+  "name": "Starbase Plasma Turrets",
+  "aliases": [
+   "PlasmaTurretModule"
+  ],
+  "summary": "Adds Plasma Turrets to Starbase",
+  "fields": {
+   "specialization": "Generic",
+   "module_cost": "1",
+   "effects": [
+    "+9 Beam Attack (Starbase)"
+   ],
+   "requires_module_any": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase"
+   ],
+   "requires_tech": [
+    "Plasma Beams",
+    "Beam Intensification",
+    "Plasma Weapons"
+   ],
+   "description": "Adds Plasma Turrets to Starbase",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:starbase_promenade",
+  "name": "Starbase Promenade",
+  "aliases": [
+   "StarbasePromenade"
+  ],
+  "summary": "Boost the Income of nearby worlds",
+  "fields": {
+   "specialization": "Economic",
+   "requires_target": "Colony",
+   "module_cost": "1",
+   "resources": [
+    "1 Durantium",
+    "1 Promethion"
+   ],
+   "effects": [
+    "+5% Gross Income (Colony)"
+   ],
+   "upgrades_from": [
+    "Orbital Shopping Center"
+   ],
+   "requires_tech": [
+    "The Invisible Hand",
+    "Virtual Currencies"
+   ],
+   "description": "Boost the Income of nearby worlds",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:starbase_trade_center",
+  "name": "Starbase Trade Center",
+  "aliases": [
+   "HumanModule_StarbaseTradeCenter"
+  ],
+  "summary": "Commerce hub that increases the value of trade routes passing through this sector.",
+  "fields": {
+   "specialization": "Economic",
+   "module_cost": "1",
+   "resources": [
+    "1 Durantium",
+    "1 Promethion"
+   ],
+   "effects": [
+    "+12% Trade Route Value (TradeRoute)"
+   ],
+   "requires_module_any": [
+    "Economic Starbase"
+   ],
+   "requires_tech": [
+    "Interstellar Trade"
+   ],
+   "description": "Commerce hub that increases the value of trade routes passing through this sector.",
+   "source": "StarbaseModuleDefs_Humans.xml"
+  }
+ },
+ {
+  "id": "starbase_module:stationary_doom_ray",
+  "name": "Stationary Doom Ray",
+  "aliases": [
+   "StationaryDoomRayModule"
+  ],
+  "summary": "Adds a Stationary Doom Ray",
+  "fields": {
+   "specialization": "Generic",
+   "module_cost": "1",
+   "resources": [
+    "5 Elerium"
+   ],
+   "effects": [
+    "+24 Beam Attack (Starbase)"
+   ],
+   "upgrades_from": [
+    "Starbase Plasma Turrets"
+   ],
+   "requires_tech": [
+    "Doom Ray",
+    "Phasor Weapons"
+   ],
+   "description": "Adds a Stationary Doom Ray",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:stellar_gateway",
+  "name": "Stellar Gateway",
+  "aliases": [
+   "StellarGatewayBaseModule"
+  ],
+  "summary": "Stellar Gateways represent the pinnacle of interstellar innovation, harnessing the formidable power of black holes to bridge vast expanses of space.",
+  "fields": {
+   "specialization": "Stellar Gateway",
+   "requires_target": "Black Hole",
+   "turns_to_build": "8",
+   "maintenance": "5",
+   "effects": [
+    "+100 Armor Rating (Starbase)",
+    "+100 Shield Strength (Starbase)"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Dyson Sphere",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Stellar Nexus",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Advanced Nexus Augments"
+   ],
+   "dlc": "Mega Structures",
+   "description": "Stellar Gateways represent the pinnacle of interstellar innovation, harnessing the formidable power of black holes to bridge vast expanses of space.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:stellar_nexus_0",
+  "name": "Stellar Nexus",
+  "aliases": [
+   "StellarNexusBaseModule"
+  ],
+  "summary": "A colossal marvel of engineering, this mechanical framework is designed to support technology on an unprecedented scale. Its immense presence commands admiration and wonder.",
+  "fields": {
+   "specialization": "Stellar Nexus",
+   "turns_to_build": "12",
+   "effects": [
+    "+75 Armor Rating (Starbase)",
+    "+100 Shield Strength (Starbase)",
+    "+5% Manufacturing (Colony)",
+    "+5% Research (Colony)",
+    "+5% Approval (Unit)"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Dyson Sphere",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Stellar Gateway",
+    "Stellar Nexus",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Megastructure Nexi"
+   ],
+   "dlc": "Mega Structures",
+   "description": "A colossal marvel of engineering, this mechanical framework is designed to support technology on an unprecedented scale. Its immense presence commands admiration and wonder.",
+   "source": "StarbaseModuleDefs.xml",
+   "variant": "StellarNexusBaseModule"
+  }
+ },
+ {
+  "id": "starbase_module:stellar_nexus_blue",
+  "name": "Stellar Nexus",
+  "aliases": [
+   "StellarNexusBaseModule_Blue"
+  ],
+  "summary": "A colossal marvel of engineering, this mechanical framework is designed to support technology on an unprecedented scale. Its immense presence commands admiration and wonder.",
+  "fields": {
+   "specialization": "Stellar Nexus",
+   "turns_to_build": "12",
+   "effects": [
+    "+75 Armor Rating (Starbase)",
+    "+100 Shield Strength (Starbase)",
+    "+5% Manufacturing (Colony)",
+    "+5% Research (Colony)",
+    "+5% Approval (Unit)"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Dyson Sphere",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Stellar Gateway",
+    "Stellar Nexus",
+    "Terror Star Foundation"
+   ],
+   "dlc": "Mega Structures",
+   "description": "A colossal marvel of engineering, this mechanical framework is designed to support technology on an unprecedented scale. Its immense presence commands admiration and wonder.",
+   "source": "StarbaseModuleDefs.xml",
+   "variant": "StellarNexusBaseModule_Blue"
+  }
+ },
+ {
+  "id": "starbase_module:stellar_nexus_purple",
+  "name": "Stellar Nexus",
+  "aliases": [
+   "StellarNexusBaseModule_Purple"
+  ],
+  "summary": "A colossal marvel of engineering, this mechanical framework is designed to support technology on an unprecedented scale. Its immense presence commands admiration and wonder.",
+  "fields": {
+   "specialization": "Stellar Nexus",
+   "turns_to_build": "12",
+   "effects": [
+    "+75 Armor Rating (Starbase)",
+    "+100 Shield Strength (Starbase)",
+    "+5% Manufacturing (Colony)",
+    "+5% Research (Colony)",
+    "+5% Approval (Unit)"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Dyson Sphere",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Stellar Gateway",
+    "Stellar Nexus",
+    "Terror Star Foundation"
+   ],
+   "dlc": "Mega Structures",
+   "description": "A colossal marvel of engineering, this mechanical framework is designed to support technology on an unprecedented scale. Its immense presence commands admiration and wonder.",
+   "source": "StarbaseModuleDefs.xml",
+   "variant": "StellarNexusBaseModule_Purple"
+  }
+ },
+ {
+  "id": "starbase_module:stellar_nexus_red",
+  "name": "Stellar Nexus",
+  "aliases": [
+   "StellarNexusBaseModule_Red"
+  ],
+  "summary": "A colossal marvel of engineering, this mechanical framework is designed to support technology on an unprecedented scale. Its immense presence commands admiration and wonder.",
+  "fields": {
+   "specialization": "Stellar Nexus",
+   "turns_to_build": "12",
+   "effects": [
+    "+75 Armor Rating (Starbase)",
+    "+100 Shield Strength (Starbase)",
+    "+5% Manufacturing (Colony)",
+    "+5% Research (Colony)",
+    "+5% Approval (Unit)"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Dyson Sphere",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Stellar Gateway",
+    "Stellar Nexus",
+    "Terror Star Foundation"
+   ],
+   "dlc": "Mega Structures",
+   "description": "A colossal marvel of engineering, this mechanical framework is designed to support technology on an unprecedented scale. Its immense presence commands admiration and wonder.",
+   "source": "StarbaseModuleDefs.xml",
+   "variant": "StellarNexusBaseModule_Red"
+  }
+ },
+ {
+  "id": "starbase_module:stellar_wake_generator",
+  "name": "Stellar Wake Generator",
+  "aliases": [
+   "StellerWakeGeneratorModule"
+  ],
+  "summary": "Boost the Speed of our nearby ships",
+  "fields": {
+   "specialization": "Military",
+   "module_cost": "1",
+   "resources": [
+    "1 Promethion"
+   ],
+   "effects": [
+    "-25% Move Cost (Tile)",
+    "+25% Tactical Speed (Ship)"
+   ],
+   "upgrades_from": [
+    "Slipstream Generator"
+   ],
+   "requires_tech": [
+    "Subspace Projection",
+    "Phase Drive Optimizations"
+   ],
+   "description": "Boost the Speed of our nearby ships",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:support_field_stabilization",
+  "name": "Support Field Stabilization",
+  "aliases": [
+   "SupportFieldStabilizationModule"
+  ],
+  "summary": "Extends Starbases Area of Effect by 2",
+  "fields": {
+   "specialization": "Generic",
+   "module_cost": "1",
+   "resources": [
+    "1 Durantium"
+   ],
+   "effects": [
+    "+2 Starbase Range (Starbase)"
+   ],
+   "requires_module_any": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase"
+   ],
+   "requires_tech": [
+    "Starbase Defense Grid",
+    "Multi-Node Synchronization",
+    "Orbital Manufacturing"
+   ],
+   "description": "Extends Starbases Area of Effect by 2",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:surveillance_system",
+  "name": "Surveillance System",
+  "aliases": [
+   "SurveillanceSystemModule"
+  ],
+  "summary": "Increase Sensor Power by 32",
+  "fields": {
+   "specialization": "Generic",
+   "module_cost": "1",
+   "effects": [
+    "+32 Sensor Power (Starbase)",
+    "+5 Influence Growth (Starbase)"
+   ],
+   "upgrades_from": [
+    "Sector Scanners"
+   ],
+   "requires_tech": [
+    "Starbase Defense Grid",
+    "Multi-Species Encryption",
+    "Precursor Anthropology"
+   ],
+   "description": "Increase Sensor Power by 32",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:techapod_mining_unit",
+  "name": "Techapod Mining Unit",
+  "aliases": [
+   "TechapodMining"
+  ],
+  "summary": "Boost Yields of attached Resources",
+  "fields": {
+   "specialization": "Mining",
+   "requires_target": "Strategic Resource",
+   "module_cost": "1",
+   "resources": [
+    "1 Techapod Hive"
+   ],
+   "effects": [
+    "+0.2 Mining (StrategicResource)"
+   ],
+   "requires_module_any": [
+    "Mining Starbase"
+   ],
+   "requires_tech": [
+    "Starbase Modules",
+    "Technology Matrix"
+   ],
+   "description": "In addition to our standard mining abilities, we can also extend them by using Techapods. If we have any.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:technology_matrix_node",
+  "name": "Technology Matrix Node",
+  "aliases": [
+   "HumanModule_TechnologyMatrixNode"
+  ],
+  "summary": "Interconnected research network that accelerates scientific breakthroughs in the region.",
+  "fields": {
+   "specialization": "Generic",
+   "module_cost": "1",
+   "resources": [
+    "2 Durantium"
+   ],
+   "effects": [
+    "+14% Research (Colony)"
+   ],
+   "requires_module_any": [
+    "Economic Starbase"
+   ],
+   "requires_tech": [
+    "Technology Matrix"
+   ],
+   "description": "Interconnected research network that accelerates scientific breakthroughs in the region.",
+   "source": "StarbaseModuleDefs_Humans.xml"
+  }
+ },
+ {
+  "id": "starbase_module:terror_star_command",
+  "name": "Terror Star Command",
+  "aliases": [
+   "TerrorStarCommandModule"
+  ],
+  "summary": "A command center will be needed to provide accurate information and facilitate swift execution of the weapon system.",
+  "fields": {
+   "specialization": "Terror Star",
+   "credits_cost": "150",
+   "module_cost": "1",
+   "resources": [
+    "10 Thulium"
+   ],
+   "effects": [
+    "+0.2 Build Progress (Starbase)"
+   ],
+   "requires_module_any": [
+    "Terror Star Foundation"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase"
+   ],
+   "requires_tech": [
+    "Terror Stars"
+   ],
+   "description": "The decision to destroy a solar system is not a light one, a command center will be needed to provide accurate information and facilitate swift execution of the weapon system.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:terror_star_death_beam",
+  "name": "Terror Star Death Beam",
+  "aliases": [
+   "TerrorStarDeathBeamModule"
+  ],
+  "summary": "Adds the finishing touch to the Terror Star - the devastating death beam!",
+  "fields": {
+   "specialization": "Terror Star",
+   "credits_cost": "300",
+   "module_cost": "1",
+   "resources": [
+    "10 Elerium"
+   ],
+   "effects": [
+    "+0.2 Build Progress (Starbase)"
+   ],
+   "requires_module_any": [
+    "Terror Star Propulsion"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase"
+   ],
+   "requires_tech": [
+    "Terror Stars"
+   ],
+   "description": "Adds the finishing touch to the Terror Star - the devastating death beam!",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:terror_star_foundation",
+  "name": "Terror Star Foundation",
+  "aliases": [
+   "TerrorStarBaseModule"
+  ],
+  "summary": "Begin constructing the skeleton of the most terrible weapon in the universe. (One per sector)",
+  "fields": {
+   "specialization": "Terror Star",
+   "maintenance": "5",
+   "effects": [
+    "+0.2 Build Progress (Starbase)"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Dyson Sphere",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Stellar Gateway",
+    "Stellar Nexus"
+   ],
+   "requires_tech": [
+    "Terror Stars"
+   ],
+   "limit": "one per cluster",
+   "dlc": "Supernova",
+   "description": "Begin constructing the skeleton of the most terrible weapon in the universe. (One per sector)",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:terror_star_propulsion",
+  "name": "Terror Star Propulsion",
+  "aliases": [
+   "TerrorStarPropulsionModule"
+  ],
+  "summary": "What good is a star destroying weapon if it cant escape the gravity of your home star?",
+  "fields": {
+   "specialization": "Terror Star",
+   "credits_cost": "250",
+   "module_cost": "1",
+   "resources": [
+    "10 Antimatter"
+   ],
+   "effects": [
+    "+0.2 Build Progress (Starbase)",
+    "+10 Ship Range (Starbase)",
+    "+3 Moves (Starbase)"
+   ],
+   "requires_module_any": [
+    "Terror Star Storage"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase"
+   ],
+   "requires_tech": [
+    "Terror Stars"
+   ],
+   "description": "What good is a star destroying weapon if it cant escape the gravity of your home star?",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:terror_star_storage",
+  "name": "Terror Star Storage",
+  "aliases": [
+   "TerrorStarStorageModule"
+  ],
+  "summary": "The energy requirements to fire a Terror Star are immense, we will need a way to safely store the energy.",
+  "fields": {
+   "specialization": "Terror Star",
+   "credits_cost": "200",
+   "module_cost": "1",
+   "resources": [
+    "10 Durantium"
+   ],
+   "effects": [
+    "+0.2 Build Progress (Starbase)"
+   ],
+   "requires_module_any": [
+    "Terror Star Command"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase"
+   ],
+   "requires_tech": [
+    "Terror Stars"
+   ],
+   "description": "The energy requirements to fire a Terror Star are immense, we will need a way to safely store the energy.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:thulium_sensor_array",
+  "name": "Thulium Sensor Array",
+  "aliases": [
+   "ThuliumSensorArrayModule"
+  ],
+  "summary": "Increase Sensor Power by 64",
+  "fields": {
+   "specialization": "Generic",
+   "module_cost": "1",
+   "effects": [
+    "+64 Sensor Power (Starbase)",
+    "+5 Influence Growth (Starbase)"
+   ],
+   "upgrades_from": [
+    "Surveillance System"
+   ],
+   "requires_tech": [
+    "Anomaly Detection",
+    "Cross-Galaxy Automated Market",
+    "Technology Matrix"
+   ],
+   "description": "Increase Sensor Power by 64",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:tractor_beam",
+  "name": "Tractor Beam",
+  "aliases": [
+   "TractorBeamModule"
+  ],
+  "summary": "Slows nearby enemy ships",
+  "fields": {
+   "specialization": "Military",
+   "module_cost": "1",
+   "resources": [
+    "1 Promethion"
+   ],
+   "effects": [
+    "+25% Move Cost (Tile)",
+    "-25% Tactical Speed (Ship)"
+   ],
+   "upgrades_from": [
+    "Gravity Field Generator"
+   ],
+   "requires_tech": [
+    "Subspace Projection",
+    "Phase Drive Optimizations"
+   ],
+   "description": "Slows nearby enemy ships",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:trade_center",
+  "name": "Trade Center",
+  "aliases": [
+   "TradeCenterModule"
+  ],
+  "summary": "Increases Trade Route income of worlds in Area of Effect.",
+  "fields": {
+   "specialization": "Economic",
+   "requires_target": "Colony",
+   "module_cost": "1",
+   "resources": [
+    "1 Durantium",
+    "1 Promethion"
+   ],
+   "effects": [
+    "+10% Trade Route Value (TradeRoute)"
+   ],
+   "upgrades_from": [
+    "Trade Station"
+   ],
+   "requires_tech": [
+    "Galactic Trade",
+    "Biotechnical Synthesis Exports"
+   ],
+   "description": "Increases Trade Route income of worlds in Area of Effect.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:trade_station",
+  "name": "Trade Station",
+  "aliases": [
+   "TradePostModule"
+  ],
+  "summary": "Increases Trade Route income of worlds in Area of Effect.",
+  "fields": {
+   "specialization": "Economic",
+   "requires_target": "Colony",
+   "module_cost": "1",
+   "resources": [
+    "1 Durantium",
+    "1 Promethion"
+   ],
+   "effects": [
+    "+10% Trade Route Value (TradeRoute)"
+   ],
+   "requires_module_any": [
+    "Economic Starbase"
+   ],
+   "requires_tech": [
+    "Interstellar Trade",
+    "Reciprocity Verification"
+   ],
+   "description": "Increases Trade Route income of worlds in Area of Effect.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:trading_hub",
+  "name": "Trading Hub",
+  "aliases": [
+   "TradingHubModule"
+  ],
+  "summary": "Increases Trade Route income of worlds in Area of Effect.",
+  "fields": {
+   "specialization": "Economic",
+   "requires_target": "Colony",
+   "module_cost": "1",
+   "resources": [
+    "1 Durantium",
+    "1 Promethion"
+   ],
+   "effects": [
+    "+10% Trade Route Value (TradeRoute)"
+   ],
+   "upgrades_from": [
+    "Trade Center"
+   ],
+   "requires_tech": [
+    "Open Trade Policy",
+    "Cross-Galaxy Automated Market"
+   ],
+   "description": "Increases Trade Route income of worlds in Area of Effect.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:xeno_archeology_institute",
+  "name": "Xeno Archeology Institute",
+  "aliases": [
+   "XenoArcheologyInstituteModule"
+  ],
+  "summary": "Increases bonuses from Relics",
+  "fields": {
+   "specialization": "Generic",
+   "requires_target": "Relic",
+   "module_cost": "1",
+   "resources": [
+    "1 Promethion"
+   ],
+   "effects": [
+    "+0.05 Modifier Value (StrategicResource)",
+    "+3 Modifier Value (StrategicResource)"
+   ],
+   "upgrades_from": [
+    "Ancient Studies Center"
+   ],
+   "requires_tech": [
+    "Precursor Artifact Studies"
+   ],
+   "description": "Increases bonuses from Relics",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:xeno_archeology_lab",
+  "name": "Xeno Archeology Lab",
+  "aliases": [
+   "XenoArcheologyLabModule"
+  ],
+  "summary": "Allows any starbase to study Precursor Relics and Ascension gates.",
+  "fields": {
+   "specialization": "Generic",
+   "requires_target": "Relic",
+   "module_cost": "1",
+   "effects": [
+    "+0.03 Modifier Value (StrategicResource)",
+    "+1 Modifier Value (StrategicResource)"
+   ],
+   "requires_module_any": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase"
+   ],
+   "requires_tech": [
+    "Master Tech Tree"
+   ],
+   "description": "Allows any starbase to study Precursor Relics and Ascension gates.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:xeno_manufacturing_facility",
+  "name": "Xeno Manufacturing Facility",
+  "aliases": [
+   "HumanModule_XenoManufacturingFacility"
+  ],
+  "summary": "Advanced fabrication center using alien manufacturing techniques to boost production.",
+  "fields": {
+   "specialization": "Economic",
+   "module_cost": "1",
+   "resources": [
+    "2 Durantium"
+   ],
+   "effects": [
+    "+11% Manufacturing (Colony)"
+   ],
+   "requires_module_any": [
+    "Economic Starbase"
+   ],
+   "requires_tech": [
+    "Xeno Manufacturing"
+   ],
+   "description": "Advanced fabrication center using alien manufacturing techniques to boost production.",
+   "source": "StarbaseModuleDefs_Humans.xml"
+  }
+ },
+ {
+  "id": "starbase_module:xeno_research_institute",
+  "name": "Xeno Research Institute",
+  "aliases": [
+   "HumanModule_XenoResearchInstitute"
+  ],
+  "summary": "Advanced research facility that studies alien technologies to accelerate research across nearby colonies.",
+  "fields": {
+   "specialization": "Generic",
+   "module_cost": "1",
+   "resources": [
+    "1 Durantium"
+   ],
+   "effects": [
+    "+20% Research (Colony)"
+   ],
+   "requires_module_any": [
+    "Economic Starbase"
+   ],
+   "requires_tech": [
+    "Xeno Utilization Doctrine"
+   ],
+   "description": "Advanced research facility that studies alien technologies to accelerate research across nearby colonies.",
+   "source": "StarbaseModuleDefs_Humans.xml"
+  }
+ },
+ {
+  "id": "starbase_module:yellow_nexus_celestial_cloud_cycler",
+  "name": "Yellow Nexus: Celestial Cloud Cycler",
+  "aliases": [
+   "SN_Augment_CelestialCloudCycler_L3"
+  ],
+  "summary": "Redefining the concept of \"Recycling,\" this ingenious device eradicates pollution from our planets' atmospheres, delighting our citizens with cleaner, healthier air. Exclusive to Stellar Nexuses built around Yellow Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Yellow Star"
+   ],
+   "turns_to_build": "12",
+   "resources": [
+    "50 Energy"
+   ],
+   "effects": [
+    "+50 Energy Consumption",
+    "+75 Armor Rating (Starbase)",
+    "+100 Shield Strength (Starbase)",
+    "-75% Pollution (Colony)",
+    "+30% Approval (Unit)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Nexus Mastery"
+   ],
+   "requires_trait": [
+    "Amphibious Ability",
+    "Spores Ability",
+    "Proliferation Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "Redefining the concept of \"Recycling,\" this ingenious device eradicates pollution from our planets' atmospheres, delighting our citizens with cleaner, healthier air. Exclusive to Stellar Nexuses built around Yellow Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:yellow_nexus_celestial_garden",
+  "name": "Yellow Nexus: Celestial Garden",
+  "aliases": [
+   "SN_Augment_CelestialGarden_L3"
+  ],
+  "summary": "Liberated from the whims of atmospheric changes, our advanced nurseries harness the Sun's energy to nourish our entire empire, ensuring a stable and abundant food supply. Exclusive to Stellar Nexuses built around Yellow Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Yellow Star"
+   ],
+   "turns_to_build": "12",
+   "resources": [
+    "50 Energy"
+   ],
+   "effects": [
+    "+50 Energy Consumption",
+    "+75 Armor Rating (Starbase)",
+    "+100 Shield Strength (Starbase)",
+    "+6 Farming (Colony)",
+    "+100% Growth (Colony)",
+    "+7 Population Cap (Colony)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Nexus Mastery"
+   ],
+   "requires_trait": [
+    "Explorers Ability",
+    "Resourceful Ability",
+    "Patriotic Ability",
+    "Empathy Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "Liberated from the whims of atmospheric changes, our advanced nurseries harness the Sun's energy to nourish our entire empire, ensuring a stable and abundant food supply. Exclusive to Stellar Nexuses built around Yellow Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:yellow_nexus_central_system_authority",
+  "name": "Yellow Nexus: Central System Authority",
+  "aliases": [
+   "SN_Augment_CentralSystemAuth_L3"
+  ],
+  "summary": "Nothing exudes authority like this formidable galactic seat of power. Command respect and allegiance, but tread carefully near the reactor core shaft. Exclusive to Stellar Nexuses built around Yellow Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Yellow Star"
+   ],
+   "turns_to_build": "12",
+   "resources": [
+    "50 Energy"
+   ],
+   "effects": [
+    "+10 Control Per Month",
+    "+2 Culture Points Per Month",
+    "+50 Energy Consumption",
+    "+75 Armor Rating (Starbase)",
+    "+100 Shield Strength (Starbase)",
+    "-75% Crime (Colony)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Nexus Mastery"
+   ],
+   "requires_trait": [
+    "Slavers Ability",
+    "Genocidal Ability",
+    "Intuitive Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "Nothing exudes authority like this formidable galactic seat of power. Command respect and allegiance, but tread carefully near the reactor core shaft. Exclusive to Stellar Nexuses built around Yellow Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:yellow_nexus_core_authority",
+  "name": "Yellow Nexus: Core Authority",
+  "aliases": [
+   "SN_Augment_CentralSystemAuth_L1"
+  ],
+  "summary": "Nothing exudes authority like this formidable galactic seat of power. Command respect and allegiance, but tread carefully near the reactor core shaft. Exclusive to Stellar Nexuses built around Yellow Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Yellow Star"
+   ],
+   "turns_to_build": "4",
+   "resources": [
+    "10 Energy"
+   ],
+   "effects": [
+    "+3 Control Per Month",
+    "+10 Energy Consumption",
+    "+25 Armor Rating (Starbase)",
+    "+50 Shield Strength (Starbase)",
+    "-25% Crime (Colony)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Megastructure Nexi"
+   ],
+   "requires_trait": [
+    "Slavers Ability",
+    "Genocidal Ability",
+    "Intuitive Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "Nothing exudes authority like this formidable galactic seat of power. Command respect and allegiance, but tread carefully near the reactor core shaft. Exclusive to Stellar Nexuses built around Yellow Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:yellow_nexus_flourishing_garden",
+  "name": "Yellow Nexus: Flourishing Garden",
+  "aliases": [
+   "SN_Augment_CelestialGarden_L2"
+  ],
+  "summary": "Liberated from the whims of atmospheric changes, our advanced nurseries harness the Sun's energy to nourish our entire empire, ensuring a stable and abundant food supply. Exclusive to Stellar Nexuses built around Yellow Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Yellow Star"
+   ],
+   "turns_to_build": "8",
+   "resources": [
+    "25 Energy"
+   ],
+   "effects": [
+    "+25 Energy Consumption",
+    "+50 Armor Rating (Starbase)",
+    "+75 Shield Strength (Starbase)",
+    "+4 Farming (Colony)",
+    "+60% Growth (Colony)",
+    "+5 Population Cap (Colony)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Advanced Nexus Augments"
+   ],
+   "requires_trait": [
+    "Explorers Ability",
+    "Resourceful Ability",
+    "Patriotic Ability",
+    "Empathy Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "Liberated from the whims of atmospheric changes, our advanced nurseries harness the Sun's energy to nourish our entire empire, ensuring a stable and abundant food supply. Exclusive to Stellar Nexuses built around Yellow Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:yellow_nexus_focus_amplifier",
+  "name": "Yellow Nexus: Focus Amplifier",
+  "aliases": [
+   "SN_Augment_FocusGenerator_L2"
+  ],
+  "summary": "Our citizens brim with untapped potential, and this innovative device is the key to expanding their horizons and unleashing their true capabilities. Exclusive to Stellar Nexuses built around Yellow Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Yellow Star"
+   ],
+   "turns_to_build": "8",
+   "resources": [
+    "25 Energy"
+   ],
+   "effects": [
+    "+25 Energy Consumption",
+    "+50 Armor Rating (Starbase)",
+    "+75 Shield Strength (Starbase)",
+    "+3 Intelligence (Unit)",
+    "+3 Resolve (Unit)",
+    "+3 Social Skills (Unit)",
+    "+3 Diligence (Unit)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Advanced Nexus Augments"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "Our citizens brim with untapped potential, and this innovative device is the key to expanding their horizons and unleashing their true capabilities. Exclusive to Stellar Nexuses built around Yellow Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:yellow_nexus_focus_generator",
+  "name": "Yellow Nexus: Focus Generator",
+  "aliases": [
+   "SN_Augment_FocusGenerator_L3"
+  ],
+  "summary": "Our citizens brim with untapped potential, and this innovative device is the key to expanding their horizons and unleashing their true capabilities. Exclusive to Stellar Nexuses built around Yellow Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Yellow Star"
+   ],
+   "turns_to_build": "12",
+   "resources": [
+    "50 Energy"
+   ],
+   "effects": [
+    "+50 Energy Consumption",
+    "+75 Armor Rating (Starbase)",
+    "+100 Shield Strength (Starbase)",
+    "+5 Intelligence (Unit)",
+    "+5 Resolve (Unit)",
+    "+5 Social Skills (Unit)",
+    "+5 Diligence (Unit)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Nexus Mastery"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "Our citizens brim with untapped potential, and this innovative device is the key to expanding their horizons and unleashing their true capabilities. Exclusive to Stellar Nexuses built around Yellow Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:yellow_nexus_focus_origin",
+  "name": "Yellow Nexus: Focus Origin",
+  "aliases": [
+   "SN_Augment_FocusGenerator_L1"
+  ],
+  "summary": "Our citizens brim with untapped potential, and this innovative device is the key to expanding their horizons and unleashing their true capabilities. Exclusive to Stellar Nexuses built around Yellow Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Yellow Star"
+   ],
+   "turns_to_build": "4",
+   "resources": [
+    "10 Energy"
+   ],
+   "effects": [
+    "+10 Energy Consumption",
+    "+25 Armor Rating (Starbase)",
+    "+50 Shield Strength (Starbase)",
+    "+2 Intelligence (Unit)",
+    "+2 Resolve (Unit)",
+    "+2 Social Skills (Unit)",
+    "+2 Diligence (Unit)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Megastructure Nexi"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "Our citizens brim with untapped potential, and this innovative device is the key to expanding their horizons and unleashing their true capabilities. Exclusive to Stellar Nexuses built around Yellow Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:yellow_nexus_nascent_garden",
+  "name": "Yellow Nexus: Nascent Garden",
+  "aliases": [
+   "SN_Augment_CelestialGarden_L1"
+  ],
+  "summary": "Liberated from the whims of atmospheric changes, our advanced nurseries harness the Sun's energy to nourish our entire empire, ensuring a stable and abundant food supply. Exclusive to Stellar Nexuses built around Yellow Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Yellow Star"
+   ],
+   "turns_to_build": "4",
+   "resources": [
+    "10 Energy"
+   ],
+   "effects": [
+    "+10 Energy Consumption",
+    "+25 Armor Rating (Starbase)",
+    "+50 Shield Strength (Starbase)",
+    "+2 Farming (Colony)",
+    "+30% Growth (Colony)",
+    "+3 Population Cap (Colony)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Megastructure Nexi"
+   ],
+   "requires_trait": [
+    "Explorers Ability",
+    "Resourceful Ability",
+    "Patriotic Ability",
+    "Empathy Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "Liberated from the whims of atmospheric changes, our advanced nurseries harness the Sun's energy to nourish our entire empire, ensuring a stable and abundant food supply. Exclusive to Stellar Nexuses built around Yellow Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:yellow_nexus_nimbus_cycler",
+  "name": "Yellow Nexus: Nimbus Cycler",
+  "aliases": [
+   "SN_Augment_CelestialCloudCycler_L2"
+  ],
+  "summary": "Redefining the concept of \"Recycling,\" this ingenious device eradicates pollution from our planets' atmospheres, delighting our citizens with cleaner, healthier air. Exclusive to Stellar Nexuses built around Yellow Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Yellow Star"
+   ],
+   "turns_to_build": "8",
+   "resources": [
+    "25 Energy"
+   ],
+   "effects": [
+    "+25 Energy Consumption",
+    "+50 Armor Rating (Starbase)",
+    "+75 Shield Strength (Starbase)",
+    "-40% Pollution (Colony)",
+    "+15% Approval (Unit)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Advanced Nexus Augments"
+   ],
+   "requires_trait": [
+    "Amphibious Ability",
+    "Spores Ability",
+    "Proliferation Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "Redefining the concept of \"Recycling,\" this ingenious device eradicates pollution from our planets' atmospheres, delighting our citizens with cleaner, healthier air. Exclusive to Stellar Nexuses built around Yellow Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:yellow_nexus_stratus_cycler",
+  "name": "Yellow Nexus: Stratus Cycler",
+  "aliases": [
+   "SN_Augment_CelestialCloudCycler_L1"
+  ],
+  "summary": "Redefining the concept of \"Recycling,\" this ingenious device eradicates pollution from our planets' atmospheres, delighting our citizens with cleaner, healthier air. Exclusive to Stellar Nexuses built around Yellow Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Yellow Star"
+   ],
+   "turns_to_build": "4",
+   "resources": [
+    "10 Energy"
+   ],
+   "effects": [
+    "+10 Energy Consumption",
+    "+25 Armor Rating (Starbase)",
+    "+50 Shield Strength (Starbase)",
+    "-30% Pollution (Colony)",
+    "+10% Approval (Unit)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Megastructure Nexi"
+   ],
+   "requires_trait": [
+    "Amphibious Ability",
+    "Spores Ability",
+    "Proliferation Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "Redefining the concept of \"Recycling,\" this ingenious device eradicates pollution from our planets' atmospheres, delighting our citizens with cleaner, healthier air. Exclusive to Stellar Nexuses built around Yellow Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:yellow_nexus_unified_authority",
+  "name": "Yellow Nexus: Unified Authority",
+  "aliases": [
+   "SN_Augment_CentralSystemAuth_L2"
+  ],
+  "summary": "Nothing exudes authority like this formidable galactic seat of power. Command respect and allegiance, but tread carefully near the reactor core shaft. Exclusive to Stellar Nexuses built around Yellow Stars.",
+  "fields": {
+   "specialization": "Generic",
+   "star_type": [
+    "Yellow Star"
+   ],
+   "turns_to_build": "8",
+   "resources": [
+    "25 Energy"
+   ],
+   "effects": [
+    "+5 Control Per Month",
+    "+25 Energy Consumption",
+    "+50 Armor Rating (Starbase)",
+    "+75 Shield Strength (Starbase)",
+    "-50% Crime (Colony)"
+   ],
+   "requires_module_any": [
+    "Stellar Nexus"
+   ],
+   "excludes_module": [
+    "Communications Starbase",
+    "Economic Starbase",
+    "Military Starbase",
+    "Mining Starbase",
+    "Terror Star Foundation"
+   ],
+   "requires_tech": [
+    "Advanced Nexus Augments"
+   ],
+   "requires_trait": [
+    "Slavers Ability",
+    "Genocidal Ability",
+    "Intuitive Ability"
+   ],
+   "limit": "one per nexus type",
+   "dlc": "Mega Structures",
+   "description": "Nothing exudes authority like this formidable galactic seat of power. Command respect and allegiance, but tread carefully near the reactor core shaft. Exclusive to Stellar Nexuses built around Yellow Stars.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:zalon_defense_system",
+  "name": "Zalon Defense System",
+  "aliases": [
+   "ZalonDefenseSystemModule"
+  ],
+  "summary": "Increase the Attack of all our ships within starbase Area of Effect.",
+  "fields": {
+   "specialization": "Military",
+   "maintenance": "5",
+   "module_cost": "1",
+   "resources": [
+    "6 Durantium"
+   ],
+   "effects": [
+    "+5% Beam Attack (Ship)",
+    "+5% Kinetic Attack (Ship)",
+    "+5% Missile Attack (Ship)"
+   ],
+   "requires_module_any": [
+    "Military Starbase"
+   ],
+   "requires_tech": [
+    "Starbase Defense Grid",
+    "Weapon Platforms",
+    "Terran Weapon Systems"
+   ],
+   "description": "Increase the Attack of all our ships within starbase Area of Effect.",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:zero_g_experimentation",
+  "name": "Zero G Experimentation",
+  "aliases": [
+   "ZeroGExperimentationModule"
+  ],
+  "summary": "Boost the Research of nearby worlds",
+  "fields": {
+   "specialization": "Economic",
+   "requires_target": "Colony",
+   "module_cost": "1",
+   "resources": [
+    "2 Promethion"
+   ],
+   "effects": [
+    "+3% Research (Colony)"
+   ],
+   "upgrades_from": [
+    "Starbase Laboratory"
+   ],
+   "requires_tech": [
+    "Quantum Computing"
+   ],
+   "description": "Boost the Research of nearby worlds",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:zero_g_scaling",
+  "name": "Zero G Scaling",
+  "aliases": [
+   "ZeroGScalingModule"
+  ],
+  "summary": "Boost the Manufacturing of nearby worlds",
+  "fields": {
+   "specialization": "Economic",
+   "requires_target": "Colony",
+   "maintenance": "1",
+   "module_cost": "1",
+   "resources": [
+    "2 Durantium"
+   ],
+   "effects": [
+    "+3% Manufacturing (Colony)"
+   ],
+   "upgrades_from": [
+    "Starbase Factory"
+   ],
+   "requires_tech": [
+    "Starbase Modules",
+    "Technology Matrix"
+   ],
+   "description": "Boost the Manufacturing of nearby worlds",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ },
+ {
+  "id": "starbase_module:zero_point_armor",
+  "name": "Zero Point Armor",
+  "aliases": [
+   "ZeroPointArmorModule"
+  ],
+  "summary": "Adds Zero Point Armor",
+  "fields": {
+   "specialization": "Generic",
+   "module_cost": "1",
+   "resources": [
+    "3 Durantium"
+   ],
+   "effects": [
+    "+15 Armor Rating (Starbase)"
+   ],
+   "upgrades_from": [
+    "Kanvium Laminate"
+   ],
+   "requires_tech": [
+    "Exotic Armor Materials",
+    "Advanced Structural Engineering",
+    "Adamant Bulwark"
+   ],
+   "description": "Adds Zero Point Armor",
+   "source": "StarbaseModuleDefs.xml"
+  }
+ }
+]

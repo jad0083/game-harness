@@ -12,9 +12,12 @@ The two folders are `<install>\Data\Gameplay` and `<install>\Data\English\Text` 
 
 Contract:
 
-- `<kind>.json` — a JSON array of records for one entity kind (`tech`, `improvement`, `order`,
-  `ship`, `planet`, …). The file stem is the kind.
-- `_meta.json` — `{ "game_version": "...", "generated_at": "...", "generator": "<commit>" }`.
+- `<kind>.json` — a JSON array of records for one entity kind. The file stem is the kind.
+  Generated today: `tech`, `improvement`, `order` (executive orders), `policy`,
+  `ship_component`, `starbase_module` and `event` (event dialogs; `fields.choices` lists each
+  button as `N. <text> [<bonus text>] -> <outcomes>`).
+- `_meta.json` — `{ "game_version": "...", "generated_at": "...", "generator": "<commit>",
+  "counts": {"<kind>": n, ...}, ... }`.
   Files starting with `_` are not loaded as records.
 
 Record shape (extra keys go under `fields`; the extractor decides which fields each kind has):

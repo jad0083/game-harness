@@ -1,12 +1,16 @@
 {
  "game_version": "4.1.1",
- "generated_at": "2026-09-25T22:35:26+00:00",
- "generator": "scripts/extract-galciv4.py@0ebcf48",
+ "generated_at": "2026-09-25T23:15:32+00:00",
+ "generator": "scripts/extract-galciv4.py@b0059ae",
  "tech_tree": "HumanTechTree",
  "counts": {
   "tech": 130,
   "improvement": 528,
-  "order": 66
+  "order": 66,
+  "policy": 203,
+  "ship_component": 355,
+  "starbase_module": 167,
+  "event": 994
  },
  "strings": 38393
 }

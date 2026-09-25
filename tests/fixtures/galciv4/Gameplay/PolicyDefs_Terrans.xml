@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PolicyList>
+  <Policy>
+    <InternalName>Policy_Terran_ResearchGrants</InternalName>
+    <DisplayName>Policy_ResearchGrants_Name</DisplayName>
+    <Description>Policy_ResearchGrants_Dec</Description>
+    <Icon>Policy_ResearchGrants.png</Icon>
+    <Triggers>
+      <OnEvent>OnEnactPolicy</OnEvent>
+      <Lifetime>Source</Lifetime>
+      <Modifier>
+        <EffectType>Research</EffectType>
+        <Target><TargetType>Colony</TargetType></Target>
+        <BonusType>Multiplier</BonusType>
+        <Value>0.2</Value>
+      </Modifier>
+    </Triggers>
+    <Prerequ>
+      <Techs><Option>Tech_ColonialPolicies</Option></Techs>
+    </Prerequ>
+  </Policy>
+  <Policy>
+    <InternalName>Accord_DraftAct</InternalName>
+    <DisplayName>Accord_DraftAct_Name</DisplayName>
+    <Description>Accord_DraftAct_Dec</Description>
+    <PolicyType>Accord</PolicyType>
+    <Cost>
+      <EffectType>ConsensusCost</EffectType>
+      <Target><TargetType>Faction</TargetType></Target>
+      <BonusType>OneTime</BonusType>
+      <Value>40</Value>
+    </Cost>
+    <BaseAuthorityCost>10</BaseAuthorityCost>
+    <MaturityTurns>12</MaturityTurns>
+    <GrantsExecutiveOrder>EO_DraftColonists</GrantsExecutiveOrder>
+    <Prerequ>
+      <Government><Option>FederationGovernmentTier</Option></Government>
+      <Policy><Option>Policy_Terran_ResearchGrants</Option></Policy>
+    </Prerequ>
+  </Policy>
+</PolicyList>

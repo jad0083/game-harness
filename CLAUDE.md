@@ -46,7 +46,7 @@ This file guides LLMs and coding agents when operating in this repository.
 2. **Consult the game corpus** (`corpora/galciv4/`, see ARCHITECTURE.md §5):
    - `manifest.toml`: hotkeys, 8 screen signatures, and macros (hand-verified).
    - `strategy.md`: playbook for expansion, colony feeding, districts, ministers, and tech pathing.
-   - `data/*.json`: entity records generated from the game's own XML (130 techs, 528 improvements, 66 orders). Never hand-edit; when a wiki doc and a record disagree, the record wins.
+   - `data/*.json`: entity records generated from the game's own XML (130 techs, 528 improvements, 66 orders, 203 policies, 355 ship components, 167 starbase modules, 994 events — event records list each choice's exact outcome). Never hand-edit; when a wiki doc and a record disagree, the record wins.
    - `docs/*.md`: reference prose with `Source:`/`License:` headers. Use `corpus_search` to get ids, then `corpus_get` for one chunk; do not dump whole docs into context.
 3. **Use the Autopilot Loop** for routine turn advancement instead of individual tool calls: `autopilot_turns` / `./target/release/game-controller autopilot --turns 25`. Each turn is verified by the HUD date readout changing. It stops and hands you a screenshot when a dialog is up (HUD dimmed) or a turn did **not** advance (something is blocking end-turn: idle unit, empty queue, popup); clear that, then resume. It refuses to run unless the game is the foreground window — call `focus` first.
 4. **Resolution & Coordinate Mapping**: Image space is 1568x882; remote screen is 3072x1728 (or 3840x2160). Both `click` and `drag` automatically scale coordinates using live target width/height headers.
