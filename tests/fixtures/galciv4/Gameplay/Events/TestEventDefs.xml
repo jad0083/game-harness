@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<GameEventList>
+  <GameEvent>
+    <InternalName>TestEvent_Popup</InternalName>
+    <DisplayName>TestEvent_Popup_Name</DisplayName>
+    <Type>CrisisEvent</Type>
+    <Choice><InternalName>TestEvent_Popup_choice_0</InternalName></Choice>
+  </GameEvent>
+</GameEventList>

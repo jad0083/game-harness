@@ -15,4 +15,32 @@
   <StringTable><Label>STATNAME_MaxPolicies</Label><String>Policy Slots</String></StringTable>
   <StringTable><Label>Project_UpgradeWealth_Name</Label><String>Upgrade Wealth</String></StringTable>
   <StringTable><Label>PrecursorNanites_Name</Label><String>Precursor Nanites</String></StringTable>
+  <StringTable><Label>Policy_ResearchGrants_Name</Label><String>Research Grants</String></StringTable>
+  <StringTable><Label>Policy_ResearchGrants_Dec</Label><String>Fund the [COLOR=Gold]sciences[/COLOR].</String></StringTable>
+  <StringTable><Label>Policy_GreatExpansion_Name</Label><String>The Great Expansion</String></StringTable>
+  <StringTable><Label>Policy_GreatExpansion_Dec</Label><String>Grow the capital fast.</String></StringTable>
+  <StringTable><Label>Accord_DraftAct_Name</Label><String>Draft Act</String></StringTable>
+  <StringTable><Label>Accord_DraftAct_Dec</Label><String>Federal conscription.</String></StringTable>
+  <StringTable><Label>HullPlating_Name</Label><String>Hull Plating</String></StringTable>
+  <StringTable><Label>HullPlating_Dec</Label><String>Basic armor.</String></StringTable>
+  <StringTable><Label>SupplyModule_Name</Label><String>Supply Module</String></StringTable>
+  <StringTable><Label>SupplyModule_Dec</Label><String>Carries production.</String></StringTable>
+  <StringTable><Label>FrigateModule_Name</Label><String>Frigate Module</String></StringTable>
+  <StringTable><Label>FleetShields_Name</Label><String>Field Generator</String></StringTable>
+  <StringTable><Label>FleetShields_Dec</Label><String>Shields the fleet.</String></StringTable>
+  <StringTable><Label>MassDriver_Name</Label><String>Mass Driver</String></StringTable>
+  <StringTable><Label>MassDriver_Dec</Label><String>A kinetic gun.</String></StringTable>
+  <StringTable><Label>InterstellarExchangeModule_Name</Label><String>Interstellar Exchange</String></StringTable>
+  <StringTable><Label>InterstellarExchangeModule_ShortDec</Label><String>Boosts influence nearby.</String></StringTable>
+  <StringTable><Label>InterstellarExchangeModule_Dec</Label><String>A cultural hub.</String></StringTable>
+  <StringTable><Label>InterstellarEmbassyModule_Name</Label><String>Interstellar Embassy</String></StringTable>
+  <StringTable><Label>DysonSphere_Name</Label><String>Dyson Sphere</String></StringTable>
+  <StringTable><Label>DysonSphere_ShortDec</Label><String>Encloses a star.</String></StringTable>
+  <StringTable><Label>CyberInfiltrationModule_Name</Label><String>Cyber Infiltration</String></StringTable>
+  <StringTable><Label>Event_PrecursorProbe_Name</Label><String>Precursor Probe</String></StringTable>
+  <StringTable><Label>Event_PrecursorProbe_Dec</Label><String>We have uncovered a Precursor probe orbiting {PLANETNAME}.</String></StringTable>
+  <StringTable><Label>Event_PrecursorProbe_Liberty_Bonus_Name</Label><String>Let's study this and see what we can learn.</String></StringTable>
+  <StringTable><Label>Event_PrecursorProbe_Equality_Bonus_Name</Label><String>Repair the Probe and see what it does.</String></StringTable>
+  <StringTable><Label>Event_PrecursorProbe_Equality_Bonus_Dec</Label><String>Unlock the Stargazer ship</String></StringTable>
+  <StringTable><Label>Event_PrecursorProbe_Echo_Choice</Label><String>Listen to the echo.</String></StringTable>
 </StringTableList>

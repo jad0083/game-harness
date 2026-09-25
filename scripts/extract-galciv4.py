@@ -3,14 +3,16 @@
 
 Input is a copy of two folders from the game install (`<install>/Data/`):
     Gameplay/   *Defs.xml — techs, improvements, executive orders, ship components, policies, ...
+                Events/*.xml, HomeworldEvents*.xml, ColonizeEvents*.xml — event dialogs
     Text/       *.xml     — <StringTable><Label/><String/> display strings
 
 Usage:
     scripts/extract-galciv4.py <data-dir> [--out corpora/galciv4/data] [--tech-tree HumanTechTree]
                                [--game-version 4.1.1]
 
-<data-dir> must contain `Gameplay/` and `Text/`. Output: tech.json, improvement.json, order.json
-and _meta.json in the record shape documented in corpora/galciv4/data/README.md. Standard
+<data-dir> must contain `Gameplay/` and `Text/`. Output: tech.json, improvement.json, order.json,
+policy.json, ship_component.json, starbase_module.json, event.json and _meta.json in the record
+shape documented in corpora/galciv4/data/README.md. Standard
 library only.
 """
 
@@ -45,6 +47,29 @@ UNLOCK_SOURCES = [
     ("UnitLeaderDefs*.xml", "UnitLeader", "Leader"),
     ("InvasionTacticDefs.xml", "InvasionTactic", "Invasion tactic"),
 ]
+
+# PerformAction verbs that only maintain script state and mean nothing to a player.
+INTERNAL_ACTION = re.compile(
+    r"Counter|Flag|StoreEvent|StoredEvent|RemoveEventChoice|UpdateTechTreeUI|UnhideScreen|UnlockAchievement"
+)
+
+# Files holding <GameEvent> definitions (event dialogs; Test*.xml developer events are skipped).
+EVENT_SOURCES = ["Events/*.xml", "HomeworldEvents*.xml", "ColonizeEvents*.xml"]
+
+# Stats that are AI hints or bookkeeping rather than player-visible effects.
+HIDDEN_STATS = {
+    "Threat",
+    "Value",
+    "MiscBattleRatingMod",
+    "MiscBattleRatingModDefenseOnly",
+    # weapon-count markers; the matching *Attack stat carries the number
+    "BeamWeapon",
+    "MissileWeapon",
+    "KineticWeapon",
+}
+
+# One-time build inputs that are not named "<Resource>Cost".
+ONE_TIME_RESOURCE = {"EnergyConsumption": "Energy"}
 
 MARKUP = re.compile(r"\[/?[A-Za-z_]+(?:=[^\]]*)?\]|</?[a-zA-Z][^>]*>")
 
@@ -161,7 +186,11 @@ class GameData:
         else:
             amount = f"{'+' if value >= 0 else ''}{fmt_num(value)}"
         target = st.findtext("Target/TargetType")
-        suffix = f" ({target})" if target and target not in ("Improvement", "Faction") else ""
+        qualifier = st.findtext("Target/TargetQualifier")
+        where = [target] if target and target not in ("Improvement", "Faction") else []
+        if qualifier:
+            where.append(split_camel(qualifier).lower())
+        suffix = f" ({', '.join(where)})" if where else ""
         return f"{amount} {name}{suffix}"
 
 
@@ -203,6 +232,35 @@ class Extractor:
             if power is not None:
                 return self.d.s(power.findtext("DisplayName"), fallback=True)
         return self.d.s(e.findtext("DisplayName"), fallback=True) or split_camel(e.findtext("InternalName", ""))
+
+    def trigger_effects(self, e: ET.Element, *quiet_events: str) -> list[str]:
+        """Render an element's <Triggers>: modifiers via render_stat (with duration) plus
+        player-visible actions. Triggers firing on an event not in `quiet_events` are labelled
+        with it; repeal triggers and script bookkeeping (counters, flags) are skipped."""
+        effects = []
+        for trig in e.findall("Triggers"):
+            event = trig.findtext("OnEvent", "")
+            if event.startswith("OnRepeal"):
+                continue
+            when = f" on {split_camel(event.removeprefix('On')).lower()}" if event and event not in quiet_events else ""
+            lifetime = trig.findtext("Lifetime", "")
+            dur = trig.findtext("RandomDurationMax") or trig.findtext("Duration")
+            for mod in trig.findall("Modifier"):
+                text = self.d.render_stat(mod)
+                if dur and lifetime != "Instant":
+                    text += f" for {dur} turns"
+                effects.append(text + when)
+            for act in trig.findall("PerformAction"):
+                raw = act.findtext("Action", "")
+                if INTERNAL_ACTION.search(raw):
+                    continue
+                params = [p for p in (act.findtext("ValueParam"), act.findtext("StringParam")) if p]
+                effects.append(split_camel(raw) + (f" ({', '.join(params)})" if params else "") + when)
+        return effects
+
+    def names_of(self, pattern: str, tag: str) -> dict[str, str]:
+        """InternalName -> display name for every definition matching (pattern, tag)."""
+        return {e.findtext("InternalName", ""): self.display_name(e) for _, e in self.d.defs(pattern, tag)}
 
     def _build_unlock_index(self) -> dict[str, list[str]]:
         index: dict[str, set[str]] = defaultdict(set)
@@ -251,7 +309,7 @@ class Extractor:
                 {
                     "id": f"tech:{slug(name)}",
                     "name": name,
-                    "aliases": [a for a in {internal, generic} if a],
+                    "aliases": list(dict.fromkeys(a for a in (internal, generic) if a)),
                     "summary": self.d.s(t.findtext("ShortDescription")),
                     "fields": fields,
                 }
@@ -342,20 +400,7 @@ class Extractor:
             target = eo.findtext("Target")
             if target:
                 fields["target"] = target
-            effects = []
-            if power is not None:
-                for trig in power.findall("Triggers"):
-                    lifetime = trig.findtext("Lifetime", "")
-                    dur = trig.findtext("RandomDurationMax") or trig.findtext("Duration")
-                    for mod in trig.findall("Modifier"):
-                        text = self.d.render_stat(mod)
-                        if dur and lifetime != "Instant":
-                            text += f" for {dur} turns"
-                        effects.append(text)
-                    for act in trig.findall("PerformAction"):
-                        action = split_camel(act.findtext("Action", ""))
-                        params = [p for p in (act.findtext("ValueParam"), act.findtext("StringParam")) if p]
-                        effects.append(action + (f" ({', '.join(params)})" if params else ""))
+            effects = self.trigger_effects(power, "OnArtifactPowerUsed") if power is not None else []
             if effects:
                 fields["effects"] = effects
             reqs = self.tech_names(prereq_techs(eo))
@@ -379,8 +424,322 @@ class Extractor:
             )
         return dedupe(records, "order")
 
+    # -- policies -------------------------------------------------------------
+
+    def policies(self) -> list[dict]:
+        order_names = self.names_of("ExecutiveOrder*.xml", "ExecutiveOrder")
+        policy_names = self.names_of("PolicyDefs*.xml", "Policy")
+        records = []
+        for source, p in self.d.defs("PolicyDefs*.xml", "Policy"):
+            internal = p.findtext("InternalName", "")
+            name = self.display_name(p)
+            fields: dict = {}
+            for key, tag in (("type", "PolicyType"), ("alignment", "Alignment")):
+                v = p.findtext(tag)
+                if v:
+                    fields[key] = split_camel(v)
+            cost = p.find("Cost")
+            if cost is not None:
+                currency = split_camel(cost.findtext("EffectType", "").removesuffix("Cost"))
+                fields["cost"] = f"{fmt_num(float(cost.findtext('Value', '0') or 0))} {currency}".strip()
+            for key, tag in (
+                ("authority_cost", "BaseAuthorityCost"),
+                ("collateral_cost", "BaseCollateralCost"),
+                ("maturity_turns", "MaturityTurns"),
+            ):
+                v = p.findtext(tag)
+                if v:
+                    fields[key] = fmt_num(float(v))
+            effects = []
+            for st in p.findall("Stats"):
+                if st.findtext("EffectType") == "Maintenance" and st.findtext("Target/TargetType") == "Policy":
+                    fields["upkeep"] = fmt_num(float(st.findtext("Value", "0") or 0))
+                else:
+                    effects.append(self.d.render_stat(st))
+            effects += self.trigger_effects(p, "OnEnactPolicy")
+            if effects:
+                fields["effects"] = effects
+            grants = p.findtext("GrantsExecutiveOrder")
+            if grants:
+                fields["grants_order"] = order_names.get(grants) or split_camel(grants.removeprefix("EO_"))
+            reqs = self.tech_names(prereq_techs(p))
+            if reqs:
+                fields["requires_tech"] = reqs
+            govs = [o.text for o in p.findall("Prerequ/Government/Option") if o.text]
+            if govs:
+                fields["requires_government"] = [split_camel(g.removesuffix("GovernmentTier")) for g in govs]
+            needs = [o.text for o in p.findall("Prerequ/Policy/Option") if o.text]
+            if needs:
+                fields["requires_policy"] = [policy_names.get(n) or split_camel(n) for n in needs]
+            traits = prereq_traits(p)
+            if traits:
+                fields["requires_trait"] = [split_camel(t) for t in traits]
+            precl = [o.text for o in p.findall("Preclusions/RaceTrait/Option") if o.text]
+            if precl:
+                fields["blocked_by_trait"] = [split_camel(t) for t in precl]
+            desc = self.d.s(p.findtext("Description"))
+            if desc:
+                fields["description"] = desc
+            fields["source"] = source
+            records.append(
+                {
+                    "id": f"policy:{slug(name)}",
+                    "name": name,
+                    "aliases": [internal] if internal else [],
+                    "summary": desc[:140] if desc else "",
+                    "fields": fields,
+                }
+            )
+        return dedupe(records, "policy")
+
+    # -- ship components ------------------------------------------------------
+
+    def ship_components(self) -> list[dict]:
+        records = []
+        defs = self.d.defs("ShipComponentDefs*.xml", "ShipComponent") + self.d.defs("ShipComponents_*.xml", "ShipComponent")
+        for source, c in defs:
+            category = c.findtext("Category", "")
+            if category == "Hidden":  # hull-class markers and scripted parts never offered in the designer
+                continue
+            internal = c.findtext("InternalName", "")
+            name = self.display_name(c)
+            fields: dict = {}
+            for key, tag in (("category", "Category"), ("type", "Type"), ("slot", "PlacementType")):
+                v = c.findtext(tag)
+                if v:
+                    fields[key] = split_camel(v)
+            if c.findtext("OnePerPlayer") == "true":
+                fields["limit"] = "one per civilization"
+            elif c.findtext("OnePerShip") == "true":
+                fields["limit"] = "one per ship"
+            effects, resources = [], []
+            for st in c.findall("Stats"):
+                et = st.findtext("EffectType", "")
+                if et in HIDDEN_STATS:
+                    continue
+                if et == "Mass":
+                    fields["mass"] = render_mass(st)
+                    continue
+                value = float(st.findtext("Value", "0") or 0)
+                bonus = st.findtext("BonusType", "Flat")
+                if et.endswith("ManufacturingCost") and bonus == "Flat":
+                    fields["cost"] = fmt_num(value)
+                elif et == "Maintenance" and bonus == "Flat":
+                    fields["maintenance"] = fmt_num(value)
+                elif bonus == "OneTime" and et in ONE_TIME_RESOURCE:
+                    resources.append(f"{fmt_num(value)} {ONE_TIME_RESOURCE[et]}")
+                elif et.endswith("Cost") and bonus == "OneTime":
+                    resources.append(f"{fmt_num(value)} {split_camel(et.removesuffix('Cost'))}")
+                else:
+                    effects.append(self.d.render_stat(st))
+            effects += self.trigger_effects(c, "OnConstructShip", "OnAddLevelUpgradeToShip")
+            if resources:
+                fields["resources"] = resources
+            if effects:
+                fields["effects"] = effects
+            level_effects = [self.d.render_stat(st) for st in c.findall("LevelEffectStats")]
+            if level_effects:
+                fields["per_level"] = level_effects
+            reqs = self.tech_names(prereq_techs(c))
+            if reqs:
+                fields["requires_tech"] = reqs
+            traits = prereq_traits(c)
+            if traits:
+                fields["requires_trait"] = [split_camel(t) for t in traits]
+            precl = [o.text for o in c.findall("Preclusions/RaceTrait/Option") if o.text]
+            if precl:
+                fields["blocked_by_trait"] = [split_camel(t) for t in precl]
+            desc = self.d.s(c.findtext("Description"))
+            if desc:
+                fields["description"] = desc
+            fields["source"] = source
+            records.append(
+                {
+                    "id": f"ship_component:{slug(name)}",
+                    "name": name,
+                    "aliases": [internal] if internal else [],
+                    "summary": desc[:140] if desc else "",
+                    "fields": fields,
+                }
+            )
+        return dedupe(records, "ship_component")
+
+    # -- starbase modules -----------------------------------------------------
+
+    def starbase_modules(self) -> list[dict]:
+        defs = self.d.defs("StarbaseModuleDefs*.xml", "StarbaseModule") + self.d.defs(
+            "starbasemoduledefs*.xml", "StarbaseModule"
+        )
+        module_names = {e.findtext("InternalName", ""): self.display_name(e) for _, e in defs}
+
+        def modules(keys: list[str]) -> list[str]:
+            return sorted({module_names.get(k) or split_camel(k) for k in keys})
+
+        records = []
+        for source, m in defs:
+            internal = m.findtext("InternalName", "")
+            name = self.display_name(m)
+            fields: dict = {}
+            for key, tag in (("specialization", "SpecializationType"), ("requires_target", "RequiredTarget")):
+                v = m.findtext(tag)
+                if v:
+                    fields[key] = split_camel(v)
+            stars = [s.text for s in m.findall("Prerequ/StarType") if s.text]
+            if stars:
+                fields["star_type"] = [split_camel(s) for s in stars]
+            turns = m.findtext("TurnsToBuild")
+            if turns:
+                fields["turns_to_build"] = turns
+            effects, resources = [], []
+            for st in m.findall("Stats"):
+                et = st.findtext("EffectType", "")
+                if et in HIDDEN_STATS:
+                    continue
+                value = float(st.findtext("Value", "0") or 0)
+                bonus = st.findtext("BonusType", "Flat")
+                if et == "ModulesCost":
+                    fields["module_cost"] = fmt_num(value)
+                elif et == "Credits" and bonus == "OneTime":
+                    fields["credits_cost"] = fmt_num(value)
+                elif et == "Maintenance" and bonus == "Flat":
+                    fields["maintenance"] = fmt_num(value)
+                elif bonus == "OneTime" and et in ONE_TIME_RESOURCE:
+                    resources.append(f"{fmt_num(value)} {ONE_TIME_RESOURCE[et]}")
+                elif et.endswith("Cost") and bonus == "OneTime":
+                    resources.append(f"{fmt_num(value)} {split_camel(et.removesuffix('Cost'))}")
+                else:
+                    effects.append(self.d.render_stat(st))
+            effects += self.trigger_effects(m, "OnConstructModule")
+            if resources:
+                fields["resources"] = resources
+            if effects:
+                fields["effects"] = effects
+            upgrades = [u.text for u in m.findall("Prerequ/UpgradesFrom") if u.text]
+            if upgrades:
+                fields["upgrades_from"] = modules(upgrades)
+            needs = [u.text for u in m.findall("Prerequ/StarbaseModule") if u.text]
+            if needs:
+                fields["requires_module_any"] = modules(needs)
+            excl = [u.text for u in m.findall("Preclusions/StarbaseModule") if u.text]
+            if excl:
+                fields["excludes_module"] = modules(excl)
+            reqs = self.tech_names(prereq_techs(m))
+            if reqs:
+                fields["requires_tech"] = reqs
+            traits = prereq_traits(m)
+            if traits:
+                fields["requires_trait"] = [split_camel(t) for t in traits]
+            if m.findtext("Prerequ/MaxPerNexusType") == "true":
+                fields["limit"] = "one per nexus type"
+            elif m.findtext("Prerequ/OnePerCluster") == "true":
+                fields["limit"] = "one per cluster"
+            dlc = m.findtext("Prerequ/DLC")
+            if dlc:
+                fields["dlc"] = split_camel(dlc)
+            desc = self.d.s(m.findtext("Description"))
+            if desc:
+                fields["description"] = desc
+            fields["source"] = source
+            records.append(
+                {
+                    "id": f"starbase_module:{slug(name)}",
+                    "name": name,
+                    "aliases": [internal] if internal else [],
+                    "summary": self.d.s(m.findtext("ShortDescription")),
+                    "fields": fields,
+                }
+            )
+        return dedupe(records, "starbase_module")
+
+    # -- events ---------------------------------------------------------------
+
+    def _param_names(self) -> dict[str, str]:
+        """InternalName -> display name for anything an event action may hand out by name."""
+        names = {k: v for k, v in self.tech_name.items()}
+        for pattern, tag, _ in UNLOCK_SOURCES:
+            names.update(self.names_of(pattern, tag))
+        for key, power in self.d.artifact_powers.items():
+            names[key] = self.d.s(power.findtext("DisplayName"), fallback=True)
+        return {k: v for k, v in names.items() if k and v}
+
+    def event_trigger(self, trig: ET.Element, param_names: dict[str, str]) -> list[str]:
+        """One choice <Trigger>: modifiers marked one-time / permanent / for N turns, plus
+        player-visible actions with their parameters resolved to display names."""
+        out = []
+        lifetime = trig.findtext("Lifetime", "")
+        dur = trig.findtext("RandomDurationMax") or trig.findtext("Duration")
+        for mod in trig.findall("Modifier"):
+            text = self.d.render_stat(mod)
+            if dur and lifetime != "Instant":
+                text += f" for {dur} turns"
+            elif lifetime == "Instant" and mod.findtext("BonusType") != "OneTime":
+                text += " (one-time)"
+            elif lifetime in ("Target", "Source"):
+                text += " (permanent)"
+            out.append(text)
+        for act in trig.findall("PerformAction"):
+            raw = act.findtext("Action", "")
+            if INTERNAL_ACTION.search(raw):
+                continue
+            params = [p for p in (act.findtext("ValueParam"), act.findtext("StringParam")) if p]
+            params = [param_names.get(p) or self.d.s(p) or p for p in params]
+            out.append(split_camel(raw) + (f" ({', '.join(params)})" if params else ""))
+        return out
+
+    def events(self) -> list[dict]:
+        param_names = self._param_names()
+        defs = []
+        for pattern in EVENT_SOURCES:
+            defs.extend((s, e) for s, e in self.d.defs(pattern, "GameEvent") if not s.startswith("Test"))
+        records = []
+        for source, ev in defs:
+            internal = ev.findtext("InternalName", "")
+            name = (
+                self.d.s(ev.findtext("DisplayName"))
+                or self.d.s(ev.findtext("WindowTitle"))
+                or clean(split_camel(internal.removeprefix("Event_").replace("_", " ")))
+            )
+            fields: dict = {}
+            etype = ev.findtext("Type")
+            if etype:
+                fields["type"] = split_camel(etype)
+            choices = []
+            for n, choice in enumerate(ev.findall("Choice"), start=1):
+                button = self.d.s(choice.findtext("Description")) or f"Choice {n}"
+                bonus = self.d.s(choice.findtext("BonusDescription"))
+                effects = [x for t in choice.findall("Trigger") for x in self.event_trigger(t, param_names)]
+                text = f"{n}. {button}" + (f" [{bonus}]" if bonus else "")
+                choices.append(text + (f" -> {'; '.join(effects)}" if effects else ""))
+            if choices:
+                fields["choices"] = choices
+            if ev.findtext("Prerequ/OccursOncePerPlayer") == "true":
+                fields["once_per_player"] = "yes"
+            fields["source"] = source
+            desc = self.d.s(ev.findtext("Description"))
+            records.append(
+                {
+                    "id": f"event:{slug(name)}",
+                    "name": name,
+                    "aliases": [internal] if internal else [],
+                    "summary": desc[:140] if desc else "",
+                    "fields": fields,
+                }
+            )
+        return dedupe(records, "event", drop_variants=False)
+
+
+def render_mass(st: ET.Element) -> str:
+    """Component mass: a flat value, or HullMassScaleMod(base, fraction of hull capacity)."""
+    params = [float(p.text or 0) for p in st.findall("SpecialValue/ValueParam")]
+    if st.findtext("SpecialValue/Special") == "HullMassScaleMod" and params:
+        base = fmt_num(params[0])
+        scale = params[1] if len(params) > 1 else 0.0
+        return f"{base} + {fmt_num(round(scale * 100, 3))}% of hull" if scale else base
+    return fmt_num(float(st.findtext("Value", "0") or 0))
+
 
 PREFERRED_FACTION = "Human"  # Terran Alliance variants win over base and other-faction ones
+PREFERRED_MARKERS = ("human", "terran")  # how the Terran Alliance's own definitions are named
 OTHER_FACTION_MARKERS = ("synth", "xendar", "arnor", "fed", "watcher", "drengin", "korath")
 
 
@@ -392,7 +751,7 @@ def variant_rank(r: dict) -> int:
         return 0
     if any(m in key for m in OTHER_FACTION_MARKERS) or (traits and PREFERRED_FACTION.lower() not in traits):
         return 1
-    if PREFERRED_FACTION.lower() in key:
+    if any(m in key for m in PREFERRED_MARKERS):
         return 3
     return 2
 
@@ -400,24 +759,54 @@ def variant_rank(r: dict) -> int:
 TRAILING_TIER = re.compile(r"(?:L|_)?(\d+)(?:_[A-Za-z]+)?$")
 
 
-def dedupe(records: list[dict], kind: str) -> list[dict]:
+def common_word_prefix(names: list[str]) -> int:
+    """Length of the longest shared prefix of `names` that ends on a word boundary
+    (before an uppercase letter, digit or '_', or at the end of a name)."""
+    n = len(os.path.commonprefix(names))
+    while n > 0 and not all(len(s) == n or s[n].isupper() or s[n].isdigit() or s[n] == "_" for s in names):
+        n -= 1
+    return n
+
+
+def merge_identical(group: list[dict]) -> list[dict]:
+    """Collapse definitions that render identically (same summary and fields apart from
+    `source`) into one record carrying all their aliases."""
+    seen: dict[str, dict] = {}
+    for r in group:
+        key = json.dumps([r["summary"], {k: v for k, v in r["fields"].items() if k != "source"}], sort_keys=True)
+        if key in seen:
+            seen[key]["aliases"] = sorted(set(seen[key]["aliases"]) | set(r["aliases"]))
+        else:
+            seen[key] = r
+    return list(seen.values())
+
+
+def dedupe(records: list[dict], kind: str, drop_variants: bool = True) -> list[dict]:
     """Resolve display-name collisions.
 
     Tutorial variants lose to anything else; the preferred faction's variant beats the base
     definition, which beats other factions' variants. Definitions that survive with equal rank
-    (e.g. tiered projects `Project_UpgradeWealth1/2/3`) are all kept under suffixed ids.
+    (e.g. tiered projects `Project_UpgradeWealth1/2/3`) are all kept under suffixed ids: the
+    trailing tier number, else the part of the internal name the variants do not share
+    (`DysonSphereBaseModule_Red` -> `_red`); an un-numbered base tier gets `_0`.
+
+    With `drop_variants=False` (events, whose variants differ in their outcomes) nothing is
+    ranked away: only exact duplicates are merged, every distinct definition is kept.
     """
     groups: dict[str, list[dict]] = defaultdict(list)
     for r in records:
         groups[r["id"]].append(r)
     out: list[dict] = []
+    taken = set(groups)
     for id_, group in groups.items():
+        if not drop_variants:
+            group = merge_identical(group)
         if len(group) == 1:
             out.append(group[0])
             continue
-        best = max(variant_rank(r) for r in group)
-        keep = [r for r in group if variant_rank(r) == best]
-        dropped = [a for r in group if variant_rank(r) != best for a in r["aliases"]]
+        best = max(variant_rank(r) for r in group) if drop_variants else 0
+        keep = [r for r in group if not drop_variants or variant_rank(r) == best]
+        dropped = [a for r in group if r not in keep for a in r["aliases"]]
         if dropped:
             print(f"note: {kind} {id_}: dropped variant(s) {', '.join(dropped)}", file=sys.stderr)
         if len(keep) == 1:
@@ -425,14 +814,16 @@ def dedupe(records: list[dict], kind: str) -> list[dict]:
             out.append(keep[0])
             continue
         used: set[str] = set()
-        for n, r in enumerate(keep):
-            internal = r["aliases"][0] if r["aliases"] else ""
+        internals = [r["aliases"][0] if r["aliases"] else "" for r in keep]
+        shared = common_word_prefix(internals)
+        for n, (r, internal) in enumerate(zip(keep, internals, strict=True)):
             m = TRAILING_TIER.search(internal)
-            suffix = m.group(1) if m else "0"  # an un-numbered base tier sorts first
-            while suffix in used:
+            suffix = m.group(1) if m else slug(split_camel(internal[shared:])) or "0"
+            while suffix in used or f"{id_}_{suffix}" in taken:
                 suffix = f"{suffix}_{n + 1}"
             used.add(suffix)
             r["id"] = f"{id_}_{suffix}"
+            taken.add(r["id"])
             r["fields"]["variant"] = internal
             out.append(r)
         print(f"note: {kind} {id_}: kept {len(keep)} tiers ({', '.join(r['id'] for r in keep)})", file=sys.stderr)
@@ -463,7 +854,15 @@ def main(argv: list[str] | None = None) -> int:
 
     data = GameData(args.data_dir)
     ex = Extractor(data, args.tech_tree)
-    outputs = {"tech": ex.techs(), "improvement": ex.improvements(), "order": ex.orders()}
+    outputs = {
+        "tech": ex.techs(),
+        "improvement": ex.improvements(),
+        "order": ex.orders(),
+        "policy": ex.policies(),
+        "ship_component": ex.ship_components(),
+        "starbase_module": ex.starbase_modules(),
+        "event": ex.events(),
+    }
 
     args.out.mkdir(parents=True, exist_ok=True)
     for kind, records in outputs.items():
@@ -478,7 +877,7 @@ def main(argv: list[str] | None = None) -> int:
     }
     (args.out / "_meta.json").write_text(json.dumps(meta, indent=1) + "\n", encoding="utf-8")
     for kind, records in outputs.items():
-        print(f"{kind:<12} {len(records):>4} records -> {args.out / (kind + '.json')}")
+        print(f"{kind:<16} {len(records):>4} records -> {args.out / (kind + '.json')}")
     return 0
 
 

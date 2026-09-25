@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ShipComponentList>
+  <ShipComponent>
+    <InternalName>MassDriver</InternalName>
+    <DisplayName>MassDriver_Name</DisplayName>
+    <Description>MassDriver_Dec</Description>
+    <Category>Weapons</Category>
+    <Type>KineticWeapon</Type>
+    <PlacementType>Weapon</PlacementType>
+    <Stats>
+      <EffectType>KineticManufacturingCost</EffectType>
+      <Scope>Queue</Scope>
+      <Target><TargetType>Ship</TargetType></Target>
+      <BonusType>Flat</BonusType>
+      <Value>13</Value>
+    </Stats>
+    <Stats>
+      <EffectType>Mass</EffectType>
+      <Target><TargetType>Ship</TargetType></Target>
+      <BonusType>Flat</BonusType>
+      <ValueType>Special</ValueType>
+      <SpecialValue>
+        <Special>HullMassScaleMod</Special>
+        <ValueParam>5</ValueParam>
+        <ValueParam>0</ValueParam>
+      </SpecialValue>
+    </Stats>
+    <Stats>
+      <EffectType>KineticWeapon</EffectType>
+      <Target><TargetType>Ship</TargetType></Target>
+      <BonusType>Flat</BonusType>
+      <Value>1</Value>
+    </Stats>
+    <Stats>
+      <EffectType>KineticAttack</EffectType>
+      <Target><TargetType>Ship</TargetType></Target>
+      <BonusType>Flat</BonusType>
+      <Value>4</Value>
+    </Stats>
+  </ShipComponent>
+</ShipComponentList>
