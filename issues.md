@@ -7,6 +7,8 @@
 ### Rust controller (`crates/game-controller`)
 - [ ] `manifest.toml` screen fields `choice_keys`, `buttons`, `dismiss_key`, `title_ocr`, `is_blocking` are parsed but still unused (the autopilot now uses `luminance_roi`, `luminance_threshold`, `turn_indicator_roi`)
 - [ ] Earth's **Capital City** (0 cost, +6 pop cap, +100 influence; `CapitalOnly`, `PlacementType: Special`) could not be placed: drag onto plains and onto the grassland "home" tile did nothing, double-click only selects it, and the tile menu lists only districts. Likely the agent's drag (button down → 12 moves at 20 ms → up) is too fast for the planet screen, or it needs a specific tile. Earth has a housing crisis (5/5 pop) until solved (found 2026-09-25, Feb 2330)
+- [ ] GC4 turn hang in "Starting New Month" (game bug) occurred once after first contact with Baratak Grove, Jun 2331; recovered by quit + relaunch + autosave (2026-09-25). Recovery is manual; could become a macro (needs the launcher steps and a way to pick the save)
+- [ ] Rust agent's key table lacks `win`/`lwin` (the Python agent had them), so `win+r` fails; Steam window focus was used instead (2026-09-25)
 - [ ] Event option number keys (`1`/`2`/`3`) claimed in strategy.md are unverified; clicking works
 - [ ] `autopilot.rs:105-107` `click_norm` emits image-space coords without scaling (latent: no macro uses it yet)
 - [ ] `client.rs:254-256` `focus` returns Ok on a 404 body; `settle`/`windows`/`focus` never check HTTP status (a 401 surfaces as a JSON parse error)
