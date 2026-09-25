@@ -349,7 +349,13 @@ impl Autopilot {
         let Some((name, def, _)) = self.unhandled_matches(&img, exclude, blocked) else {
             return Ok(None);
         };
-        if let Some([nx, ny]) = def.dismiss_click {
+        if !def.dismiss_clicks.is_empty() {
+            for [nx, ny] in &def.dismiss_clicks {
+                let (sx, sy) = view.to_screen(nx * view.width as f64, ny * view.height as f64)?;
+                self.client.click(sx, sy, "left", 1).await?;
+                tokio::time::sleep(std::time::Duration::from_millis(600)).await;
+            }
+        } else if let Some([nx, ny]) = def.dismiss_click {
             let (sx, sy) = view.to_screen(nx * view.width as f64, ny * view.height as f64)?;
             self.client.click(sx, sy, "left", 1).await?;
         } else if let Some(key) = &def.dismiss_key {
@@ -485,6 +491,7 @@ mod tests {
         assert_eq!(busy.len(), m.screens.values().filter(|d| d.busy).count(), "every busy template must load");
         assert!(busy.iter().any(|(n, _, _)| n == "turn_processing"));
         assert!(!screens.iter().any(|(n, _, _)| n == "turn_processing"), "busy screens are never dismissed");
+        assert_eq!(m.screens["colony_ship_boarding"].dismiss_clicks.len(), 3, "citizen, Board, Done");
         for unit_screen in ["idle_colony_ship", "idle_survey_ship"] {
             let def = &m.screens[unit_screen];
             assert!(def.only_when_blocked, "{unit_screen} must only act after end-turn was blocked");

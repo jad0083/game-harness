@@ -201,3 +201,11 @@ template_roi = [0.4464, 0.3379, 0.1071, 0.0295]
 template_threshold = 0.06
 auto_dismiss = true
 dismiss_click = [0.4286, 0.5952]    # No
+
+[screens.colony_ship_boarding]
+description = "'Boarding T.A.S. <ship> from <planet>': board the first available citizen (workers are listed before specialists), then Done"
+template = "templates/boarding_title.png"     # fixed part of the title, "Boarding T.A.S."
+template_roi = [0.3852, 0.2778, 0.0855, 0.0238]
+template_threshold = 0.06
+auto_dismiss = true
+dismiss_clicks = [[0.352, 0.3878], [0.4994, 0.6349], [0.6224, 0.7109]]   # first citizen, Board, Done

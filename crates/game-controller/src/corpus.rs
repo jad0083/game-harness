@@ -88,6 +88,10 @@ pub struct ScreenDef {
     /// Normalized [x, y] to click to dismiss; `dismiss_key` is used when absent.
     #[serde(default)]
     pub dismiss_click: Option<[f64; 2]>,
+    /// Several normalized [x, y] clicks, performed in order (e.g. pick, Board, Done).
+    /// Takes precedence over `dismiss_click` and `dismiss_key`.
+    #[serde(default)]
+    pub dismiss_clicks: Vec<[f64; 2]>,
     /// While this screen matches, the game is still processing the turn: keep waiting.
     #[serde(default)]
     pub busy: bool,
