@@ -78,6 +78,7 @@ When a modal event or planet report halts the autonomous turn loop:
 *   **Expansion Over Caution**: Choices that *grant* ships, survey probes, or colonist capacity should almost always be chosen — but check the data: an "unlock" often only makes something purchasable.
 *   **Artifact vs. +200 credits** (survey finds: Tech Finder, Arnor Halo, Wormhole Generator, …): take the artifact while the treasury is above ~500 credits; sell only when cash is short. Artifacts are one-shot powers kept in the vault; 200 credits is about a turn of rush-buying.
 *   **Pay-to-choose options** (−100/−250 credits for approval or influence): take the one whose effect is *permanent* or lasts 24+ turns while the treasury stays above ~800.
+*   **AI trade proposals**: judge the whole table. Reject when we'd hand over a technology or most of our credits for treaties and trinkets (e.g. Baratak Grove, Jul 2332: 874 credits + Open Borders + Armed Shuttles for an Exploration Treaty and 2 Antimatter). Reject → the table clears → **Done** → **Goodbye**.
 *   **Selecting an option**: clicking the option button works (verified). Number keys `1`/`2`/`3` are unverified.
 
 ---
