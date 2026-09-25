@@ -72,7 +72,7 @@ Core Worlds feature hex tiles that accept **Districts** and unique **Improvement
 ## 5. Event Dialog Heuristics & Deterministic Controls
 
 When a modal event or planet report halts the autonomous turn loop:
-*   **Look the event up before choosing**: event outcomes are in the game data (`corpus_search "<event title>"`, or `Gameplay/Events/*.xml` by title). The button text rarely states the payoff; e.g. *Precursor Probe* "study" = permanent +1 sensor range on every ship, "repair" = only makes the Stargazer probe purchasable as a 900-credit mercenary, "sell" = 200 credits.
+*   **Look the event up before choosing**: event outcomes are generated from the game data: `corpus_search "<event title>"`, then `corpus_get event:<id>` lists every choice with its exact effects. The button text rarely states the payoff; e.g. *Precursor Probe* "study" = permanent +1 sensor range on every ship, "repair" = only makes the Stargazer probe purchasable as a 900-credit mercenary, "sell" = 200 credits.
 *   **Permanent Output > Temporary Cash**: A $+10\%$ permanent manufacturing or research boost is infinitely superior to $+200$ credits.
 *   **Planet Colonization Site Choice**: On initial planet colonization (e.g., Mars Planet Report), select mineral/manufacturing extraction sites (option `2` / Delta sites) for feeder colonies supplying an industrial core world, or scientific/microbial sites (option `3`) if founding a science colony.
 *   **Expansion Over Caution**: Choices that *grant* ships, survey probes, or colonist capacity should almost always be chosen — but check the data: an "unlock" often only makes something purchasable.

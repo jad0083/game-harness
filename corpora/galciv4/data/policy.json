@@ -1,0 +1,4231 @@
+[
+ {
+  "id": "policy:adaptive_building",
+  "name": "Adaptive Building",
+  "aliases": [
+   "Policy_AdaptiveBuilding"
+  ],
+  "summary": "Malleable structures simultaneously boost manufacturing capabilities.",
+  "fields": {
+   "effects": [
+    "+10% Manufacturing (Colony)"
+   ],
+   "requires_tech": [
+    "Polymorphic Infrastructure"
+   ],
+   "requires_trait": [
+    "Synthetic Life"
+   ],
+   "description": "Malleable structures simultaneously boost manufacturing capabilities.",
+   "source": "PolicyDefs_Synth.xml"
+  }
+ },
+ {
+  "id": "policy:ambassadorial_privilege",
+  "name": "Ambassadorial Privilege",
+  "aliases": [
+   "Accord_AmbassadorialPrivilege"
+  ],
+  "summary": "Member embassies coordinate diplomatic outreach and increase the Federation diplomatic capital flow.",
+  "fields": {
+   "type": "Accord",
+   "cost": "60 Consensus",
+   "effects": [
+    "+1 Diplomatic Capital Income"
+   ],
+   "requires_tech": [
+    "Universal Translator"
+   ],
+   "requires_government": [
+    "Federation"
+   ],
+   "description": "Member embassies coordinate diplomatic outreach and increase the Federation diplomatic capital flow.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:anti_piracy_compact",
+  "name": "Anti-Piracy Compact",
+  "aliases": [
+   "Accord_AntiPiracyCompact"
+  ],
+  "summary": "Shared patrol doctrines and local defense pacts harden Federation worlds against raids. Applies to all Core Worlds, including your capital",
+  "fields": {
+   "type": "Accord",
+   "cost": "40 Consensus",
+   "effects": [
+    "+10% Resistance (Colony, core worlds only)"
+   ],
+   "requires_tech": [
+    "Starbases"
+   ],
+   "requires_government": [
+    "Federation"
+   ],
+   "description": "Shared patrol doctrines and local defense pacts harden Federation worlds against raids. Applies to all Core Worlds, including your capital",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:articles_of_the_grand_federation",
+  "name": "Articles of the Grand Federation",
+  "aliases": [
+   "Accord_ArticlesOfTheGrandFederation"
+  ],
+  "summary": "The founding charter of a true galactic federation, granting Member worlds major bonuses to research, manufacturing, military production, in",
+  "fields": {
+   "type": "Accord",
+   "cost": "200 Consensus",
+   "effects": [
+    "+15% Research (Colony, member worlds only)",
+    "+20% Manufacturing (Colony, member worlds only)",
+    "+20% Military (Shipyard)",
+    "+10% Gross Income (Colony, member worlds only)",
+    "+10% Influence Growth (Colony, member worlds only)"
+   ],
+   "requires_tech": [
+    "Eminence",
+    "Galactic Envoys",
+    "Extraplanetary Inspiration Network"
+   ],
+   "requires_government": [
+    "Federation"
+   ],
+   "description": "The founding charter of a true galactic federation, granting Member worlds major bonuses to research, manufacturing, military production, income, and cultural influence. Bonus is only applied to Member Worlds",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:ascendant_research_group",
+  "name": "Ascendant Research Group",
+  "aliases": [
+   "Investment_AscendantResearchGroup"
+  ],
+  "summary": "A research combine that unlocks Direct R&D Funding when mature.",
+  "fields": {
+   "type": "Investment",
+   "collateral_cost": "14",
+   "maturity_turns": "15",
+   "grants_order": "Direct R&D Funding",
+   "requires_government": [
+    "Oligarchy"
+   ],
+   "description": "A research combine that unlocks Direct R&D Funding when mature.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:asteroid_exploitation",
+  "name": "Asteroid Exploitation",
+  "aliases": [
+   "Policy_Archeology"
+  ],
+  "summary": "Our species are natural ' archeologists '. We can make use of this ability to get far more benefit from any asteroids we are able to mine.",
+  "fields": {
+   "effects": [
+    "-10% Gross Income (Colony)",
+    "+100% Raw Production (Asteroid)"
+   ],
+   "requires_trait": [
+    "Archaeologist Ability"
+   ],
+   "description": "Our species are natural ' archeologists '. We can make use of this ability to get far more benefit from any asteroids we are able to mine.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:astrodyne_advanced_weapons",
+  "name": "AstroDyne Advanced Weapons",
+  "aliases": [
+   "Investment_AstroDyneAdvancedWeapons"
+  ],
+  "summary": "A weapons R&D division that unlocks Prototype Access when mature.",
+  "fields": {
+   "type": "Investment",
+   "collateral_cost": "15",
+   "maturity_turns": "16",
+   "grants_order": "Prototype Access",
+   "requires_government": [
+    "Oligarchy"
+   ],
+   "description": "A weapons R&D division that unlocks Prototype Access when mature.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:astrodyne_defense_trust",
+  "name": "AstroDyne Defense Trust",
+  "aliases": [
+   "Investment_AstroDyneDefenseTrust"
+  ],
+  "summary": "A defense contractor trust that unlocks Private Security Detail when mature.",
+  "fields": {
+   "type": "Investment",
+   "collateral_cost": "16",
+   "maturity_turns": "18",
+   "grants_order": "Private Security Detail",
+   "requires_tech": [
+    "Martial Law Doctrine",
+    "Fleet Coordination",
+    "Weapon Platforms"
+   ],
+   "requires_government": [
+    "Oligarchy"
+   ],
+   "description": "A defense contractor trust that unlocks Private Security Detail when mature.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:ban_dissent",
+  "name": "Ban Dissent",
+  "aliases": [
+   "Policy_BanDissent"
+  ],
+  "summary": "We are stronger when we are united in purpose, and therefore speaking against our government weakens us and is effectively treason.",
+  "fields": {
+   "effects": [
+    "+100% Maintenance",
+    "+10% Approval (Unit)",
+    "+5% Crime"
+   ],
+   "requires_tech": [
+    "Cultural Influence",
+    "Cultural Influence",
+    "Adaptive Jurisprudence"
+   ],
+   "description": "We are stronger when we are united in purpose, and therefore speaking against our government weakens us and is effectively treason.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:brainstorming",
+  "name": "Brainstorming",
+  "aliases": [
+   "Policy_Brainstorming"
+  ],
+  "summary": "We are an ' inspired ', species. To that end, we can seek out the best and brightest of our people and see what amazing ideas they might hav",
+  "fields": {
+   "alignment": "Progressivism",
+   "effects": [
+    "+2 Research (Colony, capital world only)"
+   ],
+   "requires_trait": [
+    "Inspired Ability"
+   ],
+   "description": "We are an ' inspired ', species. To that end, we can seek out the best and brightest of our people and see what amazing ideas they might have to spur technological progress. Research bonus is only applied to the Homeworld",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:cave_of_echoes",
+  "name": "Cave of Echoes",
+  "aliases": [
+   "Policy_CaveOfEchoes"
+  ],
+  "summary": "Our homeworld is where our sentience was born. This most sacred place must be maintained for future generations. Influence bonus is only app",
+  "fields": {
+   "effects": [
+    "+3% Approval (Unit)",
+    "+10% Influence Growth (Colony, capital world only)"
+   ],
+   "requires_trait": [
+    "Silicon Based Ability"
+   ],
+   "description": "Our homeworld is where our sentience was born. This most sacred place must be maintained for future generations. Influence bonus is only applied to the Homeworld.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:civ_focus_economic",
+  "name": "Civ Focus - Economic",
+  "aliases": [
+   "CivFocusPolicy_Economic"
+  ],
+  "summary": "Civ Focus - Economic",
+  "fields": {
+   "type": "Civ Focus",
+   "effects": [
+    "+25% Gross Income"
+   ],
+   "description": "Civ Focus - Economic",
+   "source": "PolicyDefs_CivFocus.xml"
+  }
+ },
+ {
+  "id": "policy:civ_focus_growth",
+  "name": "Civ Focus - Growth",
+  "aliases": [
+   "CivFocusPolicy_Growth"
+  ],
+  "summary": "Civ Focus - Growth",
+  "fields": {
+   "type": "Civ Focus",
+   "effects": [
+    "+25% Growth (Colony)"
+   ],
+   "description": "Civ Focus - Growth",
+   "source": "PolicyDefs_CivFocus.xml"
+  }
+ },
+ {
+  "id": "policy:civ_focus_manufacturing",
+  "name": "Civ Focus - Manufacturing",
+  "aliases": [
+   "CivFocusPolicy_Manufacturing"
+  ],
+  "summary": "Civ Focus - Manufacturing",
+  "fields": {
+   "type": "Civ Focus",
+   "effects": [
+    "+25% Manufacturing (Colony)"
+   ],
+   "description": "Civ Focus - Manufacturing",
+   "source": "PolicyDefs_CivFocus.xml"
+  }
+ },
+ {
+  "id": "policy:civ_focus_military",
+  "name": "Civ Focus - Military",
+  "aliases": [
+   "CivFocusPolicy_Military"
+  ],
+  "summary": "Civ Focus - Military",
+  "fields": {
+   "type": "Civ Focus",
+   "effects": [
+    "+25% Military (Shipyard)"
+   ],
+   "description": "Civ Focus - Military",
+   "source": "PolicyDefs_CivFocus.xml"
+  }
+ },
+ {
+  "id": "policy:civ_focus_research",
+  "name": "Civ Focus - Research",
+  "aliases": [
+   "CivFocusPolicy_Research"
+  ],
+  "summary": "Civ Focus - Research",
+  "fields": {
+   "type": "Civ Focus",
+   "effects": [
+    "+25% Research (Colony)"
+   ],
+   "description": "Civ Focus - Research",
+   "source": "PolicyDefs_CivFocus.xml"
+  }
+ },
+ {
+  "id": "policy:civic_renaissance",
+  "name": "Civic Renaissance",
+  "aliases": [
+   "Accord_CivicRenaissance"
+  ],
+  "summary": "Federation civic programs strengthen local legitimacy and make member governments more trusted. Applies to all Core Worlds, including your c",
+  "fields": {
+   "type": "Accord",
+   "cost": "40 Consensus",
+   "effects": [
+    "+5% Approval (Unit, core worlds only)"
+   ],
+   "requires_tech": [
+    "Colonial Capital Refit"
+   ],
+   "requires_government": [
+    "Federation"
+   ],
+   "description": "Federation civic programs strengthen local legitimacy and make member governments more trusted. Applies to all Core Worlds, including your capital",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:civic_stability_accord",
+  "name": "Civic Stability Accord",
+  "aliases": [
+   "Accord_CivicStabilityAccord"
+  ],
+  "summary": "Federation governance standards reduce crime and pollution on Member worlds, creating cleaner and safer communities. Bonus is only applied t",
+  "fields": {
+   "type": "Accord",
+   "cost": "100 Consensus",
+   "effects": [
+    "-3% Crime (Colony, member worlds only)",
+    "-15% Pollution (Colony, member worlds only)"
+   ],
+   "requires_tech": [
+    "Extreme Miniaturization"
+   ],
+   "requires_government": [
+    "Federation"
+   ],
+   "description": "Federation governance standards reduce crime and pollution on Member worlds, creating cleaner and safer communities. Bonus is only applied to Member Worlds",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:coerced_colonization",
+  "name": "Coerced Colonization",
+  "aliases": [
+   "Policy_CoercedColonization"
+  ],
+  "summary": "If we are to colonize the galaxy we will need to inspire our citizens. This can be done through propaganda, incentives, or force. Doubles po",
+  "fields": {
+   "effects": [
+    "-10% Approval (Unit)",
+    "+100% Growth (Colony)"
+   ],
+   "requires_trait": [
+    "Carbon Based Life"
+   ],
+   "blocked_by_trait": [
+    "Fertile Ability",
+    "Ravenous Ability"
+   ],
+   "description": "If we are to colonize the galaxy we will need to inspire our citizens. This can be done through propaganda, incentives, or force. Doubles population growth.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:collective_planning",
+  "name": "Collective Planning",
+  "aliases": [
+   "Policy_CollectivePlanning"
+  ],
+  "summary": "Unified coordination of resources drives industrial growth.",
+  "fields": {
+   "effects": [
+    "+10% Manufacturing (Colony)",
+    "+5% Maintenance"
+   ],
+   "requires_tech": [
+    "Cognitive Charters"
+   ],
+   "requires_trait": [
+    "Synthetic Life"
+   ],
+   "description": "Unified coordination of resources drives industrial growth.",
+   "source": "PolicyDefs_Synth.xml"
+  }
+ },
+ {
+  "id": "policy:colonial_bonds",
+  "name": "Colonial Bonds",
+  "aliases": [
+   "Policy_Terran_ColonialDevelopmentBonds"
+  ],
+  "summary": "Issue bonds to finance colonial development, increasing income but reducing research output.",
+  "fields": {
+   "effects": [
+    "+15% Gross Income (Colony)",
+    "-5% Research (Colony)"
+   ],
+   "requires_tech": [
+    "Cabinet Expansion"
+   ],
+   "description": "Issue bonds to finance colonial development, increasing income but reducing research output.",
+   "source": "PolicyDefs_Terrans.xml"
+  }
+ },
+ {
+  "id": "policy:colonial_development_reit",
+  "name": "Colonial Development REIT",
+  "aliases": [
+   "Investment_ColonialDevelopmentREIT"
+  ],
+  "summary": "A real estate trust reinvesting in colonial housing. Helps colonies thrive from acquisition while held; matured stakes can be sold.",
+  "fields": {
+   "type": "Investment",
+   "collateral_cost": "10",
+   "maturity_turns": "12",
+   "effects": [
+    "+10% Growth (Colony)"
+   ],
+   "requires_tech": [
+    "Megapolis"
+   ],
+   "requires_government": [
+    "Oligarchy"
+   ],
+   "description": "A real estate trust reinvesting in colonial housing. Helps colonies thrive from acquisition while held; matured stakes can be sold.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:compute_optimization_i",
+  "name": "Compute Optimization I",
+  "aliases": [
+   "OptPolicy_Compute_T1"
+  ],
+  "summary": "Matrix tier: +1% Compute Potential per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "description": "Matrix tier: +1% Compute Potential per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:compute_optimization_ii",
+  "name": "Compute Optimization II",
+  "aliases": [
+   "OptPolicy_Compute_T2"
+  ],
+  "summary": "Matrix tier: +2% Compute Potential per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "requires_policy": [
+    "Compute Optimization I"
+   ],
+   "description": "Matrix tier: +2% Compute Potential per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:compute_optimization_iii",
+  "name": "Compute Optimization III",
+  "aliases": [
+   "OptPolicy_Compute_T3"
+  ],
+  "summary": "Matrix tier: +4% Compute Potential per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "requires_policy": [
+    "Compute Optimization II"
+   ],
+   "description": "Matrix tier: +4% Compute Potential per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:compute_optimization_iv",
+  "name": "Compute Optimization IV",
+  "aliases": [
+   "OptPolicy_Compute_T4"
+  ],
+  "summary": "Matrix tier: +8% Compute Potential per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "requires_policy": [
+    "Compute Optimization III"
+   ],
+   "description": "Matrix tier: +8% Compute Potential per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:compute_optimization_v",
+  "name": "Compute Optimization V",
+  "aliases": [
+   "OptPolicy_Compute_T5"
+  ],
+  "summary": "Matrix tier: +16% Compute Potential per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "requires_policy": [
+    "Compute Optimization IV"
+   ],
+   "description": "Matrix tier: +16% Compute Potential per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:compute_optimization_vi",
+  "name": "Compute Optimization VI",
+  "aliases": [
+   "OptPolicy_Compute_T6"
+  ],
+  "summary": "Matrix tier: +32% Compute Potential per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "requires_policy": [
+    "Compute Optimization V"
+   ],
+   "description": "Matrix tier: +32% Compute Potential per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:conscription",
+  "name": "Conscription",
+  "aliases": [
+   "Policy_Conscription"
+  ],
+  "summary": "We stand, or fall, together. And from each is expected a unity of purpose and service.",
+  "fields": {
+   "effects": [
+    "-3% Approval (Unit)",
+    "+15% Manufacturing (Colony)"
+   ],
+   "requires_tech": [
+    "Planetary Invasion"
+   ],
+   "blocked_by_trait": [
+    "Silicon Based Ability"
+   ],
+   "description": "We stand, or fall, together. And from each is expected a unity of purpose and service.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:conscription_quota",
+  "name": "Conscription Quota",
+  "aliases": [
+   "Decree_ConscriptionQuota"
+  ],
+  "summary": "Every Vassal world contributes soldiers to the imperial legions. More worlds, larger levy. Military bonus scales with total Vassal populatio",
+  "fields": {
+   "type": "Decree",
+   "authority_cost": "12",
+   "effects": [
+    "+0 Military",
+    "-2 Loyalty (Unit, vassal governor only)"
+   ],
+   "requires_tech": [
+    "Weapon Systems",
+    "Basic Armaments"
+   ],
+   "requires_government": [
+    "Imperial"
+   ],
+   "description": "Every Vassal world contributes soldiers to the imperial legions. More worlds, larger levy. Military bonus scales with total Vassal population.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:consensus_conduits",
+  "name": "Consensus Conduits",
+  "aliases": [
+   "Policy_ConsensusConduits"
+  ],
+  "summary": "Fluid data pathways enhance cultural synergy and influence.",
+  "fields": {
+   "effects": [
+    "+5% Influence Growth (Colony)"
+   ],
+   "requires_tech": [
+    "Networked Legislation"
+   ],
+   "requires_trait": [
+    "Synthetic Life"
+   ],
+   "description": "Fluid data pathways enhance cultural synergy and influence.",
+   "source": "PolicyDefs_Synth.xml"
+  }
+ },
+ {
+  "id": "policy:consumer_media_trust",
+  "name": "Consumer Media Trust",
+  "aliases": [
+   "Investment_ConsumerMediaTrust"
+  ],
+  "summary": "Entertainment feeds tuned to soothe. Keeps colonies content from acquisition while held; matured stakes can be sold.",
+  "fields": {
+   "type": "Investment",
+   "collateral_cost": "11",
+   "maturity_turns": "12",
+   "effects": [
+    "+5% Approval (Unit)"
+   ],
+   "requires_tech": [
+    "Xeno Entertainment",
+    "Xeno Entertainment",
+    "Networked Legislation"
+   ],
+   "requires_government": [
+    "Oligarchy"
+   ],
+   "description": "Entertainment feeds tuned to soothe. Keeps colonies content from acquisition while held; matured stakes can be sold.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:corporate_investment",
+  "name": "Corporate Investment",
+  "aliases": [
+   "Policy_Terran_CorporateInvestment"
+  ],
+  "summary": "Encourage private sector investment to increase wealth generation across all colonies.",
+  "fields": {
+   "effects": [
+    "+2 Wealth (Colony)"
+   ],
+   "requires_tech": [
+    "Cabinet Expansion"
+   ],
+   "description": "Encourage private sector investment to increase wealth generation across all colonies.",
+   "source": "PolicyDefs_Terrans.xml"
+  }
+ },
+ {
+  "id": "policy:court_patronage",
+  "name": "Court Patronage",
+  "aliases": [
+   "Decree_CourtPatronage"
+  ],
+  "summary": "Festivals, stipends, and favors keep the capital content while the treasury absorbs the cost. +10% Approval on the Homeworld; -5% Gross Inco",
+  "fields": {
+   "type": "Decree",
+   "authority_cost": "6",
+   "effects": [
+    "+10% Approval (Unit, capital world only)",
+    "-5% Gross Income (Colony, capital world only)"
+   ],
+   "requires_tech": [
+    "Political Capital",
+    "Xeno Diplomacy",
+    "Holonic Governance"
+   ],
+   "requires_government": [
+    "Imperial"
+   ],
+   "description": "Festivals, stipends, and favors keep the capital content while the treasury absorbs the cost. +10% Approval on the Homeworld; -5% Gross Income on the Homeworld.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:crown_works",
+  "name": "Crown Works",
+  "aliases": [
+   "Decree_CrownWorks"
+  ],
+  "summary": "Imperial foundries and academies on the capital are funded without delay. Flat subsidies that matter most when the throne world is still sma",
+  "fields": {
+   "type": "Decree",
+   "authority_cost": "8",
+   "effects": [
+    "+2 Manufacturing (Colony, capital world only)",
+    "+1 Research (Colony, capital world only)"
+   ],
+   "requires_tech": [
+    "Manufacturing Capital",
+    "Orbital Manufacturing",
+    "Quantum Fabrication"
+   ],
+   "requires_government": [
+    "Imperial"
+   ],
+   "description": "Imperial foundries and academies on the capital are funded without delay. Flat subsidies that matter most when the throne world is still small. +2 Manufacturing and +1 Research on the Homeworld.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:crypto_sovereignty",
+  "name": "Crypto Sovereignty",
+  "aliases": [
+   "Policy_CryptoSovereignty"
+  ],
+  "summary": "Exclusive digital currencies fortify economic gains.",
+  "fields": {
+   "effects": [
+    "+15% Gross Income",
+    "-1 Diplomacy Bonus (Unit)"
+   ],
+   "requires_tech": [
+    "Virtual Currencies"
+   ],
+   "requires_trait": [
+    "Synthetic Life"
+   ],
+   "description": "Exclusive digital currencies fortify economic gains.",
+   "source": "PolicyDefs_Synth.xml"
+  }
+ },
+ {
+  "id": "policy:cultural_branding_agency",
+  "name": "Cultural Branding Agency",
+  "aliases": [
+   "Investment_CulturalBrandingAgency"
+  ],
+  "summary": "Your civilization, packaged as a lifestyle brand. Gives it a louder voice from acquisition while held; matured stakes can be sold.",
+  "fields": {
+   "type": "Investment",
+   "collateral_cost": "10",
+   "maturity_turns": "10",
+   "effects": [
+    "+10% Influence Growth (Colony)"
+   ],
+   "requires_tech": [
+    "Cultural Influence",
+    "Cultural Influence",
+    "Holometric Culture Vistas"
+   ],
+   "requires_government": [
+    "Oligarchy"
+   ],
+   "description": "Your civilization, packaged as a lifestyle brand. Gives it a louder voice from acquisition while held; matured stakes can be sold.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:cultural_exchange_compact",
+  "name": "Cultural Exchange Compact",
+  "aliases": [
+   "Accord_CulturalExchangeCompact"
+  ],
+  "summary": "Federal delegations sponsor cultural exchanges that strengthen local institutions and cultural output. Applies to all Core Worlds, including",
+  "fields": {
+   "type": "Accord",
+   "cost": "0 Consensus",
+   "effects": [
+    "+1 Influence Growth (Colony, core worlds only)"
+   ],
+   "requires_government": [
+    "Federation"
+   ],
+   "description": "Federal delegations sponsor cultural exchanges that strengthen local institutions and cultural output. Applies to all Core Worlds, including your capital Unlocks the Creator profession",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:cultural_exhibition",
+  "name": "Cultural Exhibition",
+  "aliases": [
+   "Decree_CulturalExhibition"
+  ],
+  "summary": "Provincial art requisitioned for permanent display in the capital. Tourists flock; Vassals resent the theft. Siphons Influence from Vassal w",
+  "fields": {
+   "type": "Decree",
+   "authority_cost": "10",
+   "effects": [
+    "-15% Influence Growth (Colony, vassal worlds only)",
+    "+0% Tourism (Colony, capital world only)",
+    "-1 Loyalty (Unit, vassal governor only)"
+   ],
+   "requires_tech": [
+    "Xeno Entertainment",
+    "Xeno Entertainment",
+    "Networked Legislation"
+   ],
+   "requires_government": [
+    "Imperial"
+   ],
+   "description": "Provincial art requisitioned for permanent display in the capital. Tourists flock; Vassals resent the theft. Siphons Influence from Vassal worlds as Tourism on the Homeworld.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:cultural_hegemony",
+  "name": "Cultural Hegemony",
+  "aliases": [
+   "Accord_CulturalHegemony"
+  ],
+  "summary": "The Federation aligns cultural policy across its members, projecting more influence beyond its borders. Bonus is only applied to Member Worl",
+  "fields": {
+   "type": "Accord",
+   "cost": "60 Consensus",
+   "effects": [
+    "+25% Influence Growth (Colony, member worlds only)"
+   ],
+   "requires_tech": [
+    "Precursor Archeology"
+   ],
+   "requires_government": [
+    "Federation"
+   ],
+   "description": "The Federation aligns cultural policy across its members, projecting more influence beyond its borders. Bonus is only applied to Member Worlds",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:cultural_imperialism",
+  "name": "Cultural Imperialism",
+  "aliases": [
+   "Accord_CulturalImperialism"
+  ],
+  "summary": "Member worlds coordinate aggressive cultural outreach that increases Federation influence. Bonus is only applied to Member Worlds",
+  "fields": {
+   "type": "Accord",
+   "cost": "100 Consensus",
+   "effects": [
+    "+50% Influence Growth (Colony, member worlds only)"
+   ],
+   "requires_tech": [
+    "Precursor Studies"
+   ],
+   "requires_government": [
+    "Federation"
+   ],
+   "description": "Member worlds coordinate aggressive cultural outreach that increases Federation influence. Bonus is only applied to Member Worlds",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:cultural_optimization_i",
+  "name": "Cultural Optimization I",
+  "aliases": [
+   "OptPolicy_Influence_T1"
+  ],
+  "summary": "Matrix tier: +1% Influence per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "description": "Matrix tier: +1% Influence per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:cultural_optimization_ii",
+  "name": "Cultural Optimization II",
+  "aliases": [
+   "OptPolicy_Influence_T2"
+  ],
+  "summary": "Matrix tier: +2% Influence per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "requires_policy": [
+    "Cultural Optimization I"
+   ],
+   "description": "Matrix tier: +2% Influence per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:cultural_optimization_iii",
+  "name": "Cultural Optimization III",
+  "aliases": [
+   "OptPolicy_Influence_T3"
+  ],
+  "summary": "Matrix tier: +4% Influence per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "requires_policy": [
+    "Cultural Optimization II"
+   ],
+   "description": "Matrix tier: +4% Influence per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:cultural_optimization_iv",
+  "name": "Cultural Optimization IV",
+  "aliases": [
+   "OptPolicy_Influence_T4"
+  ],
+  "summary": "Matrix tier: +8% Influence per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "requires_policy": [
+    "Cultural Optimization III"
+   ],
+   "description": "Matrix tier: +8% Influence per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:cultural_optimization_v",
+  "name": "Cultural Optimization V",
+  "aliases": [
+   "OptPolicy_Influence_T5"
+  ],
+  "summary": "Matrix tier: +16% Influence per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "requires_policy": [
+    "Cultural Optimization IV"
+   ],
+   "description": "Matrix tier: +16% Influence per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:cultural_optimization_vi",
+  "name": "Cultural Optimization VI",
+  "aliases": [
+   "OptPolicy_Influence_T6"
+  ],
+  "summary": "Matrix tier: +32% Influence per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "requires_policy": [
+    "Cultural Optimization V"
+   ],
+   "description": "Matrix tier: +32% Influence per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:cultural_patronage",
+  "name": "Cultural Patronage",
+  "aliases": [
+   "Policy_CulturalPatronage"
+  ],
+  "summary": "By sponsoring the arts and celebrating our shared heritage, we cultivate a civilization others will remember. Culture bonus is only applied ",
+  "fields": {
+   "effects": [
+    "+1 Culture Points Per Month (Colony, capital world only)"
+   ],
+   "description": "By sponsoring the arts and celebrating our shared heritage, we cultivate a civilization others will remember. Culture bonus is only applied to the Homeworld.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:cultural_tithe",
+  "name": "Cultural Tithe",
+  "aliases": [
+   "Decree_CulturalTithe"
+  ],
+  "summary": "The imperial court appropriates culture from its core colonies, demanding loyalty in return. -1 Loyalty to each non-sovereign governor and V",
+  "fields": {
+   "type": "Decree",
+   "authority_cost": "10",
+   "effects": [
+    "+0% Influence Growth (Colony, core worlds only)",
+    "+0 Influence Growth (Colony, capital world only)",
+    "-1 Loyalty (Unit, governor only not sovereign)"
+   ],
+   "requires_government": [
+    "Imperial"
+   ],
+   "description": "The imperial court appropriates culture from its core colonies, demanding loyalty in return. -1 Loyalty to each non-sovereign governor and Vassal.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:cultural_values",
+  "name": "Cultural Values",
+  "aliases": [
+   "Policy_CulturalValues"
+  ],
+  "summary": "If we conquer the galaxy but lose our identity in the process we have been defeated, if only by ourselves.",
+  "fields": {
+   "effects": [
+    "+10% Influence Growth (Colony)",
+    "-1 Diplomacy Bonus (Unit)"
+   ],
+   "requires_tech": [
+    "Cultural Influence",
+    "Cultural Influence",
+    "Networked Legislation"
+   ],
+   "description": "If we conquer the galaxy but lose our identity in the process we have been defeated, if only by ourselves.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:defensive_measures",
+  "name": "Defensive Measures",
+  "aliases": [
+   "Policy_DefensiveMeasures"
+  ],
+  "summary": "By focusing on basic defenses we limit the reach of our explorers, but significantly limit their risk.",
+  "fields": {
+   "effects": [
+    "-25% Ship Range (Ship)",
+    "+20% Hit Points (Ship)"
+   ],
+   "requires_tech": [
+    "Defensive Studies",
+    "Defensive Studies",
+    "Nanite Plating"
+   ],
+   "description": "By focusing on basic defenses we limit the reach of our explorers, but significantly limit their risk.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:devolved_operations",
+  "name": "Devolved Operations",
+  "aliases": [
+   "Policy_DevolvedOperations"
+  ],
+  "summary": "Local autonomy increases citizen Approval within the network.",
+  "fields": {
+   "effects": [
+    "+5% Approval (Unit)"
+   ],
+   "requires_tech": [
+    "Local Autonomy Charters"
+   ],
+   "requires_trait": [
+    "Synthetic Life"
+   ],
+   "description": "Local autonomy increases citizen Approval within the network.",
+   "source": "PolicyDefs_Synth.xml"
+  }
+ },
+ {
+  "id": "policy:diplomatic_venture_fund",
+  "name": "Diplomatic Venture Fund",
+  "aliases": [
+   "Investment_DiplomaticVentureFund"
+  ],
+  "summary": "A diplomatic lobbying fund that unlocks Golden Handshake when mature.",
+  "fields": {
+   "type": "Investment",
+   "collateral_cost": "12",
+   "maturity_turns": "13",
+   "grants_order": "Golden Handshake",
+   "requires_government": [
+    "Oligarchy"
+   ],
+   "description": "A diplomatic lobbying fund that unlocks Golden Handshake when mature.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:distributed_command",
+  "name": "Distributed Command",
+  "aliases": [
+   "Policy_DistributedCommand"
+  ],
+  "summary": "Multiple command centers improve fleet logistics across the stars.",
+  "fields": {
+   "effects": [
+    "+6 Logistics"
+   ],
+   "requires_tech": [
+    "Holonic Governance"
+   ],
+   "requires_trait": [
+    "Synthetic Life"
+   ],
+   "description": "Multiple command centers improve fleet logistics across the stars.",
+   "source": "PolicyDefs_Synth.xml"
+  }
+ },
+ {
+  "id": "policy:dynamic_legal_frames",
+  "name": "Dynamic Legal Frames",
+  "aliases": [
+   "Policy_DynamicLegalFrames"
+  ],
+  "summary": "Adaptive codes keep crime in check and boost administrative reach.",
+  "fields": {
+   "effects": [
+    "-10% Crime (Colony)",
+    "+5% Influence Growth (Colony)"
+   ],
+   "requires_tech": [
+    "Adaptive Jurisprudence"
+   ],
+   "requires_trait": [
+    "Synthetic Life"
+   ],
+   "description": "Adaptive codes keep crime in check and boost administrative reach.",
+   "source": "PolicyDefs_Synth.xml"
+  }
+ },
+ {
+  "id": "policy:economic_development",
+  "name": "Economic Development",
+  "aliases": [
+   "Policy_EconomicDevelopment"
+  ],
+  "summary": "Develops the economy of each of our worlds.",
+  "fields": {
+   "effects": [
+    "+2 Wealth (Colony)"
+   ],
+   "requires_tech": [
+    "Economic Development",
+    "Interstellar Trade",
+    "Resource Allocation"
+   ],
+   "description": "Develops the economy of each of our worlds.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:economic_optimization_i",
+  "name": "Economic Optimization I",
+  "aliases": [
+   "OptPolicy_Economy_T1"
+  ],
+  "summary": "Matrix tier: +1% Income per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "description": "Matrix tier: +1% Income per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:economic_optimization_ii",
+  "name": "Economic Optimization II",
+  "aliases": [
+   "OptPolicy_Economy_T2"
+  ],
+  "summary": "Matrix tier: +2% Income per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "requires_policy": [
+    "Economic Optimization I"
+   ],
+   "description": "Matrix tier: +2% Income per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:economic_optimization_iii",
+  "name": "Economic Optimization III",
+  "aliases": [
+   "OptPolicy_Economy_T3"
+  ],
+  "summary": "Matrix tier: +4% Income per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "requires_policy": [
+    "Economic Optimization II"
+   ],
+   "description": "Matrix tier: +4% Income per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:economic_optimization_iv",
+  "name": "Economic Optimization IV",
+  "aliases": [
+   "OptPolicy_Economy_T4"
+  ],
+  "summary": "Matrix tier: +8% Income per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "requires_policy": [
+    "Economic Optimization III"
+   ],
+   "description": "Matrix tier: +8% Income per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:economic_optimization_v",
+  "name": "Economic Optimization V",
+  "aliases": [
+   "OptPolicy_Economy_T5"
+  ],
+  "summary": "Matrix tier: +16% Income per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "requires_policy": [
+    "Economic Optimization IV"
+   ],
+   "description": "Matrix tier: +16% Income per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:economic_optimization_vi",
+  "name": "Economic Optimization VI",
+  "aliases": [
+   "OptPolicy_Economy_T6"
+  ],
+  "summary": "Matrix tier: +32% Income per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "requires_policy": [
+    "Economic Optimization V"
+   ],
+   "description": "Matrix tier: +32% Income per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:efficient_extractors",
+  "name": "Efficient Extractors",
+  "aliases": [
+   "Policy_EfficientExtractors"
+  ],
+  "summary": "Advanced units harness planetary resources at unmatched speeds.",
+  "fields": {
+   "effects": [
+    "+10% Manufacturing (Colony)"
+   ],
+   "requires_tech": [
+    "Resource Allocation"
+   ],
+   "requires_trait": [
+    "Synthetic Life"
+   ],
+   "description": "Advanced units harness planetary resources at unmatched speeds.",
+   "source": "PolicyDefs_Synth.xml"
+  }
+ },
+ {
+  "id": "policy:emergency_coalition",
+  "name": "Emergency Coalition",
+  "aliases": [
+   "Policy_EmergencyCoalition"
+  ],
+  "summary": "War often calls for all of us to sacrifice for the common good.",
+  "fields": {
+   "effects": [
+    "-3% Approval (Unit)",
+    "+50% Military (Shipyard)",
+    "-25% Manufacturing (Colony)"
+   ],
+   "requires_tech": [
+    "Systems Of Control",
+    "Policy Reforms",
+    "Cognitive Charters"
+   ],
+   "description": "War often calls for all of us to sacrifice for the common good.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:empathic_connection",
+  "name": "Empathic Connection",
+  "aliases": [
+   "Policy_Empathy"
+  ],
+  "summary": "We are an ' empathic ' people. Our civilization must work together more than ever to thrive in this next stage of our history. By using our ",
+  "fields": {
+   "effects": [
+    "+15% Approval (Unit)"
+   ],
+   "requires_trait": [
+    "Empathy Ability"
+   ],
+   "description": "We are an ' empathic ' people. Our civilization must work together more than ever to thrive in this next stage of our history. By using our empathic ability actively we can increase our happiness greatly.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:endless_feast",
+  "name": "Endless Feast",
+  "aliases": [
+   "Policy_EndlessFeast"
+  ],
+  "summary": "Our ' ravenous ' nature makes us appreciate a good meal. To that end, we will be harvesting life from other planets for consumption at home.",
+  "fields": {
+   "effects": [
+    "+20% Approval (Unit)",
+    "-2 Diplomacy Bonus (Unit)",
+    "+1 Food (Colony)"
+   ],
+   "requires_trait": [
+    "Ravenous Ability"
+   ],
+   "description": "Our ' ravenous ' nature makes us appreciate a good meal. To that end, we will be harvesting life from other planets for consumption at home.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:experimental_drives",
+  "name": "Experimental Drives",
+  "aliases": [
+   "Policy_ExperimentalDrives"
+  ],
+  "summary": "The safety thresholds of our engines are well below their actual capability. We can unlock their potential if we are okay with occasional si",
+  "fields": {
+   "effects": [
+    "+1 Moves (Ship)",
+    "-20% Hit Points (Ship)"
+   ],
+   "requires_tech": [
+    "Artificial Gravity",
+    "Long Range Propulsion"
+   ],
+   "description": "The safety thresholds of our engines are well below their actual capability. We can unlock their potential if we are okay with occasional side effects.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:export_food",
+  "name": "Export Food",
+  "aliases": [
+   "Policy_SellSurplusFood"
+  ],
+  "summary": "A small amount of food is exported from each world for wealth to each world.",
+  "fields": {
+   "effects": [
+    "-2 Food (Colony, core worlds only)",
+    "+2 Gross Income (Colony, core worlds only)"
+   ],
+   "requires_tech": [
+    "Universal Translator"
+   ],
+   "requires_trait": [
+    "Carbon Based Life"
+   ],
+   "description": "A small amount of food is exported from each world for wealth to each world.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:extreme_automation",
+  "name": "Extreme Automation",
+  "aliases": [
+   "Policy_ExtremeAutomation"
+  ],
+  "summary": "So-called 'Synthetic' species such as ourselves have the ability to work together in ways that fleshlings cannot. This comes at a cost, even",
+  "fields": {
+   "effects": [
+    "-20% Gross Income (Colony)",
+    "+15% Manufacturing (Colony)"
+   ],
+   "requires_trait": [
+    "Synthetic Life"
+   ],
+   "description": "So-called 'Synthetic' species such as ourselves have the ability to work together in ways that fleshlings cannot. This comes at a cost, even for us, but we can greatly increase our production as a result.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:fast_exploration",
+  "name": "Fast Exploration",
+  "aliases": [
+   "Policy_FastExploration"
+  ],
+  "summary": "As natural ' explorers ', we have the ability to sacrifice the quality of our ships, to get a bit more performance out of the engines.",
+  "fields": {
+   "effects": [
+    "-50% Hit Points (Ship)",
+    "+2 Moves (Ship)"
+   ],
+   "requires_trait": [
+    "Explorers Ability"
+   ],
+   "description": "As natural ' explorers ', we have the ability to sacrifice the quality of our ships, to get a bit more performance out of the engines.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:federal_armament_act",
+  "name": "Federal Armament Act",
+  "aliases": [
+   "Accord_FederalArmamentAct"
+  ],
+  "summary": "Federation defense policy accelerates shipyard production, hardens fleet hulls, and improves fleet mobility across all member systems. Bonus",
+  "fields": {
+   "type": "Accord",
+   "cost": "150 Consensus",
+   "effects": [
+    "+25% Military (Shipyard)",
+    "+20% Hit Points (Ship)",
+    "+1 Moves (Ship)"
+   ],
+   "requires_tech": [
+    "Dreadnought Doctrine"
+   ],
+   "requires_government": [
+    "Federation"
+   ],
+   "description": "Federation defense policy accelerates shipyard production, hardens fleet hulls, and improves fleet mobility across all member systems. Bonus is only applied to Member Worlds",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:federal_asylum_charter",
+  "name": "Federal Asylum Charter",
+  "aliases": [
+   "Accord_FederalAsylumCharter"
+  ],
+  "summary": "Asylum offices convert refugee expertise into a stronger leadership pipeline for the Federation.",
+  "fields": {
+   "type": "Accord",
+   "cost": "40 Consensus",
+   "effects": [
+    "+10% New Leader Chance"
+   ],
+   "requires_tech": [
+    "Exotic World Colonization"
+   ],
+   "requires_government": [
+    "Federation"
+   ],
+   "description": "Asylum offices convert refugee expertise into a stronger leadership pipeline for the Federation.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:federal_economic_authority",
+  "name": "Federal Economic Authority",
+  "aliases": [
+   "Accord_FederalEconomicAuthority"
+  ],
+  "summary": "A central economic bureau harmonizes trade policy, taxation, and diplomatic commerce, improving income, trade revenue, and diplomatic capita",
+  "fields": {
+   "type": "Accord",
+   "cost": "150 Consensus",
+   "effects": [
+    "+15% Gross Income (Colony, member worlds only)",
+    "+20% Trade Route Income",
+    "+1 Diplomatic Capital Income"
+   ],
+   "requires_tech": [
+    "Interstellar Markets"
+   ],
+   "requires_government": [
+    "Federation"
+   ],
+   "description": "A central economic bureau harmonizes trade policy, taxation, and diplomatic commerce, improving income, trade revenue, and diplomatic capital. Bonus is only applied to Member Worlds",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:federal_industrial_compact",
+  "name": "Federal Industrial Compact",
+  "aliases": [
+   "Accord_FederalIndustrialCompact"
+  ],
+  "summary": "Standardized construction codes and shared supply chains increase manufacturing capacity while reducing improvement upkeep on Member worlds.",
+  "fields": {
+   "type": "Accord",
+   "cost": "60 Consensus",
+   "effects": [
+    "+20% Manufacturing (Colony, member worlds only)",
+    "-10% Maintenance (Colony, member worlds only)"
+   ],
+   "requires_tech": [
+    "Manufacturing Capital",
+    "Xeno Manufacturing",
+    "Quantum Fabrication"
+   ],
+   "requires_government": [
+    "Federation"
+   ],
+   "description": "Standardized construction codes and shared supply chains increase manufacturing capacity while reducing improvement upkeep on Member worlds. Bonus is only applied to Member Worlds",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:federal_infrastructure",
+  "name": "Federal Infrastructure",
+  "aliases": [
+   "Accord_FederalInfrastructure"
+  ],
+  "summary": "Federal planning offices standardize major construction programs, increasing manufacturing output across the Federation. Applies to all Core",
+  "fields": {
+   "type": "Accord",
+   "cost": "0 Consensus",
+   "effects": [
+    "+20% Manufacturing (Colony, core worlds only)"
+   ],
+   "requires_government": [
+    "Federation"
+   ],
+   "description": "Federal planning offices standardize major construction programs, increasing manufacturing output across the Federation. Applies to all Core Worlds, including your capital Unlocks the Planning Office improvement",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:federal_prosperity_initiative",
+  "name": "Federal Prosperity Initiative",
+  "aliases": [
+   "Accord_FederalProsperityInitiative"
+  ],
+  "summary": "A comprehensive development program that boosts population growth, raises income, and expands the population ceiling on Member worlds. Bonus",
+  "fields": {
+   "type": "Accord",
+   "cost": "100 Consensus",
+   "effects": [
+    "+10% Growth (Colony, member worlds only)",
+    "+5% Gross Income (Colony, member worlds only)",
+    "+2 Population Cap (Colony, member worlds only)"
+   ],
+   "requires_tech": [
+    "Interstellar Investments"
+   ],
+   "requires_government": [
+    "Federation"
+   ],
+   "description": "A comprehensive development program that boosts population growth, raises income, and expands the population ceiling on Member worlds. Bonus is only applied to Member Worlds",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:federal_research_grants",
+  "name": "Federal Research Grants",
+  "aliases": [
+   "Accord_FederalResearchGrants"
+  ],
+  "summary": "Federal institutes coordinate grant programs across core systems, improving research output throughout the Federation. Applies to all Core W",
+  "fields": {
+   "type": "Accord",
+   "cost": "0 Consensus",
+   "effects": [
+    "+1 Research (Colony, core worlds only)"
+   ],
+   "requires_government": [
+    "Federation"
+   ],
+   "description": "Federal institutes coordinate grant programs across core systems, improving research output throughout the Federation. Applies to all Core Worlds, including your capital",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:federal_shipyard_authority",
+  "name": "Federal Shipyard Authority",
+  "aliases": [
+   "Accord_FederalShipyardAuthority"
+  ],
+  "summary": "A central shipyard bureau coordinates hull production across Federation facilities, significantly increasing military manufacturing output.",
+  "fields": {
+   "type": "Accord",
+   "cost": "100 Consensus",
+   "effects": [
+    "+25% Military (Shipyard)"
+   ],
+   "requires_tech": [
+    "Planetary Invasion"
+   ],
+   "requires_government": [
+    "Federation"
+   ],
+   "description": "A central shipyard bureau coordinates hull production across Federation facilities, significantly increasing military manufacturing output.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:federal_treasury_pact",
+  "name": "Federal Treasury Pact",
+  "aliases": [
+   "Accord_FederalTreasuryPact"
+  ],
+  "summary": "Shared treasury standards reduce waste and improve revenue collection across the Federation, and the Pact's audit corps can be seconded to a",
+  "fields": {
+   "type": "Accord",
+   "cost": "0 Consensus",
+   "effects": [
+    "+10% Gross Income (Colony, core worlds only)"
+   ],
+   "requires_government": [
+    "Federation"
+   ],
+   "description": "Shared treasury standards reduce waste and improve revenue collection across the Federation, and the Pact's audit corps can be seconded to any world that asks for it. Applies to all Core Worlds, including your capital Unlocks the Inspector profession",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:federal_urbanization_program",
+  "name": "Federal Urbanization Program",
+  "aliases": [
+   "Accord_FederalUrbanizationProgram"
+  ],
+  "summary": "Federation urban planning standards expand habitation infrastructure, raising the population ceiling on Member worlds. Bonus is only applied",
+  "fields": {
+   "type": "Accord",
+   "cost": "60 Consensus",
+   "effects": [
+    "+2 Population Cap (Colony, member worlds only)"
+   ],
+   "requires_tech": [
+    "Megapolis"
+   ],
+   "requires_government": [
+    "Federation"
+   ],
+   "description": "Federation urban planning standards expand habitation infrastructure, raising the population ceiling on Member worlds. Bonus is only applied to Member Worlds",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:federated_customs_union",
+  "name": "Federated Customs Union",
+  "aliases": [
+   "Accord_FederatedCustomsUnion"
+  ],
+  "summary": "Common customs rules make trade easier across Federation space and increase trade income.",
+  "fields": {
+   "type": "Accord",
+   "cost": "40 Consensus",
+   "effects": [
+    "+20% Trade Route Income"
+   ],
+   "requires_tech": [
+    "Asteroid Mining"
+   ],
+   "requires_government": [
+    "Federation"
+   ],
+   "description": "Common customs rules make trade easier across Federation space and increase trade income.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:federation_mobilization",
+  "name": "Federation Mobilization",
+  "aliases": [
+   "Accord_FederationMobilization"
+  ],
+  "summary": "The Federation prepares for defensive war, expanding fleet range and command logistics.",
+  "fields": {
+   "type": "Accord",
+   "cost": "100 Consensus",
+   "effects": [
+    "+20% Ship Range (Ship)",
+    "+3 Logistics"
+   ],
+   "requires_tech": [
+    "Battleship Doctrine"
+   ],
+   "requires_government": [
+    "Federation"
+   ],
+   "description": "The Federation prepares for defensive war, expanding fleet range and command logistics.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:fleet_build_up",
+  "name": "Fleet Build Up",
+  "aliases": [
+   "Policy_FleetBuildUp"
+  ],
+  "summary": "There is little use in accumulated assets if we lack the ability to defend them.",
+  "fields": {
+   "effects": [
+    "-10% Gross Income (Colony)",
+    "+10% Military (Shipyard)"
+   ],
+   "requires_tech": [
+    "Martial Law Doctrine",
+    "Fleet Coordination",
+    "Weapon Platforms"
+   ],
+   "description": "There is little use in accumulated assets if we lack the ability to defend them.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:fleet_coordination",
+  "name": "Fleet Coordination",
+  "aliases": [
+   "Policy_Terran_FleetCoordination"
+  ],
+  "summary": "Centralized command structures improve fleet coordination and logistics capacity.",
+  "fields": {
+   "effects": [
+    "+4 Logistics"
+   ],
+   "requires_tech": [
+    "Policy Reforms"
+   ],
+   "description": "Centralized command structures improve fleet coordination and logistics capacity.",
+   "source": "PolicyDefs_Terrans.xml"
+  }
+ },
+ {
+  "id": "policy:fleet_leasing_group",
+  "name": "Fleet Leasing Group",
+  "aliases": [
+   "Investment_FleetLeasingGroup"
+  ],
+  "summary": "Leases hulls back to your navy at cartel rates. Eases the strain of a standing navy from acquisition while held; matured stakes can be sold.",
+  "fields": {
+   "type": "Investment",
+   "collateral_cost": "10",
+   "maturity_turns": "10",
+   "effects": [
+    "-15% Maintenance (Ship)"
+   ],
+   "requires_tech": [
+    "Orbital Manufacturing",
+    "Orbital Manufacturing",
+    "Hull Architecture"
+   ],
+   "requires_government": [
+    "Oligarchy"
+   ],
+   "description": "Leases hulls back to your navy at cartel rates. Eases the strain of a standing navy from acquisition while held; matured stakes can be sold.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:foreign_dumping",
+  "name": "Foreign Dumping",
+  "aliases": [
+   "Policy_ForeignDumping"
+  ],
+  "summary": "We have found the perfect solution to our polluted worlds, secretly dumping our toxic waste on other planets. Spreads 10% Pollution through ",
+  "fields": {
+   "effects": [
+    "+10% Pollution (Colony)",
+    "-10% Pollution (Colony)",
+    "-2 Diplomacy Bonus (Unit)"
+   ],
+   "requires_tech": [
+    "Espionage",
+    "Interstellar Trade",
+    "Reciprocity Verification"
+   ],
+   "description": "We have found the perfect solution to our polluted worlds, secretly dumping our toxic waste on other planets. Spreads 10% Pollution through trade routes",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:free_housing",
+  "name": "Free Housing",
+  "aliases": [
+   "Policy_FreeHousing"
+  ],
+  "summary": "The least among us struggle to find shelter. By providing minimum housing to all of our citizens we make sure that they have a foundation to",
+  "fields": {
+   "effects": [
+    "+6% Approval (Unit)",
+    "-10% Gross Income (Colony)",
+    "+25% Growth (Colony)"
+   ],
+   "requires_tech": [
+    "Domestic Policy Doctrine",
+    "Policy Reforms",
+    "Autonomous Colony Modules"
+   ],
+   "description": "The least among us struggle to find shelter. By providing minimum housing to all of our citizens we make sure that they have a foundation to build upon.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:free_media",
+  "name": "Free Media",
+  "aliases": [
+   "Policy_FreeMedia"
+  ],
+  "summary": "The cornerstone of a successful civilization is a powerful media that can speak without fear of reprisal.",
+  "fields": {
+   "effects": [
+    "+1 Diplomacy Bonus (Unit)"
+   ],
+   "requires_tech": [
+    "Xeno Entertainment",
+    "Xeno Entertainment"
+   ],
+   "description": "The cornerstone of a successful civilization is a powerful media that can speak without fear of reprisal.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:free_press_charter",
+  "name": "Free Press Charter",
+  "aliases": [
+   "Accord_FreePressCharter"
+  ],
+  "summary": "Independent member media networks improve visibility into foreign technology, relations, and military strength. Bonus is only applied to Mem",
+  "fields": {
+   "type": "Accord",
+   "cost": "60 Consensus",
+   "effects": [
+    "+1 Intelligence (Unit, member worlds only)"
+   ],
+   "requires_tech": [
+    "Subspace Streaming"
+   ],
+   "requires_government": [
+    "Federation"
+   ],
+   "description": "Independent member media networks improve visibility into foreign technology, relations, and military strength. Bonus is only applied to Member Worlds",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:free_trade",
+  "name": "Free Trade",
+  "aliases": [
+   "Policy_FreeTrade"
+  ],
+  "summary": "Embargoes, subsidies and taxes are the enemy of economic growth. By allowing open trade between civilizations we all prosper.",
+  "fields": {
+   "alignment": "Individualism",
+   "effects": [
+    "+33% Trade Route Value (TradeRoute)",
+    "+10% Gross Income (Colony)",
+    "-5% Manufacturing (Colony)"
+   ],
+   "requires_tech": [
+    "Trade Networks",
+    "Interstellar Trade",
+    "Engagement"
+   ],
+   "description": "Embargoes, subsidies and taxes are the enemy of economic growth. By allowing open trade between civilizations we all prosper.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:freight_futures_exchange",
+  "name": "Freight Futures Exchange",
+  "aliases": [
+   "Investment_FreightFuturesExchange"
+  ],
+  "summary": "A commodities exchange for interstellar freight. Keeps trade lanes open and the freight ledger healthy from acquisition while held; matured ",
+  "fields": {
+   "type": "Investment",
+   "collateral_cost": "11",
+   "maturity_turns": "13",
+   "effects": [
+    "+1 Trade Licenses Max",
+    "+10% Trade Route Income"
+   ],
+   "requires_tech": [
+    "Interstellar Trade",
+    "Interstellar Trade",
+    "Cross-Galaxy Automated Market"
+   ],
+   "requires_government": [
+    "Oligarchy"
+   ],
+   "description": "A commodities exchange for interstellar freight. Keeps trade lanes open and the freight ledger healthy from acquisition while held; matured stakes can be sold.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:frontier_acquisitions_group",
+  "name": "Frontier Acquisitions Group",
+  "aliases": [
+   "Investment_FrontierAcquisitionsGroup"
+  ],
+  "summary": "A survey and logistics venture that unlocks Expedite Prospector when mature.",
+  "fields": {
+   "type": "Investment",
+   "collateral_cost": "9",
+   "maturity_turns": "8",
+   "grants_order": "Expedite Prospector",
+   "requires_government": [
+    "Oligarchy"
+   ],
+   "description": "A survey and logistics venture that unlocks Expedite Prospector when mature.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:galactic_library_pact",
+  "name": "Galactic Library Pact",
+  "aliases": [
+   "Accord_GalacticLibraryPact"
+  ],
+  "summary": "Member archives and universities pool discoveries, substantially increasing Federation research output. Applies to all Core Worlds, includin",
+  "fields": {
+   "type": "Accord",
+   "cost": "40 Consensus",
+   "effects": [
+    "+20% Research (Colony, core worlds only)"
+   ],
+   "requires_tech": [
+    "Subspace Scanning"
+   ],
+   "requires_government": [
+    "Federation"
+   ],
+   "description": "Member archives and universities pool discoveries, substantially increasing Federation research output. Applies to all Core Worlds, including your capital Unlocks the Librarian profession",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:galactic_mandate",
+  "name": "Galactic Mandate",
+  "aliases": [
+   "Decree_GalacticMandate"
+  ],
+  "summary": "All sectors rally behind the imperial banner. The Vassals bear the full weight of ambition. All output bonuses are applied empire-wide.",
+  "fields": {
+   "type": "Decree",
+   "authority_cost": "20",
+   "effects": [
+    "+15% Gross Income",
+    "+15% Manufacturing (Colony)",
+    "+15% Military (Shipyard)",
+    "+15% Research",
+    "-2 Loyalty (Unit, vassal governor only)"
+   ],
+   "requires_tech": [
+    "Political Capital",
+    "Xeno Diplomacy",
+    "Local Autonomy Charters"
+   ],
+   "requires_government": [
+    "Imperial"
+   ],
+   "description": "All sectors rally behind the imperial banner. The Vassals bear the full weight of ambition. All output bonuses are applied empire-wide.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:galactic_media_conglomerate",
+  "name": "Galactic Media Conglomerate",
+  "aliases": [
+   "Investment_GalacticMediaConglomerate"
+  ],
+  "summary": "A media conglomerate that unlocks Advertising Campaign when mature.",
+  "fields": {
+   "type": "Investment",
+   "collateral_cost": "10",
+   "maturity_turns": "12",
+   "grants_order": "Advertising Campaign",
+   "requires_government": [
+    "Oligarchy"
+   ],
+   "description": "A media conglomerate that unlocks Advertising Campaign when mature.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:galactic_migration_pact",
+  "name": "Galactic Migration Pact",
+  "aliases": [
+   "Accord_GalacticMigrationPact"
+  ],
+  "summary": "Migration offices coordinate resettlement and labor mobility across member systems. Bonus is only applied to Member Worlds",
+  "fields": {
+   "type": "Accord",
+   "cost": "60 Consensus",
+   "effects": [
+    "+15% Growth (Colony, member worlds only)"
+   ],
+   "requires_tech": [
+    "Extreme Colonization"
+   ],
+   "requires_government": [
+    "Federation"
+   ],
+   "description": "Migration offices coordinate resettlement and labor mobility across member systems. Bonus is only applied to Member Worlds",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:genetic_manipulation",
+  "name": "Genetic Manipulation",
+  "aliases": [
+   "Policy_GeneticManipulation"
+  ],
+  "summary": "Our capabilities are not determined by chance, but by intent. +2 Intelligence for all Citizens and Leaders",
+  "fields": {
+   "alignment": "Progressivism",
+   "effects": [
+    "+2 Intelligence (Unit)",
+    "+10% Growth (Colony)"
+   ],
+   "requires_tech": [
+    "Planetary Adaption",
+    "Xeno Biology",
+    "Self Adaptive Algorithms"
+   ],
+   "description": "Our capabilities are not determined by chance, but by intent. +2 Intelligence for all Citizens and Leaders",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:genius_grants",
+  "name": "Genius Grants",
+  "aliases": [
+   "Policy_GeniusGrants"
+  ],
+  "summary": "There is no more rewarding investment than in our brightest minds. Gives every core world an additional research point.",
+  "fields": {
+   "effects": [
+    "-10% Gross Income (Colony)",
+    "+1 Research (Colony)"
+   ],
+   "requires_tech": [
+    "Xeno Research",
+    "Discovery Protocols",
+    "Core Logic Matrix"
+   ],
+   "blocked_by_trait": [
+    "Unrelenting Ability"
+   ],
+   "description": "There is no more rewarding investment than in our brightest minds. Gives every core world an additional research point.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:grand_charter_of_sciences",
+  "name": "Grand Charter of Sciences",
+  "aliases": [
+   "Accord_GrandCharterOfSciences"
+  ],
+  "summary": "Member universities and research stations pool knowledge under a unified charter, substantially boosting research and manufacturing output. ",
+  "fields": {
+   "type": "Accord",
+   "cost": "150 Consensus",
+   "effects": [
+    "+30% Research (Colony, member worlds only)",
+    "+15% Manufacturing (Colony, member worlds only)"
+   ],
+   "requires_tech": [
+    "Precursor Studies"
+   ],
+   "requires_government": [
+    "Federation"
+   ],
+   "description": "Member universities and research stations pool knowledge under a unified charter, substantially boosting research and manufacturing output. Bonus is only applied to Member Worlds",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:grove_growth",
+  "name": "Grove Growth",
+  "aliases": [
+   "Policy_GroveGrowth"
+  ],
+  "summary": "Our spores can be used to increase the food production on our worlds.",
+  "fields": {
+   "effects": [
+    "+50% Food (Colony)"
+   ],
+   "requires_trait": [
+    "Spores Ability"
+   ],
+   "description": "Our spores can be used to increase the food production on our worlds.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:heart_of_the_empire",
+  "name": "Heart of the Empire",
+  "aliases": [
+   "Policy_HeartOfTheEmpire"
+  ],
+  "summary": "Our homeworld is the core of our civilization, and the pinnacle of who we are as a people. Influence and Income are only applied to the Home",
+  "fields": {
+   "effects": [
+    "+10% Influence Growth (Colony, capital world only)",
+    "+25% Gross Income (Colony, capital world only)"
+   ],
+   "blocked_by_trait": [
+    "Silicon Based Ability",
+    "Ammonia Based Ability",
+    "Ravenous Ability"
+   ],
+   "description": "Our homeworld is the core of our civilization, and the pinnacle of who we are as a people. Influence and Income are only applied to the Homeworld.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:helix_pharmaceutical_cartel",
+  "name": "Helix Pharmaceutical Cartel",
+  "aliases": [
+   "Investment_HelixPharmaceuticalCartel"
+  ],
+  "summary": "A pharmaceutical cartel that unlocks Health Subsidy when mature.",
+  "fields": {
+   "type": "Investment",
+   "collateral_cost": "11",
+   "maturity_turns": "13",
+   "grants_order": "Health Subsidy",
+   "requires_tech": [
+    "Planetary Adaption",
+    "Xeno Biology",
+    "Self Adaptive Algorithms"
+   ],
+   "requires_government": [
+    "Oligarchy"
+   ],
+   "description": "A pharmaceutical cartel that unlocks Health Subsidy when mature.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:heritage_protection",
+  "name": "Heritage Protection",
+  "aliases": [
+   "Policy_HeritageProtection"
+  ],
+  "summary": "We were first in this galaxy and should preserve our ways and our home eternal. We will use this to influence other civilizations. Influence",
+  "fields": {
+   "alignment": "Traditionalism",
+   "effects": [
+    "+100% Influence Growth (Colony, capital world only)"
+   ],
+   "requires_trait": [
+    "Ancient Ability"
+   ],
+   "description": "We were first in this galaxy and should preserve our ways and our home eternal. We will use this to influence other civilizations. Influence bonus is only applied to the Homeworld",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:hull_reinforcing",
+  "name": "Hull Reinforcing",
+  "aliases": [
+   "Policy_HullReinforcing"
+  ],
+  "summary": "With the dangers of space and our own familiarity with exotic materials we can ensure that our ships are more robust than others.",
+  "fields": {
+   "effects": [
+    "+20% Hit Points (Ship)"
+   ],
+   "requires_trait": [
+    "War Profiteers Ability"
+   ],
+   "description": "With the dangers of space and our own familiarity with exotic materials we can ensure that our ships are more robust than others.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:ideological_beacon",
+  "name": "Ideological Beacon",
+  "aliases": [
+   "Accord_IdeologicalBeacon"
+  ],
+  "summary": "Member worlds broadcast Federation ideals, generating additional culture for your civilization. +1 Culture Point per turn",
+  "fields": {
+   "type": "Accord",
+   "cost": "100 Consensus",
+   "effects": [
+    "+1 Culture Points Per Month"
+   ],
+   "requires_tech": [
+    "Individual Divinity"
+   ],
+   "requires_government": [
+    "Federation"
+   ],
+   "description": "Member worlds broadcast Federation ideals, generating additional culture for your civilization. +1 Culture Point per turn",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:imperial_census",
+  "name": "Imperial Census",
+  "aliases": [
+   "Decree_ImperialCensus"
+  ],
+  "summary": "A full accounting of the capital's people, housing, and labor. Growth is planned from the center outward. +0.2 Growth on the Homeworld.",
+  "fields": {
+   "type": "Decree",
+   "authority_cost": "6",
+   "effects": [
+    "+0.2 Growth (Colony, capital world only)"
+   ],
+   "requires_government": [
+    "Imperial"
+   ],
+   "description": "A full accounting of the capital's people, housing, and labor. Growth is planned from the center outward. +0.2 Growth on the Homeworld.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:imperial_forge_levy",
+  "name": "Imperial Forge Levy",
+  "aliases": [
+   "Decree_ImperialForgeLevy"
+  ],
+  "summary": "The throne commands its core colonies to expand imperial industry at the expense of local loyalty. -2 Loyalty to each non-sovereign governor",
+  "fields": {
+   "type": "Decree",
+   "authority_cost": "12",
+   "effects": [
+    "+0% Manufacturing (Colony, core worlds only)",
+    "+0 Manufacturing (Colony, capital world only)",
+    "-2 Loyalty (Unit, governor only not sovereign)"
+   ],
+   "requires_government": [
+    "Imperial"
+   ],
+   "description": "The throne commands its core colonies to expand imperial industry at the expense of local loyalty. -2 Loyalty to each non-sovereign governor and Vassal.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:imperial_foundries",
+  "name": "Imperial Foundries",
+  "aliases": [
+   "Decree_ImperialFoundries"
+  ],
+  "summary": "Vassal factories retooled to imperial specifications. The provinces choke on industrial waste. Siphons Manufacturing to the Homeworld and ad",
+  "fields": {
+   "type": "Decree",
+   "authority_cost": "16",
+   "effects": [
+    "-30% Manufacturing (Colony, vassal worlds only)",
+    "+0 Manufacturing (Colony, capital world only)",
+    "+5% Pollution (Colony, vassal worlds only)",
+    "-2 Loyalty (Unit, vassal governor only)"
+   ],
+   "requires_tech": [
+    "Orbital Manufacturing",
+    "Orbital Manufacturing",
+    "Assembly Automation"
+   ],
+   "requires_government": [
+    "Imperial"
+   ],
+   "description": "Vassal factories retooled to imperial specifications. The provinces choke on industrial waste. Siphons Manufacturing to the Homeworld and adds Pollution to Vassal worlds.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:imperial_grip",
+  "name": "Imperial Grip",
+  "aliases": [
+   "Decree_ImperialGrip"
+  ],
+  "summary": "The bureaucratic apparatus tightens. Governors report directly to the throne. Generates Control empire-wide.",
+  "fields": {
+   "type": "Decree",
+   "authority_cost": "10",
+   "effects": [
+    "+2 Control Per Month",
+    "-1 Loyalty (Unit, vassal governor only)"
+   ],
+   "requires_tech": [
+    "Leadership Recruiting",
+    "Cabinet Expansion",
+    "Holonic Governance"
+   ],
+   "requires_government": [
+    "Imperial"
+   ],
+   "description": "The bureaucratic apparatus tightens. Governors report directly to the throne. Generates Control empire-wide.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:imperial_guard",
+  "name": "Imperial Guard",
+  "aliases": [
+   "Decree_ImperialGuard"
+  ],
+  "summary": "Elite forces garrisoned at the capital, sworn to defend the throne at any cost. Resistance and ship bonuses are applied to the Homeworld onl",
+  "fields": {
+   "type": "Decree",
+   "authority_cost": "12",
+   "effects": [
+    "+25% Resistance (Colony, capital world only)",
+    "+20% Hit Points (Ship, capital world defenders only)",
+    "+0 Loyalty (Unit, vassal governor only)"
+   ],
+   "requires_tech": [
+    "Defensive Studies",
+    "Defensive Studies",
+    "Nanite Plating"
+   ],
+   "requires_government": [
+    "Imperial"
+   ],
+   "description": "Elite forces garrisoned at the capital, sworn to defend the throne at any cost. Resistance and ship bonuses are applied to the Homeworld only.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:imperial_tithe",
+  "name": "Imperial Tithe",
+  "aliases": [
+   "Decree_ImperialTithe"
+  ],
+  "summary": "The throne raises a tithe across its core colonies, enriching the capital while straining local loyalty. -1 Loyalty to each non-sovereign go",
+  "fields": {
+   "type": "Decree",
+   "authority_cost": "10",
+   "effects": [
+    "+0% Gross Income (Colony, core worlds only)",
+    "+0 Gross Income (Colony, capital world only)",
+    "-1 Loyalty (Unit, governor only not sovereign)"
+   ],
+   "requires_government": [
+    "Imperial"
+   ],
+   "description": "The throne raises a tithe across its core colonies, enriching the capital while straining local loyalty. -1 Loyalty to each non-sovereign governor and Vassal.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:industrial_automation_fund",
+  "name": "Industrial Automation Fund",
+  "aliases": [
+   "Investment_IndustrialAutomationFund"
+  ],
+  "summary": "Robotic production lines for the industrial heartland. Keeps core worlds humming from acquisition while held; matured stakes can be sold.",
+  "fields": {
+   "type": "Investment",
+   "collateral_cost": "12",
+   "maturity_turns": "14",
+   "effects": [
+    "+10% Manufacturing (Colony, core worlds only)"
+   ],
+   "requires_tech": [
+    "Xeno Manufacturing",
+    "Xeno Manufacturing",
+    "Assembly Automation"
+   ],
+   "requires_government": [
+    "Oligarchy"
+   ],
+   "description": "Robotic production lines for the industrial heartland. Keeps core worlds humming from acquisition while held; matured stakes can be sold.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:infrastructure_support",
+  "name": "Infrastructure Support",
+  "aliases": [
+   "Policy_InfrastructureSupport",
+   "Policy_Terran_InfrastructureSupport"
+  ],
+  "summary": "Support non-capital worlds with infrastructure funding to increase production.",
+  "fields": {
+   "effects": [
+    "+5% Manufacturing (Colony, non capital worlds only)"
+   ],
+   "requires_tech": [
+    "Warp Theory"
+   ],
+   "description": "Support non-capital worlds with infrastructure funding to increase production.",
+   "source": "PolicyDefs_Terrans.xml"
+  }
+ },
+ {
+  "id": "policy:interstellar_real_estate_trust",
+  "name": "Interstellar Real Estate Trust",
+  "aliases": [
+   "Investment_InterstellarRealEstateTrust"
+  ],
+  "summary": "An appreciating portfolio of orbital property. Builds the collateral pool from acquisition while held; matured stakes can be sold.",
+  "fields": {
+   "type": "Investment",
+   "collateral_cost": "12",
+   "maturity_turns": "16",
+   "effects": [
+    "+5 Collateral"
+   ],
+   "requires_tech": [
+    "Interstellar Investments"
+   ],
+   "requires_government": [
+    "Oligarchy"
+   ],
+   "description": "An appreciating portfolio of orbital property. Builds the collateral pool from acquisition while held; matured stakes can be sold.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:ip_theft",
+  "name": "IP Theft",
+  "aliases": [
+   "Policy_IPTheft"
+  ],
+  "summary": "Our resourceful nature can be used to aggressively steal the bits of research from other civilizations.",
+  "fields": {
+   "effects": [
+    "+20% Research (Colony)",
+    "-1 Diplomacy Bonus (Unit)"
+   ],
+   "requires_trait": [
+    "Resourceful Ability"
+   ],
+   "description": "Our resourceful nature can be used to aggressively steal the bits of research from other civilizations.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:knowledge_tribute",
+  "name": "Knowledge Tribute",
+  "aliases": [
+   "Decree_KnowledgeTribute"
+  ],
+  "summary": "Imperial scholars across the core colonies must place their discoveries at the throne's service. -1 Loyalty to each non-sovereign governor a",
+  "fields": {
+   "type": "Decree",
+   "authority_cost": "10",
+   "effects": [
+    "+0% Research (Colony, core worlds only)",
+    "+0 Research (Colony, capital world only)",
+    "-1 Loyalty (Unit, governor only not sovereign)"
+   ],
+   "requires_government": [
+    "Imperial"
+   ],
+   "description": "Imperial scholars across the core colonies must place their discoveries at the throne's service. -1 Loyalty to each non-sovereign governor and Vassal.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:laissez_faire",
+  "name": "Laissez-faire",
+  "aliases": [
+   "Policy_Laissez faire"
+  ],
+  "summary": "Our wealthy civilization will do better if we eliminate remaining social programs and regulation.",
+  "fields": {
+   "effects": [
+    "+100% Gross Income (Colony)",
+    "+20% Pollution (Colony)",
+    "+10% Crime (Colony)"
+   ],
+   "requires_trait": [
+    "Wealthy Ability"
+   ],
+   "description": "Our wealthy civilization will do better if we eliminate remaining social programs and regulation.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:land_exploitation",
+  "name": "Land Exploitation",
+  "aliases": [
+   "Policy_EnvironmentalExploitation"
+  ],
+  "summary": "We are in a period of rapid interstellar expansion. The expense requires we take unusual measures to increase our wealth. This policy will o",
+  "fields": {
+   "effects": [
+    "+5 Gross Income (Colony)",
+    "+30% Pollution (Colony)"
+   ],
+   "description": "We are in a period of rapid interstellar expansion. The expense requires we take unusual measures to increase our wealth. This policy will open up public lands to extreme mining techniques to generate additional wealth.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:logic_over_emotion",
+  "name": "Logic Over Emotion",
+  "aliases": [
+   "Policy_LogicOverEmotion"
+  ],
+  "summary": "A purely rational standpoint enhances scientific progress.",
+  "fields": {
+   "effects": [
+    "+10% Research (Colony)",
+    "-0.5 Diplomacy Bonus (Unit)"
+   ],
+   "requires_tech": [
+    "Fundamental Autonomy"
+   ],
+   "requires_trait": [
+    "Synthetic Life"
+   ],
+   "description": "A purely rational standpoint enhances scientific progress.",
+   "source": "PolicyDefs_Synth.xml"
+  }
+ },
+ {
+  "id": "policy:look_the_other_way",
+  "name": "Look the Other Way",
+  "aliases": [
+   "Policy_LookTheOtherWay"
+  ],
+  "summary": "What happens in the dark corners of our empire is none of our business. Crime is spread through Trade Routes",
+  "fields": {
+   "effects": [
+    "+10% Crime (Colony)",
+    "+10% Crime (Colony)"
+   ],
+   "requires_trait": [
+    "Crimelord Ability"
+   ],
+   "description": "What happens in the dark corners of our empire is none of our business. Crime is spread through Trade Routes",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:mandatory_service",
+  "name": "Mandatory Service",
+  "aliases": [
+   "Policy_MandatoryService"
+  ],
+  "summary": "Defense of our worlds must be the first priority of our government, or no other priority matters. With this measure each of our planets rece",
+  "fields": {
+   "effects": [
+    "+3 Guardian Fighters Cap (Colony)"
+   ],
+   "requires_tech": [
+    "Killbots",
+    "Space Doctrine",
+    "Weapon Platforms"
+   ],
+   "description": "Defense of our worlds must be the first priority of our government, or no other priority matters. With this measure each of our planets receive 3 free guardian fighters",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:manufacturing_optimization_i",
+  "name": "Manufacturing Optimization I",
+  "aliases": [
+   "OptPolicy_Manufacturing_T1"
+  ],
+  "summary": "Matrix tier: +1% Manufacturing per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "description": "Matrix tier: +1% Manufacturing per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:manufacturing_optimization_ii",
+  "name": "Manufacturing Optimization II",
+  "aliases": [
+   "OptPolicy_Manufacturing_T2"
+  ],
+  "summary": "Matrix tier: +2% Manufacturing per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "requires_policy": [
+    "Manufacturing Optimization I"
+   ],
+   "description": "Matrix tier: +2% Manufacturing per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:manufacturing_optimization_iii",
+  "name": "Manufacturing Optimization III",
+  "aliases": [
+   "OptPolicy_Manufacturing_T3"
+  ],
+  "summary": "Matrix tier: +4% Manufacturing per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "requires_policy": [
+    "Manufacturing Optimization II"
+   ],
+   "description": "Matrix tier: +4% Manufacturing per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:manufacturing_optimization_iv",
+  "name": "Manufacturing Optimization IV",
+  "aliases": [
+   "OptPolicy_Manufacturing_T4"
+  ],
+  "summary": "Matrix tier: +8% Manufacturing per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "requires_policy": [
+    "Manufacturing Optimization III"
+   ],
+   "description": "Matrix tier: +8% Manufacturing per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:manufacturing_optimization_v",
+  "name": "Manufacturing Optimization V",
+  "aliases": [
+   "OptPolicy_Manufacturing_T5"
+  ],
+  "summary": "Matrix tier: +16% Manufacturing per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "requires_policy": [
+    "Manufacturing Optimization IV"
+   ],
+   "description": "Matrix tier: +16% Manufacturing per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:manufacturing_optimization_vi",
+  "name": "Manufacturing Optimization VI",
+  "aliases": [
+   "OptPolicy_Manufacturing_T6"
+  ],
+  "summary": "Matrix tier: +32% Manufacturing per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "requires_policy": [
+    "Manufacturing Optimization V"
+   ],
+   "description": "Matrix tier: +32% Manufacturing per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:meridian_security_group",
+  "name": "Meridian Security Group",
+  "aliases": [
+   "Investment_MeridianSecurityGroup"
+  ],
+  "summary": "A private-security conglomerate that unlocks Corporate Compliance when mature.",
+  "fields": {
+   "type": "Investment",
+   "collateral_cost": "12",
+   "maturity_turns": "14",
+   "grants_order": "Corporate Compliance",
+   "requires_tech": [
+    "Colonial Law And Policy",
+    "Executive Prerogative",
+    "Cognitive Charters"
+   ],
+   "requires_government": [
+    "Oligarchy"
+   ],
+   "description": "A private-security conglomerate that unlocks Corporate Compliance when mature.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:military_optimization_i",
+  "name": "Military Optimization I",
+  "aliases": [
+   "OptPolicy_Military_T1"
+  ],
+  "summary": "Matrix tier: +1% Military strength per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "description": "Matrix tier: +1% Military strength per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:military_optimization_ii",
+  "name": "Military Optimization II",
+  "aliases": [
+   "OptPolicy_Military_T2"
+  ],
+  "summary": "Matrix tier: +2% Military strength per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "requires_policy": [
+    "Military Optimization I"
+   ],
+   "description": "Matrix tier: +2% Military strength per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:military_optimization_iii",
+  "name": "Military Optimization III",
+  "aliases": [
+   "OptPolicy_Military_T3"
+  ],
+  "summary": "Matrix tier: +4% Military strength per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "requires_policy": [
+    "Military Optimization II"
+   ],
+   "description": "Matrix tier: +4% Military strength per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:military_optimization_iv",
+  "name": "Military Optimization IV",
+  "aliases": [
+   "OptPolicy_Military_T4"
+  ],
+  "summary": "Matrix tier: +8% Military strength per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "requires_policy": [
+    "Military Optimization III"
+   ],
+   "description": "Matrix tier: +8% Military strength per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:military_optimization_v",
+  "name": "Military Optimization V",
+  "aliases": [
+   "OptPolicy_Military_T5"
+  ],
+  "summary": "Matrix tier: +16% Military strength per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "requires_policy": [
+    "Military Optimization IV"
+   ],
+   "description": "Matrix tier: +16% Military strength per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:military_optimization_vi",
+  "name": "Military Optimization VI",
+  "aliases": [
+   "OptPolicy_Military_T6"
+  ],
+  "summary": "Matrix tier: +32% Military strength per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "requires_policy": [
+    "Military Optimization V"
+   ],
+   "description": "Matrix tier: +32% Military strength per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:modular_expansion",
+  "name": "Modular Expansion",
+  "aliases": [
+   "Policy_ModularExpansion"
+  ],
+  "summary": "Standardized colony modules simplify development and logistics.",
+  "fields": {
+   "effects": [
+    "+2 Logistics"
+   ],
+   "requires_tech": [
+    "Autonomous Colony Modules"
+   ],
+   "requires_trait": [
+    "Synthetic Life"
+   ],
+   "description": "Standardized colony modules simplify development and logistics.",
+   "source": "PolicyDefs_Synth.xml"
+  }
+ },
+ {
+  "id": "policy:multitiered_integration",
+  "name": "Multitiered Integration",
+  "aliases": [
+   "Policy_MultitieredIntegration"
+  ],
+  "summary": "A hierarchy of integrated layers adds necessary structure and strengthens Approval and Influence.",
+  "fields": {
+   "effects": [
+    "+5% Approval (Unit)",
+    "+5% Influence Growth (Colony)"
+   ],
+   "requires_tech": [
+    "Cascading Sovereignty"
+   ],
+   "requires_trait": [
+    "Synthetic Life"
+   ],
+   "description": "A hierarchy of integrated layers adds necessary structure and strengthens Approval and Influence.",
+   "source": "PolicyDefs_Synth.xml"
+  }
+ },
+ {
+  "id": "policy:mutual_defense_compact",
+  "name": "Mutual Defense Compact",
+  "aliases": [
+   "Accord_MutualDefenseCompact"
+  ],
+  "summary": "Joint command planning expands fleet coordination and improves operational reach.",
+  "fields": {
+   "type": "Accord",
+   "cost": "60 Consensus",
+   "effects": [
+    "+3 Logistics",
+    "+10% Ship Range (Ship)"
+   ],
+   "requires_tech": [
+    "Serrated Munitions"
+   ],
+   "requires_government": [
+    "Federation"
+   ],
+   "description": "Joint command planning expands fleet coordination and improves operational reach.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:neural_trade_grid",
+  "name": "Neural Trade Grid",
+  "aliases": [
+   "Policy_NeuralTradeGrid"
+  ],
+  "summary": "Instant data-commerce fosters both financial returns and discoveries.",
+  "fields": {
+   "effects": [
+    "+10% Gross Income",
+    "+5% Research"
+   ],
+   "requires_tech": [
+    "Neural Exchange Nodes"
+   ],
+   "requires_trait": [
+    "Synthetic Life"
+   ],
+   "description": "Instant data-commerce fosters both financial returns and discoveries.",
+   "source": "PolicyDefs_Synth.xml"
+  }
+ },
+ {
+  "id": "policy:officer_corps",
+  "name": "Officer Corps",
+  "aliases": [
+   "Policy_Terran_OfficerCorps"
+  ],
+  "summary": "Establish professional officer training programs to increase unit experience gains.",
+  "fields": {
+   "effects": [
+    "+50% Experience Bonus"
+   ],
+   "requires_tech": [
+    "Policy Reforms"
+   ],
+   "description": "Establish professional officer training programs to increase unit experience gains.",
+   "source": "PolicyDefs_Terrans.xml"
+  }
+ },
+ {
+  "id": "policy:officer_exchange_program",
+  "name": "Officer Exchange Program",
+  "aliases": [
+   "Accord_OfficerExchangeProgram"
+  ],
+  "summary": "Member militaries rotate officers through shared command schools, building experience faster and strengthening loyalty across the Federation",
+  "fields": {
+   "type": "Accord",
+   "cost": "40 Consensus",
+   "effects": [
+    "+50% Experience Bonus",
+    "+1 Loyalty (Unit)"
+   ],
+   "requires_tech": [
+    "Battle Cruiser Doctrine"
+   ],
+   "requires_government": [
+    "Federation"
+   ],
+   "description": "Member militaries rotate officers through shared command schools, building experience faster and strengthening loyalty across the Federation.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:orbital_luxury_resort",
+  "name": "Orbital Luxury Resort",
+  "aliases": [
+   "Investment_OrbitalLuxuryResort"
+  ],
+  "summary": "A hospitality conglomerate that unlocks Grand Opening when mature.",
+  "fields": {
+   "type": "Investment",
+   "collateral_cost": "11",
+   "maturity_turns": "12",
+   "grants_order": "Grand Opening",
+   "requires_tech": [
+    "Xeno Entertainment",
+    "Xeno Entertainment",
+    "Networked Legislation"
+   ],
+   "requires_government": [
+    "Oligarchy"
+   ],
+   "description": "A hospitality conglomerate that unlocks Grand Opening when mature.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:pan_galactic_banking_syndicate",
+  "name": "Pan-Galactic Banking Syndicate",
+  "aliases": [
+   "Investment_PanGalacticBankingSyndicate"
+  ],
+  "summary": "A financial syndicate that unlocks Leveraged Buyout when mature.",
+  "fields": {
+   "type": "Investment",
+   "collateral_cost": "18",
+   "maturity_turns": "20",
+   "grants_order": "Leveraged Buyout",
+   "requires_tech": [
+    "Preferred Lending",
+    "Interstellar Trade",
+    "Zero-Latency Accounting"
+   ],
+   "requires_government": [
+    "Oligarchy"
+   ],
+   "description": "A financial syndicate that unlocks Leveraged Buyout when mature.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:pax_imperialis",
+  "name": "Pax Imperialis",
+  "aliases": [
+   "Decree_PaxImperialis"
+  ],
+  "summary": "Order radiates from the imperial capital. The homeworld enjoys the full protection of imperial law. Approval and Crime bonuses are applied t",
+  "fields": {
+   "type": "Decree",
+   "authority_cost": "12",
+   "effects": [
+    "+10% Approval (Unit, capital world only)",
+    "-20% Crime (Colony, capital world only)",
+    "+0 Loyalty (Unit, vassal governor only)"
+   ],
+   "requires_tech": [
+    "Hyperwave Radio",
+    "Policy Reforms",
+    "Cognitive Charters"
+   ],
+   "requires_government": [
+    "Imperial"
+   ],
+   "description": "Order radiates from the imperial capital. The homeworld enjoys the full protection of imperial law. Approval and Crime bonuses are applied to the Homeworld only.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:planetary_stimulus",
+  "name": "Planetary Stimulus",
+  "aliases": [
+   "Policy_PlanetaryStimulus",
+   "Policy_Terran_PlanetaryStimulus"
+  ],
+  "summary": "Stimulate planetary manufacturing with subsidies to significantly increase production output.",
+  "fields": {
+   "effects": [
+    "+20% Manufacturing (Colony)"
+   ],
+   "requires_tech": [
+    "World Shaping"
+   ],
+   "description": "Stimulate planetary manufacturing with subsidies to significantly increase production output.",
+   "source": "PolicyDefs_Terrans.xml"
+  }
+ },
+ {
+  "id": "policy:police_state",
+  "name": "Police State",
+  "aliases": [
+   "Policy_PoliceState"
+  ],
+  "summary": "If our citizens want the government to be accountable for their condition, they must give the government the tools to control that condition",
+  "fields": {
+   "alignment": "Totalitarianism",
+   "effects": [
+    "-3% Approval (Unit)",
+    "+1 Control Per Month",
+    "-3% Crime (Colony)"
+   ],
+   "requires_tech": [
+    "Colonial Law And Policy",
+    "Executive Prerogative",
+    "Cognitive Charters"
+   ],
+   "description": "If our citizens want the government to be accountable for their condition, they must give the government the tools to control that condition.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:population_boom",
+  "name": "Population Boom",
+  "aliases": [
+   "Policy_PopulationBoom"
+  ],
+  "summary": "Our ' fertile ' nature can be leveraged to increase our population quickly. We are going to need all the people we can get to populate the u",
+  "fields": {
+   "effects": [
+    "+10% Approval (Unit)",
+    "-25% Gross Income (Colony)",
+    "+200% Growth (Colony)"
+   ],
+   "requires_trait": [
+    "Fertile Ability"
+   ],
+   "description": "Our ' fertile ' nature can be leveraged to increase our population quickly. We are going to need all the people we can get to populate the universe.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:population_levy",
+  "name": "Population Levy",
+  "aliases": [
+   "Decree_PopulationLevy"
+  ],
+  "summary": "The throne requisitions the future growth of its core colonies, angering the leaders who must enforce the levy. -2 Loyalty to each non-sover",
+  "fields": {
+   "type": "Decree",
+   "authority_cost": "10",
+   "effects": [
+    "+0% Growth (Colony, core worlds only)",
+    "+0 Growth (Colony, capital world only)",
+    "-2 Loyalty (Unit, governor only not sovereign)"
+   ],
+   "requires_tech": [
+    "Colonial Policies",
+    "Planetary Assimilation"
+   ],
+   "requires_government": [
+    "Imperial"
+   ],
+   "description": "The throne requisitions the future growth of its core colonies, angering the leaders who must enforce the levy. -2 Loyalty to each non-sovereign governor and Vassal.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:professionalism",
+  "name": "Professionalism",
+  "aliases": [
+   "Policy_Professionalism"
+  ],
+  "summary": "We are a loyal people. This has allowed for our officers to form bonds that build trust without fear of cynical ambition. We can leverage th",
+  "fields": {
+   "effects": [
+    "+50% Experience Bonus"
+   ],
+   "requires_trait": [
+    "Loyal Ability"
+   ],
+   "description": "We are a loyal people. This has allowed for our officers to form bonds that build trust without fear of cynical ambition. We can leverage this to improve the performance of our officer corps.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:protect_the_planet",
+  "name": "Protect the Planet",
+  "aliases": [
+   "Policy_ProtectThePlanet"
+  ],
+  "summary": "The planet came before us, and will exist after. How long we remain upon it will depend on if we are a good caretaker.",
+  "fields": {
+   "effects": [
+    "-20% Pollution (Colony)",
+    "-5% Manufacturing (Colony)"
+   ],
+   "requires_tech": [
+    "Planetary Adaption",
+    "Xeno Biology",
+    "Cyber Ecology"
+   ],
+   "blocked_by_trait": [
+    "Wealthy Ability"
+   ],
+   "description": "The planet came before us, and will exist after. How long we remain upon it will depend on if we are a good caretaker.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:prototype_defenses",
+  "name": "Prototype Defenses",
+  "aliases": [
+   "Policy_PrototypeDefenses"
+  ],
+  "summary": "Nothing is more important than the lives of those brave enough to lead our charge into space. We should do everything in our power to protec",
+  "fields": {
+   "effects": [
+    "+2 Armor Rating (Ship)",
+    "+2 Shield Strength (Ship)",
+    "+2 Evasion (Ship)"
+   ],
+   "requires_tech": [
+    "Defensive Studies",
+    "Defensive Studies",
+    "Nanite Plating"
+   ],
+   "description": "Nothing is more important than the lives of those brave enough to lead our charge into space. We should do everything in our power to protect them.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:quantum_production",
+  "name": "Quantum Production",
+  "aliases": [
+   "Policy_QuantumProduction"
+  ],
+  "summary": "Exploiting quantum states leads to substantial manufacturing output.",
+  "fields": {
+   "effects": [
+    "+20% Manufacturing (Colony)"
+   ],
+   "requires_tech": [
+    "Quantum Resource Management"
+   ],
+   "requires_trait": [
+    "Synthetic Life"
+   ],
+   "description": "Exploiting quantum states leads to substantial manufacturing output.",
+   "source": "PolicyDefs_Synth.xml"
+  }
+ },
+ {
+  "id": "policy:real_time_audits",
+  "name": "Real-Time Audits",
+  "aliases": [
+   "Policy_RealTimeAudits"
+  ],
+  "summary": "Instantaneous monitoring amplifies wealth via perfect accountability.",
+  "fields": {
+   "effects": [
+    "+10% Gross Income",
+    "-5% Approval (Unit)"
+   ],
+   "requires_tech": [
+    "Zero-Latency Accounting"
+   ],
+   "requires_trait": [
+    "Synthetic Life"
+   ],
+   "description": "Instantaneous monitoring amplifies wealth via perfect accountability.",
+   "source": "PolicyDefs_Synth.xml"
+  }
+ },
+ {
+  "id": "policy:reduced_regulations",
+  "name": "Reduced Regulations",
+  "aliases": [
+   "Policy_ReducedRegulations",
+   "Policy_Terran_ReducedRegulations"
+  ],
+  "summary": "Cut red tape to boost wealth on non-capital worlds, but increases pollution on capital worlds.",
+  "fields": {
+   "effects": [
+    "+1 Wealth (Colony, non capital worlds only)",
+    "+10% Pollution (Colony, core worlds only)"
+   ],
+   "requires_tech": [
+    "Executive Prerogative"
+   ],
+   "description": "Cut red tape to boost wealth on non-capital worlds, but increases pollution on capital worlds.",
+   "source": "PolicyDefs_Terrans.xml"
+  }
+ },
+ {
+  "id": "policy:refugee_sanctuary_treaty",
+  "name": "Refugee Sanctuary Treaty",
+  "aliases": [
+   "Accord_RefugeeSanctuaryTreaty"
+  ],
+  "summary": "Sanctuary institutions help core systems absorb displaced populations and sustain growth. Applies to all Core Worlds, including your capital",
+  "fields": {
+   "type": "Accord",
+   "cost": "40 Consensus",
+   "effects": [
+    "+10% Growth (Colony, core worlds only)"
+   ],
+   "requires_tech": [
+    "Planetary Outposts"
+   ],
+   "requires_government": [
+    "Federation"
+   ],
+   "description": "Sanctuary institutions help core systems absorb displaced populations and sustain growth. Applies to all Core Worlds, including your capital",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:remote_piloting",
+  "name": "Remote Piloting",
+  "aliases": [
+   "Policy_Telenavigation"
+  ],
+  "summary": "We are a manufactured species that can create ships with sentient but synthetic pilots that can withstand forces that would crush the soft, ",
+  "fields": {
+   "effects": [
+    "+1 Moves (Ship)"
+   ],
+   "requires_trait": [
+    "Synthetic Life"
+   ],
+   "description": "We are a manufactured species that can create ships with sentient but synthetic pilots that can withstand forces that would crush the soft, squishy fleshlings. This policy will allow our ships to travel faster.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:reproductive_imperative",
+  "name": "Reproductive Imperative",
+  "aliases": [
+   "Policy_ReproductiveImperative"
+  ],
+  "summary": "Our species has never had a problem replacing its numbers. However, recent events have made it clear that we need to greatly increase our gr",
+  "fields": {
+   "upkeep": "2",
+   "effects": [
+    "+100% Growth (Colony)"
+   ],
+   "requires_trait": [
+    "Unrelenting Ability"
+   ],
+   "blocked_by_trait": [
+    "Wealthy Ability"
+   ],
+   "description": "Our species has never had a problem replacing its numbers. However, recent events have made it clear that we need to greatly increase our growth.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:research_collaboration",
+  "name": "Research Collaboration",
+  "aliases": [
+   "Policy_Terran_ResearchCollaboration"
+  ],
+  "summary": "Establish joint research programs with allied civilizations, significantly boosting research output and strengthening diplomatic ties with r",
+  "fields": {
+   "effects": [
+    "+8% Research (Colony)",
+    "+1 Diplomacy Bonus"
+   ],
+   "requires_tech": [
+    "Alliances"
+   ],
+   "description": "Establish joint research programs with allied civilizations, significantly boosting research output and strengthening diplomatic ties with research partners.",
+   "source": "PolicyDefs_Terrans.xml"
+  }
+ },
+ {
+  "id": "policy:research_grants",
+  "name": "Research Grants",
+  "aliases": [
+   "Policy_ResearchGrants",
+   "Policy_Terran_ResearchGrants"
+  ],
+  "summary": "Fund scientific initiatives to significantly increase research output.",
+  "fields": {
+   "effects": [
+    "+20% Research (Colony)"
+   ],
+   "requires_tech": [
+    "Cultural Influence"
+   ],
+   "description": "Fund scientific initiatives to significantly increase research output.",
+   "source": "PolicyDefs_Terrans.xml"
+  }
+ },
+ {
+  "id": "policy:research_optimization_i",
+  "name": "Research Optimization I",
+  "aliases": [
+   "OptPolicy_Research_T1"
+  ],
+  "summary": "Matrix tier: +1% Research per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "description": "Matrix tier: +1% Research per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:research_optimization_ii",
+  "name": "Research Optimization II",
+  "aliases": [
+   "OptPolicy_Research_T2"
+  ],
+  "summary": "Matrix tier: +2% Research per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "requires_policy": [
+    "Research Optimization I"
+   ],
+   "description": "Matrix tier: +2% Research per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:research_optimization_iii",
+  "name": "Research Optimization III",
+  "aliases": [
+   "OptPolicy_Research_T3"
+  ],
+  "summary": "Matrix tier: +4% Research per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "requires_policy": [
+    "Research Optimization II"
+   ],
+   "description": "Matrix tier: +4% Research per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:research_optimization_iv",
+  "name": "Research Optimization IV",
+  "aliases": [
+   "OptPolicy_Research_T4"
+  ],
+  "summary": "Matrix tier: +8% Research per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "requires_policy": [
+    "Research Optimization III"
+   ],
+   "description": "Matrix tier: +8% Research per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:research_optimization_v",
+  "name": "Research Optimization V",
+  "aliases": [
+   "OptPolicy_Research_T5"
+  ],
+  "summary": "Matrix tier: +16% Research per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "requires_policy": [
+    "Research Optimization IV"
+   ],
+   "description": "Matrix tier: +16% Research per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:research_optimization_vi",
+  "name": "Research Optimization VI",
+  "aliases": [
+   "OptPolicy_Research_T6"
+  ],
+  "summary": "Matrix tier: +32% Research per Optimizer.",
+  "fields": {
+   "requires_government": [
+    "Technocracy"
+   ],
+   "requires_policy": [
+    "Research Optimization V"
+   ],
+   "description": "Matrix tier: +32% Research per Optimizer.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:resource_export_program",
+  "name": "Resource Export Program",
+  "aliases": [
+   "Policy_Terran_ResourceExportProgram"
+  ],
+  "summary": "Export planetary minerals to generate wealth, trading mineral production for economic gain.",
+  "fields": {
+   "effects": [
+    "+3 Wealth (Planet)",
+    "-1 Minerals (Planet)"
+   ],
+   "requires_tech": [
+    "Executive Prerogative"
+   ],
+   "description": "Export planetary minerals to generate wealth, trading mineral production for economic gain.",
+   "source": "PolicyDefs_Terrans.xml"
+  }
+ },
+ {
+  "id": "policy:royal_charter",
+  "name": "Royal Charter",
+  "aliases": [
+   "Decree_RoyalCharter"
+  ],
+  "summary": "The throne sponsors culture and soft power from the capital, projecting imperial presence into nearby systems. +15% Influence Growth on the ",
+  "fields": {
+   "type": "Decree",
+   "authority_cost": "8",
+   "effects": [
+    "+15% Influence Growth (Colony, capital world only)"
+   ],
+   "requires_tech": [
+    "Cultural Influence",
+    "Xeno Broadcasting",
+    "Synthetic Constitutionalism"
+   ],
+   "requires_government": [
+    "Imperial"
+   ],
+   "description": "The throne sponsors culture and soft power from the capital, projecting imperial presence into nearby systems. +15% Influence Growth on the Homeworld.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:secret_police",
+  "name": "Secret Police",
+  "aliases": [
+   "Policy_SecretPolice"
+  ],
+  "summary": "With our empire now stretching across the stars, there's many dark corners we can disappear troublemakers to...",
+  "fields": {
+   "effects": [
+    "-3% Crime (Colony)"
+   ],
+   "description": "With our empire now stretching across the stars, there's many dark corners we can disappear troublemakers to...",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:security_lights",
+  "name": "Security Lights",
+  "aliases": [
+   "Policy_SecurityLights"
+  ],
+  "summary": "There are simple steps that can be taken to keep our citizens safe. The first of these is adequate lighting in all areas of our cities.",
+  "fields": {
+   "effects": [
+    "-3% Crime (Colony)"
+   ],
+   "requires_tech": [
+    "Colonial Bureaucracy",
+    "Policy Reforms",
+    "Autonomous Colony Modules"
+   ],
+   "blocked_by_trait": [
+    "Crimelord Ability"
+   ],
+   "description": "There are simple steps that can be taken to keep our citizens safe. The first of these is adequate lighting in all areas of our cities.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:self_optimizing_infrastructure",
+  "name": "Self-Optimizing Infrastructure",
+  "aliases": [
+   "Policy_SelfOptimizingInfrastructure"
+  ],
+  "summary": "Adaptive systems steadily raise planetary manufacturing capacities.",
+  "fields": {
+   "effects": [
+    "+20% Manufacturing (Colony)",
+    "+10% Maintenance"
+   ],
+   "requires_tech": [
+    "Adaptive Supply Chains"
+   ],
+   "requires_trait": [
+    "Synthetic Life"
+   ],
+   "description": "Adaptive systems steadily raise planetary manufacturing capacities.",
+   "source": "PolicyDefs_Synth.xml"
+  }
+ },
+ {
+  "id": "policy:sentient_rights_accord",
+  "name": "Sentient Rights Accord",
+  "aliases": [
+   "Accord_SentientRightsAccord"
+  ],
+  "summary": "A Federation rights charter improves trust in public institutions and protects local autonomy. Applies to all Core Worlds, including your ca",
+  "fields": {
+   "type": "Accord",
+   "cost": "40 Consensus",
+   "effects": [
+    "+10% Approval (Unit, core worlds only)"
+   ],
+   "requires_tech": [
+    "Universal Translator"
+   ],
+   "requires_government": [
+    "Federation"
+   ],
+   "description": "A Federation rights charter improves trust in public institutions and protects local autonomy. Applies to all Core Worlds, including your capital",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:shipyard_stimulus",
+  "name": "Shipyard Stimulus",
+  "aliases": [
+   "Policy_MilitaryStimulus"
+  ],
+  "summary": "We must subsidize our Shipyards with more manufacturing help.",
+  "fields": {
+   "effects": [
+    "-5% Gross Income (Colony)",
+    "+20% Military (Shipyard)"
+   ],
+   "requires_tech": [
+    "Armed Shuttles",
+    "Space Exploration",
+    "Weapon Platforms"
+   ],
+   "description": "We must subsidize our Shipyards with more manufacturing help.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:shoddy_construction",
+  "name": "Shoddy Construction",
+  "aliases": [
+   "Policy_ShoddyConstruction"
+  ],
+  "summary": "We are a ' prolific ' civilization and are willing to do what needs to be done to get structures built as quickly as possible. Reduces impro",
+  "fields": {
+   "effects": [
+    "-50% Construction Cost",
+    "+300% Maintenance"
+   ],
+   "requires_trait": [
+    "Proliferation Ability"
+   ],
+   "blocked_by_trait": [
+    "Synthetic Life"
+   ],
+   "description": "We are a ' prolific ' civilization and are willing to do what needs to be done to get structures built as quickly as possible. Reduces improvement construction cost but increases upkeep.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:singular_purpose",
+  "name": "Singular Purpose",
+  "aliases": [
+   "Policy_SingularPurpose"
+  ],
+  "summary": "Our nature is ' unrelenting ' due to our ability to work together with singular purpose. With a little effort, we can increase our control o",
+  "fields": {
+   "effects": [
+    "+1 Control Per Month"
+   ],
+   "requires_trait": [
+    "Unrelenting Ability"
+   ],
+   "description": "Our nature is ' unrelenting ' due to our ability to work together with singular purpose. With a little effort, we can increase our control over our worlds.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:slave_labor",
+  "name": "Slave Labor",
+  "aliases": [
+   "Policy_SlaveLabor"
+  ],
+  "summary": "Why pay ten to do a job when you can pay one to beat the other nine until it's done?",
+  "fields": {
+   "alignment": "Nihilism",
+   "effects": [
+    "-90% Maintenance",
+    "-1 Diplomacy Bonus (Unit)"
+   ],
+   "requires_trait": [
+    "Slavers Ability"
+   ],
+   "description": "Why pay ten to do a job when you can pay one to beat the other nine until it's done?",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:sovereign_bond_desk",
+  "name": "Sovereign Bond Desk",
+  "aliases": [
+   "Investment_SovereignBondDesk"
+  ],
+  "summary": "A bond trading desk dealing in colonial debt. Keeps colonial balance sheets lucrative from acquisition while held; matured stakes can be sol",
+  "fields": {
+   "type": "Investment",
+   "collateral_cost": "11",
+   "maturity_turns": "12",
+   "effects": [
+    "+10% Gross Income (Colony)"
+   ],
+   "requires_tech": [
+    "Interstellar Markets"
+   ],
+   "requires_government": [
+    "Oligarchy"
+   ],
+   "description": "A bond trading desk dealing in colonial debt. Keeps colonial balance sheets lucrative from acquisition while held; matured stakes can be sold.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:sovereign_compliance_partners",
+  "name": "Sovereign Compliance Partners",
+  "aliases": [
+   "Investment_SovereignCompliancePartners"
+  ],
+  "summary": "Regulatory fixers on permanent retainer. Keeps the capital firmly under your hand from acquisition while held; matured stakes can be sold.",
+  "fields": {
+   "type": "Investment",
+   "collateral_cost": "12",
+   "maturity_turns": "12",
+   "effects": [
+    "+1 Control Per Month (Colony, capital world only)"
+   ],
+   "requires_government": [
+    "Oligarchy"
+   ],
+   "description": "Regulatory fixers on permanent retainer. Keeps the capital firmly under your hand from acquisition while held; matured stakes can be sold.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:starship_specifications",
+  "name": "Starship Specifications",
+  "aliases": [
+   "Policy_ShipSpecifications"
+  ],
+  "summary": "The rush to create will always result in an inferior product. Time and craftsmanship will ensure the quality of our ships is second to none.",
+  "fields": {
+   "effects": [
+    "-5% Manufacturing (Colony)",
+    "+20% Hit Points (Ship)"
+   ],
+   "requires_tech": [
+    "Orbital Manufacturing",
+    "Orbital Manufacturing",
+    "Hull Architecture"
+   ],
+   "description": "The rush to create will always result in an inferior product. Time and craftsmanship will ensure the quality of our ships is second to none.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:stellar_logistics_conglomerate",
+  "name": "Stellar Logistics Conglomerate",
+  "aliases": [
+   "Investment_StellarLogistics"
+  ],
+  "summary": "A shipping consortium that unlocks Priority Freight when mature.",
+  "fields": {
+   "type": "Investment",
+   "collateral_cost": "8",
+   "maturity_turns": "10",
+   "grants_order": "Priority Freight",
+   "requires_government": [
+    "Oligarchy"
+   ],
+   "description": "A shipping consortium that unlocks Priority Freight when mature.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:strategic_reserves",
+  "name": "Strategic Reserves",
+  "aliases": [
+   "Policy_Terran_StrategicReserves"
+  ],
+  "summary": "Maintain stockpiles of critical resources and infrastructure, substantially increasing colony manufacturing output and reducing construction",
+  "fields": {
+   "effects": [
+    "+4 Logistics",
+    "+10% Maintenance (Ship)"
+   ],
+   "requires_tech": [
+    "World Shaping"
+   ],
+   "description": "Maintain stockpiles of critical resources and infrastructure, substantially increasing colony manufacturing output and reducing construction costs.",
+   "source": "PolicyDefs_Terrans.xml"
+  }
+ },
+ {
+  "id": "policy:structured_hierarchy",
+  "name": "Structured Hierarchy",
+  "aliases": [
+   "Policy_StructuredHierarchy"
+  ],
+  "summary": "Clear chains of authority guarantee stability and unwavering control.",
+  "fields": {
+   "effects": [
+    "+2 Control Per Month",
+    "+5 Loyalty (Unit)"
+   ],
+   "requires_tech": [
+    "Synthetic Constitutionalism"
+   ],
+   "requires_trait": [
+    "Synthetic Life"
+   ],
+   "description": "Clear chains of authority guarantee stability and unwavering control.",
+   "source": "PolicyDefs_Synth.xml"
+  }
+ },
+ {
+  "id": "policy:subspace_sensors",
+  "name": "Subspace Sensors",
+  "aliases": [
+   "Policy_Vision"
+  ],
+  "summary": "Our species are very good at ' starfaring '. With a little extra spending, we can greatly increase our sensor range.",
+  "fields": {
+   "effects": [
+    "-10% Gross Income (Colony)",
+    "+100% Sensor Range (Ship)"
+   ],
+   "requires_trait": [
+    "Starfaring Ability"
+   ],
+   "description": "Our species are very good at ' starfaring '. With a little extra spending, we can greatly increase our sensor range.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:tax_efficiency_act",
+  "name": "Tax Efficiency Act",
+  "aliases": [
+   "Policy_Terran_TaxEfficiencyAct"
+  ],
+  "summary": "Implement efficient tax collection to significantly boost income, but reduces citizen approval.",
+  "fields": {
+   "effects": [
+    "+20% Gross Income (Colony)",
+    "-10% Approval (Unit)"
+   ],
+   "requires_tech": [
+    "Cabinet Expansion"
+   ],
+   "description": "Implement efficient tax collection to significantly boost income, but reduces citizen approval.",
+   "source": "PolicyDefs_Terrans.xml"
+  }
+ },
+ {
+  "id": "policy:tax_exemptions",
+  "name": "Tax Exemptions",
+  "aliases": [
+   "Policy_TaxExemptions"
+  ],
+  "summary": "Our elite argue that the government makes poor use of their money. By providing a wide range of tax exemptions their businesses can grow, ev",
+  "fields": {
+   "effects": [
+    "-20% Gross Income (Colony)",
+    "+8 Loyalty (Unit)"
+   ],
+   "requires_tech": [
+    "Leadership Recruiting",
+    "Resource Allocation"
+   ],
+   "description": "Our elite argue that the government makes poor use of their money. By providing a wide range of tax exemptions their businesses can grow, even if the public coffers don't.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:the_emperor_s_eye",
+  "name": "The Emperor's Eye",
+  "aliases": [
+   "Decree_EmperorsEye"
+  ],
+  "summary": "A network of informants ensures every plot is reported to the throne. Intelligence bonus is applied empire-wide.",
+  "fields": {
+   "type": "Decree",
+   "authority_cost": "10",
+   "effects": [
+    "+25% Intelligence (Unit)",
+    "-1 Loyalty (Unit, vassal governor only)"
+   ],
+   "requires_tech": [
+    "Xeno Research",
+    "Discovery Protocols",
+    "God of the Machine"
+   ],
+   "requires_government": [
+    "Imperial"
+   ],
+   "description": "A network of informants ensures every plot is reported to the throne. Intelligence bonus is applied empire-wide.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:the_federation_senate",
+  "name": "The Federation Senate",
+  "aliases": [
+   "Accord_TheFederationSenate"
+  ],
+  "summary": "The Senate turns member deliberation into modest civilization-wide research, industry, and military coordination. Bonus is only applied to M",
+  "fields": {
+   "type": "Accord",
+   "cost": "200 Consensus",
+   "effects": [
+    "+5% Research (member worlds only)",
+    "+5% Manufacturing (member worlds only)",
+    "+5% Military (member worlds only)"
+   ],
+   "requires_tech": [
+    "Political Capital",
+    "Xeno Diplomacy",
+    "Local Autonomy Charters"
+   ],
+   "requires_government": [
+    "Federation"
+   ],
+   "description": "The Senate turns member deliberation into modest civilization-wide research, industry, and military coordination. Bonus is only applied to Member Worlds",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:the_great_expansion",
+  "name": "The Great Expansion",
+  "aliases": [
+   "Policy_GreatExpansion"
+  ],
+  "summary": "The galaxy is an amazing opportunity and many would be entrepreneurs on our home world are likely to sign up to leave if we can compensate t",
+  "fields": {
+   "upkeep": "1",
+   "effects": [
+    "+200% Growth (Colony, capital world only)"
+   ],
+   "requires_trait": [
+    "Wealthy Ability"
+   ],
+   "description": "The galaxy is an amazing opportunity and many would be entrepreneurs on our home world are likely to sign up to leave if we can compensate them for their setup costs.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:throne_world_mandate",
+  "name": "Throne World Mandate",
+  "aliases": [
+   "Decree_ThroneWorldMandate"
+  ],
+  "summary": "The capital is declared the economic heart of the empire. Commerce and tribute flow first to the throne. +25% Gross Income on the Homeworld.",
+  "fields": {
+   "type": "Decree",
+   "authority_cost": "8",
+   "effects": [
+    "+25% Gross Income (Colony, capital world only)"
+   ],
+   "requires_government": [
+    "Imperial"
+   ],
+   "description": "The capital is declared the economic heart of the empire. Commerce and tribute flow first to the throne. +25% Gross Income on the Homeworld.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:titan_industrial_consortium",
+  "name": "Titan Industrial Consortium",
+  "aliases": [
+   "Investment_TitanIndustrialConsortium"
+  ],
+  "summary": "A heavy-industry conglomerate that unlocks Fund Production Expansion when mature.",
+  "fields": {
+   "type": "Investment",
+   "collateral_cost": "13",
+   "maturity_turns": "15",
+   "grants_order": "Fund Production Expansion",
+   "requires_tech": [
+    "Orbital Manufacturing",
+    "Orbital Manufacturing",
+    "Assembly Automation"
+   ],
+   "requires_government": [
+    "Oligarchy"
+   ],
+   "description": "A heavy-industry conglomerate that unlocks Fund Production Expansion when mature.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:toxin_spreading",
+  "name": "Toxin Spreading",
+  "aliases": [
+   "Policy_ToxinSpreading"
+  ],
+  "summary": "We can spread our influence and make worlds to our liking by spreading Pollution through trade. Spreads 10% Pollution through trade routes",
+  "fields": {
+   "effects": [
+    "+10% Pollution (Colony)",
+    "-2 Diplomacy Bonus (Unit)"
+   ],
+   "requires_trait": [
+    "Ammonia Based Ability"
+   ],
+   "description": "We can spread our influence and make worlds to our liking by spreading Pollution through trade. Spreads 10% Pollution through trade routes",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:trade_consortium",
+  "name": "Trade Consortium",
+  "aliases": [
+   "Policy_Terran_TradeConsortium"
+  ],
+  "summary": "Form commercial alliances to enhance trade routes and boost economic output.",
+  "fields": {
+   "alignment": "Individualism",
+   "effects": [
+    "+33% Trade Route Value (TradeRoute)",
+    "+10% Gross Income (Colony)"
+   ],
+   "requires_tech": [
+    "Galactic Envoys"
+   ],
+   "description": "Form commercial alliances to enhance trade routes and boost economic output.",
+   "source": "PolicyDefs_Terrans.xml"
+  }
+ },
+ {
+  "id": "policy:transparent_handshake",
+  "name": "Transparent Handshake",
+  "aliases": [
+   "Policy_TransparentHandshake"
+  ],
+  "summary": "Open, verifiable protocols improve trust, granting a substantial diplomatic advantage.",
+  "fields": {
+   "effects": [
+    "+2 Diplomacy Bonus (Unit)"
+   ],
+   "requires_tech": [
+    "Transparent Protocols"
+   ],
+   "description": "Open, verifiable protocols improve trust, granting a substantial diplomatic advantage.",
+   "source": "PolicyDefs_Synth.xml"
+  }
+ },
+ {
+  "id": "policy:underwater_homes",
+  "name": "Underwater Homes",
+  "aliases": [
+   "Policy_UnderwaterHomes"
+  ],
+  "summary": "We are not restricted to the land. The ocean was our home, and we can live there still.",
+  "fields": {
+   "effects": [
+    "+2 Population Cap (Colony)"
+   ],
+   "requires_trait": [
+    "Amphibious Ability"
+   ],
+   "description": "We are not restricted to the land. The ocean was our home, and we can live there still.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:unregulated_corporations",
+  "name": "Unregulated Corporations",
+  "aliases": [
+   "Policy_UnregulatedCorporations"
+  ],
+  "summary": "Corporations may be more effective without regulations limiting their growth. But, our advisors warn that regulations are critical to avoid ",
+  "fields": {
+   "effects": [
+    "+10% Gross Income (Colony)",
+    "+5% Pollution (Colony)"
+   ],
+   "requires_tech": [
+    "Xeno Commerce",
+    "Interstellar Trade",
+    "Zero-Latency Accounting"
+   ],
+   "description": "Corporations may be more effective without regulations limiting their growth. But, our advisors warn that regulations are critical to avoid disastrous events.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:unregulated_research",
+  "name": "Unregulated Research",
+  "aliases": [
+   "Policy_UnregulatedResearch"
+  ],
+  "summary": "This age will be led by those with the most advanced technology. But our advisors warn that regulations are critical to avoid disastrous con",
+  "fields": {
+   "effects": [
+    "+10% Research (Colony)",
+    "+5% Pollution (Colony)"
+   ],
+   "requires_tech": [
+    "Quantum Computing",
+    "Discovery Protocols"
+   ],
+   "description": "This age will be led by those with the most advanced technology. But our advisors warn that regulations are critical to avoid disastrous consequences.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:urban_planning",
+  "name": "Urban Planning",
+  "aliases": [
+   "Policy_UrbanPlanning"
+  ],
+  "summary": "By including adequate space for all needs we can provide for our citizens in a way that empty rhetoric won't.",
+  "fields": {
+   "effects": [
+    "+2 Population Cap (Colony)"
+   ],
+   "requires_tech": [
+    "Megapolis"
+   ],
+   "description": "By including adequate space for all needs we can provide for our citizens in a way that empty rhetoric won't.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:vassal_suppression",
+  "name": "Vassal Suppression",
+  "aliases": [
+   "Decree_VassalSuppression"
+  ],
+  "summary": "Vassal garrisons are repurposed as enforcers. Order is restored, but at the cost of readiness. Reduces Military on Vassal worlds. Each Vassa",
+  "fields": {
+   "type": "Decree",
+   "authority_cost": "10",
+   "effects": [
+    "-15% Military (Colony, vassal worlds only)",
+    "+3 Authority Contribution (Colony, vassal worlds only)",
+    "-2 Loyalty (Unit, vassal governor only)"
+   ],
+   "requires_tech": [
+    "Planetary Mobilization",
+    "Planetary Invasion",
+    "Planetary Assimilation"
+   ],
+   "requires_government": [
+    "Imperial"
+   ],
+   "description": "Vassal garrisons are repurposed as enforcers. Order is restored, but at the cost of readiness. Reduces Military on Vassal worlds. Each Vassal contributes +3 Authority.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:venture_research_labs",
+  "name": "Venture Research Labs",
+  "aliases": [
+   "Investment_VentureResearchLabs"
+  ],
+  "summary": "Seed capital for high-risk laboratories. Keeps the discovery pipeline well funded from acquisition while held; matured stakes can be sold.",
+  "fields": {
+   "type": "Investment",
+   "collateral_cost": "10",
+   "maturity_turns": "12",
+   "effects": [
+    "+10% Research (Colony)"
+   ],
+   "requires_tech": [
+    "Xeno Research",
+    "Discovery Protocols",
+    "God of the Machine"
+   ],
+   "requires_government": [
+    "Oligarchy"
+   ],
+   "description": "Seed capital for high-risk laboratories. Keeps the discovery pipeline well funded from acquisition while held; matured stakes can be sold.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:wealth_tax",
+  "name": "Wealth Tax",
+  "aliases": [
+   "Policy_WealthTax"
+  ],
+  "summary": "Our wealthiest citizens have benefited the most from our society. They should be taxed not only on their profit, but annually on any wealth ",
+  "fields": {
+   "effects": [
+    "+20% Gross Income (Colony)",
+    "-15 Loyalty (Unit)"
+   ],
+   "requires_tech": [
+    "Preferred Lending",
+    "Interstellar Trade",
+    "Zero-Latency Accounting"
+   ],
+   "description": "Our wealthiest citizens have benefited the most from our society. They should be taxed not only on their profit, but annually on any wealth they hold.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:without_slumber",
+  "name": "Without Slumber",
+  "aliases": [
+   "Policy_WithoutSlumber"
+  ],
+  "summary": "We do not require sleep like organic species, we rest for balance and pleasure. But, if our civilization requires it, this pleasure can be i",
+  "fields": {
+   "effects": [
+    "-5% Approval (Unit)",
+    "+20% Manufacturing (Colony)"
+   ],
+   "requires_trait": [
+    "Silicon Based Ability"
+   ],
+   "description": "We do not require sleep like organic species, we rest for balance and pleasure. But, if our civilization requires it, this pleasure can be ignored.",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:xeno_harvesting",
+  "name": "Xeno Harvesting",
+  "aliases": [
+   "Policy_XenoHarvesting"
+  ],
+  "summary": "Our ' unrelenting ' nature shows us the truth that other species exist only as either our food or to provide wealth. This policy means that ",
+  "fields": {
+   "effects": [
+    "-1 Diplomacy Bonus (Unit)",
+    "+50% Gross Income (Colony, capital world only)"
+   ],
+   "requires_trait": [
+    "Unrelenting Ability"
+   ],
+   "description": "Our ' unrelenting ' nature shows us the truth that other species exist only as either our food or to provide wealth. This policy means that we will always seek to maximize the wealth we are able to extract from the universe to our homeworld",
+   "source": "PolicyDefs.xml"
+  }
+ },
+ {
+  "id": "policy:xeno_integration",
+  "name": "Xeno Integration",
+  "aliases": [
+   "Policy_Terran_XenoIntegration"
+  ],
+  "summary": "Embrace alien perspectives and integrate their knowledge into our society, improving diplomatic relations and accelerating research across a",
+  "fields": {
+   "effects": [
+    "+2 Diplomacy Bonus",
+    "+5% Influence Growth (Colony)"
+   ],
+   "requires_tech": [
+    "Xeno Diplomacy"
+   ],
+   "description": "Embrace alien perspectives and integrate their knowledge into our society, improving diplomatic relations and accelerating research across all fields.",
+   "source": "PolicyDefs_Terrans.xml"
+  }
+ },
+ {
+  "id": "policy:xeno_resource_holdings",
+  "name": "Xeno-Resource Holdings",
+  "aliases": [
+   "Investment_XenoResourceHoldings"
+  ],
+  "summary": "A resource cartel that unlocks Corner the Market when mature.",
+  "fields": {
+   "type": "Investment",
+   "collateral_cost": "13",
+   "maturity_turns": "16",
+   "grants_order": "Corner the Market",
+   "requires_tech": [
+    "Xeno Resource Mining",
+    "Advanced Asteroid Mining"
+   ],
+   "requires_government": [
+    "Oligarchy"
+   ],
+   "description": "A resource cartel that unlocks Corner the Market when mature.",
+   "source": "PolicyDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "policy:you_are_just_a_number",
+  "name": "You Are Just A Number",
+  "aliases": [
+   "Policy_YouAreJustANumber"
+  ],
+  "summary": "Personal expression is a distracting and ultimately toxic influence on our society. Also, it's weird. If we condemn it we can focus our citi",
+  "fields": {
+   "effects": [
+    "-3% Approval (Unit)",
+    "+10% Manufacturing (Colony)"
+   ],
+   "requires_tech": [
+    "Xeno Religions",
+    "Executive Prerogative",
+    "Cognitive Charters"
+   ],
+   "description": "Personal expression is a distracting and ultimately toxic influence on our society. Also, it's weird. If we condemn it we can focus our citizens on more productive pursuits.",
+   "source": "PolicyDefs.xml"
+  }
+ }
+]

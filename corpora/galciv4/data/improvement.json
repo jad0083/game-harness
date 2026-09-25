@@ -4682,7 +4682,7 @@
     "1 Durantium"
    ],
    "effects": [
-    "+20 Loyalty (Unit)"
+    "+20 Loyalty (Unit, governor only)"
    ],
    "per_level": [
     "+3% Gross Income (Colony)"
@@ -7875,7 +7875,24 @@
   }
  },
  {
-  "id": "improvement:orbital_prison_0",
+  "id": "improvement:orbital_prison_colony_upgrade_prison_world",
+  "name": "Orbital Prison",
+  "aliases": [
+   "ColonyUpgrade_PrisonWorld"
+  ],
+  "summary": "By deploying a global prison system we have a place to send all our world's worst criminals.",
+  "fields": {
+   "type": "Population",
+   "placement": "Special",
+   "effects": [
+    "-10% Crime (Colony)"
+   ],
+   "source": "ImprovementDefs_orbitals.xml",
+   "variant": "ColonyUpgrade_PrisonWorld"
+  }
+ },
+ {
+  "id": "improvement:orbital_prison_supernova_colony_upgrade_orbital_prison",
   "name": "Orbital Prison",
   "aliases": [
    "Supernova_ColonyUpgrade_OrbitalPrison"
@@ -7895,23 +7912,6 @@
    ],
    "source": "ImprovementDefs_Supernova.xml",
    "variant": "Supernova_ColonyUpgrade_OrbitalPrison"
-  }
- },
- {
-  "id": "improvement:orbital_prison_0_2",
-  "name": "Orbital Prison",
-  "aliases": [
-   "ColonyUpgrade_PrisonWorld"
-  ],
-  "summary": "By deploying a global prison system we have a place to send all our world's worst criminals.",
-  "fields": {
-   "type": "Population",
-   "placement": "Special",
-   "effects": [
-    "-10% Crime (Colony)"
-   ],
-   "source": "ImprovementDefs_orbitals.xml",
-   "variant": "ColonyUpgrade_PrisonWorld"
   }
  },
  {
@@ -8725,21 +8725,7 @@
   }
  },
  {
-  "id": "improvement:precursor_archive_0",
-  "name": "Precursor Archive",
-  "aliases": [
-   "PrecursorLibraryArtifact"
-  ],
-  "summary": "Upgrade this artifact to unlock charges that will instantly complete the current research.",
-  "fields": {
-   "type": "Artifact",
-   "placement": "Special",
-   "source": "ArtifactImprovementDefs.xml",
-   "variant": "PrecursorLibraryArtifact"
-  }
- },
- {
-  "id": "improvement:precursor_archive_0_2",
+  "id": "improvement:precursor_archive_colony_upgrade_research",
   "name": "Precursor Archive",
   "aliases": [
    "ColonyUpgrade_Research"
@@ -8750,6 +8736,20 @@
    "placement": "Special",
    "source": "ImprovementDefs_orbitals.xml",
    "variant": "ColonyUpgrade_Research"
+  }
+ },
+ {
+  "id": "improvement:precursor_archive_precursor_library_artifact",
+  "name": "Precursor Archive",
+  "aliases": [
+   "PrecursorLibraryArtifact"
+  ],
+  "summary": "Upgrade this artifact to unlock charges that will instantly complete the current research.",
+  "fields": {
+   "type": "Artifact",
+   "placement": "Special",
+   "source": "ArtifactImprovementDefs.xml",
+   "variant": "PrecursorLibraryArtifact"
   }
  },
  {
@@ -9270,25 +9270,7 @@
   }
  },
  {
-  "id": "improvement:produce_modules_0",
-  "name": "Produce Modules",
-  "aliases": [
-   "Shipyard_Build_Modules"
-  ],
-  "summary": "Use your shipyard to produce Starbase modules. Modules are required to upgrade your starbases.",
-  "fields": {
-   "type": "Shipyard Project",
-   "cost": "150",
-   "requires_tech": [
-    "Starbase Modules",
-    "Civilian"
-   ],
-   "source": "ImprovementDefs.xml",
-   "variant": "Shipyard_Build_Modules"
-  }
- },
- {
-  "id": "improvement:produce_modules_0_2",
+  "id": "improvement:produce_modules_build_modules",
   "name": "Produce Modules",
   "aliases": [
    "Build_Modules"
@@ -9303,6 +9285,24 @@
    ],
    "source": "ImprovementDefs.xml",
    "variant": "Build_Modules"
+  }
+ },
+ {
+  "id": "improvement:produce_modules_shipyard_build_modules",
+  "name": "Produce Modules",
+  "aliases": [
+   "Shipyard_Build_Modules"
+  ],
+  "summary": "Use your shipyard to produce Starbase modules. Modules are required to upgrade your starbases.",
+  "fields": {
+   "type": "Shipyard Project",
+   "cost": "150",
+   "requires_tech": [
+    "Starbase Modules",
+    "Civilian"
+   ],
+   "source": "ImprovementDefs.xml",
+   "variant": "Shipyard_Build_Modules"
   }
  },
  {
@@ -9687,7 +9687,7 @@
   }
  },
  {
-  "id": "improvement:scan_planet_0",
+  "id": "improvement:scan_planet_scan_planet",
   "name": "Scan Planet",
   "aliases": [
    "Project_ScanPlanet"
@@ -9702,7 +9702,7 @@
   }
  },
  {
-  "id": "improvement:scan_planet_0_2",
+  "id": "improvement:scan_planet_the_opportunity_scan_planet",
   "name": "Scan Planet",
   "aliases": [
    "Project_TheOpportunity_ScanPlanet"
@@ -9776,7 +9776,27 @@
   }
  },
  {
-  "id": "improvement:sensor_array_0",
+  "id": "improvement:sensor_array_colony_upgrade_satellites",
+  "name": "Sensor Array",
+  "aliases": [
+   "ColonyUpgrade_Satellites"
+  ],
+  "summary": "This satellite array reveals even distant objects.",
+  "fields": {
+   "type": "Influence",
+   "placement": "Special",
+   "resources": [
+    "1 Thulium"
+   ],
+   "effects": [
+    "+8 Sensor Range (Colony)"
+   ],
+   "source": "ImprovementDefs_orbitals.xml",
+   "variant": "ColonyUpgrade_Satellites"
+  }
+ },
+ {
+  "id": "improvement:sensor_array_supernova_colony_upgrade_sensor_array",
   "name": "Sensor Array",
   "aliases": [
    "Supernova_ColonyUpgrade_SensorArray"
@@ -9796,26 +9816,6 @@
    ],
    "source": "ImprovementDefs_Supernova.xml",
    "variant": "Supernova_ColonyUpgrade_SensorArray"
-  }
- },
- {
-  "id": "improvement:sensor_array_0_2",
-  "name": "Sensor Array",
-  "aliases": [
-   "ColonyUpgrade_Satellites"
-  ],
-  "summary": "This satellite array reveals even distant objects.",
-  "fields": {
-   "type": "Influence",
-   "placement": "Special",
-   "resources": [
-    "1 Thulium"
-   ],
-   "effects": [
-    "+8 Sensor Range (Colony)"
-   ],
-   "source": "ImprovementDefs_orbitals.xml",
-   "variant": "ColonyUpgrade_Satellites"
   }
  },
  {
@@ -12056,24 +12056,6 @@
   "id": "improvement:upgrade_research_0",
   "name": "Upgrade Research",
   "aliases": [
-   "Project_UpgradeResearch_Human"
-  ],
-  "summary": "Increase the level of our Research Districts.",
-  "fields": {
-   "type": "Research",
-   "placement": "Research Unique",
-   "cost": "100",
-   "requires_tech": [
-    "Discovery Protocols"
-   ],
-   "source": "HumanImprovementDefs.xml",
-   "variant": "Project_UpgradeResearch_Human"
-  }
- },
- {
-  "id": "improvement:upgrade_research_0_2",
-  "name": "Upgrade Research",
-  "aliases": [
    "Project_UpgradeResearch0_Human"
   ],
   "summary": "Increase the level of our Research Districts.",
@@ -12086,6 +12068,24 @@
    ],
    "source": "HumanImprovementDefs.xml",
    "variant": "Project_UpgradeResearch0_Human"
+  }
+ },
+ {
+  "id": "improvement:upgrade_research_human",
+  "name": "Upgrade Research",
+  "aliases": [
+   "Project_UpgradeResearch_Human"
+  ],
+  "summary": "Increase the level of our Research Districts.",
+  "fields": {
+   "type": "Research",
+   "placement": "Research Unique",
+   "cost": "100",
+   "requires_tech": [
+    "Discovery Protocols"
+   ],
+   "source": "HumanImprovementDefs.xml",
+   "variant": "Project_UpgradeResearch_Human"
   }
  },
  {

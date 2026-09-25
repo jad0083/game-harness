@@ -3,8 +3,8 @@
   "id": "tech:abundance",
   "name": "Abundance",
   "aliases": [
-   "Tech_Terran_Abundance",
-   "HumanTech_Abundance"
+   "HumanTech_Abundance",
+   "Tech_Terran_Abundance"
   ],
   "summary": "Post-scarcity economics via interstellar trade",
   "fields": {
@@ -46,8 +46,8 @@
   "id": "tech:adaptive_seeker_missiles",
   "name": "Adaptive Seeker Missiles",
   "aliases": [
-   "Tech_Terran_AdaptiveSeekerMissiles",
-   "HumanTech_AdaptiveSeekerMissiles"
+   "HumanTech_AdaptiveSeekerMissiles",
+   "Tech_Terran_AdaptiveSeekerMissiles"
   ],
   "summary": "Teach every missile to re-route and reacquire mid-flight.",
   "fields": {
@@ -106,8 +106,8 @@
   "id": "tech:aegis_point_defense",
   "name": "Aegis Point Defense",
   "aliases": [
-   "Tech_Terran_AegisPointDefense",
-   "HumanTech_AegisPointDefense"
+   "HumanTech_AegisPointDefense",
+   "Tech_Terran_AegisPointDefense"
   ],
   "summary": "Use predictive targeting networks to intercept threats preemptively.",
   "fields": {
@@ -198,8 +198,8 @@
   "id": "tech:artificial_gravity",
   "name": "Artificial Gravity",
   "aliases": [
-   "Tech_ArtificialGravity",
-   "HumanTech_ArtificialGravity"
+   "HumanTech_ArtificialGravity",
+   "Tech_ArtificialGravity"
   ],
   "summary": "Generate artificial gravity fields",
   "fields": {
@@ -225,8 +225,8 @@
   "id": "tech:asteroid_mining",
   "name": "Asteroid Mining",
   "aliases": [
-   "Tech_AsteroidMining",
-   "HumanTech_AsteroidMining"
+   "HumanTech_AsteroidMining",
+   "Tech_AsteroidMining"
   ],
   "summary": "Extract resources from asteroids",
   "fields": {
@@ -249,8 +249,8 @@
   "id": "tech:barrier_projectors",
   "name": "Barrier Projectors",
   "aliases": [
-   "Tech_Terran_BarrierProjectors",
-   "HumanTech_BarrierProjectors"
+   "HumanTech_BarrierProjectors",
+   "Tech_Terran_BarrierProjectors"
   ],
   "summary": "Convert shield tech into wide-area barriers that envelop a ship.",
   "fields": {
@@ -292,8 +292,8 @@
   "id": "tech:battle_mastery",
   "name": "Battle Mastery",
   "aliases": [
-   "Tech_Terran_BattleMastery",
-   "HumanTech_BattleMastery"
+   "HumanTech_BattleMastery",
+   "Tech_Terran_BattleMastery"
   ],
   "summary": "Capstone: Master defensive shield optimization",
   "fields": {
@@ -312,8 +312,8 @@
   "id": "tech:battleship_foundries",
   "name": "Battleship Foundries",
   "aliases": [
-   "Tech_Battleships",
-   "HumanTech_BattleshipFoundries"
+   "HumanTech_BattleshipFoundries",
+   "Tech_Battleships"
   ],
   "summary": "Construct heavy foundries dedicated to battleship-scale hulls.",
   "fields": {
@@ -361,8 +361,8 @@
   "id": "tech:cabinet_expansion",
   "name": "Cabinet Expansion",
   "aliases": [
-   "Tech_Terran_CabinetExpansion",
-   "HumanTech_CabinetExpansion"
+   "HumanTech_CabinetExpansion",
+   "Tech_Terran_CabinetExpansion"
   ],
   "summary": "Expand governmental cabinet to include additional ministerial positions",
   "fields": {
@@ -389,8 +389,8 @@
   "id": "tech:carrier_doctrine",
   "name": "Carrier Doctrine",
   "aliases": [
-   "Tech_Carriers",
-   "HumanTech_CarrierDoctrine"
+   "HumanTech_CarrierDoctrine",
+   "Tech_Carriers"
   ],
   "summary": "Integrate fighter complements and logistics bays into capital hulls.",
   "fields": {
@@ -413,8 +413,8 @@
   "id": "tech:civilian",
   "name": "Civilian",
   "aliases": [
-   "Tech_Civilian",
-   "HumanTech_Civilian"
+   "HumanTech_Civilian",
+   "Tech_Civilian"
   ],
   "summary": "Civilian technologies: government, trade, diplomacy, and culture",
   "fields": {
@@ -441,8 +441,8 @@
   "id": "tech:cloaking_devices",
   "name": "Cloaking Devices",
   "aliases": [
-   "Tech_CloakingDevices",
-   "HumanTech_CloakingDevices"
+   "HumanTech_CloakingDevices",
+   "Tech_CloakingDevices"
   ],
   "summary": "Mastering the art of invisibility.",
   "fields": {
@@ -464,8 +464,8 @@
   "id": "tech:colonial_capital_refit",
   "name": "Colonial Capital Refit",
   "aliases": [
-   "Tech_ColonialCapitalRefit",
-   "HumanTech_ColonialCapitalRefit"
+   "HumanTech_ColonialCapitalRefit",
+   "Tech_ColonialCapitalRefit"
   ],
   "summary": "Increases the number of citizens that can live on our worlds.",
   "fields": {
@@ -601,8 +601,8 @@
   "id": "tech:cruiser_architecture",
   "name": "Cruiser Architecture",
   "aliases": [
-   "Tech_CruiserDoctrine",
-   "HumanTech_CruiserArchitecture"
+   "HumanTech_CruiserArchitecture",
+   "Tech_CruiserDoctrine"
   ],
   "summary": "Design modular cruiser hulls for long-range deployments.",
   "fields": {
@@ -651,8 +651,8 @@
   "id": "tech:cultural_domination",
   "name": "Cultural Domination",
   "aliases": [
-   "Tech_Terran_CulturalDomination",
-   "HumanTech_CulturalDomination"
+   "HumanTech_CulturalDomination",
+   "Tech_Terran_CulturalDomination"
   ],
   "summary": "Capstone: Systematically spread human culture to dominate alien civilizations",
   "fields": {
@@ -735,8 +735,8 @@
   "id": "tech:deflector_systems",
   "name": "Deflector Systems",
   "aliases": [
-   "Tech_Terran_DeflectorSystems",
-   "HumanTech_DeflectorSystems"
+   "HumanTech_DeflectorSystems",
+   "Tech_Terran_DeflectorSystems"
   ],
   "summary": "Project low-power deflector fields that bleed off beam energy.",
   "fields": {
@@ -852,8 +852,8 @@
   "id": "tech:dual_stage_detonations",
   "name": "Dual Stage Detonations",
   "aliases": [
-   "Tech_UpgradedMissiles",
-   "HumanTech_UpgradedMissiles"
+   "HumanTech_UpgradedMissiles",
+   "Tech_UpgradedMissiles"
   ],
   "summary": "Recovered warheads translate directly into harder-hitting missiles.",
   "fields": {
@@ -874,8 +874,8 @@
   "id": "tech:eclipse_warheads",
   "name": "Eclipse Warheads",
   "aliases": [
-   "Tech_Terran_EclipseWarheads",
-   "HumanTech_EclipseWarheads"
+   "HumanTech_EclipseWarheads",
+   "Tech_Terran_EclipseWarheads"
   ],
   "summary": "Deploy warheads that blind sensors and tear open hulls simultaneously.",
   "fields": {
@@ -896,8 +896,8 @@
   "id": "tech:economic_singularity",
   "name": "Economic Singularity",
   "aliases": [
-   "Tech_EconomicSingularity",
-   "HumanTech_EconomicSingularity"
+   "HumanTech_EconomicSingularity",
+   "Tech_EconomicSingularity"
   ],
   "summary": "Capstone: Automate and interlink all markets and production",
   "fields": {
@@ -943,8 +943,8 @@
   "id": "tech:executive_prerogative",
   "name": "Executive Prerogative",
   "aliases": [
-   "Tech_Terran_ExecutivePrerogative",
-   "HumanTech_ExecutivePrerogative"
+   "HumanTech_ExecutivePrerogative",
+   "Tech_Terran_ExecutivePrerogative"
   ],
   "summary": "Grant executive branch enhanced decision-making authority",
   "fields": {
@@ -992,8 +992,8 @@
   "id": "tech:exotic_world_colonization",
   "name": "Exotic World Colonization",
   "aliases": [
-   "Tech_ExoticWorldColonization",
-   "HumanTech_ExoticWorldColonization"
+   "HumanTech_ExoticWorldColonization",
+   "Tech_ExoticWorldColonization"
   ],
   "summary": "Colonize truly alien world types",
   "fields": {
@@ -1014,8 +1014,8 @@
   "id": "tech:experimental_weapons",
   "name": "Experimental Weapons",
   "aliases": [
-   "Tech_ExperimentalWeapons",
-   "HumanTech_ExperimentalWeapons"
+   "HumanTech_ExperimentalWeapons",
+   "Tech_ExperimentalWeapons"
   ],
   "summary": "Frontiers in armament technology produce advanced targeting systems.",
   "fields": {
@@ -1037,8 +1037,8 @@
   "id": "tech:extreme_colonization",
   "name": "Extreme Colonization",
   "aliases": [
-   "Tech_ExtremeColonization",
-   "HumanTech_ExtremeColonization"
+   "HumanTech_ExtremeColonization",
+   "Tech_ExtremeColonization"
   ],
   "summary": "Colonize harsh and extreme environments",
   "fields": {
@@ -1271,8 +1271,8 @@
   "id": "tech:gigamass_theory",
   "name": "Gigamass Theory",
   "aliases": [
-   "Tech_GigaMassTheory",
-   "HumanTech_GigaMassTheory"
+   "HumanTech_GigaMassTheory",
+   "Tech_GigaMassTheory"
   ],
   "summary": "Allows us to begin detecting and using naturally occuring hyperdense materials.",
   "fields": {
@@ -1297,8 +1297,8 @@
   "id": "tech:glorious_legacy",
   "name": "Glorious Legacy",
   "aliases": [
-   "Tech_GloriousLegacy",
-   "HumanTech_GloriousLegacy"
+   "HumanTech_GloriousLegacy",
+   "Tech_GloriousLegacy"
   ],
   "summary": "Immortalize every victory to accelerate cultural pressure.",
   "fields": {
@@ -1316,8 +1316,8 @@
   "id": "tech:greater_anomaly_detection",
   "name": "Greater Anomaly Detection",
   "aliases": [
-   "Tech_AnomalyDetection_Extended",
-   "HumanTech_AnomalyDetection_Extended"
+   "HumanTech_AnomalyDetection_Extended",
+   "Tech_AnomalyDetection_Extended"
   ],
   "summary": "Discover new anomalies in the universe.",
   "fields": {
@@ -1337,8 +1337,8 @@
   "id": "tech:habitable_rings",
   "name": "Habitable Rings",
   "aliases": [
-   "Tech_Ringworlds",
-   "HumanTech_Ringworlds"
+   "HumanTech_Ringworlds",
+   "Tech_Ringworlds"
   ],
   "summary": "Unlock Ringworld Megastructure .",
   "fields": {
@@ -1363,8 +1363,8 @@
   "id": "tech:hyperdense_impactors",
   "name": "Hyperdense Impactors",
   "aliases": [
-   "Tech_Terran_HyperdenseImpactors",
-   "HumanTech_HyperdenseImpactors"
+   "HumanTech_HyperdenseImpactors",
+   "Tech_Terran_HyperdenseImpactors"
   ],
   "summary": "Fire hyperdense penetrators that punch through any plating.",
   "fields": {
@@ -1454,8 +1454,8 @@
   "id": "tech:industrial_matrix",
   "name": "Industrial Matrix",
   "aliases": [
-   "Tech_Terran_IndustrialMatrix",
-   "HumanTech_IndustrialMatrix"
+   "HumanTech_IndustrialMatrix",
+   "Tech_Terran_IndustrialMatrix"
   ],
   "summary": "Networked production for compounding efficiency",
   "fields": {
@@ -1479,8 +1479,8 @@
   "id": "tech:innovation",
   "name": "Innovation",
   "aliases": [
-   "Tech_Innovation",
-   "HumanTech_Innovation"
+   "HumanTech_Innovation",
+   "Tech_Innovation"
   ],
   "summary": "Innovation technologies: science, engineering, propulsion, and sensors",
   "fields": {
@@ -1610,8 +1610,8 @@
   "id": "tech:leadership_recruiting",
   "name": "Leadership Recruiting",
   "aliases": [
-   "Tech_LeadershipRecruiting",
-   "HumanTech_LeadershipRecruiting"
+   "HumanTech_LeadershipRecruiting",
+   "Tech_LeadershipRecruiting"
   ],
   "summary": "Identify and recruit talented leaders",
   "fields": {
@@ -1659,8 +1659,8 @@
   "id": "tech:megapolis",
   "name": "Megapolis",
   "aliases": [
-   "Tech_Megapolis",
-   "HumanTech_Megapolis"
+   "HumanTech_Megapolis",
+   "Tech_Megapolis"
   ],
   "summary": "Increases the number of citizens that can live on our worlds.",
   "fields": {
@@ -1686,8 +1686,8 @@
   "id": "tech:megastructure_nexi",
   "name": "Megastructure Nexi",
   "aliases": [
-   "Tech_StellarNexus",
-   "HumanTech_StellarNexus"
+   "HumanTech_StellarNexus",
+   "Tech_StellarNexus"
   ],
   "summary": "Unlock Stellar Nexus Megastructure . Allows us to build Tier 1 Nexus Augments .",
   "fields": {
@@ -1755,8 +1755,8 @@
   "id": "tech:military",
   "name": "Military",
   "aliases": [
-   "Tech_Military",
-   "HumanTech_Military"
+   "HumanTech_Military",
+   "Tech_Military"
   ],
   "summary": "Military technologies: weapons, defenses, and combat systems",
   "fields": {
@@ -1840,8 +1840,8 @@
   "id": "tech:nexus_mastery",
   "name": "Nexus Mastery",
   "aliases": [
-   "Tech_NexusMastery",
-   "HumanTech_NexusMastery"
+   "HumanTech_NexusMastery",
+   "Tech_NexusMastery"
   ],
   "summary": "Allows us to build Tier 3 Nexus Augments .",
   "fields": {
@@ -1886,8 +1886,8 @@
   "id": "tech:orbital_manufacturing",
   "name": "Orbital Manufacturing",
   "aliases": [
-   "Tech_Terran_OrbitalManufacturing",
-   "HumanTech_OrbitalManufacturing"
+   "HumanTech_OrbitalManufacturing",
+   "Tech_Terran_OrbitalManufacturing"
   ],
   "summary": "Establish manufacturing facilities in orbit",
   "fields": {
@@ -1947,8 +1947,8 @@
   "id": "tech:phasor_weapons",
   "name": "Phasor Weapons",
   "aliases": [
-   "Tech_Terran_PhasorWeapons",
-   "HumanTech_PhasorWeapons"
+   "HumanTech_PhasorWeapons",
+   "Tech_Terran_PhasorWeapons"
   ],
   "summary": "Phase-tune beam emitters to pass straight through shielding.",
   "fields": {
@@ -1969,8 +1969,8 @@
   "id": "tech:planetary_invasion",
   "name": "Planetary Invasion",
   "aliases": [
-   "Tech_PlanetaryInvasion",
-   "HumanTech_PlanetaryInvasion"
+   "HumanTech_PlanetaryInvasion",
+   "Tech_PlanetaryInvasion"
   ],
   "summary": "Techniques and technology for invading enemy worlds",
   "fields": {
@@ -2022,8 +2022,8 @@
   "id": "tech:plasma_weapons",
   "name": "Plasma Weapons",
   "aliases": [
-   "Tech_Terran_PlasmaWeapons",
-   "HumanTech_PlasmaWeapons"
+   "HumanTech_PlasmaWeapons",
+   "Tech_Terran_PlasmaWeapons"
   ],
   "summary": "Weaponize magnetically bottled plasma streams.",
   "fields": {
@@ -2045,8 +2045,8 @@
   "id": "tech:plasmatic_torpedoes",
   "name": "Plasmatic Torpedoes",
   "aliases": [
-   "Tech_Terran_PlasmaticTorpedoes",
-   "HumanTech_PlasmaticTorpedoes"
+   "HumanTech_PlasmaticTorpedoes",
+   "Tech_Terran_PlasmaticTorpedoes"
   ],
   "summary": "Pack torpedoes with caged plasma that erupts inside targets.",
   "fields": {
@@ -2097,8 +2097,8 @@
   "id": "tech:post_sentience",
   "name": "Post-Sentience",
   "aliases": [
-   "Tech_PostSentience",
-   "HumanTech_PostSentience"
+   "HumanTech_PostSentience",
+   "Tech_PostSentience"
   ],
   "summary": "Plan for society after our machines achieve self-directed thought.",
   "fields": {
@@ -2120,8 +2120,8 @@
   "id": "tech:precursor_anthropology",
   "name": "Precursor Anthropology",
   "aliases": [
-   "Tech_Terran_PrecursorAnthropology",
-   "HumanTech_PrecursorAnthropology"
+   "HumanTech_PrecursorAnthropology",
+   "Tech_Terran_PrecursorAnthropology"
   ],
   "summary": "Model Precursor societies to understand their rise and collapse.",
   "fields": {
@@ -2166,8 +2166,8 @@
   "id": "tech:precursor_legacy",
   "name": "Precursor Legacy",
   "aliases": [
-   "Tech_Terran_PrecursorLegacy",
-   "HumanTech_PrecursorLegacy"
+   "HumanTech_PrecursorLegacy",
+   "Tech_Terran_PrecursorLegacy"
   ],
   "summary": "Leverage Precursor wisdom to shape modern Terran policy.",
   "fields": {
@@ -2276,8 +2276,8 @@
   "id": "tech:sentinel_point_defense",
   "name": "Sentinel Point Defense",
   "aliases": [
-   "Tech_Terran_SentinelPointDefense",
-   "HumanTech_SentinelPointDefense"
+   "HumanTech_SentinelPointDefense",
+   "Tech_Terran_SentinelPointDefense"
   ],
   "summary": "Network smart point-defense turrets for overlapping missile coverage.",
   "fields": {
@@ -2387,8 +2387,8 @@
   "id": "tech:slipstream_drive",
   "name": "Slipstream Drive",
   "aliases": [
-   "Tech_Terran_SlipstreamDrive",
-   "HumanTech_SlipstreamDrive"
+   "HumanTech_SlipstreamDrive",
+   "Tech_Terran_SlipstreamDrive"
   ],
   "summary": "Advanced FTL propulsion system",
   "fields": {
@@ -2441,8 +2441,8 @@
   "id": "tech:space_elevators",
   "name": "Space Elevators",
   "aliases": [
-   "Tech_Terran_SpaceElevators",
-   "HumanTech_SpaceElevators"
+   "HumanTech_SpaceElevators",
+   "Tech_Terran_SpaceElevators"
   ],
   "summary": "Build elevators connecting surface to orbit",
   "fields": {
@@ -2464,8 +2464,8 @@
   "id": "tech:space_exploration",
   "name": "Space Exploration",
   "aliases": [
-   "Tech_Terran_SpaceExploration",
-   "HumanTech_ArmedShuttles"
+   "HumanTech_ArmedShuttles",
+   "Tech_Terran_SpaceExploration"
   ],
   "summary": "Makes the Discovery Module available for exploration and survey operations",
   "fields": {
@@ -2514,8 +2514,8 @@
   "id": "tech:starbases",
   "name": "Starbases",
   "aliases": [
-   "Tech_Starbases",
-   "HumanTech_Starbases"
+   "HumanTech_Starbases",
+   "Tech_Starbases"
   ],
   "summary": "Construct permanent space stations",
   "fields": {
@@ -2537,8 +2537,8 @@
   "id": "tech:stellar_architecture",
   "name": "Stellar Architecture",
   "aliases": [
-   "Tech_DysonSpheres",
-   "HumanTech_DysonSpheres"
+   "HumanTech_DysonSpheres",
+   "Tech_DysonSpheres"
   ],
   "summary": "Allows us to build Stellar Architect ships used construct Megastructures . Unlock Dyson Sphere Megastructure.",
   "fields": {
@@ -2586,8 +2586,8 @@
   "id": "tech:subspace_scanning",
   "name": "Subspace Scanning",
   "aliases": [
-   "Tech_SubspaceScanning",
-   "HumanTech_SubspaceScanning"
+   "HumanTech_SubspaceScanning",
+   "Tech_SubspaceScanning"
   ],
   "summary": "Scan through subspace for distant objects",
   "fields": {
@@ -2618,8 +2618,8 @@
   "id": "tech:subspace_streaming",
   "name": "Subspace Streaming",
   "aliases": [
-   "Tech_SubspaceStreaming",
-   "HumanTech_SubspaceStreaming"
+   "HumanTech_SubspaceStreaming",
+   "Tech_SubspaceStreaming"
   ],
   "summary": "Stream data through subspace channels",
   "fields": {
@@ -2646,8 +2646,8 @@
   "id": "tech:synthetic_antibodies",
   "name": "Synthetic Antibodies",
   "aliases": [
-   "Tech_PlagueCure",
-   "HumanTech_PlagueCure"
+   "HumanTech_PlagueCure",
+   "Tech_PlagueCure"
   ],
   "summary": "Brew the antidote that ends the galactic plague storyline.",
   "fields": {
@@ -2689,8 +2689,8 @@
   "id": "tech:technological_singularity",
   "name": "Technological Singularity",
   "aliases": [
-   "Tech_TechnologicalSingularity",
-   "HumanTech_TechnologicalSingularity"
+   "HumanTech_TechnologicalSingularity",
+   "Tech_TechnologicalSingularity"
   ],
   "summary": "Stabilize a singularity event into a repeatable research surge.",
   "fields": {
@@ -2711,8 +2711,8 @@
   "id": "tech:technology_ascendancy",
   "name": "Technology Ascendancy",
   "aliases": [
-   "Tech_Terran_TechnologyAscendancy",
-   "HumanTech_TechnologyAscendancy"
+   "HumanTech_TechnologyAscendancy",
+   "Tech_Terran_TechnologyAscendancy"
   ],
   "summary": "Capstone: Command of frontier sciences and systems",
   "fields": {
@@ -2770,8 +2770,8 @@
   "id": "tech:terraforming",
   "name": "Terraforming",
   "aliases": [
-   "Tech_Terran_Terraforming",
-   "HumanTech_Terraforming"
+   "HumanTech_Terraforming",
+   "Tech_Terran_Terraforming"
   ],
   "summary": "Reshape planets for colonization",
   "fields": {
@@ -2830,8 +2830,8 @@
   "id": "tech:time_dilation_weapons",
   "name": "Time Dilation Weapons",
   "aliases": [
-   "Tech_TimeDilationWeapons",
-   "HumanTech_TimeDilationWeapons"
+   "HumanTech_TimeDilationWeapons",
+   "Tech_TimeDilationWeapons"
   ],
   "summary": "Warping time to dominate battles.",
   "fields": {
@@ -2852,8 +2852,8 @@
   "id": "tech:tritanium_plating",
   "name": "Tritanium Plating",
   "aliases": [
-   "Tech_Terran_TritaniumPlating",
-   "HumanTech_TritaniumPlating"
+   "HumanTech_TritaniumPlating",
+   "Tech_Terran_TritaniumPlating"
   ],
   "summary": "Forge tritanium-alloy hull plates to toughen baseline armor.",
   "fields": {
@@ -2876,8 +2876,8 @@
   "id": "tech:universal_translator",
   "name": "Universal Translator",
   "aliases": [
-   "TranslatorTech",
-   "HumanTech_UniversalTranslator"
+   "HumanTech_UniversalTranslator",
+   "TranslatorTech"
   ],
   "summary": "Advanced translation systems for alien communication",
   "fields": {
@@ -2910,8 +2910,8 @@
   "id": "tech:warp_theory",
   "name": "Warp Theory",
   "aliases": [
-   "Tech_Terran_WarpTheory",
-   "HumanTech_WarpTheory"
+   "HumanTech_WarpTheory",
+   "Tech_Terran_WarpTheory"
   ],
   "summary": "Theoretical foundation for faster-than-light travel",
   "fields": {
@@ -2935,8 +2935,8 @@
   "id": "tech:weapon_systems",
   "name": "Weapon Systems",
   "aliases": [
-   "Tech_WeaponSystems",
-   "HumanTech_WeaponSystems"
+   "HumanTech_WeaponSystems",
+   "Tech_WeaponSystems"
   ],
   "summary": "Advanced integrated weapon systems",
   "fields": {
@@ -2982,8 +2982,8 @@
   "id": "tech:world_shaping",
   "name": "World Shaping",
   "aliases": [
-   "Tech_Terran_WorldShaping",
-   "HumanTech_WorldShaping"
+   "HumanTech_WorldShaping",
+   "Tech_Terran_WorldShaping"
   ],
   "summary": "Terraform to unlock additional usable tiles",
   "fields": {
@@ -3124,8 +3124,8 @@
   "id": "tech:xeno_manufacturing",
   "name": "Xeno Manufacturing",
   "aliases": [
-   "Tech_Terran_XenoManufacturing",
-   "HumanTech_XenoManufacturing"
+   "HumanTech_XenoManufacturing",
+   "Tech_Terran_XenoManufacturing"
   ],
   "summary": "Advanced alien manufacturing techniques",
   "fields": {
@@ -3208,8 +3208,8 @@
   "id": "tech:xeno_treaties",
   "name": "Xeno Treaties",
   "aliases": [
-   "Tech_Terran_TradePacts",
-   "HumanTech_TradePacts"
+   "HumanTech_TradePacts",
+   "Tech_Terran_TradePacts"
   ],
   "summary": "Negotiate beneficial trade agreements",
   "fields": {
