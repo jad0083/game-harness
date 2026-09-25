@@ -145,7 +145,7 @@ impl McpServer {
                 jsonrpc: "2.0",
                 id,
                 result: Some(serde_json::json!({
-                    "tools": self.list_tools()
+                    "tools": Self::list_tools()
                 })),
                 error: None,
             }),
@@ -187,7 +187,7 @@ impl McpServer {
         }
     }
 
-    fn list_tools(&self) -> Vec<Value> {
+    fn list_tools() -> Vec<Value> {
         vec![
             serde_json::json!({
                 "name": "screenshot",
@@ -211,7 +211,7 @@ impl McpServer {
             }),
             serde_json::json!({
                 "name": "drag",
-                "description": "Drag from (x1, y1) to (x2, y2) in the last image coordinates.",
+                "description": "Drag from (x1, y1) to (x2, y2) in the last image coordinates. If a drop does not register, try a longer hold_ms/dwell_ms, more steps, or wiggle.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -220,6 +220,11 @@ impl McpServer {
                         "x2": { "type": "number" },
                         "y2": { "type": "number" },
                         "button": { "type": "string", "default": "left" },
+                        "hold_ms": { "type": "integer", "default": 30, "minimum": 0, "maximum": 3000, "description": "Delay after button down before moving" },
+                        "steps": { "type": "integer", "default": 12, "minimum": 2, "maximum": 120, "description": "Interpolated moves to the target" },
+                        "step_ms": { "type": "integer", "default": 15, "minimum": 5, "maximum": 200, "description": "Delay between moves" },
+                        "dwell_ms": { "type": "integer", "default": 30, "minimum": 0, "maximum": 3000, "description": "Delay at the target before release" },
+                        "wiggle": { "type": "boolean", "default": false, "description": "Move +/-3 px around the target before release" },
                         "wait": { "type": "number", "default": 0.5 }
                     },
                     "required": ["x1", "y1", "x2", "y2"]
@@ -411,7 +416,8 @@ impl McpServer {
 
                 let (sx1, sy1) = self.to_screen_coords(x1, y1)?;
                 let (sx2, sy2) = self.to_screen_coords(x2, y2)?;
-                self.client.drag(sx1, sy1, sx2, sy2, button).await?;
+                let opts = drag_options(&args);
+                self.client.drag(sx1, sy1, sx2, sy2, button, &opts).await?;
 
                 if wait_sec > 0.0 {
                     tokio::time::sleep(std::time::Duration::from_secs_f64(wait_sec)).await;
@@ -760,6 +766,19 @@ pub(crate) fn require_f64(args: &Value, key: &str) -> Result<f64> {
         .ok_or_else(|| anyhow::anyhow!("Missing or non-numeric argument `{}`", key))
 }
 
+/// Reads the optional `/drag` timing knobs from MCP tool arguments. Negative or
+/// non-numeric values are ignored so the agent's defaults apply.
+fn drag_options(args: &Value) -> crate::client::DragOptions {
+    let uint = |k: &str| args.get(k).and_then(|v| v.as_u64());
+    crate::client::DragOptions {
+        hold_ms: uint("hold_ms"),
+        steps: uint("steps").map(|v| v.min(i32::MAX as u64) as i32),
+        step_ms: uint("step_ms"),
+        dwell_ms: uint("dwell_ms"),
+        wiggle: args.get("wiggle").and_then(|v| v.as_bool()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -795,5 +814,30 @@ mod tests {
         assert_eq!(require_f64(&args, "x").unwrap(), 5.0);
         assert!(require_f64(&args, "y").unwrap_err().to_string().contains("`y`"));
         assert!(require_f64(&args, "z").unwrap_err().to_string().contains("`z`"));
+    }
+
+    #[test]
+    fn drag_tool_schema_exposes_timing_options() {
+        let tools = McpServer::list_tools();
+        let drag = tools.iter().find(|t| t["name"] == "drag").expect("drag tool");
+        let props = &drag["inputSchema"]["properties"];
+        for key in ["hold_ms", "steps", "step_ms", "dwell_ms"] {
+            assert_eq!(props[key]["type"], "integer", "{key}");
+        }
+        assert_eq!(props["wiggle"]["type"], "boolean");
+        let required = drag["inputSchema"]["required"].as_array().unwrap();
+        assert_eq!(required.len(), 4, "timing options must stay optional");
+    }
+
+    #[test]
+    fn drag_options_read_from_args() {
+        let none = drag_options(&serde_json::json!({"x1": 1}));
+        assert_eq!(none, crate::client::DragOptions::default());
+        let some = drag_options(&serde_json::json!({"hold_ms": 250, "steps": 40, "step_ms": 25, "dwell_ms": 300, "wiggle": true}));
+        assert_eq!(
+            some,
+            crate::client::DragOptions { hold_ms: Some(250), steps: Some(40), step_ms: Some(25), dwell_ms: Some(300), wiggle: Some(true) }
+        );
+        assert_eq!(drag_options(&serde_json::json!({"hold_ms": -5})).hold_ms, None);
     }
 }

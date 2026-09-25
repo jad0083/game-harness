@@ -19,7 +19,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-const VERSION: &str = "1.0.0";
+const VERSION: &str = "1.1.0";
 const DEFAULT_PORT: u16 = 8765;
 
 #[derive(Parser, Debug)]
@@ -71,6 +71,16 @@ struct DragReq {
     x2: i32,
     y2: i32,
     button: Option<String>,
+    /// Delay after button down before the first movement (drag-threshold timers).
+    hold_ms: Option<u64>,
+    /// Number of interpolated moves from start to target.
+    steps: Option<i32>,
+    /// Delay between interpolated moves.
+    step_ms: Option<u64>,
+    /// Delay at the target before button up.
+    dwell_ms: Option<u64>,
+    /// After reaching the target, move +/-3 px and back so drop targets see hover movement.
+    wiggle: Option<bool>,
 }
 
 #[derive(Deserialize)]
@@ -338,27 +348,78 @@ async fn click_handler(Json(req): Json<ClickReq>) -> Result<impl IntoResponse, (
     Ok(Json(serde_json::json!({"ok": true})))
 }
 
+const DRAG_DEFAULT_HOLD_MS: u64 = 30;
+const DRAG_DEFAULT_STEPS: i32 = 12;
+const DRAG_DEFAULT_STEP_MS: u64 = 15;
+const DRAG_DEFAULT_DWELL_MS: u64 = 30;
+const DRAG_MAX_DELAY_MS: u64 = 3000;
+const DRAG_WIGGLE_PX: i32 = 3;
+
+/// Resolved `/drag` timing and path, with defaults applied and every value clamped.
+#[derive(Debug, PartialEq)]
+struct DragPlan {
+    hold_ms: u64,
+    steps: i32,
+    step_ms: u64,
+    dwell_ms: u64,
+    wiggle: bool,
+}
+
+impl DragPlan {
+    fn from_req(req: &DragReq) -> Self {
+        Self {
+            hold_ms: req.hold_ms.unwrap_or(DRAG_DEFAULT_HOLD_MS).min(DRAG_MAX_DELAY_MS),
+            steps: req.steps.unwrap_or(DRAG_DEFAULT_STEPS).clamp(2, 120),
+            step_ms: req.step_ms.unwrap_or(DRAG_DEFAULT_STEP_MS).clamp(5, 200),
+            dwell_ms: req.dwell_ms.unwrap_or(DRAG_DEFAULT_DWELL_MS).min(DRAG_MAX_DELAY_MS),
+            wiggle: req.wiggle.unwrap_or(false),
+        }
+    }
+
+    /// Every cursor position after the button goes down, in order. The last point is
+    /// always the target so the release happens exactly there.
+    fn path(&self, x1: i32, y1: i32, x2: i32, y2: i32) -> Vec<(i32, i32)> {
+        let mut pts: Vec<(i32, i32)> = (1..=self.steps)
+            .map(|i| (x1 + ((x2 - x1) * i) / self.steps, y1 + ((y2 - y1) * i) / self.steps))
+            .collect();
+        if self.wiggle {
+            let d = DRAG_WIGGLE_PX;
+            pts.extend([(x2 + d, y2), (x2, y2 + d), (x2 - d, y2), (x2, y2 - d), (x2, y2)]);
+        }
+        pts
+    }
+}
+
 async fn drag_handler(Json(req): Json<DragReq>) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     let button = req.button.as_deref().unwrap_or("left");
+    if !matches!(button, "left" | "right" | "middle") {
+        return Err((StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": format!("unknown button {:?}", button)}))));
+    }
+    let plan = DragPlan::from_req(&req);
     #[cfg(windows)]
     {
         backend::win::mouse_move(req.x1, req.y1);
         tokio::time::sleep(Duration::from_millis(30)).await;
         backend::win::mouse_button(button, true)
             .map_err(|e| (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": e}))))?;
+        tokio::time::sleep(Duration::from_millis(plan.hold_ms)).await;
 
-        let steps = 12;
-        for i in 1..=steps {
-            let x = req.x1 + ((req.x2 - req.x1) * i) / steps;
-            let y = req.y1 + ((req.y2 - req.y1) * i) / steps;
+        for (x, y) in plan.path(req.x1, req.y1, req.x2, req.y2) {
             backend::win::mouse_move(x, y);
-            tokio::time::sleep(Duration::from_millis(15)).await;
+            tokio::time::sleep(Duration::from_millis(plan.step_ms)).await;
         }
-        tokio::time::sleep(Duration::from_millis(30)).await;
+        tokio::time::sleep(Duration::from_millis(plan.dwell_ms)).await;
         backend::win::mouse_button(button, false)
             .map_err(|e| (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": e}))))?;
     }
-    Ok(Json(serde_json::json!({"ok": true})))
+    Ok(Json(serde_json::json!({
+        "ok": true,
+        "hold_ms": plan.hold_ms,
+        "steps": plan.steps,
+        "step_ms": plan.step_ms,
+        "dwell_ms": plan.dwell_ms,
+        "wiggle": plan.wiggle,
+    })))
 }
 
 async fn scroll_handler(Json(req): Json<ScrollReq>) -> impl IntoResponse {
@@ -431,6 +492,8 @@ const MAX_WAIT_SECS: f64 = 30.0;
 enum BatchAction {
     Move { x: i32, y: i32 },
     Click { x: i32, y: i32, button: String, count: i32 },
+    MouseDown { button: String },
+    MouseUp { button: String },
     Key { vks: Vec<u16>, repeat: i32 },
     Type { text: String },
     Wait { seconds: f64 },
@@ -446,23 +509,32 @@ fn parse_batch(actions: &[serde_json::Value]) -> Result<Vec<BatchAction>, String
             .map(|v| v as i32)
             .ok_or_else(|| format!("Action #{}: missing or non-integer `{}`", i, key))
     };
+    let button = |act: &serde_json::Value, i: usize| -> Result<String, String> {
+        let b = match act.get("button") {
+            None | Some(serde_json::Value::Null) => "left",
+            Some(v) => v.as_str().ok_or_else(|| format!("Action #{}: `button` must be a string", i))?,
+        };
+        if !matches!(b, "left" | "right" | "middle") {
+            return Err(format!("Action #{}: unknown button {:?}", i, b));
+        }
+        Ok(b.to_string())
+    };
     let mut out = Vec::with_capacity(actions.len());
     for (i, act) in actions.iter().enumerate() {
         let kind = act.get("action").and_then(|v| v.as_str()).unwrap_or("");
         let parsed = match kind {
             "move" => BatchAction::Move { x: coord(act, i, "x")?, y: coord(act, i, "y")? },
             "click" => {
-                let button = act.get("button").and_then(|v| v.as_str()).unwrap_or("left");
-                if !matches!(button, "left" | "right" | "middle") {
-                    return Err(format!("Action #{}: unknown button {:?}", i, button));
-                }
+                let button = button(act, i)?;
                 BatchAction::Click {
                     x: coord(act, i, "x")?,
                     y: coord(act, i, "y")?,
-                    button: button.to_string(),
+                    button,
                     count: (act.get("count").and_then(|v| v.as_i64()).unwrap_or(1) as i32).clamp(1, MAX_CLICK_COUNT),
                 }
             }
+            "mouse_down" => BatchAction::MouseDown { button: button(act, i)? },
+            "mouse_up" => BatchAction::MouseUp { button: button(act, i)? },
             "key" => {
                 let combo = act.get("combo").and_then(|v| v.as_str()).unwrap_or("");
                 let vks = keys::parse_combo(combo).map_err(|e| format!("Action #{}: {}", i, e))?;
@@ -515,6 +587,16 @@ async fn batch_handler(Json(req): Json<BatchReq>) -> Result<impl IntoResponse, (
                     }
                 }
                 results.push(serde_json::json!({"action": "click", "ok": true}));
+            }
+            BatchAction::MouseDown { button } | BatchAction::MouseUp { button } => {
+                let down = matches!(act, BatchAction::MouseDown { .. });
+                #[cfg(windows)]
+                backend::win::mouse_button(button, down)
+                    .map_err(|e| (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": e, "results": results.clone()}))))?;
+                #[cfg(not(windows))]
+                let _ = button;
+                let name = if down { "mouse_down" } else { "mouse_up" };
+                results.push(serde_json::json!({"action": name, "ok": true}));
             }
             BatchAction::Key { vks, repeat } => {
                 #[cfg(windows)]
@@ -666,5 +748,55 @@ mod tests {
         // A bad step anywhere rejects the whole batch: nothing before it should run.
         let err = parse_batch(&[json!({"action": "key", "combo": "tab"}), json!({"action": "click"})]).unwrap_err();
         assert!(err.starts_with("Action #1:"), "{err}");
+    }
+
+    #[test]
+    fn batch_mouse_down_and_up_validate_buttons() {
+        let parsed = parse_batch(&[
+            json!({"action": "move", "x": 1, "y": 2}),
+            json!({"action": "mouse_down"}),
+            json!({"action": "move", "x": 50, "y": 60}),
+            json!({"action": "mouse_up", "button": "right"}),
+        ])
+        .unwrap();
+        assert_eq!(parsed[1], BatchAction::MouseDown { button: "left".into() });
+        assert_eq!(parsed[3], BatchAction::MouseUp { button: "right".into() });
+        let err = parse_batch(&[json!({"action": "mouse_down", "button": "side"})]).unwrap_err();
+        assert!(err.starts_with("Action #0:") && err.contains("button"), "{err}");
+        let err = parse_batch(&[json!({"action": "wait"}), json!({"action": "mouse_up", "button": 3})]).unwrap_err();
+        assert!(err.starts_with("Action #1:"), "{err}");
+    }
+
+    fn drag_req(extra: serde_json::Value) -> DragReq {
+        let mut v = json!({"x1": 0, "y1": 0, "x2": 120, "y2": 60});
+        v.as_object_mut().unwrap().extend(extra.as_object().unwrap().clone());
+        serde_json::from_value(v).unwrap()
+    }
+
+    #[test]
+    fn drag_defaults_match_previous_behaviour() {
+        let plan = DragPlan::from_req(&drag_req(json!({})));
+        assert_eq!(plan, DragPlan { hold_ms: 30, steps: 12, step_ms: 15, dwell_ms: 30, wiggle: false });
+        let path = plan.path(0, 0, 120, 60);
+        assert_eq!(path.len(), 12);
+        assert_eq!(path[0], (10, 5));
+        assert_eq!(*path.last().unwrap(), (120, 60));
+    }
+
+    #[test]
+    fn drag_options_are_clamped() {
+        let low = DragPlan::from_req(&drag_req(json!({"hold_ms": 0, "steps": -4, "step_ms": 0, "dwell_ms": 0})));
+        assert_eq!(low, DragPlan { hold_ms: 0, steps: 2, step_ms: 5, dwell_ms: 0, wiggle: false });
+        let high = DragPlan::from_req(&drag_req(
+            json!({"hold_ms": 99_999, "steps": 10_000, "step_ms": 10_000, "dwell_ms": 99_999, "wiggle": true}),
+        ));
+        assert_eq!(high, DragPlan { hold_ms: 3000, steps: 120, step_ms: 200, dwell_ms: 3000, wiggle: true });
+    }
+
+    #[test]
+    fn drag_wiggle_circles_target_and_ends_on_it() {
+        let plan = DragPlan::from_req(&drag_req(json!({"steps": 2, "wiggle": true})));
+        let path = plan.path(0, 0, 100, 100);
+        assert_eq!(path, vec![(50, 50), (100, 100), (103, 100), (100, 103), (97, 100), (100, 97), (100, 100)]);
     }
 }

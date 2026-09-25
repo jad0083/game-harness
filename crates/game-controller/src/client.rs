@@ -40,6 +40,24 @@ struct DragReq {
     x2: i32,
     y2: i32,
     button: String,
+    #[serde(flatten)]
+    opts: DragOptions,
+}
+
+/// Optional `/drag` timing knobs. `None` fields are omitted so the agent applies its
+/// own defaults (hold 30 ms, 12 steps, 15 ms/step, dwell 30 ms, no wiggle).
+#[derive(Serialize, Debug, Clone, Default, PartialEq)]
+pub struct DragOptions {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hold_ms: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub steps: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub step_ms: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dwell_ms: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub wiggle: Option<bool>,
 }
 
 #[derive(Serialize)]
@@ -281,7 +299,7 @@ impl AgentClient {
         Ok(())
     }
 
-    pub async fn drag(&self, x1: i32, y1: i32, x2: i32, y2: i32, button: &str) -> Result<()> {
+    pub async fn drag(&self, x1: i32, y1: i32, x2: i32, y2: i32, button: &str, opts: &DragOptions) -> Result<()> {
         self.client
             .post(format!("{}/drag", self.base_url))
             .json(&DragReq {
@@ -290,6 +308,7 @@ impl AgentClient {
                 x2,
                 y2,
                 button: button.to_string(),
+                opts: opts.clone(),
             })
             .send()
             .await?
@@ -348,5 +367,32 @@ impl AgentClient {
             .cloned()
             .unwrap_or_default();
         Ok(results)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn drag_json(opts: DragOptions) -> serde_json::Value {
+        serde_json::to_value(DragReq { x1: 1, y1: 2, x2: 3, y2: 4, button: "left".into(), opts }).unwrap()
+    }
+
+    #[test]
+    fn drag_request_omits_unset_options_so_agent_defaults_apply() {
+        assert_eq!(
+            drag_json(DragOptions::default()),
+            serde_json::json!({"x1": 1, "y1": 2, "x2": 3, "y2": 4, "button": "left"})
+        );
+    }
+
+    #[test]
+    fn drag_request_flattens_set_options() {
+        let v = drag_json(DragOptions { hold_ms: Some(250), steps: Some(40), step_ms: None, dwell_ms: Some(300), wiggle: Some(true) });
+        assert_eq!(v["hold_ms"], 250);
+        assert_eq!(v["steps"], 40);
+        assert_eq!(v["dwell_ms"], 300);
+        assert_eq!(v["wiggle"], true);
+        assert!(v.get("step_ms").is_none());
     }
 }

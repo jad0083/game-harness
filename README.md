@@ -80,6 +80,8 @@ The compiled controller binary provides full programmatic access to all agent fu
 
 # 6. Drag in Last-Image Coordinate Space
 ./target/release/game-controller drag 1510 140 640 310 --button left
+# Slower drag for UIs with a drag-threshold timer or hover-sensitive drop targets
+./target/release/game-controller drag 1510 140 640 310 --hold-ms 250 --steps 40 --step-ms 25 --dwell-ms 300 --wiggle
 
 # 7. Send Keyboard Combos
 ./target/release/game-controller key "esc"
@@ -133,7 +135,7 @@ To connect Claude Desktop, Claude Code, or Antigravity IDE directly to the game 
 |---|---|---|
 | `screenshot` | `{}` | Capture full frame from Windows agent with dynamic scaling metadata. |
 | `click` | `x, y, button, count, wait` | Click at `(x, y)` in last-image space (automatically scaled to physical screen). |
-| `drag` | `x1, y1, x2, y2, button, wait` | Drag from `(x1, y1)` to `(x2, y2)` with multi-step interpolation. |
+| `drag` | `x1, y1, x2, y2, button, wait, hold_ms, steps, step_ms, dwell_ms, wiggle` | Drag from `(x1, y1)` to `(x2, y2)` with multi-step interpolation. Optional timing: `hold_ms` after press (default 30), `steps` (12, 2..120), `step_ms` (15, 5..200), `dwell_ms` at target before release (30, 0..3000), `wiggle` ±3 px at target (false). |
 | `key` | `combo, repeat` | Press key/combo (resolves aliases like `end_turn` $\to$ `enter` via `game.toml`). |
 | `type_text` | `text` | Type literal string into focused UI element. |
 | `batch` | `actions: [...]` | Execute atomic multi-action sequence in a single network round-trip. |
