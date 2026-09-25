@@ -6,8 +6,7 @@
 
 ### Rust controller (`crates/game-controller`)
 - [ ] `manifest.toml` screen fields `choice_keys`, `buttons`, `dismiss_key`, `title_ocr`, `is_blocking` are parsed but still unused (the autopilot now uses `luminance_roi`, `luminance_threshold`, `turn_indicator_roi`)
-- [ ] The `turn_pump` macro cannot end a turn while "action required" items are pending (leader to assign, colony action): `enter` navigates to the blocker instead. The autopilot needs a pending-action handler (or must hand off to the model) before it can advance unattended (found live 2026-09-25)
-- [ ] `space` (skip unit) and `f` (sleep unit) hotkeys remain unverified; the macro ran but no visible unit-cycling effect could be isolated
+- [ ] Event option number keys (`1`/`2`/`3`) claimed in strategy.md are unverified; clicking works
 - [ ] `autopilot.rs:105-107` `click_norm` emits image-space coords without scaling (latent: no macro uses it yet)
 - [ ] `client.rs:254-256` `focus` returns Ok on a 404 body; `settle`/`windows`/`focus` never check HTTP status (a 401 surfaces as a JSON parse error)
 - [ ] Rust MCP has no `zoom`, `hover`, `scroll`, `list_windows`, or grid overlay; `GAME_SCREENSHOT_DIR` frame archive dropped from `.mcp.json`; `PLAYING.md` documents tools that no longer exist
@@ -28,6 +27,12 @@
 - [ ] Python harness (`src/harness`, `windows_agent/agent.py`, 40 tests) is no longer deployed; its green suite covers nothing that runs (`agent.py` `settle` stub always returns `settled: True`)
 
 ## Resolved
+- [x] Manifest `end_turn` was `enter`; the game ends turns with TAB, and `space`/`f`/`e` hotkeys were wrong (2026-09-25; corrected from live tooltips: explore = O, standby = J; b0059ae, e19ddbc)
+- [x] Autopilot judged a turn 0.9 s after the key, before the game finished processing, and reported a real advance as NotAdvanced (2026-09-25; now waits for the date to change; b0059ae)
+- [x] Date change "Jul → Aug" read as unchanged: whole-box mean diff 0.028 < 0.03 (2026-09-25; per-glyph strip metric, real-frame fixtures; e19ddbc)
+- [x] GNN news bulletin blocked the loop (2026-09-25; template match + auto Close; c67c8b5)
+- [x] `game-controller corpus …` required an agent token although it works offline (2026-09-25; test added)
+- [x] Root `ruff check .` linted other agents' worktrees under `.claude/`, and a CI failure was committed because `| tail` hid the exit code (2026-09-25; excluded worktrees; `scripts/ci-commit.sh` gates commits on CI)
 - [x] `turn_indicator_roi` and `NotAdvanced` detection validated live: with a pending leader prompt the date readout stayed identical (diff 0.000) and the autopilot reported the blocked turn instead of counting it (2026-09-25)
 - [x] Rust agent key injection was unproven on real hardware (only the Python agent had been); verified live 2026-09-25 (`esc` opened the game's pause menu)
 - [x] Autopilot counted turns locally with no check that a turn advanced, and hard-coded its modal ROI (2026-09-25; now diffs the manifest's `turn_indicator_roi` before/after the macro, returns `NotAdvanced` when unchanged, reads `luminance_roi`/threshold from the manifest, and refuses to send keys unless the game is foreground; 4 classifier tests)

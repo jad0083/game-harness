@@ -139,7 +139,10 @@ enum CorpusAction {
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
-    let client = Arc::new(AgentClient::new(cli.agent_url.as_deref(), cli.token.as_deref())?);
+    // Corpus commands work offline: they never contact the agent, so they must not need its token.
+    let offline = matches!(cli.command, Commands::Corpus { .. });
+    let token = cli.token.as_deref().or(if offline { Some("offline") } else { None });
+    let client = Arc::new(AgentClient::new(cli.agent_url.as_deref(), token)?);
 
     let corpus = if let Some(p) = &cli.corpus {
         if p.is_dir() {

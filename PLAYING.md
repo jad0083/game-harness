@@ -48,3 +48,19 @@ Verified 2026-09-25 (afternoon, Rust agent, turn 3):
   then navigates to that item rather than advancing; the autopilot reports `NotAdvanced`.
 - `turn_indicator_roi` (the date readout, top-right) is stable frame-to-frame when no turn
   passes (diff 0.000), so an unchanged readout is a reliable "did not advance" signal.
+
+Verified 2026-09-25 (evening, autonomous play, Mar → Oct 2329):
+
+- **TAB ends the turn** ("Press Tab to advance to next turn") — not Enter. When something is
+  pending, TAB opens it instead. The turn button's icon says what is pending:
+  ▷ = ready · ⚖ = leader/policy decision · green planet = idle core world (empty build queue) ·
+  green ships = idle fleet · red ! = pending event (TAB opens the event dialog).
+- Ship orders (hotkey shown in each action button's tooltip): **Explore = O** (probes/survey
+  ships auto-explore), **Standby = J**, Auto Colonize = C.
+- Colonial Charter: drag a leader card onto a Minister office; drag a policy from
+  *Available Policies* onto an open slot. Both confirmed working through the agent's drag.
+- Planet screen ("Choose a region to improve"): click an empty tile → a menu of districts
+  with turn costs → click one. Dragging an improvement icon onto a tile did **not** work.
+- Event dialogs: click the option button. Outcomes are in the game data — look them up first.
+- Galactic News (GNN) bulletins are informational; the autopilot matches the "GNN LIVE" logo
+  (`templates/gnn_live.png`) and clicks Close by itself.
