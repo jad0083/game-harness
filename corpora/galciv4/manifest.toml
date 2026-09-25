@@ -168,6 +168,7 @@ template_roi = [0.2577, 0.8265, 0.0217, 0.0385]
 template_threshold = 0.06
 auto_dismiss = true
 dismiss_key = "c"
+only_when_blocked = true  # a stale selection may already be busy
 
 [screens.colonize_confirm]
 description = "'Colonize Planet? <name> No/Yes' confirmation after Auto Colonize arrives: accept"
@@ -191,3 +192,12 @@ template_roi = [0.2577, 0.8265, 0.0217, 0.0385]
 template_threshold = 0.06
 auto_dismiss = true
 dismiss_key = "v"
+only_when_blocked = true  # a stale selection may already be busy
+
+[screens.survey_abandon_confirm]
+description = "'Survey in Progress — abandon the in-progress survey?' (a repeated survey order): always No"
+template = "templates/survey_in_progress_title.png"
+template_roi = [0.4464, 0.3379, 0.1071, 0.0295]
+template_threshold = 0.06
+auto_dismiss = true
+dismiss_click = [0.4286, 0.5952]    # No

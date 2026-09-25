@@ -243,7 +243,7 @@ impl Autopilot {
             // (a colony ship stays selected after Auto Colonize), which must not loop.
             let mut handled: Vec<String> = Vec::new();
             while dismissed.len() < MAX_DISMISSALS_PER_TURN {
-                match self.dismiss_known_screen(&before, &view, &handled).await? {
+                match self.dismiss_known_screen(&before, &view, &handled, attempt > 0).await? {
                     Some(name) => {
                         handled.push(name.clone());
                         dismissed.push(name);
@@ -284,7 +284,7 @@ impl Autopilot {
                     });
                 }
                 TurnVerdict::NotAdvanced { .. }
-                    if attempt == 0 && self.known_screen_name(&after, &dismissed)?.is_some() =>
+                    if attempt == 0 && self.known_screen_name(&after, &dismissed, true)?.is_some() =>
                 {
                     continue; // dismissed at the top of the next attempt
                 }
@@ -314,25 +314,39 @@ impl Autopilot {
     }
 
     /// A known screen on `frame` that is not in `exclude`.
-    fn known_screen_name(&self, frame: &[u8], exclude: &[String]) -> Result<Option<String>> {
+    fn known_screen_name(&self, frame: &[u8], exclude: &[String], blocked: bool) -> Result<Option<String>> {
         let img = decode_rgb(frame)?;
-        Ok(self.unhandled_matches(&img, exclude).map(|(n, _, _)| n.clone()))
+        Ok(self.unhandled_matches(&img, exclude, blocked).map(|(n, _, _)| n.clone()))
     }
 
+    /// First known screen on `img`, skipping `exclude` and, unless `blocked`, the screens that
+    /// may only be acted on after end-turn was blocked.
     fn unhandled_matches(
         &self,
         img: &image::RgbImage,
         exclude: &[String],
+        blocked: bool,
     ) -> Option<&(String, crate::corpus::ScreenDef, image::RgbImage)> {
-        let candidates: Vec<_> = self.known_screens.iter().filter(|(n, _, _)| !exclude.contains(n)).cloned().collect();
+        let candidates: Vec<_> = self
+            .known_screens
+            .iter()
+            .filter(|(n, d, _)| !exclude.contains(n) && (blocked || !d.only_when_blocked))
+            .cloned()
+            .collect();
         let name = match_known_screen(img, &candidates)?.0.clone();
         self.known_screens.iter().find(|(n, _, _)| *n == name)
     }
 
     /// If `frame` shows a known `auto_dismiss` screen not in `exclude`, dismiss it and return its name.
-    async fn dismiss_known_screen(&self, frame: &[u8], view: &View, exclude: &[String]) -> Result<Option<String>> {
+    async fn dismiss_known_screen(
+        &self,
+        frame: &[u8],
+        view: &View,
+        exclude: &[String],
+        blocked: bool,
+    ) -> Result<Option<String>> {
         let img = decode_rgb(frame)?;
-        let Some((name, def, _)) = self.unhandled_matches(&img, exclude) else {
+        let Some((name, def, _)) = self.unhandled_matches(&img, exclude, blocked) else {
             return Ok(None);
         };
         if let Some([nx, ny]) = def.dismiss_click {
@@ -471,6 +485,10 @@ mod tests {
         assert_eq!(busy.len(), m.screens.values().filter(|d| d.busy).count(), "every busy template must load");
         assert!(busy.iter().any(|(n, _, _)| n == "turn_processing"));
         assert!(!screens.iter().any(|(n, _, _)| n == "turn_processing"), "busy screens are never dismissed");
+        for unit_screen in ["idle_colony_ship", "idle_survey_ship"] {
+            let def = &m.screens[unit_screen];
+            assert!(def.only_when_blocked, "{unit_screen} must only act after end-turn was blocked");
+        }
         assert!(declared >= 3);
         let gnn = screens.iter().find(|(n, _, _)| n == "gnn_news").expect("gnn_news template loads");
         assert!(gnn.1.dismiss_click.is_some());
