@@ -1,0 +1,511 @@
+# Planetary Management
+Source: https://wiki.galciv.com/index.php/Planetary_Management
+
+Planetary Management
+
+Planetary Management
+The economy in Galactic Civilization 4 is based around the 5 primary planetary inputs minerals, technology, wealth, farming and culture. These inputs are produced by and fed into core worlds. They are then turned into manufacturing, research, gross income, food, and influence outputs. A major part of the game is developing your economy to get the most out of these resources. 
+
+Planetary Input/Output
+
+Input and Output
+
+Planetary Inputs
+
+Planetary Inputs are the raw resources for your economy. They will determine how effective a colony will be at producing its associated output. Colonies will send their planetary inputs to their sponsored core world, but some will be lost due to supply attrition. The table below details each of the inputs, where it's typically found and the output it is paired with.
+
+Planetary Outputs
+
+Citizens, Districts, and Improvements process the planetary inputs and convert them to Planetary Outputs. These outputs are Manufacturing, Research, Income, Food, Influence, Military and Tourism. Manufacturing, Military, and Influence are local outputs meaning they provide an immediate bonus to the core world itself. Research, Food, Tourism, and Income are global outputs which means their benefits apply to your entire civilization. Citizen's specialization, districts, and improvements that increases global outputs should be built on any core world with suitable planetary input. Local outputs on the other hand should be specialized as much as possible to maximize them on their preferred core world.
+
+For instance, if the goal were to specialize your civilization for maximum production, a player could take the following three actions: 
+
+Train one of their citizen as a worker.
+Build a manufacturing district.
+Build a manufacturing improvement.
+Planet Tiles
+
+Name
+
+Description
+
+Unique Per Planet
+
+Bonuses
+
+Rainforest
+
+Lush, dense, and teeming with life.
+
+No
+
++1%  Manufacturing
+
+Coastal
+
+Stunning shoreline where the land meets the sea.
+
+No
+
++2%  Approval
+
+Oasis
+
+A particularly fertile area in an otherwise inhospitable land.
+
+Yes
+
++2%  Food
+
+Frozen Lakes
+
+The ice traps ages of scientific data and creates beautiful vistas to relax by.
+
+No
+
++1%  Research
+
+Tundra
+
+Clear, isolated regions are good for Research.
+
+No
+
++1%  Research
+
+Highlands
+
+Rolling hills and elevated landforms dominate these lands.
+
+No
+
+Vapor Mines
+
+These mines can be extracted to provide a significant economic bonus.
+
+Yes
+
++3%  Manufacturing
+
+Cataract
+
+Massive falls provide almost free energy for manufacturing.
+
+Yes
+
++3%  Manufacturing
+
+Fluorescent Forest
+
+The beauty of this forest would be enjoyed by citizens or tourists.
+
+Yes
+
++3%  Tourism
+
+Volcanic
+
+A land filled with volcanic ash.
+
+No
+
+-1%  Food
+
+Fertile Valley
+
+Nestled between mountains, these lush valleys boast rich soil.
+
+Yes
+
++3%  Food
+
+Tropical Grassland
+
+Characterized by tall grasses and scattered trees.
+
+No
+
++1%  Manufacturing
+
+Desert
+
+Food improvements cannot be constructed here.
+
+No
+
+Shrublands
+
+Dominated by dense shrubs and hardy plants.
+
+No
+
++1%  Manufacturing
+
+Ancient Ruins
+
+These Precursor ruins are renown throughout the galaxy.
+
+Yes
+
++3%  Influence
+
+Thriving Reef
+
+This reef is home to many exotic creatures that we can study.
+
+Yes
+
++3%  Research
+
+Rare Stones
+
+Rare gems found in this location are valuable throughout the galaxy.
+
+Yes
+
++3%  Wealth
+
+Wasteland
+
+Barely usable terrain. There must be better options.
+
+No
+
+-2%  Research
+
+Plains
+
+Nice flat land ready for improvement.
+
+No
+
+Steppes
+
+Expansive grasslands characterized by their semi-arid climate.
+
+No
+
+Barren
+
+Barely usable terrain.
+
+No
+
+-2%  Food
+
+Auroras
+
+Auroras fill the sky here and captivate all who see it.
+
+Yes
+
++2%  Approval
+
+Grassland
+
+These fertile fields are an ideal place for homes.
+
+No
+
++1%  Population
+
+Natural Wonder
+
+Attractions built here will draw tourists from the furthest reaches of the galaxy.
+
+Yes
+
++3%  Tourism
+
+Barrier Reef
+
+An underwater kaleidoscope of life.
+
+No
+
++1%  Research
+
+Hills
+
+Gentle slopes providing diverse microclimates.
+
+No
+
++1%  Research
+
+Lakes
+
+Lakes are a fantastic place to attract the best scientists to work.
+
+No
+
++1%  Research
+
+Marshlands
+
+Sprawling swamps weave through dense vegetation.
+
+No
+
+-1%  Manufacturing
+
+Mineral Rich
+
+The minerals found here are extremely useful for construction.
+
+Yes
+
++2%  Manufacturing
+
+Planetfall
+
+The reported location of the original scouts to set foot on this world.
+
+Yes
+
++1% All Improvements
+
+Volcanic Rifts
+
+Heat from below the surface can be extracted to power production.
+
+No
+
++1%  Manufacturing
+
+Plateau
+
+Flat-topped areas rising sharply above the landscape are strategic.
+
+No
+
++1%  Military
+
+Unstable Materials
+
+Undiscovered materials that could be deadly if weaponized.
+
+Yes
+
++3%  Military
+
+Lagoon
+
+A serene expanse of shallow waters, encircled by lush foliage.
+
+No
+
++1%  Approval
+
+Isolated Biome
+
+The unique flora and fauna of this region will benefit research.
+
+Yes
+
++3%  Research
+
+Shallows
+
+A stretch of clear, shallow waters, gently lapping over fine sands.
+
+No
+
+Restorative Herbs
+
+The restorative power of these herbs can be used for medical treatments.
+
+Yes
+
++3%  Population
+
+Giant Mushrooms
+
+These freakishly large mushrooms present a generous food source.
+
+Yes
+
++3%  Food
+
+Haven
+
+This idyllic region is so beautiful that living here makes people happy.
+
+Yes
+
++3%  Population
+
+Ancient Wonder
+
+This ancient wonder appears to have been made by the Precursors.
+
+Yes
+
++3%  Research
+
+Jungle
+
+These thick jungles hide a wealth of resources.
+
+No
+
++1%  Wealth
+
+Impact Crater
+
+Studying this site could reveal insight about the history of this world.
+
+Yes
+
++2%  Research
+
+Geothermal Springs
+
+These springs power manufacturing plants, and heated pools.
+
+Yes
+
++3%  Manufacturing
+
+Permanent Rainbow
+
+The beautiful rainbow improves the mood of the local populace.
+
+Yes
+
++2%  Approval
+
+Caverns
+
+Deep natural caverns, perfect for fortifications.
+
+No
+
++1%  Military
+
+Mountains
+
+The isolation of mountains make them excellent for cultural improvements.
+
+No
+
++1%  Influence
+
+Wetland
+
+It is difficult to use heavy equipment here, but the climate is ideal.
+
+No
+
+-1%  Manufacturing
+
+Underground Relics
+
+Our traders are eager to get their hands on these precious relics.
+
+Yes
+
++3%  Wealth
+
+Ravine
+
+The stunning views of this region provide easy access to minerals.
+
+No
+
++1%  Wealth
+
+Precious Metals
+
+Veins of precious metals make this an ideal spot to make some profit.
+
+Yes
+
++2%  Wealth
+
+Gold Fields
+
+Fields rich with precious gold, will enrich whoever mines it.
+
+Yes
+
++3%  Wealth
+
+Floating Mountains
+
+These mountains are beautiful and bizarre.
+
+Yes
+
++3%  Influence
+
+Rare Earth Metals
+
+Rare earth metals allow for much more exotic research methods.
+
+Yes
+
++3%  Research
+
+Lava Flow
+
+Flowing lava is in this area making it not terribly useful for anything.
+
+No
+
+Volcano
+
+A good place to build a sinister hideout or stronghold.
+
+Yes
+
++2%  Military
+
+Stony Plains
+
+Rugged landscape, with rocky surfaces and sparse vegetation.
+
+No
+
+Volcanic Plains
+
+A surprisingly useful place for conducting sinister research.
+
+No
+
+-1%  Food
++1%  Research
+
+Fertile Plains
+
+Spanning vast expanses, these lands are the heartland of agriculture.
+
+No
+
++1%  Food
+
+Forest
+
+Forests provide raw material that can be useful to manufacturing.
+
+No
+
++1%  Manufacturing
+
+Paradise
+
+This is where everyone wants to live, or at least visit once in their life.
+
+Yes
+
++2% All Improvements
+
+Floodplain
+
+These nutrient rich flood plains are perfect for growing food.
+
+No
+
++1%  Food
+
+Retrieved from "https://wiki.galciv.com/index.php?title=Planetary_Management&oldid=23101"

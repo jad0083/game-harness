@@ -1,0 +1,34 @@
+# Anomalies
+Source: https://wiki.galciv.com/index.php/Anomalies
+
+For a list of events when discovering Anomalies see the Anomaly Events page.
+The darkest parts of the galaxy harbour many secrets in the form of Anomalies. These an assortment of abandoned space junk, ancient artifacts from long gone civilizations and other flotsam and jetsam found floating in the depths of space, and seeking them out is highly recommended since the pickups they provide can be very powerful. Even the lowly space junk can provide a quick cash injection to fill the coffers of an ailing treasury, while some of the more powerful artifacts can have a game-changing effect when used at critical moment.
+
+Contents
+
+1 Scanning Anomalies
+2 Types of Anomalies
+
+2.1 Space Junk
+2.2 Capsules
+2.3 Artifacts
+
+Scanning Anomalies
+Scanning anomalies requires high tech equipment called a Flag Module, scavenged from Precursor technology, and is in limited supply. Flagships are vessels suitably equipped to scan and retrieve Anomalies, and the player only gets access to a limited number: there'll always be at least one available to design and build in a shipyard, and some of the Commander' ships come equipped with a Flag module too.
+The ship with the flag module will be occupied for the duration of scanning an anomaly. Surveying an anomaly will always take multiple turns.
+Some of these Anomalies can trigger quests and other challenges.
+More Anomalies are generated once certain technologies are researched, ensuring that they're periodically replenished as the game progresses, and building your civilization to take advantage of this cosmic plunder might be a lucrative endeavour in your race for galactic supremacy!
+
+Types of Anomalies
+Space Junk
+These make up the flotsam and jetsam of the galaxy. They are rarely of great value, but provide unique opportunities.
+
+Capsules
+
+Capsules are lost goods never recovered, escape pods, jettisoned contraband, or simply misplaced wares. They have miscellaneous effects.
+
+ Artifacts
+
+Powerful relics of lost civilizations. They are rare but give powerful rewards. Artifacts are stored in the Artifact Vault until needed, and are activated manually by the player.
+
+Retrieved from "https://wiki.galciv.com/index.php?title=Anomalies&oldid=19688"

@@ -14,26 +14,49 @@
   in .claude/rules/*.md or import other files with @path/to/file syntax.
 -->
 
-This file guides Claude Code when working in this repository.
+This file guides LLMs and coding agents when operating in this repository.
 
 ## Project
-
 - **Project Name**: game-harness
-- **Description**: Harness that lets Claude play Galactic Civilizations IV on a Windows PC (192.168.1.77) via a LAN agent + MCP server
+- **Goal**: Autonomous, ultra-low-latency 4X game player for *Galactic Civilizations IV: Supernova* on Windows (`192.168.1.77`) driven from Linux (`192.168.1.76`).
+- **Core Architecture**: 100% Rust static binaries (`crates/game-agent` on Windows, `crates/game-controller` on Linux). See `ARCHITECTURE.md`.
 
-## Commands
+## Primary Commands (100% Native Compiled Rust)
+- Health check: `./target/release/game-controller health`
+- Live state & windows: `./target/release/game-controller state`
+- Focus game window: `./target/release/game-controller focus "Galactic Civilizations"`
+- Capture screenshot: `./target/release/game-controller screenshot -o current_screen.jpg`
+- Click image coordinates: `./target/release/game-controller click <X> <Y> [--button right|left] [--count 1|2]`
+- Drag image coordinates: `./target/release/game-controller drag <X1> <Y1> <X2> <Y2> [--button left]`
+- Send keypress / combo: `./target/release/game-controller key "<key>"`
+- Advance single turn: `./target/release/game-controller turn`
+- Fast autonomous autopilot: `./target/release/game-controller autopilot --turns <N>` (1.12s/turn)
+- Corpus search: `./target/release/game-controller corpus search "<query>"`
+- Corpus tech lookup: `./target/release/game-controller corpus tech "<name>"`
+- Corpus improvement lookup: `./target/release/game-controller corpus improvement "<name>"`
+- Corpus order lookup: `./target/release/game-controller corpus order "<name>"`
+- Corpus strategy playbook: `./target/release/game-controller corpus strategy`
+- Stdio MCP server: `./target/release/game-controller mcp`
+- Run Rust test suite: `cargo test --workspace` (8/8 tests pass in 0.04s)
+- Run legacy test suite: `.venv/bin/pytest -q` (40/40 tests pass in 10.86s)
 
-- Setup: `python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'`
-- Test: `.venv/bin/pytest -q`
-- Lint: `.venv/bin/ruff check .`
-- Serve Windows installer: `scripts/serve-agent.sh`
-- Smoke test agent: `.venv/bin/game-harness health`
-- Playing the game: see `PLAYING.md` (MCP server `game`, configured in `.mcp.json`)
+## Golden Rules for LLMs
+1. **Prefer Hotkeys Over UI Clicks**: Keypresses (`tab`, `space`, `f`, `enter`, `1`, `2`, `3`, `esc`) are 100% deterministic, resolution-independent, and instant (<1ms).
+2. **Consult the 3-Tier Game Corpus**:
+   - `corpora/galciv4/game.toml`: Machine manifest for hotkeys, 8 screen signatures, and atomic macros.
+   - `corpora/galciv4/strategy.md`: Strategy playbook for early expansion, colony feeding, districts, ministers, and tech tree.
+   - `corpora/galciv4/wiki/`: 13 core wiki documents for exact stats, costs, and cooldowns.
+3. **Use the Autopilot Loop**: Do NOT make individual tool calls for routine turn advancement. Use `./target/release/game-controller autopilot --turns 25` to fast-forward turns at 1.12s/turn. It automatically halts on strategic modal dialogs.
+4. **Resolution & Coordinate Mapping**: Image space is 1568x882; remote screen is 3072x1728 (or 3840x2160). Both `click` and `drag` automatically scale coordinates using live target width/height headers.
+5. **Handling Action Required Prompts**: When the turn button demands action (e.g. "Choose a region to improve" on Earth or "Colonial Charter" for policies/ministers), `Enter` navigates directly to that screen.
+   - On Planet Management: click the glowing empty tile and pick the district with the highest adjacency bonus (e.g. Manufacturing District next to minerals for +3).
+   - On Colonial Charter: assign recruited leaders to Ministers (Exploration for universal fleet speed, Technology for research boost).
+   - Press `Esc` to return to galaxy map once actions are committed.
 
-## Code Style
-
-- `windows_agent/agent.py` must stay standard-library only (it is copied to Windows as a single file).
-- Keep Windows-specific code inside `WindowsBackend`; everything else is tested on Linux with `FakeBackend`.
+## Architecture & Code Style
+- 100% Rust architecture: Linux controller (`crates/game-controller`) and Windows agent (`crates/game-agent`).
+- Windows agent binary is cross-compiled via `cargo build --target x86_64-pc-windows-gnu --release --bin game-agent` and staged at `windows_agent/game-agent.exe`.
+- Zero runtime Python dependencies for active gameplay or agent execution.
 
 ## Workflow
 

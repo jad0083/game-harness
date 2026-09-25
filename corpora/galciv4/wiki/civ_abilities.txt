@@ -1,0 +1,614 @@
+# Civ Abilities
+Source: https://wiki.galciv.com/index.php/Civ_Abilities
+
+Civilization Abilities
+
+Civilization Abilities Civilization AbilitiesCivilization Abilities are a set of two characteristics that grant the Civilization a powerful bonus or ability and provide some extra flavour to their gameplay style. Alongside Civilization Traits, Citizens and Cultural Focus, Civilization Abilities serve to differentiate the different in-game factions from one another. Civilization Abilities have a wide range of bonuses to grant: from useful starting resources and various modifiers to resource generation, through making unique technologies available for research, to special powers unique to that Ability that can be activated by the player to influence the game at a critical moment. Core Civilizations have their Abilities pre-set, although they can be changed in the Customize your Civilization screen before the game starts, which allows each Civilization to be played in a wide variety of ways. Players can select two Abilities for Custom Civilizations made with the AlienGPT system too.
+
+Name
+
+Description
+
+Effects
+
+ Resilient
+
+Ships immune to nebula and have access to special Hyperion improvements.
+
+Ship gets   Is Immune To Nebula
+Starbase gets   Is Immune To Nebula
+
+ Resourceful
+
+Starts with some useful Resources.
+
++2  Hyper Silicates
++2  Durantium
+Allows  Auto Printer Improvement
+Allows  Communications Array Improvement
+Allows  Lossless Mining Tech
+Allows  IP Theft Policy
+Blocks  Capital Mainframe Improvement
+Blocks  Industrial Center Improvement
+
+ Watcher
+
+Grants the Cosmic Eye Executive Order. The Cosmic Eye can reveal a part of the galaxy and grants additional research or a new technology when used on another player's planet. +5 Sensor Range for Planets. +1 Sensor Range for Ships and Starbases.
+
+Colony gets +5  Sensor Range
+Ship gets +1  Sensor Range
+Starbase gets +1  Sensor Range
++1  Totalitarianism
++5 Deception
+Blocks  Telescope Takeover Executive Order
+
+ Fertile
+
+Start with 2 additional workers and population grows 25% faster.
+
+Colony gets +25%  Growth
+At the start of the game grant +2 Citizens
+Allows  Artificial Wombs Tech
+Allows  Cloning Tech
+Allows  Population Boom Policy
+Blocks  Coerced Colonization Policy
+
+ Nocturnal
+
+Developed to work in cycles, each lasting 15 months. Season of Waking: Manufacturing and Growth are boosted. Season of Dreaming: Research and Influence are boosted.
+
+Alternate between Season of Waking and Season of Dreaming
+Season of Waking
+
++20%  Manufacturing
++20%  Crime
++20%  Growth
+Season of Dreaming
+
++25%  Influence
++25%  Research
+-25%  Ship Hit Points
+
+ Warriors
+
+Ignore 10% of all damage done to their ships. All weapons do 10% more damage.
+
+Ship gets +10%  Beam Attack
+Ship gets +10%  Kinetic Attack
+Ship gets +10%  Missile Attack
+Ship gets +0.1  Beam Resistance
+Ship gets +0.1  Kinetic Resistance
+Ship gets +0.1  Missile Resistance
++5 Intimidation
+Allows The Unlikely Pacifist Event
+
+ Genocidal
+
+Massive advantage in conquering planets due to not caring in the least about collateral damage.  Can convert other species unfortunate enough to end up on their planets into living neural network batteries.
+
+-1  Diplomacy Bonus
+Colony gets -25%  Influence Growth
++0.15  Soldiering
++10  Nihilism
++15 Deception
++15 Intimidation
+-5 Persuasion
+Allows  Interrogation Machine Improvement
+Allows  Death Camp Improvement
+Allows  Neural Battery Unit Specialization
+Blocks  Telescope Takeover Executive Order
+Blocks  Capital Mainframe Improvement
+Blocks  Industrial Center Improvement
+Blocks  Heritage Center Improvement
+
+ Craftsman
+
++50% Income from Trade Routes
+
++50%  Trade Route Income
++1  Egalitarianism
++1  Egalitarianism
++1  Nihilism
++5 Persuasion
+
+ Certain
+
+Believes their philosophy should be universal, increased (+2) influence, special planet improvements. 30 Research every time a Culture Trait is unlocked.
+
+Colony gets +2  Influence Growth
+When unlocking culture traits  +30 Award Research Amount
+Allows [[File:|alt=|24px|frameless]] Defensive Meditation Tech
+
+ Experienced
+
+All Ships receive 25% more Experience Points from battles.
+
++0.25 Experience Bonus
+Allows  Planetary Defenses Tech
+
+ Intuitive
+
+Starts with access to Xeno Anthropology technologies and a free Culture trait.
+
++5 Deception
++10 Culture Points
+Allows  Xeno Anthropology Tech
+Allows  Universal Outreach Tech
+Allows  Future Studies Tech
+
+ Slavers
+
+Gain the ability to enslave your citizens, reducing their approval, production and food consumption. But they never protest. Gain access to Slaving Technologies.
+
++5  Totalitarianism
++5  Nihilism
+Allows  Prison Labor Camp Improvement
+Allows  Prison Research Lab Improvement
+Allows  Thrall Seeking Mission Improvement
+Allows  Pain Amplifier Improvement
+Allows  Deep Space Labor Training Tech
+Allows  Slave Labor Policy
+Blocks  Draft Colonists Executive Order
+Blocks  Telescope Takeover Executive Order
+Blocks  Draft Colonists Executive Order
+Blocks  Telescope Takeover Executive Order
+Blocks  Capital Mainframe Improvement
+Blocks  Kazar's Mainframe Improvement
+Blocks  Planetary Mainframe Improvement
+Blocks  Industrial Center Improvement
+Blocks  Treasure Hunt Improvement
+Blocks  Asteroid Mining Tech
+Blocks  Asteroid Mining Tech
+Blocks  Asteroid Mining Tech
+
+ Archaeologist
+
+Whenever artifact charges are earned an additional charge is gained.
+
++1  Archivist Ability
+Allows  Asteroid Exploitation Policy
+
+ Radiated
+
+Can colonize Radioactive Worlds. Gains the Abhorent Infection Executive Order after several months.  Abhorent Infection  raises the Pollution level on a target planet.
+
++1  Egalitarianism
++1  Progressivism
++1  Egalitarianism
+At the start of the game unlocks the  Radioactive World Mastery tech
+Blocks  Draft Colonists Executive Order
+Blocks  Print Money Executive Order
+Blocks  Draft Colonists Executive Order
+Blocks  Print Money Executive Order
+
+ Unrelenting
+
++10 Control. Planets generate +1 more Influence per month.
+
++10  Control
+Colony gets +1  Influence Growth
+Allows  Warships Tech
+Allows  Systems Of Control Tech
+Allows  Interstellar Propulsion Tech
+Allows  Reproductive Imperative Policy
+Allows  Xeno Harvesting Policy
+Allows  Singular Purpose Policy
+Blocks  Print Money Executive Order
+Blocks  Artificial Gravity Tech
+Blocks  Armed Shuttles Tech
+Blocks  Genius Grants Policy
+Blocks  Research Grants Policy
+Blocks  Artificial Gravity Tech
+Blocks  Armed Shuttles Tech
+Blocks  Artificial Gravity Tech
+
+ Bureaucrats
+
+Starts with 50 Control and access to coordination technologies.
+
+At the start of the game  +50  Control
+Allows  Coordination Temple Tech
+Allows  Domestic Policy Doctrine Tech
+Allows  Colonial Governance Tech
+
+ Proliferation
+
+When a ship is constructed, two ships are constructed instead. But all ships have -25% Hit Points.
+
++1 Redundant Assembly Ability
+Ship gets -25%  Hit Points
+Unit gets -2  Intelligence
+Unit gets -1  Diligence
+Unit gets -1  Resolve
+Allows  Growth Center Improvement
+Allows  Shoddy Construction Policy
+Allows  Prolific Supply Module Ship Component
+Blocks  Emergency Speed Executive Order
+Blocks  Rush Starbase Modules Executive Order
+Blocks  Capital Mainframe Improvement
+Blocks  Industrial Center Improvement
+Blocks  Supply Module Ship Component
+
+ Hopeful
+
+Believes any civilization capable of space travel must be a potential friend. Higher Approval on planets.
+
+Unit gets +10%  Approval
++5 Persuasion
+
+ Inspired
+
+An additional Leader is available for recruitment and Leaders cost 25% less to recruit.
+
++1  Max Recruits
+-0.25  Leader Cost
++5 Persuasion
+Allows  Brainstorming Policy
+
+ Hive Mind
+
+Ships in your territory gain additional Hit Points per colony controlled.
+
++5 BonusHP Max In Z O C
+
+ Engineers
+
+Colony and asteroid production decays at half of the normal rate.
+
+Colony gets +0.5  Shipyard Decay
+Colony gets -0.15 Supply Attrition
+Allows  Deep Field Sensors Tech
+Allows  Subspace Projection Tech
+Allows  Quantum Stream Tunneling Tech
+
+ Promethion Born
+
+Ships have double the normal Hit Points but don't heal normally.
+
+Ship gets +100%  Hit Points
+Ship gets +1 Disable Repair
+At the start of the game  unlocks the  Prometheus Stone Extractor improvement
++5  Promethion
+Blocks  Repair Bay Ship Component
+
+ Scout Fleet
+
+Begins with a colony ship and three probes.
+
+-100  Control
+Blocks  Draft Colonists Executive Order
+Blocks  Impress Citizens Executive Order
+Blocks  Telescope Takeover Executive Order
+Blocks  Print Money Executive Order
+
+ Voyagers
+
++2 Ship Sensor Range. +1 Ship Moves.
+
+Ship gets +2  Sensor Range
+Ship gets +1  Moves
+Allows Global Uncertainty over the Colonization Program Event
+Allows  Fast Exploration Policy
+
+ Starfaring
+
++25% Ship Range. Starts with the ability to detect and travel on Subspace Streams.
+
++25%  Ship Range
+At the start of the game unlocks the  Subspace Scanning tech
+At the start of the game unlocks the  Subspace Streaming tech
+Allows  Translight Hub Improvement
+Allows  Central Borehole Improvement
+Allows  Subspace Sensors Policy
+Blocks  Capital Mainframe Improvement
+Blocks  Industrial Center Improvement
+
+ Traders
+
+Starts with freighter, has a significant boost to Persuasion and receives 3 free trade licenses.
+
++3  Trade Licenses Max
++1 Entrepreneurs Ability
++10 Persuasion
+At the start of the game grant a Freighter Ship
+Allows  Galactic Currency Reserve Improvement
+Allows  Central Mine Improvement
+Allows  Mining Core Improvement
+Allows  Air Purifier Improvement
+Allows  Xeno Patent Office Improvement
+Allows  Really Late Stage Capitalism Tech
+Allows  Interstellar Investments Tech
+Allows  Interstellar Markets Tech
+Blocks  Draft Colonists Executive Order
+Blocks  Telescope Takeover Executive Order
+Blocks  Print Money Executive Order
+Blocks  Capital Mainframe Improvement
+Blocks  Planetary Generator Improvement
+Blocks  Industrial Center Improvement
+Blocks  Supply Depot Improvement
+Blocks  Trade Networks Tech
+
+ Ancient
+
+Gets Research from Precursor Artifacts and anomalies. Starts with an additional Policy slot.
+
++1  Ancient Ability
++1  Max Enacted Policies
+When arriving at an Anomaly  +10 Award Research Amount
+Allows  Elemental Fabricator Improvement
+Allows  Tower of Procipinee Improvement
+Allows  Precursor Traditions Tech
+Allows [[File:|alt=|24px|frameless]] Precursor Mysteries Tech
+Allows [[File:|alt=|24px|frameless]] Living Ships Tech
+Allows  Xeno Religions Tech
+Allows  Precursor Engineering Tech
+Allows  Heritage Protection Policy
+Blocks  Capital Mainframe Improvement
+Blocks  Industrial Center Improvement
+
+ Xenophobic
+
++50% Research, -75% Influence and -3 to Diplomacy.
+
+Colony gets +150%  Research
+Colony gets -75%  Influence Growth
+-3  Diplomacy Bonus
++5  Traditionalism
+-5 Deception
+-5 Intimidation
+-5 Persuasion
+
+ Devout
+
+Starts with a Cleric citizen and a Krynniac Temple on their homeworld. Culture grows every time they add to their ideology.
+
+At the start of the game grant a Cleric
+At the start of the game  give all units  The Way
+At the start of the game  unlocks the  Krynniac Temple improvement
+When unlocking culture traits +100  Influence Growth
+Allows The Way Event
+Allows  Krynn Consulate Improvement
+Allows [[File:|alt=|24px|frameless]] Jihad Tech
+Allows [[File:|alt=|24px|frameless]] Divine Fleets Tech
+Allows  The Path Tech
+Allows  The Calling Tech
+Allows  The Order Tech
+Allows  The Way Tech
+Allows  The Path of Shadows Tech
+Allows  Shadow Enforcers Tech
+Allows  Shadow Trade Tech
+Allows  Krynniac Conversion Tech
+Blocks Destiny Event
+
+ Unwavering
+
+Colonies are much harder to Culture flip, and access to the Unbroken Spirit technologies.
+
++200 Rebellion Points
++5 Intimidation
++5 Persuasion
+Allows  Unbroken Spirit Tech
+Allows  Defensive Discipline Tech
+Allows  Defensive Trance Tech
+
+ Adaptable
+
+Can colonize extreme worlds.
+
+At the start of the game unlocks the  Extreme Colonization tech
+Blocks  Telescope Takeover Executive Order
+
+ Raiders
+
+-50% Manufacturing and -50% Income on all worlds.  Gain +100 Credits and  +20 Manufacturing for winning battles.  Gain +500 Credits and  +200 Manufacturing for conquering planets.  Starts with the Armed Shuttles Tech.
+
+Colony gets -50%  Manufacturing
+Shipyard gets -50%  Military
+Colony gets -50%  Gross Income
+When winning battles +100  Treasury
+When winning battles +20  Stored Goods at the Colony
+When winning battles +20  Stored Goods at the Shipyard
+When winning battles +10%  Approval
+When conquering planets +10%  Approval
+When conquering planets +500  Treasury
+When conquering planets +200  Stored Goods at the Colony
+When conquering planets +200  Stored Goods at the Shipyard
++5 Intimidation
+At the start of the game unlocks the  Armed Shuttles tech
+
+ Empathy
+
+Increases Diplomacy by +1, Persuasion by +15%, Reduces Crime by 10%.
+
++1  Diplomacy Bonus
+-0.1  Crime
++10 Persuasion
+Allows  Shared Ideology Tech
+Allows  Majesty Tech
+Allows  Empathic Connection Policy
+Allows  Divine Empath Unit Specialization
+
+ Loyal
+
+Leaders all have +10 Loyalty and cost 25% less to recruit. +1 Cultural Point when a Leader is assigned to a Command Ship.
+
+-0.25  Leader Cost
+Unit gets +10  Loyalty
++5 Persuasion
+Allows  Neural Link Improvement
+Allows  The World Engine Improvement
+Allows  Professionalism Policy
+Blocks  Capital Mainframe Improvement
+Blocks  Industrial Center Improvement
+
+ Crime Lord
+
+Starts allied with the Pirates. Also grants access to the 'Look the Other Way' Policy, improvements unlocked by increased Crime and Executive Orders to claim Pirate fleets and worlds.
+
++5  Nihilism
++10 Deception
+At the start of the game  ally with  Pirates
+Allows  Smuggler Port Improvement
+Allows  Pleasure Dome Improvement
+Allows  Mercenary Camp Improvement
+Allows  Enforcer Den Improvement
+Allows  Industrial Espionage Center Improvement
+Allows  Look the Other Way Policy
+Blocks Countering Crime Event
+Blocks Pirate Threat Event
+Blocks  Capital Mainframe Improvement
+Blocks  Industrial Center Improvement
+Blocks  Ministry of Compliance Tech
+Blocks  Ministry of Truth Tech
+Blocks  Security Lights Policy
+Blocks  Prisoner Unit Specialization
+
+ Exterminators
+
+Transport ships are replaced with planet killing Spore Ships.
+
+Colony gets -3  Influence Growth
++15 Intimidation
+Allows Galactic Contamination Concern Event
+Allows  Spore Module Ship Component
+
+ Spores
+
+Starts with the ability to deploy spores to a dead world to restore life. Each time a new Culture Trait is gained another charge is earned.
+
+At the start of the game  unlocks 1 charge of the  Spores of Yggdrasil artifact
+When unlocking culture traits  unlocks 1 charge of the  Spores of Yggdrasil artifact
+Allows  Father Tree Improvement
+Allows  Verdure Globe Vault Improvement
+Allows  Grove Growth Policy
+Blocks  Core World Capital Improvement
+Blocks  Capital City Improvement
+Blocks  Capital Mainframe Improvement
+Blocks  Industrial Center Improvement
+
+ Cartographer
+
+Starts knowing the location of other homeworlds. They also receive 3 charges of the Dimensional Mirror power which reveals a portion of space and they gain an additional charge each time a Culture Trait is earned.
+
+At the start of the game  Show Starting Positions
+At the start of the game  unlocks 3 charges of the  Dimensional Mirror artifact
+When unlocking culture traits  unlocks 1 charge of the  Dimensional Mirror artifact
+Allows  Acquisitions Tech
+
+ Ravenous
+
+Receives 1,000 Credits and +10% Approval for 25 months after conquering a planet. It also grants the ability to consume aliens and spawn new Festron citizens.
+
+When conquering planets +1000  Treasury
+When conquering planets +10%  Approval
+Allows  Work Instruction Chamber Improvement
+Allows  Cerebral Chamber Improvement
+Allows  Harmonious Antennae Improvement
+Allows  Hatchery Improvement
+Allows  Work Hive Improvement
+Allows  Mother Hive Improvement
+Allows  Hatcheries Tech
+Allows  Endless Feast Policy
+Allows  Consume Unit Specialization
+Blocks Religious Freedom Event
+Blocks A Mission of Mercy Event
+Blocks Religious Pilgrims - Fail Event
+Blocks  Telescope Takeover Executive Order
+Blocks  Core World Capital Improvement
+Blocks  Capital City Improvement
+Blocks  Capital Mainframe Improvement
+Blocks  Kazar's Mainframe Improvement
+Blocks  Planetary Mainframe Improvement
+Blocks  Planetary Generator Improvement
+Blocks  Industrial Center Improvement
+Blocks  Supply Depot Improvement
+Blocks  Colonial Clinic Improvement
+Blocks  Heritage Center Improvement
+Blocks  Recruiting Station Improvement
+Blocks  Colonization Center Improvement
+Blocks  Orbital Market Improvement
+Blocks  [[GalCiv4:Leader_Traits#[ICON=Trait_Clone_Icon] Clone|[ICON=Trait_Clone_Icon] Clone]] Unit Specialization
+Blocks  [[GalCiv4:Leader_Traits#[ICON=Trait_Criminal_Icon] Criminal|[ICON=Trait_Criminal_Icon] Criminal]] Unit Specialization
+Blocks  [[GalCiv4:Leader_Traits#[ICON=Trait_Mutant_Icon] Mutant|[ICON=Trait_Mutant_Icon] Mutant]] Unit Specialization
+Blocks File:GovernorTrait Doctor Icon.png [[GalCiv4:Leader_Traits#[ICON=GovernorTrait_Doctor_Icon] Natural League|[ICON=GovernorTrait_Doctor_Icon] Natural League]] Unit Specialization
+Blocks  [[GalCiv4:Leader_Traits#[ICON=UnitTrait_Plagued_Icon] Plagued|[ICON=UnitTrait_Plagued_Icon] Plagued]] Unit Specialization
+Blocks File:GovernorTrait Doctor.png [[GalCiv4:Leader_Traits#[ICON=GovernorTrait_Doctor_Icon] Natural League|[ICON=GovernorTrait_Doctor_Icon] Natural League]] Unit Specialization
+Blocks  [[GalCiv4:Leader_Traits#[ICON=Trait_Defiant_Icon] Defiant|[ICON=Trait_Defiant_Icon] Defiant]] Unit Specialization
+Blocks  [[GalCiv4:Leader_Traits#[ICON=Trait_Scarred_Icon] Scarred|[ICON=Trait_Scarred_Icon] Scarred]] Unit Specialization
+Blocks  [[GalCiv4:Leader_Traits#[ICON=Trait_AlienArtifact_Icon] Alien Artifact|[ICON=Trait_AlienArtifact_Icon] Alien Artifact]] Unit Specialization
+Blocks File:FamousIcon.png [[GalCiv4:Leader_Traits#[ICON=GovernorTrait_Famous_Icon] Spouse|[ICON=GovernorTrait_Famous_Icon] Spouse]] Unit Specialization
+Blocks  [[GalCiv4:Leader_Traits#[ICON=Trait_Clone_Icon] Missing Twin|[ICON=Trait_Clone_Icon] Missing Twin]] Unit Specialization
+Blocks  [[GalCiv4:Leader_Traits#[ICON=DiplomatTrait_Underminer_Icon] Raised by Squatters|[ICON=DiplomatTrait_Underminer_Icon] Raised by Squatters]] Unit Specialization
+Blocks  [[GalCiv4:Leader_Traits#[ICON=Trait_NeuralClamp_Icon] Trained Chef|[ICON=Trait_NeuralClamp_Icon] Trained Chef]] Unit Specialization
+Blocks  [[GalCiv4:Leader_Traits#[ICON=Trait_NeuralClamp_Icon] Brainwashed Cultist|[ICON=Trait_NeuralClamp_Icon] Brainwashed Cultist]] Unit Specialization
+Blocks File:GovernorTrait Doctor.png [[GalCiv4:Leader_Traits#[ICON=GovernorTrait_Doctor_Icon] Failed Med School|[ICON=GovernorTrait_Doctor_Icon] Failed Med School]] Unit Specialization
+Blocks  [[GalCiv4:Leader_Traits#[ICON=Trait_Ex-Convict_Icon] Avoided Service|[ICON=Trait_Ex-Convict_Icon] Avoided Service]] Unit Specialization
+Blocks  [[GalCiv4:Leader_Traits#[ICON=GovernorTrait_Timid_Icon] Excluded Inheritance|[ICON=GovernorTrait_Timid_Icon] Excluded Inheritance]] Unit Specialization
+Blocks  [[GalCiv4:Leader_Traits#[ICON=Trait_Scarred_Icon] Scarred Duelist|[ICON=Trait_Scarred_Icon] Scarred Duelist]] Unit Specialization
+Blocks  [[GalCiv4:Leader_Traits#[ICON=DiplomatTrait_Charismatic_Icon] Minor Nobility|[ICON=DiplomatTrait_Charismatic_Icon] Minor Nobility]] Unit Specialization
+Blocks  [[GalCiv4:Leader_Traits#[ICON=Trait_Ex-Convict_Icon] Wharf Rat|[ICON=Trait_Ex-Convict_Icon] Wharf Rat]] Unit Specialization
+Blocks  [[GalCiv4:Leader_Traits#[ICON=Trait_Vendetta_Icon] Military Child|[ICON=Trait_Vendetta_Icon] Military Child]] Unit Specialization
+Blocks  [[GalCiv4:Leader_Traits#[ICON=Trait_Ex-Convict_Icon] Former Sailor|[ICON=Trait_Ex-Convict_Icon] Former Sailor]] Unit Specialization
+Blocks  [[GalCiv4:Leader_Traits#[ICON=DiplomatTrait_Negotiator_Icon] Career Diplomat|[ICON=DiplomatTrait_Negotiator_Icon] Career Diplomat]] Unit Specialization
+Blocks  [[GalCiv4:Leader_Traits#[ICON=Trait_NeuralClamp_Icon] Overcame Addiction|[ICON=Trait_NeuralClamp_Icon] Overcame Addiction]] Unit Specialization
+Blocks  [[GalCiv4:Leader_Traits#[ICON=CitizenTrait_Infected_Icon] Frostbitten Toes|[ICON=CitizenTrait_Infected_Icon] Frostbitten Toes]] Unit Specialization
+Blocks  [[GalCiv4:Leader_Traits#[ICON=GovernorTrait_Organized_Icon] Detail-Oriented Engineer|[ICON=GovernorTrait_Organized_Icon] Detail-Oriented Engineer]] Unit Specialization
+Blocks  [[GalCiv4:Leader_Traits#[ICON=CitizenTrait_Infected_Icon] Badly Burnt|[ICON=CitizenTrait_Infected_Icon] Badly Burnt]] Unit Specialization
+Blocks  [[GalCiv4:Leader_Traits#[ICON=DiplomatTrait_Underminer_Icon] Deceased Friend|[ICON=DiplomatTrait_Underminer_Icon] Deceased Friend]] Unit Specialization
+Blocks  [[GalCiv4:Leader_Traits#[ICON=Trait_AlienArtifact_Icon] Alien Coin Flipper|[ICON=Trait_AlienArtifact_Icon] Alien Coin Flipper]] Unit Specialization
+Blocks  [[GalCiv4:Leader_Traits#[ICON=DiplomatTrait_Charismatic_Icon] Renowned Archaeologist|[ICON=DiplomatTrait_Charismatic_Icon] Renowned Archaeologist]] Unit Specialization
+Blocks  [[GalCiv4:Leader_Traits#[ICON=Trait_Industrial_Icon] Asteroid Miner|[ICON=Trait_Industrial_Icon] Asteroid Miner]] Unit Specialization
+Blocks  [[GalCiv4:Leader_Traits#[ICON=Trait_Ex-Convict_Icon] Survived Mutiny|[ICON=Trait_Ex-Convict_Icon] Survived Mutiny]] Unit Specialization
+Blocks  [[GalCiv4:Leader_Traits#[ICON=UnitTrait_Veteran_Icon] Former Gladiator|[ICON=UnitTrait_Veteran_Icon] Former Gladiator]] Unit Specialization
+Blocks  [[GalCiv4:Leader_Traits#[ICON=Trait_NeuralClamp_Icon] Psychic bond with alien|[ICON=Trait_NeuralClamp_Icon] Psychic bond with alien]] Unit Specialization
+Blocks  Coerced Colonization Policy
+Blocks  Heart of the Empire Policy
+
+ War Profiteers
+
+Receives 200% bonus from trade routes established with warring races.
+
+TradeRoute gets +1 War Profiteering
+Allows  Arms Expo Improvement
+Allows  Black Market Tech
+Allows  Hull Reinforcing Policy
+
+ Paranoid
+
+Ships receive +25% Hit Points and Attack when they are within their borders.
+
+Ship gets +25%  Hit Points
+Ship gets +25%  Missile Attack
+Ship gets +25%  Beam Attack
+Ship gets +25%  Kinetic Attack
+Allows  Molecular Fabrication Tech
+Allows [[File:|alt=|24px|frameless]] Industrial Replication Tech
+
+ Wealthy
+
+Starts with 2000 more credits and the Universal Translator technology. Receives access to Interstellar Banking technologies.
+
+At the start of the game unlocks the  Universal Translator tech
+At the start of the game unlocks the  Universal Translator tech
++2000  Treasury
+Allows  Iridia Exchange Improvement
+Allows  Xeno Economics Tech
+Allows  The Invisible Hand Tech
+Allows  Interstellar Banking Tech
+Allows  Financial Sectors Tech
+Allows  Stellar Resorts Tech
+Allows  Preferred Lending Tech
+Allows  The Great Expansion Policy
+Allows  Laissez-faire Policy
+Allows  Efficient Constructor Module Ship Component
+Blocks  Capital Mainframe Improvement
+Blocks  Kazar's Mainframe Improvement
+Blocks  Planetary Mainframe Improvement
+Blocks  Technological Capital Improvement
+Blocks  Eyes of the Universe Improvement
+Blocks  Heritage Center Improvement
+Blocks  Reproductive Imperative Policy
+Blocks  Protect the Planet Policy
+Blocks  Constructor Module Ship Component
+
+Retrieved from "https://wiki.galciv.com/index.php?title=Civ_Abilities&oldid=22955"

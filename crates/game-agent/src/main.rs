@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_variables, unused_imports)]
 mod backend;
 mod keys;
 
@@ -111,7 +112,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
     #[cfg(windows)]
-    backend::win::keep_awake();
+    {
+        backend::win::init_dpi();
+        backend::win::keep_awake();
+    }
 
     let token = get_or_create_token(args.token)?;
     let state = AppState {
