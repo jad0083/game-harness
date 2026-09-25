@@ -537,27 +537,48 @@ impl McpServer {
                 }
 
                 let mut completed = 0;
-                let mut event_outcome = None;
+                let mut unverified = 0;
+                let mut stop_outcome = None;
 
-                for _ in 0..turns {
+                for _ in 0..turns.clamp(1, 200) {
                     let outcome = ap.advance_single_turn().await?;
                     match outcome {
-                        crate::autopilot::TurnOutcome::Advanced { .. } => completed += 1,
-                        crate::autopilot::TurnOutcome::ModalEvent { .. } => {
-                            event_outcome = Some(outcome);
+                        crate::autopilot::TurnOutcome::Advanced { verified, .. } => {
+                            completed += 1;
+                            if !verified {
+                                unverified += 1;
+                            }
+                        }
+                        other => {
+                            stop_outcome = Some(other);
                             break;
                         }
                     }
                 }
 
-                let (note, img_bytes) = if let Some(crate::autopilot::TurnOutcome::ModalEvent { turn, bbox, crop_bytes, full_bytes }) = event_outcome {
-                    (
-                        format!("Turn {}: Strategic modal event detected! Changed bbox: {:?}", turn, bbox),
+                let (note, img_bytes) = match stop_outcome {
+                    Some(crate::autopilot::TurnOutcome::ModalEvent { turn, bbox, crop_bytes, full_bytes }) => (
+                        format!(
+                            "Advanced {} turn(s), then stopped at turn {}: a dialog is up (HUD dimmed; changed bbox {:?}). Decide and act, then call autopilot_turns again.",
+                            completed, turn, bbox
+                        ),
                         if !crop_bytes.is_empty() { crop_bytes } else { full_bytes },
-                    )
-                } else {
-                    let (curr, _) = self.capture_frame().await?;
-                    (format!("Advanced {} turns autonomously", completed), curr)
+                    ),
+                    Some(crate::autopilot::TurnOutcome::NotAdvanced { turn, reason, full_bytes }) => (
+                        format!(
+                            "Advanced {} turn(s), then stopped at turn {}: {}. Look at the screen, clear the blocker (idle unit, empty queue, popup), then retry.",
+                            completed, turn, reason
+                        ),
+                        full_bytes,
+                    ),
+                    _ => {
+                        let (curr, _) = self.capture_frame().await?;
+                        let mut note = format!("Advanced {} turn(s); each verified by the date readout changing.", completed);
+                        if unverified > 0 {
+                            note = format!("Advanced {} turn(s), {} unverified (no turn_indicator_roi in the manifest).", completed, unverified);
+                        }
+                        (note, curr)
+                    }
                 };
 
                 let b64 = base64::engine::general_purpose::STANDARD.encode(&img_bytes);

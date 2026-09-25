@@ -66,6 +66,10 @@ pub struct ScreenDef {
     pub buttons: HashMap<String, ButtonDef>,
     #[serde(default)]
     pub dismiss_key: Option<String>,
+    /// Normalized [x, y, w, h] of a HUD element that changes every turn (the date readout);
+    /// the autopilot diffs it before/after "end turn" to verify a turn actually advanced.
+    #[serde(default)]
+    pub turn_indicator_roi: Option<[f64; 4]>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
