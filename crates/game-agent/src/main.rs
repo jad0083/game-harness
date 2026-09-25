@@ -394,10 +394,16 @@ async fn key_handler(Json(req): Json<KeyReq>) -> Result<impl IntoResponse, (Stat
     Ok(Json(serde_json::json!({"ok": true})))
 }
 
-async fn type_handler(Json(req): Json<TypeReq>) -> impl IntoResponse {
+async fn type_handler(Json(req): Json<TypeReq>) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+    if req.text.chars().count() > MAX_TYPE_CHARS {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({"error": format!("text exceeds {} characters", MAX_TYPE_CHARS)})),
+        ));
+    }
     #[cfg(windows)]
     backend::win::type_text(&req.text);
-    Json(serde_json::json!({"ok": true}))
+    Ok(Json(serde_json::json!({"ok": true})))
 }
 
 async fn focus_handler(Json(req): Json<FocusReq>) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
@@ -413,80 +419,127 @@ async fn focus_handler(Json(req): Json<FocusReq>) -> Result<impl IntoResponse, (
     }
 }
 
-async fn batch_handler(Json(req): Json<BatchReq>) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
-    if req.actions.len() > 100 {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(serde_json::json!({"error": "Batch exceeds 100 actions"})),
-        ));
-    }
+const MAX_BATCH_ACTIONS: usize = 100;
+const MAX_CLICK_COUNT: i32 = 5;
+const MAX_KEY_REPEAT: i32 = 50;
+const MAX_TYPE_CHARS: usize = 1000;
+const MAX_WAIT_SECS: f64 = 30.0;
 
-    let mut results = Vec::new();
-    for (i, act) in req.actions.iter().enumerate() {
+/// One validated `/batch` step. Built by `parse_batch` before anything is sent to the
+/// desktop, so a bad step rejects the whole batch instead of failing part-way through.
+#[derive(Debug, PartialEq)]
+enum BatchAction {
+    Move { x: i32, y: i32 },
+    Click { x: i32, y: i32, button: String, count: i32 },
+    Key { vks: Vec<u16>, repeat: i32 },
+    Type { text: String },
+    Wait { seconds: f64 },
+}
+
+fn parse_batch(actions: &[serde_json::Value]) -> Result<Vec<BatchAction>, String> {
+    if actions.len() > MAX_BATCH_ACTIONS {
+        return Err(format!("Batch exceeds {} actions", MAX_BATCH_ACTIONS));
+    }
+    let coord = |act: &serde_json::Value, i: usize, key: &str| -> Result<i32, String> {
+        act.get(key)
+            .and_then(|v| v.as_i64())
+            .map(|v| v as i32)
+            .ok_or_else(|| format!("Action #{}: missing or non-integer `{}`", i, key))
+    };
+    let mut out = Vec::with_capacity(actions.len());
+    for (i, act) in actions.iter().enumerate() {
         let kind = act.get("action").and_then(|v| v.as_str()).unwrap_or("");
-        match kind {
-            "move" => {
-                let x = act.get("x").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
-                let y = act.get("y").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+        let parsed = match kind {
+            "move" => BatchAction::Move { x: coord(act, i, "x")?, y: coord(act, i, "y")? },
+            "click" => {
+                let button = act.get("button").and_then(|v| v.as_str()).unwrap_or("left");
+                if !matches!(button, "left" | "right" | "middle") {
+                    return Err(format!("Action #{}: unknown button {:?}", i, button));
+                }
+                BatchAction::Click {
+                    x: coord(act, i, "x")?,
+                    y: coord(act, i, "y")?,
+                    button: button.to_string(),
+                    count: (act.get("count").and_then(|v| v.as_i64()).unwrap_or(1) as i32).clamp(1, MAX_CLICK_COUNT),
+                }
+            }
+            "key" => {
+                let combo = act.get("combo").and_then(|v| v.as_str()).unwrap_or("");
+                let vks = keys::parse_combo(combo).map_err(|e| format!("Action #{}: {}", i, e))?;
+                BatchAction::Key {
+                    vks,
+                    repeat: (act.get("repeat").and_then(|v| v.as_i64()).unwrap_or(1) as i32).clamp(1, MAX_KEY_REPEAT),
+                }
+            }
+            "type" => {
+                let text = act.get("text").and_then(|v| v.as_str()).unwrap_or("");
+                if text.chars().count() > MAX_TYPE_CHARS {
+                    return Err(format!("Action #{}: text exceeds {} characters", i, MAX_TYPE_CHARS));
+                }
+                BatchAction::Type { text: text.to_string() }
+            }
+            "wait" => BatchAction::Wait {
+                seconds: act.get("seconds").and_then(|v| v.as_f64()).unwrap_or(0.5).clamp(0.0, MAX_WAIT_SECS),
+            },
+            _ => return Err(format!("Action #{}: unknown action {:?}", i, kind)),
+        };
+        out.push(parsed);
+    }
+    Ok(out)
+}
+
+async fn batch_handler(Json(req): Json<BatchReq>) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+    let actions = parse_batch(&req.actions)
+        .map_err(|e| (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": e}))))?;
+
+    let mut results = Vec::with_capacity(actions.len());
+    for act in &actions {
+        match act {
+            BatchAction::Move { x, y } => {
                 #[cfg(windows)]
-                backend::win::mouse_move(x, y);
+                backend::win::mouse_move(*x, *y);
                 results.push(serde_json::json!({"action": "move", "ok": true}));
             }
-            "click" => {
-                let x = act.get("x").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
-                let y = act.get("y").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
-                let button = act.get("button").and_then(|v| v.as_str()).unwrap_or("left");
-                let count = act.get("count").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
+            BatchAction::Click { x, y, button, count } => {
                 #[cfg(windows)]
                 {
-                    backend::win::mouse_move(x, y);
+                    backend::win::mouse_move(*x, *y);
                     tokio::time::sleep(Duration::from_millis(20)).await;
-                    for _ in 0..count {
-                        let _ = backend::win::mouse_button(button, true);
+                    for _ in 0..*count {
+                        backend::win::mouse_button(button, true)
+                            .map_err(|e| (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": e, "results": results.clone()}))))?;
                         tokio::time::sleep(Duration::from_millis(20)).await;
-                        let _ = backend::win::mouse_button(button, false);
+                        backend::win::mouse_button(button, false)
+                            .map_err(|e| (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": e, "results": results.clone()}))))?;
                         tokio::time::sleep(Duration::from_millis(20)).await;
                     }
                 }
                 results.push(serde_json::json!({"action": "click", "ok": true}));
             }
-            "key" => {
-                let combo = act.get("combo").and_then(|v| v.as_str()).unwrap_or("");
-                let repeat = act.get("repeat").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
-                if let Ok(vks) = keys::parse_combo(combo) {
-                    #[cfg(windows)]
-                    {
-                        for _ in 0..repeat {
-                            for &vk in &vks {
-                                backend::win::send_key(vk, true);
-                            }
-                            tokio::time::sleep(Duration::from_millis(20)).await;
-                            for &vk in vks.iter().rev() {
-                                backend::win::send_key(vk, false);
-                            }
-                            tokio::time::sleep(Duration::from_millis(20)).await;
+            BatchAction::Key { vks, repeat } => {
+                #[cfg(windows)]
+                {
+                    for _ in 0..*repeat {
+                        for &vk in vks {
+                            backend::win::send_key(vk, true);
                         }
+                        tokio::time::sleep(Duration::from_millis(20)).await;
+                        for &vk in vks.iter().rev() {
+                            backend::win::send_key(vk, false);
+                        }
+                        tokio::time::sleep(Duration::from_millis(20)).await;
                     }
                 }
                 results.push(serde_json::json!({"action": "key", "ok": true}));
             }
-            "type" => {
-                let text = act.get("text").and_then(|v| v.as_str()).unwrap_or("");
+            BatchAction::Type { text } => {
                 #[cfg(windows)]
                 backend::win::type_text(text);
                 results.push(serde_json::json!({"action": "type", "ok": true}));
             }
-            "wait" => {
-                let sec = act.get("seconds").and_then(|v| v.as_f64()).unwrap_or(0.5);
-                let dur = Duration::from_secs_f64(sec.clamp(0.0, 30.0));
-                tokio::time::sleep(dur).await;
-                results.push(serde_json::json!({"action": "wait", "ok": true, "seconds": sec}));
-            }
-            _ => {
-                return Err((
-                    StatusCode::BAD_REQUEST,
-                    Json(serde_json::json!({"error": format!("Action #{}: unknown action {:?}", i, kind)})),
-                ));
+            BatchAction::Wait { seconds } => {
+                tokio::time::sleep(Duration::from_secs_f64(*seconds)).await;
+                results.push(serde_json::json!({"action": "wait", "ok": true, "seconds": seconds}));
             }
         }
     }
@@ -549,5 +602,69 @@ async fn settle_handler(Query(params): Query<SettleParams>) -> Result<impl IntoR
     #[cfg(not(windows))]
     {
         Ok(Json(serde_json::json!({"settled": true, "elapsed": 0.0})))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn batch_clamps_click_count_and_key_repeat() {
+        let parsed = parse_batch(&[
+            json!({"action": "click", "x": 10, "y": 20, "count": 1_000_000}),
+            json!({"action": "key", "combo": "tab", "repeat": 1_000_000}),
+            json!({"action": "key", "combo": "enter", "repeat": 0}),
+        ])
+        .unwrap();
+        assert_eq!(parsed[0], BatchAction::Click { x: 10, y: 20, button: "left".into(), count: MAX_CLICK_COUNT });
+        assert_eq!(parsed[1], BatchAction::Key { vks: vec![0x09], repeat: MAX_KEY_REPEAT });
+        assert_eq!(parsed[2], BatchAction::Key { vks: vec![0x0D], repeat: 1 });
+    }
+
+    #[test]
+    fn batch_rejects_bad_key_combo_with_its_index() {
+        let err = parse_batch(&[json!({"action": "key", "combo": "tab"}), json!({"action": "key", "combo": "hyperkey"})])
+            .unwrap_err();
+        assert!(err.starts_with("Action #1:"), "{err}");
+    }
+
+    #[test]
+    fn batch_rejects_missing_coordinates_instead_of_clicking_origin() {
+        let err = parse_batch(&[json!({"action": "click", "y": 5})]).unwrap_err();
+        assert!(err.contains("`x`"), "{err}");
+        let err = parse_batch(&[json!({"action": "move", "x": 5})]).unwrap_err();
+        assert!(err.contains("`y`"), "{err}");
+    }
+
+    #[test]
+    fn batch_rejects_unknown_button_action_and_oversize_text() {
+        assert!(parse_batch(&[json!({"action": "click", "x": 1, "y": 1, "button": "side"})]).is_err());
+        assert!(parse_batch(&[json!({"action": "teleport"})]).is_err());
+        let long = "a".repeat(MAX_TYPE_CHARS + 1);
+        assert!(parse_batch(&[json!({"action": "type", "text": long})]).is_err());
+        let ok = "a".repeat(MAX_TYPE_CHARS);
+        assert!(parse_batch(&[json!({"action": "type", "text": ok})]).is_ok());
+    }
+
+    #[test]
+    fn batch_rejects_more_than_max_actions() {
+        let many: Vec<_> = (0..=MAX_BATCH_ACTIONS).map(|_| json!({"action": "wait", "seconds": 0})).collect();
+        assert!(parse_batch(&many).unwrap_err().contains("exceeds"));
+    }
+
+    #[test]
+    fn batch_wait_is_clamped_and_whole_batch_validates_before_execution() {
+        let parsed = parse_batch(&[
+            json!({"action": "wait", "seconds": 999.0}),
+            json!({"action": "wait", "seconds": -1.0}),
+        ])
+        .unwrap();
+        assert_eq!(parsed[0], BatchAction::Wait { seconds: MAX_WAIT_SECS });
+        assert_eq!(parsed[1], BatchAction::Wait { seconds: 0.0 });
+        // A bad step anywhere rejects the whole batch: nothing before it should run.
+        let err = parse_batch(&[json!({"action": "key", "combo": "tab"}), json!({"action": "click"})]).unwrap_err();
+        assert!(err.starts_with("Action #1:"), "{err}");
     }
 }
