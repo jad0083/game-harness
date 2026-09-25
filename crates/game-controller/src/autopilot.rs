@@ -33,6 +33,9 @@ pub enum TurnOutcome {
 
 /// How many known informational screens one turn may dismiss before giving up.
 const MAX_DISMISSALS_PER_TURN: usize = 4;
+/// Turn attempts: each retry first clears the known screens found by the previous one
+/// (idle unit selected by TAB, then its colonize confirmation, ...).
+const MAX_ATTEMPTS: usize = 3;
 /// Upper bound on waiting while a `busy` screen ("Starting New Month") is visible.
 pub const BUSY_MAX_WAIT_SECS: f64 = 180.0;
 
@@ -233,9 +236,9 @@ impl Autopilot {
 
         self.require_game_foreground().await?;
 
-        // Two attempts: a known informational screen (e.g. a news bulletin) can open at the
-        // start of a turn and swallow the end-turn key; it is dismissed and the turn retried.
-        for attempt in 0..2 {
+        // Several attempts: a known screen (news bulletin, idle unit, confirmation) can open
+        // during a turn and swallow the end-turn key; it is dismissed and the turn retried.
+        for attempt in 0..MAX_ATTEMPTS {
             // Look before acting: clear known informational screens, and never send keys into
             // an open dialog.
             let (mut before, mut view) = self.screenshot_view().await?;
@@ -272,7 +275,17 @@ impl Autopilot {
             self.wait_for_turn_signal(&before, &check, timeout).await?;
             let _ = self.client.settle(Some(timeout), Some(threshold)).await?;
             let (after, _) = self.screenshot_view().await?;
-            match classify_turn(&before, &after, &check)? {
+            let verdict = classify_turn(&before, &after, &check)?;
+            // A known screen (e.g. the "Colonize Planet?" confirmation, which dims the HUD) is
+            // handled at the top of the next attempt whatever the verdict says; only unknown
+            // dialogs go to the model.
+            if !matches!(verdict, TurnVerdict::Advanced { .. })
+                && attempt + 1 < MAX_ATTEMPTS
+                && self.known_screen_name(&after, &[], true)?.is_some()
+            {
+                continue;
+            }
+            match verdict {
                 TurnVerdict::Modal => return Ok(self.modal_outcome(turn, Some(&before), after)),
                 TurnVerdict::Advanced { verified, .. } => {
                     self.turn_counter.fetch_add(1, Ordering::SeqCst);
@@ -282,11 +295,6 @@ impl Autopilot {
                         verified,
                         dismissed,
                     });
-                }
-                TurnVerdict::NotAdvanced { .. }
-                    if attempt == 0 && self.known_screen_name(&after, &dismissed, true)?.is_some() =>
-                {
-                    continue; // dismissed at the top of the next attempt
                 }
                 TurnVerdict::NotAdvanced { indicator_diff } => {
                     if match_known_screen(&decode_rgb(&after)?, &self.busy_screens).is_some() {
@@ -310,7 +318,7 @@ impl Autopilot {
                 }
             }
         }
-        unreachable!("the second attempt always returns")
+        unreachable!("the last attempt always returns")
     }
 
     /// A known screen on `frame` that is not in `exclude`.
