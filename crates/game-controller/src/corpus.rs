@@ -88,6 +88,9 @@ pub struct ScreenDef {
     /// Normalized [x, y] to click to dismiss; `dismiss_key` is used when absent.
     #[serde(default)]
     pub dismiss_click: Option<[f64; 2]>,
+    /// While this screen matches, the game is still processing the turn: keep waiting.
+    #[serde(default)]
+    pub busy: bool,
 }
 
 fn default_template_threshold() -> f64 {
