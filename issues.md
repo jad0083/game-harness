@@ -5,7 +5,6 @@
 ### Deployment
 
 ### Rust controller (`crates/game-controller`)
-- [ ] `mcp.rs:82-88` `to_screen_coords` passes raw image coords through as screen pixels when no screenshot has been taken or the point is out of range; `mcp.rs:377-378` defaults missing `x`/`y` to 0 → wrong-place clicks instead of an error
 - [ ] `corpus.rs:472-558` tech parser keys most entries by an effects line: `corpus tech "Colonial Policies"` → not found; `corpus tech drive` → name "Unlocks Singularity Driver Ship Component", cost -102
 - [ ] `autopilot.rs:79` counts turns locally with no check that a turn advanced; `game.toml` screen fields (`luminance_roi`, `choice_keys`, `buttons`, `dismiss_key`, `title_ocr`, `is_blocking`) are parsed (`corpus.rs:38-55`) but never read; modal ROI hard-coded in `imaging.rs:132`
 - [ ] `autopilot.rs:105-107` `click_norm` emits image-space coords without scaling (latent: no macro uses it yet)
@@ -16,7 +15,7 @@
 
 ### Rust agent (`crates/game-agent`)
 - [ ] `main.rs:192-199` fallback token is a nanosecond timestamp in hex; `main.rs:214` non-constant-time compare; Python `--allow` client-IP list dropped
-- [ ] `/batch` (`main.rs:436-471`): `count`/`repeat` unclamped, `parse_combo` errors swallowed and reported `ok:true`, `std::thread::sleep` blocks tokio workers
+- [ ] `/batch` `count`/`repeat` unclamped, `parse_combo` errors swallowed and reported `ok:true`, unbounded `/type` text with blocking sleeps (fixed on the agent side, awaiting redeploy of the rebuilt `game-agent.exe`)
 - [ ] `main.rs:256` `x + w` can wrap in release, bypassing the bounds check (GDI then fails; no crash)
 - [ ] Console-subsystem exe launched as an interactive logon task → console window on the game desktop at every logon
 - [ ] Zero tests for the shipped agent binary
@@ -31,6 +30,7 @@
 - [ ] Python harness (`src/harness`, `windows_agent/agent.py`, 40 tests) is no longer deployed; its green suite covers nothing that runs (`agent.py` `settle` stub always returns `settled: True`)
 
 ## Resolved
+- [x] Rust MCP `to_screen_coords` passed raw image coords through as screen pixels when no screenshot had been taken or the point was out of range; missing `x`/`y` defaulted to 0 (2026-09-25; fixed with tests, controller rebuilt, verified over stdio: all such calls now return tool errors before reaching the agent)
 - [x] Agent on 192.168.1.77 was the 12:04 build (7c4a284) without DPI awareness: reported 3072x1728 on a 3840x2160 display and captured at virtualized resolution (2026-09-25; redeployed the `79fb15a` build via the fixed installer, `/health` now reports 3840x2160 and `max_side=1568` yields 1568x882)
 - [x] `install.ps1` downloaded `game-agent.exe` over the running exe before stopping the task → update failed on the locked file; also pointed at an `agent.log` the Rust agent never writes (2026-09-25; fixed in 3e425bf, verified by a successful update on the PC)
 - [x] `scripts/serve-agent.sh` silently skipped a missing `game-agent.exe` → HTTP 404 on install instead of failing fast (2026-09-25; fixed in 3e425bf)

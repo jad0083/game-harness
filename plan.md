@@ -16,7 +16,7 @@
 - [ ] Autopilot: verify a turn actually advanced before counting it; use the `game.toml` screen signatures it parses
 - [ ] Fix the corpus tech parser and add fixture tests against `research_tree.txt`
 - [ ] Restore `zoom`/`hover`/`scroll`/grid in the Rust MCP, or document why they're gone
-- [ ] Tests for the Rust MCP coordinate mapping and for the agent binary
+- [x] Tests for the Rust MCP coordinate mapping and for the agent's batch validation (`cargo test --workspace`: 18)
 - [ ] Decide the Python harness's fate: delete, or keep as the reference implementation with its tests pointed at what runs
 - [ ] Stop tracking `game-agent.exe`; publish it as a release asset
 
