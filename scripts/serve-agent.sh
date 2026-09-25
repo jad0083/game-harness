@@ -7,14 +7,14 @@ cd "$(dirname "$0")/.."
 PORT="${1:-8000}"
 
 if [[ ! -s .agent_token ]]; then
-  python3 -c 'import secrets; print(secrets.token_urlsafe(24))' > .agent_token
+  openssl rand -base64 24 | tr '+/' '-_' | tr -d '=' > .agent_token
   chmod 600 .agent_token
   echo "generated new token in .agent_token"
 fi
 
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
-cp windows_agent/agent.py windows_agent/install.ps1 "$STAGE/"
+cp windows_agent/install.ps1 "$STAGE/"
 if [[ -f windows_agent/game-agent.exe ]]; then
   cp windows_agent/game-agent.exe "$STAGE/"
 fi

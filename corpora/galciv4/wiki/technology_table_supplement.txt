@@ -1,0 +1,32 @@
+# GalCiv 4: Technology Table Reference & Prerequisites
+Source: https://wiki.galciv.com/index.php?title=GalCiv4:Technology_Table
+
+Key Tech Branches & Crucial Unlocks:
+
+Engineering:
+- Asteroid Mining: Unlocks Asteroid Miner ship class, unlocks asteroid exploitation (+1-2 production per belt).
+- Starbases: Unlocks Mining Starbase, Starbase Defense System, Starbase Modules.
+- Space Elevators: Cost -42 Research. Unlocks Space Elevator improvement, Elon's Lift wonder (+10% all planetary manufacturing, requires 5 Durantium).
+- Sublight Drives: Cost -42 Research. Unlocks Sublight Drives ship engine component (+1 movement speed).
+- Subspace Scanning: Cost -80 Research. Unlocks Eyes of the Universe wonder (reveals entire map, requires 5 Promethion).
+- Orbital Manufacturing: Cost -80 Research. Unlocks advanced Shipyard Modules and constructor capacity.
+
+Colonization:
+- Research Districts: Cost -42 Research. Unlocks Research District improvement, Kazar's Mainframe wonder (+25% research, requires 5 Promethion).
+- Planetology: Cost -80 Research. Unlocks Xeno Manufacturing (+10% max manufacturing).
+- Extreme Miniaturization: Cost -250 Research. Unlocks Battleship Module, Battleship Ship Category, Large Ship Hulls.
+- Terraforming: Cost -128 Research. Unlocks Atmospheric Scrubbers, Soil Enrichment, Planetary Recycling Center (-430 manufacturing cost, -0.05 pollution).
+
+Warfare:
+- Armed Shuttles: Cost -42 Research. Unlocks Deflectors, Point Defense, Hull Plating components, Barrier Reef improvement, Defensive Measures policy.
+- Weapon Systems: Cost -42 Research. Unlocks Lasers, Railguns, Enhanced Particle Beams, Fighter Ship Category, Bomber Ship Category.
+- Pulse Cannons: Cost -80 Research. Unlocks Enhanced Pulse Cannon, +10% Kinetic Attack.
+- Gravimetric Shields: Cost -242 Research. Unlocks +10% Shield Strength.
+- Invulnerability Shields: Cost -500 Research. Unlocks Fleet Shield Tech.
+
+Governance:
+- Leadership Recruiting: Cost -42 Research. Unlocks Invite Leaders executive order, allows recruitment of 3 additional leaders.
+- Colonial Bureaucracy: Cost -60 Research. Unlocks Colonial Bureaucracy policy, increases governor limit.
+- Political Capital: Cost -80 Research. Unlocks Draft Colonists executive order (-33 Control), Illicit Deals executive order (+600 Credits).
+- Colonial Law & Order: Cost -120 Research. Eliminates planetary crime generation across empire.
+- Hyperwave Radio: Cost -42 Research. Unlocks +1 Empire Policy Slot.

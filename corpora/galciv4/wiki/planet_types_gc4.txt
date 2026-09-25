@@ -1,0 +1,594 @@
+# Planet Types GC4
+Source: https://wiki.galciv.com/index.php/Planet_Types_GC4
+
+Each planet orbiting a star on the game map has a Planet Type, indicated on its tooltip. 
+
+Planet TypesPlanet Type is a classification of a planet's biome and general environment. Different Planet Types often have different terrains in differing amounts, determining what resources the planet can provide and informing as to the kind of tiles potentially available when converted into a Core World.
+
+Planet Type
+
+Planet Class
+
+Planet Resources
+
+Effects
+
+Requirements
+
+ Desert World 1It's a desert. It's exactly what you are picturing. 
+
+1-2
+
+1-2 Technology
+1-2 Minerals
+1-2 Wealth
+0-0 Fertility
+1-1 Planet Influence
+
+-1 Upgrade Slots (For Aquatic Life Only)
++1 Upgrade Slots (For Silicon Based Life Only)
+
+ Desert World 2It's a desert. It's exactly what you are picturing. 
+
+19-20
+
+1-1 Technology
+1-3 Minerals
+1-1 Wealth
+0-0 Fertility
+1-1 Planet Influence
+
+-1 Upgrade Slots (For Aquatic Life Only)
++1 Upgrade Slots (For Silicon Based Life Only)
+
+ Terrestrial World 1A world balanced with multiple biomes. These are great targets to colonize and then assign a governor to make into a core world.
+
+18-28
+
+1-4 Technology
+1-3 Minerals
+1-6 Wealth
+1-5 Fertility
+1-3 Planet Influence
+
++2 Upgrade Slots
+
+ Terrestrial World 2A world balanced with multiple biomes. These are great targets to colonize and then assign a governor to make into a core world.
+
+25-30
+
+2-3 Technology
+2-4 Minerals
+1-3 Wealth
+2-3 Fertility
+1-3 Planet Influence
+
++2 Upgrade Slots
+
+ Paradise World 1An amazing world. These make excellent core worlds once you colonize and assign a governor to it.
+
+30-36
+
+2-4 Technology
+2-4 Minerals
+1-12 Wealth
+1-8 Fertility
+2-4 Planet Influence
+
++3 Upgrade Slots
+
+ Jungle World 1Often uncomfortable to live on but even the low quality ones make good colonies due to the exotic chemical wealth that can be sent back to core worlds.
+
+1-2
+
+1-2 Technology
+1-3 Minerals
+2-8 Wealth
+1-4 Fertility
+1-2 Planet Influence
+
++1 Upgrade Slots
+
+ Jungle World 2Often uncomfortable to live on but even the low quality ones make good colonies due to the exotic chemical wealth that can be sent back to core worlds.
+
+16-28
+
+2-3 Technology
+2-3 Minerals
+4-5 Wealth
+1-3 Fertility
+1-1 Planet Influence
+
++1 Upgrade Slots
+
+ Arboreal World 1These worlds make good targets to colonize and then promote to a core world by adding a governor due to their typically high fertility for food growing.
+
+24-29
+
+1-3 Technology
+2-4 Minerals
+1-7 Wealth
+3-16 Fertility
+1-2 Planet Influence
+
++1 Upgrade Slots
+
+ Arboreal World 2These worlds make good targets to colonize and then promote to a core world by adding a governor due to their typically high fertility for food growing.
+
+20-22
+
+1-3 Technology
+1-3 Minerals
+1-1 Wealth
+3-4 Fertility
+1-1 Planet Influence
+
++1 Upgrade Slots
+
+ Volcanic World 1Not exactly a pleasant place to live but often good colony targets for the all the wealth and minerals they send back to their core world.
+
+18-23
+
+0-1 Technology
+2-3 Minerals
+1-9 Wealth
+0-0 Fertility
+0-1 Planet Influence
+
++0.3 Pollution
++1 Upgrade Slots
+
+ Volcanic World 2Not exactly a pleasant place to live but often good colony targets for the all the wealth and minerals they send back to their core world.
+
+1-2
+
+0-1 Technology
+1-3 Minerals
+2-3 Wealth
+0-0 Fertility
+0-0 Planet Influence
+
++0.3 Pollution
++1 Upgrade Slots
+
+ Mountainous World 1Tall mountains and deep ravines cover this planet's surface. Even low quality worlds of this kind can still be good targets to colonize because of the minerals they can send to their core world.
+
+23-24
+
+1-2 Technology
+3-5 Minerals
+1-10 Wealth
+1-2 Fertility
+1-2 Planet Influence
+
++8 Planetary Defenses MaxHP
++1 Upgrade Slots
+
+ Mountainous World 2Tall mountains and deep ravines cover this planet's surface. Even low quality worlds of this kind can still be good targets to colonize because of the minerals they can send to their core world.
+
+1-2
+
+1-1 Technology
+2-3 Minerals
+1-2 Wealth
+0-2 Fertility
+1-1 Planet Influence
+
++8 Planetary Defenses MaxHP
++1 Upgrade Slots
+
+ Tropical World 1Often beautiful worlds. Always good targets to colonize. Not always good to turn into a core world as usable land is not always plentiful.
+
+20-28
+
+1-3 Technology
+2-3 Minerals
+2-4 Wealth
+2-9 Fertility
+1-2 Planet Influence
+
++0.1 Tourism
++2 Upgrade Slots
+
+ Tropical World 2Often beautiful worlds. Always good targets to colonize. Not always good to turn into a core world as usable land is not always plentiful.
+
+26-30
+
+2-3 Technology
+1-2 Minerals
+1-2 Wealth
+2-4 Fertility
+1-1 Planet Influence
+
++0.1 Tourism
++2 Upgrade Slots
+
+ Bombarded World 1Mostly destroyed, but they can still make good colonies to send resources back to our nearest core world..
+
+1-2
+
+1-3 Technology
+2-3 Minerals
+1-2 Wealth
+0-0 Fertility
+0-0 Planet Influence
+
++0.3 Pollution
+-5 Planetary Defenses MaxHP
+
+ Bombarded World 1Mostly destroyed, but they can still make good colonies to send resources back to our nearest core world..
+
+17-25
+
+1-3 Technology
+2-3 Minerals
+1-2 Wealth
+0-0 Fertility
+0-0 Planet Influence
+
++0.3 Pollution
+-5 Planetary Defenses MaxHP
+
+ Thin Atmosphere World 1Not exactly a pleasant place but food tends to grow well here making it attractive as a colony to feed hungry core worlds.
+
+15-25
+
+1-1 Technology
+1-2 Minerals
+1-2 Wealth
+4-5 Fertility
+1-2 Planet Influence
+
++50 Food Income
+-2 Population Cap
+
+ Thin Atmosphere World 2Not exactly a pleasant place but food tends to grow well here making it attractive as a colony to feed hungry core worlds.
+
+1-2
+
+1-1 Technology
+0-1 Minerals
+0-2 Wealth
+3-4 Fertility
+1-1 Planet Influence
+
++50 Food Income
+-2 Population Cap
+
+ Low Gravity World 1Often unpleasant to live on but low gravity worlds can still make good colonies for the tech they can send back to the nearest core world.
+
+16-18
+
+2-3 Technology
+1-2 Minerals
+1-1 Wealth
+1-5 Fertility
+1-2 Planet Influence
+
++3 Upgrade Slots
+
+ Low Gravity World 2Often unpleasant to live on but low gravity worlds can still make good colonies for the tech they can send back to the nearest core world.
+
+1-2
+
+2-3 Technology
+1-2 Minerals
+1-2 Wealth
+1-6 Fertility
+1-1 Planet Influence
+
++3 Upgrade Slots
+
+ Aquatic World 1These water worlds can be useful given the right technology.
+
+17-23
+
+2-3 Technology
+3-5 Minerals
+2-4 Wealth
+2-4 Fertility
+1-1 Planet Influence
+
++1 Upgrade Slots
++1 Upgrade Slots (For Aquatic Life Only)
+-1 Upgrade Slots (For Silicon Based Life Only)
+
+Requires Exotic World Colonization
+
+ Corrosive World 1Acidic lakes and storms makes this world unsuitable for standard colonization.
+
+1-2
+
+1-2 Technology
+2-5 Minerals
+1-4 Wealth
+0-0 Fertility
+0-1 Planet Influence
+
++0.2 Pollution
++1 Upgrade Slots
+-1 Upgrade Slots (For Synthetic Life Only)
+
+Requires Extreme Colonization
+
+ Corrosive World 1Acidic lakes and storms makes this world unsuitable for standard colonization.
+
+1-2
+
+1-2 Technology
+2-5 Minerals
+1-4 Wealth
+0-0 Fertility
+0-1 Planet Influence
+
++0.2 Pollution
++1 Upgrade Slots
+-1 Upgrade Slots (For Synthetic Life Only)
+
+Requires Extreme Colonization
+
+ Frozen World 1Extremely cold even in the Summer months. Even colder then the mythical 'northern Michigan' in the Winter. These low quality worlds can still be good colony targets if they have sufficient resource outputs.
+
+1-3
+
+1-3 Technology
+1-2 Minerals
+1-2 Wealth
+0-0 Fertility
+0-2 Planet Influence
+
+ Frozen World 1Extremely cold even in the Summer months. Even colder then the mythical 'northern Michigan' in the Winter. These low quality worlds can still be good colony targets if they have sufficient resource outputs.
+
+12-28
+
+1-3 Technology
+1-2 Minerals
+1-2 Wealth
+0-0 Fertility
+0-2 Planet Influence
+
+ Barren World 1These rocks in space can still potentially be good targets for colonizing even if they are poor quality if they possess enough resources to send to their core world.
+
+1-2
+
+1-2 Technology
+2-3 Minerals
+1-3 Wealth
+0-1 Fertility
+1-1 Planet Influence
+
++1 Upgrade Slots
+
+ Barren World 1These rocks in space can still potentially be good targets for colonizing even if they are poor quality if they possess enough resources to send to their core world.
+
+15-18
+
+1-2 Technology
+2-3 Minerals
+1-3 Wealth
+0-1 Fertility
+1-1 Planet Influence
+
++1 Upgrade Slots
+
+ Toxic World 1You wouldn't want to make a Summer home here but toxic worlds often make good targets to colonize due to their resource richness.
+
+14-26
+
+1-2 Technology
+2-3 Minerals
+1-3 Wealth
+0-0 Fertility
+0-1 Planet Influence
+
++0.3 Pollution
++1 Upgrade Slots
+
+Requires Extreme Colonization
+
+ Radioactive World 1Very dangerous to live on without the right technology. Radioactive worlds tend to have a lot of exotic resources to use..
+
+1-20
+
+1-4 Technology
+2-3 Minerals
+1-3 Wealth
+0-0 Fertility
+1-1 Planet Influence
+
++0.1 Pollution
++1 Upgrade Slots
++3 Upgrade Slots (For Synthetic Life Only)
+
+Requires Extreme Colonization
+
+ Thulium Moon 1A Precursor world carved from a fragment of a Thulium world. Thulium is a key ingredient in kinetic weapon systems.
+
+20-24
+
+2-2 Technology
+4-8 Minerals
+2-3 Wealth
+0-2 Fertility
+1-2 Planet Influence
+
+-50 Growth
+
+ Durantium Cloud 1A Precursor world constructed through collected Durantium asteroids. Durantium is a valuable exotic metal that is needed for most structures needing extreme durability.
+
+20-30
+
+0-2 Technology
+4-8 Minerals
+2-3 Wealth
+0-2 Fertility
+1-2 Planet Influence
+
+-50 Growth
+
+ Precursor Accelerator 1A Precursor world built from crystalized Promethium. These worlds make great core worlds due to their scientific features on the surface.
+
+23-28
+
+2-6 Technology
+1-3 Minerals
+2-3 Wealth
+0-1 Fertility
+1-2 Planet Influence
+
+-50 Growth
++3 Upgrade Slots
+
+ Precursor Satellites 1A Precursor world that still has a massive array of orbiting relics.
+
+22-25
+
+2-6 Technology
+1-3 Minerals
+2-3 Wealth
+0-0 Fertility
+1-2 Planet Influence
+
+-50 Growth
++6 Upgrade Slots
+
+ Precursor Elevator 1A Precursor world with a fully intact space elevator.  Once colonized and given a governor to become a core world, these worlds can become manufacturing titans.
+
+23-25
+
+2-3 Technology
+3-8 Minerals
+3-4 Wealth
+0-0 Fertility
+1-4 Planet Influence
+
+-50 Growth
++6 Upgrade Slots
+
+ Promethion Refinery 1A Precursor world that has been completely converted to be a refinery.
+
+20-27
+
+2-3 Technology
+4-12 Minerals
+1-2 Wealth
+0-0 Fertility
+1-2 Planet Influence
+
+-50 Growth
++0.3 Pollution
++3 Upgrade Slots
+
+ Precursor Factory World 1A Precursor World with 3 vast orbital factory rings. These greatly increase the manufacturing potential of the world.
+
+23-29
+
+2-3 Technology
+4-14 Minerals
+2-3 Wealth
+0-1 Fertility
+1-2 Planet Influence
+
+-50 Growth
++0.2 Pollution
++3 Upgrade Slots
+
+ Precursor Research World 1A Precursor world that was once the site of exotic scientific experiments.
+
+24-29
+
+4-8 Technology
+1-3 Minerals
+1-3 Wealth
+1-4 Fertility
+1-4 Planet Influence
+
+-50 Growth
++3 Upgrade Slots
+
+ Precursor Treasury 1Once the capital of the Precursor Civilization.
+
+36
+
+1-2 Technology
+1-3 Minerals
+12-16 Wealth
+1-5 Fertility
+1-8 Planet Influence
+
+-50 Growth
++3 Upgrade Slots
+
+ Precursor Quarantine 1A once wealthy world quarantined by the Precursors. What remains is so toxic that it is uncolonizable without work.
+
+16-36
+
+1-2 Technology
+2-3 Minerals
+2-3 Wealth
+0-0 Fertility
+1-1 Planet Influence
+
+Requires Precursor Studies
+
+ Precursor Experimental World 1A world thought to have been used by the Precursors for dangerous experimentation. It will take a great deal of work to make it safe to colonize.
+
+18-30
+
+1-9 Technology
+2-3 Minerals
+2-3 Wealth
+0-5 Fertility
+2-3 Planet Influence
+
+Requires Precursor Studies
+
+ Precursor Prison 1A mysterious world that was once used as a Precursor Prison. Its atmosphere has been poisoned, making it impossible to colonize without a great deal of work.
+
+30
+
+2-3 Technology
+2-3 Minerals
+2-3 Wealth
+0-2 Fertility
+1-1 Planet Influence
+
+Requires Precursor Studies
+
+ Shard Of The Mithrilar 1A strange, ancient energy seeps from this world.
+
+32
+
+4-4 Technology
+6-6 Minerals
+6-6 Wealth
+8-8 Fertility
+32-32 Planet Influence
+
+ Maker World 1Designed to control the galaxy.
+
+32
+
+5-5 Technology
+3-3 Minerals
+0-0 Wealth
+0-0 Fertility
+9-9 Planet Influence
+
+ Radioactive World 1Very dangerous to live on without the right technology. Radioactive worlds tend to have a lot of exotic resources to use..
+
+17-29
+
+1-4 Technology
+2-3 Minerals
+1-3 Wealth
+0-0 Fertility
+1-1 Planet Influence
+
++0.55 Pollution
++1 Upgrade Slots
++3 Upgrade Slots (For Synthetic Life Only)
+
+Requires Extreme Colonization
+
+Retrieved from "https://wiki.galciv.com/index.php?title=Planet_Types_GC4&oldid=19671"

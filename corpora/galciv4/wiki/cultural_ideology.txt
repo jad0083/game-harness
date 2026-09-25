@@ -1,0 +1,1169 @@
+# Cultural Ideology
+Source: https://wiki.galciv.com/index.php/Cultural_Ideology
+
+Contents
+
+1 About Culture
+2 Ideology Types
+
+2.1 Totalitarianism
+2.2 Egalitarianism
+2.3 Progressivism
+2.4 Traditionalism
+2.5 Pacifism
+2.6 Individualism
+2.7 Collectivism
+2.8 Nihilism
+
+About Culture
+Culture is a measure of your Civilization's social, intellectual, artistic and ideological values. Culture is associated with eight different Ideologies, with each Ideology containing a sequence of Ideological Traits that can be unlocked for a gradually increasing number of Culture Points.
+Every Civilization will have a Cultural Focus, which grants a discount to Ideological Traits belonging to its associated Ideology. This informs their intended playstyle, but the player is free to mix and match Ideological Traits from different Ideologies to suit their needs. However, the capstone Trait at the end of each Ideological branch bestows a very powerful ability and access to advanced Techs, and so the player is incentivised to try to complete at least one Ideology. 
+Each turn your Capital generates a Culture Point, and extra points can be generated through Improvements, the effect of Ideological Traits and more. Once enough points to unlock a specific Ideological Trait are accumulated, the player will be notified. The cost for each subsequent Ideological Trait choice will scale up as the game progresses.
+Each Ideology has an associated Ideology Discount percentage, which is initially set by the Civilization's Cultural Focus, but can be further increased through the choices made in Events, Diplomatic decisions, building Improvements and as a consequence of various other in-game mechanics. For example, consistently making choices that show a Totalitarian bent will gradually increase the Ideological Discount for Totalitarianism, and so Ideological Traits in that branch will become gradually cheaper and cheaper.
+Furthermore, your Citizens will occasionally take on an Ideology, and certain Ideological Traits will unlock powerful bonuses for those Citizens (note the Citizens with this ideology percentage in the top right of the screen to see how much of your population support that particular branch).
+
+Ideology Types
+A civilization can have two Ideologies set at the beginning of the game.
+
+Name
+
+Description
+
+Effects
+
+ Individualism
+
+Believes in the primacy of individual rights, personal freedom, and self-reliance, often over the needs and interests of the community or society.
+
++25  Individualism
+
+ Nihilism
+
+Believes in the rejection or denial of inherent meaning or value in life. Causing pain to others is a valid purpose.
+
++25  Nihilism
+
+ Egalitarianism
+
+Believes in the fundamental equality of all sentient beings, advocating for equal rights and opportunities regardless of species, origin planet, or other characteristics.
+
++25  Egalitarianism
+
+ Pacifism
+
+Believes in opposing war and violence, advocating for the resolution of conflicts through peaceful negotiations and mutual respect.
+
++25  Pacifism
+Blocks Return of the Slyne Event
+Blocks Whispers of the Furry Menace Event
+Blocks The Xendar Resurgence Event
+
+ Collectivism
+
+Believes in prioritizing the group, community, or society over individual interests, often with a focus on shared responsibility and collective action.
+
++25  Collectivism
+
+ Progressivism
+
+Advocates for social reform and new ideas. Progressives are often open to change and seek to address social inequalities and injustices through innovation and reform.
+
++25  Progressivism
+
+ Traditionalism
+
+This philosophy values historical continuity and emphasizes the importance of customs, practices, and institutions that have endured over time. Traditionalists often resist rapid social change and maintain a deep reverence for cultural heritage.
+
++25  Traditionalism
+
+ Totalitarianism
+
+Believes in absolute power and control by the state, with all aspects of public and private life under the governance of a single authority.
+
++25  Totalitarianism
+
+Totalitarianism
+
+Believes in absolute power and control by the state, with all aspects of public and private life under the governance of a single authority..
+
+Level
+Traits
+
+1
+
+ Iron Fist
+
+2
+
+ Prestige
+
+ Purges
+
+3
+
+ Obedience
+
+ Secret Police
+
+4
+
+ Censorship
+
+5
+
+ Conscription
+
+ Oppression
+
+6
+
+ Big Brother
+
+Level
+
+Name
+
+Description
+
+Effects
+
+1
+
+ Iron Fist
+
+When you whip a worker, it inspires immense productivity in him, and any that witness the event.+100 Control
+
++100  Control
++1  Totalitarianism
+
+2
+
+ Prestige
+
+The famous will show you what a culture values. While others worship the vapid and beautiful or the bright and curious, we revere the strong.Double Ship Experience
+
++1  Totalitarianism
++8 Experience Bonus
+
+2
+
+ Purges
+
+Your state maintains power through fear, eliminating perceived threats to its control.  Unrest is reduced across all Core Worlds and security measures are more effective.
+
+-0.1  Crime
++1  Totalitarianism
+
+3
+
+ Obedience
+
+In your society, unity and order are valued above all. Obedience to the state's command is a virtue, not a burden.Citizen expectations lowered by 20%. Citizens with the Totalitarianism trait provide +25% more Manufacturing. Spawns support ship "The Enforcer".
+
+-20%  Expectations
++1  Totalitarianism
++25%  Manufacturing
+Enforcer
+
+3
+
+ Secret Police
+
+With our empire now stretching across the stars, there are many dark corners we can disappear troublemakers to.Unlocks the Secret Police policy.
+
+-0.1  Crime
++1  Totalitarianism
+
+4
+
+ Censorship
+
+The power of censorship lies in its sinister ability to manipulate minds, suppress dissent, and control the narrative.Factions have no negative side effects
+
++1  Totalitarianism
++1 Ignore Thinktanks Penalties
+
+5
+
+ Conscription
+
+Conscription is deemed an essential and inescapable duty for all citizens.Grants five free Transports
+
++1 Transport
++1 Transport
++1 Transport
++1 Transport
++1 Transport
+
+5
+
+ Oppression
+
+The value of oppression lies in its malevolent capacity to subjugate and control the masses.Faction benefits increased by 50%
+
++1  Progressivism
++0.5 Thinktank Premium
+
+6
+
+ Big Brother
+
+Every move, every whisper, every thought is monitored for the greater good.Impeccable internal security and surveillance. Dissent is almost non-existent. Expectations on citizens lowered by 50 points. Unlocks Coordinated Travel technology.
+
+-50  Expectations
++1  Totalitarianism
+Big Brother
+
+Egalitarianism
+
+Believes in the fundamental equality of all sentient beings, advocating for equal rights and opportunities regardless of species, origin planet, or other characteristics.
+
+Level
+Traits
+
+1
+
+ Fairness
+
+2
+
+ Representation
+
+ Tolerance
+
+3
+
+ Inclusivity
+
+4
+
+ Universal Rights
+
+ Labor Rights
+
+5
+
+ Empowerment
+
+ Diversity
+
+6
+
+ Utopia
+
+Level
+
+Name
+
+Description
+
+Effects
+
+1
+
+ Fairness
+
+Fairness fosters unity among diverse populations, providing a strong foundation for sustainable empire building.10% Approval boost on all worlds3 free Colony ships
+
++0.1  Approval
++1  Egalitarianism
+Awards a colony ship with a colonist.
+Awards a colony ship with a colonist.
+Awards a colony ship with a colonist.
+
+2
+
+ Representation
+
+We measure success not by personal achievement, but by the growth and happiness of our neighbors.All Colonies generate +1 influence per month.
+
++1  Cultural Significance
++1  Egalitarianism
+
+2
+
+ Tolerance
+
+True progress in any society can only be achieved through the practice of tolerance and acceptance towards those who are different from ourselves.Core worlds start with +100 Influence and an additional +5 Influence Per Turn
+
++100  Influence
++5  Influence Growth
++1  Pacifism
+
+3
+
+ Inclusivity
+
+An inclusive empire combines advanced technology, diverse cultures, and equal opportunities, creating an enticing haven for outsiders.Worlds with over 50% Approval get +15% Influence.
+
++15%  Influence Growth
++1  Egalitarianism
+
+4
+
+ Universal Rights
+
+Universal rights and freedoms for all beings are essential for fostering a stable, prosperous, and harmonious society.Citizens not of your main species get +25% approval.
+
++25%  Approval
++1  Pacifism
+
+4
+
+ Labor Rights
+
+Empower the working class by acknowledging and protecting their rights.  Unlocks the Union Center improvement.
+
++1  Egalitarianism
+
+5
+
+ Empowerment
+
+Empowerment instills a sense of responsibility in our citizens, driving them to be more proactive in contributing to the betterment of society.+ 2 global citizen Diligence and 5 free leaders.
+
++2  Diligence
++1  Egalitarianism
++1 Unassigned Leader
++1 Unassigned Leader
++1 Unassigned Leader
++1 Unassigned Leader
++1 Unassigned Leader
+
+5
+
+ Diversity
+
+Diversity fuels innovation, fosters resilience, and ultimately strengthens the foundation and growth of an empire.Citizens now increase core world influence by 2% per social skill.
+
++1 Diversity
++1  Egalitarianism
+Has Social S Kill Increases Core Influence
+
+6
+
+ Utopia
+
+In our pursuit of perfection, we have crafted a society where all prosper and harmony reigns supreme.Exceptional societal happiness, growth, and prosperity across all systems. All planets gain 1000 influence. Unlocks Dream of Utopia technology.
+
++1000  Influence
++1  Egalitarianism
+Utopia
+
+Progressivism
+
+Believes in the relentless pursuit of technological advancement and societal reform, often with a focus on universal equality across species and planetary systems.
+
+Level
+Traits
+
+1
+
+ Eureka
+
+2
+
+ Deep Investigation
+
+ Innovation
+
+3
+
+ Early Adoption
+
+ Breakthrough
+
+4
+
+ Risk Taking
+
+5
+
+ Futurist
+
+ Quantum Leap
+
+6
+
+ Singularity
+
+Level
+
+Name
+
+Description
+
+Effects
+
+1
+
+ Eureka
+
+Abandon the fear of change and embrace discovery.Temporary Approval boost after discovering a new Technology and +30 Research
+
++1  Progressivism
++0.05  Approval
++30 Research Amount
+
+2
+
+ Deep Investigation
+
+There are lessons to be learned from even the most meager sources.+3 Research after surveying an AnomalyUncovers many new anomalies near our homeworld
+
++1  Progressivism
++3 Research Amount
+
+2
+
+ Innovation
+
+Innovation is the calling card of the future.Citizens with the Progressive Trait generate +1 raw tech per turn. Unlocks Innovation Complex Improvement.
+
++1  Progressivism
+
+3
+
+ Early Adoption
+
+The early adoption of technology in a rapidly evolving universe is like riding a cosmic wave, where those who dare to surf the unknown may unlock the secrets of the stars.Breakthrough tech discount increases to 60%
+
++0.10 Research Discount Bonus
++1  Progressivism
+
+3
+
+ Breakthrough
+
+Science unconstrained can change everything, for good or bad.+100 Research, unlocks Hyperion Shrinker
+
++1  Progressivism
++100 Research Amount
+
+4
+
+ Risk Taking
+
+The progress of logic requires an uncompromising assault on dogma and rhetoric.Unlocks the Shark Tank improvement.
+
++1  Progressivism
+
+5
+
+ Futurist
+
+Do not celebrate doctors, soldiers, or entrepreneurs. Where would they be without the inventions that led to their craft?Unlocks The Possibility Engine planetary improvement
+
++1  Progressivism
+
+5
+
+ Quantum Leap
+
+Let every idea be presented and succeed or fail based on its merit. There is no room for morality in science, only rationality.+1000 Research
+
++1  Progressivism
++1000 Research Amount
+
+6
+
+ Singularity
+
+Embracing the pinnacle of technological advancement, our civilization hovers on the brink of becoming something... transcendent.Massive bonuses in all tech-related endeavors. Possibility of evolving into a post-biological state. Unlocks Technological Singularity technology.
+
++1  Intelligence
++1  Progressivism
+Singularity
+
+Traditionalism
+
+Believes in the importance of preserving established customs, practices, and institutions and views societal change with caution.
+
+Level
+Traits
+
+1
+
+ Sacred History
+
+2
+
+ Social Ties
+
+ Code of Law
+
+3
+
+ Family Values
+
+4
+
+ Cultural Pride
+
+ Preferred Culture
+
+5
+
+ Devotion
+
+ Dogma
+
+6
+
+ Legacy
+
+Level
+
+Name
+
+Description
+
+Effects
+
+1
+
+ Sacred History
+
+The culture and standard of living on the homeworld are admired and envied throughout the galaxy.Unlocks the improvement "Hall Of Tradition".
+
++1  Traditionalism
+
+2
+
+ Social Ties
+
+A community with strong social bonds prioritizes harmony, respect, and the collective well-being of all.Citizens of our species no longer generate crime.
+
++1  Traditionalism
+
+2
+
+ Code of Law
+
+In the time-honored traditions of justice, ancient and steadfast, all find solace in the assurance of fair and consistent treatment under the unwavering law.Add an additional Policy slot
+
++1  Max Enacted Policies
++1  Traditionalism
+
+3
+
+ Family Values
+
+Our Starbases glitter in the deep night of space like stars formed from glass and titanium.Population growth rates increase by 25%
+
++25%  Growth
++1  Traditionalism
+
+4
+
+ Cultural Pride
+
+Cultural pride is a powerful force that can inspire individuals and communities to overcome adversity, preserve their heritage, and assert their rightful place in the galaxy.+25% Culture Points per turn
+
++25%  Culture Points Per Month
++1  Traditionalism
+
+4
+
+ Preferred Culture
+
+United under a preferred culture, diverse societies soar to new heights of progress and enlightenment.+10% Approval for our civilization species.
+
++0.1  Approval
++1  Traditionalism
+
+5
+
+ Devotion
+
+Iron can bind a man, devotion can bind a generation.+2 Control per turn
+
++2  Control Per Month
++1  Traditionalism
+Give All Leaders  Traditional
+Give All Leaders  Traditional
+
+5
+
+ Dogma
+
+Our people are so proud that the concept of yielding to a foreign culture is hard to imagine.All planets gain +25% Resistance
+
++0.25  Resistance
++1  Traditionalism
+
+6
+
+ Legacy
+
+Honoring the past, our civilization ensures that its achievements and wisdom will endure for eons.Monuments, wonders, and cultural outputs are enhanced. History is preserved meticulously. We have successfully integrated the knowledge of the Precursors with our own glorious traditions. Provides 50 Prestige points. Unlocks Glorious Legacy technology.
+
++100  Prestige
++1  Traditionalism
+Legacy
+
+Pacifism
+
+Believes in opposing interstellar war and violence, advocating for the peaceful resolution of conflicts through diplomacy and mutual respect among diverse species and civilizations.
+
+Level
+Traits
+
+1
+
+ Kindness
+
+2
+
+ Charity
+
+ Peacekeeping
+
+3
+
+ Altruism
+
+4
+
+ Empathy
+
+ Forgiveness
+
+5
+
+ Serenity
+
+ Peacefulness
+
+6
+
+ Sanctuary
+
+Level
+
+Name
+
+Description
+
+Effects
+
+1
+
+ Kindness
+
+Love and compassion are necessities, not luxuries. Without them, we cannot survive. +1 Diplomacy3 Constructor ships join you
+
++0.01  Approval
++1  Diplomacy Bonus
++1  Pacifism
++1 Constructor
++1 Constructor
++1 Constructor
+
+2
+
+ Charity
+
+In the vast expanse of the cosmos, generosity has never led a soul to impoverishment.-10% Global Crime. Spawns support ship "Goodwill".
+
+-0.1  Crime
++1  Pacifism
+Goodwill
+
+2
+
+ Peacekeeping
+
+With kind words, a wise leader pacifies their enemies, disarming their hostility and transforming adversaries into allies, forging a harmonious path to lasting peace.All leaders gain the peacemaker trait.  Starbase range +1.  +2 Diplomacy for peacekeeping
+
++1  Starbase Range
++1  Pacifism
+Give All Leaders  Peacemaker
+Give All Leaders  Peacemaker
+
+3
+
+ Altruism
+
+When you do not treat the empire building game as zero sum, you can build a galactic community everyone benefits from.+2 Diplomacy  Homeworld gains 10% of all inputs from all homeworlds of civilizations we have a friendly relationship with
+
++2  Diplomacy Bonus
++1  Pacifism
+Gain Portion Of Friendly Homeworlds Input
+
+4
+
+ Empathy
+
+In the midst of war, empathy becomes a beacon of hope, reminding us of our shared harmony and the potential for peace and understanding.Citizens no longer negatively react to being at war with their home civilizations.
+
++1  Calm Foreign Citizens
++1  Pacifism
+
+4
+
+ Forgiveness
+
+Acknowledging and forgiving the mistakes of all alien species unlocks the door to shared progress.Ignores diplomatic penalties for being at war with allies or trading with enemies.
+
++1 Ignore Wars With Friends
++1 Ignore Trade With Enemies
++1  Pacifism
+
+5
+
+ Serenity
+
+The culture and standard of living of our civilization is admired and envied throughout the galaxy.Citizens with the Pacifist Trait have their stats quadrupled.
+
++1  Pacifism
++300%  Intelligence
++300%  Social Skills
++300%  Diligence
++300%  Resolve
++300%  Intelligence
++300%  Social Skills
++300%  Diligence
++300%  Resolve
++300%  Intelligence
++300%  Social Skills
++300%  Diligence
++300%  Resolve
+
+5
+
+ Peacefulness
+
+It is the steadfast commitment to peace that brings hope to the civilizations who cherish its values.Unlocks the United Planets improvement
+
++1  Pacifism
+
+6
+
+ Sanctuary
+
+In a galaxy of turmoil, our civilization stands as a beacon of refuge and hope.Diplomatic bonuses and enhanced defenses make our territories a haven for allies and citizens. Unlocks The Consensus Maker technology.
+
++25%  Social Skills
++1  Diplomacy Bonus
++1  Pacifism
+Sanctuary
+
+Individualism
+
+Believes in the primacy of individual rights, personal freedom, and self-reliance, often over the needs and interests of the community or society.
+
+Level
+Traits
+
+1
+
+ Independence
+
+2
+
+ Self Determinism
+
+ Private Property Rights
+
+3
+
+ Self-Reliance
+
+ Autonomy
+
+4
+
+ Privacy
+
+5
+
+ Competitiveness
+
+ Self-Governance
+
+6
+
+ Sovereign Identity
+
+Level
+
+Name
+
+Description
+
+Effects
+
+1
+
+ Independence
+
+Independence in colonies nurtures self-reliance, empowering them to tend to their own needs and flourish autonomously.15% increase to Supply Attrition from coloniesSpawns the ship "The Independence"
+
++0.15 Supply Attrition
++1  Individualism
+Zarkov
+
+2
+
+ Self Determinism
+
+Our society gives individuals the opportunity to decide their own future, for better or worse.3 Leaders join us. +3 to all stats of citizens with individualist trait.
+
++0.5  Leader Trait Chance
++1  Individualism
++1 Unassigned Leader
++1 Unassigned Leader
++1 Unassigned Leader
++3  Intelligence
++3  Social Skills
++3  Diligence
++3  Resolve
+
+2
+
+ Private Property Rights
+
+Ownership is respected and protected. Your society values the individual rights to accumulate and control property.Unlocks the Entrepreneur specialization and +1 Orbital Upgrade slot to every planet.
+
++1 Upgrade Slots
++1  Individualism
+
+3
+
+ Self-Reliance
+
+The triumph of the individual over the circumstances is the essence of self-reliance. Your people value independence and personal responsibility.Citizens get +3 to their attributes.
+
++3  Diligence
++3  Intelligence
++3  Social Skills
++3  Resolve
++1  Individualism
+
+3
+
+ Autonomy
+
+The choice belongs to the individual. Your society believes in the personal freedom to make decisions.  Governors get +10 loyalty, +1 Policy Slots.
+
++1  Max Enacted Policies
++10  Loyalty
++1  Individualism
+
+4
+
+ Privacy
+
+Individuals' right to privacy is highly valued and protected. Your society respects personal space, data, and communications.All citizens who have the Individualist Trait get a 25% approval bonus.
+
++1  Individualism
++25%  Approval
+
+5
+
+ Competitiveness
+
+Society rewards those who strive to be the best. Your people value competition and the pursuit of excellence.	  All citizens who have the individualist Trait now provide +1 raw wealth to their core world.
+
++1  Individualism
+
+5
+
+ Self-Governance
+
+The smallest minority is the individual. You cannot deny the individual and claim to defend minorities.+8% Approval on all Core Worlds except your Homeworld and a free Leader
+
++0.08  Approval
++1  Individualism
++1 Unassigned Leader
+
+6
+
+ Sovereign Identity
+
+Above all, our civilization values its unique identity and independence, standing firm in the face of external influences.Strong resistance against external cultural or diplomatic influences. Enhanced national pride and unity. All citizens stats increased greatly. Unlocks Individual Divinity technology.
+
++0.25  Resistance
++25%  Intelligence
++25%  Social Skills
++25%  Diligence
++25%  Resolve
++1  Individualism
+Divinity
+
+Collectivism
+
+Believes in prioritizing the group, community, or society over individual interests, often with a focus on shared responsibility and collective action.
+
+Level
+Traits
+
+1
+
+ Unification
+
+2
+
+ Shared Belief
+
+ Consensus
+
+3
+
+ Cooperation
+
+ Unified Coordination
+
+4
+
+ Mass Mobilization
+
+5
+
+ Interdependence
+
+ Solidarity
+
+6
+
+ Hive Mind
+
+Level
+
+Name
+
+Description
+
+Effects
+
+1
+
+ Unification
+
+Unification weaves together the threads of diverse civilizations, elevating all who embrace its unity to new heights of wisdom and prosperity.+100% Homeworld Influence
+
++100%  Influence Growth
++1  Collectivism
+
+2
+
+ Shared Belief
+
+Shared beliefs and values unite the hearts and minds of countless beings, the strength of their collective spirit transcends the limits of individual understanding. Increased likelihood that new citizens will have the Collectivism trait  +2 levels to Housing Improvements on Core Worlds
+
++2 Improvement Level
++1  Collectivism
+Increased Chance For Collectivism Trait
+
+2
+
+ Consensus
+
+We unanimously agree that the shared joy of collective prosperity outweighs the fleeting thrill of individual triumph.Citizen Expectations reduced by 50% and Citizen's with the Collectivist trait gain +10% approval.
+
+-50%  Expectations
++1  Pacifism
++10%  Approval
+
+3
+
+ Cooperation
+
+Team ambition serves the common good.+1 Fertility to all worlds. Spawns support ship "The Negotiator".
+
++1  Farming
++1  Collectivism
+Negotiator
+
+3
+
+ Unified Coordination
+
+A well-oiled machine, that's what our civilization is. Every part, every individual, is synchronized with the rest, working towards the common good. We move as one, and so our potential is limitless allowing our fleets to grow bigger.    +12 Logistics
+
++12  Logistics
++1  Collectivism
+
+4
+
+ Mass Mobilization
+
+In times of need, everyone contributes. A tide of unity can overcome any obstacle.Unlocks the Mass Mobilization Executive Order. +25% Max Manufacturing while at war.
+
++4600%  Manufacturing
++1  Collectivism
+
+5
+
+ Interdependence
+
+When one falls, we all stumble. When one triumphs, we all share in the victory. Let's build a future where no one is left behind.Minor worlds in our influence provide 3X the resources to their sponsor world.
+
++1  Collectivism
+More Resources From Minor Civs
+
+5
+
+ Solidarity
+
+We are one body, one voice, one shared destiny. Only by working together can we overcome our challenges.+1% to core world approval for each non governed colony in empire.
+
++1  Collectivism
+Has Ungoverned Colony Approval Bonus Flag
+
+6
+
+ Hive Mind
+
+Every individual operates in perfect harmony, guided by a shared consciousness. The concept of "self" has dissolved, making the civilization a powerful, singular entity.All units and cities act in perfect coordination with significant bonuses to simultaneous actions. Unlocks Post-Sentience technology.
+
++25%  Intelligence
++25%  Social Skills
++25%  Diligence
++25%  Resolve
++1  Collectivism
+Post Sentience
+
+Nihilism
+
+Believes in the rejection or denial of inherent meaning or value in life. Causing pain in others is the reward.
+
+Level
+Traits
+
+1
+
+ Detached
+
+2
+
+ Realism
+
+ Criminal Ties
+
+3
+
+ Moral Relativism
+
+ Exploitation
+
+4
+
+ Flexibility
+
+5
+
+ Attrition
+
+ Fatalism
+
+6
+
+ Terror Stars
+
+Level
+
+Name
+
+Description
+
+Effects
+
+1
+
+ Detached
+
+Our society has grown so Detached from consumerism that there is plenty of excess goods.	3 free supply ships and +10% income on all worlds.
+
++10%  Gross Income
++1  Nihilism
++1 Worker
++1 Worker
++1 Worker
+
+2
+
+ Realism
+
+We are known for valuing goods at their objective worth.Alien Civs will value your trades by 50% more.
+
++0.5  Diplomatic Trade Value
++1  Nihilism
+
+2
+
+ Criminal Ties
+
+We have traded and traveled with the darker elements of the galaxy for so long that they see us as one of them.Unlocks Crime Wave executive order.
+
++1  Nihilism
+
+3
+
+ Moral Relativism
+
+Good and bad are but perspectives.Nihilists on planet have their stats increased  Unlocks Communication Starbase Module “Relativistic Ethics Beacon”  All event choices give awareness into every ideology
+
++1  Nihilism
++0.1  Individualism
++0.1  Totalitarianism
++0.1  Egalitarianism
++0.1  Traditionalism
++0.1  Progressivism
++0.1  Pacifism
++0.1  Nihilism
++0.1  Collectivism
++100%  Intelligence
++100%  Social Skills
++100%  Diligence
++100%  Resolve
+
+3
+
+ Exploitation
+
+It is our duty to harness the labor and resources of weaker species, for their worth is only in serving us.Unlocks Exploit Population executive order.
+
++4  Diligence
++1  Progressivism
+
+4
+
+ Flexibility
+
+Flexibility allows for adaptation to market fluctuations, fostering mutually beneficial exchanges and promoting economic growth.Galactic Bazaar sell price +25%, Galactic Bazaar buy price -25%
+
++0.25 Bazaar Premium
++0.25  Bazaar Discount
++1  Nihilism
+
+5
+
+ Attrition
+
+By opening ourselves up to the universe, it embraces us as well. It also rejects those that stand against us.-25% Hit Points for enemy ships in our borders
+
+-25%  Hit Points
++1  Nihilism
+
+5
+
+ Fatalism
+
+All events are predetermined and therefore inevitable. It's useless to resist fate. "We are all going to die anyway" +20% to Soldiering  Unlocks the Death Commandos executive order
+
++1  Nihilism
++0.20  Soldiering
+Has Death Commandos
+
+6
+
+ Terror Stars
+
+The vastness of space hides terrifying wonders, harnessed by our civilization for dominance and defense.Enhanced cosmic weaponry and interstellar fortifications. Fear strikes enemies upon encounter. Unlocks the Terror Star technology.
+
++1  Nihilism
+Terror Stars
+
+Retrieved from "https://wiki.galciv.com/index.php?title=Cultural_Ideology&oldid=27065"

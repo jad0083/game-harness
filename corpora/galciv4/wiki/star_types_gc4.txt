@@ -1,0 +1,124 @@
+# Star Types GC4
+Source: https://wiki.galciv.com/index.php/Star_Types_GC4
+
+Stars are found distributed through each sector in the galaxy and are each assigned a Type depending on their age and color. Each Star Type has a tendency towards spawning on the map with various orbiting bodies. 
+
+Star System
+
+Dead Planets
+
+Habitable Planets
+
+Resources
+
+ System Yellow 01
+
+0-2 Dead Planets
+
+0-4 Habitable Planets
+
+ System Yellow 02
+
+0-1 Dead Planets
+
+0-4 Habitable Planets
+
+ System Yellow 03
+
+0-1 Dead Planets
+
+0-4 Habitable Planets
+
+ System Purple 01
+
+0-1 Dead Planets
+
+0-2 Habitable Planets
+
+Chance of generating Promethion
+
+ System Purple 02
+
+0-1 Dead Planets
+
+0-1 Habitable Planets
+
+Chance of generating Promethion
+
+ System Purple 03
+
+0-1 Dead Planets
+
+0-1 Habitable Planets
+
+Chance of generating Promethion
+
+ System Red 01
+
+0-1 Dead Planets
+
+0-2 Habitable Planets
+
+Chance of generating Durantium
+
+ System Red 02
+
+0-2 Dead Planets
+
+0-2 Habitable Planets
+
+Chance of generating Durantium
+
+ System Orange 01
+
+0-2 Dead Planets
+
+0-4 Habitable Planets
+
+Chance of generating Promethion
+
+ System Orange 02
+
+0-1 Dead Planets
+
+0-3 Habitable Planets
+
+Chance of generating Durantium
+
+ System Orange 03
+
+0-2 Dead Planets
+
+0-3 Habitable Planets
+
+ System Blue 01
+
+0-3 Dead Planets
+
+0-1 Habitable Planets
+
+Chance of generating Thulium
+
+ System Blue 02
+
+0-3 Dead Planets
+
+0-1 Habitable Planets
+
+Chance of generating Thulium
+
+ System Blue 03
+
+0-2 Dead Planets
+
+0-2 Habitable Planets
+
+Chance of generating Thulium 
+
+ System White 01
+
+0-1 Habitable Planets
+
+ System White 02
+
+Retrieved from "https://wiki.galciv.com/index.php?title=Star_Types_GC4&oldid=19675"

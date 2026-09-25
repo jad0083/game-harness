@@ -26,6 +26,15 @@ pub mod win {
         SetForegroundWindow, ShowWindow, SW_RESTORE,
     };
 
+    pub fn init_dpi() {
+        unsafe {
+            use windows::Win32::UI::HiDpi::{
+                SetProcessDpiAwarenessContext, DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2,
+            };
+            let _ = SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+        }
+    }
+
     pub fn keep_awake() {
         unsafe {
             let _ = SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED);

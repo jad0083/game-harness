@@ -1,0 +1,154 @@
+# Galactic Civilizations IV: Supernova - Machine Executable Game Manifest
+# Used by native Rust game-controller for zero-latency lookups and autonomous macros.
+
+[metadata]
+id = "galciv4"
+name = "Galactic Civilizations IV: Supernova"
+version = "4.1.1"
+process_title = "Galactic Civilizations"
+native_resolution = [3840, 2160]
+downscaled_resolution = [1568, 882]
+
+[hotkeys]
+# Turn & Global Navigation
+next_action = "tab"
+end_turn = "enter"
+cancel = "esc"
+confirm_yes = "y"
+confirm_no = "n"
+homeworld = "h"
+center_selection = "c"
+toggle_grid = "g"
+toggle_chat = "t"
+console = "`"
+
+# Ship & Unit Commands
+skip_turn = "space"
+sleep_ship = "f"
+auto_explore = "e"
+auto_colonize = "c"
+upgrade_ship = "u"
+rush_buy = "r"
+decommission = "delete"
+
+# Camera Controls
+zoom_in = "z"
+zoom_out = "x"
+pan_up = "w"
+pan_left = "a"
+pan_down = "s"
+pan_right = "d"
+pivot_cw = "e"
+pivot_ccw = "q"
+
+# Dialog & Choice Hotkeys (Verified 100% deterministic)
+option_1 = "1"
+option_2 = "2"
+option_3 = "3"
+option_4 = "4"
+
+# Sub-menu Navigation
+next_planet = "right"
+prev_planet = "left"
+next_idle_planet = "shift+right"
+prev_idle_planet = "shift+left"
+
+[screens.event_modal]
+description = "Strategic event or planet colonization choice dialog"
+# 80-microsecond luminance signature on top resource bar (dimmed when modal appears)
+luminance_roi = [0, 0, 1568, 40]
+luminance_threshold = 22.0
+is_blocking = true
+choice_keys = ["1", "2", "3"]
+
+[screens.planet_management_tutorial]
+description = "Planet management tutorial / viewscreen"
+title_ocr = "Planet Management"
+# Normalized coordinates relative to image width/height (works across all DPI scales)
+buttons.done = { norm_x = 0.88, norm_y = 0.855, action = "click" }
+dismiss_key = "esc"
+
+[screens.shipyard]
+description = "Orbital Shipyard production queue"
+buttons.build_ship = { norm_x = 0.89, norm_y = 0.92, action = "click" }
+buttons.close = { norm_x = 0.95, norm_y = 0.05, action = "click" }
+dismiss_key = "esc"
+
+[screens.research]
+description = "Technology research selection screen"
+buttons.select_tech = { norm_x = 0.50, norm_y = 0.50, action = "click" }
+dismiss_key = "esc"
+
+[screens.data_bank]
+description = "Data Bank overview screen (Civilization, Timeline, Graphs, Report, Stats, Core Worlds)"
+buttons.civilization = { norm_x = 0.205, norm_y = 0.168, action = "click" }
+buttons.timeline = { norm_x = 0.345, norm_y = 0.168, action = "click" }
+buttons.graphs = { norm_x = 0.485, norm_y = 0.168, action = "click" }
+buttons.report = { norm_x = 0.625, norm_y = 0.168, action = "click" }
+buttons.stats = { norm_x = 0.755, norm_y = 0.168, action = "click" }
+buttons.core_worlds = { norm_x = 0.895, norm_y = 0.168, action = "click" }
+dismiss_key = "esc"
+
+[screens.planet_report]
+description = "Planet report and colonization site selection modal"
+title_ocr = "Planet Report"
+is_blocking = true
+choice_keys = ["1", "2", "3"]
+buttons.option_1 = { norm_x = 0.245, norm_y = 0.810, action = "click" }
+buttons.option_2 = { norm_x = 0.245, norm_y = 0.880, action = "click" }
+buttons.option_3 = { norm_x = 0.245, norm_y = 0.950, action = "click" }
+
+[screens.main_galaxy_map]
+description = "Main Galaxy Map HUD view"
+buttons.end_turn = { norm_x = 0.950, norm_y = 0.950, action = "click" }
+buttons.advisors = { norm_x = 0.950, norm_y = 0.050, action = "click" }
+buttons.research_panel = { norm_x = 0.080, norm_y = 0.020, action = "click" }
+buttons.policies_panel = { norm_x = 0.120, norm_y = 0.080, action = "click" }
+
+[screens.colonial_charter]
+description = "Colonial Charter policy & government management screen"
+buttons.government_tab = { norm_x = 0.125, norm_y = 0.168, action = "click" }
+buttons.leaders_tab = { norm_x = 0.270, norm_y = 0.168, action = "click" }
+buttons.ministers_tab = { norm_x = 0.410, norm_y = 0.168, action = "click" }
+buttons.diplomats_tab = { norm_x = 0.555, norm_y = 0.168, action = "click" }
+buttons.governors_tab = { norm_x = 0.695, norm_y = 0.168, action = "click" }
+buttons.commanders_tab = { norm_x = 0.835, norm_y = 0.168, action = "click" }
+buttons.parties_tab = { norm_x = 0.970, norm_y = 0.168, action = "click" }
+buttons.tax_rate_low = { norm_x = 0.120, norm_y = 0.295, action = "click" }
+buttons.tax_rate_med = { norm_x = 0.150, norm_y = 0.295, action = "click" }
+buttons.policy_slot_1 = { norm_x = 0.395, norm_y = 0.448, action = "click" }
+dismiss_key = "esc"
+
+
+
+[macros.turn_pump]
+description = "Cycle idle ships, skip or sleep pending units, and end turn"
+actions = [
+    { type = "key", key = "tab" },
+    { type = "wait", ms = 30 },
+    { type = "key", key = "space" },
+    { type = "wait", ms = 30 },
+    { type = "key", key = "tab" },
+    { type = "wait", ms = 30 },
+    { type = "key", key = "f" },
+    { type = "wait", ms = 30 },
+    { type = "key", key = "enter" },
+]
+settle_timeout = 8.0
+settle_threshold = 0.02
+
+[macros.dismiss_tutorial]
+description = "Fast-dismiss tutorial popups via Enter/Done/Esc"
+actions = [
+    { type = "key", key = "enter" },
+    { type = "wait", ms = 100 },
+    { type = "key", key = "esc" },
+]
+
+[macros.auto_scout_cycle]
+description = "Cycle through survey flagships and assign auto-explore"
+actions = [
+    { type = "key", key = "tab" },
+    { type = "wait", ms = 80 },
+    { type = "key", key = "e" },
+]
