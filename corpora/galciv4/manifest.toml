@@ -157,3 +157,19 @@ template = "templates/gnn_live.png"          # the "GNN LIVE" logo, bottom-left 
 template_roi = [0.1913, 0.7211, 0.1122, 0.1406]
 auto_dismiss = true
 dismiss_click = [0.7526, 0.8707]              # Close button
+
+[screens.idle_colony_ship]
+description = "An idle colony ship is selected (TAB selects idle fleets): order Auto Colonize"
+template = "templates/action_colonize.png"   # green colonize icon in the unit's first action slot
+template_roi = [0.2577, 0.8265, 0.0217, 0.0385]
+template_threshold = 0.06
+auto_dismiss = true
+dismiss_key = "c"
+
+[screens.colonize_confirm]
+description = "'Colonize Planet? <name> No/Yes' confirmation after Auto Colonize arrives: accept"
+template = "templates/colonize_planet_title.png"   # dialog title "Colonize Planet"
+template_roi = [0.4401, 0.3379, 0.1212, 0.0295]
+template_threshold = 0.06
+auto_dismiss = true
+dismiss_click = [0.5708, 0.5952]                    # Yes

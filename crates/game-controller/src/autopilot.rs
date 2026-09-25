@@ -212,9 +212,13 @@ impl Autopilot {
             // Look before acting: clear known informational screens, and never send keys into
             // an open dialog.
             let (mut before, mut view) = self.screenshot_view().await?;
+            // Each screen at most once per attempt: some stay visible after their action
+            // (a colony ship stays selected after Auto Colonize), which must not loop.
+            let mut handled: Vec<String> = Vec::new();
             while dismissed.len() < MAX_DISMISSALS_PER_TURN {
-                match self.dismiss_known_screen(&before, &view).await? {
+                match self.dismiss_known_screen(&before, &view, &handled).await? {
                     Some(name) => {
+                        handled.push(name.clone());
                         dismissed.push(name);
                         (before, view) = self.screenshot_view().await?;
                     }
@@ -252,7 +256,9 @@ impl Autopilot {
                         dismissed,
                     });
                 }
-                TurnVerdict::NotAdvanced { .. } if attempt == 0 && self.known_screen_name(&after)?.is_some() => {
+                TurnVerdict::NotAdvanced { .. }
+                    if attempt == 0 && self.known_screen_name(&after, &dismissed)?.is_some() =>
+                {
                     continue; // dismissed at the top of the next attempt
                 }
                 TurnVerdict::NotAdvanced { indicator_diff } => {
@@ -270,15 +276,26 @@ impl Autopilot {
         unreachable!("the second attempt always returns")
     }
 
-    fn known_screen_name(&self, frame: &[u8]) -> Result<Option<String>> {
+    /// A known screen on `frame` that is not in `exclude`.
+    fn known_screen_name(&self, frame: &[u8], exclude: &[String]) -> Result<Option<String>> {
         let img = decode_rgb(frame)?;
-        Ok(match_known_screen(&img, &self.known_screens).map(|(n, _, _)| n.clone()))
+        Ok(self.unhandled_matches(&img, exclude).map(|(n, _, _)| n.clone()))
     }
 
-    /// If `frame` shows a known `auto_dismiss` screen, dismiss it and return its name.
-    async fn dismiss_known_screen(&self, frame: &[u8], view: &View) -> Result<Option<String>> {
+    fn unhandled_matches(
+        &self,
+        img: &image::RgbImage,
+        exclude: &[String],
+    ) -> Option<&(String, crate::corpus::ScreenDef, image::RgbImage)> {
+        let candidates: Vec<_> = self.known_screens.iter().filter(|(n, _, _)| !exclude.contains(n)).cloned().collect();
+        let name = match_known_screen(img, &candidates)?.0.clone();
+        self.known_screens.iter().find(|(n, _, _)| *n == name)
+    }
+
+    /// If `frame` shows a known `auto_dismiss` screen not in `exclude`, dismiss it and return its name.
+    async fn dismiss_known_screen(&self, frame: &[u8], view: &View, exclude: &[String]) -> Result<Option<String>> {
         let img = decode_rgb(frame)?;
-        let Some((name, def, _)) = match_known_screen(&img, &self.known_screens) else {
+        let Some((name, def, _)) = self.unhandled_matches(&img, exclude) else {
             return Ok(None);
         };
         if let Some([nx, ny]) = def.dismiss_click {
@@ -403,6 +420,9 @@ mod tests {
         let dir = format!("{}/../../corpora/galciv4", env!("CARGO_MANIFEST_DIR"));
         let m = crate::corpus::GameManifest::load_from_file(format!("{dir}/manifest.toml")).unwrap();
         let screens = load_known_screens(&m);
+        let declared = m.screens.values().filter(|d| d.auto_dismiss && d.template.is_some()).count();
+        assert_eq!(screens.len(), declared, "every auto_dismiss screen's template must load");
+        assert!(declared >= 3);
         let gnn = screens.iter().find(|(n, _, _)| n == "gnn_news").expect("gnn_news template loads");
         assert!(gnn.1.dismiss_click.is_some());
         // a flat frame matches nothing
