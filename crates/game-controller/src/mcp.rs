@@ -297,19 +297,28 @@ impl McpServer {
             }),
             serde_json::json!({
                 "name": "corpus_search",
-                "description": "Ultra-fast in-memory search (<100us) across all GalCiv IV technologies, planetary improvements, executive orders, strategy rules, and wiki guides.",
+                "description": "Keyword search over the game corpus (generated records such as techs/improvements/orders, the strategy playbook, and reference docs). Returns ids with one-line summaries only; call corpus_get with an id for the body.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "query": { "type": "string" },
-                        "limit": { "type": "integer", "default": 5 }
+                        "limit": { "type": "integer", "default": 5, "maximum": 50 }
                     },
                     "required": ["query"]
                 }
             }),
             serde_json::json!({
+                "name": "corpus_get",
+                "description": "Fetch one corpus item by id from corpus_search: a compact record (e.g. tech:colonial_policies) or one prose chunk (e.g. doc:planetary_management#3, strategy#1).",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": { "id": { "type": "string" } },
+                    "required": ["id"]
+                }
+            }),
+            serde_json::json!({
                 "name": "corpus_tech",
-                "description": "Lookup research technology details: research cost, tree category, prerequisites, ship components, policies, and planetary unlocks.",
+                "description": "Lookup a technology by name (exact, alias, or closest match) from the generated game data. Returns a compact record with its fields (cost, tree, prerequisites, unlocks).",
                 "inputSchema": {
                     "type": "object",
                     "properties": { "name": { "type": "string" } },
@@ -318,7 +327,7 @@ impl McpServer {
             }),
             serde_json::json!({
                 "name": "corpus_improvement",
-                "description": "Lookup planetary improvement / district details: production cost, base effects, level bonuses, adjacency bonuses, and tech/civ requirements.",
+                "description": "Lookup a planetary improvement / district by name (exact, alias, or closest match) from the generated game data.",
                 "inputSchema": {
                     "type": "object",
                     "properties": { "name": { "type": "string" } },
@@ -327,7 +336,7 @@ impl McpServer {
             }),
             serde_json::json!({
                 "name": "corpus_order",
-                "description": "Lookup executive order details: Control point cost, cooldown, civ/tech requirements, and immediate effects (e.g. 'Draft Colonists').",
+                "description": "Lookup an executive order by name (exact, alias, or closest match) from the generated game data.",
                 "inputSchema": {
                     "type": "object",
                     "properties": { "name": { "type": "string" } },
@@ -560,18 +569,33 @@ impl McpServer {
                 }))
             }
             "corpus_info" => {
-                if let Some(m) = &self.manifest {
-                    Ok(serde_json::json!({
-                        "content": [{
-                            "type": "text",
-                            "text": serde_json::to_string_pretty(m)?
-                        }]
-                    }))
-                } else {
-                    Ok(serde_json::json!({
-                        "content": [{ "type": "text", "text": "No game corpus manifest loaded." }]
-                    }))
+                let m = self.manifest.as_ref().ok_or_else(|| anyhow::anyhow!("No game corpus manifest loaded."))?;
+                let mut text = format!("# {} ({}) v{}\n", m.metadata.name, m.metadata.id, m.metadata.version);
+                if let Some(c) = &self.corpus {
+                    let st = c.stats();
+                    let records: Vec<String> = st.records.iter().map(|(k, n)| format!("{} {}", n, k)).collect();
+                    text.push_str(&format!(
+                        "Records: {}\nDocs: {} in {} chunks (search with corpus_search, fetch with corpus_get)\n",
+                        if records.is_empty() { "none generated yet".to_string() } else { records.join(", ") },
+                        st.docs, st.chunks
+                    ));
                 }
+                let mut hotkeys: Vec<_> = m.hotkeys.iter().collect();
+                hotkeys.sort();
+                text.push_str("\nHotkeys:\n");
+                for (k, v) in hotkeys {
+                    text.push_str(&format!("- {} = {}\n", k, v));
+                }
+                let mut macros: Vec<_> = m.macros.iter().collect();
+                macros.sort_by(|a, b| a.0.cmp(b.0));
+                text.push_str("\nMacros (run_macro):\n");
+                for (k, d) in macros {
+                    text.push_str(&format!("- {}: {} ({} actions)\n", k, d.description, d.actions.len()));
+                }
+                let mut screens: Vec<_> = m.screens.keys().collect();
+                screens.sort();
+                text.push_str(&format!("\nScreens: {}\n", screens.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", ")));
+                Ok(serde_json::json!({ "content": [{ "type": "text", "text": text }] }))
             }
             "run_macro" => {
                 let name = args.get("name").and_then(|v| v.as_str()).unwrap_or("");
@@ -620,83 +644,42 @@ impl McpServer {
             }
             "corpus_search" => {
                 let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("");
-                let limit = args.get("limit").and_then(|v| v.as_i64()).unwrap_or(5) as usize;
-                if let Some(c) = &self.corpus {
-                    let results = c.search(query, limit);
-                    Ok(serde_json::json!({
-                        "content": [{
-                            "type": "text",
-                            "text": serde_json::to_string_pretty(&results)?
-                        }]
-                    }))
+                let limit = args.get("limit").and_then(|v| v.as_i64()).unwrap_or(5).max(1) as usize;
+                let c = self.corpus.as_ref().ok_or_else(|| anyhow::anyhow!("Game corpus is not loaded."))?;
+                let hits = c.search(query, limit);
+                let text = if hits.is_empty() {
+                    format!("No corpus hits for {:?}.", query)
                 } else {
-                    Ok(serde_json::json!({
-                        "content": [{ "type": "text", "text": "Game corpus is not loaded." }]
-                    }))
-                }
+                    let lines: Vec<String> = hits
+                        .iter()
+                        .map(|h| format!("- `{}` [{}] {} — {}", h.id, h.kind, h.title, h.summary))
+                        .collect();
+                    format!("{}\n\nFetch a body with corpus_get(id).", lines.join("\n"))
+                };
+                Ok(serde_json::json!({ "content": [{ "type": "text", "text": text }] }))
             }
-            "corpus_tech" => {
-                let name = args.get("name").and_then(|v| v.as_str()).unwrap_or("");
-                if let Some(c) = &self.corpus {
-                    if let Some(tech) = c.lookup_tech(name) {
-                        Ok(serde_json::json!({
-                            "content": [{
-                                "type": "text",
-                                "text": serde_json::to_string_pretty(tech)?
-                            }]
-                        }))
-                    } else {
-                        Ok(serde_json::json!({
-                            "content": [{ "type": "text", "text": format!("Technology '{}' not found in corpus.", name) }]
-                        }))
-                    }
-                } else {
-                    Ok(serde_json::json!({
-                        "content": [{ "type": "text", "text": "Game corpus is not loaded." }]
-                    }))
-                }
+            "corpus_get" => {
+                let id = args.get("id").and_then(|v| v.as_str()).unwrap_or("");
+                let c = self.corpus.as_ref().ok_or_else(|| anyhow::anyhow!("Game corpus is not loaded."))?;
+                let text = match c.get(id) {
+                    Some(item) => item.render(),
+                    None => format!("No corpus item with id {:?}. Ids come from corpus_search.", id),
+                };
+                Ok(serde_json::json!({ "content": [{ "type": "text", "text": text }] }))
             }
-            "corpus_improvement" => {
-                let name = args.get("name").and_then(|v| v.as_str()).unwrap_or("");
-                if let Some(c) = &self.corpus {
-                    if let Some(imp) = c.lookup_improvement(name) {
-                        Ok(serde_json::json!({
-                            "content": [{
-                                "type": "text",
-                                "text": serde_json::to_string_pretty(imp)?
-                            }]
-                        }))
-                    } else {
-                        Ok(serde_json::json!({
-                            "content": [{ "type": "text", "text": format!("Improvement '{}' not found in corpus.", name) }]
-                        }))
-                    }
-                } else {
-                    Ok(serde_json::json!({
-                        "content": [{ "type": "text", "text": "Game corpus is not loaded." }]
-                    }))
-                }
-            }
-            "corpus_order" => {
-                let name = args.get("name").and_then(|v| v.as_str()).unwrap_or("");
-                if let Some(c) = &self.corpus {
-                    if let Some(ord) = c.lookup_order(name) {
-                        Ok(serde_json::json!({
-                            "content": [{
-                                "type": "text",
-                                "text": serde_json::to_string_pretty(ord)?
-                            }]
-                        }))
-                    } else {
-                        Ok(serde_json::json!({
-                            "content": [{ "type": "text", "text": format!("Executive order '{}' not found in corpus.", name) }]
-                        }))
-                    }
-                } else {
-                    Ok(serde_json::json!({
-                        "content": [{ "type": "text", "text": "Game corpus is not loaded." }]
-                    }))
-                }
+            "corpus_tech" | "corpus_improvement" | "corpus_order" => {
+                let kind = &name["corpus_".len()..];
+                let query = args.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                let c = self.corpus.as_ref().ok_or_else(|| anyhow::anyhow!("Game corpus is not loaded."))?;
+                let text = match c.lookup(kind, query) {
+                    Some(r) => r.render(),
+                    None if c.count(kind) == 0 => format!(
+                        "No {} records are loaded (data/{}.json has not been generated yet). Use corpus_search over the reference docs instead.",
+                        kind, kind
+                    ),
+                    None => format!("No {} named {:?}. Try corpus_search({:?}).", kind, query, query),
+                };
+                Ok(serde_json::json!({ "content": [{ "type": "text", "text": text }] }))
             }
             "corpus_strategy" => {
                 if let Some(c) = &self.corpus {

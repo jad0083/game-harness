@@ -1,5 +1,6 @@
 # Planetary Management
 Source: https://wiki.galciv.com/index.php/Planetary_Management
+License: not stated by the source page; kept for personal reference, verify before redistributing.
 
 Planetary Management
 

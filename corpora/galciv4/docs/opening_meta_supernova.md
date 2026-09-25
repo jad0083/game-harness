@@ -3,6 +3,7 @@ Sources:
 - Steam Community Guide (id: 3057543587 - Best Start in GalCiv IV Supernova)
 - Cultured Vultures: Strategy Tips (Colonization, Anomalies, Starbases)
 - Official Dev Journal (article: 510813 - Strategy Guide)
+License: not stated by the source page; kept for personal reference, verify before redistributing.
 
 Core Competitive Mechanics:
 

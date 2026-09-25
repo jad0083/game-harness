@@ -1,5 +1,6 @@
 # Research Tree
 Source: https://wiki.galciv.com/index.php/Research_Tree
+License: not stated by the source page; kept for personal reference, verify before redistributing.
 
 Research Tree
 

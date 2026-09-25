@@ -1,5 +1,6 @@
 # Star Types GC4
 Source: https://wiki.galciv.com/index.php/Star_Types_GC4
+License: not stated by the source page; kept for personal reference, verify before redistributing.
 
 Stars are found distributed through each sector in the galaxy and are each assigned a Type depending on their age and color. Each Star Type has a tendency towards spawning on the map with various orbiting bodies. 
 

@@ -1,5 +1,6 @@
 # Planet Types GC4
 Source: https://wiki.galciv.com/index.php/Planet_Types_GC4
+License: not stated by the source page; kept for personal reference, verify before redistributing.
 
 Each planet orbiting a star on the game map has a Planet Type, indicated on its tooltip. 
 

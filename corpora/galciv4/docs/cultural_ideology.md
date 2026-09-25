@@ -1,5 +1,6 @@
 # Cultural Ideology
 Source: https://wiki.galciv.com/index.php/Cultural_Ideology
+License: not stated by the source page; kept for personal reference, verify before redistributing.
 
 Contents
 
