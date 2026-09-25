@@ -79,12 +79,9 @@ impl McpServer {
         Ok((jpeg, v))
     }
 
-    fn to_screen_coords(&self, x: f64, y: f64) -> (i32, i32) {
-        let v = *self.view.lock().unwrap();
-        match v {
-            Some(view) => view.to_screen(x, y).unwrap_or((x as i32, y as i32)),
-            None => (x as i32, y as i32),
-        }
+    /// Map last-image coordinates to screen pixels; never guesses (see `map_point`).
+    fn to_screen_coords(&self, x: f64, y: f64) -> Result<(i32, i32)> {
+        map_point(*self.view.lock().unwrap(), x, y)
     }
 
     pub async fn run_stdio(&self) -> Result<()> {
@@ -373,13 +370,13 @@ impl McpServer {
                 }))
             }
             "click" => {
-                let x = args.get("x").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                let y = args.get("y").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                let x = require_f64(&args, "x")?;
+                let y = require_f64(&args, "y")?;
                 let button = args.get("button").and_then(|v| v.as_str()).unwrap_or("left");
                 let count = args.get("count").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
                 let wait_sec = args.get("wait").and_then(|v| v.as_f64()).unwrap_or(0.5);
 
-                let (sx, sy) = self.to_screen_coords(x, y);
+                let (sx, sy) = self.to_screen_coords(x, y)?;
                 self.client.click(sx, sy, button, count).await?;
 
                 if wait_sec > 0.0 {
@@ -396,15 +393,15 @@ impl McpServer {
                 }))
             }
             "drag" => {
-                let x1 = args.get("x1").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                let y1 = args.get("y1").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                let x2 = args.get("x2").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                let y2 = args.get("y2").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                let x1 = require_f64(&args, "x1")?;
+                let y1 = require_f64(&args, "y1")?;
+                let x2 = require_f64(&args, "x2")?;
+                let y2 = require_f64(&args, "y2")?;
                 let button = args.get("button").and_then(|v| v.as_str()).unwrap_or("left");
                 let wait_sec = args.get("wait").and_then(|v| v.as_f64()).unwrap_or(0.5);
 
-                let (sx1, sy1) = self.to_screen_coords(x1, y1);
-                let (sx2, sy2) = self.to_screen_coords(x2, y2);
+                let (sx1, sy1) = self.to_screen_coords(x1, y1)?;
+                let (sx2, sy2) = self.to_screen_coords(x2, y2)?;
                 self.client.drag(sx1, sy1, sx2, sy2, button).await?;
 
                 if wait_sec > 0.0 {
@@ -454,7 +451,7 @@ impl McpServer {
                 let actions = args.get("actions").and_then(|v| v.as_array()).cloned().unwrap_or_default();
                 // Map coordinates and resolve keys
                 let mut converted = Vec::new();
-                for act in actions {
+                for (i, act) in actions.iter().enumerate() {
                     let mut item = act.clone();
                     let kind = item.get("action").and_then(|v| v.as_str()).unwrap_or("").to_string();
                     if kind == "key" {
@@ -464,11 +461,12 @@ impl McpServer {
                         }
                     }
                     if kind == "click" || kind == "move" {
-                        if let (Some(x), Some(y)) = (item.get("x").and_then(|v| v.as_f64()), item.get("y").and_then(|v| v.as_f64())) {
-                            let (sx, sy) = self.to_screen_coords(x, y);
-                            item["x"] = serde_json::json!(sx);
-                            item["y"] = serde_json::json!(sy);
-                        }
+                        let at = |e: anyhow::Error| anyhow::anyhow!("batch action #{}: {}", i, e);
+                        let x = require_f64(&item, "x").map_err(at)?;
+                        let y = require_f64(&item, "y").map_err(at)?;
+                        let (sx, sy) = self.to_screen_coords(x, y).map_err(at)?;
+                        item["x"] = serde_json::json!(sx);
+                        item["y"] = serde_json::json!(sy);
                     }
                     converted.push(item);
                 }
@@ -603,7 +601,7 @@ impl McpServer {
                             converted.push(serde_json::json!({"action": "wait", "seconds": *ms as f64 / 1000.0}));
                         }
                         crate::corpus::MacroAction::ClickNorm { x, y } => {
-                            let (sx, sy) = self.to_screen_coords(*x * tw, *y * th);
+                            let (sx, sy) = self.to_screen_coords(*x * tw, *y * th)?;
                             converted.push(serde_json::json!({"action": "click", "x": sx, "y": sy, "button": "left", "count": 1}));
                         }
                     }
@@ -737,5 +735,61 @@ impl McpServer {
             }
             _ => anyhow::bail!("Unknown tool: {}", name),
         }
+    }
+}
+
+/// Map a point given in last-image pixels to screen pixels.
+///
+/// Errors rather than guessing: without a prior screenshot there is no scale to apply,
+/// and a point outside the image would land somewhere unrelated on screen.
+pub(crate) fn map_point(view: Option<View>, x: f64, y: f64) -> Result<(i32, i32)> {
+    let view = view.ok_or_else(|| {
+        anyhow::anyhow!("No screenshot taken yet; call `screenshot` first so coordinates can be mapped")
+    })?;
+    view.to_screen(x, y)
+}
+
+/// Fetch a required numeric argument; a missing coordinate must not default to 0.
+pub(crate) fn require_f64(args: &Value, key: &str) -> Result<f64> {
+    args.get(key)
+        .and_then(|v| v.as_f64())
+        .ok_or_else(|| anyhow::anyhow!("Missing or non-numeric argument `{}`", key))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn four_k_view() -> View {
+        // 3840x2160 downscaled to 1568x882
+        View::new(0, 0, 3840.0 / 1568.0, 1568, 882)
+    }
+
+    #[test]
+    fn map_point_without_screenshot_is_an_error() {
+        let err = map_point(None, 100.0, 100.0).unwrap_err().to_string();
+        assert!(err.contains("No screenshot"), "{err}");
+    }
+
+    #[test]
+    fn map_point_scales_into_screen_space() {
+        assert_eq!(map_point(Some(four_k_view()), 784.0, 441.0).unwrap(), (1920, 1080));
+        assert_eq!(map_point(Some(four_k_view()), 0.0, 0.0).unwrap(), (0, 0));
+    }
+
+    #[test]
+    fn map_point_outside_image_is_an_error_not_a_raw_click() {
+        for (x, y) in [(1568.0, 10.0), (10.0, 882.0), (-1.0, 10.0), (1600.0, 900.0)] {
+            let err = map_point(Some(four_k_view()), x, y).unwrap_err().to_string();
+            assert!(err.contains("outside"), "({x},{y}): {err}");
+        }
+    }
+
+    #[test]
+    fn require_f64_rejects_missing_and_non_numeric() {
+        let args = serde_json::json!({"x": 5, "y": "7"});
+        assert_eq!(require_f64(&args, "x").unwrap(), 5.0);
+        assert!(require_f64(&args, "y").unwrap_err().to_string().contains("`y`"));
+        assert!(require_f64(&args, "z").unwrap_err().to_string().contains("`z`"));
     }
 }
