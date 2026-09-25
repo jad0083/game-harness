@@ -27,4 +27,12 @@ context reset.
 ## Verified controls
 Only list things confirmed in play. Record the game resolution too, since positions depend on it.
 
-- _(none yet)_
+Verified 2026-09-25, game resolution 3840x2160 (screenshots downscaled to 1568x882):
+
+- Research: click the research panel (top-left, "Not Researching"/current tech) → Research Center.
+- Tutorial popups ("Greetings ...") close with their **Done** button.
+- Shipyard: click the "Order the Shipyard..." advisor → select class on the right → **Build Ship**.
+- `tab` selects the next idle ship. Colony ship: `c` = Auto Colonize (best known planet),
+  or right-click a colonizable planet.
+- Mouse wheel down zooms the map out; hovering a ship/button shows a tooltip with its hotkey.
+- Advisors panel (top-right) lists pending to-dos; clicking an entry jumps to it.
