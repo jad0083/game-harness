@@ -3,9 +3,6 @@
 ## Open
 
 ### Deployment
-- [ ] Agent on 192.168.1.77 is the 12:04 build (7c4a284) without DPI awareness: reports 3072x1728 on a 3840x2160 display, screenshots captured at virtualized resolution, default `/screenshot` returns full-size JPEG (x-target-width 3072) (2026-09-25)
-- [ ] `install.ps1:28` downloads `game-agent.exe` over the running exe before `Stop-ScheduledTask` (line 66) → update fails on the locked file under `$ErrorActionPreference='Stop'`; line 74 points at `agent.log`, which the Rust agent never writes; header still describes the Python agent (2026-09-25)
-- [ ] `scripts/serve-agent.sh:18-20` silently skips a missing `game-agent.exe` → remote install fails with HTTP 404 instead of failing fast
 
 ### Rust controller (`crates/game-controller`)
 - [ ] `mcp.rs:82-88` `to_screen_coords` passes raw image coords through as screen pixels when no screenshot has been taken or the point is out of range; `mcp.rs:377-378` defaults missing `x`/`y` to 0 → wrong-place clicks instead of an error
@@ -34,5 +31,8 @@
 - [ ] Python harness (`src/harness`, `windows_agent/agent.py`, 40 tests) is no longer deployed; its green suite covers nothing that runs (`agent.py` `settle` stub always returns `settled: True`)
 
 ## Resolved
+- [x] Agent on 192.168.1.77 was the 12:04 build (7c4a284) without DPI awareness: reported 3072x1728 on a 3840x2160 display and captured at virtualized resolution (2026-09-25; redeployed the `79fb15a` build via the fixed installer, `/health` now reports 3840x2160 and `max_side=1568` yields 1568x882)
+- [x] `install.ps1` downloaded `game-agent.exe` over the running exe before stopping the task → update failed on the locked file; also pointed at an `agent.log` the Rust agent never writes (2026-09-25; fixed in 3e425bf, verified by a successful update on the PC)
+- [x] `scripts/serve-agent.sh` silently skipped a missing `game-agent.exe` → HTTP 404 on install instead of failing fast (2026-09-25; fixed in 3e425bf)
 - [x] Windows backend (GDI capture, SendInput, focus) verified on real hardware against GC4 at 3840x2160 (2026-09-25)
 - [x] install.ps1 Python check crashed on PS 5.1: one-element arg array unrolled to a string (`-c` splatted as `-`,`c`) and native stderr became terminating under `Stop` (2026-09-25; fixed in ef2987a, installed OK)

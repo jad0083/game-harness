@@ -12,7 +12,7 @@
 - [x] Rust Windows agent (axum, GDI StretchBlt, SendInput) cross-compiled and installed on the PC
 - [x] Rust Linux controller: CLI, HTTP client, imaging, stdio MCP server (18 tools)
 - [x] GC4 corpus: `game.toml` hotkeys/screens/macros, `strategy.md`, 13 wiki articles
-- [ ] Redeploy the DPI-aware agent build (blocked by the installer file-lock bug in issues.md)
+- [x] Redeploy the DPI-aware agent build (installer fixed in 3e425bf; PC now reports 3840x2160)
 - [ ] Autopilot: verify a turn actually advanced before counting it; use the `game.toml` screen signatures it parses
 - [ ] Fix the corpus tech parser and add fixture tests against `research_tree.txt`
 - [ ] Restore `zoom`/`hover`/`scroll`/grid in the Rust MCP, or document why they're gone
