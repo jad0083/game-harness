@@ -25,7 +25,10 @@ console = "`"
 
 # Ship & Unit Commands (hotkeys shown in each action button's tooltip)
 standby = "j"         # verified: "Standby — remain here, skipping its turns"
-explore = "o"         # verified: "Explore — will attempt to clear the fog of war" (probes, survey ships)
+explore = "o"         # verified: "Explore — will attempt to clear the fog of war" (probes)
+survey = "v"          # verified: "Survey — will attempt to find and go to anomalies" (survey ships)
+sentry = "n"          # verified: "Sentry — remain here until an enemy enters sensor range"
+# go_to: right-click (mouse, not a key) — verified: "Go To — send the fleet to a specific location" (mouse, not a key)
 auto_colonize = "c"   # verified: colony ship "Auto Colonize"
 upgrade_ship = "u"
 rush_buy = "r"
@@ -180,3 +183,11 @@ template = "templates/starting_new_month.png"
 template_roi = [0.8048, 0.9637, 0.1084, 0.0249]
 template_threshold = 0.05   # measured: label present 0.007-0.011, absent >= 0.134
 busy = true
+
+[screens.idle_survey_ship]
+description = "An idle survey ship is selected: order Survey (find and visit anomalies)"
+template = "templates/action_survey.png"     # blue survey icon in the unit's first action slot
+template_roi = [0.2577, 0.8265, 0.0217, 0.0385]
+template_threshold = 0.06
+auto_dismiss = true
+dismiss_key = "v"
