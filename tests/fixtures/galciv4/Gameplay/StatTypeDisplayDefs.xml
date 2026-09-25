@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StatTypeDisplayDefs>
+  <StatTypeDisplayDef><UniqueID>MaxManufacturing</UniqueID><DisplayName>STATNAME_MaxManufacturing</DisplayName></StatTypeDisplayDef>
+  <StatTypeDisplayDef><UniqueID>Approval</UniqueID><DisplayName>STATNAME_Approval</DisplayName><IsPercentage>true</IsPercentage></StatTypeDisplayDef>
+  <StatTypeDisplayDef><UniqueID>MaxPolicies</UniqueID><DisplayName>STATNAME_MaxPolicies</DisplayName></StatTypeDisplayDef>
+</StatTypeDisplayDefs>

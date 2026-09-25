@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ArtifactPowerList>
+  <ArtifactPower>
+    <InternalName>DraftColonists</InternalName>
+    <DisplayName>DraftColonists_Name</DisplayName>
+    <Description>DraftColonists_Dec</Description>
+    <Triggers>
+      <OnEvent>OnArtifactPowerUsed</OnEvent>
+      <Lifetime>Target</Lifetime>
+      <RandomDurationMin>10</RandomDurationMin>
+      <RandomDurationMax>10</RandomDurationMax>
+      <Modifier>
+        <EffectType>Approval</EffectType>
+        <Target><TargetType>Unit</TargetType></Target>
+        <BonusType>Flat</BonusType>
+        <Value>-0.02</Value>
+      </Modifier>
+    </Triggers>
+    <Triggers>
+      <OnEvent>OnArtifactPowerUsed</OnEvent>
+      <Lifetime>Instant</Lifetime>
+      <PerformAction>
+        <Action>AwardColonyShipWithPassenger</Action>
+        <ValueParam>1</ValueParam>
+        <StringParam>Unit_Colonist</StringParam>
+      </PerformAction>
+    </Triggers>
+  </ArtifactPower>
+</ArtifactPowerList>

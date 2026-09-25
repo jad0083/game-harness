@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TechList>
+  <Tech>
+    <InternalName>MasterTech_ColonialPolicies</InternalName>
+    <GenericName>Tech_ColonialPolicies</GenericName>
+    <DisplayName>HumanTech_ColonialPolicies_Name</DisplayName>
+    <TechTree>Master_Tree</TechTree>
+    <ResearchCost>99</ResearchCost>
+  </Tech>
+</TechList>

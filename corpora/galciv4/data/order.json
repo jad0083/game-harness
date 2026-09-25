@@ -1,0 +1,1377 @@
+[
+ {
+  "id": "order:abhorent_infection",
+  "name": "Abhorent Infection",
+  "aliases": [
+   "EO_PollutionBomb"
+  ],
+  "summary": "A foul and noxious compound of toxins and radiation. Increase the Pollution level on a target planet.",
+  "fields": {
+   "control_cost": "40",
+   "cooldown_turns": "10",
+   "target": "Player",
+   "effects": [
+    "+10% Pollution (Colony)",
+    "Play Effect On Tile (1, FXConvertWorld)"
+   ],
+   "description": "A foul and noxious compound of toxins and radiation. Increase the Pollution level on a target planet.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:add_shock_troopers",
+  "name": "Add Shock Troopers",
+  "aliases": [
+   "EO_AddShockTroopers"
+  ],
+  "summary": "Install shock troopers on target ship to assist in conquering worlds.",
+  "fields": {
+   "control_cost": "50",
+   "credits_cost": "100",
+   "target": "Player",
+   "effects": [
+    "+5 Conquest Rating (Ship)",
+    "Play Effect On Tile (1, FXAttackBuff)"
+   ],
+   "description": "Install shock troopers on target ship to assist in conquering worlds.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:advertising_campaign",
+  "name": "Advertising Campaign",
+  "aliases": [
+   "EO_AdvertisingCampaign"
+  ],
+  "summary": "Saturate the airwaves with feel-good messaging from your media empire. Boost Approval across all your colonies for 20 months.",
+  "fields": {
+   "control_cost": "15",
+   "credits_cost": "10",
+   "cooldown_turns": "24",
+   "target": "Player",
+   "effects": [
+    "+10% Approval (Unit) for 20 turns"
+   ],
+   "description": "Saturate the airwaves with feel-good messaging from your media empire. Boost Approval across all your colonies for 20 months.",
+   "source": "ExecutiveOrderDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "order:colonial_supplies",
+  "name": "Colonial Supplies",
+  "aliases": [
+   "EO_ColonialSupplies",
+   "EO_Synth_ColonialSupplies"
+  ],
+  "summary": "Making a large shipment of supplies to our colonies will reduce their Decay for 25 months.",
+  "fields": {
+   "control_cost": "30",
+   "cooldown_turns": "50",
+   "target": "AllUngovernedColonies",
+   "effects": [
+    "-15% Supply Attrition (Colony) for 25 turns"
+   ],
+   "requires_tech": [
+    "Centralized Administration"
+   ],
+   "description": "Making a large shipment of supplies to our colonies will reduce their Decay for 25 months.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:corner_the_market",
+  "name": "Corner the Market",
+  "aliases": [
+   "EO_ResourceEmbargo"
+  ],
+  "summary": "Buy up the strategic supply your holdings share with a rival, starving their market. Inflict Supply Attrition on the target and damage Diplo",
+  "fields": {
+   "control_cost": "20",
+   "credits_cost": "10",
+   "cooldown_turns": "30",
+   "target": "None",
+   "effects": [
+    "Apply Generic Diplomatic Mod To Target About Owner (-3, EO_ResourceEmbargo_Diplomacy)"
+   ],
+   "description": "Buy up the strategic supply your holdings share with a rival, starving their market. Inflict Supply Attrition on the target and damage Diplomatic Relations for 12 months.",
+   "source": "ExecutiveOrderDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "order:corporate_compliance",
+  "name": "Corporate Compliance",
+  "aliases": [
+   "EO_CorporateCompliance"
+  ],
+  "summary": "Deploy Meridian auditors across your empire for a galaxy-wide compliance crackdown. Reduce Crime on all your colonies for 20 months.",
+  "fields": {
+   "control_cost": "15",
+   "credits_cost": "10",
+   "cooldown_turns": "30",
+   "target": "Player",
+   "effects": [
+    "-15% Crime (Colony) for 20 turns"
+   ],
+   "description": "Deploy Meridian auditors across your empire for a galaxy-wide compliance crackdown. Reduce Crime on all your colonies for 20 months.",
+   "source": "ExecutiveOrderDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "order:cosmic_eye_0",
+  "name": "Cosmic Eye",
+  "aliases": [
+   "EO_CosmicEye_Watcher"
+  ],
+  "summary": "Use the Cosmic Eye to reveal a part of the map. If the Cosmic Eye sees another civilization's planet, it has a chance to steal a technology.",
+  "fields": {
+   "control_cost": "30",
+   "cooldown_turns": "20",
+   "target": "Player",
+   "effects": [
+    "Show Area For Turns (1)",
+    "Play Effect On Tile (1, FXScan)",
+    "Steal Tech In Range (12, Event_CosmicEye_NoPlanets)"
+   ],
+   "blocked_by_trait": [
+    "Clever4"
+   ],
+   "description": "Use the Cosmic Eye to reveal a part of the map. If the Cosmic Eye sees another civilization's planet, it has a chance to steal a technology.",
+   "source": "ExecutiveOrderDefs.xml",
+   "variant": "EO_CosmicEye_Watcher"
+  }
+ },
+ {
+  "id": "order:cosmic_eye_0_2",
+  "name": "Cosmic Eye",
+  "aliases": [
+   "EO_CosmicEye_Watcher_Seeing"
+  ],
+  "summary": "Use the Cosmic Eye to reveal a part of the map. If the Cosmic Eye sees another civilization's planet, it has a chance to steal a technology.",
+  "fields": {
+   "control_cost": "15",
+   "cooldown_turns": "10",
+   "target": "Player",
+   "effects": [
+    "Show Area For Turns (1)",
+    "Play Effect On Tile (1, FXScan)",
+    "Steal Tech In Range (12, Event_CosmicEye_NoPlanets)"
+   ],
+   "description": "Use the Cosmic Eye to reveal a part of the map. If the Cosmic Eye sees another civilization's planet, it has a chance to steal a technology.",
+   "source": "ExecutiveOrderDefs.xml",
+   "variant": "EO_CosmicEye_Watcher_Seeing"
+  }
+ },
+ {
+  "id": "order:crime_wave",
+  "name": "Crime Wave",
+  "aliases": [
+   "EO_CrimeWave"
+  ],
+  "summary": "Organize entire criminal networks with the pull of a few strings. Creates a crime wave on the target planet, increasing Crime by 200% for 24",
+  "fields": {
+   "control_cost": "30",
+   "cooldown_turns": "20",
+   "target": "Player",
+   "effects": [
+    "+200% Crime (Colony) for 24 turns"
+   ],
+   "description": "Organize entire criminal networks with the pull of a few strings. Creates a crime wave on the target planet, increasing Crime by 200% for 24 months.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:death_commandos",
+  "name": "Death Commandos",
+  "aliases": [
+   "EO_DeathCommandos"
+  ],
+  "summary": "Unleash your most fatalistic and experienced forces for a targeted attack. Reduces HP of each ship in enemy fleet by 25%.",
+  "fields": {
+   "control_cost": "40",
+   "cooldown_turns": "25",
+   "target": "None",
+   "effects": [
+    "Remove Hitpoint Percent From Fleet (0.25)",
+    "Play Effect On Tile (1, FXScan)"
+   ],
+   "description": "Unleash your most fatalistic and experienced forces for a targeted attack. Reduces HP of each ship in enemy fleet by 25%.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:deep_think",
+  "name": "Deep Think",
+  "aliases": [
+   "EO_PotentialDeepThink"
+  ],
+  "summary": "The Potential goes to sleep, dedicating its processing lattice to the Matrix and increasing your total Compute by 25% while it slumbers. Giv",
+  "fields": {
+   "cooldown_turns": "3",
+   "target": "None",
+   "effects": [
+    "Swap Sender Ship To Ship Class Design (HeroShip_Potential_DeepThink)"
+   ],
+   "description": "The Potential goes to sleep, dedicating its processing lattice to the Matrix and increasing your total Compute by 25% while it slumbers. Giving the ship any new order wakes it and ends the bonus.",
+   "source": "ExecutiveOrderDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "order:defense_sentinels",
+  "name": "Defense Sentinels",
+  "aliases": [
+   "EO_OrbitalDefenseDrones"
+  ],
+  "summary": "Provides a guardian drone for the selected colony. Defense drones can protect against minor attacks but can't leave the planet.",
+  "fields": {
+   "control_cost": "35",
+   "cooldown_turns": "10",
+   "target": "Player",
+   "effects": [
+    "Award Ship Of Class At Tile (GuardianBlueprint)",
+    "Play Effect On Tile (1, FXSpawn)"
+   ],
+   "requires_tech": [
+    "Space Doctrine"
+   ],
+   "description": "Provides a guardian drone for the selected colony. Defense drones can protect against minor attacks but can't leave the planet.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:direct_r_d_funding",
+  "name": "Direct R&D Funding",
+  "aliases": [
+   "EO_DirectRnDFunding"
+  ],
+  "summary": "Redirect the Ascendant Research Group's entire quarterly budget straight into your labs. Instantly grant 250 Research points. Cooldown: 30 m",
+  "fields": {
+   "control_cost": "18",
+   "credits_cost": "10",
+   "cooldown_turns": "30",
+   "target": "Player",
+   "effects": [
+    "Award Research Amount (250)"
+   ],
+   "description": "Redirect the Ascendant Research Group's entire quarterly budget straight into your labs. Instantly grant 250 Research points. Cooldown: 30 months.",
+   "source": "ExecutiveOrderDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "order:draft_civilian_ships",
+  "name": "Draft Civilian Ships",
+  "aliases": [
+   "EO_DraftCivilianShips",
+   "EO_DraftCivilianShips_Human"
+  ],
+  "summary": "Security is more important than private ownership. This will provide three free defenders. Reduces Approval for 25 turns.",
+  "fields": {
+   "control_cost": "100",
+   "cooldown_turns": "20",
+   "target": "Player",
+   "effects": [
+    "-10% Approval (Unit) for 25 turns",
+    "Award Ship Of Class At Tile (DefenderBlueprint)",
+    "Award Ship Of Class At Tile (DefenderBlueprint)",
+    "Award Ship Of Class At Tile (DefenderBlueprint)"
+   ],
+   "requires_tech": [
+    "Space Doctrine",
+    "Fleet Coordination"
+   ],
+   "description": "Security is more important than private ownership. This will provide three free defenders. Reduces Approval for 25 turns.",
+   "source": "ExecutiveOrderDefs_Humans.xml"
+  }
+ },
+ {
+  "id": "order:draft_colonists",
+  "name": "Draft Colonists",
+  "aliases": [
+   "EO_DraftColonists",
+   "EO_DraftColonists_TutorialVariant"
+  ],
+  "summary": "Sometimes we can't afford to wait for volunteers. This will provide a free Colony ship. Reduces Approval for 10 turns.",
+  "fields": {
+   "control_cost": "33",
+   "cooldown_turns": "12",
+   "target": "Player",
+   "effects": [
+    "-2% Approval (Unit) for 10 turns",
+    "Award Colony Ship With Passenger (1, Unit_Colonist)"
+   ],
+   "blocked_by_trait": [
+    "Slavers Ability",
+    "Synthetic Life",
+    "Entrepreneurs Ability",
+    "Tutorial Tracker Ability",
+    "Radiated Ability"
+   ],
+   "description": "Sometimes we can't afford to wait for volunteers. This will provide a free Colony ship. Reduces Approval for 10 turns.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:emergency_speed",
+  "name": "Emergency Speed",
+  "aliases": [
+   "EO_GoFaster"
+  ],
+  "summary": "Orders fleet to go beyond their maximum rated speed.",
+  "fields": {
+   "control_cost": "25",
+   "cooldown_turns": "24",
+   "target": "Player",
+   "effects": [
+    "+2 Moves (Ship)",
+    "+20 Ship Range (Ship)",
+    "-50% Hit Points (Ship)",
+    "Play Effect On Tile (1, FXBuff)"
+   ],
+   "blocked_by_trait": [
+    "Proliferation Ability"
+   ],
+   "description": "Orders fleet to go beyond their maximum rated speed.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:enlist_pirate_fleet",
+  "name": "Enlist Pirate Fleet",
+  "aliases": [
+   "EO_EnlistPirateFleet"
+  ],
+  "summary": "Recruit a Pirate fleet.",
+  "fields": {
+   "control_cost": "15",
+   "target": "None",
+   "effects": [
+    "Convert Fleet To Faction",
+    "Play Effect On Tile (1, FXBuff)"
+   ],
+   "description": "Recruit a Pirate fleet.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:enlist_pirate_world",
+  "name": "Enlist Pirate World",
+  "aliases": [
+   "EO_EnlistPirateWorld"
+  ],
+  "summary": "Recruit a Pirate world.",
+  "fields": {
+   "control_cost": "30",
+   "target": "None",
+   "effects": [
+    "Claim Target Object",
+    "Play Effect On Tile (1, FXBuff)"
+   ],
+   "description": "Recruit a Pirate world.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:exit_deep_think",
+  "name": "Exit Deep Think",
+  "aliases": [
+   "EO_PotentialExitDeepThink"
+  ],
+  "summary": "Wake the Potential, ending Deep Think and its Compute bonus.",
+  "fields": {
+   "cooldown_turns": "3",
+   "target": "None",
+   "effects": [
+    "Swap Sender Ship To Ship Class Design (HeroShip_Potential)"
+   ],
+   "description": "Wake the Potential, ending Deep Think and its Compute bonus.",
+   "source": "ExecutiveOrderDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "order:expedite_prospector",
+  "name": "Expedite Prospector",
+  "aliases": [
+   "EO_ExpediteProspector"
+  ],
+  "summary": "Fast-track survey vessels off the line through your logistics network. Deploy 2 Prospectors near your Homeworld. Cooldown: 24 months.",
+  "fields": {
+   "control_cost": "15",
+   "credits_cost": "10",
+   "cooldown_turns": "24",
+   "target": "Player",
+   "effects": [
+    "Award Ship Of Class At Tile (ProspectorBlueprint)",
+    "Award Ship Of Class At Tile (ProspectorBlueprint)",
+    "Play Effect On Tile (1, FXSpawn)"
+   ],
+   "description": "Fast-track survey vessels off the line through your logistics network. Deploy 2 Prospectors near your Homeworld. Cooldown: 24 months.",
+   "source": "ExecutiveOrderDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "order:exploit_population",
+  "name": "Exploit Population",
+  "aliases": [
+   "EO_ExploitPopulation"
+  ],
+  "summary": "Take advantage of an entire empire's labor force. +150% to all planets outputs for 5 months. Reduces Approval for 15 turns.",
+  "fields": {
+   "control_cost": "30",
+   "cooldown_turns": "10",
+   "target": "Player",
+   "effects": [
+    "+150% Manufacturing (Colony) for 5 turns",
+    "+150% Research (Colony) for 5 turns",
+    "+150% Food (Colony) for 5 turns",
+    "+150% Influence Growth (Colony) for 5 turns",
+    "+150% Gross Income (Colony) for 5 turns",
+    "-10% Approval (Unit) for 15 turns"
+   ],
+   "description": "Take advantage of an entire empire's labor force. +150% to all planets outputs for 5 months. Reduces Approval for 15 turns.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:exploit_resources",
+  "name": "Exploit Resources",
+  "aliases": [
+   "EO_ExploitNaturalResources"
+  ],
+  "summary": "In times of need, we can exploit government land of all their resources. This will create a significant Pollution problem for a full year.",
+  "fields": {
+   "control_cost": "50",
+   "cooldown_turns": "10",
+   "target": "Player",
+   "effects": [
+    "+5% Pollution (Colony) for 12 turns",
+    "+250 Treasury"
+   ],
+   "requires_tech": [
+    "Planetology"
+   ],
+   "description": "In times of need, we can exploit government land of all their resources. This will create a significant Pollution problem for a full year.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:extort_governors",
+  "name": "Extort Governors",
+  "aliases": [
+   "EO_ExhortGovernors"
+  ],
+  "summary": "Our governors will generously donate to our cause. But they won't like it. Provides 100 Credits per Governor Reduces Governor Loyalty for 20",
+  "fields": {
+   "control_cost": "30",
+   "cooldown_turns": "25",
+   "target": "Player",
+   "effects": [
+    "-12 Loyalty (Unit) for 20 turns",
+    "Give Exhort Governor Credit Reward"
+   ],
+   "requires_tech": [
+    "Political Capital"
+   ],
+   "description": "Our governors will generously donate to our cause. But they won't like it. Provides 100 Credits per Governor Reduces Governor Loyalty for 20 turns.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:fertilize_planet",
+  "name": "Fertilize Planet",
+  "aliases": [
+   "EO_IncreaseFertility"
+  ],
+  "summary": "Increases fertility of target colony.",
+  "fields": {
+   "control_cost": "25",
+   "credits_cost": "50",
+   "cooldown_turns": "36",
+   "target": "Player",
+   "effects": [
+    "+1 Farming (Colony)",
+    "Play Effect On Tile (1, FXBuff)"
+   ],
+   "blocked_by_trait": [
+    "Synthetic Life"
+   ],
+   "description": "Increases fertility of target colony.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:forced_labor",
+  "name": "Forced Labor",
+  "aliases": [
+   "EO_ForcedLabor"
+  ],
+  "summary": "The people are working hard. They could be working harder. Reduces Approval for 12 turns.",
+  "fields": {
+   "control_cost": "30",
+   "cooldown_turns": "10",
+   "target": "Player",
+   "effects": [
+    "+100 Stored Goods (Colony)",
+    "-5% Approval (Unit) for 12 turns",
+    "Play Effect On Tile (1, FXManufacturingBuff)"
+   ],
+   "description": "The people are working hard. They could be working harder. Reduces Approval for 12 turns.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:forced_overtime",
+  "name": "Forced Overtime",
+  "aliases": [
+   "EO_ForcedOvertime",
+   "EO_ForcedOvertime_Human"
+  ],
+  "summary": "More work gets done at the targeted shipyard but your citizens won't be happy. Improves your Military for 10 turns and reduces Approval for ",
+  "fields": {
+   "control_cost": "100",
+   "cooldown_turns": "30",
+   "target": "Player",
+   "effects": [
+    "-10% Approval (Unit) for 30 turns",
+    "+100% Military (Shipyard) for 10 turns",
+    "Play Effect On Tile (1, FXManufacturingBuff)"
+   ],
+   "requires_tech": [
+    "Orbital Manufacturing",
+    "Manufacturing Evolution"
+   ],
+   "description": "More work gets done at the targeted shipyard but your citizens won't be happy. Improves your Military for 10 turns and reduces Approval for 30 turns.",
+   "source": "ExecutiveOrderDefs_Humans.xml"
+  }
+ },
+ {
+  "id": "order:fund_production_expansion",
+  "name": "Fund Production Expansion",
+  "aliases": [
+   "EO_FundProductionExpansion"
+  ],
+  "summary": "Inject capital into a colony's industrial sector to accelerate output. Boost Manufacturing on one of your colonies for 15 months.",
+  "fields": {
+   "control_cost": "18",
+   "credits_cost": "10",
+   "cooldown_turns": "30",
+   "target": "Player",
+   "effects": [
+    "+25% Manufacturing (Colony) for 15 turns"
+   ],
+   "description": "Inject capital into a colony's industrial sector to accelerate output. Boost Manufacturing on one of your colonies for 15 months.",
+   "source": "ExecutiveOrderDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "order:galactic_festival",
+  "name": "Galactic Festival",
+  "aliases": [
+   "EO_GalacticFestival",
+   "EO_GalacticFestival_Human"
+  ],
+  "summary": "Holding a grand festival on all of our worlds will improve our Tourism for 12 months.",
+  "fields": {
+   "control_cost": "10",
+   "cooldown_turns": "50",
+   "target": "AllColonies",
+   "effects": [
+    "+25% Tourism (Colony) for 12 turns"
+   ],
+   "requires_tech": [
+    "Xeno Entertainment"
+   ],
+   "description": "Holding a grand festival on all of our worlds will improve our Tourism for 12 months.",
+   "source": "ExecutiveOrderDefs_Humans.xml"
+  }
+ },
+ {
+  "id": "order:give_hope",
+  "name": "Give Hope",
+  "aliases": [
+   "EO_GiveHope"
+  ],
+  "summary": "Give a series of inspirational speeches to the target core world to increase their Approval for 25 turns.",
+  "fields": {
+   "control_cost": "30",
+   "credits_cost": "50",
+   "cooldown_turns": "24",
+   "target": "Player",
+   "effects": [
+    "+20% Approval (Unit) for 25 turns",
+    "Play Effect On Tile (1, FXManufacturingBuff)"
+   ],
+   "description": "Give a series of inspirational speeches to the target core world to increase their Approval for 25 turns.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:golden_handshake",
+  "name": "Golden Handshake",
+  "aliases": [
+   "EO_GoldenHandshake"
+  ],
+  "summary": "Spread lavish corporate goodwill across the galaxy to grease every diplomatic and commercial tie. Improve Diplomatic Relations with all civi",
+  "fields": {
+   "control_cost": "15",
+   "credits_cost": "10",
+   "cooldown_turns": "30",
+   "target": "Player",
+   "effects": [
+    "Apply Generic Diplomatic Mod (3, EO_GoldenHandshake_Diplomacy)",
+    "+20% Trade Route Income for 12 turns"
+   ],
+   "description": "Spread lavish corporate goodwill across the galaxy to grease every diplomatic and commercial tie. Improve Diplomatic Relations with all civilizations and boost your Trade Income empire-wide for 12 months.",
+   "source": "ExecutiveOrderDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "order:goodwill_tour",
+  "name": "Goodwill Tour",
+  "aliases": [
+   "EO_GoodWillTour",
+   "EO_GoodWillTour_Human"
+  ],
+  "summary": "Go on a Goodwill Tour to improve your Diplomacy with foreign civilizations. +1 Diplomacy for 30 months",
+  "fields": {
+   "control_cost": "30",
+   "cooldown_turns": "40",
+   "target": "Player",
+   "effects": [
+    "Apply Generic Diplomatic Mod (1, GoodWillTour_Name)"
+   ],
+   "requires_tech": [
+    "Xeno Diplomacy",
+    "Galactic Envoys"
+   ],
+   "description": "Go on a Goodwill Tour to improve your Diplomacy with foreign civilizations. +1 Diplomacy for 30 months",
+   "source": "ExecutiveOrderDefs_Humans.xml"
+  }
+ },
+ {
+  "id": "order:grand_opening",
+  "name": "Grand Opening",
+  "aliases": [
+   "EO_GrandOpening"
+  ],
+  "summary": "Inaugurate your flagship resort world with a spectacle that draws visitors from across the galaxy. Boost Tourism and Approval on the target ",
+  "fields": {
+   "control_cost": "15",
+   "credits_cost": "10",
+   "cooldown_turns": "24",
+   "target": "Player",
+   "effects": [
+    "+25% Tourism (Colony) for 15 turns",
+    "+5% Approval (Unit) for 15 turns"
+   ],
+   "description": "Inaugurate your flagship resort world with a spectacle that draws visitors from across the galaxy. Boost Tourism and Approval on the target colony for 15 months.",
+   "source": "ExecutiveOrderDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "order:hack",
+  "name": "Hack",
+  "aliases": [
+   "EO_PotentialHack"
+  ],
+  "summary": "Disrupt an enemy fleet's navigation systems. Reduce its ships to 1 move for 3 months.",
+  "fields": {
+   "cooldown_turns": "10",
+   "target": "None",
+   "effects": [
+    "+100% Shares Moves With Fleet (Ship) for 3 turns",
+    "Play Effect On Tile (1, FXScan)"
+   ],
+   "description": "Disrupt an enemy fleet's navigation systems. Reduce its ships to 1 move for 3 months.",
+   "source": "ExecutiveOrderDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "order:health_subsidy",
+  "name": "Health Subsidy",
+  "aliases": [
+   "EO_PlagueScare"
+  ],
+  "summary": "Flood your empire with subsidized medicine. Boost Population Growth on all your colonies for 20 months.",
+  "fields": {
+   "control_cost": "15",
+   "credits_cost": "10",
+   "cooldown_turns": "24",
+   "target": "Player",
+   "effects": [
+    "+10% Growth (Colony) for 20 turns"
+   ],
+   "description": "Flood your empire with subsidized medicine. Boost Population Growth on all your colonies for 20 months.",
+   "source": "ExecutiveOrderDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "order:hire_merchant_ship",
+  "name": "Hire Merchant Ship",
+  "aliases": [
+   "EO_HireMerchants"
+  ],
+  "summary": "Contract experienced merchants to man a ship to expand your trade routes.",
+  "fields": {
+   "control_cost": "25",
+   "credits_cost": "50",
+   "cooldown_turns": "12",
+   "target": "Player",
+   "effects": [
+    "Award Ship Of Class (FreighterBlueprint)"
+   ],
+   "description": "Contract experienced merchants to man a ship to expand your trade routes.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:hire_miner",
+  "name": "Hire Miner",
+  "aliases": [
+   "EO_HireMiner"
+  ],
+  "summary": "Engage skilled miners to extract valuable resources efficiently and boost your productivity.",
+  "fields": {
+   "control_cost": "25",
+   "credits_cost": "50",
+   "cooldown_turns": "12",
+   "target": "Player",
+   "effects": [
+    "Award Ship Of Class (AsteroidBlueprint)"
+   ],
+   "description": "Engage skilled miners to extract valuable resources efficiently and boost your productivity.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:illicit_deals",
+  "name": "Illicit Deals",
+  "aliases": [
+   "EO_IllicitDeals"
+  ],
+  "summary": "There are those that want our favor and are happy to pay for it. This will provide Credits but increase Crime across our civilization.",
+  "fields": {
+   "control_cost": "10",
+   "cooldown_turns": "50",
+   "target": "Player",
+   "effects": [
+    "+3% Crime (Colony)",
+    "+600 Treasury"
+   ],
+   "requires_tech": [
+    "Political Capital"
+   ],
+   "description": "There are those that want our favor and are happy to pay for it. This will provide Credits but increase Crime across our civilization.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:impress_citizens",
+  "name": "Impress Citizens",
+  "aliases": [
+   "EO_ImpressCitizens"
+  ],
+  "summary": "Our people are owned by you. It is time they remember. Will provide a Colony Ship and a Constructor",
+  "fields": {
+   "control_cost": "50",
+   "cooldown_turns": "6",
+   "target": "Player",
+   "effects": [
+    "Award Colony Ship With Passenger (1, Unit_Colonist)",
+    "Award Ship Of Class (ConstructorBlueprint)"
+   ],
+   "blocked_by_trait": [
+    "Tutorial Tracker Ability"
+   ],
+   "description": "Our people are owned by you. It is time they remember. Will provide a Colony Ship and a Constructor",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:impress_constructors",
+  "name": "Impress Constructors",
+  "aliases": [
+   "EO_ImpressConstructors"
+  ],
+  "summary": "We need a Constructor Ship and we need it now. Reduces Approval for 10 turns.",
+  "fields": {
+   "control_cost": "30",
+   "cooldown_turns": "8",
+   "target": "Player",
+   "effects": [
+    "-2% Approval (Unit) for 10 turns",
+    "Award Ship Of Class (ConstructorBlueprint)"
+   ],
+   "description": "We need a Constructor Ship and we need it now. Reduces Approval for 10 turns.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:impress_foreign_fleet",
+  "name": "Impress Foreign Fleet",
+  "aliases": [
+   "EO_ImpressForeignFleet"
+  ],
+  "summary": "Take control of another civilization's fleet that is within your borders. Cannot be used on fleets you are at war with. -3 Diplomacy with or",
+  "fields": {
+   "control_cost": "100",
+   "cooldown_turns": "5",
+   "target": "None",
+   "effects": [
+    "Convert Fleet To Faction",
+    "Apply Generic Diplomatic Mod To Target About Owner (-3, ImpressForeignFleet_Name)",
+    "Play Effect On Tile (1, FXBuff)"
+   ],
+   "requires_tech": [
+    "Preferred Lending"
+   ],
+   "description": "Take control of another civilization's fleet that is within your borders. Cannot be used on fleets you are at war with. -3 Diplomacy with origin civilization for 50 months",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:inspire_population",
+  "name": "Inspire Population",
+  "aliases": [
+   "EO_InspirePopulation_Human"
+  ],
+  "summary": "Rally the population with inspiring speeches and ceremonies. Grants +25 Research immediately and boosts shipyard production by +5 and approv",
+  "fields": {
+   "control_cost": "70",
+   "cooldown_turns": "120",
+   "target": "Player",
+   "effects": [
+    "Award Research Amount (25)",
+    "+5 Military (Shipyard) for 8 turns",
+    "+10% Approval (Unit) for 8 turns"
+   ],
+   "requires_tech": [
+    "Civilian"
+   ],
+   "description": "Rally the population with inspiring speeches and ceremonies. Grants +25 Research immediately and boosts shipyard production by +5 and approval by +0.1 across all worlds for 8 turns.",
+   "source": "ExecutiveOrderDefs_Humans.xml"
+  }
+ },
+ {
+  "id": "order:invite_leaders",
+  "name": "Invite Leaders",
+  "aliases": [
+   "EO_InviteLeaders",
+   "EO_Synth_InviteLeaders"
+  ],
+  "summary": "Searching for our most talented will provide 3 new leaders for recruitment.",
+  "fields": {
+   "control_cost": "25",
+   "credits_cost": "250",
+   "cooldown_turns": "24",
+   "target": "Player",
+   "effects": [
+    "Add New Leader Options (3)"
+   ],
+   "requires_tech": [
+    "Leadership Recruiting"
+   ],
+   "description": "Searching for our most talented will provide 3 new leaders for recruitment.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:leveraged_buyout",
+  "name": "Leveraged Buyout",
+  "aliases": [
+   "EO_LeveragedBuyout"
+  ],
+  "summary": "Consolidate a Corporation Link into a larger permanent bonus, at the target's expense. Must be used on a foreign world where you already hol",
+  "fields": {
+   "control_cost": "20",
+   "credits_cost": "10",
+   "cooldown_turns": "36",
+   "target": "None",
+   "description": "Consolidate a Corporation Link into a larger permanent bonus, at the target's expense. Must be used on a foreign world where you already hold a Corporation Link.",
+   "source": "ExecutiveOrderDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "order:martial_law",
+  "name": "Martial Law",
+  "aliases": [
+   "EO_MartialLaw",
+   "EO_MartialLaw_Human"
+  ],
+  "summary": "Improves your Manufacturing and reduces Research and Approval for 50 turns.",
+  "fields": {
+   "control_cost": "10",
+   "cooldown_turns": "200",
+   "target": "AllColonies",
+   "effects": [
+    "+50% Manufacturing (Colony) for 50 turns",
+    "-25% Research (Colony)",
+    "-3% Approval (Unit)"
+   ],
+   "requires_tech": [
+    "Defensive Studies",
+    "Space Doctrine"
+   ],
+   "description": "Improves your Manufacturing and reduces Research and Approval for 50 turns.",
+   "source": "ExecutiveOrderDefs_Humans.xml"
+  }
+ },
+ {
+  "id": "order:mass_mobilization",
+  "name": "Mass Mobilization",
+  "aliases": [
+   "EO_MassMobilization"
+  ],
+  "summary": "Shared sense of duty makes it easy to find volunteers willing to fight. Spawns a free transport",
+  "fields": {
+   "control_cost": "30",
+   "cooldown_turns": "20",
+   "target": "Player",
+   "effects": [
+    "Award Ship Of Class At Tile (TransportBlueprint)"
+   ],
+   "description": "Shared sense of duty makes it easy to find volunteers willing to fight. Spawns a free transport",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:mitosis",
+  "name": "Mitosis",
+  "aliases": [
+   "EO_Mitosis"
+  ],
+  "summary": "Induce Mitosis in an Irradiated Citizen on a target planet. +1 Citizen",
+  "fields": {
+   "control_cost": "25",
+   "cooldown_turns": "10",
+   "target": "Player",
+   "effects": [
+    "Create Unit On Planet (Citizen)",
+    "Play Effect On Tile (1, FXManufacturingBuff)"
+   ],
+   "description": "Induce Mitosis in an Irradiated Citizen on a target planet. +1 Citizen",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:pandemonium",
+  "name": "Pandemonium",
+  "aliases": [
+   "EO_Pandemonium"
+  ],
+  "summary": "Use telepathy to affect an entire planet negatively. Choose to lower the Planetary Defense , reduce Influence and Approval , or impair Manuf",
+  "fields": {
+   "control_cost": "30",
+   "cooldown_turns": "20",
+   "target": "Player",
+   "effects": [
+    "Send Trigger Event And Pass Sender (Event_Pandemonium)"
+   ],
+   "description": "Use telepathy to affect an entire planet negatively. Choose to lower the Planetary Defense , reduce Influence and Approval , or impair Manufacturing and Research .",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:pillage_the_weak",
+  "name": "Pillage the Weak",
+  "aliases": [
+   "EO_PillageTheWeak"
+  ],
+  "summary": "Send our Gatherers through the population to take what is needed for the empire from those too weak to resist. Reduces Approval for 52 turns",
+  "fields": {
+   "control_cost": "25",
+   "cooldown_turns": "50",
+   "target": "Player",
+   "effects": [
+    "-5% Approval (Unit) for 52 turns",
+    "+400 Treasury",
+    "Modify Counter (1, Counter_ExploitsOwnPopulation)"
+   ],
+   "description": "Send our Gatherers through the population to take what is needed for the empire from those too weak to resist. Reduces Approval for 52 turns.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:planetary_clairvoyance",
+  "name": "Planetary Clairvoyance",
+  "aliases": [
+   "EO_PlanetVision"
+  ],
+  "summary": "Greatly expand the sensor vision of the target world to see what is remotely near it. Effect begins one month later.",
+  "fields": {
+   "control_cost": "100",
+   "cooldown_turns": "100",
+   "target": "Player",
+   "effects": [
+    "+20 Sensor Range (Colony)",
+    "Play Effect On Tile (1, FXInfluenceBuff)"
+   ],
+   "description": "Greatly expand the sensor vision of the target world to see what is remotely near it. Effect begins one month later.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:pressure_scientists",
+  "name": "Pressure Scientists",
+  "aliases": [
+   "EO_PressureScientists",
+   "EO_Synth_PressureScientists"
+  ],
+  "summary": "Putting pressure on our scientists will result in an immediate +50 Research .",
+  "fields": {
+   "control_cost": "30",
+   "cooldown_turns": "10",
+   "target": "Player",
+   "effects": [
+    "Award Research Amount (50)"
+   ],
+   "requires_tech": [
+    "Xeno Research"
+   ],
+   "description": "Putting pressure on our scientists will result in an immediate +50 Research .",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:print_money",
+  "name": "Print Money",
+  "aliases": [
+   "EO_PrintMoney",
+   "EO_PrintMoney_TutorialVariant"
+  ],
+  "summary": "Printing money can provide short-term wealth at the cost of inflation, which lowers Approval for approximately a year.",
+  "fields": {
+   "control_cost": "45",
+   "cooldown_turns": "18",
+   "target": "Player",
+   "effects": [
+    "-10% Approval (Unit) for 12 turns",
+    "+500 Treasury"
+   ],
+   "blocked_by_trait": [
+    "Unrelenting Ability",
+    "Synthetic Life",
+    "Entrepreneurs Ability",
+    "Tutorial Tracker Ability",
+    "Radiated Ability"
+   ],
+   "description": "Printing money can provide short-term wealth at the cost of inflation, which lowers Approval for approximately a year.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:priority_freight",
+  "name": "Priority Freight",
+  "aliases": [
+   "EO_DumpingRights"
+  ],
+  "summary": "Direct your logistics network to prioritize your empire's most profitable runs. Boost Gross Income across all your colonies for 20 months.",
+  "fields": {
+   "control_cost": "15",
+   "cooldown_turns": "24",
+   "target": "Player",
+   "effects": [
+    "+15% Gross Income (Colony) for 20 turns"
+   ],
+   "description": "Direct your logistics network to prioritize your empire's most profitable runs. Boost Gross Income across all your colonies for 20 months.",
+   "source": "ExecutiveOrderDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "order:private_security_detail",
+  "name": "Private Security Detail",
+  "aliases": [
+   "EO_PrivateNavy"
+  ],
+  "summary": "Contract AstroDyne's security division for a show of force. Deploy a capital-class flagship near your Homeworld.",
+  "fields": {
+   "control_cost": "20",
+   "credits_cost": "10",
+   "cooldown_turns": "30",
+   "target": "Player",
+   "effects": [
+    "Award Ship Of Class At Tile (DreadnoughtBlueprint)",
+    "Play Effect On Tile (1, FXSpawn)"
+   ],
+   "description": "Contract AstroDyne's security division for a show of force. Deploy a capital-class flagship near your Homeworld.",
+   "source": "ExecutiveOrderDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "order:prototype_access",
+  "name": "Prototype Access",
+  "aliases": [
+   "EO_PrototypeAccess"
+  ],
+  "summary": "Field AstroDyne's latest prototype weapon systems across every fleet in your empire. Boost Weapon Attack for all your ships for 12 months.",
+  "fields": {
+   "control_cost": "18",
+   "credits_cost": "10",
+   "cooldown_turns": "30",
+   "target": "Player",
+   "effects": [
+    "+25% Beam Attack (Ship) for 12 turns",
+    "+25% Missile Attack (Ship) for 12 turns",
+    "+25% Kinetic Attack (Ship) for 12 turns"
+   ],
+   "description": "Field AstroDyne's latest prototype weapon systems across every fleet in your empire. Boost Weapon Attack for all your ships for 12 months.",
+   "source": "ExecutiveOrderDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "order:recapitalize",
+  "name": "Recapitalize",
+  "aliases": [
+   "EO_Recapitalize"
+  ],
+  "summary": "Generate new capital through recapitalization with your reserve currency status.",
+  "fields": {
+   "control_cost": "15",
+   "cooldown_turns": "24",
+   "target": "Player",
+   "effects": [
+    "+300 Treasury"
+   ],
+   "description": "Generate new capital through recapitalization with your reserve currency status.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:recruit_colonists",
+  "name": "Recruit Colonists",
+  "aliases": [
+   "EO_Synth_RecruitColonists"
+  ],
+  "summary": "Attract new colonists to expand to other worlds. Provides a Free Colony ship .",
+  "fields": {
+   "control_cost": "30",
+   "cooldown_turns": "5",
+   "target": "Player",
+   "effects": [
+    "Award Colony Ship With Passenger (1, Unit_Colonist)",
+    "Play Effect On Tile (1, FXSpawn)"
+   ],
+   "description": "Attract new colonists to expand to other worlds. Provides a Free Colony ship .",
+   "source": "ExecutiveOrdersDefs_Synths.xml"
+  }
+ },
+ {
+  "id": "order:research_inspiration",
+  "name": "Research Inspiration",
+  "aliases": [
+   "EO_RerollBreakthroughs"
+  ],
+  "summary": "Replace your available breakthrough technologies with new choices. If you are researching one of the current choices, it remains available. ",
+  "fields": {
+   "control_cost": "25",
+   "cooldown_turns": "20",
+   "target": "Player",
+   "effects": [
+    "Reroll Tech Options"
+   ],
+   "description": "Replace your available breakthrough technologies with new choices. If you are researching one of the current choices, it remains available. Does not increase Refocus costs.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:rush_starbase_modules",
+  "name": "Rush Starbase Modules",
+  "aliases": [
+   "EO_BuyModules",
+   "EO_Synth_BuyModules"
+  ],
+  "summary": "Use your vast power to impel private industry to deliver you some new modules for use at Starbases.",
+  "fields": {
+   "control_cost": "15",
+   "credits_cost": "250",
+   "cooldown_turns": "18",
+   "target": "Player",
+   "effects": [
+    "+5 Modules"
+   ],
+   "requires_tech": [
+    "Starbase Modules"
+   ],
+   "blocked_by_trait": [
+    "Proliferation Ability"
+   ],
+   "description": "Use your vast power to impel private industry to deliver you some new modules for use at Starbases.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:serenity",
+  "name": "Serenity",
+  "aliases": [
+   "EO_Serenity"
+  ],
+  "summary": "Use telepathy to affect an entire planet positively. Choose to boost Growth , improve Approval , or increase Influence and Tourism .",
+  "fields": {
+   "control_cost": "30",
+   "cooldown_turns": "20",
+   "target": "Player",
+   "effects": [
+    "Send Trigger Event And Pass Sender (Event_Serenity)"
+   ],
+   "description": "Use telepathy to affect an entire planet positively. Choose to boost Growth , improve Approval , or increase Influence and Tourism .",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:shipyard_production_boost",
+  "name": "Shipyard Production Boost",
+  "aliases": [
+   "EO_ShipyardRush"
+  ],
+  "summary": "Focus our efforts to quickly supply manufacturing resources to a specific shipyard.",
+  "fields": {
+   "control_cost": "50",
+   "credits_cost": "25",
+   "cooldown_turns": "12",
+   "target": "Player",
+   "effects": [
+    "+100 Stored Goods (Shipyard)",
+    "Play Effect On Tile (1, FXManufacturingBuff)"
+   ],
+   "description": "Focus our efforts to quickly supply manufacturing resources to a specific shipyard.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:summon_a_new_citizen",
+  "name": "Summon A New Citizen",
+  "aliases": [
+   "EO_BuildYor"
+  ],
+  "summary": "Without using Durantium we can recycle scraps to quickly produce more citizens.",
+  "fields": {
+   "control_cost": "25",
+   "credits_cost": "100",
+   "cooldown_turns": "10",
+   "target": "Player",
+   "effects": [
+    "Create Unit On Planet (Citizen)",
+    "Play Effect On Tile (1, FXManufacturingBuff)"
+   ],
+   "requires_tech": [
+    "Supra Cognition",
+    "Planetology"
+   ],
+   "description": "Without using Durantium we can recycle scraps to quickly produce more citizens.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:surge_production",
+  "name": "Surge Production",
+  "aliases": [
+   "EO_SurgeProduction"
+  ],
+  "summary": "Divert reserve crews and logistics capacity to a single shipyard. Double Military Production at the target shipyard for 12 months.",
+  "fields": {
+   "control_cost": "15",
+   "cooldown_turns": "36",
+   "target": "Player",
+   "effects": [
+    "+100% Military (Shipyard) for 12 turns"
+   ],
+   "description": "Divert reserve crews and logistics capacity to a single shipyard. Double Military Production at the target shipyard for 12 months.",
+   "source": "ExecutiveOrderDefs_FedEmpires.xml"
+  }
+ },
+ {
+  "id": "order:swarm",
+  "name": "Swarm",
+  "aliases": [
+   "EO_Swarm"
+  ],
+  "summary": "For six months all members of our species that have the Consuming will see their abilities doubled.",
+  "fields": {
+   "control_cost": "75",
+   "cooldown_turns": "50",
+   "target": "Player",
+   "effects": [
+    "+100% Intelligence (Unit) for 6 turns",
+    "+100% Diligence (Unit) for 6 turns",
+    "+100% Social Skills (Unit) for 6 turns",
+    "+25% Approval (Unit) for 6 turns"
+   ],
+   "requires_tech": [
+    "Hatcheries"
+   ],
+   "description": "For six months all members of our species that have the Consuming will see their abilities doubled.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:telescope_takeover",
+  "name": "Telescope Takeover",
+  "aliases": [
+   "EO_TelescopeTakeover",
+   "EO_TelescopeTakeover_TutorialVariant",
+   "EO_TelescopeTakeover_Watcher"
+  ],
+  "summary": "Private corporations have advanced survey equipment which we can put to immediate use. Reveal an Area of the Map",
+  "fields": {
+   "control_cost": "15",
+   "cooldown_turns": "30",
+   "target": "Player",
+   "effects": [
+    "Show Area For Turns (10)",
+    "Play Effect On Tile (1, FXScan)"
+   ],
+   "blocked_by_trait": [
+    "Watcher Ability",
+    "Slavers Ability",
+    "Synthetic Life",
+    "Entrepreneurs Ability",
+    "Genocidal Ability",
+    "Adaptable Ability",
+    "Tutorial Tracker Ability",
+    "Ravenous Ability"
+   ],
+   "description": "Private corporations have advanced survey equipment which we can put to immediate use. Reveal an Area of the Map",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:thrall_training",
+  "name": "Thrall Training",
+  "aliases": [
+   "EO_ForcedTraining"
+  ],
+  "summary": "Trains thralls to increase target fleet experience.",
+  "fields": {
+   "control_cost": "25",
+   "credits_cost": "50",
+   "target": "Player",
+   "effects": [
+    "Give Experience (15)",
+    "Play Effect On Tile (1, FXManufacturingBuff)"
+   ],
+   "requires_tech": [
+    "Asteroid Mining"
+   ],
+   "description": "Trains thralls to increase target fleet experience.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ },
+ {
+  "id": "order:upgrade_fleet_propulsion",
+  "name": "Upgrade Fleet Propulsion",
+  "aliases": [
+   "EO_RoboticDrive"
+  ],
+  "summary": "Use our executive powers to focus our efforts onto a single fleet to optimize its speed.",
+  "fields": {
+   "control_cost": "30",
+   "credits_cost": "25",
+   "cooldown_turns": "15",
+   "target": "Player",
+   "effects": [
+    "+1 Moves (Ship)",
+    "Play Effect On Tile (1, FXBuff)"
+   ],
+   "description": "Use our executive powers to focus our efforts onto a single fleet to optimize its speed.",
+   "source": "ExecutiveOrderDefs.xml"
+  }
+ }
+]

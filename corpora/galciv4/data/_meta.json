@@ -1,0 +1,12 @@
+{
+ "game_version": "4.1.1",
+ "generated_at": "2026-09-25T22:35:26+00:00",
+ "generator": "scripts/extract-galciv4.py@0ebcf48",
+ "tech_tree": "HumanTechTree",
+ "counts": {
+  "tech": 130,
+  "improvement": 528,
+  "order": 66
+ },
+ "strings": 38393
+}
