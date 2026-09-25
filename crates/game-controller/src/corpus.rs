@@ -91,6 +91,11 @@ pub struct ScreenDef {
     /// While this screen matches, the game is still processing the turn: keep waiting.
     #[serde(default)]
     pub busy: bool,
+    /// Act on this screen only after end-turn was blocked (TAB then selected the idle unit).
+    /// A unit that merely stays selected from earlier may already be busy, and re-issuing its
+    /// order can cancel work in progress (e.g. "abandon the in-progress survey?").
+    #[serde(default)]
+    pub only_when_blocked: bool,
 }
 
 fn default_template_threshold() -> f64 {
