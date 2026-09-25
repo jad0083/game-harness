@@ -15,9 +15,12 @@ fi
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 cp windows_agent/install.ps1 "$STAGE/"
-if [[ -f windows_agent/game-agent.exe ]]; then
-  cp windows_agent/game-agent.exe "$STAGE/"
+if [[ ! -f windows_agent/game-agent.exe ]]; then
+  echo "windows_agent/game-agent.exe is missing; build it first:" >&2
+  echo "  cargo build --target x86_64-pc-windows-gnu --release --bin game-agent && cp target/x86_64-pc-windows-gnu/release/game-agent.exe windows_agent/" >&2
+  exit 1
 fi
+cp windows_agent/game-agent.exe "$STAGE/"
 cp .agent_token "$STAGE/agent_token.txt"
 
 IP="$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}')"
