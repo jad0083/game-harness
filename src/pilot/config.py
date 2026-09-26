@@ -50,12 +50,17 @@ class Settings:
     # the game is paused while the model decides), in-game months between scheduled decisions,
     # and seconds between autosave polls.
     speed: str = "fast"
+    campaign: str = ""                 # campaign name for telemetry; default: save folder / journal dir
     decide_every_months: int = 12
     poll_s: float = 2.0
 
     @property
     def corpus_dir(self) -> Path:
         return REPO / "corpora" / self.game
+
+    @property
+    def telemetry_db(self) -> Path:
+        return self.runs_dir / "telemetry.sqlite"
 
     @property
     def window_title(self) -> str:
@@ -91,6 +96,7 @@ class Settings:
         s.speed = env.get("PILOT_SPEED", s.speed)
         s.decide_every_months = int(env.get("PILOT_DECIDE_MONTHS", s.decide_every_months))
         s.poll_s = float(env.get("PILOT_POLL_S", s.poll_s))
+        s.campaign = env.get("PILOT_CAMPAIGN", s.campaign)
         s.journal = default_journal(s.game)
         if "PILOT_JOURNAL" in env:
             s.journal = Path(env["PILOT_JOURNAL"])

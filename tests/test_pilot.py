@@ -65,6 +65,15 @@ def test_gemini_image_metadata_matches_the_sdk_type():
     assert image_metadata(Settings(model="openai:gpt-5")) is None
 
 
+def test_gemini_thinking_config_matches_the_sdk_type():
+    from google.genai import types
+
+    from pilot.agent import model_settings
+
+    cfg = model_settings(Settings(model="google:gemini-3.8-flash", thinking="low"))["google_thinking_config"]
+    assert types.ThinkingConfig.model_validate(cfg).include_thoughts is True
+
+
 def test_autopilot_report_classification():
     assert classify_report("Advanced 2 turn(s), then stopped at turn 3: a dialog is up (HUD dimmed") == "dialog"
     assert classify_report("Advanced 0 turn(s), then stopped at turn 1: turn indicator unchanged ... blocking end-turn") == "blocked"

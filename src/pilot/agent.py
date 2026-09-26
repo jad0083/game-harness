@@ -257,7 +257,8 @@ def model_settings(s: Settings) -> ModelSettings:
     if s.thinking == "off":
         return ModelSettings()
     if s.provider.startswith("google"):
-        return ModelSettings(google_thinking_config={"thinking_level": s.thinking})  # type: ignore[typeddict-unknown-key]
+        # include_thoughts: Gemini returns thought summaries, shown in the dashboard's decision traces.
+        return ModelSettings(google_thinking_config={"thinking_level": s.thinking, "include_thoughts": True})  # type: ignore[typeddict-unknown-key]
     if s.provider.startswith("openai"):
         return ModelSettings(openai_reasoning_effort=s.thinking)  # type: ignore[typeddict-unknown-key]
     return ModelSettings()
@@ -273,7 +274,7 @@ def build_agent(s: Settings, game_briefing: str, model=None) -> Agent[Deps, Epis
 
 
 def run_episode(agent: Agent[Deps, EpisodeResult], deps: Deps, stop_text: str, frame: bytes | None,
-                extra: list[str]) -> tuple[EpisodeResult, object]:
+                extra: list[str]) -> tuple[EpisodeResult, object, list]:
     briefing = [f"The autopilot stopped: {stop_text}"]
     if extra:
         briefing.append("HUMAN INSTRUCTIONS (follow these): " + " | ".join(extra))
@@ -285,4 +286,4 @@ def run_episode(agent: Agent[Deps, EpisodeResult], deps: Deps, stop_text: str, f
         content.append(frame_content(deps.settings, frame))
     result = agent.run_sync(content, deps=deps,
                             usage_limits=UsageLimits(request_limit=deps.settings.max_requests_per_episode))
-    return result.output, result.usage
+    return result.output, result.usage, result.all_messages()

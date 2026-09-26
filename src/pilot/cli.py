@@ -3,6 +3,8 @@
     python -m pilot check                     # key, model, agent, corpus
     python -m pilot run [--model M] [--port P] [--turns N] [--no-commit] [--episodes K]
     python -m pilot run --game stellaris [--speed fast|fastest|...] [--months N]
+    python -m pilot view [--port P]           # read-only dashboard over recorded runs
+    python -m pilot rebuild-telemetry         # recreate runs/telemetry.sqlite from the run logs
 """
 
 from __future__ import annotations
@@ -58,7 +60,8 @@ def run(s: Settings, episodes: int | None) -> int:
     from .game import McpGame
 
     run_id = time.strftime("%Y%m%d-%H%M%S")
-    log = EventLog(s.runs_dir, run_id, s.model)
+    from .telemetry import Telemetry
+    log = EventLog(s.runs_dir, run_id, s.model, telemetry=Telemetry(s.telemetry_db))
     game = McpGame(s.controller_bin, s.corpus_dir, s.agent_url, REPO, title=s.window_title)
     if s.game == "stellaris":
         from .governor import Governor
@@ -86,6 +89,25 @@ def run(s: Settings, episodes: int | None) -> int:
     return 0
 
 
+def rebuild(s: Settings) -> int:
+    from .telemetry import Telemetry
+    tel = Telemetry(s.telemetry_db)
+    n = tel.rebuild(s.runs_dir)
+    counts = {t: tel.query(f"SELECT COUNT(*) AS n FROM {t}")[0]["n"] for t in ("campaigns", "runs", "decisions", "metrics")}
+    print(f"rebuilt {s.telemetry_db} from {n} runs: {counts}")
+    return 0
+
+
+def view(s: Settings, port: int) -> int:
+    from aiohttp import web
+
+    from .dashboard import make_app
+    print(f"viewer: http://{s.dashboard_host}:{port}/ over {s.runs_dir}", flush=True)
+    from .telemetry import Telemetry
+    web.run_app(make_app(None, s.runs_dir, Telemetry(s.telemetry_db)), host=s.dashboard_host, port=port, print=None)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     os.environ.setdefault("PYDANTIC_AI_NO_BANNER", "1")
     ap = argparse.ArgumentParser(prog="pilot", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -96,6 +118,9 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument("--model", help="pydantic-ai model string, e.g. google:gemini-3.8-flash")
         p.add_argument("--coords", choices=["auto", "norm1000", "pixels"])
         p.add_argument("--thinking", choices=["off", "low", "medium", "high"])
+    sub.add_parser("rebuild-telemetry", help="recreate runs/telemetry.sqlite from the run logs")
+    view_p = sub.add_parser("view", help="read-only dashboard over recorded runs")
+    view_p.add_argument("--port", type=int, default=8790)
     run_p = sub.choices["run"]
     run_p.add_argument("--port", type=int)
     run_p.add_argument("--turns", type=int, help="turns per autopilot call")
@@ -106,6 +131,10 @@ def main(argv: list[str] | None = None) -> int:
     run_p.add_argument("--months", type=int, help="Stellaris: in-game months between scheduled decisions")
     a = ap.parse_args(argv)
     s = Settings.from_env()
+    if a.cmd == "view":
+        return view(s, a.port)
+    if a.cmd == "rebuild-telemetry":
+        return rebuild(s)
     s.model = a.model or s.model
     s.coords = a.coords or s.coords
     s.thinking = a.thinking or s.thinking
