@@ -43,3 +43,31 @@ Strategy source: `corpora/galciv4/strategy.md`. Newest entries at the bottom.
   Bridge* → save campaign (+10% approval permanent, −100 cr).
 - **May 2332**: Research District done (research 5.1). Net income fell to **+0** → Earth builds a
   **Financial District** (10 turns).
+
+## 2332–2333
+- **Jul 2332**: *Appoint a Governor* report (informational). *Broken Teleporter Artifact* →
+  Wormhole Generator artifact. Baratak Grove proposed a trade (our 874 credits + Open Borders +
+  Armed Shuttles tech for an Exploration Treaty + 2 Antimatter) → **rejected**, left with Goodbye.
+- **Nov 2332**: Research Districts done → **Hyperwave Radio** (+1 policy slot), 19 months.
+- **Dec 2332**: *Summon Synthetic Leader Device* → stored (candidate governor for Agena II).
+- **Jan 2333**: Colony Ship-3 boarded (automatically) and sent by Auto Colonize.
+- **Mar 2333**: **Macrinus III** colonised (confirmation handled automatically). Financial
+  District done; Earth → second **Financial District** (+2 adjacency, 7 turns). Governor warns
+  about taxes (approval 72% — not changed yet).
+- **Apr 2333**: *The Frontier Shrine* → pilgrimage route (+5% influence 24 turns).
+- **Jun 2333**: *Lost Cargo: Tactical Thruster* → stored.
+
+## ▶ Paused here (for the next session / model)
+- **Date**: Jul 1, 2333. Game running on the PC, in the foreground.
+- **On screen**: event *Space Creature Migration* (HUD dimmed), not answered yet.
+  Planned choice: **"Protect the creatures"** (button at image 480, 618) — +3 relations with
+  Baratak Grove, our only known neighbour; the alternative is +150 credits and Nihilism.
+- **Empire**: Earth (core), Mars, Artemis, Agena II, Macrinus III. ~1,100 credits, research ~6,
+  production ~8, income +2. Policies: Brainstorming, Fast Exploration. Ministers: Pat Mil
+  (Exploration), Daf Daf (Technology). Two warships on Sentry at Earth; Discovery surveying.
+- **Queues**: research Hyperwave Radio (~7 months); Earth: Financial District; shipyard idle
+  (the autopilot queues a Colony Ship when TAB opens it).
+- **Open threads**: Agena II needs a governor (leader recruitment); Capital City still unplaced;
+  agent 1.1.0 not deployed; taxes/approval to watch.
+- **Resume**: answer the event (`scripts/play/act.sh click 480 618`), then `scripts/play/ap.sh 20`
+  and follow AGENTS.md §4 for each stop.

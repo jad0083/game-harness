@@ -9,10 +9,13 @@
 - [ ] Earth's **Capital City** (0 cost, +6 pop cap, +100 influence; `CapitalOnly`, `PlacementType: Special`) could not be placed: drag onto plains and onto the grassland "home" tile did nothing, double-click only selects it, and the tile menu lists only districts. Likely the agent's drag (button down → 12 moves at 20 ms → up) is too fast for the planet screen, or it needs a specific tile. Earth has a housing crisis (5/5 pop) until solved (found 2026-09-25, Feb 2330)
 - [ ] GC4 turn hang in "Starting New Month" (game bug) occurred once after first contact with Baratak Grove, Jun 2331; recovered by quit + relaunch + autosave (2026-09-25). Recovery is manual; could become a macro (needs the launcher steps and a way to pick the save)
 - [ ] Rust agent's key table lacks `win`/`lwin` (the Python agent had them), so `win+r` fails; Steam window focus was used instead (2026-09-25)
+- [ ] `manifest.toml` macro `dismiss_tutorial` still presses `enter` then `esc`; `esc` on the bare map opens the pause menu — unverified and risky, don't run it
+- [ ] Autopilot can't place buildings or choose research; those blockers always go to the model (plan.md "Autonomy")
+- [ ] `.mcp.json` / `.gemini/settings.json` assume `./target/release/game-controller` is built; a fresh clone needs `cargo build --release -p game-controller` first (documented in AGENTS.md §2)
 - [ ] Event option number keys (`1`/`2`/`3`) claimed in strategy.md are unverified; clicking works
 - [ ] `autopilot.rs:105-107` `click_norm` emits image-space coords without scaling (latent: no macro uses it yet)
 - [ ] `client.rs:254-256` `focus` returns Ok on a 404 body; `settle`/`windows`/`focus` never check HTTP status (a 401 surfaces as a JSON parse error)
-- [ ] Rust MCP has no `zoom`, `hover`, `scroll`, `list_windows`, or grid overlay; `GAME_SCREENSHOT_DIR` frame archive dropped from `.mcp.json`; `PLAYING.md` documents tools that no longer exist
+- [ ] Rust MCP has no `zoom`, `hover`, `scroll`, `list_windows`, or grid overlay; `GAME_SCREENSHOT_DIR` frame archive dropped from `.mcp.json` (shell workaround: `scripts/play/hover.sh`)
 - [ ] `clippy --all-targets`: 2 warnings (`corpus.rs:466`, `imaging.rs:28`); "0 warnings" achieved via `#![allow(dead_code, ...)]` in every file
 
 ### Rust agent (`crates/game-agent`)
@@ -25,11 +28,17 @@
 - [ ] `windows_agent/game-agent.exe` (1.4 MB) is tracked and re-committed on every rebuild
 - [ ] Stale `crates/game-agent/Cargo.lock`, `.gitignore`, and 413 MB `crates/game-agent/target/` from the pre-workspace build
 - [ ] `.mcp.json` points at gitignored `./target/release/game-controller`; fresh clone has no MCP until `cargo build --release`, undocumented
-- [ ] 12 stray `*.jpg` crops in the repo root and 16 MB `screenshots/` (ignored, should be deleted)
 - [ ] `#![allow(dead_code, …)]` remains in `game-agent/main.rs`, `imaging.rs`, `mcp.rs` (removed from `corpus.rs`, `autopilot.rs`)
 - [ ] Python harness (`src/harness`, `windows_agent/agent.py`, 40 tests) is no longer deployed; its green suite covers nothing that runs (`agent.py` `settle` stub always returns `settled: True`)
 
 ## Resolved
+- [x] 12 stray `*.jpg` crops in the repo root and `screenshots/` (2026-09-25; moved to gitignored `play/archive/`)
+- [x] `PLAYING.md` documented Python-era MCP tools (`status`, `zoom`, `focus_game`) (2026-09-25; rewritten with a quick reference, procedure in AGENTS.md)
+- [x] Docs were Claude-specific (`CLAUDE.md` only) and the play loop lived in untracked scratch scripts (2026-09-25; `AGENTS.md`, `GEMINI.md`, `.gemini/settings.json`, `scripts/play/`)
+- [x] "Colonize Planet?" confirmation dims the HUD, so the loop stopped before checking known screens; and when it appeared after a camera pan the pre-turn check returned Modal (2026-09-25; retry on any non-advanced verdict, settle after each dismissal; 0dca505, 0f95cf0)
+- [x] Re-pressing Survey on a ship that was already surveying asked to abandon the survey (2026-09-25; `only_when_blocked` + `survey_abandon_confirm` → No; 0f4e557)
+- [x] Turns stuck in AI processing were reported as blocked after the 8 s settle (2026-09-25; `busy` screens extend the wait to 180 s; 68cc89f)
+- [x] Colony ship boarding dialog blocked every new colony ship (2026-09-25; `colony_ship_boarding` click sequence; bc34180)
 - [x] Manifest `end_turn` was `enter`; the game ends turns with TAB, and `space`/`f`/`e` hotkeys were wrong (2026-09-25; corrected from live tooltips: explore = O, standby = J; b0059ae, e19ddbc)
 - [x] Autopilot judged a turn 0.9 s after the key, before the game finished processing, and reported a real advance as NotAdvanced (2026-09-25; now waits for the date to change; b0059ae)
 - [x] Date change "Jul → Aug" read as unchanged: whole-box mean diff 0.028 < 0.03 (2026-09-25; per-glyph strip metric, real-frame fixtures; e19ddbc)
