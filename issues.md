@@ -37,6 +37,7 @@
 - [ ] Agent key table has no numpad keys or `+`; Stellaris speed-up must use `=` (VK_OEM_PLUS) until added
 
 ## Resolved
+- [x] The governor fixed its campaign at start; when the user loaded another game mid-run (United Nations of Earth 2), the next decision applied `expand` there and was recorded under the old campaign (2026-09-25; every briefing's save folder is now checked, a different game pauses the run with needs-attention; test)
 - [x] `take-control` failed to read the console's reply to human_ai when a bright nebula was behind the semi-transparent console (template distances 0.103 / 0.130); the governor correctly waited for the human instead of crashing (2026-09-25; replies are now read from white-text masks: right word ≤ 0.023, wrong ≥ 0.057 on 4 real frames; fixture added)
 - [x] Model picker listed Gemini models that cannot play (TTS, image, transcription, robotics, computer-use) (2026-09-25; filtered; test)
 - [x] Every "learned" / "learn_rejected" event raised TypeError: `emit(kind, …)` was also given `kind=` as data, so the governor's `remember_rule` and GC4's learning tools failed whenever a model used them (found 2026-09-25 while adding retrospectives; data key renamed to `category`; regression test)

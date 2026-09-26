@@ -1,0 +1,81 @@
+# Governor Bridge: extra AI budget while a governor directive is active.
+#
+# The harness sets one country flag, governor_directive_<name>, on the player's empire (which the
+# game's AI plays under human_ai). Each entry below applies only while its flag is set. Entries are
+# additive (the ai_budget README: "Several entries may share the same category and resource"), so no
+# vanilla file is overridden. Weights are relative to all other entries for the same resource
+# (vanilla: alloys for ships 0.6, alloys for expansion starbases 0.2).
+
+# --- expand: outposts and colonies ------------------------------------------------------------
+governor_expand_alloys_starbases = {
+	resource = alloys
+	type = expenditure
+	category = starbases
+	potential = { has_country_flag = governor_directive_expand }
+	weight = { weight = 0.3 }
+	desired_min = { base = 100 }
+}
+governor_expand_influence_starbases = {
+	resource = influence
+	type = expenditure
+	category = starbases
+	potential = { has_country_flag = governor_directive_expand }
+	weight = { weight = 0.3 }
+}
+governor_expand_alloys_colonies = {
+	resource = alloys
+	type = expenditure
+	category = colonies
+	potential = { has_country_flag = governor_directive_expand }
+	weight = { weight = 0.2 }
+}
+
+# --- prepare_war: warships ------------------------------------------------------------------
+governor_prepare_war_alloys_ships = {
+	resource = alloys
+	type = expenditure
+	category = ships
+	potential = { has_country_flag = governor_directive_prepare_war }
+	weight = { weight = 0.4 }
+}
+
+# --- defend: warships and starbases ----------------------------------------------------------
+governor_defend_alloys_ships = {
+	resource = alloys
+	type = expenditure
+	category = ships
+	potential = { has_country_flag = governor_directive_defend }
+	weight = { weight = 0.3 }
+}
+governor_defend_alloys_starbases = {
+	resource = alloys
+	type = expenditure
+	category = starbases
+	potential = { has_country_flag = governor_directive_defend }
+	weight = { weight = 0.2 }
+}
+
+# --- consolidate_economy: districts and buildings ---------------------------------------------
+governor_consolidate_minerals_planets = {
+	resource = minerals
+	type = expenditure
+	category = planets
+	potential = { has_country_flag = governor_directive_consolidate_economy }
+	weight = { weight = 0.3 }
+}
+governor_consolidate_energy_planets = {
+	resource = energy
+	type = expenditure
+	category = planets
+	potential = { has_country_flag = governor_directive_consolidate_economy }
+	weight = { weight = 0.1 }
+}
+
+# --- tech_rush: buildings (research labs among them) ------------------------------------------
+governor_tech_rush_minerals_planets = {
+	resource = minerals
+	type = expenditure
+	category = planets
+	potential = { has_country_flag = governor_directive_tech_rush }
+	weight = { weight = 0.2 }
+}

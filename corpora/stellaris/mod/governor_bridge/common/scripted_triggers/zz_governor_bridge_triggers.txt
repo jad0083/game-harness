@@ -1,0 +1,5 @@
+# Governor Bridge: lets the harness check from the console that this mod is loaded
+# (an effect using an undefined trigger fails, so its log line never appears).
+governor_bridge_present = {
+	always = yes
+}

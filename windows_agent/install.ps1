@@ -8,7 +8,8 @@
 # What it does:
 #   1. Stops any running agent (a running exe is locked and cannot be overwritten).
 #   2. Copies game-agent.exe + agent_token.txt to %LOCALAPPDATA%\GameAgent and writes roots.json
-#      (game folders the agent may read, read-only: Stellaris/GalCiv4 documents and install dirs).
+#      (game folders the agent may read: Stellaris/GalCiv4 documents and install dirs; and the only
+#      files it may write: the governor's Stellaris mod and dlc_load.json, which enables mods).
 #   3. Adds an inbound firewall rule for TCP 8765 from the local subnet only (one UAC prompt, first run only).
 #   4. Registers a logon task that runs the agent in your desktop session, starts it, and checks /health.
 
@@ -114,8 +115,17 @@ foreach ($k in $candidates.Keys) {
     $note = if (Test-Path $v) { '' } else { '  (not created yet)' }
     Write-Host "    $k = $v$note"
 }
+# Writable: only the governor's Stellaris mod and the file that enables mods (dlc_load.json).
+$writeRoots = [ordered]@{}
+if ($roots['stellaris_docs']) {
+    $writeRoots['stellaris_mods'] = [ordered]@{
+        path  = $roots['stellaris_docs']
+        allow = @('mod/governor_bridge/', 'mod/governor_bridge.mod', 'dlc_load.json')
+    }
+    Write-Host "    writable: $($roots['stellaris_docs']) (mod/governor_bridge/, mod/governor_bridge.mod, dlc_load.json)"
+}
 # No BOM: Windows PowerShell 5.1's Set-Content -Encoding UTF8 would add one.
-[IO.File]::WriteAllText((Join-Path $Dest 'roots.json'), (@{ roots = $roots } | ConvertTo-Json -Depth 3), (New-Object Text.UTF8Encoding $false))
+[IO.File]::WriteAllText((Join-Path $Dest 'roots.json'), (@{ roots = $roots; write_roots = $writeRoots } | ConvertTo-Json -Depth 5), (New-Object Text.UTF8Encoding $false))
 
 # --- 3. Firewall (needs admin once) --------------------------------------------
 Step "Allowing inbound TCP $Port from the local subnet"

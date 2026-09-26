@@ -460,12 +460,15 @@ class Governor:
                                 "steps": [{"type": "text", "text": reason}]})
         self.journal.note(f"{directive} ({outcome}) — human override", b["date"])
 
+    @staticmethod
+    def _save_folder(b: dict) -> str | None:
+        parts = str(b.get("source", "")).split("/")
+        return parts[1] if len(parts) >= 3 else None
+
     def _set_campaign(self, b: dict) -> None:
         """Campaign = the save folder ('save games/<empire>_<id>/…'), or PILOT_CAMPAIGN."""
-        name = self.s.campaign
-        if not name:
-            parts = str(b.get("source", "")).split("/")
-            name = parts[1] if len(parts) >= 3 else (b.get("name") or "unknown").replace(" ", "_").lower()
+        self._folder = self._save_folder(b)
+        name = self.s.campaign or self._folder or (b.get("name") or "unknown").replace(" ", "_").lower()
         self.log.set_campaign(self.s.game, name)
         f = self._orders_file()
         if f.exists():
@@ -499,6 +502,14 @@ class Governor:
             except Exception as e:  # noqa: BLE001 - a save being rotated; try again next poll
                 self.log.emit("briefing_error", error=str(e)[:200])
                 continue
+            folder = self._save_folder(b)
+            if folder and getattr(self, "_folder", None) and folder != self._folder:
+                # another game was loaded: never act on an empire this run was not started for
+                self.game.set_paused(True)
+                self._needs_attention(f"the game changed: newest autosave is from {folder!r}, this run governs "
+                                      f"{self._folder!r}. Load that game again and press Resume, or stop this run "
+                                      "and start a new one for the new game.")
+                return last, ""
             if b["date"] != last["date"]:
                 self.log.emit("metrics", **metrics(b))
                 self.log.state.game_date = b["date"]

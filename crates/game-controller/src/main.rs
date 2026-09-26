@@ -152,6 +152,11 @@ enum StellarisAction {
     /// Hand the player's empire to the game's AI (leave observer mode, switch human_ai on,
     /// checked on screen); leaves the game paused
     TakeControl,
+    /// Upload the companion mod (corpora/stellaris/mod/governor_bridge) and enable it in
+    /// dlc_load.json; the game loads it at its next start (agent >= 1.3.0)
+    InstallMod,
+    /// Check through the console whether the running game has the companion mod loaded
+    BridgeCheck,
     /// Pause the game (checked on screen; no-op if already paused)
     Pause,
     /// Resume the game (checked on screen; no-op if already running)
@@ -276,6 +281,20 @@ async fn main() -> Result<()> {
             let country = stellaris::brief_save(&stellaris::fetch_latest_save(&client).await?.1)?.country;
             for line in stellaris::take_control(&client, &pause, &reader, country).await? {
                 println!("{line}");
+            }
+        }
+        Commands::Stellaris { action: StellarisAction::InstallMod } => {
+            let dir = cli.corpus.clone().unwrap_or_else(|| PathBuf::from("corpora/stellaris"));
+            for f in stellaris::install_mod(&client, &dir).await? {
+                println!("wrote {f}");
+            }
+            println!("Enabled in dlc_load.json. Restart the game to load it; then `stellaris bridge-check`.");
+        }
+        Commands::Stellaris { action: StellarisAction::BridgeCheck } => {
+            let loaded = stellaris::bridge_loaded(&client).await?;
+            println!("{}", if loaded { "Governor Bridge is loaded" } else { "Governor Bridge is NOT loaded" });
+            if !loaded {
+                std::process::exit(1);
             }
         }
         Commands::Stellaris { action: StellarisAction::Speed { name } } => {

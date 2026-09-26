@@ -139,6 +139,8 @@ The compiled controller binary provides full programmatic access to all agent fu
 ./target/release/game-controller stellaris brief path/to/autosave.sav # local file, offline
 ./target/release/game-controller stellaris brief --json
 ./target/release/game-controller stellaris take-control               # once per session: AI plays the empire (human_ai)
+./target/release/game-controller stellaris install-mod                # companion mod into the game's mod folder (agent >= 1.3)
+./target/release/game-controller stellaris bridge-check               # is it loaded?
 ./target/release/game-controller stellaris directive expand --dry-run  # console lines only
 ./target/release/game-controller stellaris directive expand            # apply (Stellaris must be foreground)
 ./target/release/game-controller stellaris log -l 30                   # tail of logs/game.log
