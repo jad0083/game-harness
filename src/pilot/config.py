@@ -46,7 +46,7 @@ class Settings:
     # overloaded, or, with `rotate`, each decision starts at the next entry (spreads the load).
     models: tuple = ()
     rotate: bool = False
-    # Per role ("retrospective", "chat", "episodes"): {"models": [...], "rotate": bool}. A role that
+    # Per role ("strategy", "chat", "episodes"): {"models": [...], "rotate": bool}. A role that
     # is not listed uses the decision models above.
     roles: dict = field(default_factory=dict)
     stale_save_s: float = 300.0                      # an autosave older than this at start may be another game's
