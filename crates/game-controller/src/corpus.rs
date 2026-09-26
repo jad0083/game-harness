@@ -93,6 +93,10 @@ pub struct ScreenDef {
     /// Max mean difference (0..1) for a template match.
     #[serde(default = "default_template_threshold")]
     pub template_threshold: f64,
+    /// Search ±this many pixels around `template_roi` (JPEG jitter; centered titles whose
+    /// variable part changes glyph widths move by a pixel or two).
+    #[serde(default = "default_template_search")]
+    pub template_search: u32,
     /// The autopilot may close this screen on its own (informational popups only).
     #[serde(default)]
     pub auto_dismiss: bool,
@@ -115,6 +119,10 @@ pub struct ScreenDef {
 
 fn default_template_threshold() -> f64 {
     0.08
+}
+
+fn default_template_search() -> u32 {
+    2
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

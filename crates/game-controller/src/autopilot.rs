@@ -5,7 +5,7 @@
 use crate::client::AgentClient;
 use crate::imaging::{
     decode_rgb, detect_change_bbox, region_diff_max_strip, region_mean_luminance, roi_from_norm,
-    template_diff, View, DEFAULT_MODAL_ROI, MAX_SIDE,
+    template_diff_search, View, DEFAULT_MODAL_ROI, MAX_SIDE,
 };
 use anyhow::Result;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -87,7 +87,7 @@ pub fn match_known_screen<'a>(
     screens.iter().find(|(_, def, tpl)| {
         let Some(norm) = def.template_roi else { return false };
         let roi = roi_from_norm(frame.width(), frame.height(), norm);
-        template_diff(frame, tpl, roi[0], roi[1]) <= def.template_threshold
+        template_diff_search(frame, tpl, roi[0], roi[1], def.template_search) <= def.template_threshold
     })
 }
 
@@ -288,8 +288,14 @@ impl Autopilot {
             // must win over the date change that preceded it.
             self.wait_for_turn_signal(&before, &check, timeout).await?;
             let _ = self.client.settle(Some(timeout), Some(threshold)).await?;
-            let (after, _) = self.screenshot_view().await?;
-            let verdict = classify_turn(&before, &after, &check)?;
+            let (mut after, _) = self.screenshot_view().await?;
+            let mut verdict = classify_turn(&before, &after, &check)?;
+            if matches!(verdict, TurnVerdict::Modal) && self.known_screen_name(&after, &[], true)?.is_none() {
+                // Dialogs fade in; a known one may not be recognisable on the first frame.
+                tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
+                after = self.screenshot_view().await?.0;
+                verdict = classify_turn(&before, &after, &check)?;
+            }
             // A known screen (e.g. the "Colonize Planet?" confirmation, which dims the HUD) is
             // handled at the top of the next attempt whatever the verdict says; only unknown
             // dialogs go to the model.
@@ -300,6 +306,8 @@ impl Autopilot {
                 continue;
             }
             match verdict {
+                // Whether TAB ended the turn before this dialog opened can't be told reliably:
+                // the dialog dims or blanks the date readout. Only verified advances are counted.
                 TurnVerdict::Modal => return Ok(self.modal_outcome(turn, Some(&before), after)),
                 TurnVerdict::Advanced { verified, .. } => {
                     self.turn_counter.fetch_add(1, Ordering::SeqCst);

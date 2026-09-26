@@ -222,6 +222,22 @@ pub fn template_diff(frame: &RgbImage, template: &RgbImage, x: u32, y: u32) -> f
     sum as f64 / (tw as f64 * th as f64 * 3.0 * 255.0)
 }
 
+/// Smallest `template_diff` with the template's top-left within ±`search` px of (x, y).
+pub fn template_diff_search(frame: &RgbImage, template: &RgbImage, x: u32, y: u32, search: u32) -> f64 {
+    let s = search as i64;
+    let mut best = 1.0f64;
+    for dy in -s..=s {
+        for dx in -s..=s {
+            let (cx, cy) = (x as i64 + dx, y as i64 + dy);
+            if cx < 0 || cy < 0 {
+                continue;
+            }
+            best = best.min(template_diff(frame, template, cx as u32, cy as u32));
+        }
+    }
+    best
+}
+
 /// True when the mean luminance of `roi` falls below `threshold`: GC4 dims the HUD behind
 /// event dialogs, reports and choice popups, so the normally bright top bar goes dark.
 pub fn is_modal_dimmed_in(jpeg_bytes: &[u8], roi: Roi, threshold: f64) -> Result<bool> {
@@ -424,6 +440,22 @@ mod tests {
         assert!(miss > 0.15, "ordinary map must not match: {miss}");
         assert_eq!(template_diff(&tpl, &tpl, 0, 0), 0.0);
         assert_eq!(template_diff(&tpl, &tpl, 1, 0), 1.0, "out of bounds never matches");
+    }
+
+    #[test]
+    fn template_search_matches_a_one_pixel_shifted_centered_title() {
+        let fixture = |name: &str| {
+            let path = format!("{}/tests/fixtures/{}", env!("CARGO_MANIFEST_DIR"), name);
+            decode_rgb(&std::fs::read(path).unwrap()).unwrap()
+        };
+        let tpl_path = format!("{}/../../corpora/galciv4/templates/boarding_title.png", env!("CARGO_MANIFEST_DIR"));
+        let tpl = image::open(tpl_path).unwrap().to_rgb8();
+        // live frame from Colony Ship-4, cropped at (594, 235); the manifest ROI is (604, 245)
+        let region = fixture("boarding_ship4_region.jpg");
+        let fixed = template_diff(&region, &tpl, 10, 10);
+        let searched = template_diff_search(&region, &tpl, 10, 10, 2);
+        assert!(fixed > 0.08, "fixed position misses the shifted title: {fixed}");
+        assert!(searched < 0.06, "±2 px search finds it: {searched}");
     }
 
     #[test]

@@ -566,7 +566,7 @@ impl McpServer {
                 }
 
                 let (note, img_bytes) = match stop_outcome {
-                    Some(crate::autopilot::TurnOutcome::ModalEvent { turn, bbox, full_bytes, .. }) => (
+                    Some(crate::autopilot::TurnOutcome::ModalEvent { turn, bbox, full_bytes }) => (
                         // The full frame, not the crop: click coordinates refer to the full frame.
                         format!(
                             "Advanced {} turn(s), then stopped at turn {}: a dialog is up (HUD dimmed; changed bbox {:?}). Decide and act, then call autopilot_turns again.",
