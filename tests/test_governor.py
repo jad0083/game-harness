@@ -2227,7 +2227,7 @@ def test_strategy_api_returns_current_milestones_and_history(setup, tmp_path):
             r = await c.post("/control", json={"action": "edit_pillar", "pillar": "economy", "fields": {"stance": "save energy"}})
             assert r.status == 200 and g.strategy.pillars["economy"].pinned
             r = await c.post("/control", json={"action": "review_strategy"})
-            assert r.status == 200 and g.review_requested == "requested from the dashboard"
+            assert r.status == 200 and g.requests.get_nowait() == ("review", "requested from the dashboard")
     asyncio.run(go())
 
 
@@ -2279,18 +2279,25 @@ def test_edit_pillar_records_a_new_strategy_version_with_trigger_text(setup, tmp
     assert g2.strategy.pillars["economy"].pinned
 
 
-def test_request_review_bypasses_the_event_cap_like_a_failed_retry(setup):
-    """Ruling 4: review_strategy from the dashboard is a cap-bypassing request, like a failed
-    review's own retry, so it runs at the next decision even inside the 12-month event cap."""
+def test_request_review_queues_a_review_request(setup):
+    """Final review 5: review_strategy from the dashboard goes through the request queue (it runs
+    at once, between scheduled decisions) instead of waiting for the next decision."""
+    s, log = setup
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+    g.request_review()
+    assert g.requests.get_nowait() == ("review", "requested from the dashboard")
+    assert g.review_requested is None
+
+
+def test_a_review_request_bypasses_the_event_cap(setup):
     s, log = setup
     calls = []
     g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": _strategist(calls)})
     g._review_strategy(briefing("2200.01.01"), "start of run")
     g._last_event_review_month = months("2200.01.01")   # a review just counted against the cap
-    g.request_review()
-    assert g.review_requested == "requested from the dashboard"
-    ran = g._maybe_event_review(briefing("2200.06.01"), g.review_requested, retry=g._review_retry)
-    assert ran, "a dashboard-requested review must bypass the 12-month cap"
+    g._handle_request(("review", "requested from the dashboard"), briefing("2200.06.01"))
+    assert calls == ["strategist", "strategist"]
+    assert g._last_event_review_month == months("2200.01.01"), "a requested review does not move the cap"
 
 
 def test_control_edit_pillar_returns_400_for_an_invalid_edit(setup, tmp_path):
@@ -2593,3 +2600,54 @@ def test_a_sell_over_20_percent_of_todays_income_is_skipped(setup):
     assert not any(a[0] == "market_sync" for a in game.actions), "nothing to sync: no orders wanted, none placed"
     assert any("skipped sell energy" in e.get("result", "") and "over 20% of income" in e["result"]
                for e in log.recent if e["kind"] == "strategy_action")
+
+
+def test_review_now_runs_at_once_without_waiting_for_a_scheduled_decision(setup):
+    """Final review 5: the save date never advances (no scheduled decision can come), yet the
+    requested review runs; no extra directive decision is made for it."""
+    s, log = setup
+    calls = []
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": _strategist(calls)})
+    t = _run_bg(g)
+    try:
+        assert _wait(lambda: log.state.episodes == 1 and calls == ["strategist"])
+        g.request_review()
+        assert _wait(lambda: any(e["kind"] == "strategy_review" and e["trigger"] == "requested from the dashboard"
+                                 for e in log.recent)), "the requested review ran"
+        assert len(calls) == 2
+        assert log.state.episodes == 1, "no directive decision was made for it"
+    finally:
+        g.stop()
+        t.join(3)
+
+
+def test_one_review_per_decision_point(setup):
+    """Final review 6: a scheduled review that ran inside _decide is the review for this decision
+    point; an urgent event trigger at the same point does not start a second one."""
+    from dataclasses import replace
+    s, log = setup
+    s2 = replace(s, retro_every=1)
+    s2.__class__ = s.__class__
+    calls = []
+    b0 = briefing("2200.01.01")
+    b1 = briefing("2200.03.01", wars=[{"name": "Border War", "attacker": False}])
+    g = Governor(s2, FakeStellaris([b0, b1]), log, model=decisions("keep", "keep"),
+                 role_models={"strategy": _strategist(calls)})
+    g.run(max_decisions=2)
+    eps = [e for e in log.recent if e["kind"] == "episode"]
+    assert eps[1]["situation"].startswith("urgent: new war")
+    reviews = [e for e in log.recent if e["kind"] == "strategy_review"]
+    assert [r["trigger"] for r in reviews] == ["start of run", "scheduled after 1 decisions"], reviews
+
+
+def test_an_event_review_still_runs_when_no_review_ran_in_the_decision(setup):
+    s, log = setup
+    calls = []
+    b0 = briefing("2200.01.01")
+    b1 = briefing("2200.03.01", wars=[{"name": "Border War", "attacker": False}])
+    g = Governor(s, FakeStellaris([b0, b1]), log, model=decisions("keep", "keep"),
+                 role_models={"strategy": _strategist(calls)})
+    g.run(max_decisions=2)
+    reviews = [e for e in log.recent if e["kind"] == "strategy_review"]
+    assert len(reviews) == 2 and reviews[1]["trigger"].startswith("urgent: new war")

@@ -373,7 +373,9 @@ class Governor:
         self._since_retro = 0
         self._strategy_trace_n = 0                # negative episode ids for strategy review traces (see _review_strategy)
         self.orders: list[str] = []               # standing orders, saved per campaign
-        self.requests: queue.Queue[tuple[str, str]] = queue.Queue()   # ("decide", msg) | ("override", name)
+        # ("decide", msg) | ("override", name) | ("speed", speed) | ("review", trigger)
+        self.requests: queue.Queue[tuple[str, str]] = queue.Queue()
+        self._reviews_run = 0                     # strategy reviews started (one review per decision point)
         log.state.info["controls"] = ["instruct", "chat", "order_add", "order_remove", "decide_now", "override",
                                       "set_model", "set_models", "set_roles", "set_fallback", "set_speed", "set_months",
                                       "edit_pillar", "unpin_pillar", "review_strategy"]
@@ -642,10 +644,9 @@ class Governor:
         self._publish_strategy(s, self.log.state.game_date or "", trigger, "human")
 
     def request_review(self) -> None:
-        """Ask for a strategy review at the next decision; a cap-bypassing request, like a failed
-        review's own retry, so it runs even inside the 12-month event-review cap."""
-        self.review_requested = "requested from the dashboard"
-        self._review_retry = True
+        """Run a strategy review now (between scheduled decisions, like decide_now). A human request
+        is never held back by the 12-month event-review cap and does not count toward it."""
+        self.requests.put(("review", "requested from the dashboard"))
         self.log.emit("instruction", text="Strategy review requested")
 
     def chat(self, text: str) -> None:
@@ -725,9 +726,14 @@ class Governor:
                         # decision point instead of reviewing inline, so its own trace/choice is not
                         # re-litigated at once. `retry` (cap bypass) is only for a failed review's own
                         # retry or no strategy yet — an off-frame request goes through the normal cap.
+                        # At most one review per decision point: a review that already ran inside
+                        # _decide (the scheduled one) covers any event trigger at this point too.
                         pending = self.review_requested is not None
+                        reviews_before = self._reviews_run
                         self._decide(b, reason)
-                        if pending or (reason.startswith("urgent:") and any(t in reason for t in EVENT_TRIGGERS)):
+                        still_pending = pending and self.review_requested is not None
+                        event = reason.startswith("urgent:") and any(t in reason for t in EVENT_TRIGGERS)
+                        if self._reviews_run == reviews_before and (still_pending or event):
                             self._maybe_event_review(b, self.review_requested or reason, retry=self._review_retry)
                 except Exception as e:  # noqa: BLE001 - any game-control failure (agent down, focus lost, a panel open)
                     self._needs_attention(f"game control failed: {type(e).__name__}: {e}. "
@@ -795,6 +801,8 @@ class Governor:
             self._decide(b, "human request" + (f": {arg}" if arg else ""))
         elif kind == "override":
             self._override(b, arg)
+        elif kind == "review":
+            self._review_strategy(b, arg)
         elif kind == "speed":
             self.game.set_speed(arg)
             self.s = replace(self.s, speed=arg)
@@ -1160,6 +1168,7 @@ class Governor:
         no change. Never raises and never pauses the game: any failure past the model call is logged and
         the current strategy stays, exactly like a failed model call."""
         self._last_b = b     # cached for edit_pillar's market-order validation (idle resources, income)
+        self._reviews_run += 1
         self._since_retro = 0
         self.review_requested = None
         self._review_retry = False
