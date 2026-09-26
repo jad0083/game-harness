@@ -445,7 +445,11 @@ async function loadCampaigns() {
   const sel = $("campaign");
   sel.innerHTML = camps.map((c) => `<option value="${esc(c.id)}">${esc(c.title || human(c.name))}${c.id === live ? " (live)" : ""}, ${esc(c.decisions)} decisions</option>`).join("")
     || `<option value="">No campaigns recorded yet</option>`;
-  S.campaign = S.campaign && camps.some((c) => c.id === S.campaign) ? S.campaign : (live || camps[0]?.id || null);
+  // Follow the live run's campaign unless the reader picked another one during this run.
+  const prev = S.campaign;
+  const keep = S.campaign && camps.some((c) => c.id === S.campaign);
+  S.campaign = live && !S.pinned ? live : (keep ? S.campaign : (live || camps[0]?.id || null));
+  if (S.campaign !== prev) { S.sel = null; S.plansKey = undefined; S.showAll = false; }
   if (S.campaign) sel.value = S.campaign;
 }
 
@@ -788,10 +792,11 @@ function describe(ev) {
     case "run_start": return `run started: ${ev.model}${ev.speed ? ", speed " + ev.speed : ""}`;
     case "run_end": return "run ended";
     case "model": return `now using ${ev.model} (${ev.thinking} thinking)`;
+    case "model_retry": return `${ev.error}; trying again in ${ev.delay} s`;
     default: { const { t, kind, ...rest } = ev; return JSON.stringify(rest).slice(0, 200); }
   }
 }
-const KCLASS = { episode_error: "bad", needs_attention: "bad", learn_rejected: "bad", briefing_error: "bad", learned: "learn", instruction: "human", orders: "human", answer: "human" };
+const KCLASS = { model_retry: "bad", episode_error: "bad", needs_attention: "bad", learn_rejected: "bad", briefing_error: "bad", learned: "learn", instruction: "human", orders: "human", answer: "human" };
 function addFeed(ev) {
   if (QUIET.has(ev.kind)) return;
   $("feed").insertAdjacentHTML("afterbegin", `<li><span class="t">${new Date(ev.t * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span><span><span class="k ${KCLASS[ev.kind] || ""}">${esc(human(ev.kind))}</span>${esc(describe(ev))}</span></li>`);
@@ -840,6 +845,7 @@ async function sync() {
   const run = S.status.run_id || null;
   if (S.live && (wasLive !== true || run !== liveRun)) {        // a run started (or a new one replaced it)
     liveRun = run;
+    S.pinned = false;
     setMode(((S.status.info || {}).controls || []).includes("chat") ? "chat" : "instruct");
     try { (await api("/events.json?n=300")).forEach((e) => { if (isNew(e)) { addFeed(e); if (e.kind === "chat") addMessage(e); } }); } catch { /* older server */ }
     connect();
@@ -883,7 +889,11 @@ document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("clic
   document.querySelectorAll("[data-view]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
   renderChart();
 }));
-$("campaign").addEventListener("change", async (e) => { S.campaign = e.target.value; S.sel = null; await loadCampaignData(); });
+$("campaign").addEventListener("change", async (e) => {
+  S.campaign = e.target.value; S.sel = null; S.plansKey = undefined; S.showAll = false;
+  S.pinned = S.campaign !== (S.status.info || {}).campaign;     // a deliberate look at another campaign
+  await loadCampaignData();
+});
 $("b-toggle").addEventListener("click", () => control({ action: $("b-toggle").textContent === "Pause" ? "pause" : "resume" }));
 
 let toastT;

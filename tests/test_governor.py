@@ -858,3 +858,54 @@ def test_campaign_title_comes_from_the_briefing_or_the_trace(setup, tmp_path):
     tel.record("old", {"t": 2, "kind": "trace", "episode": 1, "date": "2201.01.01", "decision": "keep"},
                {"steps": [{"type": "prompt", "text": "Decision point.\nBriefing:\n# 2201.01.01 — Kilik Cooperative (country 3, v4.5.1)\n"}]})
     assert tel.query("SELECT title FROM campaigns WHERE id='stellaris/folder_1'")[0]["title"] == "Kilik Cooperative"
+
+
+def test_a_transient_model_error_is_retried_and_the_decision_still_made(setup):
+    from pydantic_ai.exceptions import ModelHTTPError
+    s, log = setup
+    s.retry_delays = (0, 0)
+    calls = {"n": 0}
+
+    def respond(messages, info: AgentInfo) -> ModelResponse:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise ModelHTTPError(status_code=503, model_name="gemini-3.8-flash", body={"error": "high demand"})
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"directive": "expand", "reason": "r"})])
+
+    game = FakeStellaris([briefing("2200.01.01")])
+    Governor(s, game, log, model=FunctionModel(respond)).run(max_decisions=1)
+    assert ("directive", "expand") in game.actions
+    retries = [e for e in log.recent if e["kind"] == "model_retry"]
+    assert len(retries) == 1 and retries[0]["error"] == "model gemini-3.8-flash answered 503"
+    assert not any(e["kind"] == "episode_error" for e in log.recent)
+
+
+def test_a_permanent_model_error_is_not_retried(setup):
+    from pydantic_ai.exceptions import ModelHTTPError
+    s, log = setup
+    s.retry_delays = (0, 0)
+    calls = {"n": 0}
+
+    def respond(messages, info: AgentInfo) -> ModelResponse:
+        calls["n"] += 1
+        raise ModelHTTPError(status_code=400, model_name="m", body={"error": "bad request"})
+
+    Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=FunctionModel(respond)).run(max_decisions=1)
+    assert calls["n"] == 1
+    assert any(e["kind"] == "episode_error" for e in log.recent)
+
+
+def test_responses_are_never_cached(setup):
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from pilot.dashboard import make_app
+    s, _ = setup
+
+    async def go():
+        async with TestClient(TestServer(make_app(None, s.runs_dir))) as c:
+            for path in ("/", "/status", "/api/campaigns", "/api/decision?run=x&episode=9"):
+                assert (await c.get(path)).headers.get("Cache-Control") == "no-store", path
+
+    asyncio.run(go())

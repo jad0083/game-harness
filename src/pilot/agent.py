@@ -4,13 +4,32 @@ corpus consultation, and learning tools. Provider-agnostic; images are trimmed f
 from __future__ import annotations
 
 import threading
+import time
 from dataclasses import dataclass, field
 
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent, BinaryContent, ModelSettings, RunContext, Tool, ToolReturn
 from pydantic_ai.capabilities import ProcessHistory
+from pydantic_ai.exceptions import ModelHTTPError
 from pydantic_ai.messages import ModelMessage, ModelRequest, ToolReturnPart, UserPromptPart
 from pydantic_ai.usage import UsageLimits
+
+TRANSIENT_HTTP = {429, 500, 502, 503, 504}
+
+
+def run_with_retry(fn, delays: tuple[float, ...], on_retry=None):
+    """Call `fn`; on a transient provider error (overloaded, rate limited, gateway) wait and try
+    again, once per delay. The game is paused while a decision is made, so waiting costs nothing."""
+    for i, delay in enumerate((*delays, None)):
+        try:
+            return fn()
+        except ModelHTTPError as e:
+            if e.status_code not in TRANSIENT_HTTP or delay is None:
+                raise
+            if on_retry:
+                on_retry(e, delay, i + 1)
+            time.sleep(delay)
+    return None  # unreachable
 
 from . import coords
 from .config import Settings
@@ -291,6 +310,10 @@ def run_episode(agent: Agent[Deps, EpisodeResult], deps: Deps, stop_text: str, f
         deps.frame = frame
         deps.store.remember_frame(frame)
         content.append(frame_content(deps.settings, frame))
-    result = agent.run_sync(content, deps=deps,
-                            usage_limits=UsageLimits(request_limit=deps.settings.max_requests_per_episode))
+    def on_retry(e, delay, attempt):
+        deps.log.emit("model_retry", error=f"model {e.model_name} answered {e.status_code}", delay=delay, attempt=attempt)
+
+    result = run_with_retry(lambda: agent.run_sync(content, deps=deps,
+                                                   usage_limits=UsageLimits(request_limit=deps.settings.max_requests_per_episode)),
+                            deps.settings.retry_delays, on_retry)
     return result.output, result.usage, result.all_messages()
