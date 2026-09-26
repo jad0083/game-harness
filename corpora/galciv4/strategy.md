@@ -20,7 +20,7 @@
 *   **Minister of Colonization**: Appoint a leader with highest **Social** stat to maximize planetary population growth.
 
 ### C. Turn 1 Foundation Checklist
-1.  **Homeworld Capital City (Earth)**: Construct the Capital City improvement immediately on Turn 1 on Earth. It costs 0 manufacturing and does not wait in queue, immediately granting +10 Colony Gross Income, +6 Pop Cap, +3 Sensor Range, +1 Control/turn, +100 Influence, and +1 Culture Point/turn.
+1.  **Homeworld Capital City (Earth)**: Construct the Capital City improvement immediately on Turn 1 on Earth. It costs 0 manufacturing and does not wait in queue, immediately granting +10 Colony Gross Income, +6 Pop Cap, +3 Sensor Range, +1 Control/turn, +100 Influence, and +1 Culture Point/turn (confirmed by `improvement:capital_city`, which also gives +2 adjacency to all neighbours). **Harness caveat:** its `PlacementType` is *Special*; the tile menu does not offer it and dragging it has not worked yet (issues.md) — until that is solved, skip it and don't spend turns retrying.
 2.  **Executive Orders**:
     *   **Draft Colonists**: (-33 Control). Incurs a minor temporary Approval hit in exchange for an immediate free Colony Ship with passenger. Always take this on Turn 1—expansion velocity wins the game.
     *   **Telescope Takeover**: (-10 Control). Clears fog of war around high-class habitable worlds in your sector.
@@ -94,8 +94,25 @@ When a modal event or planet report halts the autonomous turn loop:
 ## 7. Government Policies & Tax Optimization (Colonial Charter)
 
 *   **Tax Rate Management**: Keep the Tax Rate slider at Low (~33%, norm `0.120, 0.295`) early on to sustain high planetary Approval (>55–60%). High approval directly drives population growth rate and worker productivity across all core worlds.
-*   **Early Enacted Policies**: Immediately slot *Brainstorming* (+2 Research/month) into the first available policy slot (`norm_x = 0.395, norm_y = 0.448`).
+*   **Early Enacted Policies**: Immediately slot *Brainstorming* (+2 Research/month) into the first available policy slot (drag it from *Available Policies* onto the slot; research rose 1.1 → 1.9/month in play).
 *   **Policy Slot Unlocks**: Prioritize early techs like *Hyperwave Radio* (+1 policy slot) to stack civilization-wide research and production multipliers.
 *   **Autopilot pacing**: unblocked turns take about 2–3.5 s (game end-turn processing plus settle); the loop stops for policy slots, idle ships/planets and event dialogs.
 
 
+
+
+---
+
+## 8. Decisions taken in play (Terran game, 2329–2333) and why
+
+Kept short; the full log is `games/terran-2329/journal.md`. These are the defaults to reuse.
+
+| Situation | Choice | Reason |
+|---|---|---|
+| Second policy slot (Colonial Policies tech, 24 research) | *Fast Exploration* (+2 moves, −50% ship HP) | Expansion race; early ships are not fighting. Swap out when war starts. |
+| Minister of Technology | Highest Intelligence leader (Daf Daf, 270 credits) | +1 technology slot and +5% research. |
+| First contact before Universal Translator | Any option (all just close) | Untranslatable. After the translator, answer politely. |
+| AI trade asking for a tech + most of the treasury | Reject | Never trade away tech for treaties/trinkets. |
+| Free warships from *Armed Shuttles* | Sentry (N) at the homeworld | Deterrent without upkeep of orders. |
+| Earth build queue | Districts with an adjacency bonus first; Financial when net income ≤ +2; Research when research lags production | Balanced core world. |
+| Treasury > ~1,000 idle | Spend on pay-to-choose events with lasting effects, leader recruitment | Unused credits do nothing. |

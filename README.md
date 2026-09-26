@@ -19,7 +19,31 @@ An ultra-low-latency, 100% Rust-powered autonomous AI game harness that plays tu
  └─────────────────────────────────────────┘                 └─────────────────────────────────────────┘
 ```
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for system topology, the modal-detection heuristic, coordinate scaling, and the corpus layout.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for system topology, the turn verification and known-screen system, coordinate scaling, and the corpus layout.
+
+## For AI agents (Gemini, Claude, others)
+
+Start with **[AGENTS.md](AGENTS.md)** — the model-neutral operating guide: setup, the play loop,
+the decision procedure for every kind of blocker, known screens and how to add them, corpus
+lookups, recoveries, and how to record and commit what you learn.
+
+| Client | Context file | MCP config |
+|---|---|---|
+| Gemini CLI | `GEMINI.md` (+ `AGENTS.md` via `.gemini/settings.json`) | `.gemini/settings.json` |
+| Claude Code | `CLAUDE.md` (imports `AGENTS.md`) | `.mcp.json` |
+| Any other | `AGENTS.md` | run `./target/release/game-controller mcp` (stdio) |
+
+Without MCP, everything works from the shell: `scripts/play/act.sh`, `ap.sh`, `hover.sh`,
+`capture-template.py` and the `game-controller` CLI. Frames are written to `play/` (gitignored).
+
+## Status (2026-09-25)
+
+- Plays GC4 Supernova 4.1.1 as the Terran Alliance, Jan 2329 → Jul 2333 so far; five worlds
+  (Earth, Mars, Artemis, Agena II, Macrinus III). Game log: [`games/terran-2329/journal.md`](games/terran-2329/journal.md).
+- Every turn is verified by the HUD date changing; the autopilot clears 9 kinds of known screens
+  by itself and stops only for real decisions (events, research, builds, policies, trades).
+- Agent 1.0.0 is deployed on the PC; agent 1.1.0 (configurable drag) is built, not deployed.
+- Open problems and history: [`issues.md`](issues.md); roadmap: [`plan.md`](plan.md).
 
 ---
 
@@ -29,8 +53,9 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for system topology, the modal-detection 
 |---|---|---|---|
 | **Windows Remote Agent** | [`crates/game-agent`](crates/game-agent) & [`windows_agent/game-agent.exe`](windows_agent/game-agent.exe) | Compiled native Rust (`x86_64-pc-windows-gnu`) | ~8ms screen capture & JPEG encode; native Win32 `SendInput`, `SetCursorPos`, and `mouse_event`; Per-Monitor V2 HiDPI aware. |
 | **Linux Native Controller** | [`crates/game-controller`](crates/game-controller) → `target/release/game-controller` (build with `cargo build --release`; `.mcp.json` points here) | Compiled native Rust (`x86_64-unknown-linux-gnu`) | ~1 ms agent round-trip; autopilot that verifies each turn by the HUD date changing and stops on dialogs or blockers; in-memory corpus (search <1 ms); stdio MCP server. |
-| **Game Corpus** | [`corpora/galciv4/`](corpora/galciv4/) | `manifest.toml` + generated `data/*.json` + `docs/*.md` + `strategy.md` | 33 hotkeys, 8 screen signatures, 3 macros; 130 techs, 528 improvements, 66 executive orders, 203 policies, 355 ship components, 167 starbase modules and 994 events generated from the game's own XML by `scripts/extract-galciv4.py`; 13 reference docs chunked into 168 searchable pieces. |
-| **Legacy Pytest Suite** | [`src/harness/`](src/harness/) & [`tests/`](tests/) | Python 3.12 (FakeBackend fixtures) | 40/40 legacy tests passing in 10.86s. |
+| **Game Corpus** | [`corpora/galciv4/`](corpora/galciv4/) | `manifest.toml` + `templates/*.png` + generated `data/*.json` + `docs/*.md` + `strategy.md` | 34 hotkeys, 17 screens (9 recognised by template), 3 macros; 130 techs, 528 improvements, 66 executive orders, 203 policies, 355 ship components, 167 starbase modules and 994 events generated from the game's own XML by `scripts/extract-galciv4.py`; 13 reference docs chunked into 168 searchable pieces. |
+| **Play helpers** | [`scripts/play/`](scripts/play/) | Bash + Python | `act.sh` (one action + frame), `ap.sh` (autopilot), `hover.sh` (tooltips), `capture-template.py` (new known screens). |
+| **Legacy Python harness** | [`src/harness/`](src/harness/), `windows_agent/agent.py` | Python 3.12 | The first implementation; **not deployed**. Its tests still run in CI. |
 
 ---
 
@@ -112,21 +137,20 @@ The compiled controller binary provides full programmatic access to all agent fu
 
 ## Model Context Protocol (MCP) Server
 
-To connect Claude Desktop, Claude Code, or Antigravity IDE directly to the game harness, add the following to your MCP configuration (`.mcp.json` or `claude_desktop_config.json`):
+The controller is a stdio MCP server. Run it from the repo root so it finds `.agent_token` and
+`corpora/galciv4` (or set `GAME_AGENT_TOKEN` / pass `--corpus`).
 
+Claude Code — `.mcp.json` (in this repo):
 ```json
-{
-  "mcpServers": {
-    "galciv4": {
-      "command": "/mnt/codeman-cases/game-harness/target/release/game-controller",
-      "args": ["mcp"],
-      "env": {
-        "GAME_AGENT_URL": "http://192.168.1.77:8765",
-        "GAME_AGENT_TOKEN": "<your-token>"
-      }
-    }
-  }
-}
+{ "mcpServers": { "game": { "command": "./target/release/game-controller", "args": ["mcp"],
+  "env": { "GAME_AGENT_URL": "http://192.168.1.77:8765" } } } }
+```
+
+Gemini CLI — `.gemini/settings.json` (in this repo):
+```json
+{ "contextFileName": ["GEMINI.md", "AGENTS.md"],
+  "mcpServers": { "game": { "command": "./target/release/game-controller", "args": ["mcp"], "cwd": ".",
+    "env": { "GAME_AGENT_URL": "http://192.168.1.77:8765" }, "timeout": 600000 } } }
 ```
 
 ### Available MCP Tools
@@ -136,13 +160,13 @@ To connect Claude Desktop, Claude Code, or Antigravity IDE directly to the game 
 | `screenshot` | `{}` | Capture full frame from Windows agent with dynamic scaling metadata. |
 | `click` | `x, y, button, count, wait` | Click at `(x, y)` in last-image space (automatically scaled to physical screen). |
 | `drag` | `x1, y1, x2, y2, button, wait, hold_ms, steps, step_ms, dwell_ms, wiggle` | Drag from `(x1, y1)` to `(x2, y2)` with multi-step interpolation. Optional timing: `hold_ms` after press (default 30), `steps` (12, 2..120), `step_ms` (15, 5..200), `dwell_ms` at target before release (30, 0..3000), `wiggle` ±3 px at target (false). |
-| `key` | `combo, repeat` | Press key/combo (resolves aliases like `end_turn` $\to$ `enter` via `game.toml`). |
+| `key` | `combo, repeat` | Press key/combo; manifest aliases resolve (e.g. `end_turn` → `tab`, `explore` → `o`). |
 | `type_text` | `text` | Type literal string into focused UI element. |
 | `batch` | `actions: [...]` | Execute atomic multi-action sequence in a single network round-trip. |
 | `wait_settle` | `timeout, threshold` | Wait for on-screen animations or AI turns to stabilize. |
 | `diff` | `{}` | Compare current frame against previous capture and highlight changes. |
-| `autopilot_turns`| `turns` | Run the turn loop; each turn is verified by the date readout changing. Stops with a screenshot at the first dialog (HUD dimmed) or blocked turn (indicator unchanged). Refuses if the game is not the foreground window. |
-| `run_macro` | `name` | Execute pre-registered macro from `game.toml` (`turn_pump`, `auto_scout_cycle`). |
+| `autopilot_turns`| `turns` | Run the turn loop; each turn is verified by the date readout changing and known screens are cleared automatically. Stops with a screenshot at the first unknown dialog (HUD dimmed) or blocked turn (indicator unchanged). Refuses if the game is not the foreground window. |
+| `run_macro` | `name` | Execute a macro from `manifest.toml` (`turn_pump` = TAB, `auto_scout_cycle` = TAB then O). |
 | `corpus_search` | `query, limit` | Keyword search over records, playbook and reference docs; returns ids + one-line match snippets. |
 | `corpus_get` | `id` | One compact record (`tech:colonial_policies`) or one prose chunk (`doc:anomalies#0`, `strategy#2`). |
 | `corpus_tech` / `corpus_improvement` / `corpus_order` | `name` | Name lookup (exact, alias, or closest match) in the generated `data/*.json` records: cost, prerequisites, effects, unlocks, adjacency, requirements. |
@@ -156,10 +180,13 @@ To connect Claude Desktop, Claude Code, or Antigravity IDE directly to the game 
 ## Testing & CI
 
 ```bash
-cargo test --workspace          # controller: imaging, MCP coordinate mapping, corpus; agent: batch validation
-cargo clippy --workspace --all-targets
-.venv/bin/pytest -q             # legacy Python harness (no longer deployed)
+scripts/ci.sh                                  # release build, cargo test, clippy -D warnings,
+                                               # Windows agent check, corpus load, ruff, pytest -> "CI OK"
+git add <paths> && scripts/ci-commit.sh "type(scope): message" "body"   # commits + pushes only if CI passes
 ```
+Rust: 41 tests (controller: coordinate mapping, imaging incl. real-frame fixtures, corpus,
+autopilot classifier, known-screen loading, MCP schema; agent: batch and drag validation).
+Python: 55 tests (extractor fixtures, offline corpus CLI, legacy harness).
 
 ## Game corpus
 
@@ -167,7 +194,8 @@ cargo clippy --workspace --all-targets
 
 ```
 corpora/galciv4/
-  manifest.toml   hotkeys, screen signatures, macros — hand-verified
+  manifest.toml   hotkeys, known screens (template, ROI, action), macros — hand-verified
+  templates/      reference crops that identify known screens
   strategy.md     playbook for the model, also chunked for search
   data/           GENERATED records, one <kind>.json each (tech, improvement, order, policy,
                   ship_component, starbase_module, event) — see data/README.md
