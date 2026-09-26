@@ -1,0 +1,78 @@
+"""Settings: environment variables (optionally from <repo>/.env) with CLI overrides."""
+
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass, field
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[2]
+
+
+def load_dotenv(path: Path = REPO / ".env") -> None:
+    """Minimal .env loader: KEY=VALUE lines; existing environment variables win."""
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
+@dataclass
+class Settings:
+    # LLM: any pydantic-ai model string, e.g. "google:gemini-3.8-flash", "openai:gpt-5",
+    # "anthropic:claude-sonnet-5", "ollama:qwen3-vl" (with OLLAMA_BASE_URL).
+    model: str = "google:gemini-3.8-flash"
+    # Coordinate convention the model is asked to use: "norm1000" ([0,1000] on both axes,
+    # what Gemini is trained on) or "pixels" (1568x882 image pixels). "auto" picks per provider.
+    coords: str = "auto"
+    thinking: str = "low"              # low | medium | high | off (provider-specific mapping)
+    image_detail: str = "medium"       # low | medium | high (Gemini media resolution)
+    images_in_context: int = 2         # older screenshots in an episode become text stubs
+    max_requests_per_episode: int = 30 # loop guard, not a cost limit
+    turns_per_autopilot: int = 20
+    game: str = "galciv4"
+    journal: Path = REPO / "games/terran-2329/journal.md"
+    runs_dir: Path = REPO / "runs"
+    agent_url: str = field(default_factory=lambda: os.environ.get("GAME_AGENT_URL", "http://192.168.1.77:8765"))
+    dashboard_host: str = "0.0.0.0"
+    dashboard_port: int = 8790
+    commit_learnings: bool = True
+    ask_human_timeout_s: float = 45.0
+
+    @property
+    def corpus_dir(self) -> Path:
+        return REPO / "corpora" / self.game
+
+    @property
+    def controller_bin(self) -> Path:
+        return REPO / "target/release/game-controller"
+
+    @property
+    def provider(self) -> str:
+        return self.model.split(":", 1)[0] if ":" in self.model else ""
+
+    @property
+    def coord_space(self) -> str:
+        if self.coords != "auto":
+            return self.coords
+        return "norm1000" if self.provider in ("google", "google-cloud", "google-gla", "google-vertex") else "pixels"
+
+    @classmethod
+    def from_env(cls) -> Settings:
+        load_dotenv()
+        s = cls()
+        env = os.environ
+        s.model = env.get("PILOT_MODEL", s.model)
+        s.coords = env.get("PILOT_COORDS", s.coords)
+        s.thinking = env.get("PILOT_THINKING", s.thinking)
+        s.image_detail = env.get("PILOT_IMAGE_DETAIL", s.image_detail)
+        s.dashboard_port = int(env.get("PILOT_PORT", s.dashboard_port))
+        s.turns_per_autopilot = int(env.get("PILOT_TURNS", s.turns_per_autopilot))
+        s.commit_learnings = env.get("PILOT_COMMIT", "1") not in ("0", "false", "no")
+        if "PILOT_JOURNAL" in env:
+            s.journal = Path(env["PILOT_JOURNAL"])
+        return s
