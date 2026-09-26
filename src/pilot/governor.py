@@ -322,7 +322,7 @@ class Governor:
         self.strategy: Strategy | None = None     # the pillar strategy (Strategist), per campaign
         self.review_requested: str | None = None  # pending review trigger after a failed strategy call
         self._since_retro = 0
-        self._strategy_trace_n = 0                # negative trace/episode ids: never collide with a decision's
+        self._strategy_trace_n = 0                # negative episode ids for strategy review traces (see _review_strategy)
         self.orders: list[str] = []               # standing orders, saved per campaign
         self.requests: queue.Queue[tuple[str, str]] = queue.Queue()   # ("decide", msg) | ("override", name)
         log.state.info["controls"] = ["instruct", "chat", "order_add", "order_remove", "decide_now", "override",
@@ -983,7 +983,11 @@ class Governor:
                 errs = []
             accepted = bool(r.change and new is not None and not errs)
 
-            self._strategy_trace_n -= 1        # negative: never collides with a decision's own episode number
+            # Negative, strictly decreasing "episode" (file traces/-0001.json, ...): it can never collide with a
+            # real decision's own (positive) episode number in the same run. Readers that mean "directive
+            # decisions" (past_outcomes, score, the dashboard's campaign/decisions APIs) filter this row out by
+            # `decision == 'strategy_review'`; only a lookup by exact (run_id, episode) is expected to see it.
+            self._strategy_trace_n -= 1
             n = self._strategy_trace_n
             outcome = "accepted" if accepted else (("rejected: " + "; ".join(errs))[:300] if errs else "no change")
             self.log.save_trace(n, {**base, "episode": n, "decision": "strategy_review", "reason": r.assessment,

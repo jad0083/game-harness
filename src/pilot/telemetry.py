@@ -184,14 +184,16 @@ class Telemetry:
     # -- outcome scoring ----------------------------------------------------------------------
 
     def score(self, campaign_id: str, after_months: int = 12) -> int:
-        """Fill `decisions.result` with metric deltas `after_months` later (where that far is known)."""
+        """Fill `decisions.result` with metric deltas `after_months` later (where that far is known).
+        Strategy review rows (`decision='strategy_review'`, negative episode) are not directive
+        decisions and are never scored."""
         mets = self.query("SELECT run_id, month, data FROM metrics WHERE campaign_id=? AND month IS NOT NULL "
                           "ORDER BY month", (campaign_id,))
         if not mets:
             return 0
         scored = 0
-        for d in self.query("SELECT run_id, episode, month FROM decisions WHERE campaign_id=? AND month IS NOT NULL",
-                            (campaign_id,)):
+        for d in self.query("SELECT run_id, episode, month FROM decisions WHERE campaign_id=? AND month IS NOT NULL"
+                            " AND decision != 'strategy_review'", (campaign_id,)):
             # same run only (a reloaded older save repeats months), and an end point close to the mark
             run = [(m["month"], json.loads(m["data"])) for m in mets if m["run_id"] == d["run_id"]]
             start = next((x for mo, x in run if mo >= d["month"]), None)
@@ -225,10 +227,11 @@ class Telemetry:
                 self.query("SELECT data FROM metrics WHERE campaign_id=? AND month IS NOT NULL ORDER BY month", (campaign_id,))]
 
     def past_outcomes(self, campaign_id: str, limit: int = 12) -> str:
-        """Text table of this campaign's earlier directive changes and what followed, for the model."""
+        """Text table of this campaign's earlier directive changes and what followed, for the model.
+        Excludes strategy review rows: they are not a directive change (Task 9 shows them separately)."""
         rows = self.query(
             "SELECT date, decision, current, trigger, result FROM decisions WHERE campaign_id=? AND decision IS NOT NULL"
-            " AND decision != 'keep' ORDER BY month DESC LIMIT ?", (campaign_id, limit))
+            " AND decision != 'keep' AND decision != 'strategy_review' ORDER BY month DESC LIMIT ?", (campaign_id, limit))
         if not rows:
             return "No earlier directive changes in this campaign."
         out = ["date | directive (from) | trigger | 12 months later"]

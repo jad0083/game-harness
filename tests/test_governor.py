@@ -255,10 +255,10 @@ def test_telemetry_api(setup, tmp_path):
     async def go():
         async with TestClient(TestServer(make_app(None, s.runs_dir, tel))) as c:
             camps = await (await c.get("/api/campaigns")).json()
-            # 3 = the start-of-run strategy review (its own trace row) plus the 2 real decisions
-            assert camps[0]["id"] == "stellaris/empire_1" and camps[0]["decisions"] == 3 and camps[0]["runs"] == 1
+            # the start-of-run strategy review also traces a row, but is not a directive decision
+            assert camps[0]["id"] == "stellaris/empire_1" and camps[0]["decisions"] == 2 and camps[0]["runs"] == 1
             ds = await (await c.get("/api/decisions", params={"campaign": "stellaris/empire_1"})).json()
-            assert [d["decision"] for d in ds] == ["strategy_review", "expand", "keep"] and ds[1]["model"] == s.model
+            assert [d["decision"] for d in ds] == ["expand", "keep"] and ds[0]["model"] == s.model
             one = await (await c.get("/api/decision", params={"run": "run9", "episode": "1"})).json()
             assert any(st["type"] == "tool_call" and st["tool"] == "consult" for st in one["trace"]["steps"])
             ms = await (await c.get("/api/metrics", params={"run": "run9"})).json()
@@ -689,8 +689,9 @@ def test_plans_api(setup, tmp_path):
             plans = await (await c.get("/api/plans", params={"campaign": "stellaris/e1"})).json()
             assert [p["source"] for p in plans] == ["decision"], plans          # only decisions write the plan now
             ds = await (await c.get("/api/decisions", params={"campaign": "stellaris/e1"})).json()
-            # a strategy review traces too: one at the start of run, one after 2 decisions (retro_every)
-            assert [d["decision"] for d in ds] == ["strategy_review", "expand", "keep", "keep", "strategy_review"]
+            # strategy reviews also trace (start of run, and after 2 decisions per retro_every) but are
+            # not directive decisions, so they are excluded here
+            assert [d["decision"] for d in ds] == ["expand", "keep", "keep"]
 
     asyncio.run(go())
 
@@ -1575,3 +1576,44 @@ def test_when_every_strategy_model_fails_play_continues_with_the_current_strateg
     assert g.review_requested == "start of run"
     assert any(e["kind"] == "episode_error" and "strategy review" in e["error"] for e in log.recent)
     assert ("directive", "expand") in game.actions, "play continued: the real decision still happened"
+
+
+# ---- Task 3 fix round 2: strategy review rows are not directive decisions ------------------------
+
+def test_strategy_review_rows_are_excluded_from_directive_decision_readers(setup, tmp_path):
+    """A strategy review's own trace row (decision='strategy_review') must never be read as a directive
+    decision: not in past_outcomes() text, never scored by score(), and not listed by the dashboard's
+    campaign/decisions APIs (Task 9 adds its own, deliberate review marks)."""
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from pilot.dashboard import make_app
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(s.runs_dir, "run10", s.model, telemetry=tel)
+    src = "save games/rev_1/x.sav"
+    game = FakeStellaris([{**briefing("2200.01.01"), "source": src}, {**briefing("2201.01.01"), "source": src}])
+    Governor(s, game, log, model=decisions("expand", "keep")).run(max_decisions=2)
+    cid = "stellaris/rev_1"
+
+    # past_outcomes(): the review is absent, not just outnumbered by real decisions
+    text = tel.past_outcomes(cid)
+    assert "strategy_review" not in text
+    assert "2200.01.01 | expand (from none)" in text
+
+    # score(): review rows are never scored, even though they carry a date/month like a decision
+    rows = tel.query("SELECT decision, result FROM decisions WHERE campaign_id=?", (cid,))
+    review_rows = [r for r in rows if r["decision"] == "strategy_review"]
+    assert review_rows, "the start-of-run review did trace its own row"
+    assert all(r["result"] is None for r in review_rows)
+
+    async def go():
+        async with TestClient(TestServer(make_app(None, s.runs_dir, tel))) as c:
+            camps = await (await c.get("/api/campaigns")).json()
+            assert camps[0]["decisions"] == 2, "only the 2 real decisions, not the review"
+            ds = await (await c.get("/api/decisions", params={"campaign": cid})).json()
+            assert [d["decision"] for d in ds] == ["expand", "keep"]
+
+    asyncio.run(go())
