@@ -76,6 +76,8 @@ pub struct Briefing {
     pub techs_known: usize,
     pub research: BTreeMap<String, Research>,
     pub policies: BTreeMap<String, String>,
+    /// Active edicts (script keys).
+    pub edicts: Vec<String>,
     pub flags: Vec<String>,
     pub planets: Vec<Planet>,
     pub wars: Vec<War>,
@@ -606,6 +608,9 @@ pub fn brief_gamestate(gamestate: &[u8]) -> Result<Briefing> {
             }
         }
     }
+    if let Some(ed) = get(&c, "edicts").and_then(|v| v.read_array().ok()) {
+        b.edicts = ed.values().filter_map(|x| x.read_object().ok()).filter_map(|e| string(&e, "edict")).collect();
+    }
     b.flags = obj(&c, "flags").map(|f| f.fields().map(|(k, _, _)| k.read_string()).collect()).unwrap_or_default();
 
     // 4.5: `owned_planets` holds colony ids; a colony's `carrier` points at its planet.
@@ -692,6 +697,7 @@ impl Briefing {
         }
         s += "Policies: ";
         s += &self.policies.iter().map(|(k, v)| format!("{k}={v}")).collect::<Vec<_>>().join(", ");
+        s += &format!("\nEdicts: {}", if self.edicts.is_empty() { "none".to_string() } else { self.edicts.join(", ") });
         s += "\nPlanets:\n";
         for p in &self.planets {
             let opt = |v: Option<f64>| v.map(num).unwrap_or_else(|| "-".into());
@@ -746,6 +752,7 @@ mod tests {
         assert_eq!(b.systems, 1, "only Sol in 2200.11");
         assert_eq!(b.last_human, "2200.09.24");
         assert!(b.wars.is_empty());
+        assert!(b.edicts.is_empty());
     }
 
     #[test]

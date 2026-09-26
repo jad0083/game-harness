@@ -111,4 +111,13 @@ Open questions for the build:
   seconds' delay. Every marker now carries a unique suffix and is polled for up to 8 s.
 - Live validation run (Gemini, Normal speed, 12-month cadence): 3 decisions, all `keep`, reasons
   citing stockpiles; the run was stopped to fix the control mode above.
+- **Edicts are not steerable from the console under `human_ai`**: `effect add_edict = map_the_stars`
+  took effect (`has_edict` true, logged at 2217.2.7 and again at 2217.7.1) but the edict was gone by
+  the next monthly save both times; the AI manages edicts itself. Policies, in contrast, stayed
+  20 months. Directives therefore stay flags + policies. Steering the AI's edict and build
+  choices needs the companion mod (`ai_weight` modifiers reading `governor_directive_*`), which
+  needs a file written into the game's `mod/` folder (the agent is read-only).
+- End-to-end governor run on the `human_ai` path (Gemini, Normal, 6-month cadence): take-control
+  at start ("human_ai is ON"), then 3 × `keep` (2216.02 – 2217.02) citing "influence maxed at 800
+  and only 4 systems owned" and positive nets; game left paused.
 
