@@ -250,10 +250,20 @@
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
   /* ---- settings dialog, pace summary, collapsible panels ---- */
-  dialog.settings { width: min(460px, 94vw); }
+  dialog.settings { width: min(600px, 94vw); }
   dialog fieldset { border: 0; border-top: 1px solid var(--hair); margin: 0; padding: 12px 0 0; display: grid; gap: 12px; }
   dialog legend { padding: 0 8px 0 0; font-weight: 600; font-size: 13px; color: var(--ink); }
   dialog .hint { font-size: 12.5px; color: var(--muted); }
+  dialog label.check { display: flex; align-items: center; gap: 8px; color: var(--ink); }
+  dialog label.check input { width: 16px; height: 16px; accent-color: var(--accent); }
+  .pool { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; counter-reset: pool; }
+  .pool li { display: grid; grid-template-columns: 18px 150px minmax(0, 1fr) 96px 30px; gap: 6px; align-items: center; counter-increment: pool; }
+  .pool li::before { content: counter(pool); font-size: 12.5px; color: var(--muted); text-align: right; }
+  .pool li select { min-width: 0; width: 100%; }
+  .pool li .rm { background: none; border: 1px solid var(--hair); border-radius: 6px; color: var(--ink-2); height: 30px; cursor: pointer; }
+  .pool li .rm:disabled { opacity: .35; cursor: default; }
+  .pool li .note { grid-column: 2 / -1; font-size: 12px; color: var(--warn); margin-top: -2px; }
+  @media (max-width: 520px) { .pool li { grid-template-columns: 18px 1fr 1fr; } .pool li .th { grid-column: 2; } .pool li .rm { grid-column: 3; } }
   dialog .inline-num { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-2); }
   .ro-pace { background: none; border: 0; padding: 0; text-align: left; color: inherit; font: inherit; cursor: pointer; border-radius: 6px; }
   .ro-pace:hover b, .ro-pace:focus-visible b { text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 4px; }
@@ -321,13 +331,11 @@
     <h2 id="settings-title">Settings</h2>
     <p class="hint" id="settings-hint">Changes apply at once to the running pilot and are saved for later runs.</p>
     <fieldset>
-      <legend>Model</legend>
-      <label>Model <select id="model-select"></select></label>
-      <label>Thinking <select id="thinking-select">
-        <option value="off">off</option><option value="low">low</option><option value="medium">medium</option><option value="high">high</option>
-      </select></label>
-      <label>Fallback model <select id="fallback-select"></select>
-        <span class="hint">Tried once when the model is still overloaded after its retries (503 high demand). Off skips that decision instead.</span></label>
+      <legend>Models</legend>
+      <label class="check"><input type="checkbox" id="rotate"> Take turns between these models</label>
+      <p class="hint" id="pool-hint"></p>
+      <ol class="pool" id="pool" aria-label="Models in order"></ol>
+      <div><button type="button" class="btn" id="pool-add">Add model</button></div>
     </fieldset>
     <fieldset>
       <legend>Pace</legend>
@@ -468,7 +476,6 @@ async function loadStatus() {
   $("status").className = "pill " + st.replace(/ /g, "_");
   document.querySelectorAll(".live-only").forEach((b) => (b.hidden = !S.live));
   const info = S.status.info || {};
-  syncPickers(S.live ? { models: info.models, model: S.status.model, thinking: info.thinking, fallback: info.fallback } : null);
   $("b-start").hidden = S.live || !S.ok;
   renderReadout();
   const paused = ["paused", "needs_attention"].includes(st);
@@ -1043,67 +1050,85 @@ S.catalog = null;
 async function loadCatalog() {
   try { S.catalog = await api("/api/models"); } catch { S.catalog = S.catalog || { models: [] }; }
 }
-function syncPickers(live) {
-  const cat = S.catalog || { models: [] };
-  const current = live ? live.model : cat.model, thinking = live ? live.thinking : cat.thinking;
-  const sel = $("model-select");
-  const models = [...new Set([...(cat.models || []), ...((live && live.models) || []), current])].filter(Boolean).sort();
-  const key = models.join("|");
-  if (sel.dataset.key !== key) {
-    sel.innerHTML = models.map((m) => `<option value="${esc(m)}">${esc(m.replace(/^google:/, ""))}</option>`).join("");
-    sel.dataset.key = key;
-  }
-  if (document.activeElement !== sel && current) sel.value = current;
-  if (document.activeElement !== $("thinking-select") && thinking) $("thinking-select").value = thinking;
-  const fb = (live && live.fallback) || cat.fallback || "none", fsel = $("fallback-select");
-  const fkey = "none|" + key;
-  if (fsel.dataset.key !== fkey) {
-    fsel.innerHTML = `<option value="none">off</option>` + models.map((m) => `<option value="${esc(m)}">${esc(m.replace(/^google:/, ""))}</option>`).join("");
-    fsel.dataset.key = fkey;
-  }
-  if (document.activeElement !== fsel) {
-    if (fb !== "none" && ![...fsel.options].some((o) => o.value === fb)) fsel.insertAdjacentHTML("beforeend", `<option value="${esc(fb)}">${esc(fb.replace(/^google:/, ""))}</option>`);
-    fsel.value = fb;
-  }
+// ---- model list: provider, model and thinking per entry; first decides unless taking turns ----
+const THINK = ["off", "low", "medium", "high"];
+const shortName = (m) => m.replace(/^[a-z-]+:/, "");
+function poolFrom(live) {
+  const cat = S.catalog || {};
+  return JSON.parse(JSON.stringify((live && live.models && live.models.length ? live.models : cat.pool) || []));
 }
-async function switchFallback() {
-  const fallback = $("fallback-select").value;
-  const r = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" },
-                                           body: JSON.stringify({ fallback }) });
+function renderPool() {
+  const cat = S.catalog || { providers: [] }, provs = cat.providers || [];
+  const byId = Object.fromEntries(provs.map((p) => [p.id, p]));
+  const pool = S.pool || [];
+  $("rotate").checked = !!S.rotate;
+  $("pool-hint").textContent = S.rotate
+    ? "Each decision starts with the next model in the list; if it is overloaded, the others are tried in order."
+    : "The first model makes every decision; the others are tried in order when it is overloaded (503 high demand).";
+  $("pool").innerHTML = pool.map((e, i) => {
+    const pid = e.model.split(":")[0], prov = byId[pid] || { models: [], configured: false, label: pid };
+    const models = [...new Set([...(prov.models || []), e.model])].sort();
+    const note = !prov.configured ? `No API key: add ${prov.key_env || pid.toUpperCase() + "_API_KEY"} to the pilot's .env to use ${prov.label}.`
+               : prov.error ? `Could not list ${prov.label} models: ${prov.error}` : "";
+    return `<li data-i="${i}">
+      <select class="pv" aria-label="Provider for model ${i + 1}">${provs.map((p) => `<option value="${esc(p.id)}"${p.id === pid ? " selected" : ""}>${esc(p.label)}${p.configured ? "" : " (no API key)"}</option>`).join("")}</select>
+      <select class="md" aria-label="Model ${i + 1}">${models.map((m) => `<option value="${esc(m)}"${m === e.model ? " selected" : ""}>${esc(shortName(m))}</option>`).join("")}</select>
+      <select class="th" aria-label="Thinking for model ${i + 1}">${THINK.map((t) => `<option${t === e.thinking ? " selected" : ""}>${t}</option>`).join("")}</select>
+      <button type="button" class="rm" aria-label="Remove model ${i + 1}"${pool.length < 2 ? " disabled" : ""}>×</button>
+      ${note ? `<span class="note">${esc(note)}</span>` : ""}</li>`;
+  }).join("");
+  $("pool-add").disabled = pool.length >= 6;
+}
+let poolT;
+function savePoolSoon() { clearTimeout(poolT); poolT = setTimeout(savePool, 350); }
+async function savePool() {
+  const body = { models: S.pool, rotate: !!S.rotate };
+  const r = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   if (!r.ok) { toast(`Could not save: ${await r.text()}`); return; }
   let live = false;
   if (S.live) {
     const c = await fetch("/control", { method: "POST", headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({ action: "set_fallback", model: fallback }) });
+                                        body: JSON.stringify({ action: "set_models", ...body }) });
     live = c.ok;
   }
-  const what = fallback === "none" ? "No fallback model: an overloaded model skips the decision" : `Fallback model ${fallback.replace(/^google:/, "")}`;
-  toast(live ? `${what}, from now on and for later runs.` : `${what} for the next run.`);
-  await loadCatalog(); loadStatus();
-}
-async function switchModel() {
-  const model = $("model-select").value, thinking = $("thinking-select").value;
-  const r = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" },
-                                           body: JSON.stringify({ model, thinking }) });
-  if (!r.ok) { toast(`Could not save: ${await r.text()}`); return; }
-  let live = false;
-  if (S.live) {
-    const c = await fetch("/control", { method: "POST", headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({ action: "set_model", model, thinking }) });
-    live = c.ok;
-  }
-  toast(live ? `Switched to ${model} (${thinking} thinking) from the next model call, and saved for later runs.`
-             : `Saved: the next run uses ${model} with ${thinking} thinking.`);
+  const first = shortName(S.pool[0].model);
+  toast(`${S.rotate ? `Taking turns between ${S.pool.length} models` : `${first} decides, ${S.pool.length - 1} fallback${S.pool.length === 2 ? "" : "s"}`}${live ? ", from the next decision; saved for later runs." : "; saved for the next run."}`);
   await loadCatalog();
-  loadStatus();
 }
-$("model-select").addEventListener("change", switchModel);
-$("b-settings").addEventListener("click", () => { loadCatalog().then(() => syncPickers(S.live ? liveModels() : null)); $("settings-dialog").showModal(); });
-$("ro-pace-btn").addEventListener("click", () => $("b-settings").click());
-function liveModels() {
+$("pool").addEventListener("change", (e) => {
+  const li = e.target.closest("li"); if (!li) return;
+  const i = +li.dataset.i, entry = S.pool[i];
+  if (e.target.classList.contains("pv")) {
+    const prov = ((S.catalog || {}).providers || []).find((p) => p.id === e.target.value);
+    entry.model = (prov && prov.models && prov.models[0]) || `${e.target.value}:`;
+    renderPool();
+    if (!entry.model.endsWith(":")) savePoolSoon();
+    return;
+  }
+  if (e.target.classList.contains("md")) entry.model = e.target.value;
+  if (e.target.classList.contains("th")) entry.thinking = e.target.value;
+  savePoolSoon();
+});
+$("pool").addEventListener("click", (e) => {
+  if (!e.target.classList.contains("rm")) return;
+  S.pool.splice(+e.target.closest("li").dataset.i, 1);
+  renderPool(); savePoolSoon();
+});
+$("pool-add").addEventListener("click", () => {
+  const last = S.pool[S.pool.length - 1] || { model: "google:", thinking: "medium" };
+  S.pool.push({ model: last.model, thinking: last.thinking });
+  renderPool(); savePoolSoon();
+});
+$("rotate").addEventListener("change", (e) => { S.rotate = e.target.checked; renderPool(); savePoolSoon(); });
+$("b-settings").addEventListener("click", async () => {
+  await loadCatalog();
   const info = S.status.info || {};
-  return { models: info.models, model: S.status.model, thinking: info.thinking, fallback: info.fallback };
-}
+  S.pool = poolFrom(S.live ? { models: info.pool } : null);
+  S.rotate = S.live && info.rotate !== undefined ? info.rotate : !!(S.catalog || {}).rotate;
+  renderPool();
+  $("settings-dialog").showModal();
+});
+$("ro-pace-btn").addEventListener("click", () => $("b-settings").click());
 // Collapsible panels (heading button); the choice is remembered in this browser.
 for (const sec of document.querySelectorAll("[data-collapsible]")) {
   const h2 = sec.querySelector("header h2"), key = "collapsed:" + sec.id;
@@ -1118,7 +1143,6 @@ for (const sec of document.querySelectorAll("[data-collapsible]")) {
   set(start);
   btn.addEventListener("click", () => set(!sec.classList.contains("collapsed")));
 }
-$("fallback-select").addEventListener("change", switchFallback);
 
 async function setPace(kind) {
   const speed = $("pace-speed").value, months = +$("pace-months").value;
@@ -1160,7 +1184,6 @@ $("start-dialog").addEventListener("close", async () => {
              : `Could not start: ${await r.text()}`);
   await loadCatalog();
 });
-$("thinking-select").addEventListener("change", switchModel);
 $("b-stop").addEventListener("click", () => { if (confirm("Stop the pilot? The game is paused when it stops.")) control({ action: "stop" }); });
 $("b-yes").addEventListener("click", () => control({ action: "answer", text: "yes" }));
 $("b-no").addEventListener("click", () => control({ action: "answer", text: "no" }));

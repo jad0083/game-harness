@@ -292,13 +292,16 @@ def model_settings(s: Settings) -> ModelSettings:
     # until it was restarted. A timeout is retried like a 503 (run_with_retry).
     base = ModelSettings(timeout=s.model_timeout_s)
     if s.thinking == "off":
-        return base
+        if s.provider.startswith(("google", "openai")):
+            return base
+        return ModelSettings(**base, thinking=False)  # type: ignore[typeddict-unknown-key]
     if s.provider.startswith("google"):
         # include_thoughts: Gemini returns thought summaries, shown in the dashboard's decision traces.
         return ModelSettings(**base, google_thinking_config={"thinking_level": s.thinking, "include_thoughts": True})  # type: ignore[typeddict-unknown-key]
     if s.provider.startswith("openai"):
         return ModelSettings(**base, openai_reasoning_effort=s.thinking)  # type: ignore[typeddict-unknown-key]
-    return base
+    # Anthropic and others: pydantic-ai's provider-neutral thinking level
+    return ModelSettings(**base, thinking=s.thinking)  # type: ignore[typeddict-unknown-key]
 
 
 def build_agent(s: Settings, game_briefing: str, model=None) -> Agent[Deps, EpisodeResult]:

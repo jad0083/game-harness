@@ -300,38 +300,63 @@ class Governor:
         self.orders: list[str] = []               # standing orders, saved per campaign
         self.requests: queue.Queue[tuple[str, str]] = queue.Queue()   # ("decide", msg) | ("override", name)
         log.state.info["controls"] = ["instruct", "chat", "order_add", "order_remove", "decide_now", "override",
-                                      "set_model", "set_fallback", "set_speed", "set_months"]
+                                      "set_model", "set_models", "set_fallback", "set_speed", "set_months"]
         log.state.info["thinking"] = settings.governor_thinking
-        log.state.info["fallback"] = settings.fallback_model or "none"
+        log.state.info["pool"] = settings.pool()
+        log.state.info["rotate"] = settings.rotate
         log.state.info["directives"] = list(DIRECTIVES)
 
-    def set_fallback(self, model: str | None) -> None:
-        """The model tried once when the main one stays overloaded; "none" switches it off."""
-        from .models import valid_model
-        if model in (None, "", "none"):
-            self.s = replace(self.s, fallback_model=None)
-        elif valid_model(model):
-            self.s = replace(self.s, fallback_model=model)
-        else:
-            raise ValueError(f"not a model name: {model!r} (expected provider:name, or none)")
-        self._fallback_obj = None
-        self.log.state.info["fallback"] = self.s.fallback_model or "none"
-        self.log.emit("fallback_model", model=self.s.fallback_model or "none")
+    # ---- model pool ----------------------------------------------------------------------------
 
-    def _fallback_name(self):
+    def _pool(self) -> list[dict]:
+        """The models in order ({"model", "thinking", "obj"}); `obj` is a Model instance in tests."""
+        pool = self.s.pool()
+        if self._model_obj is not None:
+            pool[0] = {**pool[0], "obj": self._model_obj}
         if self._fallback_obj is not None:
-            return getattr(self._fallback_obj, "model_name", "fallback")
-        fb = self.s.fallback_model
-        return fb if fb and fb != self.s.model else None
+            pool = [pool[0], {"model": getattr(self._fallback_obj, "model_name", "fallback"),
+                              "thinking": pool[0]["thinking"], "obj": self._fallback_obj}]
+        return pool
 
-    def _fallback_agent(self):
-        """The decision agent on the fallback model (None when there is none or it is the main model)."""
-        m = self._fallback_obj or self._fallback_name()
-        if m is None:
-            return None
-        if getattr(self, "_fallback_cache", (None, None))[0] != m:
-            self._fallback_cache = (m, build_governor(self.s, self._text, model=m))
-        return self._fallback_cache[1]
+    def _agent_for(self, entry: dict):
+        """The decision agent for one pool entry, built once per (model, thinking)."""
+        key = (entry.get("obj") and id(entry["obj"]), entry["model"], entry["thinking"])
+        cache = self.__dict__.setdefault("_agents", {})
+        if key not in cache:
+            model = entry.get("obj") or entry["model"]
+            settings = replace(self.s, governor_thinking=entry["thinking"],
+                               model=entry["model"] if isinstance(model, str) else self.s.model)
+            cache[key] = build_governor(settings, self._text, model=model)
+        return cache[key]
+
+    def _order(self) -> list[dict]:
+        """This decision's models: the pool as listed, or starting one further on each time (rotate)."""
+        pool = self._pool()
+        if not self.s.rotate or len(pool) < 2:
+            return pool
+        turn = self.__dict__.get("_turn", 0)
+        self._turn = turn + 1
+        i = turn % len(pool)
+        return pool[i:] + pool[:i]
+
+    def set_models(self, models: list[dict], rotate: bool | None = None) -> None:
+        """Replace the model pool (each with its thinking level) and whether they take turns."""
+        from .models import check_pool
+        pool = check_pool(models)
+        self.s = replace(self.s, models=tuple(pool), model=pool[0]["model"], governor_thinking=pool[0]["thinking"],
+                         rotate=self.s.rotate if rotate is None else bool(rotate))
+        self._model_obj = self._fallback_obj = None
+        self.__dict__.pop("_agents", None)
+        self._build_agents()
+        self.log.state.model = pool[0]["model"]
+        self.log.state.info.update(pool=pool, rotate=self.s.rotate, thinking=pool[0]["thinking"])
+        self.log.emit("models", models=pool, rotate=self.s.rotate)
+
+    def set_fallback(self, model: str | None) -> None:
+        """Older control: the pool becomes the first model plus this one ("none": the first alone)."""
+        first = self.s.pool()[0]
+        pool = [first] if model in (None, "", "none") else [first, {"model": model, "thinking": first["thinking"]}]
+        self.set_models(pool)
 
     def _build_agents(self) -> None:
         """(Re)build the decision, chat and retrospective agents for the current model settings."""
@@ -347,18 +372,16 @@ class Governor:
             model_settings=governor_settings(s), retries=2)
 
     def set_model(self, model: str, thinking: str | None = None) -> None:
-        """Switch model (and thinking level) from the next model call on."""
+        """Older control: replace the first model of the pool (the others stay)."""
         from .models import THINKING, valid_model
         if not valid_model(model):
             raise ValueError(f"not a model name: {model!r} (expected provider:name)")
         if thinking is not None and thinking not in THINKING:
             raise ValueError(f"thinking must be one of {', '.join(THINKING)}")
-        self.s = replace(self.s, model=model, governor_thinking=thinking or self.s.governor_thinking)
-        self._model_obj = None
-        self._build_agents()
-        self.log.state.model = model
-        self.log.state.info["thinking"] = self.s.governor_thinking
-        self.log.emit("model", model=model, thinking=self.s.governor_thinking)
+        pool = self.s.pool()
+        pool[0] = {"model": model, "thinking": thinking or pool[0]["thinking"]}
+        self.set_models(pool)
+        self.log.emit("model", model=model, thinking=pool[0]["thinking"])
 
     # dashboard controls (same surface as Pilot)
     def pause(self) -> None:
@@ -720,16 +743,21 @@ class Governor:
         def ask(agent):
             return agent.run_sync("\n".join(prompt), deps=deps,
                                   usage_limits=UsageLimits(request_limit=self.s.governor_max_requests))
+        order = self._order()
         try:
-            try:
-                result = run_with_retry(lambda: ask(self.agent), self.s.retry_delays, self._on_retry)
-            except Exception as first:
-                fallback = self._fallback_agent()
-                if fallback is None or not transient(first):
-                    raise
-                self.log.emit("model_fallback", error=f"{type(first).__name__}: {first}"[:300],
-                              fallback=str(self._fallback_name()))
-                result = ask(fallback)
+            result = None
+            for i, entry in enumerate(order):
+                base.update(model=entry["model"], thinking_level=entry["thinking"])
+                try:
+                    # the first model gets the retries; the others one try each, only after an overload
+                    agent = self._agent_for(entry)
+                    result = (run_with_retry(lambda agent=agent: ask(agent), self.s.retry_delays, self._on_retry)
+                              if i == 0 else ask(agent))
+                    break
+                except Exception as e:
+                    if not transient(e) or i == len(order) - 1:
+                        raise
+                    self.log.emit("model_fallback", error=f"{type(e).__name__}: {e}"[:300], fallback=order[i + 1]["model"])
         except Exception as e:  # noqa: BLE001 - keep playing with the current directive
             if isinstance(e, UsageLimitExceeded):
                 e = RuntimeError(f"no answer within {self.s.governor_max_requests} model calls; "
