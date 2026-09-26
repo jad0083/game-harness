@@ -27,6 +27,15 @@ struct LearnedOverlay {
     hotkeys: HashMap<String, String>,
 }
 
+/// A per-resolution overlay (`res/<W>x<H>.toml`): screens and `[ui.*]` points measured on that size.
+#[derive(Debug, Deserialize, Default)]
+struct ResolutionOverlay {
+    #[serde(default)]
+    screens: HashMap<String, ScreenDef>,
+    #[serde(default)]
+    ui: toml::Table,
+}
+
 /// Manifest file names, in the order they are tried.
 pub const MANIFEST_FILES: [&str; 2] = ["manifest.toml", "game.toml"];
 /// Upper bound on a prose chunk; a single longer paragraph becomes its own chunk.
@@ -180,12 +189,45 @@ pub enum MacroAction {
 }
 
 impl GameManifest {
+    /// Load the manifest and, when `GAME_RESOLUTION` is set (e.g. `2560x1440`), its resolution
+    /// overlay (`res/<resolution>.toml` next to it; see [`Self::load_for_resolution`]).
     pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let content = std::fs::read_to_string(path.as_ref())
-            .with_context(|| format!("Failed to read game corpus manifest at {:?}", path.as_ref()))?;
+        let res = std::env::var("GAME_RESOLUTION").ok().filter(|r| !r.trim().is_empty());
+        Self::load_for_resolution(path, res.as_deref())
+    }
+
+    /// Load the manifest, then merge `res/<resolution>.toml` from the corpus directory when it
+    /// exists: screen positions and templates are measured on one screen size, and a host with a
+    /// different size (the UI scales differently) needs its own. Overlay screens replace the
+    /// manifest's; overlay `[ui.*]` keys replace the manifest's keys one by one.
+    pub fn load_for_resolution<P: AsRef<Path>>(path: P, resolution: Option<&str>) -> Result<Self> {
+        let mut manifest = Self::load_base(path.as_ref())?;
+        if let (Some(res), Some(dir)) = (resolution, manifest.base_dir.clone()) {
+            let file = dir.join("res").join(format!("{}.toml", res.trim()));
+            if file.exists() {
+                let content = std::fs::read_to_string(&file).with_context(|| format!("reading {:?}", file))?;
+                let overlay: ResolutionOverlay =
+                    toml::from_str(&content).with_context(|| format!("parsing resolution overlay {:?}", file))?;
+                manifest.screens.extend(overlay.screens);
+                for (section, value) in overlay.ui {
+                    match (manifest.ui.get_mut(&section), value) {
+                        (Some(toml::Value::Table(base)), toml::Value::Table(over)) => base.extend(over),
+                        (_, value) => {
+                            manifest.ui.insert(section, value);
+                        }
+                    }
+                }
+            }
+        }
+        Ok(manifest)
+    }
+
+    fn load_base(path: &Path) -> Result<Self> {
+        let content = std::fs::read_to_string(path)
+            .with_context(|| format!("Failed to read game corpus manifest at {:?}", path))?;
         let mut manifest: Self = toml::from_str(&content)
-            .with_context(|| format!("Failed to parse game corpus TOML at {:?}", path.as_ref()))?;
-        manifest.base_dir = path.as_ref().parent().map(Path::to_path_buf);
+            .with_context(|| format!("Failed to parse game corpus TOML at {:?}", path))?;
+        manifest.base_dir = path.parent().map(Path::to_path_buf);
         if let Some(dir) = manifest.base_dir.clone() {
             manifest.merge_learned(&dir.join(LEARNED_DIR).join("manifest.toml"))?;
         }
@@ -706,6 +748,27 @@ fn file_stem(p: &Path) -> String {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn a_resolution_overlay_replaces_screens_and_ui_points() {
+        let dir = std::env::temp_dir().join(format!("res_overlay_{}", std::process::id()));
+        std::fs::create_dir_all(dir.join("res")).unwrap();
+        std::fs::write(dir.join("manifest.toml"), "[metadata]\nid = \"g\"\nname = \"G\"\nversion = \"1\"\nprocess_title = \"G\"\nnative_resolution = [3840, 2160]\ndownscaled_resolution = [1568, 882]\n[hotkeys]\n[screens.paused]\ndescription = \"4k\"\ntemplate_roi = [0.1, 0.1, 0.1, 0.1]\n\
+[ui.tech]\nfirst_option = [390, 125]\noption_pitch = 62\n").unwrap();
+        std::fs::write(dir.join("res/2560x1440.toml"), "[screens.paused]\ndescription = \"1440p\"\ntemplate_roi = [0.2, 0.2, 0.2, 0.2]\n\
+[ui.tech]\nfirst_option = [400, 140]\n").unwrap();
+        let plain = GameManifest::load_from_file(dir.join("manifest.toml")).unwrap();
+        assert_eq!(plain.screens["paused"].description, "4k");
+        let m = GameManifest::load_for_resolution(dir.join("manifest.toml"), Some("2560x1440")).unwrap();
+        assert_eq!(m.screens["paused"].description, "1440p", "the overlay's screen wins");
+        let tech = m.ui["tech"].as_table().unwrap();
+        assert_eq!(tech["first_option"].as_array().unwrap()[1].as_integer(), Some(140), "overlay point wins");
+        assert_eq!(tech["option_pitch"].as_integer(), Some(62), "keys the overlay does not set are kept");
+        let none = GameManifest::load_for_resolution(dir.join("manifest.toml"), Some("1920x1080")).unwrap();
+        assert_eq!(none.screens["paused"].description, "4k", "no overlay file: the manifest as is");
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
     use super::*;
 
     const MANIFEST: &str = r#"

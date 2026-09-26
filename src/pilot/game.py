@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 import re
 import subprocess
 import threading
@@ -68,6 +69,8 @@ class McpGame:
         self.env = {"GAME_AGENT_URL": agent_url, "PATH": "/usr/bin:/bin"}
         if token:
             self.env["GAME_AGENT_TOKEN"] = token
+        if os.environ.get("GAME_RESOLUTION"):      # the host's screen size selects res/<W>x<H>.toml
+            self.env["GAME_RESOLUTION"] = os.environ["GAME_RESOLUTION"]
         self.cwd = cwd
         self.agent_url = agent_url.rstrip("/")
         self.GAME_TITLE = title
