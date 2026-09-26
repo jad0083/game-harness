@@ -90,4 +90,4 @@
 - [x] Dashboard updates itself: live/history switching, event stream with de-duplication, periodic refresh, freshness indicator, reader follows the newest decision
 - [x] Default model Gemini 3.8 Flash with `medium` thinking for GC4 episodes and Stellaris decisions (thought summaries in traces)
 - [x] Peer benchmarks in the Stellaris briefing (ours vs median/best of the other regular empires, rank, FALLING BEHIND line), urgent trigger when newly behind, standing line on the dashboard
-- [ ] Briefing: why expansion stalls (surveyed/unclaimed systems in reach, construction ships, border closure) so the governor can name the constraint
+- [x] Briefing: expansion room (unclaimed systems 1–2 jumps out, surveyed by us, held by others), construction/science/colony ships, BOXED IN / NO CONSTRUCTION SHIP lines
