@@ -89,6 +89,17 @@ template_roi = [0.4719, 0.5782, 0.0587, 0.0204]
 template_threshold = 0.06
 template_search = 3
 
+# The console is open: the blue "Debug View" bar under the console output (4.5.1; present in every
+# console frame captured so far, over any map background). Colour signature (verified 2026-09-26:
+# 73% of the strip open, <= 0.2% on eight closed frames incl. menus and bright nebulae). Console
+# lines are typed only after this shows, so keystrokes never land on the map as hotkeys.
+[screens.console_open]
+description = "Console open (Debug View bar under the console output)"
+template = "templates/stellaris_console_open.png"
+template_roi = [0.0255, 0.2608, 0.2041, 0.0068]
+color_range = [[50, 100, 170], [140, 175, 255]]
+color_min_fraction = 0.3
+
 # The console's reply to `human_ai` ("Human AI is now ON" / "... OFF"), read on the bottom output
 # line after `help` has filled the console. The two words are told apart by which template is
 # closer (verified 2026-09-25: 0.048 apart; each matches itself at ~0.01).

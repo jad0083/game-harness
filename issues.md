@@ -2,6 +2,8 @@
 
 ## Open
 
+- [x] Directives failed twice (2218.04, 2219.05 in the Theian test): console `effect` runs on the selected map object, so with a mining station selected the policies changed but the directive flag and the confirmation did not. Fixed: the console is opened only after Esc drops the selection (game menu closed again) and only when the Debug View bar shows it really opened; verified by applying `expand` by hand after deselecting (2026-09-26)
+- [x] Event popups under `human_ai`: the game's AI answers them itself (game.log: "selectedOption 0, human -1"); only informational popups such as a declaration of war stay on screen
 - [x] Starting a run on a brand-new game read the newest autosave, which belonged to another campaign (the new game had none yet); the start decision was `keep`, so nothing was applied, but a change would have hit the wrong empire. Fixed: when the newest autosave is over 5 minutes old at start, the governor plays until a fresh one is written (2026-09-26)
 - [x] Gemini Flash models answered 503 "high demand" through all retries for several decisions (2026-09-26; 39 × 503 and no 429 across all runs, so not our call rate). Fixed: a fallback model (default gemini-3.1-pro-preview, choosable on the dashboard, `off` to skip) is tried once after the retries
 - [x] Briefing display: first-contact and fleet-doctrine policies were missing from the policies line, prescripted species names kept underscores, and an unformed Galactic Community read "0 members"
