@@ -54,6 +54,8 @@
   .pill.deciding::before { background: var(--thought); }
   .pill.paused::before, .pill.needs_attention::before { background: var(--warn); }
   .pill.stopped::before, .pill.viewer::before { background: var(--muted); }
+  .fresh { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  .fresh.lost { color: var(--warn); font-weight: 600; }
   .facts { display: flex; flex-wrap: wrap; gap: 4px 16px; color: var(--ink-2); font-size: 13.5px; }
   .facts b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
   .spacer { flex: 1; }
@@ -201,6 +203,7 @@
   <span class="brand">Game Pilot</span>
   <label class="campaign"><span class="sr">Campaign</span><select id="campaign"></select></label>
   <span id="status" class="pill">connecting</span>
+  <span class="fresh" id="fresh" aria-live="polite"></span>
   <div class="facts" id="facts"></div>
   <span class="spacer"></span>
   <button class="btn live-only" id="b-pause" hidden>Pause</button>
@@ -305,7 +308,8 @@ const color = (i) => `var(--s${i + 1})`;
 
 // ---------- status & campaign ----------
 async function loadStatus() {
-  try { S.status = await api("/status"); } catch { S.status = { status: "offline" }; }
+  try { S.status = await api("/status"); S.ok = true; S.lastOk = Date.now(); }
+  catch { S.status = { status: "offline", live: S.live }; S.ok = false; return; }   // keep the page as it is
   S.live = !!S.status.live;
   const st = S.status.status || "viewer";
   $("status").textContent = { needs_attention: "needs attention", viewer: "viewing history" }[st] || st;
@@ -358,7 +362,10 @@ async function loadCampaignData() {
   const qs = "campaign=" + encodeURIComponent(S.campaign);
   [S.decisions, S.metrics] = await Promise.all([api("/api/decisions?" + qs), api("/api/metrics?" + qs)]);
   renderChart(); renderDecisions();
-  if (!S.sel && S.decisions.length) selectDecision(S.decisions[S.decisions.length - 1]);
+  const newest = S.decisions[S.decisions.length - 1];
+  // follow the newest decision unless the reader picked an older one
+  if (newest && (!S.sel || S.follow) && !(S.sel && S.sel.run_id === newest.run_id && S.sel.episode === newest.episode))
+    selectDecision(newest, false);
   const last = S.decisions[S.decisions.length - 1];
   $("frame").src = S.live ? "/frame.jpg?t=" + Date.now() : last ? `/runs/${encodeURIComponent(last.run_id)}/frame.jpg` : "";
 }
@@ -500,10 +507,13 @@ function renderDecisions() {
   ul.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => selectDecision(S.decisions[+b.dataset.i])));
 }
 
-async function selectDecision(d) {
+async function selectDecision(d, byUser = true) {
   if (!d) return;
   S.sel = { run_id: d.run_id, episode: d.episode };
-  renderDecisions(); renderChart(); showTab("reasoning");
+  const newest = S.decisions[S.decisions.length - 1];
+  S.follow = !!newest && newest.run_id === d.run_id && newest.episode === d.episode;
+  renderDecisions(); renderChart();
+  if (byUser) showTab("reasoning"); else flag("reasoning");
   const box = $("tab-reasoning");
   box.innerHTML = `<p class="empty">Loading…</p>`;
   try { renderTrace(await api(`/api/decision?run=${encodeURIComponent(d.run_id)}&episode=${d.episode}`)); }
@@ -627,22 +637,71 @@ function addFeed(ev) {
 }
 
 // ---------- live updates ----------
-let refreshTimer = null;
+// The page keeps itself current: status every 3 s (switching between live and history on its own),
+// the live event stream while a run is live, and campaign data every 10 s otherwise.
+let es = null, wasLive = null, liveRun = null, refreshTimer = null;
+const seenEv = new Set();
+function isNew(ev) {
+  const k = `${ev.t}|${ev.kind}|${ev.text || ev.decision || ev.action || ""}`;
+  if (seenEv.has(k)) return false;            // the stream replays recent events on reconnect
+  seenEv.add(k);
+  if (seenEv.size > 6000) seenEv.clear();
+  return true;
+}
 const refreshSoon = () => { clearTimeout(refreshTimer); refreshTimer = setTimeout(async () => { await loadCampaigns(); await loadCampaignData(); }, 400); };
+function onEvent(ev) {
+  S.lastOk = Date.now();
+  if (!isNew(ev)) return;
+  addFeed(ev);
+  if (ev.kind === "chat") addMessage(ev);
+  if (ev.kind === "trace" || ev.kind === "campaign") refreshSoon();
+  if (ev.kind === "metrics" && S.campaign === (S.status.info || {}).campaign) {
+    S.metrics.push({ ...ev, month: ev.date ? (+ev.date.split(".")[0]) * 12 + (+ev.date.split(".")[1]) - 1 : null });
+    renderChart();
+  }
+  if (["action", "autopilot", "trace", "needs_attention"].includes(ev.kind)) $("frame").src = "/frame.jpg?t=" + Date.now();
+  if (ev.kind !== "metrics") loadStatus();
+}
 function connect() {
-  const es = new EventSource("/events");
-  es.onmessage = (m) => {
-    const ev = JSON.parse(m.data);
-    addFeed(ev);
-    if (ev.kind === "chat") addMessage(ev);
-    if (ev.kind === "trace" || ev.kind === "campaign") refreshSoon();
-    if (ev.kind === "metrics" && S.campaign === (S.status.info || {}).campaign) {
-      S.metrics.push({ ...ev, month: ev.date ? (+ev.date.split(".")[0]) * 12 + (+ev.date.split(".")[1]) - 1 : null });
-      renderChart();
-    }
-    if (["action", "autopilot", "trace"].includes(ev.kind)) $("frame").src = "/frame.jpg?t=" + Date.now();
-    if (!["metrics"].includes(ev.kind)) loadStatus();
-  };
+  if (es && es.readyState !== EventSource.CLOSED) return;
+  es = new EventSource("/events");                // reconnects by itself after a drop
+  es.onmessage = (m) => onEvent(JSON.parse(m.data));
+  es.onopen = () => { S.lastOk = Date.now(); S.streamOk = true; };
+  es.onerror = () => { S.streamOk = false; };
+}
+function disconnect() { if (es) es.close(); es = null; }
+
+async function sync() {
+  await loadStatus();
+  if (!S.ok) return;
+  const run = S.status.run_id || null;
+  if (S.live && (wasLive !== true || run !== liveRun)) {        // a run started (or a new one replaced it)
+    liveRun = run;
+    setMode(((S.status.info || {}).controls || []).includes("chat") ? "chat" : "instruct");
+    try { (await api("/events.json?n=300")).forEach((e) => { if (isNew(e)) { addFeed(e); if (e.kind === "chat") addMessage(e); } }); } catch { /* older server */ }
+    connect();
+    await loadCampaigns(); await loadCampaignData();
+  } else if (!S.live && wasLive === true) {                       // the run ended
+    disconnect();
+    await loadCampaigns(); await loadCampaignData();
+  }
+  wasLive = S.live;
+}
+
+async function loadHistoryFeed() {
+  try {
+    const runs = await api("/runs");
+    if (runs[0]) (await api(`/runs/${encodeURIComponent(runs[0].id)}/events`)).forEach((e) => { if (isNew(e)) addFeed(e); });
+  } catch { /* no runs */ }
+}
+
+function freshness() {
+  const el = $("fresh");
+  if (!S.lastOk) { el.textContent = ""; return; }
+  const secs = Math.round((Date.now() - S.lastOk) / 1000);
+  const lost = !S.ok || (S.live && S.streamOk === false && secs > 10);
+  el.className = "fresh" + (lost ? " lost" : "");
+  el.textContent = lost ? "Reconnecting…" : (S.live ? "Live" : "Updated") + (secs < 3 ? " just now" : `, ${secs} s ago`);
 }
 
 // ---------- wiring ----------
@@ -666,16 +725,15 @@ let resizeT; addEventListener("resize", () => { clearTimeout(resizeT); resizeT =
   setMode(((S.status.info || {}).controls || []).includes("chat") ? "chat" : "instruct");
   await loadCampaigns();
   await loadCampaignData();
-  if (S.live) {
-    try { (await api("/events.json?n=300")).filter((e) => e.kind === "chat").forEach(addMessage); } catch { /* older server */ }
-    connect();
-    setInterval(loadStatus, 5000);
-  } else {
-    try {
-      const runs = await api("/runs");
-      if (runs[0]) (await api(`/runs/${encodeURIComponent(runs[0].id)}/events`)).forEach(addFeed);
-    } catch { /* no runs */ }
-  }
+  if (!S.live) await loadHistoryFeed();
+  await sync();
+  setInterval(sync, 3000);
+  setInterval(async () => {
+    if (!S.ok) return;
+    if (S.live) { connect(); $("frame").src = "/frame.jpg?t=" + Date.now(); }
+    else { await loadCampaigns(); await loadCampaignData(); await loadHistoryFeed(); }
+  }, 10000);
+  setInterval(freshness, 1000);
 })();
 </script>
 </body>

@@ -220,11 +220,16 @@ echo 'GEMINI_API_KEY=…' >> .env                 # or OPENAI_API_KEY / ANTHROPI
 .venv/bin/python -m pilot run --model openai:gpt-5 --game stellaris --episodes 3 --no-commit
 ```
 Environment overrides: `PILOT_MODEL`, `PILOT_GAME`, `PILOT_SPEED`, `PILOT_DECIDE_MONTHS`,
-`PILOT_POLL_S`, `PILOT_PORT`, `PILOT_COMMIT`, `PILOT_JOURNAL`, `PILOT_THINKING`, `PILOT_CAMPAIGN`,
+`PILOT_POLL_S`, `PILOT_PORT`, `PILOT_COMMIT`, `PILOT_JOURNAL`, `PILOT_THINKING` (GC4 episodes, default
+`low`), `PILOT_GOVERNOR_THINKING` (Stellaris decisions, default `medium`: Gemini then returns a
+thought summary for the dashboard), `PILOT_CAMPAIGN`,
 `PILOT_RUNS_DIR`.
 
 ### Dashboard (LAN): `http://192.168.1.76:8780/`
-Always on (`deploy/game-pilot-view.service`, a systemd user service; linger is enabled). It shows
+Always on (`deploy/game-pilot-view.service`, a systemd user service; linger is enabled). It keeps
+itself current without reloading: status every 3 s (switching between live and history when a
+run starts or ends), the live event stream during a run, campaign data every 10 s otherwise, and a
+"Live / Updated N s ago / Reconnecting…" indicator. It shows
 every recorded campaign and, while a pilot runs, forwards its live controls (the pilot's own
 dashboard is on :8790).
 - **Empire over time**: net income, stockpile, power (or a table) over in-game months, the directive
