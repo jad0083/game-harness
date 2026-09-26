@@ -117,25 +117,30 @@ template_search = 2
 
 # Screen steps for tech picks and market orders (Task 6). Points are [x, y] in the 1568x882 image
 # space (AGENTS.md §1), read by `ui_point` in stellaris.rs (`pick_tech`, `sync_market`).
-# values from the 2026-09-26 session; [0,0] = not yet measured
-[ui.tech]   # verified 2026-09-26 on 4.5.1, 1568x882 image space
+# verified live 2381.03 on 4.5.1: clicking swap drops the current research at once; the list shows
+# the save's alternatives that come before the current tech, then the current tech; only 4 cards fit
+[ui.tech]
 open_key = "f4"
 swap = { physics = [229, 168], society = [229, 249], engineering = [229, 331] }
 first_option = [390, 125]
-option_pitch = 66
+option_pitch = 62
+visible_options = 4
 close_key = "esc"
 
+# verified live 2381.03 on 4.5.1
 [ui.market]
 open_click = [48, 10]
 add = [382, 156]
-buy = [816, 311]
+buy = [831, 311]
 sell = [873, 311]
-resources = { energy = [820, 335], minerals = [837, 335], food = [855, 335], alloys = [872, 335], consumer_goods = [820, 353], trade = [0, 0] }
+resources = { energy = [820, 335], minerals = [838, 335], food = [856, 335], consumer_goods = [873, 335], alloys = [820, 353], volatile_motes = [838, 353], exotic_gases = [856, 353], rare_crystals = [873, 353], sr_living_metal = [820, 371], sr_zro = [838, 371], sr_dark_matter = [856, 371] }   # no trade: it is not a market resource
+minus = [820, 388]
 plus = [855, 388]
-confirm = [863, 452]
-order_row_first = [370, 161]
-order_row_pitch = 14
-remove = [0, 0]
+confirm = [863, 451]
+remove = [787, 451]   # removal flow: click the order row (opens its edit dialog), then this button
+order_row_first = [380, 181]
+order_row_pitch = 0   # not yet measured (only one order existed live); kept at 0 so removing more
+                       # than the first row is refused rather than clicking the wrong row
 close_key = "esc"
 
 # Planned:

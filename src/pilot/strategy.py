@@ -114,11 +114,14 @@ def validate(s: Strategy, *, previous: Strategy | None, tech_ids: set[str], idle
         if len(pl.market) > 2:
             errs.append(f"{name}: at most 2 market orders")
         for o in pl.market:
-            cap = 25 if o.resource == "trade" else 0.2 * max(income.get(o.resource, 0.0), 0.0)
+            if o.resource == "trade":
+                errs.append(f"{name}: trade cannot be sold or bought on the market")
+                continue
+            cap = 0.2 * max(income.get(o.resource, 0.0), 0.0)
             if o.side == "sell" and o.resource not in idle:
                 errs.append(f"{name}: selling {o.resource} but it is not idle")
             if o.side == "sell":
-                if o.resource != "trade" and o.resource not in income:
+                if o.resource not in income:
                     errs.append(f"{name}: no monthly income known for {o.resource}")
                 elif o.amount > cap:
                     errs.append(f"{name}: sell {o.resource} {o.amount} is over {cap:.0f} (20% of monthly income)")
