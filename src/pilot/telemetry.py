@@ -58,6 +58,10 @@ CREATE TABLE IF NOT EXISTS plans (
     text TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS plans_campaign ON plans(campaign_id, t);
+CREATE TABLE IF NOT EXISTS strategies (
+    campaign_id TEXT, run_id TEXT NOT NULL, t REAL, date TEXT, trigger TEXT, model TEXT, data TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS strategies_campaign ON strategies(campaign_id, t);
 """
 
 # Numbers compared N months after a decision (from the governor's metrics events).
@@ -117,6 +121,7 @@ class Telemetry:
         self._exec("UPDATE decisions SET campaign_id=? WHERE run_id=? AND campaign_id IS NULL", (cid, run_id))
         self._exec("UPDATE metrics SET campaign_id=? WHERE run_id=? AND campaign_id IS NULL", (cid, run_id))
         self._exec("UPDATE plans SET campaign_id=? WHERE run_id=? AND campaign_id IS NULL", (cid, run_id))
+        self._exec("UPDATE strategies SET campaign_id=? WHERE run_id=? AND campaign_id IS NULL", (cid, run_id))
         return cid
 
     def _title_from_trace(self, run_id: str, tr: dict) -> None:
@@ -157,6 +162,10 @@ class Telemetry:
         elif kind == "plan":
             self._exec("INSERT INTO plans(campaign_id, run_id, t, date, source, text) VALUES (?,?,?,?,?,?)",
                        (self._campaign_of(run_id), run_id, t, data.get("date"), data.get("source"), data.get("text", "")))
+        elif kind == "strategy":
+            self._exec("INSERT INTO strategies(campaign_id, run_id, t, date, trigger, model, data) VALUES (?,?,?,?,?,?,?)",
+                       (self._campaign_of(run_id), run_id, t, data.get("date"), data.get("trigger"), data.get("model"),
+                        json.dumps({**(data.get("strategy") or {}), "reason": data.get("reason", "")}, default=str)))
         elif kind == "trace":
             tr = trace or {}
             self._title_from_trace(run_id, tr)
@@ -201,6 +210,20 @@ class Telemetry:
         rows = self.query("SELECT text FROM plans WHERE campaign_id=? ORDER BY t DESC LIMIT 1", (campaign_id,))
         return rows[0]["text"] if rows else ""
 
+    def latest_strategy(self, campaign_id: str) -> dict | None:
+        rows = self.query("SELECT data FROM strategies WHERE campaign_id=? ORDER BY t DESC LIMIT 1", (campaign_id,))
+        return json.loads(rows[0]["data"]) if rows else None
+
+    def strategy_history(self, campaign_id: str, limit: int = 50) -> list[dict]:
+        rows = self.query("SELECT date, trigger, model, t, data FROM strategies WHERE campaign_id=? ORDER BY t DESC LIMIT ?",
+                          (campaign_id, limit))
+        return [{"date": r["date"], "trigger": r["trigger"], "model": r["model"], "t": r["t"],
+                 "strategy": json.loads(r["data"])} for r in rows]
+
+    def metrics_rows(self, campaign_id: str) -> list[dict]:
+        return [json.loads(r["data"]) for r in
+                self.query("SELECT data FROM metrics WHERE campaign_id=? AND month IS NOT NULL ORDER BY month", (campaign_id,))]
+
     def past_outcomes(self, campaign_id: str, limit: int = 12) -> str:
         """Text table of this campaign's earlier directive changes and what followed, for the model."""
         rows = self.query(
@@ -226,7 +249,7 @@ class Telemetry:
             self.db.execute("BEGIN")
         try:
             with self._lock:
-                for table in ("events", "decisions", "metrics", "plans", "runs", "campaigns"):
+                for table in ("events", "decisions", "metrics", "plans", "strategies", "runs", "campaigns"):
                     self.db.execute(f"DELETE FROM {table}")  # fixed table names
             for d in sorted(p for p in runs_dir.iterdir() if (p / "events.jsonl").exists()):
                 with open(d / "events.jsonl", encoding="utf-8") as f:
