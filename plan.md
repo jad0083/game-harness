@@ -62,3 +62,10 @@
 - [ ] Perception layer: OCR + UI-element detection on the gaming PC's GPU, so Claude clicks element IDs instead of guessed pixels
 - [ ] Spike: is a GC4 save file parseable per turn? If so, read state from files and use vision only to confirm actions
 - Rejected for now: controller in Docker / GPU host (controller does no GPU work; Linux box has only an Intel iGPU); moving the game to Linux (Proton/VFIO) until the above are exhausted
+
+## Stellaris
+- [x] Corpus seeded from the web: `corpora/stellaris/` — 46 docs from 34 official-wiki pages (1,405 chunks), manifest (33 hotkeys, 0 screens), strategy with governor directives, draft pilot, data contract
+- [ ] Extractor `scripts/extract-stellaris.py` from the game's `common/`, `events/` and `localisation/english/` files → `data/*.json`
+- [ ] Companion bridge mod: directive events (flags, edicts, policies, AI weights) fired from the console, `log` effects to `game.log`
+- [ ] Save parser and monthly briefing from the autosave (`gamestate` + `meta`)
+- [ ] Live spike: window title, console key, pause/date/event-popup templates, one directive applied end to end
