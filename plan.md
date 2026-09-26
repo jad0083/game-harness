@@ -127,3 +127,4 @@
 - [ ] Two shipyards in different systems and alloys on two or more planets before any war (strategy rule and mod budget nudge)
 - [ ] Monthly fleet snapshot in telemetry to find what destroys ships in peacetime
 - [ ] Full decision prompts in traces (no 6,000-character cut)
+- [x] CI skips the Rust stages for commits with no Rust, Cargo or corpus files (`scripts/ci-needs-rust.sh`)
