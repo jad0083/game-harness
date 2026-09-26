@@ -3200,3 +3200,85 @@ def test_control_review_strategy_returns_400_when_the_layer_is_off(setup, tmp_pa
             r = await c.post("/control", json={"action": "review_strategy"})
             assert r.status == 400
     asyncio.run(go())
+
+
+# ---- Task 5: dashboard renders the Strategy tab from the spec -----------------------------------
+
+THREE_PILLARS = '''[strategy]
+min_milestones_top = 1
+
+[metrics]
+names = ["systems", "pops"]
+
+[pillars.faith]
+label = "Faith"
+description = "Religion and its spread."
+
+[pillars.science]
+label = "Science"
+description = "Research output."
+
+[pillars.culture]
+label = "Culture"
+description = "Great works and tourism."
+'''
+
+
+def test_strategy_api_serves_the_games_pillars(setup, tmp_path):
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from pilot.dashboard import make_app
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(s.runs_dir, "rsp", s.model, telemetry=tel)
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": _strategist([])})
+    log.emit("run_start", model=s.model, game=s.game)
+    log.set_campaign("stellaris", "c9", "Test")
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+
+    async def go():
+        async with TestClient(TestServer(make_app(g, s.runs_dir, tel))) as c:
+            body = await (await c.get(f"/api/strategy?campaign={log.campaign_id}")).json()
+            assert [p["id"] for p in body["spec"]["pillars"]] == list(STELLARIS.ids)
+            assert body["spec"]["actions"]["market"]["max_items"] == 1
+    asyncio.run(go())
+
+
+def test_strategy_api_serves_a_three_pillar_spec_in_the_viewer(tmp_path):
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from pilot.dashboard import make_app
+    from pilot.telemetry import Telemetry
+    corpora = tmp_path / "corpora"
+    (corpora / "civtest").mkdir(parents=True)
+    (corpora / "civtest" / "pillars.toml").write_text(THREE_PILLARS, encoding="utf-8")
+    (corpora / "civtest" / "directives.toml").write_text("", encoding="utf-8")   # no directive is ranked
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(tmp_path / "runs", "r1", "test:model", telemetry=tel)
+    log.emit("run_start", model="test:model", game="civtest")
+    log.set_campaign("civtest", "c1", "Test civ")
+    strategy = {"pillars": {p: {"priority": i + 1, "stance": f"{p} stance", "goals": ["g"]}
+                            for i, p in enumerate(["science", "faith", "culture"])}, "focus": "pray"}
+    log.emit("strategy", date="2200.01.01", trigger="start of run", model="seed", reason="seed", strategy=strategy)
+
+    async def go():
+        async with TestClient(TestServer(make_app(None, tmp_path / "runs", tel, corpora=corpora))) as c:
+            body = await (await c.get("/api/strategy?campaign=civtest/c1")).json()
+            assert [(p["id"], p["label"], p["directive"], p["actions"]) for p in body["spec"]["pillars"]] == [
+                ("faith", "Faith", None, []), ("science", "Science", None, []), ("culture", "Culture", None, [])]
+            assert body["current"]["focus"] == "pray"
+            missing = await (await c.get("/api/strategy?campaign=nogame/c1")).json()
+            assert missing["spec"] is None
+    asyncio.run(go())
+
+
+def test_dashboard_strategy_tab_reads_the_spec_not_a_copied_map():
+    html = (REPO / "src/pilot/static/dashboard.html").read_text(encoding="utf-8")
+    assert "DIRECTIVE_OF" not in html
+    assert "data.spec" in html and "function specIndex(" in html
+    assert 'name === "technology"' not in html and 'name === "economy"' not in html

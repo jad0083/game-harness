@@ -574,10 +574,15 @@ async function loadCampaigns() {
 }
 
 // ---------- strategy ----------
-// Pillar -> the directive it stands for (mirrors strategy.py's DIRECTIVE_OF; pillars without one
-// don't take part in the directive ranking).
-const DIRECTIVE_OF = { economy: "consolidate_economy", expansion: "expand", technology: "tech_rush",
-                       diplomacy: "diplomacy_first", defence: "defend", government: null, society: null };
+// Pillar labels, directives and actions come from the game's pillars file (/api/strategy `spec`).
+// Without a spec (an older campaign, or a game without one) pillars show their ids and no ranking.
+function specIndex(spec) {
+  const byId = {};
+  ((spec && spec.pillars) || []).forEach((p) => { byId[p.id] = p; });
+  return byId;
+}
+function pillarLabel(byId, id) { return (byId[id] && byId[id].label) || human(id); }
+function pillarActions(byId, id) { return (byId[id] && byId[id].actions) || []; }
 // status -> [tag class, icon, word] — colour is never the only signal: the word is always shown too.
 const MS_STATUS = { met: ["good", "✓", "met"], on_track: ["", "→", "on track"],
                     at_risk: ["warn", "⚠", "at risk"], missed: ["bad", "✕", "missed"] };
@@ -603,14 +608,16 @@ function milestoneRow(m) {
     <span class="tag${st[0] ? " " + st[0] : ""}" title="${esc(st[2])}"><i aria-hidden="true">${st[1]}</i>${esc(st[2])}</span></li>`;
 }
 
-function pillarCard(name, pl, ms) {
+function pillarCard(name, pl, ms, byId) {
+  const def = byId[name] || {};
+  const acts = pillarActions(byId, name);
   const goals = (pl.goals || []).map((g) => `<li>${esc(g)}</li>`).join("");
   const msRows = ms.map(milestoneRow).join("");
   const actions = [];
-  if (name === "technology" && (pl.prefer_techs || []).length) actions.push(`Prefers: ${esc(pl.prefer_techs.join(", "))}`);
-  if (name === "economy") (pl.market || []).forEach((o) => actions.push(`Market: ${esc(o.side)} ${esc(o.resource)} ${fmt(o.amount)}/month`));
+  if (acts.includes("tech") && (pl.prefer_techs || []).length) actions.push(`Prefers: ${esc(pl.prefer_techs.join(", "))}`);
+  if (acts.includes("market")) (pl.market || []).forEach((o) => actions.push(`Market: ${esc(o.side)} ${esc(o.resource)} ${fmt(o.amount)}/month`));
   return `<article class="pillar" data-pillar="${esc(name)}">
-    <div class="p-head"><h3>${esc(human(name))}</h3><span class="p-num">priority ${esc(pl.priority)}</span>
+    <div class="p-head"><h3 title="${esc(def.description || "")}">${esc(pillarLabel(byId, name))}</h3><span class="p-num">priority ${esc(pl.priority)}</span>
       ${pl.pinned ? `<span class="tag" title="Pinned by a human edit: a review will never change it">pinned</span>` : ""}</div>
     <p class="stance">${esc(pl.stance || "")}</p>
     ${goals ? `<ul class="goals">${goals}</ul>` : ""}
@@ -621,26 +628,31 @@ function pillarCard(name, pl, ms) {
   </article>`;
 }
 
-function marketFieldsHtml(orders) {
-  const rows = [0, 1].map((i) => {
+function marketFieldsHtml(orders, limits) {
+  const n = Math.max(1, (limits && limits.max_items) || 1);
+  const res = limits && (limits.resources || []).length ? `; resources: ${limits.resources.join(", ")}` : "";
+  const range = limits && limits.amount_max ? `; amount ${limits.amount_min}–${limits.amount_max}` : "";
+  const rows = Array.from({ length: n }, (_, i) => {
     const o = orders[i] || { side: "sell", resource: "", amount: "" };
     return `<div class="market-row">
       <select name="m${i}-side"><option value="sell"${o.side === "sell" ? " selected" : ""}>sell</option><option value="buy"${o.side === "buy" ? " selected" : ""}>buy</option></select>
-      <input name="m${i}-resource" placeholder="resource (not trade)" value="${esc(o.resource || "")}">
+      <input name="m${i}-resource" placeholder="resource" value="${esc(o.resource || "")}">
       <input name="m${i}-amount" type="number" min="1" placeholder="amount / month" value="${esc(o.amount ?? "")}"></div>`;
   }).join("");
-  return `<div class="market-fields"><span>Market orders (up to 2; trade cannot be sold or bought)</span>${rows}</div>`;
+  return `<div class="market-fields"><span>Market orders (up to ${n}${esc(range)}${esc(res)})</span>${rows}</div>`;
 }
 
-function openEditForm(name, pillar) {
+function openEditForm(name, pillar, byId, spec) {
   const art = $("strategy").querySelector(`article[data-pillar="${CSS.escape(name)}"]`);
   if (!art) return;
-  const slot = art.querySelector(".p-form-slot"), isTech = name === "technology", isEcon = name === "economy";
+  const acts = pillarActions(byId, name);
+  const limits = (spec && spec.actions) || {};
+  const slot = art.querySelector(".p-form-slot");
   slot.innerHTML = `<form class="p-form">
     <label>Stance<textarea name="stance">${esc(pillar.stance || "")}</textarea></label>
     <label>Goals (one per line, up to 3)<textarea name="goals">${esc((pillar.goals || []).join("\n"))}</textarea></label>
-    ${isTech ? `<label>Prefer techs (comma list)<input name="prefer_techs" value="${esc((pillar.prefer_techs || []).join(", "))}"></label>` : ""}
-    ${isEcon ? marketFieldsHtml(pillar.market || []) : ""}
+    ${acts.includes("tech") ? `<label>Prefer techs (comma list, up to ${esc((limits.tech || {}).max_items || "")})<input name="prefer_techs" value="${esc((pillar.prefer_techs || []).join(", "))}"></label>` : ""}
+    ${acts.includes("market") ? marketFieldsHtml(pillar.market || [], limits.market) : ""}
     <p class="p-error" hidden></p>
     <div class="row"><button type="submit" class="btn primary">Save</button><button type="button" class="btn" data-cancel>Cancel</button></div>
   </form>`;
@@ -655,9 +667,10 @@ async function submitEdit(name, slot, onSaved) {
   const form = slot.querySelector("form");
   const fields = { stance: form["stance"].value, goals: form["goals"].value.split("\n").map((s) => s.trim()).filter(Boolean).slice(0, 3) };
   if (form["prefer_techs"]) fields.prefer_techs = form["prefer_techs"].value.split(",").map((s) => s.trim()).filter(Boolean);
-  if (form["m0-resource"]) {
+  const rows = form.querySelectorAll(".market-row").length;
+  if (rows) {
     const market = [];
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < rows; i++) {
       const res = form[`m${i}-resource`].value.trim();
       if (res) market.push({ side: form[`m${i}-side`].value, resource: res, amount: +form[`m${i}-amount`].value || 0 });
     }
@@ -688,13 +701,20 @@ async function submitEdit(name, slot, onSaved) {
 function renderStrategy(data) {
   const box = $("strategy");
   const cur = data && data.current;
+  // Ruling: a broken/missing pillars file (or the governor reporting the strategy layer is off)
+  // shows one plain line with the reason instead of pillar cards.
+  if (data && data.error) {
+    box.innerHTML = `<p class="empty">Strategy layer off: ${esc(data.error)}</p>`;
+    return;
+  }
   if (!cur) {
     box.innerHTML = `<p class="empty">No strategy yet. The first review runs at the start of the run.</p><div class="strategy-review">${reviewButtonHtml()}</div>`;
     wireReviewButton();
     return;
   }
+  const spec = data.spec || null, byId = specIndex(spec);
   const pillars = Object.entries(cur.pillars || {}).sort((a, b) => (a[1].priority || 0) - (b[1].priority || 0));
-  const ranking = pillars.map(([name]) => DIRECTIVE_OF[name]).filter(Boolean).map(human).join(", ");
+  const ranking = pillars.map(([name]) => byId[name] && byId[name].directive).filter(Boolean).map(human).join(", ");
   const last = (data.history && data.history[0]) || {};
   const past = (data.history || []).slice(1);
   const msByPillar = {};
@@ -705,7 +725,7 @@ function renderStrategy(data) {
     ${cur.identity ? `<p class="t-reason">Built on: ${md(tidy(cur.identity))}</p>` : ""}
     <div class="t-when">Last review: ${esc(last.date || "–")}, ${esc(tidy(last.trigger || ""))}, ${esc(last.model || "–")}</div>
   </div>`;
-  h += pillars.map(([name, pl]) => pillarCard(name, pl, msByPillar[name] || [])).join("");
+  h += pillars.map(([name, pl]) => pillarCard(name, pl, msByPillar[name] || [], byId)).join("");
   if (past.length) {
     h += `<details class="strategy-history"><summary>History (${past.length} version${past.length === 1 ? "" : "s"})</summary>
       <table class="data"><thead><tr><th>Date</th><th>Trigger</th><th>Model</th><th>Reason</th></tr></thead><tbody>` +
@@ -715,9 +735,9 @@ function renderStrategy(data) {
   h += `<div class="strategy-review">${reviewButtonHtml()}</div>`;
   box.innerHTML = h;
   wireReviewButton();
-  box.querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => openEditForm(b.dataset.edit, cur.pillars[b.dataset.edit])));
+  box.querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => openEditForm(b.dataset.edit, cur.pillars[b.dataset.edit], byId, spec)));
   box.querySelectorAll("[data-unpin]").forEach((b) => b.addEventListener("click", () => {
-    if (confirm(`Unpin ${human(b.dataset.unpin)}? A future review may change it again.`)) control({ action: "unpin_pillar", pillar: b.dataset.unpin });
+    if (confirm(`Unpin ${pillarLabel(byId, b.dataset.unpin)}? A future review may change it again.`)) control({ action: "unpin_pillar", pillar: b.dataset.unpin });
   }));
 }
 

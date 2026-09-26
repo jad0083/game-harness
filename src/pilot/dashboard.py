@@ -18,7 +18,7 @@ Telemetry (runs/telemetry.sqlite, across runs and models):
     GET  /api/decision?run=<id>&episode=<n>     one decision with its full trace
     GET  /api/metrics?campaign=<id>|run=<id>    metric points over in-game time
     GET  /api/plans?campaign=<id>|run=<id>      campaign plan versions, newest first
-    GET  /api/strategy?campaign=<id>            current pillar strategy, milestone status, version history
+    GET  /api/strategy?campaign=<id>            current pillar strategy, milestone status, version history, the game's pillars spec
     GET  /api/models                            models to offer, and the saved choice for the next run
     GET  /api/pc                                gaming PC: agent reachable, version, window in front, games open
     POST /api/settings  {"models": [{"model", "thinking"}, ...], "rotate"}   the model list (live too); older {"model", "thinking", "fallback"}
@@ -233,30 +233,30 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
         return web.json_response(rows)
 
     async def api_strategy(request):
-        """The current pillar strategy, its milestones' status, and version history for a campaign."""
+        """The current pillar strategy, its milestones' status, version history and the game's
+        pillars spec (labels, directives, actions) for a campaign."""
         from .strategy import Strategy, milestone_status
         cid = request.query.get("campaign") or (log.campaign_id if log else "")
+        spec, error = campaign_spec(cid) if cid else (None, "")
+        public = spec.public() if spec else None
         if tel is None or not cid:
-            return web.json_response({"current": None, "milestones": [], "history": []})
+            return web.json_response({"current": None, "milestones": [], "history": [], "spec": public, "error": error})
         cur = await asyncio.to_thread(tel.latest_strategy, cid)
         rows = await asyncio.to_thread(tel.metrics_rows, cid)
         hist = await asyncio.to_thread(tel.strategy_history, cid)
         ms: list = []
-        error = ""
         if cur:
             try:
                 s = Strategy.model_validate({k: v for k, v in cur.items() if k != "reason"})
             except ValueError:
                 s = None    # an older/foreign strategy shape: serve the raw record, no milestone status
-            if s is not None:
-                spec, error = campaign_spec(cid)
-                if spec is not None:      # no spec (missing/invalid pillars file): no milestone status,
-                    today = rows[-1]["date"] if rows else "2200.01.01"   # never guess with empty row_keys
-                    for name, pl in s.pillars.items():
-                        for m in pl.milestones:
-                            ms.append({"pillar": name, **m.model_dump(),
-                                      "status": milestone_status(m, rows, today, spec.row_keys)})
-        return web.json_response({"current": cur, "milestones": ms, "history": hist, "error": error})
+            if s is not None and spec is not None:  # no spec (missing/invalid pillars file): no milestone status,
+                today = rows[-1]["date"] if rows else "2200.01.01"   # never guess with empty row_keys
+                for name, pl in s.pillars.items():
+                    for m in pl.milestones:
+                        ms.append({"pillar": name, **m.model_dump(),
+                                  "status": milestone_status(m, rows, today, spec.row_keys)})
+        return web.json_response({"current": cur, "milestones": ms, "history": hist, "spec": public, "error": error})
 
     models_cache: dict = {}
 
