@@ -170,7 +170,7 @@ while (-not $health -and (Get-Date) -lt $deadline) {
 if ($health) {
     Step "Agent v$($health.version) is running on port $Port; screen $($health.screen[0])x$($health.screen[1])"
 } else {
-    Write-Warning "Agent is not answering on port $Port. Run it by hand to see its output:  & '$Exe' --port $Port"
+    Write-Warning "Agent is not answering on port $Port. Its log (no console window since 1.4): $(Join-Path $Dest 'agent.log')"
 }
 Write-Host ''
 Write-Host 'Tips: run the game in Borderless/Windowed mode (exclusive fullscreen can capture black),'

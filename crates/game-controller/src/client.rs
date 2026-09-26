@@ -253,9 +253,7 @@ impl AgentClient {
             .send()
             .await
             .context("Failed /settle")?;
-
-        let json = resp.json().await?;
-        Ok(json)
+        json_ok(resp, "/settle").await
     }
 
     pub async fn windows(&self) -> Result<serde_json::Value> {
@@ -265,9 +263,7 @@ impl AgentClient {
             .send()
             .await
             .context("Failed /windows")?;
-
-        let json = resp.json().await?;
-        Ok(json)
+        json_ok(resp, "/windows").await
     }
 
     pub async fn focus(&self, title: &str) -> Result<String> {
@@ -278,8 +274,7 @@ impl AgentClient {
             .send()
             .await
             .context("Failed /focus")?;
-
-        let json: serde_json::Value = resp.json().await?;
+        let json = json_ok(resp, "/focus").await?;
         let focused = json.get("focused").and_then(|v| v.as_str()).unwrap_or(title);
         Ok(focused.to_string())
     }
@@ -443,9 +438,62 @@ impl AgentClient {
     }
 }
 
+/// The JSON body of a successful response; otherwise an error with the status and the agent's
+/// message (a 401 or a 404 "window not found" must not read as success or as a parse error).
+async fn json_ok(resp: reqwest::Response, what: &str) -> Result<serde_json::Value> {
+    let status = resp.status();
+    let body = resp.text().await.with_context(|| format!("reading {what} response"))?;
+    if !status.is_success() {
+        let msg = serde_json::from_str::<serde_json::Value>(&body)
+            .ok()
+            .and_then(|v| v.get("error").and_then(|e| e.as_str()).map(str::to_string))
+            .unwrap_or_else(|| body.chars().take(200).collect());
+        anyhow::bail!("{what} returned HTTP {status}{}", if msg.is_empty() { String::new() } else { format!(": {msg}") });
+    }
+    serde_json::from_str(&body).with_context(|| format!("bad {what} response"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Serve one canned HTTP response on a local port and return its URL.
+    async fn one_shot(status: &str, body: &str) -> String {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        let reply = format!("HTTP/1.1 {status}\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}", body.len());
+        tokio::spawn(async move {
+            let (mut sock, _) = listener.accept().await.unwrap();
+            let mut buf = [0u8; 4096];
+            let _ = sock.read(&mut buf).await;
+            sock.write_all(reply.as_bytes()).await.unwrap();
+        });
+        url
+    }
+
+    #[tokio::test]
+    async fn focus_reports_a_missing_window_instead_of_success() {
+        let url = one_shot("404 Not Found", r#"{"error":"no window titled Stellaris"}"#).await;
+        let c = AgentClient::new(Some(&url), Some("t")).unwrap();
+        let e = c.focus("Stellaris").await.unwrap_err().to_string();
+        assert!(e.contains("404") && e.contains("no window titled Stellaris"), "{e}");
+    }
+
+    #[tokio::test]
+    async fn unauthorized_is_an_http_error_not_a_parse_error() {
+        let url = one_shot("401 Unauthorized", "").await;
+        let c = AgentClient::new(Some(&url), Some("t")).unwrap();
+        let e = c.windows().await.unwrap_err().to_string();
+        assert!(e.contains("401"), "{e}");
+    }
+
+    #[tokio::test]
+    async fn focus_returns_the_focused_title() {
+        let url = one_shot("200 OK", r#"{"ok":true,"focused":"Stellaris"}"#).await;
+        let c = AgentClient::new(Some(&url), Some("t")).unwrap();
+        assert_eq!(c.focus("Stell").await.unwrap(), "Stellaris");
+    }
 
     fn drag_json(opts: DragOptions) -> serde_json::Value {
         serde_json::to_value(DragReq { x1: 1, y1: 2, x2: 3, y2: 4, button: "left".into(), opts }).unwrap()

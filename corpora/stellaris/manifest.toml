@@ -18,8 +18,7 @@ downscaled_resolution = [1568, 882]
 pause = "space"                 # wiki: Hotkeys — "Pause / Unpause"
 speed_up = "="                  # verified 2026-09-25: steps Normal → Fast → Fastest (US =/+ key, VK_OEM_PLUS)
 speed_down = "-"                # verified 2026-09-25: steps down to Slowest. Speeds: Slowest, Slow, Normal, Fast, Fastest
-# Numpad +/- also work per the wiki, but the agent's key table (crates/game-agent/src/keys.rs)
-# has no numpad names yet.
+# Numpad +/- also work per the wiki (agent >= 1.4 keys "add"/"subtract"; unverified in game).
 
 # --- Console ---
 # wiki: Console commands — "Shift+2, ALT+2+1, Shift+3, §, ~, ^, °, ² or ` (key varies based on

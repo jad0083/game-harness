@@ -35,6 +35,24 @@ pub fn parse_key(name: &str) -> Option<u16> {
         "f10" => Some(0x79),
         "f11" => Some(0x7A),
         "f12" => Some(0x7B),
+        "win" | "lwin" | "super" => Some(0x5B),
+        "rwin" => Some(0x5C),
+        "apps" | "contextmenu" => Some(0x5D),
+        "printscreen" | "prtsc" => Some(0x2C),
+        "numlock" => Some(0x90),
+        "scrolllock" => Some(0x91),
+        "multiply" | "num*" => Some(0x6A),
+        "add" | "num+" | "numplus" => Some(0x6B),
+        "subtract" | "num-" | "numminus" => Some(0x6D),
+        "decimal" | "num." => Some(0x6E),
+        "divide" | "num/" => Some(0x6F),
+        // the main-keyboard =/+ key (VK_OEM_PLUS); "+" alone is handled by parse_combo
+        "plus" => Some(0xBB),
+        "minus" => Some(0xBD),
+        // num0..num9 (also numpad0..numpad9, the old Python agent's names)
+        s if s.strip_prefix("numpad").or_else(|| s.strip_prefix("num")).is_some_and(|d| d.len() == 1 && d.as_bytes()[0].is_ascii_digit()) => {
+            Some(0x60 + (s.as_bytes()[s.len() - 1] - b'0') as u16)
+        }
         // single characters
         s if s.len() == 1 => {
             let c = s.chars().next().unwrap();
@@ -61,7 +79,15 @@ pub fn parse_key(name: &str) -> Option<u16> {
 }
 
 pub fn parse_combo(combo: &str) -> Result<Vec<u16>, String> {
+    // "+" is the separator, so a literal plus key is "+" alone or a trailing "++" ("shift++")
+    if combo.trim() == "+" {
+        return Ok(vec![0xBB]);
+    }
     let mut vks = Vec::new();
+    let (combo, trailing_plus) = match combo.trim().strip_suffix("++") {
+        Some(rest) => (rest, true),
+        None => (combo, false),
+    };
     for part in combo.split('+') {
         let trimmed = part.trim();
         if trimmed.is_empty() {
@@ -72,8 +98,49 @@ pub fn parse_combo(combo: &str) -> Result<Vec<u16>, String> {
             None => return Err(format!("Unknown key in combo: {:?}", trimmed)),
         }
     }
+    if trailing_plus {
+        vks.push(0xBB);
+    }
     if vks.is_empty() {
         return Err("Empty key combo".into());
     }
     Ok(vks)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn named_keys_and_characters() {
+        assert_eq!(parse_key("Esc"), Some(0x1B));
+        assert_eq!(parse_key("a"), Some(0x41));
+        assert_eq!(parse_key("9"), Some(0x39));
+        assert_eq!(parse_key("`"), Some(0xC0));
+        assert_eq!(parse_key("="), Some(0xBB));
+        assert_eq!(parse_key("nosuchkey"), None);
+    }
+
+    #[test]
+    fn windows_numpad_and_plus_keys() {
+        assert_eq!(parse_key("win"), Some(0x5B));
+        assert_eq!(parse_key("num0"), Some(0x60));
+        assert_eq!(parse_key("num9"), Some(0x69));
+        assert_eq!(parse_key("numpad7"), Some(0x67));
+        assert_eq!(parse_key("num10"), None);
+        assert_eq!(parse_key("num+"), Some(0x6B));
+        assert_eq!(parse_key("num-"), Some(0x6D));
+        assert_eq!(parse_key("plus"), Some(0xBB));
+        assert_eq!(parse_combo("win+r").unwrap(), vec![0x5B, 0x52]);
+        assert_eq!(parse_combo("+").unwrap(), vec![0xBB]);
+        assert_eq!(parse_combo("shift++").unwrap(), vec![0x10, 0xBB]);
+        assert_eq!(parse_combo("ctrl+num+").unwrap_err(), "Unknown key in combo: \"num\"");
+    }
+
+    #[test]
+    fn combos_reject_unknown_and_empty() {
+        assert_eq!(parse_combo("shift+alt+c").unwrap(), vec![0x10, 0x12, 0x43]);
+        assert!(parse_combo("ctrl+bogus").is_err());
+        assert!(parse_combo("").is_err());
+    }
 }

@@ -54,7 +54,7 @@ Without MCP, everything works from the shell: `scripts/play/act.sh`, `ap.sh`, `h
 
 | Component | Path / Binary | Architecture | Performance / Capabilities |
 |---|---|---|---|
-| **Windows Remote Agent** | [`crates/game-agent`](crates/game-agent) & [`windows_agent/game-agent.exe`](windows_agent/game-agent.exe) | Compiled native Rust (`x86_64-pc-windows-gnu`) | ~8ms screen capture & JPEG encode; native Win32 `SendInput`, `SetCursorPos`, and `mouse_event`; Per-Monitor V2 HiDPI aware. |
+| **Windows Remote Agent** | [`crates/game-agent`](crates/game-agent) (built into `game-agent.exe` by `scripts/serve-agent.sh`) | Compiled native Rust (`x86_64-pc-windows-gnu`) | ~8ms screen capture & JPEG encode; native Win32 `SendInput`, `SetCursorPos`, and `mouse_event`; Per-Monitor V2 HiDPI aware. |
 | **Linux Native Controller** | [`crates/game-controller`](crates/game-controller) → `target/release/game-controller` (build with `cargo build --release`; `.mcp.json` points here) | Compiled native Rust (`x86_64-unknown-linux-gnu`) | ~1 ms agent round-trip; autopilot that verifies each turn by the HUD date changing and stops on dialogs or blockers; in-memory corpus (search <1 ms); stdio MCP server. |
 | **Game Corpus** | [`corpora/galciv4/`](corpora/galciv4/) | `manifest.toml` + `templates/*.png` + generated `data/*.json` + `docs/*.md` + `strategy.md` | 34 hotkeys, 17 screens (9 recognised by template), 3 macros; 130 techs, 528 improvements, 66 executive orders, 203 policies, 355 ship components, 167 starbase modules and 994 events generated from the game's own XML by `scripts/extract-galciv4.py`; 13 reference docs chunked into 168 searchable pieces. |
 | **Stellaris corpus** | [`corpora/stellaris/`](corpora/stellaris/) | `manifest.toml`, `directives.toml`, `templates/`, `docs/*.md`, `strategy.md`, `pilot.md` | 9,152 records generated from the game's own files by `scripts/extract-stellaris.py` (679 techs, 56 policies, 171 edicts, 498 buildings, 147 districts, 234 traditions, 49 ascension perks, 358 civics, 6,960 events with every option); 46 wiki reference docs; 6 governor directives; pause-state screen; verified console/speed keys. Save reader in `crates/game-controller/src/stellaris.rs`. |
@@ -83,7 +83,7 @@ The remote Windows agent is a single, self-contained native Rust executable (`ga
 You can recompile the Windows agent binary directly on the Linux controller:
 ```bash
 cargo build --target x86_64-pc-windows-gnu --release --bin game-agent
-cp target/x86_64-pc-windows-gnu/release/game-agent.exe windows_agent/game-agent.exe
+# scripts/serve-agent.sh runs this build itself and serves the result; the exe is not tracked in git
 ```
 
 ---
