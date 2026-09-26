@@ -65,5 +65,9 @@
 - Rejected for now: controller in Docker / GPU host (controller does no GPU work; Linux box has only an Intel iGPU); moving the game to Linux (Proton/VFIO) until the above are exhausted
 
 ## Stellaris (spike: LLM governor over the native AI)
-- [ ] Spike in a throwaway non-Ironman game: launch, autosave → briefing, console injection, pause/date, companion-mod log line, event-set policy
-- [ ] Decide the final Stellaris design from the spike results
+- [x] Spike in a throwaway non-Ironman game: autosave via agent, console injection, pause/date, `log` → game.log, `set_policy` held by the AI (`games/stellaris-spike/journal.md`)
+- [x] Design: monthly autosave → briefing → LLM → pause, `play 0`, whitelisted effects, `observe`, unpause; native AI plays day to day
+- [ ] Save reader: Clausewitz parser (jomini) → compact empire briefing, with tests on real saves
+- [ ] Controller: `stellaris` loop (watch autosaves + game.log, console directive macro with whitelist)
+- [ ] Pilot: Stellaris game adapter and `corpora/stellaris/pilot.md` governor briefing
+- [ ] Test which directives the AI keeps long term (edicts, economy, war); decide on a companion mod
