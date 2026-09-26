@@ -1739,11 +1739,13 @@ pub fn brief_gamestate(gamestate: &[u8]) -> Result<Briefing> {
         for field in ["physics", "society", "engineering"] {
             let mut r = Research::default();
             if let Some(q) = get(&ts, &format!("{field}_queue")).and_then(|v| v.read_array().ok()) {
-                if let Some(first) = q.values().next().and_then(|x| x.read_object().ok()) {
-                    if let Some(t) = string(&first, "technology") {
-                        r.current = Some((t, f64_(&first, "progress").unwrap_or(0.0)));
-                    }
-                }
+                // The first queue entry can be empty or otherwise malformed (no `technology` key)
+                // while a tech is being researched (verified live 2393.02/2393.06); take the first
+                // entry that actually names one instead of assuming it is first.
+                r.current = q.values().filter_map(|x| x.read_object().ok()).find_map(|o| {
+                    let t = string(&o, "technology")?;
+                    Some((t, f64_(&o, "progress").unwrap_or(0.0)))
+                });
             }
             r.alternatives = alts.as_ref().map(|a| strings(get(a, field))).unwrap_or_default();
             b.research.insert(field.to_string(), r);
@@ -2509,6 +2511,45 @@ situations={ situations={ 0=none 1={ country=0 type="rebellion_situation" progre
     fn rejects_non_saves() {
         assert!(brief_save(b"not a zip").is_err());
         assert!(brief_gamestate(b"date=\"2200.01.01\"\n").is_err()); // no country section
+    }
+
+    #[test]
+    fn research_current_skips_queue_entries_with_no_technology() {
+        // Verified live 2393.02/2393.06: while a tech is being researched, the queue's first
+        // entry can be an empty object; the entry that actually names a tech comes after it.
+        let gs = br#"date="2393.02.01"
+player={ { name="x" country=0 } }
+country={
+    0={ name={ key="NAME_Us" } type="default"
+        tech_status={ society_queue={ { } { progress=5 technology="tech_x" date="2393.01.17" } } }
+    }
+}
+"#;
+        let b = brief_gamestate(gs).unwrap();
+        assert_eq!(b.research["society"].current, Some(("tech_x".to_string(), 5.0)));
+
+        let gs_empty = br#"date="2393.02.01"
+player={ { name="x" country=0 } }
+country={
+    0={ name={ key="NAME_Us" } type="default"
+        tech_status={ society_queue={ { } } }
+    }
+}
+"#;
+        let b2 = brief_gamestate(gs_empty).unwrap();
+        assert_eq!(b2.research["society"].current, None);
+
+        // A malformed (non-empty, but technology-less) first entry must also be skipped.
+        let gs_malformed = br#"date="2393.02.01"
+player={ { name="x" country=0 } }
+country={
+    0={ name={ key="NAME_Us" } type="default"
+        tech_status={ society_queue={ { date="2393.02.01" } { progress=5 technology="tech_x" date="2393.01.17" } } }
+    }
+}
+"#;
+        let b3 = brief_gamestate(gs_malformed).unwrap();
+        assert_eq!(b3.research["society"].current, Some(("tech_x".to_string(), 5.0)));
     }
 
     #[test]
