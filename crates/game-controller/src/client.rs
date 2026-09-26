@@ -19,6 +19,16 @@ pub struct AgentClient {
     pub last_target_height: Arc<AtomicU32>,
 }
 
+/// One entry of an agent directory listing.
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct FileEntry {
+    pub name: String,
+    pub is_dir: bool,
+    pub size: u64,
+    /// Seconds since the Unix epoch.
+    pub modified: u64,
+}
+
 #[derive(Serialize)]
 struct MoveReq {
     x: i32,
@@ -272,6 +282,51 @@ impl AgentClient {
         let json: serde_json::Value = resp.json().await?;
         let focused = json.get("focused").and_then(|v| v.as_str()).unwrap_or(title);
         Ok(focused.to_string())
+    }
+
+    /// List a directory inside one of the agent's read-only roots (agent >= 1.2.0).
+    pub async fn files_list(&self, root: &str, path: &str) -> Result<Vec<FileEntry>> {
+        let resp = self
+            .client
+            .get(format!("{}/files/list", self.base_url))
+            .query(&[("root", root), ("path", path)])
+            .send()
+            .await
+            .context("Failed /files/list")?;
+        let status = resp.status();
+        let json: serde_json::Value = resp.json().await.context("bad /files/list response")?;
+        if !status.is_success() {
+            anyhow::bail!("/files/list {root}:{path}: HTTP {status}: {}", json["error"]);
+        }
+        Ok(serde_json::from_value(json["entries"].clone())?)
+    }
+
+    /// Read a file (from `offset`, at most `max` bytes) inside one of the agent's roots.
+    /// Returns the bytes and the file's total size.
+    pub async fn files_read(&self, root: &str, path: &str, offset: u64, max: Option<u64>) -> Result<(Vec<u8>, u64)> {
+        let mut q = vec![("root", root.to_string()), ("path", path.to_string()), ("offset", offset.to_string())];
+        if let Some(m) = max {
+            q.push(("max", m.to_string()));
+        }
+        let resp = self
+            .client
+            .get(format!("{}/files/read", self.base_url))
+            .query(&q)
+            .send()
+            .await
+            .context("Failed /files/read")?;
+        let status = resp.status();
+        if !status.is_success() {
+            let body = resp.text().await.unwrap_or_default();
+            anyhow::bail!("/files/read {root}:{path}: HTTP {status}: {body}");
+        }
+        let size = resp
+            .headers()
+            .get("x-file-size")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(0);
+        Ok((resp.bytes().await?.to_vec(), size))
     }
 
     pub async fn move_mouse(&self, x: i32, y: i32) -> Result<()> {

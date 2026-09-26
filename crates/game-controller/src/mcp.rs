@@ -145,7 +145,7 @@ impl McpServer {
                 jsonrpc: "2.0",
                 id,
                 result: Some(serde_json::json!({
-                    "tools": Self::list_tools()
+                    "tools": Self::list_tools(self.corpus.as_ref().map(|c| c.manifest.metadata.id.as_str()))
                 })),
                 error: None,
             }),
@@ -187,8 +187,9 @@ impl McpServer {
         }
     }
 
-    fn list_tools() -> Vec<Value> {
-        vec![
+    /// Tools for the loaded game (`game` = corpus id); game-specific tools only for their game.
+    fn list_tools(game: Option<&str>) -> Vec<Value> {
+        let mut tools = vec![
             serde_json::json!({
                 "name": "screenshot",
                 "description": "Capture the full screen from the Windows agent.",
@@ -368,7 +369,20 @@ impl McpServer {
                     }
                 }
             }),
-        ]
+        ];
+        if game == Some("stellaris") {
+            tools.push(serde_json::json!({
+                "name": "stellaris_briefing",
+                "description": "Briefing of the player's Stellaris empire from the newest monthly autosave on the PC: date, government, stockpile and monthly net per resource (deficits flagged), power, research in progress and options, policies, planets (pops, stability, housing, amenities, crime), wars. About 2 KB of text.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "json": { "type": "boolean", "description": "Full structured JSON instead of text" }
+                    }
+                }
+            }));
+        }
+        tools
     }
 
     async fn dispatch_tool(&self, name: &str, args: Value) -> Result<Value> {
@@ -752,6 +766,16 @@ impl McpServer {
                     ]
                 }))
             }
+            "stellaris_briefing" => {
+                let (path, bytes) = crate::stellaris::fetch_latest_save(&self.client).await?;
+                let b = crate::stellaris::brief_save(&bytes)?;
+                let text = if args.get("json").and_then(|v| v.as_bool()).unwrap_or(false) {
+                    serde_json::to_string_pretty(&b)?
+                } else {
+                    format!("{}(from {path})", b.to_text())
+                };
+                Ok(serde_json::json!({ "content": [{ "type": "text", "text": text }] }))
+            }
             _ => anyhow::bail!("Unknown tool: {}", name),
         }
     }
@@ -827,7 +851,7 @@ mod tests {
 
     #[test]
     fn drag_tool_schema_exposes_timing_options() {
-        let tools = McpServer::list_tools();
+        let tools = McpServer::list_tools(None);
         let drag = tools.iter().find(|t| t["name"] == "drag").expect("drag tool");
         let props = &drag["inputSchema"]["properties"];
         for key in ["hold_ms", "steps", "step_ms", "dwell_ms"] {
@@ -836,6 +860,14 @@ mod tests {
         assert_eq!(props["wiggle"]["type"], "boolean");
         let required = drag["inputSchema"]["required"].as_array().unwrap();
         assert_eq!(required.len(), 4, "timing options must stay optional");
+    }
+
+    #[test]
+    fn stellaris_tools_only_for_the_stellaris_corpus() {
+        let has = |g| McpServer::list_tools(g).iter().any(|t| t["name"] == "stellaris_briefing");
+        assert!(has(Some("stellaris")));
+        assert!(!has(Some("galciv4")));
+        assert!(!has(None));
     }
 
     #[test]

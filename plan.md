@@ -68,7 +68,7 @@
 - [x] Corpus seeded from the web: `corpora/stellaris/`, with 46 docs from 34 official-wiki pages (1,405 chunks), a manifest (33 hotkeys, 0 screens), a strategy with governor directives, a draft pilot briefing and a data contract
 - [x] Spike in a throwaway non-Ironman game: autosave via agent, console injection, pause/date, `log` → game.log, `set_policy` held by the AI (`games/stellaris-spike/journal.md`)
 - [x] Design: monthly autosave → briefing → LLM → pause, `play 0`, whitelisted effects, `observe`, unpause; native AI plays day to day
-- [ ] Save reader: Clausewitz parser (jomini) → compact empire briefing, with tests on real saves
+- [x] Save reader: `stellaris.rs` (jomini) → ~2 KB empire briefing; `game-controller stellaris brief`, MCP `stellaris_briefing`; tests on a real autosave
 - [ ] Extractor `scripts/extract-stellaris.py`: reads the game's `common/`, `events/` and `localisation/english/` (via the agent's `stellaris_install` root) → `data/*.json`
 - [ ] Controller: `stellaris` loop (watch autosaves + game.log, console directive macro with whitelist)
 - [ ] Pilot: Stellaris game adapter; finalise `corpora/stellaris/pilot.md` with the verified `play 0` → effect → `observe` pattern

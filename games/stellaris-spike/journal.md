@@ -44,8 +44,8 @@ All findings verified live on 2026-09-25 on the user's PC.
   applies at once ("Policy on Diplomatic Stance is set to Cooperative") and shows in the next
   autosave.
 - **`observe`** hands the player's empire to the native AI. Research had been idle (points piling
-  up in `stored_techpoints`); the AI filled all three queues on the day `observe` ran, and known
-  techs went from 31 to 34.
+  up in `stored_techpoints`); the AI filled all three queues on the day `observe` ran and the
+  stored points were spent (known techs stay at 31 until the first ones finish).
 - **Pitfall**: in observer mode, console `effect` has no country scope. The console still printed
   "set to Expansionist", but nothing changed in any country and a `set_country_flag` landed nowhere.
 - **Works**: `play 0` → `effect …` → `observe`. The flag `harness_probe2` landed on country 0; the
