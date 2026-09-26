@@ -115,6 +115,29 @@ template = "templates/stellaris_human_ai_off.png"
 template_roi = [0.0446, 0.2222, 0.014, 0.0136]
 template_search = 2
 
+# Screen steps for tech picks and market orders (Task 6). Points are [x, y] in the 1568x882 image
+# space (AGENTS.md §1), read by `ui_point` in stellaris.rs (`pick_tech`, `sync_market`).
+# values from the 2026-09-26 session; [0,0] = not yet measured
+[ui.tech]   # verified 2026-09-26 on 4.5.1, 1568x882 image space
+open_key = "f4"
+swap = { physics = [229, 168], society = [229, 249], engineering = [229, 331] }
+first_option = [390, 125]
+option_pitch = 66
+close_key = "esc"
+
+[ui.market]
+open_click = [48, 10]
+add = [382, 156]
+buy = [816, 311]
+sell = [873, 311]
+resources = { energy = [820, 335], minerals = [837, 335], food = [855, 335], alloys = [872, 335], consumer_goods = [820, 353], trade = [0, 0] }
+plus = [855, 388]
+confirm = [863, 452]
+order_row_first = [370, 161]
+order_row_pitch = 14
+remove = [0, 0]
+close_key = "esc"
+
 # Planned:
 #
 # [screens.date_readout]

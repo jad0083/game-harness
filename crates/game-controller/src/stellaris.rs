@@ -1407,10 +1407,10 @@ pub struct MarketOrderSpec {
     pub amount: i64,
 }
 
-// TechPick/choose_tech_pick/market_diff are pure selection logic; the governor loop that calls
-// them with a live `prefer`/`desired` list and a corpus tech-cost lookup is wired in separately.
+// TechPick/choose_tech_pick/market_diff are pure selection logic, called from `pick_tech` and
+// `sync_market` below (with a live `prefer`/`desired` list and a corpus tech-cost lookup) as well
+// as tested directly.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-#[allow(dead_code)]
 pub struct TechPick {
     pub field: String,
     pub tech: String,
@@ -1420,7 +1420,6 @@ pub struct TechPick {
 
 /// The first preferred tech that is offered in a field whose current research is below 10% of its
 /// cost (fields already researching a preferred tech are left alone).
-#[allow(dead_code)]
 pub fn choose_tech_pick(research: &BTreeMap<String, Research>, prefer: &[String], cost: &dyn Fn(&str) -> Option<f64>) -> Option<TechPick> {
     for want in prefer {
         for (field, r) in research {
@@ -1440,11 +1439,179 @@ pub fn choose_tech_pick(research: &BTreeMap<String, Research>, prefer: &[String]
 }
 
 /// Orders to add and to remove so the save's monthly trades equal `desired`.
-#[allow(dead_code)]
 pub fn market_diff(current: &[MarketOrderSpec], desired: &[MarketOrderSpec]) -> (Vec<MarketOrderSpec>, Vec<MarketOrderSpec>) {
     let add = desired.iter().filter(|d| !current.contains(d)).cloned().collect();
     let remove = current.iter().filter(|c| !desired.contains(c)).cloned().collect();
     (add, remove)
+}
+
+/// A calibrated `[x, y]` point from `ui.<section>.<key>` (image-space pixels; see AGENTS.md §1).
+/// `ui_point` refuses an uncalibrated `[0, 0]` placeholder rather than clicking a guess.
+fn ui_point(ui: &toml::Table, section: &str, key: &str) -> Result<(i32, i32)> {
+    let v = ui.get(section).and_then(|s| s.get(key)).and_then(|p| p.as_array()).context(format!("manifest has no ui.{section}.{key}"))?;
+    let x = v.first().and_then(|n| n.as_integer()).context("bad point")? as i32;
+    let y = v.get(1).and_then(|n| n.as_integer()).context("bad point")? as i32;
+    if (x, y) == (0, 0) {
+        bail!("ui.{section}.{key} is not calibrated");
+    }
+    Ok((x, y))
+}
+
+/// Click a manifest UI point (image-space pixels): checks the game is foreground, re-establishes
+/// the current image-to-screen scale from a fresh frame (mirrors the `click` CLI command), then
+/// clicks. Manifest points are calibrated in `downscaled_resolution` space, not raw screen pixels.
+async fn click_ui_point(client: &crate::client::AgentClient, point: (i32, i32)) -> Result<()> {
+    require_foreground(client).await?;
+    client.screenshot(None, None, None, None, Some(crate::imaging::MAX_SIDE as i32), Some(75)).await?;
+    let orig_w = client.last_width.load(std::sync::atomic::Ordering::Relaxed).max(1) as f64;
+    let target_w = client.last_target_width.load(std::sync::atomic::Ordering::Relaxed).max(1) as f64;
+    let scale = orig_w / target_w;
+    let (x, y) = point;
+    require_foreground(client).await?;
+    client.click((x as f64 * scale).round() as i32, (y as f64 * scale).round() as i32, "left", 1).await
+}
+
+/// Pick the first preferred tech offered in a field under 10% done (screen: F4, swap, option
+/// card). Pauses and closes any open in-game menu first, like the other console/UI actions.
+pub async fn pick_tech(
+    client: &crate::client::AgentClient,
+    pause: &PauseDetector,
+    ui: &toml::Table,
+    research: &BTreeMap<String, Research>,
+    prefer: &[String],
+    cost: &dyn Fn(&str) -> Option<f64>,
+) -> Result<String> {
+    let Some(pick) = choose_tech_pick(research, prefer, cost) else {
+        return Ok("nothing to pick: no preferred tech offered in a field that is free to change".into());
+    };
+    pause.set_paused(client, true).await?;
+    pause.close_menu(client).await?;
+    let tech = ui.get("tech").context("manifest has no [ui.tech]")?;
+    let str_key = |k: &str| tech.get(k).and_then(|v| v.as_str()).map(str::to_string);
+    let open_key = str_key("open_key").context("ui.tech.open_key missing")?;
+    let close_key = str_key("close_key").unwrap_or_else(|| "esc".to_string());
+
+    require_foreground(client).await?;
+    client.key(&open_key, 1).await?;
+    tokio::time::sleep(std::time::Duration::from_millis(800)).await;
+
+    let swap = tech
+        .get("swap")
+        .and_then(|s| s.get(&pick.field))
+        .and_then(|p| p.as_array())
+        .with_context(|| format!("manifest ui.tech.swap has no entry for field {:?}", pick.field))?;
+    let sx = swap.first().and_then(|n| n.as_integer()).context("bad ui.tech.swap point")? as i32;
+    let sy = swap.get(1).and_then(|n| n.as_integer()).context("bad ui.tech.swap point")? as i32;
+    if (sx, sy) == (0, 0) {
+        bail!("ui.tech.swap.{} is not calibrated", pick.field);
+    }
+    click_ui_point(client, (sx, sy)).await?;
+    tokio::time::sleep(std::time::Duration::from_millis(600)).await;
+
+    let (fx, fy) = ui_point(ui, "tech", "first_option")?;
+    let pitch = tech.get("option_pitch").and_then(|v| v.as_integer()).unwrap_or(66) as i32;
+    click_ui_point(client, (fx, fy + pitch * pick.option_index as i32)).await?;
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+
+    require_foreground(client).await?;
+    client.key(&close_key, 1).await?;
+    Ok(format!("picked {} in {} (option {}); the next autosave confirms it", pick.tech, pick.field, pick.option_index + 1))
+}
+
+/// One order rendered as `side resource amount` for the tool's result text.
+fn describe_orders(orders: &[MarketOrderSpec]) -> String {
+    if orders.is_empty() {
+        return "none".to_string();
+    }
+    orders.iter().map(|o| format!("{} {} {}", o.side, o.resource, o.amount)).collect::<Vec<_>>().join(", ")
+}
+
+/// Screen steps for `remove` and `add`, run after the Market dialog is open (`ui.market`). Kept
+/// separate from `sync_market` so the Market can always be closed afterwards, success or failure.
+async fn apply_market_changes(
+    client: &crate::client::AgentClient,
+    ui: &toml::Table,
+    current: &[MarketOrderSpec],
+    remove: &[MarketOrderSpec],
+    add: &[MarketOrderSpec],
+) -> Result<()> {
+    // Remove highest row index first so removing one order does not shift the rows below it.
+    let mut idxs: Vec<usize> = remove.iter().filter_map(|r| current.iter().position(|c| c == r)).collect();
+    idxs.sort_unstable_by(|a, b| b.cmp(a));
+    if !idxs.is_empty() {
+        let (rx, ry) = ui_point(ui, "market", "order_row_first")?;
+        let pitch = ui.get("market").and_then(|m| m.get("order_row_pitch")).and_then(|v| v.as_integer()).unwrap_or(14) as i32;
+        let remove_pt = ui_point(ui, "market", "remove")?;
+        for i in idxs {
+            click_ui_point(client, (rx, ry + pitch * i as i32)).await?;
+            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+            click_ui_point(client, remove_pt).await?;
+            tokio::time::sleep(std::time::Duration::from_millis(400)).await;
+        }
+    }
+
+    if !add.is_empty() {
+        let add_pt = ui_point(ui, "market", "add")?;
+        let buy_pt = ui_point(ui, "market", "buy")?;
+        let sell_pt = ui_point(ui, "market", "sell")?;
+        let plus_pt = ui_point(ui, "market", "plus")?;
+        let confirm_pt = ui_point(ui, "market", "confirm")?;
+        let resources = ui.get("market").and_then(|m| m.get("resources")).and_then(|r| r.as_table()).context("manifest ui.market has no resources table")?;
+        for order in add {
+            click_ui_point(client, add_pt).await?;
+            tokio::time::sleep(std::time::Duration::from_millis(400)).await;
+            click_ui_point(client, if order.side == "buy" { buy_pt } else { sell_pt }).await?;
+
+            let point = resources.get(&order.resource).and_then(|p| p.as_array()).with_context(|| format!("manifest ui.market.resources has no entry for {:?}", order.resource))?;
+            let rx = point.first().and_then(|n| n.as_integer()).context("bad ui.market.resources point")? as i32;
+            let ry = point.get(1).and_then(|n| n.as_integer()).context("bad ui.market.resources point")? as i32;
+            if (rx, ry) == (0, 0) {
+                bail!("ui.market.resources.{} is not calibrated", order.resource);
+            }
+            click_ui_point(client, (rx, ry)).await?;
+            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+
+            // One `+` click per unit (amount is capped at 25 by MCP-layer validation).
+            for _ in 0..order.amount {
+                click_ui_point(client, plus_pt).await?;
+            }
+            click_ui_point(client, confirm_pt).await?;
+            tokio::time::sleep(std::time::Duration::from_millis(400)).await;
+        }
+    }
+    Ok(())
+}
+
+/// Add and remove monthly Market trades so they match `desired` (screen: energy icon, "Add new
+/// monthly trade" dialog, order rows). The Market is never left open: on error the close key is
+/// still pressed before the error is returned.
+pub async fn sync_market(
+    client: &crate::client::AgentClient,
+    pause: &PauseDetector,
+    ui: &toml::Table,
+    current: &[MarketOrderSpec],
+    desired: &[MarketOrderSpec],
+) -> Result<String> {
+    let (add, remove) = market_diff(current, desired);
+    if add.is_empty() && remove.is_empty() {
+        return Ok("orders already match".into());
+    }
+    pause.set_paused(client, true).await?;
+    pause.close_menu(client).await?;
+
+    let open_click = ui_point(ui, "market", "open_click")?;
+    click_ui_point(client, open_click).await?;
+    tokio::time::sleep(std::time::Duration::from_millis(600)).await;
+
+    let result = apply_market_changes(client, ui, current, &remove, &add).await;
+
+    // Always try to close the Market, even on error, so a failure never leaves it open over the map.
+    let close_key = ui.get("market").and_then(|m| m.get("close_key")).and_then(|v| v.as_str()).unwrap_or("esc").to_string();
+    let _ = require_foreground(client).await;
+    let _ = client.key(&close_key, 1).await;
+
+    result?;
+    Ok(format!("added {}; removed {}", describe_orders(&add), describe_orders(&remove)))
 }
 
 /// Build a briefing from the unzipped `gamestate` text.
@@ -2310,6 +2477,23 @@ situations={ situations={ 0=none 1={ country=0 type="rebellion_situation" progre
         let (add, remove) = market_diff(&[o("sell", "energy", 11), o("buy", "food", 5)], &[o("sell", "energy", 11), o("sell", "trade", 20)]);
         assert_eq!(add, vec![o("sell", "trade", 20)]);
         assert_eq!(remove, vec![o("buy", "food", 5)]);
+    }
+
+    #[test]
+    fn ui_point_names_missing_keys_and_refuses_uncalibrated_points() {
+        let mut market = toml::Table::new();
+        market.insert("add".into(), toml::Value::Array(vec![toml::Value::Integer(382), toml::Value::Integer(156)]));
+        market.insert("remove".into(), toml::Value::Array(vec![toml::Value::Integer(0), toml::Value::Integer(0)]));
+        let mut ui = toml::Table::new();
+        ui.insert("market".into(), toml::Value::Table(market));
+
+        let err = ui_point(&ui, "market", "open_click").unwrap_err().to_string();
+        assert!(err.contains("ui.market.open_click"), "{err}");
+
+        let err = ui_point(&ui, "market", "remove").unwrap_err().to_string();
+        assert!(err.contains("ui.market.remove") && err.contains("not calibrated"), "{err}");
+
+        assert_eq!(ui_point(&ui, "market", "add").unwrap(), (382, 156));
     }
 
     #[test]
