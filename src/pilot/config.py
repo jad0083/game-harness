@@ -38,6 +38,7 @@ class Settings:
     thinking: str = "medium"
     # Stellaris governor decisions (rare, strategic); set separately from GC4 episodes.
     governor_thinking: str = "medium"
+    retro_every: int = 5                # Stellaris: a retrospective after every N model decisions (0 = never)
     image_detail: str = "medium"       # low | medium | high (Gemini media resolution)
     images_in_context: int = 2         # older screenshots in an episode become text stubs
     max_requests_per_episode: int = 30 # loop guard, not a cost limit
@@ -102,6 +103,7 @@ class Settings:
         s.decide_every_months = int(env.get("PILOT_DECIDE_MONTHS", s.decide_every_months))
         s.poll_s = float(env.get("PILOT_POLL_S", s.poll_s))
         s.campaign = env.get("PILOT_CAMPAIGN", s.campaign)
+        s.retro_every = int(env.get("PILOT_RETRO_EVERY", s.retro_every))
         if "PILOT_RUNS_DIR" in env:
             s.runs_dir = Path(env["PILOT_RUNS_DIR"])
         s.journal = default_journal(s.game)

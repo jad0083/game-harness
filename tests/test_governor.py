@@ -566,3 +566,99 @@ def test_rebuild_survives_a_corrupt_trace_file(setup, tmp_path):
     tel = Telemetry(tmp_path / "r.sqlite")
     assert tel.rebuild(s.runs_dir) == 1
     assert tel.query("SELECT decision, trace FROM decisions")[0] == {"decision": "expand", "trace": None}
+
+
+def planner_model(retro_rules=("Survey before expanding: expand stalls when few reachable systems are surveyed.",)):
+    """Decides with a plan on the first decision, keeps afterwards; answers retrospectives."""
+    seen = []
+
+    def respond(messages, info: AgentInfo) -> ModelResponse:
+        from pydantic_ai.messages import UserPromptPart
+        for m in messages:
+            for p in getattr(m, "parts", []):
+                if isinstance(p, UserPromptPart) and isinstance(p.content, str):
+                    seen.append(p.content)
+        props = info.output_tools[0].parameters_json_schema.get("properties", {})
+        if "assessment" in props:
+            return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {
+                "assessment": "Expansion lagged the median; surveying was the bottleneck.",
+                "rules": list(retro_rules), "plan": "1. Survey all systems within 2 jumps by 2203.\\n2. Reach 8 systems by 2205."})])
+        first = not any("Campaign plan:" in p and "Reach 6 systems" in p for p in seen)
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {
+            "directive": "expand" if first else "keep", "reason": "r",
+            "plan": "1. Reach 6 systems by 2205.\\n2. Keep all nets positive." if first else ""})])
+
+    return FunctionModel(respond), seen
+
+
+def test_campaign_plan_persists_and_retrospective_runs(setup, tmp_path):
+
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    s.retro_every = 3
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(s.runs_dir, "run5", s.model, telemetry=tel)
+    src = "save games/emp_1/x.sav"
+    game = FakeStellaris([{**briefing(f"22{i:02d}.01.01"), "source": src} for i in range(8)])
+    model, seen = planner_model()
+    gov = Governor(s, game, log, model=model)
+    gov.run(max_decisions=4)          # 3 decisions, then the retrospective counts as the 4th
+    plans = tel.query("SELECT date, text, source FROM plans WHERE campaign_id='stellaris/emp_1' ORDER BY t")
+    assert [p["source"] for p in plans] == ["decision", "retrospective"], plans
+    assert "Reach 6 systems" in plans[0]["text"] and "Survey all systems" in plans[1]["text"]
+    assert any("Campaign plan:" in p and "Reach 6 systems" in p for p in seen), "the plan is shown to later decisions"
+    retro = [e for e in log.recent if e["kind"] == "trace" and e.get("decision") == "retrospective"]
+    assert retro and "bottleneck" in retro[0]["reason"]
+    rules = (s.corpus_dir / "learned" / "strategy.md")
+    assert rules.exists() and "Survey before expanding" in rules.read_text()
+    assert gov.plan.startswith("1. Survey all systems")
+    gov._set_plan("Goals &amp; milestones", "2203.01.01", "decision")
+    assert gov.plan == "Goals & milestones"
+    # a new Governor for the same campaign picks the plan up again
+    gov2 = Governor(s, FakeStellaris([briefing("2210.01.01")]), EventLog(s.runs_dir, "run6", s.model, telemetry=tel), model=model)
+    gov2._set_campaign({"source": src})
+    assert gov2.plan == "Goals & milestones"
+
+
+def test_remember_rule_tool_records_a_rule(setup):
+    """Regression: 'learned' events passed kind= as data and raised TypeError."""
+    s, log = setup
+
+    def respond(messages, info: AgentInfo) -> ModelResponse:
+        step = sum(isinstance(m, ModelResponse) for m in messages)
+        if step == 0:
+            return ModelResponse(parts=[ToolCallPart("remember_rule", {
+                "rule": "When influence is capped and systems lag, keep expand and check surveying.",
+                "why": "influence 800 unused while systems 4 vs median 15"})])
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"directive": "keep", "reason": "r"})])
+
+    Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=FunctionModel(respond)).run(max_decisions=1)
+    ev = [e for e in log.recent if e["kind"] == "learned"]
+    assert ev and ev[0]["category"] == "rules"
+    assert "keep expand and check surveying" in (s.corpus_dir / "learned/strategy.md").read_text()
+    assert not any(e["kind"] == "episode_error" for e in log.recent)
+
+
+def test_plans_api(setup, tmp_path):
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from pilot.dashboard import make_app
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    s.retro_every = 2
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(s.runs_dir, "run7", s.model, telemetry=tel)
+    game = FakeStellaris([{**briefing(f"22{i:02d}.01.01"), "source": "save games/e1/x.sav"} for i in range(6)])
+    model, _ = planner_model()
+    Governor(s, game, log, model=model).run(max_decisions=3)
+
+    async def go():
+        async with TestClient(TestServer(make_app(None, s.runs_dir, tel))) as c:
+            plans = await (await c.get("/api/plans", params={"campaign": "stellaris/e1"})).json()
+            assert [p["source"] for p in plans] == ["retrospective", "decision"], plans
+            ds = await (await c.get("/api/decisions", params={"campaign": "stellaris/e1"})).json()
+            assert ds[-1]["decision"] == "retrospective" and "bottleneck" in ds[-1]["reason"]
+
+    asyncio.run(go())

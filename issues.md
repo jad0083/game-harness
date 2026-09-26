@@ -37,6 +37,7 @@
 - [ ] Agent key table has no numpad keys or `+`; Stellaris speed-up must use `=` (VK_OEM_PLUS) until added
 
 ## Resolved
+- [x] Every "learned" / "learn_rejected" event raised TypeError: `emit(kind, …)` was also given `kind=` as data, so the governor's `remember_rule` and GC4's learning tools failed whenever a model used them (found 2026-09-25 while adding retrospectives; data key renamed to `category`; regression test)
 - [x] (medium) Chat history slice `[-20:]` can start with an orphan tool result; providers reject it and chat stays broken for the run (`governor._chat`) (2026-09-25; whole exchanges kept (last 6); test)
 - [x] (medium) `prepare_war` approval takes any pending note as the answer and treats text starting with "y" as yes; answers need their own channel (`HumanChannel.ask`) (2026-09-25; answers have their own channel (dashboard Yes/No/answer box); notes never answer; exact yes; tests)
 - [x] (low-medium) `HumanAiReader::set` leaves the console open when a screenshot or decode fails mid-read (2026-09-25; console closed even when reading fails)

@@ -91,3 +91,5 @@
 - [x] Default model Gemini 3.8 Flash with `medium` thinking for GC4 episodes and Stellaris decisions (thought summaries in traces)
 - [x] Peer benchmarks in the Stellaris briefing (ours vs median/best of the other regular empires, rank, FALLING BEHIND line), urgent trigger when newly behind, standing line on the dashboard
 - [x] Briefing: expansion room (unclaimed systems 1–2 jumps out, surveyed by us, held by others), construction/science/colony ships, BOXED IN / NO CONSTRUCTION SHIP lines
+- [x] Campaign plan (written and revised by the governor, per campaign, versioned) and retrospectives every N decisions (assessment, up to 3 rules into the learned overlay, revised plan); dashboard Plan tab
+- [x] Code review follow-ups: answers channel, chat history, scoped scoring, transactional rebuild, escaping, console always closed, exact window title

@@ -165,6 +165,9 @@
 
   /* ---- talk ---- */
   .thread { display: grid; gap: 12px; margin-bottom: 14px; }
+  .plan-text { font-family: var(--serif); font-size: 17px; line-height: 1.6; white-space: pre-wrap; margin: 4px 0 0; max-width: 70ch; }
+  .plan-old { border-top: 1px solid var(--hair); margin-top: 12px; padding-top: 10px; }
+  .plan-old .plan-text { font-size: 15px; color: var(--ink-2); }
   .msg .who { font-size: 12.5px; color: var(--muted); }
   .msg.human p { margin: 2px 0 0; font-weight: 500; }
   .msg.model p { margin: 2px 0 0; font-family: var(--serif); font-size: 16.5px; line-height: 1.55; white-space: pre-wrap; }
@@ -260,6 +263,7 @@
       <div class="tabs" role="tablist">
         <button role="tab" aria-selected="true" data-tab="reasoning">Reasoning<span class="dot" hidden></span></button>
         <button role="tab" aria-selected="false" data-tab="talk">Talk<span class="dot" hidden></span></button>
+        <button role="tab" aria-selected="false" data-tab="plan">Plan<span class="dot" hidden></span></button>
         <button role="tab" aria-selected="false" data-tab="activity">Activity<span class="dot" hidden></span></button>
       </div>
       <div class="tabpanel" id="tab-reasoning" role="tabpanel"><p class="empty">Pick a decision to read how it was made.</p></div>
@@ -289,6 +293,7 @@
         </div>
         <p class="hint" id="talk-off" hidden>Talking to the model needs a live run. Start one with <code>python -m pilot run</code>.</p>
       </div>
+      <div class="tabpanel" id="tab-plan" role="tabpanel" hidden><div id="plan"></div></div>
       <div class="tabpanel" id="tab-activity" role="tabpanel" hidden><ul class="feed" id="feed"></ul></div>
     </section>
   </div>
@@ -362,10 +367,29 @@ async function loadCampaigns() {
   if (S.campaign) sel.value = S.campaign;
 }
 
+function renderPlan(plans) {
+  const box = $("plan");
+  if (!plans || !plans.length) {
+    box.innerHTML = `<p class="empty">No campaign plan yet. The governor writes one at its first decision and revises it at each retrospective.</p>`;
+    return;
+  }
+  const [cur, ...old] = plans;
+  const src = (p) => p.source === "retrospective" ? "revised at a retrospective" : "written at a decision";
+  box.innerHTML = `<div class="t-when">${esc(cur.date)}, ${esc(src(cur))}</div><p class="plan-text">${esc(cur.text)}</p>` +
+    old.slice(0, 8).map((p) => `<details class="plan-old"><summary>${esc(p.date)}, ${esc(src(p))}</summary><p class="plan-text">${esc(p.text)}</p></details>`).join("");
+}
+
 async function loadCampaignData() {
-  if (!S.campaign) { renderChart(); renderDecisions(); return; }
+  if (!S.campaign) { renderChart(); renderDecisions(); renderPlan([]); return; }
   const qs = "campaign=" + encodeURIComponent(S.campaign);
-  [S.decisions, S.metrics] = await Promise.all([api("/api/decisions?" + qs), api("/api/metrics?" + qs)]);
+  let plans;
+  [S.decisions, S.metrics, plans] = await Promise.all([api("/api/decisions?" + qs), api("/api/metrics?" + qs),
+                                                      api("/api/plans?" + qs).catch(() => [])]);
+  if (JSON.stringify(plans) !== S.plansKey) {
+    if (S.plansKey !== undefined && plans.length) flag("plan");
+    S.plansKey = JSON.stringify(plans);
+    renderPlan(plans);
+  }
   renderChart(); renderDecisions();
   const newest = S.decisions[S.decisions.length - 1];
   // follow the newest decision unless the reader picked an older one
@@ -617,13 +641,13 @@ function showTab(name) {
     b.setAttribute("aria-selected", String(on));
     if (on) b.querySelector(".dot").hidden = true;
   });
-  ["reasoning", "talk", "activity"].forEach((n) => ($("tab-" + n).hidden = n !== name));
+  ["reasoning", "talk", "plan", "activity"].forEach((n) => ($("tab-" + n).hidden = n !== name));
 }
 function flag(name) { const b = document.querySelector(`.tabs [data-tab="${name}"]`); if (b.getAttribute("aria-selected") !== "true") b.querySelector(".dot").hidden = false; }
 document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
 
 // ---------- activity ----------
-const QUIET = new Set(["metrics", "status", "trace", "chat"]);
+const QUIET = new Set(["metrics", "status", "trace", "chat", "plan"]);
 function describe(ev) {
   switch (ev.kind) {
     case "episode": return `${ev.situation}: ${ev.decision}`;
@@ -671,7 +695,7 @@ function onEvent(ev) {
   if (!isNew(ev)) return;
   addFeed(ev);
   if (ev.kind === "chat") addMessage(ev);
-  if (ev.kind === "trace" || ev.kind === "campaign") refreshSoon();
+  if (ev.kind === "trace" || ev.kind === "campaign" || ev.kind === "plan") refreshSoon();
   if (ev.kind === "metrics" && S.campaign === (S.status.info || {}).campaign) {
     S.metrics.push({ ...ev, month: ev.date ? (+ev.date.split(".")[0]) * 12 + (+ev.date.split(".")[1]) - 1 : null });
     renderChart();

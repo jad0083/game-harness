@@ -51,6 +51,12 @@ CREATE TABLE IF NOT EXISTS metrics (
     PRIMARY KEY (run_id, date)
 );
 CREATE INDEX IF NOT EXISTS metrics_campaign ON metrics(campaign_id, month);
+CREATE TABLE IF NOT EXISTS plans (
+    campaign_id TEXT, run_id TEXT NOT NULL, t REAL NOT NULL,
+    date TEXT, source TEXT,         -- 'decision' | 'retrospective'
+    text TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS plans_campaign ON plans(campaign_id, t);
 """
 
 # Numbers compared N months after a decision (from the governor's metrics events).
@@ -99,6 +105,7 @@ class Telemetry:
         self._exec("UPDATE runs SET campaign_id=? WHERE id=?", (cid, run_id))
         self._exec("UPDATE decisions SET campaign_id=? WHERE run_id=? AND campaign_id IS NULL", (cid, run_id))
         self._exec("UPDATE metrics SET campaign_id=? WHERE run_id=? AND campaign_id IS NULL", (cid, run_id))
+        self._exec("UPDATE plans SET campaign_id=? WHERE run_id=? AND campaign_id IS NULL", (cid, run_id))
         return cid
 
     def _campaign_of(self, run_id: str) -> str | None:
@@ -121,6 +128,9 @@ class Telemetry:
             self._exec("INSERT OR REPLACE INTO metrics(run_id, campaign_id, t, date, month, data) VALUES (?,?,?,?,?,?)",
                        (run_id, self._campaign_of(run_id), t, data.get("date"), month_index(data.get("date")),
                         json.dumps(data, default=str)))
+        elif kind == "plan":
+            self._exec("INSERT INTO plans(campaign_id, run_id, t, date, source, text) VALUES (?,?,?,?,?,?)",
+                       (self._campaign_of(run_id), run_id, t, data.get("date"), data.get("source"), data.get("text", "")))
         elif kind == "trace":
             tr = trace or {}
             decision = data.get("decision") or tr.get("decision") or data.get("situation")
@@ -157,6 +167,10 @@ class Telemetry:
             scored += 1
         return scored
 
+    def latest_plan(self, campaign_id: str) -> str:
+        rows = self.query("SELECT text FROM plans WHERE campaign_id=? ORDER BY t DESC LIMIT 1", (campaign_id,))
+        return rows[0]["text"] if rows else ""
+
     def past_outcomes(self, campaign_id: str, limit: int = 12) -> str:
         """Text table of this campaign's earlier directive changes and what followed, for the model."""
         rows = self.query(
@@ -182,7 +196,7 @@ class Telemetry:
             self.db.execute("BEGIN")
         try:
             with self._lock:
-                for table in ("events", "decisions", "metrics", "runs", "campaigns"):
+                for table in ("events", "decisions", "metrics", "plans", "runs", "campaigns"):
                     self.db.execute(f"DELETE FROM {table}")  # fixed table names
             for d in sorted(p for p in runs_dir.iterdir() if (p / "events.jsonl").exists()):
                 with open(d / "events.jsonl", encoding="utf-8") as f:
