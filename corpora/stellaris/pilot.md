@@ -61,6 +61,22 @@ Directives never grant resources, stats or anything the empire could not do itse
   `expand` cannot work: growth needs diplomacy, war (ask the human) or colonising planets inside our
   borders. Room but few surveyed systems means exploration is the bottleneck: keep `expand` (its
   stance favours claiming) and say so.
+- **Neighbours** (up to 6 known empires, nearest first; at war and shared borders first): their
+  military, economy and tech as a multiple of ours, systems, techs, opinion (ours → them / theirs →
+  us), threat, and relation flags (rival, hostile, alliance, pacts, closed borders, truce, AT WAR).
+  A bordering empire with military above ~1.5x ours and a hostile/rival flag or opinion below -300
+  is the "stronger hostile neighbour" that calls for `defend`; allies and pacts argue against it.
+  `[FALLEN EMPIRE]` entries are far stronger but passive unless provoked: never a reason for
+  `prepare_war`.
+- **War line**: who attacked whom, the enemy's military, both war goals, war exhaustion on both
+  sides (at 100% the other side can force a status-quo peace) and battles won/lost. Exhaustion
+  rising faster on our side means the war is being lost even if no planet has fallen yet.
+- **Change since …** (about 12 months): systems, pops, military against the others' median,
+  tech power and the alloy stock. `ALLOYS PILING UP` means the AI cannot turn more budget into
+  ships (naval capacity or the starbase cap), so `defend`/`prepare_war` will not raise military
+  power by themselves: say so, and prefer the directive that uses what we have (e.g. `tech_rush`
+  for naval-capacity techs, or `consolidate_economy`).
+- A `war ended` urgent line means leave `defend` unless another threat is listed.
 
 - Read the whole briefing before choosing. Pick the directive whose *trigger* in
   `strategy.md` fits best; keep the current one if nothing has changed materially.
