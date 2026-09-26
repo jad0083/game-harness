@@ -16,6 +16,17 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
+/// Subdirectory holding knowledge learned during play (overlay manifest, templates, notes).
+pub const LEARNED_DIR: &str = "learned";
+
+#[derive(Debug, Default, Deserialize)]
+struct LearnedOverlay {
+    #[serde(default)]
+    screens: HashMap<String, ScreenDef>,
+    #[serde(default)]
+    hotkeys: HashMap<String, String>,
+}
+
 /// Manifest file names, in the order they are tried.
 pub const MANIFEST_FILES: [&str; 2] = ["manifest.toml", "game.toml"];
 /// Upper bound on a prose chunk; a single longer paragraph becomes its own chunk.
@@ -155,7 +166,29 @@ impl GameManifest {
         let mut manifest: Self = toml::from_str(&content)
             .with_context(|| format!("Failed to parse game corpus TOML at {:?}", path.as_ref()))?;
         manifest.base_dir = path.as_ref().parent().map(Path::to_path_buf);
+        if let Some(dir) = manifest.base_dir.clone() {
+            manifest.merge_learned(&dir.join(LEARNED_DIR).join("manifest.toml"))?;
+        }
         Ok(manifest)
+    }
+
+    /// Merge the learned overlay (written by the pilot app) into this manifest. Hand-verified
+    /// entries win: an overlay screen or hotkey with the same name as a main one is ignored.
+    /// Overlay template paths are relative to the corpus directory (e.g. `learned/templates/x.png`).
+    fn merge_learned(&mut self, path: &Path) -> Result<()> {
+        if !path.exists() {
+            return Ok(());
+        }
+        let content = std::fs::read_to_string(path).with_context(|| format!("reading {:?}", path))?;
+        let overlay: LearnedOverlay =
+            toml::from_str(&content).with_context(|| format!("parsing learned overlay {:?}", path))?;
+        for (name, screen) in overlay.screens {
+            self.screens.entry(name).or_insert(screen);
+        }
+        for (name, key) in overlay.hotkeys {
+            self.hotkeys.entry(name).or_insert(key);
+        }
+        Ok(())
     }
 
     /// The manifest file inside a corpus directory, if any.
@@ -373,6 +406,12 @@ impl GameCorpus {
             let stem = file_stem(&path);
             let raw = std::fs::read_to_string(&path).with_context(|| format!("reading {:?}", path))?;
             corpus.add_doc(&stem, &format!("doc:{}", stem), &raw.replace('\u{00a0}', " "));
+        }
+        // Notes learned during play (rules, verified controls) are searchable like docs.
+        for path in sorted_files(&dir.join(LEARNED_DIR), "md") {
+            let stem = file_stem(&path);
+            let raw = std::fs::read_to_string(&path).with_context(|| format!("reading {:?}", path))?;
+            corpus.add_doc(&format!("learned_{}", stem), &format!("learned:{}", stem), &raw);
         }
 
         Ok(corpus)
@@ -697,6 +736,34 @@ end_turn = "enter"
         assert_eq!(f.load().unwrap().manifest.metadata.id, "testgame");
         std::fs::remove_file(f.0.join("game.toml")).unwrap();
         assert!(f.load().is_err());
+    }
+
+    #[test]
+    fn learned_overlay_adds_screens_hotkeys_and_notes_without_overriding() {
+        let f = Fixture::new("learned");
+        std::fs::create_dir_all(f.0.join("learned")).unwrap();
+        f.write(
+            "learned/manifest.toml",
+            r#"
+[hotkeys]
+end_turn = "space"      # must not override the main manifest
+survey = "v"
+
+[screens.new_popup]
+description = "learned"
+template = "learned/templates/new_popup.png"
+template_roi = [0.1, 0.1, 0.1, 0.1]
+auto_dismiss = true
+dismiss_key = "esc"
+"#,
+        )
+        .write("learned/strategy.md", "# Learned rules\n\nAlways store artifacts while rich.");
+        let c = f.load().unwrap();
+        assert_eq!(c.manifest.hotkeys["end_turn"], "enter", "main manifest wins");
+        assert_eq!(c.manifest.hotkeys["survey"], "v");
+        let s = &c.manifest.screens["new_popup"];
+        assert!(s.auto_dismiss && s.template.as_deref() == Some("learned/templates/new_popup.png"));
+        assert!(c.search("store artifacts", 5).iter().any(|h| h.id.starts_with("learned:strategy#")));
     }
 
     #[test]
