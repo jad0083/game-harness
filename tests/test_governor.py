@@ -1224,3 +1224,23 @@ def test_a_failing_model_cools_down_behind_the_others(setup):
     Governor(s2, game, log, model=FunctionModel(overloaded), fallback=_recording("b", calls)).run(max_decisions=2)
     # decision 1: a (+1 retry) fails, b answers; decision 2: a is cooling down, so b goes first
     assert calls == ["a", "a", "b", "b"], calls
+
+
+def test_strategy_versions_are_stored_per_campaign(tmp_path):
+    from pilot.events import EventLog
+    from pilot.telemetry import Telemetry
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(tmp_path / "runs", "r1", "m", telemetry=tel)
+    log.emit("run_start", game="stellaris", model="m")
+    log.set_campaign("stellaris", "theian_1", "Theian")
+    log.emit("metrics", date="2240.01.01", planets=4)
+    log.emit("strategy", date="2240.01.01", trigger="start of run", model="m", reason="first",
+             strategy={"pillars": {}, "focus": "grow"})
+    log.emit("strategy", date="2245.01.01", trigger="war started", model="m", reason="war",
+             strategy={"pillars": {}, "focus": "defend"})
+    cid = log.campaign_id
+    assert tel.latest_strategy(cid)["focus"] == "defend"
+    hist = tel.strategy_history(cid)
+    assert [h["trigger"] for h in hist] == ["war started", "start of run"]
+    assert tel.metrics_rows(cid)[0]["planets"] == 4
+    assert tel.latest_strategy("nope") is None
