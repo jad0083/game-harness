@@ -297,4 +297,11 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   a decision with `decision = "retrospective"`.
 - `static/dashboard.html`: one file, no build step; SVG charts (palette validated for both themes;
   light-mode relief via legend, hover values and a table view).
+- Design (keep it consistent): deep-space plane with warm ivory ink, dark first; one amber accent
+  reserved for attention (falling behind, needs you, the live pulse, focus) and teal for sensors and
+  tool calls; Bricolage Grotesque for the interface and Fraunces for the model's own words (reasons,
+  thinking, plan, chat), so the two voices are told apart by type; sections separated by hairlines
+  with an amber rule at each heading (no uniform cards); the readout strip (in-game date at display
+  size, directive, standing, governor state) is the one loud element. No capitalised eyebrow labels,
+  middle dots or arrow glyphs.
 

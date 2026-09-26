@@ -92,11 +92,11 @@ class EventLog:
         self.emit("trace", _trace=trace, episode=episode, file=rel, thinking=thinking, tools=tools, **summary)
         return rel
 
-    def set_campaign(self, game: str, name: str) -> None:
-        """Name the campaign (save/playthrough) this run belongs to."""
+    def set_campaign(self, game: str, name: str, title: str = "") -> None:
+        """Name the campaign (save/playthrough) this run belongs to; `title` is for people (empire name)."""
         self.campaign_id = f"{game}/{name}"
         self.state.info["campaign"] = self.campaign_id
-        self.emit("campaign", game=game, name=name)
+        self.emit("campaign", game=game, name=name, title=title)
 
     def subscribe(self, loop: asyncio.AbstractEventLoop) -> asyncio.Queue:
         q: asyncio.Queue = asyncio.Queue()

@@ -6,108 +6,127 @@
 <title>Game Pilot</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400&display=swap" rel="stylesheet">
 <style>
+  /* Tokens: deep-space plane, warm ivory ink, one amber accent. Dark first (the room it is watched in). */
   :root {
     color-scheme: light;
-    --plane: #eef2f8; --surface: #ffffff; --raised: #f5f7fb; --ink: #16203a; --ink-2: #45506d;
-    --muted: #6b7592; --hair: #d9dfea; --accent: #2f4fc4; --accent-ink: #ffffff; --thought: #6b4fd8;
-    --good: #11803a; --warn: #a85a08; --bad: #c0392b; --grid: #e6eaf2; --axis: #c3cad9;
+    --plane: #ece9e1; --surface: #f8f7f3; --raised: #e6e2d8; --hair: #d4cfc3;
+    --ink: #1b1d29; --ink-2: #4a4d5c; --muted: #7b7e8c;
+    --accent: #a9741b; --accent-ink: #fffaf0; --sensor: #1f8f86; --thought: #6b52c9;
+    --good: #1f7f46; --warn: #b5651d; --bad: #b8362f; --grid: #ddd9cf; --axis: #bfb9ab;
     --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300;
-    --sans: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
-    --serif: "Newsreader", "Iowan Old Style", Georgia, serif;
-    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --sans: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+    --serif: "Fraunces", "Iowan Old Style", Georgia, serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   }
   @media (prefers-color-scheme: dark) {
     :root:where(:not([data-theme="light"])) {
       color-scheme: dark;
-      --plane: #0e1424; --surface: #151d33; --raised: #1b2540; --ink: #e7ebf5; --ink-2: #b7c0d6;
-      --muted: #8c97b3; --hair: #29345a; --accent: #7fa2ff; --accent-ink: #0e1424; --thought: #b39cff;
-      --good: #3ccf6e; --warn: #f0a93b; --bad: #ff7b6e; --grid: #222c4a; --axis: #36426a;
+      --plane: #0e1220; --surface: #141a2a; --raised: #1b2236; --hair: #29314a;
+      --ink: #efeadd; --ink-2: #c6c2b5; --muted: #8b8d9c;
+      --accent: #f0b34a; --accent-ink: #1a1305; --sensor: #63d1c6; --thought: #b8a6ff;
+      --good: #5ec98a; --warn: #ff9a3c; --bad: #ff6f6f; --grid: #1f2740; --axis: #33406a;
       --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300;
     }
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --plane: #0e1424; --surface: #151d33; --raised: #1b2540; --ink: #e7ebf5; --ink-2: #b7c0d6;
-    --muted: #8c97b3; --hair: #29345a; --accent: #7fa2ff; --accent-ink: #0e1424; --thought: #b39cff;
-    --good: #3ccf6e; --warn: #f0a93b; --bad: #ff7b6e; --grid: #222c4a; --axis: #36426a;
+    --plane: #0e1220; --surface: #141a2a; --raised: #1b2236; --hair: #29314a;
+    --ink: #efeadd; --ink-2: #c6c2b5; --muted: #8b8d9c;
+    --accent: #f0b34a; --accent-ink: #1a1305; --sensor: #63d1c6; --thought: #b8a6ff;
+    --good: #5ec98a; --warn: #ff9a3c; --bad: #ff6f6f; --grid: #1f2740; --axis: #33406a;
     --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300;
   }
 
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
   html { -webkit-text-size-adjust: 100%; }
-  body { margin: 0; background: var(--plane); color: var(--ink); font: 15px/1.5 var(--sans); }
+  body { margin: 0; background: var(--plane); color: var(--ink); font: 15px/1.5 var(--sans); font-variation-settings: "opsz" 14; }
   button, input, select, textarea { font: inherit; color: inherit; }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+  a { color: var(--sensor); }
 
   /* ---- top bar ---- */
-  .bar { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px;
-         padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--hair); }
-  .brand { font-weight: 700; font-size: 17px; letter-spacing: -0.01em; margin-right: 4px; }
-  .campaign select { background: var(--raised); border: 1px solid var(--hair); border-radius: 8px; padding: 5px 8px; max-width: min(300px, 60vw); }
+  .bar { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px;
+         padding: 10px 24px; background: color-mix(in srgb, var(--plane) 88%, transparent); backdrop-filter: blur(8px);
+         border-bottom: 1px solid var(--hair); }
+  .brand { font-weight: 700; font-size: 17px; letter-spacing: -0.02em; font-variation-settings: "opsz" 24; }
+  .brand::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--accent);
+                   margin-right: 9px; vertical-align: 1px; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+  .campaign select, .picker select { background: transparent; border: 1px solid var(--hair); border-radius: 6px; padding: 5px 8px; color: var(--ink); }
+  .campaign select { max-width: min(320px, 60vw); font-weight: 600; }
   .pill { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 13px; }
   .pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
-  .pill.playing::before { background: var(--good); }
-  .pill.deciding::before { background: var(--thought); }
+  .pill.playing::before { background: var(--good); box-shadow: 0 0 8px var(--good); }
+  .pill.deciding::before { background: var(--thought); box-shadow: 0 0 8px var(--thought); }
   .pill.paused::before, .pill.needs_attention::before { background: var(--warn); }
   .pill.stopped::before, .pill.viewer::before { background: var(--muted); }
-  .fresh { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  .pc, .fresh { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .pc { display: inline-flex; align-items: center; gap: 6px; }
+  .pc::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+  .pc.on::before { background: var(--good); }
+  .pc.off::before { background: var(--bad); }
   .fresh.lost { color: var(--warn); font-weight: 600; }
-  .facts { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--ink-2); font-size: 13.5px; }
-  .facts b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .facts { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--ink-2); font-size: 13px; }
+  .facts b { color: var(--ink); font-weight: 600; }
   .spacer { flex: 1; }
   .picker { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
-  .picker select { background: var(--raised); border: 1px solid var(--hair); border-radius: 8px; padding: 5px 8px; color: var(--ink); max-width: 230px; }
-  dialog { border: 1px solid var(--hair); border-radius: 12px; background: var(--surface); color: var(--ink); padding: 18px 20px; width: min(420px, 92vw); }
-  dialog::backdrop { background: rgba(8, 12, 24, .55); }
-  dialog h2 { margin: 0 0 4px; font-size: 17px; }
-  dialog form { display: grid; gap: 12px; }
-  dialog label { display: grid; gap: 4px; font-size: 13.5px; color: var(--ink-2); }
-  dialog select, dialog input { padding: 7px 10px; border-radius: 8px; border: 1px solid var(--hair); background: var(--raised); color: var(--ink); }
-  dialog input[type=number] { width: 90px; }
-  dialog .row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
-  .toast { position: fixed; right: 16px; bottom: 16px; z-index: 10; background: var(--surface); border: 1px solid var(--hair);
-           border-left: 3px solid var(--accent); border-radius: 10px; padding: 10px 14px; font-size: 13.5px; max-width: min(420px, 90vw);
-           box-shadow: 0 6px 24px rgba(10, 18, 40, .14); }
-  .btn { border: 1px solid var(--hair); background: var(--raised); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
-  .btn:hover { border-color: var(--accent); }
+  .picker select { max-width: 230px; }
+  .btn { border: 1px solid var(--hair); background: transparent; border-radius: 6px; padding: 6px 12px; cursor: pointer; color: var(--ink); }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
   .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .btn.primary:hover { color: var(--accent-ink); filter: brightness(1.08); }
   .btn.danger { color: var(--bad); }
+  .btn.danger:hover { border-color: var(--bad); }
   .btn:disabled { opacity: .5; cursor: default; }
   .live-only[hidden] { display: none !important; }
 
-  .banner { margin: 12px 20px 0; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--warn);
-            background: var(--surface); display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  /* ---- readout: the one loud element ---- */
+  .readout { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 40px; padding: 18px 24px 14px;
+             border-bottom: 1px solid var(--hair); }
+  .ro-label { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 2px; }
+  .ro-date b { display: block; font-family: var(--serif); font-weight: 400; font-size: 46px; line-height: 1; letter-spacing: -0.01em;
+               font-variation-settings: "opsz" 72, "SOFT" 30; color: var(--ink); }
+  .ro-item b { display: block; font-size: 19px; font-weight: 600; line-height: 1.25; font-variation-settings: "opsz" 24; }
+  .ro-item b.attn { color: var(--accent); }
+  .ro-item .ro-sub { display: block; font-size: 13px; color: var(--ink-2); }
+  @media (max-width: 700px) { .readout { gap: 8px 24px; padding: 14px 16px 12px; } .ro-date b { font-size: 36px; } }
+
+  .banner { margin: 12px 24px 0; padding: 12px 14px; border-left: 3px solid var(--accent); background: var(--surface);
+            display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
   .banner p { margin: 0; flex: 1 1 320px; font-family: var(--serif); font-size: 17px; }
 
-  /* ---- layout ---- */
-  main { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(360px, 1fr); gap: 16px; padding: 16px 20px 24px;
-         align-items: start; }
-  @media (max-width: 1000px) { main { grid-template-columns: 1fr; padding: 12px 16px 20px; } .bar { padding: 10px 16px; } }
-  .col { display: grid; gap: 16px; min-width: 0; }
-  .panel { background: var(--surface); border: 1px solid var(--hair); border-radius: 12px; min-width: 0; }
-  .panel > header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; padding: 14px 16px 0; }
-  .panel h2 { margin: 0; font-size: 15px; font-weight: 700; }
+  /* ---- layout: sections with hairlines, no card kit ---- */
+  main { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(360px, 1fr); gap: 0 32px; padding: 4px 24px 32px; align-items: start; }
+  @media (max-width: 1000px) { main { grid-template-columns: 1fr; padding: 0 16px 24px; } .bar { padding: 10px 16px; } .banner { margin: 12px 16px 0; } }
+  .col { display: grid; min-width: 0; }
+  .panel { min-width: 0; padding: 18px 0 22px; border-bottom: 1px solid var(--hair); }
+  .col > .panel:last-child { border-bottom: 0; }
+  .panel > header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; margin-bottom: 12px; }
+  .panel h2 { margin: 0; font-size: 15px; font-weight: 700; padding-left: 10px; border-left: 3px solid var(--accent); line-height: 1.2; }
   .panel .sub { color: var(--muted); font-size: 13px; }
-  .panel .body { padding: 12px 16px 16px; }
-  .right { position: sticky; top: 64px; }
+  .right { position: sticky; top: 58px; }
   @media (max-width: 1000px) { .right { position: static; } }
+  @media (max-width: 1000px) {
+    main { display: flex; flex-direction: column; }
+    .col { display: contents; }
+    #p-chart { order: 1; } #p-dec { order: 2; } #p-tabs { order: 3; } #p-frame { order: 4; }
+  }
 
   /* ---- chart ---- */
-  .seg { display: inline-flex; border: 1px solid var(--hair); border-radius: 8px; overflow: hidden; margin-left: auto; }
-  .seg button { border: 0; background: transparent; padding: 4px 10px; cursor: pointer; font-size: 13px; color: var(--ink-2); }
-  .seg button[aria-pressed="true"] { background: var(--raised); color: var(--ink); font-weight: 600; }
-  .standing { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
-  .chip { display: grid; gap: 1px; padding: 6px 10px; border: 1px solid var(--hair); border-radius: 8px; background: var(--raised);
-          font-variant-numeric: tabular-nums; min-width: 96px; }
-  .chip b { font-size: 16px; font-weight: 700; }
-  .chip-label, .chip-sub { font-size: 11.5px; color: var(--muted); }
-  .chip.behind { border-color: var(--warn); box-shadow: inset 3px 0 0 var(--warn); }
-  .chip.behind b { color: var(--warn); }
-  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--ink-2); margin: 4px 0 6px; }
+  .seg { display: inline-flex; border-bottom: 1px solid var(--hair); margin-left: auto; }
+  .seg button { border: 0; background: transparent; padding: 4px 10px 6px; cursor: pointer; font-size: 13px; color: var(--muted); margin-bottom: -1px; }
+  .seg button[aria-pressed="true"] { color: var(--ink); font-weight: 600; border-bottom: 2px solid var(--accent); }
+  .standing { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 0 0 14px; }
+  .chip { display: grid; gap: 0; min-width: 84px; }
+  .chip b { font-size: 22px; font-weight: 500; line-height: 1.1; font-variation-settings: "opsz" 28; }
+  .chip-label { font-size: 12.5px; color: var(--muted); }
+  .chip-sub { font-size: 12px; color: var(--ink-2); }
+  .chip.behind b { color: var(--accent); }
+  .chip.behind .chip-sub em { color: var(--accent); font-style: normal; font-weight: 600; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--ink-2); margin: 4px 0 6px; }
   .legend span { display: inline-flex; align-items: center; gap: 6px; }
   .legend i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
   .chartwrap { position: relative; }
@@ -116,12 +135,12 @@
   svg.chart .lane-label { fill: var(--ink-2); font-size: 12px; }
   svg.chart .lane-label.current { fill: var(--ink); font-weight: 600; }
   svg.chart .dmark { cursor: pointer; }
-  .tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--hair);
-         border-radius: 8px; padding: 8px 10px; font-size: 12.5px; min-width: 150px; box-shadow: 0 4px 16px rgba(10, 18, 40, .12); }
+  .tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--hair); border-radius: 6px;
+         padding: 8px 10px; font-size: 12.5px; min-width: 150px; box-shadow: 0 6px 20px rgba(4, 8, 20, .35); }
   .tip b { display: block; margin-bottom: 4px; }
   .tip div { display: flex; justify-content: space-between; gap: 12px; font-variant-numeric: tabular-nums; }
   .tip i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
-  .empty { color: var(--muted); padding: 24px 0; text-align: center; }
+  .empty { color: var(--muted); padding: 20px 0; }
   table.data { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
   table.data th, table.data td { text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
   table.data th:first-child, table.data td:first-child { text-align: left; }
@@ -129,17 +148,14 @@
 
   /* ---- decisions ---- */
   .decisions { list-style: none; margin: 0; padding: 0; }
-  .decisions li { border-top: 1px solid var(--hair); }
+  .decisions li { border-top: 1px solid var(--grid); }
   .decisions li:first-child { border-top: 0; }
-  .decisions button { display: grid; grid-template-columns: 92px 1fr; gap: 2px 14px; width: 100%; text-align: left;
-                      background: transparent; border: 0; padding: 12px 10px; cursor: pointer; border-radius: 8px; }
-  .decisions button:hover { background: var(--raised); }
-  .decisions li.sel button { background: var(--raised); box-shadow: inset 3px 0 0 var(--accent); }
-  @media (max-width: 1000px) {
-    main { display: flex; flex-direction: column; }
-    .col { display: contents; }
-    #p-chart { order: 1; } #p-dec { order: 2; } #p-tabs { order: 3; } #p-frame { order: 4; }
-  }
+  .decisions button { display: grid; grid-template-columns: 96px 1fr; gap: 2px 14px; width: 100%; text-align: left;
+                      background: transparent; border: 0; padding: 12px 8px; cursor: pointer; }
+  .decisions button:hover { background: var(--surface); }
+  .decisions li.sel button { background: var(--surface); box-shadow: inset 3px 0 0 var(--accent); }
+  .decisions li.more { padding: 10px 8px 0; }
+  .decisions li.more button { display: inline-block; width: auto; }
   .nw { white-space: nowrap; }
   .d-date { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 14px; }
   .d-meta { color: var(--muted); font-size: 12.5px; grid-column: 1; }
@@ -148,73 +164,88 @@
   .dir { font-weight: 600; }
   .dir.kept { color: var(--ink-2); font-weight: 500; }
   .trigger { color: var(--muted); font-size: 13px; }
-  .reason { font-family: var(--serif); font-size: 16px; line-height: 1.45; margin: 3px 0 0; color: var(--ink);
+  .reason { font-family: var(--serif); font-size: 16px; line-height: 1.5; margin: 3px 0 0; color: var(--ink);
             display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .after { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
   .after .up { color: var(--good); } .after .down { color: var(--bad); }
 
   /* ---- tabs ---- */
-  .tabs { display: flex; gap: 2px; padding: 8px 8px 0; border-bottom: 1px solid var(--hair); }
-  .tabs button { position: relative; border: 0; background: transparent; padding: 8px 12px 10px; cursor: pointer; color: var(--ink-2); font-weight: 500; }
-  .tabs button[aria-selected="true"] { color: var(--ink); font-weight: 700; box-shadow: inset 0 -2px 0 var(--accent); }
+  #p-tabs { padding-top: 12px; }
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--hair); }
+  .tabs button { position: relative; border: 0; background: transparent; padding: 8px 12px 10px; cursor: pointer; color: var(--muted); font-weight: 500; margin-bottom: -1px; }
+  .tabs button[aria-selected="true"] { color: var(--ink); font-weight: 700; border-bottom: 2px solid var(--accent); }
   .tabs .dot { position: absolute; top: 7px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--thought); }
-  .tabpanel { padding: 14px 16px 16px; max-height: calc(100vh - 150px); overflow: auto; }
+  .tabpanel { padding: 16px 4px 8px; max-height: calc(100vh - 150px); overflow: auto; }
   @media (max-width: 1000px) { .tabpanel { max-height: none; } }
 
-  /* ---- trace reader ---- */
+  /* ---- trace reader: the model's words in serif ---- */
   .t-when { color: var(--muted); font-size: 13px; }
-  .t-decision { font-family: var(--serif); font-size: 26px; line-height: 1.2; margin: 2px 0 6px; font-weight: 500; }
-  .t-reason { font-family: var(--serif); font-size: 17.5px; line-height: 1.55; margin: 0 0 10px; max-width: 70ch; }
-  .t-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; margin-bottom: 14px; }
-  .steps { display: grid; gap: 12px; }
+  .t-decision { font-family: var(--serif); font-size: 30px; line-height: 1.15; margin: 4px 0 8px; font-weight: 400; font-variation-settings: "opsz" 48, "SOFT" 30; }
+  .t-reason { font-family: var(--serif); font-size: 17.5px; line-height: 1.55; margin: 0 0 10px; max-width: 68ch; }
+  .t-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; margin-bottom: 16px; }
+  .steps { display: grid; gap: 14px; }
   .step h3 { margin: 0 0 4px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
   .step.thinking { border-left: 3px solid var(--thought); padding: 2px 0 2px 12px; }
   .step.thinking h3 { color: var(--thought); }
-  .step.thinking p, .step.text p { font-family: var(--serif); font-size: 16.5px; line-height: 1.6; margin: 0; white-space: pre-wrap; max-width: 70ch; }
-  .step.call { border: 1px solid var(--hair); border-radius: 10px; padding: 10px 12px; background: var(--raised); }
-  .call-name { font-weight: 600; }
+  .step.thinking p, .step.text p { font-family: var(--serif); font-size: 16.5px; line-height: 1.6; margin: 0; white-space: pre-wrap; max-width: 68ch; }
+  .step.call { border-left: 3px solid var(--sensor); padding: 6px 0 6px 12px; }
+  .call-name { font-weight: 600; color: var(--sensor); }
   code, pre { font-family: var(--mono); font-size: 12.5px; }
   .args { color: var(--ink-2); overflow-wrap: anywhere; }
   details { margin-top: 6px; }
   details summary { cursor: pointer; color: var(--ink-2); font-size: 13px; }
-  pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 8px 0 0; padding: 10px; background: var(--plane); border-radius: 8px; max-height: 360px; overflow: auto; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 8px 0 0; padding: 10px; background: var(--surface); border-radius: 6px; max-height: 360px; overflow: auto; }
   .step.retry { color: var(--warn); font-size: 13.5px; }
   .usage { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .plan-text { font-family: var(--serif); font-size: 17px; line-height: 1.6; white-space: pre-wrap; margin: 4px 0 0; max-width: 68ch; }
+  .plan-old { border-top: 1px solid var(--hair); margin-top: 12px; padding-top: 10px; }
+  .plan-old .plan-text { font-size: 15px; color: var(--ink-2); }
 
   /* ---- talk ---- */
   .thread { display: grid; gap: 12px; margin-bottom: 14px; }
-  .plan-text { font-family: var(--serif); font-size: 17px; line-height: 1.6; white-space: pre-wrap; margin: 4px 0 0; max-width: 70ch; }
-  .plan-old { border-top: 1px solid var(--hair); margin-top: 12px; padding-top: 10px; }
-  .plan-old .plan-text { font-size: 15px; color: var(--ink-2); }
   .msg .who { font-size: 12.5px; color: var(--muted); }
   .msg.human p { margin: 2px 0 0; font-weight: 500; }
   .msg.model p { margin: 2px 0 0; font-family: var(--serif); font-size: 16.5px; line-height: 1.55; white-space: pre-wrap; }
   .composer { display: grid; gap: 8px; }
-  .composer textarea { width: 100%; min-height: 72px; resize: vertical; padding: 9px 11px; border-radius: 10px;
-                       border: 1px solid var(--hair); background: var(--raised); }
+  .composer textarea { width: 100%; min-height: 72px; resize: vertical; padding: 9px 11px; border-radius: 6px; border: 1px solid var(--hair); background: var(--surface); }
   .composer .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .hint { color: var(--muted); font-size: 12.5px; margin: 0; }
   .orders { list-style: none; padding: 0; margin: 6px 0 8px; display: grid; gap: 6px; }
-  .orders li { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border: 1px solid var(--hair); border-radius: 8px; }
+  .orders li { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border-left: 3px solid var(--hair); background: var(--surface); }
   .orders li span { flex: 1; }
   .orders button { border: 0; background: transparent; color: var(--muted); cursor: pointer; padding: 0 4px; }
   .orders button:hover { color: var(--bad); }
   .section { border-top: 1px solid var(--hair); margin-top: 16px; padding-top: 14px; }
   .section h3 { margin: 0 0 6px; font-size: 14px; }
   .inline { display: flex; gap: 8px; }
-  .inline input, .inline select { flex: 1; min-width: 0; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--hair); background: var(--raised); }
+  .inline input, .inline select { flex: 1; min-width: 0; padding: 7px 10px; border-radius: 6px; border: 1px solid var(--hair); background: var(--surface); }
 
   /* ---- activity + frame ---- */
   .feed { list-style: none; margin: 0; padding: 0; }
   .feed li { display: grid; grid-template-columns: 64px 1fr; gap: 8px; padding: 6px 0; border-top: 1px solid var(--grid); font-size: 13px; }
   .feed .t { color: var(--muted); font-variant-numeric: tabular-nums; }
   .feed .k { font-weight: 600; margin-right: 6px; }
-  .feed .k.bad { color: var(--bad); } .feed .k.learn { color: var(--good); } .feed .k.human { color: var(--accent); }
-  #noframe { padding: 4px 0; text-align: left; }
-  .frame img { width: 100%; display: block; border-radius: 8px; background: #000; aspect-ratio: 1568 / 882; object-fit: contain; }
+  .feed .k.bad { color: var(--bad); } .feed .k.learn { color: var(--good); } .feed .k.human { color: var(--sensor); }
+  #noframe { padding: 4px 0; }
+  .frame img { width: 100%; display: block; border-radius: 4px; background: #000; aspect-ratio: 1568 / 882; object-fit: contain; }
   .stats { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--ink-2); margin-top: 10px; font-variant-numeric: tabular-nums; }
   .stats b { color: var(--ink); }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  /* ---- dialog + toast ---- */
+  dialog { border: 1px solid var(--hair); border-top: 3px solid var(--accent); border-radius: 8px; background: var(--surface); color: var(--ink); padding: 18px 20px; width: min(420px, 92vw); }
+  dialog::backdrop { background: rgba(6, 9, 20, .6); }
+  dialog h2 { margin: 0 0 4px; font-size: 17px; }
+  dialog .warn { color: var(--warn); }
+  dialog form { display: grid; gap: 12px; }
+  dialog label { display: grid; gap: 4px; font-size: 13.5px; color: var(--ink-2); }
+  dialog select, dialog input { padding: 7px 10px; border-radius: 6px; border: 1px solid var(--hair); background: var(--raised); color: var(--ink); }
+  dialog input[type=number] { width: 90px; }
+  dialog .row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+  .toast { position: fixed; right: 16px; bottom: 16px; z-index: 10; background: var(--surface); border: 1px solid var(--hair);
+           border-left: 3px solid var(--accent); border-radius: 6px; padding: 10px 14px; font-size: 13.5px; max-width: min(420px, 90vw);
+           box-shadow: 0 6px 24px rgba(4, 8, 20, .4); }
+
   /* narrow screens: last, so it wins over the base rules above */
   @media (max-width: 600px) {
     .decisions button { grid-template-columns: 1fr; }
@@ -229,6 +260,7 @@
   <label class="campaign"><span class="sr">Campaign</span><select id="campaign"></select></label>
   <span id="status" class="pill">connecting</span>
   <span class="fresh" id="fresh" aria-live="polite"></span>
+  <span class="pc" id="pc" title="The gaming PC and what is open on it"></span>
   <div class="facts" id="facts"></div>
   <span class="spacer"></span>
   <label class="picker" title="The model the pilot uses; with no run active, it is saved for the next run">Model <select id="model-select" aria-label="Model"></select></label>
@@ -244,6 +276,7 @@
   <form method="dialog" id="start-form">
     <h2 id="start-title">Start a pilot run</h2>
     <p class="hint">The pilot plays the game that is open on the PC, with the model chosen in the top bar.</p>
+    <p class="hint warn" id="start-note" hidden>No game window is open on the PC right now. Start the game and load a save first.</p>
     <label>Game <select id="start-game"><option value="stellaris">Stellaris</option><option value="galciv4">Galactic Civilizations IV</option></select></label>
     <label class="stellaris-only">Game speed <select id="start-speed">
       <option value="slowest">slowest</option><option value="slow">slow</option><option value="normal">normal</option><option value="fast">fast</option><option value="fastest">fastest</option>
@@ -258,6 +291,12 @@
   <button class="btn" id="b-no">No</button>
   <span class="inline" id="answer-box" style="flex:1 1 260px"><input id="answer-text" placeholder="Or answer in your own words"><button class="btn" id="b-answer">Answer</button></span>
 </div>
+<section class="readout" id="readout" aria-label="Empire readout">
+  <div class="ro-date"><span class="ro-label" id="ro-date-label">In-game date</span><b id="ro-date">–</b></div>
+  <div class="ro-item"><span class="ro-label">Directive</span><b id="ro-directive">–</b><span class="ro-sub" id="ro-directive-sub"></span></div>
+  <div class="ro-item"><span class="ro-label">Standing</span><b id="ro-standing">–</b><span class="ro-sub" id="ro-standing-sub"></span></div>
+  <div class="ro-item"><span class="ro-label">Governor</span><b id="ro-gov">–</b><span class="ro-sub" id="ro-gov-sub"></span></div>
+</section>
 
 <main>
   <div class="col">
@@ -341,6 +380,10 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const fmt = (n) => n == null ? "–" : Math.abs(n) >= 1e6 ? (n / 1e6).toFixed(1) + "M" : Math.abs(n) >= 1e4 ? (n / 1e3).toFixed(1) + "k" : Math.abs(n) >= 100 ? Math.round(n).toLocaleString() : (+n).toFixed(1).replace(/\.0$/, "");
 const human = (s) => String(s || "").replace(/_/g, " ");
+// long floats from older records (405.92577500000004) read as one decimal
+const tidy = (s) => String(s ?? "").replace(/-?\d+\.\d{3,}/g, (m) => (+m).toFixed(1));
+// the model writes light markdown: bold and italic only, applied after escaping
+const md = (s) => esc(s).replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>").replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, "$1<em>$2</em>");
 const api = async (u) => { const r = await fetch(u); if (!r.ok) throw new Error(`${u}: ${r.status}`); return r.json(); };
 
 const S = { live: false, status: {}, campaign: null, decisions: [], metrics: [], view: "net", sel: null, mode: "chat" };
@@ -365,13 +408,11 @@ async function loadStatus() {
   const info = S.status.info || {};
   syncPickers(S.live ? { models: info.models, model: S.status.model, thinking: info.thinking } : null);
   $("b-start").hidden = S.live || !S.ok;
+  renderReadout();
   const paused = ["paused", "needs_attention"].includes(st);
   $("b-toggle").textContent = paused ? "Resume" : "Pause";
   const facts = [];
   if (S.live) {
-    facts.push(`<span>Date <b>${esc(S.status.game_date || "–")}</b></span>`);
-    if (info.directive !== undefined) facts.push(`<span>Directive <b>${esc(human(info.directive) || "none")}</b></span>`);
-    if (info.speed) facts.push(`<span>Speed <b>${esc(info.speed)}</b></span>`);
     if (!(info.controls || []).includes("set_model")) facts.push(`<span>Model <b>${esc(S.status.model)}</b></span>`);
   }
   $("facts").innerHTML = facts.join("");
@@ -402,7 +443,7 @@ async function loadCampaigns() {
   try { camps = await api("/api/campaigns"); } catch { /* no telemetry yet */ }
   const live = (S.status.info || {}).campaign;
   const sel = $("campaign");
-  sel.innerHTML = camps.map((c) => `<option value="${esc(c.id)}">${esc(human(c.name))}${c.id === live ? " (live)" : ""}, ${esc(c.decisions)} decisions</option>`).join("")
+  sel.innerHTML = camps.map((c) => `<option value="${esc(c.id)}">${esc(c.title || human(c.name))}${c.id === live ? " (live)" : ""}, ${esc(c.decisions)} decisions</option>`).join("")
     || `<option value="">No campaigns recorded yet</option>`;
   S.campaign = S.campaign && camps.some((c) => c.id === S.campaign) ? S.campaign : (live || camps[0]?.id || null);
   if (S.campaign) sel.value = S.campaign;
@@ -416,8 +457,8 @@ function renderPlan(plans) {
   }
   const [cur, ...old] = plans;
   const src = (p) => p.source === "retrospective" ? "revised at a retrospective" : "written at a decision";
-  box.innerHTML = `<div class="t-when">${esc(cur.date)}, ${esc(src(cur))}</div><p class="plan-text">${esc(cur.text)}</p>` +
-    old.slice(0, 8).map((p) => `<details class="plan-old"><summary>${esc(p.date)}, ${esc(src(p))}</summary><p class="plan-text">${esc(p.text)}</p></details>`).join("");
+  box.innerHTML = `<div class="t-when">${esc(cur.date)}, ${esc(src(cur))}</div><p class="plan-text">${md(cur.text)}</p>` +
+    old.slice(0, 8).map((p) => `<details class="plan-old"><summary>${esc(p.date)}, ${esc(src(p))}</summary><p class="plan-text">${md(p.text)}</p></details>`).join("");
 }
 
 async function loadCampaignData() {
@@ -431,7 +472,7 @@ async function loadCampaignData() {
     S.plansKey = JSON.stringify(plans);
     renderPlan(plans);
   }
-  renderChart(); renderDecisions();
+  renderChart(); renderDecisions(); renderReadout();
   const newest = S.decisions[S.decisions.length - 1];
   // follow the newest decision unless the reader picked an older one
   if (newest && (!S.sel || S.follow) && !(S.sel && S.sel.run_id === newest.run_id && S.sel.episode === newest.episode))
@@ -471,13 +512,40 @@ function renderStanding(last) {
   const own = (k) => k === "techs" ? last.techs_known : last[k];
   const chips = PEER_LABELS.filter(([k]) => p[k]).map(([k, label]) =>
     `<span class="chip${behind.has(k) ? " behind" : ""}" title="${behind.has(k) ? "Falling behind: below half the median of the other empires" : ""}">` +
-    `<span class="chip-label">${esc(label)}</span><b>${fmt(own(k))}</b><span class="chip-sub">median ${fmt(p[k].median)}, #${esc(p[k].rank)} of ${esc(n)}</span></span>`);
+    `<span class="chip-label">${esc(label)}</span><b>${fmt(own(k))}</b><span class="chip-sub">median ${fmt(p[k].median)}, #${esc(p[k].rank)} of ${esc(n)}${behind.has(k) ? ", <em>falling behind</em>" : ""}</span></span>`);
   if (last.room != null) {
     chips.push(`<span class="chip${last.room === 0 ? " behind" : ""}"><span class="chip-label">room to expand</span><b>${fmt(last.room)}</b>` +
       `<span class="chip-sub">unclaimed within 2 jumps, ${fmt(last.room_surveyed || 0)} surveyed, ${fmt(last.construction_ships || 0)} construction ships</span></span>`);
   }
   el.innerHTML = chips.join("");
   el.hidden = false;
+}
+
+function renderReadout() {
+  const live = S.live, info = S.status.info || {};
+  const ms = S.metrics.filter((m) => m.month != null), last = ms[ms.length - 1];
+  const lastDec = S.decisions[S.decisions.length - 1];
+  const date = live ? (S.status.game_date || (last && last.date)) : (last && last.date);
+  $("ro-date").textContent = date || "–";
+  $("ro-date-label").textContent = live ? "In-game date, live" : "In-game date at the last record";
+  const dir = live && info.directive !== undefined ? info.directive : (last && last.directive) || (lastDec && (lastDec.outcome === "applied" ? lastDec.decision : lastDec.current));
+  $("ro-directive").textContent = dir ? human(dir) : "none";
+  $("ro-directive-sub").textContent = lastDec ? `since ${lastDec.date}` : "";
+  const p = last && last.peers, sysP = p && p.systems, n = last ? (last.peer_count || 0) + 1 : 0;
+  const behind = (last && last.behind) || [];
+  const stEl = $("ro-standing");
+  if (sysP) {
+    stEl.textContent = `#${sysP.rank} of ${n} in systems`;
+    stEl.className = behind.length ? "attn" : "";
+    $("ro-standing-sub").textContent = behind.length ? `falling behind in ${behind.map(human).join(", ")}` : "keeping pace";
+  } else { stEl.textContent = "–"; stEl.className = ""; $("ro-standing-sub").textContent = ""; }
+  const st = S.status.status || "viewer";
+  $("ro-gov").textContent = live ? ({ playing: "Watching the empire", deciding: "Deciding now", paused: "Paused", needs_attention: "Needs you" }[st] || st) : "Not running";
+  $("ro-gov").className = st === "needs_attention" ? "attn" : "";
+  const when = (t) => new Date(t * 1000).toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+  $("ro-gov-sub").textContent = live
+    ? `${(S.status.model || "").replace(/^google:/, "")}${info.speed ? ", " + info.speed + " speed" : ""}, ${S.status.episodes || 0} decisions this run`
+    : (lastDec ? `last decision ${when(lastDec.t)} by ${(lastDec.model || "").replace(/^google:/, "")}` : "");
 }
 
 function renderChart() {
@@ -532,7 +600,7 @@ function renderChart() {
     const sel = S.sel && S.sel.run_id === d.run_id && S.sel.episode === d.episode;
     svg += `<g class="dmark" data-i="${idx}" tabindex="0" role="button" aria-label="Decision ${esc(d.date)}: ${esc(human(d.decision))}">
       <title>${esc(d.date)}: ${esc(human(d.decision === "keep" ? "kept " + (d.current || "") : d.decision))}</title>
-      <line x1="${x}" x2="${x}" y1="${T}" y2="${H - B + 2}" stroke="${sel ? "var(--accent)" : "var(--axis)"}" stroke-width="1" stroke-dasharray="${changed ? "0" : "3 3"}"/>
+      <line x1="${x}" x2="${x}" y1="${T}" y2="${H - B + 2}" stroke="${sel ? "var(--accent)" : "var(--axis)"}" stroke-width="1" stroke-opacity="${changed || sel ? 1 : 0.5}"/>
       <circle cx="${x}" cy="${H - 12}" r="${changed ? 6 : 4.5}" fill="${changed ? "var(--accent)" : "var(--surface)"}" stroke="var(--accent)" stroke-width="2"/>
       <rect x="${x - 10}" y="${H - 24}" width="20" height="24" fill="transparent"/></g>`;
   });
@@ -582,7 +650,8 @@ function renderDecisions() {
   const ul = $("decisions");
   $("dec-sub").textContent = S.decisions.length ? `${S.decisions.length} in this campaign, newest first` : "";
   if (!S.decisions.length) { ul.innerHTML = `<li class="empty">No decisions yet.</li>`; return; }
-  ul.innerHTML = [...S.decisions].reverse().map((d) => {
+  const all = [...S.decisions].reverse(), shown = S.showAll ? all : all.slice(0, 8);
+  ul.innerHTML = shown.map((d) => {
     const i = S.decisions.indexOf(d);
     const kept = d.decision === "keep" || d.outcome === "kept";
     const label = kept ? `kept ${human(d.current || "none")}` : d.outcome === "applied" ? human(d.decision) : `${human(d.decision)} (${d.outcome || ""})`;
@@ -590,10 +659,12 @@ function renderDecisions() {
     return `<li class="${sel ? "sel" : ""}"><button data-i="${i}">
       <span class="d-date">${esc(d.date || "–")}</span>
       <span class="d-meta"><span class="nw">${d.model === "human" ? "you" : fmt(d.tokens_in) + " tokens"}</span>${d.seconds ? `<br><span class="nw">${esc(d.seconds)} s</span>` : ""}</span>
-      <span class="d-main"><span class="d-head"><span class="dir${kept ? " kept" : ""}">${esc(label)}</span><span class="trigger">${esc(d.trigger || "")}</span></span>
-      <p class="reason">${esc(d.reason || "")}</p>${afterText(d.result)}</span></button></li>`;
-  }).join("");
-  ul.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => selectDecision(S.decisions[+b.dataset.i])));
+      <span class="d-main"><span class="d-head"><span class="dir${kept ? " kept" : ""}">${esc(label)}</span><span class="trigger">${esc(tidy(d.trigger || ""))}</span></span>
+      <p class="reason">${esc(tidy(d.reason || ""))}</p>${afterText(d.result)}</span></button></li>`;
+  }).join("") + (all.length > shown.length ? `<li class="more"><button class="btn" id="show-all">Show all ${all.length}</button></li>` : "");
+  const more = $("show-all");
+  if (more) more.addEventListener("click", () => { S.showAll = true; renderDecisions(); });
+  ul.querySelectorAll("button[data-i]").forEach((b) => b.addEventListener("click", () => selectDecision(S.decisions[+b.dataset.i])));
 }
 
 async function selectDecision(d, byUser = true) {
@@ -612,9 +683,9 @@ async function selectDecision(d, byUser = true) {
 function renderTrace(d) {
   const t = d.trace || {}, steps = t.steps || [];
   const kept = d.decision === "keep";
-  let h = `<div class="t-when">${esc(d.date)}, ${esc(d.trigger || "")}</div>
+  let h = `<div class="t-when">${esc(d.date)}, ${esc(tidy(d.trigger || ""))}</div>
     <div class="t-decision">${kept ? "Kept " + esc(human(d.current || "no directive")) : esc(human(d.decision))}</div>
-    <p class="t-reason">${esc(d.reason || "")}</p>
+    <p class="t-reason">${md(tidy(d.reason || ""))}</p>
     <div class="t-meta"><span>${esc(d.model === "human" ? "Your decision" : d.model || "")}</span><span>${esc(d.outcome || "")}</span>
     ${d.tokens_in ? `<span>${fmt(d.tokens_in)} tokens in, ${fmt(d.tokens_out)} out</span>` : ""}${d.seconds ? `<span>${esc(d.seconds)} s</span>` : ""}</div>`;
   if (d.result) h += afterText(d.result).replace('class="after"', 'class="after" style="margin:-4px 0 14px"');
@@ -623,8 +694,8 @@ function renderTrace(d) {
   for (let i = 0; i < steps.length; i++) {
     const s = steps[i];
     if (s.type === "prompt") h += `<details class="step"><summary>What the model was shown</summary><pre>${esc(s.text)}</pre></details>`;
-    else if (s.type === "thinking") h += `<div class="step thinking"><h3>Thinking</h3><p>${esc(s.text)}</p></div>`;
-    else if (s.type === "text") h += `<div class="step text"><p>${esc(s.text)}</p></div>`;
+    else if (s.type === "thinking") h += `<div class="step thinking"><h3>Thinking</h3><p>${md(s.text)}</p></div>`;
+    else if (s.type === "text") h += `<div class="step text"><p>${md(s.text)}</p></div>`;
     else if (s.type === "tool_call") {
       const res = steps.slice(i + 1).find((x) => x.type === "tool_result" && x.tool === s.tool);
       h += `<div class="step call"><span class="call-name">${esc(human(s.tool))}</span> <code class="args">${esc(JSON.stringify(s.args))}</code>
@@ -678,7 +749,7 @@ function addMessage(ev) {
   if (seenChat.has(key)) return;          // history load and the live stream's replay overlap
   seenChat.add(key);
   const who = ev.role === "human" ? "You" : "Model";
-  $("thread").insertAdjacentHTML("beforeend", `<div class="msg ${ev.role}"><span class="who">${who}, ${new Date(ev.t * 1000).toLocaleTimeString()}</span><p>${esc(ev.text)}</p></div>`);
+  $("thread").insertAdjacentHTML("beforeend", `<div class="msg ${ev.role}"><span class="who">${who}, ${new Date(ev.t * 1000).toLocaleTimeString()}</span><p>${ev.role === "model" ? md(ev.text) : esc(ev.text)}</p></div>`);
   if (ev.role === "model") flag("talk");
   const panel = $("tab-talk");
   if (!panel.hidden) panel.scrollTop = panel.scrollHeight;
@@ -787,6 +858,16 @@ async function loadHistoryFeed() {
   } catch { /* no runs */ }
 }
 
+async function loadPc() {
+  try { S.pc = await api("/api/pc"); } catch { S.pc = { online: false }; }
+  const el = $("pc"), p = S.pc;
+  const names = { stellaris: "Stellaris", galciv4: "GalCiv IV" };
+  if (!p.online) { el.className = "pc off"; el.textContent = "PC offline"; return; }
+  const open = (p.games || []).map((g) => names[g] || g);
+  el.className = "pc on";
+  el.textContent = open.length ? `PC: ${open.join(", ")} open` : "PC on, no game open";
+}
+
 function freshness() {
   const el = $("fresh");
   if (!S.lastOk) { el.textContent = ""; return; }
@@ -848,8 +929,10 @@ async function switchModel() {
 $("model-select").addEventListener("change", switchModel);
 
 function openStart() {
-  const c = S.catalog || {};
+  const c = S.catalog || {}, open = (S.pc && S.pc.games) || [];
   if (c.game) $("start-game").value = c.game;
+  if (open.length === 1) $("start-game").value = open[0];
+  $("start-note").hidden = !!open.length;
   if (c.speed) $("start-speed").value = c.speed;
   if (c.months) $("start-months").value = c.months;
   document.querySelectorAll(".stellaris-only").forEach((el) => (el.hidden = $("start-game").value !== "stellaris"));
@@ -891,6 +974,8 @@ let resizeT; addEventListener("resize", () => { clearTimeout(resizeT); resizeT =
     else { await loadCampaigns(); await loadCampaignData(); await loadHistoryFeed(); }
   }, 10000);
   setInterval(freshness, 1000);
+  await loadPc();
+  setInterval(loadPc, 10000);
 })();
 </script>
 </body>
