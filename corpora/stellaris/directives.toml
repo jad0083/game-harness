@@ -11,12 +11,17 @@
 # repeated on the same in-game day. The next autosave also shows the flag.
 #
 # Only policy options that exist in the game's common/policies (4.5.1, read 2026-09-25) are used.
+# Each policy is set only under its option's `valid` trigger (`conditions`, copied from
+# common/policies 4.5.1), because a console set_policy would not check it.
 # A directive never adds resources or modifiers. `set_policy … cooldown = no` skips the normal
 # 10-year lock, so directives should still change rarely (hold each ~12 months).
 
 [directive.expand]
 description = "Grow: outposts, colonies, exploration. Pick in the opening or while unclaimed habitable systems are near and no deficits."
-policies = { diplomatic_stance = "diplo_stance_expansionist" }
+# proactive first contact: +50% influence from each completed first contact (localisation
+# first_contact_proactive_effects, 4.5.1); influence gates outposts
+policies = { diplomatic_stance = "diplo_stance_expansionist", first_contact_protocol = "first_contact_proactive" }
+conditions = { diplomatic_stance = "is_homicidal = no", first_contact_protocol = "is_homicidal = no is_xenophobe = no NOT = { has_origin = origin_payback }" }
 
 [directive.consolidate_economy]
 description = "Fix deficits, housing, amenities and stability before anything else."
@@ -30,13 +35,16 @@ policies = { economic_policy = "economic_policy_civilian" }
 description = "Alloys, naval capacity, claims. Only against a weaker neighbour, after ask_human."
 # belligerent: +10% naval capacity, -10% war exhaustion, -10% claim cost (common/policies 4.5.1)
 policies = { economic_policy = "economic_policy_military", diplomatic_stance = "diplo_stance_belligerent" }
+conditions = { diplomatic_stance = "NOT = { has_valid_civic = civic_inwards_perfection } is_homicidal = no" }
 
 [directive.defend]
 description = "War on us or a stronger hostile neighbour on the border: fleets home, fortify chokepoints."
 # belligerent: +10% naval capacity and -10% war exhaustion while we fight; the next peacetime
 # directive (expand / diplomacy_first) sets its own stance again
 policies = { diplomatic_stance = "diplo_stance_belligerent" }
+conditions = { diplomatic_stance = "NOT = { has_valid_civic = civic_inwards_perfection } is_homicidal = no" }
 
 [directive.diplomacy_first]
 description = "Improve relations, pacts, federation and galactic community standing."
-policies = { diplomatic_stance = "diplo_stance_cooperative" }
+policies = { diplomatic_stance = "diplo_stance_cooperative", first_contact_protocol = "first_contact_proactive" }
+conditions = { diplomatic_stance = "NOT = { has_valid_civic = civic_inwards_perfection } is_unfriendly = no", first_contact_protocol = "is_homicidal = no is_xenophobe = no NOT = { has_origin = origin_payback }" }

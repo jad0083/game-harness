@@ -702,6 +702,11 @@ pub struct DirectiveDef {
     pub description: String,
     #[serde(default)]
     pub policies: BTreeMap<String, String>,
+    /// Per policy: the trigger under which the game allows the option (copied from its `valid`
+    /// block); the console sets a policy only inside `if = { limit = { … } }`, because a console
+    /// `set_policy` would otherwise apply an option the empire may not take.
+    #[serde(default)]
+    pub conditions: BTreeMap<String, String>,
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -720,6 +725,12 @@ impl Directives {
             for (k, v) in &def.policies {
                 check_ident(k)?;
                 check_ident(v)?;
+            }
+            for (k, c) in &def.conditions {
+                if !def.policies.contains_key(k) {
+                    bail!("directive {name}: condition for {k}, which it does not set");
+                }
+                check_condition(c)?;
             }
         }
         Ok(d)
@@ -745,7 +756,11 @@ impl Directives {
         }
         let mut apply = format!("effect set_country_flag = governor_directive_{name}");
         for (policy, option) in &def.policies {
-            apply += &format!(" set_policy = {{ policy = {policy} option = {option} cooldown = no }}");
+            let set = format!("set_policy = {{ policy = {policy} option = {option} cooldown = no }}");
+            match def.conditions.get(policy) {
+                Some(c) => apply += &format!(" if = {{ limit = {{ {c} }} {set} }}"),
+                None => apply += &format!(" {set}"),
+            }
         }
         apply += &format!(" {}", scoped_log(&applied_marker(name, nonce)));
         lines.push(apply);
@@ -785,6 +800,23 @@ async fn wait_for_log(client: &crate::client::AgentClient, offset: u64, marker: 
 /// so callers add a `nonce()` to every marker.
 pub fn scoped_log(text: &str) -> String {
     format!("if = {{ limit = {{ exists = capital_scope }} log = \"{text}\" }}")
+}
+
+/// A trigger block's contents from directives.toml: identifiers, `=`, `<`, `>`, digits, spaces and
+/// balanced braces only (no quotes or line breaks that could end the console line), at most 300 chars.
+fn check_condition(c: &str) -> Result<()> {
+    let ok_chars = c.chars().all(|ch| ch.is_ascii_alphanumeric() || " _=<>{}.".contains(ch));
+    let mut depth = 0i32;
+    for ch in c.chars() {
+        depth += match ch { '{' => 1, '}' => -1, _ => 0 };
+        if depth < 0 {
+            break;
+        }
+    }
+    if !ok_chars || depth != 0 || c.len() > 300 || c.trim().is_empty() {
+        bail!("refusing policy condition {c:?}: only identifiers, comparisons and balanced braces");
+    }
+    Ok(())
 }
 
 /// Script identifiers only: nothing that could smuggle other console commands.
@@ -1783,10 +1815,18 @@ mod tests {
         assert!(!lines[0].contains("governor_directive_expand "));
         let apply = &lines[1];
         assert!(apply.contains("set_country_flag = governor_directive_expand"));
-        assert!(apply.contains("set_policy = { policy = diplomatic_stance option = diplo_stance_expansionist cooldown = no }"));
+        // each policy is set only when the game would allow it (the option's `valid` block)
+        assert!(apply.contains("if = { limit = { is_homicidal = no } set_policy = { policy = diplomatic_stance option = diplo_stance_expansionist cooldown = no } }"), "{apply}");
+        assert!(apply.contains("if = { limit = { is_homicidal = no is_xenophobe = no NOT = { has_origin = origin_payback } } set_policy = { policy = first_contact_protocol option = first_contact_proactive cooldown = no } }"), "{apply}");
         assert!(apply.ends_with("if = { limit = { exists = capital_scope } log = \"GOVERNOR_APPLIED expand k3x9\" }"));
-        assert!(lines.iter().all(|l| l.len() < 1000), "agent /type limit");
+        for name in d.directive.keys() {
+            let ls = d.console_lines(name, "k3x9").unwrap();
+            assert!(ls.iter().all(|l| l.len() < 1000), "{name}: agent /type limit");
+        }
         assert!(d.console_lines("nuke_everyone", "x").is_err());
+        assert!(check_condition("is_xenophobe = no NOT = { has_origin = origin_payback }").is_ok());
+        assert!(check_condition("is_xenophobe = no } add_resource = { energy = 1").is_err(), "unbalanced braces");
+        assert!(check_condition("is_xenophobe = no\"").is_err(), "quotes could end the console line's strings");
         let (a, b) = (nonce(), { std::thread::sleep(std::time::Duration::from_millis(2)); nonce() });
         assert!(a != b && a.chars().all(|c| c.is_ascii_alphanumeric()), "{a} {b}");
     }
