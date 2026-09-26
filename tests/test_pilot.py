@@ -286,3 +286,15 @@ def test_every_model_call_has_a_timeout():
     s = Settings()
     for thinking in ("off", "medium"):
         assert model_settings(replace(s, thinking=thinking))["timeout"] == s.model_timeout_s
+
+
+def test_the_controller_gets_the_hosts_resolution(monkeypatch, tmp_path):
+    """A host with another screen size loads its res/<W>x<H>.toml overlay: the pilot passes
+    GAME_RESOLUTION through to the controller it starts."""
+    from pilot.game import McpGame
+    monkeypatch.setattr(McpGame, "_start", lambda self: None)     # no controller process in a unit test
+    monkeypatch.setenv("GAME_RESOLUTION", "2560x1440")
+    g = McpGame(tmp_path / "controller", tmp_path, "http://h:8765", tmp_path, token="t")
+    assert g.env["GAME_RESOLUTION"] == "2560x1440"
+    monkeypatch.delenv("GAME_RESOLUTION")
+    assert "GAME_RESOLUTION" not in McpGame(tmp_path / "controller", tmp_path, "http://h:8765", tmp_path, token="t").env

@@ -130,3 +130,11 @@
 - [x] CI skips the Rust stages for commits with no Rust, Cargo or corpus files (`scripts/ci-needs-rust.sh`)
 - [ ] Game pillars: each game defines its strategy pillars, metrics and actions in `corpora/<game>/pillars.toml`; the strategy layer, decisions, actions and dashboard use them as guardrails (spec docs/superpowers/specs/2026-09-26-game-pillars-design.md)
 - [ ] Civilization VI integration (after game pillars)
+
+## Hosts
+- [x] Second game host mini-rig2 (192.168.1.159, 2560x1440): agent 1.4.0 installed and reachable with the shared token (2026-09-26)
+- [ ] Host registry (`hosts.toml`: name, agent URL, screen) and one governor service per host (own dashboard port, `GAME_AGENT_URL`); dashboard lists live runs of every host
+- [ ] Installer detects Civilization VI folders (documents, saves, logs, install) for the agent's read roots; update both hosts
+- [x] Screen positions per resolution: `res/<W>x<H>.toml` overlays selected by `GAME_RESOLUTION`; Stellaris 2560x1440 screens measured live on mini-rig2 (a8c53a9, 110e638)
+- [x] Stellaris tech and market positions at 2560x1440: mapped from 4K by `scripts/res-map.py` (scale 1.2, anchors in `res/map.toml`), verified live with a tech pick and a market order added and removed (51143d9)
+- [x] Stellaris on mini-rig2: borderless, monthly autosave, tutorial off, Governor Bridge playset; governor service points at mini-rig2 (systemd drop-in) and plays the new Blooms of Gaea campaign (2026-09-26)
