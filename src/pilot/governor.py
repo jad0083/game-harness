@@ -33,9 +33,10 @@ from .trace import serialize
 DIRECTIVES = ("expand", "consolidate_economy", "tech_rush", "prepare_war", "defend", "diplomacy_first")
 NEEDS_HUMAN = {"prepare_war"}      # strategy.md: only after the human confirmed the target
 
-# Big-event triggers: an urgent decision whose reason contains one of these, or a set
-# review_requested (a failed review pending retry, or an off-frame decision), starts a strategy
-# review (capped at one per 12 in-game months unless it is a retry or no strategy exists yet).
+# Big-event triggers: an urgent decision whose reason contains one of these, or a pending
+# review_requested (an off-frame decision, or a failed review awaiting retry), starts a strategy
+# review, capped at one per 12 in-game months; only a failed review's own retry, or a review while
+# no strategy exists yet, bypasses that cap.
 EVENT_TRIGGERS = ("new war", "war ended", "crisis", "colony lost", "boxed in", "milestone missed",
                   "off-frame", "military fell")
 
@@ -351,7 +352,9 @@ class Governor:
         self.last_briefing = ""                   # text of the latest briefing given to the model
         self.plan = ""                            # the campaign plan (goals, milestones), per campaign
         self.strategy: Strategy | None = None     # the pillar strategy (Strategist), per campaign
-        self.review_requested: str | None = None  # pending review trigger after a failed strategy call
+        self.review_requested: str | None = None  # pending review trigger (off-frame, or after a failed call)
+        self._review_retry: bool = False          # review_requested was set by a failed review call (bypasses the cap)
+        self._decision_military: float | None = None   # military_power as of the last decision (military-fell baseline)
         self._since_retro = 0
         self._strategy_trace_n = 0                # negative episode ids for strategy review traces (see _review_strategy)
         self.orders: list[str] = []               # standing orders, saved per campaign
@@ -644,13 +647,15 @@ class Governor:
                     if reason == "request":
                         b = self._handle_request(self.requests.get_nowait(), b)
                     elif reason:
-                        # a review already pending (a failed review, or an earlier off-frame tag) is a
-                        # retry; a freshly off-frame-tagged decision waits for the *next* decision point
-                        # instead of reviewing inline, so its own trace/choice is not re-litigated at once
+                        # a review already pending (a failed review, or an earlier off-frame tag) is
+                        # picked up here; a freshly off-frame-tagged decision waits for the *next*
+                        # decision point instead of reviewing inline, so its own trace/choice is not
+                        # re-litigated at once. `retry` (cap bypass) is only for a failed review's own
+                        # retry or no strategy yet — an off-frame request goes through the normal cap.
                         pending = self.review_requested is not None
                         self._decide(b, reason)
                         if pending or (reason.startswith("urgent:") and any(t in reason for t in EVENT_TRIGGERS)):
-                            self._maybe_event_review(b, self.review_requested or reason, retry=pending)
+                            self._maybe_event_review(b, self.review_requested or reason, retry=self._review_retry)
                 except Exception as e:  # noqa: BLE001 - any game-control failure (agent down, focus lost, a panel open)
                     self._needs_attention(f"game control failed: {type(e).__name__}: {e}. "
                                           "Fix the game screen or the agent, then press Resume.")
@@ -806,6 +811,9 @@ class Governor:
                 self.log.state.game_date = b["date"]
                 self.log.state.turns_advanced = months(b["date"]) - months(last["date"]) + self.log.state.turns_advanced
             urgent = urgent_changes(last, b)
+            mil_base, mil_now = self._decision_military, b.get("military_power")
+            if mil_base and mil_now is not None and mil_now <= 0.5 * mil_base and not any(u.startswith("military fell") for u in urgent):
+                urgent.append(f"military fell: {round(mil_base)} -> {round(mil_now)}")
             if urgent:
                 self.game.set_paused(True)
                 return b, "urgent: " + "; ".join(urgent)
@@ -829,6 +837,7 @@ class Governor:
 
     def _decide(self, b: dict, reason: str, reviewed_at_start: bool = False) -> None:
         self._status("deciding")
+        self._decision_military = b.get("military_power")   # baseline for "military fell" until the next decision
         self.log.state.episodes += 1
         self.log.state.game_date = b["date"]
         self.log.emit("metrics", **metrics(b))
@@ -895,7 +904,7 @@ class Governor:
         chosen = d.directive
         ranked = self.strategy.ranking() if self.strategy else []
         off_frame = bool(ranked) and chosen not in ("keep", current) and chosen not in ranked[:2]
-        if off_frame:
+        if off_frame and self.review_requested is None:   # keep the first pending request's trigger text
             self.review_requested = f"off-frame decision: {chosen} ({reason})"
         applied = "kept"
         if chosen != "keep" and chosen != current:
@@ -938,11 +947,16 @@ class Governor:
     def _maybe_event_review(self, b: dict, trigger: str, retry: bool = False) -> bool:
         """Run a strategy review for a big event, at most once per 12 in-game months. `retry`
         (a failed review pending retry) and having no strategy yet both bypass the cap and never
-        move its last-review month: only event-triggered reviews count toward it."""
+        move its last-review month: only event-triggered and off-frame reviews count toward it.
+        A refused request is logged and, if it was a pending one (off-frame), dropped
+        (review_requested cleared) so it does not keep re-firing every decision until the cap opens."""
         bypass = retry or self.strategy is None
         last = getattr(self, "_last_event_review_month", None)
         now = months(b["date"])
         if not bypass and last is not None and now - last < 12:
+            self.log.emit("strategy_review_skipped", trigger=trigger, reason="within 12 months of the last event review")
+            if self.review_requested == trigger:
+                self.review_requested = None
             return False
         if not bypass:
             self._last_event_review_month = now
@@ -986,6 +1000,7 @@ class Governor:
         the current strategy stays, exactly like a failed model call."""
         self._since_retro = 0
         self.review_requested = None
+        self._review_retry = False
         started = time.time()
         current = self.strategy.model_dump_json(indent=1) if self.strategy else "(none yet: write the first strategy)"
         prompt = [f"Strategy review, trigger: {trigger}.", "Current strategy:\n" + current,
@@ -1007,6 +1022,7 @@ class Governor:
                                         on_try=lambda e: base.update(model=e["model"], thinking_level=e["thinking"]))
         except Exception as e:  # noqa: BLE001 - a failed review never stops play; retried at the next decision
             self.review_requested = trigger
+            self._review_retry = True
             self.log.emit("episode_error", error=f"strategy review: {type(e).__name__}: {e}"[:500])
             return
         retry_errors: list[str] | None = None
@@ -1060,6 +1076,7 @@ class Governor:
                 self._set_strategy(new, b["date"], trigger, base.get("model", ""))
         except Exception as e:  # noqa: BLE001 - a failed review never stops play or pauses the game
             self.review_requested = trigger
+            self._review_retry = True
             self.log.emit("episode_error", error=f"strategy review: {type(e).__name__}: {e}"[:500])
             return
         if retry_errors is not None:
