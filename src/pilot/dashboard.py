@@ -174,6 +174,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
         where, args = scope(request)
         rows = await q(f"SELECT run_id, episode, campaign_id, t, date, month, trigger, decision, reason, outcome, current,"
                        f" tokens_in, tokens_out, seconds, result, model_version, thinking,"
+                       f" json_extract(trace,'$.off_frame') AS off_frame,"
                        f" COALESCE(model, (SELECT model FROM runs WHERE runs.id=decisions.run_id)) AS model"
                        f" FROM decisions WHERE {where} AND decision != 'strategy_review' ORDER BY t", args)
         for r in rows:

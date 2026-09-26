@@ -277,6 +277,35 @@ def test_telemetry_api(setup, tmp_path):
     asyncio.run(go())
 
 
+def test_api_decisions_reports_off_frame_from_the_trace(setup, tmp_path):
+    """Task 9: /api/decisions extracts `off_frame` from each decision's stored trace, so the
+    dashboard can tag a decision made without a fresh screen capture."""
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from pilot.dashboard import make_app
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(s.runs_dir, "run-off", s.model, telemetry=tel)
+    log.emit("run_start", model=s.model, game="stellaris")
+    log.set_campaign("stellaris", "off1", "Off Frame Test")
+    log.save_trace(1, {"date": "2200.01.01", "trigger": "start of run", "decision": "expand", "reason": "grow",
+                       "outcome": "applied", "current": None, "seconds": 1.0, "tokens_in": 10, "tokens_out": 5,
+                       "model": s.model, "off_frame": True, "steps": []})
+    log.save_trace(2, {"date": "2200.07.01", "trigger": "scheduled", "decision": "keep", "reason": "steady",
+                       "outcome": "kept", "current": "expand", "seconds": 1.0, "tokens_in": 8, "tokens_out": 4,
+                       "model": s.model, "off_frame": False, "steps": []})
+
+    async def go():
+        async with TestClient(TestServer(make_app(None, s.runs_dir, tel))) as c:
+            ds = await (await c.get("/api/decisions", params={"campaign": "stellaris/off1"})).json()
+            by_ep = {d["episode"]: d["off_frame"] for d in ds}
+            assert by_ep[1] and not by_ep[2]
+    asyncio.run(go())
+
+
 def recording_model(choice: str = "keep"):
     """Decides `choice`, answers chat in text, and records every prompt it was given."""
     seen: list[str] = []
