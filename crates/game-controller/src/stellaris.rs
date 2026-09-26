@@ -901,6 +901,20 @@ pub struct PauseDetector {
     menu: Option<(image::RgbImage, [f64; 4], f64, u32)>,
     /// The console is open: ROI and colour signature ([screens.console_open]).
     console: Option<([f64; 4], [[u8; 3]; 2], f64)>,
+    /// The console's input line ([ui.console] input) and how many backspaces clear it: clicked
+    /// before typing so the keys reach the console, not the map.
+    console_input: Option<((i32, i32), u32)>,
+}
+
+/// `[ui.console]` input point and backspace count from the manifest, if calibrated.
+fn console_input_from(ui: &toml::Table) -> Option<((i32, i32), u32)> {
+    let c = ui.get("console")?;
+    let p = c.get("input")?.as_array()?;
+    let (x, y) = (p.first()?.as_integer()? as i32, p.get(1)?.as_integer()? as i32);
+    if (x, y) == (0, 0) {
+        return None;
+    }
+    Some(((x, y), c.get("clear_backspaces").and_then(|v| v.as_integer()).unwrap_or(200) as u32))
 }
 
 impl PauseDetector {
@@ -923,7 +937,9 @@ impl PauseDetector {
         let console = m.screens.get("console_open").and_then(|c| {
             Some((c.template_roi?, c.color_range?, c.color_min_fraction.unwrap_or(0.3)))
         });
-        Ok(PauseDetector { template, roi, threshold: def.template_threshold, search: def.template_search, color, menu, console })
+        let console_input = console_input_from(&m.ui);
+        Ok(PauseDetector { template, roi, threshold: def.template_threshold, search: def.template_search, color, menu, console,
+                           console_input })
     }
 
     /// Is the console open? (false when the manifest has no console signature)
@@ -973,6 +989,16 @@ impl PauseDetector {
         }
         if !opened {
             bail!("the console did not open (no Debug View bar on screen); nothing was typed");
+        }
+        // focus the input line and clear anything left on it (an unfocused console sends keys to the map)
+        if let Some((point, backspaces)) = self.console_input {
+            click_ui_point(client, point).await?;
+            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+            require_foreground(client).await?;
+            client.key("end", 1).await?;
+            require_foreground(client).await?;
+            client.key("backspace", backspaces as i32).await?;
+            tokio::time::sleep(pause).await;
         }
         for line in lines {
             require_foreground(client).await?;
@@ -2128,6 +2154,16 @@ impl Briefing {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn console_input_point_comes_from_the_manifest() {
+        let ui: toml::Table = toml::from_str("[console]\ninput = [190, 219]\nclear_backspaces = 150\n").unwrap();
+        assert_eq!(console_input_from(&ui), Some(((190, 219), 150)));
+        let empty: toml::Table = toml::from_str("[console]\ninput = [0, 0]\n").unwrap();
+        assert_eq!(console_input_from(&empty), None);
+        let m = crate::corpus::GameManifest::load_from_file(concat!(env!("CARGO_MANIFEST_DIR"), "/../../corpora/stellaris/manifest.toml"));
+        assert!(console_input_from(&m.expect("stellaris manifest loads").ui).is_some(), "the stellaris manifest calibrates the console input");
+    }
+
     use super::*;
 
     const SAVE: &[u8] = include_bytes!("../tests/fixtures/stellaris_2200_11_01.sav");

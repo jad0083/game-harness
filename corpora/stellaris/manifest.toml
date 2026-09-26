@@ -119,6 +119,11 @@ template_search = 2
 # space (AGENTS.md §1), read by `ui_point` in stellaris.rs (`pick_tech`, `sync_market`).
 # verified live 2381.03 on 4.5.1: clicking swap drops the current research at once; the list shows
 # the save's alternatives that come before the current tech, then the current tech; only 4 cards fit
+[ui.console]   # verified live 2461.10 on 4.5.1: an open console can lack keyboard focus (left open by a
+               # killed controller); typed keys then go to the map. Clicking the input line focuses it.
+input = [190, 219]
+clear_backspaces = 200
+
 [ui.tech]
 open_key = "f4"
 swap = { physics = [229, 168], society = [229, 249], engineering = [229, 331] }
