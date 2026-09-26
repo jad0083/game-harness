@@ -191,6 +191,10 @@ def test_telemetry_records_campaign_decisions_and_scores_outcomes(setup, tmp_pat
     assert runs[0]["campaign_id"] == cid and runs[0]["game"] == "stellaris" and runs[0]["status"] == "ended"
     ds = tel.query("SELECT * FROM decisions WHERE campaign_id=? ORDER BY episode", (cid,))
     assert [d["decision"] for d in ds] == ["expand", "keep", "keep"]
+    # the model that actually answered (an alias like gemini-pro-latest resolves to a version) and the
+    # thinking level are kept with every decision
+    assert ds[0]["model_version"] and ds[0]["model_version"].startswith("function:"), ds[0]["model_version"]
+    assert ds[0]["thinking"] == s.governor_thinking
     assert json.loads(ds[0]["trace"])["steps"][0]["type"] == "prompt"
     assert len(tel.query("SELECT * FROM metrics WHERE campaign_id=?", (cid,))) == 3
     # 12 months after 'expand' (2200.01 -> 2201.01): +1 planet, +30 pops

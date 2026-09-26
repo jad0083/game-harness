@@ -272,7 +272,9 @@ The database is local (gitignored); curated knowledge (`learned/`, strategy, jou
 **Stellaris governor** (`src/pilot/governor.py`): pause → briefing from the newest autosave →
 the model returns one directive or `keep` → apply (flag + policies, console, game paused) →
 resume at `--speed` (default `normal`) → poll autosaves until `--months` have passed, a war starts or ends, a
-resource turns negative, or we newly fall below half the median in a measure → pause → decide again. The briefing names each war's sides, goals, war exhaustion and battles, lists the nearest
+resource turns negative, or we newly fall below half the median in a measure → pause → decide again. The dashboard shows the neighbours with their strength against ours over time and shades war
+periods on the chart; each decision records the model release that answered (an alias such as
+`gemini-pro-latest` resolves) and the thinking level. The briefing names each war's sides, goals, war exhaustion and battles, lists the nearest
 empires against ours (strength ratios, opinion both ways, rival/pact flags), and the prompt adds
 a 12-month trend line (flags alloys piling up while military stays flat). The game is paused whenever the model thinks,
 so any speed is safe. `prepare_war` is applied only after a human "yes" on the dashboard.

@@ -145,6 +145,25 @@
   .tip div { display: flex; justify-content: space-between; gap: 12px; font-variant-numeric: tabular-nums; }
   .tip i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
   .empty { color: var(--muted); padding: 20px 0; }
+  .legend i.war { background: color-mix(in srgb, var(--bad) 22%, transparent); outline: 1px solid color-mix(in srgb, var(--bad) 45%, transparent); }
+  .nb { width: 100%; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+  .nb th { font-weight: 500; font-size: 12.5px; color: var(--muted); text-align: right; padding: 0 8px 6px; white-space: nowrap; }
+  .nb td { text-align: right; padding: 8px; border-top: 1px solid var(--grid); vertical-align: middle; white-space: nowrap; }
+  .nb th:first-child, .nb td:first-child { text-align: left; white-space: normal; padding-left: 0; }
+  .nb .who b { font-weight: 600; }
+  .nb .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+  .nb .tag { font-size: 11.5px; line-height: 18px; padding: 0 7px; border-radius: 999px; border: 1px solid var(--hair); color: var(--ink-2); white-space: nowrap; }
+  .nbwrap { overflow-x: auto; }
+  .nb td.who { min-width: 190px; }
+  .nb .tag.bad { border-color: color-mix(in srgb, var(--bad) 60%, transparent); color: var(--ink); background: color-mix(in srgb, var(--bad) 14%, transparent); }
+  .nb .tag.good { border-color: color-mix(in srgb, var(--good) 60%, transparent); color: var(--ink); background: color-mix(in srgb, var(--good) 12%, transparent); }
+  .nb .ratio { display: inline-grid; grid-template-columns: 3em 48px; align-items: center; gap: 6px; }
+  .nb .bar { position: relative; height: 8px; border-radius: 4px; background: var(--raised); overflow: hidden; }
+  .nb .bar span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; }
+  .nb .bar em { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--ink-2); left: 33.3%; }
+  .nb svg { display: block; margin-left: auto; }
+  .nb-note { font-size: 12.5px; color: var(--muted); margin: 10px 0 0; }
+  @media (max-width: 720px) { .nb .hide-s { display: none; } }
   table.data { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
   table.data th, table.data td { text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
   table.data th:first-child, table.data td:first-child { text-align: left; }
@@ -329,6 +348,11 @@
         <div class="legend" id="legend"></div>
         <div class="chartwrap" id="chartwrap"></div>
       </div>
+    </section>
+
+    <section class="panel" id="p-nb" aria-labelledby="h-nb" hidden>
+      <header><h2 id="h-nb">Neighbours</h2><span class="sub" id="nb-sub"></span></header>
+      <div class="body" id="nb"></div>
     </section>
 
     <section class="panel" id="p-dec" aria-labelledby="h-dec">
@@ -572,6 +596,8 @@ function renderReadout() {
 function renderChart() {
   const wrap = $("chartwrap"), view = S.view;
   const ms = S.metrics.filter((m) => m.month != null);
+  ms.forEach((m, i) => { m.prev = i ? ms[i - 1].month : null; });
+  renderNeighbours(ms);
   renderStanding(ms[ms.length - 1]);
   $("chart-sub").textContent = ms.length ? `${ms[0].date} to ${ms[ms.length - 1].date}` : "";
   if (!ms.length) {
@@ -592,6 +618,16 @@ function renderChart() {
   const X = (mo) => L + (mo - x0) / (x1 - x0) * (W - L - R);
   const Y = (v) => T + (1 - (v - y0) / (y1 - y0 || 1)) * (H - T - B);
   let svg = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(document.querySelector(`[data-view="${view}"]`).textContent)} over in-game time">`;
+  // wars: shaded spans behind the lines (from the monthly records)
+  const wars = [];
+  for (const m of ms) {
+    if (m.wars > 0) { const last = wars[wars.length - 1]; if (last && last.to === m.prev) last.to = m.month; else wars.push({ from: m.month, to: m.month }); }
+  }
+  for (const w of wars) {
+    const a = X(w.from), b = Math.max(X(w.to + 1), a + 2);
+    svg += `<rect x="${a}" y="${T}" width="${Math.min(b, W - R) - a}" height="${H - T - B}" fill="var(--bad)" fill-opacity="0.09"><title>At war</title></rect>`;
+  }
+  if (wars.length) $("legend").innerHTML += `<span><i class="war"></i>at war</span>`;
   // directive lane (top)
   const spans = directiveSpans();
   spans.forEach((s, i) => {
@@ -648,6 +684,61 @@ function renderChart() {
     tip.style.top = T / scale + "px";
   });
   hit.addEventListener("pointerleave", () => { tip.hidden = true; xh.setAttribute("visibility", "hidden"); dots.innerHTML = ""; });
+}
+
+// The model as chosen, the release that answered (aliases resolve), and the thinking level.
+function modelLabel(d) {
+  const chosen = (d.model || "").replace(/^google:/, "");
+  const served = d.model_version || (d.trace && d.trace.model_version) || "";
+  const thinking = d.thinking || (d.trace && d.trace.thinking_level) || "";
+  let s = chosen;
+  if (served && served !== chosen) s += ` (answered by ${served})`;
+  if (thinking) s += `, ${thinking} thinking`;
+  return s;
+}
+
+// ---------- neighbours ----------
+const NB_BAD = ["AT WAR", "rival", "hostile", "they rival us", "they closed borders"];
+const NB_GOOD = ["alliance", "friendly", "commercial pact", "research agreement", "defensive pact"];
+function ratioCell(t, o) {
+  if (!o || t == null) return "–";
+  const r = t / o, w = Math.min(r / 3, 1) * 100;
+  const fill = r > 1.25 ? "var(--bad)" : r < 0.8 ? "var(--good)" : "var(--ink-2)";
+  return `<span class="ratio" title="${fmt(t)} vs our ${fmt(o)}"><span>${r.toFixed(1)}×</span><span class="bar"><span style="width:${w}%;background:${fill}"></span><em></em></span></span>`;
+}
+function times(t, o) { return !o || t == null ? "–" : (t / o).toFixed(1) + "×"; }
+function spark(points) {
+  if (points.length < 2) return "–";
+  const W = 84, H = 22, xs = points.map((p) => p[0]), ys = points.map((p) => p[1]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs) || x0 + 1, hi = Math.max(1.2, ...ys);
+  const X = (x) => 2 + (x - x0) / ((x1 - x0) || 1) * (W - 4), Y = (y) => H - 2 - y / hi * (H - 4);
+  const pts = points.map(([x, y]) => `${X(x).toFixed(1)},${Y(y).toFixed(1)}`).join(" ");
+  return `<svg width="${W}" height="${H}" role="img" aria-label="Their military as a multiple of ours over time">
+    <line x1="2" x2="${W - 2}" y1="${Y(1)}" y2="${Y(1)}" stroke="var(--axis)" stroke-dasharray="3 3"/>
+    <polyline points="${pts}" fill="none" stroke="var(--s1)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+}
+function renderNeighbours(ms) {
+  const panel = $("p-nb"), last = [...ms].reverse().find((m) => m.neighbours && m.neighbours.length);
+  if (!last) { panel.hidden = true; return; }
+  panel.hidden = false;
+  $("nb-sub").textContent = `${last.date}, compared with us`;
+  const hist = (name) => ms.filter((m) => m.military_power && m.neighbours).map((m) => {
+    const n = m.neighbours.find((x) => x.name === name);
+    return n && n.military != null ? [m.month, n.military / m.military_power] : null;
+  }).filter(Boolean);
+  const rows = last.neighbours.map((n) => {
+    const tags = (n.status || []).map((t) => `<span class="tag${NB_BAD.includes(t) ? " bad" : NB_GOOD.includes(t) ? " good" : ""}">${esc(t)}</span>`).join("");
+    return `<tr><td class="who"><b>${esc(n.name)}</b>${tags ? `<div class="tags">${tags}</div>` : ""}</td>
+      <td>${ratioCell(n.military, last.military_power)}</td>
+      <td class="hide-s" title="${fmt(n.economy)} vs our ${fmt(last.economy_power)}">${times(n.economy, last.economy_power)}</td>
+      <td class="hide-s" title="${fmt(n.tech)} vs our ${fmt(last.tech_power)}">${times(n.tech, last.tech_power)}</td>
+      <td>${fmt(n.systems)}</td>
+      <td>${n.opinion == null ? "–" : fmt(n.opinion)}</td>
+      <td class="hide-s">${spark(hist(n.name))}</td></tr>`;
+  }).join("");
+  $("nb").innerHTML = `<div class="nbwrap"><table class="nb"><thead><tr><th>Empire</th><th>Military</th><th class="hide-s">Economy</th>
+    <th class="hide-s">Tech</th><th>Systems</th><th title="Their opinion of us">Opinion</th><th class="hide-s" title="Their military as a multiple of ours, over the campaign">Trend</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <p class="nb-note">Military, economy and tech are theirs as a multiple of ours (the bar's tick is 1×, equal strength); opinion is theirs of us; the trend line is their military against ours since records began. Nearest first, with empires at war with us and on our border leading.</p>`;
 }
 
 function renderTable(ms) {
@@ -707,7 +798,7 @@ function renderTrace(d) {
   let h = `<div class="t-when">${esc(d.date)}, ${esc(tidy(d.trigger || ""))}</div>
     <div class="t-decision">${kept ? "Kept " + esc(human(d.current || "no directive")) : esc(human(d.decision))}</div>
     <p class="t-reason">${md(tidy(d.reason || ""))}</p>
-    <div class="t-meta"><span>${esc(d.model === "human" ? "Your decision" : d.model || "")}</span><span>${esc(d.outcome || "")}</span>
+    <div class="t-meta"><span>${esc(d.model === "human" ? "Your decision" : modelLabel(d))}</span><span>${esc(d.outcome || "")}</span>
     ${d.tokens_in ? `<span>${fmt(d.tokens_in)} tokens in, ${fmt(d.tokens_out)} out</span>` : ""}${d.seconds ? `<span>${esc(d.seconds)} s</span>` : ""}</div>`;
   if (d.result) h += afterText(d.result).replace('class="after"', 'class="after" style="margin:-4px 0 14px"');
   h += `<div class="steps">`;
