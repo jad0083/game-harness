@@ -101,6 +101,48 @@ pub struct Neighbour {
     pub status: Vec<String>,
 }
 
+/// Our federation, if any.
+#[derive(Debug, Serialize, Default)]
+pub struct Federation {
+    pub name: String,
+    /// e.g. "research_federation"
+    pub kind: String,
+    pub level: i64,
+    pub cohesion: f64,
+    pub we_lead: bool,
+    pub members: Vec<String>,
+    pub associates: Vec<String>,
+}
+
+/// The Galactic Community, if it has formed.
+#[derive(Debug, Serialize, Default)]
+pub struct Community {
+    pub members: usize,
+    pub we_are_member: bool,
+    /// Resolution under vote: (type, proposer, our stance "for" / "against" / "undecided").
+    pub voting: Option<(String, String, String)>,
+    /// Most recently passed resolution types, newest first (up to 3).
+    pub passed: Vec<String>,
+}
+
+/// Federation, Galactic Community, crises and our situations.
+#[derive(Debug, Serialize, Default)]
+pub struct Galaxy {
+    pub federation: Option<Federation>,
+    pub community: Option<Community>,
+    /// Active crisis or awakened empires: (country type, name, military power).
+    pub crises: Vec<(String, String, f64)>,
+    /// Our situations: (type, progress, approach).
+    pub situations: Vec<(String, f64, String)>,
+}
+
+/// Country types of the endgame crises and other galaxy-level threats (4.5.1 common/ scripts use
+/// these with `is_country_type`; the extradimensional ones have numbered variants).
+const CRISIS_TYPES: [&str; 8] = [
+    "swarm", "extradimensional", "ai_empire", "awakened_marauders", "awakened_fallen_empire",
+    "awakened_synth_queen", "gray_tempest", "voidworm",
+];
+
 /// How many neighbours the briefing lists (nearest first; wars and shared borders first).
 pub const MAX_NEIGHBOURS: usize = 6;
 
@@ -175,6 +217,7 @@ pub struct Briefing {
     pub expansion: Expansion,
     /// Nearest empires we have contact with (see MAX_NEIGHBOURS).
     pub neighbours: Vec<Neighbour>,
+    pub galaxy: Galaxy,
 }
 
 fn expansion(
@@ -370,6 +413,89 @@ fn neighbours(countries: &Obj, us: u64, c: &Obj, origins: &std::collections::Has
     out.sort_by_key(|n| (!at_war.contains(&n.id), !n.borders, n.border_range.unwrap_or(i64::MAX)));
     out.truncate(MAX_NEIGHBOURS);
     out
+}
+
+fn readable_type(t: &str, prefix: &str) -> String {
+    t.strip_prefix(prefix).unwrap_or(t).replace('_', " ")
+}
+
+/// Federation, Galactic Community, crises and our situations.
+fn galaxy(root: &Obj, countries: &Obj, c: &Obj, us: u64) -> Galaxy {
+    let name = |id: u64| -> String {
+        if id == us {
+            return "us".to_string();
+        }
+        obj(countries, &id.to_string()).map(|x| name_of(&x)).unwrap_or_else(|| format!("country {id}"))
+    };
+    let ids = |o: &Obj, key: &str| -> Vec<u64> { strings(get(o, key)).iter().filter_map(|x| x.parse().ok()).collect() };
+    let mut g = Galaxy::default();
+
+    if let Some(fid) = i64_(c, "federation") {
+        if let Some(f) = obj(root, "federation").and_then(|fs| obj(&fs, &fid.to_string())) {
+            let prog = obj(&f, "federation_progression");
+            g.federation = Some(Federation {
+                name: name_of(&f),
+                kind: prog.as_ref().and_then(|p| string(p, "federation_type")).unwrap_or_default(),
+                level: prog.as_ref().and_then(|p| i64_(p, "levels")).unwrap_or(0),
+                cohesion: prog.as_ref().and_then(|p| f64_(p, "cohesion")).unwrap_or(0.0),
+                we_lead: i64_(&f, "leader").map(|l| l as u64) == Some(us),
+                members: ids(&f, "members").into_iter().map(name).collect(),
+                associates: ids(&f, "associates").into_iter().map(name).collect(),
+            });
+        }
+    }
+
+    if let Some(gc) = obj(root, "galactic_community") {
+        let members = ids(&gc, "members");
+        let resolutions = obj(root, "resolution");
+        let res = |id: i64| resolutions.as_ref().and_then(|r| obj(r, &id.to_string()));
+        let voting = i64_(&gc, "voting").and_then(&res).map(|r| {
+            let stance = if ids(&r, "supporters").contains(&us) {
+                "for"
+            } else if ids(&r, "opponents").contains(&us) {
+                "against"
+            } else {
+                "undecided"
+            };
+            (
+                readable_type(&string(&r, "type").unwrap_or_default(), "resolution_"),
+                i64_(&r, "country").map(|x| name(x as u64)).unwrap_or_default(),
+                stance.to_string(),
+            )
+        });
+        let passed = strings(get(&gc, "passed"))
+            .iter()
+            .rev()
+            .filter_map(|x| x.parse::<i64>().ok())
+            .filter_map(|id| res(id).and_then(|r| string(&r, "type")))
+            .map(|t| readable_type(&t, "resolution_"))
+            .take(3)
+            .collect();
+        g.community = Some(Community { members: members.len(), we_are_member: members.contains(&us), voting, passed });
+    }
+
+    for (_, _, v) in countries.fields() {
+        let Ok(x) = v.read_object() else { continue };
+        let Some(t) = string(&x, "type") else { continue };
+        if CRISIS_TYPES.iter().any(|k| t.starts_with(k)) {
+            g.crises.push((t, name_of(&x), f64_(&x, "military_power").unwrap_or(0.0)));
+        }
+    }
+
+    if let Some(sits) = obj(root, "situations").and_then(|s| obj(&s, "situations")) {
+        for (_, _, v) in sits.fields() {
+            let Ok(x) = v.read_object() else { continue };
+            if i64_(&x, "country").map(|n| n as u64) != Some(us) {
+                continue;
+            }
+            g.situations.push((
+                readable_type(&string(&x, "type").unwrap_or_default(), ""),
+                f64_(&x, "progress").unwrap_or(0.0),
+                readable_type(&string(&x, "approach").unwrap_or_default(), "approach_"),
+            ));
+        }
+    }
+    g
 }
 
 /// Extract `meta` and `gamestate` from a `.sav` ZIP.
@@ -964,6 +1090,9 @@ fn render_name(n: &Obj) -> String {
         format!("{} of {}", vars[0], vars[1])          // "AofB" {1=Hegemony 2=Kalaxenan} → "Hegemony of Kalaxenan"
     } else if (template || key.starts_with("AofB")) && !vars.is_empty() {
         vars.join(" ")
+    } else if !vars.is_empty() {
+        // a word that takes words: "Coalition_of" {SovereignStars} → "Coalition of Sovereign Stars"
+        format!("{} {}", readable(&key), vars.join(" "))
     } else {
         readable(&key)
     }
@@ -1143,6 +1272,7 @@ pub fn brief_gamestate(gamestate: &[u8]) -> Result<Briefing> {
     }
     let at_war: Vec<u64> = b.wars.iter().flat_map(|w| w.enemy_ids.iter().copied()).collect();
     b.neighbours = neighbours(&countries, b.country, &c, &origins, &at_war);
+    b.galaxy = galaxy(&root, &countries, &c, b.country);
     Ok(b)
 }
 
@@ -1301,6 +1431,32 @@ impl Briefing {
                     w.battles_won, w.battles_lost
                 );
             }
+        }
+        let gx = &self.galaxy;
+        if let Some(f) = &gx.federation {
+            let assoc = if f.associates.is_empty() { String::new() } else { format!("; associates: {}", f.associates.join(", ")) };
+            s += &format!(
+                "Federation: {} ({}, level {}, cohesion {:.0}{}); members: {}{}\n",
+                f.name, f.kind.replace('_', " "), f.level, f.cohesion, if f.we_lead { ", we lead it" } else { "" },
+                f.members.join(", "), assoc
+            );
+        }
+        if let Some(gc) = &gx.community {
+            let vote = gc.voting.as_ref().map(|(t, by, st)| format!("; voting now: {t} (proposed by {by}; we are {st})")).unwrap_or_default();
+            let passed = if gc.passed.is_empty() { String::new() } else { format!("; recently passed: {}", gc.passed.join(", ")) };
+            s += &format!(
+                "Galactic Community: {} ({} members){vote}{passed}\n",
+                if gc.we_are_member { "we are a member" } else { "we are not a member" }, gc.members
+            );
+        }
+        if gx.crises.is_empty() {
+            s += "Crisis: none active\n";
+        } else {
+            let list: Vec<String> = gx.crises.iter().map(|(t, n, m)| format!("{n} [{t}] military {m:.0}")).collect();
+            s += &format!("CRISIS / galaxy-level threat: {}\n", list.join("; "));
+        }
+        for (t, p, a) in &gx.situations {
+            s += &format!("Situation: {t}, progress {p:.0}, approach {a}\n");
         }
         let gov: Vec<&String> = self.flags.iter().filter(|f| f.starts_with("governor_")).collect();
         if !gov.is_empty() {
@@ -1563,6 +1719,46 @@ war={ 0=none 1={
         assert_eq!((n.name.as_str(), n.borders, n.opinion_ours, n.opinion_theirs), ("Yax Kalock Consolidated", true, Some(-300), Some(-450)));
         assert_eq!(n.status, vec!["AT WAR", "rival", "hostile"]);
         assert!(t.contains("- Yax Kalock Consolidated: shares our border; military 2.5x (2500)"), "{t}");
+    }
+
+    #[test]
+    fn federation_community_crises_and_situations() {
+        // Shapes copied from the 2278.06 autosave (federation, galactic_community, resolution,
+        // situations); the crisis country is synthetic (none was active).
+        let gs = br#"date="2278.06.01"
+player={ { name="x" country=0 } }
+country={
+    0={ name={ key="NAME_Us" } type="default" federation=1 }
+    1={ name={ key="NAME_Ess_Jaggon_Authority" } type="default" }
+    7={ name={ key="NAME_Rihi_Nar" } type="default" }
+    9={ name={ key="Prethoryn_Scourge" } type="swarm" military_power=90000 }
+}
+federation={ 0={ name={ key="NAME_Other" } } 1={
+    name={ key="%ADJ%" variables={ { key="1" value={ key="Coalition_of" variables={ { key="1" value={ key="SovereignStars" } } } } } } }
+    federation_progression={ federation_type="research_federation" levels=3 cohesion=100 }
+    members={ 0 1 } associates={ 7 } leader=0 } }
+galactic_community={ members={ 0 1 7 } voting=4 passed={ 1 3 } }
+resolution={ 1={ type="resolution_galactic_market_form" country=1 } 3={ type="resolution_industry_regulatory_facilitation" country=7 }
+    4={ type="resolution_industry_collective_waste_management" country=7 supporters={ 7 } opponents={ 0 } } }
+situations={ situations={ 0=none 1={ country=0 type="rebellion_situation" progress=42.5 approach="approach_crackdown" }
+    2={ country=7 type="other_situation" progress=1 approach="x" } } }
+"#;
+        let b = brief_gamestate(gs).unwrap();
+        let f = b.galaxy.federation.as_ref().unwrap();
+        assert_eq!(f.name, "Coalition of Sovereign Stars");
+        assert!(f.we_lead);
+        assert_eq!(f.members, vec!["us", "Ess Jaggon Authority"]);
+        assert_eq!(f.associates, vec!["Rihi Nar"]);
+        let gc = b.galaxy.community.as_ref().unwrap();
+        assert_eq!(gc.voting, Some(("industry collective waste management".into(), "Rihi Nar".into(), "against".into())));
+        assert_eq!(gc.passed, vec!["industry regulatory facilitation", "galactic market form"]);
+        assert_eq!(b.galaxy.crises, vec![("swarm".to_string(), "Prethoryn Scourge".to_string(), 90000.0)]);
+        assert_eq!(b.galaxy.situations, vec![("rebellion situation".to_string(), 42.5, "crackdown".to_string())]);
+        let t = b.to_text();
+        assert!(t.contains("Federation: Coalition of Sovereign Stars (research federation, level 3, cohesion 100, we lead it); members: us, Ess Jaggon Authority; associates: Rihi Nar"), "{t}");
+        assert!(t.contains("voting now: industry collective waste management (proposed by Rihi Nar; we are against)"), "{t}");
+        assert!(t.contains("CRISIS / galaxy-level threat: Prethoryn Scourge [swarm] military 90000"), "{t}");
+        assert!(t.contains("Situation: rebellion situation, progress 42, approach crackdown"), "{t}");
     }
 
     #[test]

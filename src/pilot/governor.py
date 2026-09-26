@@ -168,6 +168,10 @@ def urgent_changes(before: dict, now: dict) -> list[str]:
             out.append(f"new war: {w['name']} (we are {'attacker' if w.get('attacker') else 'defender'})")
     for name in sorted(old_wars - new_wars):
         out.append(f"war ended: {name}")
+    old_crises = {c[1] for c in (before.get("galaxy") or {}).get("crises", [])}
+    for kind, name, *_ in (now.get("galaxy") or {}).get("crises", []):
+        if name not in old_crises:
+            out.append(f"crisis: {name} ({kind}) appeared")
     for res, net in now.get("net", {}).items():
         if net < 0 <= before.get("net", {}).get(res, 0):
             out.append(f"{res} net turned negative ({net:+.1f}/month)")

@@ -77,6 +77,12 @@ Directives never grant resources, stats or anything the empire could not do itse
   power by themselves: say so, and prefer the directive that uses what we have (e.g. `tech_rush`
   for naval-capacity techs, or `consolidate_economy`).
 - A `war ended` urgent line means leave `defend` unless another threat is listed.
+- **Federation / Galactic Community / Crisis** lines: our federation (type, level, cohesion, who
+  leads, members and associates), the resolution under vote with our stance, recent resolutions,
+  and any endgame crisis or awakened empire. Allies in a federation make `defend` less urgent
+  against a single neighbour and `diplomacy_first` more valuable. A `CRISIS` line (or a
+  `crisis: … appeared` urgent line) outranks growth: prefer `defend` (fleets, starbases) and
+  `consolidate_economy` to keep alloys flowing; never `prepare_war` against another empire then.
 
 - Read the whole briefing before choosing. Pick the directive whose *trigger* in
   `strategy.md` fits best; keep the current one if nothing has changed materially.
