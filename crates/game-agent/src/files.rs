@@ -3,7 +3,12 @@
 //! Roots come from `roots.json` next to the executable, written by the installer:
 //! `{"roots": {"stellaris_docs": "C:\\Users\\me\\Documents\\Paradox Interactive\\Stellaris"}}`.
 //! Requests name a root and a relative path; anything that resolves outside its root, absolute
-//! paths and `..` components are refused. There is no write, delete or execute operation.
+//! paths and `..` components are refused. There is no delete or execute operation.
+//!
+//! Writing is possible only under `write_roots`, and only to the paths each one allows
+//! (`"dir/"` = anything under that folder, otherwise one exact file), e.g. a game's mod folder:
+//! `{"write_roots": {"stellaris_mods": {"path": "…\\Stellaris", "allow": ["mod/governor_bridge/",
+//! "mod/governor_bridge.mod", "dlc_load.json"]}}}`.
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -13,11 +18,23 @@ use std::time::UNIX_EPOCH;
 
 /// Largest single read (bytes). Stellaris saves are typically a few MB; late-game ones tens of MB.
 pub const MAX_READ: u64 = 128 * 1024 * 1024;
+/// Largest single write (bytes): mod scripts and small config files.
+pub const MAX_WRITE: usize = 4 * 1024 * 1024;
+
+#[derive(Debug, Default, Clone, Deserialize)]
+pub struct WriteRoot {
+    pub path: PathBuf,
+    /// Relative paths that may be written: "dir/" allows anything under dir, otherwise an exact file.
+    #[serde(default)]
+    pub allow: Vec<String>,
+}
 
 #[derive(Debug, Default, Clone, Deserialize)]
 pub struct Roots {
     #[serde(default)]
     pub roots: BTreeMap<String, PathBuf>,
+    #[serde(default)]
+    pub write_roots: BTreeMap<String, WriteRoot>,
 }
 
 #[derive(Debug, Serialize, PartialEq)]
@@ -65,6 +82,58 @@ impl Roots {
             return Err(format!("{rel:?} resolves outside root {name:?}"));
         }
         Ok(full_c)
+    }
+
+    /// Write `data` to `rel` inside write root `name` (atomically: temp file + rename). Returns bytes written.
+    pub fn write(&self, name: &str, rel: &str, data: &[u8]) -> Result<usize, String> {
+        let wr = self.write_roots.get(name).ok_or_else(|| format!("{name:?} is not a writable root"))?;
+        if data.len() > MAX_WRITE {
+            return Err(format!("too large: {} bytes (max {MAX_WRITE})", data.len()));
+        }
+        let rel_path = Path::new(rel);
+        let mut parts = Vec::new();
+        for c in rel_path.components() {
+            match c {
+                Component::Normal(p) => parts.push(p.to_string_lossy().into_owned()),
+                _ => return Err(format!("path {rel:?} must be relative and must not contain '..'")),
+            }
+        }
+        if rel.contains(':') || parts.is_empty() {
+            return Err("drive or stream syntax (':') or an empty path is not allowed".into());
+        }
+        let norm = parts.join("/");
+        let allowed = wr.allow.iter().any(|a| {
+            if let Some(dir) = a.strip_suffix('/') {
+                norm.starts_with(&format!("{dir}/"))
+            } else {
+                norm == *a
+            }
+        });
+        if !allowed {
+            return Err(format!("{norm:?} is not writable (allowed: {})", wr.allow.join(", ")));
+        }
+        let root_c = wr.path.canonicalize().map_err(|e| format!("root {name:?} unavailable: {e}"))?;
+        let target = root_c.join(&norm);
+        let parent = target.parent().ok_or("no parent directory")?.to_path_buf();
+        std::fs::create_dir_all(&parent).map_err(|e| e.to_string())?;
+        let parent_c = parent.canonicalize().map_err(|e| e.to_string())?;
+        if !parent_c.starts_with(&root_c) {
+            return Err(format!("{norm:?} resolves outside root {name:?}"));
+        }
+        let file_name = target.file_name().ok_or("no file name")?;
+        let final_path = parent_c.join(file_name);
+        if let Ok(meta) = std::fs::symlink_metadata(&final_path) {
+            if meta.file_type().is_symlink() || meta.is_dir() {
+                return Err(format!("{norm:?} is a link or a directory"));
+            }
+        }
+        let tmp = parent_c.join(format!(".{}.tmp", file_name.to_string_lossy()));
+        std::fs::write(&tmp, data).map_err(|e| e.to_string())?;
+        std::fs::rename(&tmp, &final_path).map_err(|e| {
+            let _ = std::fs::remove_file(&tmp);
+            e.to_string()
+        })?;
+        Ok(data.len())
     }
 
     pub fn list(&self, name: &str, rel: &str) -> Result<Vec<Entry>, String> {
@@ -170,6 +239,58 @@ mod tests {
         let p = d.path().join("roots.json");
         std::fs::write(&p, "\u{feff}{\"roots\": {\"a\": \"/tmp\"}}").unwrap();
         assert_eq!(Roots::load(&p).roots["a"], PathBuf::from("/tmp"));
+    }
+
+    fn write_roots(dir: &Path) -> Roots {
+        let mut r = Roots::default();
+        r.write_roots.insert(
+            "w".into(),
+            WriteRoot { path: dir.to_path_buf(), allow: vec!["mod/bridge/".into(), "mod/bridge.mod".into(), "dlc_load.json".into()] },
+        );
+        r
+    }
+
+    #[test]
+    fn writes_only_allowed_paths_inside_write_roots() {
+        let d = tempdir::TempDirLite::new("write");
+        let r = write_roots(d.path());
+        assert_eq!(r.write("w", "mod/bridge/common/ai_budget/x.txt", b"a = 1").unwrap(), 5);
+        assert_eq!(std::fs::read(d.path().join("mod/bridge/common/ai_budget/x.txt")).unwrap(), b"a = 1");
+        r.write("w", "mod/bridge.mod", b"name=\"x\"").unwrap();
+        r.write("w", "dlc_load.json", b"{}").unwrap();
+        r.write("w", "dlc_load.json", b"{\"enabled_mods\":[]}").unwrap(); // overwrite
+        assert_eq!(std::fs::read(d.path().join("dlc_load.json")).unwrap(), b"{\"enabled_mods\":[]}");
+        for bad in ["settings.txt", "mod/other/x.txt", "mod/bridge", "mod/bridgeX/x", "../x", "mod/bridge/../../x", "/etc/x", "C:x", ""] {
+            assert!(r.write("w", bad, b"x").is_err(), "{bad:?} must be refused");
+        }
+        assert!(r.write("nope", "dlc_load.json", b"x").is_err(), "unknown root");
+        assert!(r.write("w", "dlc_load.json", &vec![0u8; MAX_WRITE + 1]).is_err(), "too large");
+        // read roots are never writable
+        let mut ro = Roots::default();
+        ro.roots.insert("r".into(), d.path().to_path_buf());
+        assert!(ro.write("r", "dlc_load.json", b"x").is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn write_refuses_symlink_escapes() {
+        let d = tempdir::TempDirLite::new("wlink");
+        let outside = tempdir::TempDirLite::new("wout");
+        std::fs::create_dir_all(d.path().join("mod")).unwrap();
+        std::os::unix::fs::symlink(outside.path(), d.path().join("mod/bridge")).unwrap();
+        let r = write_roots(d.path());
+        assert!(r.write("w", "mod/bridge/x.txt", b"x").is_err(), "directory link out of the root");
+        std::os::unix::fs::symlink(outside.path().join("f"), d.path().join("dlc_load.json")).unwrap();
+        assert!(r.write("w", "dlc_load.json", b"x").is_err(), "file link");
+        assert!(!outside.path().join("x.txt").exists() && !outside.path().join("f").exists());
+    }
+
+    #[test]
+    fn write_roots_load_from_json() {
+        let d = tempdir::TempDirLite::new("wjson");
+        let p = d.path().join("roots.json");
+        std::fs::write(&p, r#"{"roots": {}, "write_roots": {"m": {"path": "/tmp", "allow": ["mod/x/"]}}}"#).unwrap();
+        assert_eq!(Roots::load(&p).write_roots["m"].allow, vec!["mod/x/".to_string()]);
     }
 
     /// Minimal temp dir (no extra dependency).

@@ -621,6 +621,11 @@ pub async fn take_control(
     }
     reader.set(client, true).await?;
     done.push("human_ai is ON: the game's AI plays the empire".into());
+    done.push(match bridge_loaded(client).await {
+        Ok(true) => "companion mod Governor Bridge is loaded: directives also steer the AI's budget".into(),
+        Ok(false) => "companion mod not loaded: directives set policies only (game-controller stellaris install-mod)".into(),
+        Err(e) => format!("could not check the companion mod: {e}"),
+    });
     Ok(done)
 }
 
@@ -636,6 +641,76 @@ async fn latest_save_path(client: &crate::client::AgentClient) -> Result<(String
         }
     }
     best.map(|(m, p)| (p, m)).context("no .sav files under 'save games'")
+}
+
+// ---- companion mod ("Governor Bridge") ---------------------------------------------------------
+
+/// Agent write root for the Stellaris documents folder (only the mod and dlc_load.json are writable).
+pub const MODS_ROOT: &str = "stellaris_mods";
+pub const MOD_NAME: &str = "governor_bridge";
+
+/// dlc_load.json with `mod_ref` added to `enabled_mods` (other entries and keys are kept).
+pub fn enable_mod(dlc_load: &str, mod_ref: &str) -> Result<String> {
+    let mut v: serde_json::Value = if dlc_load.trim().is_empty() {
+        serde_json::json!({})
+    } else {
+        serde_json::from_str(dlc_load.trim_start_matches('\u{feff}')).context("dlc_load.json is not JSON")?
+    };
+    let obj = v.as_object_mut().context("dlc_load.json is not an object")?;
+    let mods = obj.entry("enabled_mods").or_insert_with(|| serde_json::json!([]));
+    let list = mods.as_array_mut().context("enabled_mods is not a list")?;
+    if !list.iter().any(|m| m.as_str() == Some(mod_ref)) {
+        list.push(serde_json::Value::String(mod_ref.to_string()));
+    }
+    obj.entry("disabled_dlcs").or_insert_with(|| serde_json::json!([]));
+    Ok(serde_json::to_string(&v)?)
+}
+
+/// Upload the mod from `<corpus>/mod/governor_bridge/` and enable it in dlc_load.json. The game
+/// loads it at the next start. Returns the files written.
+pub async fn install_mod(client: &crate::client::AgentClient, corpus_dir: &std::path::Path) -> Result<Vec<String>> {
+    let src = corpus_dir.join("mod").join(MOD_NAME);
+    let mut files = vec![];
+    let mut stack = vec![src.clone()];
+    while let Some(dir) = stack.pop() {
+        for e in std::fs::read_dir(&dir).with_context(|| format!("reading {}", dir.display()))? {
+            let p = e?.path();
+            if p.is_dir() {
+                stack.push(p);
+            } else {
+                files.push(p);
+            }
+        }
+    }
+    files.sort();
+    let mut written = vec![];
+    for f in &files {
+        let rel = f.strip_prefix(&src)?.to_string_lossy().replace('\\', "/");
+        let dest = format!("mod/{MOD_NAME}/{rel}");
+        client.files_write(MODS_ROOT, &dest, std::fs::read(f)?).await?;
+        written.push(dest);
+    }
+    // the launcher-level descriptor next to the folder: same fields plus the path
+    let descriptor = std::fs::read_to_string(src.join("descriptor.mod")).context("mod has no descriptor.mod")?;
+    let outer = format!("{}\npath=\"mod/{MOD_NAME}\"\n", descriptor.trim_end());
+    client.files_write(MODS_ROOT, &format!("mod/{MOD_NAME}.mod"), outer.into_bytes()).await?;
+    written.push(format!("mod/{MOD_NAME}.mod"));
+    let current = match client.files_read(DOCS_ROOT, "dlc_load.json", 0, None).await {
+        Ok((bytes, _)) => String::from_utf8_lossy(&bytes).into_owned(),
+        Err(_) => String::new(),
+    };
+    let updated = enable_mod(&current, &format!("mod/{MOD_NAME}.mod"))?;
+    client.files_write(MODS_ROOT, "dlc_load.json", updated.into_bytes()).await?;
+    written.push("dlc_load.json".into());
+    Ok(written)
+}
+
+/// Whether the running game has the mod loaded: an effect using its trigger logs only if it exists.
+pub async fn bridge_loaded(client: &crate::client::AgentClient) -> Result<bool> {
+    let marker = format!("GOVERNOR_BRIDGE_OK {}", nonce());
+    let (_, before) = client.files_read(DOCS_ROOT, "logs/game.log", 0, Some(0)).await?;
+    run_console(client, &[format!("effect if = {{ limit = {{ governor_bridge_present = yes }} log = \"{marker}\" }}")]).await?;
+    wait_for_log(client, before, &marker).await
 }
 
 /// Bytes of game.log after `offset` (and the new size), via the agent.
@@ -1086,6 +1161,40 @@ mod tests {
         // a bright nebula behind the console (plain template distances 0.103 / 0.130)
         assert_eq!(r.read_frame(&load("stellaris_human_ai_on_nebula.jpg")), Some(true));
         assert_eq!(r.read_frame(&image::RgbImage::new(1568, 882)), None, "no console: unknown");
+    }
+
+    #[test]
+    fn enable_mod_keeps_other_mods_and_is_idempotent() {
+        let out = enable_mod(r#"{"enabled_mods":["mod/ugc_1.mod"],"disabled_dlcs":["x"]}"#, "mod/governor_bridge.mod").unwrap();
+        let v: serde_json::Value = serde_json::from_str(&out).unwrap();
+        assert_eq!(v["enabled_mods"], serde_json::json!(["mod/ugc_1.mod", "mod/governor_bridge.mod"]));
+        assert_eq!(v["disabled_dlcs"], serde_json::json!(["x"]));
+        assert_eq!(enable_mod(&out, "mod/governor_bridge.mod").unwrap(), out, "second install changes nothing");
+        let fresh: serde_json::Value = serde_json::from_str(&enable_mod("", "mod/governor_bridge.mod").unwrap()).unwrap();
+        assert_eq!(fresh["enabled_mods"], serde_json::json!(["mod/governor_bridge.mod"]));
+        assert!(enable_mod("\u{feff}{\"enabled_mods\":[]}", "m").is_ok(), "BOM accepted");
+        assert!(enable_mod("[1,2]", "m").is_err());
+    }
+
+    #[test]
+    fn mod_files_are_well_formed() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpora/stellaris/mod/governor_bridge");
+        let descriptor = std::fs::read_to_string(dir.join("descriptor.mod")).unwrap();
+        assert!(descriptor.contains("supported_version=\"v4.5.*\"") && !descriptor.contains("path="));
+        for f in ["common/ai_budget/zz_governor_bridge_budget.txt", "common/scripted_triggers/zz_governor_bridge_triggers.txt"] {
+            let text = std::fs::read_to_string(dir.join(f)).unwrap();
+            jomini::TextTape::from_slice(text.as_bytes()).unwrap_or_else(|e| panic!("{f}: {e}"));
+            let opens = text.matches('{').count();
+            assert_eq!(opens, text.matches('}').count(), "{f}: unbalanced braces");
+        }
+        let budget = std::fs::read_to_string(dir.join("common/ai_budget/zz_governor_bridge_budget.txt")).unwrap();
+        // every entry is gated on a directive flag that exists
+        let d = Directives::load(&dir.join("../..")).unwrap();
+        for flag in budget.split("has_country_flag = ").skip(1).map(|s| s.split_whitespace().next().unwrap()) {
+            let name = flag.strip_prefix("governor_directive_").expect(flag);
+            assert!(d.directive.contains_key(name), "{flag} is not a directive");
+        }
+        assert_eq!(budget.matches("potential = { has_country_flag = governor_directive_").count(), budget.matches(" = {\n\tresource =").count());
     }
 
     #[test]

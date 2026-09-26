@@ -221,6 +221,8 @@ own AI through **`human_ai`** (we stay the player); the model only picks one sta
 C="./target/release/game-controller --corpus corpora/stellaris"
 $C stellaris brief                   # ~2 KB briefing from the newest autosave (read via the agent)
 $C stellaris take-control            # once per session: leave observer mode, human_ai ON (read on screen)
+$C stellaris install-mod             # upload the Governor Bridge mod and enable it (agent >= 1.3; restart the game)
+$C stellaris bridge-check            # is the mod loaded in the running game?
 $C stellaris directive expand        # flags + policies on the empire; confirmed in game.log
 $C stellaris speed fastest           # slowest | slow | normal | fast | fastest
 $C stellaris pause                   # / resume — state read from the screen, safe to repeat

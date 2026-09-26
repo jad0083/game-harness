@@ -78,7 +78,8 @@
 - [ ] Long unattended Stellaris run in a real game (user's choice of empire), with learned rules committed
 - [x] `stellaris take-control` / MCP `stellaris_take_control`: human_ai ON (console reply read on screen), leaves observer mode; briefing reports systems owned
 - [x] Which directive levers the AI keeps: policies yes (20 months); console-added edicts no (cancelled within a month); briefing shows active edicts
-- [ ] Companion mod: `ai_weight` modifiers keyed to `governor_directive_*` so the AI itself favours the directive's edicts, buildings and expansion (needs write access to the game's `mod/` folder, or a user install)
+- [ ] Companion mod "Governor Bridge" (`corpora/stellaris/mod/`): additive AI budget entries gated on `governor_directive_*` (expand: outposts/colonies; prepare_war/defend: ships, starbases; consolidate/tech_rush: planets), `stellaris install-mod` / `bridge-check`, take-control reports it; agent 1.3 write roots (mod folder + dlc_load.json only). Built and tested; pending agent 1.3 deploy and a live load check
+- [ ] Surveying speed is not budget-driven (science ship count comes from engine defines): find another lever if the mod doesn't lift expansion
 - [ ] Screen templates: pause/date and event popups
 
 ## Pilot app: observability and control

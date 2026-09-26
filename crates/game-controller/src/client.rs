@@ -301,6 +301,24 @@ impl AgentClient {
         Ok(serde_json::from_value(json["entries"].clone())?)
     }
 
+    /// Write a file inside one of the agent's write roots (agent >= 1.3.0; allowed paths only).
+    pub async fn files_write(&self, root: &str, path: &str, data: Vec<u8>) -> Result<()> {
+        let resp = self
+            .client
+            .put(format!("{}/files/write", self.base_url))
+            .query(&[("root", root), ("path", path)])
+            .body(data)
+            .send()
+            .await
+            .context("Failed /files/write")?;
+        let status = resp.status();
+        if !status.is_success() {
+            let body = resp.text().await.unwrap_or_default();
+            anyhow::bail!("/files/write {root}:{path}: HTTP {status}: {body}");
+        }
+        Ok(())
+    }
+
     /// Read a file (from `offset`, at most `max` bytes) inside one of the agent's roots.
     /// Returns the bytes and the file's total size.
     pub async fn files_read(&self, root: &str, path: &str, offset: u64, max: Option<u64>) -> Result<(Vec<u8>, u64)> {

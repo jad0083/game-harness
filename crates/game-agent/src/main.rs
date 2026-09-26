@@ -8,7 +8,7 @@ use axum::{
     http::{header, HeaderMap, StatusCode},
     middleware::{self, Next},
     response::{IntoResponse, Response},
-    routing::{get, post},
+    routing::{get, post, put},
     Json, Router,
 };
 use clap::Parser;
@@ -20,7 +20,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-const VERSION: &str = "1.2.0";
+const VERSION: &str = "1.3.0";
 const DEFAULT_PORT: u16 = 8765;
 
 #[derive(Parser, Debug)]
@@ -163,6 +163,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/files/roots", get(files_roots_handler))
         .route("/files/list", get(files_list_handler))
         .route("/files/read", get(files_read_handler))
+        .route(
+            "/files/write",
+            put(files_write_handler).layer(axum::extract::DefaultBodyLimit::max(files::MAX_WRITE + 1024)),
+        )
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             auth_middleware,
@@ -672,7 +676,13 @@ async fn files_roots_handler(State(state): State<AppState>) -> impl IntoResponse
         .iter()
         .map(|(k, v)| (k.clone(), serde_json::json!({"path": v, "exists": v.is_dir()})))
         .collect();
-    Json(serde_json::json!({"roots": roots}))
+    let writable: serde_json::Map<String, serde_json::Value> = state
+        .roots
+        .write_roots
+        .iter()
+        .map(|(k, w)| (k.clone(), serde_json::json!({"path": w.path, "exists": w.path.is_dir(), "allow": w.allow})))
+        .collect();
+    Json(serde_json::json!({"roots": roots, "write_roots": writable}))
 }
 
 async fn files_list_handler(
@@ -681,6 +691,23 @@ async fn files_list_handler(
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     let entries = state.roots.list(&p.root, &p.path).map_err(file_error)?;
     Ok(Json(serde_json::json!({"root": p.root, "path": p.path, "entries": entries})))
+}
+
+/// PUT /files/write?root=…&path=… with the file's bytes as the body (write roots only).
+async fn files_write_handler(
+    State(state): State<AppState>,
+    Query(p): Query<FileParams>,
+    body: axum::body::Bytes,
+) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+    let n = state.roots.write(&p.root, &p.path, &body).map_err(|e| {
+        let status = if e.contains("not a writable root") || e.contains("is not writable") {
+            StatusCode::FORBIDDEN
+        } else {
+            StatusCode::BAD_REQUEST
+        };
+        (status, Json(serde_json::json!({"error": e})))
+    })?;
+    Ok(Json(serde_json::json!({"ok": true, "root": p.root, "path": p.path, "bytes": n})))
 }
 
 async fn files_read_handler(

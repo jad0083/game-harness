@@ -755,3 +755,18 @@ def test_models_that_cannot_play_are_filtered(monkeypatch):
     monkeypatch.setattr(google.genai, "Client", Client)
     monkeypatch.setenv("GEMINI_API_KEY", "k")
     assert models.google_models() == ["google:gemini-3.8-flash", "google:gemini-3.1-pro-preview"]
+
+
+def test_loading_another_game_stops_the_governor_acting(setup):
+    s, log = setup
+    a = {**briefing("2200.01.01"), "source": "save games/empire_a/x.sav"}
+    other = {**briefing("2203.06.01"), "source": "save games/empire_b/x.sav"}
+    game = FakeStellaris([a, a, other])
+    gov = Governor(s, game, log, model=decisions("expand", "tech_rush"))
+    t = _run_bg(gov)
+    assert _wait(lambda: log.state.status == "needs_attention")
+    assert any("the game changed" in e.get("reason", "") and "empire_b" in e["reason"] for e in log.recent)
+    assert [a_ for a_ in game.actions if a_[0] == "directive"] == [("directive", "expand")], "nothing applied to game B"
+    assert game.paused
+    gov.stop()
+    t.join(timeout=5)
