@@ -1998,7 +1998,7 @@ def test_tech_misses_reset_at_each_review(setup):
     offered = {**briefing("2200.02.01"), "research": {"engineering": {"current": ["tech_mining_2", 5.0],
                                                                        "alternatives": ["tech_mining_2", "tech_habitat_1"]}}}
     g._carry_out_actions(offered)                  # picks (game replies "picked tech_habitat_1 in engineering")
-    g._carry_out_actions(offered)                  # still offered but not current: a miss, no retry
+    g._carry_out_actions({**offered, "date": "2200.03.01"})   # a later save: still offered, not current → a miss
     assert g._tech_misses.get("tech_habitat_1") == 1
 
     g._review_strategy(briefing("2200.03.01"), "scheduled")   # resets the miss counter
@@ -2126,3 +2126,21 @@ def test_malformed_briefing_data_does_not_raise_out_of_carry_out_actions(setup):
     bad = {**briefing("2200.01.01"), "research": "not a dict"}   # .values() will fail
     g._carry_out_actions(bad)   # must not raise
     assert any(e["kind"] == "strategy_action" and e.get("action") == "error" for e in log.recent)
+
+
+def test_a_pick_is_not_judged_on_the_save_it_was_made_on(setup):
+    """The save stays stale until the next autosave: a second decision on the same save must not
+    count the fresh pick as a miss."""
+    from pilot.strategy import Pillar
+    s, log = setup
+    game = FakeStellaris([briefing("2200.01.01")])
+    game.pick_tech = lambda prefer: (game.actions.append(("pick_tech", list(prefer))), "clicked tech_habitat_1 in engineering (option 2)")[1]
+    g = Governor(s, game, log, model=decisions("keep"), role_models={"strategy": _strategist([])})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    g.strategy.pillars["technology"] = Pillar(priority=3, stance="s", goals=["g"], prefer_techs=["tech_habitat_1"])
+    same = {**briefing("2200.01.01"), "research": {"engineering": {"current": ["tech_mining_2", 5.0],
+                                                                   "alternatives": ["tech_habitat_1", "tech_mining_2"]}}}
+    g._carry_out_actions(same)
+    g._carry_out_actions(same)                       # e.g. "decide now" on the same save
+    assert not [e for e in log.recent if e["kind"] == "strategy_action" and "did not stick" in e.get("result", "")]
+    assert g._pending_pick == "tech_habitat_1", "still waiting for a later save"

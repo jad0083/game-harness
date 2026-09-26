@@ -986,7 +986,9 @@ class Governor:
         fields = (b.get("research") or {}).values()
         researching = {((r or {}).get("current") or [None])[0] for r in fields}
         offered = {t for r in fields for t in (r or {}).get("alternatives", [])}
-        pending, self._pending_pick = self._pending_pick, None
+        pending = None
+        if self._pending_pick and date != self._tech_sync_date:   # judge a pick only on a later save
+            pending, self._pending_pick = self._pending_pick, None
         if pending:
             if pending in researching:
                 pass    # still being researched: stuck, nothing to verify yet
