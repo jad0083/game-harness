@@ -29,7 +29,7 @@ Linux AI Controller (192.168.1.76)                  Windows 11 Gaming PC (192.16
 ```
 
 ### Network Protocol & Endpoints
-Communication occurs over HTTP/1.1 with persistent TCP connection pooling and Bearer token authorization:
+Communication occurs over HTTP/1.1 with persistent TCP connection pooling and Bearer token authorization. Coordinates sent to the agent are **screen pixels**; the controller converts from 1568×882 image space. `/drag` timing fields and the `/batch` actions `mouse_down`/`mouse_up` exist from agent **1.1.0** (built, not yet deployed; the PC runs 1.0.0, which ignores the timing fields and rejects those batch actions).
 
 | Endpoint | Method | Payload / Query | Purpose | Typical Latency |
 |---|---|---|---|---|
@@ -39,6 +39,8 @@ Communication occurs over HTTP/1.1 with persistent TCP connection pooling and Be
 | `/screenshot` | `GET` | `max_side=1568&quality=75` | Capture frame via GDI `StretchBlt`, encode to JPEG with dimension headers | $45\text{--}55\,\text{ms}$ |
 | `/click`  | `POST`| `{"x": N, "y": N, "button": "left", "count": 1}` | Native Win32 `SendInput` / `SetCursorPos` with mouse-hold delay | $15\text{--}35\,\text{ms}$ |
 | `/drag`   | `POST`| `{"x1": A, "y1": B, "x2": C, "y2": D, "button": "left", "hold_ms": 30, "steps": 12, "step_ms": 15, "dwell_ms": 30, "wiggle": false}` | Press, hold `hold_ms`, move in `steps` (2..120) interpolated moves `step_ms` (5..200) apart, optionally wiggle ±3 px at the target, dwell `dwell_ms` (0..3000), release. All timing fields optional; the response echoes the clamped values | $300\text{--}400\,\text{ms}$ at defaults |
+| `/move`   | `POST`| `{"x": N, "y": N}` | Move the cursor (hover for tooltips) | $5\,\text{ms}$ |
+| `/scroll` | `POST`| `{"x": N, "y": N, "clicks": N}` | Mouse wheel at a point (map zoom) | $10\,\text{ms}$ |
 | `/key`    | `POST`| `{"combo": "tab", "repeat": 1}` | Scancode-mapped keyboard injection (`MapVirtualKeyW`) | $10\text{--}20\,\text{ms}$ |
 | `/type`   | `POST`| `{"text": "..."}` | Unicode text entry into focused fields | $20\text{--}50\,\text{ms}$ |
 | `/batch`  | `POST`| `{"actions": [...]}` | Execute a validated sequence (max 100) of `move`, `click`, `mouse_down`/`mouse_up` (`button`: left/right/middle), `key`, `type`, `wait` in 1 roundtrip; any invalid step rejects the whole batch. `mouse_down` + `move` + `wait` + `mouse_up` scripts arbitrary drags | $100\text{--}250\,\text{ms}$ |
@@ -48,38 +50,39 @@ Communication occurs over HTTP/1.1 with persistent TCP connection pooling and Be
 
 ## 2. The Two-Tier Control Loop (Reflex vs. Deliberation)
 
-Traditional visual agents invoke a full Large Language Model vision call (costing 5–15 seconds and ~1,600 vision tokens) for *every individual click or unit movement*. In 4X grand strategy games, 90% of turn actions are routine unit cycling and turn advancing.
+A model vision call costs seconds and ~1,600 tokens; most turns in a 4X game need no decision. The harness splits the work:
 
-This harness employs a **Two-Tier Hierarchical Control Loop**:
+- **Layer 1 — autopilot (Rust, no model):** ends turns, verifies each one, and clears *known screens* whose answer is always the same (news bulletins, colonize confirmations, idle colony/survey ships, boarding, empty shipyard, diplomacy menus).
+- **Layer 2 — the model:** only sees the frame when a turn is blocked by something that needs judgement (events, research, builds, policies, leaders, trades), decides using the corpus and `strategy.md`, acts, and hands control back.
 
 ```mermaid
 flowchart TD
-    Start([Turn Start]) --> L1[Layer 1: Native Rust Reflex Autopilot]
-    L1 --> Cycle[Cycle Idle Ships: Tab -> Waypoint / Sleep]
-    L1 --> SettleActions[Atomic Batch: Keypresses & Sleeps]
-    SettleActions --> EndTurn[Send End Turn: Enter]
-    EndTurn --> Settle[Dynamic Settle: /settle frame differencing]
-    Settle --> DetectModal{80µs Luminance Classifier\nis_modal_dimmed?}
-
-    DetectModal -- "No (Galaxy Map Normal)" --> TurnCheck{Turn Target\nReached?}
-    TurnCheck -- "No" --> L1
-    TurnCheck -- "Yes" --> SettleDone([Turn Batch Complete])
-
-    DetectModal -- "Yes (Event / Tech / Report)" --> L2[Layer 2: LLM Strategic Deliberation]
-    L2 --> InspectCrop[Inspect Modal Crop / Bounding Box]
-    L2 --> ConsultPlaybook[Consult corpora/galciv4/strategy.md]
-    L2 --> ExecuteChoice[Execute Deterministic Action: e.g. Key '1', '2', or '3']
-    ExecuteChoice --> L1
+    Start([advance_single_turn]) --> FG{Game window in foreground?}
+    FG -- no --> Refuse([Error: call focus first])
+    FG -- yes --> Clear[Clear known screens: template match -> click / key]
+    Clear --> Dim{HUD dimmed? dialog open}
+    Dim -- "known screen appeared late" --> Clear
+    Dim -- "unknown dialog" --> Modal([ModalEvent -> model decides])
+    Dim -- no --> Tab[Send turn_pump: TAB]
+    Tab --> Wait[Wait for date change / dialog; extend while 'Starting New Month' is visible]
+    Wait --> Settle[/settle + fresh frame/]
+    Settle --> Verdict{classify_turn}
+    Verdict -- "date changed" --> Adv([Advanced verified])
+    Verdict -- "dimmed or unchanged, known screen visible, attempts left" --> Clear
+    Verdict -- "dimmed" --> Modal
+    Verdict -- "unchanged" --> NotAdv([NotAdvanced -> model opens pending item with TAB])
 ```
 
 ### How a turn is judged (`autopilot.rs`)
 Every `advance_single_turn` call:
-1. Refuses unless the agent reports the game as the foreground window (the macro is blind keystrokes).
-2. Screenshots, and returns `ModalEvent` immediately if the HUD is already dimmed — no keys are sent into an open dialog.
-3. Sends the manifest's `turn_pump` macro, waits for the screen to settle, screenshots again.
-4. Classifies with `classify_turn` (pure, unit-tested): HUD dimmed → `ModalEvent` (with the changed-region crop); the `turn_indicator_roi` (the date readout, normalized in `manifest.toml`) changed → `Advanced { verified: true }`; unchanged → `NotAdvanced` with the frame, meaning something on screen is blocking end-turn. Without a configured indicator the advance is reported `verified: false`.
+1. **Refuses** unless the agent reports the game as the foreground window (the macro is blind keystrokes).
+2. **Clears known screens** (§4B) until none match, letting the screen settle after each action (an action can open a follow-up dialog after a camera pan). If a dialog is open and it is *not* a known screen, returns `ModalEvent` without sending any key.
+3. Sends the manifest's `turn_pump` macro — a single **TAB**, which ends the turn, or opens the next pending item when something blocks it.
+4. **Waits for a turn signal**: polls until the `turn_indicator_roi` (the date readout) changes or the HUD dims, up to the macro's `settle_timeout`, extended (to at most 180 s) while a `busy` screen such as "Starting New Month" is visible. Then `/settle` and a fresh frame.
+5. **Classifies** with `classify_turn` (pure, unit-tested): HUD dimmed → `ModalEvent`; date changed → `Advanced { verified: true }`; unchanged → `NotAdvanced`. The date comparison uses the **largest per-glyph difference** (`region_diff_max_strip`, 6-px column strips) because a month change can alter only one or two characters (the whole-box mean missed "Jul → Aug").
+6. **Retries** (up to 3 attempts per turn) when the verdict is not `Advanced` and a known screen is visible — e.g. TAB selected an idle colony ship, whose Auto Colonize then raises "Colonize Planet?".
 
-Loops (`autopilot`, `autopilot_turns`) count only advances and stop at the first dialog or blocked turn, handing the model the screenshot. Per-turn wall time is dominated by the game's own end-turn processing plus the settle wait; no fixed figure is claimed.
+Outcomes report which known screens were dismissed. Loops (`autopilot`, `autopilot_turns`) stop at the first `ModalEvent` or `NotAdvanced` and hand the model the frame. A turn usually takes 2–3 s plus AI processing; turns with dismissals 5–13 s.
 
 ---
 
@@ -121,22 +124,37 @@ The Linux controller is structured into modular, high-performance components:
 - Atomic registers (`AtomicU32`) track the latest screen scale factor from image headers, enabling dynamic coordinate translation:
   $$\text{Scale}_X = \frac{\text{Physical Width}}{\text{Image Width}}, \quad \text{Scale}_Y = \frac{\text{Physical Height}}{\text{Image Height}}$$
 
-### B. High-Speed Autopilot Engine (`autopilot.rs`)
-- Executes the atomic turn advance macro from `game.toml`:
-  - `tab` $\to$ cycle next idle unit.
-  - `space` $\to$ skip turn if idle.
-  - `tab` $\to$ cycle second idle unit.
-  - `f` $\to$ sleep unit.
-  - `enter` $\to$ commit end turn.
-- Followed by a dynamic settle check (`/settle`) and 80-microsecond luminance signature check.
+### B. Autopilot and known screens (`autopilot.rs`)
+The turn procedure is in §2. Known screens are declared in `corpora/galciv4/manifest.toml`:
 
-### C. Imaging & State Discriminator (`imaging.rs`)
-- **Luminance Thresholding (`is_modal_dimmed`)**:
-  Computes the average perceived luminance across the top resource bar:
-  $$L = 0.299R + 0.587G + 0.114B$$
-  When a modal or diplomatic event dims the background, luminance drops from $\sim 45\text{--}80$ down to $<22.0$ in $<80\,\mu\text{s}$.
-- **Bounding Box Differencing (`detect_change_bbox`)**:
-  Calculates absolute pixel differences between consecutive frames, generating tight bounding box crops around new event dialogs for the LLM.
+```toml
+[screens.colonize_confirm]
+description = "..."                         # why the action is always right
+template = "templates/colonize_planet_title.png"
+template_roi = [0.4401, 0.3379, 0.1212, 0.0295]   # normalized [x, y, w, h] in the frame
+template_threshold = 0.06                   # max mean abs difference, 0..1 (default 0.08)
+auto_dismiss = true
+dismiss_click = [0.5708, 0.5952]            # or dismiss_key = "c", or dismiss_clicks = [[x,y], ...]
+only_when_blocked = false                   # true: act only after TAB failed to end the turn
+busy = false                                # true: game still processing -> keep waiting, never act
+```
+
+| Field | Effect |
+|---|---|
+| `template`, `template_roi`, `template_threshold` | Recognition: `imaging::template_diff` over the ROI must be ≤ the threshold. |
+| `auto_dismiss` | The autopilot may act on the screen by itself. |
+| `dismiss_clicks` / `dismiss_click` / `dismiss_key` | The action, in that order of precedence; clicks are normalized and executed in sequence with a 600 ms pause. |
+| `only_when_blocked` | For "selected idle unit" screens: a unit that merely stays selected may already be busy, and re-ordering it can cancel work (e.g. abandon a survey). Acted on only on a retry, i.e. right after TAB selected it. |
+| `busy` | Recognised but never acted on; while visible the turn wait is extended (cap `BUSY_MAX_WAIT_SECS` = 180). |
+
+Each screen is handled at most once per attempt; at most 4 dismissals per turn. Templates are loaded at startup relative to the manifest's directory; a test requires every declared template to load. Current screens: `gnn_news`, `diplomacy_menu`, `colonize_confirm`, `colony_ship_boarding`, `idle_colony_ship`, `idle_survey_ship`, `survey_abandon_confirm`, `shipyard_idle`, `turn_processing` (busy). How to add one: `AGENTS.md` §5.
+
+### C. Imaging (`imaging.rs`)
+- `region_mean_luminance` — HUD dim detection over `luminance_roi` (threshold 22; the lit top bar is ~45–80).
+- `region_diff_max_strip` — per-glyph change detector for the date readout; real-frame fixtures in `crates/game-controller/tests/fixtures/` (same date ≤ 0.003, one changed month ≈ 0.10).
+- `template_diff` — known-screen recognition (real GNN logo matches at < 0.03; the same region of the map is > 0.15).
+- `roi_from_norm`, `clamp_roi` — normalized manifest coordinates → pixels.
+- `detect_change_bbox` — crop of the changed region handed to the model with a `ModalEvent`.
 
 ### D. Stdio MCP Server (`mcp.rs`)
 Exposes 19 Model Context Protocol tools over JSON-RPC stdio: screen and input tools, autopilot, and the corpus tools (`corpus_search`, `corpus_get`, `corpus_tech`, `corpus_improvement`, `corpus_order`, `corpus_info`, `corpus_strategy`).
@@ -149,7 +167,8 @@ All game knowledge lives under `corpora/<game>/`; the controller loads whatever 
 
 ```
 corpora/galciv4/
-├── manifest.toml    # hotkeys, screen signatures, macros — hand-verified (game.toml still accepted)
+├── manifest.toml    # hotkeys (34), screens (17; 9 with templates), macros (3) — hand-verified (game.toml still accepted)
+├── templates/*.png  # reference crops for known screens, captured from live 1568x882 frames
 ├── strategy.md      # playbook for the model; also chunked for search
 ├── data/            # GENERATED records, one JSON array per kind (tech, improvement, order, event, …)
 │   └── README.md    # record contract; _meta.json records game version + generator
@@ -213,6 +232,6 @@ A record whose name matches the query scores 100, above any prose chunk, so `dra
 | **Network RPC Roundtrip** | **$0.36\,\text{ms}$** | Local Gigabit LAN HTTP Keep-Alive |
 | **Corpus Search** | 0.4–0.8 ms measured (724 records, 168 chunks) | Linear scan over text normalized at load (`corpus.rs`) |
 | **Modal Luminance Check** | sub-millisecond | Mean luminance over the manifest's `luminance_roi` (`imaging.rs`); no SIMD intrinsics |
-| **Rust Test Suite** | 23 tests (17 controller, 6 agent) | `cargo test --workspace` |
-| **Legacy Test Suite** | **$10.86\,\text{s}$ (40/40 pass)** | `pytest` |
-| **Compiler Warnings** | 1 clippy warning (`imaging.rs` `to_*` convention); `#![allow(dead_code, …)]` still present in several files | `cargo clippy --workspace --all-targets` |
+| **Rust Test Suite** | 41 tests (31 controller, 10 agent) | `cargo test --workspace` |
+| **Python tests** | 55 (extractor fixtures, CLI offline check, legacy harness) | `pytest` |
+| **Lint** | clippy clean with `-D warnings` except `wrong_self_convention` (`imaging.rs`); `#![allow(dead_code, …)]` still present in `game-agent/main.rs`, `imaging.rs`, `mcp.rs` | `scripts/ci.sh` |

@@ -1,28 +1,25 @@
 # Playing Galactic Civilizations IV through the harness
 
-Tools come from the `game` MCP server. Every action returns a new screenshot; coordinates are
-pixels in the most recent image.
+The procedure (loop, decision table, known screens, recording) is in **[AGENTS.md](AGENTS.md)**
+§3–§8. This file is the log of **verified controls and UI behaviour** — only things confirmed in
+play, with the date. Coordinates are in 1568×882 image space (screen 3840×2160).
 
-## Turn loop
-1. `status` → confirm the agent is up and the game is in the foreground (`focus_game` if not).
-2. `screenshot` → read the whole state. Use `zoom` on panels with small text (resources,
-   research, event text) before deciding.
-3. Handle anything **blocking** first: event/choice popups, "idle ship/colony" notifications,
-   empty production or research queues.
-4. Give orders: colonies → production; research; ships → move/colonize/survey; diplomacy.
-5. End the turn (turn button, bottom-right), then `wait` 5–30s for the AI turns, repeat.
+## Quick reference
 
-## Precision
-- If a click misses, retake the screenshot with `grid=true`, or `zoom` into the area and click
-  inside the zoomed image (its coordinates are then active until the next full screenshot).
-- `hover` shows tooltips. GC4 explains most numbers there.
-- Prefer keyboard shortcuts once verified; record verified ones below.
-- After any unexpected screen, press `esc` once and re-screenshot rather than clicking blindly.
+| Want | Do |
+|---|---|
+| End turn / open next pending item | `tab` |
+| Run verified turns | `scripts/play/ap.sh 20` |
+| One action + fresh frame | `scripts/play/act.sh click X Y` · `act.sh key K` · `act.sh drag X1 Y1 X2 Y2` |
+| Read a tooltip | `scripts/play/hover.sh X Y` → `play/h.png` |
+| Look up an event / tech / improvement | `game-controller corpus search "…"` → `corpus get <id>` |
+| Ship orders | Explore `o` · Survey `v` · Sentry `n` · Standby `j` · Auto Colonize `c` · Go To = right-click |
+| Close a panel | its *Done* button (safer than `esc`, which opens the pause menu on the bare map) |
 
 ## Memory across long games
-Context gets summarized over a long game. Keep `games/<save-name>/journal.md` with the strategy,
-current goals, key planets/ships, and what happened each few turns. Re-read it after a
-context reset.
+Context gets summarized over a long game. Keep `games/<save-name>/journal.md` (current game:
+`games/terran-2329/journal.md`) with the strategy, current goals, key planets/ships, and what
+happened each few turns. Re-read it after a context reset or when another model takes over.
 
 ## Verified controls
 Only list things confirmed in play. Record the game resolution too, since positions depend on it.
@@ -44,8 +41,8 @@ Verified 2026-09-25 (afternoon, Rust agent, turn 3):
   So `esc` is not a free "cancel" — only use it when a panel or dialog is actually open.
 - The bottom-right turn button shows the current **blocking item** (⚖ = leader/policy decision,
   green planet = colony/planet action) instead of ending the turn while "action required" items
-  are pending, e.g. "A Leader is available to be assigned". The `turn_pump` macro's `enter`
-  then navigates to that item rather than advancing; the autopilot reports `NotAdvanced`.
+  are pending, e.g. "A Leader is available to be assigned". (At the time `turn_pump` pressed
+  `enter`; it now presses TAB — see the evening entry.) The autopilot reports `NotAdvanced`.
 - `turn_indicator_roi` (the date readout, top-right) is stable frame-to-frame when no turn
   passes (diff 0.000), so an unchanged readout is a reliable "did not advance" signal.
 
@@ -55,8 +52,9 @@ Verified 2026-09-25 (evening, autonomous play, Mar → Oct 2329):
   pending, TAB opens it instead. The turn button's icon says what is pending:
   ▷ = ready · ⚖ = leader/policy decision · green planet = idle core world (empty build queue) ·
   green ships = idle fleet · red ! = pending event (TAB opens the event dialog).
-- Ship orders (hotkey shown in each action button's tooltip): **Explore = O** (probes/survey
-  ships auto-explore), **Standby = J**, Auto Colonize = C.
+- Ship orders (hotkey shown in each action button's tooltip): **Explore = O** (probes),
+  **Survey = V** (survey ships: find and visit anomalies), **Sentry = N** (stay until an enemy
+  is in sensor range), **Standby = J**, Auto Colonize = C, Go To = right-click.
 - Colonial Charter: drag a leader card onto a Minister office; drag a policy from
   *Available Policies* onto an open slot. Both confirmed working through the agent's drag.
 - Planet screen ("Choose a region to improve"): click an empty tile → a menu of districts
@@ -71,6 +69,32 @@ Verified 2026-09-25 (evening, autonomous play, Mar → Oct 2329):
 - A finished colony ship opens a **boarding** dialog: click a citizen, Board, Done.
 - Idle colony ships and the "Colonize Planet? Yes/No" confirmation are handled by the
   autopilot (known screens `idle_colony_ship`, `colonize_confirm`).
+
+Verified 2026-09-25 (night, autonomous play, Feb 2331 → Jul 2333):
+
+- **Research Center**: *Choose New Tech* on the "Research Complete!" panel; the three large
+  cards get a 50% insight bonus; techs under *Additional Candidates* are selected by clicking
+  them (the top-left label then shows the new tech); *Done* closes.
+- **Colony ship boarding** dialog ("Boarding T.A.S. … from Earth"): click a citizen, *Board*,
+  *Done* — automated as `colony_ship_boarding`.
+- **Colonize confirmation** ("Colonize Planet? <name>") appears after Auto Colonize, sometimes
+  only after a camera pan — automated as `colonize_confirm` (Yes).
+- **Re-ordering a busy survey ship** raises "Survey in Progress — abandon the in-progress
+  survey?" → always *No* (automated as `survey_abandon_confirm`).
+- **Shipyard**: TAB opens it when its queue is empty ("Shipyard Idle"); class list on the right,
+  *Build Ship*, *Done* — automated as `shipyard_idle` (queues a Colony Ship).
+- **AI diplomacy**: an AI can open a trade screen with its own proposal. *Reject* clears the
+  table; *Done* returns to a menu (trade / threaten / something else / *Goodbye*) — the menu is
+  automated as `diplomacy_menu` (Goodbye). Contact before *Universal Translator* is researched is
+  untranslatable; all options just close it.
+- **Cutscenes** (e.g. "First Anomaly Survey"): full-screen video ~30 s, then freezes blurred until
+  a click.
+- **Planet screen district menu** shows an adjacency bonus as a number in a gold circle next to
+  the turn cost (e.g. Financial District ②).
+- **Governor**: colonies of class ≥ 10 can get a governor (becomes a Core World); the
+  "Appoint a Governor" report is informational (one button).
+- Relaunching the game: Steam library *PLAY* → **Stardock Launcher** window → its *PLAY* →
+  intro video (`esc` skips) → main menu (*Load Game* lists *Auto-Save* and *Previous Auto-Save*).
 
 ### Known game bug: turn hangs in "Starting New Month"
 GC4 Supernova can hang indefinitely while processing a turn (known bug:
