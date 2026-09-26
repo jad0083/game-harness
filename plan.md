@@ -77,7 +77,8 @@
 - [x] Pilot: Stellaris game adapter (`McpGame` Stellaris methods, `FakeStellaris`); `pilot.md` finalised
 - [ ] Long unattended Stellaris run in a real game (user's choice of empire), with learned rules committed
 - [x] `stellaris take-control` / MCP `stellaris_take_control`: human_ai ON (console reply read on screen), leaves observer mode; briefing reports systems owned
-- [ ] Test which directives the AI keeps long term (edicts, economy, war); decide on a companion bridge mod (directive events, AI weights, `log` hooks)
+- [x] Which directive levers the AI keeps: policies yes (20 months); console-added edicts no (cancelled within a month); briefing shows active edicts
+- [ ] Companion mod: `ai_weight` modifiers keyed to `governor_directive_*` so the AI itself favours the directive's edicts, buildings and expansion (needs write access to the game's `mod/` folder, or a user install)
 - [ ] Screen templates: pause/date and event popups
 
 ## Pilot app: observability and control
