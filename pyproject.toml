@@ -3,13 +3,14 @@ name = "game-harness"
 version = "0.1.0"
 description = "Let an AI agent play turn-based Windows games (Galactic Civilizations IV) over the LAN"
 requires-python = ">=3.11"
-dependencies = ["mcp>=2.2", "pillow>=10"]
+dependencies = ["mcp>=2.2", "pillow>=10", "pydantic-ai-slim[google,openai,anthropic]>=2.51", "aiohttp>=3.9"]
 
 [project.optional-dependencies]
 dev = ["pytest", "ruff"]
 
 [project.scripts]
 game-harness = "harness.cli:main"
+pilot = "pilot.cli:main"
 
 [build-system]
 requires = ["setuptools>=68"]

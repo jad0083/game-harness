@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Game Pilot</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --text: #1b1f24; --muted: #5f6b7a; --line: #e3e7ec;
+    --accent: #2563eb; --ok: #15803d; --warn: #b45309; --bad: #b91c1c; --chip: #eef2f7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0f1216; --panel: #171b21; --text: #e6e9ee; --muted: #93a0b1; --line: #262c35;
+            --accent: #60a5fa; --ok: #4ade80; --warn: #fbbf24; --bad: #f87171; --chip: #1f252d; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, Segoe UI, sans-serif; }
+  header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 12px 16px;
+           background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 2; }
+  h1 { font-size: 16px; margin: 0 8px 0 0; }
+  .pill { padding: 3px 10px; border-radius: 999px; font-weight: 600; font-size: 12px; background: var(--chip); }
+  .pill.playing { color: var(--ok); } .pill.deciding { color: var(--accent); }
+  .pill.paused, .pill.needs_attention { color: var(--warn); } .pill.stopped { color: var(--bad); }
+  .meta { color: var(--muted); font-size: 12px; }
+  .spacer { flex: 1; }
+  button { font: inherit; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line);
+           background: var(--chip); color: var(--text); cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.danger { color: var(--bad); }
+  main { display: grid; grid-template-columns: minmax(0, 3fr) minmax(300px, 2fr); gap: 16px; padding: 16px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; min-width: 0; }
+  .panel h2 { font-size: 13px; margin: 0 0 8px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  #frame { width: 100%; border-radius: 8px; display: block; background: #000; aspect-ratio: 1568 / 882; object-fit: contain; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin-top: 12px; }
+  .stat { background: var(--chip); border-radius: 8px; padding: 8px; }
+  .stat b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
+  .stat span { color: var(--muted); font-size: 12px; }
+  #decision { margin-top: 12px; }
+  #feed { list-style: none; margin: 0; padding: 0; max-height: 70vh; overflow-y: auto; }
+  #feed li { padding: 6px 4px; border-bottom: 1px solid var(--line); font-size: 13px; overflow-wrap: anywhere; }
+  #feed .k { font-weight: 600; margin-right: 6px; }
+  #feed .t { color: var(--muted); font-size: 11px; margin-right: 6px; font-variant-numeric: tabular-nums; }
+  .k.episode { color: var(--accent); } .k.learned { color: var(--ok); } .k.learn_rejected, .k.episode_error, .k.needs_attention { color: var(--bad); }
+  .k.question, .k.instruction, .k.answer { color: var(--warn); }
+  form { display: flex; gap: 8px; margin-top: 12px; }
+  input[type=text] { flex: 1; min-width: 0; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line);
+                     background: var(--bg); color: var(--text); font: inherit; }
+  #banner { display: none; margin: 0 16px; padding: 10px 12px; border-radius: 8px; background: var(--chip);
+            border: 1px solid var(--warn); color: var(--text); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Game Pilot</h1>
+  <span id="status" class="pill">…</span>
+  <span class="meta" id="model"></span>
+  <span class="spacer"></span>
+  <button onclick="ctl('pause')">Pause</button>
+  <button onclick="ctl('resume')">Resume</button>
+  <button class="danger" onclick="if (confirm('Stop the pilot?')) ctl('stop')">Stop</button>
+</header>
+<div id="banner"></div>
+<main>
+  <section class="panel">
+    <h2>Game</h2>
+    <img id="frame" alt="Latest game frame" src="/frame.jpg">
+    <div class="stats">
+      <div class="stat"><b id="turns">0</b><span>turns advanced</span></div>
+      <div class="stat"><b id="episodes">0</b><span>decisions</span></div>
+      <div class="stat"><b id="tokens">0</b><span>tokens in / out</span></div>
+      <div class="stat"><b id="requests">0</b><span>model requests</span></div>
+      <div class="stat"><b id="learned">0</b><span>learned (screens · rules · controls)</span></div>
+      <div class="stat"><b id="uptime">0</b><span>running</span></div>
+    </div>
+    <p id="decision" class="meta"></p>
+    <form onsubmit="event.preventDefault(); instruct();">
+      <input id="instr" type="text" placeholder="Give the pilot an instruction or answer its question…" autocomplete="off">
+      <button type="submit">Send</button>
+    </form>
+  </section>
+  <section class="panel">
+    <h2>Activity</h2>
+    <ul id="feed"></ul>
+  </section>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const fmt = (n) => n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e3 ? (n / 1e3).toFixed(1) + "k" : String(n);
+const dur = (s) => { const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return h ? `${h}h ${m}m` : `${m}m`; };
+
+async function ctl(action, text) {
+  await fetch("/control", { method: "POST", headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ action, text }) });
+  refresh();
+}
+function instruct() { const v = $("instr").value.trim(); if (v) { ctl("instruct", v); $("instr").value = ""; } }
+
+async function refresh() {
+  try {
+    const s = await (await fetch("/status")).json();
+    $("status").textContent = s.status.replace("_", " ");
+    $("status").className = "pill " + s.status;
+    $("model").textContent = `${s.model} · run ${s.run_id}`;
+    $("turns").textContent = s.turns_advanced;
+    $("episodes").textContent = s.episodes;
+    $("tokens").textContent = `${fmt(s.tokens_in)} / ${fmt(s.tokens_out)}`;
+    $("requests").textContent = s.requests;
+    $("learned").textContent = `${s.learned.screens || 0} · ${s.learned.rules || 0} · ${s.learned.controls || 0}`;
+    $("uptime").textContent = dur(s.uptime_s);
+    $("decision").textContent = s.last_decision ? "Last decision: " + s.last_decision : (s.last_stop || "");
+    const b = $("banner");
+    if (s.pending_question) { b.style.display = "block"; b.textContent = "The pilot asks: " + s.pending_question; }
+    else if (s.status === "needs_attention") { b.style.display = "block"; b.textContent = "Needs attention — see the activity feed, then Resume."; }
+    else b.style.display = "none";
+  } catch (e) { $("status").textContent = "offline"; $("status").className = "pill stopped"; }
+}
+
+function describe(ev) {
+  switch (ev.kind) {
+    case "autopilot": return `${ev.advanced} turn(s); stop: ${ev.stop}`;
+    case "episode": return `${ev.situation} → ${ev.decision}${ev.resolved ? "" : " (unresolved)"} · ${ev.actions} actions, ${ev.seconds}s`;
+    case "action": return ev.action + (ev.error ? " — ERROR" : "");
+    case "consult": return `${ev.situation} (${ev.past} past decisions)`;
+    case "learned": return `${ev.kind === "learned" ? ev.message : ""}`;
+    case "learn_rejected": return `${ev.kind}: ${ev.reason}`;
+    case "question": return ev.question;
+    case "answer": return ev.answer;
+    case "instruction": return ev.text;
+    case "journal": return ev.text;
+    case "commit": return ev.ok ? "committed learnings" : "commit failed (CI) — see log";
+    case "needs_attention": return ev.reason;
+    case "status": return ev.status;
+    default: { const { t, kind, ...rest } = ev; return JSON.stringify(rest).slice(0, 200); }
+  }
+}
+
+function add(ev) {
+  if (ev.kind === "status") return;
+  const li = document.createElement("li");
+  const time = new Date(ev.t * 1000).toLocaleTimeString();
+  li.innerHTML = `<span class="t"></span><span class="k"></span><span class="d"></span>`;
+  li.querySelector(".t").textContent = time;
+  li.querySelector(".k").textContent = ev.kind;
+  li.querySelector(".k").classList.add(ev.kind);
+  li.querySelector(".d").textContent = describe(ev);
+  $("feed").prepend(li);
+  while ($("feed").children.length > 300) $("feed").lastChild.remove();
+  if (["action", "autopilot", "episode"].includes(ev.kind)) $("frame").src = "/frame.jpg?t=" + Date.now();
+}
+
+const es = new EventSource("/events");
+es.onmessage = (m) => { add(JSON.parse(m.data)); refresh(); };
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>
