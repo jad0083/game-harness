@@ -545,12 +545,15 @@ impl McpServer {
                 let mut completed = 0;
                 let mut unverified = 0;
                 let mut stop_outcome = None;
+                // Known screens dismissed on turns that then advanced (lets clients judge them).
+                let mut dismissed_ok: Vec<String> = Vec::new();
 
                 for _ in 0..turns.clamp(1, 200) {
                     let outcome = ap.advance_single_turn().await?;
                     match outcome {
-                        crate::autopilot::TurnOutcome::Advanced { verified, .. } => {
+                        crate::autopilot::TurnOutcome::Advanced { verified, dismissed, .. } => {
                             completed += 1;
+                            dismissed_ok.extend(dismissed);
                             if !verified {
                                 unverified += 1;
                             }
@@ -563,12 +566,13 @@ impl McpServer {
                 }
 
                 let (note, img_bytes) = match stop_outcome {
-                    Some(crate::autopilot::TurnOutcome::ModalEvent { turn, bbox, crop_bytes, full_bytes }) => (
+                    Some(crate::autopilot::TurnOutcome::ModalEvent { turn, bbox, full_bytes, .. }) => (
+                        // The full frame, not the crop: click coordinates refer to the full frame.
                         format!(
                             "Advanced {} turn(s), then stopped at turn {}: a dialog is up (HUD dimmed; changed bbox {:?}). Decide and act, then call autopilot_turns again.",
                             completed, turn, bbox
                         ),
-                        if !crop_bytes.is_empty() { crop_bytes } else { full_bytes },
+                        full_bytes,
                     ),
                     Some(crate::autopilot::TurnOutcome::NotAdvanced { turn, reason, full_bytes }) => (
                         format!(
@@ -585,6 +589,11 @@ impl McpServer {
                         }
                         (note, curr)
                     }
+                };
+                let note = if dismissed_ok.is_empty() {
+                    note
+                } else {
+                    format!("{}\nDismissed on advanced turns: {}.", note, dismissed_ok.join(", "))
                 };
 
                 let b64 = base64::engine::general_purpose::STANDARD.encode(&img_bytes);

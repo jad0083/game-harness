@@ -4,7 +4,7 @@
 
 use crate::client::AgentClient;
 use crate::imaging::{
-    crop_region, decode_rgb, detect_change_bbox, region_diff_max_strip, region_mean_luminance, roi_from_norm,
+    decode_rgb, detect_change_bbox, region_diff_max_strip, region_mean_luminance, roi_from_norm,
     template_diff, View, DEFAULT_MODAL_ROI, MAX_SIDE,
 };
 use anyhow::Result;
@@ -25,7 +25,7 @@ pub enum TurnOutcome {
     /// configured so the advance could not be checked (`verified == false`).
     Advanced { turn: u32, elapsed_sec: f64, verified: bool, dismissed: Vec<String> },
     /// The HUD is dimmed: an event, report or choice dialog is up and needs the model.
-    ModalEvent { turn: u32, bbox: Option<[u32; 4]>, crop_bytes: Vec<u8>, full_bytes: Vec<u8> },
+    ModalEvent { turn: u32, bbox: Option<[u32; 4]>, full_bytes: Vec<u8> },
     /// The macro ran but the turn indicator did not change: something on screen is
     /// blocking end-turn (idle unit prompt, empty queue, a non-dimming popup).
     NotAdvanced { turn: u32, reason: String, full_bytes: Vec<u8> },
@@ -439,11 +439,7 @@ impl Autopilot {
 
     fn modal_outcome(&self, turn: u32, before: Option<&[u8]>, after: Vec<u8>) -> TurnOutcome {
         let bbox = before.and_then(|p| detect_change_bbox(p, &after, 25, 8).ok().flatten());
-        let crop = match bbox {
-            Some([x, y, w, h]) => crop_region(&after, x, y, w, h, 85).unwrap_or_else(|_| after.clone()),
-            None => after.clone(),
-        };
-        TurnOutcome::ModalEvent { turn, bbox, crop_bytes: crop, full_bytes: after }
+        TurnOutcome::ModalEvent { turn, bbox, full_bytes: after }
     }
 
 }
