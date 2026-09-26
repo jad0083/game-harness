@@ -1,0 +1,3132 @@
+[
+ {
+  "id": "tradition:tr_adaptability_adaptive_ecology",
+  "name": "Adaptive Ecology",
+  "aliases": [
+   "tr_adaptability_adaptive_ecology"
+  ],
+  "summary": "All our colonies gain 1 Free Building Slot.",
+  "fields": {
+   "tree": "Adaptability",
+   "modifier": "planet_non_artificial_max_districts_add = 1",
+   "possible": "has_tradition = tr_adaptability_environmental_diversification",
+   "source": "00_adaptability.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_adaptability_adopt",
+  "name": "Adaptability Traditions",
+  "aliases": [
+   "tr_adaptability_adopt"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Adaptability",
+   "source": "00_adaptability.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_adaptability_appropriation",
+  "name": "Appropriation",
+  "aliases": [
+   "tr_adaptability_appropriation"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Adaptability",
+   "modifier": "pop_resettlement_cost_mult = -0.5 planet_resettlement_unemployed_mult = 0.25",
+   "possible": "has_tradition = tr_adaptability_environmental_diversification",
+   "source": "00_adaptability.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_adaptability_environmental_diversification",
+  "name": "Environmental Diversification",
+  "aliases": [
+   "tr_adaptability_environmental_diversification"
+  ],
+  "summary": "Habitability increased by +10%.",
+  "fields": {
+   "tree": "Adaptability",
+   "modifier": "pop_environment_tolerance = 0.10",
+   "source": "00_adaptability.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_adaptability_finish",
+  "name": "Adaptability Traditions Finished",
+  "aliases": [
+   "tr_adaptability_finish"
+  ],
+  "summary": "Increases Colony Designation Bonuses for all colony types.…",
+  "fields": {
+   "tree": "Adaptability",
+   "modifier": "ascension_perks_add = 1",
+   "source": "00_adaptability.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_adaptability_recycling",
+  "name": "Enhanced Recycling",
+  "aliases": [
+   "tr_adaptability_recycling"
+  ],
+  "summary": "Building and District rare crystals exotic gases volatile motes Strategic Resource Cost and Upkeep reduced by -15%.",
+  "fields": {
+   "tree": "Adaptability",
+   "modifier": "planet_structures_volatile_motes_upkeep_mult = -0.15 planet_structures_exotic_gases_upkeep_mult = -0.15 planet_structures_rare_crystals_upkeep_mult = -0.15 planet_structures_volatile_motes_cost_mult = -0.15 planet_structures_exotic_gases_cost_mult = -0.15 planet_structures_rare_crystals_cost_mult =…",
+   "source": "00_adaptability.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_adaptability_survival_fittest",
+  "name": "Survival of the Fittest",
+  "aliases": [
+   "tr_adaptability_survival_fittest"
+  ],
+  "summary": "Orbital Bombardment Damage reduced by 25% and Defense Army Damage increased by +25%.",
+  "fields": {
+   "tree": "Adaptability",
+   "modifier": "planet_orbital_bombardment_damage = -0.25 army_defense_damage_mult = 0.25",
+   "possible": "has_tradition = tr_adaptability_recycling",
+   "source": "00_adaptability.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_aptitude_adopt",
+  "name": "Aptitude Traditions",
+  "aliases": [
+   "tr_aptitude_adopt"
+  ],
+  "summary": "Leader Starting Traits: +1",
+  "fields": {
+   "tree": "Aptitude",
+   "modifier": "leader_trait_selection_options_add = 1",
+   "source": "00_aptitude.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_aptitude_champions_of_the_empire",
+  "name": "Champions of the Empire",
+  "aliases": [
+   "tr_aptitude_champions_of_the_empire"
+  ],
+  "summary": "Per commander Commander and general General level tNaval Capacity: +2 Per official Official level tEmpire Size: -2 Per scientist Scientist level tLeader Experience Gain: +0.5%",
+  "fields": {
+   "tree": "Aptitude",
+   "modifier": "leader_skill_add = 1",
+   "possible": "has_tradition = tr_aptitude_specialist_training",
+   "source": "00_aptitude.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_aptitude_finish",
+  "name": "Aptitude Traditions Finished",
+  "aliases": [
+   "tr_aptitude_finish"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Aptitude",
+   "modifier": "leader_initial_traits_add = 1 ascension_perks_add = 1",
+   "on_enabled": "hidden_effect = { every_owned_leader = { limit = { is_leader_tier = leader_tier_default } add_trait = { trait = random_common show_message = yes } } every_pool_leader = { add_trait = { trait = random…",
+   "source": "00_aptitude.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_aptitude_healthcare_program",
+  "name": "Healthcare Program",
+  "aliases": [
+   "tr_aptitude_healthcare_program"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Aptitude",
+   "modifier": "leader_lifespan_mult = 0.10 leaders_upkeep_mult = -0.25",
+   "possible": "has_tradition = tr_aptitude_the_empire_needs_you",
+   "source": "00_aptitude.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_aptitude_psychological_profiling",
+  "name": "Psychological Profiling",
+  "aliases": [
+   "tr_aptitude_psychological_profiling"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Aptitude",
+   "modifier": "negative_traits_country = -1 country_commander_cap_add = 1 country_official_cap_add = 1 country_scientist_cap_add = 1",
+   "possible": "has_tradition = tr_aptitude_the_empire_needs_you",
+   "source": "00_aptitude.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_aptitude_specialist_training",
+  "name": "Specialist Training",
+  "aliases": [
+   "tr_aptitude_specialist_training"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Aptitude",
+   "source": "00_aptitude.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_aptitude_the_empire_needs_you",
+  "name": "The Empire Needs You!",
+  "aliases": [
+   "tr_aptitude_the_empire_needs_you"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Aptitude",
+   "modifier": "leaders_cost_mult = -0.25 country_leader_pool_size = 1",
+   "source": "00_aptitude.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_archivism_adopt",
+  "name": "Archivism Traditions",
+  "aliases": [
+   "tr_archivism_adopt"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Archivism",
+   "modifier": "country_exhibit_unlocking_cost_mult = -0.5 ship_anomaly_generation_chance_mult = 0.05",
+   "on_enabled": "add_research_option = tech_galactic_archivism",
+   "source": "00_archivism.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_archivism_exhibition_specialization",
+  "name": "Exhibition Specialization",
+  "aliases": [
+   "tr_archivism_exhibition_specialization"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Archivism",
+   "modifier": "country_specimen_storage_cooldown_mult = -0.25",
+   "on_enabled": "hidden_effect = { artifact_analysis_give_historical_items_specimen = { ORIGIN = tr_archivism_exhibition_specialization } }",
+   "possible": "has_tradition = tr_archivism_expert_negociation",
+   "source": "00_archivism.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_archivism_expert_negociation",
+  "name": "Expert Negotiation",
+  "aliases": [
+   "tr_archivism_expert_negociation"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Archivism",
+   "modifier": "country_specimen_selling_cost_mult = 2",
+   "on_enabled": "hidden_effect = { country_event = { id = grand_archive.4210 } }",
+   "source": "00_archivism.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_archivism_finish",
+  "name": "Archivism Traditions Finished",
+  "aliases": [
+   "tr_archivism_finish"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Archivism",
+   "modifier": "specimens_produces_mult = 0.15 ascension_perks_add = 1",
+   "on_enabled": "hidden_effect = { country_event = { id = grand_archive.4200 } }",
+   "source": "00_archivism.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_archivism_flawless_display",
+  "name": "Flawless Display",
+  "aliases": [
+   "tr_archivism_flawless_display"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Archivism",
+   "on_enabled": "artifact_analysis_give_aesthetic_wonders_specimen = { ORIGIN = tr_archivism_flawless_display } hidden_effect = { country_event = { id = grand_archive.4220 } }",
+   "possible": "has_tradition = tr_archivism_expert_negociation",
+   "source": "00_archivism.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_archivism_frontier_archaeology",
+  "name": "Frontier Archaeology",
+  "aliases": [
+   "tr_archivism_frontier_archaeology"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Archivism",
+   "modifier": "ship_science_speed_mult = 0.35 ship_science_upkeep_mult = -0.5",
+   "on_enabled": "hidden_effect = { artifact_analysis_give_xeno_geology_specimen = { ORIGIN = tr_archivism_frontier_archaeology } }",
+   "possible": "has_tradition = tr_archivism_xeno_paleontology",
+   "source": "00_archivism.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_archivism_xeno_paleontology",
+  "name": "Xeno-Paleontology",
+  "aliases": [
+   "tr_archivism_xeno_paleontology"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Archivism",
+   "modifier": "ship_archaeological_site_excavation_speed_mult = 0.3 ship_archaeological_site_clues_add = 1 scientist_exp_gain = 0.3",
+   "source": "00_archivism.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_cloning_adopt",
+  "name": "Cloning Traditions",
+  "aliases": [
+   "tr_cloning_adopt"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Cloning",
+   "on_enabled": "if = { limit = { NOT = { has_technology = tech_cloning } } give_technology = { tech = tech_cloning message = no } }",
+   "possible": "custom_tooltip = { fail_text = REQUIRES_FINISHED_EVOLUTION has_country_flag = cloning_tradition_unlocked }",
+   "source": "01_cloning.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_cloning_artificial_population",
+  "name": "Artificial Population",
+  "aliases": [
+   "tr_cloning_artificial_population"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "tradition_dummy",
+   "possible": "always = no",
+   "source": "01_cloning.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_cloning_biochemical_composure",
+  "name": "Biochemical Composure",
+  "aliases": [
+   "tr_cloning_biochemical_composure"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "tradition_dummy",
+   "possible": "always = no",
+   "source": "01_cloning.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_cloning_biochemical_composure_clones",
+  "name": "Regenerative Cloning",
+  "aliases": [
+   "tr_cloning_biochemical_composure_clones"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "tradition_dummy",
+   "possible": "always = no",
+   "source": "01_cloning.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_cloning_evolutionary_extrapolation",
+  "name": "Evolutionary Extrapolation",
+  "aliases": [
+   "tr_cloning_evolutionary_extrapolation"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Cloning",
+   "modifier": "category_biology_research_speed_mult = 0.15 planet_buildings_clone_vats_upkeep_mult = -0.50",
+   "source": "01_cloning.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_cloning_finish",
+  "name": "Cloning Traditions Finished",
+  "aliases": [
+   "tr_cloning_finish"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Cloning",
+   "modifier": "ascension_perks_add = 1",
+   "on_enabled": "hidden_effect = { country_event = { id = timeline.80 } if = { limit = { is_hive_empire = no } country_event = { id = bio.175 } } else = { country_event = { id = bio.190 } } luminary_speech_effect = y…",
+   "source": "01_cloning.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_cloning_genomic_growth",
+  "name": "Genomic Growth",
+  "aliases": [
+   "tr_cloning_genomic_growth"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "tradition_dummy",
+   "possible": "always = no",
+   "source": "01_cloning.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_cloning_somatic_synthesization",
+  "name": "Somatic Synthesization",
+  "aliases": [
+   "tr_cloning_somatic_synthesization"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Cloning",
+   "modifier": "BIOLOGICAL_species_trait_points_add = 4 BIOLOGICAL_species_trait_picks_add = 2 modify_species_cost_mult = -0.50",
+   "source": "01_cloning.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_cloning_stage_1_swap",
+  "name": "Flexible Tradition I",
+  "aliases": [
+   "tr_cloning_stage_1_swap"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Cloning",
+   "possible": "has_tradition = tr_cloning_evolutionary_extrapolation",
+   "source": "01_cloning.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_cloning_stage_2_swap",
+  "name": "Flexible Tradition II",
+  "aliases": [
+   "tr_cloning_stage_2_swap"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Cloning",
+   "possible": "has_tradition = tr_cloning_somatic_synthesization",
+   "source": "01_cloning.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_cloning_stage_3_swap",
+  "name": "Flexible Tradition III",
+  "aliases": [
+   "tr_cloning_stage_3_swap"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Cloning",
+   "possible": "has_tradition = tr_cloning_evolutionary_extrapolation has_tradition = tr_cloning_somatic_synthesization",
+   "source": "01_cloning.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_cybernetics_adopt",
+  "name": "Cybernetic Traditions",
+  "aliases": [
+   "tr_cybernetics_adopt"
+  ],
+  "summary": "Starts a Situation to grant the founding species the Cybernetic trait",
+  "fields": {
+   "tree": "Cybernetics",
+   "on_enabled": "if = { limit = { has_machine_age_dlc = yes NOR = { has_origin = origin_cybernetic_creed has_origin = origin_unplugged } } hidden_effect = { country_event = { id = cyber.1 } } } else_if = { limit = { …",
+   "possible": "if = { limit = { is_hive_empire = no NOR = { has_origin = origin_cybernetic_creed has_origin = origin_unplugged } } has_ascension_perk = ap_the_flesh…",
+   "source": "01_cybernetics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_cybernetics_assimilator_adopt",
+  "name": "Cybernetic Traditions",
+  "aliases": [
+   "tr_cybernetics_assimilator_adopt"
+  ],
+  "summary": "Assimilating pop Organic Pops now generates engineering Engineering Research. Resources generated from Assimilating pop Organic Pops are increased.",
+  "fields": {
+   "tree": "Cybernetics",
+   "on_enabled": "if = { limit = { has_machine_age_dlc = yes has_civic = civic_machine_assimilator } hidden_effect = { country_event = { id = cyber.2010 days = 2 } } }",
+   "possible": "has_ascension_perk = ap_organo_machine_interfacing_assimilator has_technology = tech_integrated_cybernetics",
+   "source": "01_cybernetics_assimilator.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_cybernetics_assimilator_augmentation_centers",
+  "name": "Augmentation Centers",
+  "aliases": [
+   "tr_cybernetics_assimilator_augmentation_centers"
+  ],
+  "summary": "Unlocks Building: …",
+  "fields": {
+   "tree": "Cybernetics",
+   "possible": "has_tradition = tr_cybernetics_assimilator_metabolic_reprocessing",
+   "source": "01_cybernetics_assimilator.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_cybernetics_assimilator_finish",
+  "name": "Cybernetic Traditions Finished",
+  "aliases": [
+   "tr_cybernetics_assimilator_finish"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Cybernetics",
+   "modifier": "cyborg_pop_bonus_workforce_mult = 0.10 MACHINE_species_trait_picks_add = 2 ascension_perks_add = 1",
+   "on_enabled": "hidden_effect = { country_event = { id = timeline.85 } } if = { limit = { has_country_flag = driven_cybernetics } hidden_effect = { country_event = { id = cyber.2015 days = 2 } } }",
+   "source": "01_cybernetics_assimilator.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_cybernetics_assimilator_inevitable_assimilation",
+  "name": "Inevitable Assimilation",
+  "aliases": [
+   "tr_cybernetics_assimilator_inevitable_assimilation"
+  ],
+  "summary": "Allows the Assimilation of pop Hive-Minded Pops.",
+  "fields": {
+   "tree": "Cybernetics",
+   "modifier": "auto_mod_monthly_add = 100",
+   "source": "01_cybernetics_assimilator.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_cybernetics_assimilator_integrated_anatomy",
+  "name": "Integrated Anatomy",
+  "aliases": [
+   "tr_cybernetics_assimilator_integrated_anatomy"
+  ],
+  "summary": "Unlocks Cybernetic Traits for Species Modification.",
+  "fields": {
+   "tree": "Cybernetics",
+   "possible": "has_tradition = tr_cybernetics_assimilator_inevitable_assimilation",
+   "source": "01_cybernetics_assimilator.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_cybernetics_assimilator_metabolic_reprocessing",
+  "name": "Metabolic Reprocessing",
+  "aliases": [
+   "tr_cybernetics_assimilator_metabolic_reprocessing"
+  ],
+  "summary": "Cyborg Upkeep: -10% Empire Size from Cyborg Pops: -10%",
+  "fields": {
+   "tree": "Cybernetics",
+   "modifier": "planet_pops_cyborgs_upkeep_mult = -0.10",
+   "possible": "has_tradition = tr_cybernetics_assimilator_inevitable_assimilation",
+   "source": "01_cybernetics_assimilator.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_cybernetics_assimilator_modular_cybernetics",
+  "name": "Modular Cybernetics",
+  "aliases": [
+   "tr_cybernetics_assimilator_modular_cybernetics"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Cybernetics",
+   "modifier": "modify_species_cost_mult = -0.50",
+   "possible": "has_tradition = tr_cybernetics_assimilator_integrated_anatomy",
+   "source": "01_cybernetics_assimilator.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_cybernetics_augmentation_overload",
+  "name": "Augmentation Overload",
+  "aliases": [
+   "tr_cybernetics_augmentation_overload"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Cybernetics",
+   "possible": "has_tradition = tr_cybernetics_metabolic_reprocessing",
+   "source": "01_cybernetics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_cybernetics_finish",
+  "name": "Cybernetic Traditions Finished",
+  "aliases": [
+   "tr_cybernetics_finish"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Cybernetics",
+   "on_enabled": "hidden_effect = { refresh_portraits = character if = { limit = { has_machine_age_dlc = yes OR = { has_country_flag = cybernetics_traditions_unlocked has_origin = origin_unplugged } NOT = { has_origin…",
+   "source": "01_cybernetics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_cybernetics_integrated_anatomy",
+  "name": "Integrated Anatomy",
+  "aliases": [
+   "tr_cybernetics_integrated_anatomy"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Cybernetics",
+   "modifier": "ROBOT_species_trait_picks_add = 1 ROBOT_species_trait_points_add = 1",
+   "possible": "has_tradition = tr_cybernetics_transubstantiation_synthesis",
+   "source": "01_cybernetics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_cybernetics_metabolic_reprocessing",
+  "name": "Metabolic Reprocessing",
+  "aliases": [
+   "tr_cybernetics_metabolic_reprocessing"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Cybernetics",
+   "modifier": "planet_pops_cyborgs_upkeep_mult = -0.10",
+   "possible": "has_tradition = tr_cybernetics_transubstantiation_synthesis",
+   "source": "01_cybernetics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_cybernetics_modular_cybernetics",
+  "name": "Modular Cybernetics",
+  "aliases": [
+   "tr_cybernetics_modular_cybernetics"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Cybernetics",
+   "modifier": "modify_species_cost_mult = -0.50",
+   "on_enabled": "hidden_effect = { if = { limit = { any_pre_ftl_within_border = { has_country_flag = fotd_seperatist_country@root } } country_event = { id = origin.6096 days = 3 } } }",
+   "possible": "has_tradition = tr_cybernetics_integrated_anatomy",
+   "source": "01_cybernetics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_cybernetics_transubstantiation_synthesis",
+  "name": "Transubstantiation Synthesis",
+  "aliases": [
+   "tr_cybernetics_transubstantiation_synthesis"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Cybernetics",
+   "on_enabled": "hidden_effect = { refresh_portraits = character }",
+   "possible": "if = { limit = { has_machine_age_dlc = no } if = { limit = { is_cyborg_empire = yes } } else = { custom_tooltip = { fail_text = REQUIRES_CYBORG_EMPIR…",
+   "source": "01_cybernetics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_diplomacy_adopt",
+  "name": "Diplomacy Traditions",
+  "aliases": [
+   "tr_diplomacy_adopt"
+  ],
+  "summary": "Unlocks Edict: Diplomatic Grants",
+  "fields": {
+   "tree": "Diplomacy",
+   "modifier": "diplomacy_influence_upkeep_mult = -0.5 diplomacy_influence_cost_mult = -0.25",
+   "source": "00_diplomacy.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_diplomacy_diplomatic_networking",
+  "name": "Diplomatic Networking",
+  "aliases": [
+   "tr_diplomacy_diplomatic_networking"
+  ],
+  "summary": "Embassies: +3 unity Unity Allows Advanced Diplomatic Actions without an Embassy",
+  "fields": {
+   "tree": "Diplomacy",
+   "source": "00_diplomacy.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_diplomacy_direct_diplomacy",
+  "name": "Direct Diplomacy",
+  "aliases": [
+   "tr_diplomacy_direct_diplomacy"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Diplomacy",
+   "modifier": "country_trust_cap_add = 50 country_trust_growth = 0.33",
+   "possible": "has_tradition = tr_diplomacy_diplomatic_networking",
+   "source": "00_diplomacy.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_diplomacy_eminent_diplomats",
+  "name": "Eminent Diplomats",
+  "aliases": [
+   "tr_diplomacy_eminent_diplomats"
+  ],
+  "summary": "Diplomatic Acceptance: +5 Envoys Improving Relations have a 1% chance each month of acquiring a Favor.",
+  "fields": {
+   "tree": "Diplomacy",
+   "modifier": "diplo_action_acceptance_add = 5",
+   "possible": "has_tradition = tr_diplomacy_diplomatic_networking",
+   "source": "00_diplomacy.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_diplomacy_entente_coordination",
+  "name": "Entente Coordination",
+  "aliases": [
+   "tr_diplomacy_entente_coordination"
+  ],
+  "summary": "The amount we contribute towards the Federation Naval Capacity counts for twice as much.",
+  "fields": {
+   "tree": "Diplomacy",
+   "modifier": "federation_naval_cap_contribution_mult = 1.00 country_border_friction_mult = -0.25",
+   "possible": "has_tradition = tr_diplomacy_the_federation",
+   "source": "00_diplomacy.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_diplomacy_finish",
+  "name": "Diplomacy Traditions Finished",
+  "aliases": [
+   "tr_diplomacy_finish"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Diplomacy",
+   "modifier": "federation_experience_add = 2 diplo_weight_mult = 0.10 country_official_cap_add = 1 ascension_perks_add = 1",
+   "source": "00_diplomacy.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_diplomacy_the_federation",
+  "name": "The Federation",
+  "aliases": [
+   "tr_diplomacy_the_federation"
+  ],
+  "summary": "Unlocks Diplomacy: Form Federation Available Envoys are increased by 1.",
+  "fields": {
+   "tree": "Diplomacy",
+   "modifier": "cohesion_add = 1 envoys_add = 1",
+   "on_enabled": "if = { limit = { NOT = { has_technology = tech_federation_code } } add_tech_progress = { tech = tech_federation_code progress = 0.25 } }",
+   "source": "00_diplomacy.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_discovery_adopt",
+  "name": "Discovery Traditions",
+  "aliases": [
+   "tr_discovery_adopt"
+  ],
+  "summary": "Unlocks Edict: Map the Stars Anomaly Research Speed increased by +20%.",
+  "fields": {
+   "tree": "Discovery",
+   "modifier": "ship_anomaly_research_speed_mult = 0.20",
+   "source": "00_discovery.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_discovery_databank_uplinks",
+  "name": "Databank Uplinks",
+  "aliases": [
+   "tr_discovery_databank_uplinks"
+  ],
+  "summary": "Unlocks Edict: Research Subsidies Resources Produced from Research Stations increased by 20%. Research from Starbase Constructions increased by 20%.",
+  "fields": {
+   "tree": "Discovery",
+   "modifier": "station_researchers_produces_mult = 0.20 starbase_constructions_physics_research_produces_mult = 0.20 starbase_constructions_society_research_produces_mult = 0.20 starbase_constructions_engineering_research_produces_mult = 0.20",
+   "possible": "has_tradition = tr_discovery_to_boldly_go",
+   "source": "00_discovery.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_discovery_faith_in_science",
+  "name": "Entertainment Labs",
+  "aliases": [
+   "tr_discovery_faith_in_science"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Discovery",
+   "possible": "has_tradition = tr_discovery_polytechnic_education",
+   "source": "00_discovery.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_discovery_finish",
+  "name": "Discovery Traditions Finished",
+  "aliases": [
+   "tr_discovery_finish"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Discovery",
+   "modifier": "all_technology_research_speed = 0.10 ascension_perks_add = 1",
+   "source": "00_discovery.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_discovery_polytechnic_education",
+  "name": "Polytechnic Education",
+  "aliases": [
+   "tr_discovery_polytechnic_education"
+  ],
+  "summary": "Leader Experience Gain increased by +25% and Leader Level Cap increased by 1.",
+  "fields": {
+   "tree": "Discovery",
+   "modifier": "scientist_exp_gain = 0.2 leader_scientists_upkeep_mult = -0.15",
+   "possible": "has_tradition = tr_discovery_science_division",
+   "source": "00_discovery.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_discovery_science_division",
+  "name": "Science Division",
+  "aliases": [
+   "tr_discovery_science_division"
+  ],
+  "summary": "Research Alternatives increased by 1 and Scientist Level Cap increased by 2.",
+  "fields": {
+   "tree": "Discovery",
+   "modifier": "num_tech_alternatives_add = 1 country_scientist_cap_add = 1 scientist_initial_skill = 1",
+   "source": "00_discovery.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_discovery_to_boldly_go",
+  "name": "To Boldly Go",
+  "aliases": [
+   "tr_discovery_to_boldly_go"
+  ],
+  "summary": "Survey Speed increased by +35% and Science Ship Disengage Chance increased by +50%.",
+  "fields": {
+   "tree": "Discovery",
+   "modifier": "science_ship_survey_speed = 0.35 shipclass_science_ship_disengage_mult = 0.5",
+   "source": "00_discovery.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_domestication_adopt",
+  "name": "Domestication Traditions",
+  "aliases": [
+   "tr_domestication_adopt"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Domestication",
+   "modifier": "planet_farmers_produces_mult = 0.20 starbase_shipyard_space_fauna_build_cost_mult = -0.10",
+   "possible": "has_technology = tech_alien_cloning",
+   "source": "00_domestication.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_domestication_astrozoology",
+  "name": "Astrozoology",
+  "aliases": [
+   "tr_domestication_astrozoology"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Domestication",
+   "modifier": "space_fauna_monthly_increased_breeding_chance_add = 1 space_fauna_culling_reward_mult = 0.25",
+   "possible": "has_tradition = tr_domestication_containment_protocols",
+   "source": "00_domestication.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_domestication_bio_repurposing",
+  "name": "Bio-Repurposing",
+  "aliases": [
+   "tr_domestication_bio_repurposing"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Domestication",
+   "modifier": "planet_clear_blocker_speed_mult = 0.33",
+   "source": "00_domestication.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_domestication_containment_protocols",
+  "name": "Containment Protocols",
+  "aliases": [
+   "tr_domestication_containment_protocols"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Domestication",
+   "modifier": "country_vivarium_max_capacity_mult = 0.25 country_capture_chance_add = 0.2",
+   "on_enabled": "custom_tooltip = tr_domestication_containment_protocols_tt set_country_flag = containment_protocols_unlocked",
+   "source": "00_domestication.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_domestication_finish",
+  "name": "Domestication Traditions Finished",
+  "aliases": [
+   "tr_domestication_finish"
+  ],
+  "summary": "…",
+  "fields": {
+   "tree": "Domestication",
+   "modifier": "space_fauna_experience_gain_mult = 0.5 ascension_perks_add = 1",
+   "on_enabled": "if = { limit = { NOT = { has_origin = origin_primal_calling } } country_event = { id = grand_archive.7010 days = 1 } }",
+   "source": "00_domestication.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_domestication_killer_instinct",
+  "name": "Killer Instinct",
+  "aliases": [
+   "tr_domestication_killer_instinct"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Domestication",
+   "modifier": "space_fauna_ship_damage_mult = 0.15 space_fauna_ship_speed_mult = 0.15",
+   "possible": "has_tradition = tr_domestication_bio_repurposing",
+   "source": "00_domestication.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_domestication_metabolic_regulation",
+  "name": "Metabolic Regulation",
+  "aliases": [
+   "tr_domestication_metabolic_regulation"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Domestication",
+   "modifier": "logistic_growth_mult = 0.05 starbase_shipyard_space_fauna_build_speed_mult = 0.15",
+   "possible": "has_tradition = tr_domestication_containment_protocols has_tradition = tr_domestication_bio_repurposing",
+   "source": "00_domestication.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_domination_adopt",
+  "name": "Domination Traditions",
+  "aliases": [
+   "tr_domination_adopt"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Domination",
+   "modifier": "planet_jobs_worker_produces_mult = 0.05 pop_slave_bonus_workforce_mult = 0.05 pop_slave_political_power = -0.25",
+   "source": "00_domination.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_domination_colonial_viceroys",
+  "name": "Colonial Viceroys",
+  "aliases": [
+   "tr_domination_colonial_viceroys"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Domination",
+   "modifier": "country_traditions_influence_produces_add = 0.5 country_official_cap_add = 1 official_initial_skill = 1",
+   "source": "00_domination.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_domination_finish",
+  "name": "Domination Traditions Finished",
+  "aliases": [
+   "tr_domination_finish"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Domination",
+   "modifier": "empire_size_pops_mult = -0.05 ascension_perks_add = 1",
+   "source": "00_domination.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_domination_grand_council",
+  "name": "Privy Council",
+  "aliases": [
+   "tr_domination_grand_council"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Domination",
+   "modifier": "councilor_exp_gain = 0.2 country_edict_fund_add = 50",
+   "possible": "has_tradition = tr_domination_imperious_architecture has_tradition = tr_domination_colonial_viceroys",
+   "source": "00_domination.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_domination_imperious_architecture",
+  "name": "Imperious Architecture",
+  "aliases": [
+   "tr_domination_imperious_architecture"
+  ],
+  "summary": "building Capital Buildings provide housing Housing and … … Jobs scaling with Tier.",
+  "fields": {
+   "tree": "Domination",
+   "source": "00_domination.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_domination_judgment_corps",
+  "name": "Judgment Corps",
+  "aliases": [
+   "tr_domination_judgment_corps"
+  ],
+  "summary": "Unlocks Edict: Enhanced Surveillance",
+  "fields": {
+   "tree": "Domination",
+   "modifier": "planet_enforcers_unity_produces_add = 1",
+   "source": "00_domination.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_domination_workplace_motivators",
+  "name": "Workplace Motivators",
+  "aliases": [
+   "tr_domination_workplace_motivators"
+  ],
+  "summary": "Unlocks Edict: Extended Shifts",
+  "fields": {
+   "tree": "Domination",
+   "modifier": "planet_jobs_worker_produces_mult = 0.05 pop_slave_bonus_workforce_mult = 0.05",
+   "possible": "has_tradition = tr_domination_judgment_corps",
+   "source": "00_domination.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_enmity_adopt",
+  "name": "Enmity Traditions",
+  "aliases": [
+   "tr_enmity_adopt"
+  ],
+  "summary": "mod logistic growth mult Pop Growth per neighboring Rival: +3% mod planet pop assembly mult Pop Assembly per neighboring Rival: +3%",
+  "fields": {
+   "tree": "Enmity",
+   "modifier": "max_rivalries = 1",
+   "source": "00_enmity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_enmity_consumate_contrarian",
+  "name": "Consummate Contrarian",
+  "aliases": [
+   "tr_enmity_consumate_contrarian"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Enmity",
+   "modifier": "diplo_weight_opposing_mult = 0.5",
+   "possible": "has_tradition = tr_enmity_rise_to_the_occasion",
+   "source": "00_enmity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_enmity_eclipse",
+  "name": "Eclipse",
+  "aliases": [
+   "tr_enmity_eclipse"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Enmity",
+   "possible": "has_tradition = tr_enmity_outpace",
+   "source": "00_enmity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_enmity_finish",
+  "name": "Enmity Finished",
+  "aliases": [
+   "tr_enmity_finish"
+  ],
+  "summary": "Available Envoys: +1 Unlocks the Antagonistic Diplomatic Stance. Ascension Perks Unlocked: +1",
+  "fields": {
+   "tree": "Enmity",
+   "modifier": "envoys_add = 1 ascension_perks_add = 1",
+   "source": "00_enmity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_enmity_match",
+  "name": "Match",
+  "aliases": [
+   "tr_enmity_match"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Enmity",
+   "source": "00_enmity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_enmity_outpace",
+  "name": "Outpace",
+  "aliases": [
+   "tr_enmity_outpace"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Enmity",
+   "modifier": "damage_vs_rival_mult = 0.15",
+   "possible": "has_tradition = tr_enmity_match",
+   "source": "00_enmity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_enmity_rise_to_the_occasion",
+  "name": "Rise to the Occasion",
+  "aliases": [
+   "tr_enmity_rise_to_the_occasion"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Enmity",
+   "source": "00_enmity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_expansion_a_new_life",
+  "name": "A New Life",
+  "aliases": [
+   "tr_expansion_a_new_life"
+  ],
+  "summary": "pop Pop Growth Speed increased by +10%.",
+  "fields": {
+   "tree": "Expansion",
+   "modifier": "founder_species_growth_mult = 0.1",
+   "possible": "has_tradition = tr_expansion_colonization_fever",
+   "source": "00_expansion.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_expansion_adopt",
+  "name": "Expansion Traditions",
+  "aliases": [
+   "tr_expansion_adopt"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Expansion",
+   "source": "00_expansion.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_expansion_colonization_fever",
+  "name": "Colonization Fever",
+  "aliases": [
+   "tr_expansion_colonization_fever"
+  ],
+  "summary": "New colonies start with 100 additional pop Pops.",
+  "fields": {
+   "tree": "Expansion",
+   "modifier": "colony_start_urban_districts_add = 1 planet_colony_development_speed_mult = 0.25",
+   "source": "00_expansion.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_expansion_courier_network",
+  "name": "Courier Network",
+  "aliases": [
+   "tr_expansion_courier_network"
+  ],
+  "summary": "Empire Size from Systems and Colonies is reduced by 25%.",
+  "fields": {
+   "tree": "Expansion",
+   "possible": "has_tradition = tr_expansion_reach_for_the_stars",
+   "source": "00_expansion.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_expansion_finish",
+  "name": "Expansion Traditions Finished",
+  "aliases": [
+   "tr_expansion_finish"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Expansion",
+   "modifier": "planet_non_artificial_max_districts_add = 1 ascension_perks_add = 1",
+   "source": "00_expansion.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_expansion_galactic_ambition",
+  "name": "Galactic Ambition",
+  "aliases": [
+   "tr_expansion_galactic_ambition"
+  ],
+  "summary": "Station Upkeep reduced by 20%.",
+  "fields": {
+   "tree": "Expansion",
+   "possible": "has_tradition = tr_expansion_reach_for_the_stars",
+   "source": "00_expansion.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_expansion_reach_for_the_stars",
+  "name": "Reach for the Stars",
+  "aliases": [
+   "tr_expansion_reach_for_the_stars"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Expansion",
+   "source": "00_expansion.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_genetics_adopt",
+  "name": "Genetic Traditions",
+  "aliases": [
+   "tr_genetics_adopt"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Genetics",
+   "on_enabled": "hidden_effect = { country_event = { id = utopia.2700 } }",
+   "possible": "has_ascension_perk = ap_engineered_evolution has_technology = tech_gene_tailoring",
+   "source": "01_genetics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_genetics_creation",
+  "name": "Engineered Genesis",
+  "aliases": [
+   "tr_genetics_creation"
+  ],
+  "summary": "Can alter Pop appearance with Species Modification Allows the Assimilation of Pops into or out of a Hive-Mind",
+  "fields": {
+   "tree": "Genetics",
+   "possible": "has_tradition = tr_genetics_resequencing",
+   "source": "01_genetics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_genetics_efficient_cloning",
+  "name": "Stem Cell Stimulation",
+  "aliases": [
+   "tr_genetics_efficient_cloning"
+  ],
+  "summary": "… produce an additional +1.5 Monthly Organic Pop Growth",
+  "fields": {
+   "tree": "Genetics",
+   "possible": "has_tradition = tr_genetics_retrovirus",
+   "source": "01_genetics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_genetics_enhanced_expression",
+  "name": "Allelic Expression",
+  "aliases": [
+   "tr_genetics_enhanced_expression"
+  ],
+  "summary": "Unlocks Advanced Traits for Species Modification",
+  "fields": {
+   "tree": "Genetics",
+   "modifier": "BIOLOGICAL_species_trait_points_add = 6 BIOLOGICAL_species_trait_picks_add = 2 modify_species_cost_mult = -0.50",
+   "possible": "has_tradition = tr_genetics_creation",
+   "source": "01_genetics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_genetics_finish",
+  "name": "Genetic Traditions Finished",
+  "aliases": [
+   "tr_genetics_finish"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Genetics",
+   "modifier": "planet_buildings_clone_vats_upkeep_mult = -0.33 ascension_perks_add = 1",
+   "on_enabled": "hidden_effect = { country_event = { id = utopia.2703 } luminary_speech_effect = yes }",
+   "source": "01_genetics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_genetics_resequencing",
+  "name": "Genetic Resequencing",
+  "aliases": [
+   "tr_genetics_resequencing"
+  ],
+  "summary": "Can remove Positive Traits and add Negative Traits with Species Modification",
+  "fields": {
+   "tree": "Genetics",
+   "source": "01_genetics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_genetics_retrovirus",
+  "name": "Retroviral Manipulation",
+  "aliases": [
+   "tr_genetics_retrovirus"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Genetics",
+   "modifier": "pop_environment_tolerance = 0.10",
+   "source": "01_genetics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_harmony_adopt",
+  "name": "Harmony Traditions",
+  "aliases": [
+   "tr_harmony_adopt"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Harmony",
+   "modifier": "planet_pops_upkeep_mult = -0.10",
+   "source": "00_harmony.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_harmony_finish",
+  "name": "Harmony Traditions Finished",
+  "aliases": [
+   "tr_harmony_finish"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Harmony",
+   "modifier": "planetary_ascension_effect_mult = 0.25 ascension_perks_add = 1",
+   "source": "00_harmony.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_harmony_harmonious_directives",
+  "name": "Harmonious Directives",
+  "aliases": [
+   "tr_harmony_harmonious_directives"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Harmony",
+   "modifier": "country_edict_fund_add = 50",
+   "possible": "has_tradition = tr_harmony_kinship has_tradition = tr_harmony_mind_and_body",
+   "source": "00_harmony.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_harmony_kinship",
+  "name": "Kinship",
+  "aliases": [
+   "tr_harmony_kinship"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Harmony",
+   "modifier": "empire_size_pops_mult = -0.05 refugee_attraction = 0.20",
+   "source": "00_harmony.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_harmony_mind_and_body",
+  "name": "Mind and Body",
+  "aliases": [
+   "tr_harmony_mind_and_body"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Harmony",
+   "modifier": "leader_lifespan_add = 10 negative_traits_country = -1",
+   "source": "00_harmony.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_harmony_the_greater_good",
+  "name": "The Greater Good",
+  "aliases": [
+   "tr_harmony_the_greater_good"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Harmony",
+   "modifier": "pop_government_ethic_attraction = 0.25 planet_crime_add = -10",
+   "source": "00_harmony.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_harmony_utopian_dream",
+  "name": "Utopian Dream",
+  "aliases": [
+   "tr_harmony_utopian_dream"
+  ],
+  "summary": "stability Stability increased by 5% on all our colonies.",
+  "fields": {
+   "tree": "Harmony",
+   "modifier": "planet_stability_add = 3 planetary_ascension_cost_mult = -0.1",
+   "possible": "has_tradition = tr_harmony_the_greater_good",
+   "source": "00_harmony.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_logistics_1",
+  "name": "Nested Coordination",
+  "aliases": [
+   "tr_logistics_1"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Logistics",
+   "modifier": "planet_traders_trade_produces_add = 2",
+   "source": "00_logistics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_logistics_2",
+  "name": "Distributed Delivery Systems",
+  "aliases": [
+   "tr_logistics_2"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Logistics",
+   "possible": "has_tradition = tr_logistics_1",
+   "source": "00_logistics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_logistics_3",
+  "name": "Autonomous Maintenance",
+  "aliases": [
+   "tr_logistics_3"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Logistics",
+   "modifier": "planet_maintenance_drones_trade_produces_add = 1 planet_structures_upkeep_mult = -0.05",
+   "source": "00_logistics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_logistics_4",
+  "name": "Galactic Exchange Efficiencies",
+  "aliases": [
+   "tr_logistics_4"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Logistics",
+   "modifier": "country_trade_fee = -0.10",
+   "possible": "has_tradition = tr_logistics_3",
+   "source": "00_logistics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_logistics_5",
+  "name": "Predictive Resupply Patterns",
+  "aliases": [
+   "tr_logistics_5"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Logistics",
+   "modifier": "ships_logistics_mult = -0.1",
+   "possible": "has_tradition = tr_logistics_3",
+   "source": "00_logistics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_logistics_adopt",
+  "name": "Logistics Traditions",
+  "aliases": [
+   "tr_logistics_adopt"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Logistics",
+   "modifier": "pop_logistics_drone_bonus_workforce_mult = 0.05",
+   "source": "00_logistics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_logistics_finish",
+  "name": "Logistics Traditions Finished",
+  "aliases": [
+   "tr_logistics_finish"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Logistics",
+   "modifier": "country_trade_produces_mult = 0.1 ascension_perks_add = 1",
+   "source": "00_logistics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_mercantile_adaptive_economic_policies",
+  "name": "Adaptive Economic Policies",
+  "aliases": [
+   "tr_mercantile_adaptive_economic_policies"
+  ],
+  "summary": "Unlocks Consumer Benefits and Marketplace of Ideas Trade Policies, which allow us to convert a portion of our trade Trade into consumer goods Consumer Goods or unity Unity.",
+  "fields": {
+   "tree": "Commerce",
+   "source": "00_mercantile.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_mercantile_adopt",
+  "name": "Commerce Traditions",
+  "aliases": [
+   "tr_mercantile_adopt"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Commerce",
+   "modifier": "planet_traders_upkeep_mult = -0.2",
+   "source": "00_mercantile.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_mercantile_commercial_enterprise",
+  "name": "Commercial Enterprise",
+  "aliases": [
+   "tr_mercantile_commercial_enterprise"
+  ],
+  "summary": "mod planet amenities add Amenities per 100 … …: +200 district City Districts with a zone Commercial Nexus, and building Trade Buildings, receive additional … … Jobs.",
+  "fields": {
+   "tree": "Commerce",
+   "possible": "has_tradition = tr_mercantile_trickle_up_economics",
+   "source": "00_mercantile.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_mercantile_finish",
+  "name": "Commerce Traditions Finished",
+  "aliases": [
+   "tr_mercantile_finish"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Commerce",
+   "modifier": "country_trade_produces_mult = 0.1 ascension_perks_add = 1",
+   "source": "00_mercantile.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_mercantile_insider_trading",
+  "name": "Insider Trading",
+  "aliases": [
+   "tr_mercantile_insider_trading"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Commerce",
+   "modifier": "country_trade_fee = -0.10",
+   "possible": "has_tradition = tr_mercantile_adaptive_economic_policies",
+   "source": "00_mercantile.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_mercantile_marketplace_of_better_ideas",
+  "name": "Marketplace of Better Ideas",
+  "aliases": [
+   "tr_mercantile_marketplace_of_better_ideas"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Commerce",
+   "modifier": "planet_jobs_trade_produces_mult = 0.1",
+   "possible": "has_tradition = tr_mercantile_adaptive_economic_policies",
+   "source": "00_mercantile.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_mercantile_trickle_up_economics",
+  "name": "Trickle Up Economics",
+  "aliases": [
+   "tr_mercantile_trickle_up_economics"
+  ],
+  "summary": "trade Trade per 100 … …: +1 mod planet amenities add Amenities per 100 … …: +100 consumer goods Consumer Goods Upkeep per 100 … …: +0.1",
+  "fields": {
+   "tree": "Commerce",
+   "modifier": "planet_pops_trade_produces_mult = 0.15",
+   "source": "00_mercantile.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_modularity_1",
+  "name": "High-Speed Replacements",
+  "aliases": [
+   "tr_modularity_1"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Modularity",
+   "modifier": "planet_jobs_worker_produces_mult = 0.1 auto_mod_monthly_add = 400",
+   "possible": "has_tradition = tr_modularity_adopt",
+   "source": "01_modularity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_modularity_2",
+  "name": "Liquid Metal Joints",
+  "aliases": [
+   "tr_modularity_2"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Modularity",
+   "modifier": "planet_pop_assemblers_sr_living_metal_upkeep_add = 0.15",
+   "possible": "has_tradition = tr_modularity_1",
+   "source": "01_modularity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_modularity_3",
+  "name": "Pacification Modules",
+  "aliases": [
+   "tr_modularity_3"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Modularity",
+   "modifier": "planet_stability_add = 5 army_damage_mult = 0.5",
+   "possible": "has_tradition = tr_modularity_1",
+   "source": "01_modularity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_modularity_4",
+  "name": "High-Level Enhancements",
+  "aliases": [
+   "tr_modularity_4"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Modularity",
+   "possible": "has_tradition = tr_modularity_2",
+   "source": "01_modularity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_modularity_5",
+  "name": "Advanced Tools",
+  "aliases": [
+   "tr_modularity_5"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Modularity",
+   "modifier": "MACHINE_species_trait_points_add = 4 MACHINE_species_trait_picks_add = 4 modify_species_cost_mult = -0.5",
+   "possible": "has_tradition = tr_modularity_3",
+   "source": "01_modularity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_modularity_adopt",
+  "name": "Modularity Traditions",
+  "aliases": [
+   "tr_modularity_adopt"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Modularity",
+   "modifier": "planet_metallurgists_sr_living_metal_produces_add = 0.1",
+   "on_enabled": "hidden_effect = { update_node_portraits_if_gestalt_effect = yes }",
+   "possible": "custom_tooltip = { fail_text = REQUIRES_FINISHED_TRANSFORMATION has_country_flag = modularity_traditions_unlocked }",
+   "source": "01_modularity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_modularity_finish",
+  "name": "Modularity Traditions Finished",
+  "aliases": [
+   "tr_modularity_finish"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Modularity",
+   "modifier": "planet_jobs_upkeep_mult = -0.15 ascension_perks_add = 1",
+   "on_enabled": "hidden_effect = { country_event = { id = cybernetics.5080 } country_event = { id = timeline.82 } }",
+   "source": "01_modularity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_mutation_adopt",
+  "name": "Mutation Traditions",
+  "aliases": [
+   "tr_mutation_adopt"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Mutation",
+   "on_enabled": "hidden_effect = { country_event = { id = timeline.80 } species = { change_species_characteristics = { add_trait = trait_adaptive_mutations add_traits_at_start_of_list = yes } } every_owned_species = …",
+   "possible": "custom_tooltip = { fail_text = REQUIRES_FINISHED_EVOLUTION has_country_flag = mutation_tradition_unlocked }",
+   "source": "01_mutation.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_mutation_environmental_integration",
+  "name": "Environmental Integration",
+  "aliases": [
+   "tr_mutation_environmental_integration"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "tradition_dummy",
+   "possible": "always = no",
+   "source": "01_mutation.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_mutation_finish",
+  "name": "Mutation Traditions Finished",
+  "aliases": [
+   "tr_mutation_finish"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Mutation",
+   "modifier": "ascension_perks_add = 1",
+   "on_enabled": "hidden_effect = { if = { limit = { is_hive_empire = no } country_event = { id = bio.180 } } else = { country_event = { id = bio.195 } } }",
+   "source": "01_mutation.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_mutation_nucleotide_isolation",
+  "name": "Nucleotide Isolation",
+  "aliases": [
+   "tr_mutation_nucleotide_isolation"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "tradition_dummy",
+   "possible": "always = no",
+   "source": "01_mutation.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_mutation_planned_polymorphism",
+  "name": "Planned Polymorphism",
+  "aliases": [
+   "tr_mutation_planned_polymorphism"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Mutation",
+   "modifier": "auto_mod_monthly_add = 200",
+   "source": "01_mutation.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_mutation_somatic_subversiveness",
+  "name": "Somatic Subversiveness",
+  "aliases": [
+   "tr_mutation_somatic_subversiveness"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "tradition_dummy",
+   "possible": "always = no",
+   "source": "01_mutation.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_mutation_stage_1_swap",
+  "name": "Flexible Tradition I",
+  "aliases": [
+   "tr_mutation_stage_1_swap"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Mutation",
+   "source": "01_mutation.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_mutation_stage_2_swap",
+  "name": "Flexible Tradition II",
+  "aliases": [
+   "tr_mutation_stage_2_swap"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Mutation",
+   "possible": "has_tradition = tr_mutation_stage_1_swap",
+   "source": "01_mutation.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_mutation_stage_3_swap",
+  "name": "Flexible Tradition III",
+  "aliases": [
+   "tr_mutation_stage_3_swap"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Mutation",
+   "possible": "has_tradition = tr_mutation_stage_1_swap",
+   "source": "01_mutation.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_mutation_unnatural_selection",
+  "name": "Unnatural Selection",
+  "aliases": [
+   "tr_mutation_unnatural_selection"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Mutation",
+   "modifier": "BIOLOGICAL_species_trait_points_add = 4 BIOLOGICAL_species_trait_picks_add = 4 modify_species_cost_mult = -0.50",
+   "possible": "has_tradition = tr_mutation_planned_polymorphism",
+   "source": "01_mutation.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_nanotech_1",
+  "name": "Aggregation Systems",
+  "aliases": [
+   "tr_nanotech_1"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Nanotech",
+   "modifier": "planet_farmers_food_produces_add = -1 planet_farmers_nanites_produces_add = 0.2 planet_miners_minerals_produces_add = -1 planet_miners_nanites_produces_add = 0.2",
+   "source": "01_nanotech.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_nanotech_2",
+  "name": "Molecular Reconfiguration",
+  "aliases": [
+   "tr_nanotech_2"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Nanotech",
+   "on_enabled": "add_research_option = tech_nanite_transmutation add_tech_progress = { tech = tech_nanite_transmutation progress = 0.33 }",
+   "source": "01_nanotech.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_nanotech_3",
+  "name": "Unbridled Consumption",
+  "aliases": [
+   "tr_nanotech_3"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Nanotech",
+   "possible": "has_tradition = tr_nanotech_1",
+   "source": "01_nanotech.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_nanotech_4",
+  "name": "Flood of Supremacy",
+  "aliases": [
+   "tr_nanotech_4"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Nanotech",
+   "on_enabled": "add_research_option = tech_nanite_repair_system add_research_option = tech_nanite_autocannon add_research_option = tech_nanite_flak_batteries add_tech_progress = { tech = tech_nanite_repair_system pr…",
+   "possible": "has_tradition = tr_nanotech_2",
+   "source": "01_nanotech.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_nanotech_5",
+  "name": "Nanite Augmentations",
+  "aliases": [
+   "tr_nanotech_5"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Nanotech",
+   "possible": "has_tradition = tr_nanotech_3 has_tradition = tr_nanotech_4",
+   "source": "01_nanotech.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_nanotech_adopt",
+  "name": "Nanotech Traditions",
+  "aliases": [
+   "tr_nanotech_adopt"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Nanotech",
+   "possible": "custom_tooltip = { fail_text = REQUIRES_FINISHED_TRANSFORMATION has_country_flag = nanotech_traditions_unlocked }",
+   "source": "01_nanotech.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_nanotech_finish",
+  "name": "Nanotech Traditions Finished",
+  "aliases": [
+   "tr_nanotech_finish"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Nanotech",
+   "modifier": "empire_size_colonies_mult = -0.5 ascension_perks_add = 1",
+   "on_enabled": "hidden_effect = { country_event = { id = timeline.83 } }",
+   "source": "01_nanotech.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_politics_adopt",
+  "name": "Politics Traditions",
+  "aliases": [
+   "tr_politics_adopt"
+  ],
+  "summary": "+1 Envoy official Officials assigned to the … now produce 0.1 influence Influence per Skill Level.",
+  "fields": {
+   "tree": "Politics",
+   "modifier": "envoys_add = 1",
+   "possible": "is_galactic_community_formed = yes",
+   "source": "00_politics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_politics_extraordinary_powers",
+  "name": "Extraordinary Powers",
+  "aliases": [
+   "tr_politics_extraordinary_powers"
+  ],
+  "summary": "-25% time Cooldown on Council Actions (Emergency Measures and Veto).",
+  "fields": {
+   "tree": "Politics",
+   "modifier": "veto_cooldown_mult = -0.25 emergency_measures_cooldown_mult = -0.25",
+   "possible": "has_tradition = tr_politics_national_agenda has_tradition = tr_politics_persistent_petitioners",
+   "source": "00_politics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_politics_finish",
+  "name": "Politics Traditions Finished",
+  "aliases": [
+   "tr_politics_finish"
+  ],
+  "summary": "+10% diplo weight Diplomatic Weight Unlocks 4 special Resolutions in the …. Ascension Perks Unlocked: +1",
+  "fields": {
+   "tree": "Politics",
+   "modifier": "custom_tooltip = tr_politics_finish_desc diplo_weight_mult = 0.10 ascension_perks_add = 1",
+   "source": "00_politics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_politics_gravitas",
+  "name": "Gravitas",
+  "aliases": [
+   "tr_politics_gravitas"
+  ],
+  "summary": "-25% influence Influence cost to veto or propose Resolutions official Officials assigned to the … provide an additional 2.5% diplo weight Diplomatic Weight per Skill Level.",
+  "fields": {
+   "tree": "Politics",
+   "modifier": "resolutions_cost_mult = -0.25 diplo_weight_delegate_mult = 0.025",
+   "source": "00_politics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_politics_national_agenda",
+  "name": "National Agenda",
+  "aliases": [
+   "tr_politics_national_agenda"
+  ],
+  "summary": "Whenever a resolution you propose passes, gain 18 months worth of unity Unity.",
+  "fields": {
+   "tree": "Politics",
+   "possible": "has_tradition = tr_politics_quid_pro_quo",
+   "source": "00_politics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_politics_persistent_petitioners",
+  "name": "Persistent Petitioners",
+  "aliases": [
+   "tr_politics_persistent_petitioners"
+  ],
+  "summary": "After a resolution is passed by another empire, gain +25% diplo weight Diplomatic Weight until one of your own resolutions passes.",
+  "fields": {
+   "tree": "Politics",
+   "possible": "has_tradition = tr_politics_gravitas",
+   "source": "00_politics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_politics_quid_pro_quo",
+  "name": "Quid Pro Quo",
+  "aliases": [
+   "tr_politics_quid_pro_quo"
+  ],
+  "summary": "Whenever a Resolution that you supported passes, gain 1 Favor on the empire that proposed it.",
+  "fields": {
+   "tree": "Politics",
+   "source": "00_politics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_prosperity_administrative_operations",
+  "name": "Administrative Operations",
+  "aliases": [
+   "tr_prosperity_administrative_operations"
+  ],
+  "summary": "Building Upkeep and District Upkeep reduced by 10%.",
+  "fields": {
+   "tree": "Prosperity",
+   "modifier": "planet_structures_upkeep_mult = -0.10",
+   "source": "00_prosperity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_prosperity_adopt",
+  "name": "Prosperity Traditions",
+  "aliases": [
+   "tr_prosperity_adopt"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Prosperity",
+   "modifier": "station_gatherers_produces_mult = 0.20",
+   "source": "00_prosperity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_prosperity_finish",
+  "name": "Prosperity Traditions Finished",
+  "aliases": [
+   "tr_prosperity_finish"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Prosperity",
+   "modifier": "stations_produces_mult = 0.25 ascension_perks_add = 1",
+   "source": "00_prosperity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_prosperity_interstellar_franchising",
+  "name": "Interstellar Franchising",
+  "aliases": [
+   "tr_prosperity_interstellar_franchising"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Prosperity",
+   "modifier": "planet_jobs_upkeep_mult = -0.05",
+   "possible": "has_tradition = tr_prosperity_administrative_operations",
+   "source": "00_prosperity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_prosperity_public_works",
+  "name": "Public Works Division",
+  "aliases": [
+   "tr_prosperity_public_works"
+  ],
+  "summary": "City Districts provide 100 additional housing Housing. Ring World City Segments and Ecumenopolis Residential Arcologies also provide additional housing Housing.",
+  "fields": {
+   "tree": "Prosperity",
+   "possible": "has_tradition = tr_prosperity_sct",
+   "source": "00_prosperity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_prosperity_pursuit_of_profit",
+  "name": "The Pursuit of Profit",
+  "aliases": [
+   "tr_prosperity_pursuit_of_profit"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Prosperity",
+   "modifier": "planet_jobs_produces_mult = 0.05",
+   "possible": "has_tradition = tr_prosperity_administrative_operations",
+   "source": "00_prosperity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_prosperity_sct",
+  "name": "Standard Construction Templates",
+  "aliases": [
+   "tr_prosperity_sct"
+  ],
+  "summary": "Buildings and Districts have their Build Cost reduced by 10% and Build Speed increased by +25%.",
+  "fields": {
+   "tree": "Prosperity",
+   "modifier": "planet_structures_cost_mult = -0.10 planet_building_build_speed_mult = 0.25",
+   "source": "00_prosperity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_psionics_adopt",
+  "name": "Psionic Traditions",
+  "aliases": [
+   "tr_psionics_adopt"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Psionics",
+   "on_enabled": "country_event = { id = utopia.2600 }",
+   "possible": "if = { limit = { OR = { has_origin = origin_shroudwalker_apprentice has_country_flag = ratling_country } } has_technology = tech_psionic_theory } els…",
+   "source": "01_psionics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_psionics_breach_shroud",
+  "name": "Breach the Shroud",
+  "aliases": [
+   "tr_psionics_breach_shroud"
+  ],
+  "summary": "Unlocks a Special Project to Breach the Shroud. Job Efficiency for Psionic Pops per 100 … …: +5%",
+  "fields": {
+   "tree": "Psionics",
+   "on_enabled": "hidden_effect = { country_event = { id = utopia.2655 } }",
+   "possible": "has_tradition = tr_psionics_psionic_assimilation",
+   "source": "01_psionics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_psionics_finish",
+  "name": "Psionic Traditions Finished",
+  "aliases": [
+   "tr_psionics_finish"
+  ],
+  "summary": "Unlocks a Special Project to form a Covenant. Edict Fund: +50 Ascension Perks Unlocked: +1",
+  "fields": {
+   "tree": "Psionics",
+   "modifier": "edicts_upkeep_mult = -0.1 shroud_delve_cooldown = -0.2 ascension_perks_add = 1",
+   "on_enabled": "hidden_effect = { if = { limit = { has_country_flag = has_shroud_patron NOT = { has_country_flag = covenant_end_of_the_cycle } } country_event = { id = utopia.2658 days = 360 } set_country_flag = con…",
+   "source": "01_psionics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_psionics_mind_readers",
+  "name": "Mind Readers",
+  "aliases": [
+   "tr_psionics_mind_readers"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Psionics",
+   "modifier": "custom_tooltip = tr_psionics_mind_readers_tooltip add_base_country_intel = 10",
+   "source": "01_psionics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_psionics_psi_corps",
+  "name": "Psi Corps",
+  "aliases": [
+   "tr_psionics_psi_corps"
+  ],
+  "summary": "…",
+  "fields": {
+   "tree": "Psionics",
+   "source": "01_psionics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_psionics_psionic_assimilation",
+  "name": "Great Awakening",
+  "aliases": [
+   "tr_psionics_psionic_assimilation"
+  ],
+  "summary": "All Latent Psionic species will unlock their full psionic potential. Allows Psionic Assimilation of other species, unlocking their latent abilities. …",
+  "fields": {
+   "tree": "Psionics",
+   "on_enabled": "hidden_effect = { country_event = { id = utopia.2650 } country_event = { id = enclave.7000 days = 360 random = 720 } }",
+   "possible": "has_tradition = tr_psionics_psi_corps has_tradition = tr_psionics_mind_readers",
+   "source": "01_psionics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_psionics_shroud_adopt",
+  "name": "Psionic Traditions",
+  "aliases": [
+   "tr_psionics_shroud_adopt"
+  ],
+  "summary": "Starts a Situation to grant the founding species the Psionic trait.",
+  "fields": {
+   "tree": "Psionics",
+   "on_enabled": "if = { limit = { has_origin = origin_endbringers } country_event = { id = shroud.8310 } } else = { country_event = { id = shroud.2750 } }",
+   "possible": "if = { limit = { OR = { has_origin = origin_shroudwalker_apprentice has_origin = origin_endbringers has_country_flag = ratling_country has_country_fl…",
+   "source": "01_psionics_shroud.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_psionics_shroud_clairvoyance",
+  "name": "Clairvoyance",
+  "aliases": [
+   "tr_psionics_shroud_clairvoyance"
+  ],
+  "summary": "Sensor Range from Psionic Commanders: $@clairvoyance_sensor_range|0=+$",
+  "fields": {
+   "tree": "Psionics",
+   "modifier": "add_base_country_intel = 10 intel_decryption_add = 2 intel_encryption_add = 2",
+   "possible": "has_tradition = tr_psionics_shroud_great_awakening",
+   "source": "01_psionics_shroud.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_psionics_shroud_finish",
+  "name": "Psionic Traditions",
+  "aliases": [
+   "tr_psionics_shroud_finish"
+  ],
+  "summary": "Unlocks Edict:Sight Beyond Sight",
+  "fields": {
+   "tree": "Psionics",
+   "modifier": "empire_size_penalty_mult = -0.1 ascension_perks_add = 1",
+   "on_enabled": "hidden_effect = { if = { limit = { any_planet_within_border = { has_planet_flag = fotd_seperatist_planet@root owner = { has_country_flag = fotd_seperatist_country@root } } } country_event = { id = or…",
+   "source": "01_psionics_shroud.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_psionics_shroud_great_awakening",
+  "name": "Great Awakening",
+  "aliases": [
+   "tr_psionics_shroud_great_awakening"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Psionics",
+   "on_enabled": "hidden_effect = { turn_main_species_to_psionic = yes update_node_portraits_if_gestalt_effect = yes update_every_leader_from_psionic_countries = yes refresh_portraits = character country_event = { id …",
+   "possible": "has_tradition = tr_psionics_shroud_psi_corps custom_tooltip = { fail_text = require_breach_shroud_stage_2 OR = { any_situation = { is_situation_type …",
+   "source": "01_psionics_shroud.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_psionics_shroud_psi_corps",
+  "name": "Psi Corps",
+  "aliases": [
+   "tr_psionics_shroud_psi_corps"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Psionics",
+   "source": "01_psionics_shroud.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_psionics_shroud_psychometry",
+  "name": "Psychometry",
+  "aliases": [
+   "tr_psionics_shroud_psychometry"
+  ],
+  "summary": "crime … from …: $@psionic_shroud_crime|0$",
+  "fields": {
+   "tree": "Psionics",
+   "modifier": "psionic_specialist_pop_bonus_workforce_mult = 0.05",
+   "possible": "has_tradition = tr_psionics_shroud_telekinesis has_tradition = tr_psionics_shroud_clairvoyance",
+   "source": "01_psionics_shroud.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_psionics_shroud_telekinesis",
+  "name": "Telekinesis",
+  "aliases": [
+   "tr_psionics_shroud_telekinesis"
+  ],
+  "summary": "Psionic Pops Habitability: +$@telekinesis_mult|0%$ Psionic Pops Happiness: +$@telekinesis_mult|0%$",
+  "fields": {
+   "tree": "Psionics",
+   "possible": "has_tradition = tr_psionics_shroud_great_awakening",
+   "source": "01_psionics_shroud.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_psionics_shrouded_encryption",
+  "name": "Shrouded Communications",
+  "aliases": [
+   "tr_psionics_shrouded_encryption"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Psionics",
+   "modifier": "intel_decryption_add = 2 intel_encryption_add = 2",
+   "possible": "has_tradition = tr_psionics_psionic_assimilation",
+   "source": "01_psionics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_purity_adopt",
+  "name": "Purity Traditions",
+  "aliases": [
+   "tr_purity_adopt"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Purity",
+   "modifier": "leader_lifespan_mult = 0.2",
+   "possible": "custom_tooltip = { fail_text = REQUIRES_FINISHED_EVOLUTION has_country_flag = purity_tradition_unlocked }",
+   "source": "01_purity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_purity_exemplary_genetics",
+  "name": "Exemplary Genetics",
+  "aliases": [
+   "tr_purity_exemplary_genetics"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Purity",
+   "modifier": "BIOLOGICAL_species_trait_points_add = 6 BIOLOGICAL_species_trait_picks_add = 2 modify_species_cost_mult = -0.50",
+   "possible": "has_tradition = tr_purity_genotype_regeneration",
+   "source": "01_purity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_purity_finish",
+  "name": "Purity Traditions Finished",
+  "aliases": [
+   "tr_purity_finish"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Purity",
+   "modifier": "ascension_perks_add = 1",
+   "on_enabled": "hidden_effect = { country_event = { id = timeline.80 } if = { limit = { is_hive_empire = no } country_event = { id = bio.170 } } else = { country_event = { id = bio.185 } } luminary_speech_effect = y…",
+   "source": "01_purity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_purity_genotype_regeneration",
+  "name": "Genotype Regeneration",
+  "aliases": [
+   "tr_purity_genotype_regeneration"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Purity",
+   "source": "01_purity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_purity_heightened_attributes",
+  "name": "Heightened Attributes",
+  "aliases": [
+   "tr_purity_heightened_attributes"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "tradition_dummy",
+   "possible": "always = no",
+   "source": "01_purity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_purity_imperfection_remediation",
+  "name": "Imperfection Remediation",
+  "aliases": [
+   "tr_purity_imperfection_remediation"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "tradition_dummy",
+   "possible": "always = no",
+   "source": "01_purity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_purity_optimized_neurology",
+  "name": "Optimized Neurology",
+  "aliases": [
+   "tr_purity_optimized_neurology"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "tradition_dummy",
+   "possible": "always = no",
+   "source": "01_purity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_purity_stage_1_swap",
+  "name": "Flexible Tradition I",
+  "aliases": [
+   "tr_purity_stage_1_swap"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Purity",
+   "source": "01_purity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_purity_stage_2_swap",
+  "name": "Flexible Tradition II",
+  "aliases": [
+   "tr_purity_stage_2_swap"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Purity",
+   "possible": "has_tradition = tr_purity_stage_1_swap",
+   "source": "01_purity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_purity_stage_3_swap",
+  "name": "Flexible Tradition III",
+  "aliases": [
+   "tr_purity_stage_3_swap"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Purity",
+   "possible": "has_tradition = tr_purity_stage_1_swap",
+   "source": "01_purity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_statecraft_adopt",
+  "name": "Statecraft Traditions",
+  "aliases": [
+   "tr_statecraft_adopt"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Statecraft",
+   "modifier": "country_edict_fund_add = 50",
+   "source": "00_statecraft.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_statecraft_amongst_peers",
+  "name": "Amongst Peers",
+  "aliases": [
+   "tr_statecraft_amongst_peers"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Statecraft",
+   "source": "00_statecraft.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_statecraft_constitutional_focus",
+  "name": "Constitutional Focus",
+  "aliases": [
+   "tr_statecraft_constitutional_focus"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Statecraft",
+   "modifier": "council_agenda_progress_speed = 0.25",
+   "source": "00_statecraft.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_statecraft_finish",
+  "name": "Statecraft Traditions Finished",
+  "aliases": [
+   "tr_statecraft_finish"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Statecraft",
+   "modifier": "empire_size_mult = -0.05 ascension_perks_add = 1",
+   "source": "00_statecraft.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_statecraft_immutable_directives",
+  "name": "Immutable Directives",
+  "aliases": [
+   "tr_statecraft_immutable_directives"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Statecraft",
+   "modifier": "council_agenda_finishing_effect_duration_mult = 0.25",
+   "possible": "has_tradition = tr_statecraft_inspiring_agendas",
+   "source": "00_statecraft.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_statecraft_inspiring_agendas",
+  "name": "Inspiring Agendas",
+  "aliases": [
+   "tr_statecraft_inspiring_agendas"
+  ],
+  "summary": "Unlocks Agenda: Rightful Claims Unlocks Agenda: Oppose the Fallen",
+  "fields": {
+   "tree": "Statecraft",
+   "possible": "has_tradition = tr_statecraft_constitutional_focus",
+   "source": "00_statecraft.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_statecraft_shared_benefits",
+  "name": "Shared Benefits",
+  "aliases": [
+   "tr_statecraft_shared_benefits"
+  ],
+  "summary": "Whenever an Agenda is Launched: tAll Councilors gain $@statecraft_amongst_peers_exp_reward|G0$ Experience per Skill Level",
+  "fields": {
+   "tree": "Statecraft",
+   "modifier": "councilor_skill_add = 1",
+   "possible": "has_tradition = tr_statecraft_amongst_peers",
+   "source": "00_statecraft.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_subterfuge_adopt",
+  "name": "Subterfuge Traditions",
+  "aliases": [
+   "tr_subterfuge_adopt"
+  ],
+  "summary": "Subterfuge-related technologies appear at 5 times the normal rate.",
+  "fields": {
+   "tree": "Subterfuge",
+   "modifier": "espionage_operation_cost_mult = -0.25 intel_decryption_add = 1",
+   "source": "00_subterfuge.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_subterfuge_double_agents",
+  "name": "Double Agents",
+  "aliases": [
+   "tr_subterfuge_double_agents"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Subterfuge",
+   "modifier": "envoys_add = 1 spy_network_levels_add = 10 show_only_custom_tooltip = no custom_tooltip = tr_subterfuge_double_agents_effect",
+   "possible": "has_tradition = tr_subterfuge_information_security has_tradition = tr_subterfuge_operational_security",
+   "source": "00_subterfuge.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_subterfuge_finish",
+  "name": "Subterfuge Traditions Finished",
+  "aliases": [
+   "tr_subterfuge_finish"
+  ],
+  "summary": "Successful Operations refund 50% of their Infiltration Level Cost. Ascension Perks Unlocked: +1",
+  "fields": {
+   "tree": "Subterfuge",
+   "modifier": "ascension_perks_add = 1",
+   "source": "00_subterfuge.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_subterfuge_information_security",
+  "name": "Information Security",
+  "aliases": [
+   "tr_subterfuge_information_security"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Subterfuge",
+   "modifier": "intel_encryption_add = 1 ship_evasion_add = 5",
+   "source": "00_subterfuge.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_subterfuge_nda",
+  "name": "Non-Disclosure Agreement",
+  "aliases": [
+   "tr_subterfuge_nda"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Subterfuge",
+   "modifier": "espionage_hostile_operation_difficulty_add = 1 espionage_hostile_operation_cost_mult = 0.2",
+   "possible": "has_tradition = tr_subterfuge_information_security",
+   "source": "00_subterfuge.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_subterfuge_operational_security",
+  "name": "Operational Security",
+  "aliases": [
+   "tr_subterfuge_operational_security"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Subterfuge",
+   "modifier": "intel_decryption_add = 1 espionage_operation_skill_add = 2 ship_tracking_add = 10",
+   "source": "00_subterfuge.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_subterfuge_shadow_recruits",
+  "name": "Shadow Recruits",
+  "aliases": [
+   "tr_subterfuge_shadow_recruits"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Subterfuge",
+   "modifier": "spy_network_daily_value_mult = 0.50",
+   "possible": "has_tradition = tr_subterfuge_operational_security",
+   "source": "00_subterfuge.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_supremacy_adopt",
+  "name": "Supremacy Traditions",
+  "aliases": [
+   "tr_supremacy_adopt"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Supremacy",
+   "modifier": "country_naval_cap_add = 20 army_damage_mult = 0.20",
+   "source": "00_supremacy.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_supremacy_finish",
+  "name": "Supremacy Traditions Finished",
+  "aliases": [
+   "tr_supremacy_finish"
+  ],
+  "summary": "Unlocks the War Doctrines Policies. Ascension Perks Unlocked: +1",
+  "fields": {
+   "tree": "Supremacy",
+   "modifier": "ascension_perks_add = 1",
+   "source": "00_supremacy.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_supremacy_fleet_logistical_corps",
+  "name": "Fleet Logistics Corps",
+  "aliases": [
+   "tr_supremacy_fleet_logistical_corps"
+  ],
+  "summary": "Ship Upkeep reduced by 10% and Naval Capacity increased by 20%.",
+  "fields": {
+   "tree": "Supremacy",
+   "modifier": "ships_upkeep_mult = -0.10 country_naval_cap_mult = 0.20",
+   "source": "00_supremacy.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_supremacy_great_game",
+  "name": "The Great Game",
+  "aliases": [
+   "tr_supremacy_great_game"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Supremacy",
+   "modifier": "ship_damage_against_starbases_mult = 0.2",
+   "possible": "has_tradition = tr_supremacy_overwhelming_force",
+   "source": "00_supremacy.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_supremacy_master_shipwrights",
+  "name": "Master Shipwrights",
+  "aliases": [
+   "tr_supremacy_master_shipwrights"
+  ],
+  "summary": "Ship Build Speed increased by +25%.",
+  "fields": {
+   "tree": "Supremacy",
+   "modifier": "starbase_shipyard_build_speed_mult = 0.25",
+   "source": "00_supremacy.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_supremacy_overwhelming_force",
+  "name": "Overwhelming Force",
+  "aliases": [
+   "tr_supremacy_overwhelming_force"
+  ],
+  "summary": "Ship Fire Rate increased by +10% and Orbital Bombardment Damage increased by +20%.",
+  "fields": {
+   "tree": "Supremacy",
+   "modifier": "ship_orbital_bombardment_mult = 0.20 ship_fire_rate_mult = 0.10",
+   "source": "00_supremacy.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_supremacy_war_games",
+  "name": "War Games",
+  "aliases": [
+   "tr_supremacy_war_games"
+  ],
+  "summary": "Fleet Command Limit increased by +20 and Admiral Level Cap is increased by 2.",
+  "fields": {
+   "tree": "Supremacy",
+   "modifier": "command_limit_mult = 0.10 country_commander_cap_add = 1 commander_initial_skill = 1",
+   "possible": "has_tradition = tr_supremacy_master_shipwrights has_tradition = tr_supremacy_fleet_logistical_corps",
+   "source": "00_supremacy.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_synchronicity_adopt",
+  "name": "Synchronicity Traditions",
+  "aliases": [
+   "tr_synchronicity_adopt"
+  ],
+  "summary": "Unlocks Agenda: Growth Revision Unlocks Agenda: Cognitive Revision Unlocks Agenda: Regulatory Revision Unlocks Agenda: Legion Revision Pop Upkeep: -10%",
+  "fields": {
+   "tree": "Synchronicity",
+   "source": "00_synchronicity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_synchronicity_cloned_organs",
+  "name": "Cloned Organs",
+  "aliases": [
+   "tr_synchronicity_cloned_organs"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Synchronicity",
+   "modifier": "leader_lifespan_add = 10 negative_traits_country = -1",
+   "source": "00_synchronicity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_synchronicity_collective_reasoning",
+  "name": "Collective Reasoning",
+  "aliases": [
+   "tr_synchronicity_collective_reasoning"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Synchronicity",
+   "modifier": "planet_stability_add = 3 planetary_ascension_cost_mult = -0.1",
+   "possible": "has_tradition = tr_synchronicity_integrated_preservation",
+   "source": "00_synchronicity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_synchronicity_finish",
+  "name": "Synchronicity Traditions Finished",
+  "aliases": [
+   "tr_synchronicity_finish"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Synchronicity",
+   "modifier": "planetary_ascension_effect_mult = 0.25 ascension_perks_add = 1",
+   "source": "00_synchronicity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_synchronicity_harmonious_directives",
+  "name": "Flexible Thought Routines",
+  "aliases": [
+   "tr_synchronicity_harmonious_directives"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Synchronicity",
+   "modifier": "country_edict_fund_add = 50 restored_node_bonus_skill = 1",
+   "possible": "has_tradition = tr_synchronicity_kinship_gestalt has_tradition = tr_synchronicity_cloned_organs",
+   "source": "00_synchronicity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_synchronicity_integrated_preservation",
+  "name": "Integrated Preservation",
+  "aliases": [
+   "tr_synchronicity_integrated_preservation"
+  ],
+  "summary": "… reduce Deviancy by 3 Automatic Resettlement Chance: +30%",
+  "fields": {
+   "tree": "Synchronicity",
+   "modifier": "planet_resettlement_unemployed_mult = 0.3",
+   "source": "00_synchronicity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_synchronicity_kinship_gestalt",
+  "name": "Synchronized Agents",
+  "aliases": [
+   "tr_synchronicity_kinship_gestalt"
+  ],
+  "summary": "Leader Upkeep reduced by 20%.",
+  "fields": {
+   "tree": "Synchronicity",
+   "modifier": "leaders_upkeep_mult = -0.20 empire_size_pops_mult = -0.05 refugee_attraction = 0.20",
+   "source": "00_synchronicity.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_synthetics_adopt",
+  "name": "Synthetic Traditions",
+  "aliases": [
+   "tr_synthetics_adopt"
+  ],
+  "summary": "Starts a Situation to transform the founding species into a Mechanical species.",
+  "fields": {
+   "tree": "Synthetics",
+   "on_enabled": "if = { limit = { NOT = { has_technology = tech_synthetic_leaders } } add_tech_progress = { tech = tech_synthetic_leaders progress = 0.1 } } hidden_effect = { if = { limit = { has_origin = origin_synt…",
+   "possible": "if = { limit = { has_origin = origin_synthetic_fertility } has_technology = tech_synthetic_workers } else_if = { limit = { has_machine_age_dlc = yes …",
+   "source": "01_synthetics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_synthetics_finish",
+  "name": "Synthetic Traditions Finished",
+  "aliases": [
+   "tr_synthetics_finish"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Synthetics",
+   "modifier": "ROBOT_species_trait_picks_add = 2 ROBOT_species_trait_points_add = 2 modify_species_cost_mult = -0.5 ascension_perks_add = 1",
+   "on_enabled": "hidden_effect = { refresh_portraits = character if = { limit = { has_machine_age_dlc = yes has_country_flag = synthetics_traditions_unlocked } country_event = { id = synth.500 days = 180 } } else = {…",
+   "source": "01_synthetics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_synthetics_maintenance_protocols",
+  "name": "Maintenance Protocols",
+  "aliases": [
+   "tr_synthetics_maintenance_protocols"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Synthetics",
+   "modifier": "pop_amenities_usage_robotic_mult = -0.1",
+   "possible": "if = { limit = { has_machine_age_dlc = no } if = { limit = { is_synthetic_empire = yes } } else = { custom_tooltip = { fail_text = REQUIRES_SYNTHETIC…",
+   "source": "01_synthetics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_synthetics_optimization_algorithms",
+  "name": "Optimization Algorithms",
+  "aliases": [
+   "tr_synthetics_optimization_algorithms"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Synthetics",
+   "modifier": "robotic_pop_bonus_workforce_mult = 0.10",
+   "possible": "has_tradition = tr_synthetics_maintenance_protocols",
+   "source": "01_synthetics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_synthetics_power_systems",
+  "name": "Efficient Power Systems",
+  "aliases": [
+   "tr_synthetics_power_systems"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Synthetics",
+   "modifier": "planet_pops_robotics_upkeep_mult = -0.25 planet_pop_assemblers_upkeep_mult = -0.25",
+   "possible": "has_tradition = tr_synthetics_transubstatiation_synthesis",
+   "source": "01_synthetics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_synthetics_prefabricated_components",
+  "name": "Prefabricated Components",
+  "aliases": [
+   "tr_synthetics_prefabricated_components"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Synthetics",
+   "possible": "has_tradition = tr_synthetics_transubstatiation_synthesis",
+   "source": "01_synthetics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_synthetics_transubstatiation_synthesis",
+  "name": "Transubstantiation Synthesis",
+  "aliases": [
+   "tr_synthetics_transubstatiation_synthesis"
+  ],
+  "summary": "Grants access to the Assimilation Citizenship Species Right, allowing future additions to the populace to be turned into Synths.",
+  "fields": {
+   "tree": "Synthetics",
+   "on_enabled": "set_country_flag = synth_assimilation",
+   "possible": "if = { limit = { has_machine_age_dlc = no } if = { limit = { is_synthetic_empire = yes } } else = { custom_tooltip = { fail_text = REQUIRES_SYNTHETIC…",
+   "source": "01_synthetics.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_unyielding_adopt",
+  "name": "Fortification Traditions",
+  "aliases": [
+   "tr_unyielding_adopt"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Fortification",
+   "modifier": "country_starbase_capacity_add = 2 starbase_upgrade_speed_mult = 0.50",
+   "source": "00_unyielding.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_unyielding_bulwark_of_harmony",
+  "name": "Bulwark of Harmony",
+  "aliases": [
+   "tr_unyielding_bulwark_of_harmony"
+  ],
+  "summary": "While in a defensive war with another empire, Ship Build Speed is increased by +33%. In addition, the Ship Fire Rate is increased by +15% for ships within your borders.",
+  "fields": {
+   "tree": "Fortification",
+   "modifier": "starbase_defensive_war_ship_build_speed_mult = 0.33 ship_home_territory_fire_rate_mult = 0.15",
+   "possible": "has_tradition = tr_unyielding_never_surrender",
+   "source": "00_unyielding.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_unyielding_defensive_zeal",
+  "name": "Defensive Zeal",
+  "aliases": [
+   "tr_unyielding_defensive_zeal"
+  ],
+  "summary": "Starbases and Defense Platforms have their Hull Points and Damage increased by 33%.",
+  "fields": {
+   "tree": "Fortification",
+   "modifier": "shipclass_starbase_damage_mult = 0.33 shipclass_starbase_hull_mult = 0.33 shipclass_military_station_damage_mult = 0.33 shipclass_military_station_hull_mult = 0.33",
+   "source": "00_unyielding.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_unyielding_finish",
+  "name": "Fortification Traditions Finished",
+  "aliases": [
+   "tr_unyielding_finish"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Fortification",
+   "modifier": "starbase_defense_platform_capacity_mult = 0.5 starbases_upkeep_mult = -0.20 ascension_perks_add = 1",
+   "source": "00_unyielding.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_unyielding_fortress_doctrine",
+  "name": "Fortress Doctrine",
+  "aliases": [
+   "tr_unyielding_fortress_doctrine"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Fortification",
+   "modifier": "country_starbase_capacity_add = 2 starbase_upgrade_cost_mult = -0.50",
+   "possible": "has_tradition = tr_unyielding_defensive_zeal",
+   "source": "00_unyielding.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_unyielding_never_surrender",
+  "name": "Never Surrender",
+  "aliases": [
+   "tr_unyielding_never_surrender"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Fortification",
+   "modifier": "planet_orbital_bombardment_damage = -0.25 country_war_exhaustion_mult = -0.25 country_hostile_claim_influence_cost_mult = 0.25",
+   "possible": "has_tradition = tr_unyielding_resistance_is_frugal",
+   "source": "00_unyielding.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_unyielding_resistance_is_frugal",
+  "name": "Resistance is Frugal",
+  "aliases": [
+   "tr_unyielding_resistance_is_frugal"
+  ],
+  "summary": "defense army Defense Armies now produce 0.5 unity Unity.",
+  "fields": {
+   "tree": "Fortification",
+   "modifier": "army_defense_health_mult = 0.25",
+   "source": "00_unyielding.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_versatility_adaptive_programming",
+  "name": "Adaptive Programming",
+  "aliases": [
+   "tr_versatility_adaptive_programming"
+  ],
+  "summary": "Market Fee reduced by 10%.",
+  "fields": {
+   "tree": "Versatility",
+   "modifier": "country_trade_fee = -0.10",
+   "possible": "has_tradition = tr_versatility_universal_compatibility",
+   "source": "00_versatility.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_versatility_adopt",
+  "name": "Versatility Traditions",
+  "aliases": [
+   "tr_versatility_adopt"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Versatility",
+   "modifier": "planet_pop_assemblers_upkeep_mult = -0.10",
+   "source": "00_versatility.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_versatility_finish",
+  "name": "Versatility Traditions Finished",
+  "aliases": [
+   "tr_versatility_finish"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Versatility",
+   "modifier": "planet_pop_assemblers_energy_upkeep_add = 1 planet_pop_assembly_mult = 0.10 ascension_perks_add = 1",
+   "source": "00_versatility.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_versatility_material_analysis",
+  "name": "Material Analysis",
+  "aliases": [
+   "tr_versatility_material_analysis"
+  ],
+  "summary": "Upkeep of all job Pop Jobs is reduced by 5%.",
+  "fields": {
+   "tree": "Versatility",
+   "modifier": "planet_jobs_upkeep_mult = -0.05",
+   "possible": "has_tradition = tr_versatility_spatial_optimization",
+   "source": "00_versatility.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_versatility_operational_proxies",
+  "name": "Operational Proxies",
+  "aliases": [
+   "tr_versatility_operational_proxies"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Versatility",
+   "modifier": "planet_maintenance_drones_unity_produces_add = 1",
+   "possible": "has_tradition = tr_versatility_spatial_optimization",
+   "source": "00_versatility.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_versatility_spatial_optimization",
+  "name": "Spatial Optimization",
+  "aliases": [
+   "tr_versatility_spatial_optimization"
+  ],
+  "summary": "pop Pop Housing Usage reduced by 10%.",
+  "fields": {
+   "tree": "Versatility",
+   "modifier": "pop_amenities_usage_no_happiness_mult = -0.10",
+   "source": "00_versatility.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_versatility_universal_compatibility",
+  "name": "Universal Compatibility",
+  "aliases": [
+   "tr_versatility_universal_compatibility"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Versatility",
+   "modifier": "country_synthetic_trust_cap_add = 50 envoys_add = 1",
+   "source": "00_versatility.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_virtuality_1",
+  "name": "Clustered Capacity",
+  "aliases": [
+   "tr_virtuality_1"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Virtuality",
+   "on_enabled": "hidden_effect = { country_event = { id = cybernetics.5040 } update_node_portraits_if_gestalt_effect = yes }",
+   "source": "01_virtuality.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_virtuality_2",
+  "name": "Data-Driven Logic Loops",
+  "aliases": [
+   "tr_virtuality_2"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Virtuality",
+   "modifier": "planet_researchers_upkeep_mult = -0.1 planet_bureaucrats_upkeep_mult = -0.1 leaders_upkeep_mult = -0.15 empire_size_pops_mult = -0.10 empire_size_colonies_mult = 1",
+   "source": "01_virtuality.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_virtuality_3",
+  "name": "Capacity Synchronization",
+  "aliases": [
+   "tr_virtuality_3"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Virtuality",
+   "possible": "has_tradition = tr_virtuality_1 has_tradition = tr_virtuality_2",
+   "source": "01_virtuality.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_virtuality_4",
+  "name": "Productivity Simulations",
+  "aliases": [
+   "tr_virtuality_4"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Virtuality",
+   "possible": "has_tradition = tr_virtuality_3",
+   "source": "01_virtuality.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_virtuality_5",
+  "name": "Advanced Server Maintenance",
+  "aliases": [
+   "tr_virtuality_5"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Virtuality",
+   "possible": "has_tradition = tr_virtuality_3",
+   "source": "01_virtuality.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_virtuality_adopt",
+  "name": "Virtuality Traditions",
+  "aliases": [
+   "tr_virtuality_adopt"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Virtuality",
+   "modifier": "intel_decryption_add = 2 intel_encryption_add = 2 planet_metallurgists_alloys_produces_mult = -0.15",
+   "on_enabled": "hidden_effect = { country_event = { id = cybernetics.5035 } update_node_portraits_if_gestalt_effect = yes }",
+   "possible": "custom_tooltip = { fail_text = REQUIRES_FINISHED_TRANSFORMATION has_country_flag = virtuality_traditions_unlocked }",
+   "source": "01_virtuality.txt"
+  }
+ },
+ {
+  "id": "tradition:tr_virtuality_finish",
+  "name": "Virtuality Traditions Finished",
+  "aliases": [
+   "tr_virtuality_finish"
+  ],
+  "summary": "",
+  "fields": {
+   "tree": "Virtuality",
+   "modifier": "ascension_perks_add = 1",
+   "on_enabled": "hidden_effect = { country_event = { id = cybernetics.5046 } country_event = { id = timeline.84 } update_node_portraits_if_gestalt_effect = yes every_owned_planet = { carrier_event = { id = cybernetic…",
+   "source": "01_virtuality.txt"
+  }
+ }
+]

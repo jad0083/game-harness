@@ -296,8 +296,8 @@ async fn main() -> Result<()> {
                 let lookup = |kind: &str, name: &str| match c.lookup(kind, name) {
                     Some(r) => println!("{}", r.render()),
                     None if c.count(kind) == 0 => println!(
-                        "No {} records loaded: corpora/<game>/data/{}.json is missing. Run the extractor (see corpora/galciv4/data/README.md).",
-                        kind, kind
+                        "No {} records loaded: {}/data/{}.json is missing. Run the extractor (see {}/data/README.md).",
+                        kind, c.dir.display(), kind, c.dir.display()
                     ),
                     None => println!("No {} named {:?}. Try `corpus search {:?}`.", kind, name, name),
                 };
@@ -328,7 +328,7 @@ async fn main() -> Result<()> {
                         println!("Manifest:  {} hotkeys, {} screens, {} macros",
                             c.manifest.hotkeys.len(), c.manifest.screens.len(), c.manifest.macros.len());
                         if st.records.is_empty() {
-                            println!("Records:   none (data/*.json not generated yet — see corpora/galciv4/data/README.md)");
+                            println!("Records:   none (data/*.json not generated yet — see {}/data/README.md)", c.dir.display());
                         } else {
                             for (kind, n) in &st.records {
                                 println!("Records:   {:<12} {}", kind, n);

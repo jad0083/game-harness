@@ -1,0 +1,2307 @@
+[
+ {
+  "id": "district:district_arcology_administrative",
+  "name": "Administrative Arcology",
+  "aliases": [
+   "district_arcology_administrative"
+  ],
+  "summary": "Where hordes of administrative staff and bureaucrats toil away to meet the growing expectations of an expanding bureaucracy.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_arcology_arms_industry",
+  "name": "Foundry Arcology",
+  "aliases": [
+   "district_arcology_arms_industry"
+  ],
+  "summary": "Geared towards military industries, this ecumenopolis district is filled with the roar of smelters and the clang of metallurgies.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_arcology_civilian_industry",
+  "name": "Factory Arcology",
+  "aliases": [
+   "district_arcology_civilian_industry"
+  ],
+  "summary": "Workshops filled with artisans and civilian industries line the stacked streets of this district.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_arcology_fortress",
+  "name": "Fortress Arcology",
+  "aliases": [
+   "district_arcology_fortress"
+  ],
+  "summary": "Integrating command structures, planetary bunkers, training facilities, and officer housing, these mountain-sized fortresses will outlast the planet itself.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_arcology_housing",
+  "name": "Residential Arcology",
+  "aliases": [
+   "district_arcology_housing"
+  ],
+  "summary": "With these special ecumenopolistic city districts, integrated vertical architecture is utilized to maximize population density over land surface area.",
+  "fields": {
+   "cost": {
+    "alloys": 500
+   },
+   "upkeep": {
+    "energy": 5
+   },
+   "build_time": 600,
+   "potential": "uses_district_set = city_world NAND = { is_capital = yes owner = { has_menace_perk = menp_behemoth_mind_meld } }",
+   "planet_modifier": "planet_housing_add = 1500",
+   "source": "01_arcology_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_arcology_leisure",
+  "name": "Leisure Arcology",
+  "aliases": [
+   "district_arcology_leisure"
+  ],
+  "summary": "Where denizens of the ecumenopolis unwind in their leisure hours.",
+  "fields": {
+   "cost": {
+    "minerals": 1000,
+    "exotic_gases": 50
+   },
+   "upkeep": {
+    "energy": 5,
+    "exotic_gases": 1
+   },
+   "build_time": 600,
+   "potential": "always = no",
+   "planet_modifier": "planet_housing_add = 1000",
+   "source": "01_arcology_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_arcology_mixed_industry",
+  "name": "Industrial Arcology",
+  "aliases": [
+   "district_arcology_mixed_industry"
+  ],
+  "summary": "With smelters, factories, fabrication facilities, and artisan workshops large as cities, this arcology can produce anything and everything.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_arcology_organic_housing",
+  "name": "Sanctuary Arcology",
+  "aliases": [
+   "district_arcology_organic_housing"
+  ],
+  "summary": "These towering structures feature AI-controlled artificial climates that mimic any environment a sapient organic being could require. The organics within have their housing needs completely fulfilled.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_arcology_research",
+  "name": "Research Arcology",
+  "aliases": [
+   "district_arcology_research"
+  ],
+  "summary": "Capitals of scientific discovery, these arcologies employ researchers from every field of study, no matter how niche.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_arcology_research_engineering",
+  "name": "Engineering Arcology",
+  "aliases": [
+   "district_arcology_research_engineering"
+  ],
+  "summary": "An arcology of motion, with constantly shifting buildings and a sky filled with experimental crafts.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_arcology_research_physics",
+  "name": "Physics Arcology",
+  "aliases": [
+   "district_arcology_research_physics"
+  ],
+  "summary": "With particle accelerators under the streets like an ancient sewer network, quantum computers, and field manipulators as tall as skyscrapers, it might seem as if the laws of reality are being violated.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_arcology_research_society",
+  "name": "Biology Arcology",
+  "aliases": [
+   "district_arcology_research_society"
+  ],
+  "summary": "Passing through the sprawling parks of this arcology might seem like a visit to a zoo, but in reality, the visitors are also a subject, observed in hermetically sealed labs scattered in plain sight.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_arcology_spiritualist",
+  "name": "Ecclesiastical Arcology",
+  "aliases": [
+   "district_arcology_spiritualist"
+  ],
+  "summary": "A true testament to our devotion, these spires may hold the key to the spiritual well-being of our empire.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_arcology_trade",
+  "name": "Commercial Arcology",
+  "aliases": [
+   "district_arcology_trade"
+  ],
+  "summary": "A sprawling arcology of warehouses and logistics, where business is conducted, deals are struck, and the trading floor reaches beyond the horizon. If you can not find it here, it can't be bought.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_arcology_urban_1",
+  "name": "Unspecialized Arcology",
+  "aliases": [
+   "district_arcology_urban_1"
+  ],
+  "summary": "Towering arcologies lie waiting, stretching into the clouds, awaiting a designated purpose.",
+  "fields": {
+   "cost": {
+    "alloys": 500
+   },
+   "upkeep": {
+    "energy": 5
+   },
+   "build_time": 600,
+   "potential": "uses_district_set = city_world",
+   "planet_modifier": "planet_housing_add = 1500",
+   "source": "01_arcology_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_arcology_urban_2",
+  "name": "Unspecialized Arcology",
+  "aliases": [
+   "district_arcology_urban_2"
+  ],
+  "summary": "Towering arcologies lie waiting, stretching into the clouds, awaiting a designated purpose.",
+  "fields": {
+   "cost": {
+    "alloys": 500
+   },
+   "upkeep": {
+    "energy": 5
+   },
+   "build_time": 600,
+   "potential": "uses_district_set = city_world",
+   "planet_modifier": "planet_housing_add = 1500",
+   "source": "01_arcology_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_arcology_urban_3",
+  "name": "Unspecialized Arcology",
+  "aliases": [
+   "district_arcology_urban_3"
+  ],
+  "summary": "Towering arcologies lie waiting, stretching into the clouds, awaiting a designated purpose.",
+  "fields": {
+   "cost": {
+    "alloys": 500
+   },
+   "upkeep": {
+    "energy": 5
+   },
+   "build_time": 600,
+   "potential": "uses_district_set = city_world",
+   "planet_modifier": "planet_housing_add = 1500",
+   "source": "01_arcology_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_ark_basic",
+  "name": "Arkship Deck",
+  "aliases": [
+   "district_ark_basic"
+  ],
+  "summary": "These decks of the arkship are currently used for housing, but could be developed for more specialized purposes.",
+  "fields": {
+   "cost": {
+    "alloys": 150
+   },
+   "upkeep": {
+    "energy": 1
+   },
+   "build_time": 240,
+   "prerequisites": [
+    "Industrial Agriculture"
+   ],
+   "potential": "uses_district_set = nomad",
+   "source": "07_ark_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_ark_basic_society",
+  "name": "Arkship Deck",
+  "aliases": [
+   "district_ark_basic_society"
+  ],
+  "summary": "These decks of the arkship are currently used for housing, but could be developed for more specialized purposes.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_ark_city",
+  "name": "Habitation Decks",
+  "aliases": [
+   "district_ark_city"
+  ],
+  "summary": "Vast sections of the ship given over to housing, commerce, and community. The living heart of a civilization in motion.",
+  "fields": {
+   "cost": {
+    "alloys": 250
+   },
+   "upkeep": {
+    "energy": 2
+   },
+   "build_time": 600,
+   "potential": "OR = { NOT = { exists = owner } uses_district_set = nomad } NAND = { is_capital = yes owner = { has_menace_perk = menp_behemoth_mind_meld } }",
+   "allow": "uses_district_set = nomad",
+   "planet_modifier": "planet_housing_add = 2500",
+   "source": "07_ark_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_ark_engine_bypass",
+  "name": "Engine Bypass",
+  "aliases": [
+   "district_ark_engine_bypass"
+  ],
+  "summary": "Instead of relying on traditional cooling methods, the Engine Bypass directly reuses excess energy to fuel the ship's engines, at the cost of reduced energy credit production.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_ark_food",
+  "name": "Ark Hydroponics",
+  "aliases": [
+   "district_ark_food"
+  ],
+  "summary": "Onboard hydroponic farms will grow the sustenance of our people.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_ark_forever_cruise",
+  "name": "Service District",
+  "aliases": [
+   "district_ark_forever_cruise"
+  ],
+  "summary": "Luxury on the surface, strain beneath the shine.",
+  "fields": {
+   "cost": {
+    "alloys": 150
+   },
+   "upkeep": {
+    "energy": 1
+   },
+   "build_time": 240,
+   "potential": "uses_district_set = nomad exists = owner owner = { has_origin = origin_forever_cruise NOT = { has_country_flag = forever_cruise_over } }",
+   "allow": "owner = { OR = { has_technology = tech_holo_entertainment AND = { is_gestalt = yes has_origin = origin_forever_cruise } } }",
+   "source": "07_ark_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_ark_forever_cruise_engineering",
+  "name": "Service District",
+  "aliases": [
+   "district_ark_forever_cruise_engineering"
+  ],
+  "summary": "Luxury on the surface, strain beneath the shine.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_ark_generator",
+  "name": "Reactor Arrays",
+  "aliases": [
+   "district_ark_generator"
+  ],
+  "summary": "Banks of high-output reactors lining the lower hull, channeling raw power to every system aboard.",
+  "fields": {
+   "cost": {
+    "alloys": 150
+   },
+   "upkeep": {
+    "energy": 1
+   },
+   "build_time": 240,
+   "prerequisites": [
+    "High-Energy Capacitors"
+   ],
+   "potential": "uses_district_set = nomad",
+   "planet_modifier": "planet_housing_add = 200",
+   "source": "07_ark_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_ark_generator_physics",
+  "name": "Reactor Arrays",
+  "aliases": [
+   "district_ark_generator_physics"
+  ],
+  "summary": "Banks of high-output reactors lining the lower hull, channeling raw power to every system aboard.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_ark_harvest",
+  "name": "Harvesting Bay",
+  "aliases": [
+   "district_ark_harvest"
+  ],
+  "summary": "Reserving dedicated arkship space for the collection and triage of harvested resources offers a higher yield thanks to the opportunity of in-gravity operations and the use of more streamlined machinery.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_ark_military",
+  "name": "Ordnance Engineering",
+  "aliases": [
+   "district_ark_military"
+  ],
+  "summary": "Armored engineering sections housing the specialists who maintain the Arkship's weapons, defense systems, and hull integrity.",
+  "fields": {
+   "cost": {
+    "alloys": 150
+   },
+   "upkeep": {
+    "energy": 1
+   },
+   "build_time": 240,
+   "prerequisites": [
+    "Planetary Defenses"
+   ],
+   "potential": "uses_district_set = nomad exists = owner owner = { NAND = { has_origin = origin_forever_cruise NOT = { has_country_flag = forever_cruise_over } } }",
+   "source": "07_ark_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_ark_military_engineering",
+  "name": "Ordnance Engineering",
+  "aliases": [
+   "district_ark_military_engineering"
+  ],
+  "summary": "Armored engineering sections housing the specialists who maintain the Arkship's weapons, defense systems, and hull integrity.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_ark_military_industrial",
+  "name": "Ordnance Engineering",
+  "aliases": [
+   "district_ark_military_industrial"
+  ],
+  "summary": "Armored engineering sections housing the specialists who maintain the Arkship's weapons, defense systems, and hull integrity.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_ark_shield_overloader",
+  "name": "Shield Overclocker",
+  "aliases": [
+   "district_ark_shield_overloader"
+  ],
+  "summary": "The injection of exotic materials in the reactors allows us to run shields beyond their normal parameters.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_ark_waystation_trade",
+  "name": "Waystation Trade Hub",
+  "aliases": [
+   "district_ark_waystation_trade"
+  ],
+  "summary": "Commerce flows through these decks as specialists coordinate the movement of goods between our Waystations and the markets of settled space.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_battle_thrall",
+  "name": "Battle Thrall District",
+  "aliases": [
+   "district_battle_thrall"
+  ],
+  "summary": "Utilitarian barracks and deadly training grounds designed to forge the most ferocious battle thralls.",
+  "fields": {
+   "cost": {
+    "minerals": 250
+   },
+   "upkeep": {
+    "energy": 2
+   },
+   "build_time": 480,
+   "prerequisites": [
+    "Industrial Base"
+   ],
+   "potential": "always = no",
+   "allow": "hidden_trigger = { has_modifier = slave_colony } custom_tooltip = { fail_text = arcology_project_construction_fail_tt NOT = { has_carrier_flag = arcology_project_construction } }",
+   "planet_modifier": "planet_housing_add = 200",
+   "source": "00_urban_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_betharian_hive",
+  "name": "Mining Cluster",
+  "aliases": [
+   "district_betharian_hive"
+  ],
+  "summary": "These mining towns and resource extraction centers drill deep into the mantle to access mineral deposits.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_city",
+  "name": "City District",
+  "aliases": [
+   "district_city"
+  ],
+  "summary": "These dense urban centers provide large amounts of housing and office space for clerical workers.",
+  "fields": {
+   "cost": {
+    "minerals": 250
+   },
+   "upkeep": {
+    "energy": 2
+   },
+   "build_time": 480,
+   "potential": "OR = { NOT = { exists = owner } AND = { exists = owner owner = { OR = { is_regular_empire = yes AND = { is_country_type = primitive is_hive_empire = no } is_country_type = mechanocalibrator } } } } N…",
+   "allow": "hidden_trigger = { is_special_colony_type = no } custom_tooltip = { fail_text = arcology_project_construction_fail_tt NOT = { has_carrier_flag = arcology_project_construction } }",
+   "planet_modifier": "planet_housing_add = 1000",
+   "source": "00_urban_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_cosmogenesis_goverment",
+  "name": "Synaptic Processing Unit",
+  "aliases": [
+   "district_cosmogenesis_goverment"
+  ],
+  "summary": "The quantic nature of the processing units of the Synaptic Lathe allows it to parallelize computing across multiple dimensional layers.",
+  "fields": {
+   "potential": "uses_district_set = cosmogenesis_world exists = owner owner = { has_ascension_perk = ap_cosmogenesis }",
+   "source": "00_special_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_cosmogenesis_world_logic",
+  "name": "Ampliative Speculator",
+  "aliases": [
+   "district_cosmogenesis_world_logic"
+  ],
+  "summary": "A wonder of dialectical metaphysics, this district uses Neural Chips to ascertain the truth within formal statements about reality.",
+  "fields": {
+   "cost": {
+    "alloys": 1000,
+    "advanced_logic": 500
+   },
+   "upkeep": {
+    "energy": 50
+   },
+   "build_time": 250,
+   "potential": "uses_district_set = cosmogenesis_world exists = owner owner = { has_ascension_perk = ap_cosmogenesis }",
+   "planet_modifier": "planet_housing_add = 1500 pc_cosmogenesis_world_max_buildings_add = 1",
+   "source": "00_special_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_cosmogenesis_world_science",
+  "name": "Neural Gate",
+  "aliases": [
+   "district_cosmogenesis_world_science"
+  ],
+  "summary": "The assembled imaginative faculties of countless individuals allow us to run swift simulations of advanced hypotheses.",
+  "fields": {
+   "cost": {
+    "alloys": 1000,
+    "advanced_logic": 500
+   },
+   "upkeep": {
+    "energy": 50
+   },
+   "build_time": 250,
+   "potential": "uses_district_set = cosmogenesis_world exists = owner owner = { has_ascension_perk = ap_cosmogenesis }",
+   "planet_modifier": "planet_housing_add = 1500 pc_cosmogenesis_world_max_buildings_add = 1",
+   "source": "00_special_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_craglands",
+  "name": "Communal Biome",
+  "aliases": [
+   "district_craglands"
+  ],
+  "summary": "These lush groves provide shelter to symbionts who simultaneously form and depend on the Wilderness.",
+  "fields": {
+   "cost": {
+    "minerals": 500
+   },
+   "upkeep": {
+    "energy": 2
+   },
+   "build_time": 480,
+   "potential": "uses_district_set = standard exists = owner owner = { is_wilderness_empire = yes } NAND = { is_capital = yes owner = { has_menace_perk = menp_behemoth_mind_meld } }",
+   "planet_modifier": "planet_housing_add = 100",
+   "source": "05_wilderness_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_crashed_slaver_ship",
+  "name": "Scavenger Site",
+  "aliases": [
+   "district_crashed_slaver_ship"
+  ],
+  "summary": "While debris from the crash is scattered across a massive area, enough of the ship has survived that scavenging it for parts may be of value.",
+  "fields": {
+   "upkeep": {
+    "energy": 2
+   },
+   "potential": "uses_district_set = standard has_deposit = d_crashed_slaver_ship if = { limit = { exists = owner } NAND = { is_capital = yes owner = { has_menace_perk = menp_behemoth_mind_meld } } owner = { is_wilde…",
+   "allow": "hidden_trigger = { NAND = { has_modifier = resort_colony has_modifier = slave_colony } } custom_tooltip = { fail_text = arcology_project_construction_fail_tt NOT = { has_carrier_flag = arcology_proje…",
+   "planet_modifier": "planet_housing_add = 1000",
+   "source": "00_urban_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_farming",
+  "name": "Agriculture District",
+  "aliases": [
+   "district_farming"
+  ],
+  "summary": "Land set aside for cultivation, either through the growing of crops or animal husbandry.",
+  "fields": {
+   "cost": {
+    "minerals": 150
+   },
+   "upkeep": {
+    "energy": 1
+   },
+   "build_time": 240,
+   "prerequisites": [
+    "Industrial Agriculture"
+   ],
+   "potential": "OR = { uses_district_set = standard uses_district_set = shattered_ring_world } NOT = { AND = { exists = owner owner = { is_ai = yes country_uses_food = no } } } OR = { NOT = { exists = owner } AND = …",
+   "allow": "custom_tooltip = { fail_text = arcology_project_construction_fail_tt NOT = { has_carrier_flag = arcology_project_construction } }",
+   "source": "02_rural_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_farming_exotic_gases",
+  "name": "Agriculture District",
+  "aliases": [
+   "district_farming_exotic_gases"
+  ],
+  "summary": "Land set aside for cultivation, either through the growing of crops or animal husbandry.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_farming_society",
+  "name": "Agriculture District",
+  "aliases": [
+   "district_farming_society"
+  ],
+  "summary": "Land set aside for cultivation, either through the growing of crops or animal husbandry.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_generator",
+  "name": "Generator District",
+  "aliases": [
+   "district_generator"
+  ],
+  "summary": "Rows of massive power plants that generate large amounts of energy which can then be used or converted into energy credits.",
+  "fields": {
+   "cost": {
+    "minerals": 150
+   },
+   "upkeep": {
+    "energy": 1
+   },
+   "build_time": 240,
+   "prerequisites": [
+    "High-Energy Capacitors"
+   ],
+   "potential": "OR = { uses_district_set = standard uses_district_set = shattered_ring_world } OR = { NOT = { exists = owner } AND = { exists = owner owner = { is_wilderness_empire = no } } } NOT = { has_modifier = …",
+   "allow": "custom_tooltip = { fail_text = arcology_project_construction_fail_tt NOT = { has_carrier_flag = arcology_project_construction } }",
+   "planet_modifier": "planet_housing_add = 200",
+   "source": "02_rural_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_generator_physics",
+  "name": "Generator District",
+  "aliases": [
+   "district_generator_physics"
+  ],
+  "summary": "Rows of massive power plants that generate large amounts of energy which can then be used or converted into energy credits.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_generator_volatile_motes",
+  "name": "Generator District",
+  "aliases": [
+   "district_generator_volatile_motes"
+  ],
+  "summary": "Rows of massive power plants that generate large amounts of energy which can then be used or converted into energy credits.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_geothermal",
+  "name": "Geothermal Power Plant",
+  "aliases": [
+   "district_geothermal"
+  ],
+  "summary": "Exploits the churning heat deep inside the planet to provide power to the colony.",
+  "fields": {
+   "cost": {
+    "minerals": 150
+   },
+   "upkeep": {
+    "energy": 1
+   },
+   "build_time": 240,
+   "prerequisites": [
+    "High-Energy Capacitors"
+   ],
+   "potential": "uses_district_set = volcanic_world",
+   "allow": "hidden_trigger = { NOT = { has_modifier = resort_colony } } custom_tooltip = { fail_text = arcology_project_construction_fail_tt NOT = { has_carrier_flag = arcology_project_construction } }",
+   "planet_modifier": "planet_housing_add = 200",
+   "source": "02_rural_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_hab_energy",
+  "name": "Reactor District",
+  "aliases": [
+   "district_hab_energy"
+  ],
+  "summary": "Habitat-side energy production plant districts generate energy credits, as well as provide power to the arcology on which they are built.",
+  "fields": {
+   "cost": {
+    "alloys": 150
+   },
+   "upkeep": {
+    "energy": 2,
+    "alloys": 0.25
+   },
+   "build_time": 360,
+   "prerequisites": [
+    "High-Energy Capacitors"
+   ],
+   "potential": "uses_district_set = habitat",
+   "planet_modifier": "planet_housing_add = 300",
+   "source": "03_habitat_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_hab_energy_exotic_gases",
+  "name": "Reactor District",
+  "aliases": [
+   "district_hab_energy_exotic_gases"
+  ],
+  "summary": "Habitat-side energy production plant districts generate energy credits, as well as provide power to the arcology on which they are built.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_hab_energy_volatile_motes",
+  "name": "Reactor District",
+  "aliases": [
+   "district_hab_energy_volatile_motes"
+  ],
+  "summary": "Habitat-side energy production plant districts generate energy credits, as well as provide power to the arcology on which they are built.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_hab_housing",
+  "name": "Habitation District",
+  "aliases": [
+   "district_hab_housing"
+  ],
+  "summary": "A habitat housing district provides comfortable, if compact residences for its population.",
+  "fields": {
+   "cost": {
+    "alloys": 150
+   },
+   "upkeep": {
+    "energy": 2,
+    "alloys": 0.25
+   },
+   "build_time": 360,
+   "potential": "uses_district_set = habitat NAND = { is_capital = yes owner = { has_menace_perk = menp_behemoth_mind_meld } }",
+   "planet_modifier": "planet_housing_add = 1000",
+   "source": "03_habitat_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_hab_mining",
+  "name": "Astro-Mining Bay",
+  "aliases": [
+   "district_hab_mining"
+  ],
+  "summary": "With no natural resources of their own, Habitats depend on these facilities to mine and process minerals from nearby asteroids and planetoids.",
+  "fields": {
+   "cost": {
+    "alloys": 150
+   },
+   "upkeep": {
+    "energy": 2,
+    "alloys": 0.25
+   },
+   "build_time": 360,
+   "prerequisites": [
+    "Mechanized Mining"
+   ],
+   "potential": "uses_district_set = habitat",
+   "planet_modifier": "planet_housing_add = 300",
+   "source": "03_habitat_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_hab_mining_rare_crystals",
+  "name": "Astro-Mining Bay",
+  "aliases": [
+   "district_hab_mining_rare_crystals"
+  ],
+  "summary": "With no natural resources of their own, Habitats depend on these facilities to mine and process minerals from nearby asteroids and planetoids.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_hab_science",
+  "name": "Research District",
+  "aliases": [
+   "district_hab_science"
+  ],
+  "summary": "Centers of scientific discovery, these habitat districts employ researchers from myriad fields of study.",
+  "fields": {
+   "cost": {
+    "alloys": 150
+   },
+   "upkeep": {
+    "energy": 2,
+    "alloys": 0.25
+   },
+   "build_time": 360,
+   "prerequisites": [
+    "Scientific Method"
+   ],
+   "potential": "uses_district_set = habitat",
+   "allow": "hidden_trigger = { OR = { NOT = { exists = owner } owner = { has_technology = tech_basic_science_lab_1 } has_deposit = d_payback_habitat_research } }",
+   "planet_modifier": "planet_housing_add = 300",
+   "source": "03_habitat_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_hive",
+  "name": "Hive Cluster",
+  "aliases": [
+   "district_hive"
+  ],
+  "summary": "These towering spires are where the drones gather when not working to rejuvenate and consume nutrients.",
+  "fields": {
+   "cost": {
+    "minerals": 250
+   },
+   "upkeep": {
+    "energy": 2
+   },
+   "build_time": 480,
+   "potential": "exists = owner owner = { OR = { is_hive_empire = yes is_country_type = swarm } is_wilderness_empire = no } OR = { uses_district_set = standard uses_district_set = volcanic_world uses_district_set = h…",
+   "allow": "hidden_trigger = { NOT = { has_modifier = resort_colony } } custom_tooltip = { fail_text = arcology_project_construction_fail_tt NOT = { has_carrier_flag = arcology_project_construction } }",
+   "planet_modifier": "planet_housing_add = 1200",
+   "source": "00_urban_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_hive_1",
+  "name": "Unspecialized Cluster",
+  "aliases": [
+   "district_hive_1"
+  ],
+  "summary": "An unspecialized hive cluster, used for housing drones until the mind decides upon a new purpose.",
+  "fields": {
+   "cost": {
+    "minerals": 250
+   },
+   "upkeep": {
+    "energy": 2
+   },
+   "build_time": 480,
+   "potential": "uses_district_set = hive_world",
+   "allow": "custom_tooltip = { fail_text = arcology_project_construction_fail_tt NOT = { has_carrier_flag = arcology_project_construction } }",
+   "planet_modifier": "planet_housing_add = 1200",
+   "source": "00_urban_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_hive_2",
+  "name": "Hive Cluster",
+  "aliases": [
+   "district_hive_2"
+  ],
+  "summary": "These towering spires are where the drones gather when not working to rejuvenate and consume nutrients.",
+  "fields": {
+   "cost": {
+    "minerals": 250
+   },
+   "upkeep": {
+    "energy": 2
+   },
+   "build_time": 480,
+   "potential": "uses_district_set = hive_world",
+   "allow": "custom_tooltip = { fail_text = arcology_project_construction_fail_tt NOT = { has_carrier_flag = arcology_project_construction } }",
+   "planet_modifier": "planet_housing_add = 1200",
+   "source": "00_urban_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_hive_3",
+  "name": "Hive Cluster",
+  "aliases": [
+   "district_hive_3"
+  ],
+  "summary": "These towering spires are where the drones gather when not working to rejuvenate and consume nutrients.",
+  "fields": {
+   "cost": {
+    "minerals": 250
+   },
+   "upkeep": {
+    "energy": 2
+   },
+   "build_time": 480,
+   "potential": "uses_district_set = hive_world",
+   "allow": "custom_tooltip = { fail_text = arcology_project_construction_fail_tt NOT = { has_carrier_flag = arcology_project_construction } }",
+   "planet_modifier": "planet_housing_add = 1200",
+   "source": "00_urban_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_hive_administrative",
+  "name": "Synapse Cluster",
+  "aliases": [
+   "district_hive_administrative"
+  ],
+  "summary": "The will of the Hive is amplified and transmitted through these massive clusters, carefully tended by countless drones.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_hive_energy",
+  "name": "Generator Cluster",
+  "aliases": [
+   "district_hive_energy"
+  ],
+  "summary": "Rows of massive power plants that generate large amounts of energy which can then be used or converted into energy credits.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_hive_exotic_gases",
+  "name": "Agricultural Cluster",
+  "aliases": [
+   "district_hive_exotic_gases"
+  ],
+  "summary": "Domesticated fauna and flora are grown and culled to provide ample sustenance for the Hive's drones in these structures.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_hive_factory",
+  "name": "Factory Cluster",
+  "aliases": [
+   "district_hive_factory"
+  ],
+  "summary": "Ample workshops filled with artisans and consumer industries, capable of crafting any manner of products for individuals.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_hive_food",
+  "name": "Agricultural Cluster",
+  "aliases": [
+   "district_hive_food"
+  ],
+  "summary": "Domesticated fauna and flora are grown and culled to provide ample sustenance for the Hive's drones in these structures.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_hive_fortress",
+  "name": "Fortress Cluster",
+  "aliases": [
+   "district_hive_fortress"
+  ],
+  "summary": "Aggressive instincts made manifest, these clusters contain command pathways, planetary bunkers, training facilities.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_hive_foundry",
+  "name": "Foundry Cluster",
+  "aliases": [
+   "district_hive_foundry"
+  ],
+  "summary": "The beating heart of industrial projects, these clusters echo with the hum of smelters and the clang of metallurgies.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_hive_industrial",
+  "name": "Industrial Cluster",
+  "aliases": [
+   "district_hive_industrial"
+  ],
+  "summary": "With the combined output of smelters, factories, fabrication facilities, and artisan workshops all singing in perfect harmony, this cluster can produce anything and everything.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_hive_mining",
+  "name": "Mining Cluster",
+  "aliases": [
+   "district_hive_mining"
+  ],
+  "summary": "These mining towns and resource extraction centers drill deep into the mantle to access mineral deposits.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_hive_research",
+  "name": "Research Cluster",
+  "aliases": [
+   "district_hive_research"
+  ],
+  "summary": "These clusters coordinate the cognition of brain drones, every thought leading to a new discovery.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_hive_research_engineering",
+  "name": "Engineering Cluster",
+  "aliases": [
+   "district_hive_research_engineering"
+  ],
+  "summary": "A nest of esoteric materials testing, quantum chemical synthesis, and nanoscale fabrication, it was once theorized, here it is proven.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_hive_research_physics",
+  "name": "Physics Cluster",
+  "aliases": [
+   "district_hive_research_physics"
+  ],
+  "summary": "These particle accelerators, quantum computers, and field manipulators might seem as if they violate the laws of reality, but that's simply because our hypotheses are outdated.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_hive_research_society",
+  "name": "Biology Cluster",
+  "aliases": [
+   "district_hive_research_society"
+  ],
+  "summary": "Genetic research, neural simulations, psychological profiling, cliodynamic extrapolation, it all leads to the understanding of the whole.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_hive_spawning",
+  "name": "Spawning Cluster",
+  "aliases": [
+   "district_hive_spawning"
+  ],
+  "summary": "Giant spawning pools, cared by drones spawned for this exact purpose, these ensure that the Hive's growth cannot be contained.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_hive_trade",
+  "name": "Logistics Cluster",
+  "aliases": [
+   "district_hive_trade"
+  ],
+  "summary": "With the appropriate stimulation, logistic needs across the Hive can become predictive instead of reactive.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_hive_volatile_motes",
+  "name": "Generator Cluster",
+  "aliases": [
+   "district_hive_volatile_motes"
+  ],
+  "summary": "Rows of massive power plants that generate large amounts of energy which can then be used or converted into energy credits.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_hollow_mountains",
+  "name": "Hollow Mountain",
+  "aliases": [
+   "district_hollow_mountains"
+  ],
+  "summary": "These rocky landscapes are pockmarked with mines dug by hardy symbionts in their search for precious minerals.",
+  "fields": {
+   "cost": {
+    "minerals": 300
+   },
+   "upkeep": {
+    "food": 1
+   },
+   "build_time": 240,
+   "prerequisites": [
+    "Mechanized Mining"
+   ],
+   "potential": "uses_district_set = standard exists = owner owner = { is_wilderness_empire = yes }",
+   "planet_modifier": "job_mining_drone_add = 200 planet_housing_add = 100",
+   "source": "05_wilderness_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_melting",
+  "name": "Magma Conduit",
+  "aliases": [
+   "district_melting"
+  ],
+  "summary": "A series of electromagnetic sieves extracts valuable minerals from the planet's magma flows.",
+  "fields": {
+   "cost": {
+    "minerals": 150
+   },
+   "upkeep": {
+    "energy": 1
+   },
+   "build_time": 240,
+   "prerequisites": [
+    "Mechanized Mining"
+   ],
+   "potential": "uses_district_set = volcanic_world",
+   "allow": "hidden_trigger = { NOT = { has_modifier = resort_colony } } custom_tooltip = { fail_text = arcology_project_construction_fail_tt NOT = { has_carrier_flag = arcology_project_construction } }",
+   "planet_modifier": "planet_housing_add = 200",
+   "source": "02_rural_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_mindlink",
+  "name": "Mindlink Metropolis",
+  "aliases": [
+   "district_mindlink"
+  ],
+  "summary": "Tall spires overshadow population centers, offering volunteers the chance to commune directly with the Beast.",
+  "fields": {
+   "cost": {
+    "food": 1500
+   },
+   "upkeep": {
+    "food": 2
+   },
+   "produces": {
+    "unity": 1.5,
+    "physics_research": 0.5,
+    "society_research": 0.5,
+    "engineering_research": 0.5,
+    "mult": "owner.value:transferred_pops_district_percent"
+   },
+   "build_time": 720,
+   "potential": "exists = owner is_capital = yes owner = { has_menace_perk = menp_behemoth_mind_meld }",
+   "allow": "hidden_trigger = { NOR = { has_modifier = resort_colony has_modifier = penal_colony has_modifier = slave_colony } } custom_tooltip = { fail_text = arcology_project_construction_fail_tt OR = { owner =…",
+   "planet_modifier": "planet_housing_add = 3000",
+   "source": "00_special_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_mining",
+  "name": "Mining District",
+  "aliases": [
+   "district_mining"
+  ],
+  "summary": "These mining towns and resource extraction centers drill deep into the mantle to access mineral deposits.",
+  "fields": {
+   "cost": {
+    "minerals": 150
+   },
+   "upkeep": {
+    "energy": 1
+   },
+   "build_time": 240,
+   "prerequisites": [
+    "Mechanized Mining"
+   ],
+   "potential": "OR = { uses_district_set = standard uses_district_set = shattered_ring_world } OR = { NOT = { exists = owner } AND = { exists = owner owner = { is_wilderness_empire = no } } } NOT = { has_modifier = …",
+   "allow": "custom_tooltip = { fail_text = arcology_project_construction_fail_tt NOT = { has_carrier_flag = arcology_project_construction } }",
+   "planet_modifier": "planet_housing_add = 200",
+   "source": "02_rural_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_mining_betharian",
+  "name": "Mining District",
+  "aliases": [
+   "district_mining_betharian"
+  ],
+  "summary": "These mining towns and resource extraction centers drill deep into the mantle to access mineral deposits.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_mining_engineering",
+  "name": "Mining District",
+  "aliases": [
+   "district_mining_engineering"
+  ],
+  "summary": "These mining towns and resource extraction centers drill deep into the mantle to access mineral deposits.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_mining_physics",
+  "name": "Mining District",
+  "aliases": [
+   "district_mining_physics"
+  ],
+  "summary": "These mining towns and resource extraction centers drill deep into the mantle to access mineral deposits.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_mining_rare_crystals",
+  "name": "Mining District",
+  "aliases": [
+   "district_mining_rare_crystals"
+  ],
+  "summary": "These mining towns and resource extraction centers drill deep into the mantle to access mineral deposits.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_nexus",
+  "name": "Central Nexus",
+  "aliases": [
+   "district_nexus"
+  ],
+  "summary": "Centralized districts from which drones are controlled and deployed to their work assignments.",
+  "fields": {
+   "cost": {
+    "minerals": 250
+   },
+   "upkeep": {
+    "energy": 2
+   },
+   "build_time": 480,
+   "potential": "exists = owner owner = { OR = { is_machine_empire = yes is_country_type = ai_empire } } OR = { uses_district_set = standard uses_district_set = volcanic_world uses_district_set = hive_world uses_dist…",
+   "allow": "hidden_trigger = { NOT = { has_modifier = resort_colony } } custom_tooltip = { fail_text = arcology_project_construction_fail_tt NOT = { has_carrier_flag = arcology_project_construction } }",
+   "planet_modifier": "planet_housing_add = 1100",
+   "source": "00_urban_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_nexus_1",
+  "name": "Unspecialized Nexus",
+  "aliases": [
+   "district_nexus_1"
+  ],
+  "summary": "An unspecialized hub of drone relays, storage and computational power.",
+  "fields": {
+   "cost": {
+    "minerals": 1000
+   },
+   "upkeep": {
+    "energy": 5
+   },
+   "build_time": 600,
+   "potential": "uses_district_set = machine_world",
+   "planet_modifier": "planet_housing_add = 1500",
+   "source": "00_urban_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_nexus_2",
+  "name": "Unspecialized Nexus",
+  "aliases": [
+   "district_nexus_2"
+  ],
+  "summary": "An unspecialized hub of drone relays, storage and computational power.",
+  "fields": {
+   "cost": {
+    "minerals": 1000
+   },
+   "upkeep": {
+    "energy": 5
+   },
+   "build_time": 600,
+   "potential": "uses_district_set = machine_world",
+   "planet_modifier": "planet_housing_add = 1500",
+   "source": "00_urban_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_nexus_3",
+  "name": "Unspecialized Nexus",
+  "aliases": [
+   "district_nexus_3"
+  ],
+  "summary": "An unspecialized hub of drone relays, storage and computational power.",
+  "fields": {
+   "cost": {
+    "minerals": 1000
+   },
+   "upkeep": {
+    "energy": 5
+   },
+   "build_time": 600,
+   "potential": "uses_district_set = machine_world",
+   "planet_modifier": "planet_housing_add = 1500",
+   "source": "00_urban_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_nexus_administrative",
+  "name": "Coordination Nexus",
+  "aliases": [
+   "district_nexus_administrative"
+  ],
+  "summary": "Endless structures filled with server arrays and signal boosters amplify the Core's signals for peak efficiency.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_nexus_betharian",
+  "name": "Mining Nexus",
+  "aliases": [
+   "district_nexus_betharian"
+  ],
+  "summary": "These mining towns and resource extraction centers drill deep into the mantle to access mineral deposits.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_nexus_energy",
+  "name": "Generator Nexus",
+  "aliases": [
+   "district_nexus_energy"
+  ],
+  "summary": "Rows of massive power plants that generate large amounts of energy which can then be used or converted into energy credits.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_nexus_exotic_gases",
+  "name": "Agricultural Nexus",
+  "aliases": [
+   "district_nexus_exotic_gases"
+  ],
+  "summary": "Artificial ecosystems are engineered and controlled to ensure optimal output of any biological resources.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_nexus_factory",
+  "name": "Factory Nexus",
+  "aliases": [
+   "district_nexus_factory"
+  ],
+  "summary": "Tessellated workshops filled with artisans and civilian industries, capable of crafting any manner of consumer products.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_nexus_fortress",
+  "name": "Fortress Nexus",
+  "aliases": [
+   "district_nexus_fortress"
+  ],
+  "summary": "Integrating command structures, planetary bunkers, training facilities, and databases of strategic simulations, these fortresses are buried deep within the planet.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_nexus_foundry",
+  "name": "Foundry Nexus",
+  "aliases": [
+   "district_nexus_foundry"
+  ],
+  "summary": "The beating heart of industrial projects, these nexuses are filled with the roar of smelters and the clang of metallurgies.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_nexus_industrial",
+  "name": "Industrial Nexus",
+  "aliases": [
+   "district_nexus_industrial"
+  ],
+  "summary": "With smelters, factories, fabrication facilities, and artisan workshops synchronized with unparalleled precision, this nexus can produce anything and everything.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_nexus_mining",
+  "name": "Mining Nexus",
+  "aliases": [
+   "district_nexus_mining"
+  ],
+  "summary": "These mining towns and resource extraction centers drill deep into the mantle to access mineral deposits.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_nexus_organic_housing",
+  "name": "Sanctuary Nexus",
+  "aliases": [
+   "district_nexus_organic_housing"
+  ],
+  "summary": "These endless structures feature AI-controlled artificial climates that mimic any environment a sapient organic being could require. The organics within have their housing needs completely fulfilled.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_nexus_rare_crystals",
+  "name": "Mining Nexus",
+  "aliases": [
+   "district_nexus_rare_crystals"
+  ],
+  "summary": "These mining towns and resource extraction centers drill deep into the mantle to access mineral deposits.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_nexus_research",
+  "name": "Research Nexus",
+  "aliases": [
+   "district_nexus_research"
+  ],
+  "summary": "Networked hubs of scientific discovery, these nexuses coordinate researchers from every field of study, no matter how niche.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_nexus_research_engineering",
+  "name": "Engineering Nexus",
+  "aliases": [
+   "district_nexus_research_engineering"
+  ],
+  "summary": "A hub of motion, with constantly shifting buildings and a sky filled with experimental crafts.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_nexus_research_physics",
+  "name": "Physics Nexus",
+  "aliases": [
+   "district_nexus_research_physics"
+  ],
+  "summary": "These particle accelerators, quantum computers, and field manipulators might seem as if they violate the laws of reality, but that's simply because our simulations are outdated.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_nexus_research_society",
+  "name": "Biology Nexus",
+  "aliases": [
+   "district_nexus_research_society"
+  ],
+  "summary": "Genetic research, neural simulations, psychological profiling, cliodynamic extrapolation, it all leads to the understanding of the whole.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_nexus_spiritualist",
+  "name": "Ecclesiastical Nexus",
+  "aliases": [
+   "district_nexus_spiritualist"
+  ],
+  "summary": "A true testament to our devotion, these temples are as organized as our codebase.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_nexus_trade",
+  "name": "Logistics Nexus",
+  "aliases": [
+   "district_nexus_trade"
+  ],
+  "summary": "Server clusters dedicated to monitoring supply lines, galactic market fluctuations, and predictive algorithms sit side-by-side with towering warehouses.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_nexus_volatile_motes",
+  "name": "Generator Nexus",
+  "aliases": [
+   "district_nexus_volatile_motes"
+  ],
+  "summary": "Rows of massive power plants that generate large amounts of energy which can then be used or converted into energy credits.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_orchard_forests",
+  "name": "Orchard Forest",
+  "aliases": [
+   "district_orchard_forests"
+  ],
+  "summary": "Regions set aside for cultivation and hunting, growing everything from cellular food stock to edible grains and prey symbionts.",
+  "fields": {
+   "cost": {
+    "minerals": 300
+   },
+   "upkeep": {
+    "energy": 1
+   },
+   "build_time": 240,
+   "prerequisites": [
+    "Industrial Agriculture"
+   ],
+   "potential": "uses_district_set = standard exists = owner owner = { is_wilderness_empire = yes }",
+   "allow": "NOT = { has_modifier = resort_colony }",
+   "planet_modifier": "job_agri_drone_add = 200 planet_housing_add = 100",
+   "source": "05_wilderness_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_orders_demesne",
+  "name": "Order's Demesne",
+  "aliases": [
+   "district_orders_demesne"
+  ],
+  "summary": "The Order shall not be limited to any keep or star base! Nay, only with vast open spaces - worlds and systems bountiful with resources and good hunting - can they truly thrive.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_photosynthesis_fields",
+  "name": "Photosynthesis Field",
+  "aliases": [
+   "district_photosynthesis_fields"
+  ],
+  "summary": "Grasping photosynthetic fronds form the backbone of these vast energy-collecting regions.",
+  "fields": {
+   "cost": {
+    "minerals": 300
+   },
+   "upkeep": {
+    "energy": 1
+   },
+   "build_time": 240,
+   "prerequisites": [
+    "High-Energy Capacitors"
+   ],
+   "potential": "uses_district_set = standard exists = owner owner = { is_wilderness_empire = yes }",
+   "planet_modifier": "job_technician_drone_add = 200 planet_housing_add = 100",
+   "source": "05_wilderness_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_polytechnic",
+  "name": "Thermotechnic Forum",
+  "aliases": [
+   "district_polytechnic"
+  ],
+  "summary": "This hub of interdisciplinary collaboration and education helps the colony manage the geological dynamism of the planet.",
+  "fields": {
+   "cost": {
+    "minerals": 450
+   },
+   "upkeep": {
+    "energy": 3
+   },
+   "build_time": 250,
+   "prerequisites": [
+    "Scientific Method"
+   ],
+   "potential": "uses_district_set = volcanic_world",
+   "allow": "hidden_trigger = { OR = { NOT = { exists = owner } owner = { has_technology = tech_basic_science_lab_1 } } } custom_tooltip = { fail_text = arcology_project_construction_fail_tt NOT = { has_carrier_f…",
+   "planet_modifier": "planet_housing_add = 200",
+   "source": "02_rural_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_prison",
+  "name": "Prison District",
+  "aliases": [
+   "district_prison"
+  ],
+  "summary": "Cells, guard towers, high walls, and security checkpoints. All are designed for the containment and rehabilitation of society's detainees.",
+  "fields": {
+   "cost": {
+    "minerals": 250
+   },
+   "upkeep": {
+    "energy": 2
+   },
+   "build_time": 480,
+   "potential": "exists = owner owner = { is_regular_empire = yes } has_modifier = penal_colony",
+   "allow": "hidden_trigger = { has_modifier = penal_colony } custom_tooltip = { fail_text = arcology_project_construction_fail_tt NOT = { has_carrier_flag = arcology_project_construction } }",
+   "planet_modifier": "planet_housing_add = 300",
+   "source": "00_urban_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_prison_industrial",
+  "name": "Prison Industrial District",
+  "aliases": [
+   "district_prison_industrial"
+  ],
+  "summary": "Workshops, factories, surveillance systems, and fortified barriers for detainment and productive labor within the bounds of security and order.",
+  "fields": {
+   "cost": {
+    "minerals": 250
+   },
+   "upkeep": {
+    "energy": 2
+   },
+   "build_time": 480,
+   "prerequisites": [
+    "Industrial Base"
+   ],
+   "potential": "always = no",
+   "allow": "NOR = { has_modifier = resort_colony has_modifier = slave_colony }",
+   "planet_modifier": "planet_housing_add = 200",
+   "source": "00_urban_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_rare_crystals_hive",
+  "name": "Mining Cluster",
+  "aliases": [
+   "district_rare_crystals_hive"
+  ],
+  "summary": "These mining towns and resource extraction centers drill deep into the mantle to access mineral deposits.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_resort",
+  "name": "Accommodation District",
+  "aliases": [
+   "district_resort"
+  ],
+  "summary": "Resorts, retreats, and pleasure domes. Everything required for rest, indulgence, and the perfect escape.",
+  "fields": {
+   "cost": {
+    "minerals": 250
+   },
+   "upkeep": {
+    "energy": 2
+   },
+   "build_time": 480,
+   "potential": "exists = owner owner = { is_regular_empire = yes } has_modifier = resort_colony",
+   "allow": "hidden_trigger = { NOT = { has_modifier = slave_colony } } custom_tooltip = { fail_text = arcology_project_construction_fail_tt NOT = { has_carrier_flag = arcology_project_construction } }",
+   "planet_modifier": "planet_housing_add = 500",
+   "source": "00_urban_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_resort_1",
+  "name": "Attraction Districts",
+  "aliases": [
+   "district_resort_1"
+  ],
+  "summary": "A vibrant space where experiences are crafted, memories are made, and countless wonders await.",
+  "fields": {
+   "cost": {
+    "minerals": 250
+   },
+   "upkeep": {
+    "energy": 2
+   },
+   "build_time": 480,
+   "potential": "exists = owner owner = { is_regular_empire = yes } has_modifier = resort_colony",
+   "allow": "custom_tooltip = { fail_text = arcology_project_construction_fail_tt NOT = { has_carrier_flag = arcology_project_construction } }",
+   "planet_modifier": "planet_housing_add = 500",
+   "source": "00_urban_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_resort_2",
+  "name": "Attraction Districts",
+  "aliases": [
+   "district_resort_2"
+  ],
+  "summary": "A vibrant space where experiences are crafted, memories are made, and countless wonders await.",
+  "fields": {
+   "cost": {
+    "minerals": 250
+   },
+   "upkeep": {
+    "energy": 2
+   },
+   "build_time": 480,
+   "potential": "exists = owner owner = { is_regular_empire = yes } has_modifier = resort_colony",
+   "allow": "custom_tooltip = { fail_text = arcology_project_construction_fail_tt NOT = { has_carrier_flag = arcology_project_construction } }",
+   "planet_modifier": "planet_housing_add = 500",
+   "source": "00_urban_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_resort_3",
+  "name": "Attraction Districts",
+  "aliases": [
+   "district_resort_3"
+  ],
+  "summary": "A vibrant space where experiences are crafted, memories are made, and countless wonders await.",
+  "fields": {
+   "cost": {
+    "minerals": 250
+   },
+   "upkeep": {
+    "energy": 2
+   },
+   "build_time": 480,
+   "potential": "exists = owner owner = { is_regular_empire = yes } has_modifier = resort_colony",
+   "allow": "custom_tooltip = { fail_text = arcology_project_construction_fail_tt NOT = { has_carrier_flag = arcology_project_construction } }",
+   "planet_modifier": "planet_housing_add = 500",
+   "source": "00_urban_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_resort_hunting_ground",
+  "name": "Grand Hunting Park",
+  "aliases": [
+   "district_resort_hunting_ground"
+  ],
+  "summary": "Covering a large part of the planet, this vast reserve offers curated encounters with some of the most majestic, and dangerous, fauna in the galaxy.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_resort_museum",
+  "name": "Memory Hall",
+  "aliases": [
+   "district_resort_museum"
+  ],
+  "summary": "A dedicated space for the preservation and exhibition of culture, history, and thought. Here the past is remembered in service of the future.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_resort_proving_grounds",
+  "name": "Proving Grounds",
+  "aliases": [
+   "district_resort_proving_grounds"
+  ],
+  "summary": "A grand display of spectacle and skill. Here, visitors come to test themselves or watch others bleed.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_resort_restoration_enclave",
+  "name": "Restoration Enclave",
+  "aliases": [
+   "district_resort_restoration_enclave"
+  ],
+  "summary": "A quiet space shaped for healing, where advanced medicine and peaceful design work in concert.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_resort_spiritual_retreat",
+  "name": "Sacred Retreat",
+  "aliases": [
+   "district_resort_spiritual_retreat"
+  ],
+  "summary": "Far from the noise of crowed urban center, this secluded sanctuary offers silence, contemplation, and connection to the eternal.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_resort_zoo",
+  "name": "Xenobiological Zoo",
+  "aliases": [
+   "district_resort_zoo"
+  ],
+  "summary": "Across carefully crafted biomes and containment fields, life from distant worlds flourishes for the entertainment of our citizens.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_ring_world_administrative",
+  "name": "Administrative Segment",
+  "aliases": [
+   "district_ring_world_administrative"
+  ],
+  "summary": "Where hordes of administrative staff and bureaucrats toil away to meet the growing expectations of an expanding bureaucracy. The irony of this circular work on a Ring World seems lost on them.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_ring_world_energy",
+  "name": "Generator Segment",
+  "aliases": [
+   "district_ring_world_energy"
+  ],
+  "summary": "Rows of massive power plants that generate large amounts of energy which can then be used or converted into energy credits.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_ring_world_factory",
+  "name": "Factory Segment",
+  "aliases": [
+   "district_ring_world_factory"
+  ],
+  "summary": "Highways of workshops filled with artisans and civilian industries roll skywards, and vanish around the curve of the Ring.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_ring_world_food",
+  "name": "Agricultural Segment",
+  "aliases": [
+   "district_ring_world_food"
+  ],
+  "summary": "Endless seas of hydroponic farmland stretch around this Ring World section, perfectly regulated climates and gravity guarantee a bountiful harvest.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_ring_world_fortress",
+  "name": "Fortress Segment",
+  "aliases": [
+   "district_ring_world_fortress"
+  ],
+  "summary": "Integrating command structures, planetary bunkers, training facilities, and officer housing, these fortresses dot the Ring like the teeth of a vicious predator.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_ring_world_foundry",
+  "name": "Foundry Segment",
+  "aliases": [
+   "district_ring_world_foundry"
+  ],
+  "summary": "The beating heart of industrial projects, this Ring segment is filled with the roar of smelters and the clang of metallurgies.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_ring_world_industrial",
+  "name": "Industrial Segment",
+  "aliases": [
+   "district_ring_world_industrial"
+  ],
+  "summary": "With smelters, factories, fabrication facilities, and artisan workshops visible upwards the Ring, it can produce anything and everything.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_ring_world_organic_housing",
+  "name": "Sanctuary Segment",
+  "aliases": [
+   "district_ring_world_organic_housing"
+  ],
+  "summary": "These endless structures feature AI-controlled artificial climates that mimic any environment a sapient organic being could require. The organics within have their housing needs completely fulfilled.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_ring_world_research",
+  "name": "Research Segment",
+  "aliases": [
+   "district_ring_world_research"
+  ],
+  "summary": "Centers of scientific discovery, coordinating with different labs across the Ring, afford the staffing researchers from myriad fields of study incredible opportunities.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_ring_world_research_engineering",
+  "name": "Engineering Segment",
+  "aliases": [
+   "district_ring_world_research_engineering"
+  ],
+  "summary": "Living in the pinnacle of their field, here are esoteric materials testing, quantum chemical synthesis, and nanoscale fabrication being developed in flawless environments.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_ring_world_research_physics",
+  "name": "Physics Segment",
+  "aliases": [
+   "district_ring_world_research_physics"
+  ],
+  "summary": "These particle accelerators, quantum computers, and field manipulators might seem as if they violate the laws of reality, but that's what people thought of Ring Worlds before.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_ring_world_research_society",
+  "name": "Biology Segment",
+  "aliases": [
+   "district_ring_world_research_society"
+  ],
+  "summary": "Genetic research, neural simulations, psychological profiling, cliodynamic extrapolation, it all leads to the understanding of the whole.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_ring_world_spiritualist",
+  "name": "Ecclesiastical Segment",
+  "aliases": [
+   "district_ring_world_spiritualist"
+  ],
+  "summary": "A true testament to our devotion, these temples surround the star like sacred jewels.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_ring_world_trade",
+  "name": "Commercial Segment",
+  "aliases": [
+   "district_ring_world_trade"
+  ],
+  "summary": "Where business is conducted, deals are struck, and the trading floor reaches around the star. If you can not find it here, it can't be bought.",
+  "fields": {
+   "potential": "always = no",
+   "source": "06_swap_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_rw_city",
+  "name": "City Segment",
+  "aliases": [
+   "district_rw_city"
+  ],
+  "summary": "Urban centers fill this Ring World section, providing large amounts of housing and office space for clerical workers.",
+  "fields": {
+   "cost": {
+    "minerals": 1000
+   },
+   "upkeep": {
+    "energy": 5
+   },
+   "build_time": 360,
+   "potential": "exists = owner owner = { is_gestalt = no } uses_district_set = ring_world NAND = { is_capital = yes owner = { has_menace_perk = menp_behemoth_mind_meld } }",
+   "planet_modifier": "planet_housing_add = 2500",
+   "source": "04_ringworld_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_rw_commercial",
+  "name": "Commercial Segment",
+  "aliases": [
+   "district_rw_commercial"
+  ],
+  "summary": "Civilian industry and infrastructure populate this Ring World segment dedicated to commerce.",
+  "fields": {
+   "cost": {
+    "minerals": 1000,
+    "rare_crystals": 50
+   },
+   "upkeep": {
+    "energy": 5,
+    "rare_crystals": 2
+   },
+   "build_time": 360,
+   "potential": "always = no",
+   "source": "04_ringworld_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_rw_farming",
+  "name": "Agricultural Segment",
+  "aliases": [
+   "district_rw_farming"
+  ],
+  "summary": "Endless seas of farmland stretch across this Ring World section, growing massive amounts of food.",
+  "fields": {
+   "cost": {
+    "minerals": 1000,
+    "volatile_motes": 50
+   },
+   "upkeep": {
+    "energy": 5,
+    "volatile_motes": 2
+   },
+   "build_time": 360,
+   "potential": "always = no",
+   "source": "04_ringworld_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_rw_generator",
+  "name": "Generator Segment",
+  "aliases": [
+   "district_rw_generator"
+  ],
+  "summary": "Reactors fill this Ring World section, focused on the generation of energy.",
+  "fields": {
+   "cost": {
+    "minerals": 1000,
+    "rare_crystals": 50
+   },
+   "upkeep": {
+    "energy": 5,
+    "rare_crystals": 2
+   },
+   "build_time": 360,
+   "potential": "always = no",
+   "source": "04_ringworld_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_rw_hive",
+  "name": "Hive Segment",
+  "aliases": [
+   "district_rw_hive"
+  ],
+  "summary": "Towering spires stretch across this Ring World section for drones to gather when not working to rejuvenate and consume nutrients.",
+  "fields": {
+   "cost": {
+    "minerals": 1000
+   },
+   "upkeep": {
+    "energy": 5
+   },
+   "build_time": 360,
+   "potential": "exists = owner owner = { is_hive_empire = yes } uses_district_set = ring_world NAND = { is_capital = yes owner = { has_menace_perk = menp_behemoth_mind_meld } }",
+   "planet_modifier": "planet_housing_add = 3000",
+   "source": "04_ringworld_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_rw_nexus",
+  "name": "Nexus Segment",
+  "aliases": [
+   "district_rw_nexus"
+  ],
+  "summary": "Efficient districts fill this Ring World section, provide locations for drones to be serviced and repaired before they are deployed to their work assignments.",
+  "fields": {
+   "cost": {
+    "minerals": 1000
+   },
+   "upkeep": {
+    "energy": 5
+   },
+   "build_time": 360,
+   "potential": "exists = owner owner = { is_machine_empire = yes } uses_district_set = ring_world NAND = { is_capital = yes owner = { has_menace_perk = menp_behemoth_mind_meld } }",
+   "planet_modifier": "planet_housing_add = 2500 job_technician_drone_add = 100",
+   "source": "04_ringworld_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_rw_science",
+  "name": "Research Segment",
+  "aliases": [
+   "district_rw_science"
+  ],
+  "summary": "Research facilities of all kinds fill this Ring World segment.",
+  "fields": {
+   "cost": {
+    "minerals": 1000,
+    "exotic_gases": 50
+   },
+   "upkeep": {
+    "energy": 5,
+    "exotic_gases": 2
+   },
+   "build_time": 360,
+   "prerequisites": [
+    "Scientific Method"
+   ],
+   "potential": "always = no",
+   "allow": "hidden_trigger = { OR = { NOT = { exists = owner } owner = { has_technology = tech_basic_science_lab_1 } } }",
+   "source": "04_ringworld_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_rw_urban_1",
+  "name": "Unspecialized Segment",
+  "aliases": [
+   "district_rw_urban_1"
+  ],
+  "summary": "Unspecialized Ring World segments, used as housing until new facilities are ready.",
+  "fields": {
+   "cost": {
+    "minerals": 1000
+   },
+   "upkeep": {
+    "energy": 5
+   },
+   "build_time": 360,
+   "potential": "exists = owner uses_district_set = ring_world",
+   "planet_modifier": "planet_housing_add = 2500",
+   "source": "04_ringworld_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_rw_urban_2",
+  "name": "Unspecialized Segment",
+  "aliases": [
+   "district_rw_urban_2"
+  ],
+  "summary": "Unspecialized Ring World segments, used as housing until new facilities are ready.",
+  "fields": {
+   "cost": {
+    "minerals": 1000
+   },
+   "upkeep": {
+    "energy": 5
+   },
+   "build_time": 360,
+   "potential": "exists = owner uses_district_set = ring_world",
+   "planet_modifier": "planet_housing_add = 2500",
+   "source": "04_ringworld_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_rw_urban_3",
+  "name": "Unspecialized Segment",
+  "aliases": [
+   "district_rw_urban_3"
+  ],
+  "summary": "Unspecialized Ring World segments, used as housing until new facilities are ready.",
+  "fields": {
+   "cost": {
+    "minerals": 1000
+   },
+   "upkeep": {
+    "energy": 5
+   },
+   "build_time": 360,
+   "potential": "exists = owner uses_district_set = ring_world",
+   "planet_modifier": "planet_housing_add = 2500",
+   "source": "04_ringworld_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_slave",
+  "name": "Slave Domicile District",
+  "aliases": [
+   "district_slave"
+  ],
+  "summary": "Endless slums of towering, densely packed housing are designed to hold the maximum number of individuals with minimal upkeep.",
+  "fields": {
+   "cost": {
+    "minerals": 250
+   },
+   "upkeep": {
+    "energy": 2
+   },
+   "build_time": 480,
+   "potential": "exists = owner owner = { is_regular_empire = yes } has_modifier = slave_colony",
+   "allow": "hidden_trigger = { has_modifier = slave_colony } custom_tooltip = { fail_text = arcology_project_construction_fail_tt NOT = { has_carrier_flag = arcology_project_construction } }",
+   "planet_modifier": "planet_housing_add = 1000",
+   "source": "00_urban_districts.txt"
+  }
+ },
+ {
+  "id": "district:district_srw_commercial",
+  "name": "Trade District",
+  "aliases": [
+   "district_srw_commercial"
+  ],
+  "summary": "A district of offices and factories where goods are manufactured and sold.",
+  "fields": {
+   "cost": {
+    "minerals": 150
+   },
+   "upkeep": {
+    "energy": 1
+   },
+   "build_time": 240,
+   "potential": "always = no exists = owner owner = { is_regular_empire = yes } uses_district_set = shattered_ring_world",
+   "allow": "hidden_trigger = { NOT = { has_modifier = resort_colony } } custom_tooltip = { fail_text = arcology_project_construction_fail_tt NOT = { has_carrier_flag = arcology_project_construction } }",
+   "planet_modifier": "planet_housing_add = 200",
+   "source": "00_urban_districts.txt"
+  }
+ }
+]

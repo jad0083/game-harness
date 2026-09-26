@@ -1,0 +1,3090 @@
+[
+ {
+  "id": "edict:aggregated_memory",
+  "name": "Aggregated Memory",
+  "aliases": [
+   "aggregated_memory"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "council_agenda_progress_speed = 0.15 councilor_exp_gain = 0.10",
+   "potential": "has_country_flag = driven_memory_aggregator has_machine_age_dlc = yes",
+   "source": "04_machine_age_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:animatus",
+  "name": "Animatus",
+  "aliases": [
+   "animatus"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "sr_zro": 5,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "ship_hull_regen_add_perc = 0.005 ship_armor_regen_add_perc = 0.005 ship_evasion_mult = 0.1 ship_fire_rate_mult = 0.1",
+   "potential": "has_country_flag = shroud_3200_happened",
+   "source": "06_shroud_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:annihilation_of_energy",
+  "name": "Annihilation of Energy",
+  "aliases": [
+   "annihilation_of_energy"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "energy": 200,
+    "exotic_gases": 30,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "psionic_aura_intensity_mult = 0.25",
+   "potential": "has_country_flag = reached_eotc_situation_stage3",
+   "source": "06_shroud_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:annihilation_of_matter",
+  "name": "Annihilation of Matter",
+  "aliases": [
+   "annihilation_of_matter"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "minerals": 200,
+    "alloys": 100,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "psionic_aura_intensity_mult = 0.25",
+   "potential": "has_country_flag = reached_eotc_situation_stage3",
+   "source": "06_shroud_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:architectural_renaissance",
+  "name": "Decree: Architectural Renaissance",
+  "aliases": [
+   "architectural_renaissance"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 75,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "megastructure_build_speed_mult = 0.50 country_megastructure_build_cap_add = 1 planet_building_build_speed_mult = 1.00",
+   "potential": "has_technology = tech_ascension_theory is_nomadic = no",
+   "allow": "has_technology = tech_mega_engineering",
+   "source": "02_ambitions.txt"
+  }
+ },
+ {
+  "id": "edict:architectural_renaissance_nomad",
+  "name": "Decree: Nomadic Renaissance",
+  "aliases": [
+   "architectural_renaissance_nomad"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 75,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "megastructure_build_speed_mult = 0.50 country_starbase_capacity_mult = 0.5 planet_building_build_speed_mult = 1.00",
+   "potential": "has_technology = tech_ascension_theory is_nomadic = yes",
+   "allow": "has_technology = tech_mega_engineering",
+   "source": "02_ambitions.txt"
+  }
+ },
+ {
+  "id": "edict:astral_binding",
+  "name": "Astral Binding",
+  "aliases": [
+   "astral_binding"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "astral_threads": 25,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "pop_bonus_workforce_mult = 0.05",
+   "potential": "has_country_flag = action_planar_mastery_activated",
+   "allow": "NOT = { resource_stockpile_compare = { resource = astral_threads value < 10 } }",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:astral_cloaking",
+  "name": "Astral Cloaking",
+  "aliases": [
+   "astral_cloaking"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "astral_threads": 5,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "ship_cloaking_strength_add = 1",
+   "potential": "has_country_flag = astral_cloaking_available",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:astral_shielding",
+  "name": "Astral Shielding",
+  "aliases": [
+   "astral_shielding"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "astral_threads": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "ship_shield_mult = 0.10 ship_shield_hardening_add = 0.25",
+   "potential": "has_country_flag = action_planar_mastery_activated",
+   "allow": "NOT = { resource_stockpile_compare = { resource = astral_threads value < 10 } }",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:auto_hunker_down",
+  "name": "Hunker Down Protocols",
+  "aliases": [
+   "auto_hunker_down"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "effect": "custom_tooltip = edict_auto_hunker_down_tt every_planet_within_border = { limit = { solar_system = { has_star_flag = storm_system } } select_decision = { name = decision_hunker_down } }",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:automated_disinfection",
+  "name": "Automated Disinfection",
+  "aliases": [
+   "automated_disinfection"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "energy": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "pop_amenities_usage_mult = -0.05 pop_environment_tolerance = 0.05",
+   "potential": "has_astral_planes_dlc = yes has_country_flag = edict_automated_disinfection",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:baryonic_insight",
+  "name": "Baryonic Insight",
+  "aliases": [
+   "baryonic_insight"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "sr_dark_matter": 1,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "country_physics_research_produces_mult = 0.1",
+   "potential": "is_dark_consortium_empire = yes",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:battle_royale",
+  "name": "Battle Royale",
+  "aliases": [
+   "battle_royale"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "pop_cat_specialist_bonus_workforce_mult = 0.15 pop_cat_worker_bonus_workforce_mult = 0.15 pop_cat_specialist_happiness = -0.15 pop_cat_worker_happiness = -0.15",
+   "potential": "is_oligarchic_authority = yes has_country_flag = cyber_individualist",
+   "source": "04_machine_age_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:beasts_burden",
+  "name": "Beasts of Burden",
+  "aliases": [
+   "beasts_burden"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "farmer_jobs_bonus_workforce_mult = 0.10 planet_jobs_worker_produces_mult = 0.05 pop_slave_bonus_workforce_mult = 0.05",
+   "potential": "has_modifier = primal_calling_exploit_modifier",
+   "source": "05_grand_archive_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:behemoth_alloys_augmentation",
+  "name": "Behemoth Augmentation: Alloys",
+  "aliases": [
+   "behemoth_alloys_augmentation"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "alloys": 25,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "custom_tooltip = behemoth_alloys_augmentation_tt shipsize_behemoth_01_armor_mult = 0.15 shipsize_behemoth_02_armor_mult = 0.15 shipsize_behemoth_03_armor_mult = 0.15 shipsize_behemoth_04_armor_mult = 0.15",
+   "potential": "has_country_flag = behemoth_mutation_machine",
+   "source": "06_biogenesis_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:behemoth_living_metal_augmentation",
+  "name": "Behemoth Augmentation: Living Metal",
+  "aliases": [
+   "behemoth_living_metal_augmentation"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "sr_living_metal": 2,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "custom_tooltip = behemoth_living_metal_augmentation_tt shipsize_behemoth_01_armor_hardening_add = 0.4 shipsize_behemoth_02_armor_hardening_add = 0.4 shipsize_behemoth_03_armor_hardening_add = 0.4 shipsize_behemoth_04_armor_hardening_add = 0.4",
+   "potential": "has_country_flag = behemoth_mutation_machine",
+   "source": "06_biogenesis_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:behemoth_nanite_augmentation",
+  "name": "Behemoth Augmentation: Nanites",
+  "aliases": [
+   "behemoth_nanite_augmentation"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "nanites": 5,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "custom_tooltip = behemoth_nanite_augmentation_tt shipsize_behemoth_01_armor_regen_add_perc = 0.15 shipsize_behemoth_02_armor_regen_add_perc = 0.15 shipsize_behemoth_03_armor_regen_add_perc = 0.15 shipsize_behemoth_04_armor_regen_add_perc = 0.15",
+   "potential": "has_country_flag = behemoth_mutation_machine",
+   "source": "06_biogenesis_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:biological_overdrive",
+  "name": "Biological Overdrive",
+  "aliases": [
+   "biological_overdrive"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "space_fauna_ship_fire_rate_mult = 0.15",
+   "potential": "has_modifier = primal_calling_feed_modifier",
+   "source": "05_grand_archive_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:bureau_of_espionage",
+  "name": "Bureau of Espionage",
+  "aliases": [
+   "bureau_of_espionage"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "envoys_add = 1 intel_decryption_add = 2 add_base_country_intel = 10 spy_network_levels_add = 10",
+   "potential": "has_comms_with_alien_empire = yes is_gestalt = no",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:capacity_subsidies",
+  "name": "Capacity Subsidies",
+  "aliases": [
+   "capacity_subsidies"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 20,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "technician_jobs_bonus_workforce_mult = 0.20 planet_technician_trade_upkeep_add = 0.50",
+   "potential": "is_wilderness_empire = no",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:capacity_subsidies_wilderness",
+  "name": "Capacity Subsidies",
+  "aliases": [
+   "capacity_subsidies_wilderness"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 20,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "planet_technician_produces_mult = 0.20 planet_technician_trade_upkeep_add = 0.50",
+   "potential": "is_wilderness_empire = yes",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:centrifugal_siphoning",
+  "name": "Centrifugal Siphoning",
+  "aliases": [
+   "centrifugal_siphoning"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 5,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "planet_metallurgists_alloys_produces_add = -1 planet_metallurgists_sr_living_metal_produces_add = 0.25",
+   "potential": "is_galvanic_empire = yes",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:choral_harmony",
+  "name": "Choral Harmony",
+  "aliases": [
+   "choral_harmony"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "cyborg_pop_bonus_workforce_mult = 0.10",
+   "potential": "has_country_flag = driven_neural_chorus has_machine_age_dlc = yes",
+   "source": "04_machine_age_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:clearing_motes",
+  "name": "Volatile Land Clearance",
+  "aliases": [
+   "clearing_motes"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "volatile_motes": 0.5,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "deposit_blockers_cost_mult = -0.25 planet_clear_blocker_speed_mult = 0.25",
+   "potential": "OR = { has_resource = { type = volatile_motes amount > 0 } has_edict = clearing_motes } is_wilderness_empire = no is_nomadic = no",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:clearing_motes_nomad",
+  "name": "Volatile Compartment Reclamation",
+  "aliases": [
+   "clearing_motes_nomad"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "volatile_motes": 0.5,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "deposit_blockers_cost_mult = -0.25 planet_clear_blocker_speed_mult = 0.25",
+   "potential": "OR = { has_resource = { type = volatile_motes amount > 0 } has_edict = clearing_motes_nomad } is_nomadic = yes",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:clearing_motes_wilderness",
+  "name": "Volatile Land Clearance",
+  "aliases": [
+   "clearing_motes_wilderness"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "volatile_motes": 0.5,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "deposit_blockers_cost_mult = -0.25 planet_clear_blocker_speed_mult = 0.25",
+   "potential": "OR = { has_resource = { type = volatile_motes amount > 0 } has_edict = clearing_motes } is_wilderness_empire = yes",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:covert_analysis_algorithm",
+  "name": "Covert Analysis Algorithm",
+  "aliases": [
+   "covert_analysis_algorithm"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "envoys_add = 1 intel_decryption_add = 2 add_base_country_intel = 10 spy_network_levels_add = 10",
+   "potential": "has_comms_with_alien_empire = yes is_machine_empire = yes",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:crack_the_whip",
+  "name": "Crack The Whip",
+  "aliases": [
+   "crack_the_whip"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "space_fauna_ship_fire_rate_mult = 0.15",
+   "potential": "has_modifier = primal_calling_hunt_modifier",
+   "source": "05_grand_archive_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:creature_welfare",
+  "name": "Creature Welfare",
+  "aliases": [
+   "creature_welfare"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "space_fauna_ship_hull_mult = 0.15",
+   "potential": "has_modifier = primal_calling_shelter_modifier",
+   "source": "05_grand_archive_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:crystal_focus",
+  "name": "Crystal Focus",
+  "aliases": [
+   "crystal_focus"
+  ],
+  "summary": "Improved transmission mediums modeled after the Crystalline Entities' unique internal structures minimize resistive losses in energy production and distribution.",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "rare_crystals": 1,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "weapon_type_energy_weapon_damage_mult = 0.25",
+   "potential": "OR = { has_resource = { type = rare_crystals amount > 0 } has_edict = crystal_focus }",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:crystalline_sensors",
+  "name": "Crystalline Sensors",
+  "aliases": [
+   "crystalline_sensors"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "rare_crystals": 0.5,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "ship_sensor_range_add = 1",
+   "potential": "OR = { has_resource = { type = rare_crystals amount > 0 } has_edict = crystalline_sensors }",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:customer_insights",
+  "name": "Customer Insights",
+  "aliases": [
+   "customer_insights"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "planet_branch_offices_cost_mult = -0.25 branch_office_value_mult = 0.10",
+   "potential": "is_megacorp = yes has_country_flag = cyber_individualist",
+   "source": "04_machine_age_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:cybernetic_creed_construction_edict",
+  "name": "A Virtuous Hammering",
+  "aliases": [
+   "cybernetic_creed_construction_edict"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "planet_building_build_speed_mult = 0.25 foundry_jobs_bonus_workforce_mult = 0.10 artisan_jobs_bonus_workforce_mult = 0.10",
+   "potential": "is_cyber_creed_advanced_government = yes has_country_flag = cybernetic_creed_construction",
+   "source": "04_machine_age_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:cybernetic_creed_construction_labor",
+  "name": "The Labored Masses",
+  "aliases": [
+   "cybernetic_creed_construction_labor"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "planet_jobs_worker_produces_mult = 0.2 planet_jobs_upkeep_mult = -0.1",
+   "potential": "is_cyber_creed_advanced_government = yes has_country_flag = cybernetic_creed_labor",
+   "source": "04_machine_age_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:cybernetic_creed_general_edict",
+  "name": "The Lessons of Harmony",
+  "aliases": [
+   "cybernetic_creed_general_edict"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "cyborg_pop_bonus_workforce_mult = 0.1 pop_happiness = 0.1 planet_stability_add = 2",
+   "potential": "is_cyber_creed_advanced_government = yes has_country_flag = cybernetic_creed_general",
+   "source": "04_machine_age_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:cybernetic_creed_research_edict",
+  "name": "The Song of Knowledge",
+  "aliases": [
+   "cybernetic_creed_research_edict"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "num_tech_alternatives_add = 1 researcher_jobs_bonus_workforce_mult = 0.1",
+   "potential": "is_cyber_creed_advanced_government = yes has_country_flag = cybernetic_creed_research",
+   "source": "04_machine_age_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:cybernetic_creed_war_edict",
+  "name": "The Crusade of Steel",
+  "aliases": [
+   "cybernetic_creed_war_edict"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "country_naval_cap_mult = 0.1 ship_fire_rate_mult = 0.1 army_attack_damage_mult = 0.1",
+   "potential": "is_cyber_creed_advanced_government = yes has_country_flag = cybernetic_creed_war",
+   "source": "04_machine_age_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:damn_the_consequences",
+  "name": "Damn the Consequences",
+  "aliases": [
+   "damn_the_consequences"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 1,
+    "multiplier": "value:consequences_cost"
+   },
+   "modifier": "custom_tooltip = edict_damn_the_consequences_effects show_only_custom_tooltip = no planet_pops_organics_upkeep_mult = 1",
+   "potential": "has_origin = origin_overtuned",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:dark_matter_forging",
+  "name": "Dark Matter Forging",
+  "aliases": [
+   "dark_matter_forging"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "sr_dark_matter": 3,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "country_alloys_produces_mult = 0.05",
+   "potential": "is_dark_consortium_empire = yes",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:dark_matter_unravelling",
+  "name": "Dark Matter Unravelling",
+  "aliases": [
+   "dark_matter_unravelling"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "sr_dark_matter": 4,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "country_energy_produces_mult = 0.1",
+   "potential": "is_dark_consortium_empire = yes",
+   "allow": "NOT = { resource_stockpile_compare = { resource = sr_dark_matter value < 4 } }",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:decentralized_research",
+  "name": "Decentralized Research",
+  "aliases": [
+   "decentralized_research"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "researcher_jobs_bonus_workforce_mult = -0.10 station_researchers_produces_mult = 1.0",
+   "potential": "is_galactic_curators_empire = yes has_grand_archive_dlc = yes is_nomadic = no",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:decentralized_research_nomad",
+  "name": "Decentralized Research",
+  "aliases": [
+   "decentralized_research_nomad"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "planet_researchers_produces_mult = -0.05 starbase_collected_system_physics_research_mult = 1.0 starbase_collected_system_society_research_mult = 1.0 starbase_collected_system_engineering_research_mult = 1.0",
+   "potential": "is_galactic_curators_empire = yes has_grand_archive_dlc = yes is_nomadic = yes",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:defensive_instincts",
+  "name": "Self-Preservation Instincts",
+  "aliases": [
+   "defensive_instincts"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "space_fauna_ship_hull_mult = 0.15",
+   "potential": "has_modifier = primal_calling_symbiosis_modifier",
+   "source": "05_grand_archive_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:desperate_measures",
+  "name": "Decree: Desperate Measures",
+  "aliases": [
+   "desperate_measures"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 75,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "starbase_defensive_war_ship_build_speed_mult = 1.00 ship_home_territory_fire_rate_mult = 0.40",
+   "potential": "has_technology = tech_ascension_theory is_nomadic = no",
+   "source": "02_ambitions.txt"
+  }
+ },
+ {
+  "id": "edict:dimensional_artificing",
+  "name": "Dimensional Artificing",
+  "aliases": [
+   "dimensional_artificing"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "astral_threads": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "produces": {
+    "minor_artifacts": 5
+   },
+   "modifier": "custom_tooltip = edict_dimensional_artificing_tooltip",
+   "potential": "has_country_flag = action_planar_mastery_activated has_ancrel = yes",
+   "allow": "NOT = { resource_stockpile_compare = { resource = astral_threads value < 10 } }",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:dimensional_collapse",
+  "name": "Dimensional Collapse",
+  "aliases": [
+   "dimensional_collapse"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "sr_zro": 5,
+    "astral_threads": 25,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "psionic_aura_intensity_mult = 0.25",
+   "potential": "has_astral_planes_dlc = yes has_country_flag = reached_eotc_situation_stage3",
+   "source": "06_shroud_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:diplomatic_grants",
+  "name": "Diplomatic Grants",
+  "aliases": [
+   "diplomatic_grants"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "envoys_add = 1 diplo_weight_mult = 0.1",
+   "potential": "has_tradition = tr_diplomacy_adopt has_comms_with_alien_empire = yes",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:drone_campaign",
+  "name": "Drone Campaign",
+  "aliases": [
+   "drone_campaign"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "food": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "logistic_growth_mult = 0.1",
+   "potential": "always = no",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:drone_overdrive",
+  "name": "Drone Overdrive",
+  "aliases": [
+   "drone_overdrive"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "pop_cat_simple_drone_bonus_workforce_mult = 0.10 pop_amenities_usage_no_happiness_mult = 0.15",
+   "potential": "is_gestalt = yes is_wilderness_empire = no OR = { has_active_tradition = tr_domination_drone_network has_active_tradition = tr_domination_wilderness_…",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:drone_overdrive_wilderness",
+  "name": "Symbiont Overdrive",
+  "aliases": [
+   "drone_overdrive_wilderness"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "pop_cat_simple_drone_bonus_workforce_mult = 0.10 pop_amenities_usage_no_happiness_mult = 0.15",
+   "potential": "is_wilderness_empire = yes OR = { has_active_tradition = tr_domination_drone_network has_active_tradition = tr_domination_wilderness_network }",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:education_campaign",
+  "name": "Education Campaign",
+  "aliases": [
+   "education_campaign"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "energy": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "species_leader_exp_gain = 0.10",
+   "potential": "NOT = { has_ethic = ethic_gestalt_consciousness } has_technology = tech_planetary_unification",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:encourage_free_thought",
+  "name": "Encourage Political Thought",
+  "aliases": [
+   "encourage_free_thought"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "pop_ethics_shift_speed_mult = 1",
+   "potential": "is_egalitarian = yes",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:energy_drain",
+  "name": "Energy Drain",
+  "aliases": [
+   "energy_drain"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 20,
+    "multiplier": "value:edict_size_effect"
+   },
+   "effect": "custom_tooltip = edict_energy_drain_tt",
+   "potential": "is_entropy_drinkers_empire = yes",
+   "source": "06_shroud_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:enhanced_surveillance",
+  "name": "Enhanced Surveillance",
+  "aliases": [
+   "enhanced_surveillance"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "planet_stability_add = 5 intel_encryption_add = 1 pop_happiness = -0.10 pop_ethic_authoritarian_attraction_mult = 0.25",
+   "potential": "has_active_tradition = tr_domination_judgment_corps is_gestalt = no",
+   "allow": "has_comms_with_alien_empire = yes",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:entropy_harnessing",
+  "name": "Entropy Harnessing",
+  "aliases": [
+   "entropy_harnessing"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 5,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "planet_technician_energy_produces_add = -2.5 planet_technician_entropy_crystals_produces_add = 0.4",
+   "potential": "has_menace_perk = menp_hyperthermia_harnessing",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:evacuation_protocols",
+  "name": "Evacuation Protocols",
+  "aliases": [
+   "evacuation_protocols"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "planet_colony_development_speed_mult = 1.00 pop_resettlement_cost_mult = -0.50",
+   "potential": "has_origin = origin_doomsday is_nomadic = no any_owned_planet = { is_doomsday_planet = yes }",
+   "allow": "custom_tooltip = { fail_text = requires_doomsday_colony any_planet_within_border = { OR = { is_colonizable = yes is_colony = yes } is_doomsday_planet…",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:exotic_network",
+  "name": "Exotic Neural Network",
+  "aliases": [
+   "exotic_network"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "all_technology_research_speed = 0.05",
+   "potential": "has_modifier = primal_calling_assimilate_modifier",
+   "source": "05_grand_archive_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:expanded_breeding_program_servitor",
+  "name": "Expanded Breeding Program",
+  "aliases": [
+   "expanded_breeding_program_servitor"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "logistic_growth_mult = 0.1 biological_pop_happiness = 0.05 lithoid_pop_happiness = 0.05 planet_pops_organics_food_upkeep_mult = 0.25 planet_pops_organics_minerals_upkeep_mult = 0.25 planet_pops_organics_alloys_upkeep_mult = 0.25",
+   "potential": "has_valid_civic = civic_machine_servitor",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:extended_shifts",
+  "name": "Extended Shifts",
+  "aliases": [
+   "extended_shifts"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "pop_cat_worker_bonus_workforce_mult = 0.10 pop_slave_bonus_workforce_mult = 0.10 pop_cat_worker_happiness = -0.15 pop_slave_happiness = -0.15",
+   "potential": "has_active_tradition = tr_domination_workplace_motivators",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:farming_subsidies",
+  "name": "Farming Subsidies",
+  "aliases": [
+   "farming_subsidies"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 20,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "farmer_jobs_bonus_workforce_mult = 0.20 planet_farmers_trade_upkeep_add = 0.50",
+   "potential": "is_wilderness_empire = no",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:farming_subsidies_wilderness",
+  "name": "Farming Subsidies",
+  "aliases": [
+   "farming_subsidies_wilderness"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 20,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "planet_farmers_produces_mult = 0.20 planet_farmers_trade_upkeep_add = 0.50",
+   "potential": "is_wilderness_empire = yes",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:fear_campaign",
+  "name": "Fear Campaign",
+  "aliases": [
+   "fear_campaign"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "energy": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "country_unity_produces_mult = 0.10 pop_ethic_xenophobe_attraction_mult = 0.25",
+   "potential": "is_xenophobe = yes has_comms_with_alien_civilization = yes has_technology = tech_planetary_unification",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:fleet_supremacy",
+  "name": "Fleet Supremacy",
+  "aliases": [
+   "fleet_supremacy"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "ship_starting_experience_add = 100 starbase_shipyard_build_speed_mult = 0.10 diplo_weight_naval_mult = 0.10",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:forge_subsidies",
+  "name": "Forge Subsidies",
+  "aliases": [
+   "forge_subsidies"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 20,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "foundry_jobs_bonus_workforce_mult = 0.10 planet_metallurgists_trade_upkeep_add = 1",
+   "potential": "is_wilderness_empire = no",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:forge_subsidies_wilderness",
+  "name": "Forge Subsidies",
+  "aliases": [
+   "forge_subsidies_wilderness"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 20,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "planet_metallurgists_produces_mult = 0.10 planet_metallurgists_trade_upkeep_add = 1",
+   "potential": "is_wilderness_empire = yes",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:fortify_the_border",
+  "name": "Fortify the Border",
+  "aliases": [
+   "fortify_the_border"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "starbase_upgrade_speed_mult = 0.50 country_starbase_capacity_add = 2",
+   "potential": "is_nomadic = no",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:fortress_proclamation",
+  "name": "Decree: Fortress Proclamation",
+  "aliases": [
+   "fortress_proclamation"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 75,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "starbase_upgrade_speed_mult = 1.00 shipsize_military_station_small_build_speed_mult = 1.00",
+   "potential": "has_technology = tech_ascension_theory is_nomadic = no",
+   "source": "02_ambitions.txt"
+  }
+ },
+ {
+  "id": "edict:fuel_gases",
+  "name": "Exotic Gases as Fuel",
+  "aliases": [
+   "fuel_gases"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "exotic_gases": 1,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "ship_speed_mult = 0.15",
+   "potential": "OR = { has_resource = { type = exotic_gases amount > 0 } has_edict = fuel_gases }",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:galactic_dowsing",
+  "name": "Galactic Dowsing",
+  "aliases": [
+   "galactic_dowsing"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "planet_bureaucrats_unity_produces_add = 0.25 deposit_increase_on_survey_chance_mult = 0.1",
+   "potential": "is_superstitious_beliefs_empire = yes is_gestalt = no",
+   "source": "06_shroud_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:galactic_dowsing_gestalt",
+  "name": "Galactic Dowsing",
+  "aliases": [
+   "galactic_dowsing_gestalt"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "planet_bureaucrats_unity_produces_add = 0.25 deposit_increase_on_survey_chance_mult = 0.1",
+   "potential": "is_superstitious_beliefs_empire = yes is_gestalt = yes",
+   "source": "06_shroud_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:grand_fleet",
+  "name": "Decree: A Grand Fleet",
+  "aliases": [
+   "grand_fleet"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 75,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "country_naval_cap_mult = 0.20 country_power_projection_influence_produces_add = 0.25",
+   "potential": "has_technology = tech_ascension_theory",
+   "source": "02_ambitions.txt"
+  }
+ },
+ {
+  "id": "edict:greater_than_ourselves",
+  "name": "Greater Than Ourselves",
+  "aliases": [
+   "greater_than_ourselves"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "planet_resettlement_unemployed_mult = 2.00",
+   "potential": "is_nomadic = no is_galactic_community_member = yes OR = { is_active_resolution = resolution_greatergood_greater_than_ourselves is_active_resolution =…",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:healthcare_campaign",
+  "name": "Healthcare Campaign",
+  "aliases": [
+   "healthcare_campaign"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "energy": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "logistic_growth_mult = 0.1",
+   "potential": "always = no",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:hearts_and_minds",
+  "name": "Decree: Hearts and Minds",
+  "aliases": [
+   "hearts_and_minds"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 75,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "pop_government_ethic_attraction = 1.00 pop_ethics_shift_speed_mult = 1.00",
+   "potential": "has_technology = tech_ascension_theory NOT = { has_ethic = ethic_gestalt_consciousness }",
+   "source": "02_ambitions.txt"
+  }
+ },
+ {
+  "id": "edict:hive_hyper_stimulants",
+  "name": "Hyper-Stimulants",
+  "aliases": [
+   "hive_hyper_stimulants"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "ship_evasion_mult = 0.10 pop_cat_simple_drone_bonus_workforce_mult = 0.25 pop_cat_complex_drone_bonus_workforce_mult = -0.1",
+   "potential": "is_hive_empire = yes has_country_flag = cyber_hive_integrated",
+   "source": "04_machine_age_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:hive_mega_construction",
+  "name": "Integrated Mega-Construction",
+  "aliases": [
+   "hive_mega_construction"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "alloys": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "megastructure_build_speed_mult = 0.50",
+   "potential": "OR = { has_country_flag = cyber_hive_integrated has_country_flag = cyber_hive_volitional }",
+   "source": "04_machine_age_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:hive_mind_outreach",
+  "name": "Hive Mind Outreach",
+  "aliases": [
+   "hive_mind_outreach"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "ship_speed_mult = 0.15 diplomacy_influence_upkeep_mult = -0.50",
+   "potential": "is_hive_empire = yes has_country_flag = cyber_hive_volitional",
+   "source": "04_machine_age_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:improved_work_environment",
+  "name": "Improved Working Environment",
+  "aliases": [
+   "improved_work_environment"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "pop_happiness = 0.05 category_biology_research_speed_mult = 0.05 category_statecraft_research_speed_mult = 0.05",
+   "potential": "has_country_flag = edict_improved_work_environment",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:industrial_maintenance",
+  "name": "Industrial Maintenance",
+  "aliases": [
+   "industrial_maintenance"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "planet_maintenance_drones_trade_produces_add = 1",
+   "potential": "is_machine_empire = yes has_tradition = tr_synchronicity_finish",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:industrial_subsidies",
+  "name": "Industrial Subsidies",
+  "aliases": [
+   "industrial_subsidies"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 20,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "artisan_jobs_bonus_workforce_mult = 0.10 planet_artisans_trade_upkeep_add = 1",
+   "potential": "country_uses_consumer_goods = yes",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:information_quarantine",
+  "name": "Information Quarantine",
+  "aliases": [
+   "information_quarantine"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "planet_stability_add = 5 pop_government_ethic_attraction = 0.25",
+   "potential": "is_authoritarian = yes",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:inner_focus",
+  "name": "Inner Focus",
+  "aliases": [
+   "inner_focus"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "influence": 3
+   },
+   "modifier": "country_unity_produces_mult = 0.10",
+   "potential": "is_sovereign_guardianship_empire = yes",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:land_of_opportunity",
+  "name": "Land of Opportunity",
+  "aliases": [
+   "land_of_opportunity"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "planet_resettlement_unemployed_destination_mult = 0.5",
+   "potential": "is_xenophile = yes has_comms_with_alien_empire = yes is_nomadic = no",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:learning_campaign",
+  "name": "Learning Campaign",
+  "aliases": [
+   "learning_campaign"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "food": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "species_leader_exp_gain = 0.10",
+   "potential": "is_hive_empire = yes has_technology = tech_planetary_unification is_wilderness_empire = no",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:learning_campaign_wilderness",
+  "name": "Learning Campaign",
+  "aliases": [
+   "learning_campaign_wilderness"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "food": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "species_leader_exp_gain = 0.10",
+   "potential": "has_technology = tech_planetary_unification is_wilderness_empire = yes",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:legislative_chorus",
+  "name": "Legislative Chorus",
+  "aliases": [
+   "legislative_chorus"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "council_agenda_progress_speed = 0.25 council_agenda_finishing_effect_duration_mult = 0.25",
+   "potential": "is_democratic_authority = yes has_country_flag = cyber_individualist",
+   "source": "04_machine_age_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:levied_experience",
+  "name": "Levied Experience",
+  "aliases": [
+   "levied_experience"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "leader_trait_selection_options_add = 1 negative_traits_country = -1",
+   "potential": "is_imperial_authority = yes has_country_flag = cyber_individualist",
+   "source": "04_machine_age_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:living_metal_construction",
+  "name": "Living Metal Mega-Construction",
+  "aliases": [
+   "living_metal_construction"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "sr_living_metal": 0.5,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "megastructure_build_speed_mult = 0.50",
+   "potential": "has_resource = { type = sr_living_metal amount > 0 } OR = { has_any_megastructure_in_empire = yes has_technology = tech_mega_engineering has_technolo…",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:love_letter_virus",
+  "name": "Love Letter Virus",
+  "aliases": [
+   "love_letter_virus"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "planet_resettlement_unemployed_mult = 1.00 pop_resettlement_cost_mult = -0.15 pop_cyborg_happiness = 0.15",
+   "potential": "is_dictatorial_authority = yes has_country_flag = cyber_collectivist is_nomadic = no",
+   "source": "04_machine_age_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:love_letter_virus_nomad",
+  "name": "Love Letter Virus",
+  "aliases": [
+   "love_letter_virus_nomad"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "pop_cyborg_happiness = 0.15",
+   "potential": "is_dictatorial_authority = yes has_country_flag = cyber_collectivist is_nomadic = yes",
+   "source": "04_machine_age_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:machine_learning_campaign",
+  "name": "Machine Learning Campaign",
+  "aliases": [
+   "machine_learning_campaign"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "energy": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "species_leader_exp_gain = 0.10",
+   "potential": "is_machine_empire = yes has_technology = tech_planetary_unification",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:map_the_stars",
+  "name": "Map the Stars",
+  "aliases": [
+   "map_the_stars"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "science_ship_survey_speed = 0.25 ship_anomaly_generation_chance_mult = 0.10 ship_hyperlane_range_add = 1",
+   "potential": "has_tradition = tr_discovery_adopt",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:masters_writings_diplomacy",
+  "name": "Master's Teachings: Diplomatic Trust",
+  "aliases": [
+   "masters_writings_diplomacy"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "country_trust_growth = 1",
+   "potential": "has_country_flag = edict_masters_writings_diplomacy",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:masters_writings_philosophy",
+  "name": "Master's Teachings: Philosophical Mindset",
+  "aliases": [
+   "masters_writings_philosophy"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "country_society_tech_research_speed = 0.05 country_leader_pool_size = 1",
+   "potential": "has_country_flag = edict_masters_writings_philosophy",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:masters_writings_politics",
+  "name": "Master's Teachings: The Greater Good",
+  "aliases": [
+   "masters_writings_politics"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "planet_structures_cost_mult = -0.1 planet_building_build_speed_mult = 0.10",
+   "potential": "has_country_flag = edict_masters_writings_politics",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:masters_writings_war",
+  "name": "Master's Teachings: Warring States",
+  "aliases": [
+   "masters_writings_war"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "country_naval_cap_mult = 0.1 armies_upkeep_mult = -0.15",
+   "potential": "has_country_flag = edict_masters_writings_war",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:mining_subsidies",
+  "name": "Mining Subsidies",
+  "aliases": [
+   "mining_subsidies"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 20,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "miner_jobs_bonus_workforce_mult = 0.20 planet_miners_trade_upkeep_add = 0.50",
+   "potential": "is_wilderness_empire = no is_nomadic = no",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:mining_subsidies_nomadic",
+  "name": "Mining Subsidies",
+  "aliases": [
+   "mining_subsidies_nomadic"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 20,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "ark_harvester_jobs_bonus_workforce_mult = 0.20 planet_ark_harvester_trade_upkeep_add = 0.50",
+   "potential": "is_nomadic = yes",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:mining_subsidies_wilderness",
+  "name": "Mining Subsidies",
+  "aliases": [
+   "mining_subsidies_wilderness"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 20,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "planet_miners_produces_mult = 0.20 planet_miners_trade_upkeep_add = 0.50",
+   "potential": "is_wilderness_empire = yes",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:modular_growth_compounds",
+  "name": "Modular Growth Compounds",
+  "aliases": [
+   "modular_growth_compounds"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "sr_living_metal": 5,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "founder_species_growth_mult = 0.10",
+   "potential": "is_galvanic_empire = yes",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:motes_armor",
+  "name": "Volatile Reactive Armor",
+  "aliases": [
+   "motes_armor"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "volatile_motes": 1,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "ship_armor_mult = 0.25 ship_armor_hardening_add = 0.1",
+   "potential": "OR = { has_resource = { type = volatile_motes amount > 0 } has_edict = motes_armor }",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:motes_explosives",
+  "name": "Volatile Explosives",
+  "aliases": [
+   "motes_explosives"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "volatile_motes": 1,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "weapon_type_explosive_weapon_damage_mult = 0.25",
+   "potential": "OR = { has_resource = { type = volatile_motes amount > 0 } has_edict = motes_explosives }",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:motes_kinetic",
+  "name": "Volatile Ammunition",
+  "aliases": [
+   "motes_kinetic"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "volatile_motes": 1,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "weapon_type_kinetic_weapon_damage_mult = 0.25",
+   "potential": "OR = { has_resource = { type = volatile_motes amount > 0 } has_edict = motes_kinetic }",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:nanite_actuators",
+  "name": "Nanite Actuators",
+  "aliases": [
+   "nanite_actuators"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "nanites": 2,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "all_technology_research_speed = 0.10 planet_researchers_upkeep_mult = 0.10",
+   "potential": "OR = { has_resource = { type = nanites amount > 0 } has_edict = nanite_actuators }",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:nanotech_alloy_augmentation",
+  "name": "Coordinated Nanocomplexes",
+  "aliases": [
+   "nanotech_alloy_augmentation"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "nanites": 5,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "country_alloys_produces_mult = 0.15",
+   "potential": "has_tradition = tr_nanotech_5",
+   "source": "04_machine_age_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:nanotech_energy_augmentation",
+  "name": "Nanoconnected Generators",
+  "aliases": [
+   "nanotech_energy_augmentation"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "nanites": 5,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "country_energy_produces_mult = 0.25",
+   "potential": "has_tradition = tr_nanotech_5",
+   "source": "04_machine_age_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:nanotech_naval_augmentation",
+  "name": "Nano-operated Supply Chains",
+  "aliases": [
+   "nanotech_naval_augmentation"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "nanites": 5,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "country_naval_cap_mult = 0.25",
+   "potential": "has_tradition = tr_nanotech_5",
+   "source": "04_machine_age_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:neurocasted_spectacles",
+  "name": "Neurocasted Spectacles",
+  "aliases": [
+   "neurocasted_spectacles"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "custom_tooltip = edict_neurocasted_spectacles_effect",
+   "potential": "is_imperial_authority = yes has_country_flag = cyber_collectivist",
+   "allow": "custom_tooltip = { fail_text = requires_cyberdome owner.capital_scope = { has_building = building_cyberdome } }",
+   "source": "04_machine_age_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:nutritional_plenitude",
+  "name": "Nutritional Plenitude",
+  "aliases": [
+   "nutritional_plenitude"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "logistic_growth_mult = 0.1 biological_pop_happiness = 0.05 lithoid_pop_happiness = 0.05 planet_pops_organics_food_upkeep_mult = 0.25 planet_pops_organics_minerals_upkeep_mult = 0.25 planet_pops_organics_alloys_upkeep_mult = 0.25",
+   "potential": "is_gestalt = no",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:nutritional_plenitude_hive",
+  "name": "Nutritional Plenitude",
+  "aliases": [
+   "nutritional_plenitude_hive"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "logistic_growth_mult = 0.1 planet_pops_organics_food_upkeep_mult = 0.25 planet_pops_organics_minerals_upkeep_mult = 0.25 planet_pops_organics_alloys_upkeep_mult = 0.25",
+   "potential": "is_hive_empire = yes",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:nuumismatic_visualization",
+  "name": "Numistic Visualization",
+  "aliases": [
+   "nuumismatic_visualization"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "planet_pops_consumer_goods_upkeep_mult = -0.05 category_statecraft_research_speed_mult = 0.05 country_trade_produces_mult = 0.10",
+   "potential": "has_country_flag = nuumismatic_visualization",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:observation_instinct",
+  "name": "Observation Instinct",
+  "aliases": [
+   "observation_instinct"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "envoys_add = 1 intel_decryption_add = 2 add_base_country_intel = 10 spy_network_levels_add = 10",
+   "potential": "has_comms_with_alien_empire = yes is_hive_empire = yes",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:obsidian_veil",
+  "name": "Obsidian Veil",
+  "aliases": [
+   "obsidian_veil"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "sr_dark_matter": 2,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "ship_cloaking_strength_add = 1 ship_cloaking_detection_add = 1",
+   "potential": "is_dark_consortium_empire = yes has_first_contact_dlc = yes",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:omnifarious_acquisition",
+  "name": "Decree: Omnifarious Acquisition",
+  "aliases": [
+   "omnifarious_acquisition"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 75,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "country_minerals_produces_mult = 0.25",
+   "potential": "is_nomadic = no has_technology = tech_ascension_theory",
+   "source": "02_ambitions.txt"
+  }
+ },
+ {
+  "id": "edict:omnifarious_acquisition_nomad",
+  "name": "Decree: Omnifarious Acquisition",
+  "aliases": [
+   "omnifarious_acquisition_nomad"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 75,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "arkship_harvest_resources_produces_mult = 0.15 starbase_collected_system_resources_mult = 0.15",
+   "potential": "is_nomadic = yes has_technology = tech_ascension_theory",
+   "source": "02_ambitions.txt"
+  }
+ },
+ {
+  "id": "edict:optimized_identity_creation",
+  "name": "Optimized Identity Creation",
+  "aliases": [
+   "optimized_identity_creation"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "planet_pop_assembly_mult = 0.10",
+   "potential": "has_country_flag = edict_optimized_identity_creation",
+   "source": "04_machine_age_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:peace_festivals",
+  "name": "Peace Festivals",
+  "aliases": [
+   "peace_festivals"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "pop_happiness = 0.05 pop_ethic_pacifist_attraction_mult = 0.25",
+   "potential": "is_pacifist = yes",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:psychic_feast",
+  "name": "Convergence of Will",
+  "aliases": [
+   "psychic_feast"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 20,
+    "sr_zro": 3,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "councilor_skill_add = 2",
+   "potential": "is_entropy_drinkers_empire = yes",
+   "source": "06_shroud_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:recycling_campaign",
+  "name": "Recycling Campaign",
+  "aliases": [
+   "recycling_campaign"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "energy": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "planet_pops_consumer_goods_upkeep_mult = -0.10",
+   "potential": "NOT = { has_ethic = ethic_gestalt_consciousness } has_technology = tech_planetary_unification",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:relay_network_amenities",
+  "name": "Networked Amenities",
+  "aliases": [
+   "relay_network_amenities"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "megastructures_hyper_relay_rare_crystals_upkeep_add = 0.1",
+   "potential": "has_overlord_dlc = yes is_gestalt = no has_technology = tech_hyper_relays is_nomadic = no",
+   "allow": "NOT = { has_deficit = rare_crystals } exists = capital_scope capital_scope = { solar_system = { has_hyper_relay = yes } }",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:relay_network_amenities_gestalt",
+  "name": "Networked Amenities",
+  "aliases": [
+   "relay_network_amenities_gestalt"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "megastructures_hyper_relay_rare_crystals_upkeep_add = 0.1",
+   "potential": "has_overlord_dlc = yes is_gestalt = yes has_technology = tech_hyper_relays is_nomadic = no",
+   "allow": "NOT = { has_deficit = rare_crystals } exists = capital_scope capital_scope = { solar_system = { has_hyper_relay = yes } }",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:relay_network_dummy",
+  "name": "Networked Relays",
+  "aliases": [
+   "relay_network_dummy"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "custom_tooltip = edict_relay_network_dummy_tooltip",
+   "potential": "always = no",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:relay_network_movement",
+  "name": "Networked Movement",
+  "aliases": [
+   "relay_network_movement"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "megastructures_hyper_relay_volatile_motes_upkeep_add = 0.1",
+   "potential": "has_overlord_dlc = yes has_technology = tech_hyper_relays is_nomadic = no",
+   "allow": "NOT = { has_deficit = volatile_motes } exists = capital_scope capital_scope = { solar_system = { has_hyper_relay = yes } }",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:relay_network_stability",
+  "name": "Networked Dominance",
+  "aliases": [
+   "relay_network_stability"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "megastructures_hyper_relay_exotic_gases_upkeep_add = 0.1",
+   "potential": "has_overlord_dlc = yes has_technology = tech_hyper_relays is_nomadic = no",
+   "allow": "NOT = { has_deficit = exotic_gases } exists = capital_scope capital_scope = { solar_system = { has_hyper_relay = yes } }",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:renewable_energy",
+  "name": "Improved Energy Initiative",
+  "aliases": [
+   "renewable_energy"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "planet_pops_consumer_goods_upkeep_mult = -0.05 category_industry_research_speed_mult = 0.05 category_materials_research_speed_mult = 0.05",
+   "potential": "has_country_flag = edict_renewable_energy",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:research_subsidies",
+  "name": "Research Subsidies",
+  "aliases": [
+   "research_subsidies"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 20,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "researcher_jobs_bonus_workforce_mult = 0.10 planet_physicists_trade_upkeep_add = 1 planet_biologists_trade_upkeep_add = 1 planet_engineers_trade_upkeep_add = 1",
+   "potential": "has_tradition = tr_discovery_databank_uplinks is_wilderness_empire = no",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:research_subsidies_wilderness",
+  "name": "Research Subsidies",
+  "aliases": [
+   "research_subsidies_wilderness"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 20,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "planet_researchers_produces_mult = 0.10 planet_physicists_trade_upkeep_add = 1 planet_biologists_trade_upkeep_add = 1 planet_engineers_trade_upkeep_add = 1",
+   "potential": "has_tradition = tr_discovery_databank_uplinks is_wilderness_empire = yes",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:robot_campaign",
+  "name": "Drone Campaign",
+  "aliases": [
+   "robot_campaign"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "energy": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "planet_pop_assembly_mult = 0.10",
+   "potential": "always = no",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:rolling_updates",
+  "name": "Rolling Updates",
+  "aliases": [
+   "rolling_updates"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "intel_encryption_add = 1 intel_decryption_add = 1 planet_pops_consumer_goods_upkeep_mult = -0.15",
+   "potential": "is_megacorp = yes has_country_flag = cyber_collectivist",
+   "source": "04_machine_age_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:sacrifice_bounty",
+  "name": "Sacrifice: Bounty",
+  "aliases": [
+   "sacrifice_bounty"
+  ],
+  "summary": "",
+  "fields": {
+   "length": 1800,
+   "modifier": "custom_tooltip = edict_sacrifice_bounty_tooltip show_only_custom_tooltip = no country_minerals_produces_mult = 0.05 country_energy_produces_mult = 0.05 logistic_growth_mult = 0.05",
+   "effect": "country_event = { id = necroids.202 days = 0 }",
+   "potential": "NOT = { has_valid_civic = civic_permanent_employment } is_death_cult_empire = yes NOR = { has_edict = sacrifice_togetherness has_edict = sacrifice_ha…",
+   "allow": "NOR = { has_edict = sacrifice_togetherness has_edict = sacrifice_harmony } OR = { has_edict = sacrifice_bounty num_assigned_jobs = { job = mortal_ini…",
+   "source": "03_sacrifices.txt"
+  }
+ },
+ {
+  "id": "edict:sacrifice_bounty_zombie",
+  "name": "Sacrifice: Bounty",
+  "aliases": [
+   "sacrifice_bounty_zombie"
+  ],
+  "summary": "",
+  "fields": {
+   "length": 1800,
+   "modifier": "custom_tooltip = edict_sacrifice_bounty_zombie_tooltip show_only_custom_tooltip = no country_minerals_produces_mult = 0.05 country_energy_produces_mult = 0.05 logistic_growth_mult = 0.05",
+   "effect": "country_event = { id = necroids.202 days = 0 }",
+   "potential": "has_valid_civic = civic_permanent_employment is_death_cult_empire = yes NOR = { has_edict = sacrifice_togetherness has_edict = sacrifice_harmony } OR…",
+   "allow": "NOR = { has_edict = sacrifice_togetherness has_edict = sacrifice_harmony } OR = { has_edict = sacrifice_bounty_zombie num_assigned_jobs = { job = mor…",
+   "source": "03_sacrifices.txt"
+  }
+ },
+ {
+  "id": "edict:sacrifice_dummy",
+  "name": "Sacrifices",
+  "aliases": [
+   "sacrifice_dummy"
+  ],
+  "summary": "",
+  "fields": {
+   "length": 1800,
+   "modifier": "custom_tooltip = edict_sacrifice_dummy_tooltip",
+   "potential": "always = no",
+   "source": "03_sacrifices.txt"
+  }
+ },
+ {
+  "id": "edict:sacrifice_harmony",
+  "name": "Sacrifice: Harmony",
+  "aliases": [
+   "sacrifice_harmony"
+  ],
+  "summary": "",
+  "fields": {
+   "length": 1800,
+   "modifier": "custom_tooltip = edict_sacrifice_harmony_tooltip show_only_custom_tooltip = no pop_happiness = 0.10 logistic_growth_mult = 0.05",
+   "effect": "country_event = { id = necroids.201 days = 0 }",
+   "potential": "is_death_cult_empire = yes NOR = { has_edict = sacrifice_togetherness has_edict = sacrifice_bounty } OR = { has_edict = sacrifice_harmony OR = { any_…",
+   "allow": "NOR = { has_edict = sacrifice_togetherness has_edict = sacrifice_bounty } OR = { has_edict = sacrifice_harmony num_assigned_jobs = { job = mortal_ini…",
+   "source": "03_sacrifices.txt"
+  }
+ },
+ {
+  "id": "edict:sacrifice_togetherness",
+  "name": "Sacrifice: Togetherness",
+  "aliases": [
+   "sacrifice_togetherness"
+  ],
+  "summary": "",
+  "fields": {
+   "length": 1800,
+   "modifier": "custom_tooltip = edict_sacrifice_togetherness_tooltip show_only_custom_tooltip = no country_unity_produces_mult = 0.10 logistic_growth_mult = 0.05",
+   "effect": "country_event = { id = necroids.200 days = 0 }",
+   "potential": "is_death_cult_empire = yes NOR = { has_edict = sacrifice_harmony has_edict = sacrifice_bounty } OR = { has_edict = sacrifice_togetherness OR = { any_…",
+   "allow": "NOR = { has_edict = sacrifice_harmony has_edict = sacrifice_bounty } OR = { has_edict = sacrifice_togetherness num_assigned_jobs = { job = mortal_ini…",
+   "source": "03_sacrifices.txt"
+  }
+ },
+ {
+  "id": "edict:sanguine_council",
+  "name": "Sanguine Council",
+  "aliases": [
+   "sanguine_council"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "council_agenda_progress_speed = 0.25",
+   "potential": "is_entropy_drinkers_empire = yes is_machine_empire = no",
+   "source": "06_shroud_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:sanguine_council_machine",
+  "name": "Nexus Charge",
+  "aliases": [
+   "sanguine_council_machine"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "council_agenda_progress_speed = 0.25",
+   "potential": "is_entropy_drinkers_empire = yes is_machine_empire = yes",
+   "source": "06_shroud_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:scientific_revolution",
+  "name": "Decree: Scientific Revolution",
+  "aliases": [
+   "scientific_revolution"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 75,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "researcher_jobs_bonus_workforce_mult = 0.10 num_tech_alternatives_add = 1",
+   "potential": "has_technology = tech_ascension_theory is_wilderness_empire = no",
+   "source": "02_ambitions.txt"
+  }
+ },
+ {
+  "id": "edict:scientific_revolution_wilderness",
+  "name": "Decree: Scientific Revolution",
+  "aliases": [
+   "scientific_revolution_wilderness"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 75,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "all_technology_research_speed = 0.10 num_tech_alternatives_add = 1",
+   "potential": "has_technology = tech_ascension_theory is_wilderness_empire = yes",
+   "source": "02_ambitions.txt"
+  }
+ },
+ {
+  "id": "edict:self_indictment_protocol",
+  "name": "Self-Indictment Protocol",
+  "aliases": [
+   "self_indictment_protocol"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "planet_crime_add = -30 planet_stability_add = 4 pop_cyborg_happiness = 0.15",
+   "potential": "is_dictatorial_authority = yes has_country_flag = cyber_individualist",
+   "source": "04_machine_age_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:self_preservation_override",
+  "name": "Self-Preservation Override",
+  "aliases": [
+   "self_preservation_override"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "cyborg_pop_bonus_workforce_mult = 0.2 logistic_growth_mult = -0.1",
+   "potential": "is_democratic_authority = yes has_country_flag = cyber_collectivist",
+   "source": "04_machine_age_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:shadow_matrix",
+  "name": "Shadow Matrix",
+  "aliases": [
+   "shadow_matrix"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "sr_dark_matter": 1,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "intel_encryption_add = 1 intel_decryption_add = 1 spy_network_levels_add = 10",
+   "potential": "is_dark_consortium_empire = yes",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:shield_gases",
+  "name": "Exotic Gases for Shield Boost",
+  "aliases": [
+   "shield_gases"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "exotic_gases": 1,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "ship_shield_mult = 0.25 ship_shield_hardening_add = 0.1",
+   "potential": "OR = { has_resource = { type = exotic_gases amount > 0 } has_edict = shield_gases }",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:shroud_bonded",
+  "name": "Shroud-Bonded",
+  "aliases": [
+   "shroud_bonded"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "sr_zro": 0.5,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "country_unity_produces_mult = 0.1",
+   "potential": "has_origin = origin_shroud_forged has_country_flag = finish_shroud_forged_liberation_flag",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:sight_beyond_sight",
+  "name": "Sight Beyond Sight",
+  "aliases": [
+   "sight_beyond_sight"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "sr_zro": 0.5,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "ship_sensor_range_add = 1 ship_windup_mult = -0.15 ship_winddown_mult = -0.15 ship_jumpdrive_cooldown_mult = -0.15 catapult_spread_mult = 0.15",
+   "potential": "OR = { has_active_tradition = tr_psionics_mind_readers has_active_tradition = tr_psionics_shroud_finish }",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:space_fauna_exhibition",
+  "name": "Space Fauna Exhibition",
+  "aliases": [
+   "space_fauna_exhibition"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "planet_amenities_mult = 0.1",
+   "potential": "has_modifier = primal_calling_exhibit_modifier",
+   "source": "05_grand_archive_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:spontaneous_crystallization",
+  "name": "Spontaneous Crystallization",
+  "aliases": [
+   "spontaneous_crystallization"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "minerals": 1,
+    "mult": "value:percent_monthly_resource_income_edict_cost|RESOURCE|minerals|PERCENT|1|"
+   },
+   "produces": {
+    "rare_crystals": 1,
+    "mult": "value:percent_monthly_resource_income|RESOURCE|minerals|PERCENT|1|"
+   },
+   "modifier": "custom_tooltip = edict_spontaneous_crystallization_tooltip",
+   "potential": "has_country_flag = has_spontaneous_crystallization",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:stately_acclaim",
+  "name": "Stately Acclaim",
+  "aliases": [
+   "stately_acclaim"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "custom_tooltip = edict_stately_acclaim_tt show_only_custom_tooltip = no",
+   "potential": "is_oligarchic_authority = yes has_country_flag = cyber_collectivist",
+   "allow": "hidden_trigger = { has_extorted_faction = yes } custom_tooltip = edict_stately_acclaim_requirements_tt",
+   "source": "04_machine_age_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:storm_attraction_field",
+  "name": "Storm Attraction Field",
+  "aliases": [
+   "storm_attraction_field"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "country_storm_attraction_influence_add = 0.15",
+   "allow": "NOT = { has_edict = storm_repel_field }",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:storm_repel_field",
+  "name": "Storm Repulsion Field",
+  "aliases": [
+   "storm_repel_field"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "country_storm_repulsion_influence_add = 0.15",
+   "allow": "NOT = { has_edict = storm_attraction_field }",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:subsidized_identity_backups",
+  "name": "Subsidized Identity Backups",
+  "aliases": [
+   "subsidized_identity_backups"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "custom_tooltip = edict_subsidized_identity_backups_effect",
+   "potential": "has_country_flag = edict_subsidized_identity_backups",
+   "source": "04_machine_age_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:super_sensors",
+  "name": "Extensive Sensor Searches",
+  "aliases": [
+   "super_sensors"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "ship_sensor_range_add = 1 ship_hyperlane_range_add = 2",
+   "potential": "has_country_flag = edict_super_sensors",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:synaptic_reinforcement",
+  "name": "Synaptic Reinforcement",
+  "aliases": [
+   "synaptic_reinforcement"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "planet_maintenance_drones_trade_produces_add = 1",
+   "potential": "is_hive_empire = yes",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:terraforming_gas",
+  "name": "Terraforming Gases",
+  "aliases": [
+   "terraforming_gas"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "exotic_gases": 0.5,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "terraform_speed_mult = 0.50",
+   "potential": "is_nomadic = no",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:thought_enforcement",
+  "name": "Thought Enforcement",
+  "aliases": [
+   "thought_enforcement"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 20,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "custom_tooltip = edict_thought_enforcement_effect intel_encryption_add = 1 pop_happiness = -0.10 pop_government_ethic_attraction = 0.25",
+   "potential": "is_gestalt = no",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:thought_enforcement_gestalt",
+  "name": "Thought Pre-Emption",
+  "aliases": [
+   "thought_enforcement_gestalt"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 20,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "custom_tooltip = edict_thought_enforcement_gestalt_effect intel_encryption_add = 1 planet_stability_add = 5 planet_jobs_upkeep_mult = -0.1",
+   "potential": "has_shroud_dlc = yes is_gestalt = yes",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:tracking_implants",
+  "name": "Tracking Implants",
+  "aliases": [
+   "tracking_implants"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 20,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "intel_encryption_add = 1 pop_happiness = -0.10 planet_crime_add = -10 pop_ethic_authoritarian_attraction_mult = 0.25",
+   "potential": "has_comms_with_alien_empire = yes is_gestalt = no",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:veneration_of_saints",
+  "name": "Veneration of Saints",
+  "aliases": [
+   "veneration_of_saints"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "pop_bureaucrat_bonus_workforce_mult = 0.05 pop_ethic_spiritualist_attraction_mult = 0.25",
+   "potential": "is_spiritualist = yes",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:war_drone_campaign",
+  "name": "War Drone Campaign",
+  "aliases": [
+   "war_drone_campaign"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "food": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "army_damage_mult = 0.15",
+   "potential": "is_hive_empire = yes has_technology = tech_planetary_unification is_wilderness_empire = no",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:war_drone_campaign_wilderness",
+  "name": "War Symbiote Campaign",
+  "aliases": [
+   "war_drone_campaign_wilderness"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "food": 15,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "army_damage_mult = 0.15",
+   "potential": "is_hive_empire = yes has_technology = tech_planetary_unification is_wilderness_empire = yes",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:will_of_distraction",
+  "name": "Will of Distraction",
+  "aliases": [
+   "will_of_distraction"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "sr_zro": 1,
+    "multiplier": "value:edict_size_effect"
+   },
+   "potential": "has_country_flag = shroud_3220_happened",
+   "source": "06_shroud_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:will_of_endless",
+  "name": "Will of Endless",
+  "aliases": [
+   "will_of_endless"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "sr_zro": 5,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "leader_lifespan_mult = 0.25",
+   "potential": "has_country_flag = shroud_3230_happened",
+   "source": "06_shroud_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:will_of_motion",
+  "name": "Will of Motion",
+  "aliases": [
+   "will_of_motion"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "sr_zro": 5,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "ship_speed_mult = 0.25",
+   "potential": "has_country_flag = shroud_3270_happened",
+   "source": "06_shroud_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:will_of_order",
+  "name": "Will of Order",
+  "aliases": [
+   "will_of_order"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "sr_zro": 1,
+    "multiplier": "value:edict_size_effect"
+   },
+   "potential": "has_country_flag = shroud_3260_happened",
+   "source": "06_shroud_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:will_of_rebirth",
+  "name": "Will of Rebirth",
+  "aliases": [
+   "will_of_rebirth"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "sr_zro": 5,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "ship_hull_regen_add_perc = 0.05 ship_armor_regen_add_perc = 0.05 ship_hull_mult = 0.05 ship_armor_mult = 0.05",
+   "potential": "has_country_flag = shroud_3240_happened",
+   "source": "06_shroud_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:will_of_temperance",
+  "name": "Will of Temperance",
+  "aliases": [
+   "will_of_temperance"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "sr_zro": 1,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "ship_sensor_range_add = 2",
+   "potential": "has_country_flag = shroud_3210_happened",
+   "source": "06_shroud_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:will_to_power",
+  "name": "Decree: Will to Power",
+  "aliases": [
+   "will_to_power"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 75,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "country_ambition_influence_produces_add = 5",
+   "potential": "has_technology = tech_ascension_theory",
+   "source": "02_ambitions.txt"
+  }
+ },
+ {
+  "id": "edict:zro_catalysis_non_utopia",
+  "name": "Zro Catalysis",
+  "aliases": [
+   "zro_catalysis_non_utopia"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "sr_zro": 0.5,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "pop_bonus_workforce_mult = 0.10",
+   "potential": "always = no",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:zro_catalysis_utopia",
+  "name": "Zro Catalysis",
+  "aliases": [
+   "zro_catalysis_utopia"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "sr_zro": 0.5,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "psionic_pop_bonus_workforce_mult = 0.10",
+   "potential": "exists = federation federation = { has_federation_perk = zro_catalysis_1 } OR = { has_resource = { type = sr_zro amount > 0 } has_edict = zro_catalys…",
+   "source": "01_campaigns.txt"
+  }
+ },
+ {
+  "id": "edict:zro_crystal",
+  "name": "Zro Additives",
+  "aliases": [
+   "zro_crystal"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "species_leader_exp_gain = 0.10 leader_lifespan_add = 30",
+   "potential": "has_relic = r_zro_crystal is_machine_empire = no",
+   "allow": "NOT = { resource_stockpile_compare = { resource = sr_zro value = 0 } }",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:zro_crystal_machine",
+  "name": "Zro Additives",
+  "aliases": [
+   "zro_crystal_machine"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "unity": 10,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "species_leader_exp_gain = 0.10 leader_lifespan_add = 30",
+   "potential": "has_relic = r_zro_crystal is_machine_empire = yes",
+   "allow": "NOT = { resource_stockpile_compare = { resource = sr_zro value = 0 } }",
+   "source": "00_edicts.txt"
+  }
+ },
+ {
+  "id": "edict:zro_observators",
+  "name": "Shroud Observation",
+  "aliases": [
+   "zro_observators"
+  ],
+  "summary": "",
+  "fields": {
+   "length": -1,
+   "upkeep": {
+    "sr_zro": 0.5,
+    "multiplier": "value:edict_size_effect"
+   },
+   "modifier": "biologist_jobs_bonus_workforce_mult = 0.1",
+   "potential": "has_origin = origin_shroud_forged",
+   "source": "01_campaigns.txt"
+  }
+ }
+]

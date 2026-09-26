@@ -69,7 +69,7 @@
 - [x] Spike in a throwaway non-Ironman game: autosave via agent, console injection, pause/date, `log` → game.log, `set_policy` held by the AI (`games/stellaris-spike/journal.md`)
 - [x] Design: monthly autosave → briefing → LLM → pause, `play 0`, whitelisted effects, `observe`, unpause; native AI plays day to day
 - [x] Save reader: `stellaris.rs` (jomini) → ~2 KB empire briefing; `game-controller stellaris brief`, MCP `stellaris_briefing`; tests on a real autosave
-- [ ] Extractor `scripts/extract-stellaris.py`: reads the game's `common/`, `events/` and `localisation/english/` (via the agent's `stellaris_install` root) → `data/*.json`
+- [x] Extractor: `scripts/fetch-stellaris-files.py` (install via the agent) + `scripts/extract-stellaris.py` → 9,152 records (tech, policy, edict, building, district, tradition, ascension perk, civic, event) for 4.5.1
 - [x] Directive bridge: `directives.toml` + `stellaris directive <name>` / MCP `stellaris_directive` (play → flag + policies → observe, confirmed in game.log), `stellaris log` / `stellaris_log`; verified live 2026-09-25 (flag and stance held 20 months)
 - [x] Game speed control: `stellaris speed` / MCP `stellaris_speed` (slowest … fastest), verified live
 - [x] Pause state from the screen: `stellaris pause|resume` / MCP `stellaris_pause`, safe to repeat; directives pause while applying. Verified at Fastest (30/30 save reads, directive confirmed)
