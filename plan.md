@@ -70,7 +70,7 @@
 - [x] Design: monthly autosave → briefing → LLM → pause, `play 0`, whitelisted effects, `observe`, unpause; native AI plays day to day
 - [x] Save reader: `stellaris.rs` (jomini) → ~2 KB empire briefing; `game-controller stellaris brief`, MCP `stellaris_briefing`; tests on a real autosave
 - [ ] Extractor `scripts/extract-stellaris.py`: reads the game's `common/`, `events/` and `localisation/english/` (via the agent's `stellaris_install` root) → `data/*.json`
-- [ ] Directive bridge: `directives.toml` + `stellaris directive <name>` / MCP `stellaris_directive` (play → flag + policies → observe, confirmed in game.log), `stellaris log` / `stellaris_log`; unit-tested, live check pending (PC offline 2026-09-25)
+- [ ] Directive bridge: `directives.toml` + `stellaris directive <name>` / MCP `stellaris_directive` (play → flag + policies → observe, confirmed in game.log), `stellaris log` / `stellaris_log`; unit-tested; `stellaris log` verified live; directive apply not yet run live
 - [ ] Controller: `stellaris` loop (watch autosaves + game.log, apply directives)
 - [ ] Pilot: Stellaris game adapter; finalise `corpora/stellaris/pilot.md` with the verified `play 0` → effect → `observe` pattern
 - [ ] Test which directives the AI keeps long term (edicts, economy, war); decide on a companion bridge mod (directive events, AI weights, `log` hooks)
