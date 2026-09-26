@@ -251,3 +251,38 @@ def test_stop_grace_forces_exit_when_a_step_hangs():
     done.set()
     t.join(1)
     assert exits == [], "a run that ends within the grace period exits normally"
+
+
+def test_model_calls_retry_transient_errors_and_timeouts():
+    import httpx
+    from pydantic_ai.exceptions import ModelHTTPError
+
+    from pilot.agent import run_with_retry
+    errors = [ModelHTTPError(503, "m"), httpx.ReadTimeout("slow"), TimeoutError()]
+    seen = []
+
+    def call():
+        if errors:
+            raise errors.pop(0)
+        return "ok"
+    assert run_with_retry(call, (0, 0, 0), on_retry=lambda e, d, i: seen.append(type(e).__name__)) == "ok"
+    assert seen == ["ModelHTTPError", "ReadTimeout", "TimeoutError"]
+
+    def always_slow():
+        raise httpx.ReadTimeout("slow")
+    with pytest.raises(httpx.ReadTimeout):
+        run_with_retry(always_slow, (0,))
+
+    def bad_request():
+        raise ModelHTTPError(400, "m")
+    with pytest.raises(ModelHTTPError):
+        run_with_retry(bad_request, (0, 0))
+
+
+def test_every_model_call_has_a_timeout():
+    from dataclasses import replace
+
+    from pilot.agent import model_settings
+    s = Settings()
+    for thinking in ("off", "medium"):
+        assert model_settings(replace(s, thinking=thinking))["timeout"] == s.model_timeout_s

@@ -2,6 +2,7 @@
 
 ## Open
 
+- [ ] A governor decision hung indefinitely (gemini-pro-latest, 2216.02 and 2219.09, game paused, status stuck on "Deciding now"): model calls had no timeout. Fixed: every request has `model_timeout_s` = 120 (Gemini enforces it server-side as a deadline and answers 504, retried like a 503; client-side timeouts are retried too)
 - [x] `systemctl --user stop game-pilot.service` hung 60 s and was SIGKILLed while a decision's model call ran (gemini-pro-latest, 2026-09-26); fixed: after SIGTERM the loop gets 20 s, then the process exits (the game is paused before every decision); a second signal exits at once. Also `KillMode=mixed`: systemd had killed the controller subprocess too, so the pause on exit failed (broken pipe). Verified live: stop mid-decision 7.4 s, stop while running 0.9 s with the game left paused
 - [ ] The Paradox Launcher's window is also titled "Stellaris", so the exact-title foreground check cannot tell it from the game (seen 2026-09-26 on restart); a directive or pause while the launcher is up would send keys to it
 - [ ] Governor Bridge: `expand` put its extra influence in AI budget category `starbases` (nomad-only for influence) instead of `stations`, where outposts draw it; fixed in the mod and tested, live once the game restarts with the new files (2026-09-26)

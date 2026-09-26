@@ -7,6 +7,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 
+import httpx
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent, BinaryContent, ModelSettings, RunContext, Tool, ToolReturn
 from pydantic_ai.capabilities import ProcessHistory
@@ -17,14 +18,21 @@ from pydantic_ai.usage import UsageLimits
 TRANSIENT_HTTP = {429, 500, 502, 503, 504}
 
 
+def transient(e: BaseException) -> bool:
+    """Worth retrying: overloaded / rate limited / gateway errors, and requests that timed out."""
+    if isinstance(e, ModelHTTPError):
+        return e.status_code in TRANSIENT_HTTP
+    return isinstance(e, (httpx.TimeoutException, TimeoutError))
+
+
 def run_with_retry(fn, delays: tuple[float, ...], on_retry=None):
-    """Call `fn`; on a transient provider error (overloaded, rate limited, gateway) wait and try
-    again, once per delay. The game is paused while a decision is made, so waiting costs nothing."""
+    """Call `fn`; on a transient provider error (overloaded, rate limited, gateway, timed out) wait
+    and try again, once per delay. The game is paused while a decision is made, so waiting costs nothing."""
     for i, delay in enumerate((*delays, None)):
         try:
             return fn()
-        except ModelHTTPError as e:
-            if e.status_code not in TRANSIENT_HTTP or delay is None:
+        except (ModelHTTPError, httpx.TimeoutException, TimeoutError) as e:
+            if not transient(e) or delay is None:
                 raise
             if on_retry:
                 on_retry(e, delay, i + 1)
@@ -280,14 +288,17 @@ def trim_images(keep: int):
 # -- agent ----------------------------------------------------------------------------------------
 
 def model_settings(s: Settings) -> ModelSettings:
+    # Every request has a timeout: a Gemini call once never answered and held the run (game paused)
+    # until it was restarted. A timeout is retried like a 503 (run_with_retry).
+    base = ModelSettings(timeout=s.model_timeout_s)
     if s.thinking == "off":
-        return ModelSettings()
+        return base
     if s.provider.startswith("google"):
         # include_thoughts: Gemini returns thought summaries, shown in the dashboard's decision traces.
-        return ModelSettings(google_thinking_config={"thinking_level": s.thinking, "include_thoughts": True})  # type: ignore[typeddict-unknown-key]
+        return ModelSettings(**base, google_thinking_config={"thinking_level": s.thinking, "include_thoughts": True})  # type: ignore[typeddict-unknown-key]
     if s.provider.startswith("openai"):
-        return ModelSettings(openai_reasoning_effort=s.thinking)  # type: ignore[typeddict-unknown-key]
-    return ModelSettings()
+        return ModelSettings(**base, openai_reasoning_effort=s.thinking)  # type: ignore[typeddict-unknown-key]
+    return base
 
 
 def build_agent(s: Settings, game_briefing: str, model=None) -> Agent[Deps, EpisodeResult]:
