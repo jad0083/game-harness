@@ -1110,9 +1110,7 @@ class Governor:
             errs = market_briefing_errors(o, idle, income)
             if errs:     # a sell that no longer fits today's briefing (e.g. a pinned or older order)
                 if later:
-                    why = " / ".join(w for w, hit in (("not idle", any("not idle" in e for e in errs)),
-                                                      ("over 20% of income", any("not idle" not in e for e in errs))) if hit)
-                    self._log_action("market", f"skipped sell {o.resource}: {why}")
+                    self._log_action("market", f"skipped sell {o.resource}: {'; '.join(errs)}"[:300])
                 continue
             desired.append(o.model_dump())
         if not self._market_stuck and not self._same_orders(desired, current) and later:
@@ -1177,8 +1175,12 @@ class Governor:
         strategy, rows = self.strategy, self._metrics_rows()
         if strategy is None or rows is None:
             return []
-        return [f"milestone missed: {name} {m.metric}" for name, pl in strategy.sorted_pillars() for m in pl.milestones
-                if milestone_status(m, rows, today) == "missed" and milestone_status(m, rows, before) != "missed"]
+        try:
+            return [f"milestone missed: {name} {m.metric}" for name, pl in strategy.sorted_pillars() for m in pl.milestones
+                    if milestone_status(m, rows, today) == "missed" and milestone_status(m, rows, before) != "missed"]
+        except Exception as e:  # noqa: BLE001 - runs in the poll loop; raising would pause the governor
+            self.log.emit("briefing_error", error=f"milestone check: {type(e).__name__}: {e}"[:200])
+            return []
 
     def _past_outcomes_text(self) -> str:
         if self.log.telemetry is None or not self.log.campaign_id:

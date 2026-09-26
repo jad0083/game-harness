@@ -2598,7 +2598,7 @@ def test_a_sell_over_20_percent_of_todays_income_is_skipped(setup):
                                                market=[{"side": "sell", "resource": "energy", "amount": 25}]))
     g._carry_out_actions(_idle_energy("2200.01.01"))            # cap today is 20
     assert not any(a[0] == "market_sync" for a in game.actions), "nothing to sync: no orders wanted, none placed"
-    assert any("skipped sell energy" in e.get("result", "") and "over 20% of income" in e["result"]
+    assert any("skipped sell energy" in e.get("result", "") and "20% of monthly income" in e["result"]
                for e in log.recent if e["kind"] == "strategy_action")
 
 
@@ -2812,3 +2812,18 @@ def test_unpin_pillar_on_an_unknown_pillar_raises_and_leaves_the_strategy_unchan
         g.unpin_pillar("navy")
     assert g.strategy is before and g.strategy.pillars["economy"].pinned
     assert not any(e["kind"] == "strategy" for e in log.recent)
+
+
+def test_a_broken_milestone_check_never_pauses_the_governor(setup, monkeypatch):
+    """The milestone check runs in the poll loop: an unexpected error there is logged, not raised
+    (raising would reach run() and flag needs_attention)."""
+    s, log = setup
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": _strategist([])})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    from pilot.strategy import Milestone
+    g.strategy.pillars["expansion"].milestones = [Milestone(metric="systems", op=">=", target=10, by="2200.02.01")]
+    import pilot.governor as gm
+    monkeypatch.setattr(gm, "milestone_status", lambda *a, **k: (_ for _ in ()).throw(ValueError("bad row date")))
+    monkeypatch.setattr(g, "_metrics_rows", lambda: [{"date": "x"}])
+    assert g._newly_missed_milestones("2200.01.01", "2200.02.01") == []
+    assert any(e["kind"] == "briefing_error" and "milestone" in e.get("error", "") for e in log.recent)
