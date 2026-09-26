@@ -132,3 +132,38 @@ def test_real_files_parse_without_errors():
     loc = xs.Loc()
     loc.load_dir(REPO / "incoming/stellaris/localisation/english")
     assert loc("tech_physics_1")
+
+
+def test_species_traits_and_planet_classes(tmp_path):
+    root = tmp_path / "stl"
+    (root / "common/traits").mkdir(parents=True)
+    (root / "common/planet_classes").mkdir(parents=True)
+    (root / "localisation/english").mkdir(parents=True)
+    (root / "common/traits/04_species_traits.txt").write_text('''
+trait_adaptive = { cost = 2 opposites = { "trait_nonadaptive" } allowed_archetypes = { BIOLOGICAL }
+  tags = { organic positive habitability } modifier = { pop_environment_tolerance = 0.10 } }
+''')
+    (root / "common/traits/00_scientist_traits.txt").write_text('''
+leader_trait_curator = { leader_class = { scientist } cost = 1 modifier = { x = 1 } }
+''')
+    (root / "common/planet_classes/00.txt").write_text('''
+pc_continental = { climate = "wet" colonizable = yes }
+pc_toxic = { colonizable = no }
+pc_habitat = { climate = "artificial" colonizable = yes }
+''')
+    (root / "localisation/english/t_l_english.yml").write_text('''l_english:
+ trait_adaptive:0 "Adaptive"
+ trait_adaptive_desc:0 "Handles many climates."
+ pc_continental:0 "Continental"
+''')
+    out = tmp_path / "data"
+    assert xs.main([str(root), "--out", str(out)]) == 0
+    traits = json.loads((out / "trait.json").read_text())
+    assert [t["id"] for t in traits] == ["trait:trait_adaptive"], "leader traits are skipped"
+    t = traits[0]
+    assert t["name"] == "Adaptive" and t["fields"]["cost"] == 2
+    assert "pop_environment_tolerance = 0.10" in t["fields"]["modifier"]
+    assert t["fields"]["opposites"] == ["trait_nonadaptive"] and t["fields"]["archetypes"] == ["BIOLOGICAL"]
+    pcs = {p["id"]: p for p in json.loads((out / "planet_class.json").read_text())}
+    assert set(pcs) == {"planet_class:pc_continental", "planet_class:pc_habitat"}, "only colonizable classes"
+    assert pcs["planet_class:pc_continental"]["fields"]["climate"] == "wet"

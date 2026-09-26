@@ -1,0 +1,279 @@
+[
+ {
+  "id": "planet_class:pc_alpine",
+  "name": "Alpine World",
+  "aliases": [
+   "pc_alpine"
+  ],
+  "summary": "Mountainous world with a nitrogen-oxygen atmosphere. Snow covers the mountaintops, and frozen-over lakes dot the valleys.",
+  "fields": {
+   "climate": "cold",
+   "source": "00_planet_classes.txt"
+  }
+ },
+ {
+  "id": "planet_class:pc_arctic",
+  "name": "Arctic World",
+  "aliases": [
+   "pc_arctic"
+  ],
+  "summary": "Frigid, rocky world with a nitrogen-oxygen atmosphere. The poles are big, and significant water deposits can be found permanently frozen as glacial ice.",
+  "fields": {
+   "climate": "cold",
+   "source": "00_planet_classes.txt"
+  }
+ },
+ {
+  "id": "planet_class:pc_arid",
+  "name": "Arid World",
+  "aliases": [
+   "pc_arid"
+  ],
+  "summary": "Dry, rocky world with a nitrogen-oxygen atmosphere. The dust-covered terrain consists largely of mesas and canyons. Forests can be found in the more temperate polar regions, but vegetation is otherwise scarce.",
+  "fields": {
+   "climate": "dry",
+   "source": "00_planet_classes.txt"
+  }
+ },
+ {
+  "id": "planet_class:pc_ark",
+  "name": "Arkship",
+  "aliases": [
+   "pc_ark"
+  ],
+  "summary": "Our world became our ship and our ship became our world.",
+  "fields": {
+   "climate": "artificial",
+   "source": "06_planet_classes_nomads.txt"
+  }
+ },
+ {
+  "id": "planet_class:pc_city",
+  "name": "Ecumenopolis",
+  "aliases": [
+   "pc_city"
+  ],
+  "summary": "World completely engulfed by urban-industrial sprawl. Its natural lithosphere is no longer discernible from orbit.",
+  "fields": {
+   "climate": "dry",
+   "source": "02_planet_classes_megacorp.txt"
+  }
+ },
+ {
+  "id": "planet_class:pc_continental",
+  "name": "Continental World",
+  "aliases": [
+   "pc_continental"
+  ],
+  "summary": "Rocky world with a nitrogen-oxygen atmosphere. Active and stable hydrosphere. Great landmasses are separated by oceans, with large climate variations depending on latitude and precipitation.",
+  "fields": {
+   "climate": "wet",
+   "source": "00_planet_classes.txt"
+  }
+ },
+ {
+  "id": "planet_class:pc_cosmogenesis_world",
+  "name": "Synaptic Lathe",
+  "aliases": [
+   "pc_cosmogenesis_world"
+  ],
+  "summary": "A colossal reservoir computing system designed to connect billions of sentient beings, organic or synthetic, via an intricate array of cables, transistors, and life support pods.",
+  "fields": {
+   "climate": "artificial",
+   "source": "00_planet_classes.txt"
+  }
+ },
+ {
+  "id": "planet_class:pc_crystal_habitat",
+  "name": "pc_crystal_habitat",
+  "aliases": [],
+  "summary": "",
+  "fields": {
+   "source": "00_planet_classes_first_contact_dlc.txt"
+  }
+ },
+ {
+  "id": "planet_class:pc_desert",
+  "name": "Desert World",
+  "aliases": [
+   "pc_desert"
+  ],
+  "summary": "Dry, rocky world with a nitrogen-oxygen atmosphere. Precipitation and major bodies of surface water are relatively rare. Significant temperature variations between day and night cycles.",
+  "fields": {
+   "climate": "dry",
+   "source": "00_planet_classes.txt"
+  }
+ },
+ {
+  "id": "planet_class:pc_gaia",
+  "name": "Gaia World",
+  "aliases": [
+   "pc_gaia"
+  ],
+  "summary": "An ideal, temperate world with a nitrogen-oxygen atmosphere and a resilient ecosystem. Optimal conditions for all known higher forms of life at different latitudes.",
+  "fields": {
+   "source": "00_planet_classes.txt"
+  }
+ },
+ {
+  "id": "planet_class:pc_habitat",
+  "name": "Orbital Habitat",
+  "aliases": [
+   "pc_habitat"
+  ],
+  "summary": "An artificial deep-space arcology offering planet-like - if decidedly urban - living conditions.",
+  "fields": {
+   "climate": "artificial",
+   "source": "00_planet_classes.txt"
+  }
+ },
+ {
+  "id": "planet_class:pc_hive",
+  "name": "Hive World",
+  "aliases": [
+   "pc_hive"
+  ],
+  "summary": "This entire world is a giant living organism, psionically connected with the Hive Mind that shaped it. Any beings not part of the Hive that set foot here will be attacked by the very terrain itself.",
+  "fields": {
+   "source": "00_planet_classes.txt"
+  }
+ },
+ {
+  "id": "planet_class:pc_machine",
+  "name": "Machine World",
+  "aliases": [
+   "pc_machine"
+  ],
+  "summary": "Rocky world covered with artificial structures. The thin atmosphere consists mostly of industrial pollutants and is not capable of supporting biological life.",
+  "fields": {
+   "source": "00_planet_classes.txt"
+  }
+ },
+ {
+  "id": "planet_class:pc_nanotech",
+  "name": "Nanite World",
+  "aliases": [
+   "pc_nanotech"
+  ],
+  "summary": "The flood has profoundly transformed this planet. Its landscape is now dominated by a dynamic sea of nanites in constant flux.",
+  "fields": {
+   "source": "00_planet_classes.txt"
+  }
+ },
+ {
+  "id": "planet_class:pc_nuked",
+  "name": "Tomb World",
+  "aliases": [
+   "pc_nuked"
+  ],
+  "summary": "A rocky world with a nitrogen-oxygen atmosphere. It is currently experiencing a nuclear winter, with dense layers of sooty aerosols in the atmosphere. High levels of surface radiation. Minimal signs of life.",
+  "fields": {
+   "source": "00_planet_classes.txt"
+  }
+ },
+ {
+  "id": "planet_class:pc_ocean",
+  "name": "Ocean World",
+  "aliases": [
+   "pc_ocean"
+  ],
+  "summary": "Rocky world with a nitrogen-oxygen atmosphere and a significant hydrosphere. Oceans cover more than 90% of the surface, with scattered islands making up the remaining percentage.",
+  "fields": {
+   "climate": "wet",
+   "source": "00_planet_classes.txt"
+  }
+ },
+ {
+  "id": "planet_class:pc_relic",
+  "name": "Relic World",
+  "aliases": [
+   "pc_relic"
+  ],
+  "summary": "A city once stretched across this entire world. Only ancient and abandoned ruins remain now, their original inhabitants long since departed.",
+  "fields": {
+   "climate": "dry",
+   "source": "03_planet_classes_ancient_relics.txt"
+  }
+ },
+ {
+  "id": "planet_class:pc_ringworld_habitable",
+  "name": "Ring Segment",
+  "aliases": [
+   "pc_ringworld_habitable"
+  ],
+  "summary": "Part of a Ring World, an immense band encircling the system's sun.",
+  "fields": {
+   "climate": "artificial",
+   "source": "00_planet_classes.txt"
+  }
+ },
+ {
+  "id": "planet_class:pc_savannah",
+  "name": "Savanna World",
+  "aliases": [
+   "pc_savannah"
+  ],
+  "summary": "Rocky world dominated by dry, arid plains covered by a nitrogen-oxygen atmosphere.",
+  "fields": {
+   "climate": "dry",
+   "source": "00_planet_classes.txt"
+  }
+ },
+ {
+  "id": "planet_class:pc_shattered_ring_habitable",
+  "name": "Shattered Ring Segment",
+  "aliases": [
+   "pc_shattered_ring_habitable"
+  ],
+  "summary": "Part of a Ring World, an immense band encircling the system's sun. This section of the megastructure has sustained damage - especially to some of its more advanced districts - but it does not appear irreparable.",
+  "fields": {
+   "climate": "artificial",
+   "source": "00_planet_classes.txt"
+  }
+ },
+ {
+  "id": "planet_class:pc_tropical",
+  "name": "Tropical World",
+  "aliases": [
+   "pc_tropical"
+  ],
+  "summary": "Humid, rocky world with a thick nitrogen-oxygen atmosphere. Seasons with significant precipitation are interchanged with drier periods. Most landmasses are covered in dense vegetation.",
+  "fields": {
+   "climate": "wet",
+   "source": "00_planet_classes.txt"
+  }
+ },
+ {
+  "id": "planet_class:pc_tundra",
+  "name": "Tundra World",
+  "aliases": [
+   "pc_tundra"
+  ],
+  "summary": "Cold and rocky world with a nitrogen-oxygen atmosphere. Permafrost covers most of the surface except for the more temperate equatorial regions.",
+  "fields": {
+   "climate": "cold",
+   "source": "00_planet_classes.txt"
+  }
+ },
+ {
+  "id": "planet_class:pc_volcanic",
+  "name": "Volcanic World",
+  "aliases": [
+   "pc_volcanic"
+  ],
+  "summary": "Rocky world with a sulfur rich atmosphere and a partially liquid lithosphere. The ash and basalt covered surface is interspersed with fresh volcanic activity, lava lakes and rivers.",
+  "fields": {
+   "climate": "dry",
+   "source": "00_planet_classes.txt"
+  }
+ },
+ {
+  "id": "planet_class:pc_warden_guardian",
+  "name": "pc_warden_guardian",
+  "aliases": [],
+  "summary": "",
+  "fields": {
+   "source": "00_planet_classes_first_contact_dlc.txt"
+  }
+ }
+]

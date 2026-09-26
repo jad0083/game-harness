@@ -89,6 +89,10 @@
 - [x] Decision traces: prompt, Gemini thought summaries, tool calls and results, answer, tokens, time (`runs/<id>/traces/`)
 - [x] Telemetry per campaign in SQLite (`runs/telemetry.sqlite`), rebuildable from the JSONL logs; outcome scoring 12 months later; governor tool `past_outcomes`
 - [x] Dashboard: campaign charts with directive lane and decision marks, decision list with outcomes, reasoning reader, activity feed; dark/light, phone layout
+- [x] Briefing: our species (traits, climate preference), other species in the empire, identity (AI personality, traditions, perks), colonisable planets in our borders with their fit, growth and naval-capacity techs, naval capacity used, idle stockpiles, colonies against peers (2026-09-26)
+- [x] Neighbours' identity in the briefing: ethics, government, civics, AI personality, species traits, colonies, traditions, perks
+- [x] Corpus: 363 species traits and 24 colonisable planet classes from the game files; advanced strategy doc (4.5.1 files + wiki); playbook §10 lessons from play and §11 species and identity, both sent with every decision
+- [ ] Governor Bridge: `expand` funds orbital habitats once `tech_habitat_1` is known; `prepare_war`/`defend` set the belligerent stance — files uploaded, live at the next game start
 - [x] Briefing: federation (type, level, cohesion, leader, members), Galactic Community vote and recent resolutions, crises and awakened empires, our situations; a crisis appearing is an urgent trigger
 - [x] Neighbours panel (strength ratios against ours, opinion, relation tags, military trend) and war spans shaded on the chart (2026-09-26)
 - [x] Each decision records the model release that answered (aliases resolve) and the thinking level; shown with the decision

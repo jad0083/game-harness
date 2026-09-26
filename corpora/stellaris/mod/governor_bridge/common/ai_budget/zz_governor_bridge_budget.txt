@@ -34,6 +34,24 @@ governor_expand_alloys_colonies = {
 	weight = { weight = 0.2 }
 }
 
+# Boxed in, growth continues with orbital habitats. Vanilla funds them only while
+# ai_should_build_habitats = yes (tech known, a suitable site); the same condition keeps these
+# entries from reserving alloys/influence the AI would never spend.
+governor_expand_alloys_habitats = {
+	resource = alloys
+	type = expenditure
+	category = megastructures_habitat
+	potential = { has_country_flag = governor_directive_expand ai_should_build_habitats = yes }
+	weight = { weight = 0.2 }
+}
+governor_expand_influence_habitats = {
+	resource = influence
+	type = expenditure
+	category = megastructures_habitat
+	potential = { has_country_flag = governor_directive_expand ai_should_build_habitats = yes }
+	weight = { weight = 0.1 }
+}
+
 # --- prepare_war: warships ------------------------------------------------------------------
 governor_prepare_war_alloys_ships = {
 	resource = alloys
