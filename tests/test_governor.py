@@ -992,3 +992,11 @@ def test_metrics_keep_neighbours_for_comparison():
     n = metrics(b)["neighbours"][0]
     assert n == {"name": "Ess Jaggon Authority", "military": 2475.0, "economy": 1282.0, "tech": 978.0, "systems": 27,
                  "opinion": 681, "status": ["alliance"]}
+
+
+def test_a_crisis_appearing_is_urgent():
+    from pilot.governor import urgent_changes
+    before = {"galaxy": {"crises": []}}
+    now = {"galaxy": {"crises": [["swarm", "Prethoryn Scourge", 90000.0]]}}
+    assert urgent_changes(before, now) == ["crisis: Prethoryn Scourge (swarm) appeared"]
+    assert urgent_changes(now, now) == []
