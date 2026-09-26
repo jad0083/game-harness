@@ -41,6 +41,7 @@ class Pilot:
         learned_rules = settings.corpus_dir / "learned" / "strategy.md"
         if learned_rules.exists():
             briefing += "\n\n## Rules learned in play\n" + learned_rules.read_text(encoding="utf-8")
+        self._briefing = briefing
         self.agent = build_agent(settings, briefing, model=model)
         self._learned_since_commit = 0
         self._commit_lock = threading.Lock()
@@ -63,6 +64,21 @@ class Pilot:
         self.human.push(text)
         self.log.emit("instruction", text=text)
 
+    def set_model(self, model: str, thinking: str | None = None) -> None:
+        """Switch model (and thinking level) from the next episode on."""
+        from dataclasses import replace
+
+        from .models import THINKING, valid_model
+        if not valid_model(model):
+            raise ValueError(f"not a model name: {model!r} (expected provider:name)")
+        if thinking is not None and thinking not in THINKING:
+            raise ValueError(f"thinking must be one of {', '.join(THINKING)}")
+        self.s = replace(self.s, model=model, thinking=thinking or self.s.thinking)
+        self.agent = build_agent(self.s, self._briefing)
+        self.log.state.model = model
+        self.log.state.info["thinking"] = self.s.thinking
+        self.log.emit("model", model=model, thinking=self.s.thinking)
+
     def answer(self, text: str) -> None:
         """Answer the model's open question (ask_human)."""
         self.human.answer(text)
@@ -75,7 +91,7 @@ class Pilot:
 
     def run(self, max_episodes: int | None = None) -> None:
         self._status("playing")
-        self.log.state.info.update(game=self.s.game, controls=["instruct"])
+        self.log.state.info.update(game=self.s.game, controls=["instruct", "set_model"], thinking=self.s.thinking)
         self.log.emit("run_start", model=self.s.model, game=self.s.game, coords=self.s.coord_space)
         self.log.set_campaign(self.s.game, self.s.campaign or self.s.journal.parent.name)
         unresolved = processing = 0

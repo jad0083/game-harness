@@ -19,6 +19,7 @@ from typing import Literal, Protocol
 
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent, RunContext, Tool
+from pydantic_ai.exceptions import UsageLimitExceeded
 from pydantic_ai.usage import UsageLimits
 
 from .agent import HumanChannel, model_settings
@@ -33,7 +34,11 @@ NEEDS_HUMAN = {"prepare_war"}      # strategy.md: only after the human confirmed
 INSTRUCTIONS = """You are the governor of a Stellaris empire. The game's own AI runs the empire day to day;
 you steer it by choosing ONE standing directive, which the harness applies (policies and a flag the
 AI keeps). The game is paused while you decide. Answer with `keep` unless the situation changed
-materially or the current directive's "leave when" condition holds. Use `consult` for game facts.
+materially or the current directive's "leave when" condition holds.
+The prompt already holds what you normally need: the briefing (resources, standing against the other
+empires, expansion room), the campaign plan, earlier directive changes and their outcomes, and the
+directives table below. Call a tool only for a specific fact that is missing (e.g. what an event
+option does: consult), and at most twice; then answer.
 Human instructions, when present, override the rules below."""
 
 
@@ -131,8 +136,11 @@ def consult(ctx: RunContext[GovDeps], query: str) -> str:
 
 
 def get_doc(ctx: RunContext[GovDeps], record_id: str) -> str:
-    """Fetch one doc chunk by id from a consult result, e.g. 'doc:policies#0'."""
-    return ctx.deps.game.corpus("corpus_get", id=record_id)
+    """Fetch one record or doc chunk by the id a consult result shows, e.g. 'doc:policies#0' or 'event:distar.311'."""
+    got = ctx.deps.game.corpus("corpus_get", id=record_id)
+    if got.startswith("No corpus item") and record_id.startswith("doc:strategy"):
+        got = ctx.deps.game.corpus("corpus_get", id=record_id.removeprefix("doc:"))   # models add "doc:" to strategy ids
+    return got
 
 
 def recent_log(ctx: RunContext[GovDeps], lines: int = 20) -> str:
@@ -169,10 +177,24 @@ def governor_settings(s: Settings):
     return model_settings(replace(s, thinking=s.governor_thinking))
 
 
+def strategy_core(strategy: str) -> str:
+    """The part of strategy.md every decision needs (the directives section), plus a table of contents
+    for the rest, which the model reads with `consult` when a topic comes up. Keeps the fixed
+    instructions short (and identical between calls, so providers can cache them)."""
+    parts = re.split(r"(?m)^(?=## )", strategy)
+    head, sections = parts[0], parts[1:]
+    core = [s for s in sections if "directive" in s.splitlines()[0].lower()]
+    toc = [s.splitlines()[0].lstrip("# ").strip() for s in sections if s not in core]
+    out = head.split("---")[0].strip()
+    if toc:
+        out += "\n\nMore in the playbook (use consult, e.g. consult(\"crisis preparation\")): " + "; ".join(toc) + "."
+    return out + "\n\n" + "\n".join(core)
+
+
 def build_governor(s: Settings, briefing: str, model=None) -> Agent[GovDeps, GovernorDecision]:
     return Agent(model or s.model, deps_type=GovDeps, output_type=GovernorDecision,
                  instructions=INSTRUCTIONS + "\n\n" + briefing,
-                 tools=[Tool(f) for f in (consult, get_doc, recent_log, past_outcomes, remember_rule)],
+                 tools=[Tool(f) for f in (consult, get_doc, recent_log, remember_rule)],   # outcomes are in the prompt
                  model_settings=governor_settings(s), retries=2)
 
 
@@ -200,31 +222,52 @@ class Governor:
         self.store = LearnedStore(settings.corpus_dir, settings.model, log.state.run_id)
         self.journal = Journal(settings.journal, settings.model)
         text = (settings.corpus_dir / "pilot.md").read_text(encoding="utf-8")
-        text += "\n\n" + (settings.corpus_dir / "strategy.md").read_text(encoding="utf-8")
+        text += "\n\n" + strategy_core((settings.corpus_dir / "strategy.md").read_text(encoding="utf-8"))
         learned = settings.corpus_dir / "learned" / "strategy.md"
         if learned.exists():
             text += "\n\n## Rules learned in play\n" + learned.read_text(encoding="utf-8")
-        self.agent = build_governor(settings, text, model=model)
-        self.chat_agent: Agent[GovDeps, str] = Agent(
-            model or settings.model, deps_type=GovDeps, output_type=str,
-            instructions=CHAT_INSTRUCTIONS + "\n\n" + text,
-            tools=[Tool(f) for f in (consult, get_doc, recent_log, past_outcomes)],   # read-only
-            model_settings=model_settings(settings), retries=2)
+        self._text = text
+        self._model_obj = model                  # a Model instance (tests); None = settings.model
+        self._build_agents()
         self.chat_exchanges: list[list] = []      # whole exchanges, so history never starts mid-exchange
         self._chat_lock = threading.Lock()
         self.last_change: int | None = None       # month of the last directive change
         self.last_briefing = ""                   # text of the latest briefing given to the model
         self.plan = ""                            # the campaign plan (goals, milestones), per campaign
         self._since_retro = 0
-        self.retro_agent: Agent[GovDeps, Retrospective] = Agent(
-            model or settings.model, deps_type=GovDeps, output_type=Retrospective,
-            instructions=RETRO_INSTRUCTIONS + "\n\n" + text,
-            tools=[Tool(f) for f in (consult, get_doc, past_outcomes)],
-            model_settings=governor_settings(settings), retries=2)
         self.orders: list[str] = []               # standing orders, saved per campaign
         self.requests: queue.Queue[tuple[str, str]] = queue.Queue()   # ("decide", msg) | ("override", name)
-        log.state.info["controls"] = ["instruct", "chat", "order_add", "order_remove", "decide_now", "override"]
+        log.state.info["controls"] = ["instruct", "chat", "order_add", "order_remove", "decide_now", "override",
+                                      "set_model"]
+        log.state.info["thinking"] = settings.governor_thinking
         log.state.info["directives"] = list(DIRECTIVES)
+
+    def _build_agents(self) -> None:
+        """(Re)build the decision, chat and retrospective agents for the current model settings."""
+        m, s, text = self._model_obj or self.s.model, self.s, self._text
+        self.agent = build_governor(s, text, model=m)
+        self.chat_agent: Agent[GovDeps, str] = Agent(
+            m, deps_type=GovDeps, output_type=str, instructions=CHAT_INSTRUCTIONS + "\n\n" + text,
+            tools=[Tool(f) for f in (consult, get_doc, recent_log, past_outcomes)],   # read-only
+            model_settings=governor_settings(s), retries=2)
+        self.retro_agent: Agent[GovDeps, Retrospective] = Agent(
+            m, deps_type=GovDeps, output_type=Retrospective, instructions=RETRO_INSTRUCTIONS + "\n\n" + text,
+            tools=[Tool(f) for f in (consult, get_doc)],    # outcomes are already in its prompt
+            model_settings=governor_settings(s), retries=2)
+
+    def set_model(self, model: str, thinking: str | None = None) -> None:
+        """Switch model (and thinking level) from the next model call on."""
+        from .models import THINKING, valid_model
+        if not valid_model(model):
+            raise ValueError(f"not a model name: {model!r} (expected provider:name)")
+        if thinking is not None and thinking not in THINKING:
+            raise ValueError(f"thinking must be one of {', '.join(THINKING)}")
+        self.s = replace(self.s, model=model, governor_thinking=thinking or self.s.governor_thinking)
+        self._model_obj = None
+        self._build_agents()
+        self.log.state.model = model
+        self.log.state.info["thinking"] = self.s.governor_thinking
+        self.log.emit("model", model=model, thinking=self.s.governor_thinking)
 
     # dashboard controls (same surface as Pilot)
     def pause(self) -> None:
@@ -492,6 +535,12 @@ class Governor:
                   f"Current directive: {current or 'none'}{held}.",
                   "Campaign plan:\n" + (self.plan or "(none yet: write one in `plan`)"),
                   "Briefing from the latest autosave:", self.last_briefing]
+        if self.log.telemetry is not None and self.log.campaign_id:
+            try:   # given up front, so the model rarely needs a second call for it
+                prompt.append("Earlier directive changes in this campaign and what followed 12 months later:\n"
+                              + self.log.telemetry.past_outcomes(self.log.campaign_id, limit=6))
+            except Exception as e:  # noqa: BLE001
+                self.log.emit("briefing_error", error=f"past outcomes: {e}"[:200])
         if self.orders:
             prompt.append("STANDING ORDERS from the human (always follow these): "
                           + " | ".join(f"{i + 1}. {o}" for i, o in enumerate(self.orders)))
@@ -504,8 +553,11 @@ class Governor:
                 "current": current}
         try:
             result = self.agent.run_sync("\n".join(prompt), deps=deps,
-                                         usage_limits=UsageLimits(request_limit=self.s.max_requests_per_episode))
+                                         usage_limits=UsageLimits(request_limit=self.s.governor_max_requests))
         except Exception as e:  # noqa: BLE001 - keep playing with the current directive
+            if isinstance(e, UsageLimitExceeded):
+                e = RuntimeError(f"no answer within {self.s.governor_max_requests} model calls; "
+                                 f"the current directive ({current or 'none'}) stays")
             self.log.emit("episode_error", error=f"{type(e).__name__}: {e}"[:500])
             self.log.save_trace(n, {**base, "outcome": "error", "error": f"{type(e).__name__}: {e}"[:2000],
                                     "seconds": round(time.time() - started, 1),

@@ -38,6 +38,7 @@ class Settings:
     thinking: str = "medium"
     # Stellaris governor decisions (rare, strategic); set separately from GC4 episodes.
     governor_thinking: str = "medium"
+    governor_max_requests: int = 4      # model calls per governor decision (1 answer + up to 3 tool rounds)
     retro_every: int = 5                # Stellaris: a retrospective after every N model decisions (0 = never)
     image_detail: str = "medium"       # low | medium | high (Gemini media resolution)
     images_in_context: int = 2         # older screenshots in an episode become text stubs

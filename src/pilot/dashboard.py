@@ -130,7 +130,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
         where, args = scope(request)
         rows = await q(f"SELECT run_id, episode, campaign_id, t, date, month, trigger, decision, reason, outcome, current,"
                        f" tokens_in, tokens_out, seconds, result,"
-                       f" (SELECT model FROM runs WHERE runs.id=decisions.run_id) AS model"
+                       f" COALESCE(model, (SELECT model FROM runs WHERE runs.id=decisions.run_id)) AS model"
                        f" FROM decisions WHERE {where} ORDER BY t", args)
         for r in rows:
             r["result"] = json.loads(r["result"]) if r["result"] else None
@@ -140,7 +140,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
         run, ep = request.query.get("run", ""), request.query.get("episode", "")
         if not ep.isdigit():
             raise web.HTTPBadRequest(text="episode must be a number")
-        rows = await q("SELECT *, (SELECT model FROM runs WHERE runs.id=decisions.run_id) AS model"
+        rows = await q("SELECT *, COALESCE(model, (SELECT model FROM runs WHERE runs.id=decisions.run_id)) AS model"
                        " FROM decisions WHERE run_id=? AND episode=?", (run, int(ep)))
         if not rows:
             raise web.HTTPNotFound()
@@ -308,6 +308,11 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
             pilot.stop()
         elif action == "instruct" and body.get("text", "").strip():
             pilot.instruct(body["text"].strip())
+        elif action == "set_model" and hasattr(pilot, "set_model"):
+            try:
+                pilot.set_model(str(body.get("model", "")), body.get("thinking") or None)
+            except ValueError as e:
+                raise web.HTTPBadRequest(text=str(e)) from e
         elif action == "answer" and body.get("text", "").strip() and hasattr(pilot, "answer"):
             pilot.answer(body["text"].strip())
         elif action in ("chat", "order_add") and body.get("text", "").strip() and hasattr(pilot, action):
@@ -322,7 +327,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
             except ValueError as e:
                 raise web.HTTPBadRequest(text=str(e)) from e
         else:
-            raise web.HTTPBadRequest(text="action must be pause|resume|stop|instruct|answer|chat|order_add|order_remove|"
+            raise web.HTTPBadRequest(text="action must be pause|resume|stop|instruct|answer|set_model|chat|order_add|order_remove|"
                                           "decide_now|override, with its text/index/directive")
         return web.json_response({"ok": True, "status": log.state.status})
 

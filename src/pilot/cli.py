@@ -69,6 +69,13 @@ def run(s: Settings, episodes: int | None) -> int:
     else:
         pilot = Pilot(s, game, log)
     log.state.info["port"] = s.dashboard_port      # lets the always-on viewer find this run
+
+    def list_models() -> None:
+        from .models import available_models
+        log.state.info["models"] = available_models(s)
+
+    import threading
+    threading.Thread(target=list_models, daemon=True, name="models").start()
     serve_in_background(pilot, s.dashboard_host, s.dashboard_port)
     print(f"pilot {run_id}: model {s.model}; dashboard http://{s.dashboard_host}:{s.dashboard_port}/ ; "
           f"log {log.dir / 'events.jsonl'}", flush=True)
