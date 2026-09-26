@@ -222,6 +222,19 @@ What went wrong in the first long campaign, and the rule each lesson gives:
 - **War stance**: `prepare_war` and `defend` set the belligerent stance (+10% naval capacity,
   −10% war exhaustion); `expand` and `diplomacy_first` set their own stance again afterwards.
 
+- **Allies are made before a war, not during it** (4.5: an AI weighs its opinion of both sides,
+  counting the war leaders twice, and its price rises with the war's size and its own other wars;
+  crisis wars are exempt; dev diary 430, confirmed shipped by the 4.5.1 war-join messages). A
+  small empire gets help from pacts and a federation signed in peace (`diplomacy_first`), not by
+  recruiting once attacked; against a large coalition, `defend` with the allies we already have.
+- **Fallen empires**: parity in military power is not enough to fight one (their ships are
+  built to counter; one tester needed about twice their power against a spiritualist one;
+  unverified in our games). Never `prepare_war` against one.
+- **Proactive first contact** (`expand`, `diplomacy_first`; not for xenophobe or homicidal
+  empires): +50% influence from each completed first contact, the cheapest early influence.
+- **Unity after traditions**: once all tradition trees and perk slots are taken, a large unity
+  stock is normal (it only buys edicts and planet ascension) and not a sign of weak production.
+
 ## 11. Species and empire identity (ours and theirs)
 
 Every run can be a different species and government; read the *Species*, *Identity* and

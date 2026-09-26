@@ -454,6 +454,10 @@ Recorded on 4.3.7 (June 2026); not re-checked against the 4.5.1 files unless mar
 - https://stellaris.paradoxwikis.com/Crisis — crisis timing and damage bonuses, verified 4.4.
 - https://stellaris.paradoxwikis.com/Ethics — ethic modifiers, verified 4.4.
 - https://stellaris.paradoxwikis.com/Trade — trade resource and market fee, verified 4.4.
+- https://www.youtube.com/watch?v=nRhX-XgHXr0 — Ep3o, war changes of dev diary 430 (4.5 beta; shipped in 4.5.1): AI war-joining.
+- https://www.youtube.com/watch?v=zTyKLDujjp0 — Ep3o, ship designs (4.3+): carriers mid-game; fleet doctrines.
+- https://www.youtube.com/watch?v=WJlSrJxdhck — Aktion, early-game tips (2025-04, pre-4.0 meta in places): proactive first contact.
+- https://www.youtube.com/watch?v=lvS3snXDyk4 — Montu Plays, economy (4.2): strategic-resource buildings; late unity.
 - https://www.youtube.com/watch?v=8JiqZYKU9PA — Cedar Games, Stellaris Planet and Economy Guide (4.3.7, 2026-06-19): market, pop growth, planet management.
 - https://stellaris.paradoxwikis.com/Stability — stability thresholds, revolt, deficit trade cost, verified 4.4.
 - https://stellaris.paradoxwikis.com/Influence — influence sinks and sources (thin), verified 4.4.
