@@ -7,7 +7,8 @@
 #
 # What it does:
 #   1. Stops any running agent (a running exe is locked and cannot be overwritten).
-#   2. Copies game-agent.exe + agent_token.txt to %LOCALAPPDATA%\GameAgent.
+#   2. Copies game-agent.exe + agent_token.txt to %LOCALAPPDATA%\GameAgent and writes roots.json
+#      (game folders the agent may read, read-only: Stellaris/GalCiv4 documents and install dirs).
 #   3. Adds an inbound firewall rule for TCP 8765 from the local subnet only (one UAC prompt, first run only).
 #   4. Registers a logon task that runs the agent in your desktop session, starts it, and checks /health.
 
@@ -57,6 +58,39 @@ if ($env:GA_SRC) {
     $tok = Join-Path $here 'agent_token.txt'
     if (Test-Path $tok) { Copy-Item $tok $TokenFile -Force }
 }
+
+# --- 2b. Read-only file roots (game saves, logs, game data) ----------------------
+# The agent serves files only from these folders, read-only (GET /files/*).
+Step 'Detecting game folders for read-only access'
+$docs = [Environment]::GetFolderPath('MyDocuments')
+$steamLibs = @()
+try {
+    $steam = (Get-ItemProperty 'HKCU:\Software\Valve\Steam' -ErrorAction Stop).SteamPath
+    $steamLibs += $steam
+    $vdf = Join-Path $steam 'steamapps\libraryfolders.vdf'
+    if (Test-Path $vdf) {
+        $steamLibs += Get-Content $vdf | Select-String '"path"\s+"(.+)"' | ForEach-Object { $_.Matches[0].Groups[1].Value -replace '\\\\', '\' }
+    }
+} catch { Write-Host '    Steam not found in the registry' }
+function Find-SteamGame($folder) {
+    foreach ($lib in $steamLibs) {
+        $p = Join-Path $lib "steamapps\common\$folder"
+        if (Test-Path $p) { return (Resolve-Path $p).Path }
+    }
+    return $null
+}
+$candidates = [ordered]@{
+    stellaris_docs    = Join-Path $docs 'Paradox Interactive\Stellaris'
+    stellaris_install = Find-SteamGame 'Stellaris'
+    galciv4_docs      = Join-Path $docs 'My Games\GalCiv4'
+    galciv4_install   = Find-SteamGame 'Galactic Civilizations IV'
+}
+$roots = [ordered]@{}
+foreach ($k in $candidates.Keys) {
+    $v = $candidates[$k]
+    if ($v -and (Test-Path $v)) { $roots[$k] = $v; Write-Host "    $k = $v" }
+}
+(@{ roots = $roots } | ConvertTo-Json -Depth 3) | Set-Content -Encoding UTF8 (Join-Path $Dest 'roots.json')
 
 # --- 3. Firewall (needs admin once) --------------------------------------------
 Step "Allowing inbound TCP $Port from the local subnet"
