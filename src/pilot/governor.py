@@ -8,6 +8,7 @@ one standing directive. The game is paused while the model decides, so any game 
 
 from __future__ import annotations
 
+import html
 import json
 import queue
 import re
@@ -41,6 +42,21 @@ class GovernorDecision(BaseModel):
                        "diplomacy_first"] = Field(description="The directive to hold from now on, or 'keep'")
     reason: str = Field(description="One or two sentences citing the briefing numbers that decided it")
     note: str = Field(default="", description="Optional one line for the game journal (war, first colony, crisis...)")
+    plan: str = Field(default="", description="The full rewritten campaign plan (goals, milestones with in-game target "
+                      "dates, current focus), ONLY when the plan should change; otherwise empty")
+
+
+class Retrospective(BaseModel):
+    assessment: str = Field(description="What worked and what did not since the last review, citing numbers")
+    rules: list[str] = Field(default_factory=list, description="0-3 general rules learned (situation -> choice), "
+                             "each a full sentence; only what the evidence supports")
+    plan: str = Field(description="The revised campaign plan: goals, milestones with in-game target dates, current focus")
+
+
+RETRO_INSTRUCTIONS = """You review how a Stellaris empire has been governed. The game's own AI plays it; a governor
+picks one standing directive at a time. Compare the campaign plan with what happened: the decisions,
+their outcomes 12 months later, and the empire's standing against the other empires. Be concrete and
+brief, cite numbers, and propose only rules the evidence supports."""
 
 
 class StellarisGame(Protocol):
@@ -141,10 +157,10 @@ def remember_rule(ctx: RunContext[GovDeps], rule: str, why: str) -> str:
     try:
         msg = ctx.deps.store.add_rule(rule, why)
     except LearningRejected as e:
-        ctx.deps.log.emit("learn_rejected", kind="rules", reason=str(e), rule=rule)
+        ctx.deps.log.emit("learn_rejected", category="rules", reason=str(e), rule=rule)
         return f"rejected: {e}"
     ctx.deps.log.state.learned["rules"] = ctx.deps.log.state.learned.get("rules", 0) + 1
-    ctx.deps.log.emit("learned", kind="rules", message=msg, rule=rule)
+    ctx.deps.log.emit("learned", category="rules", message=msg, rule=rule)
     return msg
 
 
@@ -198,6 +214,13 @@ class Governor:
         self._chat_lock = threading.Lock()
         self.last_change: int | None = None       # month of the last directive change
         self.last_briefing = ""                   # text of the latest briefing given to the model
+        self.plan = ""                            # the campaign plan (goals, milestones), per campaign
+        self._since_retro = 0
+        self.retro_agent: Agent[GovDeps, Retrospective] = Agent(
+            model or settings.model, deps_type=GovDeps, output_type=Retrospective,
+            instructions=RETRO_INSTRUCTIONS + "\n\n" + text,
+            tools=[Tool(f) for f in (consult, get_doc, past_outcomes)],
+            model_settings=governor_settings(settings), retries=2)
         self.orders: list[str] = []               # standing orders, saved per campaign
         self.requests: queue.Queue[tuple[str, str]] = queue.Queue()   # ("decide", msg) | ("override", name)
         log.state.info["controls"] = ["instruct", "chat", "order_add", "order_remove", "decide_now", "override"]
@@ -406,6 +429,12 @@ class Governor:
             except ValueError:
                 self.orders = []
         self.log.state.info["orders"] = list(self.orders)
+        if self.log.telemetry is not None:
+            try:
+                self.plan = self.log.telemetry.latest_plan(self.log.campaign_id or "")
+            except Exception as e:  # noqa: BLE001
+                self.log.emit("briefing_error", error=f"loading the plan: {e}"[:200])
+        self.log.state.info["plan"] = self.plan
 
     def _run_until_next_decision(self, last: dict) -> tuple[dict | None, str]:
         due = months(last["date"]) + self.s.decide_every_months
@@ -461,6 +490,7 @@ class Governor:
         self.last_briefing = self.game.briefing_text()
         prompt = [f"Decision point: {reason}.",
                   f"Current directive: {current or 'none'}{held}.",
+                  "Campaign plan:\n" + (self.plan or "(none yet: write one in `plan`)"),
                   "Briefing from the latest autosave:", self.last_briefing]
         if self.orders:
             prompt.append("STANDING ORDERS from the human (always follow these): "
@@ -519,3 +549,59 @@ class Governor:
         self.journal.note(f"{d.directive} ({applied}) — {d.reason}", b["date"])
         if d.note:
             self.journal.note(d.note, b["date"])
+        if d.plan.strip():
+            self._set_plan(d.plan.strip(), b["date"], "decision")
+        self._since_retro += 1
+        if self.s.retro_every and self._since_retro >= self.s.retro_every:
+            self._retrospective(b)
+
+    def _set_plan(self, text: str, date: str, source: str) -> None:
+        text = html.unescape(text)            # models sometimes write "&amp;"; the dashboard escapes on display
+        self.plan = text
+        self.log.state.info["plan"] = text
+        self.log.emit("plan", date=date, source=source, text=text)
+
+    def _retrospective(self, b: dict) -> None:
+        """Review plan vs outcomes and standing; revise the plan and record rules learned."""
+        self._since_retro = 0
+        self._status("deciding")
+        self.log.state.episodes += 1
+        n = self.log.state.episodes
+        tel, cid = self.log.telemetry, self.log.campaign_id
+        outcomes = tel.past_outcomes(cid) if tel is not None and cid else "(no telemetry)"
+        recent = [e for e in list(self.log.recent) if e["kind"] == "episode"][-10:]
+        prompt = ["Retrospective.", "Campaign plan:\n" + (self.plan or "(none)"),
+                  "Recent decisions:\n" + "\n".join(f"- {e.get('date')}: {e.get('decision')}" for e in recent),
+                  "Directive changes and what followed:\n" + outcomes,
+                  "Latest briefing:\n" + self.last_briefing]
+        started = time.time()
+        base = {"episode": n, "model": self.s.model, "game": self.s.game, "date": b["date"],
+                "trigger": f"retrospective after {self.s.retro_every} decisions", "current": current_directive(b)}
+        try:
+            result = self.retro_agent.run_sync("\n\n".join(prompt), deps=GovDeps(self.game, self.store, self.log),
+                                               usage_limits=UsageLimits(request_limit=self.s.max_requests_per_episode))
+        except Exception as e:  # noqa: BLE001 - a failed review never stops play
+            self.log.emit("episode_error", error=f"retrospective: {type(e).__name__}: {e}"[:500])
+            return
+        r, usage = result.output, result.usage
+        st = self.log.state
+        st.tokens_in += usage.input_tokens or 0
+        st.tokens_out += usage.output_tokens or 0
+        st.requests += usage.requests or 0
+        learned = []
+        for rule in r.rules[:3]:
+            try:
+                self.store.add_rule(rule, f"retrospective {b['date']}")
+                learned.append(rule)
+                st.learned["rules"] = st.learned.get("rules", 0) + 1
+                self.log.emit("learned", category="rules", message="retrospective rule", rule=rule)
+            except LearningRejected as e:
+                self.log.emit("learn_rejected", category="rules", reason=str(e), rule=rule)
+        if r.plan.strip():
+            self._set_plan(r.plan.strip(), b["date"], "retrospective")
+        self.log.save_trace(n, {**base, "decision": "retrospective", "reason": r.assessment,
+                                "outcome": f"{len(learned)} rules learned", "seconds": round(time.time() - started, 1),
+                                "tokens_in": usage.input_tokens, "tokens_out": usage.output_tokens,
+                                "steps": serialize(result.all_messages())})
+        self.journal.note(f"Retrospective: {r.assessment}", b["date"])
+        self._status("playing")

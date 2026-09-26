@@ -220,10 +220,10 @@ def _learn(ctx: RunContext[Deps], kind: str, fn, **info) -> str:
     try:
         msg = fn()
     except LearningRejected as e:
-        ctx.deps.log.emit("learn_rejected", kind=kind, reason=str(e), **info)
+        ctx.deps.log.emit("learn_rejected", category=kind, reason=str(e), **info)
         return f"rejected: {e}"
     ctx.deps.log.state.learned[kind] = ctx.deps.log.state.learned.get(kind, 0) + 1
-    ctx.deps.log.emit("learned", kind=kind, message=msg, **info)
+    ctx.deps.log.emit("learned", category=kind, message=msg, **info)
     return msg
 
 

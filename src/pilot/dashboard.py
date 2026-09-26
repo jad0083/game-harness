@@ -17,6 +17,7 @@ Telemetry (runs/telemetry.sqlite, across runs and models):
     GET  /api/decisions?campaign=<id>|run=<id>  decisions (summary + outcome 12 months later)
     GET  /api/decision?run=<id>&episode=<n>     one decision with its full trace
     GET  /api/metrics?campaign=<id>|run=<id>    metric points over in-game time
+    GET  /api/plans?campaign=<id>|run=<id>      campaign plan versions, newest first
 """
 
 from __future__ import annotations
@@ -153,7 +154,13 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
         rows = await q(f"SELECT date, month, data FROM metrics WHERE {where} ORDER BY month, t", args)
         return web.json_response([{"date": r["date"], "month": r["month"], **json.loads(r["data"])} for r in rows])
 
+    async def api_plans(request):
+        where, args = scope(request)
+        rows = await q(f"SELECT run_id, t, date, source, text FROM plans WHERE {where} ORDER BY t DESC", args)
+        return web.json_response(rows)
+
     api = [web.get("/api/campaigns", api_campaigns), web.get("/api/decisions", api_decisions),
+           web.get("/api/plans", api_plans),
            web.get("/api/decision", api_decision), web.get("/api/metrics", api_metrics)]
 
     def run_dir(request) -> Path:

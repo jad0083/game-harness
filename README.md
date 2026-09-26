@@ -220,7 +220,7 @@ echo 'GEMINI_API_KEY=…' >> .env                 # or OPENAI_API_KEY / ANTHROPI
 .venv/bin/python -m pilot run --model openai:gpt-5 --game stellaris --episodes 3 --no-commit
 ```
 Environment overrides: `PILOT_MODEL`, `PILOT_GAME`, `PILOT_SPEED`, `PILOT_DECIDE_MONTHS`,
-`PILOT_POLL_S`, `PILOT_PORT`, `PILOT_COMMIT`, `PILOT_JOURNAL`, `PILOT_THINKING` (GC4 episodes) and
+`PILOT_POLL_S`, `PILOT_RETRO_EVERY`, `PILOT_PORT`, `PILOT_COMMIT`, `PILOT_JOURNAL`, `PILOT_THINKING` (GC4 episodes) and
 `PILOT_GOVERNOR_THINKING` (Stellaris decisions), both default `medium` (at `low` Gemini often skips
 thinking and returns no thought summary), `PILOT_CAMPAIGN`,
 `PILOT_RUNS_DIR`.
@@ -241,6 +241,9 @@ dashboard is on :8790).
   decision*; *Decide now* (pauses and decides immediately); *Standing orders* (in every decision
   until removed, saved per campaign); *Override* (apply a directive yourself, recorded as yours);
   Yes/No when the model asks for confirmation (e.g. `prepare_war`).
+- **Plan**: the governor's campaign plan (goals, milestones with in-game target dates, current
+  focus) and its earlier versions; it is written at the first decision, can be revised at any
+  decision, and is reviewed at every retrospective.
 - **Activity**: the event feed; plus pause / resume / stop in the top bar.
 
 ### Telemetry (`runs/telemetry.sqlite`)
@@ -255,7 +258,10 @@ The database is local (gitignored); curated knowledge (`learned/`, strategy, jou
 the model returns one directive or `keep` → apply (flag + policies, console, game paused) →
 resume at `--speed` (default `normal`) → poll autosaves until `--months` have passed, a new war starts, or a
 resource turns negative → pause → decide again. The game is paused whenever the model thinks,
-so any speed is safe. `prepare_war` is applied only after a human "yes" on the dashboard. If the
+so any speed is safe. `prepare_war` is applied only after a human "yes" on the dashboard.
+Every `PILOT_RETRO_EVERY` decisions (default 5) a **retrospective** compares the plan with what
+happened (decisions, their 12-month outcomes, the standing against other empires), revises the
+plan and records up to 3 rules in `corpora/stellaris/learned/strategy.md` (read by later decisions). If the
 game stops responding to pause/resume (e.g. a text box has keyboard focus; the controller tries
 one Esc first), the governor stops acting and flags *needs attention* until you press Resume.
 Measured with Gemini 3.8 Flash: ~6.2k input / ~0.4k output tokens and ~2 s per decision.

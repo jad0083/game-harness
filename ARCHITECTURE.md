@@ -290,6 +290,11 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
 - `dashboard.py` API: `/api/campaigns`, `/api/decisions`, `/api/decision`, `/api/metrics`,
   `/runs/*`; the viewer's `LiveProxy` finds the live run by the dashboard port recorded in its
   `status.json` and checks that it answers with the same run id.
+- Campaign plan and retrospectives (`governor.py`): the plan is text the model writes in the
+  optional `plan` field of a decision (`plan` events, `plans` table, `/api/plans`); every
+  `retro_every` model decisions a separate agent (`Retrospective`: assessment, rules, plan) reviews
+  plan vs outcomes and standing; its rules go through `LearnedStore.add_rule`, and it is saved as
+  a decision with `decision = "retrospective"`.
 - `static/dashboard.html`: one file, no build step; SVG charts (palette validated for both themes;
   light-mode relief via legend, hover values and a table view).
 
