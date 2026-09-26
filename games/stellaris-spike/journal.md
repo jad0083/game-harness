@@ -120,4 +120,9 @@ Open questions for the build:
 - End-to-end governor run on the `human_ai` path (Gemini, Normal, 6-month cadence): take-control
   at start ("human_ai is ON"), then 3 × `keep` (2216.02 – 2217.02) citing "influence maxed at 800
   and only 4 systems owned" and positive nets; game left paused.
+- **Peer benchmarks** (2217–2218): the briefing now shows "FALLING BEHIND: systems 4 vs median 15.5".
+  Gemini cites it in both decisions but keeps `expand` ("not resource-constrained": 860 influence,
+  +14 alloys/month) while systems stay at 4 (median 16.5). The briefing lacks why expansion stalls
+  (reachable unclaimed systems, construction ships, closed borders), so the model cannot name the
+  constraint yet.
 

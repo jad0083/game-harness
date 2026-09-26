@@ -51,6 +51,12 @@ Directives never grant resources, stats or anything the empire could not do itse
 
 ## Decision rules
 
+- **Standing first**: the briefing compares us with the other regular empires (ours / median /
+  best, our rank). A `FALLING BEHIND` line means we are below half the median: treat it as the
+  main problem. Falling behind in *systems* while `expand` is already active means the AI is
+  constrained, not that the directive is wrong: look for the cause (influence stock and income,
+  alloys for outposts, unsurveyed space, a closed border, deficits) and say it in your reason.
+
 - Read the whole briefing before choosing. Pick the directive whose *trigger* in
   `strategy.md` fits best; keep the current one if nothing has changed materially.
 - **Deficits first**: any basic resource with a negative monthly net and a stockpile that will
