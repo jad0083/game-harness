@@ -592,10 +592,12 @@ def test_rebuild_survives_a_corrupt_trace_file(setup, tmp_path):
 
 
 def planner_model(retro_rules=("Survey before expanding: expand stalls when few reachable systems are surveyed.",)):
-    """Decides with a plan on the first decision, keeps afterwards; the strategist writes a new
-    version (with rules learned) whenever it is reviewed."""
+    """Decides `expand` on the first decision, `keep` afterwards; the strategist writes a new
+    version (with rules learned) whenever it is reviewed. `expansion` is priority 2 (PILLARS
+    order), so the first `expand` choice stays within the frame's top 2 and is never off-frame."""
     from pilot.strategy import PILLARS
     seen = []
+    calls = {"n": 0}
 
     def respond(messages, info: AgentInfo) -> ModelResponse:
         from pydantic_ai.messages import UserPromptPart
@@ -610,16 +612,16 @@ def planner_model(retro_rules=("Survey before expanding: expand stalls when few 
             return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {
                 "change": True, "assessment": "Expansion lagged the median; surveying was the bottleneck.",
                 "rules": list(retro_rules), "strategy": strategy})])
-        first = not any("Campaign plan:" in p and "Reach 6 systems" in p for p in seen)
-        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {
-            "directive": "expand" if first else "keep", "reason": "r",
-            "plan": "1. Reach 6 systems by 2205.\\n2. Keep all nets positive." if first else ""})])
+        choice = "expand" if calls["n"] == 0 else "keep"
+        calls["n"] += 1
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"directive": choice, "reason": "r"})])
 
     return FunctionModel(respond), seen
 
 
-def test_campaign_plan_persists_and_the_strategist_reviews_on_schedule(setup, tmp_path):
-
+def test_the_strategy_frame_persists_and_the_strategist_reviews_on_schedule(setup, tmp_path):
+    """Successor to the old free-text campaign plan test (Task 4 drops `plan` from decisions): the
+    strategist's frame, not a plan, is what now reaches later decisions."""
     from pilot.telemetry import Telemetry
     s, _ = setup
     s.retro_every = 3
@@ -630,20 +632,30 @@ def test_campaign_plan_persists_and_the_strategist_reviews_on_schedule(setup, tm
     model, seen = planner_model()
     gov = Governor(s, game, log, model=model)
     gov.run(max_decisions=4)          # 4 decisions; the strategist also reviews at start and after 3
-    plans = tel.query("SELECT date, text, source FROM plans WHERE campaign_id='stellaris/emp_1' ORDER BY t")
-    assert [p["source"] for p in plans] == ["decision"], plans          # only decisions write the plan now
-    assert "Reach 6 systems" in plans[0]["text"]
-    assert any("Campaign plan:" in p and "Reach 6 systems" in p for p in seen), "the plan is shown to later decisions"
+    assert any("STRATEGY FRAME" in p and "Survey before expanding" in p for p in seen), \
+        "the frame is shown to later decisions"
     hist = tel.strategy_history("stellaris/emp_1")
     assert [h["trigger"] for h in hist] == ["scheduled after 3 decisions", "start of run"]
     assert hist[0]["strategy"]["focus"] == "Survey before expanding"
     rules = (s.corpus_dir / "learned" / "strategy.md")
     assert rules.exists() and "Survey before expanding" in rules.read_text()
-    assert gov.plan.startswith("1. Reach 6 systems")
+
+
+def test_a_plan_can_still_be_set_directly_and_persists_across_governors(setup, tmp_path):
+    """The campaign plan machinery (superseded by the strategy frame in decision prompts) is kept
+    for whatever else sets it directly; `_set_plan`/telemetry round-trip still works."""
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(s.runs_dir, "run5b", s.model, telemetry=tel)
+    src = "save games/emp_2/x.sav"
+    gov = Governor(s, FakeStellaris([{**briefing("2200.01.01"), "source": src}]), log, model=decisions("keep"))
+    gov.run(max_decisions=1)
     gov._set_plan("Goals &amp; milestones", "2203.01.01", "decision")
     assert gov.plan == "Goals & milestones"
     # a new Governor for the same campaign picks the plan up again
-    gov2 = Governor(s, FakeStellaris([briefing("2210.01.01")]), EventLog(s.runs_dir, "run6", s.model, telemetry=tel), model=model)
+    gov2 = Governor(s, FakeStellaris([briefing("2210.01.01")]),
+                    EventLog(s.runs_dir, "run6b", s.model, telemetry=tel), model=decisions("keep"))
     gov2._set_campaign({"source": src})
     assert gov2.plan == "Goals & milestones"
 
@@ -682,12 +694,14 @@ def test_plans_api(setup, tmp_path):
     log = EventLog(s.runs_dir, "run7", s.model, telemetry=tel)
     game = FakeStellaris([{**briefing(f"22{i:02d}.01.01"), "source": "save games/e1/x.sav"} for i in range(6)])
     model, _ = planner_model()
-    Governor(s, game, log, model=model).run(max_decisions=3)
+    gov = Governor(s, game, log, model=model)
+    gov.run(max_decisions=3)
+    gov._set_plan("Reach 6 systems by 2205.", "2202.01.01", "decision")   # the plan endpoint still serves direct writes
 
     async def go():
         async with TestClient(TestServer(make_app(None, s.runs_dir, tel))) as c:
             plans = await (await c.get("/api/plans", params={"campaign": "stellaris/e1"})).json()
-            assert [p["source"] for p in plans] == ["decision"], plans          # only decisions write the plan now
+            assert plans and "Reach 6 systems" in plans[0]["text"]
             ds = await (await c.get("/api/decisions", params={"campaign": "stellaris/e1"})).json()
             # strategy reviews also trace (start of run, and after 2 decisions per retro_every) but are
             # not directive decisions, so they are excluded here
@@ -767,9 +781,9 @@ def test_a_decision_that_keeps_calling_tools_is_cut_off_and_keeps_the_directive(
     game = FakeStellaris([briefing("2200.01.01")])
     Governor(s, game, log, model=FunctionModel(respond)).run(max_decisions=1)
     err = [e for e in log.recent if e["kind"] == "episode_error"]
-    assert err and "no answer within 4 model calls" in err[0]["error"]
+    assert err and "no answer within 6 model calls" in err[0]["error"]
     assert not [a for a in game.actions if a[0] == "directive"]
-    assert sum(1 for a in game.actions if a[0] == "corpus") <= 4
+    assert sum(1 for a in game.actions if a[0] == "corpus") <= 6
 
 
 def test_models_that_cannot_play_are_filtered(monkeypatch):
@@ -1617,3 +1631,136 @@ def test_strategy_review_rows_are_excluded_from_directive_decision_readers(setup
             assert [d["decision"] for d in ds] == ["expand", "keep"]
 
     asyncio.run(go())
+
+
+# ---- Task 4: decisions work inside the frame; event reviews; request limit ---------------------
+
+def test_decisions_get_the_strategy_frame(setup):
+    s, log = setup
+    seen = []
+
+    def respond(messages, info):
+        seen.append(" ".join(str(p.content) for m in messages for p in getattr(m, "parts", []) if hasattr(p, "content")))
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"directive": "keep", "reason": "r"})])
+    calls = []
+    Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=FunctionModel(respond),
+             role_models={"strategy": _strategist(calls)}).run(max_decisions=1)
+    assert any("STRATEGY FRAME" in t and "defend > consolidate_economy > tech_rush > expand > diplomacy_first" in t for t in seen)
+
+
+def test_an_off_frame_choice_is_tagged_and_schedules_a_review(setup):
+    s, log = setup
+    calls = []
+    g = Governor(s, FakeStellaris([briefing("2200.01.01"), briefing("2201.01.01", net={"energy": -5.0})]), log,
+                 model=decisions("keep", "diplomacy_first"), role_models={"strategy": _strategist(calls)})
+    g.run(max_decisions=2)
+    traces = [e for e in log.recent if e["kind"] == "trace" and e.get("decision") == "diplomacy_first"]
+    assert traces and traces[-1].get("off_frame") is True
+    assert g.review_requested and "off-frame" in g.review_requested
+
+
+def test_event_reviews_are_capped_at_one_per_year(setup):
+    s, log = setup
+    calls = []
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": _strategist(calls)})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    assert g._maybe_event_review(briefing("2201.01.01"), "war started") is True
+    assert g._maybe_event_review(briefing("2201.06.01"), "war ended") is False, "within 12 months of the last event review"
+    assert g._maybe_event_review(briefing("2202.02.01"), "war ended") is True
+
+
+def test_the_decision_request_limit_is_six():
+    assert Settings().governor_max_requests == 6
+
+
+# ---- Task 4 rulings -------------------------------------------------------------------------
+
+def test_a_failed_reviews_retry_bypasses_the_event_cap_and_a_success_clears_it(setup):
+    """Ruling: a retry of a failed review (review_requested set by a failure) bypasses the 12-month
+    event cap and does not move the cap's last-review month; a successful retry clears
+    review_requested. The failed start review is retried at the next (scheduled) decision."""
+    from dataclasses import replace
+
+    from pilot.strategy import Pillar
+    s, log = setup
+    s2 = replace(s, decide_every_months=1)
+    s2.__class__ = s.__class__
+    prios = {"defence": 1, "economy": 2, "technology": 3, "expansion": 4, "diplomacy": 5, "government": 6, "society": 7}
+    n = {"count": 0}
+
+    def respond(messages, info):
+        n["count"] += 1
+        if n["count"] == 1:
+            raise RuntimeError("boom")
+        pillars = {p: Pillar(priority=i, stance=f"{p} by model", goals=["g"]).model_dump() for p, i in prios.items()}
+        body = {"change": True, "assessment": "ok", "rules": [],
+                "strategy": {"pillars": pillars, "focus": "grow", "reason": "retry"}}
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, body)])
+
+    game = FakeStellaris([briefing("2200.01.01"), briefing("2200.02.01")])
+    g = Governor(s2, game, log, model=decisions("keep", "keep"), role_models={"strategy": FunctionModel(respond)})
+    g.run(max_decisions=2)
+    assert n["count"] == 2, "the failed start review was retried exactly once, at the next decision"
+    assert g.strategy is not None and g.strategy.reason == "retry"
+    assert g.review_requested is None, "a successful retry clears review_requested"
+    assert getattr(g, "_last_event_review_month", None) is None, \
+        "a retry of a failed review does not update the cap's last-review month"
+
+
+def test_off_frame_does_not_fire_for_keep_even_when_current_is_top_ranked(setup):
+    """Ruling: the off-frame tag (and the review it schedules) must not fire for 'keep' of the
+    current directive when the current directive is itself top-ranked."""
+    s, log = setup
+    calls = []
+    game = FakeStellaris([briefing("2200.01.01"), briefing("2201.01.01")])
+    g = Governor(s, game, log, model=decisions("defend", "keep"), role_models={"strategy": _strategist(calls)})
+    g.run(max_decisions=2)
+    assert g.strategy.ranking()[0] == "defend", "defend is top-ranked and is the current directive"
+    traces = [e for e in log.recent if e["kind"] == "trace" and e.get("decision") == "keep"]
+    assert traces and traces[-1].get("off_frame") is False
+    assert g.review_requested is None
+
+
+def test_off_frame_does_not_fire_when_no_strategy_exists_yet(setup):
+    """Ruling: the off-frame tag (and the review it schedules) must not fire when no strategy
+    exists yet, however far the choice would otherwise be from a (non-existent) ranking."""
+    s, log = setup
+
+    def always_fails(messages, info):
+        raise RuntimeError("boom")
+
+    game = FakeStellaris([briefing("2200.01.01")])
+    g = Governor(s, game, log, model=decisions("diplomacy_first"), role_models={"strategy": FunctionModel(always_fails)})
+    g.run(max_decisions=1)
+    assert g.strategy is None
+    traces = [e for e in log.recent if e["kind"] == "trace" and e.get("decision") == "diplomacy_first"]
+    assert traces and traces[-1].get("off_frame") is False
+
+
+def test_urgent_changes_flags_colony_loss_being_boxed_in_and_a_military_collapse():
+    before = {**briefing("2200.01.01"), "planets": [{}, {}, {}], "expansion": {"reach_unclaimed": 4},
+              "military_power": 1000}
+    now = {**briefing("2200.02.01"), "planets": [{}, {}], "expansion": {"reach_unclaimed": 0},
+           "military_power": 400}
+    reasons = urgent_changes(before, now)
+    assert any("colony lost: 3 -> 2" in r for r in reasons)
+    assert any(r == "boxed in" for r in reasons)
+    assert any("military fell: 1000 -> 400" in r for r in reasons)
+    assert urgent_changes(now, now) == [], "no further loss, and already boxed in, does not re-trigger"
+
+
+def test_military_falling_by_half_triggers_an_early_decision_and_a_capped_review(setup):
+    """Ruling: 'military fell' is an EVENT_TRIGGERS member (it schedules a review), still capped at
+    one per 12 in-game months like any other event trigger."""
+    from pilot.governor import EVENT_TRIGGERS
+    assert "military fell" in EVENT_TRIGGERS
+    s, log = setup
+    calls = []
+    b0 = {**briefing("2200.01.01"), "military_power": 1000}
+    b1 = {**briefing("2200.03.01"), "military_power": 400}
+    game = FakeStellaris([b0, b1])
+    g = Governor(s, game, log, model=decisions("keep", "keep"), role_models={"strategy": _strategist(calls)})
+    g.run(max_decisions=2)
+    ep = [e for e in log.recent if e["kind"] == "episode"][1]
+    assert ep["situation"].startswith("urgent: military fell: 1000 -> 400")
+    assert any(e["kind"] == "strategy_review" and "military fell" in e["trigger"] for e in log.recent)

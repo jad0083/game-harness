@@ -87,7 +87,7 @@ class EventLog:
         (self.dir / rel).write_text(json.dumps(trace, ensure_ascii=False, default=str, indent=1), encoding="utf-8")
         summary = {k: trace.get(k) for k in ("date", "trigger", "decision", "reason", "situation", "outcome",
                                               "current", "seconds", "tokens_in", "tokens_out", "model",
-                                              "model_version", "thinking_level")}
+                                              "model_version", "thinking_level", "off_frame")}
         thinking = sum(1 for st in trace.get("steps", []) if st.get("type") == "thinking")
         tools = sum(1 for st in trace.get("steps", []) if st.get("type") == "tool_call")
         self.emit("trace", _trace=trace, episode=episode, file=rel, thinking=thinking, tools=tools, **summary)

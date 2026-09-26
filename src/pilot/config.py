@@ -38,7 +38,7 @@ class Settings:
     thinking: str = "medium"
     # Stellaris governor decisions (rare, strategic); set separately from GC4 episodes.
     governor_thinking: str = "medium"
-    governor_max_requests: int = 4
+    governor_max_requests: int = 6
     # waits between tries when the provider is overloaded or rate-limited (503/429/5xx)
     fallback_model: str | None = "google:gemini-3.1-pro-preview"   # tried once when the main model stays overloaded
     # The governor's model pool: ({"model": "provider:name", "thinking": level}, ...). Empty = the
