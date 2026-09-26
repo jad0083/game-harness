@@ -76,7 +76,7 @@ STRATEGY_INSTRUCTIONS = """You are the Strategist: you set the empire's top-down
 (systems, colonies, pops, techs_known, military_power, economy_power, tech_power, rank:<measure>) with a
 target and an in-game date, and only for technology `prefer_techs` (tech ids to pick when offered; at most 6)
 and only for economy `market` (at most 1 small monthly order, amount 1-25; sell only a resource the briefing lists as
-IDLE, at most 20% of its monthly income). Market orders cannot use trade; sell only idle energy, minerals, food, consumer goods, alloys or strategic resources. Priorities decide which directives the governor prefers.
+IDLE, at most 20% of its monthly income). Market orders cannot use trade; sell only idle energy, minerals, food, consumer goods or alloys (strategic resources can only be bought). Priorities decide which directives the governor prefers.
 Everything must be achievable through directives, tech picks or market orders: the game's AI builds,
 designs ships and moves fleets. Never change a pillar marked pinned: the human set it. If nothing
 material changed, answer change=false. Build on the empire's species, ethics, civics and origin.
@@ -181,13 +181,22 @@ def _num(v) -> str:
     return f"{v:.0f}" if abs(v) >= 100 or float(v).is_integer() else f"{v:.1f}"
 
 
+IDLE_CHECKED = ("energy", "minerals", "food", "alloys", "consumer_goods")   # as the briefing (stellaris.rs)
+
+
 def idle_resources(b: dict) -> set[str]:
-    """Resources the briefing would flag IDLE: large stock, positive net, over 10 years of income (trade: > 15,000)."""
+    """Exactly the resources the briefing flags IDLE (stellaris.rs): energy, minerals, food, alloys
+    or consumer goods with a stock over 5,000, positive net and over 10 years of income; trade over
+    15,000 and still growing. Strategic resources are never flagged."""
+    stock, net = b.get("stockpile") or {}, b.get("net") or {}
     out = set()
-    for k, v in (b.get("stockpile") or {}).items():
-        n = (b.get("net") or {}).get(k, 0)
-        if (k == "trade" and v > 15000 and n > 0) or (v > 5000 and n > 0 and v > n * 120):
+    for k in IDLE_CHECKED:
+        v, n = stock.get(k), net.get(k)
+        if v is not None and n is not None and v > 5000 and n > 0 and v > n * 120:
             out.add(k)
+    v, n = stock.get("trade"), net.get("trade")
+    if v is not None and n is not None and v > 15000 and n > 0:
+        out.add("trade")
     return out
 
 

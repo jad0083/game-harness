@@ -1448,8 +1448,8 @@ def test_strategy_instructions_cover_the_defence_naval_cap_ruling():
 
 def test_strategy_instructions_forbid_trade_market_orders():
     from pilot.governor import STRATEGY_INSTRUCTIONS
-    assert ("Market orders cannot use trade; sell only idle energy, minerals, food, consumer goods, "
-            "alloys or strategic resources.") in STRATEGY_INSTRUCTIONS
+    assert ("Market orders cannot use trade; sell only idle energy, minerals, food, consumer goods "
+            "or alloys (strategic resources can only be bought).") in STRATEGY_INSTRUCTIONS
 
 
 def test_the_strategist_receives_the_naval_cap_ruling_in_its_prompt(setup):
@@ -2772,3 +2772,43 @@ def test_dashboard_clears_review_pending_only_on_a_review_result():
     for ln in clears:
         assert '"strategy_review"' in ln and '"episode_error"' in ln
         assert not re.search(r'ev\.kind === "strategy"\s*\|\|', ln), ln
+
+
+# ---- final review 10: coverage ------------------------------------------------------------------
+
+def test_idle_resources_boundaries():
+    from pilot.governor import idle_resources
+
+    def idle(res, stock, net):
+        return res in idle_resources({"stockpile": {res: stock}, "net": {res: net}})
+    assert not idle("energy", 1_000_000, 0), "a huge stockpile with no net income is not idle"
+    assert not idle("energy", 1_000_000, -5), "nor with a deficit"
+    assert not idle("energy", 6000, 50), "exactly 120 months of income (50*120) is not over the threshold"
+    assert idle("energy", 6001, 50)
+    assert not idle("energy", 5000, 1), "the stockpile must be over 5000"
+    assert idle("energy", 5001, 1)
+    assert not idle("trade", 15000, 10), "trade: exactly 15000 is not over the threshold"
+    assert idle("trade", 15001, 10)
+    assert not idle("trade", 20000, 0)
+    assert not idle("trade", 10000, 1), "trade uses only its own threshold, like the briefing"
+    assert not idle("volatile_motes", 1_000_000, 1), "the briefing never flags strategic resources idle"
+
+
+def test_frame_text_lists_only_at_risk_and_missed_milestones():
+    from pilot.governor import frame_text
+    lines = ("- economy: pops >= 100 by 2210.01.01: met\n- expansion: systems >= 20 by 2210.01.01: on_track\n"
+             "- technology: techs_known >= 80 by 2210.01.01: at_risk\n- defence: military_power >= 5000 by 2205.01.01: missed")
+    text = frame_text(_strategy_with(), lines)
+    assert "techs_known >= 80 by 2210.01.01: at_risk" in text and "military_power >= 5000 by 2205.01.01: missed" in text
+    assert ": met" not in text and "on_track" not in text
+
+
+def test_unpin_pillar_on_an_unknown_pillar_raises_and_leaves_the_strategy_unchanged(setup):
+    s, log = setup
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+    g.strategy = _strategy_with(economy=_pinned_energy_sell())
+    before = g.strategy
+    with pytest.raises(ValueError, match="unknown pillar 'navy'"):
+        g.unpin_pillar("navy")
+    assert g.strategy is before and g.strategy.pillars["economy"].pinned
+    assert not any(e["kind"] == "strategy" for e in log.recent)

@@ -2597,6 +2597,20 @@ country={
     }
 
     #[test]
+    fn tech_pick_with_an_unknown_cost_swaps_only_research_not_yet_started() {
+        // No corpus cost for the current tech: only research with no progress at all may be
+        // swapped (clicking a swap drops the current research at once, verified live 2381.03).
+        let cost = |_: &str| None;
+        let mut research = BTreeMap::new();
+        research.insert("physics".to_string(), Research { current: Some(("cur".into(), 0.0)),
+            alternatives: vec!["want".into(), "cur".into()] });
+        let pick = choose_tech_pick(&research, &["want".to_string()], &cost, 4).unwrap();
+        assert_eq!((pick.field.as_str(), pick.tech.as_str()), ("physics", "want"));
+        research.get_mut("physics").unwrap().current = Some(("cur".into(), 0.5));
+        assert!(choose_tech_pick(&research, &["want".to_string()], &cost, 4).is_none(), "some progress: left alone");
+    }
+
+    #[test]
     fn tech_pick_only_offers_techs_shown_on_screen() {
         // [a, b, c, current, x]: x comes after the current tech in the save's alternatives list
         // and is not shown on screen; option_index counts position among what IS shown.
