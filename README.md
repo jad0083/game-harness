@@ -9,7 +9,7 @@ An ultra-low-latency, 100% Rust-powered autonomous AI game harness that plays tu
  │   └─ game-controller (Native Rust)      │         │   (Running borderless / windowed)       │
  │      • game corpus (manifest+data+docs)│         └─────────────────────────────────────────┘
  │      • autopilot (verified turn loop)   │                              ▲
- │      • stdio MCP server (19 tools, +6 Stellaris)      │  HTTP/TCP 8765               │ GDI / Win32 SendInput
+ │      • stdio MCP server (19 tools, +8 Stellaris)      │  HTTP/TCP 8765               │ GDI / Win32 SendInput
  │      • frame diff + luminance check     │ ──────────────► ┌─────────────────────────────────────────┐
  │                                         │ ◄────────────── │ game-agent.exe (Native Rust)            │
  │                                         │  (JPEG / JSON)  │   • Axum 0.8 HTTP API (:8765)           │
@@ -198,6 +198,8 @@ Gemini CLI — `.gemini/settings.json` (in this repo):
 | `stellaris_speed` | `speed` | *Stellaris only.* Set the game speed: slowest, slow, normal, fast, fastest (`-` ×4 then `=` ×n; fastest ≈ 2.5 in-game months per second). |
 | `stellaris_pause` | `paused` | *Stellaris only.* Pause or resume; reads the state from the screen first (the yellow "Paused" label), so it is safe to repeat. |
 | `stellaris_log` | `lines` | *Stellaris only.* Tail of `logs/game.log`. |
+| `stellaris_pick_tech` | `prefer` | *Stellaris only.* Pick the first preferred tech (≤ 6 ids) offered in a field under 10% done: Technology → swap → option card (only the first 4 offered are clickable); unverified until the next autosave. |
+| `stellaris_market_sync` | `orders` | *Stellaris only.* Make the monthly market trades equal `orders` (≤ 2 of `{side, resource, amount 1..25}`, resources from the manifest); computed from the last autosave, so call at most once per autosave. |
 
 ---
 
@@ -250,9 +252,14 @@ dashboard is on :8790).
   decision*; *Decide now* (pauses and decides immediately); *Standing orders* (in every decision
   until removed, saved per campaign); *Override* (apply a directive yourself, recorded as yours);
   Yes/No when the model asks for confirmation (e.g. `prepare_war`).
-- **Plan**: the governor's campaign plan (goals, milestones with in-game target dates, current
-  focus) and its earlier versions; it is written at the first decision, can be revised at any
-  decision, and is reviewed at every retrospective.
+- **Strategy**: the campaign's pillar strategy — focus, directive ranking, one card per pillar
+  (economy, expansion, technology, diplomacy, defence, government, society) in priority order with
+  its stance, goals, milestones and their status (met, on track, at risk, missed), and actions
+  (preferred techs, a monthly market order). *Edit* changes a pillar and pins it (the Strategist
+  never changes a pinned pillar; the edit is checked like a model strategy and a rejection shows
+  its reason); *Unpin* hands it back; *Review strategy now* runs a review at once; *History* lists
+  the versions with their trigger. Off-frame decisions are tagged in the Decisions list and reviews
+  are marked on the chart.
 - **Activity**: the event feed.
 - **Top bar**: model and thinking pickers (Gemini models this key can use, plus `PILOT_MODELS`),
   always shown. With no run active the choice is saved for the next `pilot run`
@@ -278,7 +285,7 @@ periods on the chart; each decision records the model release that answered (an 
 identity (AI personality, traditions, ascension perks), colonisable planets in our borders with how
 well they suit our species, which growth and naval-capacity techs we have, and idle stockpiles; each
 neighbour gets a `who:` line (ethics, government, civics, AI personality, species traits,
-traditions). Settings → Models sets models per role (Decisions, Retrospectives, Talk, GC4 blockers; a role
+traditions). Settings → Models sets models per role (Decisions, Strategy, Talk, GC4 blockers; a role
 without its own list uses the decision models). Any model failure moves on to the next model in the
 list; a model that just failed goes behind the others for 10 minutes. Each role's models are a list: each entry is a provider (Google, Anthropic,
 OpenAI; keys `GOOGLE_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` in `.env`), a model and a
@@ -288,9 +295,24 @@ just-loaded game) makes the governor play until a fresh one exists. The briefing
 empires against ours (strength ratios, opinion both ways, rival/pact flags), and the prompt adds
 a 12-month trend line (flags alloys piling up while military stays flat). The game is paused whenever the model thinks,
 so any speed is safe. `prepare_war` is applied only after a human "yes" on the dashboard.
-Every `PILOT_RETRO_EVERY` decisions (default 5) a **retrospective** compares the plan with what
-happened (decisions, their 12-month outcomes, the standing against other empires), revises the
-plan and records up to 3 rules in `corpora/stellaris/learned/strategy.md` (read by later decisions). If the
+**Strategy layer** (`src/pilot/strategy.py`, `governor.py`): a **Strategist** (model role
+`strategy`; give it a strong reasoning model) keeps one strategy per campaign: seven pillars with a
+unique priority, a stance, goals, measurable milestones (`{metric, op, target, by}`, status computed
+from telemetry) and two actions — preferred techs (technology) and at most one small monthly market
+order (economy; sell only an idle resource, at most 25 and 20% of its income; trade is not a market
+resource). It reviews at the start of a campaign without a strategy, every `PILOT_RETRO_EVERY`
+decisions (default 5; "no change" writes no version), on big events (war started or ended, crisis,
+colony lost, boxed in, military fell by half, a milestone turned missed, an off-frame decision; at
+most one per 12 in-game months) and on *Review strategy now*. Its output is validated (invalid →
+one corrective retry, then no change) and pinned pillars are kept. Each decision gets a **strategy
+frame** (ranking, focus, at-risk milestones) and picks within the top of the ranking; a pick outside
+it must cite an urgent line and is tagged off-frame. After each decision the governor carries out
+the actions through the game's screens (`stellaris_pick_tech`: Technology → swap → option card, only
+in a field under 10% done; `stellaris_market_sync`: Market → monthly trades), at most once per
+autosave, and checks them in a later save (a pick that did not stick is skipped until the next
+review; market orders that did not stick wait for the next review). Once a strategy exists the
+monthly trades in the save follow it, so trades placed by hand are removed. A review may also record
+up to 3 rules in `corpora/stellaris/learned/strategy.md` (read by later decisions). If the
 game stops responding to pause/resume (e.g. a text box has keyboard focus; the controller tries
 one Esc first), the governor stops acting and flags *needs attention* until you press Resume.
 Measured with Gemini 3.8 Flash: ~6.2k input / ~0.4k output tokens and ~2 s per decision.

@@ -150,7 +150,10 @@ pop/faction numbers as approximate until generated data exists.
 ## 9. Governor directives
 
 The governor model does not micro-manage; it picks **one** standing directive and the
-native AI executes it. The game's AI plays the empire through **`human_ai`** (we stay the
+native AI executes it. Since the strategy layer, the directive is chosen within the **strategy
+frame**: the Strategist's pillar priorities rank the directives (economy → `consolidate_economy`,
+expansion → `expand`, technology → `tech_rush`, diplomacy → `diplomacy_first`, defence → `defend`),
+and the harness itself carries out the preferred tech picks and the monthly market order. The game's AI plays the empire through **`human_ai`** (we stay the
 player; `stellaris take-control` switches it on and checks the console's reply). **Observer mode
 is not used**: there the AI researches and builds warships but never explores or expands (verified
 2026-09-25, `games/stellaris-spike/journal.md`). A directive is applied from the console with the

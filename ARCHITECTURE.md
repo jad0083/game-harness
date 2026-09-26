@@ -290,11 +290,21 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
 - `dashboard.py` API: `/api/campaigns`, `/api/decisions`, `/api/decision`, `/api/metrics`,
   `/runs/*`; the viewer's `LiveProxy` finds the live run by the dashboard port recorded in its
   `status.json` and checks that it answers with the same run id.
-- Campaign plan and retrospectives (`governor.py`): the plan is text the model writes in the
-  optional `plan` field of a decision (`plan` events, `plans` table, `/api/plans`); every
-  `retro_every` model decisions a separate agent (`Retrospective`: assessment, rules, plan) reviews
-  plan vs outcomes and standing; its rules go through `LearnedStore.add_rule`, and it is saved as
-  a decision with `decision = "retrospective"`.
+- Strategy layer: `strategy.py` is pure (Pillar, Milestone, MarketOrder, Strategy with
+  `ranking()`; `validate` — structural checks on all pillars, briefing checks (idle, income) only on
+  changed unpinned pillars; `keep_pinned`; `milestone_status` from metrics rows). `governor.py`:
+  `_review_strategy` (role `strategy`, `StrategyReview` output, one corrective retry, `strategy` and
+  `strategy_review` events, saved as a decision row with `decision = "strategy_review"` and a
+  negative episode, excluded wherever directive decisions are meant), `_maybe_event_review` (12-month
+  cap; failure retries, no-strategy and dashboard requests bypass it), `frame_text` + off-frame
+  tagging in `_decide`, `_carry_out_actions` (once per save date, verified in a later save),
+  `edit_pillar`/`unpin_pillar`/`request_review` under `_strategy_lock`. Telemetry: `strategies`
+  table, `latest_strategy`, `strategy_history`, `metrics_rows`; dashboard `/api/strategy`, control
+  actions `edit_pillar`, `unpin_pillar`, `review_strategy`. Rust: `choose_tech_pick` (only the
+  alternatives listed before the current tech, first 4 visible), `market_diff`, `amount_clicks`
+  (a new trade starts at 10), `pick_tech`/`sync_market` (paused, foreground-checked, screen always
+  closed), positions in `corpora/stellaris/manifest.toml` `[ui.tech]`/`[ui.market]` (calibrated live
+  on 4.5.1). The old free-text plan (`plan` events, `/api/plans`) remains readable history only.
 - `static/dashboard.html`: one file, no build step; SVG charts (palette validated for both themes;
   light-mode relief via legend, hover values and a table view).
 - Design (keep it consistent): deep-space plane with warm ivory ink, dark first; one amber accent
