@@ -245,19 +245,33 @@ impl Autopilot {
             // Each screen at most once per attempt: some stay visible after their action
             // (a colony ship stays selected after Auto Colonize), which must not loop.
             let mut handled: Vec<String> = Vec::new();
-            while dismissed.len() < MAX_DISMISSALS_PER_TURN {
-                match self.dismiss_known_screen(&before, &view, &handled, attempt > 0).await? {
-                    Some(name) => {
-                        handled.push(name.clone());
-                        dismissed.push(name);
-                        (before, view) = self.screenshot_view().await?;
+            let check;
+            loop {
+                while dismissed.len() < MAX_DISMISSALS_PER_TURN {
+                    match self.dismiss_known_screen(&before, &view, &handled, attempt > 0).await? {
+                        Some(name) => {
+                            handled.push(name.clone());
+                            dismissed.push(name);
+                            // An action can open a follow-up dialog after a camera pan
+                            // (Auto Colonize -> "Colonize Planet?"): let the screen settle.
+                            let _ = self.client.settle(Some(3.0), Some(0.02)).await;
+                            (before, view) = self.screenshot_view().await?;
+                        }
+                        None => break,
                     }
-                    None => break,
                 }
-            }
-            let check = self.turn_check(view.width, view.height);
-            if let TurnVerdict::Modal = classify_turn(&before, &before, &check)? {
-                return Ok(self.modal_outcome(turn, None, before));
+                let c = self.turn_check(view.width, view.height);
+                if let TurnVerdict::Modal = classify_turn(&before, &before, &c)? {
+                    // A known dialog that appeared late is handled; anything else goes to the model.
+                    if dismissed.len() < MAX_DISMISSALS_PER_TURN
+                        && self.known_screen_name(&before, &handled, attempt > 0)?.is_some()
+                    {
+                        continue;
+                    }
+                    return Ok(self.modal_outcome(turn, None, before));
+                }
+                check = c;
+                break;
             }
 
             self.client.batch(self.turn_actions(&view)).await?;

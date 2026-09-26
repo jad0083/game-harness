@@ -217,3 +217,12 @@ template_roi = [0.4719, 0.8844, 0.0561, 0.0249]
 template_threshold = 0.06
 auto_dismiss = true
 dismiss_click = [0.4994, 0.8968]
+
+[screens.shipyard_idle]
+description = "Shipyard screen opened by TAB with an empty queue ('Shipyard Idle'): build a Colony Ship (expansion phase), then Done"
+template = "templates/shipyard_idle.png"
+template_roi = [0.1798, 0.89, 0.0485, 0.0204]
+template_threshold = 0.06
+auto_dismiss = true
+only_when_blocked = true
+dismiss_clicks = [[0.8584, 0.1395], [0.4994, 0.7528], [0.898, 0.9694]]   # Colony Ship (first featured class), Build Ship, Done
