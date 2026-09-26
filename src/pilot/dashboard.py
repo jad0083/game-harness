@@ -301,6 +301,8 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
             pilot.stop()
         elif action == "instruct" and body.get("text", "").strip():
             pilot.instruct(body["text"].strip())
+        elif action == "answer" and body.get("text", "").strip() and hasattr(pilot, "answer"):
+            pilot.answer(body["text"].strip())
         elif action in ("chat", "order_add") and body.get("text", "").strip() and hasattr(pilot, action):
             getattr(pilot, action)(body["text"].strip())
         elif action == "order_remove" and hasattr(pilot, "order_remove") and str(body.get("index", "")).isdigit():
@@ -313,7 +315,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
             except ValueError as e:
                 raise web.HTTPBadRequest(text=str(e)) from e
         else:
-            raise web.HTTPBadRequest(text="action must be pause|resume|stop|instruct|chat|order_add|order_remove|"
+            raise web.HTTPBadRequest(text="action must be pause|resume|stop|instruct|answer|chat|order_add|order_remove|"
                                           "decide_now|override, with its text/index/directive")
         return web.json_response({"ok": True, "status": log.state.status})
 

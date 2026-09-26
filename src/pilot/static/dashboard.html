@@ -217,6 +217,7 @@
   <p id="banner-text"></p>
   <button class="btn primary" id="b-yes">Yes</button>
   <button class="btn" id="b-no">No</button>
+  <span class="inline" id="answer-box" style="flex:1 1 260px"><input id="answer-text" placeholder="Or answer in your own words"><button class="btn" id="b-answer">Answer</button></span>
 </div>
 
 <main>
@@ -331,7 +332,7 @@ async function loadStatus() {
   const q = S.status.pending_question;
   $("banner").hidden = !q && st !== "needs_attention";
   $("banner-text").textContent = q ? "The model asks: " + q : "The run needs attention: see Activity, then Resume.";
-  $("b-yes").hidden = $("b-no").hidden = !q;
+  $("b-yes").hidden = $("b-no").hidden = $("answer-box").hidden = !q;
   const controls = info.controls || [];
   $("talk-controls").hidden = !S.live;
   $("talk-off").hidden = S.live;
@@ -344,10 +345,10 @@ async function loadStatus() {
   if ($("override-dir").options.length === 0 && info.directives)
     $("override-dir").innerHTML = info.directives.map((d) => `<option value="${esc(d)}">${esc(human(d))}</option>`).join("");
   $("stats").innerHTML = S.live ? [
-    `<span>Decisions <b>${S.status.episodes}</b></span>`,
+    `<span>Decisions <b>${esc(S.status.episodes)}</b></span>`,
     `<span>Tokens <b>${fmt(S.status.tokens_in)}</b> in, <b>${fmt(S.status.tokens_out)}</b> out</span>`,
-    `<span>Model calls <b>${S.status.requests}</b></span>`,
-    `<span>Running <b>${Math.floor(S.status.uptime_s / 3600)}h ${Math.floor(S.status.uptime_s % 3600 / 60)}m</b></span>`].join("") : "";
+    `<span>Model calls <b>${esc(S.status.requests)}</b></span>`,
+    `<span>Running <b>${esc(Math.floor(S.status.uptime_s / 3600))}h ${esc(Math.floor(S.status.uptime_s % 3600 / 60))}m</b></span>`].join("") : "";
 }
 
 async function loadCampaigns() {
@@ -355,7 +356,7 @@ async function loadCampaigns() {
   try { camps = await api("/api/campaigns"); } catch { /* no telemetry yet */ }
   const live = (S.status.info || {}).campaign;
   const sel = $("campaign");
-  sel.innerHTML = camps.map((c) => `<option value="${esc(c.id)}">${esc(human(c.name))}${c.id === live ? " (live)" : ""}, ${c.decisions} decisions</option>`).join("")
+  sel.innerHTML = camps.map((c) => `<option value="${esc(c.id)}">${esc(human(c.name))}${c.id === live ? " (live)" : ""}, ${esc(c.decisions)} decisions</option>`).join("")
     || `<option value="">No campaigns recorded yet</option>`;
   S.campaign = S.campaign && camps.some((c) => c.id === S.campaign) ? S.campaign : (live || camps[0]?.id || null);
   if (S.campaign) sel.value = S.campaign;
@@ -502,7 +503,7 @@ function afterText(r) {
   if (!r) return "";
   const parts = SCORED.filter(([k]) => r[k]).map(([k, l]) => `<span class="${r[k] > 0 ? "up" : "down"}">${r[k] > 0 ? "+" : ""}${fmt(r[k])} ${l}</span>`);
   if (r.deficits_after?.length) parts.push(`<span class="down">deficit: ${esc(r.deficits_after.map(human).join(", "))}</span>`);
-  return parts.length ? `<div class="after"><span>${r.months} months later:</span>${parts.join("")}</div>` : "";
+  return parts.length ? `<div class="after"><span>${esc(r.months)} months later:</span>${parts.join("")}</div>` : "";
 }
 
 function renderDecisions() {
@@ -512,11 +513,11 @@ function renderDecisions() {
   ul.innerHTML = [...S.decisions].reverse().map((d) => {
     const i = S.decisions.indexOf(d);
     const kept = d.decision === "keep" || d.outcome === "kept";
-    const label = kept ? `kept ${human(d.current || "none")}` : d.outcome === "applied" ? human(d.decision) : `${human(d.decision)} (${esc(d.outcome || "")})`;
+    const label = kept ? `kept ${human(d.current || "none")}` : d.outcome === "applied" ? human(d.decision) : `${human(d.decision)} (${d.outcome || ""})`;
     const sel = S.sel && S.sel.run_id === d.run_id && S.sel.episode === d.episode;
     return `<li class="${sel ? "sel" : ""}"><button data-i="${i}">
       <span class="d-date">${esc(d.date || "–")}</span>
-      <span class="d-meta">${d.model === "human" ? "you" : fmt(d.tokens_in) + " tokens"}${d.seconds ? ", " + d.seconds + " s" : ""}</span>
+      <span class="d-meta">${d.model === "human" ? "you" : fmt(d.tokens_in) + " tokens"}${d.seconds ? ", " + esc(d.seconds) + " s" : ""}</span>
       <span class="d-main"><span class="d-head"><span class="dir${kept ? " kept" : ""}">${esc(label)}</span><span class="trigger">${esc(d.trigger || "")}</span></span>
       <p class="reason">${esc(d.reason || "")}</p>${afterText(d.result)}</span></button></li>`;
   }).join("");
@@ -543,7 +544,7 @@ function renderTrace(d) {
     <div class="t-decision">${kept ? "Kept " + esc(human(d.current || "no directive")) : esc(human(d.decision))}</div>
     <p class="t-reason">${esc(d.reason || "")}</p>
     <div class="t-meta"><span>${esc(d.model === "human" ? "Your decision" : d.model || "")}</span><span>${esc(d.outcome || "")}</span>
-    ${d.tokens_in ? `<span>${fmt(d.tokens_in)} tokens in, ${fmt(d.tokens_out)} out</span>` : ""}${d.seconds ? `<span>${d.seconds} s</span>` : ""}</div>`;
+    ${d.tokens_in ? `<span>${fmt(d.tokens_in)} tokens in, ${fmt(d.tokens_out)} out</span>` : ""}${d.seconds ? `<span>${esc(d.seconds)} s</span>` : ""}</div>`;
   if (d.result) h += afterText(d.result).replace('class="after"', 'class="after" style="margin:-4px 0 14px"');
   h += `<div class="steps">`;
   let call = 0;
@@ -730,8 +731,9 @@ $("campaign").addEventListener("change", async (e) => { S.campaign = e.target.va
 $("b-pause").addEventListener("click", () => control({ action: "pause" }));
 $("b-resume").addEventListener("click", () => control({ action: "resume" }));
 $("b-stop").addEventListener("click", () => { if (confirm("Stop the pilot? The game is paused when it stops.")) control({ action: "stop" }); });
-$("b-yes").addEventListener("click", () => control({ action: "instruct", text: "yes" }));
-$("b-no").addEventListener("click", () => control({ action: "instruct", text: "no" }));
+$("b-yes").addEventListener("click", () => control({ action: "answer", text: "yes" }));
+$("b-no").addEventListener("click", () => control({ action: "answer", text: "no" }));
+$("b-answer").addEventListener("click", () => { const t = $("answer-text").value.trim(); if (t) { control({ action: "answer", text: t }); $("answer-text").value = ""; } });
 $("frame").addEventListener("load", () => { $("frame").hidden = false; $("noframe").hidden = true; });
 $("frame").addEventListener("error", () => { $("frame").hidden = true; $("noframe").hidden = false; });
 let resizeT; addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTimeout(renderChart, 150); });

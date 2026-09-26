@@ -49,16 +49,22 @@ class Deps:
 
 
 class HumanChannel:
-    """Instructions from the dashboard; ask_human waits briefly for an answer."""
+    """Notes from the dashboard (used at the next decision) and answers to questions, kept apart:
+    a note sent while a question is open must never count as its answer."""
 
     def __init__(self) -> None:
         self._cond = threading.Condition()
         self._pending: list[str] = []
+        self._answers: list[str] = []
         self.question = ""
 
     def push(self, text: str) -> None:
         with self._cond:
             self._pending.append(text)
+
+    def answer(self, text: str) -> None:
+        with self._cond:
+            self._answers.append(text)
             self._cond.notify_all()
 
     def take_all(self) -> list[str]:
@@ -68,11 +74,12 @@ class HumanChannel:
 
     def ask(self, question: str, timeout: float) -> str | None:
         with self._cond:
+            self._answers = []                    # stale answers never apply to a new question
             self.question = question
-            got = self._cond.wait_for(lambda: bool(self._pending), timeout=timeout)
+            got = self._cond.wait_for(lambda: bool(self._answers), timeout=timeout)
             self.question = ""
             if got:
-                out, self._pending = self._pending, []
+                out, self._answers = self._answers, []
                 return " / ".join(out)
             return None
 

@@ -63,6 +63,10 @@ class Pilot:
         self.human.push(text)
         self.log.emit("instruction", text=text)
 
+    def answer(self, text: str) -> None:
+        """Answer the model's open question (ask_human)."""
+        self.human.answer(text)
+
     def _status(self, status: str) -> None:
         self.log.state.status = status
         self.log.emit("status", status=status)

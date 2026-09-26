@@ -194,7 +194,7 @@ class Governor:
             instructions=CHAT_INSTRUCTIONS + "\n\n" + text,
             tools=[Tool(f) for f in (consult, get_doc, recent_log, past_outcomes)],   # read-only
             model_settings=model_settings(settings), retries=2)
-        self.chat_history: list = []
+        self.chat_exchanges: list[list] = []      # whole exchanges, so history never starts mid-exchange
         self._chat_lock = threading.Lock()
         self.last_change: int | None = None       # month of the last directive change
         self.last_briefing = ""                   # text of the latest briefing given to the model
@@ -217,9 +217,13 @@ class Governor:
         self.control.paused = False
 
     def instruct(self, text: str) -> None:
-        """A note for the next decision only (also answers a pending question)."""
+        """A note for the next decision only."""
         self.human.push(text)
         self.log.emit("instruction", text=text)
+
+    def answer(self, text: str) -> None:
+        """Answer the model's open question (e.g. yes/no for prepare_war)."""
+        self.human.answer(text)
 
     # -- directing the model (dashboard) ------------------------------------------------------
 
@@ -268,16 +272,19 @@ class Governor:
                    f"Last decision: {self.log.state.last_decision or 'none'}", f"The human asks: {text}"]
             try:
                 result = self.chat_agent.run_sync("\n\n".join(ctx), deps=GovDeps(self.game, self.store, self.log),
-                                                  message_history=self.chat_history[-20:] or None,
+                                                  message_history=self._chat_history() or None,
                                                   usage_limits=UsageLimits(request_limit=8))
             except Exception as e:  # noqa: BLE001
                 self.log.emit("chat", role="model", text=f"(could not answer: {type(e).__name__}: {e})"[:500])
                 return
-            self.chat_history = result.all_messages()
+            self.chat_exchanges = (self.chat_exchanges + [result.new_messages()])[-6:]
             u = result.usage
             self.log.state.tokens_in += u.input_tokens or 0
             self.log.state.tokens_out += u.output_tokens or 0
             self.log.emit("chat", role="model", text=result.output, steps=serialize(result.new_messages()))
+
+    def _chat_history(self) -> list:
+        return [m for ex in self.chat_exchanges for m in ex]
 
     def _status(self, status: str) -> None:
         self.log.state.status = status
@@ -489,7 +496,7 @@ class Governor:
                 answer = self.human.ask(q, self.s.ask_human_timeout_s) or ""
                 st.pending_question = ""
                 self.log.emit("answer", answer=answer or "(no answer)")
-                if not answer.strip().lower().startswith("y"):
+                if answer.strip().lower() not in ("y", "yes"):
                     chosen, applied = "keep", f"not applied ({chosen} needs a human yes)"
             if chosen != "keep":
                 try:
