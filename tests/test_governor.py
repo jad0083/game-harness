@@ -799,7 +799,8 @@ def test_model_choice_is_saved_for_the_next_run_without_a_live_pilot(setup, monk
             assert cat["model"] == "google:gemini-3.1-pro-preview" and cat["thinking"] == "high"
 
     asyncio.run(go())
-    assert models.load_prefs(s.runs_dir) == {"model": "google:gemini-3.1-pro-preview", "thinking": "high"}
+    assert models.load_prefs(s.runs_dir) == {"model": "google:gemini-3.1-pro-preview", "thinking": "high",
+                                             "models": [{"model": "google:gemini-3.1-pro-preview", "thinking": "high"}]}
     # the next `pilot run` picks it up; a command-line option still wins
     seen = {}
     monkeypatch.setenv("PILOT_RUNS_DIR", str(s.runs_dir))
@@ -1052,8 +1053,97 @@ def test_fallback_model_is_saved_and_switchable_live(setup, tmp_path):
         save_prefs(tmp_path, fallback="not a model")
     s, log = setup
     g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
-    g.set_fallback("google:gemini-3.7-flash")
-    assert g.s.fallback_model == "google:gemini-3.7-flash" and log.state.info["fallback"] == "google:gemini-3.7-flash"
+    first = g.s.pool()[0]
+    g.set_fallback("google:gemini-3.7-flash")      # older control: the pool becomes first + this one
+    assert log.state.info["pool"] == [first, {"model": "google:gemini-3.7-flash", "thinking": first["thinking"]}]
     g.set_fallback("none")
-    assert g.s.fallback_model is None and g._fallback_agent() is None and log.state.info["fallback"] == "none"
+    assert log.state.info["pool"] == [first]
     assert "set_fallback" in log.state.info["controls"]
+
+
+# ---- model pool: providers, per-model thinking, taking turns ----------------------------------
+
+def test_model_pool_prefs_roundtrip_and_old_settings(tmp_path):
+    import json as _json
+
+    from pilot.models import load_prefs, save_prefs
+    pool = [{"model": "google:gemini-3.1-pro-preview", "thinking": "medium"},
+            {"model": "anthropic:claude-sonnet-5", "thinking": "high"}]
+    p = save_prefs(tmp_path, models=pool, rotate=True)
+    assert p["models"] == pool and p["rotate"] is True
+    assert p["model"] == "google:gemini-3.1-pro-preview" and p["thinking"] == "medium", "first model mirrored for older readers"
+    assert load_prefs(tmp_path)["models"] == pool
+    for bad in ([], [{"model": "nope", "thinking": "low"}], [{"model": "google:x", "thinking": "extreme"}],
+                [{"model": f"google:m{i}", "thinking": "low"} for i in range(7)]):
+        with pytest.raises(ValueError):
+            save_prefs(tmp_path, models=bad)
+    # settings saved before the pool existed: model + thinking + fallback
+    (tmp_path / "pilot-settings.json").write_text(_json.dumps(
+        {"model": "google:gemini-3.6-flash", "thinking": "high", "fallback": "google:gemini-3.1-pro-preview"}))
+    assert load_prefs(tmp_path)["models"] == [{"model": "google:gemini-3.6-flash", "thinking": "high"},
+                                              {"model": "google:gemini-3.1-pro-preview", "thinking": "high"}]
+
+
+def test_thinking_settings_per_provider():
+    from dataclasses import replace
+
+    from pilot.agent import model_settings
+    s = Settings()
+    g = model_settings(replace(s, model="google:gemini-3.1-pro-preview", thinking="high"))
+    assert g["google_thinking_config"]["thinking_level"] == "high"
+    a = model_settings(replace(s, model="anthropic:claude-sonnet-5", thinking="medium"))
+    assert a["thinking"] == "medium" and "google_thinking_config" not in a
+    assert model_settings(replace(s, model="anthropic:claude-sonnet-5", thinking="off"))["thinking"] is False
+    o = model_settings(replace(s, model="openai:gpt-5", thinking="low"))
+    assert o["openai_reasoning_effort"] == "low"
+
+
+def _recording(name, calls):
+    def respond(messages, info):
+        calls.append(name)
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"directive": "keep", "reason": name})])
+    return FunctionModel(respond)
+
+
+def test_models_take_turns_when_rotation_is_on(setup):
+    from dataclasses import replace
+    s, log = setup
+    calls = []
+    s2 = replace(s, rotate=True)
+    s2.__class__ = s.__class__
+    game = FakeStellaris([briefing("2200.01.01"), briefing("2201.01.01"), briefing("2202.01.01")])
+    Governor(s2, game, log, model=_recording("a", calls), fallback=_recording("b", calls)).run(max_decisions=3)
+    assert calls == ["a", "b", "a"]
+
+
+def test_first_model_decides_when_rotation_is_off(setup):
+    s, log = setup
+    calls = []
+    game = FakeStellaris([briefing("2200.01.01"), briefing("2201.01.01")])
+    Governor(s, game, log, model=_recording("a", calls), fallback=_recording("b", calls)).run(max_decisions=2)
+    assert calls == ["a", "a"]
+
+
+def test_model_pool_can_be_changed_live(setup):
+    s, log = setup
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+    g.set_models([{"model": "google:gemini-3.1-pro-preview", "thinking": "low"},
+                  {"model": "anthropic:claude-sonnet-5", "thinking": "high"}], rotate=True)
+    assert log.state.info["pool"] == [{"model": "google:gemini-3.1-pro-preview", "thinking": "low"},
+                                        {"model": "anthropic:claude-sonnet-5", "thinking": "high"}]
+    assert log.state.info["rotate"] is True and log.state.model == "google:gemini-3.1-pro-preview"
+    with pytest.raises(ValueError):
+        g.set_models([], rotate=False)
+    assert "set_models" in log.state.info["controls"]
+
+
+def test_provider_catalog_shows_which_providers_have_keys(monkeypatch):
+    from pilot.models import provider_catalog
+    monkeypatch.setenv("GOOGLE_API_KEY", "x")
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    cat = {p["id"]: p for p in provider_catalog(Settings(), list_models=lambda provider: [f"{provider}:m1"])}
+    assert set(cat) >= {"google", "anthropic", "openai"}
+    assert cat["google"]["configured"] and cat["google"]["models"] == ["google:m1"]
+    assert not cat["anthropic"]["configured"] and cat["anthropic"]["models"] == []
+    assert cat["anthropic"]["key_env"] == "ANTHROPIC_API_KEY"

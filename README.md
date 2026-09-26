@@ -278,8 +278,10 @@ periods on the chart; each decision records the model release that answered (an 
 identity (AI personality, traditions, ascension perks), colonisable planets in our borders with how
 well they suit our species, which growth and naval-capacity techs we have, and idle stockpiles; each
 neighbour gets a `who:` line (ethics, government, civics, AI personality, species traits,
-traditions). When a model stays overloaded after its retries, a fallback model (dashboard picker, default
-gemini-3.1-pro-preview, `off` to skip) gets one try; at start, a stale newest autosave (a new or
+traditions). The governor's models are a list in Settings: each entry is a provider (Google, Anthropic,
+OpenAI; keys `GOOGLE_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` in `.env`), a model and a
+thinking level. The first model decides and the others are tried in order when it stays
+overloaded after its retries, or, with "take turns", each decision starts at the next model; at start, a stale newest autosave (a new or
 just-loaded game) makes the governor play until a fresh one exists. The briefing names each war's sides, goals, war exhaustion and battles, lists the nearest
 empires against ours (strength ratios, opinion both ways, rival/pact flags), and the prompt adds
 a 12-month trend line (flags alloys piling up while military stays flat). The game is paused whenever the model thinks,

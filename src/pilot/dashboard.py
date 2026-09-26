@@ -20,7 +20,7 @@ Telemetry (runs/telemetry.sqlite, across runs and models):
     GET  /api/plans?campaign=<id>|run=<id>      campaign plan versions, newest first
     GET  /api/models                            models to offer, and the saved choice for the next run
     GET  /api/pc                                gaming PC: agent reachable, version, window in front, games open
-    POST /api/settings  {"model", "thinking", "fallback"}   save that choice (applies to a live pilot too)
+    POST /api/settings  {"models": [{"model", "thinking"}, ...], "rotate"}   the model list (live too); older {"model", "thinking", "fallback"}
     POST /api/run  {"game", "speed", "months"}   start a pilot run (game-pilot.service); viewer only
 """
 
@@ -205,15 +205,20 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
     async def api_models(_):
         """Models to offer (cached 10 min) and the saved choice for the next run."""
         from .config import Settings
-        from .models import available_models, load_prefs
+        from .models import available_models, load_prefs, provider_catalog
         now = asyncio.get_running_loop().time()
         if not models_cache or now - models_cache["t"] > 600:
             s = Settings.from_env()
-            models_cache.update(t=now, models=await asyncio.to_thread(available_models, s), default=s.model)
+            models_cache.update(t=now, models=await asyncio.to_thread(available_models, s), default=s.model,
+                                providers=await asyncio.to_thread(provider_catalog, s))
         prefs = load_prefs(runs_dir)
         return web.json_response({"models": models_cache["models"], "model": prefs.get("model", models_cache["default"]),
                                   "thinking": prefs.get("thinking", "medium"), "game": prefs.get("game", "stellaris"),
                                   "fallback": prefs.get("fallback", Settings.fallback_model or "none"),
+                                  "providers": models_cache.get("providers", []),
+                                  "pool": prefs.get("models") or Settings(model=prefs.get("model", models_cache["default"]),
+                                                                          governor_thinking=prefs.get("thinking", "medium")).pool(),
+                                  "rotate": prefs.get("rotate", False),
                                   "speed": prefs.get("speed", "normal"), "months": prefs.get("months", 12)})
 
     async def api_settings(request):
@@ -224,13 +229,16 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
             months = body.get("months")
             prefs = save_prefs(runs_dir, model=body.get("model") or None, thinking=body.get("thinking") or None,
                                speed=body.get("speed") or None, months=int(months) if months not in (None, "") else None,
-                               fallback=body.get("fallback") or None)
+                               fallback=body.get("fallback") or None, models=body.get("models"),
+                               rotate=body.get("rotate"))
         except (ValueError, TypeError) as e:
             raise web.HTTPBadRequest(text=str(e)) from e
         if pilot is not None and hasattr(pilot, "set_model") and body.get("model"):
             pilot.set_model(prefs["model"], prefs.get("thinking"))
         if pilot is not None and hasattr(pilot, "set_fallback") and body.get("fallback"):
             pilot.set_fallback(prefs["fallback"])
+        if pilot is not None and hasattr(pilot, "set_models") and (body.get("models") or body.get("rotate") is not None):
+            pilot.set_models(prefs["models"], prefs.get("rotate", False))
         return web.json_response({"ok": True, **prefs, "applied_live": pilot is not None})
 
     async def api_run(request):
@@ -420,6 +428,11 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
             pilot.stop()
         elif action == "instruct" and body.get("text", "").strip():
             pilot.instruct(body["text"].strip())
+        elif action == "set_models" and hasattr(pilot, "set_models"):
+            try:
+                pilot.set_models(body.get("models") or [], body.get("rotate"))
+            except ValueError as e:
+                raise web.HTTPBadRequest(text=str(e)) from e
         elif action == "set_fallback" and hasattr(pilot, "set_fallback"):
             try:
                 pilot.set_fallback(str(body.get("model", "")) or None)
@@ -457,7 +470,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
             except ValueError as e:
                 raise web.HTTPBadRequest(text=str(e)) from e
         else:
-            raise web.HTTPBadRequest(text="action must be pause|resume|stop|instruct|answer|set_model|set_fallback|set_speed|set_months|chat|order_add|order_remove|"
+            raise web.HTTPBadRequest(text="action must be pause|resume|stop|instruct|answer|set_model|set_models|set_fallback|set_speed|set_months|chat|order_add|order_remove|"
                                           "decide_now|override, with its text/index/directive")
         return web.json_response({"ok": True, "status": log.state.status})
 

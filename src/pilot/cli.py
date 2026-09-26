@@ -182,6 +182,10 @@ def main(argv: list[str] | None = None) -> int:
     s.governor_thinking = a.thinking or prefs.get("thinking") or s.governor_thinking
     if prefs.get("fallback"):
         s.fallback_model = None if prefs["fallback"] == "none" else prefs["fallback"]
+    if prefs.get("models") and not a.model:       # the dashboard's model list (each with its thinking)
+        s.models = tuple(prefs["models"])
+        s.model, s.governor_thinking = prefs["models"][0]["model"], prefs["models"][0]["thinking"]
+    s.rotate = bool(prefs.get("rotate", s.rotate))
     game = a.game or (prefs.get("game") if a.cmd == "run" else None)
     if game and game != s.game:
         from .config import default_journal

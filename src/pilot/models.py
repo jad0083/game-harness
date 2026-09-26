@@ -36,6 +36,48 @@ def google_models() -> list[str]:
     return out
 
 
+# Providers the pilot can use (pydantic-ai model prefixes) and the API key each needs.
+PROVIDERS = [
+    {"id": "google", "label": "Google", "key_env": "GOOGLE_API_KEY", "alt_env": "GEMINI_API_KEY"},
+    {"id": "anthropic", "label": "Anthropic", "key_env": "ANTHROPIC_API_KEY"},
+    {"id": "openai", "label": "OpenAI", "key_env": "OPENAI_API_KEY"},
+]
+
+
+def provider_models(provider: str) -> list[str]:
+    """Models the configured key can call for one provider ("provider:name"), from the provider's API."""
+    if provider == "google":
+        return google_models()
+    if provider == "anthropic":
+        import anthropic
+        return sorted(f"anthropic:{m.id}" for m in anthropic.Anthropic().models.list(limit=100))
+    if provider == "openai":
+        import openai
+        keep = ("gpt-", "o1", "o3", "o4", "o5")
+        return sorted(f"openai:{m.id}" for m in openai.OpenAI().models.list()
+                      if m.id.startswith(keep) and not any(x in m.id for x in ("audio", "realtime", "tts", "image", "transcribe", "search")))
+    return []
+
+
+def provider_catalog(s: Settings, list_models=provider_models) -> list[dict]:
+    """Every provider with whether its API key is set and, if so, its models (plus PILOT_MODELS extras)."""
+    extras = [m.strip() for m in os.environ.get("PILOT_MODELS", "").split(",") if valid_model(m.strip())]
+    out = []
+    for p in PROVIDERS:
+        configured = bool(os.environ.get(p["key_env"]) or (p.get("alt_env") and os.environ.get(p["alt_env"])))
+        models: list[str] = []
+        error = ""
+        if configured:
+            try:
+                models = list(list_models(p["id"]))
+            except Exception as e:  # noqa: BLE001 - a listing failure must not hide the provider
+                error = f"{type(e).__name__}: {e}"[:200]
+        models += [m for m in extras if m.startswith(p["id"] + ":") and m not in models]
+        out.append({"id": p["id"], "label": p["label"], "key_env": p["key_env"], "configured": configured,
+                    "models": sorted(set(models)), "error": error})
+    return out
+
+
 def available_models(s: Settings) -> list[str]:
     models = {s.model}
     try:
@@ -68,6 +110,39 @@ def load_prefs(runs_dir: Path) -> dict:
         out["speed"] = d["speed"]
     if isinstance(d.get("months"), int) and 1 <= d["months"] <= 120:
         out["months"] = d["months"]
+    try:
+        out["models"] = check_pool(d["models"]) if d.get("models") else None
+    except ValueError:
+        out["models"] = None
+    if not out["models"]:
+        del out["models"]
+        if out.get("model"):       # settings saved before the pool: model + thinking + fallback
+            th = out.get("thinking", "medium")
+            pool = [{"model": out["model"], "thinking": th}]
+            fb = out.get("fallback")
+            if fb and fb != "none" and fb != out["model"]:
+                pool.append({"model": fb, "thinking": th})
+            out["models"] = pool
+    if isinstance(d.get("rotate"), bool):
+        out["rotate"] = d["rotate"]
+    return out
+
+
+MAX_POOL = 6
+
+
+def check_pool(models) -> list[dict]:
+    """A model pool from the dashboard: 1-6 entries of {"model": "provider:name", "thinking": level}."""
+    if not isinstance(models, list) or not 1 <= len(models) <= MAX_POOL:
+        raise ValueError(f"the model list needs 1 to {MAX_POOL} models")
+    out = []
+    for m in models:
+        name, th = (m or {}).get("model"), (m or {}).get("thinking", "medium")
+        if not isinstance(name, str) or not valid_model(name):
+            raise ValueError(f"not a model name: {name!r} (expected provider:name)")
+        if th not in THINKING:
+            raise ValueError(f"thinking must be one of {', '.join(THINKING)}")
+        out.append({"model": name, "thinking": th})
     return out
 
 
@@ -86,6 +161,12 @@ def save_prefs(runs_dir: Path, model: str | None = None, thinking: str | None = 
         if thinking not in THINKING:
             raise ValueError(f"thinking must be one of {', '.join(THINKING)}")
         prefs["thinking"] = thinking
+    if run.get("models") is not None:
+        pool = check_pool(run["models"])
+        prefs["models"] = pool
+        prefs["model"], prefs["thinking"] = pool[0]["model"], pool[0]["thinking"]
+    if run.get("rotate") is not None:
+        prefs["rotate"] = bool(run["rotate"])
     if run.get("fallback") is not None:
         fb = str(run["fallback"])
         if fb != "none" and not valid_model(fb):

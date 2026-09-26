@@ -41,6 +41,11 @@ class Settings:
     governor_max_requests: int = 4
     # waits between tries when the provider is overloaded or rate-limited (503/429/5xx)
     fallback_model: str | None = "google:gemini-3.1-pro-preview"   # tried once when the main model stays overloaded
+    # The governor's model pool: ({"model": "provider:name", "thinking": level}, ...). Empty = the
+    # model (+ fallback) above. First entry decides; the rest are tried in order when it is
+    # overloaded, or, with `rotate`, each decision starts at the next entry (spreads the load).
+    models: tuple = ()
+    rotate: bool = False
     stale_save_s: float = 300.0                      # an autosave older than this at start may be another game's
     fresh_save_wait_s: float = 600.0
     model_timeout_s: float = 120.0                    # per model request; decisions take ~20-30 s
@@ -81,6 +86,15 @@ class Settings:
     @property
     def controller_bin(self) -> Path:
         return REPO / "target/release/game-controller"
+
+    def pool(self) -> list[dict]:
+        """The governor's models in order, each with its thinking level."""
+        if self.models:
+            return [dict(m) for m in self.models]
+        out = [{"model": self.model, "thinking": self.governor_thinking}]
+        if self.fallback_model and self.fallback_model != self.model:
+            out.append({"model": self.fallback_model, "thinking": self.governor_thinking})
+        return out
 
     @property
     def provider(self) -> str:
