@@ -19,6 +19,7 @@
 - [ ] `clippy --all-targets`: 2 warnings (`corpus.rs:466`, `imaging.rs:28`); "0 warnings" achieved via `#![allow(dead_code, ...)]` in every file
 
 ### Rust agent (`crates/game-agent`)
+- [ ] Installer picks the first *existing* docs folder: on the PC `stellaris_docs` resolved to a stale 2022 copy under `OneDrive\Documents` while Stellaris 4.5 likely writes to `MyDocuments` (`D:\OneDrive - Sacramento`); confirm after launch and fix the order (2026-09-25)
 - [ ] `main.rs:192-199` fallback token is a nanosecond timestamp in hex; `main.rs:214` non-constant-time compare; Python `--allow` client-IP list dropped
 - [ ] `main.rs:256` `x + w` can wrap in release, bypassing the bounds check (GDI then fails; no crash)
 - [ ] Console-subsystem exe launched as an interactive logon task → console window on the game desktop at every logon
@@ -32,6 +33,7 @@
 - [ ] Python harness (`src/harness`, `windows_agent/agent.py`, 40 tests) is no longer deployed; its green suite covers nothing that runs (`agent.py` `settle` stub always returns `settled: True`)
 
 ## Resolved
+- [x] Agent reported no file roots: PS 5.1 wrote `roots.json` with a BOM and the loader ignored the parse error; re-registering an elevated scheduled task failed with Access denied (2026-09-25; 8d81a44, redeployed, 4 roots verified)
 - [x] 12 stray `*.jpg` crops in the repo root and `screenshots/` (2026-09-25; moved to gitignored `play/archive/`)
 - [x] `PLAYING.md` documented Python-era MCP tools (`status`, `zoom`, `focus_game`) (2026-09-25; rewritten with a quick reference, procedure in AGENTS.md)
 - [x] Docs were Claude-specific (`CLAUDE.md` only) and the play loop lived in untracked scratch scripts (2026-09-25; `AGENTS.md`, `GEMINI.md`, `.gemini/settings.json`, `scripts/play/`)
