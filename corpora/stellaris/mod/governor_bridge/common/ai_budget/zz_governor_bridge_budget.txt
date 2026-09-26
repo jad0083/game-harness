@@ -15,12 +15,16 @@ governor_expand_alloys_starbases = {
 	weight = { weight = 0.3 }
 	desired_min = { base = 100 }
 }
-governor_expand_influence_starbases = {
+# Outposts draw influence from `stations` (vanilla influence_expenditure_stations: "min is 1 jump
+# away"); influence in `starbases` is only spent by nomadic empires, so it must not go there.
+# Vanilla also only funds outpost alloys while influence > 75, so influence is the expansion gate.
+governor_expand_influence_stations = {
 	resource = influence
 	type = expenditure
-	category = starbases
+	category = stations
 	potential = { has_country_flag = governor_directive_expand }
 	weight = { weight = 0.3 }
+	desired_min = { base = 75 }
 }
 governor_expand_alloys_colonies = {
 	resource = alloys
@@ -62,13 +66,6 @@ governor_consolidate_minerals_planets = {
 	category = planets
 	potential = { has_country_flag = governor_directive_consolidate_economy }
 	weight = { weight = 0.3 }
-}
-governor_consolidate_energy_planets = {
-	resource = energy
-	type = expenditure
-	category = planets
-	potential = { has_country_flag = governor_directive_consolidate_economy }
-	weight = { weight = 0.1 }
 }
 
 # --- tech_rush: buildings (research labs among them) ------------------------------------------

@@ -1256,6 +1256,32 @@ mod tests {
             assert!(d.directive.contains_key(name), "{flag} is not a directive");
         }
         assert_eq!(budget.matches("potential = { has_country_flag = governor_directive_").count(), budget.matches(" = {\n\tresource =").count());
+
+        // Each (resource, category) must be one a non-nomadic empire spends from in vanilla 4.5.1
+        // (common/ai_budget, read 2026-09-26); e.g. influence in `starbases` is nomad-only, and
+        // outposts take influence from `stations`.
+        const VANILLA: [(&str, &str); 9] = [
+            ("alloys", "ships"), ("alloys", "starbases"), ("alloys", "colonies"), ("alloys", "planets"),
+            ("influence", "stations"), ("influence", "claims"), ("influence", "edicts"),
+            ("minerals", "planets"), ("minerals", "stations"),
+        ];
+        let tape = jomini::TextTape::from_slice(budget.as_bytes()).unwrap();
+        let mut checked = 0;
+        for (key, _op, value) in tape.windows1252_reader().fields() {
+            checked += 1;
+            let entry = value.read_object().unwrap();
+            let (mut resource, mut category) = (String::new(), String::new());
+            for (k, _o, v) in entry.fields() {
+                match k.read_str().as_ref() {
+                    "resource" => resource = v.read_string().unwrap(),
+                    "category" => category = v.read_string().unwrap(),
+                    _ => {}
+                }
+            }
+            let name = key.read_str();
+            assert!(VANILLA.contains(&(resource.as_str(), category.as_str())), "{name}: {resource} in {category} is not spent by a non-nomadic empire");
+        }
+        assert_eq!(checked, budget.matches("\tresource =").count());
     }
 
     #[test]

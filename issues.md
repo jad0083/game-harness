@@ -2,6 +2,7 @@
 
 ## Open
 
+- [ ] Governor Bridge: `expand` put its extra influence in AI budget category `starbases` (nomad-only for influence) instead of `stations`, where outposts draw it; fixed in the mod and tested, live once the game restarts with the new files (2026-09-26)
 - [ ] Telemetry: one decision made on United Nations of Earth 2 (2203.10) during the model-switch test is recorded under the old throwaway campaign, stretching its chart to 2201 (history kept as recorded; the campaign guard prevents new cases)
 
 ### Pilot / Stellaris (code review 2026-09-25, 7dc677a..616b501)
