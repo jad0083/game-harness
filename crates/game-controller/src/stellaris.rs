@@ -544,13 +544,14 @@ impl HumanAiReader {
 
     /// Some(true) for ON, Some(false) for OFF, None when neither is clearly closer.
     pub fn read_frame(&self, frame: &image::RgbImage) -> Option<bool> {
+        // Compare only the white text: the console is semi-transparent, and a bright nebula behind it
+        // pushed plain template distances past any fixed limit (0.103 vs 0.130 on an ON frame).
+        // Text masks: the right word 0.000-0.023, the wrong one 0.057-0.064 on real frames.
         let r = crate::imaging::roi_from_norm(frame.width(), frame.height(), self.roi);
-        let d_on = crate::imaging::template_diff_search(frame, &self.on, r[0], r[1], self.search);
-        let d_off = crate::imaging::template_diff_search(frame, &self.off, r[0], r[1], self.search);
+        let d_on = crate::imaging::text_mask_diff_search(frame, &self.on, r[0], r[1], self.search, 170);
+        let d_off = crate::imaging::text_mask_diff_search(frame, &self.off, r[0], r[1], self.search, 170);
         let (best, other) = if d_on < d_off { (d_on, d_off) } else { (d_off, d_on) };
-        // The console is semi-transparent over the map, so absolute distances drift with what is
-        // behind it (live OFF frame: 0.039 vs ON 0.071); the gap between the two decides.
-        (best < 0.08 && other - best > 0.015).then_some(d_on < d_off)
+        (best < 0.04 && other - best > 0.02).then_some(d_on < d_off)
     }
 
     async fn toggle_and_read(&self, client: &crate::client::AgentClient) -> Result<Option<bool>> {
@@ -1082,6 +1083,8 @@ mod tests {
         assert_eq!(r.read_frame(&load("stellaris_human_ai_off.jpg")), Some(false));
         // a live frame with a different map behind the console (distances 0.039 / 0.071)
         assert_eq!(r.read_frame(&load("stellaris_human_ai_off_live.jpg")), Some(false));
+        // a bright nebula behind the console (plain template distances 0.103 / 0.130)
+        assert_eq!(r.read_frame(&load("stellaris_human_ai_on_nebula.jpg")), Some(true));
         assert_eq!(r.read_frame(&image::RgbImage::new(1568, 882)), None, "no console: unknown");
     }
 

@@ -10,6 +10,8 @@ from .config import Settings
 
 MODEL_RE = re.compile(r"^[a-z][a-z0-9-]*:[A-Za-z0-9._/:-]+$")     # provider:name
 THINKING = ("off", "low", "medium", "high")
+# Gemini models that cannot play: speech, image, transcription, robotics and computer-use variants
+NOT_FOR_PLAY = ("tts", "image", "transcribe", "robotics", "computer-use", "embedding", "customtools")
 
 
 def valid_model(name: str) -> bool:
@@ -27,7 +29,7 @@ def google_models() -> list[str]:
     for m in client.models.list():
         name = (m.name or "").split("/")[-1]
         actions = getattr(m, "supported_actions", None) or []
-        if name.startswith("gemini") and ("generateContent" in actions or not actions) and "embedding" not in name:
+        if name.startswith("gemini") and ("generateContent" in actions or not actions) and not any(x in name for x in NOT_FOR_PLAY):
             out.append(f"google:{name}")
     return out
 
