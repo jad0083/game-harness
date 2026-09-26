@@ -268,6 +268,18 @@ class Governor:
         self.log.state.status = status
         self.log.emit("status", status=status)
 
+    def _needs_attention(self, why: str) -> None:
+        """Stop acting and wait for the human (dashboard Resume) instead of crashing the run."""
+        self.control.paused = True
+        self.log.state.status = "needs_attention"
+        try:
+            shot = self.game.screenshot()
+            if getattr(shot, "image", None):
+                self.log.frame(shot.image)
+        except Exception:  # noqa: BLE001, S110 - the frame is only a convenience here
+            pass
+        self.log.emit("needs_attention", reason=why[:500])
+
     def run(self, max_decisions: int | None = None) -> None:
         self.log.state.info.update(game=self.s.game, speed=self.s.speed, every_months=self.s.decide_every_months)
         self.log.emit("run_start", model=self.s.model, game=self.s.game, speed=self.s.speed,
@@ -281,20 +293,24 @@ class Governor:
             while not self.control.stopping:
                 if max_decisions is not None and self.log.state.episodes >= max_decisions:
                     break
-                if self.control.paused:
-                    self.game.set_paused(True)
-                    while self.control.paused and not self.control.stopping and self.requests.empty():
-                        time.sleep(0.5)
-                    if not self.requests.empty():
-                        b = self._handle_request(self.game.briefing())
-                    continue
-                b, reason = self._run_until_next_decision(b)
-                if b is None:
-                    break
-                if reason == "request":
-                    b = self._handle_request(b)
-                elif reason:
-                    self._decide(b, reason)
+                try:
+                    if self.control.paused:
+                        if self.log.state.status != "needs_attention":
+                            self.game.set_paused(True)
+                        while self.control.paused and not self.control.stopping and self.requests.empty():
+                            time.sleep(0.5)
+                        if not self.requests.empty():
+                            b = self._handle_request(self.game.briefing())
+                        continue
+                    b, reason = self._run_until_next_decision(b)
+                    if b is None:
+                        break
+                    if reason == "request":
+                        b = self._handle_request(b)
+                    elif reason:
+                        self._decide(b, reason)
+                except RuntimeError as e:   # game control failed (focus lost, a panel open, agent down)
+                    self._needs_attention(f"game control failed: {e}. Fix the game screen, then press Resume.")
         finally:
             try:
                 self.game.set_paused(True)

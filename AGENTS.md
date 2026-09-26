@@ -223,7 +223,7 @@ $C stellaris directive expand        # play 0 → flags + policies → observe; 
 $C stellaris speed fastest           # slowest | slow | normal | fast | fastest
 $C stellaris pause                   # / resume — state read from the screen, safe to repeat
 $C stellaris log -l 30               # tail of logs/game.log
-.venv/bin/python -m pilot run --game stellaris --speed fastest --months 12   # the governor loop
+.venv/bin/python -m pilot run --game stellaris --months 12   # the governor loop (speed: normal default)
 ```
 Rules:
 - **Never touch other save folders.** "Commonwealth of Man 3" is the user's own game. Test only
