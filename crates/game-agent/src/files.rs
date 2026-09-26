@@ -30,11 +30,19 @@ pub struct Entry {
 }
 
 impl Roots {
+    /// Load roots; a missing file means no roots. A BOM (Windows PowerShell 5.1 writes one) is
+    /// accepted; an unparsable file is reported on stderr and yields no roots.
     pub fn load(path: &Path) -> Roots {
-        std::fs::read_to_string(path)
-            .ok()
-            .and_then(|s| serde_json::from_str(&s).ok())
-            .unwrap_or_default()
+        let Ok(text) = std::fs::read_to_string(path) else {
+            return Roots::default();
+        };
+        match serde_json::from_str(text.trim_start_matches('\u{feff}')) {
+            Ok(r) => r,
+            Err(e) => {
+                eprintln!("ignoring {path:?}: {e}");
+                Roots::default()
+            }
+        }
     }
 
     /// Resolve `rel` inside root `name`, refusing anything that could escape it.
@@ -153,6 +161,15 @@ mod tests {
         std::fs::write(&p, r#"{"roots": {"a": "/tmp"}}"#).unwrap();
         assert_eq!(Roots::load(&p).roots["a"], PathBuf::from("/tmp"));
         assert!(Roots::load(&d.path().join("missing.json")).roots.is_empty());
+    }
+
+    #[test]
+    fn loads_roots_json_with_a_utf8_bom() {
+        // Windows PowerShell 5.1 `Set-Content -Encoding UTF8` prefixes a BOM.
+        let d = tempdir::TempDirLite::new("bom");
+        let p = d.path().join("roots.json");
+        std::fs::write(&p, "\u{feff}{\"roots\": {\"a\": \"/tmp\"}}").unwrap();
+        assert_eq!(Roots::load(&p).roots["a"], PathBuf::from("/tmp"));
     }
 
     /// Minimal temp dir (no extra dependency).

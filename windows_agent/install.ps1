@@ -62,7 +62,16 @@ if ($env:GA_SRC) {
 # --- 2b. Read-only file roots (game saves, logs, game data) ----------------------
 # The agent serves files only from these folders, read-only (GET /files/*).
 Step 'Detecting game folders for read-only access'
-$docs = [Environment]::GetFolderPath('MyDocuments')
+# Documents may be redirected (e.g. to OneDrive); check the usual places.
+$docsDirs = @([Environment]::GetFolderPath('MyDocuments'), (Join-Path $env:USERPROFILE 'Documents'))
+if ($env:OneDrive) { $docsDirs += Join-Path $env:OneDrive 'Documents' }
+$docsDirs = @($docsDirs | Where-Object { $_ } | Select-Object -Unique)
+function Find-DocsFolder($rel) {
+    foreach ($d in $docsDirs) { $p = Join-Path $d $rel; if (Test-Path $p) { return $p } }
+    # Not created yet (a game creates it on first launch): keep the likely path; /files/roots
+    # reports exists=false until then.
+    return (Join-Path $docsDirs[0] $rel)
+}
 $steamLibs = @()
 try {
     $steam = (Get-ItemProperty 'HKCU:\Software\Valve\Steam' -ErrorAction Stop).SteamPath
@@ -80,17 +89,21 @@ function Find-SteamGame($folder) {
     return $null
 }
 $candidates = [ordered]@{
-    stellaris_docs    = Join-Path $docs 'Paradox Interactive\Stellaris'
+    stellaris_docs    = Find-DocsFolder 'Paradox Interactive\Stellaris'
     stellaris_install = Find-SteamGame 'Stellaris'
-    galciv4_docs      = Join-Path $docs 'My Games\GalCiv4'
+    galciv4_docs      = Find-DocsFolder 'My Games\GalCiv4'
     galciv4_install   = Find-SteamGame 'Galactic Civilizations IV'
 }
 $roots = [ordered]@{}
 foreach ($k in $candidates.Keys) {
     $v = $candidates[$k]
-    if ($v -and (Test-Path $v)) { $roots[$k] = $v; Write-Host "    $k = $v" }
+    if (-not $v) { continue }
+    $roots[$k] = $v
+    $note = if (Test-Path $v) { '' } else { '  (not created yet)' }
+    Write-Host "    $k = $v$note"
 }
-(@{ roots = $roots } | ConvertTo-Json -Depth 3) | Set-Content -Encoding UTF8 (Join-Path $Dest 'roots.json')
+# No BOM: Windows PowerShell 5.1's Set-Content -Encoding UTF8 would add one.
+[IO.File]::WriteAllText((Join-Path $Dest 'roots.json'), (@{ roots = $roots } | ConvertTo-Json -Depth 3), (New-Object Text.UTF8Encoding $false))
 
 # --- 3. Firewall (needs admin once) --------------------------------------------
 Step "Allowing inbound TCP $Port from the local subnet"
@@ -110,7 +123,14 @@ $trigger = New-ScheduledTaskTrigger -AtLogOn -User "$env:USERDOMAIN\$env:USERNAM
 $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive -RunLevel Limited
 $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 3 `
     -RestartInterval (New-TimeSpan -Minutes 1) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -MultipleInstances IgnoreNew
-Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
+try {
+    Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
+} catch {
+    # An existing task created elevated can't be replaced from a normal shell ("Access is
+    # denied"). It already runs the same exe path, so starting it is enough for an update.
+    if (-not (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue)) { throw }
+    Write-Host "    could not re-register ($($_.Exception.Message.Trim())); starting the existing task"
+}
 Start-ScheduledTask -TaskName $TaskName
 
 # --- 5. Verify ----------------------------------------------------------------
