@@ -71,6 +71,7 @@ class Strategy(BaseModel):
     pillars: dict[str, Pillar]
     focus: str
     reason: str = ""
+    identity: str = ""      # how our species, traits, ethics, civics and origin shape this strategy
 
     def sorted_pillars(self) -> list[tuple[str, Pillar]]:
         """(name, pillar) pairs in priority order."""

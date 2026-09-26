@@ -2859,3 +2859,53 @@ def test_strategy_instructions_list_every_metric_name():
     from pilot.strategy import METRICS
     for m in METRICS:
         assert m in STRATEGY_INSTRUCTIONS, m
+
+
+def _species_briefing(date: str) -> dict:
+    return {**briefing(date), "identity": {"species": {"name": "Lithoid humans", "class": "LITHOID",
+            "traits": ["trait_lithoid", "trait_industrious", "trait_enduring", "trait_wasteful"]}}}
+
+
+def _identity_strategist(identities: list[str], seen_prompts: list[str]):
+    """Answers with a valid strategy whose `identity` is taken from `identities` in turn."""
+    from pilot.strategy import Pillar
+    prios = {"defence": 1, "economy": 2, "technology": 3, "expansion": 4, "diplomacy": 5, "government": 6, "society": 7}
+
+    def respond(messages, info):
+        seen_prompts.append("\n".join(str(getattr(p, "content", "")) for m in messages for p in getattr(m, "parts", [])))
+        pillars = {p: Pillar(priority=n, stance=f"{p} by model", goals=["g"]).model_dump() for p, n in prios.items()}
+        ident = identities[min(len(seen_prompts) - 1, len(identities) - 1)]
+        body = {"change": True, "assessment": "ok", "rules": [], "identity": ident,
+                "strategy": {"pillars": pillars, "focus": "grow", "reason": "start"}}
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, body)])
+    return FunctionModel(respond)
+
+
+def test_a_start_review_must_build_on_our_species_traits(setup):
+    s, log = setup
+    prompts = []
+    g = Governor(s, FakeStellaris([_species_briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": _identity_strategist(["We will grow fast.", ("Industrious and enduring lithoids: "
+                                                                "mining-heavy economy, long wars are affordable.")], prompts)})
+    g._review_strategy(_species_briefing("2200.01.01"), "start of run")
+    assert len(prompts) == 2, "the first answer ignored our traits and was sent back once"
+    assert "industrious" in prompts[1] and "enduring" in prompts[1]
+    assert g.strategy is not None and "Industrious" in g.strategy.identity
+
+
+def test_a_dashboard_review_also_checks_the_species_traits(setup):
+    s, log = setup
+    prompts = []
+    g = Governor(s, FakeStellaris([_species_briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": _identity_strategist(["nothing about us", "still nothing"], prompts)})
+    g._review_strategy(_species_briefing("2200.01.01"), "requested from the dashboard")
+    assert g.strategy is None and any(e["kind"] == "strategy_rejected" for e in log.recent)
+
+
+def test_the_strategist_prompt_names_our_species_and_traits(setup):
+    s, log = setup
+    prompts = []
+    g = Governor(s, FakeStellaris([_species_briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": _identity_strategist(["industrious enduring lithoids"], prompts)})
+    g._review_strategy(_species_briefing("2200.01.01"), "start of run")
+    assert "Our species: Lithoid humans" in prompts[0] and "industrious" in prompts[0]

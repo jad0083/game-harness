@@ -702,6 +702,7 @@ function renderStrategy(data) {
 
   let h = `<div class="strategy-head">
     <div class="t-meta"><span>Focus: ${esc(cur.focus || "–")}</span><span>Ranking: ${esc(ranking || "–")}</span></div>
+    ${cur.identity ? `<p class="t-reason">Built on: ${md(tidy(cur.identity))}</p>` : ""}
     <div class="t-when">Last review: ${esc(last.date || "–")}, ${esc(tidy(last.trigger || ""))}, ${esc(last.model || "–")}</div>
   </div>`;
   h += pillars.map(([name, pl]) => pillarCard(name, pl, msByPillar[name] || [])).join("");

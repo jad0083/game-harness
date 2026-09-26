@@ -68,6 +68,33 @@ class StrategyReview(BaseModel):
     strategy: Strategy | None = Field(default=None, description="the full new strategy when change is true")
     assessment: str = Field(description="what worked and what did not since the last review, citing numbers")
     rules: list[str] = Field(default_factory=list, description="0-3 general rules learned (situation -> choice)")
+    identity: str = Field(default="", description="how our species (its traits by name), ethics, civics and origin shape "
+                                                  "this strategy, and which pillars each trait affects")
+
+
+# Reviews that always have to show the strategy is built on our species (the user's rule): the first
+# strategy of a run and a review the human asked for.
+IDENTITY_TRIGGERS = ("start of run", "requested from the dashboard")
+
+
+def species_terms(b: dict) -> tuple[str, list[str]]:
+    """Our species' name and its traits in readable form ("trait_pc_desert_preference" -> "desert
+    preference"), from the briefing's identity; empty when the save has none."""
+    sp = ((b.get("identity") or {}).get("species") or {})
+    traits = [t.removeprefix("trait_").removeprefix("pc_").replace("_", " ") for t in sp.get("traits") or []]
+    return sp.get("name") or "", [t for t in traits if t]
+
+
+def identity_errors(identity: str, traits: list[str]) -> list[str]:
+    """The identity statement must name at least two of our traits (one if we have only one)."""
+    if not traits:
+        return []
+    named = [t for t in traits if t.lower() in identity.lower()]
+    need = min(2, len(traits))
+    if len(named) >= need:
+        return []
+    return [(f"identity: say how our species' traits shape the strategy, naming at least {need} of them "
+             f"(ours: {', '.join(traits)})")]
 
 
 STRATEGY_INSTRUCTIONS = """You are the Strategist: you set the empire's top-down strategy, one entry per pillar
@@ -80,7 +107,10 @@ and only for economy `market` (at most 1 small monthly order, amount 1-25; sell 
 IDLE, at most 20% of its monthly income). Market orders cannot use trade; sell only idle energy, minerals, food, consumer goods or alloys (strategic resources can only be bought). Priorities decide which directives the governor prefers.
 Everything must be achievable through directives, tech picks or market orders: the game's AI builds,
 designs ships and moves fleets. Never change a pillar marked pinned: the human set it. If nothing
-material changed, answer change=false. Build on the empire's species, ethics, civics and origin.
+material changed, answer change=false. Build on the empire's species and its traits, ethics, civics and
+origin: fill `identity` with how they shape this strategy, naming the traits you rely on and the pillars they
+affect (e.g. industrious → economy on minerals; enduring → long wars are affordable), and weigh a
+neighbour's traits when dealing with or fighting it.
 While at war, the defence stance must name its exit condition (peace, war exhaustion, or planets retaken). When a hostile neighbour's military is twice ours or more, a defence goal is two shipyards in different systems and alloy production on two or more planets; never reason from a naval-capacity cap the briefing does not show."""
 
 
@@ -1216,6 +1246,10 @@ class Governor:
                       "Milestones (status computed from the recorded numbers):\n" + self._milestones_text(),
                       "Directive changes and what followed:\n" + self._past_outcomes_text(),
                       "Latest briefing:\n" + (self.last_briefing or self.game.briefing_text())]
+            sp_name, sp_traits = species_terms(b)
+            if sp_name or sp_traits:
+                prompt.insert(1, f"Our species: {sp_name}; traits: {', '.join(sp_traits) or 'none listed'}. "
+                                 "The strategy must be built on them (fill `identity`).")
             misfits = pinned_misfits(self.strategy, idle=idle_resources(b), income=b.get("net") or {}) if self.strategy else []
             if misfits:     # kept as the human set them; the Strategist should plan around them
                 prompt.insert(2, "Warnings:\n" + "\n".join(misfits))
@@ -1256,6 +1290,10 @@ class Governor:
                                 income=b.get("net", {}))
             else:
                 errs = []
+            if r.change or trigger in IDENTITY_TRIGGERS:     # a new strategy, or one the human asked for
+                errs = errs + identity_errors(r.identity, sp_traits)
+            if new is not None and r.identity:
+                new = new.model_copy(update={"identity": r.identity})
             accepted = bool(r.change and new is not None and not errs)
 
             # Negative, strictly decreasing "episode" (file traces/-0001.json, ...): it can never collide with a
