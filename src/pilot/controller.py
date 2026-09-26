@@ -14,6 +14,7 @@ from .config import REPO, Settings
 from .events import EventLog
 from .game import Game
 from .learning import Journal, LearnedStore
+from .trace import serialize
 
 DISMISSED_RE = re.compile(r"Dismissed on advanced turns: (.+)\.")
 ALREADY_RE = re.compile(r"already dismissed: ([^)]+)\)")
@@ -70,7 +71,9 @@ class Pilot:
 
     def run(self, max_episodes: int | None = None) -> None:
         self._status("playing")
-        self.log.emit("run_start", model=self.s.model, coords=self.s.coord_space)
+        self.log.state.info.update(game=self.s.game)
+        self.log.emit("run_start", model=self.s.model, game=self.s.game, coords=self.s.coord_space)
+        self.log.set_campaign(self.s.game, self.s.campaign or self.s.journal.parent.name)
         unresolved = processing = 0
         try:
             while not self.control.stopping:
@@ -118,7 +121,7 @@ class Pilot:
         extra = self.human.take_all()
         started = time.time()
         try:
-            result, usage = run_episode(self.agent, deps, stop_text, frame, extra)
+            result, usage, messages = run_episode(self.agent, deps, stop_text, frame, extra)
         except Exception as e:  # noqa: BLE001 - a failed episode must not end the run
             self.log.emit("episode_error", error=f"{type(e).__name__}: {e}"[:500])
             self._status("playing")
@@ -135,6 +138,12 @@ class Pilot:
                       tokens_in=getattr(usage, "input_tokens", 0), tokens_out=getattr(usage, "output_tokens", 0))
         self.store.add_episode(result.situation, result.decision, "resolved" if result.resolved else "unresolved",
                                result.game_date)
+        self.log.save_trace(st.episodes, {
+            "episode": st.episodes, "model": self.s.model, "game": self.s.game, "date": result.game_date,
+            "trigger": stop_text[:500], "decision": result.decision, "situation": result.situation,
+            "outcome": "resolved" if result.resolved else "unresolved", "seconds": round(time.time() - started, 1),
+            "tokens_in": getattr(usage, "input_tokens", 0), "tokens_out": getattr(usage, "output_tokens", 0),
+            "steps": serialize(messages)})
         self.journal.note(f"{result.situation} → {result.decision}", result.game_date)
         learned_now = sum(1 for e in list(self.log.recent)[-40:] if e["kind"] == "learned" and e["t"] >= started)
         if learned_now:

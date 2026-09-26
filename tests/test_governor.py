@@ -91,3 +91,153 @@ def test_prepare_war_needs_a_human_yes(setup):
     assert ("directive", "prepare_war") not in game.actions
     assert any(e["kind"] == "question" for e in log.recent)
     assert "needs a human yes" in log.state.last_decision
+
+
+def test_traces_capture_tool_calls_and_answer(setup):
+    s, log = setup
+    game = FakeStellaris([briefing("2200.01.01")])
+    Governor(s, game, log, model=decisions("expand", consult_first=True)).run(max_decisions=1)
+    import json
+    t = json.loads((log.dir / "traces/0001.json").read_text())
+    assert t["decision"] == "expand" and t["outcome"] == "applied" and t["date"] == "2200.01.01"
+    kinds = [st["type"] for st in t["steps"]]
+    assert kinds[0] == "prompt" and "Decision point: start of run" in t["steps"][0]["text"]
+    assert {"tool_call", "tool_result", "output", "usage"} <= set(kinds)
+    call = next(st for st in t["steps"] if st["type"] == "tool_call")
+    assert call["tool"] == "consult" and call["args"] == {"query": "diplomatic stance"}
+    assert any(e["kind"] == "trace" and e["file"] == "traces/0001.json" for e in log.recent)
+    m = [e for e in log.recent if e["kind"] == "metrics"]
+    assert m and m[0]["date"] == "2200.01.01" and "net" in m[0]
+    assert log.state.info["directive"] == "expand" and log.state.info["speed"] == "fastest"
+
+
+def test_trace_serializer_handles_thinking_images_and_retries():
+    from pydantic_ai import BinaryContent
+    from pydantic_ai.messages import (
+        ModelRequest,
+        ModelResponse,
+        RetryPromptPart,
+        TextPart,
+        ThinkingPart,
+        ToolCallPart,
+        ToolReturnPart,
+        UserPromptPart,
+    )
+
+    from pilot.trace import MAX_TEXT, serialize
+    msgs = [ModelRequest(parts=[UserPromptPart(["look", BinaryContent(b"x", media_type="image/jpeg")])]),
+            ModelResponse(parts=[ThinkingPart("weighing options"), TextPart("ok"),
+                                 ToolCallPart("click", {"x": 1, "y": 2})]),
+            ModelRequest(parts=[ToolReturnPart("click", "x" * (MAX_TEXT + 10)), RetryPromptPart("bad args", tool_name="click")]),
+            ModelResponse(parts=[ToolCallPart("final_result", {"resolved": True})])]
+    steps = serialize(msgs)
+    assert steps[0] == {"type": "prompt", "text": "look\n[image]"}
+    assert {"type": "thinking", "text": "weighing options"} in steps
+    res = next(st for st in steps if st["type"] == "tool_result")
+    assert res["text"].endswith("[10 more chars]")
+    assert any(st["type"] == "retry" for st in steps)
+    assert steps[-2] == {"type": "output", "tool": "final_result", "args": {"resolved": True}}
+
+
+def test_history_endpoints_serve_runs_traces_and_metrics(setup):
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from pilot.dashboard import make_app
+    s, log = setup
+    game = FakeStellaris([briefing("2200.01.01"), briefing("2201.01.01")])
+    Governor(s, game, log, model=decisions("expand", "keep")).run(max_decisions=2)
+
+    async def go():
+        async with TestClient(TestServer(make_app(None, s.runs_dir))) as c:   # read-only viewer
+            runs = await (await c.get("/runs")).json()
+            assert runs[0]["id"] == "run1" and runs[0]["game"] == "stellaris" and runs[0]["decisions"] == 2
+            assert (await (await c.get("/status")).json())["live"] is False
+            evs = await (await c.get("/runs/run1/events?kind=metrics,episode")).json()
+            assert {e["kind"] for e in evs} == {"metrics", "episode"}
+            t = await (await c.get("/runs/run1/trace/2")).json()
+            assert t["decision"] == "keep" and t["trigger"].startswith("scheduled")
+            assert (await c.get("/runs/run1/trace/9")).status == 404
+            assert (await c.get("/runs/..%2Fetc/events")).status == 404
+            assert (await c.post("/control", json={"action": "pause"})).status in (404, 405)
+            assert (await c.get("/")).status == 200
+
+    asyncio.run(go())
+
+
+def test_telemetry_records_campaign_decisions_and_scores_outcomes(setup, tmp_path):
+    import json
+
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(s.runs_dir, "run7", s.model, telemetry=tel)
+    src = "save games/unitednationsofearth_-155/autosave_2200.01.01.sav"
+    b0 = {**briefing("2200.01.01"), "source": src, "planets": [{}], "pops": 100}
+    b1 = {**briefing("2201.01.01"), "source": src, "planets": [{}, {}], "pops": 130}
+    b2 = {**briefing("2202.01.01"), "source": src, "planets": [{}, {}, {}], "pops": 150}
+    game = FakeStellaris([b0, b1, b2])
+    Governor(s, game, log, model=decisions("expand", "keep", "keep")).run(max_decisions=3)
+
+    cid = "stellaris/unitednationsofearth_-155"
+    assert log.campaign_id == cid
+    runs = tel.query("SELECT * FROM runs")
+    assert runs[0]["campaign_id"] == cid and runs[0]["game"] == "stellaris" and runs[0]["status"] == "ended"
+    ds = tel.query("SELECT * FROM decisions WHERE campaign_id=? ORDER BY episode", (cid,))
+    assert [d["decision"] for d in ds] == ["expand", "keep", "keep"]
+    assert json.loads(ds[0]["trace"])["steps"][0]["type"] == "prompt"
+    assert len(tel.query("SELECT * FROM metrics WHERE campaign_id=?", (cid,))) == 3
+    # 12 months after 'expand' (2200.01 -> 2201.01): +1 planet, +30 pops
+    res = json.loads(ds[0]["result"])
+    assert res["planets"] == 1 and res["pops"] == 30 and res["months"] == 12
+    text = tel.past_outcomes(cid)
+    assert "2200.01.01 | expand (from none) | start of run | " in text and "planets +1" in text
+
+    # the database can be recreated from the JSONL logs alone
+    tel2 = Telemetry(tmp_path / "t2.sqlite")
+    assert tel2.rebuild(s.runs_dir) >= 1
+    ds2 = tel2.query("SELECT decision, result FROM decisions WHERE campaign_id=? ORDER BY episode", (cid,))
+    assert [d["decision"] for d in ds2] == ["expand", "keep", "keep"] and ds2[0]["result"] == ds[0]["result"]
+
+
+def test_telemetry_failure_never_stops_play(setup):
+    s, _ = setup
+
+    class Broken:
+        def record(self, *a, **k):
+            raise RuntimeError("disk full")
+
+    log = EventLog(s.runs_dir, "run8", s.model, telemetry=Broken())
+    Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("expand")).run(max_decisions=1)
+    assert log.state.episodes == 1
+
+
+def test_telemetry_api(setup, tmp_path):
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from pilot.dashboard import make_app
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(s.runs_dir, "run9", s.model, telemetry=tel)
+    src = "save games/empire_1/autosave.sav"
+    game = FakeStellaris([{**briefing("2200.01.01"), "source": src}, {**briefing("2201.01.01"), "source": src}])
+    Governor(s, game, log, model=decisions("expand", "keep", consult_first=True)).run(max_decisions=2)
+
+    async def go():
+        async with TestClient(TestServer(make_app(None, s.runs_dir, tel))) as c:
+            camps = await (await c.get("/api/campaigns")).json()
+            assert camps[0]["id"] == "stellaris/empire_1" and camps[0]["decisions"] == 2 and camps[0]["runs"] == 1
+            ds = await (await c.get("/api/decisions", params={"campaign": "stellaris/empire_1"})).json()
+            assert [d["decision"] for d in ds] == ["expand", "keep"] and ds[0]["model"] == s.model
+            one = await (await c.get("/api/decision", params={"run": "run9", "episode": "1"})).json()
+            assert any(st["type"] == "tool_call" and st["tool"] == "consult" for st in one["trace"]["steps"])
+            ms = await (await c.get("/api/metrics", params={"run": "run9"})).json()
+            assert ms[0]["date"] == "2200.01.01" and "net" in ms[0]
+            assert (await c.get("/api/decisions")).status == 400
+            assert (await c.get("/api/decision", params={"run": "run9", "episode": "x"})).status == 400
+
+    asyncio.run(go())

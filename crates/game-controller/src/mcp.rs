@@ -807,7 +807,9 @@ impl McpServer {
                 let (path, bytes) = crate::stellaris::fetch_latest_save(&self.client).await?;
                 let b = crate::stellaris::brief_save(&bytes)?;
                 let text = if args.get("json").and_then(|v| v.as_bool()).unwrap_or(false) {
-                    serde_json::to_string_pretty(&b)?
+                    let mut v = serde_json::to_value(&b)?;
+                    v["source"] = serde_json::Value::String(path.clone());
+                    serde_json::to_string_pretty(&v)?
                 } else {
                     format!("{}(from {path})", b.to_text())
                 };
