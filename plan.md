@@ -27,7 +27,7 @@
 - [x] `scripts/extract-galciv4.py` with fixture tests → `data/tech.json` (130), `improvement.json` (528), `order.json` (66), `_meta.json`
 - [x] Extend the extractor to ship components, policies and starbase modules as their own record kinds → `policy.json` (203), `ship_component.json` (355), `starbase_module.json` (167)
 - [x] Extract event dialogs with every choice's exact outcome → `event.json` (994)
-- [ ] Reconcile `strategy.md` numbers with the generated data (e.g. Colonial Policies costs 24, not 27)
+- [x] Reconcile `strategy.md` numbers with the generated data (checked Capital City, Draft Colonists, Colonial Policies; the 27-vs-24 discrepancy is only in the wiki docs)
 - [x] Wire the autopilot to the `manifest.toml` screen signatures (`luminance_roi`/threshold, new `turn_indicator_roi`)
 - [x] Autopilot verifies a turn advanced (date readout diff), reports `NotAdvanced`, and refuses to send keys unless the game is foreground
 - [x] Live-validate `turn_indicator_roi` and the `NotAdvanced` path against the running game (blocked by a pending leader prompt, correctly reported)
@@ -35,13 +35,28 @@
 - [x] Known informational screens auto-dismissed by template (first: GNN bulletin), verified live
 - [x] Per-game journal (`games/terran-2329/journal.md`)
 - [ ] Recognise the turn button's pending-item icons (policy / idle planet / idle fleet / event) so the autopilot reports *what* blocks it
-- [ ] Auto-handle idle probes/survey ships (TAB then O) as a known blocker
+- [x] Auto-handle idle survey ships (Survey, `v`) and never abandon a survey in progress
+- [ ] Auto-handle idle probes (Explore, `o`) — needs a template of the probe's action icon
+
+## Autonomy (known screens and recovery)
+- [x] Known-screen system: template match → click / key / click sequence; `only_when_blocked`; `busy`; up to 3 attempts per turn; late dialogs after camera pans
+- [x] Known screens: GNN bulletin, diplomacy menu, colonize confirmation, colony ship boarding, idle colony ship, idle survey ship, survey-abandon guard, idle shipyard, turn processing
+- [x] `scripts/play/` helpers and `scripts/play/capture-template.py` for adding screens
+- [ ] Planet build queue (idle core world): choose a district automatically from a rule (adjacency first)
+- [ ] Research selection and "Research Complete" panel: pick from a priority list in the manifest
+- [ ] Probe / warship idle handling (Explore / Sentry)
+- [ ] Deploy agent 1.1.0 and retry Capital City placement with a slow drag
+
+## LLM portability
+- [x] `AGENTS.md` as the single model-neutral operating guide; `GEMINI.md` and `CLAUDE.md` point to it
+- [x] `.gemini/settings.json` (Gemini CLI MCP + context files) alongside `.mcp.json` (Claude Code)
+- [ ] Try a full session with Gemini CLI end-to-end and record any client-specific differences
 
 ## Playing
 - [x] Record verified GC4 controls/UI positions in PLAYING.md
-- [ ] Bring PLAYING.md in line with the Rust MCP tool set
+- [x] Bring PLAYING.md in line with the Rust MCP tool set (quick reference; procedure moved to AGENTS.md)
 - [x] Play a first full turn cycle autonomously (2026-09-25)
-- [ ] Optional: launch GC4 from the harness (Steam/Epic URI) when it isn't running
+- [ ] Automate launching/reloading GC4 (Steam → Stardock Launcher → Load Game) — done by hand once, documented in AGENTS.md §7
 
 ## Alternatives evaluated (2026-09-25)
 - [ ] Perception layer: OCR + UI-element detection on the gaming PC's GPU, so Claude clicks element IDs instead of guessed pixels
