@@ -31,6 +31,9 @@
 - [ ] `.mcp.json` points at gitignored `./target/release/game-controller`; fresh clone has no MCP until `cargo build --release`, undocumented
 - [ ] `#![allow(dead_code, …)]` remains in `game-agent/main.rs`, `imaging.rs`, `mcp.rs` (removed from `corpus.rs`, `autopilot.rs`)
 - [ ] Python harness (`src/harness`, `windows_agent/agent.py`, 40 tests) is no longer deployed; its green suite covers nothing that runs (`agent.py` `settle` stub always returns `settled: True`)
+- [ ] Image test fixtures `crates/game-controller/tests/fixtures/*.jpg` are gitignored (`*.jpg`), so `cargo test` fails 3 imaging tests in any fresh clone or worktree (found 2026-09-25 while seeding the Stellaris corpus)
+- [ ] Corpus summary for a corpus without records says "see corpora/galciv4/data/README.md" regardless of the game (game-specific path in the game-agnostic loader)
+- [ ] Agent key table has no numpad keys or `+`; Stellaris speed-up must use `=` (VK_OEM_PLUS) until added
 
 ## Resolved
 - [x] Agent reported no file roots: PS 5.1 wrote `roots.json` with a BOM and the loader ignored the parse error; re-registering an elevated scheduled task failed with Access denied (2026-09-25; 8d81a44, redeployed, 4 roots verified)

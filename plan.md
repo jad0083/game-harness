@@ -60,14 +60,17 @@
 - [ ] Automate launching/reloading GC4 (Steam → Stardock Launcher → Load Game) — done by hand once, documented in AGENTS.md §7
 
 ## Alternatives evaluated (2026-09-25)
-- [ ] Perception layer: OCR + UI-element detection on the gaming PC's GPU, so Claude clicks element IDs instead of guessed pixels
+- [ ] Perception layer: OCR + UI-element detection on the gaming PC's GPU, so the model clicks element IDs instead of guessed pixels
 - [ ] Spike: is a GC4 save file parseable per turn? If so, read state from files and use vision only to confirm actions
 - Rejected for now: controller in Docker / GPU host (controller does no GPU work; Linux box has only an Intel iGPU); moving the game to Linux (Proton/VFIO) until the above are exhausted
 
-## Stellaris (spike: LLM governor over the native AI)
+## Stellaris (LLM governor over the native AI)
+- [x] Corpus seeded from the web: `corpora/stellaris/`, with 46 docs from 34 official-wiki pages (1,405 chunks), a manifest (33 hotkeys, 0 screens), a strategy with governor directives, a draft pilot briefing and a data contract
 - [x] Spike in a throwaway non-Ironman game: autosave via agent, console injection, pause/date, `log` → game.log, `set_policy` held by the AI (`games/stellaris-spike/journal.md`)
 - [x] Design: monthly autosave → briefing → LLM → pause, `play 0`, whitelisted effects, `observe`, unpause; native AI plays day to day
 - [ ] Save reader: Clausewitz parser (jomini) → compact empire briefing, with tests on real saves
+- [ ] Extractor `scripts/extract-stellaris.py`: reads the game's `common/`, `events/` and `localisation/english/` (via the agent's `stellaris_install` root) → `data/*.json`
 - [ ] Controller: `stellaris` loop (watch autosaves + game.log, console directive macro with whitelist)
-- [ ] Pilot: Stellaris game adapter and `corpora/stellaris/pilot.md` governor briefing
-- [ ] Test which directives the AI keeps long term (edicts, economy, war); decide on a companion mod
+- [ ] Pilot: Stellaris game adapter; finalise `corpora/stellaris/pilot.md` with the verified `play 0` → effect → `observe` pattern
+- [ ] Test which directives the AI keeps long term (edicts, economy, war); decide on a companion bridge mod (directive events, AI weights, `log` hooks)
+- [ ] Screen templates: pause/date and event popups
