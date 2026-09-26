@@ -474,7 +474,7 @@ function renderTable(ms) {
 }
 
 // ---------- decisions ----------
-const SCORED = [["planets", "planets"], ["pops", "pops"], ["techs_known", "techs"], ["military_power", "military"], ["economy_power", "economy"], ["tech_power", "tech"]];
+const SCORED = [["systems", "systems"], ["planets", "planets"], ["pops", "pops"], ["techs_known", "techs"], ["military_power", "military"], ["economy_power", "economy"], ["tech_power", "tech"]];
 function afterText(r) {
   if (!r) return "";
   const parts = SCORED.filter(([k]) => r[k]).map(([k, l]) => `<span class="${r[k] > 0 ? "up" : "down"}">${r[k] > 0 ? "+" : ""}${fmt(r[k])} ${l}</span>`);

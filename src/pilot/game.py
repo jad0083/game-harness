@@ -192,6 +192,10 @@ class McpGame:
     def log_tail(self, lines: int = 30) -> str:
         return self.call("stellaris_log", lines=lines).text
 
+    def take_control(self) -> str:
+        self.ensure_foreground()
+        return self._checked(self.call("stellaris_take_control"))
+
     @staticmethod
     def _checked(r: ToolResult) -> str:
         if r.is_error:
@@ -300,6 +304,10 @@ class FakeStellaris:
 
     def log_tail(self, lines: int = 30) -> str:
         return ""
+
+    def take_control(self) -> str:
+        self.actions.append(("take_control",))
+        return "AI controls the empire"
 
     def screenshot(self) -> ToolResult:
         return ToolResult("Screenshot", None)

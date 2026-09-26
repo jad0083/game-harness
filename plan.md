@@ -67,7 +67,7 @@
 ## Stellaris (LLM governor over the native AI)
 - [x] Corpus seeded from the web: `corpora/stellaris/`, with 46 docs from 34 official-wiki pages (1,405 chunks), a manifest (33 hotkeys, 0 screens), a strategy with governor directives, a draft pilot briefing and a data contract
 - [x] Spike in a throwaway non-Ironman game: autosave via agent, console injection, pause/date, `log` → game.log, `set_policy` held by the AI (`games/stellaris-spike/journal.md`)
-- [x] Design: monthly autosave → briefing → LLM → pause, `play 0`, whitelisted effects, `observe`, unpause; native AI plays day to day
+- [x] Design: monthly autosave → briefing → LLM → pause, whitelisted effects, unpause; the game's AI plays the empire under `human_ai` (observer mode dropped: no expansion)
 - [x] Save reader: `stellaris.rs` (jomini) → ~2 KB empire briefing; `game-controller stellaris brief`, MCP `stellaris_briefing`; tests on a real autosave
 - [x] Extractor: `scripts/fetch-stellaris-files.py` (install via the agent) + `scripts/extract-stellaris.py` → 9,152 records (tech, policy, edict, building, district, tradition, ascension perk, civic, event) for 4.5.1
 - [x] Directive bridge: `directives.toml` + `stellaris directive <name>` / MCP `stellaris_directive` (play → flag + policies → observe, confirmed in game.log), `stellaris log` / `stellaris_log`; verified live 2026-09-25 (flag and stance held 20 months)
@@ -76,6 +76,7 @@
 - [x] Governor loop in the pilot app (`src/pilot/governor.py`, `pilot run --game stellaris --speed … --months …`): pauses to decide, urgent triggers (new war, new deficit), `prepare_war` needs a human yes; verified live with Gemini at Fastest (3 decisions)
 - [x] Pilot: Stellaris game adapter (`McpGame` Stellaris methods, `FakeStellaris`); `pilot.md` finalised
 - [ ] Long unattended Stellaris run in a real game (user's choice of empire), with learned rules committed
+- [x] `stellaris take-control` / MCP `stellaris_take_control`: human_ai ON (console reply read on screen), leaves observer mode; briefing reports systems owned
 - [ ] Test which directives the AI keeps long term (edicts, economy, war); decide on a companion bridge mod (directive events, AI weights, `log` hooks)
 - [ ] Screen templates: pause/date and event popups
 

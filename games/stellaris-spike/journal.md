@@ -90,3 +90,25 @@ Open questions for the build:
   scheduled stop overshot by one month at Fastest (2 s polling). The game was left paused with
   `governor_directive_expand`. The run's journal and learned episodes were discarded (test game).
 
+## Correction: observer mode does not play the empire fully (2212–2216)
+- Counting **owned systems** (distinct systems of `controlled_planets`) instead of starbase
+  capacity showed the earlier conclusion was wrong: from 2200 to 2212 our empire stayed at **1
+  system** while every AI empire grew to 9–18. In observer mode the AI researched and built
+  warships (fleet 20 → 30) but never surveyed (`first_system_survey_finished` missing) or expanded.
+- **`human_ai`** ("Toggles AI for Human countries") fixes it: we stay the player and the game's AI
+  plays the empire fully. After switching it on in 2212.03: 2 systems by 2214.02, 4 by 2215.11,
+  empire size 56 → 79, starbase capacity used 1/3 → 3/3, a new colony (Al-Jissa).
+- Console effects then apply directly (the player's empire is the scope): directives no longer
+  need `play`/`observe`. `play 0` does not change the `human_ai` state.
+- `human_ai` is a toggle and its state is not saved; `is_ai` is `no` in both states and
+  `last_date_was_human` only records the last `play`. The console's reply "Human AI is now ON/OFF"
+  is read on screen: `help` first fills the console so the reply lands on the bottom line, then
+  the ON and OFF templates are compared (the closer one wins; the console is semi-transparent, so
+  absolute distances drift with the map behind it).
+- A scoped log (`if = { limit = { exists = capital_scope } log = … }`) is written while playing and
+  not while observing, which detects observer mode.
+- **game.log** drops a log line whose text repeats on the same in-game day, and writes with a few
+  seconds' delay. Every marker now carries a unique suffix and is polled for up to 8 s.
+- Live validation run (Gemini, Normal speed, 12-month cadence): 3 decisions, all `keep`, reasons
+  citing stockpiles; the run was stopped to fix the control mode above.
+

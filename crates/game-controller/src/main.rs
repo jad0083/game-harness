@@ -140,18 +140,18 @@ enum StellarisAction {
         #[arg(long)]
         json: bool,
     },
-    /// Apply a governor directive from directives.toml (play <country> → effects → observe)
+    /// Apply a governor directive from directives.toml (effects on the player's empire)
     Directive {
         name: String,
-        /// Player country id (default: read from the newest autosave)
-        #[arg(long)]
-        country: Option<u64>,
         /// Print the console lines without sending anything
         #[arg(long)]
         dry_run: bool,
     },
     /// Set the game speed: slowest, slow, normal, fast, fastest ("faster" = fastest)
     Speed { name: String },
+    /// Hand the player's empire to the game's AI (leave observer mode, switch human_ai on,
+    /// checked on screen); leaves the game paused
+    TakeControl,
     /// Pause the game (checked on screen; no-op if already paused)
     Pause,
     /// Resume the game (checked on screen; no-op if already running)
@@ -249,16 +249,11 @@ async fn main() -> Result<()> {
                 eprintln!("({source}: {} KB, fetch {:?}, parse {:?})", bytes.len() / 1024, fetched, start.elapsed() - fetched);
             }
         }
-        Commands::Stellaris { action: StellarisAction::Directive { name, country, dry_run } } => {
+        Commands::Stellaris { action: StellarisAction::Directive { name, dry_run } } => {
             let dir = cli.corpus.clone().unwrap_or_else(|| PathBuf::from("corpora/stellaris"));
             let directives = stellaris::Directives::load(&dir)?;
-            let country = match country {
-                Some(c) => c,
-                None if dry_run => 0,
-                None => stellaris::brief_save(&stellaris::fetch_latest_save(&client).await?.1)?.country,
-            };
             if dry_run {
-                let lines = directives.console_lines(&name, country)?;
+                let lines = directives.console_lines(&name, "<nonce>")?;
                 println!("# {name}: {}", directives.directive[&name].description);
                 for l in lines {
                     println!("{l}");
@@ -266,11 +261,21 @@ async fn main() -> Result<()> {
             } else {
                 let manifest = corpus::GameCorpus::load_from_dir(&dir)?.manifest;
                 let pause = stellaris::PauseDetector::from_manifest(&manifest)?;
-                let lines = stellaris::apply_directive(&client, &directives, &name, country, Some(&pause)).await?;
-                println!("Applied directive {name} to country {country} (confirmed in game.log):");
+                let lines = stellaris::apply_directive(&client, &directives, &name, Some(&pause)).await?;
+                println!("Applied directive {name} (confirmed in game.log):");
                 for l in lines {
                     println!("  {l}");
                 }
+            }
+        }
+        Commands::Stellaris { action: StellarisAction::TakeControl } => {
+            let dir = cli.corpus.clone().unwrap_or_else(|| PathBuf::from("corpora/stellaris"));
+            let manifest = corpus::GameCorpus::load_from_dir(&dir)?.manifest;
+            let pause = stellaris::PauseDetector::from_manifest(&manifest)?;
+            let reader = stellaris::HumanAiReader::from_manifest(&manifest)?;
+            let country = stellaris::brief_save(&stellaris::fetch_latest_save(&client).await?.1)?.country;
+            for line in stellaris::take_control(&client, &pause, &reader, country).await? {
+                println!("{line}");
             }
         }
         Commands::Stellaris { action: StellarisAction::Speed { name } } => {

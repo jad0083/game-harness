@@ -150,17 +150,17 @@ pop/faction numbers as approximate until generated data exists.
 ## 9. Governor directives
 
 The governor model does not micro-manage; it picks **one** standing directive and the
-native AI executes it. The empire runs in **observer mode** (`observe`), so the native AI
-plays it day to day. A directive is applied from the console (verified 2026-09-25,
-`games/stellaris-spike/journal.md`): pause → `play 0` → whitelisted `effect …` commands →
-`observe` → unpause. **While observing, `effect` has no country scope and silently does
-nothing**, so `play 0` must come first. Verified: `set_policy` (the AI kept it for the 2
-months checked) and `set_country_flag`. Untested: edicts, economy plans, and whether the AI
-keeps them. Policy changes lock that policy for 10 years in normal play [doc:policies]; the
-console's `cooldown = no` skips the lock, so change policies rarely anyway. A later companion
-mod could add `ai_weight` modifiers that read a `governor_directive_<name>` flag
-[doc:ai_modding]. A directive **never** adds resources, modifiers or anything the empire
-could not do itself.
+native AI executes it. The game's AI plays the empire through **`human_ai`** (we stay the
+player; `stellaris take-control` switches it on and checks the console's reply). **Observer mode
+is not used**: there the AI researches and builds warships but never explores or expands (verified
+2026-09-25, `games/stellaris-spike/journal.md`). A directive is applied from the console with the
+game paused: `effect` lines that set the `governor_directive_<name>` flag and the directive's
+policies, confirmed by a scoped log line in game.log. Verified: `set_policy` (kept by the AI for
+20 months) and `set_country_flag`. Untested: edicts, economy plans. Policy changes lock that policy
+for 10 years in normal play [doc:policies]; the console's `cooldown = no` skips the lock, so change
+policies rarely anyway. A later companion mod could add `ai_weight` modifiers that read the
+directive flag [doc:ai_modding]. A directive **never** adds resources, modifiers or anything the
+empire could not do itself.
 
 | Directive | AI emphasis (intended) | Pick when | Leave when |
 |---|---|---|---|
@@ -175,6 +175,3 @@ Priority when several fit: **defend > consolidate_economy > prepare_war > expand
 tech_rush > diplomacy_first** — survival, then solvency, then growth. Hold a directive at
 least ~12 in-game months unless an urgent line forces a change.
 
-**Observer mode is the base of the design** [doc:console_commands]: `observe` hands the
-empire to the native AI (in the spike, research queues were filled the same day), and
-`play <id>` takes it back just long enough to apply a directive.

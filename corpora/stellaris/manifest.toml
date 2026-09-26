@@ -80,6 +80,21 @@ template_search = 3
 color_range = [[150, 120, 0], [255, 255, 110]]
 color_min_fraction = 0.08
 
+# The console's reply to `human_ai` ("Human AI is now ON" / "... OFF"), read on the bottom output
+# line after `help` has filled the console. The two words are told apart by which template is
+# closer (verified 2026-09-25: 0.048 apart; each matches itself at ~0.01).
+[screens.human_ai_on]
+description = "Console reply 'Human AI is now ON' (last output line, after `help`)"
+template = "templates/stellaris_human_ai_on.png"
+template_roi = [0.0446, 0.2222, 0.014, 0.0136]
+template_search = 2
+
+[screens.human_ai_off]
+description = "Console reply 'Human AI is now OFF' (last output line, after `help`)"
+template = "templates/stellaris_human_ai_off.png"
+template_roi = [0.0446, 0.2222, 0.014, 0.0136]
+template_search = 2
+
 # Planned:
 #
 # [screens.date_readout]

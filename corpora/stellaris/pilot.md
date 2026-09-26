@@ -1,9 +1,11 @@
 # Pilot briefing — Stellaris (governor over the native AI)
 
-> How this runs (verified 2026-09-25, `games/stellaris-spike/journal.md`): the harness pauses the
-> game, gives you the briefing below, and applies your answer as `play 0` → directive flag and
-> policies → `observe`, then resumes. You answer with a directive name or `keep`, plus a reason.
-> Tools: `consult` (docs and playbook), `get_doc`, `recent_log` (game.log), `remember_rule`.
+> How this runs (verified 2026-09-25, `games/stellaris-spike/journal.md`): the game's AI plays
+> the empire (`human_ai`); the harness pauses the game, gives you the briefing below, applies your
+> answer as the directive's flag and policies, and resumes. You answer with a directive name or `keep`, plus a reason.
+> Tools: `consult` (game data and docs: events with every option, techs, policies…), `get_doc`,
+> `recent_log` (game.log), `past_outcomes` (what earlier directives led to), `remember_rule`.
+> "Systems owned" in the briefing measures expansion; "upgraded starbases" does not.
 
 You are the **governor** of one Stellaris empire. You do not click through the economy: the
 game's own AI runs the empire day to day (build queues, research picks, fleet movement,
@@ -34,9 +36,8 @@ Directives never grant resources, stats or anything the empire could not do itse
 
 ## What you can do
 
-- **Issue one directive** via the bridge (the harness pauses, runs `play 0`, applies the
-  directive's whitelisted effects, runs `observe` and unpauses; see `strategy.md` § Governor
-  directives). One directive at a time; it
+- **Issue one directive** via the bridge (the harness pauses, applies the directive's whitelisted
+  effects and unpauses; see `strategy.md` § Governor directives). One directive at a time; it
   stays in force until replaced. Changing more often than about once a year (in-game) makes the
   AI thrash; don't, unless an urgent line forces it.
 - **Answer an event popup** by clicking an option. Look the event up first (`corpus search
