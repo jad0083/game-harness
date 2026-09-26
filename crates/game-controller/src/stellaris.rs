@@ -1556,6 +1556,16 @@ fn removal_rows(order_row_first_y: i32, pitch: i32, idxs: &[usize]) -> Result<Ve
         .collect()
 }
 
+/// Which button to click, and how many times, to move a new monthly trade's amount from `start`
+/// (the dialog's default, `ui.market.new_trade_amount`) to `target`.
+fn amount_clicks(start: i64, target: i64) -> (&'static str, u32) {
+    match target - start {
+        0 => ("none", 0),
+        d if d > 0 => ("plus", d as u32),
+        d => ("minus", (-d) as u32),
+    }
+}
+
 /// Screen steps for `remove` and `add`, run after the Market dialog is open (`ui.market`). Kept
 /// separate from `sync_market` so the Market can always be closed afterwards, success or failure.
 async fn apply_market_changes(
@@ -1587,7 +1597,13 @@ async fn apply_market_changes(
         let buy_pt = ui_point(ui, "market", "buy")?;
         let sell_pt = ui_point(ui, "market", "sell")?;
         let plus_pt = ui_point(ui, "market", "plus")?;
+        let minus_pt = ui_point(ui, "market", "minus")?;
         let confirm_pt = ui_point(ui, "market", "confirm")?;
+        let new_trade_amount = ui
+            .get("market")
+            .and_then(|m| m.get("new_trade_amount"))
+            .and_then(|v| v.as_integer())
+            .context("manifest has no ui.market.new_trade_amount")?;
         let resources = ui.get("market").and_then(|m| m.get("resources")).and_then(|r| r.as_table()).context("manifest ui.market has no resources table")?;
         for order in add {
             click_ui_point(client, add_pt).await?;
@@ -1603,9 +1619,15 @@ async fn apply_market_changes(
             click_ui_point(client, (rx, ry)).await?;
             tokio::time::sleep(std::time::Duration::from_millis(300)).await;
 
-            // One `+` click per unit (amount is capped at 25 by MCP-layer validation).
-            for _ in 0..order.amount {
-                click_ui_point(client, plus_pt).await?;
+            // A new trade dialog starts at `new_trade_amount` (verified live 2387.07: 10), not 0.
+            let (button, clicks) = amount_clicks(new_trade_amount, order.amount);
+            let button_pt = match button {
+                "plus" => plus_pt,
+                "minus" => minus_pt,
+                _ => (0, 0),
+            };
+            for _ in 0..clicks {
+                click_ui_point(client, button_pt).await?;
             }
             click_ui_point(client, confirm_pt).await?;
             tokio::time::sleep(std::time::Duration::from_millis(400)).await;
@@ -1617,6 +1639,12 @@ async fn apply_market_changes(
 /// Add and remove monthly Market trades so they match `desired` (screen: energy icon, "Add new
 /// monthly trade" dialog, order rows). The Market is never left open: on error the close key is
 /// still pressed before the error is returned.
+///
+/// `current` should be `market_orders` from the newest autosave; this call does not update that
+/// save, so its `market_orders` will not reflect the change until the next monthly autosave.
+/// Callers must not call `sync_market` twice against the same save (i.e. without an autosave in
+/// between): a second call would recompute `add`/`remove` from data that no longer matches the
+/// screen and could re-add or re-remove orders that were already applied.
 pub async fn sync_market(
     client: &crate::client::AgentClient,
     pause: &PauseDetector,
@@ -1643,7 +1671,7 @@ pub async fn sync_market(
     let _ = client.key(&close_key, 1).await;
 
     result?;
-    Ok(format!("added {}; removed {}", describe_orders(&add), describe_orders(&remove)))
+    Ok(format!("added {}; removed {}; the next autosave confirms it", describe_orders(&add), describe_orders(&remove)))
 }
 
 /// Build a briefing from the unzipped `gamestate` text.
@@ -2562,6 +2590,15 @@ situations={ situations={ 0=none 1={ country=0 type="rebellion_situation" progre
         assert!(err.contains("order_row_pitch") && err.contains("not calibrated"), "{err}");
         // once calibrated (non-zero pitch), any row is fine
         assert_eq!(removal_rows(181, 14, &[1, 0]).unwrap(), vec![195, 181]);
+    }
+
+    #[test]
+    fn amount_clicks_computes_the_button_and_count_from_the_dialogs_default() {
+        // A new monthly trade starts at 10 (verified live 2387.07): moving to a lower amount
+        // needs minus clicks, a higher amount needs plus clicks, and no change needs none.
+        assert_eq!(amount_clicks(10, 5), ("minus", 5));
+        assert_eq!(amount_clicks(10, 25), ("plus", 15));
+        assert_eq!(amount_clicks(10, 10), ("none", 0));
     }
 
     #[test]
