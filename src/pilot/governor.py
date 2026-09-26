@@ -22,7 +22,7 @@ from pydantic_ai import Agent, RunContext, Tool
 from pydantic_ai.exceptions import UsageLimitExceeded
 from pydantic_ai.usage import UsageLimits
 
-from .agent import HumanChannel, model_settings
+from .agent import HumanChannel, model_settings, run_with_retry
 from .config import Settings
 from .events import EventLog
 from .learning import Journal, LearnedStore, LearningRejected
@@ -365,6 +365,9 @@ class Governor:
         self.log.state.status = status
         self.log.emit("status", status=status)
 
+    def _on_retry(self, e, delay, attempt) -> None:
+        self.log.emit("model_retry", error=f"model {e.model_name} answered {e.status_code}", delay=delay, attempt=attempt)
+
     def _needs_attention(self, why: str) -> None:
         """Stop acting and wait for the human (dashboard Resume) instead of crashing the run."""
         self.control.paused = True
@@ -572,8 +575,10 @@ class Governor:
         base = {"episode": n, "model": self.s.model, "game": self.s.game, "date": b["date"], "trigger": reason,
                 "current": current}
         try:
-            result = self.agent.run_sync("\n".join(prompt), deps=deps,
-                                         usage_limits=UsageLimits(request_limit=self.s.governor_max_requests))
+            result = run_with_retry(
+                lambda: self.agent.run_sync("\n".join(prompt), deps=deps,
+                                            usage_limits=UsageLimits(request_limit=self.s.governor_max_requests)),
+                self.s.retry_delays, self._on_retry)
         except Exception as e:  # noqa: BLE001 - keep playing with the current directive
             if isinstance(e, UsageLimitExceeded):
                 e = RuntimeError(f"no answer within {self.s.governor_max_requests} model calls; "
@@ -650,8 +655,10 @@ class Governor:
         base = {"episode": n, "model": self.s.model, "game": self.s.game, "date": b["date"],
                 "trigger": f"retrospective after {self.s.retro_every} decisions", "current": current_directive(b)}
         try:
-            result = self.retro_agent.run_sync("\n\n".join(prompt), deps=GovDeps(self.game, self.store, self.log),
-                                               usage_limits=UsageLimits(request_limit=self.s.max_requests_per_episode))
+            result = run_with_retry(
+                lambda: self.retro_agent.run_sync("\n\n".join(prompt), deps=GovDeps(self.game, self.store, self.log),
+                                                  usage_limits=UsageLimits(request_limit=self.s.max_requests_per_episode)),
+                self.s.retry_delays, self._on_retry)
         except Exception as e:  # noqa: BLE001 - a failed review never stops play
             self.log.emit("episode_error", error=f"retrospective: {type(e).__name__}: {e}"[:500])
             return

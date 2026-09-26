@@ -39,6 +39,8 @@
 - [ ] Agent key table has no numpad keys or `+`; Stellaris speed-up must use `=` (VK_OEM_PLUS) until added
 
 ## Resolved
+- [x] Dashboard kept showing the previously selected campaign when a run started on a different one, so a reload was needed to see the live game (2026-09-25; the page now follows the live campaign unless another was picked deliberately; all responses no-store; browser test)
+- [x] A transient Gemini 503 ("high demand") skipped a governor decision (2026-09-25; transient 429/5xx are retried after 5, 15 and 45 s with a feed entry; tests)
 - [x] The governor fixed its campaign at start; when the user loaded another game mid-run (United Nations of Earth 2), the next decision applied `expand` there and was recorded under the old campaign (2026-09-25; every briefing's save folder is now checked, a different game pauses the run with needs-attention; test)
 - [x] `take-control` failed to read the console's reply to human_ai when a bright nebula was behind the semi-transparent console (template distances 0.103 / 0.130); the governor correctly waited for the human instead of crashing (2026-09-25; replies are now read from white-text masks: right word ≤ 0.023, wrong ≥ 0.057 on 4 real frames; fixture added)
 - [x] Model picker listed Gemini models that cannot play (TTS, image, transcription, robotics, computer-use) (2026-09-25; filtered; test)

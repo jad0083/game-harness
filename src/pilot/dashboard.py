@@ -38,6 +38,18 @@ STATIC = Path(__file__).parent / "static"
 
 
 RUN_ID = re.compile(r"^[A-Za-z0-9_.-]+$")
+
+
+@web.middleware
+async def no_store(request, handler):
+    """Live data and the page itself must never come from the browser cache."""
+    try:
+        resp = await handler(request)
+    except web.HTTPException as e:          # error responses are raised, not returned
+        e.headers.setdefault("Cache-Control", "no-store")
+        raise
+    resp.headers.setdefault("Cache-Control", "no-store")
+    return resp
 SERVICE = "game-pilot.service"      # deploy/game-pilot.service, started by the dashboard's Start run
 LIVE_STATES = {"starting", "playing", "deciding", "paused", "needs_attention"}
 
@@ -354,7 +366,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
                 pass
             return resp
 
-        app = web.Application()
+        app = web.Application(middlewares=[no_store])
         app.on_cleanup.append(lambda _: proxy.close())
         app.add_routes([web.get("/", index), web.get("/status", v_status), web.get("/events", v_events),
                         web.get("/events.json", v_forward), web.get("/frame.jpg", v_forward),
@@ -424,7 +436,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
                                           "decide_now|override, with its text/index/directive")
         return web.json_response({"ok": True, "status": log.state.status})
 
-    app = web.Application()
+    app = web.Application(middlewares=[no_store])
     app.add_routes([web.get("/", index), web.get("/status", status), web.get("/frame.jpg", frame),
                     web.get("/events", events), web.get("/events.json", events_json), web.post("/control", control),
                     *history, *api])
