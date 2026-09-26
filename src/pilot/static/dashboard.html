@@ -868,8 +868,17 @@ function renderTrace(d) {
     else if (s.type === "output") h += `<details class="step"><summary>Answer as returned</summary><pre>${esc(JSON.stringify(s.args, null, 1))}</pre></details>`;
     else if (s.type === "usage") { call++; h += `<div class="usage">Model call ${call}: ${fmt(s.in)} tokens in, ${fmt(s.out)} out</div>`; }
   }
-  if (!steps.some((s) => s.type === "thinking") && d.model !== "human") h += `<p class="hint">No thinking was returned for this decision. Gemini returns thought summaries when thinking is on.</p>`;
+  if (!steps.some((s) => s.type === "thinking") && d.model !== "human") h += `<p class="hint">${esc(thinkingHint(d.model))}</p>`;
   $("tab-reasoning").innerHTML = h + `</div>`;
+}
+
+// Why a decision may carry no thinking: each provider exposes it differently.
+function thinkingHint(model) {
+  const provider = String(model || "").split(":")[0];
+  if (provider === "anthropic") return "No thinking was returned for this decision. Claude decides for itself whether to think (adaptive thinking) and often answers directly; its reason above is its reasoning.";
+  if (provider.startsWith("google")) return "No thinking was returned for this decision. Gemini returns thought summaries only when thinking is on.";
+  if (provider === "openai") return "No thinking was returned for this decision. OpenAI models keep their reasoning hidden.";
+  return "No thinking was returned for this decision.";
 }
 
 // ---------- talk ----------
