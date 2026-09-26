@@ -1,9 +1,29 @@
+import signal
 import threading
 from http.server import HTTPServer
 
 import pytest
 
 from windows_agent import agent
+
+TEST_TIME_LIMIT_S = 60
+
+
+class TestTimeLimitExceeded(BaseException):
+    """BaseException, so the governor's broad `except Exception` loops cannot swallow it."""
+
+
+@pytest.fixture(autouse=True)
+def _time_limit():
+    """Fail a test that runs past TEST_TIME_LIMIT_S instead of hanging the suite (a governor loop
+    waiting on a fake game that never advances polls forever)."""
+    def expired(*_):
+        raise TestTimeLimitExceeded(f"test ran longer than {TEST_TIME_LIMIT_S} s")
+    old = signal.signal(signal.SIGALRM, expired)
+    signal.alarm(TEST_TIME_LIMIT_S)
+    yield
+    signal.alarm(0)
+    signal.signal(signal.SIGALRM, old)
 
 
 class FakeBackend:
