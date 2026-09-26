@@ -263,3 +263,27 @@ A record whose name matches the query scores 100, above any prose chunk, so `dra
 | **Rust Test Suite** | 41 tests (31 controller, 10 agent) | `cargo test --workspace` |
 | **Python tests** | 55 (extractor fixtures, CLI offline check, legacy harness) | `pytest` |
 | **Lint** | clippy clean with `-D warnings` except `wrong_self_convention` (`imaging.rs`); `#![allow(dead_code, …)]` still present in `game-agent/main.rs`, `imaging.rs`, `mcp.rs` | `scripts/ci.sh` |
+
+## 8. Pilot app, telemetry and dashboard (`src/pilot/`)
+
+```
+pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-controller MCP ──► agent
+   │ EventLog: runs/<id>/events.jsonl + traces/NNNN.json + latest.jpg
+   │     └─ write-through ─► Telemetry: runs/telemetry.sqlite (campaigns, runs, events, decisions, metrics)
+   └ dashboard :8790 (live)          pilot view :8780 (always on) ──► forwards /status /events /control
+```
+- `trace.py` turns a model run's messages into steps (prompt, thinking, text, tool call, tool
+  result, retry, answer, usage); images become placeholders, long texts are cut at 6,000 chars.
+- `telemetry.py`: SQLite (WAL) with a lock; `record()` maps events to rows; `score()` joins each
+  decision to the metric point 12 months later; `past_outcomes()` renders them for the model;
+  `rebuild()` replays every `events.jsonl`. Write failures are logged and never stop play.
+- `governor.py` controls from the dashboard: `chat` (separate read-only agent, answers in a
+  thread), `order_add`/`order_remove` (standing orders in every prompt, saved in
+  `runs/orders/<campaign>.json`), `decide_now` and `override` (queued requests the loop handles
+  with the game paused), `instruct` (one-time note, also answers questions).
+- `dashboard.py` API: `/api/campaigns`, `/api/decisions`, `/api/decision`, `/api/metrics`,
+  `/runs/*`; the viewer's `LiveProxy` finds the live run by the dashboard port recorded in its
+  `status.json` and checks that it answers with the same run id.
+- `static/dashboard.html`: one file, no build step; SVG charts (palette validated for both themes;
+  light-mode relief via legend, hover values and a table view).
+

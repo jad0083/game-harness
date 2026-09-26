@@ -97,6 +97,8 @@ class Settings:
         s.decide_every_months = int(env.get("PILOT_DECIDE_MONTHS", s.decide_every_months))
         s.poll_s = float(env.get("PILOT_POLL_S", s.poll_s))
         s.campaign = env.get("PILOT_CAMPAIGN", s.campaign)
+        if "PILOT_RUNS_DIR" in env:
+            s.runs_dir = Path(env["PILOT_RUNS_DIR"])
         s.journal = default_journal(s.game)
         if "PILOT_JOURNAL" in env:
             s.journal = Path(env["PILOT_JOURNAL"])

@@ -8,6 +8,10 @@ one standing directive. The game is paused while the model decides, so any game 
 
 from __future__ import annotations
 
+import json
+import queue
+import re
+import threading
 import time
 from dataclasses import dataclass
 from typing import Literal, Protocol
@@ -149,6 +153,12 @@ class Control:
     stopping: bool = False
 
 
+CHAT_INSTRUCTIONS = """You are the governor of a Stellaris empire, talking with the human who oversees you.
+Answer their questions about the empire and your decisions plainly and briefly, citing briefing numbers.
+You cannot act in this conversation: directives are only chosen at decision points. If the human wants
+something done, tell them to use "Decide now", a standing order, or an override on the dashboard."""
+
+
 class Governor:
     def __init__(self, settings: Settings, game: StellarisGame, log: EventLog, model=None):
         self.s = settings
@@ -164,7 +174,19 @@ class Governor:
         if learned.exists():
             text += "\n\n## Rules learned in play\n" + learned.read_text(encoding="utf-8")
         self.agent = build_governor(settings, text, model=model)
+        self.chat_agent: Agent[GovDeps, str] = Agent(
+            model or settings.model, deps_type=GovDeps, output_type=str,
+            instructions=CHAT_INSTRUCTIONS + "\n\n" + text,
+            tools=[Tool(f) for f in (consult, get_doc, recent_log, past_outcomes)],   # read-only
+            model_settings=model_settings(settings), retries=2)
+        self.chat_history: list = []
+        self._chat_lock = threading.Lock()
         self.last_change: int | None = None       # month of the last directive change
+        self.last_briefing = ""                   # text of the latest briefing given to the model
+        self.orders: list[str] = []               # standing orders, saved per campaign
+        self.requests: queue.Queue[tuple[str, str]] = queue.Queue()   # ("decide", msg) | ("override", name)
+        log.state.info["controls"] = ["instruct", "chat", "order_add", "order_remove", "decide_now", "override"]
+        log.state.info["directives"] = list(DIRECTIVES)
 
     # dashboard controls (same surface as Pilot)
     def pause(self) -> None:
@@ -180,8 +202,67 @@ class Governor:
         self.control.paused = False
 
     def instruct(self, text: str) -> None:
+        """A note for the next decision only (also answers a pending question)."""
         self.human.push(text)
         self.log.emit("instruction", text=text)
+
+    # -- directing the model (dashboard) ------------------------------------------------------
+
+    def _orders_file(self):
+        cid = self.log.campaign_id or "no-campaign"
+        return self.s.runs_dir / "orders" / (re.sub(r"[^A-Za-z0-9_.-]", "_", cid) + ".json")
+
+    def _save_orders(self) -> None:
+        f = self._orders_file()
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(json.dumps(self.orders, ensure_ascii=False, indent=1), encoding="utf-8")
+        self.log.state.info["orders"] = list(self.orders)
+        self.log.emit("orders", orders=list(self.orders))
+
+    def order_add(self, text: str) -> None:
+        """A standing order: included in every decision until removed."""
+        self.orders.append(text.strip())
+        self._save_orders()
+
+    def order_remove(self, index: int) -> None:
+        if 0 <= index < len(self.orders):
+            self.orders.pop(index)
+            self._save_orders()
+
+    def decide_now(self, text: str = "") -> None:
+        """Pause the game and have the model decide immediately (with an optional message)."""
+        self.requests.put(("decide", text.strip()))
+        self.log.emit("instruction", text=f"Decide now{': ' + text.strip() if text.strip() else ''}")
+
+    def override(self, directive: str) -> None:
+        """Apply a directive chosen by the human (recorded as a human decision)."""
+        if directive not in DIRECTIVES:
+            raise ValueError(f"unknown directive {directive!r}")
+        self.requests.put(("override", directive))
+        self.log.emit("instruction", text=f"Override: {directive}")
+
+    def chat(self, text: str) -> None:
+        """Ask the model something; it answers in the feed without acting on the game."""
+        self.log.emit("chat", role="human", text=text)
+        threading.Thread(target=self._chat, args=(text,), daemon=True, name="chat").start()
+
+    def _chat(self, text: str) -> None:
+        with self._chat_lock:
+            ctx = [f"Standing orders: {'; '.join(self.orders) or 'none'}.",
+                   f"Latest briefing:\n{self.last_briefing or '(no decision yet)'}",
+                   f"Last decision: {self.log.state.last_decision or 'none'}", f"The human asks: {text}"]
+            try:
+                result = self.chat_agent.run_sync("\n\n".join(ctx), deps=GovDeps(self.game, self.store, self.log),
+                                                  message_history=self.chat_history[-20:] or None,
+                                                  usage_limits=UsageLimits(request_limit=8))
+            except Exception as e:  # noqa: BLE001
+                self.log.emit("chat", role="model", text=f"(could not answer: {type(e).__name__}: {e})"[:500])
+                return
+            self.chat_history = result.all_messages()
+            u = result.usage
+            self.log.state.tokens_in += u.input_tokens or 0
+            self.log.state.tokens_out += u.output_tokens or 0
+            self.log.emit("chat", role="model", text=result.output, steps=serialize(result.new_messages()))
 
     def _status(self, status: str) -> None:
         self.log.state.status = status
@@ -202,13 +283,18 @@ class Governor:
                     break
                 if self.control.paused:
                     self.game.set_paused(True)
-                    while self.control.paused and not self.control.stopping:
+                    while self.control.paused and not self.control.stopping and self.requests.empty():
                         time.sleep(0.5)
+                    if not self.requests.empty():
+                        b = self._handle_request(self.game.briefing())
                     continue
                 b, reason = self._run_until_next_decision(b)
                 if b is None:
                     break
-                self._decide(b, reason)
+                if reason == "request":
+                    b = self._handle_request(b)
+                elif reason:
+                    self._decide(b, reason)
         finally:
             try:
                 self.game.set_paused(True)
@@ -217,6 +303,38 @@ class Governor:
             self._status("stopped")
             self.log.emit("run_end", decisions=self.log.state.episodes)
 
+    def _handle_request(self, b: dict) -> dict:
+        """Run one queued human request (the game is paused)."""
+        kind, arg = self.requests.get_nowait()
+        if kind == "decide":
+            if arg:
+                self.human.push(arg)
+            self._decide(b, "human request" + (f": {arg}" if arg else ""))
+        elif kind == "override":
+            self._override(b, arg)
+        return b
+
+    def _override(self, b: dict, directive: str) -> None:
+        self.log.state.episodes += 1
+        n = self.log.state.episodes
+        current = current_directive(b)
+        try:
+            self.game.directive(directive)
+            outcome = "applied"
+            self.last_change = months(b["date"])
+            self.log.state.info["directive"] = directive
+        except Exception as e:  # noqa: BLE001
+            outcome = f"FAILED: {e}"[:200]
+        reason = "Directive chosen by the human on the dashboard."
+        self.log.state.last_decision = f"{b['date']}: {directive} ({outcome}) — human override"
+        self.log.emit("episode", situation="human override", decision=f"{directive}: {reason}", date=b["date"],
+                      resolved=outcome == "applied", actions=1, seconds=0, tokens_in=0, tokens_out=0)
+        self.log.save_trace(n, {"episode": n, "model": "human", "game": self.s.game, "date": b["date"],
+                                "trigger": "human override", "current": current, "decision": directive,
+                                "reason": reason, "outcome": outcome, "seconds": 0, "tokens_in": 0, "tokens_out": 0,
+                                "steps": [{"type": "text", "text": reason}]})
+        self.journal.note(f"{directive} ({outcome}) — human override", b["date"])
+
     def _set_campaign(self, b: dict) -> None:
         """Campaign = the save folder ('save games/<empire>_<id>/…'), or PILOT_CAMPAIGN."""
         name = self.s.campaign
@@ -224,6 +342,13 @@ class Governor:
             parts = str(b.get("source", "")).split("/")
             name = parts[1] if len(parts) >= 3 else (b.get("name") or "unknown").replace(" ", "_").lower()
         self.log.set_campaign(self.s.game, name)
+        f = self._orders_file()
+        if f.exists():
+            try:
+                self.orders = [str(x) for x in json.loads(f.read_text(encoding="utf-8"))]
+            except ValueError:
+                self.orders = []
+        self.log.state.info["orders"] = list(self.orders)
 
     def _run_until_next_decision(self, last: dict) -> tuple[dict | None, str]:
         due = months(last["date"]) + self.s.decide_every_months
@@ -233,7 +358,10 @@ class Governor:
             if self.control.stopping:
                 return None, "stop"
             if self.control.paused:
-                return last, "paused by the human"
+                return last, ""                     # the main loop pauses the game; no decision
+            if not self.requests.empty():
+                self.game.set_paused(True)
+                return self.game.briefing(), "request"
             time.sleep(self.s.poll_s)
             try:
                 b = self.game.briefing()
@@ -273,9 +401,13 @@ class Governor:
         self.log.state.info["directive"] = current or ""
         held = "" if self.last_change is None else f" (held {months(b['date']) - self.last_change} months)"
         extra = self.human.take_all()
+        self.last_briefing = self.game.briefing_text()
         prompt = [f"Decision point: {reason}.",
                   f"Current directive: {current or 'none'}{held}.",
-                  "Briefing from the latest autosave:", self.game.briefing_text()]
+                  "Briefing from the latest autosave:", self.last_briefing]
+        if self.orders:
+            prompt.append("STANDING ORDERS from the human (always follow these): "
+                          + " | ".join(f"{i + 1}. {o}" for i, o in enumerate(self.orders)))
         if extra:
             prompt.append("HUMAN INSTRUCTIONS (follow these): " + " | ".join(extra))
         started = time.time()

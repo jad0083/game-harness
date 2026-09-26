@@ -4,157 +4,679 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Game Pilot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #f6f7f9; --panel: #ffffff; --text: #1b1f24; --muted: #5f6b7a; --line: #e3e7ec;
-    --accent: #2563eb; --ok: #15803d; --warn: #b45309; --bad: #b91c1c; --chip: #eef2f7;
+    color-scheme: light;
+    --plane: #eef2f8; --surface: #ffffff; --raised: #f5f7fb; --ink: #16203a; --ink-2: #45506d;
+    --muted: #6b7592; --hair: #d9dfea; --accent: #2f4fc4; --accent-ink: #ffffff; --thought: #6b4fd8;
+    --good: #11803a; --warn: #a85a08; --bad: #c0392b; --grid: #e6eaf2; --axis: #c3cad9;
+    --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300;
+    --sans: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --serif: "Newsreader", "Iowan Old Style", Georgia, serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
   }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #0f1216; --panel: #171b21; --text: #e6e9ee; --muted: #93a0b1; --line: #262c35;
-            --accent: #60a5fa; --ok: #4ade80; --warn: #fbbf24; --bad: #f87171; --chip: #1f252d; }
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --plane: #0e1424; --surface: #151d33; --raised: #1b2540; --ink: #e7ebf5; --ink-2: #b7c0d6;
+      --muted: #8c97b3; --hair: #29345a; --accent: #7fa2ff; --accent-ink: #0e1424; --thought: #b39cff;
+      --good: #3ccf6e; --warn: #f0a93b; --bad: #ff7b6e; --grid: #222c4a; --axis: #36426a;
+      --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300;
+    }
   }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --plane: #0e1424; --surface: #151d33; --raised: #1b2540; --ink: #e7ebf5; --ink-2: #b7c0d6;
+    --muted: #8c97b3; --hair: #29345a; --accent: #7fa2ff; --accent-ink: #0e1424; --thought: #b39cff;
+    --good: #3ccf6e; --warn: #f0a93b; --bad: #ff7b6e; --grid: #222c4a; --axis: #36426a;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300;
+  }
+
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, Segoe UI, sans-serif; }
-  header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 12px 16px;
-           background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 2; }
-  h1 { font-size: 16px; margin: 0 8px 0 0; }
-  .pill { padding: 3px 10px; border-radius: 999px; font-weight: 600; font-size: 12px; background: var(--chip); }
-  .pill.playing { color: var(--ok); } .pill.deciding { color: var(--accent); }
-  .pill.paused, .pill.needs_attention { color: var(--warn); } .pill.stopped { color: var(--bad); }
-  .meta { color: var(--muted); font-size: 12px; }
+  [hidden] { display: none !important; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--plane); color: var(--ink); font: 15px/1.5 var(--sans); }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+  /* ---- top bar ---- */
+  .bar { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px;
+         padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--hair); }
+  .brand { font-weight: 700; font-size: 17px; letter-spacing: -0.01em; margin-right: 4px; }
+  .campaign select { background: var(--raised); border: 1px solid var(--hair); border-radius: 8px; padding: 5px 8px; max-width: min(440px, 70vw); }
+  .pill { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 13px; }
+  .pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .pill.playing::before { background: var(--good); }
+  .pill.deciding::before { background: var(--thought); }
+  .pill.paused::before, .pill.needs_attention::before { background: var(--warn); }
+  .pill.stopped::before, .pill.viewer::before { background: var(--muted); }
+  .facts { display: flex; flex-wrap: wrap; gap: 4px 16px; color: var(--ink-2); font-size: 13.5px; }
+  .facts b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
   .spacer { flex: 1; }
-  button { font: inherit; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line);
-           background: var(--chip); color: var(--text); cursor: pointer; }
-  button:hover { border-color: var(--accent); }
-  button.danger { color: var(--bad); }
-  main { display: grid; grid-template-columns: minmax(0, 3fr) minmax(300px, 2fr); gap: 16px; padding: 16px; }
-  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
-  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; min-width: 0; }
-  .panel h2 { font-size: 13px; margin: 0 0 8px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
-  #frame { width: 100%; border-radius: 8px; display: block; background: #000; aspect-ratio: 1568 / 882; object-fit: contain; }
-  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin-top: 12px; }
-  .stat { background: var(--chip); border-radius: 8px; padding: 8px; }
-  .stat b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
-  .stat span { color: var(--muted); font-size: 12px; }
-  #decision { margin-top: 12px; }
-  #feed { list-style: none; margin: 0; padding: 0; max-height: 70vh; overflow-y: auto; }
-  #feed li { padding: 6px 4px; border-bottom: 1px solid var(--line); font-size: 13px; overflow-wrap: anywhere; }
-  #feed .k { font-weight: 600; margin-right: 6px; }
-  #feed .t { color: var(--muted); font-size: 11px; margin-right: 6px; font-variant-numeric: tabular-nums; }
-  .k.episode { color: var(--accent); } .k.learned { color: var(--ok); } .k.learn_rejected, .k.episode_error, .k.needs_attention { color: var(--bad); }
-  .k.question, .k.instruction, .k.answer { color: var(--warn); }
-  form { display: flex; gap: 8px; margin-top: 12px; }
-  input[type=text] { flex: 1; min-width: 0; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line);
-                     background: var(--bg); color: var(--text); font: inherit; }
-  #banner { display: none; margin: 0 16px; padding: 10px 12px; border-radius: 8px; background: var(--chip);
-            border: 1px solid var(--warn); color: var(--text); }
+  .btn { border: 1px solid var(--hair); background: var(--raised); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .btn.danger { color: var(--bad); }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .live-only[hidden] { display: none !important; }
+
+  .banner { margin: 12px 20px 0; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--warn);
+            background: var(--surface); display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .banner p { margin: 0; flex: 1 1 320px; font-family: var(--serif); font-size: 17px; }
+
+  /* ---- layout ---- */
+  main { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(360px, 1fr); gap: 16px; padding: 16px 20px 24px;
+         align-items: start; }
+  @media (max-width: 1000px) { main { grid-template-columns: 1fr; padding: 12px 16px 20px; } .bar { padding: 10px 16px; } }
+  .col { display: grid; gap: 16px; min-width: 0; }
+  .panel { background: var(--surface); border: 1px solid var(--hair); border-radius: 12px; min-width: 0; }
+  .panel > header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; padding: 14px 16px 0; }
+  .panel h2 { margin: 0; font-size: 15px; font-weight: 700; }
+  .panel .sub { color: var(--muted); font-size: 13px; }
+  .panel .body { padding: 12px 16px 16px; }
+  .right { position: sticky; top: 64px; }
+  @media (max-width: 1000px) { .right { position: static; } }
+
+  /* ---- chart ---- */
+  .seg { display: inline-flex; border: 1px solid var(--hair); border-radius: 8px; overflow: hidden; margin-left: auto; }
+  .seg button { border: 0; background: transparent; padding: 4px 10px; cursor: pointer; font-size: 13px; color: var(--ink-2); }
+  .seg button[aria-pressed="true"] { background: var(--raised); color: var(--ink); font-weight: 600; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--ink-2); margin: 4px 0 6px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+  .chartwrap { position: relative; }
+  svg.chart { display: block; width: 100%; height: auto; overflow: visible; }
+  svg.chart text { fill: var(--muted); font: 12px var(--sans); font-variant-numeric: tabular-nums; }
+  svg.chart .lane-label { fill: var(--ink-2); font-size: 12px; }
+  svg.chart .lane-label.current { fill: var(--ink); font-weight: 600; }
+  svg.chart .dmark { cursor: pointer; }
+  .tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--hair);
+         border-radius: 8px; padding: 8px 10px; font-size: 12.5px; min-width: 150px; box-shadow: 0 4px 16px rgba(10, 18, 40, .12); }
+  .tip b { display: block; margin-bottom: 4px; }
+  .tip div { display: flex; justify-content: space-between; gap: 12px; font-variant-numeric: tabular-nums; }
+  .tip i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .empty { color: var(--muted); padding: 24px 0; text-align: center; }
+  table.data { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+  table.data th, table.data td { text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+  table.data th:first-child, table.data td:first-child { text-align: left; }
+  .tablewrap { max-height: 320px; overflow: auto; }
+
+  /* ---- decisions ---- */
+  .decisions { list-style: none; margin: 0; padding: 0; }
+  .decisions li { border-top: 1px solid var(--hair); }
+  .decisions li:first-child { border-top: 0; }
+  .decisions button { display: grid; grid-template-columns: 92px 1fr; gap: 2px 14px; width: 100%; text-align: left;
+                      background: transparent; border: 0; padding: 12px 10px; cursor: pointer; border-radius: 8px; }
+  .decisions button:hover { background: var(--raised); }
+  .decisions li.sel button { background: var(--raised); box-shadow: inset 3px 0 0 var(--accent); }
+  @media (max-width: 1000px) {
+    main { display: flex; flex-direction: column; }
+    .col { display: contents; }
+    #p-chart { order: 1; } #p-dec { order: 2; } #p-tabs { order: 3; } #p-frame { order: 4; }
+  }
+  .d-date { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 14px; }
+  .d-meta { color: var(--muted); font-size: 12.5px; grid-column: 1; }
+  .d-main { grid-column: 2; grid-row: 1 / span 2; min-width: 0; }
+  .d-head { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; }
+  .dir { font-weight: 600; }
+  .dir.kept { color: var(--ink-2); font-weight: 500; }
+  .trigger { color: var(--muted); font-size: 13px; }
+  .reason { font-family: var(--serif); font-size: 16px; line-height: 1.45; margin: 3px 0 0; color: var(--ink);
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .after { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .after .up { color: var(--good); } .after .down { color: var(--bad); }
+
+  /* ---- tabs ---- */
+  .tabs { display: flex; gap: 2px; padding: 8px 8px 0; border-bottom: 1px solid var(--hair); }
+  .tabs button { position: relative; border: 0; background: transparent; padding: 8px 12px 10px; cursor: pointer; color: var(--ink-2); font-weight: 500; }
+  .tabs button[aria-selected="true"] { color: var(--ink); font-weight: 700; box-shadow: inset 0 -2px 0 var(--accent); }
+  .tabs .dot { position: absolute; top: 7px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--thought); }
+  .tabpanel { padding: 14px 16px 16px; max-height: calc(100vh - 150px); overflow: auto; }
+  @media (max-width: 1000px) { .tabpanel { max-height: none; } }
+
+  /* ---- trace reader ---- */
+  .t-when { color: var(--muted); font-size: 13px; }
+  .t-decision { font-family: var(--serif); font-size: 26px; line-height: 1.2; margin: 2px 0 6px; font-weight: 500; }
+  .t-reason { font-family: var(--serif); font-size: 17.5px; line-height: 1.55; margin: 0 0 10px; max-width: 70ch; }
+  .t-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; margin-bottom: 14px; }
+  .steps { display: grid; gap: 12px; }
+  .step h3 { margin: 0 0 4px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+  .step.thinking { border-left: 3px solid var(--thought); padding: 2px 0 2px 12px; }
+  .step.thinking h3 { color: var(--thought); }
+  .step.thinking p, .step.text p { font-family: var(--serif); font-size: 16.5px; line-height: 1.6; margin: 0; white-space: pre-wrap; max-width: 70ch; }
+  .step.call { border: 1px solid var(--hair); border-radius: 10px; padding: 10px 12px; background: var(--raised); }
+  .call-name { font-weight: 600; }
+  code, pre { font-family: var(--mono); font-size: 12.5px; }
+  .args { color: var(--ink-2); overflow-wrap: anywhere; }
+  details { margin-top: 6px; }
+  details summary { cursor: pointer; color: var(--ink-2); font-size: 13px; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 8px 0 0; padding: 10px; background: var(--plane); border-radius: 8px; max-height: 360px; overflow: auto; }
+  .step.retry { color: var(--warn); font-size: 13.5px; }
+  .usage { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+  /* ---- talk ---- */
+  .thread { display: grid; gap: 12px; margin-bottom: 14px; }
+  .msg .who { font-size: 12.5px; color: var(--muted); }
+  .msg.human p { margin: 2px 0 0; font-weight: 500; }
+  .msg.model p { margin: 2px 0 0; font-family: var(--serif); font-size: 16.5px; line-height: 1.55; white-space: pre-wrap; }
+  .composer { display: grid; gap: 8px; }
+  .composer textarea { width: 100%; min-height: 72px; resize: vertical; padding: 9px 11px; border-radius: 10px;
+                       border: 1px solid var(--hair); background: var(--raised); }
+  .composer .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .hint { color: var(--muted); font-size: 12.5px; margin: 0; }
+  .orders { list-style: none; padding: 0; margin: 6px 0 8px; display: grid; gap: 6px; }
+  .orders li { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border: 1px solid var(--hair); border-radius: 8px; }
+  .orders li span { flex: 1; }
+  .orders button { border: 0; background: transparent; color: var(--muted); cursor: pointer; padding: 0 4px; }
+  .orders button:hover { color: var(--bad); }
+  .section { border-top: 1px solid var(--hair); margin-top: 16px; padding-top: 14px; }
+  .section h3 { margin: 0 0 6px; font-size: 14px; }
+  .inline { display: flex; gap: 8px; }
+  .inline input, .inline select { flex: 1; min-width: 0; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--hair); background: var(--raised); }
+
+  /* ---- activity + frame ---- */
+  .feed { list-style: none; margin: 0; padding: 0; }
+  .feed li { display: grid; grid-template-columns: 64px 1fr; gap: 8px; padding: 6px 0; border-top: 1px solid var(--grid); font-size: 13px; }
+  .feed .t { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .feed .k { font-weight: 600; margin-right: 6px; }
+  .feed .k.bad { color: var(--bad); } .feed .k.learn { color: var(--good); } .feed .k.human { color: var(--accent); }
+  .frame img { width: 100%; display: block; border-radius: 8px; background: #000; aspect-ratio: 1568 / 882; object-fit: contain; }
+  .stats { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--ink-2); margin-top: 10px; font-variant-numeric: tabular-nums; }
+  .stats b { color: var(--ink); }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  /* narrow screens: last, so it wins over the base rules above */
+  @media (max-width: 600px) {
+    .decisions button { grid-template-columns: 1fr; }
+    .d-meta { grid-column: 1; grid-row: 2; }
+    .d-main { grid-column: 1; grid-row: 3; margin-top: 4px; }
+  }
 </style>
 </head>
 <body>
-<header>
-  <h1>Game Pilot</h1>
-  <span id="status" class="pill">…</span>
-  <span class="meta" id="model"></span>
+<div class="bar">
+  <span class="brand">Game Pilot</span>
+  <label class="campaign"><span class="sr">Campaign</span><select id="campaign"></select></label>
+  <span id="status" class="pill">connecting</span>
+  <div class="facts" id="facts"></div>
   <span class="spacer"></span>
-  <button onclick="ctl('pause')">Pause</button>
-  <button onclick="ctl('resume')">Resume</button>
-  <button class="danger" onclick="if (confirm('Stop the pilot?')) ctl('stop')">Stop</button>
-</header>
-<div id="banner"></div>
+  <button class="btn live-only" id="b-pause" hidden>Pause</button>
+  <button class="btn live-only" id="b-resume" hidden>Resume</button>
+  <button class="btn danger live-only" id="b-stop" hidden>Stop</button>
+</div>
+<div class="banner" id="banner" hidden>
+  <p id="banner-text"></p>
+  <button class="btn primary" id="b-yes">Yes</button>
+  <button class="btn" id="b-no">No</button>
+</div>
+
 <main>
-  <section class="panel">
-    <h2>Game</h2>
-    <img id="frame" alt="Latest game frame" src="/frame.jpg">
-    <div class="stats">
-      <div class="stat"><b id="gdate">–</b><span>in-game date</span></div>
-      <div class="stat"><b id="turns">0</b><span>verified autopilot turns</span></div>
-      <div class="stat"><b id="episodes">0</b><span>decisions</span></div>
-      <div class="stat"><b id="tokens">0</b><span>tokens in / out</span></div>
-      <div class="stat"><b id="requests">0</b><span>model requests</span></div>
-      <div class="stat"><b id="learned">0</b><span>learned (screens · rules · controls)</span></div>
-      <div class="stat"><b id="uptime">0</b><span>running</span></div>
-    </div>
-    <p id="decision" class="meta"></p>
-    <form onsubmit="event.preventDefault(); instruct();">
-      <input id="instr" type="text" placeholder="Give the pilot an instruction or answer its question…" autocomplete="off">
-      <button type="submit">Send</button>
-    </form>
-  </section>
-  <section class="panel">
-    <h2>Activity</h2>
-    <ul id="feed"></ul>
-  </section>
+  <div class="col">
+    <section class="panel" id="p-chart" aria-labelledby="h-chart">
+      <header>
+        <h2 id="h-chart">Empire over time</h2>
+        <span class="sub" id="chart-sub"></span>
+        <div class="seg" role="group" aria-label="Chart">
+          <button data-view="net" aria-pressed="true">Net income</button>
+          <button data-view="stock" aria-pressed="false">Stockpile</button>
+          <button data-view="power" aria-pressed="false">Power</button>
+          <button data-view="table" aria-pressed="false">Table</button>
+        </div>
+      </header>
+      <div class="body">
+        <div class="legend" id="legend"></div>
+        <div class="chartwrap" id="chartwrap"></div>
+      </div>
+    </section>
+
+    <section class="panel" id="p-dec" aria-labelledby="h-dec">
+      <header><h2 id="h-dec">Decisions</h2><span class="sub" id="dec-sub"></span></header>
+      <div class="body"><ul class="decisions" id="decisions"></ul></div>
+    </section>
+
+    <section class="panel frame" id="p-frame" aria-labelledby="h-frame">
+      <header><h2 id="h-frame">Game screen</h2><span class="sub">latest capture</span></header>
+      <div class="body">
+        <img id="frame" alt="Latest game screen" hidden>
+        <p class="empty" id="noframe">No screen captured yet.</p>
+        <div class="stats" id="stats"></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="col right">
+    <section class="panel" id="p-tabs">
+      <div class="tabs" role="tablist">
+        <button role="tab" aria-selected="true" data-tab="reasoning">Reasoning<span class="dot" hidden></span></button>
+        <button role="tab" aria-selected="false" data-tab="talk">Talk<span class="dot" hidden></span></button>
+        <button role="tab" aria-selected="false" data-tab="activity">Activity<span class="dot" hidden></span></button>
+      </div>
+      <div class="tabpanel" id="tab-reasoning" role="tabpanel"><p class="empty">Pick a decision to read how it was made.</p></div>
+      <div class="tabpanel" id="tab-talk" role="tabpanel" hidden>
+        <div class="thread" id="thread"></div>
+        <div id="talk-controls">
+          <div class="composer">
+            <div class="seg" role="group" aria-label="Message type" id="modes" style="margin-left:0">
+              <button data-mode="chat" aria-pressed="true">Ask</button>
+              <button data-mode="instruct" aria-pressed="false">Note for next decision</button>
+              <button data-mode="decide_now" aria-pressed="false">Decide now</button>
+            </div>
+            <textarea id="msg" placeholder="Ask why it chose a directive, or what it plans next"></textarea>
+            <div class="row"><button class="btn primary" id="send">Ask</button><p class="hint" id="mode-hint">Asking never changes the game.</p></div>
+          </div>
+          <div class="section" id="orders-section">
+            <h3>Standing orders</h3>
+            <p class="hint">Followed in every decision until you remove them. Saved for this campaign.</p>
+            <ul class="orders" id="orders"></ul>
+            <div class="inline"><input id="order-text" placeholder="e.g. Never start a war without asking me"><button class="btn" id="order-add">Add order</button></div>
+          </div>
+          <div class="section" id="override-section">
+            <h3>Override</h3>
+            <p class="hint">Apply a directive yourself. It is recorded as your decision.</p>
+            <div class="inline"><select id="override-dir"></select><button class="btn" id="override">Apply directive</button></div>
+          </div>
+        </div>
+        <p class="hint" id="talk-off" hidden>Talking to the model needs a live run. Start one with <code>python -m pilot run</code>.</p>
+      </div>
+      <div class="tabpanel" id="tab-activity" role="tabpanel" hidden><ul class="feed" id="feed"></ul></div>
+    </section>
+  </div>
 </main>
+
 <script>
 const $ = (id) => document.getElementById(id);
-const fmt = (n) => n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e3 ? (n / 1e3).toFixed(1) + "k" : String(n);
-const dur = (s) => { const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return h ? `${h}h ${m}m` : `${m}m`; };
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmt = (n) => n == null ? "–" : Math.abs(n) >= 1e6 ? (n / 1e6).toFixed(1) + "M" : Math.abs(n) >= 1e4 ? (n / 1e3).toFixed(1) + "k" : Math.abs(n) >= 100 ? Math.round(n).toLocaleString() : (+n).toFixed(1).replace(/\.0$/, "");
+const human = (s) => String(s || "").replace(/_/g, " ");
+const api = async (u) => { const r = await fetch(u); if (!r.ok) throw new Error(`${u}: ${r.status}`); return r.json(); };
 
-async function ctl(action, text) {
-  await fetch("/control", { method: "POST", headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ action, text }) });
-  refresh();
+const S = { live: false, status: {}, campaign: null, decisions: [], metrics: [], view: "net", sel: null, mode: "chat" };
+
+const SERIES = {
+  net:   [["energy", "Energy"], ["minerals", "Minerals"], ["food", "Food"], ["alloys", "Alloys"], ["influence", "Influence"], ["unity", "Unity"]],
+  stock: [["energy", "Energy"], ["minerals", "Minerals"], ["food", "Food"], ["alloys", "Alloys"], ["influence", "Influence"], ["unity", "Unity"]],
+  power: [["military_power", "Military"], ["economy_power", "Economy"], ["tech_power", "Technology"]],
+};
+const value = (m, view, key) => view === "net" ? m.net?.[key] : view === "stock" ? m.stockpile?.[key] : m[key];
+const color = (i) => `var(--s${i + 1})`;
+
+// ---------- status & campaign ----------
+async function loadStatus() {
+  try { S.status = await api("/status"); } catch { S.status = { status: "offline" }; }
+  S.live = !!S.status.live;
+  const st = S.status.status || "viewer";
+  $("status").textContent = { needs_attention: "needs attention", viewer: "viewing history" }[st] || st;
+  $("status").className = "pill " + st.replace(/ /g, "_");
+  document.querySelectorAll(".live-only").forEach((b) => (b.hidden = !S.live));
+  const info = S.status.info || {};
+  const facts = [];
+  if (S.live) {
+    facts.push(`<span>Date <b>${esc(S.status.game_date || "–")}</b></span>`);
+    if (info.directive !== undefined) facts.push(`<span>Directive <b>${esc(human(info.directive) || "none")}</b></span>`);
+    if (info.speed) facts.push(`<span>Speed <b>${esc(info.speed)}</b></span>`);
+    facts.push(`<span>Model <b>${esc(S.status.model)}</b></span>`);
+  }
+  $("facts").innerHTML = facts.join("");
+  const q = S.status.pending_question;
+  $("banner").hidden = !q && st !== "needs_attention";
+  $("banner-text").textContent = q ? "The model asks: " + q : "The run needs attention: see Activity, then Resume.";
+  $("b-yes").hidden = $("b-no").hidden = !q;
+  const controls = info.controls || [];
+  $("talk-controls").hidden = !S.live;
+  $("talk-off").hidden = S.live;
+  document.querySelector('[data-mode="chat"]').hidden = !controls.includes("chat");
+  document.querySelector('[data-mode="decide_now"]').hidden = !controls.includes("decide_now");
+  $("orders-section").hidden = !controls.includes("order_add");
+  $("override-section").hidden = !controls.includes("override");
+  if (!controls.includes("chat") && S.mode === "chat" && S.live) setMode("instruct");
+  renderOrders(info.orders || []);
+  if ($("override-dir").options.length === 0 && info.directives)
+    $("override-dir").innerHTML = info.directives.map((d) => `<option value="${esc(d)}">${esc(human(d))}</option>`).join("");
+  $("stats").innerHTML = S.live ? [
+    `<span>Decisions <b>${S.status.episodes}</b></span>`,
+    `<span>Tokens <b>${fmt(S.status.tokens_in)}</b> in, <b>${fmt(S.status.tokens_out)}</b> out</span>`,
+    `<span>Model calls <b>${S.status.requests}</b></span>`,
+    `<span>Running <b>${Math.floor(S.status.uptime_s / 3600)}h ${Math.floor(S.status.uptime_s % 3600 / 60)}m</b></span>`].join("") : "";
 }
-function instruct() { const v = $("instr").value.trim(); if (v) { ctl("instruct", v); $("instr").value = ""; } }
 
-async function refresh() {
-  try {
-    const s = await (await fetch("/status")).json();
-    $("status").textContent = s.status.replace("_", " ");
-    $("status").className = "pill " + s.status;
-    $("model").textContent = `${s.model} · run ${s.run_id}`;
-    $("turns").textContent = s.turns_advanced;
-    $("gdate").textContent = s.game_date || "–";
-    $("episodes").textContent = s.episodes;
-    $("tokens").textContent = `${fmt(s.tokens_in)} / ${fmt(s.tokens_out)}`;
-    $("requests").textContent = s.requests;
-    $("learned").textContent = `${s.learned.screens || 0} · ${s.learned.rules || 0} · ${s.learned.controls || 0}`;
-    $("uptime").textContent = dur(s.uptime_s);
-    $("decision").textContent = s.last_decision ? "Last decision: " + s.last_decision : (s.last_stop || "");
-    const b = $("banner");
-    if (s.pending_question) { b.style.display = "block"; b.textContent = "The pilot asks: " + s.pending_question; }
-    else if (s.status === "needs_attention") { b.style.display = "block"; b.textContent = "Needs attention — see the activity feed, then Resume."; }
-    else b.style.display = "none";
-  } catch (e) { $("status").textContent = "offline"; $("status").className = "pill stopped"; }
+async function loadCampaigns() {
+  let camps = [];
+  try { camps = await api("/api/campaigns"); } catch { /* no telemetry yet */ }
+  const live = (S.status.info || {}).campaign;
+  const sel = $("campaign");
+  sel.innerHTML = camps.map((c) => `<option value="${esc(c.id)}">${esc(human(c.name))}${c.id === live ? " (live)" : ""}, ${c.decisions} decisions</option>`).join("")
+    || `<option value="">No campaigns recorded yet</option>`;
+  S.campaign = S.campaign && camps.some((c) => c.id === S.campaign) ? S.campaign : (live || camps[0]?.id || null);
+  if (S.campaign) sel.value = S.campaign;
 }
 
+async function loadCampaignData() {
+  if (!S.campaign) { renderChart(); renderDecisions(); return; }
+  const qs = "campaign=" + encodeURIComponent(S.campaign);
+  [S.decisions, S.metrics] = await Promise.all([api("/api/decisions?" + qs), api("/api/metrics?" + qs)]);
+  renderChart(); renderDecisions();
+  if (!S.sel && S.decisions.length) selectDecision(S.decisions[S.decisions.length - 1]);
+  const last = S.decisions[S.decisions.length - 1];
+  $("frame").src = S.live ? "/frame.jpg?t=" + Date.now() : last ? `/runs/${encodeURIComponent(last.run_id)}/frame.jpg` : "";
+}
+
+// ---------- chart ----------
+function niceTicks(lo, hi, n = 4) {
+  if (lo === hi) { lo -= 1; hi += 1; }
+  const step0 = (hi - lo) / n, mag = 10 ** Math.floor(Math.log10(step0));
+  const step = [1, 2, 2.5, 5, 10].map((k) => k * mag).find((s) => s >= step0);
+  const out = [];
+  let v = Math.floor(lo / step) * step;
+  out.push(+v.toFixed(6));
+  while (v < hi - 1e-9) { v += step; out.push(+v.toFixed(6)); }   // last tick covers the maximum
+  return out;
+}
+
+function directiveSpans() {
+  const spans = [];
+  for (const d of S.decisions) {
+    if (d.month == null) continue;
+    const now = d.outcome === "applied" ? d.decision : (d.current || null);
+    if (!now) continue;
+    if (!spans.length || spans[spans.length - 1].name !== now) spans.push({ name: now, from: d.month });
+  }
+  return spans;
+}
+
+function renderChart() {
+  const wrap = $("chartwrap"), view = S.view;
+  const ms = S.metrics.filter((m) => m.month != null);
+  $("chart-sub").textContent = ms.length ? `${ms[0].date} to ${ms[ms.length - 1].date}` : "";
+  if (!ms.length) {
+    $("legend").innerHTML = "";
+    wrap.innerHTML = `<p class="empty">No game metrics yet. Stellaris runs record the empire every in-game month.</p>`;
+    return;
+  }
+  if (view === "table") return renderTable(ms);
+  const series = SERIES[view];
+  $("legend").innerHTML = series.map(([, label], i) => `<span><i style="background:${color(i)}"></i>${label}</span>`).join("");
+  const W = Math.max(wrap.clientWidth, 320), H = 280, L = 48, R = view === "power" ? 84 : 14, T = 30, B = 44;
+  const x0 = ms[0].month, x1 = Math.max(ms[ms.length - 1].month, x0 + 1);
+  let lo = Infinity, hi = -Infinity;
+  for (const m of ms) for (const [k] of series) { const v = value(m, view, k); if (v != null) { lo = Math.min(lo, v); hi = Math.max(hi, v); } }
+  if (view !== "net") lo = Math.min(lo, 0);
+  const ticks = niceTicks(lo, hi);
+  const y0 = ticks[0], y1 = ticks[ticks.length - 1];
+  const X = (mo) => L + (mo - x0) / (x1 - x0) * (W - L - R);
+  const Y = (v) => T + (1 - (v - y0) / (y1 - y0 || 1)) * (H - T - B);
+  let svg = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(document.querySelector(`[data-view="${view}"]`).textContent)} over in-game time">`;
+  // directive lane (top)
+  const spans = directiveSpans();
+  spans.forEach((s, i) => {
+    const a = Math.max(X(Math.max(s.from, x0)), L), b = i + 1 < spans.length ? X(spans[i + 1].from) : W - R;
+    if (b <= L) return;
+    svg += `<rect x="${a}" y="4" width="${Math.max(b - a - 2, 1)}" height="18" rx="4" fill="var(--raised)" stroke="var(--hair)"/>`;
+    if (b - a > 60) svg += `<text class="lane-label${i === spans.length - 1 ? " current" : ""}" x="${a + 8}" y="17">${esc(human(s.name))}</text>`;
+  });
+  // grid + y ticks
+  for (const t of ticks) svg += `<line x1="${L}" x2="${W - R}" y1="${Y(t)}" y2="${Y(t)}" stroke="${t === 0 ? "var(--axis)" : "var(--grid)"}" stroke-width="1"/><text x="${L - 8}" y="${Y(t) + 4}" text-anchor="end">${fmt(t)}</text>`;
+  // x ticks: years
+  const yrs = Math.max(1, Math.ceil((x1 - x0) / 12 / 6));
+  for (let mo = Math.ceil(x0 / 12) * 12; mo <= x1; mo += 12 * yrs) svg += `<text x="${X(mo)}" y="${H - B + 18}" text-anchor="middle">${Math.floor(mo / 12)}</text>`;
+  // lines
+  series.forEach(([k], i) => {
+    const pts = ms.map((m) => [X(m.month), value(m, view, k)]).filter(([, v]) => v != null).map(([x, v]) => `${x.toFixed(1)},${Y(v).toFixed(1)}`);
+    if (pts.length) svg += `<polyline points="${pts.join(" ")}" fill="none" stroke="${color(i)}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    if (view === "power") {
+      const last = [...ms].reverse().find((m) => value(m, view, k) != null);
+      if (last) svg += `<text x="${W - R + 8}" y="${Y(value(last, view, k)) + 4}" style="fill:var(--ink-2)">${esc(series[i][1])}</text>`;
+    }
+  });
+  // decision marks (bottom)
+  S.decisions.forEach((d, idx) => {
+    if (d.month == null || d.month < x0 - 1) return;
+    const x = X(Math.min(Math.max(d.month, x0), x1)), changed = d.outcome === "applied";
+    const sel = S.sel && S.sel.run_id === d.run_id && S.sel.episode === d.episode;
+    svg += `<g class="dmark" data-i="${idx}" tabindex="0" role="button" aria-label="Decision ${esc(d.date)}: ${esc(human(d.decision))}">
+      <line x1="${x}" x2="${x}" y1="${T}" y2="${H - B + 2}" stroke="${sel ? "var(--accent)" : "var(--axis)"}" stroke-width="1" stroke-dasharray="${changed ? "0" : "3 3"}"/>
+      <circle cx="${x}" cy="${H - 12}" r="${changed ? 6 : 4.5}" fill="${changed ? "var(--accent)" : "var(--surface)"}" stroke="var(--accent)" stroke-width="2"/>
+      <rect x="${x - 10}" y="${H - 24}" width="20" height="24" fill="transparent"/></g>`;
+  });
+  svg += `<line id="xhair" x1="0" x2="0" y1="${T}" y2="${H - B}" stroke="var(--ink-2)" stroke-width="1" visibility="hidden"/>`;
+  svg += `<g id="hdots"></g><rect id="hit" x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent"/></svg><div class="tip" id="tip" hidden></div>`;
+  wrap.innerHTML = svg;
+  wrap.querySelectorAll(".dmark").forEach((g) => {
+    const pick = () => selectDecision(S.decisions[+g.dataset.i]);
+    g.addEventListener("click", pick);
+    g.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
+  });
+  const hit = wrap.querySelector("#hit"), tip = $("tip"), xh = wrap.querySelector("#xhair"), dots = wrap.querySelector("#hdots");
+  hit.addEventListener("pointermove", (e) => {
+    const box = hit.ownerSVGElement.getBoundingClientRect(), scale = W / box.width;
+    const px = (e.clientX - box.left) * scale, mo = x0 + (px - L) / (W - L - R) * (x1 - x0);
+    const m = ms.reduce((a, b) => Math.abs(b.month - mo) < Math.abs(a.month - mo) ? b : a);
+    const x = X(m.month);
+    xh.setAttribute("x1", x); xh.setAttribute("x2", x); xh.setAttribute("visibility", "visible");
+    dots.innerHTML = series.map(([k], i) => { const v = value(m, view, k); return v == null ? "" : `<circle cx="${x}" cy="${Y(v)}" r="4" fill="${color(i)}" stroke="var(--surface)" stroke-width="2"/>`; }).join("");
+    tip.innerHTML = `<b>${esc(m.date)}</b>` + series.map(([k, label], i) => `<div><span><i style="background:${color(i)}"></i>${label}</span><span>${fmt(value(m, view, k))}</span></div>`).join("");
+    tip.hidden = false;
+    const left = x / scale + 14, maxLeft = box.width - tip.offsetWidth - 4;
+    tip.style.left = (left > maxLeft ? x / scale - tip.offsetWidth - 14 : left) + "px";
+    tip.style.top = T / scale + "px";
+  });
+  hit.addEventListener("pointerleave", () => { tip.hidden = true; xh.setAttribute("visibility", "hidden"); dots.innerHTML = ""; });
+}
+
+function renderTable(ms) {
+  $("legend").innerHTML = "";
+  const cols = [["date", "Date"], ...SERIES.net.map(([k, l]) => ["net." + k, l + " / mo"]), ["planets", "Planets"], ["pops", "Pops"], ["military_power", "Military"], ["economy_power", "Economy"], ["tech_power", "Technology"]];
+  const get = (m, c) => c.startsWith("net.") ? m.net?.[c.slice(4)] : m[c];
+  $("chartwrap").innerHTML = `<div class="tablewrap"><table class="data"><thead><tr>${cols.map(([, l]) => `<th>${l}</th>`).join("")}</tr></thead><tbody>` +
+    [...ms].reverse().map((m) => `<tr>${cols.map(([c]) => `<td>${c === "date" ? esc(m.date) : fmt(get(m, c))}</td>`).join("")}</tr>`).join("") + `</tbody></table></div>`;
+}
+
+// ---------- decisions ----------
+const SCORED = [["planets", "planets"], ["pops", "pops"], ["techs_known", "techs"], ["military_power", "military"], ["economy_power", "economy"], ["tech_power", "tech"]];
+function afterText(r) {
+  if (!r) return "";
+  const parts = SCORED.filter(([k]) => r[k]).map(([k, l]) => `<span class="${r[k] > 0 ? "up" : "down"}">${r[k] > 0 ? "+" : ""}${fmt(r[k])} ${l}</span>`);
+  if (r.deficits_after?.length) parts.push(`<span class="down">deficit: ${esc(r.deficits_after.map(human).join(", "))}</span>`);
+  return parts.length ? `<div class="after"><span>${r.months} months later:</span>${parts.join("")}</div>` : "";
+}
+
+function renderDecisions() {
+  const ul = $("decisions");
+  $("dec-sub").textContent = S.decisions.length ? `${S.decisions.length} in this campaign, newest first` : "";
+  if (!S.decisions.length) { ul.innerHTML = `<li class="empty">No decisions yet.</li>`; return; }
+  ul.innerHTML = [...S.decisions].reverse().map((d) => {
+    const i = S.decisions.indexOf(d);
+    const kept = d.decision === "keep" || d.outcome === "kept";
+    const label = kept ? `kept ${human(d.current || "none")}` : d.outcome === "applied" ? human(d.decision) : `${human(d.decision)} (${esc(d.outcome || "")})`;
+    const sel = S.sel && S.sel.run_id === d.run_id && S.sel.episode === d.episode;
+    return `<li class="${sel ? "sel" : ""}"><button data-i="${i}">
+      <span class="d-date">${esc(d.date || "–")}</span>
+      <span class="d-meta">${d.model === "human" ? "you" : fmt(d.tokens_in) + " tokens"}${d.seconds ? ", " + d.seconds + " s" : ""}</span>
+      <span class="d-main"><span class="d-head"><span class="dir${kept ? " kept" : ""}">${esc(label)}</span><span class="trigger">${esc(d.trigger || "")}</span></span>
+      <p class="reason">${esc(d.reason || "")}</p>${afterText(d.result)}</span></button></li>`;
+  }).join("");
+  ul.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => selectDecision(S.decisions[+b.dataset.i])));
+}
+
+async function selectDecision(d) {
+  if (!d) return;
+  S.sel = { run_id: d.run_id, episode: d.episode };
+  renderDecisions(); renderChart(); showTab("reasoning");
+  const box = $("tab-reasoning");
+  box.innerHTML = `<p class="empty">Loading…</p>`;
+  try { renderTrace(await api(`/api/decision?run=${encodeURIComponent(d.run_id)}&episode=${d.episode}`)); }
+  catch (e) { box.innerHTML = `<p class="empty">Could not load this decision (${esc(e.message)}).</p>`; }
+}
+
+function renderTrace(d) {
+  const t = d.trace || {}, steps = t.steps || [];
+  const kept = d.decision === "keep";
+  let h = `<div class="t-when">${esc(d.date)}, ${esc(d.trigger || "")}</div>
+    <div class="t-decision">${kept ? "Kept " + esc(human(d.current || "no directive")) : esc(human(d.decision))}</div>
+    <p class="t-reason">${esc(d.reason || "")}</p>
+    <div class="t-meta"><span>${esc(d.model === "human" ? "Your decision" : d.model || "")}</span><span>${esc(d.outcome || "")}</span>
+    ${d.tokens_in ? `<span>${fmt(d.tokens_in)} tokens in, ${fmt(d.tokens_out)} out</span>` : ""}${d.seconds ? `<span>${d.seconds} s</span>` : ""}</div>`;
+  if (d.result) h += afterText(d.result).replace('class="after"', 'class="after" style="margin:-4px 0 14px"');
+  h += `<div class="steps">`;
+  let call = 0;
+  for (let i = 0; i < steps.length; i++) {
+    const s = steps[i];
+    if (s.type === "prompt") h += `<details class="step"><summary>What the model was shown</summary><pre>${esc(s.text)}</pre></details>`;
+    else if (s.type === "thinking") h += `<div class="step thinking"><h3>Thinking</h3><p>${esc(s.text)}</p></div>`;
+    else if (s.type === "text") h += `<div class="step text"><p>${esc(s.text)}</p></div>`;
+    else if (s.type === "tool_call") {
+      const res = steps.slice(i + 1).find((x) => x.type === "tool_result" && x.tool === s.tool);
+      h += `<div class="step call"><span class="call-name">${esc(human(s.tool))}</span> <code class="args">${esc(JSON.stringify(s.args))}</code>
+        ${res ? `<details><summary>Result</summary><pre>${esc(res.text)}</pre></details>` : ""}</div>`;
+    } else if (s.type === "retry") h += `<div class="step retry">Retried ${esc(s.tool)}: ${esc(s.text)}</div>`;
+    else if (s.type === "output") h += `<details class="step"><summary>Answer as returned</summary><pre>${esc(JSON.stringify(s.args, null, 1))}</pre></details>`;
+    else if (s.type === "usage") { call++; h += `<div class="usage">Model call ${call}: ${fmt(s.in)} tokens in, ${fmt(s.out)} out</div>`; }
+  }
+  if (!steps.some((s) => s.type === "thinking") && d.model !== "human") h += `<p class="hint">No thinking was returned for this decision. Gemini returns thought summaries when thinking is on.</p>`;
+  $("tab-reasoning").innerHTML = h + `</div>`;
+}
+
+// ---------- talk ----------
+function setMode(m) {
+  S.mode = m;
+  document.querySelectorAll("#modes button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === m)));
+  const cfg = {
+    chat: ["Ask", "Ask why it chose a directive, or what it plans next", "Asking never changes the game."],
+    instruct: ["Add note", "Guidance for the next decision only", "Used once, at the next decision point."],
+    decide_now: ["Decide now", "Optional: what the model should weigh right now", "Pauses the game and asks the model to decide now."],
+  }[m];
+  $("send").textContent = cfg[0]; $("msg").placeholder = cfg[1]; $("mode-hint").textContent = cfg[2];
+}
+document.querySelectorAll("#modes button").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
+
+async function control(body) {
+  const r = await fetch("/control", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  if (!r.ok) alert(await r.text());
+  loadStatus();
+}
+$("send").addEventListener("click", () => {
+  const text = $("msg").value.trim();
+  if (!text && S.mode !== "decide_now") return;
+  control({ action: S.mode, text });
+  $("msg").value = "";
+});
+$("msg").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) $("send").click(); });
+$("order-add").addEventListener("click", () => { const t = $("order-text").value.trim(); if (t) { control({ action: "order_add", text: t }); $("order-text").value = ""; } });
+$("override").addEventListener("click", () => {
+  const d = $("override-dir").value;
+  if (confirm(`Apply "${human(d)}" now? The game pauses while it is applied.`)) control({ action: "override", directive: d });
+});
+function renderOrders(orders) {
+  $("orders").innerHTML = orders.length ? orders.map((o, i) => `<li><span>${esc(o)}</span><button aria-label="Remove order" data-i="${i}">Remove</button></li>`).join("")
+    : `<li class="hint" style="border:0;padding:0">No standing orders.</li>`;
+  $("orders").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => control({ action: "order_remove", index: +b.dataset.i })));
+}
+const seenChat = new Set();
+function addMessage(ev) {
+  const key = `${ev.t}|${ev.role}|${ev.text}`;
+  if (seenChat.has(key)) return;          // history load and the live stream's replay overlap
+  seenChat.add(key);
+  const who = ev.role === "human" ? "You" : "Model";
+  $("thread").insertAdjacentHTML("beforeend", `<div class="msg ${ev.role}"><span class="who">${who}, ${new Date(ev.t * 1000).toLocaleTimeString()}</span><p>${esc(ev.text)}</p></div>`);
+  if (ev.role === "model") flag("talk");
+}
+
+// ---------- tabs ----------
+function showTab(name) {
+  document.querySelectorAll(".tabs button").forEach((b) => {
+    const on = b.dataset.tab === name;
+    b.setAttribute("aria-selected", String(on));
+    if (on) b.querySelector(".dot").hidden = true;
+  });
+  ["reasoning", "talk", "activity"].forEach((n) => ($("tab-" + n).hidden = n !== name));
+}
+function flag(name) { const b = document.querySelector(`.tabs [data-tab="${name}"]`); if (b.getAttribute("aria-selected") !== "true") b.querySelector(".dot").hidden = false; }
+document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
+
+// ---------- activity ----------
+const QUIET = new Set(["metrics", "status", "trace", "chat"]);
 function describe(ev) {
   switch (ev.kind) {
-    case "autopilot": return `${ev.advanced} turn(s); stop: ${ev.stop}`;
-    case "episode": return `${ev.situation} → ${ev.decision}${ev.resolved ? "" : " (unresolved)"} · ${ev.actions} actions, ${ev.seconds}s`;
-    case "action": return ev.action + (ev.error ? " — ERROR" : "");
-    case "consult": return `${ev.situation} (${ev.past} past decisions)`;
-    case "learned": return `${ev.kind === "learned" ? ev.message : ""}`;
-    case "learn_rejected": return `${ev.kind}: ${ev.reason}`;
+    case "episode": return `${ev.situation}: ${ev.decision}`;
+    case "autopilot": return `${ev.advanced} turn(s); stopped: ${ev.stop}`;
+    case "action": return ev.action + (ev.error ? " (error)" : "");
+    case "consult": return `looked up “${ev.situation}”`;
+    case "learned": return ev.message || ev.rule || "";
+    case "learn_rejected": return ev.reason;
     case "question": return ev.question;
     case "answer": return ev.answer;
     case "instruction": return ev.text;
     case "journal": return ev.text;
-    case "commit": return ev.ok ? "committed learnings" : "commit failed (CI) — see log";
+    case "orders": return ev.orders.length ? "standing orders: " + ev.orders.join(" | ") : "standing orders cleared";
+    case "campaign": return `campaign ${ev.game}/${ev.name}`;
+    case "commit": return ev.ok ? "committed what was learned" : "commit failed (CI)";
     case "needs_attention": return ev.reason;
-    case "status": return ev.status;
+    case "run_start": return `run started: ${ev.model}${ev.speed ? ", speed " + ev.speed : ""}`;
+    case "run_end": return "run ended";
     default: { const { t, kind, ...rest } = ev; return JSON.stringify(rest).slice(0, 200); }
   }
 }
-
-function add(ev) {
-  if (ev.kind === "status") return;
-  const li = document.createElement("li");
-  const time = new Date(ev.t * 1000).toLocaleTimeString();
-  li.innerHTML = `<span class="t"></span><span class="k"></span><span class="d"></span>`;
-  li.querySelector(".t").textContent = time;
-  li.querySelector(".k").textContent = ev.kind;
-  li.querySelector(".k").classList.add(ev.kind);
-  li.querySelector(".d").textContent = describe(ev);
-  $("feed").prepend(li);
-  while ($("feed").children.length > 300) $("feed").lastChild.remove();
-  if (["action", "autopilot", "episode"].includes(ev.kind)) $("frame").src = "/frame.jpg?t=" + Date.now();
+const KCLASS = { episode_error: "bad", needs_attention: "bad", learn_rejected: "bad", briefing_error: "bad", learned: "learn", instruction: "human", orders: "human", answer: "human" };
+function addFeed(ev) {
+  if (QUIET.has(ev.kind)) return;
+  $("feed").insertAdjacentHTML("afterbegin", `<li><span class="t">${new Date(ev.t * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span><span><span class="k ${KCLASS[ev.kind] || ""}">${esc(human(ev.kind))}</span>${esc(describe(ev))}</span></li>`);
+  while ($("feed").children.length > 400) $("feed").lastChild.remove();
+  if (["needs_attention", "episode_error", "question"].includes(ev.kind)) flag("activity");
 }
 
-const es = new EventSource("/events");
-es.onmessage = (m) => { add(JSON.parse(m.data)); refresh(); };
-refresh();
-setInterval(refresh, 5000);
+// ---------- live updates ----------
+let refreshTimer = null;
+const refreshSoon = () => { clearTimeout(refreshTimer); refreshTimer = setTimeout(async () => { await loadCampaigns(); await loadCampaignData(); }, 400); };
+function connect() {
+  const es = new EventSource("/events");
+  es.onmessage = (m) => {
+    const ev = JSON.parse(m.data);
+    addFeed(ev);
+    if (ev.kind === "chat") addMessage(ev);
+    if (ev.kind === "trace" || ev.kind === "campaign") refreshSoon();
+    if (ev.kind === "metrics" && S.campaign === (S.status.info || {}).campaign) {
+      S.metrics.push({ ...ev, month: ev.date ? (+ev.date.split(".")[0]) * 12 + (+ev.date.split(".")[1]) - 1 : null });
+      renderChart();
+    }
+    if (["action", "autopilot", "trace"].includes(ev.kind)) $("frame").src = "/frame.jpg?t=" + Date.now();
+    if (!["metrics"].includes(ev.kind)) loadStatus();
+  };
+}
+
+// ---------- wiring ----------
+document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => {
+  S.view = b.dataset.view;
+  document.querySelectorAll("[data-view]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  renderChart();
+}));
+$("campaign").addEventListener("change", async (e) => { S.campaign = e.target.value; S.sel = null; await loadCampaignData(); });
+$("b-pause").addEventListener("click", () => control({ action: "pause" }));
+$("b-resume").addEventListener("click", () => control({ action: "resume" }));
+$("b-stop").addEventListener("click", () => { if (confirm("Stop the pilot? The game is paused when it stops.")) control({ action: "stop" }); });
+$("b-yes").addEventListener("click", () => control({ action: "instruct", text: "yes" }));
+$("b-no").addEventListener("click", () => control({ action: "instruct", text: "no" }));
+$("frame").addEventListener("load", () => { $("frame").hidden = false; $("noframe").hidden = true; });
+$("frame").addEventListener("error", () => { $("frame").hidden = true; $("noframe").hidden = false; });
+let resizeT; addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTimeout(renderChart, 150); });
+
+(async () => {
+  await loadStatus();
+  setMode(((S.status.info || {}).controls || []).includes("chat") ? "chat" : "instruct");
+  await loadCampaigns();
+  await loadCampaignData();
+  if (S.live) {
+    try { (await api("/events.json?n=300")).filter((e) => e.kind === "chat").forEach(addMessage); } catch { /* older server */ }
+    connect();
+    setInterval(loadStatus, 5000);
+  } else {
+    try {
+      const runs = await api("/runs");
+      if (runs[0]) (await api(`/runs/${encodeURIComponent(runs[0].id)}/events`)).forEach(addFeed);
+    } catch { /* no runs */ }
+  }
+})();
 </script>
 </body>
 </html>
