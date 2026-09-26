@@ -958,3 +958,33 @@ def test_pace_controls_over_the_dashboard(setup):
     asyncio.run(go())
     assert gov.s.decide_every_months == 3 and gov.requests.get_nowait() == ("speed", "fast")
     assert models.load_prefs(s.runs_dir) == {"speed": "slow", "months": 9}
+
+
+def test_trends_compare_with_twelve_months_ago_and_flag_idle_alloys():
+    from pilot.governor import trends
+    old = {"date": "2230.01.01", "systems": 21, "pops": 6700, "military_power": 1000.0, "tech_power": 500.0,
+           "stockpile": {"alloys": 1200.0}, "peers": {"military_power": {"median": 2000.0, "rank": 14}}}
+    now = {"date": "2231.01.01", "systems": 21, "pops": 6900, "military_power": 1030.0, "tech_power": 540.0,
+           "stockpile": {"alloys": 2240.0}, "peers": {"military_power": {"median": 2300.0, "rank": 14}}}
+    t = trends(old, now)
+    assert t.startswith("Change since 2230.01.01 (12 months):")
+    assert "systems +0" in t and "pops +200" in t and "military +30 (the others' median +300)" in t
+    assert "ALLOYS PILING UP" in t, t
+    assert "ALLOYS" not in trends(old, {**now, "stockpile": {"alloys": 1300.0}})
+    assert trends(None, now) == ""
+
+
+def test_war_ending_is_urgent():
+    from pilot.governor import urgent_changes
+    war = {"name": "A vs B", "attacker": False}
+    assert urgent_changes({"wars": [war]}, {"wars": []}) == ["war ended: A vs B"]
+
+
+def test_metrics_keep_neighbours_for_comparison():
+    from pilot.governor import metrics
+    b = {"date": "2236.06.01", "neighbours": [{"id": 1, "name": "Ess Jaggon Authority", "military": 2475.0, "economy": 1282.0,
+         "tech": 978.0, "systems": 27, "techs": 77, "borders": True, "border_range": 0, "opinion_ours": 681,
+         "opinion_theirs": 681, "threat": 0, "status": ["alliance"], "kind": "default"}]}
+    n = metrics(b)["neighbours"][0]
+    assert n == {"name": "Ess Jaggon Authority", "military": 2475.0, "economy": 1282.0, "tech": 978.0, "systems": 27,
+                 "opinion": 681, "status": ["alliance"]}

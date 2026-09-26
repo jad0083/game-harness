@@ -41,10 +41,22 @@ pub struct Planet {
     pub crime: Option<f64>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 pub struct War {
     pub name: String,
     pub attacker: bool,
+    pub start: String,
+    /// The other side's countries: (name, military power).
+    pub enemies: Vec<(String, f64)>,
+    pub enemy_ids: Vec<u64>,
+    /// War goal types, e.g. "wg_conquest" (empty when a side has none).
+    pub our_goal: String,
+    pub their_goal: String,
+    /// War exhaustion 0..1; at 1 the other side can force a status-quo peace.
+    pub our_exhaustion: f64,
+    pub their_exhaustion: f64,
+    pub battles_won: usize,
+    pub battles_lost: usize,
 }
 
 /// Our value, the other regular empires' median and best, and our rank (1 = best) for one measure.
@@ -65,6 +77,32 @@ pub struct Peers {
     /// Measures where we are below half the median ("falling behind").
     pub behind: Vec<String>,
 }
+
+/// Another empire we have contact with, compared with us (ratios are theirs / ours).
+#[derive(Debug, Serialize, Default, Clone)]
+pub struct Neighbour {
+    pub id: u64,
+    pub name: String,
+    /// "default" (regular empire) or "fallen_empire"/"awakened_fallen_empire".
+    pub kind: String,
+    pub military: f64,
+    pub economy: f64,
+    pub tech: f64,
+    pub systems: usize,
+    pub techs: usize,
+    /// Our border distance to them from our relation (0 when they touch our borders).
+    pub border_range: Option<i64>,
+    pub borders: bool,
+    /// Opinion: ours of them and theirs of us.
+    pub opinion_ours: Option<i64>,
+    pub opinion_theirs: Option<i64>,
+    pub threat: f64,
+    /// Relation flags that are set, e.g. "hostile", "rival", "alliance", "commercial pact", "at war".
+    pub status: Vec<String>,
+}
+
+/// How many neighbours the briefing lists (nearest first; wars and shared borders first).
+pub const MAX_NEIGHBOURS: usize = 6;
 
 /// The save's "no object" reference (u32::MAX).
 const NULL_ID: &str = "4294967295";
@@ -135,6 +173,8 @@ pub struct Briefing {
     pub peers: Peers,
     /// Room to expand around our space, and the ships that do it.
     pub expansion: Expansion,
+    /// Nearest empires we have contact with (see MAX_NEIGHBOURS).
+    pub neighbours: Vec<Neighbour>,
 }
 
 fn expansion(
@@ -258,6 +298,76 @@ fn peers(countries: &Obj, player: &str, c: &Obj, origins: &std::collections::Has
         p.stats.insert((*key).to_string(), PeerStat { ours: ours[i], median, best, rank });
     }
     p
+}
+
+/// The `relation={…}` entries of a country's relations_manager.
+fn relations<'d, 't>(c: &Obj<'d, 't>) -> Vec<Obj<'d, 't>> {
+    obj(c, "relations_manager")
+        .map(|rm| rm.fields().filter(|(k, _, _)| k.read_str() == "relation").filter_map(|(_, _, v)| v.read_object().ok()).collect())
+        .unwrap_or_default()
+}
+
+/// Empires we have contact with (regular and fallen), nearest first: at war with us, then those
+/// sharing a border, then by border distance. `at_war` holds the ids we are fighting.
+fn neighbours(countries: &Obj, us: u64, c: &Obj, origins: &std::collections::HashMap<String, i64>, at_war: &[u64]) -> Vec<Neighbour> {
+    let yes = |r: &Obj, k: &str| get(r, k).and_then(|v| v.read_string().ok()).as_deref() == Some("yes");
+    let mut out = Vec::new();
+    for r in relations(c) {
+        let Some(id) = i64_(&r, "country").map(|n| n as u64) else { continue };
+        if id == us || !yes(&r, "contact") {
+            continue;
+        }
+        let Some(them) = obj(countries, &id.to_string()) else { continue };
+        let kind = string(&them, "type").unwrap_or_default();
+        if !matches!(kind.as_str(), "default" | "fallen_empire" | "awakened_fallen_empire") {
+            continue;
+        }
+        let theirs = relations(&them).into_iter().find(|x| i64_(x, "country").map(|n| n as u64) == Some(us));
+        let mut status = Vec::new();
+        if at_war.contains(&id) {
+            status.push("AT WAR".to_string());
+        }
+        for (key, label) in [
+            ("is_rival", "rival"), ("hostile", "hostile"), ("friendly", "friendly"), ("alliance", "alliance"),
+            ("commercial_pact", "commercial pact"), ("research_agreement", "research agreement"),
+            ("migration_access", "migration access"), ("embassy", "embassy"), ("closed_borders", "we closed borders"),
+        ] {
+            if yes(&r, key) {
+                status.push(label.to_string());
+            }
+        }
+        if let Some(t) = theirs.as_ref() {
+            if yes(t, "is_rival") && !yes(&r, "is_rival") {
+                status.push("they rival us".to_string());
+            }
+            if yes(t, "closed_borders") {
+                status.push("they closed borders".to_string());
+            }
+        }
+        if get(&r, "truce").and_then(|v| v.read_scalar().ok()).and_then(|x| x.to_i64().ok()).is_some_and(|t| t != 0) {
+            status.push("truce".to_string());
+        }
+        let stats = empire_stats(&them, origins);
+        out.push(Neighbour {
+            id,
+            name: name_of(&them),
+            kind,
+            military: f64_(&them, "military_power").unwrap_or(0.0),
+            economy: f64_(&them, "economy_power").unwrap_or(0.0),
+            tech: f64_(&them, "tech_power").unwrap_or(0.0),
+            systems: stats[0] as usize,
+            techs: stats[2] as usize,
+            border_range: i64_(&r, "border_range"),
+            borders: yes(&r, "borders"),
+            opinion_ours: i64_(&r, "relation_current"),
+            opinion_theirs: theirs.as_ref().and_then(|t| i64_(t, "relation_current")),
+            threat: f64_(&r, "threat").unwrap_or(0.0),
+            status,
+        });
+    }
+    out.sort_by_key(|n| (!at_war.contains(&n.id), !n.borders, n.border_range.unwrap_or(i64::MAX)));
+    out.truncate(MAX_NEIGHBOURS);
+    out
 }
 
 /// Extract `meta` and `gamestate` from a `.sav` ZIP.
@@ -817,14 +927,59 @@ fn strings(v: Option<Val>) -> Vec<String> {
         .map(|a| a.values().filter_map(|x| x.read_string().ok()).collect())
         .unwrap_or_default()
 }
-/// Localisation key of a `name={ key="…" }` block, made readable ("NAME_Earth" → "Earth").
+/// A `name={ key="…" variables={…} }` block as readable text ("NAME_Earth" → "Earth").
 fn name_of(o: &Obj) -> String {
-    let key = obj(o, "name").and_then(|n| string(&n, "key")).unwrap_or_default();
-    readable(&key)
+    obj(o, "name").map(|n| render_name(&n)).unwrap_or_default()
+}
+/// Render a localisation block. Template keys ("%ADJECTIVE%", "PREFIX_NAME_FORMAT", …) have no
+/// text of their own here (the game's localisation files are not read), so they become their
+/// variables' values in save order: `%ADJECTIVE%{adjective=SPEC_YaxKalock, 1=Consolidated}` →
+/// "Yax Kalock Consolidated".
+fn render_name(n: &Obj) -> String {
+    let key = string(n, "key").unwrap_or_default();
+    let vars: Vec<String> = get(n, "variables")
+        .and_then(|v| v.read_array().ok())
+        .map(|a| {
+            a.values()
+                .filter_map(|x| x.read_object().ok())
+                .filter_map(|x| obj(&x, "value").map(|v| render_name(&v)))
+                .filter(|t| !t.is_empty())
+                .collect()
+        })
+        .unwrap_or_default();
+    let template = key.starts_with('%') || key.ends_with("_FORMAT") || key.contains("_vs_");
+    if template && !vars.is_empty() {
+        vars.join(" ")
+    } else {
+        readable(&key)
+    }
 }
 fn readable(key: &str) -> String {
-    let k = key.strip_prefix("NAME_").unwrap_or(key);
-    k.replace('_', " ")
+    // Drop scaffolding prefixes: "NAME_Earth", "SPEC_YaxKalock", "HUMAN1_PLANET_StYegorov".
+    let mut k = key.strip_prefix("NAME_").or_else(|| key.strip_prefix("SPEC_")).unwrap_or(key);
+    while let Some((head, rest)) = k.split_once('_') {
+        let scaffold = !rest.is_empty() && head.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit());
+        if !scaffold {
+            break;
+        }
+        k = rest;
+    }
+    // "YaxKalock" → "Yax Kalock"; "StYegorov" → "St Yegorov"
+    let mut out = String::new();
+    let mut prev_lower = false;
+    for ch in k.chars() {
+        if ch == '_' {
+            out.push(' ');
+            prev_lower = false;
+            continue;
+        }
+        if ch.is_ascii_uppercase() && prev_lower {
+            out.push(' ');
+        }
+        prev_lower = ch.is_ascii_lowercase();
+        out.push(ch);
+    }
+    out
 }
 /// `{ energy=1 minerals=2 }` → map.
 fn resources(o: &Obj) -> BTreeMap<String, f64> {
@@ -963,23 +1118,67 @@ pub fn brief_gamestate(gamestate: &[u8]) -> Result<Briefing> {
     if let Some(wars) = obj(&root, "war") {
         for (_, _, w) in wars.fields() {
             let Ok(w) = w.read_object() else { continue };
-            let side_has = |side: &str| {
-                get(&w, side)
-                    .and_then(|v| v.read_array().ok())
-                    .map(|a| {
-                        a.values().filter_map(|x| x.read_object().ok()).any(|x| {
-                            i64_(&x, "country").map(|n| n as u64) == Some(b.country)
-                        })
-                    })
-                    .unwrap_or(false)
-            };
-            let (att, def) = (side_has("attackers"), side_has("defenders"));
-            if att || def {
-                b.wars.push(War { name: name_of(&w), attacker: att });
+            if let Some(war) = war_of(&w, b.country, &countries) {
+                b.wars.push(war);
             }
         }
     }
+    let at_war: Vec<u64> = b.wars.iter().flat_map(|w| w.enemy_ids.iter().copied()).collect();
+    b.neighbours = neighbours(&countries, b.country, &c, &origins, &at_war);
     Ok(b)
+}
+
+/// One war we take part in, seen from our side.
+fn war_of(w: &Obj, us: u64, countries: &Obj) -> Option<War> {
+    let side = |key: &str| -> Vec<u64> {
+        get(w, key)
+            .and_then(|v| v.read_array().ok())
+            .map(|a| a.values().filter_map(|x| x.read_object().ok()).filter_map(|x| i64_(&x, "country")).map(|n| n as u64).collect())
+            .unwrap_or_default()
+    };
+    let (attackers, defenders) = (side("attackers"), side("defenders"));
+    let attacker = attackers.contains(&us);
+    if !attacker && !defenders.contains(&us) {
+        return None;
+    }
+    let who = |ids: &[u64]| -> Vec<(String, f64)> {
+        ids.iter()
+            .filter_map(|id| obj(countries, &id.to_string()).map(|c| (name_of(&c), f64_(&c, "military_power").unwrap_or(0.0))))
+            .collect()
+    };
+    let names = |v: &[(String, f64)]| v.iter().map(|(n, _)| n.as_str()).collect::<Vec<_>>().join(", ");
+    let (ours, theirs) = if attacker { (&attackers, &defenders) } else { (&defenders, &attackers) };
+    let enemies = who(theirs);
+    let goal = |key: &str| obj(w, key).and_then(|g| string(&g, "type")).unwrap_or_default();
+    let (att_goal, def_goal) = (goal("attacker_war_goal"), goal("defender_war_goal"));
+    let (att_ex, def_ex) = (f64_(w, "attacker_war_exhaustion").unwrap_or(0.0), f64_(w, "defender_war_exhaustion").unwrap_or(0.0));
+    // each battle lists its attacker side and whether it won
+    let (mut won, mut lost) = (0, 0);
+    if let Some(battles) = get(w, "battles").and_then(|v| v.read_array().ok()) {
+        for bt in battles.values().filter_map(|x| x.read_object().ok()) {
+            let ids = |k: &str| strings(get(&bt, k)).iter().filter_map(|x| x.parse::<u64>().ok()).collect::<Vec<_>>();
+            let we_attacked = ids("attackers").iter().any(|c| ours.contains(c));
+            let we_defended = ids("defenders").iter().any(|c| ours.contains(c));
+            if !we_attacked && !we_defended {
+                continue;
+            }
+            let attacker_won = get(&bt, "attacker_victory").and_then(|v| v.read_string().ok()).as_deref() == Some("yes");
+            if attacker_won == we_attacked { won += 1 } else { lost += 1 }
+        }
+    }
+    Some(War {
+        name: format!("{} vs {}", names(&who(&attackers)), names(&who(&defenders))),
+        attacker,
+        start: string(w, "start_date").unwrap_or_default(),
+        enemies,
+        enemy_ids: theirs.clone(),
+        our_goal: if attacker { att_goal.clone() } else { def_goal.clone() },
+        their_goal: if attacker { def_goal } else { att_goal },
+        our_exhaustion: if attacker { att_ex } else { def_ex },
+        their_exhaustion: if attacker { def_ex } else { att_ex },
+        battles_won: won,
+        battles_lost: lost,
+    })
 }
 
 impl Briefing {
@@ -1045,6 +1244,21 @@ impl Briefing {
                 s += &format!("FALLING BEHIND (below half the median): {}\n", parts.join("; "));
             }
         }
+        if !self.neighbours.is_empty() {
+            let ratio = |t: f64, o: f64| if o > 0.0 { format!("{:.1}x", t / o) } else { "?".to_string() };
+            s += "Neighbours (nearest first; military/economy/tech as a multiple of ours; opinion ours→them / theirs→us):\n";
+            for n in &self.neighbours {
+                let place = if n.borders { "shares our border".to_string() } else { format!("border distance {}", n.border_range.map(|r| r.to_string()).unwrap_or_else(|| "?".into())) };
+                let op = |o: Option<i64>| o.map(|v| v.to_string()).unwrap_or_else(|| "?".into());
+                let fe = if n.kind == "default" { "" } else { " [FALLEN EMPIRE]" };
+                s += &format!(
+                    "- {}{fe}: {place}; military {} ({}), economy {}, tech {}; systems {}, techs {}; opinion {} / {}; threat {:.0}{}\n",
+                    n.name, ratio(n.military, self.military_power), num(n.military), ratio(n.economy, self.economy_power),
+                    ratio(n.tech, self.tech_power), n.systems, n.techs, op(n.opinion_ours), op(n.opinion_theirs), n.threat,
+                    if n.status.is_empty() { String::new() } else { format!("; {}", n.status.join(", ")) }
+                );
+            }
+        }
         let x = &self.expansion;
         s += &format!(
             "Expansion room: 1 jump from our space {} systems ({} unclaimed, {} held by others); within 2 jumps {} ({} unclaimed, {} of them surveyed by us first). Ships: {} construction, {} science, {} colony\n",
@@ -1060,7 +1274,14 @@ impl Briefing {
             s += "Wars: none\n";
         } else {
             for w in &self.wars {
-                s += &format!("War: {} (we are {})\n", w.name, if w.attacker { "attacker" } else { "defender" });
+                let enemies = w.enemies.iter().map(|(n, m)| format!("{n} (military {m:.0})")).collect::<Vec<_>>().join(", ");
+                let goal = |g: &str| if g.is_empty() { "none".to_string() } else { g.trim_start_matches("wg_").replace('_', " ") };
+                s += &format!(
+                    "War since {}: {} (we are {}) against {}; war goals: theirs {}, ours {}; war exhaustion ours {:.0}%, theirs {:.0}% (100% lets the other side force peace); battles won {}, lost {}\n",
+                    w.start, w.name, if w.attacker { "attacker" } else { "defender" }, enemies,
+                    goal(&w.their_goal), goal(&w.our_goal), w.our_exhaustion * 100.0, w.their_exhaustion * 100.0,
+                    w.battles_won, w.battles_lost
+                );
             }
         }
         let gov: Vec<&String> = self.flags.iter().filter(|f| f.starts_with("governor_")).collect();
@@ -1282,6 +1503,68 @@ mod tests {
             assert!(VANILLA.contains(&(resource.as_str(), category.as_str())), "{name}: {resource} in {category} is not spent by a non-nomadic empire");
         }
         assert_eq!(checked, budget.matches("\tresource =").count());
+    }
+
+    #[test]
+    fn war_is_described_from_our_side_with_readable_names() {
+        // Shapes copied from a 4.5.1 save (2236): templated names, sides, goals, exhaustion, battles.
+        let gs = br#"date="2230.01.01"
+player={ { name="x" country=0 } }
+country={
+    0={ name={ key="NAME_United_Nations_of_Earth" } type="default" military_power=1000
+        relations_manager={ relation={ owner=0 country=16777224 contact=yes borders=yes border_range=0 relation_current=-300 threat=40 hostile=yes is_rival=yes } } }
+    16777224={ name={ key="%ADJECTIVE%" variables={ { key="adjective" value={ key="SPEC_YaxKalock" } } { key="1" value={ key="%ADJ%" variables={ { key="1" value={ key="Consolidated" } } } } } } }
+        type="default" military_power=2500
+        relations_manager={ relation={ owner=16777224 country=0 contact=yes relation_current=-450 } } }
+}
+war={ 0=none 1={
+    name={ key="war_vs_adjectives" variables={ { key="1" value={ key="%ADJECTIVE%" variables={ { key="adjective" value={ key="SPEC_YaxKalock" } } } } } } }
+    start_date="2229.11.07"
+    attackers={ { call_type=primary country=16777224 } }
+    defenders={ { call_type=primary country=0 } }
+    battles={ { defenders={ 0 } attackers={ 16777224 } attacker_victory=yes }
+              { defenders={ 0 } attackers={ 16777224 } attacker_victory=no }
+              { defenders={ 16777224 } attackers={ 0 } attacker_victory=no } }
+    attacker_war_goal={ type="wg_conquest" }
+    defender_war_goal={ type="wg_humiliation" }
+    attacker_war_exhaustion=0.48141 defender_war_exhaustion=0.25
+} }
+"#;
+        let b = brief_gamestate(gs).unwrap();
+        assert_eq!(b.name, "United Nations of Earth");
+        let w = &b.wars[0];
+        assert_eq!(w.name, "Yax Kalock Consolidated vs United Nations of Earth");
+        assert!(!w.attacker);
+        assert_eq!(w.enemies, vec![("Yax Kalock Consolidated".to_string(), 2500.0)]);
+        assert_eq!((w.our_goal.as_str(), w.their_goal.as_str()), ("wg_humiliation", "wg_conquest"));
+        assert_eq!((w.our_exhaustion, w.their_exhaustion), (0.25, 0.48141));
+        assert_eq!((w.battles_won, w.battles_lost), (1, 2), "we won a defence, lost a defence and an attack");
+        let t = b.to_text();
+        assert!(t.contains("War since 2229.11.07: Yax Kalock Consolidated vs United Nations of Earth (we are defender) against Yax Kalock Consolidated (military 2500); war goals: theirs conquest, ours humiliation; war exhaustion ours 25%, theirs 48%"), "{t}");
+        let n = &b.neighbours[0];
+        assert_eq!((n.name.as_str(), n.borders, n.opinion_ours, n.opinion_theirs), ("Yax Kalock Consolidated", true, Some(-300), Some(-450)));
+        assert_eq!(n.status, vec!["AT WAR", "rival", "hostile"]);
+        assert!(t.contains("- Yax Kalock Consolidated: shares our border; military 2.5x (2500)"), "{t}");
+    }
+
+    #[test]
+    fn readable_names_drop_scaffolding() {
+        assert_eq!(readable("NAME_Earth"), "Earth");
+        assert_eq!(readable("HUMAN1_PLANET_StYegorov"), "St Yegorov");
+        assert_eq!(readable("SPEC_YaxKalock"), "Yax Kalock");
+        assert_eq!(readable("NAME_United_Nations_of_Earth"), "United Nations of Earth");
+        assert_eq!(readable("Consolidated"), "Consolidated");
+    }
+
+    #[test]
+    fn neighbours_come_from_contacts_nearest_first() {
+        let b = brief_save(include_bytes!("../tests/fixtures/stellaris_2212_03_01.sav")).unwrap();
+        let n = &b.neighbours[0];
+        assert_eq!(n.name, "Havarigga High Kingdom");
+        assert_eq!(n.border_range, Some(0));
+        assert!(n.military > 0.0 && n.systems > 0, "{n:?}");
+        assert!(b.to_text().contains("Neighbours (nearest first"));
+        assert!(brief_save(SAVE).unwrap().neighbours.is_empty(), "2200.11: no contacts yet");
     }
 
     #[test]

@@ -108,7 +108,35 @@ def metrics(b: dict) -> dict:
             "room": (b.get("expansion") or {}).get("reach_unclaimed"),
             "room_surveyed": (b.get("expansion") or {}).get("reach_unclaimed_surveyed"),
             "construction_ships": (b.get("expansion") or {}).get("construction_ships"),
-            "techs_known": b.get("techs_known"), "wars": len(b.get("wars", [])), "directive": current_directive(b)}
+            "techs_known": b.get("techs_known"), "wars": len(b.get("wars", [])), "directive": current_directive(b),
+            "neighbours": [{"name": n.get("name"), "military": n.get("military"), "economy": n.get("economy"),
+                            "tech": n.get("tech"), "systems": n.get("systems"), "opinion": n.get("opinion_theirs"),
+                            "status": n.get("status", [])} for n in b.get("neighbours", [])]}
+
+
+def trends(old: dict | None, now: dict) -> str:
+    """One line comparing two metrics snapshots (about 12 months apart), for the decision prompt.
+
+    Flags alloys piling up while military stays flat: the AI then cannot turn more military budget
+    into ships (fleet at naval capacity, starbases at their cap), which the save does not show."""
+    if not old:
+        return ""
+    span = months(now["date"]) - months(old["date"])
+    def d(key: str) -> float:
+        return (now.get(key) or 0) - (old.get(key) or 0)
+    med = lambda m, key: ((m.get("peers") or {}).get(key) or {}).get("median") or 0
+    parts = [f"systems {d('systems'):+.0f}", f"pops {d('pops'):+.0f}",
+             f"military {d('military_power'):+.0f} (the others' median {med(now, 'military_power') - med(old, 'military_power'):+.0f})",
+             f"tech power {d('tech_power'):+.0f}"]
+    a_old, a_now = (old.get("stockpile") or {}).get("alloys", 0), (now.get("stockpile") or {}).get("alloys", 0)
+    parts.append(f"alloy stock {a_now - a_old:+.0f}")
+    line = f"Change since {old['date']} ({span} months): " + ", ".join(parts) + "."
+    mil_old = old.get("military_power") or 0
+    if a_now > 1000 and a_now > 1.5 * max(a_old, 1) and d("military_power") < 0.1 * max(mil_old, 1):
+        line += (" ALLOYS PILING UP while military is flat: the AI is not converting alloys into ships"
+                 " (likely at naval capacity or the starbase cap), so a directive that adds military budget"
+                 " will not raise military power by itself.")
+    return line
 
 
 def _num(v) -> str:
@@ -122,9 +150,12 @@ def urgent_changes(before: dict, now: dict) -> list[str]:
     """Reasons to decide before the scheduled date: a new war, or a resource turning negative."""
     out = []
     old_wars = {w["name"] for w in before.get("wars", [])}
+    new_wars = {w["name"] for w in now.get("wars", [])}
     for w in now.get("wars", []):
         if w["name"] not in old_wars:
             out.append(f"new war: {w['name']} (we are {'attacker' if w.get('attacker') else 'defender'})")
+    for name in sorted(old_wars - new_wars):
+        out.append(f"war ended: {name}")
     for res, net in now.get("net", {}).items():
         if net < 0 <= before.get("net", {}).get(res, 0):
             out.append(f"{res} net turned negative ({net:+.1f}/month)")
@@ -556,6 +587,19 @@ class Governor:
                 return b, f"scheduled ({self.s.decide_every_months} months)"
             last = b
 
+    def _trend(self, b: dict) -> str:
+        """Compare with this campaign's metrics from about 12 months ago (telemetry)."""
+        if self.log.telemetry is None or not self.log.campaign_id:
+            return ""
+        try:
+            rows = self.log.telemetry.query(
+                "SELECT data FROM metrics WHERE campaign_id=? AND month IS NOT NULL AND month <= ? ORDER BY month DESC LIMIT 1",
+                (self.log.campaign_id, months(b["date"]) - 12))
+            return trends(json.loads(rows[0]["data"]) if rows else None, metrics(b))
+        except Exception as e:  # noqa: BLE001 - trends are advisory
+            self.log.emit("briefing_error", error=f"trends: {e}"[:200])
+            return ""
+
     def _decide(self, b: dict, reason: str) -> None:
         self._status("deciding")
         self.log.state.episodes += 1
@@ -581,6 +625,9 @@ class Governor:
                   f"Current directive: {current or 'none'}{held}.",
                   "Campaign plan:\n" + (self.plan or "(none yet: write one in `plan`)"),
                   "Briefing from the latest autosave:", self.last_briefing]
+        trend = self._trend(b)
+        if trend:
+            prompt.append(trend)
         if self.log.telemetry is not None and self.log.campaign_id:
             try:   # given up front, so the model rarely needs a second call for it
                 prompt.append("Earlier directive changes in this campaign and what followed 12 months later:\n"
