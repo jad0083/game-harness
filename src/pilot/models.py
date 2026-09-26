@@ -3,8 +3,10 @@ listed in PILOT_MODELS (comma-separated pydantic-ai model strings, e.g. "openai:
 
 from __future__ import annotations
 
+import json
 import os
 import re
+from pathlib import Path
 
 from .config import Settings
 
@@ -42,3 +44,31 @@ def available_models(s: Settings) -> list[str]:
         print(f"could not list Gemini models: {e}", flush=True)
     models.update(m.strip() for m in os.environ.get("PILOT_MODELS", "").split(",") if valid_model(m.strip()))
     return sorted(models)
+
+
+PREFS_FILE = "pilot-settings.json"
+
+
+def load_prefs(runs_dir: Path) -> dict:
+    """The model and thinking level chosen on the dashboard (used by the next `pilot run`)."""
+    try:
+        d = json.loads((runs_dir / PREFS_FILE).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    out = {}
+    if isinstance(d.get("model"), str) and valid_model(d["model"]):
+        out["model"] = d["model"]
+    if d.get("thinking") in THINKING:
+        out["thinking"] = d["thinking"]
+    return out
+
+
+def save_prefs(runs_dir: Path, model: str, thinking: str) -> dict:
+    if not valid_model(model):
+        raise ValueError(f"not a model name: {model!r} (expected provider:name)")
+    if thinking not in THINKING:
+        raise ValueError(f"thinking must be one of {', '.join(THINKING)}")
+    runs_dir.mkdir(parents=True, exist_ok=True)
+    prefs = {"model": model, "thinking": thinking}
+    (runs_dir / PREFS_FILE).write_text(json.dumps(prefs, indent=1), encoding="utf-8")
+    return prefs

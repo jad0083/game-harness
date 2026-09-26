@@ -223,8 +223,8 @@
   <span class="fresh" id="fresh" aria-live="polite"></span>
   <div class="facts" id="facts"></div>
   <span class="spacer"></span>
-  <label class="picker live-only" hidden>Model <select id="model-select" aria-label="Model"></select></label>
-  <label class="picker live-only" hidden>Thinking <select id="thinking-select" aria-label="Thinking level">
+  <label class="picker" title="The model the pilot uses; with no run active, it is saved for the next run">Model <select id="model-select" aria-label="Model"></select></label>
+  <label class="picker" title="Thinking effort">Thinking <select id="thinking-select" aria-label="Thinking level">
     <option value="off">off</option><option value="low">low</option><option value="medium">medium</option><option value="high">high</option>
   </select></label>
   <button class="btn live-only" id="b-toggle" hidden>Pause</button>
@@ -341,9 +341,7 @@ async function loadStatus() {
   $("status").className = "pill " + st.replace(/ /g, "_");
   document.querySelectorAll(".live-only").forEach((b) => (b.hidden = !S.live));
   const info = S.status.info || {};
-  const canSwitch = S.live && (info.controls || []).includes("set_model");
-  document.querySelectorAll(".picker").forEach((el) => (el.hidden = !canSwitch));
-  if (canSwitch) syncPickers(info);
+  syncPickers(S.live ? { models: info.models, model: S.status.model, thinking: info.thinking } : null);
   const paused = ["paused", "needs_attention"].includes(st);
   $("b-toggle").textContent = paused ? "Resume" : "Pause";
   const facts = [];
@@ -789,22 +787,39 @@ function toast(msg) {
   const t = $("toast"); t.textContent = msg; t.hidden = false;
   clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), 5000);
 }
-function syncPickers(info) {
-  const sel = $("model-select"), models = [...new Set([...(info.models || []), S.status.model])].filter(Boolean).sort();
+// Pickers are always shown: during a live run they show (and switch) the running model; otherwise
+// they show the saved choice for the next run.
+S.catalog = null;
+async function loadCatalog() {
+  try { S.catalog = await api("/api/models"); } catch { S.catalog = S.catalog || { models: [] }; }
+}
+function syncPickers(live) {
+  const cat = S.catalog || { models: [] };
+  const current = live ? live.model : cat.model, thinking = live ? live.thinking : cat.thinking;
+  const sel = $("model-select");
+  const models = [...new Set([...(cat.models || []), ...((live && live.models) || []), current])].filter(Boolean).sort();
   const key = models.join("|");
   if (sel.dataset.key !== key) {
     sel.innerHTML = models.map((m) => `<option value="${esc(m)}">${esc(m.replace(/^google:/, ""))}</option>`).join("");
     sel.dataset.key = key;
   }
-  if (document.activeElement !== sel) sel.value = S.status.model;
-  if (document.activeElement !== $("thinking-select") && info.thinking) $("thinking-select").value = info.thinking;
+  if (document.activeElement !== sel && current) sel.value = current;
+  if (document.activeElement !== $("thinking-select") && thinking) $("thinking-select").value = thinking;
 }
 async function switchModel() {
   const model = $("model-select").value, thinking = $("thinking-select").value;
-  const r = await fetch("/control", { method: "POST", headers: { "Content-Type": "application/json" },
-                                      body: JSON.stringify({ action: "set_model", model, thinking }) });
-  if (r.ok) toast(`Switched to ${model} with ${thinking} thinking, from the next model call.`);
-  else toast(`Could not switch: ${await r.text()}`);
+  const r = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" },
+                                           body: JSON.stringify({ model, thinking }) });
+  if (!r.ok) { toast(`Could not save: ${await r.text()}`); return; }
+  let live = false;
+  if (S.live) {
+    const c = await fetch("/control", { method: "POST", headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ action: "set_model", model, thinking }) });
+    live = c.ok;
+  }
+  toast(live ? `Switched to ${model} (${thinking} thinking) from the next model call, and saved for later runs.`
+             : `Saved: the next run uses ${model} with ${thinking} thinking.`);
+  await loadCatalog();
   loadStatus();
 }
 $("model-select").addEventListener("change", switchModel);
@@ -818,6 +833,7 @@ $("frame").addEventListener("error", () => { $("frame").hidden = true; $("nofram
 let resizeT; addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTimeout(renderChart, 150); });
 
 (async () => {
+  await loadCatalog();
   await loadStatus();
   setMode(((S.status.info || {}).controls || []).includes("chat") ? "chat" : "instruct");
   await loadCampaigns();

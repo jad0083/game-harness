@@ -143,9 +143,13 @@ def main(argv: list[str] | None = None) -> int:
         return view(s, a.port)
     if a.cmd == "rebuild-telemetry":
         return rebuild(s)
-    s.model = a.model or s.model
+    # the dashboard's model choice beats the environment; command-line options beat both
+    from .models import load_prefs
+    prefs = load_prefs(s.runs_dir)
+    s.model = a.model or prefs.get("model") or s.model
     s.coords = a.coords or s.coords
-    s.thinking = a.thinking or s.thinking
+    s.thinking = a.thinking or prefs.get("thinking") or s.thinking
+    s.governor_thinking = a.thinking or prefs.get("thinking") or s.governor_thinking
     if a.game and a.game != s.game:
         from .config import default_journal
         s.game = a.game

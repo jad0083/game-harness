@@ -111,6 +111,13 @@ def metrics(b: dict) -> dict:
             "techs_known": b.get("techs_known"), "wars": len(b.get("wars", [])), "directive": current_directive(b)}
 
 
+def _num(v) -> str:
+    """Readable number for reasons: 405.92577500000004 -> '406', 1.0 -> '1', 12.34 -> '12.3'."""
+    if not isinstance(v, (int, float)):
+        return str(v)
+    return f"{v:.0f}" if abs(v) >= 100 or float(v).is_integer() else f"{v:.1f}"
+
+
 def urgent_changes(before: dict, now: dict) -> list[str]:
     """Reasons to decide before the scheduled date: a new war, or a resource turning negative."""
     out = []
@@ -125,7 +132,7 @@ def urgent_changes(before: dict, now: dict) -> list[str]:
     for m in (now.get("peers") or {}).get("behind", []):
         if m not in was_behind:
             st = now["peers"]["stats"].get(m, {})
-            out.append(f"falling behind other empires in {m} ({st.get('ours')} vs median {st.get('median')})")
+            out.append(f"falling behind other empires in {m} ({_num(st.get('ours'))} vs median {_num(st.get('median'))})")
     return out
 
 

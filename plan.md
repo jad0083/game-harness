@@ -98,3 +98,4 @@
 - [x] Live model selector on the dashboard: model and thinking pickers (Gemini models for this key + PILOT_MODELS), switch from the next model call, each decision records its model
 - [x] Dashboard design pass: standing as chips with expansion room, single pause/resume toggle, decision-mark tooltips, no-wrap meta, compact empty screen panel, Talk auto-scroll, confirmation toasts
 - [x] Agent 1.3.0 deployed on the PC (remotely, 2026-09-25): write root limited to mod/governor_bridge/, mod/governor_bridge.mod and dlc_load.json; other writes refused (403) on the PC
+- [x] Model and thinking pickers always visible: with no run they save the choice for the next run (runs/pilot-settings.json; command-line options still win), during a run they also switch it live

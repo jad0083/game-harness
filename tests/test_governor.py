@@ -53,8 +53,10 @@ def test_helpers():
     assert any("new war: Border War (we are defender)" in r for r in reasons)
     assert any("food net turned negative" in r for r in reasons)
     assert urgent_changes(now, now) == []   # an existing deficit or war does not re-trigger
-    lag = {**now, "peers": {"behind": ["systems"], "stats": {"systems": {"ours": 1, "median": 10}}}}
+    lag = {**now, "peers": {"behind": ["systems", "military_power"], "stats": {"systems": {"ours": 1, "median": 10},
+           "military_power": {"ours": 193.75781, "median": 405.92577500000004}}}}
     assert any("falling behind other empires in systems (1 vs median 10)" in r for r in urgent_changes(now, lag))
+    assert any("military_power (194 vs median 406)" in r for r in urgent_changes(now, lag))
     assert not any("falling behind" in r for r in urgent_changes(lag, lag))
 
 
@@ -770,3 +772,36 @@ def test_loading_another_game_stops_the_governor_acting(setup):
     assert game.paused
     gov.stop()
     t.join(timeout=5)
+
+
+def test_model_choice_is_saved_for_the_next_run_without_a_live_pilot(setup, monkeypatch):
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from pilot import cli, models
+    from pilot.dashboard import make_app
+    s, _ = setup
+    monkeypatch.setattr(models, "available_models", lambda st: ["google:gemini-3.8-flash", "google:gemini-3.1-pro-preview"])
+
+    async def go():
+        async with TestClient(TestServer(make_app(None, s.runs_dir))) as c:
+            cat = await (await c.get("/api/models")).json()
+            assert "google:gemini-3.1-pro-preview" in cat["models"]
+            r = await c.post("/api/settings", json={"model": "google:gemini-3.1-pro-preview", "thinking": "high"})
+            assert r.status == 200 and (await r.json())["applied_live"] is False
+            assert (await c.post("/api/settings", json={"model": "bad", "thinking": "high"})).status == 400
+            cat = await (await c.get("/api/models")).json()
+            assert cat["model"] == "google:gemini-3.1-pro-preview" and cat["thinking"] == "high"
+
+    asyncio.run(go())
+    assert models.load_prefs(s.runs_dir) == {"model": "google:gemini-3.1-pro-preview", "thinking": "high"}
+    # the next `pilot run` picks it up; a command-line option still wins
+    seen = {}
+    monkeypatch.setenv("PILOT_RUNS_DIR", str(s.runs_dir))
+    monkeypatch.setattr(cli, "run", lambda st, ep: seen.setdefault("s", st) and 0)
+    cli.main(["run", "--game", "stellaris"])
+    assert seen["s"].model == "google:gemini-3.1-pro-preview" and seen["s"].governor_thinking == "high"
+    seen.clear()
+    cli.main(["run", "--game", "stellaris", "--model", "google:gemini-3.8-flash"])
+    assert seen["s"].model == "google:gemini-3.8-flash"
