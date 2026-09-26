@@ -8,7 +8,7 @@
 min_milestones_top = 3          # each of the 3 highest-priority pillars needs >= 1 milestone
 # spellings models use for the recorded measures (seen live: "rank:military" on 2452.03)
 metric_aliases = { military = "military_power", economy = "economy_power", tech = "tech_power", planets = "colonies", techs = "techs_known", "rank:military" = "rank:military_power", "rank:economy" = "rank:economy_power", "rank:tech" = "rank:tech_power", "rank:planets" = "rank:colonies" }
-instructions = """Everything must be achievable through directives, tech picks or market orders: the game's AI builds, designs ships and moves fleets. Build on the empire's species, ethics, civics and origin.
+instructions = """Everything must be achievable through directives, tech picks or market orders: the game's AI builds, designs ships and moves fleets.
 While at war, the defence stance must name its exit condition (peace, war exhaustion, or planets retaken). When a hostile neighbour's military is twice ours or more, a defence goal is two shipyards in different systems and alloy production on two or more planets; never reason from a naval-capacity cap the briefing does not show."""
 
 [metrics]

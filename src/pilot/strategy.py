@@ -302,9 +302,11 @@ def _action_field(a: ActionLimits):
     if a.kind == "tech":
         return (list[str], Field(default_factory=list,
                                  description=f"tech ids to pick when offered; at most {a.max_items}"))
-    return (list[MarketOrder], Field(default_factory=list,
-                                     description=f"at most {a.max_items} monthly order(s), amount "
-                                                 f"{a.amount_min}-{a.amount_max}; resources: {', '.join(a.resources)}"))
+    if a.kind == "market":
+        return (list[MarketOrder], Field(default_factory=list,
+                                         description=f"at most {a.max_items} monthly order(s), amount "
+                                                     f"{a.amount_min}-{a.amount_max}; resources: {', '.join(a.resources)}"))
+    raise ValueError(f"unknown action kind {a.kind!r}")
 
 
 def review_model(spec: PillarSpec) -> type[BaseModel]:
@@ -371,6 +373,10 @@ def strategist_instructions(spec: PillarSpec) -> str:
             lines.append(a.note)
     lines.append("Priorities decide which directives the governor prefers. Never change a pillar marked pinned: "
                  "the human set it. If nothing material changed, answer change=false.")
+    lines.append("Build on our species (race) and its traits, ethics, civics and origin: fill `identity` with how "
+                 "they shape this strategy, naming the traits you rely on and the pillars they affect (e.g. "
+                 "industrious → economy on minerals; enduring → long wars are affordable), and weigh a "
+                 "neighbour's traits when dealing with or fighting it.")
     if spec.instructions:
         lines.append(spec.instructions)
     return "\n".join(lines)

@@ -498,3 +498,27 @@ def test_the_review_schema_keeps_the_identity_field_for_the_species_guardrail():
     assert identity.get("default") == ""
     assert "how our species" in identity["description"] and "traits by name" in identity["description"]
     assert "which pillars each trait affects" in identity["description"]
+
+
+# ---- Task 3 fix round 1 -------------------------------------------------------------------------
+
+def test_the_species_guidance_is_part_of_every_games_prompt():
+    """Fix round 1, item 1: the migration dropped the species/identity guidance from the old
+    STRATEGY_INSTRUCTIONS; it belongs in the generated prompt (every game, not only Stellaris)."""
+    from pilot.pillars import PillarDef, PillarSpec
+    from pilot.strategy import strategist_instructions
+    text = strategist_instructions(SPEC)
+    assert "naming the traits you rely on" in text and "weigh a neighbour's traits" in text
+    synthetic = PillarSpec(game="synthetic", pillars={"eco": PillarDef("eco", "Economy", "money and stuff")},
+                           metrics=("m",))
+    text2 = strategist_instructions(synthetic)
+    assert "naming the traits you rely on" in text2 and "weigh a neighbour's traits" in text2
+
+
+def test_action_field_rejects_an_unknown_action_kind():
+    """Fix round 1, item 2: _action_field only knows tech/market; anything else is a clear error,
+    not a silent fallthrough to the market shape."""
+    from pilot.pillars import ActionLimits
+    from pilot.strategy import _action_field
+    with pytest.raises(ValueError, match="unknown action kind"):
+        _action_field(ActionLimits(kind="something_else", field="x", max_items=1))
