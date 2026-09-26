@@ -33,6 +33,12 @@ from .trace import serialize
 DIRECTIVES = ("expand", "consolidate_economy", "tech_rush", "prepare_war", "defend", "diplomacy_first")
 NEEDS_HUMAN = {"prepare_war"}      # strategy.md: only after the human confirmed the target
 
+# Big-event triggers: an urgent decision whose reason contains one of these, or a set
+# review_requested (a failed review pending retry, or an off-frame decision), starts a strategy
+# review (capped at one per 12 in-game months unless it is a retry or no strategy exists yet).
+EVENT_TRIGGERS = ("new war", "war ended", "crisis", "colony lost", "boxed in", "milestone missed",
+                  "off-frame", "military fell")
+
 INSTRUCTIONS = """You are the governor of a Stellaris empire. The game's own AI runs the empire day to day;
 you steer it by choosing ONE standing directive, which the harness applies (policies and a flag the
 AI keeps). The game is paused while you decide. Answer with `keep` unless the situation changed
@@ -49,8 +55,6 @@ class GovernorDecision(BaseModel):
                        "diplomacy_first"] = Field(description="The directive to hold from now on, or 'keep'")
     reason: str = Field(description="One or two sentences citing the briefing numbers that decided it")
     note: str = Field(default="", description="Optional one line for the game journal (war, first colony, crisis...)")
-    plan: str = Field(default="", description="The full rewritten campaign plan (goals, milestones with in-game target "
-                      "dates, current focus), ONLY when the plan should change; otherwise empty")
 
 
 class StrategyReview(BaseModel):
@@ -193,6 +197,16 @@ def urgent_changes(before: dict, now: dict) -> list[str]:
     for kind, name, *_ in (now.get("galaxy") or {}).get("crises", []):
         if name not in old_crises:
             out.append(f"crisis: {name} ({kind}) appeared")
+    old_planets, new_planets = len(before.get("planets", [])), len(now.get("planets", []))
+    if new_planets < old_planets:
+        out.append(f"colony lost: {old_planets} -> {new_planets}")
+    old_room = (before.get("expansion") or {}).get("reach_unclaimed")
+    new_room = (now.get("expansion") or {}).get("reach_unclaimed")
+    if old_room is not None and old_room > 0 and new_room == 0:
+        out.append("boxed in")
+    mil_before, mil_now = before.get("military_power") or 0, now.get("military_power")
+    if mil_before > 0 and mil_now is not None and mil_now <= 0.5 * mil_before:
+        out.append(f"military fell: {round(mil_before)} -> {round(mil_now)}")
     for res, net in now.get("net", {}).items():
         if net < 0 <= before.get("net", {}).get(res, 0):
             out.append(f"{res} net turned negative ({net:+.1f}/month)")
@@ -202,6 +216,23 @@ def urgent_changes(before: dict, now: dict) -> list[str]:
             st = now["peers"]["stats"].get(m, {})
             out.append(f"falling behind other empires in {m} ({_num(st.get('ours'))} vs median {_num(st.get('median'))})")
     return out
+
+
+def frame_text(strategy: Strategy | None, milestones: str) -> str:
+    """The strategy frame shown to a decision: the pillar ranking, focus, stances and any
+    at-risk/missed milestones, replacing the old free-text campaign plan."""
+    if strategy is None:
+        return ""
+    lines = ["STRATEGY FRAME (from the Strategist; choose within it):",
+             f"Directive ranking: {' > '.join(strategy.ranking())}", f"Focus: {strategy.focus}"]
+    for name, pl in sorted(strategy.pillars.items(), key=lambda kv: kv[1].priority):
+        lines.append(f"{pl.priority}. {name}{' (pinned by the human)' if pl.pinned else ''}: {pl.stance}")
+    at_risk = [m for m in milestones.splitlines() if m.endswith(("at_risk", "missed"))]
+    if at_risk:
+        lines.append("Milestones at risk or missed:\n" + "\n".join(at_risk))
+    lines.append("Pick the highest-ranked directive that fits the briefing, or keep. Choose a directive outside "
+                 "this ranking only for an urgent line (new war, deficit, crisis) and say so in the reason.")
+    return "\n".join(lines)
 
 
 # -- tools ------------------------------------------------------------------------------------
@@ -613,7 +644,13 @@ class Governor:
                     if reason == "request":
                         b = self._handle_request(self.requests.get_nowait(), b)
                     elif reason:
+                        # a review already pending (a failed review, or an earlier off-frame tag) is a
+                        # retry; a freshly off-frame-tagged decision waits for the *next* decision point
+                        # instead of reviewing inline, so its own trace/choice is not re-litigated at once
+                        pending = self.review_requested is not None
                         self._decide(b, reason)
+                        if pending or (reason.startswith("urgent:") and any(t in reason for t in EVENT_TRIGGERS)):
+                            self._maybe_event_review(b, self.review_requested or reason, retry=pending)
                 except Exception as e:  # noqa: BLE001 - any game-control failure (agent down, focus lost, a panel open)
                     self._needs_attention(f"game control failed: {type(e).__name__}: {e}. "
                                           "Fix the game screen or the agent, then press Resume.")
@@ -813,7 +850,7 @@ class Governor:
         self.last_briefing = self.game.briefing_text()
         prompt = [f"Decision point: {reason}.",
                   f"Current directive: {current or 'none'}{held}.",
-                  "Campaign plan:\n" + (self.plan or "(none yet: write one in `plan`)"),
+                  frame_text(self.strategy, self._milestones_text()) or "No strategy yet.",
                   "Briefing from the latest autosave:", self.last_briefing]
         trend = self._trend(b)
         if trend:
@@ -856,6 +893,10 @@ class Governor:
         st.tokens_out += usage.output_tokens or 0
         st.requests += usage.requests or 0
         chosen = d.directive
+        ranked = self.strategy.ranking() if self.strategy else []
+        off_frame = bool(ranked) and chosen not in ("keep", current) and chosen not in ranked[:2]
+        if off_frame:
+            self.review_requested = f"off-frame decision: {chosen} ({reason})"
         applied = "kept"
         if chosen != "keep" and chosen != current:
             if chosen in NEEDS_HUMAN:
@@ -882,18 +923,31 @@ class Governor:
                       seconds=round(time.time() - started, 1),
                       tokens_in=usage.input_tokens, tokens_out=usage.output_tokens)
         self.log.save_trace(n, {**base, "decision": d.directive, "reason": d.reason, "outcome": applied,
-                                "seconds": round(time.time() - started, 1), "tokens_in": usage.input_tokens,
-                                "tokens_out": usage.output_tokens, "steps": serialize(result.all_messages())})
+                                "off_frame": off_frame, "seconds": round(time.time() - started, 1),
+                                "tokens_in": usage.input_tokens, "tokens_out": usage.output_tokens,
+                                "steps": serialize(result.all_messages())})
         self.store.add_episode(reason, f"{d.directive} ({applied}): {d.reason}", applied, b["date"])
         self.journal.note(f"{d.directive} ({applied}) — {d.reason}", b["date"])
         if d.note:
             self.journal.note(d.note, b["date"])
-        if d.plan.strip():
-            self._set_plan(d.plan.strip(), b["date"], "decision")
         if not (reason == "start of run" and reviewed_at_start):   # a review just ran for this decision point
             self._since_retro += 1
             if self.s.retro_every and self._since_retro >= self.s.retro_every:
                 self._review_strategy(b, f"scheduled after {self.s.retro_every} decisions")
+
+    def _maybe_event_review(self, b: dict, trigger: str, retry: bool = False) -> bool:
+        """Run a strategy review for a big event, at most once per 12 in-game months. `retry`
+        (a failed review pending retry) and having no strategy yet both bypass the cap and never
+        move its last-review month: only event-triggered reviews count toward it."""
+        bypass = retry or self.strategy is None
+        last = getattr(self, "_last_event_review_month", None)
+        now = months(b["date"])
+        if not bypass and last is not None and now - last < 12:
+            return False
+        if not bypass:
+            self._last_event_review_month = now
+        self._review_strategy(b, trigger)
+        return True
 
     def _set_plan(self, text: str, date: str, source: str) -> None:
         text = html.unescape(text)            # models sometimes write "&amp;"; the dashboard escapes on display
