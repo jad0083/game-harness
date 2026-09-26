@@ -979,6 +979,24 @@ def test_trends_compare_with_twelve_months_ago_and_flag_idle_alloys():
     assert trends(None, now) == ""
 
 
+def test_trends_never_claim_a_naval_cap_the_save_cannot_show():
+    # Theian 2245-2254: the hint said "likely at naval capacity" while the fleet was at 51/115; the
+    # models then chased naval-capacity techs for nine years.
+    from pilot.governor import trends
+    old = {"date": "2230.01.01", "military_power": 1000.0, "stockpile": {"alloys": 1200.0}}
+    now = {"date": "2231.01.01", "military_power": 1030.0, "stockpile": {"alloys": 2240.0}}
+    assert "naval capacity" not in trends(old, now)
+
+
+def test_trends_flag_a_military_collapse_as_losses():
+    from pilot.governor import trends
+    old = {"date": "2244.07.01", "military_power": 3000.0, "stockpile": {"alloys": 300.0}}
+    now = {"date": "2245.06.01", "military_power": 900.0, "stockpile": {"alloys": 400.0}}
+    t = trends(old, now)
+    assert "MILITARY FELL 70%" in t, t
+    assert "MILITARY FELL" not in trends(old, {**now, "military_power": 2000.0})
+
+
 def test_war_ending_is_urgent():
     from pilot.governor import urgent_changes
     war = {"name": "A vs B", "attacker": False}
