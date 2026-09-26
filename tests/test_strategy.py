@@ -353,16 +353,23 @@ def test_market_resources_are_the_manifests_market_resources():
     assert "trade" not in SPEC.actions["market"].resources
 
 
-def test_python_market_amount_limits_equal_the_controllers():
+def test_the_stellaris_pillars_file_limits_equal_the_controllers():
+    """Rust keeps its own tool validation (mcp.rs); the pillars file must never plan what the tools refuse."""
     src = (REPO / "crates/game-controller/src/mcp.rs").read_text(encoding="utf-8")
     lo = re.search(r"const MARKET_AMOUNT_MIN: i64 = (\d+);", src)
     hi = re.search(r"const MARKET_AMOUNT_MAX: i64 = (\d+);", src)
     assert lo and hi, "mcp.rs declares its market amount limits as constants"
-    m = SPEC.actions["market"]
-    assert (m.amount_min, m.amount_max) == (int(lo.group(1)), int(hi.group(1)))
+    market, tech = SPEC.actions["market"], SPEC.actions["tech"]
+    assert (market.amount_min, market.amount_max) == (int(lo.group(1)), int(hi.group(1)))
     body = src[src.index("fn validate_market_orders"):]
     body = body[:body.index("\n}\n")]
     assert "MARKET_AMOUNT_MIN..=MARKET_AMOUNT_MAX" in body, "validate_market_orders uses those constants"
+    orders = re.search(r"orders\.len\(\) > (\d+)", body)
+    assert orders and market.max_items <= int(orders.group(1)), "never more orders than stellaris_market_sync takes"
+    techs = re.search(r"prefer\.len\(\) > (\d+)", src)
+    assert techs and tech.max_items == int(techs.group(1)), "prefer_techs limit equals stellaris_pick_tech's"
+    manifest = tomllib.loads((REPO / "corpora/stellaris/manifest.toml").read_text(encoding="utf-8"))
+    assert set(market.resources) == set(manifest["ui"]["market"]["resources"]) and "trade" not in market.resources
 
 
 # ---- game pillars: rules come from the spec ------------------------------------------------------
