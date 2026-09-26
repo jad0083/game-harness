@@ -21,6 +21,10 @@ def load_dotenv(path: Path = REPO / ".env") -> None:
         os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
 
 
+def default_journal(game: str) -> Path:
+    return {"stellaris": REPO / "games/stellaris/journal.md"}.get(game, REPO / "games/terran-2329/journal.md")
+
+
 @dataclass
 class Settings:
     # LLM: any pydantic-ai model string, e.g. "google:gemini-3.8-flash", "openai:gpt-5",
@@ -42,10 +46,20 @@ class Settings:
     dashboard_port: int = 8790
     commit_learnings: bool = True
     ask_human_timeout_s: float = 45.0
+    # Stellaris governor: game speed while the AI plays (slowest | slow | normal | fast | fastest;
+    # the game is paused while the model decides), in-game months between scheduled decisions,
+    # and seconds between autosave polls.
+    speed: str = "fast"
+    decide_every_months: int = 12
+    poll_s: float = 2.0
 
     @property
     def corpus_dir(self) -> Path:
         return REPO / "corpora" / self.game
+
+    @property
+    def window_title(self) -> str:
+        return {"stellaris": "Stellaris"}.get(self.game, "Galactic Civilizations")
 
     @property
     def controller_bin(self) -> Path:
@@ -73,6 +87,11 @@ class Settings:
         s.dashboard_port = int(env.get("PILOT_PORT", s.dashboard_port))
         s.turns_per_autopilot = int(env.get("PILOT_TURNS", s.turns_per_autopilot))
         s.commit_learnings = env.get("PILOT_COMMIT", "1") not in ("0", "false", "no")
+        s.game = env.get("PILOT_GAME", s.game)
+        s.speed = env.get("PILOT_SPEED", s.speed)
+        s.decide_every_months = int(env.get("PILOT_DECIDE_MONTHS", s.decide_every_months))
+        s.poll_s = float(env.get("PILOT_POLL_S", s.poll_s))
+        s.journal = default_journal(s.game)
         if "PILOT_JOURNAL" in env:
             s.journal = Path(env["PILOT_JOURNAL"])
         return s

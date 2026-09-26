@@ -42,7 +42,10 @@ Without MCP, everything works from the shell: `scripts/play/act.sh`, `ap.sh`, `h
   (Earth, Mars, Artemis, Agena II, Macrinus III). Game log: [`games/terran-2329/journal.md`](games/terran-2329/journal.md).
 - Every turn is verified by the HUD date changing; the autopilot clears 9 kinds of known screens
   by itself and stops only for real decisions (events, research, builds, policies, trades).
-- Agent 1.0.0 is deployed on the PC; agent 1.1.0 (configurable drag) is built, not deployed.
+- **Stellaris** (4.5.1): the pilot app governs an empire over the native AI (observer mode +
+  console directives, decisions from the monthly autosave). Verified live at Fastest speed on a
+  throwaway game; see [`games/stellaris-spike/journal.md`](games/stellaris-spike/journal.md).
+- Agent 1.2.0 (configurable drag, read-only game folders) is deployed on the PC.
 - Open problems and history: [`issues.md`](issues.md); roadmap: [`plan.md`](plan.md).
 
 ---
@@ -54,6 +57,8 @@ Without MCP, everything works from the shell: `scripts/play/act.sh`, `ap.sh`, `h
 | **Windows Remote Agent** | [`crates/game-agent`](crates/game-agent) & [`windows_agent/game-agent.exe`](windows_agent/game-agent.exe) | Compiled native Rust (`x86_64-pc-windows-gnu`) | ~8ms screen capture & JPEG encode; native Win32 `SendInput`, `SetCursorPos`, and `mouse_event`; Per-Monitor V2 HiDPI aware. |
 | **Linux Native Controller** | [`crates/game-controller`](crates/game-controller) → `target/release/game-controller` (build with `cargo build --release`; `.mcp.json` points here) | Compiled native Rust (`x86_64-unknown-linux-gnu`) | ~1 ms agent round-trip; autopilot that verifies each turn by the HUD date changing and stops on dialogs or blockers; in-memory corpus (search <1 ms); stdio MCP server. |
 | **Game Corpus** | [`corpora/galciv4/`](corpora/galciv4/) | `manifest.toml` + `templates/*.png` + generated `data/*.json` + `docs/*.md` + `strategy.md` | 34 hotkeys, 17 screens (9 recognised by template), 3 macros; 130 techs, 528 improvements, 66 executive orders, 203 policies, 355 ship components, 167 starbase modules and 994 events generated from the game's own XML by `scripts/extract-galciv4.py`; 13 reference docs chunked into 168 searchable pieces. |
+| **Stellaris corpus** | [`corpora/stellaris/`](corpora/stellaris/) | `manifest.toml`, `directives.toml`, `templates/`, `docs/*.md`, `strategy.md`, `pilot.md` | 46 wiki reference docs (1,418 chunks), 6 governor directives, pause-state screen, verified console/speed keys. Save reader in `crates/game-controller/src/stellaris.rs`. |
+| **Pilot app** | [`src/pilot/`](src/pilot/) (`python -m pilot`) | Python 3.13, pydantic-ai (any provider: Gemini, OpenAI, Anthropic, Ollama) | Plays autonomously with an API key: GC4 blockers as vision episodes; Stellaris as a text-only governor. Live dashboard on :8790; run logs in `runs/`. |
 | **Play helpers** | [`scripts/play/`](scripts/play/) | Bash + Python | `act.sh` (one action + frame), `ap.sh` (autopilot), `hover.sh` (tooltips), `capture-template.py` (new known screens). |
 | **Legacy Python harness** | [`src/harness/`](src/harness/), `windows_agent/agent.py` | Python 3.12 | The first implementation; **not deployed**. Its tests still run in CI. |
 
@@ -202,6 +207,27 @@ git add <paths> && scripts/ci-commit.sh "type(scope): message" "body"   # commit
 Rust: 41 tests (controller: coordinate mapping, imaging incl. real-frame fixtures, corpus,
 autopilot classifier, known-screen loading, MCP schema; agent: batch and drag validation).
 Python: 55 tests (extractor fixtures, offline corpus CLI, legacy harness).
+
+## Pilot app (autonomous player with any LLM)
+
+```bash
+echo 'GEMINI_API_KEY=…' >> .env                 # or OPENAI_API_KEY / ANTHROPIC_API_KEY
+.venv/bin/python -m pilot check --game stellaris
+.venv/bin/python -m pilot run --game galciv4                                   # vision episodes per blocker
+.venv/bin/python -m pilot run --game stellaris --speed fastest --months 12      # governor
+.venv/bin/python -m pilot run --model openai:gpt-5 --game stellaris --episodes 3 --no-commit
+```
+Dashboard: `http://<controller>:8790/` (status, in-game date, decisions, tokens, pause / resume /
+stop, instructions to the model). Events: `runs/<id>/events.jsonl`. Environment overrides:
+`PILOT_MODEL`, `PILOT_GAME`, `PILOT_SPEED`, `PILOT_DECIDE_MONTHS`, `PILOT_POLL_S`, `PILOT_PORT`,
+`PILOT_COMMIT`, `PILOT_JOURNAL`, `PILOT_THINKING`.
+
+**Stellaris governor** (`src/pilot/governor.py`): pause → briefing from the newest autosave →
+the model returns one directive or `keep` → apply (`play` → flag + policies → `observe`) →
+resume at `--speed` → poll autosaves until `--months` have passed, a new war starts, or a
+resource turns negative → pause → decide again. The game is paused whenever the model thinks,
+so any speed is safe. `prepare_war` is applied only after a human "yes" on the dashboard.
+Measured with Gemini 3.8 Flash: ~6.2k input / ~0.4k output tokens and ~2 s per decision.
 
 ## Game corpus
 

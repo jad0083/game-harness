@@ -2,6 +2,7 @@
 
     python -m pilot check                     # key, model, agent, corpus
     python -m pilot run [--model M] [--port P] [--turns N] [--no-commit] [--episodes K]
+    python -m pilot run --game stellaris [--speed fast|fastest|...] [--months N]
 """
 
 from __future__ import annotations
@@ -58,8 +59,12 @@ def run(s: Settings, episodes: int | None) -> int:
 
     run_id = time.strftime("%Y%m%d-%H%M%S")
     log = EventLog(s.runs_dir, run_id, s.model)
-    game = McpGame(s.controller_bin, s.corpus_dir, s.agent_url, REPO)
-    pilot = Pilot(s, game, log)
+    game = McpGame(s.controller_bin, s.corpus_dir, s.agent_url, REPO, title=s.window_title)
+    if s.game == "stellaris":
+        from .governor import Governor
+        pilot = Governor(s, game, log)
+    else:
+        pilot = Pilot(s, game, log)
     serve_in_background(pilot, s.dashboard_host, s.dashboard_port)
     print(f"pilot {run_id}: model {s.model}; dashboard http://{s.dashboard_host}:{s.dashboard_port}/ ; "
           f"log {log.dir / 'events.jsonl'}", flush=True)
@@ -71,7 +76,10 @@ def run(s: Settings, episodes: int | None) -> int:
     signal.signal(signal.SIGTERM, on_signal)
     signal.signal(signal.SIGINT, on_signal)
     try:
-        pilot.run(max_episodes=episodes)
+        if s.game == "stellaris":
+            pilot.run(max_decisions=episodes)
+        else:
+            pilot.run(max_episodes=episodes)
     finally:
         game.close()
         log.close()
@@ -84,6 +92,7 @@ def main(argv: list[str] | None = None) -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
     for name in ("check", "run"):
         p = sub.add_parser(name)
+        p.add_argument("--game", choices=["galciv4", "stellaris"])
         p.add_argument("--model", help="pydantic-ai model string, e.g. google:gemini-3.8-flash")
         p.add_argument("--coords", choices=["auto", "norm1000", "pixels"])
         p.add_argument("--thinking", choices=["off", "low", "medium", "high"])
@@ -92,16 +101,25 @@ def main(argv: list[str] | None = None) -> int:
     run_p.add_argument("--turns", type=int, help="turns per autopilot call")
     run_p.add_argument("--episodes", type=int, help="stop after this many decisions (testing)")
     run_p.add_argument("--no-commit", action="store_true", help="don't commit learnings")
+    run_p.add_argument("--speed", choices=["slowest", "slow", "normal", "fast", "faster", "fastest"],
+                       help="Stellaris game speed while the AI plays ('faster' = fastest)")
+    run_p.add_argument("--months", type=int, help="Stellaris: in-game months between scheduled decisions")
     a = ap.parse_args(argv)
     s = Settings.from_env()
     s.model = a.model or s.model
     s.coords = a.coords or s.coords
     s.thinking = a.thinking or s.thinking
+    if a.game and a.game != s.game:
+        from .config import default_journal
+        s.game, s.journal = a.game, default_journal(a.game)
     if a.cmd == "check":
         return check(s)
     s.dashboard_port = a.port or s.dashboard_port
     s.turns_per_autopilot = a.turns or s.turns_per_autopilot
     s.commit_learnings = s.commit_learnings and not a.no_commit
+    if a.speed:
+        s.speed = "fastest" if a.speed == "faster" else a.speed
+    s.decide_every_months = a.months or s.decide_every_months
     return run(s, a.episodes)
 
 

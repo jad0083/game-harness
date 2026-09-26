@@ -17,6 +17,8 @@ Everything below was verified in live play on 2026-09-25 unless marked **unverif
 | Game corpus | `corpora/galciv4/` | Everything game-specific: hotkeys, known screens, macros, generated game data, strategy, reference docs. The Rust code is game-agnostic. |
 | Play helpers | `scripts/play/` | Shell wrappers for the act → look → decide loop (`act.sh`, `ap.sh`, `hover.sh`, `capture-template.py`). |
 | Game journal | `games/terran-2329/journal.md` | What happened in the current game and why. Read it before resuming play. |
+| Stellaris | `corpora/stellaris/`, `crates/game-controller/src/stellaris.rs`, `src/pilot/governor.py` | Governor over the native AI: autosave briefing, console directives, speed and pause. See §10. |
+| Pilot app | `src/pilot/` (`python -m pilot`) | Autonomous player with any LLM API key (README → "Pilot app"). |
 
 Hard facts:
 - Screen 3840×2160 (DPI-aware agent). All screenshots and all coordinates you pass are in
@@ -207,3 +209,28 @@ screenshots, or the game's raw XML (`incoming/`).
 - `src/harness/` and `windows_agent/agent.py` are the earlier Python implementation, **not
   deployed**; don't extend them.
 - Parallel work: use a separate git worktree/branch per task, merge after `scripts/ci.sh` passes.
+
+## 10. Stellaris (governor over the native AI)
+
+Verified live 2026-09-25 (`games/stellaris-spike/journal.md`). The empire is played by the game's
+own AI in **observer mode**; the model only picks one standing directive.
+
+```bash
+C="./target/release/game-controller --corpus corpora/stellaris"
+$C stellaris brief                   # ~2 KB briefing from the newest autosave (read via the agent)
+$C stellaris directive expand        # play 0 → flags + policies → observe; confirmed in game.log
+$C stellaris speed fastest           # slowest | slow | normal | fast | fastest
+$C stellaris pause                   # / resume — state read from the screen, safe to repeat
+$C stellaris log -l 30               # tail of logs/game.log
+.venv/bin/python -m pilot run --game stellaris --speed fastest --months 12   # the governor loop
+```
+Rules:
+- **Never touch other save folders.** "Commonwealth of Man 3" is the user's own game. Test only
+  in a throwaway, non-Ironman game; the console disables achievements.
+- While observing, console `effect` has no country scope and silently does nothing: always
+  `play <id>` first (the `directive` command does this).
+- Space toggles pause, so never press it blind; use `stellaris pause|resume`.
+- Directives are only those in `corpora/stellaris/directives.toml` (identifiers `[a-z0-9_]`); a
+  new directive needs policy options that exist in the game's `common/policies`.
+- Settings used: autosave Monthly (`settings.txt` `autosave=2`), tutorial off.
+

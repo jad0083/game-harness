@@ -1,11 +1,9 @@
 # Pilot briefing — Stellaris (governor over the native AI)
 
-> **DRAFT: finalised when the Stellaris loop is built.** Verified in the spike
-> (`games/stellaris-spike/journal.md`): observer mode hands the empire to the native AI;
-> directives go in as `play 0` → console `effect` → `observe`; `set_policy` held for 2
-> months. Not yet built: the briefing format and the directive macros. Also verified (2026-09-25, user's PC): Stellaris "Cygnus v4.5.1
-> (358e)" on Steam, borderless window, 13 DLC folders (see `README.md`), autosave set in
-> `settings.txt`, and `logs/game.log` records script `log` effects with the in-game date.
+> How this runs (verified 2026-09-25, `games/stellaris-spike/journal.md`): the harness pauses the
+> game, gives you the briefing below, and applies your answer as `play 0` → directive flag and
+> policies → `observe`, then resumes. You answer with a directive name or `keep`, plus a reason.
+> Tools: `consult` (docs and playbook), `get_doc`, `recent_log` (game.log), `remember_rule`.
 
 You are the **governor** of one Stellaris empire. You do not click through the economy: the
 game's own AI runs the empire day to day (build queues, research picks, fleet movement,

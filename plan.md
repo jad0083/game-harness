@@ -73,7 +73,8 @@
 - [x] Directive bridge: `directives.toml` + `stellaris directive <name>` / MCP `stellaris_directive` (play → flag + policies → observe, confirmed in game.log), `stellaris log` / `stellaris_log`; verified live 2026-09-25 (flag and stance held 20 months)
 - [x] Game speed control: `stellaris speed` / MCP `stellaris_speed` (slowest … fastest), verified live
 - [x] Pause state from the screen: `stellaris pause|resume` / MCP `stellaris_pause`, safe to repeat; directives pause while applying. Verified at Fastest (30/30 save reads, directive confirmed)
-- [ ] Controller: `stellaris` loop (watch autosaves + game.log, apply directives, configurable speed: fast/fastest)
-- [ ] Pilot: Stellaris game adapter; finalise `corpora/stellaris/pilot.md` with the verified `play 0` → effect → `observe` pattern
+- [x] Governor loop in the pilot app (`src/pilot/governor.py`, `pilot run --game stellaris --speed … --months …`): pauses to decide, urgent triggers (new war, new deficit), `prepare_war` needs a human yes; verified live with Gemini at Fastest (3 decisions)
+- [x] Pilot: Stellaris game adapter (`McpGame` Stellaris methods, `FakeStellaris`); `pilot.md` finalised
+- [ ] Long unattended Stellaris run in a real game (user's choice of empire), with learned rules committed
 - [ ] Test which directives the AI keeps long term (edicts, economy, war); decide on a companion bridge mod (directive events, AI weights, `log` hooks)
 - [ ] Screen templates: pause/date and event popups
