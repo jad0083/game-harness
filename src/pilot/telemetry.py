@@ -87,6 +87,9 @@ class Telemetry:
         cols = {r[1] for r in self.db.execute("PRAGMA table_info(decisions)")}
         if "model" not in cols:       # added later: the model that made each decision (it can change mid-run)
             self.db.execute("ALTER TABLE decisions ADD COLUMN model TEXT")
+        for col in ("model_version", "thinking"):   # the release that answered (aliases resolve), thinking level
+            if col not in cols:
+                self.db.execute(f"ALTER TABLE decisions ADD COLUMN {col} TEXT")
 
     def close(self) -> None:
         self.db.close()
@@ -160,12 +163,14 @@ class Telemetry:
             decision = data.get("decision") or tr.get("decision") or data.get("situation")
             self._exec(
                 "INSERT OR REPLACE INTO decisions(run_id, episode, campaign_id, t, date, month, trigger, decision, reason,"
-                " outcome, current, tokens_in, tokens_out, seconds, trace, model) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                " outcome, current, tokens_in, tokens_out, seconds, trace, model, model_version, thinking)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (run_id, data.get("episode"), self._campaign_of(run_id), t, data.get("date"), month_index(data.get("date")),
                  data.get("trigger"), decision, data.get("reason") or data.get("situation"), data.get("outcome"),
                  data.get("current"), data.get("tokens_in"), data.get("tokens_out"), data.get("seconds"),
                  json.dumps(tr, ensure_ascii=False, default=str) if tr else None,
-                 data.get("model") or tr.get("model")))
+                 data.get("model") or tr.get("model"),
+                 data.get("model_version") or tr.get("model_version"), data.get("thinking_level") or tr.get("thinking_level")))
 
     # -- outcome scoring ----------------------------------------------------------------------
 

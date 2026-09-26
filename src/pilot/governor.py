@@ -20,6 +20,7 @@ from typing import Literal, Protocol
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent, RunContext, Tool
 from pydantic_ai.exceptions import UsageLimitExceeded
+from pydantic_ai.messages import ModelResponse
 from pydantic_ai.usage import UsageLimits
 
 from .agent import HumanChannel, model_settings, run_with_retry
@@ -112,6 +113,17 @@ def metrics(b: dict) -> dict:
             "neighbours": [{"name": n.get("name"), "military": n.get("military"), "economy": n.get("economy"),
                             "tech": n.get("tech"), "systems": n.get("systems"), "opinion": n.get("opinion_theirs"),
                             "status": n.get("status", [])} for n in b.get("neighbours", [])]}
+
+
+def served_model(result) -> str:
+    """The model version(s) that answered, as the provider reported them: an alias such as
+    gemini-pro-latest comes back as the release it points to (e.g. gemini-3.1-pro-preview)."""
+    names = []
+    for m in result.all_messages():
+        name = getattr(m, "model_name", None) if isinstance(m, ModelResponse) else None
+        if name and name not in names:
+            names.append(name)
+    return ", ".join(names)
 
 
 def trends(old: dict | None, now: dict) -> str:
@@ -642,8 +654,8 @@ class Governor:
         started = time.time()
         deps = GovDeps(self.game, self.store, self.log)
         n = self.log.state.episodes
-        base = {"episode": n, "model": self.s.model, "game": self.s.game, "date": b["date"], "trigger": reason,
-                "current": current}
+        base = {"episode": n, "model": self.s.model, "thinking_level": self.s.governor_thinking, "game": self.s.game,
+                "date": b["date"], "trigger": reason, "current": current}
         try:
             result = run_with_retry(
                 lambda: self.agent.run_sync("\n".join(prompt), deps=deps,
@@ -659,6 +671,7 @@ class Governor:
                                     "steps": [{"type": "prompt", "text": "\n".join(prompt)}]})
             return
         d, usage = result.output, result.usage
+        base["model_version"] = served_model(result)
         st = self.log.state
         st.tokens_in += usage.input_tokens or 0
         st.tokens_out += usage.output_tokens or 0
@@ -722,7 +735,7 @@ class Governor:
                   "Directive changes and what followed:\n" + outcomes,
                   "Latest briefing:\n" + self.last_briefing]
         started = time.time()
-        base = {"episode": n, "model": self.s.model, "game": self.s.game, "date": b["date"],
+        base = {"episode": n, "model": self.s.model, "thinking_level": self.s.governor_thinking, "game": self.s.game, "date": b["date"],
                 "trigger": f"retrospective after {self.s.retro_every} decisions", "current": current_directive(b)}
         try:
             result = run_with_retry(
@@ -733,6 +746,7 @@ class Governor:
             self.log.emit("episode_error", error=f"retrospective: {type(e).__name__}: {e}"[:500])
             return
         r, usage = result.output, result.usage
+        base["model_version"] = served_model(result)
         st = self.log.state
         st.tokens_in += usage.input_tokens or 0
         st.tokens_out += usage.output_tokens or 0
