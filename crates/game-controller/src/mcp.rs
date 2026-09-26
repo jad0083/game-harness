@@ -441,7 +441,7 @@ impl McpServer {
             }));
             tools.push(serde_json::json!({
                 "name": "stellaris_market_sync",
-                "description": "Make the empire's monthly Market trades match `orders` (at most 2): removes any current order not listed and adds any listed order that is missing, through the Market screen's Add/Remove dialogs. Never leaves the Market open, even on error. Refuses if Stellaris is not the foreground window.",
+                "description": "Make the empire's monthly Market trades match `orders` (at most 2): removes any current order not listed and adds any listed order that is missing, through the Market screen's Add/Remove dialogs. Never leaves the Market open, even on error. Refuses if Stellaris is not the foreground window. Changes are computed from the last autosave; call at most once per autosave.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -982,9 +982,9 @@ fn validate_prefer(prefer: &[String]) -> Result<()> {
 }
 
 /// `stellaris_market_sync`'s `orders`: at most 2 monthly trades, side sell/buy, amount 1..=25, and
-/// a resource the manifest has a calibrated icon for (`ui.market.resources`; a `[0, 0]` entry is
-/// a known resource whose point is not yet measured, so it is accepted here and refused later by
-/// `ui_point` when the click is actually attempted).
+/// a resource the manifest has a *calibrated* icon for (`ui.market.resources`). A `[0, 0]` entry
+/// is a known resource whose point is not yet measured; it is rejected here, up front, so the tool
+/// fails before the Market ever opens rather than mid-sync when `ui_point` would refuse the click.
 fn validate_market_orders(orders: &[crate::stellaris::MarketOrderSpec], resources: &toml::Table) -> Result<()> {
     if orders.len() > 2 {
         anyhow::bail!("`orders` takes at most 2 monthly trades, got {}", orders.len());
@@ -996,8 +996,14 @@ fn validate_market_orders(orders: &[crate::stellaris::MarketOrderSpec], resource
         if !(1..=25).contains(&o.amount) {
             anyhow::bail!("order amount must be 1..=25, got {}", o.amount);
         }
-        if !resources.contains_key(&o.resource) {
+        let point = resources.get(&o.resource).and_then(|p| p.as_array());
+        let Some(point) = point else {
             anyhow::bail!("unknown market resource {:?} (not in ui.market.resources)", o.resource);
+        };
+        let x = point.first().and_then(|n| n.as_integer()).unwrap_or(0);
+        let y = point.get(1).and_then(|n| n.as_integer()).unwrap_or(0);
+        if (x, y) == (0, 0) {
+            anyhow::bail!("ui.market.resources.{} is not calibrated", o.resource);
         }
     }
     Ok(())
@@ -1087,6 +1093,14 @@ mod tests {
     }
 
     #[test]
+    fn market_sync_description_warns_against_repeated_calls_on_one_autosave() {
+        let tools = McpServer::list_tools(Some("stellaris"));
+        let tool = tools.iter().find(|t| t["name"] == "stellaris_market_sync").unwrap();
+        let desc = tool["description"].as_str().unwrap();
+        assert!(desc.contains("Changes are computed from the last autosave; call at most once per autosave."), "{desc}");
+    }
+
+    #[test]
     fn drag_options_read_from_args() {
         let none = drag_options(&serde_json::json!({"x1": 1}));
         assert_eq!(none, crate::client::DragOptions::default());
@@ -1117,8 +1131,10 @@ mod tests {
         let o = |side: &str, resource: &str, amount: i64| crate::stellaris::MarketOrderSpec { side: side.into(), resource: resource.into(), amount };
 
         assert!(validate_market_orders(&[o("sell", "energy", 11)], &resources).is_ok());
-        // a resource with an uncalibrated [0,0] point is still a valid key here; ui_point refuses it later
-        assert!(validate_market_orders(&[o("sell", "sr_zro", 5)], &resources).is_ok());
+        // a resource whose manifest point is [0,0] (uncalibrated) is rejected up front, before any
+        // screen opens, not left for `ui_point` to refuse mid-sync.
+        let err = validate_market_orders(&[o("sell", "sr_zro", 5)], &resources).unwrap_err().to_string();
+        assert!(err.contains("sr_zro") && err.contains("not calibrated"), "{err}");
 
         let three = vec![o("sell", "energy", 1), o("buy", "energy", 2), o("sell", "energy", 3)];
         assert!(validate_market_orders(&three, &resources).unwrap_err().to_string().contains("at most 2"));

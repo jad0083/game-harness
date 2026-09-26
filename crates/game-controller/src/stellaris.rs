@@ -1486,8 +1486,22 @@ async fn click_ui_point(client: &crate::client::AgentClient, point: (i32, i32)) 
     client.click((x as f64 * scale).round() as i32, (y as f64 * scale).round() as i32, "left", 1).await
 }
 
+/// The click sequence inside the open Technology screen (swap the field, then the option card).
+/// Kept separate from `pick_tech` so the screen can always be closed afterwards, success or
+/// failure, mirroring `apply_market_changes`/`sync_market`.
+async fn apply_tech_pick(client: &crate::client::AgentClient, swap: (i32, i32), option: (i32, i32)) -> Result<()> {
+    click_ui_point(client, swap).await?;
+    tokio::time::sleep(std::time::Duration::from_millis(600)).await;
+    click_ui_point(client, option).await?;
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    Ok(())
+}
+
 /// Pick the first preferred tech offered in a field under 10% done (screen: F4, swap, option
-/// card). Pauses and closes any open in-game menu first, like the other console/UI actions.
+/// card). Pauses and closes any open in-game menu first, like the other console/UI actions. The
+/// Technology screen is never left open: on error the close key is still pressed before the error
+/// is returned. The pick itself is not verified here — the next autosave confirms it (see the
+/// returned text and Task 7's miss detection, which re-reads the save).
 pub async fn pick_tech(
     client: &crate::client::AgentClient,
     pause: &PauseDetector,
@@ -1502,15 +1516,14 @@ pub async fn pick_tech(
     };
     pause.set_paused(client, true).await?;
     pause.close_menu(client).await?;
+
     let tech = ui.get("tech").context("manifest has no [ui.tech]")?;
     let str_key = |k: &str| tech.get(k).and_then(|v| v.as_str()).map(str::to_string);
     let open_key = str_key("open_key").context("ui.tech.open_key missing")?;
     let close_key = str_key("close_key").unwrap_or_else(|| "esc".to_string());
 
-    require_foreground(client).await?;
-    client.key(&open_key, 1).await?;
-    tokio::time::sleep(std::time::Duration::from_millis(800)).await;
-
+    // Resolve every click point before pressing open_key: a missing or uncalibrated point must
+    // fail without ever opening the Technology screen.
     let swap = tech
         .get("swap")
         .and_then(|s| s.get(&pick.field))
@@ -1521,17 +1534,25 @@ pub async fn pick_tech(
     if (sx, sy) == (0, 0) {
         bail!("ui.tech.swap.{} is not calibrated", pick.field);
     }
-    click_ui_point(client, (sx, sy)).await?;
-    tokio::time::sleep(std::time::Duration::from_millis(600)).await;
-
     let (fx, fy) = ui_point(ui, "tech", "first_option")?;
     let pitch = tech.get("option_pitch").and_then(|v| v.as_integer()).unwrap_or(66) as i32;
-    click_ui_point(client, (fx, fy + pitch * pick.option_index as i32)).await?;
-    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    let option_pt = (fx, fy + pitch * pick.option_index as i32);
 
     require_foreground(client).await?;
-    client.key(&close_key, 1).await?;
-    Ok(format!("picked {} in {} (option {}); the next autosave confirms it", pick.tech, pick.field, pick.option_index + 1))
+    client.key(&open_key, 1).await?;
+    tokio::time::sleep(std::time::Duration::from_millis(800)).await;
+
+    let result = apply_tech_pick(client, (sx, sy), option_pt).await;
+
+    // Always close Technology, even on error, so a failure never leaves it open over the map.
+    let _ = require_foreground(client).await;
+    let _ = client.key(&close_key, 1).await;
+
+    result?;
+    Ok(format!(
+        "clicked {} in {} (option {}); unverified until the next autosave — if the click missed, the field is empty and the game's AI refills it",
+        pick.tech, pick.field, pick.option_index + 1
+    ))
 }
 
 /// One order rendered as `side resource amount` for the tool's result text.
