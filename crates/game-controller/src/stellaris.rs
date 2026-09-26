@@ -344,7 +344,9 @@ fn neighbours(countries: &Obj, us: u64, c: &Obj, origins: &std::collections::Has
                 status.push("they closed borders".to_string());
             }
         }
-        if get(&r, "truce").and_then(|v| v.read_scalar().ok()).and_then(|x| x.to_i64().ok()).is_some_and(|t| t != 0) {
+        // `truce` is a reference; while fighting it can point at an old truce, so skip it then
+        let truce = get(&r, "truce").and_then(|v| v.read_scalar().ok()).and_then(|x| x.to_i64().ok()).is_some_and(|t| t != 0);
+        if truce && !at_war.contains(&id) {
             status.push("truce".to_string());
         }
         let stats = empire_stats(&them, origins);
@@ -391,7 +393,13 @@ pub fn brief_save(bytes: &[u8]) -> Result<Briefing> {
     // The gamestate names the empire by localisation key; `meta` has the displayed name.
     if let Ok(tape) = TextTape::from_slice(&meta) {
         if let Some(name) = string(&tape.utf8_reader(), "name") {
-            b.name = name;
+            // war names were built with the key-derived name ("EMPIRE_DESIGN_humans1" → "humans1")
+            let old = std::mem::replace(&mut b.name, name);
+            if !old.is_empty() {
+                for w in &mut b.wars {
+                    w.name = w.name.replace(&old, &b.name);
+                }
+            }
         }
     }
     Ok(b)
@@ -927,6 +935,10 @@ fn strings(v: Option<Val>) -> Vec<String> {
         .map(|a| a.values().filter_map(|x| x.read_string().ok()).collect())
         .unwrap_or_default()
 }
+#[cfg(test)]
+fn name_of_key(o: &Obj, key: &str) -> String {
+    obj(o, key).map(|n| render_name(&n)).unwrap_or_default()
+}
 /// A `name={ key="…" variables={…} }` block as readable text ("NAME_Earth" → "Earth").
 fn name_of(o: &Obj) -> String {
     obj(o, "name").map(|n| render_name(&n)).unwrap_or_default()
@@ -948,7 +960,9 @@ fn render_name(n: &Obj) -> String {
         })
         .unwrap_or_default();
     let template = key.starts_with('%') || key.ends_with("_FORMAT") || key.contains("_vs_");
-    if template && !vars.is_empty() {
+    if key.starts_with("AofB") && vars.len() == 2 {
+        format!("{} of {}", vars[0], vars[1])          // "AofB" {1=Hegemony 2=Kalaxenan} → "Hegemony of Kalaxenan"
+    } else if (template || key.starts_with("AofB")) && !vars.is_empty() {
         vars.join(" ")
     } else {
         readable(&key)
@@ -956,7 +970,11 @@ fn render_name(n: &Obj) -> String {
 }
 fn readable(key: &str) -> String {
     // Drop scaffolding prefixes: "NAME_Earth", "SPEC_YaxKalock", "HUMAN1_PLANET_StYegorov".
-    let mut k = key.strip_prefix("NAME_").or_else(|| key.strip_prefix("SPEC_")).unwrap_or(key);
+    let mut k = key.strip_prefix("NAME_").unwrap_or(key);
+    if let Some(species) = key.strip_prefix("SPEC_") {
+        // "SPEC_Kalaxenan_planet" (a species name's planet/plural form) → "Kalaxenan"
+        k = species.split('_').next().unwrap_or(species);
+    }
     while let Some((head, rest)) = k.split_once('_') {
         let scaffold = !rest.is_empty() && head.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit());
         if !scaffold {
@@ -1554,6 +1572,10 @@ war={ 0=none 1={
         assert_eq!(readable("SPEC_YaxKalock"), "Yax Kalock");
         assert_eq!(readable("NAME_United_Nations_of_Earth"), "United Nations of Earth");
         assert_eq!(readable("Consolidated"), "Consolidated");
+        assert_eq!(readable("SPEC_Kalaxenan_planet"), "Kalaxenan");
+        let gs = br#"n={ key="AofB" variables={ { key="1" value={ key="Hegemony" } } { key="2" value={ key="SPEC_Kalaxenan_planet" } } } }"#;
+        let tape = jomini::TextTape::from_slice(gs).unwrap();
+        assert_eq!(name_of_key(&tape.utf8_reader(), "n"), "Hegemony of Kalaxenan");
     }
 
     #[test]
