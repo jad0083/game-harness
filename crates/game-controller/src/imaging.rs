@@ -202,6 +202,43 @@ pub fn region_diff_max_strip(a: &RgbImage, b: &RgbImage, roi: Roi, strip_w: u32)
     best / (sw as f64 * rh as f64 * 255.0)
 }
 
+/// Fraction (0..1) of pixels in `roi` ([x, y, w, h], clamped to the frame) whose colour lies
+/// within `range` ([min rgb, max rgb], inclusive).
+pub fn color_fraction(frame: &RgbImage, roi: Roi, range: [[u8; 3]; 2]) -> f64 {
+    let [x, y, w, h] = clamp_roi(roi, frame.width(), frame.height());
+    if w == 0 || h == 0 {
+        return 0.0;
+    }
+    let mut hits = 0u64;
+    for py in y..y + h {
+        for px in x..x + w {
+            let p = frame.get_pixel(px, py);
+            if (0..3).all(|c| p[c] >= range[0][c] && p[c] <= range[1][c]) {
+                hits += 1;
+            }
+        }
+    }
+    hits as f64 / (w as f64 * h as f64)
+}
+
+#[cfg(test)]
+mod color_tests {
+    use super::*;
+    #[test]
+    fn color_fraction_counts_pixels_in_range() {
+        let mut f = RgbImage::from_pixel(10, 10, image::Rgb([0, 0, 0]));
+        for x in 0..5 {
+            for y in 0..10 {
+                f.put_pixel(x, y, image::Rgb([220, 200, 40]));
+            }
+        }
+        let yellow = [[150, 120, 0], [255, 255, 110]];
+        assert!((color_fraction(&f, [0, 0, 10, 10], yellow) - 0.5).abs() < 1e-9);
+        assert_eq!(color_fraction(&f, [5, 0, 5, 10], yellow), 0.0);
+        assert_eq!(color_fraction(&f, [20, 20, 5, 5], yellow), 0.0); // outside the frame
+    }
+}
+
 /// Mean difference (0..1) between `template` and the same-sized region of `frame` whose
 /// top-left corner is (x, y). Returns 1.0 when the region does not fit in the frame.
 pub fn template_diff(frame: &RgbImage, template: &RgbImage, x: u32, y: u32) -> f64 {

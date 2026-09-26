@@ -78,4 +78,10 @@ Open questions for the build:
   Only the 5 most recent autosaves are kept (2200.12 had rotated out by 2202.07).
 - Load Game lists save folders; "Load Latest Save" on United Nations of Earth loads the newest
   autosave. Another folder ("Commonwealth of Man 3", 2219) is the user's own game: never touch it.
+- **Fastest-speed reliability** (2204–2207): 30/30 autosave fetch+parse cycles succeeded while
+  running at Fastest (saves rotate about every 0.4 s). Directives applied while running are
+  confirmed (`GOVERNOR_APPLIED tech_rush` at 2207.1.15; the 2207.02.01 save has the policy and
+  flag). Space toggles pause, so blind presses ended in the wrong state; the "Paused" label
+  pulses (template distance 0.011–0.108), and a yellow-pixel share (23–47% paused, 0% running)
+  reads it reliably. `-`/`=` do not change the pause state.
 

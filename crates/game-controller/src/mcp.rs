@@ -402,6 +402,15 @@ impl McpServer {
                 }
             }));
             tools.push(serde_json::json!({
+                "name": "stellaris_pause",
+                "description": "Pause (paused=true) or resume (paused=false) the game. The state is read from the screen first, so calling it twice is safe. Pause before deliberating at high speeds.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": { "paused": { "type": "boolean" } },
+                    "required": ["paused"]
+                }
+            }));
+            tools.push(serde_json::json!({
                 "name": "stellaris_log",
                 "description": "Last lines of the game's logs/game.log (script log effects carry the in-game date, e.g. directive confirmations and events).",
                 "inputSchema": {
@@ -810,7 +819,8 @@ impl McpServer {
                 let directives = crate::stellaris::Directives::load(&dir)?;
                 let (_, bytes) = crate::stellaris::fetch_latest_save(&self.client).await?;
                 let country = crate::stellaris::brief_save(&bytes)?.country;
-                let lines = crate::stellaris::apply_directive(&self.client, &directives, name, country).await?;
+                let pause = self.corpus.as_ref().map(|c| crate::stellaris::PauseDetector::from_manifest(&c.manifest)).transpose()?;
+                let lines = crate::stellaris::apply_directive(&self.client, &directives, name, country, pause.as_ref()).await?;
                 let text = format!(
                     "Directive {name} applied to country {country} and confirmed in game.log. Console lines:\n{}\nThe next monthly autosave will list governor_directive_{name} under Governor flags.",
                     lines.join("\n")
@@ -821,6 +831,14 @@ impl McpServer {
                 let speed = args.get("speed").and_then(|v| v.as_str()).ok_or_else(|| anyhow::anyhow!("missing `speed`"))?;
                 let set = crate::stellaris::set_speed(&self.client, speed).await?;
                 Ok(serde_json::json!({ "content": [{ "type": "text", "text": format!("Speed set to {set}.") }] }))
+            }
+            "stellaris_pause" => {
+                let want = args.get("paused").and_then(|v| v.as_bool()).ok_or_else(|| anyhow::anyhow!("missing `paused`"))?;
+                let c = self.corpus.as_ref().ok_or_else(|| anyhow::anyhow!("no corpus loaded"))?;
+                let d = crate::stellaris::PauseDetector::from_manifest(&c.manifest)?;
+                let pressed = d.set_paused(&self.client, want).await?;
+                let text = format!("{} ({}).", if want { "Paused" } else { "Running" }, if pressed { "changed" } else { "already" });
+                Ok(serde_json::json!({ "content": [{ "type": "text", "text": text }] }))
             }
             "stellaris_log" => {
                 let n = args.get("lines").and_then(|v| v.as_u64()).unwrap_or(30).min(500) as usize;

@@ -9,7 +9,7 @@ An ultra-low-latency, 100% Rust-powered autonomous AI game harness that plays tu
  │   └─ game-controller (Native Rust)      │         │   (Running borderless / windowed)       │
  │      • game corpus (manifest+data+docs)│         └─────────────────────────────────────────┘
  │      • autopilot (verified turn loop)   │                              ▲
- │      • stdio MCP server (19 tools, +4 Stellaris)      │  HTTP/TCP 8765               │ GDI / Win32 SendInput
+ │      • stdio MCP server (19 tools, +5 Stellaris)      │  HTTP/TCP 8765               │ GDI / Win32 SendInput
  │      • frame diff + luminance check     │ ──────────────► ┌─────────────────────────────────────────┐
  │                                         │ ◄────────────── │ game-agent.exe (Native Rust)            │
  │                                         │  (JPEG / JSON)  │   • Axum 0.8 HTTP API (:8765)           │
@@ -137,6 +137,7 @@ The compiled controller binary provides full programmatic access to all agent fu
 ./target/release/game-controller stellaris directive expand            # apply (Stellaris must be foreground)
 ./target/release/game-controller stellaris log -l 30                   # tail of logs/game.log
 ./target/release/game-controller stellaris speed fastest               # slowest|slow|normal|fast|fastest
+./target/release/game-controller stellaris pause                       # / resume; state read from the screen, safe to repeat
 
 # 12. Launch Stdio MCP Server (Claude Code / Gemini / Antigravity)
 ./target/release/game-controller mcp
@@ -186,6 +187,7 @@ Gemini CLI — `.gemini/settings.json` (in this repo):
 | `stellaris_briefing` | `json` | *Stellaris corpus only.* Briefing from the newest monthly autosave (fetched via the agent's `/files`): date, government, stockpile and net per resource with deficits flagged, power, research and options, policies, planets, wars. About 2 KB of text. |
 | `stellaris_directive` | `name` | *Stellaris only.* Apply a governor directive from `corpora/stellaris/directives.toml`: `play <country>` → clear other directive flags, set `governor_directive_<name>` and its policies → `observe`; confirmed by `GOVERNOR_APPLIED <name>` in game.log. Checks the game is foreground before every keystroke. |
 | `stellaris_speed` | `speed` | *Stellaris only.* Set the game speed: slowest, slow, normal, fast, fastest (`-` ×4 then `=` ×n; fastest ≈ 2.5 in-game months per second). |
+| `stellaris_pause` | `paused` | *Stellaris only.* Pause or resume; reads the state from the screen first (the yellow "Paused" label), so it is safe to repeat. |
 | `stellaris_log` | `lines` | *Stellaris only.* Tail of `logs/game.log`. |
 
 ---

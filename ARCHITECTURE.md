@@ -160,7 +160,7 @@ Each screen is handled at most once per attempt; at most 4 dismissals per turn. 
 - `detect_change_bbox` — crop of the changed region handed to the model with a `ModalEvent`.
 
 ### D. Stdio MCP Server (`mcp.rs`)
-Exposes 19 Model Context Protocol tools over JSON-RPC stdio: screen and input tools, autopilot, and the corpus tools (`corpus_search`, `corpus_get`, `corpus_tech`, `corpus_improvement`, `corpus_order`, `corpus_info`, `corpus_strategy`). Game-specific tools are listed only when their corpus is loaded: `stellaris_briefing`, `stellaris_directive`, `stellaris_speed` and `stellaris_log` with `corpora/stellaris`.
+Exposes 19 Model Context Protocol tools over JSON-RPC stdio: screen and input tools, autopilot, and the corpus tools (`corpus_search`, `corpus_get`, `corpus_tech`, `corpus_improvement`, `corpus_order`, `corpus_info`, `corpus_strategy`). Game-specific tools are listed only when their corpus is loaded: `stellaris_briefing`, `stellaris_directive`, `stellaris_speed`, `stellaris_pause` and `stellaris_log` with `corpora/stellaris`.
 
 ### E. Stellaris save reader (`stellaris.rs`)
 Reads a `.sav` (ZIP of `meta` + `gamestate`, Clausewitz text) with the `jomini` parser and builds
@@ -177,7 +177,15 @@ Directives (`corpora/stellaris/directives.toml`) become console lines: `play <co
 flag and policies plus `log = "GOVERNOR_APPLIED <name>"`, then `observe`. Every identifier must
 match `[a-z0-9_]+`, so a directive cannot inject other commands. `run_console` checks that
 Stellaris is the foreground window before every keystroke, and `apply_directive` waits for the
-marker in `game.log` (read through the agent from its size before the call).
+marker in `game.log` (read through the agent from its size before the call). It pauses the game
+first and restores the previous state afterwards, because between `play` and `observe` the empire
+is not AI-run and at Fastest the ~2 s of typing would be months of game time.
+
+Pause state comes from `[screens.paused]`: a colour signature (`color_range`,
+`color_min_fraction`; `imaging::color_fraction`) over the "Paused" label. That label pulses in
+brightness, so a pixel template misread a paused frame (0.108 vs threshold 0.06); yellow pixels
+are 23–47% of the box while paused and 0% while running. Space toggles pause, so `set_paused`
+checks the screen before and after and never presses blind.
 
 ---
 

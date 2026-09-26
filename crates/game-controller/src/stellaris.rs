@@ -250,6 +250,60 @@ pub async fn set_speed(client: &crate::client::AgentClient, name: &str) -> Resul
     Ok(SPEEDS[idx])
 }
 
+/// Detects the pause state from the manifest's `paused` screen (template of the "Paused" label).
+pub struct PauseDetector {
+    template: image::RgbImage,
+    roi: [f64; 4],
+    threshold: f64,
+    search: u32,
+    /// Colour signature (preferred: the "Paused" label pulses, which defeats the template).
+    color: Option<([[u8; 3]; 2], f64)>,
+}
+
+impl PauseDetector {
+    pub fn from_manifest(m: &crate::corpus::GameManifest) -> Result<PauseDetector> {
+        let def = m.screens.get("paused").context("manifest has no [screens.paused]")?;
+        let rel = def.template.as_ref().context("[screens.paused] has no template")?;
+        let path = m.base_dir.clone().unwrap_or_default().join(rel);
+        let template = image::open(&path).with_context(|| format!("loading {}", path.display()))?.to_rgb8();
+        let roi = def.template_roi.context("[screens.paused] has no template_roi")?;
+        let color = def.color_range.map(|r| (r, def.color_min_fraction.unwrap_or(0.05)));
+        Ok(PauseDetector { template, roi, threshold: def.template_threshold, search: def.template_search, color })
+    }
+
+    pub fn frame_is_paused(&self, frame: &image::RgbImage) -> bool {
+        let r = crate::imaging::roi_from_norm(frame.width(), frame.height(), self.roi);
+        if let Some((range, min)) = self.color {
+            return crate::imaging::color_fraction(frame, r, range) >= min;
+        }
+        crate::imaging::template_diff_search(frame, &self.template, r[0], r[1], self.search) <= self.threshold
+    }
+
+    pub async fn is_paused(&self, client: &crate::client::AgentClient) -> Result<bool> {
+        let jpeg = client.screenshot(None, None, None, None, Some(crate::imaging::MAX_SIDE as i32), Some(75)).await?;
+        Ok(self.frame_is_paused(&crate::imaging::decode_rgb(&jpeg)?))
+    }
+
+    /// Pause or resume, checking the screen before and after (Space toggles, so a blind press
+    /// can invert the state). Returns whether a key was pressed.
+    pub async fn set_paused(&self, client: &crate::client::AgentClient, paused: bool) -> Result<bool> {
+        if self.is_paused(client).await? == paused {
+            return Ok(false);
+        }
+        for _ in 0..2 {
+            require_foreground(client).await?;
+            client.key("space", 1).await?;
+            for _ in 0..5 {
+                tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+                if self.is_paused(client).await? == paused {
+                    return Ok(true);
+                }
+            }
+        }
+        bail!("could not {} the game: the Paused label did not {}", if paused { "pause" } else { "resume" }, if paused { "appear" } else { "disappear" })
+    }
+}
+
 /// Bytes of game.log after `offset` (and the new size), via the agent.
 pub async fn read_log_since(client: &crate::client::AgentClient, offset: u64) -> Result<(String, u64)> {
     let (bytes, size) = client.files_read(DOCS_ROOT, "logs/game.log", offset, None).await?;
@@ -262,10 +316,24 @@ pub async fn apply_directive(
     directives: &Directives,
     name: &str,
     country: u64,
+    pause: Option<&PauseDetector>,
 ) -> Result<Vec<String>> {
     let lines = directives.console_lines(name, country)?;
     let (_, before) = client.files_read(DOCS_ROOT, "logs/game.log", 0, Some(0)).await?;
+    // Pause first: between `play` and `observe` the empire is not AI-run, and at Fastest ~2 s of
+    // typing would be months of game time. Restore the previous state afterwards.
+    let was_paused = match pause {
+        Some(p) => {
+            let was = p.is_paused(client).await?;
+            p.set_paused(client, true).await?;
+            Some(was)
+        }
+        None => None,
+    };
     run_console(client, &lines).await?;
+    if let (Some(p), Some(false)) = (pause, was_paused) {
+        p.set_paused(client, false).await?;
+    }
     let marker = applied_marker(name);
     for _ in 0..10 {
         tokio::time::sleep(std::time::Duration::from_millis(300)).await;
@@ -567,6 +635,24 @@ mod tests {
         for bad in ["", "a b", "x\"", "x}", "Play", "x;observe", "a=b"] {
             assert!(check_ident(bad).is_err(), "{bad:?}");
         }
+    }
+
+    #[test]
+    fn pause_detector_tells_paused_from_running_frames() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpora/stellaris");
+        let corpus = crate::corpus::GameCorpus::load_from_dir(&dir).unwrap();
+        let d = PauseDetector::from_manifest(&corpus.manifest).unwrap();
+        // Fixtures are the (600,800)-(1000,882) crop of real 1568x882 frames; paste them back.
+        let load = |f: &str| {
+            let crop = image::open(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures").join(f)).unwrap().to_rgb8();
+            let mut frame = image::RgbImage::new(1568, 882);
+            image::imageops::replace(&mut frame, &crop, 600, 800);
+            frame
+        };
+        assert!(d.frame_is_paused(&load("stellaris_paused.jpg")));
+        // Same label mid-pulse: the pixel template scored 0.108 here and misread it as running.
+        assert!(d.frame_is_paused(&load("stellaris_paused_dim.jpg")));
+        assert!(!d.frame_is_paused(&load("stellaris_running.jpg")));
     }
 
     #[test]
