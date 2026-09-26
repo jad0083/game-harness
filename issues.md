@@ -2,6 +2,7 @@
 
 ## Open
 
+- [x] Reasoning tab said "Gemini returns thought summaries" for Claude decisions: Claude Sonnet 5 supports only adaptive thinking and chose not to think on governor prompts (raw API: no thinking block even at high effort; `enabled` thinking is rejected); the hint is now per provider (2026-09-26)
 - [x] Theian postmortem (2026-09-26): the `trends()` hint said "likely at naval capacity" while the fleet sat at 51/115; the models chased naval techs 2245–2254 and five false "capped" rules entered `learned/strategy.md` (hint reworded, `MILITARY FELL` flag added, rules purged; d56184f, service restarted 08:56 on it)
 - [ ] Briefing lacks the naval-capacity maximum, occupied planets (the occupied capital showed as a normal colony), shipyards, fleets, production per planet, and our own battles apart from allies' ("won 20–0" counted the Oklarr ally's)
 - [ ] A directive is confirmed from game.log only, not read back: `tech_rush` left the economy policy on balanced 2245.04–2252.07 unnoticed; `defend` does not reset the economy policy or end the peace-festivals edict
