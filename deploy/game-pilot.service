@@ -1,7 +1,8 @@
 # The autonomous pilot as a user service. Not enabled by default: start it when the game is
 # ready, e.g.  systemctl --user start game-pilot.service
 # Settings come from the repo's .env (GEMINI_API_KEY, PILOT_GAME, PILOT_SPEED, PILOT_DECIDE_MONTHS,
-# PILOT_MODEL, …; see README → "Pilot app"). Stopping it pauses the game.
+# PILOT_MODEL, …; see README → "Pilot app"). Stopping it pauses the game; a step that is still
+# running 20 s after the stop (a slow model call; the game is already paused then) is abandoned.
 [Unit]
 Description=Game Pilot (autonomous LLM player)
 After=network-online.target

@@ -233,3 +233,21 @@ def test_dashboard_status_and_control(corpus, tmp_path):
             assert (await c.get("/")).status == 200
 
     asyncio.run(go())
+
+
+def test_stop_grace_forces_exit_when_a_step_hangs():
+    import threading
+    import time as _t
+
+    from pilot.cli import arm_stop_grace
+    exits, forced = [], []
+    done = threading.Event()
+    arm_stop_grace(done, 0.05, on_force=lambda: forced.append(1), force_exit=exits.append).join(1)
+    assert exits == [0] and forced == [1], "a model call that never returns must not block the stop"
+
+    exits.clear()
+    t = arm_stop_grace(done, 0.2, force_exit=exits.append)
+    _t.sleep(0.02)
+    done.set()
+    t.join(1)
+    assert exits == [], "a run that ends within the grace period exits normally"

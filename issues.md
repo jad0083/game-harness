@@ -2,6 +2,8 @@
 
 ## Open
 
+- [ ] `systemctl --user stop game-pilot.service` hung 60 s and was SIGKILLed while a decision's model call ran (gemini-pro-latest, 2026-09-26); fixed: after SIGTERM the loop gets 20 s, then the process exits (the game is paused before every decision); a second signal exits at once
+- [ ] The Paradox Launcher's window is also titled "Stellaris", so the exact-title foreground check cannot tell it from the game (seen 2026-09-26 on restart); a directive or pause while the launcher is up would send keys to it
 - [ ] Governor Bridge: `expand` put its extra influence in AI budget category `starbases` (nomad-only for influence) instead of `stations`, where outposts draw it; fixed in the mod and tested, live once the game restarts with the new files (2026-09-26)
 - [ ] Telemetry: one decision made on United Nations of Earth 2 (2203.10) during the model-switch test is recorded under the old throwaway campaign, stretching its chart to 2201 (history kept as recorded; the campaign guard prevents new cases)
 
