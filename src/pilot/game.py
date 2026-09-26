@@ -281,14 +281,17 @@ class FakeStellaris:
     """Scripted Stellaris for tests: each `briefing()` call returns the next briefing (the last one
     repeats); directives, speed and pause changes are recorded."""
 
-    def __init__(self, briefings: list[dict]):
+    def __init__(self, briefings: list[dict], advance_only_when_running: bool = False):
         self.briefings = list(briefings)
         self.actions: list[tuple] = []
         self.paused = True
         self.flags: list[str] = []
+        # like the real game: while paused, reading the save again returns the same save
+        self.advance_only_when_running = advance_only_when_running
 
     def _current(self) -> dict:
-        b = dict(self.briefings[0] if len(self.briefings) == 1 else self.briefings.pop(0))
+        hold = len(self.briefings) == 1 or (self.advance_only_when_running and self.paused)
+        b = dict(self.briefings[0] if hold else self.briefings.pop(0))
         b["flags"] = list(self.flags)
         return b
 

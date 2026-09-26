@@ -974,15 +974,24 @@ def test_speed_and_months_can_be_changed_during_a_run(setup):
     import threading
     s, log = setup
     s.decide_every_months = 24
-    s.poll_s = 0.3                                      # the change must land before the next poll
+    s.poll_s = 0.05
     bs = [briefing(f"22{y:02d}.{m:02d}.01") for y in range(3) for m in (1, 7)]
-    game = FakeStellaris(bs)
-    gov = Governor(s, game, log, model=decisions("keep"))
+    game = FakeStellaris(bs, advance_only_when_running=True)   # the speed request's extra read must not skip a save
+    changed = {"done": False}
+    inner = decisions("keep")
+
+    def respond(messages, info: AgentInfo) -> ModelResponse:
+        # change the pace while the first decision is being made (game paused), so the next poll is
+        # guaranteed to see it; changing it from the test thread after the decision raced the poll
+        if not changed["done"] and not _is_strategy_review(info):
+            changed["done"] = True
+            gov.set_speed("fastest")
+            gov.set_months(6)                           # was 24: the next decision now comes at +6 months
+        return inner.function(messages, info)
+
+    gov = Governor(s, game, log, model=FunctionModel(respond))
     t = threading.Thread(target=gov.run, daemon=True)
     t.start()
-    assert _wait(lambda: log.state.episodes >= 1)
-    gov.set_speed("fastest")
-    gov.set_months(6)                                   # was 24: the next decision now comes at +6 months
     assert _wait(lambda: log.state.episodes >= 2, secs=5), log.state.episodes
     gov.stop(); t.join(timeout=5)
     assert ("speed", "fastest") in game.actions
