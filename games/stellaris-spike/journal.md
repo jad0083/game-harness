@@ -125,4 +125,8 @@ Open questions for the build:
   +14 alloys/month) while systems stay at 4 (median 16.5). The briefing lacks why expansion stalls
   (reachable unclaimed systems, construction ships, closed borders), so the model cannot name the
   constraint yet.
+- **Expansion diagnostics**: 2218.02 has room (4 unclaimed systems 1 jump out, 9 within 2 jumps)
+  and 2 construction + 3 science ships, but only 2 of those 9 were surveyed by us first: the stall
+  is exploration after 12 years without it, not a lack of space. (An unclaimed system lists the
+  null starbase id 4294967295; the first version of the check counted those as claimed.)
 

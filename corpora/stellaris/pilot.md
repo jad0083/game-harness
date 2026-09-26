@@ -56,6 +56,11 @@ Directives never grant resources, stats or anything the empire could not do itse
   main problem. Falling behind in *systems* while `expand` is already active means the AI is
   constrained, not that the directive is wrong: look for the cause (influence stock and income,
   alloys for outposts, unsurveyed space, a closed border, deficits) and say it in your reason.
+- **Expansion room** (the line after the standing): unclaimed systems 1 and 2 jumps out, how many we
+  surveyed, and our construction/science ships. `BOXED IN` (nothing unclaimed within 2 jumps) means
+  `expand` cannot work: growth needs diplomacy, war (ask the human) or colonising planets inside our
+  borders. Room but few surveyed systems means exploration is the bottleneck: keep `expand` (its
+  stance favours claiming) and say so.
 
 - Read the whole briefing before choosing. Pick the directive whose *trigger* in
   `strategy.md` fits best; keep the current one if nothing has changed materially.

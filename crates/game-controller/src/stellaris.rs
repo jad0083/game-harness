@@ -66,6 +66,27 @@ pub struct Peers {
     pub behind: Vec<String>,
 }
 
+/// The save's "no object" reference (u32::MAX).
+const NULL_ID: &str = "4294967295";
+
+/// Systems around our space by hyperlane distance, and our civilian ships.
+#[derive(Debug, Serialize, Default)]
+pub struct Expansion {
+    /// Systems one jump from ours: total, unclaimed (no starbase or outpost), held by others.
+    pub near: usize,
+    pub near_unclaimed: usize,
+    pub near_foreign: usize,
+    /// Systems one or two jumps from ours.
+    pub reach: usize,
+    pub reach_unclaimed: usize,
+    /// Unclaimed systems within two jumps whose planets we surveyed first (a planet records only
+    /// its first surveyor, so this undercounts systems another empire surveyed before us).
+    pub reach_unclaimed_surveyed: usize,
+    pub construction_ships: usize,
+    pub science_ships: usize,
+    pub colony_ships: usize,
+}
+
 /// Measures compared with other empires (name, label).
 pub const PEER_MEASURES: [(&str, &str); 6] = [
     ("systems", "systems"),
@@ -112,6 +133,80 @@ pub struct Briefing {
     pub wars: Vec<War>,
     /// How we compare with the other regular empires (galaxy-wide aggregates only).
     pub peers: Peers,
+    /// Room to expand around our space, and the ships that do it.
+    pub expansion: Expansion,
+}
+
+fn expansion(
+    root: &Obj,
+    c: &Obj,
+    country: u64,
+    origins: &std::collections::HashMap<String, i64>,
+    planets: Option<&Obj>,
+) -> Expansion {
+    use std::collections::{HashMap, HashSet};
+    let mut e = Expansion::default();
+    // our civilian ships, by fleet class
+    if let (Some(fm), Some(fleets)) = (obj(c, "fleets_manager"), obj(root, "fleet")) {
+        let ids: Vec<String> = get(&fm, "owned_fleets")
+            .and_then(|v| v.read_array().ok())
+            .map(|a| a.values().filter_map(|x| x.read_object().ok()).filter_map(|x| i64_(&x, "fleet")).map(|i| i.to_string()).collect())
+            .unwrap_or_default();
+        let wanted: HashSet<&str> = ids.iter().map(|s| s.as_str()).collect();
+        for (k, _, v) in fleets.fields() {
+            if !wanted.contains(k.read_str().as_ref()) {
+                continue;
+            }
+            let Ok(f) = v.read_object() else { continue };
+            match string(&f, "ship_class").as_deref() {
+                Some("shipclass_constructor") => e.construction_ships += 1,
+                Some("shipclass_science_ship") => e.science_ships += 1,
+                Some("shipclass_colonizer") => e.colony_ships += 1,
+                _ => {}
+            }
+        }
+    }
+    // systems: hyperlanes, claimed (has a starbase: outpost or better), planets
+    let Some(gos) = obj(root, "galactic_object") else { return e };
+    let mut lanes: HashMap<i64, Vec<i64>> = HashMap::new();
+    let mut claimed: HashSet<i64> = HashSet::new();
+    let mut system_planets: HashMap<i64, Vec<String>> = HashMap::new();
+    for (k, _, v) in gos.fields() {
+        let Ok(id) = k.read_str().parse::<i64>() else { continue };
+        let Ok(g) = v.read_object() else { continue };
+        let to: Vec<i64> = get(&g, "hyperlane")
+            .and_then(|h| h.read_array().ok())
+            .map(|a| a.values().filter_map(|x| x.read_object().ok()).filter_map(|x| i64_(&x, "to")).collect())
+            .unwrap_or_default();
+        lanes.insert(id, to);
+        // unclaimed systems list the null id 4294967295 as their starbase
+        if strings(get(&g, "starbases")).iter().any(|sb| sb != NULL_ID) {
+            claimed.insert(id);
+        }
+        let ps: Vec<String> = g.fields().filter(|(k, _, _)| k.read_str() == "planet").filter_map(|(_, _, v)| v.read_string().ok()).collect();
+        system_planets.insert(id, ps);
+    }
+    let ours: HashSet<i64> = strings(get(c, "controlled_planets")).iter().filter_map(|p| origins.get(p).copied()).collect();
+    let step = |from: &HashSet<i64>| -> HashSet<i64> {
+        from.iter().flat_map(|s| lanes.get(s).cloned().unwrap_or_default()).filter(|s| !ours.contains(s)).collect()
+    };
+    let near = step(&ours);
+    let mut reach = near.clone();
+    reach.extend(step(&near));
+    let surveyed_by_us = |sys: &i64| -> bool {
+        let ps = system_planets.get(sys).cloned().unwrap_or_default();
+        !ps.is_empty()
+            && ps.iter().all(|p| {
+                planets.and_then(|all| obj(all, p)).and_then(|pl| i64_(&pl, "surveyed_by")).map(|by| by as u64) == Some(country)
+            })
+    };
+    e.near = near.len();
+    e.near_unclaimed = near.iter().filter(|s| !claimed.contains(s)).count();
+    e.near_foreign = e.near - e.near_unclaimed;
+    e.reach = reach.len();
+    e.reach_unclaimed = reach.iter().filter(|s| !claimed.contains(s)).count();
+    e.reach_unclaimed_surveyed = reach.iter().filter(|s| !claimed.contains(s) && surveyed_by_us(s)).count();
+    e
 }
 
 /// Distinct star systems of a country's controlled planets.
@@ -710,6 +805,7 @@ pub fn brief_gamestate(gamestate: &[u8]) -> Result<Briefing> {
         })
         .unwrap_or_default();
     b.systems = systems_of(&c, &origins);
+    b.expansion = expansion(&root, &c, b.country, &origins, planets.as_ref());
     b.peers = peers(&countries, &id, &c, &origins);
     let colonies = obj(&root, "colony");
     for cid in strings(get(&c, "owned_planets")) {
@@ -813,6 +909,17 @@ impl Briefing {
                 s += &format!("FALLING BEHIND (below half the median): {}\n", parts.join("; "));
             }
         }
+        let x = &self.expansion;
+        s += &format!(
+            "Expansion room: 1 jump from our space {} systems ({} unclaimed, {} held by others); within 2 jumps {} ({} unclaimed, {} of them surveyed by us first). Ships: {} construction, {} science, {} colony\n",
+            x.near, x.near_unclaimed, x.near_foreign, x.reach, x.reach_unclaimed, x.reach_unclaimed_surveyed,
+            x.construction_ships, x.science_ships, x.colony_ships
+        );
+        if x.reach > 0 && x.reach_unclaimed == 0 {
+            s += "BOXED IN: no unclaimed systems within 2 jumps; growth now means diplomacy, war or colonising planets inside our borders\n";
+        } else if x.reach_unclaimed > 0 && x.construction_ships == 0 {
+            s += "NO CONSTRUCTION SHIP: unclaimed systems are in reach but nothing can build outposts\n";
+        }
         if self.wars.is_empty() {
             s += "Wars: none\n";
         } else {
@@ -872,7 +979,15 @@ mod tests {
         assert!(b.peers.behind.contains(&"systems".to_string()));
         let t = b.to_text();
         assert!(t.contains("FALLING BEHIND (below half the median): systems 1.0 vs median"), "{t}");
-        // 2200.11: everyone still has one system, nothing to flag for systems
+        // why it stagnated: plenty of room, and construction/science ships existed
+        let x = &b.expansion;
+        assert!(x.near > 0 && x.reach >= x.near, "{x:?}");
+        assert!(x.reach_unclaimed > 0, "{x:?}");
+        assert!(x.construction_ships >= 1 && x.science_ships >= 1, "{x:?}");
+        // 2200.11: everyone still has one system, nothing to flag for systems; Sol's neighbours are free
+        let e = brief_save(SAVE).unwrap().expansion;
+        assert_eq!(e.near_foreign, 0, "{e:?}");
+        assert!(e.near_unclaimed > 0, "{e:?}");
         let early = brief_save(SAVE).unwrap();
         assert!(!early.peers.behind.contains(&"systems".to_string()));
     }
