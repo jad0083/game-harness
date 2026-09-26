@@ -199,6 +199,14 @@ class McpGame:
         self.ensure_foreground()
         return self._checked(self.call("stellaris_take_control"))
 
+    def pick_tech(self, prefer: list[str]) -> str:
+        self.ensure_foreground()
+        return self._checked(self.call("stellaris_pick_tech", prefer=prefer))
+
+    def market_sync(self, orders: list[dict]) -> str:
+        self.ensure_foreground()
+        return self._checked(self.call("stellaris_market_sync", orders=orders))
+
     @staticmethod
     def _checked(r: ToolResult) -> str:
         if r.is_error:
@@ -273,14 +281,17 @@ class FakeStellaris:
     """Scripted Stellaris for tests: each `briefing()` call returns the next briefing (the last one
     repeats); directives, speed and pause changes are recorded."""
 
-    def __init__(self, briefings: list[dict]):
+    def __init__(self, briefings: list[dict], advance_only_when_running: bool = False):
         self.briefings = list(briefings)
         self.actions: list[tuple] = []
         self.paused = True
         self.flags: list[str] = []
+        # like the real game: while paused, reading the save again returns the same save
+        self.advance_only_when_running = advance_only_when_running
 
     def _current(self) -> dict:
-        b = dict(self.briefings[0] if len(self.briefings) == 1 else self.briefings.pop(0))
+        hold = len(self.briefings) == 1 or (self.advance_only_when_running and self.paused)
+        b = dict(self.briefings[0] if hold else self.briefings.pop(0))
         b["flags"] = list(self.flags)
         return b
 
@@ -311,6 +322,14 @@ class FakeStellaris:
     def take_control(self) -> str:
         self.actions.append(("take_control",))
         return "AI controls the empire"
+
+    def pick_tech(self, prefer: list[str]) -> str:
+        self.actions.append(("pick_tech", list(prefer)))
+        return "ok"
+
+    def market_sync(self, orders: list[dict]) -> str:
+        self.actions.append(("market_sync", list(orders)))
+        return "ok"
 
     def screenshot(self) -> ToolResult:
         return ToolResult("Screenshot", None)

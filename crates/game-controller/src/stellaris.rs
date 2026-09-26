@@ -20,7 +20,7 @@ use std::io::Read;
 type Obj<'d, 't> = ObjectReader<'d, 't, Utf8Encoding>;
 type Val<'d, 't> = ValueReader<'d, 't, Utf8Encoding>;
 
-#[derive(Debug, Serialize, Default)]
+#[derive(Debug, Serialize, Default, Clone)]
 pub struct Research {
     /// Tech being researched and its progress (research points invested).
     pub current: Option<(String, f64)>,
@@ -321,6 +321,8 @@ pub struct Briefing {
     /// Growth / naval techs known (script keys from KEY_TECHS).
     pub key_techs_known: Vec<String>,
     pub used_naval_capacity: i64,
+    /// Our active monthly market orders (`market.monthly_trades` for our country).
+    pub market_orders: Vec<MarketOrderSpec>,
 }
 
 fn expansion(
@@ -1396,6 +1398,303 @@ fn resources(o: &Obj) -> BTreeMap<String, f64> {
         .collect()
 }
 
+// ---- strategy actions (tech picks, market orders) ----------------------------------------------
+
+#[derive(Debug, Clone, PartialEq, Serialize, serde::Deserialize)]
+pub struct MarketOrderSpec {
+    pub side: String,
+    pub resource: String,
+    pub amount: i64,
+}
+
+// TechPick/choose_tech_pick/market_diff are pure selection logic, called from `pick_tech` and
+// `sync_market` below (with a live `prefer`/`desired` list and a corpus tech-cost lookup) as well
+// as tested directly.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct TechPick {
+    pub field: String,
+    pub tech: String,
+    /// 0-based position of `tech` among the techs actually shown on screen (see `offered_techs`).
+    pub option_index: usize,
+}
+
+/// The techs a field's swap button actually shows on screen (verified live 2381.03): the save's
+/// `alternatives` lists what comes before the current tech, then the current tech itself; entries
+/// after it are not shown. Capped to `visible` (how many cards fit on screen).
+fn offered_techs(r: &Research, visible: usize) -> &[String] {
+    let before_current = match &r.current {
+        Some((cur, _)) => match r.alternatives.iter().position(|t| t == cur) {
+            Some(p) => &r.alternatives[..p],
+            None => &r.alternatives[..],
+        },
+        None => &r.alternatives[..],
+    };
+    &before_current[..before_current.len().min(visible)]
+}
+
+/// The first preferred tech that is offered on screen (see `offered_techs`) in a field whose
+/// current research is below 10% of its cost (fields already researching a preferred tech are
+/// left alone).
+pub fn choose_tech_pick(research: &BTreeMap<String, Research>, prefer: &[String], cost: &dyn Fn(&str) -> Option<f64>, visible: usize) -> Option<TechPick> {
+    for want in prefer {
+        for (field, r) in research {
+            if let Some((cur, _)) = &r.current {
+                if prefer.contains(cur) {
+                    continue;
+                }
+            }
+            let Some(idx) = offered_techs(r, visible).iter().position(|t| t == want) else { continue };
+            let started = r.current.as_ref().map(|(t, p)| cost(t).map(|c| *p >= 0.1 * c).unwrap_or(*p > 0.0)).unwrap_or(false);
+            if !started {
+                return Some(TechPick { field: field.clone(), tech: want.clone(), option_index: idx });
+            }
+        }
+    }
+    None
+}
+
+/// Orders to add and to remove so the save's monthly trades equal `desired`.
+pub fn market_diff(current: &[MarketOrderSpec], desired: &[MarketOrderSpec]) -> (Vec<MarketOrderSpec>, Vec<MarketOrderSpec>) {
+    let add = desired.iter().filter(|d| !current.contains(d)).cloned().collect();
+    let remove = current.iter().filter(|c| !desired.contains(c)).cloned().collect();
+    (add, remove)
+}
+
+/// A calibrated `[x, y]` point from `ui.<section>.<key>` (image-space pixels; see AGENTS.md §1).
+/// `ui_point` refuses an uncalibrated `[0, 0]` placeholder rather than clicking a guess.
+fn ui_point(ui: &toml::Table, section: &str, key: &str) -> Result<(i32, i32)> {
+    let v = ui.get(section).and_then(|s| s.get(key)).and_then(|p| p.as_array()).context(format!("manifest has no ui.{section}.{key}"))?;
+    let x = v.first().and_then(|n| n.as_integer()).context("bad point")? as i32;
+    let y = v.get(1).and_then(|n| n.as_integer()).context("bad point")? as i32;
+    if (x, y) == (0, 0) {
+        bail!("ui.{section}.{key} is not calibrated");
+    }
+    Ok((x, y))
+}
+
+/// Click a manifest UI point (image-space pixels): checks the game is foreground, re-establishes
+/// the current image-to-screen scale from a fresh frame (mirrors the `click` CLI command), then
+/// clicks. Manifest points are calibrated in `downscaled_resolution` space, not raw screen pixels.
+async fn click_ui_point(client: &crate::client::AgentClient, point: (i32, i32)) -> Result<()> {
+    require_foreground(client).await?;
+    client.screenshot(None, None, None, None, Some(crate::imaging::MAX_SIDE as i32), Some(75)).await?;
+    let orig_w = client.last_width.load(std::sync::atomic::Ordering::Relaxed).max(1) as f64;
+    let target_w = client.last_target_width.load(std::sync::atomic::Ordering::Relaxed).max(1) as f64;
+    let scale = orig_w / target_w;
+    let (x, y) = point;
+    require_foreground(client).await?;
+    client.click((x as f64 * scale).round() as i32, (y as f64 * scale).round() as i32, "left", 1).await
+}
+
+/// The click sequence inside the open Technology screen (swap the field, then the option card).
+/// Kept separate from `pick_tech` so the screen can always be closed afterwards, success or
+/// failure, mirroring `apply_market_changes`/`sync_market`.
+async fn apply_tech_pick(client: &crate::client::AgentClient, swap: (i32, i32), option: (i32, i32)) -> Result<()> {
+    click_ui_point(client, swap).await?;
+    tokio::time::sleep(std::time::Duration::from_millis(600)).await;
+    click_ui_point(client, option).await?;
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    Ok(())
+}
+
+/// Pick the first preferred tech offered in a field under 10% done (screen: F4, swap, option
+/// card). Pauses and closes any open in-game menu first, like the other console/UI actions. The
+/// Technology screen is never left open: on error the close key is still pressed before the error
+/// is returned. The pick itself is not verified here — the next autosave confirms it (see the
+/// returned text and Task 7's miss detection, which re-reads the save).
+pub async fn pick_tech(
+    client: &crate::client::AgentClient,
+    pause: &PauseDetector,
+    ui: &toml::Table,
+    research: &BTreeMap<String, Research>,
+    prefer: &[String],
+    cost: &dyn Fn(&str) -> Option<f64>,
+) -> Result<String> {
+    let visible = ui.get("tech").and_then(|s| s.get("visible_options")).and_then(|v| v.as_integer()).unwrap_or(4) as usize;
+    let Some(pick) = choose_tech_pick(research, prefer, cost, visible) else {
+        return Ok("nothing to pick: no preferred tech offered in a field that is free to change".into());
+    };
+    pause.set_paused(client, true).await?;
+    pause.close_menu(client).await?;
+
+    let tech = ui.get("tech").context("manifest has no [ui.tech]")?;
+    let str_key = |k: &str| tech.get(k).and_then(|v| v.as_str()).map(str::to_string);
+    let open_key = str_key("open_key").context("ui.tech.open_key missing")?;
+    let close_key = str_key("close_key").unwrap_or_else(|| "esc".to_string());
+
+    // Resolve every click point before pressing open_key: a missing or uncalibrated point must
+    // fail without ever opening the Technology screen.
+    let swap = tech
+        .get("swap")
+        .and_then(|s| s.get(&pick.field))
+        .and_then(|p| p.as_array())
+        .with_context(|| format!("manifest ui.tech.swap has no entry for field {:?}", pick.field))?;
+    let sx = swap.first().and_then(|n| n.as_integer()).context("bad ui.tech.swap point")? as i32;
+    let sy = swap.get(1).and_then(|n| n.as_integer()).context("bad ui.tech.swap point")? as i32;
+    if (sx, sy) == (0, 0) {
+        bail!("ui.tech.swap.{} is not calibrated", pick.field);
+    }
+    let (fx, fy) = ui_point(ui, "tech", "first_option")?;
+    let pitch = tech.get("option_pitch").and_then(|v| v.as_integer()).unwrap_or(66) as i32;
+    let option_pt = (fx, fy + pitch * pick.option_index as i32);
+
+    require_foreground(client).await?;
+    client.key(&open_key, 1).await?;
+    tokio::time::sleep(std::time::Duration::from_millis(800)).await;
+
+    let result = apply_tech_pick(client, (sx, sy), option_pt).await;
+
+    // Always close Technology, even on error, so a failure never leaves it open over the map.
+    let _ = require_foreground(client).await;
+    let _ = client.key(&close_key, 1).await;
+
+    result?;
+    Ok(format!(
+        "clicked {} in {} (option {}); unverified until the next autosave — if the click missed, the field is empty and the game's AI refills it",
+        pick.tech, pick.field, pick.option_index + 1
+    ))
+}
+
+/// One order rendered as `side resource amount` for the tool's result text.
+fn describe_orders(orders: &[MarketOrderSpec]) -> String {
+    if orders.is_empty() {
+        return "none".to_string();
+    }
+    orders.iter().map(|o| format!("{} {} {}", o.side, o.resource, o.amount)).collect::<Vec<_>>().join(", ")
+}
+
+/// Row y-positions for `idxs` (any order, e.g. highest first), each `order_row_first_y + pitch *
+/// i`. Refuses when `pitch` is 0 (not yet calibrated: only row 0's position was ever measured)
+/// and a row other than the first is requested, rather than clicking the wrong row.
+fn removal_rows(order_row_first_y: i32, pitch: i32, idxs: &[usize]) -> Result<Vec<i32>> {
+    idxs.iter()
+        .map(|&i| {
+            if i > 0 && pitch == 0 {
+                bail!("ui.market.order_row_pitch is not calibrated for more than the first row; cannot remove the order at row {i}");
+            }
+            Ok(order_row_first_y + pitch * i as i32)
+        })
+        .collect()
+}
+
+/// Which button to click, and how many times, to move a new monthly trade's amount from `start`
+/// (the dialog's default, `ui.market.new_trade_amount`) to `target`.
+fn amount_clicks(start: i64, target: i64) -> (&'static str, u32) {
+    match target - start {
+        0 => ("none", 0),
+        d if d > 0 => ("plus", d as u32),
+        d => ("minus", (-d) as u32),
+    }
+}
+
+/// Screen steps for `remove` and `add`, run after the Market dialog is open (`ui.market`). Kept
+/// separate from `sync_market` so the Market can always be closed afterwards, success or failure.
+async fn apply_market_changes(
+    client: &crate::client::AgentClient,
+    ui: &toml::Table,
+    current: &[MarketOrderSpec],
+    remove: &[MarketOrderSpec],
+    add: &[MarketOrderSpec],
+) -> Result<()> {
+    // Remove highest row index first so removing one order does not shift the rows below it.
+    let mut idxs: Vec<usize> = remove.iter().filter_map(|r| current.iter().position(|c| c == r)).collect();
+    idxs.sort_unstable_by(|a, b| b.cmp(a));
+    if !idxs.is_empty() {
+        let (rx, ry) = ui_point(ui, "market", "order_row_first")?;
+        let pitch = ui.get("market").and_then(|m| m.get("order_row_pitch")).and_then(|v| v.as_integer()).unwrap_or(0) as i32;
+        let remove_pt = ui_point(ui, "market", "remove")?;
+        let rows = removal_rows(ry, pitch, &idxs)?;
+        // Removal flow: clicking the order row opens its edit dialog, then Remove closes it.
+        for row_y in rows {
+            click_ui_point(client, (rx, row_y)).await?;
+            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+            click_ui_point(client, remove_pt).await?;
+            tokio::time::sleep(std::time::Duration::from_millis(400)).await;
+        }
+    }
+
+    if !add.is_empty() {
+        let add_pt = ui_point(ui, "market", "add")?;
+        let buy_pt = ui_point(ui, "market", "buy")?;
+        let sell_pt = ui_point(ui, "market", "sell")?;
+        let plus_pt = ui_point(ui, "market", "plus")?;
+        let minus_pt = ui_point(ui, "market", "minus")?;
+        let confirm_pt = ui_point(ui, "market", "confirm")?;
+        let new_trade_amount = ui
+            .get("market")
+            .and_then(|m| m.get("new_trade_amount"))
+            .and_then(|v| v.as_integer())
+            .context("manifest has no ui.market.new_trade_amount")?;
+        let resources = ui.get("market").and_then(|m| m.get("resources")).and_then(|r| r.as_table()).context("manifest ui.market has no resources table")?;
+        for order in add {
+            click_ui_point(client, add_pt).await?;
+            tokio::time::sleep(std::time::Duration::from_millis(400)).await;
+            click_ui_point(client, if order.side == "buy" { buy_pt } else { sell_pt }).await?;
+
+            let point = resources.get(&order.resource).and_then(|p| p.as_array()).with_context(|| format!("manifest ui.market.resources has no entry for {:?}", order.resource))?;
+            let rx = point.first().and_then(|n| n.as_integer()).context("bad ui.market.resources point")? as i32;
+            let ry = point.get(1).and_then(|n| n.as_integer()).context("bad ui.market.resources point")? as i32;
+            if (rx, ry) == (0, 0) {
+                bail!("ui.market.resources.{} is not calibrated", order.resource);
+            }
+            click_ui_point(client, (rx, ry)).await?;
+            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+
+            // A new trade dialog starts at `new_trade_amount` (verified live 2387.07: 10), not 0.
+            let (button, clicks) = amount_clicks(new_trade_amount, order.amount);
+            let button_pt = match button {
+                "plus" => plus_pt,
+                "minus" => minus_pt,
+                _ => (0, 0),
+            };
+            for _ in 0..clicks {
+                click_ui_point(client, button_pt).await?;
+            }
+            click_ui_point(client, confirm_pt).await?;
+            tokio::time::sleep(std::time::Duration::from_millis(400)).await;
+        }
+    }
+    Ok(())
+}
+
+/// Add and remove monthly Market trades so they match `desired` (screen: energy icon, "Add new
+/// monthly trade" dialog, order rows). The Market is never left open: on error the close key is
+/// still pressed before the error is returned.
+///
+/// `current` should be `market_orders` from the newest autosave; this call does not update that
+/// save, so its `market_orders` will not reflect the change until the next monthly autosave.
+/// Callers must not call `sync_market` twice against the same save (i.e. without an autosave in
+/// between): a second call would recompute `add`/`remove` from data that no longer matches the
+/// screen and could re-add or re-remove orders that were already applied.
+pub async fn sync_market(
+    client: &crate::client::AgentClient,
+    pause: &PauseDetector,
+    ui: &toml::Table,
+    current: &[MarketOrderSpec],
+    desired: &[MarketOrderSpec],
+) -> Result<String> {
+    let (add, remove) = market_diff(current, desired);
+    if add.is_empty() && remove.is_empty() {
+        return Ok("orders already match".into());
+    }
+    pause.set_paused(client, true).await?;
+    pause.close_menu(client).await?;
+
+    let open_click = ui_point(ui, "market", "open_click")?;
+    click_ui_point(client, open_click).await?;
+    tokio::time::sleep(std::time::Duration::from_millis(600)).await;
+
+    let result = apply_market_changes(client, ui, current, &remove, &add).await;
+
+    // Always try to close the Market, even on error, so a failure never leaves it open over the map.
+    let close_key = ui.get("market").and_then(|m| m.get("close_key")).and_then(|v| v.as_str()).unwrap_or("esc").to_string();
+    let _ = require_foreground(client).await;
+    let _ = client.key(&close_key, 1).await;
+
+    result?;
+    Ok(format!("added {}; removed {}; the next autosave confirms it", describe_orders(&add), describe_orders(&remove)))
+}
+
 /// Build a briefing from the unzipped `gamestate` text.
 pub fn brief_gamestate(gamestate: &[u8]) -> Result<Briefing> {
     let tape = TextTape::from_slice(gamestate).map_err(|e| anyhow!("gamestate parse error: {e}"))?;
@@ -1461,11 +1760,13 @@ pub fn brief_gamestate(gamestate: &[u8]) -> Result<Briefing> {
         for field in ["physics", "society", "engineering"] {
             let mut r = Research::default();
             if let Some(q) = get(&ts, &format!("{field}_queue")).and_then(|v| v.read_array().ok()) {
-                if let Some(first) = q.values().next().and_then(|x| x.read_object().ok()) {
-                    if let Some(t) = string(&first, "technology") {
-                        r.current = Some((t, f64_(&first, "progress").unwrap_or(0.0)));
-                    }
-                }
+                // The first queue entry can be empty or otherwise malformed (no `technology` key)
+                // while a tech is being researched (verified live 2393.02/2393.06); take the first
+                // entry that actually names one instead of assuming it is first.
+                r.current = q.values().filter_map(|x| x.read_object().ok()).find_map(|o| {
+                    let t = string(&o, "technology")?;
+                    Some((t, f64_(&o, "progress").unwrap_or(0.0)))
+                });
             }
             r.alternatives = alts.as_ref().map(|a| strings(get(a, field))).unwrap_or_default();
             b.research.insert(field.to_string(), r);
@@ -1562,6 +1863,17 @@ pub fn brief_gamestate(gamestate: &[u8]) -> Result<Briefing> {
         }
     }
     b.galaxy = galaxy(&root, &countries, &c, b.country);
+    if let Some(trades) = obj(&root, "market").and_then(|m| get(&m, "monthly_trades")).and_then(|v| v.read_array().ok()) {
+        for t in trades.values().filter_map(|x| x.read_object().ok()) {
+            let Some(td) = obj(&t, "trade_data") else { continue };
+            if i64_(&td, "country").map(|c| c as u64) != Some(b.country) {
+                continue;
+            }
+            let side = match string(&td, "trade_type").as_deref() { Some("market_sell") => "sell", Some("market_buy") => "buy", _ => continue };
+            b.market_orders.push(MarketOrderSpec { side: side.into(), resource: string(&td, "resource").unwrap_or_default(),
+                                                   amount: i64_(&t, "amount").unwrap_or(0) });
+        }
+    }
     Ok(b)
 }
 
@@ -2220,5 +2532,165 @@ situations={ situations={ 0=none 1={ country=0 type="rebellion_situation" progre
     fn rejects_non_saves() {
         assert!(brief_save(b"not a zip").is_err());
         assert!(brief_gamestate(b"date=\"2200.01.01\"\n").is_err()); // no country section
+    }
+
+    #[test]
+    fn research_current_skips_queue_entries_with_no_technology() {
+        // Verified live 2393.02/2393.06: while a tech is being researched, the queue's first
+        // entry can be an empty object; the entry that actually names a tech comes after it.
+        let gs = br#"date="2393.02.01"
+player={ { name="x" country=0 } }
+country={
+    0={ name={ key="NAME_Us" } type="default"
+        tech_status={ society_queue={ { } { progress=5 technology="tech_x" date="2393.01.17" } } }
+    }
+}
+"#;
+        let b = brief_gamestate(gs).unwrap();
+        assert_eq!(b.research["society"].current, Some(("tech_x".to_string(), 5.0)));
+
+        let gs_empty = br#"date="2393.02.01"
+player={ { name="x" country=0 } }
+country={
+    0={ name={ key="NAME_Us" } type="default"
+        tech_status={ society_queue={ { } } }
+    }
+}
+"#;
+        let b2 = brief_gamestate(gs_empty).unwrap();
+        assert_eq!(b2.research["society"].current, None);
+
+        // A malformed (non-empty, but technology-less) first entry must also be skipped.
+        let gs_malformed = br#"date="2393.02.01"
+player={ { name="x" country=0 } }
+country={
+    0={ name={ key="NAME_Us" } type="default"
+        tech_status={ society_queue={ { date="2393.02.01" } { progress=5 technology="tech_x" date="2393.01.17" } } }
+    }
+}
+"#;
+        let b3 = brief_gamestate(gs_malformed).unwrap();
+        assert_eq!(b3.research["society"].current, Some(("tech_x".to_string(), 5.0)));
+    }
+
+    #[test]
+    fn tech_pick_prefers_offered_techs_and_leaves_started_research_alone() {
+        let mut research = BTreeMap::new();
+        // The save lists alternatives that come before the current tech, then the current tech
+        // itself; anything after it is not shown on screen (verified live 2381.03).
+        research.insert("engineering".to_string(), Research { current: Some(("tech_mining_2".into(), 50.0)),
+            alternatives: vec!["tech_habitat_1".into(), "tech_lasers_2".into(), "tech_mining_2".into()] });
+        research.insert("society".to_string(), Research { current: Some(("tech_gene_crops".into(), 900.0)),
+            alternatives: vec!["tech_doctrine_navy_size_2".into(), "tech_gene_crops".into()] });
+        let cost = |t: &str| Some(if t == "tech_mining_2" { 1000.0 } else { 2000.0 });
+        let prefer = vec!["tech_doctrine_navy_size_2".to_string(), "tech_habitat_1".to_string()];
+        let pick = choose_tech_pick(&research, &prefer, &cost, 4).unwrap();
+        // society is 45% done (900/2000): not swapped even though tech_doctrine_navy_size_2 is
+        // offered there; engineering is 5% done: swapped to tech_habitat_1 (the first offered slot)
+        assert_eq!((pick.field.as_str(), pick.tech.as_str(), pick.option_index), ("engineering", "tech_habitat_1", 0));
+        // already researching a preferred tech: nothing to do
+        let mut r2 = research.clone();
+        r2.get_mut("engineering").unwrap().current = Some(("tech_habitat_1".into(), 0.0));
+        assert!(choose_tech_pick(&r2, &["tech_habitat_1".to_string()], &cost, 4).is_none());
+        // no preferred tech offered: nothing
+        assert!(choose_tech_pick(&research, &["tech_zro_1".to_string()], &cost, 4).is_none());
+    }
+
+    #[test]
+    fn tech_pick_with_an_unknown_cost_swaps_only_research_not_yet_started() {
+        // No corpus cost for the current tech: only research with no progress at all may be
+        // swapped (clicking a swap drops the current research at once, verified live 2381.03).
+        let cost = |_: &str| None;
+        let mut research = BTreeMap::new();
+        research.insert("physics".to_string(), Research { current: Some(("cur".into(), 0.0)),
+            alternatives: vec!["want".into(), "cur".into()] });
+        let pick = choose_tech_pick(&research, &["want".to_string()], &cost, 4).unwrap();
+        assert_eq!((pick.field.as_str(), pick.tech.as_str()), ("physics", "want"));
+        research.get_mut("physics").unwrap().current = Some(("cur".into(), 0.5));
+        assert!(choose_tech_pick(&research, &["want".to_string()], &cost, 4).is_none(), "some progress: left alone");
+    }
+
+    #[test]
+    fn tech_pick_only_offers_techs_shown_on_screen() {
+        // [a, b, c, current, x]: x comes after the current tech in the save's alternatives list
+        // and is not shown on screen; option_index counts position among what IS shown.
+        let mut research = BTreeMap::new();
+        research.insert("physics".to_string(), Research { current: Some(("current".into(), 0.0)),
+            alternatives: vec!["a".into(), "b".into(), "c".into(), "current".into(), "x".into()] });
+        let cost = |_: &str| Some(1000.0);
+        let pick = choose_tech_pick(&research, &["c".to_string()], &cost, 4).unwrap();
+        assert_eq!((pick.field.as_str(), pick.tech.as_str(), pick.option_index), ("physics", "c", 2));
+        // "x" is after "current" in the save's list: never on screen, never picked
+        assert!(choose_tech_pick(&research, &["x".to_string()], &cost, 4).is_none());
+
+        // Only the first `visible` (4) of the offered (before-current) techs are clickable.
+        let mut research2 = BTreeMap::new();
+        research2.insert("physics".to_string(), Research { current: Some(("current".into(), 0.0)),
+            alternatives: vec!["p0".into(), "p1".into(), "p2".into(), "p3".into(), "p4".into(), "current".into()] });
+        assert!(choose_tech_pick(&research2, &["p4".to_string()], &cost, 4).is_none(), "5th offered option is off-screen");
+        let pick2 = choose_tech_pick(&research2, &["p3".to_string()], &cost, 4).unwrap();
+        assert_eq!(pick2.option_index, 3, "4th offered option (index 3) is still on screen");
+    }
+
+    #[test]
+    fn market_diff_adds_missing_and_removes_unwanted_orders() {
+        let o = |s: &str, r: &str, a: i64| MarketOrderSpec { side: s.into(), resource: r.into(), amount: a };
+        let (add, remove) = market_diff(&[o("sell", "energy", 11), o("buy", "food", 5)], &[o("sell", "energy", 11), o("sell", "trade", 20)]);
+        assert_eq!(add, vec![o("sell", "trade", 20)]);
+        assert_eq!(remove, vec![o("buy", "food", 5)]);
+    }
+
+    #[test]
+    fn ui_point_names_missing_keys_and_refuses_uncalibrated_points() {
+        let mut market = toml::Table::new();
+        market.insert("add".into(), toml::Value::Array(vec![toml::Value::Integer(382), toml::Value::Integer(156)]));
+        market.insert("remove".into(), toml::Value::Array(vec![toml::Value::Integer(0), toml::Value::Integer(0)]));
+        let mut ui = toml::Table::new();
+        ui.insert("market".into(), toml::Value::Table(market));
+
+        let err = ui_point(&ui, "market", "open_click").unwrap_err().to_string();
+        assert!(err.contains("ui.market.open_click"), "{err}");
+
+        let err = ui_point(&ui, "market", "remove").unwrap_err().to_string();
+        assert!(err.contains("ui.market.remove") && err.contains("not calibrated"), "{err}");
+
+        assert_eq!(ui_point(&ui, "market", "add").unwrap(), (382, 156));
+    }
+
+    #[test]
+    fn removal_rows_refuses_a_second_row_when_pitch_is_uncalibrated() {
+        // Only the first row's position is known live (only one order existed to measure from);
+        // removing anything but that first row would click the wrong place, so it must refuse.
+        assert_eq!(removal_rows(181, 0, &[0]).unwrap(), vec![181]);
+        let err = removal_rows(181, 0, &[1, 0]).unwrap_err().to_string();
+        assert!(err.contains("order_row_pitch") && err.contains("not calibrated"), "{err}");
+        // once calibrated (non-zero pitch), any row is fine
+        assert_eq!(removal_rows(181, 14, &[1, 0]).unwrap(), vec![195, 181]);
+    }
+
+    #[test]
+    fn amount_clicks_computes_the_button_and_count_from_the_dialogs_default() {
+        // A new monthly trade starts at the manifest's ui.market.new_trade_amount (verified live
+        // 2387.07): a lower amount needs minus clicks, a higher one plus clicks, no change none.
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpora/stellaris/manifest.toml");
+        let manifest: toml::Table = std::fs::read_to_string(path).unwrap().parse().unwrap();
+        let start = manifest["ui"]["market"]["new_trade_amount"].as_integer().unwrap();
+        assert!((2..25).contains(&start), "the dialog default is inside the 1..=25 order range: {start}");
+        assert_eq!(amount_clicks(start, start - 1), ("minus", 1));
+        assert_eq!(amount_clicks(start, 1), ("minus", (start - 1) as u32));
+        assert_eq!(amount_clicks(start, 25), ("plus", (25 - start) as u32));
+        assert_eq!(amount_clicks(start, start), ("none", 0));
+    }
+
+    #[test]
+    fn briefing_reads_our_monthly_trades() {
+        let gs = br#"date="2201.10.01"
+player={ { name="x" country=0 } }
+country={ 0={ name={ key="NAME_Us" } type="default" } }
+market={ monthly_trades={ { trade_data={ trade_type=market_sell resource="energy" country=0 } amount=11 price=0 id=0 }
+                          { trade_data={ trade_type=market_buy resource="minerals" country=7 } amount=5 price=0 id=1 } } }
+"#;
+        let b = brief_gamestate(gs).unwrap();
+        assert_eq!(b.market_orders, vec![MarketOrderSpec { side: "sell".into(), resource: "energy".into(), amount: 11 }]);
     }
 }

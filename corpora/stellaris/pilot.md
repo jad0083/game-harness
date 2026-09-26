@@ -51,6 +51,12 @@ Directives never grant resources, stats or anything the empire could not do itse
 
 ## Decision rules
 
+- **The strategy frame comes first**: the prompt opens with the strategy frame (directive ranking,
+  focus, at-risk milestones), set by the Strategist. Choose a directive from the top of the ranking.
+  Choose outside it only for an urgent line in the briefing (new war, deficit, crisis, colony lost,
+  military fell) and name that line in your reason: the decision is tagged off-frame and schedules a
+  strategy review. Do not rewrite the strategy in a decision; the Strategist owns it.
+
 - **Standing first**: the briefing compares us with the other regular empires (ours / median /
   best, our rank). A `FALLING BEHIND` line means we are below half the median: treat it as the
   main problem. Falling behind in *systems* while `expand` is already active means the AI is

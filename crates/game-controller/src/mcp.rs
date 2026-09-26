@@ -423,6 +423,45 @@ impl McpServer {
                     "properties": { "lines": { "type": "integer", "default": 30 } }
                 }
             }));
+            tools.push(serde_json::json!({
+                "name": "stellaris_pick_tech",
+                "description": "Pick the first tech in `prefer` (tried in order) that is currently offered as an alternative in some research field whose current pick is not itself preferred and is under 10% researched: swaps to it via the field's swap button (Technology screen, F4) and clicks its option card. Costs come from the tech corpus. Returns 'nothing to pick: …' if none of `prefer` is offered anywhere free to change. Refuses if Stellaris is not the foreground window.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "prefer": {
+                            "type": "array",
+                            "items": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+                            "maxItems": 6,
+                            "description": "Tech script ids, e.g. \"tech_habitat_1\", tried in order"
+                        }
+                    },
+                    "required": ["prefer"]
+                }
+            }));
+            tools.push(serde_json::json!({
+                "name": "stellaris_market_sync",
+                "description": "Make the empire's monthly Market trades match `orders` (at most 2): removes any current order not listed and adds any listed order that is missing, through the Market screen's Add/Remove dialogs. Never leaves the Market open, even on error. Refuses if Stellaris is not the foreground window. Changes are computed from the last autosave; call at most once per autosave.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "orders": {
+                            "type": "array",
+                            "maxItems": 2,
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "side": { "type": "string", "enum": ["sell", "buy"] },
+                                    "resource": { "type": "string" },
+                                    "amount": { "type": "integer", "minimum": 1, "maximum": 25 }
+                                },
+                                "required": ["side", "resource", "amount"]
+                            }
+                        }
+                    },
+                    "required": ["orders"]
+                }
+            }));
         }
         tools
     }
@@ -863,6 +902,48 @@ impl McpServer {
                 let tail = all[all.len().saturating_sub(n)..].join("\n");
                 Ok(serde_json::json!({ "content": [{ "type": "text", "text": tail }] }))
             }
+            "stellaris_pick_tech" => {
+                let prefer: Vec<String> = args
+                    .get("prefer")
+                    .and_then(|v| v.as_array())
+                    .ok_or_else(|| anyhow::anyhow!("missing `prefer`"))?
+                    .iter()
+                    .map(|v| v.as_str().unwrap_or_default().to_string())
+                    .collect();
+                validate_prefer(&prefer)?;
+                let c = self.corpus.as_ref().ok_or_else(|| anyhow::anyhow!("no corpus loaded"))?;
+                let pause = crate::stellaris::PauseDetector::from_manifest(&c.manifest)?;
+                let (_, bytes) = crate::stellaris::fetch_latest_save(&self.client).await?;
+                let b = crate::stellaris::brief_save(&bytes)?;
+                let cost = |t: &str| match c.get(&format!("tech:{t}")) {
+                    Some(crate::corpus::Item::Record(r)) => r.fields.get("cost").and_then(|v| v.as_f64()),
+                    _ => None,
+                };
+                let text = crate::stellaris::pick_tech(&self.client, &pause, &c.manifest.ui, &b.research, &prefer, &cost).await?;
+                Ok(serde_json::json!({ "content": [{ "type": "text", "text": text }] }))
+            }
+            "stellaris_market_sync" => {
+                let orders_json = args.get("orders").and_then(|v| v.as_array()).cloned().unwrap_or_default();
+                let orders: Vec<crate::stellaris::MarketOrderSpec> = orders_json
+                    .iter()
+                    .map(|v| serde_json::from_value(v.clone()))
+                    .collect::<std::result::Result<_, _>>()
+                    .map_err(|e| anyhow::anyhow!("bad order: {e}"))?;
+                let c = self.corpus.as_ref().ok_or_else(|| anyhow::anyhow!("no corpus loaded"))?;
+                let resources = c
+                    .manifest
+                    .ui
+                    .get("market")
+                    .and_then(|m| m.get("resources"))
+                    .and_then(|r| r.as_table())
+                    .ok_or_else(|| anyhow::anyhow!("manifest ui.market has no resources table"))?;
+                validate_market_orders(&orders, resources)?;
+                let pause = crate::stellaris::PauseDetector::from_manifest(&c.manifest)?;
+                let (_, bytes) = crate::stellaris::fetch_latest_save(&self.client).await?;
+                let current = crate::stellaris::brief_save(&bytes)?.market_orders;
+                let text = crate::stellaris::sync_market(&self.client, &pause, &c.manifest.ui, &current, &orders).await?;
+                Ok(serde_json::json!({ "content": [{ "type": "text", "text": text }] }))
+            }
             _ => anyhow::bail!("Unknown tool: {}", name),
         }
     }
@@ -884,6 +965,53 @@ pub(crate) fn require_f64(args: &Value, key: &str) -> Result<f64> {
     args.get(key)
         .and_then(|v| v.as_f64())
         .ok_or_else(|| anyhow::anyhow!("Missing or non-numeric argument `{}`", key))
+}
+
+/// `stellaris_pick_tech`'s `prefer`: at most 6 raw tech ids (`Research::alternatives` stores them
+/// as the game's own script identifiers, e.g. `tech_habitat_1`), each `[a-z0-9_]+`.
+fn validate_prefer(prefer: &[String]) -> Result<()> {
+    if prefer.len() > 6 {
+        anyhow::bail!("`prefer` takes at most 6 tech ids, got {}", prefer.len());
+    }
+    for id in prefer {
+        if id.is_empty() || !id.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_') {
+            anyhow::bail!("invalid tech id {id:?} (allowed: a-z 0-9 _)");
+        }
+    }
+    Ok(())
+}
+
+/// `stellaris_market_sync`'s `orders`: at most 2 monthly trades, side sell/buy, amount 1..=25, and
+/// a resource the manifest has a *calibrated* icon for (`ui.market.resources`). A `[0, 0]` entry
+/// is a known resource whose point is not yet measured; it is rejected here, up front, so the tool
+/// fails before the Market ever opens rather than mid-sync when `ui_point` would refuse the click.
+/// Market order amount limits, shared with the governor's strategy validation
+/// (`src/pilot/strategy.py` MARKET_MIN_AMOUNT/MARKET_MAX_AMOUNT; a Python test keeps them equal).
+const MARKET_AMOUNT_MIN: i64 = 1;
+const MARKET_AMOUNT_MAX: i64 = 25;
+
+fn validate_market_orders(orders: &[crate::stellaris::MarketOrderSpec], resources: &toml::Table) -> Result<()> {
+    if orders.len() > 2 {
+        anyhow::bail!("`orders` takes at most 2 monthly trades, got {}", orders.len());
+    }
+    for o in orders {
+        if o.side != "sell" && o.side != "buy" {
+            anyhow::bail!("order side must be \"sell\" or \"buy\", got {:?}", o.side);
+        }
+        if !(MARKET_AMOUNT_MIN..=MARKET_AMOUNT_MAX).contains(&o.amount) {
+            anyhow::bail!("order amount must be {MARKET_AMOUNT_MIN}..={MARKET_AMOUNT_MAX}, got {}", o.amount);
+        }
+        let point = resources.get(&o.resource).and_then(|p| p.as_array());
+        let Some(point) = point else {
+            anyhow::bail!("unknown market resource {:?} (not in ui.market.resources)", o.resource);
+        };
+        let x = point.first().and_then(|n| n.as_integer()).unwrap_or(0);
+        let y = point.get(1).and_then(|n| n.as_integer()).unwrap_or(0);
+        if (x, y) == (0, 0) {
+            anyhow::bail!("ui.market.resources.{} is not calibrated", o.resource);
+        }
+    }
+    Ok(())
 }
 
 /// Reads the optional `/drag` timing knobs from MCP tool arguments. Negative or
@@ -970,6 +1098,14 @@ mod tests {
     }
 
     #[test]
+    fn market_sync_description_warns_against_repeated_calls_on_one_autosave() {
+        let tools = McpServer::list_tools(Some("stellaris"));
+        let tool = tools.iter().find(|t| t["name"] == "stellaris_market_sync").unwrap();
+        let desc = tool["description"].as_str().unwrap();
+        assert!(desc.contains("Changes are computed from the last autosave; call at most once per autosave."), "{desc}");
+    }
+
+    #[test]
     fn drag_options_read_from_args() {
         let none = drag_options(&serde_json::json!({"x1": 1}));
         assert_eq!(none, crate::client::DragOptions::default());
@@ -979,5 +1115,38 @@ mod tests {
             crate::client::DragOptions { hold_ms: Some(250), steps: Some(40), step_ms: Some(25), dwell_ms: Some(300), wiggle: Some(true) }
         );
         assert_eq!(drag_options(&serde_json::json!({"hold_ms": -5})).hold_ms, None);
+    }
+
+    #[test]
+    fn validate_prefer_caps_count_and_identifier_shape() {
+        assert!(validate_prefer(&["tech_habitat_1".to_string(), "tech_lasers_2".to_string()]).is_ok());
+        let seven: Vec<String> = (0..7).map(|i| format!("tech_{i}")).collect();
+        assert!(validate_prefer(&seven).unwrap_err().to_string().contains("at most 6"));
+        for bad in ["", "Tech_Habitat_1", "tech habitat", "tech-habitat", "tech;drop"] {
+            let err = validate_prefer(&[bad.to_string()]).unwrap_err().to_string();
+            assert!(err.contains(bad) || err.contains("invalid"), "{bad:?}: {err}");
+        }
+    }
+
+    #[test]
+    fn validate_market_orders_checks_count_side_amount_and_resource() {
+        let mut resources = toml::Table::new();
+        resources.insert("energy".into(), toml::Value::Array(vec![toml::Value::Integer(820), toml::Value::Integer(335)]));
+        resources.insert("sr_zro".into(), toml::Value::Array(vec![toml::Value::Integer(0), toml::Value::Integer(0)]));
+        let o = |side: &str, resource: &str, amount: i64| crate::stellaris::MarketOrderSpec { side: side.into(), resource: resource.into(), amount };
+
+        assert!(validate_market_orders(&[o("sell", "energy", 11)], &resources).is_ok());
+        // a resource whose manifest point is [0,0] (uncalibrated) is rejected up front, before any
+        // screen opens, not left for `ui_point` to refuse mid-sync.
+        let err = validate_market_orders(&[o("sell", "sr_zro", 5)], &resources).unwrap_err().to_string();
+        assert!(err.contains("sr_zro") && err.contains("not calibrated"), "{err}");
+
+        let three = vec![o("sell", "energy", 1), o("buy", "energy", 2), o("sell", "energy", 3)];
+        assert!(validate_market_orders(&three, &resources).unwrap_err().to_string().contains("at most 2"));
+
+        assert!(validate_market_orders(&[o("hold", "energy", 5)], &resources).unwrap_err().to_string().contains("sell"));
+        assert!(validate_market_orders(&[o("sell", "energy", 0)], &resources).unwrap_err().to_string().contains("1..=25"));
+        assert!(validate_market_orders(&[o("sell", "energy", 26)], &resources).unwrap_err().to_string().contains("1..=25"));
+        assert!(validate_market_orders(&[o("sell", "unobtainium", 5)], &resources).unwrap_err().to_string().contains("unobtainium"));
     }
 }

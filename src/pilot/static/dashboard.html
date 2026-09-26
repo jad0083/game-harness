@@ -140,17 +140,20 @@
   .tip i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
   .empty { color: var(--muted); padding: 20px 0; }
   .legend i.war { background: color-mix(in srgb, var(--bad) 22%, transparent); outline: 1px solid color-mix(in srgb, var(--bad) 45%, transparent); }
+  .legend i.review { width: 8px; height: 8px; border-radius: 2px; background: var(--thought); transform: rotate(45deg); }
   .nb { width: 100%; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
   .nb th { font-weight: 500; font-size: 12.5px; color: var(--muted); text-align: right; padding: 0 8px 6px; white-space: nowrap; }
   .nb td { text-align: right; padding: 8px; border-top: 1px solid var(--grid); vertical-align: middle; white-space: nowrap; }
   .nb th:first-child, .nb td:first-child { text-align: left; white-space: normal; padding-left: 0; }
   .nb .who b { font-weight: 600; }
   .nb .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
-  .nb .tag { font-size: 11.5px; line-height: 18px; padding: 0 7px; border-radius: 999px; border: 1px solid var(--hair); color: var(--ink-2); white-space: nowrap; }
+  .tag { font-size: 11.5px; line-height: 18px; padding: 0 7px; border-radius: 999px; border: 1px solid var(--hair); color: var(--ink-2);
+         white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
   .nbwrap { overflow-x: auto; }
   .nb td.who { min-width: 190px; }
-  .nb .tag.bad { border-color: color-mix(in srgb, var(--bad) 60%, transparent); color: var(--ink); background: color-mix(in srgb, var(--bad) 14%, transparent); }
-  .nb .tag.good { border-color: color-mix(in srgb, var(--good) 60%, transparent); color: var(--ink); background: color-mix(in srgb, var(--good) 12%, transparent); }
+  .tag.bad { border-color: color-mix(in srgb, var(--bad) 60%, transparent); color: var(--ink); background: color-mix(in srgb, var(--bad) 14%, transparent); }
+  .tag.good { border-color: color-mix(in srgb, var(--good) 60%, transparent); color: var(--ink); background: color-mix(in srgb, var(--good) 12%, transparent); }
+  .tag.warn { border-color: color-mix(in srgb, var(--warn) 60%, transparent); color: var(--ink); background: color-mix(in srgb, var(--warn) 14%, transparent); }
   .nb .ratio { display: inline-grid; grid-template-columns: 3em 48px; align-items: center; gap: 6px; }
   .nb .bar { position: relative; height: 8px; border-radius: 4px; background: var(--raised); overflow: hidden; }
   .nb .bar span { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; }
@@ -217,6 +220,36 @@
   .plan-text { font-family: var(--serif); font-size: 17px; line-height: 1.6; white-space: pre-wrap; margin: 4px 0 0; max-width: 68ch; }
   .plan-old { border-top: 1px solid var(--hair); margin-top: 12px; padding-top: 10px; }
   .plan-old .plan-text { font-size: 15px; color: var(--ink-2); }
+
+  /* ---- strategy ---- */
+  .strategy-head { margin-bottom: 6px; }
+  .strategy-head .t-meta { margin-bottom: 4px; }
+  .pillar { border-top: 1px solid var(--hair); padding: 14px 0; }
+  .pillar:first-child { border-top: 0; padding-top: 0; }
+  .p-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
+  .pillar h3 { margin: 0; font-size: 17px; font-family: var(--serif); font-weight: 400; font-variation-settings: "opsz" 24; }
+  .p-num { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  .pillar .stance { margin: 6px 0 0; font-family: var(--serif); font-size: 15.5px; line-height: 1.5; max-width: 60ch; }
+  .pillar .goals { margin: 6px 0 0; padding-left: 18px; font-size: 13.5px; color: var(--ink-2); }
+  .pillar .goals li { margin: 2px 0; }
+  .ms-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 5px; }
+  .ms-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .ms-metric { color: var(--ink-2); }
+  .pillar .actions { margin: 8px 0 0; font-size: 13px; color: var(--ink-2); display: grid; gap: 2px; }
+  .p-buttons { margin-top: 10px; display: flex; gap: 8px; }
+  .p-form { display: grid; gap: 10px; margin-top: 10px; padding: 12px; background: var(--surface); border-radius: 6px; }
+  .p-form label { display: grid; gap: 4px; font-size: 13px; color: var(--ink-2); }
+  .p-form textarea, .p-form input, .p-form select { padding: 7px 10px; border-radius: 6px; border: 1px solid var(--hair); background: var(--raised); color: var(--ink); width: 100%; }
+  .p-form textarea { min-height: 60px; resize: vertical; font-family: var(--serif); font-size: 14.5px; }
+  .market-fields { display: grid; gap: 6px; font-size: 13px; color: var(--ink-2); }
+  .market-row { display: flex; gap: 6px; align-items: center; }
+  .market-row select { flex: 0 0 auto; width: auto; }
+  .market-row input { flex: 1; min-width: 0; }
+  .p-form .p-error { color: var(--bad); font-size: 13px; margin: 0; }
+  .p-form .row { display: flex; gap: 8px; margin-top: 2px; }
+  .strategy-history { margin-top: 16px; }
+  .strategy-history table.data th, .strategy-history table.data td { text-align: left; white-space: normal; }
+  .strategy-review { margin-top: 16px; }
 
   /* ---- talk ---- */
   .thread { display: grid; gap: 12px; margin-bottom: 14px; }
@@ -426,7 +459,7 @@
       <div class="tabs" role="tablist">
         <button role="tab" aria-selected="true" data-tab="reasoning">Reasoning<span class="dot" hidden></span></button>
         <button role="tab" aria-selected="false" data-tab="talk">Talk<span class="dot" hidden></span></button>
-        <button role="tab" aria-selected="false" data-tab="plan">Plan<span class="dot" hidden></span></button>
+        <button role="tab" aria-selected="false" data-tab="strategy">Strategy<span class="dot" hidden></span></button>
         <button role="tab" aria-selected="false" data-tab="activity">Activity<span class="dot" hidden></span></button>
       </div>
       <div class="tabpanel" id="tab-reasoning" role="tabpanel"><p class="empty">Pick a decision to read how it was made.</p></div>
@@ -457,7 +490,7 @@
         <div id="talk-off" hidden><p class="hint">No run is active, so there is no model to talk to. Start a run and the model is available here: ask it questions, give it notes and standing orders, or override its decisions.</p>
           <button class="btn primary" id="b-start-2">Start run</button></div>
       </div>
-      <div class="tabpanel" id="tab-plan" role="tabpanel" hidden><div id="plan"></div></div>
+      <div class="tabpanel" id="tab-strategy" role="tabpanel" hidden><div id="strategy"></div></div>
       <div class="tabpanel" id="tab-activity" role="tabpanel" hidden><ul class="feed" id="feed"></ul></div>
     </section>
   </div>
@@ -474,7 +507,7 @@ const tidy = (s) => String(s ?? "").replace(/-?\d+\.\d{3,}/g, (m) => (+m).toFixe
 const md = (s) => esc(s).replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>").replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, "$1<em>$2</em>");
 const api = async (u) => { const r = await fetch(u); if (!r.ok) throw new Error(`${u}: ${r.status}`); return r.json(); };
 
-const S = { live: false, status: {}, campaign: null, decisions: [], metrics: [], view: "net", sel: null, mode: "chat" };
+const S = { live: false, status: {}, campaign: null, decisions: [], metrics: [], view: "net", sel: null, mode: "chat", strategy: null, reviewPending: false };
 
 const SERIES = {
   net:   [["energy", "Energy"], ["minerals", "Minerals"], ["food", "Food"], ["alloys", "Alloys"], ["influence", "Influence"], ["unity", "Unity"]],
@@ -540,29 +573,166 @@ async function loadCampaigns() {
   if (S.campaign) sel.value = S.campaign;
 }
 
-function renderPlan(plans) {
-  const box = $("plan");
-  if (!plans || !plans.length) {
-    box.innerHTML = `<p class="empty">No campaign plan yet. The governor writes one at its first decision and revises it at each retrospective.</p>`;
+// ---------- strategy ----------
+// Pillar -> the directive it stands for (mirrors strategy.py's DIRECTIVE_OF; pillars without one
+// don't take part in the directive ranking).
+const DIRECTIVE_OF = { economy: "consolidate_economy", expansion: "expand", technology: "tech_rush",
+                       diplomacy: "diplomacy_first", defence: "defend", government: null, society: null };
+// status -> [tag class, icon, word] — colour is never the only signal: the word is always shown too.
+const MS_STATUS = { met: ["good", "✓", "met"], on_track: ["", "→", "on track"],
+                    at_risk: ["warn", "⚠", "at risk"], missed: ["bad", "✕", "missed"] };
+
+function reviewButtonHtml() {
+  return S.reviewPending ? `<button class="btn" id="review-now" disabled>Review requested…</button>`
+                        : `<button class="btn" id="review-now">Review strategy now</button>`;
+}
+function wireReviewButton() {
+  const btn = $("review-now");
+  if (!btn) return;
+  btn.addEventListener("click", async () => {
+    S.reviewPending = true;
+    btn.disabled = true; btn.textContent = "Review requested…";
+    const r = await fetch("/control", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "review_strategy" }) });
+    if (!r.ok) { S.reviewPending = false; toast(`Could not request a review: ${await r.text()}`); renderStrategy(S.strategy); }
+  });
+}
+
+function milestoneRow(m) {
+  const st = MS_STATUS[m.status] || ["", "", m.status || ""];
+  return `<li><span class="ms-metric">${esc(human(m.metric))} ${esc(m.op)} ${fmt(m.target)} by ${esc(m.by)}</span>
+    <span class="tag${st[0] ? " " + st[0] : ""}" title="${esc(st[2])}"><i aria-hidden="true">${st[1]}</i>${esc(st[2])}</span></li>`;
+}
+
+function pillarCard(name, pl, ms) {
+  const goals = (pl.goals || []).map((g) => `<li>${esc(g)}</li>`).join("");
+  const msRows = ms.map(milestoneRow).join("");
+  const actions = [];
+  if (name === "technology" && (pl.prefer_techs || []).length) actions.push(`Prefers: ${esc(pl.prefer_techs.join(", "))}`);
+  if (name === "economy") (pl.market || []).forEach((o) => actions.push(`Market: ${esc(o.side)} ${esc(o.resource)} ${fmt(o.amount)}/month`));
+  return `<article class="pillar" data-pillar="${esc(name)}">
+    <div class="p-head"><h3>${esc(human(name))}</h3><span class="p-num">priority ${esc(pl.priority)}</span>
+      ${pl.pinned ? `<span class="tag" title="Pinned by a human edit: a review will never change it">pinned</span>` : ""}</div>
+    <p class="stance">${esc(pl.stance || "")}</p>
+    ${goals ? `<ul class="goals">${goals}</ul>` : ""}
+    ${msRows ? `<ul class="ms-list">${msRows}</ul>` : ""}
+    ${actions.length ? `<div class="actions">${actions.map((a) => `<div>${a}</div>`).join("")}</div>` : ""}
+    <div class="p-buttons"><button type="button" class="btn" data-edit="${esc(name)}">Edit</button>${pl.pinned ? `<button type="button" class="btn" data-unpin="${esc(name)}">Unpin</button>` : ""}</div>
+    <div class="p-form-slot"></div>
+  </article>`;
+}
+
+function marketFieldsHtml(orders) {
+  const rows = [0, 1].map((i) => {
+    const o = orders[i] || { side: "sell", resource: "", amount: "" };
+    return `<div class="market-row">
+      <select name="m${i}-side"><option value="sell"${o.side === "sell" ? " selected" : ""}>sell</option><option value="buy"${o.side === "buy" ? " selected" : ""}>buy</option></select>
+      <input name="m${i}-resource" placeholder="resource (not trade)" value="${esc(o.resource || "")}">
+      <input name="m${i}-amount" type="number" min="1" placeholder="amount / month" value="${esc(o.amount ?? "")}"></div>`;
+  }).join("");
+  return `<div class="market-fields"><span>Market orders (up to 2; trade cannot be sold or bought)</span>${rows}</div>`;
+}
+
+function openEditForm(name, pillar) {
+  const art = $("strategy").querySelector(`article[data-pillar="${CSS.escape(name)}"]`);
+  if (!art) return;
+  const slot = art.querySelector(".p-form-slot"), isTech = name === "technology", isEcon = name === "economy";
+  slot.innerHTML = `<form class="p-form">
+    <label>Stance<textarea name="stance">${esc(pillar.stance || "")}</textarea></label>
+    <label>Goals (one per line, up to 3)<textarea name="goals">${esc((pillar.goals || []).join("\n"))}</textarea></label>
+    ${isTech ? `<label>Prefer techs (comma list)<input name="prefer_techs" value="${esc((pillar.prefer_techs || []).join(", "))}"></label>` : ""}
+    ${isEcon ? marketFieldsHtml(pillar.market || []) : ""}
+    <p class="p-error" hidden></p>
+    <div class="row"><button type="submit" class="btn primary">Save</button><button type="button" class="btn" data-cancel>Cancel</button></div>
+  </form>`;
+  const editBtn = art.querySelector(`[data-edit]`), unpinBtn = art.querySelector(`[data-unpin]`);
+  editBtn.hidden = true; if (unpinBtn) unpinBtn.hidden = true;
+  const close = () => { slot.innerHTML = ""; editBtn.hidden = false; if (unpinBtn) unpinBtn.hidden = false; };
+  slot.querySelector("[data-cancel]").addEventListener("click", close);
+  slot.querySelector("form").addEventListener("submit", (e) => { e.preventDefault(); submitEdit(name, slot, close); });
+}
+
+async function submitEdit(name, slot, onSaved) {
+  const form = slot.querySelector("form");
+  const fields = { stance: form["stance"].value, goals: form["goals"].value.split("\n").map((s) => s.trim()).filter(Boolean).slice(0, 3) };
+  if (form["prefer_techs"]) fields.prefer_techs = form["prefer_techs"].value.split(",").map((s) => s.trim()).filter(Boolean);
+  if (form["m0-resource"]) {
+    const market = [];
+    for (let i = 0; i < 2; i++) {
+      const res = form[`m${i}-resource`].value.trim();
+      if (res) market.push({ side: form[`m${i}-side`].value, resource: res, amount: +form[`m${i}-amount`].value || 0 });
+    }
+    fields.market = market;
+  }
+  const btn = form.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  let r;
+  try {
+    r = await fetch("/control", { method: "POST", headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ action: "edit_pillar", pillar: name, fields }) });
+  } catch (e) {
+    const err = slot.querySelector(".p-error"); err.textContent = "Could not reach the server: " + e.message; err.hidden = false; btn.disabled = false;
     return;
   }
-  const [cur, ...old] = plans;
-  const src = (p) => p.source === "retrospective" ? "revised at a retrospective" : "written at a decision";
-  box.innerHTML = `<div class="t-when">${esc(cur.date)}, ${esc(src(cur))}</div><p class="plan-text">${md(cur.text)}</p>` +
-    old.slice(0, 8).map((p) => `<details class="plan-old"><summary>${esc(p.date)}, ${esc(src(p))}</summary><p class="plan-text">${md(p.text)}</p></details>`).join("");
+  if (!r.ok) {
+    const err = slot.querySelector(".p-error");
+    err.textContent = (await r.text()) || "The edit was rejected.";
+    err.hidden = false;
+    btn.disabled = false;
+    return;         // Ruling: show the server's reason inline, keep the form open
+  }
+  toast(`${human(name)}: edit saved and pinned.`);
+  onSaved();
+  loadStatus();
+}
+
+function renderStrategy(data) {
+  const box = $("strategy");
+  const cur = data && data.current;
+  if (!cur) {
+    box.innerHTML = `<p class="empty">No strategy yet. The first review runs at the start of the run.</p><div class="strategy-review">${reviewButtonHtml()}</div>`;
+    wireReviewButton();
+    return;
+  }
+  const pillars = Object.entries(cur.pillars || {}).sort((a, b) => (a[1].priority || 0) - (b[1].priority || 0));
+  const ranking = pillars.map(([name]) => DIRECTIVE_OF[name]).filter(Boolean).map(human).join(", ");
+  const last = (data.history && data.history[0]) || {};
+  const past = (data.history || []).slice(1);
+  const msByPillar = {};
+  (data.milestones || []).forEach((m) => { (msByPillar[m.pillar] = msByPillar[m.pillar] || []).push(m); });
+
+  let h = `<div class="strategy-head">
+    <div class="t-meta"><span>Focus: ${esc(cur.focus || "–")}</span><span>Ranking: ${esc(ranking || "–")}</span></div>
+    <div class="t-when">Last review: ${esc(last.date || "–")}, ${esc(tidy(last.trigger || ""))}, ${esc(last.model || "–")}</div>
+  </div>`;
+  h += pillars.map(([name, pl]) => pillarCard(name, pl, msByPillar[name] || [])).join("");
+  if (past.length) {
+    h += `<details class="strategy-history"><summary>History (${past.length} version${past.length === 1 ? "" : "s"})</summary>
+      <table class="data"><thead><tr><th>Date</th><th>Trigger</th><th>Model</th><th>Reason</th></tr></thead><tbody>` +
+      past.map((v) => `<tr><td>${esc(v.date || "")}</td><td>${esc(tidy(v.trigger || ""))}</td><td>${esc(v.model || "")}</td><td>${esc(tidy((v.strategy || {}).reason || ""))}</td></tr>`).join("") +
+      `</tbody></table></details>`;
+  }
+  h += `<div class="strategy-review">${reviewButtonHtml()}</div>`;
+  box.innerHTML = h;
+  wireReviewButton();
+  box.querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => openEditForm(b.dataset.edit, cur.pillars[b.dataset.edit])));
+  box.querySelectorAll("[data-unpin]").forEach((b) => b.addEventListener("click", () => {
+    if (confirm(`Unpin ${human(b.dataset.unpin)}? A future review may change it again.`)) control({ action: "unpin_pillar", pillar: b.dataset.unpin });
+  }));
 }
 
 async function loadCampaignData() {
-  if (!S.campaign) { renderChart(); renderDecisions(); renderPlan([]); return; }
+  if (!S.campaign) { S.strategy = null; renderChart(); renderDecisions(); renderStrategy(null); return; }
   const qs = "campaign=" + encodeURIComponent(S.campaign);
-  let plans;
-  [S.decisions, S.metrics, plans] = await Promise.all([api("/api/decisions?" + qs), api("/api/metrics?" + qs),
-                                                      api("/api/plans?" + qs).catch(() => [])]);
-  if (JSON.stringify(plans) !== S.plansKey) {
-    if (S.plansKey !== undefined && plans.length) flag("plan");
-    S.plansKey = JSON.stringify(plans);
-    renderPlan(plans);
+  let strategy;
+  [S.decisions, S.metrics, strategy] = await Promise.all([api("/api/decisions?" + qs), api("/api/metrics?" + qs),
+                                                      api("/api/strategy?" + qs).catch(() => null)]);
+  S.strategy = strategy;
+  const skey = JSON.stringify(strategy && strategy.current);
+  if (skey !== S.strategyKey) {
+    if (S.strategyKey !== undefined && strategy && strategy.current) flag("strategy");
+    S.strategyKey = skey;
   }
+  renderStrategy(strategy);
   renderChart(); renderDecisions(); renderReadout();
   const newest = S.decisions[S.decisions.length - 1];
   // follow the newest decision unless the reader picked an older one
@@ -583,6 +753,8 @@ function niceTicks(lo, hi, n = 4) {
   while (v < hi - 1e-9) { v += step; out.push(+v.toFixed(6)); }   // last tick covers the maximum
   return out;
 }
+
+const monthOf = (date) => { if (!date) return null; const [y, m] = String(date).split("."); return (+y) * 12 + (+m) - 1; };
 
 function directiveSpans() {
   const spans = [];
@@ -713,6 +885,15 @@ function renderChart() {
       <circle cx="${x}" cy="${H - 12}" r="${changed ? 6 : 4.5}" fill="${changed ? "var(--accent)" : "var(--surface)"}" stroke="var(--accent)" stroke-width="2"/>
       <rect x="${x - 10}" y="${H - 24}" width="20" height="24" fill="transparent"/></g>`;
   });
+  // strategy review marks: a thin diamond on the directive lane at each version's month
+  const reviews = (S.strategy && S.strategy.history) || [];
+  const shown = reviews.filter((r) => monthOf(r.date) != null && monthOf(r.date) >= x0 - 1);
+  shown.forEach((r) => {
+    const mo = Math.min(Math.max(monthOf(r.date), x0), x1), x = X(mo);
+    svg += `<g class="dmark rmark"><title>Strategy review: ${esc(tidy(r.trigger || ""))}</title>
+      <rect x="${x - 4}" y="9" width="8" height="8" fill="var(--thought)" stroke="var(--surface)" stroke-width="1" transform="rotate(45 ${x} 13)"/></g>`;
+  });
+  if (shown.length) $("legend").innerHTML += `<span><i class="review"></i>strategy review</span>`;
   svg += `<line id="xhair" x1="0" x2="0" y1="${T}" y2="${H - B}" stroke="var(--ink-2)" stroke-width="1" visibility="hidden"/>`;
   svg += `<g id="hdots"></g><rect id="hit" x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent"/></svg><div class="tip" id="tip" hidden></div>`;
   wrap.innerHTML = svg;
@@ -823,7 +1004,7 @@ function renderDecisions() {
     return `<li class="${sel ? "sel" : ""}"><button data-i="${i}">
       <span class="d-date">${esc(d.date || "–")}</span>
       <span class="d-meta"><span class="nw">${d.model === "human" ? "you" : fmt(d.tokens_in) + " tokens"}</span>${d.seconds ? `<br><span class="nw">${esc(d.seconds)} s</span>` : ""}</span>
-      <span class="d-main"><span class="d-head"><span class="dir${kept ? " kept" : ""}">${esc(label)}</span><span class="trigger">${esc(tidy(d.trigger || ""))}</span></span>
+      <span class="d-main"><span class="d-head"><span class="dir${kept ? " kept" : ""}">${esc(label)}</span><span class="trigger">${esc(tidy(d.trigger || ""))}</span>${d.off_frame ? '<span class="tag bad">off-frame</span>' : ""}</span>
       <p class="reason">${esc(tidy(d.reason || ""))}</p>${afterText(d.result)}</span></button></li>`;
   }).join("") + (all.length > shown.length ? `<li class="more"><button class="btn" id="show-all">Show all ${all.length}</button></li>` : "");
   const more = $("show-all");
@@ -935,7 +1116,7 @@ function showTab(name) {
     b.setAttribute("aria-selected", String(on));
     if (on) b.querySelector(".dot").hidden = true;
   });
-  ["reasoning", "talk", "plan", "activity"].forEach((n) => ($("tab-" + n).hidden = n !== name));
+  ["reasoning", "talk", "strategy", "activity"].forEach((n) => ($("tab-" + n).hidden = n !== name));
 }
 function flag(name) { const b = document.querySelector(`.tabs [data-tab="${name}"]`); if (b.getAttribute("aria-selected") !== "true") b.querySelector(".dot").hidden = false; }
 document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
@@ -993,6 +1174,9 @@ function onEvent(ev) {
   addFeed(ev);
   if (ev.kind === "chat") addMessage(ev);
   if (ev.kind === "trace" || ev.kind === "campaign" || ev.kind === "plan") refreshSoon();
+  if (ev.kind === "strategy") refreshSoon();   // a new version (a review's, or a human edit's)
+  // only the review's own result ends "Review requested…": a human edit mid-review must not
+  if (ev.kind === "strategy_review" || (ev.kind === "episode_error" && String(ev.error || "").startsWith("strategy review:"))) { S.reviewPending = false; refreshSoon(); }
   if (ev.kind === "metrics" && S.campaign === (S.status.info || {}).campaign) {
     S.metrics.push({ ...ev, month: ev.date ? (+ev.date.split(".")[0]) * 12 + (+ev.date.split(".")[1]) - 1 : null });
     renderChart();

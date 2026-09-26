@@ -250,4 +250,11 @@ Rules:
 - Directives are only those in `corpora/stellaris/directives.toml` (identifiers `[a-z0-9_]`); a
   new directive needs policy options that exist in the game's `common/policies`.
 - Settings used: autosave Monthly (`settings.txt` `autosave=2`), tutorial off.
+- **Strategy layer**: the governor keeps a pillar strategy (role `strategy`) that ranks the
+  directives; decisions choose within it. Two actions go through the game's screens (positions in
+  `[ui.tech]`/`[ui.market]` of the manifest, calibrated on 4.5.1): `stellaris_pick_tech` (clicking a
+  field's swap button drops its current research at once, so it only swaps a field under 10% done;
+  only the first 4 offered techs are clickable) and `stellaris_market_sync` (a new monthly trade
+  starts at 10; changes are computed from the last autosave, so call it at most once per autosave;
+  trade is not a market resource).
 
