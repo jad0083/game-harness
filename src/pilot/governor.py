@@ -13,7 +13,7 @@ import queue
 import re
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Literal, Protocol
 
 from pydantic import BaseModel, Field
@@ -140,11 +140,16 @@ def remember_rule(ctx: RunContext[GovDeps], rule: str, why: str) -> str:
     return msg
 
 
+def governor_settings(s: Settings):
+    """Model settings for governor decisions: the governor's own thinking level."""
+    return model_settings(replace(s, thinking=s.governor_thinking))
+
+
 def build_governor(s: Settings, briefing: str, model=None) -> Agent[GovDeps, GovernorDecision]:
     return Agent(model or s.model, deps_type=GovDeps, output_type=GovernorDecision,
                  instructions=INSTRUCTIONS + "\n\n" + briefing,
                  tools=[Tool(f) for f in (consult, get_doc, recent_log, past_outcomes, remember_rule)],
-                 model_settings=model_settings(s), retries=2)
+                 model_settings=governor_settings(s), retries=2)
 
 
 # -- loop -------------------------------------------------------------------------------------

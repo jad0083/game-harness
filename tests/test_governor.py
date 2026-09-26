@@ -398,3 +398,10 @@ def test_explicit_journal_survives_game_switch(monkeypatch, tmp_path):
     monkeypatch.setattr(cli, "check", lambda s: captured.setdefault("s", s) and 0)
     cli.main(["check", "--game", "stellaris"])
     assert captured["s"].game == "stellaris" and captured["s"].journal == tmp_path / "j.md"
+
+
+def test_governor_thinks_more_than_episodes():
+    from pilot.governor import governor_settings
+    s = Settings(model="google:gemini-3.8-flash", thinking="low")
+    assert governor_settings(s)["google_thinking_config"]["thinking_level"] == "medium"
+    assert governor_settings(Settings(model="google:x", governor_thinking="high"))["google_thinking_config"]["thinking_level"] == "high"

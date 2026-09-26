@@ -34,6 +34,9 @@ class Settings:
     # what Gemini is trained on) or "pixels" (1568x882 image pixels). "auto" picks per provider.
     coords: str = "auto"
     thinking: str = "low"              # low | medium | high | off (provider-specific mapping)
+    # Stellaris governor decisions are rare and strategic: think more. At "low", Gemini often skips
+    # thinking entirely (no thought summary); "medium" returned one (~500 extra output tokens).
+    governor_thinking: str = "medium"
     image_detail: str = "medium"       # low | medium | high (Gemini media resolution)
     images_in_context: int = 2         # older screenshots in an episode become text stubs
     max_requests_per_episode: int = 30 # loop guard, not a cost limit
@@ -88,6 +91,7 @@ class Settings:
         s.model = env.get("PILOT_MODEL", s.model)
         s.coords = env.get("PILOT_COORDS", s.coords)
         s.thinking = env.get("PILOT_THINKING", s.thinking)
+        s.governor_thinking = env.get("PILOT_GOVERNOR_THINKING", s.governor_thinking)
         s.image_detail = env.get("PILOT_IMAGE_DETAIL", s.image_detail)
         s.dashboard_port = int(env.get("PILOT_PORT", s.dashboard_port))
         s.turns_per_autopilot = int(env.get("PILOT_TURNS", s.turns_per_autopilot))
