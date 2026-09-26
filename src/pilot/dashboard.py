@@ -19,6 +19,7 @@ Telemetry (runs/telemetry.sqlite, across runs and models):
     GET  /api/metrics?campaign=<id>|run=<id>    metric points over in-game time
     GET  /api/plans?campaign=<id>|run=<id>      campaign plan versions, newest first
     GET  /api/models                            models to offer, and the saved choice for the next run
+    GET  /api/pc                                gaming PC: agent reachable, version, window in front, games open
     POST /api/settings  {"model", "thinking"}   save that choice (applies to a live pilot too)
     POST /api/run  {"game", "speed", "months"}   start a pilot run (game-pilot.service); viewer only
 """
@@ -83,6 +84,29 @@ class LiveProxy:
         return self._url
 
 
+GAME_WINDOWS = {"Stellaris": "stellaris", "Galactic Civilizations": "galciv4"}
+
+
+def pc_status() -> dict:
+    """Agent health and open game windows on the gaming PC (read-only calls)."""
+    import os
+    import urllib.request
+
+    from .config import REPO
+    url = os.environ.get("GAME_AGENT_URL", "http://192.168.1.77:8765").rstrip("/")
+    try:
+        token = os.environ.get("GAME_AGENT_TOKEN") or (REPO / ".agent_token").read_text().strip()
+        hdr = {"Authorization": f"Bearer {token}"}
+        with urllib.request.urlopen(urllib.request.Request(url + "/health", headers=hdr), timeout=3) as r:  # LAN agent
+            h = json.load(r)
+        with urllib.request.urlopen(urllib.request.Request(url + "/windows", headers=hdr), timeout=3) as r:
+            titles = [w.get("title", "") for w in json.load(r).get("windows", [])]
+    except Exception as e:  # noqa: BLE001 - offline is a normal answer here
+        return {"online": False, "error": str(e)[:120]}
+    games = sorted({g for t in titles for k, g in GAME_WINDOWS.items() if (t == k if k == "Stellaris" else k in t)})
+    return {"online": True, "version": h.get("version"), "foreground": h.get("foreground", ""), "games": games}
+
+
 def list_runs(runs_dir: Path, live_id: str | None = None) -> list[dict]:
     out = []
     dirs = [p for p in runs_dir.iterdir() if (p / "events.jsonl").exists()] if runs_dir.exists() else []
@@ -123,7 +147,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
 
     async def api_campaigns(_):
         rows = await q(
-            "SELECT c.id, c.game, c.name, c.created,"
+            "SELECT c.id, c.game, c.name, c.title, c.created,"
             " (SELECT COUNT(*) FROM runs r WHERE r.campaign_id=c.id) AS runs,"
             " (SELECT COUNT(*) FROM decisions d WHERE d.campaign_id=c.id) AS decisions,"
             " (SELECT MAX(date) FROM metrics m WHERE m.campaign_id=c.id) AS latest,"
@@ -213,7 +237,19 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
             raise web.HTTPInternalServerError(text=f"could not start {SERVICE}: {out.decode(errors='replace')[:300]}")
         return web.json_response({"ok": True, "started": SERVICE, **load_prefs(runs_dir)})
 
+    pc_cache: dict = {}
+
+    async def api_pc(_):
+        """Is the gaming PC reachable, which agent version, what is in front, which game is open (cached 4 s)."""
+        now = asyncio.get_running_loop().time()
+        if pc_cache and now - pc_cache["t"] < 4:
+            return web.json_response(pc_cache["data"])
+        data = await asyncio.to_thread(pc_status)
+        pc_cache.update(t=now, data=data)
+        return web.json_response(data)
+
     api = [web.get("/api/campaigns", api_campaigns), web.get("/api/decisions", api_decisions),
+           web.get("/api/pc", api_pc),
            web.post("/api/run", api_run),
            web.get("/api/models", api_models), web.post("/api/settings", api_settings),
            web.get("/api/plans", api_plans),

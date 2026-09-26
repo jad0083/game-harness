@@ -100,3 +100,4 @@
 - [x] Agent 1.3.0 deployed on the PC (remotely, 2026-09-25): write root limited to mod/governor_bridge/, mod/governor_bridge.mod and dlc_load.json; other writes refused (403) on the PC
 - [x] Model and thinking pickers always visible: with no run they save the choice for the next run (runs/pilot-settings.json; command-line options still win), during a run they also switch it live
 - [x] Start a pilot run from the dashboard (game, speed, decision interval; runs game-pilot.service)
+- [x] Dashboard redesign: readout strip, warm ivory on deep space, amber accent, Bricolage Grotesque + Fraunces, hairline sections instead of cards; PC status chip, campaign titles, markdown in the model's text, show-all decisions

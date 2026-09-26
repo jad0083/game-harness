@@ -476,7 +476,7 @@ class Governor:
         """Campaign = the save folder ('save games/<empire>_<id>/…'), or PILOT_CAMPAIGN."""
         self._folder = self._save_folder(b)
         name = self.s.campaign or self._folder or (b.get("name") or "unknown").replace(" ", "_").lower()
-        self.log.set_campaign(self.s.game, name)
+        self.log.set_campaign(self.s.game, name, b.get("name") or "")
         f = self._orders_file()
         if f.exists():
             try:

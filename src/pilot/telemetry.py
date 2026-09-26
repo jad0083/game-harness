@@ -10,6 +10,7 @@ model (and the human) can see whether a directive actually worked.
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 import threading
 from pathlib import Path
@@ -81,6 +82,8 @@ class Telemetry:
         self.db.row_factory = sqlite3.Row
         self.db.execute("PRAGMA journal_mode=WAL")
         self.db.executescript(SCHEMA)
+        if "title" not in {r[1] for r in self.db.execute("PRAGMA table_info(campaigns)")}:
+            self.db.execute("ALTER TABLE campaigns ADD COLUMN title TEXT")     # the empire's name, for people
         cols = {r[1] for r in self.db.execute("PRAGMA table_info(decisions)")}
         if "model" not in cols:       # added later: the model that made each decision (it can change mid-run)
             self.db.execute("ALTER TABLE decisions ADD COLUMN model TEXT")
@@ -102,14 +105,31 @@ class Telemetry:
         self._exec("INSERT OR IGNORE INTO runs(id, game, model, settings, started, status) VALUES (?,?,?,?,?,?)",
                    (run_id, game, model, json.dumps(settings, default=str), t, "running"))
 
-    def set_campaign(self, run_id: str, game: str, name: str, t: float) -> str:
+    def set_campaign(self, run_id: str, game: str, name: str, t: float, title: str = "") -> str:
         cid = f"{game}/{name}"
         self._exec("INSERT OR IGNORE INTO campaigns(id, game, name, created) VALUES (?,?,?,?)", (cid, game, name, t))
+        if title:
+            self._exec("UPDATE campaigns SET title=? WHERE id=?", (title, cid))
         self._exec("UPDATE runs SET campaign_id=? WHERE id=?", (cid, run_id))
         self._exec("UPDATE decisions SET campaign_id=? WHERE run_id=? AND campaign_id IS NULL", (cid, run_id))
         self._exec("UPDATE metrics SET campaign_id=? WHERE run_id=? AND campaign_id IS NULL", (cid, run_id))
         self._exec("UPDATE plans SET campaign_id=? WHERE run_id=? AND campaign_id IS NULL", (cid, run_id))
         return cid
+
+    def _title_from_trace(self, run_id: str, tr: dict) -> None:
+        """Older runs recorded no empire name; the briefing's first line in the trace has it."""
+        cid = self._campaign_of(run_id)
+        if not cid or not tr:
+            return
+        rows = self.query("SELECT title FROM campaigns WHERE id=?", (cid,))
+        if not rows or rows[0]["title"]:
+            return
+        for st in tr.get("steps", []):
+            if st.get("type") == "prompt":
+                m = re.search(r"^# \S+ — (.+?) \(country \d+", st.get("text", ""), re.MULTILINE)
+                if m:
+                    self._exec("UPDATE campaigns SET title=? WHERE id=?", (m.group(1), cid))
+                return
 
     def _campaign_of(self, run_id: str) -> str | None:
         rows = self.query("SELECT campaign_id FROM runs WHERE id=?", (run_id,))
@@ -124,7 +144,7 @@ class Telemetry:
         if kind == "run_start":
             self.start_run(run_id, data.get("game", ""), data.get("model", ""), data, t)
         elif kind == "campaign":
-            self.set_campaign(run_id, data.get("game", ""), data.get("name", ""), t)
+            self.set_campaign(run_id, data.get("game", ""), data.get("name", ""), t, data.get("title") or "")
         elif kind == "run_end":
             self._exec("UPDATE runs SET ended=?, status='ended' WHERE id=?", (t, run_id))
         elif kind == "metrics":
@@ -136,6 +156,7 @@ class Telemetry:
                        (self._campaign_of(run_id), run_id, t, data.get("date"), data.get("source"), data.get("text", "")))
         elif kind == "trace":
             tr = trace or {}
+            self._title_from_trace(run_id, tr)
             decision = data.get("decision") or tr.get("decision") or data.get("situation")
             self._exec(
                 "INSERT OR REPLACE INTO decisions(run_id, episode, campaign_id, t, date, month, trigger, decision, reason,"

@@ -842,3 +842,19 @@ def test_start_run_from_the_dashboard_saves_settings_and_starts_the_service(setu
     monkeypatch.setattr(cli, "run", lambda st, ep: seen.setdefault("s", st) and 0)
     cli.main(["run"])                                   # what the service runs
     assert (seen["s"].game, seen["s"].speed, seen["s"].decide_every_months) == ("stellaris", "fast", 6)
+
+
+def test_campaign_title_comes_from_the_briefing_or_the_trace(setup, tmp_path):
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(s.runs_dir, "r10", s.model, telemetry=tel)
+    game = FakeStellaris([{**briefing("2200.01.01"), "source": "save games/e/x.sav", "name": "United Nations of Earth 2"}])
+    Governor(s, game, log, model=decisions("keep")).run(max_decisions=1)
+    assert tel.query("SELECT title FROM campaigns")[0]["title"] == "United Nations of Earth 2"
+    # a campaign recorded before titles existed: filled from the trace's briefing line
+    tel.record("old", {"t": 1, "kind": "run_start", "game": "stellaris", "model": "m"})
+    tel.record("old", {"t": 1, "kind": "campaign", "game": "stellaris", "name": "folder_1"})
+    tel.record("old", {"t": 2, "kind": "trace", "episode": 1, "date": "2201.01.01", "decision": "keep"},
+               {"steps": [{"type": "prompt", "text": "Decision point.\nBriefing:\n# 2201.01.01 — Kilik Cooperative (country 3, v4.5.1)\n"}]})
+    assert tel.query("SELECT title FROM campaigns WHERE id='stellaris/folder_1'")[0]["title"] == "Kilik Cooperative"
