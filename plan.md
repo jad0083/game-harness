@@ -81,6 +81,8 @@
 - [x] Which directive levers the AI keeps: policies yes (20 months); console-added edicts no (cancelled within a month); briefing shows active edicts
 - [x] Companion mod "Governor Bridge" (`corpora/stellaris/mod/`): additive AI budget entries gated on `governor_directive_*`, `stellaris install-mod` / `bridge-check`; deployed 2026-09-25 into United Nations of Earth 2 via a launcher playset "Governor Bridge" (bridge-check: loaded, no errors)
 - [ ] Surveying speed is not budget-driven (science ship count comes from engine defines): find another lever if the mod doesn't lift expansion
+- [x] Evaluate the mod on 11 in-game years of telemetry: expansion is influence-gated; the expand directive's influence went to a nomad-only budget pool (journal, 2026-09-26)
+- [ ] Re-measure expansion ~5 in-game years after the fixed mod (influence → `stations`) is loaded
 - [ ] Screen templates: pause/date and event popups
 
 ## Pilot app: observability and control

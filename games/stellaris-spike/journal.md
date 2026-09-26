@@ -130,3 +130,18 @@ Open questions for the build:
   is exploration after 12 years without it, not a lack of space. (An unclaimed system lists the
   null starbase id 4294967295; the first version of the check counted those as claimed.)
 
+## Evaluation: Governor Bridge in United Nations of Earth 2 (2203.10 – 2215.02, telemetry)
+- Mod loaded for the whole campaign, directive `expand` throughout. Systems 3 → 12 (≈0.8 a year);
+  peer median 2 → 14, so the rank slid from 3rd to 9th of 14. The first campaign (no mod, mostly
+  observer mode) had 4–5 systems at 2216–2219, so `human_ai` + mod expands, but slower than peers.
+- The gate is **influence**: net +3.6 to +4.6 a month, stockpile repeatedly spent down to 7–70,
+  while alloys sat at 85–370 and energy piled up to 14,400 unused. Vanilla funds outpost alloys
+  only while influence > 75 (`alloys_expenditure_starbases_expand`).
+- **Bug found**: the mod's extra influence went to category `starbases`, which in vanilla only
+  nomadic empires spend influence from; outposts draw influence from `stations`
+  (`influence_expenditure_stations`, "min is 1 jump away"). So the expand directive reserved
+  influence in a pool nothing spends. Fixed (entry now `stations`, desired_min 75); a test checks
+  every mod entry against the categories a non-nomadic empire spends from. The energy-for-planets
+  entry of `consolidate_economy` was dropped for the same reason (only the Gaia seeder uses it).
+- Next check: systems a year and influence stockpile after the fixed mod has run ~5 years; if
+  still ≈0.8 a year the remaining lever is influence income itself (traditions, envoys), not budget.
