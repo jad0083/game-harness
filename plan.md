@@ -101,3 +101,5 @@
 - [x] Model and thinking pickers always visible: with no run they save the choice for the next run (runs/pilot-settings.json; command-line options still win), during a run they also switch it live
 - [x] Start a pilot run from the dashboard (game, speed, decision interval; runs game-pilot.service)
 - [x] Dashboard redesign: readout strip, warm ivory on deep space, amber accent, Bricolage Grotesque + Fraunces, hairline sections instead of cards; PC status chip, campaign titles, markdown in the model's text, show-all decisions
+- [x] Game speed and decision interval shown and changeable on the dashboard (live and for the next run)
+- [x] Dashboard follows the live campaign; no-store responses; transient model errors retried
