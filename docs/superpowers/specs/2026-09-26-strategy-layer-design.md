@@ -38,9 +38,12 @@ t, date, trigger, model, json), newest = current. JSON:
     peer ranks `rank:<measure>`); `op` ∈ `>=`, `<=`; `by` an in-game date
   - `actions` (only technology and economy):
     - technology: `prefer_techs` (tech ids that exist in the corpus, at most 6)
-    - economy: `market` (at most 2 orders `{side: sell|buy, resource, amount}`; sell only for a
-      resource the briefing flags idle; amount ≤ 20% of that resource's monthly income, or ≤ 25 for
-      trade)
+    - economy: `market` (at most 1 order `{side: sell|buy, resource, amount}` until the Market's
+      order-row pitch is measured live; resource one of `[ui.market.resources]` in the manifest (no
+      trade); amount 1..25, and a sell only of a resource the briefing flags idle and ≤ 20% of its
+      monthly income). The idle/20% checks apply only to pillars that changed and are not pinned;
+      a pinned pillar that no longer fits is kept, flagged in the Strategist's prompt, and its
+      failing sells are skipped before the market sync.
   - `pinned` (bool), `edited_by` (`model` | `human`)
 - `focus`: one line, the current focus
 - `ranking`: directives in order, derived by code from pillar priorities (mapping below)

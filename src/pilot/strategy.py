@@ -81,9 +81,62 @@ def _months(date: str) -> int:
     return y * 12 + m - 1
 
 
+# One set of market rules, shared with the controller's market_sync tool (mcp.rs
+# validate_market_orders; tests keep the two equal). MARKET_RESOURCES are the keys of
+# corpora/stellaris/manifest.toml [ui.market.resources]; trade is not a market resource.
+MARKET_RESOURCES = ("energy", "minerals", "food", "consumer_goods", "alloys", "volatile_motes", "exotic_gases",
+                    "rare_crystals", "sr_living_metal", "sr_zro", "sr_dark_matter")
+MARKET_MIN_AMOUNT = 1
+MARKET_MAX_AMOUNT = 25
+SELL_INCOME_SHARE = 0.2      # a sell order takes at most 20% of that resource's monthly income
+# At most one order until ui.market.order_row_pitch is measured live: the controller can only
+# find (and so remove) the first order row.
+MAX_MARKET_ORDERS = 1
+
+
+def market_briefing_errors(o: MarketOrder, idle: set[str], income: dict[str, float]) -> list[str]:
+    """Why a market order does not fit today's briefing: a sell must be of an IDLE resource and at
+    most 20% of its monthly income. Buys have no briefing-dependent rule."""
+    if o.side != "sell":
+        return []
+    errs = []
+    if o.resource not in idle:
+        errs.append(f"selling {o.resource} but it is not idle")
+    if o.resource not in income:
+        errs.append(f"no monthly income known for {o.resource}")
+    else:
+        cap = SELL_INCOME_SHARE * max(income[o.resource], 0.0)
+        if o.amount > cap:
+            errs.append(f"sell {o.resource} {o.amount} is over {cap:.0f} (20% of monthly income)")
+    return errs
+
+
+def _content(pl: Pillar) -> dict:
+    return pl.model_dump(exclude={"pinned", "edited_by"})
+
+
+def _briefing_checked(s: Strategy, previous: Strategy | None) -> set[str]:
+    """Pillars that changed versus `previous` and are not pinned there (all of them without one)."""
+    if previous is None:
+        return set(s.pillars)
+    out = set()
+    for name, pl in s.pillars.items():
+        old = previous.pillars.get(name)
+        if old is None or (not old.pinned and _content(pl) != _content(old)):
+            out.add(name)
+    return out
+
+
 def validate(s: Strategy, *, previous: Strategy | None, tech_ids: set[str], idle: set[str],
-             income: dict[str, float]) -> list[str]:
-    """Reasons the strategy cannot be used (empty = valid)."""
+             income: dict[str, float], briefing_checked: set[str] | None = None) -> list[str]:
+    """Reasons the strategy cannot be used (empty = valid).
+
+    Structural checks (pillars, priorities, sizes, metrics, dates, techs, market resource, side,
+    amount and count) apply to every pillar. Briefing-dependent checks (sell only an idle resource,
+    at most 20% of its income) apply only to `briefing_checked` pillars — by default the ones that
+    changed versus `previous` and are not pinned there, so a pinned or untouched pillar that no
+    longer fits today's briefing never blocks a review (see `pinned_misfits`)."""
+    checked = _briefing_checked(s, previous) if briefing_checked is None else briefing_checked
     errs: list[str] = []
     for p in PILLARS:
         if p not in s.pillars:
@@ -121,28 +174,36 @@ def validate(s: Strategy, *, previous: Strategy | None, tech_ids: set[str], idle
                 errs.append(f"{name}: unknown tech {t!r}")
         if pl.market and name != "economy":
             errs.append(f"{name}: only the economy pillar places market orders")
-        if len(pl.market) > 2:
-            errs.append(f"{name}: at most 2 market orders")
+        if len(pl.market) > MAX_MARKET_ORDERS:
+            errs.append(f"{name}: at most {MAX_MARKET_ORDERS} market order")
         for o in pl.market:
             if o.resource == "trade":
                 errs.append(f"{name}: trade cannot be sold or bought on the market")
                 continue
-            cap = 0.2 * max(income.get(o.resource, 0.0), 0.0)
-            if o.side == "sell" and o.resource not in idle:
-                errs.append(f"{name}: selling {o.resource} but it is not idle")
-            if o.side == "sell":
-                if o.resource not in income:
-                    errs.append(f"{name}: no monthly income known for {o.resource}")
-                elif o.amount > cap:
-                    errs.append(f"{name}: sell {o.resource} {o.amount} is over {cap:.0f} (20% of monthly income)")
+            if o.resource not in MARKET_RESOURCES:
+                errs.append(f"{name}: unknown market resource {o.resource!r}")
+            if not MARKET_MIN_AMOUNT <= o.amount <= MARKET_MAX_AMOUNT:
+                errs.append(f"{name}: {o.side} {o.resource} amount must be {MARKET_MIN_AMOUNT}..{MARKET_MAX_AMOUNT}")
+            if name in checked:
+                errs.extend(f"{name}: {e}" for e in market_briefing_errors(o, idle, income))
     if previous is not None:
         for name, pl in previous.pillars.items():
-            if pl.pinned and name in s.pillars:
-                prev_content = pl.model_dump(exclude={"pinned", "edited_by"})
-                new_content = s.pillars[name].model_dump(exclude={"pinned", "edited_by"})
-                if new_content != prev_content:
-                    errs.append(f"{name} is pinned by the human and must not change")
+            if pl.pinned and name in s.pillars and _content(s.pillars[name]) != _content(pl):
+                errs.append(f"{name} is pinned by the human and must not change")
     return errs
+
+
+def pinned_misfits(s: Strategy, *, idle: set[str], income: dict[str, float]) -> list[str]:
+    """One line per pinned pillar whose market orders no longer fit today's briefing, for the
+    Strategist's prompt (such a pillar is kept, never rejected: only the human can change it)."""
+    out = []
+    for name, pl in s.sorted_pillars():
+        if not pl.pinned:
+            continue
+        errs = [e for o in pl.market for e in market_briefing_errors(o, idle, income)]
+        if errs:
+            out.append(f"pinned {name} no longer fits: {'; '.join(errs)}")
+    return out
 
 
 def keep_pinned(new: Strategy, previous: Strategy | None) -> Strategy:

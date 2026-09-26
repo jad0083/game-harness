@@ -255,3 +255,108 @@ def test_too_many_milestones_are_rejected():
     s = strat(economy=Pillar(priority=2, stance="s", goals=["g"], milestones=ms))
     assert any("at most 6 milestones" in e for e in
               validate(s, previous=None, tech_ids=set(), idle=set(), income={}))
+
+
+# ---- final review fixes: split validation, one set of market rules, one order ----------------
+
+def _econ(*orders, pinned=False):
+    return Pillar(priority=2, stance="s", goals=["g"], market=list(orders), pinned=pinned,
+                  edited_by="human" if pinned else "model")
+
+
+def test_an_unchanged_pinned_pillar_that_no_longer_fits_the_briefing_does_not_block_a_review():
+    """Ruling (final review 1): briefing-dependent checks (idle, 20% of income) apply only to
+    pillars that changed versus the previous strategy and are not pinned."""
+    sell = {"side": "sell", "resource": "energy", "amount": 10}
+    old = strat(economy=_econ(sell, pinned=True))
+    new = strat(economy=_econ(sell, pinned=True), expansion=Pillar(priority=4, stance="new", goals=["g"]))
+    # energy is no longer idle and income collapsed: the pinned order no longer fits today
+    assert validate(new, previous=old, tech_ids=set(), idle=set(), income={"energy": 1.0}) == []
+
+
+def test_an_unchanged_unpinned_pillar_is_not_rechecked_against_the_briefing():
+    sell = {"side": "sell", "resource": "energy", "amount": 10}
+    old = strat(economy=_econ(sell))
+    assert validate(strat(economy=_econ(sell)), previous=old, tech_ids=set(), idle=set(), income={"energy": 1.0}) == []
+
+
+def test_a_changed_pillar_is_checked_against_the_briefing():
+    old = strat(economy=_econ({"side": "sell", "resource": "energy", "amount": 10}))
+    new = strat(economy=_econ({"side": "sell", "resource": "energy", "amount": 11}))
+    errs = validate(new, previous=old, tech_ids=set(), idle=set(), income={"energy": 100.0})
+    assert any("not idle" in e for e in errs)
+
+
+def test_structural_market_checks_apply_to_unchanged_pinned_pillars_too():
+    bad = {"side": "sell", "resource": "unobtainium", "amount": 30}
+    old = strat(economy=_econ(bad, pinned=True))
+    errs = validate(strat(economy=_econ(bad, pinned=True)), previous=old, tech_ids=set(), idle=set(), income={})
+    joined = " | ".join(errs)
+    assert "unknown market resource 'unobtainium'" in joined and "1..25" in joined
+
+
+def test_briefing_checked_names_override_the_changed_pillar_rule():
+    """edit_pillar: the edited pillar (pinned by the edit itself) is the only one checked."""
+    sell = {"side": "sell", "resource": "energy", "amount": 10}
+    s = strat(economy=_econ(sell, pinned=True))
+    assert validate(s, previous=None, tech_ids=set(), idle=set(), income={"energy": 100.0}, briefing_checked=set()) == []
+    errs = validate(s, previous=None, tech_ids=set(), idle=set(), income={"energy": 100.0}, briefing_checked={"economy"})
+    assert any("not idle" in e for e in errs)
+
+
+def test_pinned_misfits_name_each_pinned_pillar_that_no_longer_fits():
+    from pilot.strategy import pinned_misfits
+    s = strat(economy=_econ({"side": "sell", "resource": "energy", "amount": 10}, pinned=True))
+    lines = pinned_misfits(s, idle=set(), income={"energy": 100.0})
+    assert len(lines) == 1 and lines[0].startswith("pinned economy no longer fits: ") and "not idle" in lines[0]
+    assert pinned_misfits(s, idle={"energy"}, income={"energy": 100.0}) == []
+    unpinned = strat(economy=_econ({"side": "sell", "resource": "energy", "amount": 10}))
+    assert pinned_misfits(unpinned, idle=set(), income={"energy": 100.0}) == []
+
+
+def test_sell_cap_is_the_smaller_of_25_and_20_percent_of_income():
+    ok = strat(economy=_econ({"side": "sell", "resource": "energy", "amount": 25}))
+    assert validate(ok, previous=None, tech_ids=set(), idle={"energy"}, income={"energy": 1000.0}) == []
+    over = strat(economy=_econ({"side": "sell", "resource": "energy", "amount": 26}))
+    assert any("1..25" in e for e in validate(over, previous=None, tech_ids=set(), idle={"energy"}, income={"energy": 1000.0}))
+    small = strat(economy=_econ({"side": "sell", "resource": "energy", "amount": 21}))
+    assert any("over 20" in e for e in validate(small, previous=None, tech_ids=set(), idle={"energy"}, income={"energy": 100.0}))
+
+
+def test_buys_are_capped_at_25_and_need_no_idle_or_income():
+    assert validate(strat(economy=_econ({"side": "buy", "resource": "alloys", "amount": 25})),
+                    previous=None, tech_ids=set(), idle=set(), income={}) == []
+    errs = validate(strat(economy=_econ({"side": "buy", "resource": "alloys", "amount": 26})),
+                    previous=None, tech_ids=set(), idle=set(), income={})
+    assert any("1..25" in e for e in errs)
+
+
+def test_at_most_one_market_order_until_the_row_pitch_is_measured():
+    two = strat(economy=_econ({"side": "buy", "resource": "alloys", "amount": 5},
+                              {"side": "buy", "resource": "food", "amount": 5}))
+    assert any("at most 1 market order" in e for e in validate(two, previous=None, tech_ids=set(), idle=set(), income={}))
+
+
+def test_market_resources_are_the_manifests_market_resources():
+    import tomllib
+
+    from pilot.config import REPO
+    from pilot.strategy import MARKET_RESOURCES
+    manifest = tomllib.loads((REPO / "corpora/stellaris/manifest.toml").read_text(encoding="utf-8"))
+    assert set(MARKET_RESOURCES) == set(manifest["ui"]["market"]["resources"])
+    assert "trade" not in MARKET_RESOURCES
+
+
+def test_python_market_amount_limits_equal_the_controllers():
+    import re
+
+    from pilot.config import REPO
+    from pilot.strategy import MARKET_MAX_AMOUNT, MARKET_MIN_AMOUNT
+    src = (REPO / "crates/game-controller/src/mcp.rs").read_text(encoding="utf-8")
+    lo = re.search(r"const MARKET_AMOUNT_MIN: i64 = (\d+);", src)
+    hi = re.search(r"const MARKET_AMOUNT_MAX: i64 = (\d+);", src)
+    assert lo and hi, "mcp.rs declares its market amount limits as constants"
+    assert (MARKET_MIN_AMOUNT, MARKET_MAX_AMOUNT) == (int(lo.group(1)), int(hi.group(1)))
+    body = src[src.index("fn validate_market_orders"):]
+    body = body[:body.index("\n}\n")]
+    assert "MARKET_AMOUNT_MIN..=MARKET_AMOUNT_MAX" in body, "validate_market_orders uses those constants"

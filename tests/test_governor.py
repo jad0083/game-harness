@@ -1926,7 +1926,7 @@ def test_decisions_carry_out_the_strategy_actions(setup):
     g._review_strategy(briefing("2200.01.01"), "start of run")
     g.strategy.pillars["technology"] = Pillar(priority=3, stance="s", goals=["g"], prefer_techs=["tech_habitat_1"])
     g.strategy.pillars["economy"] = Pillar(priority=2, stance="s", goals=["g"], market=[{"side": "sell", "resource": "energy", "amount": 5}])
-    g._carry_out_actions(briefing("2200.01.01"))
+    g._carry_out_actions(_idle_energy("2200.01.01"))
     assert ("pick_tech", ["tech_habitat_1"]) in game.actions
     assert ("market_sync", [{"side": "sell", "resource": "energy", "amount": 5}]) in game.actions
 
@@ -1972,7 +1972,7 @@ def test_actions_run_at_most_once_per_briefing_date_even_on_failure(setup):
     g._review_strategy(briefing("2200.01.01"), "start of run")
     g.strategy.pillars["technology"] = Pillar(priority=3, stance="s", goals=["g"], prefer_techs=["tech_habitat_1"])
     g.strategy.pillars["economy"] = Pillar(priority=2, stance="s", goals=["g"], market=[{"side": "sell", "resource": "energy", "amount": 5}])
-    b = briefing("2200.01.01")
+    b = _idle_energy("2200.01.01")
     g._carry_out_actions(b)
     g._carry_out_actions(b)   # same briefing date: neither tool is retried even though both failed
     assert game.tech_calls == 1 and game.market_calls == 1
@@ -1987,12 +1987,12 @@ def test_market_sync_is_skipped_when_orders_already_match_regardless_of_order(se
     g = Governor(s, game, log, model=decisions("keep"), role_models={"strategy": _strategist([])})
     g._review_strategy(briefing("2200.01.01"), "start of run")
     g.strategy.pillars["economy"] = Pillar(priority=2, stance="s", goals=["g"], market=[
-        {"side": "sell", "resource": "energy", "amount": 5},
-        {"side": "sell", "resource": "minerals", "amount": 3},
+        {"side": "buy", "resource": "energy", "amount": 5},
+        {"side": "buy", "resource": "minerals", "amount": 3},
     ])
     b = {**briefing("2200.01.01"), "market_orders": [
-        {"side": "sell", "resource": "minerals", "amount": 3},
-        {"side": "sell", "resource": "energy", "amount": 5},
+        {"side": "buy", "resource": "minerals", "amount": 3},
+        {"side": "buy", "resource": "energy", "amount": 5},
     ]}
     g._carry_out_actions(b)
     assert not any(a[0] == "market_sync" for a in game.actions)
@@ -2016,7 +2016,7 @@ def test_a_failed_action_is_logged_and_never_raises_or_pauses(setup):
     g._review_strategy(briefing("2200.01.01"), "start of run")
     g.strategy.pillars["technology"] = Pillar(priority=3, stance="s", goals=["g"], prefer_techs=["tech_habitat_1"])
     g.strategy.pillars["economy"] = Pillar(priority=2, stance="s", goals=["g"], market=[{"side": "sell", "resource": "energy", "amount": 5}])
-    g._carry_out_actions(briefing("2200.01.01"))   # must not raise
+    g._carry_out_actions(_idle_energy("2200.01.01"))   # must not raise
     actions = [e for e in log.recent if e["kind"] == "strategy_action"]
     assert any(a["action"] == "tech" and "agent unreachable" in a["result"] for a in actions)
     assert any(a["action"] == "market" and "save is stale" in a["result"] for a in actions)
@@ -2133,22 +2133,22 @@ def test_market_orders_that_do_not_stick_wait_for_the_next_review(setup):
     g._review_strategy(briefing("2200.01.01"), "start of run")
     g.strategy.pillars["economy"] = Pillar(priority=2, stance="s", goals=["g"],
                                            market=[{"side": "sell", "resource": "energy", "amount": 5}])
-    g._carry_out_actions(briefing("2200.01.01"))          # syncs
+    g._carry_out_actions(_idle_energy("2200.01.01"))       # syncs
     assert sum(1 for a in game.actions if a[0] == "market_sync") == 1
 
-    g._carry_out_actions(briefing("2200.02.01"))          # later save still shows no orders: did not stick
+    g._carry_out_actions(_idle_energy("2200.02.01"))       # later save still shows no orders: did not stick
     assert sum(1 for a in game.actions if a[0] == "market_sync") == 1, "not retried right after the mismatch"
     stuck = [e for e in log.recent if e["kind"] == "strategy_action" and e.get("action") == "market"
              and "did not stick" in e["result"]]
     assert stuck
 
-    g._carry_out_actions(briefing("2200.03.01"))          # still stuck: no further attempts before a review
+    g._carry_out_actions(_idle_energy("2200.03.01"))       # still stuck: no further attempts before a review
     assert sum(1 for a in game.actions if a[0] == "market_sync") == 1
 
     g._review_strategy(briefing("2200.04.01"), "scheduled")     # resets the give-up flag
     g.strategy.pillars["economy"] = Pillar(priority=2, stance="s", goals=["g"],
                                            market=[{"side": "sell", "resource": "energy", "amount": 5}])
-    g._carry_out_actions(briefing("2200.05.01"))
+    g._carry_out_actions(_idle_energy("2200.05.01"))
     assert sum(1 for a in game.actions if a[0] == "market_sync") == 2, "retried after the review reset the flag"
 
 
@@ -2491,3 +2491,105 @@ def test_api_strategy_degrades_instead_of_500_on_an_unparseable_historical_strat
             body = await r.json()
             assert body["current"]["focus"] == "grow" and body["milestones"] == []
     asyncio.run(go())
+
+
+# ---- final review fixes -------------------------------------------------------------------------
+
+PRIOS = {"defence": 1, "economy": 2, "technology": 3, "expansion": 4, "diplomacy": 5, "government": 6, "society": 7}
+
+
+def _strategy_with(**over):
+    from pilot.strategy import Pillar, Strategy
+    pillars = {p: Pillar(priority=n, stance=f"{p} stance", goals=["g"]) for p, n in PRIOS.items()}
+    pillars.update(over)
+    return Strategy(pillars=pillars, focus="hold")
+
+
+def _pinned_energy_sell(amount=10):
+    from pilot.strategy import Pillar
+    return Pillar(priority=2, stance="sell spare energy", goals=["g"], pinned=True, edited_by="human",
+                  market=[{"side": "sell", "resource": "energy", "amount": amount}])
+
+
+def test_strategy_instructions_allow_at_most_one_small_monthly_order():
+    from pilot.governor import STRATEGY_INSTRUCTIONS
+    assert "at most 1 small monthly order" in STRATEGY_INSTRUCTIONS
+    assert "at most 2 small" not in STRATEGY_INSTRUCTIONS
+
+
+def test_edit_pillar_is_not_blocked_by_a_pinned_pillar_that_no_longer_fits(setup):
+    """Final review 1: the briefing checks apply to the edited pillar only."""
+    s, log = setup
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+    g.strategy = _strategy_with(economy=_pinned_energy_sell())
+    g._last_b = briefing("2200.01.01", net={"energy": 1.0})        # energy no longer idle, income tiny
+    g.edit_pillar("diplomacy", {"stance": "stay friendly"})
+    assert g.strategy.pillars["diplomacy"].stance == "stay friendly"
+    assert g.strategy.pillars["economy"].market[0].amount == 10, "the pinned order is kept"
+
+
+def test_a_review_is_not_blocked_by_a_pinned_pillar_that_no_longer_fits_and_is_warned(setup):
+    """Final review 1: a pinned pillar failing today's briefing checks is kept (never rejected)
+    and the Strategist's prompt says so."""
+    s, log = setup
+    prompts, calls = [], []
+    inner = _strategist(calls)
+
+    def respond(messages, info):
+        prompts.append(" ".join(str(p.content) for m in messages for p in getattr(m, "parts", []) if hasattr(p, "content")))
+        return inner.function(messages, info)
+
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": FunctionModel(respond)})
+    g.strategy = _strategy_with(economy=_pinned_energy_sell())
+    g._review_strategy(briefing("2201.01.01", net={"energy": 1.0}), "scheduled")
+    assert g.strategy.focus == "grow", "the new strategy was accepted"
+    assert g.strategy.pillars["economy"].pinned and g.strategy.pillars["economy"].market[0].amount == 10
+    assert not any(e["kind"] == "strategy_rejected" for e in log.recent)
+    assert "pinned economy no longer fits: selling energy but it is not idle" in prompts[0]
+
+
+def _idle_energy(date: str) -> dict:
+    """A briefing where energy is idle (big stock, positive net) with a 20% cap of 20."""
+    return {**briefing(date, net={"energy": 100.0, "food": 3.0}), "stockpile": {"energy": 20000}}
+
+
+def test_sells_that_no_longer_fit_are_dropped_before_market_sync(setup):
+    """Final review 2: a sell failing today's idle / 20% check is skipped (and logged); the rest
+    is synced."""
+    from pilot.strategy import Pillar
+    s, log = setup
+    game = FakeStellaris([briefing("2200.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"],
+                                               market=[{"side": "sell", "resource": "energy", "amount": 10}]))
+    g._carry_out_actions({**briefing("2200.01.01", net={"energy": 100.0}), "market_orders": [
+        {"side": "sell", "resource": "energy", "amount": 10}]})     # energy not idle any more
+    assert ("market_sync", []) in game.actions, "the stale sell is removed, not kept"
+    skipped = [e for e in log.recent if e["kind"] == "strategy_action" and "skipped sell energy" in e.get("result", "")]
+    assert skipped and "not idle" in skipped[0]["result"]
+
+
+def test_sells_that_still_fit_are_synced(setup):
+    from pilot.strategy import Pillar
+    s, log = setup
+    game = FakeStellaris([briefing("2200.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"],
+                                               market=[{"side": "sell", "resource": "energy", "amount": 10}]))
+    g._carry_out_actions(_idle_energy("2200.01.01"))
+    assert ("market_sync", [{"side": "sell", "resource": "energy", "amount": 10}]) in game.actions
+    assert not any("skipped sell" in e.get("result", "") for e in log.recent if e["kind"] == "strategy_action")
+
+
+def test_a_sell_over_20_percent_of_todays_income_is_skipped(setup):
+    from pilot.strategy import Pillar
+    s, log = setup
+    game = FakeStellaris([briefing("2200.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"],
+                                               market=[{"side": "sell", "resource": "energy", "amount": 25}]))
+    g._carry_out_actions(_idle_energy("2200.01.01"))            # cap today is 20
+    assert not any(a[0] == "market_sync" for a in game.actions), "nothing to sync: no orders wanted, none placed"
+    assert any("skipped sell energy" in e.get("result", "") and "over 20% of income" in e["result"]
+               for e in log.recent if e["kind"] == "strategy_action")

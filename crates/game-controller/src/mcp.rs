@@ -985,6 +985,11 @@ fn validate_prefer(prefer: &[String]) -> Result<()> {
 /// a resource the manifest has a *calibrated* icon for (`ui.market.resources`). A `[0, 0]` entry
 /// is a known resource whose point is not yet measured; it is rejected here, up front, so the tool
 /// fails before the Market ever opens rather than mid-sync when `ui_point` would refuse the click.
+/// Market order amount limits, shared with the governor's strategy validation
+/// (`src/pilot/strategy.py` MARKET_MIN_AMOUNT/MARKET_MAX_AMOUNT; a Python test keeps them equal).
+const MARKET_AMOUNT_MIN: i64 = 1;
+const MARKET_AMOUNT_MAX: i64 = 25;
+
 fn validate_market_orders(orders: &[crate::stellaris::MarketOrderSpec], resources: &toml::Table) -> Result<()> {
     if orders.len() > 2 {
         anyhow::bail!("`orders` takes at most 2 monthly trades, got {}", orders.len());
@@ -993,8 +998,8 @@ fn validate_market_orders(orders: &[crate::stellaris::MarketOrderSpec], resource
         if o.side != "sell" && o.side != "buy" {
             anyhow::bail!("order side must be \"sell\" or \"buy\", got {:?}", o.side);
         }
-        if !(1..=25).contains(&o.amount) {
-            anyhow::bail!("order amount must be 1..=25, got {}", o.amount);
+        if !(MARKET_AMOUNT_MIN..=MARKET_AMOUNT_MAX).contains(&o.amount) {
+            anyhow::bail!("order amount must be {MARKET_AMOUNT_MIN}..={MARKET_AMOUNT_MAX}, got {}", o.amount);
         }
         let point = resources.get(&o.resource).and_then(|p| p.as_array());
         let Some(point) = point else {

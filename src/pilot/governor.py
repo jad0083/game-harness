@@ -27,7 +27,7 @@ from .agent import HumanChannel, model_settings, run_with_retry
 from .config import Settings
 from .events import EventLog
 from .learning import Journal, LearnedStore, LearningRejected
-from .strategy import Strategy, keep_pinned, milestone_status, validate
+from .strategy import Strategy, keep_pinned, market_briefing_errors, milestone_status, pinned_misfits, validate
 from .trace import serialize
 
 DIRECTIVES = ("expand", "consolidate_economy", "tech_rush", "prepare_war", "defend", "diplomacy_first")
@@ -75,7 +75,7 @@ STRATEGY_INSTRUCTIONS = """You are the Strategist: you set the empire's top-down
 (1 = first), a stance of one or two sentences, 1-3 goals, milestones on the briefing's measures
 (systems, colonies, pops, techs_known, military_power, economy_power, tech_power, rank:<measure>) with a
 target and an in-game date, and only for technology `prefer_techs` (tech ids to pick when offered; at most 6)
-and only for economy `market` (at most 2 small monthly orders; sell only a resource the briefing lists as
+and only for economy `market` (at most 1 small monthly order, amount 1-25; sell only a resource the briefing lists as
 IDLE, at most 20% of its monthly income). Market orders cannot use trade; sell only idle energy, minerals, food, consumer goods, alloys or strategic resources. Priorities decide which directives the governor prefers.
 Everything must be achievable through directives, tech picks or market orders: the game's AI builds,
 designs ships and moves fleets. Never change a pillar marked pinned: the human set it. If nothing
@@ -622,8 +622,10 @@ class Governor:
             b = self._last_b
             if new.market and b is None:
                 raise ValueError("no briefing yet: market orders can be edited after the first save is read")
+            # briefing checks (idle, 20% of income) for the edited pillar only: another pinned
+            # pillar that no longer fits today's briefing must not block this edit
             errs = validate(s, previous=None, tech_ids=self._tech_ids(), idle=idle_resources(b or {}),
-                            income=(b or {}).get("net", {}))
+                            income=(b or {}).get("net", {}), briefing_checked={name})
             if errs:
                 raise ValueError("; ".join(errs))
             self.strategy = s
@@ -1083,7 +1085,17 @@ class Governor:
                 self._log_action("market", f"market orders did not stick: wanted {pending_market}, save has {current}")
                 self._market_stuck = True
         econ = self.strategy.pillars.get("economy")
-        desired = [o.model_dump() for o in (econ.market if econ else [])]
+        idle, income = idle_resources(b), b.get("net") or {}
+        desired = []
+        for o in (econ.market if econ else []):
+            errs = market_briefing_errors(o, idle, income)
+            if errs:     # a sell that no longer fits today's briefing (e.g. a pinned or older order)
+                if later:
+                    why = " / ".join(w for w, hit in (("not idle", any("not idle" in e for e in errs)),
+                                                      ("over 20% of income", any("not idle" not in e for e in errs))) if hit)
+                    self._log_action("market", f"skipped sell {o.resource}: {why}")
+                continue
+            desired.append(o.model_dump())
         if not self._market_stuck and not self._same_orders(desired, current) and later:
             self._market_sync_date = date
             try:
@@ -1160,6 +1172,9 @@ class Governor:
                   "Milestones (status computed from the recorded numbers):\n" + self._milestones_text(),
                   "Directive changes and what followed:\n" + self._past_outcomes_text(),
                   "Latest briefing:\n" + (self.last_briefing or self.game.briefing_text())]
+        misfits = pinned_misfits(self.strategy, idle=idle_resources(b), income=b.get("net") or {}) if self.strategy else []
+        if misfits:     # kept as the human set them; the Strategist should plan around them
+            prompt.insert(2, "Warnings:\n" + "\n".join(misfits))
         if errors:
             prompt.insert(0, "Your previous answer was rejected: " + "; ".join(errors) + ". Fix exactly these problems.")
         trend = self._trend(b)
