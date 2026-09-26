@@ -1174,7 +1174,9 @@ function onEvent(ev) {
   addFeed(ev);
   if (ev.kind === "chat") addMessage(ev);
   if (ev.kind === "trace" || ev.kind === "campaign" || ev.kind === "plan") refreshSoon();
-  if (ev.kind === "strategy" || ev.kind === "strategy_review") { S.reviewPending = false; refreshSoon(); }
+  if (ev.kind === "strategy") refreshSoon();   // a new version (a review's, or a human edit's)
+  // only the review's own result ends "Review requested…": a human edit mid-review must not
+  if (ev.kind === "strategy_review" || ev.kind === "episode_error") { S.reviewPending = false; refreshSoon(); }
   if (ev.kind === "metrics" && S.campaign === (S.status.info || {}).campaign) {
     S.metrics.push({ ...ev, month: ev.date ? (+ev.date.split(".")[0]) * 12 + (+ev.date.split(".")[1]) - 1 : null });
     renderChart();

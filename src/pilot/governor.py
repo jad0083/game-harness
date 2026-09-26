@@ -50,7 +50,7 @@ you steer it by choosing ONE standing directive, which the harness applies (poli
 AI keeps). The game is paused while you decide. Answer with `keep` unless the situation changed
 materially or the current directive's "leave when" condition holds.
 The prompt already holds what you normally need: the briefing (resources, standing against the other
-empires, expansion room), the campaign plan, earlier directive changes and their outcomes, and the
+empires, expansion room), the strategy frame (pillar ranking, stances, milestones at risk), earlier directive changes and their outcomes, and the
 directives table below. Call a tool only for a specific fact that is missing (e.g. what an event
 option does: consult), and at most twice; then answer.
 Human instructions, when present, override the rules below."""
@@ -1183,8 +1183,9 @@ class Governor:
     def _review_strategy(self, b: dict, trigger: str, retried: bool = False, errors: list[str] | None = None) -> None:
         """Strategist review: may keep the strategy or write a new version (pinned pillars stay). An invalid
         answer (including change=true with no strategy) is retried once with the reasons; still invalid →
-        no change. Never raises and never pauses the game: any failure past the model call is logged and
-        the current strategy stays, exactly like a failed model call."""
+        no change. Never raises and never pauses the game: any failure (reading the game for the prompt,
+        the model call, or after it) is logged, the current strategy stays, and the review is retried
+        at the next decision."""
         self._last_b = b     # cached for edit_pillar's market-order validation (idle resources, income)
         self._reviews_run += 1
         self._since_retro = 0
@@ -1194,26 +1195,26 @@ class Governor:
         self._market_stuck = False
         self._pending_market = None
         started = time.time()
-        current = self.strategy.model_dump_json(indent=1) if self.strategy else "(none yet: write the first strategy)"
-        prompt = [f"Strategy review, trigger: {trigger}.", "Current strategy:\n" + current,
-                  "Milestones (status computed from the recorded numbers):\n" + self._milestones_text(),
-                  "Directive changes and what followed:\n" + self._past_outcomes_text(),
-                  "Latest briefing:\n" + (self.last_briefing or self.game.briefing_text())]
-        misfits = pinned_misfits(self.strategy, idle=idle_resources(b), income=b.get("net") or {}) if self.strategy else []
-        if misfits:     # kept as the human set them; the Strategist should plan around them
-            prompt.insert(2, "Warnings:\n" + "\n".join(misfits))
-        if errors:
-            prompt.insert(0, "Your previous answer was rejected: " + "; ".join(errors) + ". Fix exactly these problems.")
-        trend = self._trend(b)
-        if trend:
-            prompt.append(trend)
-        deps = GovDeps(self.game, self.store, self.log)
-        base = {"model": self.s.model, "thinking_level": self.s.governor_thinking, "game": self.s.game,
-                "date": b["date"], "trigger": trigger, "current": current_directive(b)}
-        ask = lambda agent: agent.run_sync("\n\n".join(prompt), deps=deps,
-                                           usage_limits=UsageLimits(request_limit=self.s.max_requests_per_episode))
         retry_errors: list[str] | None = None
-        try:
+        try:     # building the prompt reads the game (briefing text): inside, so it never raises out
+            current = self.strategy.model_dump_json(indent=1) if self.strategy else "(none yet: write the first strategy)"
+            prompt = [f"Strategy review, trigger: {trigger}.", "Current strategy:\n" + current,
+                      "Milestones (status computed from the recorded numbers):\n" + self._milestones_text(),
+                      "Directive changes and what followed:\n" + self._past_outcomes_text(),
+                      "Latest briefing:\n" + (self.last_briefing or self.game.briefing_text())]
+            misfits = pinned_misfits(self.strategy, idle=idle_resources(b), income=b.get("net") or {}) if self.strategy else []
+            if misfits:     # kept as the human set them; the Strategist should plan around them
+                prompt.insert(2, "Warnings:\n" + "\n".join(misfits))
+            if errors:
+                prompt.insert(0, "Your previous answer was rejected: " + "; ".join(errors) + ". Fix exactly these problems.")
+            trend = self._trend(b)
+            if trend:
+                prompt.append(trend)
+            deps = GovDeps(self.game, self.store, self.log)
+            base = {"model": self.s.model, "thinking_level": self.s.governor_thinking, "game": self.s.game,
+                    "date": b["date"], "trigger": trigger, "current": current_directive(b)}
+            ask = lambda agent: agent.run_sync("\n\n".join(prompt), deps=deps,
+                                               usage_limits=UsageLimits(request_limit=self.s.max_requests_per_episode))
             result, _entry = self._call("strategy", ask,
                                         on_try=lambda e: base.update(model=e["model"], thinking_level=e["thinking"]))
             r: StrategyReview = result.output

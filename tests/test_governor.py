@@ -2735,3 +2735,40 @@ def test_a_milestone_already_missed_does_not_fire_again(setup, tmp_path):
     g2.strategy = g.strategy.model_copy(deep=True)
     g2.strategy.pillars["economy"].milestones[0].by = "2200.01.01"
     assert g2._newly_missed_milestones("2200.01.01", "2200.02.01") == ["milestone missed: economy pops"]
+
+
+def test_decision_instructions_refer_to_the_strategy_frame_not_the_campaign_plan():
+    from pilot.governor import INSTRUCTIONS
+    assert "campaign plan" not in INSTRUCTIONS
+    assert "the strategy frame" in INSTRUCTIONS
+
+
+def test_a_failing_briefing_text_read_never_raises_out_of_a_review(setup):
+    """Final review 9: building the review prompt (which may read the briefing text from the game)
+    is inside the review's own error handling: logged, retried at the next decision."""
+    s, log = setup
+
+    class NoText(FakeStellaris):
+        def briefing_text(self):
+            raise RuntimeError("agent unreachable")
+
+    g = Governor(s, NoText([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": _strategist([])})
+    assert g.last_briefing is None or g.last_briefing == ""
+    g._review_strategy(briefing("2200.01.01"), "start of run")          # must not raise
+    assert g.review_requested == "start of run" and g._review_retry
+    assert any(e["kind"] == "episode_error" and "agent unreachable" in e["error"] for e in log.recent)
+
+
+def test_dashboard_clears_review_pending_only_on_a_review_result():
+    """Final review 9: a human edit's `strategy` event must not re-enable "Review strategy now"
+    while a review is running; only the review's own result (strategy_review, or episode_error)
+    does."""
+    import re
+
+    from pilot.config import REPO
+    html = (REPO / "src/pilot/static/dashboard.html").read_text(encoding="utf-8")
+    clears = [ln for ln in html.splitlines() if "reviewPending = false" in ln and "ev.kind" in ln]
+    assert clears, "onEvent clears the pending state"
+    for ln in clears:
+        assert '"strategy_review"' in ln and '"episode_error"' in ln
+        assert not re.search(r'ev\.kind === "strategy"\s*\|\|', ln), ln

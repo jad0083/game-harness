@@ -2656,11 +2656,16 @@ country={
 
     #[test]
     fn amount_clicks_computes_the_button_and_count_from_the_dialogs_default() {
-        // A new monthly trade starts at 10 (verified live 2387.07): moving to a lower amount
-        // needs minus clicks, a higher amount needs plus clicks, and no change needs none.
-        assert_eq!(amount_clicks(10, 5), ("minus", 5));
-        assert_eq!(amount_clicks(10, 25), ("plus", 15));
-        assert_eq!(amount_clicks(10, 10), ("none", 0));
+        // A new monthly trade starts at the manifest's ui.market.new_trade_amount (verified live
+        // 2387.07): a lower amount needs minus clicks, a higher one plus clicks, no change none.
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpora/stellaris/manifest.toml");
+        let manifest: toml::Table = std::fs::read_to_string(path).unwrap().parse().unwrap();
+        let start = manifest["ui"]["market"]["new_trade_amount"].as_integer().unwrap();
+        assert!((2..25).contains(&start), "the dialog default is inside the 1..=25 order range: {start}");
+        assert_eq!(amount_clicks(start, start - 1), ("minus", 1));
+        assert_eq!(amount_clicks(start, 1), ("minus", (start - 1) as u32));
+        assert_eq!(amount_clicks(start, 25), ("plus", (25 - start) as u32));
+        assert_eq!(amount_clicks(start, start), ("none", 0));
     }
 
     #[test]
