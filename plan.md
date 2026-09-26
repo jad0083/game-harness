@@ -94,4 +94,5 @@
 - [x] Campaign plan (written and revised by the governor, per campaign, versioned) and retrospectives every N decisions (assessment, up to 3 rules into the learned overlay, revised plan); dashboard Plan tab
 - [x] Code review follow-ups: answers channel, chat history, scoped scoring, transactional rebuild, escaping, console always closed, exact window title
 - [x] Fewer tokens per governor decision: strategy trimmed to the directives section (+ contents), outcomes in the prompt, 4-call limit, short policy line (live: ~4.5k input tokens and 1 call for a routine decision, was ~15k and 2)
-- [ ] Live model selector on the dashboard (backend done: models list, set_model, per-decision model)
+- [x] Live model selector on the dashboard: model and thinking pickers (Gemini models for this key + PILOT_MODELS), switch from the next model call, each decision records its model
+- [x] Dashboard design pass: standing as chips with expansion room, single pause/resume toggle, decision-mark tooltips, no-wrap meta, compact empty screen panel, Talk auto-scroll, confirmation toasts

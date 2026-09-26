@@ -106,6 +106,8 @@ def metrics(b: dict) -> dict:
             "peers": {k: {"median": v.get("median"), "rank": v.get("rank")} for k, v in (b.get("peers") or {}).get("stats", {}).items()},
             "peer_count": (b.get("peers") or {}).get("empires"), "behind": (b.get("peers") or {}).get("behind", []),
             "room": (b.get("expansion") or {}).get("reach_unclaimed"),
+            "room_surveyed": (b.get("expansion") or {}).get("reach_unclaimed_surveyed"),
+            "construction_ships": (b.get("expansion") or {}).get("construction_ships"),
             "techs_known": b.get("techs_known"), "wars": len(b.get("wars", [])), "directive": current_directive(b)}
 
 

@@ -233,7 +233,8 @@ run starts or ends), the live event stream during a run, campaign data every 10 
 "Live / Updated N s ago / Reconnecting…" indicator. It shows
 every recorded campaign and, while a pilot runs, forwards its live controls (the pilot's own
 dashboard is on :8790).
-- **Empire over time**: net income, stockpile, power (or a table) over in-game months, the directive
+- **Empire over time**: standing against the other empires (ours, median, rank; falling-behind
+  highlighted) and the room to expand, then net income, stockpile, power (or a table) over in-game months, the directive
   in force above the chart, and a mark for every decision (click to read it).
 - **Decisions**: date, directive, trigger, the model's reason, and what changed 12 months later.
 - **Reasoning**: the full trace of a decision: what the model was shown, its thinking (Gemini
@@ -245,7 +246,10 @@ dashboard is on :8790).
 - **Plan**: the governor's campaign plan (goals, milestones with in-game target dates, current
   focus) and its earlier versions; it is written at the first decision, can be revised at any
   decision, and is reviewed at every retrospective.
-- **Activity**: the event feed; plus pause / resume / stop in the top bar.
+- **Activity**: the event feed.
+- **Top bar** (live runs): model and thinking pickers (Gemini models this key can use, plus
+  `PILOT_MODELS`; a switch applies from the next model call and each decision records its model),
+  pause/resume and stop.
 
 ### Telemetry (`runs/telemetry.sqlite`)
 Every event, decision (with its full trace) and monthly metric point, grouped by **campaign** (the
