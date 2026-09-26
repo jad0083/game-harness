@@ -60,6 +60,8 @@ def load_prefs(runs_dir: Path) -> dict:
         out["model"] = d["model"]
     if d.get("thinking") in THINKING:
         out["thinking"] = d["thinking"]
+    if isinstance(d.get("fallback"), str) and (d["fallback"] == "none" or valid_model(d["fallback"])):
+        out["fallback"] = d["fallback"]
     if d.get("game") in GAMES:
         out["game"] = d["game"]
     if d.get("speed") in SPEEDS:
@@ -84,6 +86,11 @@ def save_prefs(runs_dir: Path, model: str | None = None, thinking: str | None = 
         if thinking not in THINKING:
             raise ValueError(f"thinking must be one of {', '.join(THINKING)}")
         prefs["thinking"] = thinking
+    if run.get("fallback") is not None:
+        fb = str(run["fallback"])
+        if fb != "none" and not valid_model(fb):
+            raise ValueError(f"fallback must be a model name (provider:name) or none, not {fb!r}")
+        prefs["fallback"] = fb
     if run.get("game") is not None:
         if run["game"] not in GAMES:
             raise ValueError(f"game must be one of {', '.join(GAMES)}")

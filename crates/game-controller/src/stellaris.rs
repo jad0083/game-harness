@@ -528,8 +528,8 @@ fn species(root: &Obj, r: u64) -> Option<Species> {
     // prescripted species ("PRESCRIPTED_species_name_humans1") have no readable key: use the plural's stem
     let name = match key.strip_prefix("PRESCRIPTED_species_name_") {
         Some(stem) => {
-            let s = stem.trim_end_matches(|c: char| c.is_ascii_digit());
-            let mut ch = s.chars();
+            let stem = stem.trim_end_matches(|c: char| c.is_ascii_digit()).replace('_', " ");
+            let mut ch = stem.chars();
             ch.next().map(|f| f.to_uppercase().collect::<String>() + ch.as_str()).unwrap_or_default()
         }
         None => name_of(&sp),
@@ -688,6 +688,13 @@ pub async fn fetch_latest_save(client: &crate::client::AgentClient) -> Result<(S
     let (path, _) = latest_save_path(client).await?;
     let (bytes, _) = client.files_read(DOCS_ROOT, &path, 0, None).await?;
     Ok((path, bytes))
+}
+
+/// Like `fetch_latest_save`, plus the file's modification time (unix seconds, the PC's clock).
+pub async fn fetch_latest_save_timed(client: &crate::client::AgentClient) -> Result<(String, Vec<u8>, u64)> {
+    let (path, modified) = latest_save_path(client).await?;
+    let (bytes, _) = client.files_read(DOCS_ROOT, &path, 0, None).await?;
+    Ok((path, bytes, modified))
 }
 
 // ---- governor directives (console bridge) ------------------------------------------------
@@ -1606,7 +1613,7 @@ impl Briefing {
         }
         // only the policies directives change or the governor weighs (all of them are in the JSON)
         s += "Policies: ";
-        s += &["diplomatic_stance", "economic_policy", "war_philosophy", "trade_policy"]
+        s += &["diplomatic_stance", "economic_policy", "first_contact_protocol", "war_philosophy", "trade_policy", "fleet_doctrine", "border_policy"]
             .iter()
             .filter_map(|k| self.policies.get(*k).map(|v| format!("{k}={v}")))
             .collect::<Vec<_>>()
@@ -1709,7 +1716,7 @@ impl Briefing {
                 f.members.join(", "), assoc
             );
         }
-        if let Some(gc) = &gx.community {
+        if let Some(gc) = gx.community.as_ref().filter(|gc| gc.members > 0) {
             let vote = gc.voting.as_ref().map(|(t, by, st)| format!("; voting now: {t} (proposed by {by}; we are {st})")).unwrap_or_default();
             let passed = if gc.passed.is_empty() { String::new() } else { format!("; recently passed: {}", gc.passed.join(", ")) };
             s += &format!(
