@@ -161,15 +161,14 @@ def test_keep_pinned_deep_copies_pillars():
 
 
 def test_validation_errors_have_correct_pillar_scope():
-    """Unknown tech and market errors should use actual pillar names, not hardcoded names."""
+    """Unknown tech errors should use actual pillar name, not hardcoded 'technology:'."""
+    # Put prefer_techs on economy (wrong pillar) with unknown tech
     bad = strat(
-        technology=Pillar(priority=3, stance="s", goals=["g"], prefer_techs=["unknown_tech"]),
-        expansion=Pillar(priority=4, stance="s", goals=["g"],
-                         market=[{"side": "sell", "resource": "minerals", "amount": 5}])
+        economy=Pillar(priority=2, stance="s", goals=["g"], prefer_techs=["unknown_tech"])
     )
     errs = validate(bad, previous=None, tech_ids=set(), idle=set(), income={})
-    # Should have error mentioning "technology: unknown tech"
-    assert any("technology:" in e and "unknown tech" in e for e in errs)
+    # Should have error starting with "economy:" (actual pillar name, not "technology:")
+    assert any(e.startswith("economy:") and "unknown tech" in e for e in errs)
 
 
 def test_validation_missing_income_for_sold_resource():
@@ -179,6 +178,21 @@ def test_validation_missing_income_for_sold_resource():
     # minerals not in income dict at all
     errs = validate(s, previous=None, tech_ids=set(), idle={"minerals"}, income={})
     assert any("no monthly income known for minerals" in e for e in errs)
+
+
+def test_trade_order_cap_is_fixed_not_income_based():
+    """Trade orders have fixed cap of 25, independent of income."""
+    # sell trade 10 with income={} should have no errors (10 <= 25)
+    s = strat(economy=Pillar(priority=2, stance="s", goals=["g"],
+                             market=[{"side": "sell", "resource": "trade", "amount": 10}]))
+    errs = validate(s, previous=None, tech_ids=set(), idle={"trade"}, income={})
+    assert len(errs) == 0
+
+    # sell trade 30 should error (30 > 25)
+    s2 = strat(economy=Pillar(priority=2, stance="s", goals=["g"],
+                              market=[{"side": "sell", "resource": "trade", "amount": 30}]))
+    errs2 = validate(s2, previous=None, tech_ids=set(), idle={"trade"}, income={})
+    assert any("trade 30 is over 25" in e for e in errs2)
 
 
 def test_forbid_extra_fields_in_models():

@@ -118,7 +118,7 @@ def validate(s: Strategy, *, previous: Strategy | None, tech_ids: set[str], idle
             if o.side == "sell" and o.resource not in idle:
                 errs.append(f"{name}: selling {o.resource} but it is not idle")
             if o.side == "sell":
-                if o.resource not in income:
+                if o.resource != "trade" and o.resource not in income:
                     errs.append(f"{name}: no monthly income known for {o.resource}")
                 elif o.amount > cap:
                     errs.append(f"{name}: sell {o.resource} {o.amount} is over {cap:.0f} (20% of monthly income)")
