@@ -2230,10 +2230,44 @@ def test_strategy_api_returns_current_milestones_and_history(setup, tmp_path):
             r = await c.get(f"/api/strategy?campaign={log.campaign_id}")
             body = await r.json()
             assert body["current"]["focus"] == "grow" and len(body["history"]) == 1
+            assert body["error"] == "", "a valid pillars file reports no error"
             r = await c.post("/control", json={"action": "edit_pillar", "pillar": "economy", "fields": {"stance": "save energy"}})
             assert r.status == 200 and g.strategy.pillars["economy"].pinned
             r = await c.post("/control", json={"action": "review_strategy"})
             assert r.status == 200 and g.requests.get_nowait() == ("review", "requested from the dashboard")
+    asyncio.run(go())
+
+
+def test_strategy_api_reports_a_missing_pillars_file_without_computing_milestones(setup, tmp_path):
+    """Fix round 1, item 1: a campaign whose game has no (or an invalid) pillars.toml must not
+    silently compute milestone status with an empty row_keys mapping (every remapped metric, e.g.
+    Stellaris's colonies -> planets, would then read wrong); it must report the error instead, and
+    never 500."""
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from pilot.dashboard import make_app
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(s.runs_dir, "rb", s.model, telemetry=tel)
+    log.emit("run_start", model=s.model, game="brokengame")
+    log.set_campaign("brokengame", "c1", "Test")     # a game the live pilot (None) does not own
+    pillars = _pillars_body(PRIOS)
+    log.emit("strategy", date="2200.01.01", trigger="start of run", model=s.model, reason="seed",
+             strategy={"pillars": pillars, "focus": "grow", "reason": "seed"})
+    corpora_dir = tmp_path / "corpora"          # no "brokengame" subdirectory: load_pillars fails
+    corpora_dir.mkdir()
+
+    async def go():
+        async with TestClient(TestServer(make_app(None, s.runs_dir, tel, corpora=corpora_dir))) as c:
+            r = await c.get(f"/api/strategy?campaign={log.campaign_id}")
+            assert r.status == 200, "a broken pillars file must not 500 the endpoint"
+            body = await r.json()
+            assert body["milestones"] == [], "no milestone status without a valid spec's row_keys"
+            assert body["error"].startswith("pillars: "), body["error"]
+            assert body["current"]["focus"] == "grow", "the strategy itself is still served"
     asyncio.run(go())
 
 
@@ -2608,6 +2642,36 @@ def test_a_sell_over_20_percent_of_todays_income_is_skipped(setup):
                for e in log.recent if e["kind"] == "strategy_action")
 
 
+def test_market_actions_are_skipped_when_the_game_has_no_market_action(tmp_path):
+    """Fix round 1, item 3: a spec with no [actions.market] must not KeyError, and the pillar that
+    owns market orders is found from the spec (`spec.owners('market')`), never hard-coded to
+    'economy'."""
+    import re
+
+    from pilot.strategy import Pillar
+    corpus = tmp_path / "stellaris"
+    corpus.mkdir()
+    for f in ("manifest.toml", "pilot.md", "strategy.md", "directives.toml"):
+        shutil.copy(REPO / "corpora/stellaris" / f, corpus / f)
+    text = (REPO / "corpora/stellaris/pillars.toml").read_text(encoding="utf-8")
+    text = text.replace('actions = ["market"]\n', "")               # economy no longer declares it
+    text = re.sub(r"\[actions\.market\][\s\S]*?(?=\n#|\n\[)", "", text)  # and the limits table is gone
+    (corpus / "pillars.toml").write_text(text, encoding="utf-8")
+
+    s = Settings(model="google:gemini-3.8-flash", runs_dir=tmp_path / "runs", journal=tmp_path / "journal.md",
+                 commit_learnings=False, game="stellaris", speed="fastest", decide_every_months=12, poll_s=0,
+                 ask_human_timeout_s=0.05, fallback_model=None)
+    s.__class__ = type("S", (Settings,), {"corpus_dir": property(lambda self: corpus)})
+    log = EventLog(s.runs_dir, "run_nomarket", s.model)
+    game = FakeStellaris([briefing("2200.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    assert g.pillars.actions.get("market") is None, "the test corpus must actually lack a market action"
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"],
+                                               market=[{"side": "sell", "resource": "energy", "amount": 5}]))
+    g._carry_out_actions(_idle_energy("2200.01.01"))               # must not raise (no KeyError on actions["market"])
+    assert not any(a[0] == "market_sync" for a in game.actions), "no market action in the spec: nothing to sync"
+
+
 def test_review_now_runs_at_once_without_waiting_for_a_scheduled_decision(setup):
     """Final review 5: the save date never advances (no scheduled decision can come), yet the
     requested review runs; no extra directive decision is made for it."""
@@ -2866,6 +2930,39 @@ def test_strategy_instructions_list_every_metric_name():
     from pilot.governor import STRATEGY_INSTRUCTIONS
     for m in STELLARIS.metrics:
         assert m in STRATEGY_INSTRUCTIONS, m
+
+
+# ---- Fix round 1, item 2: aliases are pinned at the governor (both write paths) -----------------
+
+def test_a_strategist_reviews_milestone_metric_is_stored_aliased(setup):
+    """A Strategist answer written in a common model spelling ("rank:military") is stored under
+    the recorded measure's real name ("rank:military_power"), not the raw spelling."""
+    s, log = setup
+
+    def respond(messages, info):
+        pillars = _pillars_body(PRIOS)
+        pillars["economy"]["milestones"] = [{"metric": "rank:military", "op": "<=", "target": 3, "by": "2210.01.01"}]
+        body = {"change": True, "assessment": "ok", "rules": [],
+                "strategy": {"pillars": pillars, "focus": "grow", "reason": "start"}}
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, body)])
+
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": FunctionModel(respond)})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    assert g.strategy is not None, "the answer must have validated"
+    assert g.strategy.pillars["economy"].milestones[0].metric == "rank:military_power"
+
+
+def test_edit_pillar_stores_the_milestone_metric_aliased(setup):
+    """A human edit's milestone metric ("planets") is stored under the recorded measure's real
+    name ("colonies") too: edit_pillar aliases exactly like a model review."""
+    s, log = setup
+    calls = []
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": _strategist(calls)})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    g.edit_pillar("economy", {"milestones": [{"metric": "planets", "op": ">=", "target": 5, "by": "2210.01.01"}]})
+    assert g.strategy.pillars["economy"].milestones[0].metric == "colonies"
 
 
 def _species_briefing(date: str) -> dict:

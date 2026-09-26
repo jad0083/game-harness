@@ -1139,6 +1139,9 @@ class Governor:
                 self._log_action("tech", f"failed: {e}"[:300])
 
     def _carry_out_market_actions(self, b: dict) -> None:
+        limits = self.pillars.actions.get("market")
+        if limits is None:
+            return    # this game declares no market action: nothing to carry out
         date = b.get("date")
         current = b.get("market_orders") or []
         pending_market, later = self._pending_market, date != self._market_sync_date
@@ -1147,11 +1150,12 @@ class Governor:
             if not self._same_orders(current, pending_market):
                 self._log_action("market", f"market orders did not stick: wanted {pending_market}, save has {current}")
                 self._market_stuck = True
-        econ = self.strategy.pillars.get("economy")
+        owner = next(iter(self.pillars.owners("market")), None)   # the pillar the spec lets place market orders
+        econ = self.strategy.pillars.get(owner) if owner else None
         idle, income = idle_resources(b), b.get("net") or {}
         desired = []
         for o in (econ.market if econ else []):
-            errs = market_briefing_errors(o, self.pillars.actions["market"], idle, income)
+            errs = market_briefing_errors(o, limits, idle, income)
             if errs:     # a sell that no longer fits today's briefing (e.g. a pinned or older order)
                 if later:
                     self._log_action("market", f"skipped sell {o.resource}: {'; '.join(errs)}"[:300])
