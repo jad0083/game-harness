@@ -357,6 +357,10 @@ class Governor:
         self.review_requested: str | None = None  # pending review trigger (off-frame, or after a failed call)
         self._review_retry: bool = False          # review_requested was set by a failed review call (bypasses the cap)
         self._decision_military: float | None = None   # military_power as of the last decision (military-fell baseline)
+        self._tech_misses: dict[str, int] = {}    # tech id -> misses this review (>=1: not retried until the next)
+        self._pending_pick: str | None = None     # a tech picked last time, watched for whether it stuck
+        self._tech_sync_date: str | None = None   # briefing date of the last pick_tech attempt (at most one per date)
+        self._market_sync_date: str | None = None  # briefing date of the last market_sync attempt (ditto)
         self._since_retro = 0
         self._strategy_trace_n = 0                # negative episode ids for strategy review traces (see _review_strategy)
         self.orders: list[str] = []               # standing orders, saved per campaign
@@ -941,10 +945,57 @@ class Governor:
         self.journal.note(f"{d.directive} ({applied}) — {d.reason}", b["date"])
         if d.note:
             self.journal.note(d.note, b["date"])
+        self._carry_out_actions(b)
         if not (reason == "start of run" and reviewed_at_start):   # a review just ran for this decision point
             self._since_retro += 1
             if self.s.retro_every and self._since_retro >= self.s.retro_every:
                 self._review_strategy(b, f"scheduled after {self.s.retro_every} decisions")
+
+    @staticmethod
+    def _same_orders(a: list[dict], b: list[dict]) -> bool:
+        """Market orders compare order-insensitively (side, resource, amount)."""
+        key = lambda o: (o.get("side"), o.get("resource"), o.get("amount"))
+        return sorted(map(key, a)) == sorted(map(key, b))
+
+    def _carry_out_actions(self, b: dict) -> None:
+        """The strategy's player actions: preferred tech picks and monthly market orders (game
+        paused). Both tools compute their result from the last autosave, which stays stale until
+        the next monthly autosave, so each acts at most once per briefing date. A failure of
+        either tool is logged and never raises out of here, never pauses the game, and never
+        undoes the decision already applied."""
+        if not self.strategy:
+            return
+        date = b.get("date")
+        tech = self.strategy.pillars.get("technology")
+        prefer = [t for t in (tech.prefer_techs if tech else []) if self._tech_misses.get(t, 0) < 1]
+        researching = {((r or {}).get("current") or [None])[0] for r in (b.get("research") or {}).values()}
+        pending = self._pending_pick
+        if pending and pending not in researching:
+            self._tech_misses[pending] = self._tech_misses.get(pending, 0) + 1
+            self.log.emit("strategy_action", action="tech",
+                          result=f"{pending} did not stick; skipped until the next review")
+            prefer = [t for t in prefer if t != pending]
+        self._pending_pick = None
+        if prefer and not researching & set(prefer) and date != self._tech_sync_date:
+            self._tech_sync_date = date
+            try:
+                res = self.game.pick_tech(prefer)
+                self.log.emit("strategy_action", action="tech", result=res)
+                if res.startswith("picked") or res == "ok":
+                    offered = [t for r in (b.get("research") or {}).values() for t in (r or {}).get("alternatives", [])]
+                    self._pending_pick = next((t for t in prefer if t in offered), prefer[0])
+            except Exception as e:  # noqa: BLE001 - actions never stop play
+                self.log.emit("strategy_action", action="tech", result=f"failed: {e}"[:300])
+
+        econ = self.strategy.pillars.get("economy")
+        desired = [o.model_dump() for o in (econ.market if econ else [])]
+        current = b.get("market_orders") or []
+        if not self._same_orders(desired, current) and date != self._market_sync_date:
+            self._market_sync_date = date
+            try:
+                self.log.emit("strategy_action", action="market", result=self.game.market_sync(desired))
+            except Exception as e:  # noqa: BLE001 - actions never stop play
+                self.log.emit("strategy_action", action="market", result=f"failed: {e}"[:300])
 
     def _maybe_event_review(self, b: dict, trigger: str, retry: bool = False) -> bool:
         """Run a strategy review for a big event, at most once per 12 in-game months. `retry`
@@ -1003,6 +1054,7 @@ class Governor:
         self._since_retro = 0
         self.review_requested = None
         self._review_retry = False
+        self._tech_misses = {}
         started = time.time()
         current = self.strategy.model_dump_json(indent=1) if self.strategy else "(none yet: write the first strategy)"
         prompt = [f"Strategy review, trigger: {trigger}.", "Current strategy:\n" + current,
