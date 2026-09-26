@@ -19,24 +19,24 @@
 - [ ] `.mcp.json` / `.gemini/settings.json` assume `./target/release/game-controller` is built; a fresh clone needs `cargo build --release -p game-controller` first (documented in AGENTS.md §2)
 - [ ] Event option number keys (`1`/`2`/`3`) claimed in strategy.md are unverified; clicking works
 - [ ] `autopilot.rs:105-107` `click_norm` emits image-space coords without scaling (latent: no macro uses it yet)
-- [ ] `client.rs:254-256` `focus` returns Ok on a 404 body; `settle`/`windows`/`focus` never check HTTP status (a 401 surfaces as a JSON parse error)
+- [x] `client.rs:254-256` `focus` returns Ok on a 404 body; `settle`/`windows`/`focus` never check HTTP status (a 401 surfaces as a JSON parse error) — fixed: `json_ok` checks the status and surfaces the agent's error (3 tests on a local HTTP stub); deployed with the controller build 2026-09-25
 - [ ] Rust MCP has no `zoom`, `hover`, `scroll`, `list_windows`, or grid overlay; `GAME_SCREENSHOT_DIR` frame archive dropped from `.mcp.json` (shell workaround: `scripts/play/hover.sh`)
 - [ ] `clippy --all-targets`: 2 warnings (`corpus.rs:466`, `imaging.rs:28`); "0 warnings" achieved via `#![allow(dead_code, ...)]` in every file
 
 ### Rust agent (`crates/game-agent`)
-- [ ] Installer picks the first *existing* docs folder: on the PC `stellaris_docs` resolved to a stale 2022 copy under `OneDrive\Documents` while Stellaris 4.5 likely writes to `MyDocuments` (`D:\OneDrive - Sacramento`); confirmed at launch: its logs stayed at 2022 while the game ran. Installer now picks the candidate with the newest files (2026-09-25)
-- [ ] `main.rs:192-199` fallback token is a nanosecond timestamp in hex; `main.rs:214` non-constant-time compare; Python `--allow` client-IP list dropped
-- [ ] `main.rs:256` `x + w` can wrap in release, bypassing the bounds check (GDI then fails; no crash)
-- [ ] Console-subsystem exe launched as an interactive logon task → console window on the game desktop at every logon
-- [ ] Zero tests for the shipped agent binary
+- [x] Installer picks the first *existing* docs folder: on the PC `stellaris_docs` resolved to a stale 2022 copy under `OneDrive\Documents` while Stellaris 4.5 likely writes to `MyDocuments` (`D:\OneDrive - Sacramento`); confirmed at launch: its logs stayed at 2022 while the game ran. Installer now picks the candidate with the newest files (2026-09-25) — deployed with agent 1.3.0 (roots.json lists the newest docs folder)
+- [ ] `main.rs:192-199` fallback token is a nanosecond timestamp in hex; `main.rs:214` non-constant-time compare; Python `--allow` client-IP list dropped — fixed in agent 1.4.0 (32 OS-random bytes, constant-time compare, tests); the IP allow-list stays dropped (firewall rule limits to the local subnet). Waiting for the 1.4.0 install
+- [ ] `main.rs:256` `x + w` can wrap in release, bypassing the bounds check (GDI then fails; no crash) — fixed in agent 1.4.0 (`region_ok` in i64, test). Waiting for the 1.4.0 install
+- [ ] Console-subsystem exe launched as an interactive logon task → console window on the game desktop at every logon — fixed in agent 1.4.0 (GUI subsystem, logs to agent.log). Waiting for the 1.4.0 install
+- [x] Zero tests for the shipped agent binary — 24 agent tests now (batch/drag validation, files, keys, token, bounds); run by scripts/ci.sh
 
 ### Repo hygiene / docs
-- [ ] `windows_agent/game-agent.exe` (1.4 MB) is tracked and re-committed on every rebuild
-- [ ] Stale `crates/game-agent/Cargo.lock`, `.gitignore`, and 413 MB `crates/game-agent/target/` from the pre-workspace build
+- [x] `windows_agent/game-agent.exe` (1.4 MB) is tracked and re-committed on every rebuild — untracked and gitignored; scripts/serve-agent.sh builds it before serving
+- [x] Stale `crates/game-agent/Cargo.lock`, `.gitignore`, and 413 MB `crates/game-agent/target/` from the pre-workspace build — removed (the workspace Cargo.lock is the only one)
 - [ ] `.mcp.json` points at gitignored `./target/release/game-controller`; fresh clone has no MCP until `cargo build --release`, undocumented
 - [ ] `#![allow(dead_code, …)]` remains in `game-agent/main.rs`, `imaging.rs`, `mcp.rs` (removed from `corpus.rs`, `autopilot.rs`)
 - [ ] Python harness (`src/harness`, `windows_agent/agent.py`, 40 tests) is no longer deployed; its green suite covers nothing that runs (`agent.py` `settle` stub always returns `settled: True`)
-- [ ] Agent key table has no numpad keys or `+`; Stellaris speed-up must use `=` (VK_OEM_PLUS) until added
+- [ ] Agent key table has no numpad keys or `+`; Stellaris speed-up must use `=` (VK_OEM_PLUS) until added — fixed in agent 1.4.0: `num0`-`num9`/`numpad0`-`numpad9`, `add`, `subtract`, `multiply`, `divide`, `decimal`, `plus`/`+`, `win`, `apps`, `printscreen` (tests). Waiting for the 1.4.0 install
 
 ## Resolved
 - [x] Dashboard kept showing the previously selected campaign when a run started on a different one, so a reload was needed to see the live game (2026-09-25; the page now follows the live campaign unless another was picked deliberately; all responses no-store; browser test)

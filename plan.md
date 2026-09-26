@@ -16,7 +16,8 @@
 - [ ] Restore `zoom`/`hover`/`scroll`/grid in the Rust MCP, or document why they're gone
 - [x] Tests for the Rust MCP coordinate mapping and for the agent's batch validation (`cargo test --workspace`: 18)
 - [ ] Decide the Python harness's fate: delete, or keep as the reference implementation with its tests pointed at what runs
-- [ ] Stop tracking `game-agent.exe`; publish it as a release asset
+- [x] Stop tracking `game-agent.exe` (scripts/serve-agent.sh builds it from source before serving)
+- [ ] Deploy agent 1.4.0 (no console window, agent.log, numpad/win/plus keys, OS-random token)
 - [x] Deploy agent 1.2.0 (configurable drag + read-only game-folder access; 4 roots verified on the PC 2026-09-25)
 - [ ] Retry placing Earth's Capital City with the slow drag
 

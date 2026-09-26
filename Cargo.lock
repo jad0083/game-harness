@@ -364,10 +364,11 @@ dependencies = [
 
 [[package]]
 name = "game-agent"
-version = "1.0.0"
+version = "1.4.0"
 dependencies = [
  "axum",
  "clap",
+ "getrandom 0.2.17",
  "jpeg-encoder",
  "serde",
  "serde_json",

@@ -1,4 +1,7 @@
 #![allow(dead_code, unused_variables, unused_imports)]
+// A GUI-subsystem exe: the logon task starts it without a console window on the game desktop.
+// Output goes to agent.log next to the exe (see `log`).
+#![cfg_attr(windows, windows_subsystem = "windows")]
 mod backend;
 mod files;
 mod keys;
@@ -20,7 +23,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-const VERSION: &str = "1.3.0";
+const VERSION: &str = "1.4.0";
 const DEFAULT_PORT: u16 = 8765;
 
 #[derive(Parser, Debug)]
@@ -123,9 +126,39 @@ struct SettleParams {
     threshold: Option<f64>,
 }
 
+/// Append a line to agent.log next to the exe (and stdout, when there is one).
+fn log(msg: &str) {
+    use std::io::Write;
+    println!("{msg}");
+    let path = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|d| d.join("agent.log")))
+        .unwrap_or_else(|| PathBuf::from("agent.log"));
+    // keep the log small: start over past 1 MB
+    let append = std::fs::metadata(&path).map(|m| m.len() < 1 << 20).unwrap_or(true);
+    let file = std::fs::OpenOptions::new().create(true).write(true).append(append).truncate(!append).open(&path);
+    if let Ok(mut f) = file {
+        let secs = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+        let _ = writeln!(f, "[{secs}] {msg}");
+    }
+}
+
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args = Args::parse();
+async fn main() {
+    if let Err(e) = run().await {
+        log(&format!("game-agent failed: {e}"));
+        std::process::exit(1);
+    }
+}
+
+async fn run() -> Result<(), Box<dyn std::error::Error>> {
+    let args = match Args::try_parse() {
+        Ok(a) => a,
+        Err(e) => {
+            log(&e.to_string());
+            std::process::exit(if e.use_stderr() { 2 } else { 0 });
+        }
+    };
 
     #[cfg(windows)]
     {
@@ -141,7 +174,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .unwrap_or_else(|| PathBuf::from("roots.json"))
     });
     let roots = files::Roots::load(&roots_path);
-    println!("file roots from {:?}: {:?}", roots_path, roots.roots.keys().collect::<Vec<_>>());
+    log(&format!("file roots from {:?}: {:?}", roots_path, roots.roots.keys().collect::<Vec<_>>()));
     let state = AppState {
         token: Arc::new(token.clone()),
         roots: Arc::new(roots),
@@ -175,7 +208,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let addr = format!("{}:{}", args.host, args.port);
     let listener = tokio::net::TcpListener::bind(&addr).await?;
-    println!("game-agent v{} listening on {}", VERSION, addr);
+    log(&format!("game-agent v{} listening on {}", VERSION, addr));
 
     axum::serve(listener, app).await?;
     Ok(())
@@ -210,24 +243,37 @@ fn get_or_create_token(cli_token: Option<String>) -> Result<String, Box<dyn std:
     }
 
     // Generate random 24-byte token if none found
-    let token = generate_random_token();
+    let token = generate_random_token()?;
     if let Some(target) = paths.first() {
         if let Some(parent) = target.parent() {
             let _ = std::fs::create_dir_all(parent);
         }
         let _ = std::fs::write(target, &token);
-        println!("Generated token in {:?}", target);
+        log(&format!("generated a token in {:?}", target));
     }
     Ok(token)
 }
 
-fn generate_random_token() -> String {
-    use std::time::SystemTime;
-    let seed = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap()
-        .as_nanos();
-    format!("{:032x}", seed)
+/// 32 random bytes from the OS, hex-encoded.
+fn generate_random_token() -> Result<String, Box<dyn std::error::Error>> {
+    let mut buf = [0u8; 32];
+    getrandom::getrandom(&mut buf).map_err(|e| format!("no OS randomness for a token: {e}"))?;
+    Ok(buf.iter().map(|b| format!("{b:02x}")).collect())
+}
+
+/// Compare without an early exit on the first differing byte (no timing hint about the token).
+fn token_matches(given: &str, expected: &str) -> bool {
+    let (a, b) = (given.as_bytes(), expected.as_bytes());
+    let mut diff = (a.len() != b.len()) as u8;
+    for i in 0..a.len().max(b.len()) {
+        diff |= a.get(i).copied().unwrap_or(0) ^ b.get(i).copied().unwrap_or(0);
+    }
+    diff == 0
+}
+
+/// A screenshot region inside a sw x sh screen (no i32 overflow on huge x/w).
+fn region_ok(x: i32, y: i32, w: i32, h: i32, sw: i32, sh: i32) -> bool {
+    x >= 0 && y >= 0 && w > 0 && h > 0 && (x as i64 + w as i64) <= sw as i64 && (y as i64 + h as i64) <= sh as i64
 }
 
 async fn auth_middleware(
@@ -243,7 +289,7 @@ async fn auth_middleware(
     match auth_header {
         Some(val) if val.starts_with("Bearer ") => {
             let token = val[7..].trim();
-            if token == state.token.as_str() {
+            if token_matches(token, state.token.as_str()) {
                 Ok(next.run(req).await)
             } else {
                 Err(StatusCode::UNAUTHORIZED)
@@ -282,10 +328,10 @@ async fn screenshot_handler(Query(params): Query<ScreenshotParams>) -> Result<Re
         let (sw, sh) = backend::win::screen_size();
         let x = params.x.unwrap_or(0);
         let y = params.y.unwrap_or(0);
-        let w = params.w.unwrap_or(sw - x);
-        let h = params.h.unwrap_or(sh - y);
+        let w = params.w.unwrap_or(sw.saturating_sub(x));
+        let h = params.h.unwrap_or(sh.saturating_sub(y));
 
-        if x < 0 || y < 0 || w <= 0 || h <= 0 || x + w > sw || y + h > sh {
+        if !region_ok(x, y, w, h, sw, sh) {
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(serde_json::json!({"error": format!("Region outside screen: ({},{}) {}x{}", x, y, w, h)})),
@@ -868,6 +914,32 @@ mod tests {
         let mut v = json!({"x1": 0, "y1": 0, "x2": 120, "y2": 60});
         v.as_object_mut().unwrap().extend(extra.as_object().unwrap().clone());
         serde_json::from_value(v).unwrap()
+    }
+
+    #[test]
+    fn token_compare_needs_the_exact_token() {
+        assert!(token_matches("abc123", "abc123"));
+        assert!(!token_matches("abc124", "abc123"));
+        assert!(!token_matches("abc12", "abc123"));
+        assert!(!token_matches("abc1234", "abc123"));
+        assert!(!token_matches("", "abc123"));
+    }
+
+    #[test]
+    fn generated_tokens_are_long_and_differ() {
+        let (a, b) = (generate_random_token().unwrap(), generate_random_token().unwrap());
+        assert_eq!(a.len(), 64);
+        assert!(a.chars().all(|c| c.is_ascii_hexdigit()));
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn screenshot_region_bounds_do_not_overflow() {
+        assert!(region_ok(0, 0, 3840, 2160, 3840, 2160));
+        assert!(!region_ok(1, 0, 3840, 2160, 3840, 2160));
+        assert!(!region_ok(10, 10, i32::MAX, 5, 3840, 2160), "x + w wraps in i32");
+        assert!(!region_ok(-1, 0, 10, 10, 3840, 2160));
+        assert!(!region_ok(0, 0, 0, 10, 3840, 2160));
     }
 
     #[test]

@@ -20,3 +20,5 @@ incoming/
 /play/
 .env
 /runs/
+# built by scripts/serve-agent.sh from crates/game-agent
+windows_agent/game-agent.exe

@@ -12,7 +12,7 @@ Everything below was verified in live play on 2026-09-25 unless marked **unverif
 
 | Piece | Where | What it does |
 |---|---|---|
-| Windows agent | `crates/game-agent` → `windows_agent/game-agent.exe`, running on the gaming PC **192.168.1.77:8765** | HTTP API: screenshots, mouse, keyboard, window focus. Bearer-token auth. |
+| Windows agent | `crates/game-agent` → `game-agent.exe` (built by `scripts/serve-agent.sh`), running on the gaming PC **192.168.1.77:8765** | HTTP API: screenshots, mouse, keyboard, window focus. Bearer-token auth. |
 | Linux controller | `crates/game-controller` → `target/release/game-controller`, on this machine **192.168.1.76** | CLI + MCP server + verified-turn autopilot + game corpus. |
 | Game corpus | `corpora/galciv4/` | Everything game-specific: hotkeys, known screens, macros, generated game data, strategy, reference docs. The Rust code is game-agnostic. |
 | Play helpers | `scripts/play/` | Shell wrappers for the act → look → decide loop (`act.sh`, `ap.sh`, `hover.sh`, `capture-template.py`). |
@@ -171,7 +171,9 @@ wiki prose in `docs/`. Never hand-edit `corpora/galciv4/data/`.
   intro → *Load Game* → newest *Auto-Save* → *Load*. Replay the lost turns the same way.
 - **Capital City can't be placed on Earth** (drag doesn't register). Retry after deploying agent
   1.1.0 with a slow drag (`--hold-ms 250 --steps 40 --step-ms 25 --dwell-ms 300 --wiggle`).
-- **No Windows key** in the Rust agent's key table (`win+r` fails); focus windows by title instead.
+- Agent **1.4** adds `win`, `num0`–`num9`, `add`/`subtract` (numpad +/-), and `plus`/`+`; older agents
+  lack them (focus windows by title instead of `win+r`). It runs without a console window and
+  logs to `%LOCALAPPDATA%\GameAgent\agent.log`.
 - Full list: `issues.md`.
 
 ## 8. Recording what you learn (required)
@@ -204,7 +206,7 @@ screenshots, or the game's raw XML (`incoming/`).
   search), `mcp.rs` (tools), `client.rs` (agent HTTP), `main.rs` (CLI).
 - `crates/game-agent/src/`: `main.rs` (HTTP routes, batch/drag validation), `backend.rs` (Win32),
   `keys.rs` (key names). Cross-build: `cargo build --target x86_64-pc-windows-gnu --release --bin game-agent`,
-  copy to `windows_agent/game-agent.exe`, deploy with `scripts/serve-agent.sh`.
+  or just run `scripts/serve-agent.sh` (it builds, then serves the installer; the exe is not in git).
 - Keep game knowledge out of Rust: new screens, keys and thresholds go in the manifest.
 - Tests on real pixels live in `crates/game-controller/tests/fixtures/`; extractor tests in
   `tests/test_extract_galciv4.py`. Add a test with every fix.
