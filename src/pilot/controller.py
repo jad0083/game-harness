@@ -172,7 +172,7 @@ class Pilot:
                 subprocess.run(["git", "add", "--", *paths], cwd=REPO, check=False, capture_output=True)
                 if subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=REPO, check=False).returncode == 0:
                     return
-                body = f"Learned during play by {self.s.model}, run {self.log.state.run_id}."
+                body = f"Learned during pilot run {self.log.state.run_id}."
                 r = subprocess.run(["scripts/ci-commit.sh", message, body], cwd=REPO, capture_output=True, text=True, check=False)
                 self.log.emit("commit", ok=r.returncode == 0, output=(r.stdout + r.stderr)[-400:])
 

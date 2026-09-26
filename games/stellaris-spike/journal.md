@@ -84,4 +84,9 @@ Open questions for the build:
   flag). Space toggles pause, so blind presses ended in the wrong state; the "Paused" label
   pulses (template distance 0.011–0.108), and a yellow-pixel share (23–47% paused, 0% running)
   reads it reliably. `-`/`=` do not change the pause state.
+- **First governor run** (`pilot run --game stellaris --speed fastest --months 6 --episodes 3`,
+  Gemini 3.8 Flash): 2207.02 → expand (tech_rush replaced; "515 influence, only 1/3 starbases");
+  2207.09 keep; 2208.04 keep. ~6.2k input / 0.1–0.4k output tokens and ~2 s per decision; the
+  scheduled stop overshot by one month at Fastest (2 s polling). The game was left paused with
+  `governor_directive_expand`. The run's journal and learned episodes were discarded (test game).
 
