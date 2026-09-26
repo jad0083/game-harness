@@ -37,8 +37,9 @@ scripts/ci.sh                                                        # must prin
 ```
 
 The Windows agent is installed with `scripts/serve-agent.sh` + a PowerShell one-liner (see
-`README.md` → "Remote Windows Agent Setup"). The PC currently runs agent **1.0.0**; **1.1.0**
-(configurable drag) is built and committed but not yet deployed.
+`README.md` → "Remote Windows Agent Setup"). Agent **1.2.0** adds configurable drag timing and
+read-only file access to game folders listed in `roots.json` (Stellaris and GalCiv4 documents
+and install dirs, detected by the installer): `GET /files/roots|list|read`.
 
 ### Connecting your model's tools (MCP)
 The controller is a stdio MCP server: `./target/release/game-controller mcp` (19 tools, listed in

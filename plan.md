@@ -17,7 +17,7 @@
 - [x] Tests for the Rust MCP coordinate mapping and for the agent's batch validation (`cargo test --workspace`: 18)
 - [ ] Decide the Python harness's fate: delete, or keep as the reference implementation with its tests pointed at what runs
 - [ ] Stop tracking `game-agent.exe`; publish it as a release asset
-- [ ] Deploy agent 1.1.0 (configurable drag) and retry placing Earth's Capital City
+- [ ] Deploy agent 1.2.0 (configurable drag + read-only game-folder access) and retry placing Earth's Capital City
 
 ## Game corpus (design: see ARCHITECTURE.md §5)
 - [x] Restructure `corpora/galciv4/`: `manifest.toml`, `docs/*.md` with Source/License headers, `data/` contract

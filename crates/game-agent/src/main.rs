@@ -1,5 +1,6 @@
 #![allow(dead_code, unused_variables, unused_imports)]
 mod backend;
+mod files;
 mod keys;
 
 use axum::{
@@ -19,7 +20,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-const VERSION: &str = "1.1.0";
+const VERSION: &str = "1.2.0";
 const DEFAULT_PORT: u16 = 8765;
 
 #[derive(Parser, Debug)]
@@ -33,11 +34,16 @@ struct Args {
 
     #[arg(long)]
     token: Option<String>,
+
+    /// Read-only file roots (JSON). Default: roots.json next to the executable.
+    #[arg(long)]
+    roots: Option<PathBuf>,
 }
 
 #[derive(Clone)]
 struct AppState {
     token: Arc<String>,
+    roots: Arc<files::Roots>,
 }
 
 #[derive(Deserialize)]
@@ -128,8 +134,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let token = get_or_create_token(args.token)?;
+    let roots_path = args.roots.clone().unwrap_or_else(|| {
+        std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|d| d.join("roots.json")))
+            .unwrap_or_else(|| PathBuf::from("roots.json"))
+    });
+    let roots = files::Roots::load(&roots_path);
+    println!("file roots from {:?}: {:?}", roots_path, roots.roots.keys().collect::<Vec<_>>());
     let state = AppState {
         token: Arc::new(token.clone()),
+        roots: Arc::new(roots),
     };
 
     let app = Router::new()
@@ -145,6 +160,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/type", post(type_handler))
         .route("/focus", post(focus_handler))
         .route("/batch", post(batch_handler))
+        .route("/files/roots", get(files_roots_handler))
+        .route("/files/list", get(files_list_handler))
+        .route("/files/read", get(files_read_handler))
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             auth_middleware,
@@ -627,6 +645,58 @@ async fn batch_handler(Json(req): Json<BatchReq>) -> Result<impl IntoResponse, (
     }
 
     Ok(Json(serde_json::json!({"ok": true, "results": results})))
+}
+
+#[derive(Deserialize)]
+struct FileParams {
+    root: String,
+    #[serde(default)]
+    path: String,
+    offset: Option<u64>,
+    max: Option<u64>,
+}
+
+fn file_error(e: String) -> (StatusCode, Json<serde_json::Value>) {
+    let status = if e.contains("No such file") || e.contains("cannot find") || e.contains("unknown root") {
+        StatusCode::NOT_FOUND
+    } else {
+        StatusCode::BAD_REQUEST
+    };
+    (status, Json(serde_json::json!({"error": e})))
+}
+
+async fn files_roots_handler(State(state): State<AppState>) -> impl IntoResponse {
+    let roots: serde_json::Map<String, serde_json::Value> = state
+        .roots
+        .roots
+        .iter()
+        .map(|(k, v)| (k.clone(), serde_json::json!({"path": v, "exists": v.is_dir()})))
+        .collect();
+    Json(serde_json::json!({"roots": roots}))
+}
+
+async fn files_list_handler(
+    State(state): State<AppState>,
+    Query(p): Query<FileParams>,
+) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+    let entries = state.roots.list(&p.root, &p.path).map_err(file_error)?;
+    Ok(Json(serde_json::json!({"root": p.root, "path": p.path, "entries": entries})))
+}
+
+async fn files_read_handler(
+    State(state): State<AppState>,
+    Query(p): Query<FileParams>,
+) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+    let offset = p.offset.unwrap_or(0);
+    let (bytes, size) = state
+        .roots
+        .read(&p.root, &p.path, offset, p.max.unwrap_or(files::MAX_READ))
+        .map_err(file_error)?;
+    let mut headers = HeaderMap::new();
+    headers.insert(header::CONTENT_TYPE, "application/octet-stream".parse().unwrap());
+    headers.insert("X-File-Size", size.to_string().parse().unwrap());
+    headers.insert("X-Offset", offset.min(size).to_string().parse().unwrap());
+    Ok((headers, bytes))
 }
 
 /// Game-agnostic visual settle detection.
