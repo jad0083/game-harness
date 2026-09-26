@@ -145,3 +145,23 @@ Open questions for the build:
   entry of `consolidate_economy` was dropped for the same reason (only the Gaia seeder uses it).
 - Next check: systems a year and influence stockpile after the fixed mod has run ~5 years; if
   still ≈0.8 a year the remaining lever is influence income itself (traditions, envoys), not budget.
+
+## Postmortem: Theian test campaign (2200–2282, telemetry, saves and dashboard frames)
+- Lost 32 → 13 systems. Root cause of the war losses: the capital Theia held the only shipyard
+  (Titawin A Station) and nearly all alloy production (+35 of +40); occupied from 2257.03, alloy
+  income fell to +2 to +5, the AI built nothing for ~6 years and military was 0 from 2261.03 to
+  2265.06. Income recovered to +34.5 within four months of the 2270.01.10 peace, which ceded
+  Ribharm, Rhynstane, Stape and Kilnstane to a new UNE vassal. Grimvoss and Undulonn were emptied
+  in the Lyrite absorption war.
+- Root cause of the lost decade 2245–2254: a false naval-cap premise from our own `trends()` hint
+  (frames show 124/117 in 2244.07, 76/117 in 2245.06, 51/115 in 2246.06); the models ran
+  `tech_rush` for naval techs and wrote five "capped" rules into learned/strategy.md. Peacetime
+  military collapses (2224, 2226, 2244–45, 2248, 2251) were ship losses, cause unknown (monsters
+  likely).
+- Harness gaps: no naval max, occupation, shipyards, fleets or own-battle split in the briefing;
+  directives not read back (`tech_rush` left the economy on balanced for seven years); traces cut
+  at 6,000 characters; three skipped decisions (503s, request limit).
+- Done now: hint reworded and a `MILITARY FELL` flag added, false rules purged, lessons in
+  strategy.md §12. Planned (plan.md): war-readiness briefing, directive read-back, two shipyards
+  before war, fleet snapshots, full traces; the strategy layer carries war exit criteria and
+  market orders.

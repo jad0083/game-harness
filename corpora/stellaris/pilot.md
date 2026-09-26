@@ -72,10 +72,11 @@ Directives never grant resources, stats or anything the empire could not do itse
   sides (at 100% the other side can force a status-quo peace) and battles won/lost. Exhaustion
   rising faster on our side means the war is being lost even if no planet has fallen yet.
 - **Change since …** (about 12 months): systems, pops, military against the others' median,
-  tech power and the alloy stock. `ALLOYS PILING UP` means the AI cannot turn more budget into
-  ships (naval capacity or the starbase cap), so `defend`/`prepare_war` will not raise military
-  power by themselves: say so, and prefer the directive that uses what we have (e.g. `tech_rush`
-  for naval-capacity techs, or `consolidate_economy`).
+  tech power and the alloy stock. `ALLOYS PILING UP` means the AI is not turning alloys into
+  ships; the save has no naval-capacity maximum, so never assume the cap (the Theian campaign lost
+  nine years chasing a cap that did not exist, 51/115 used). Look for lost or occupied shipyards
+  and ship losses first. `MILITARY FELL n%` means ships were lost or cannot be rebuilt: a loss,
+  not a cap.
 - A `war ended` urgent line means leave `defend` unless another threat is listed.
 - **Species / Identity / Other species** (ours) and the **`who:`** line under each neighbour
   (ethics, government, civics, AI personality, species traits, colonies, traditions, perks): apply
