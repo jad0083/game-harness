@@ -2827,3 +2827,35 @@ def test_a_broken_milestone_check_never_pauses_the_governor(setup, monkeypatch):
     monkeypatch.setattr(g, "_metrics_rows", lambda: [{"date": "x"}])
     assert g._newly_missed_milestones("2200.01.01", "2200.02.01") == []
     assert any(e["kind"] == "briefing_error" and "milestone" in e.get("error", "") for e in log.recent)
+
+
+def test_the_corrective_retry_shows_the_rejected_answer(setup):
+    """Live 2452.03: the retry prompt named only the error, so the retry model (another model in the
+    rotation) started over and returned empty pillars. The retry must see the answer to fix."""
+    s, log = setup
+    prompts = []
+
+    def bad(messages, info):
+        prompts.append("\n".join(str(getattr(p, "content", "")) for m in messages for p in getattr(m, "parts", [])))
+        body = {"change": True, "assessment": "x", "rules": [], "strategy": {"pillars": {}, "focus": "hold the line", "reason": "r"}}
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, body)])
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": FunctionModel(bad)})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    assert len(prompts) == 2
+    assert "Your rejected answer" in prompts[1] and "hold the line" in prompts[1]
+
+
+def test_rank_and_measure_aliases_map_to_the_recorded_metrics():
+    from pilot.strategy import METRICS, Milestone
+    for alias, real in (("rank:military", "rank:military_power"), ("rank:economy", "rank:economy_power"),
+                        ("rank:tech", "rank:tech_power"), ("military", "military_power"), ("techs", "techs_known"),
+                        ("planets", "colonies")):
+        m = Milestone(metric=alias, op=">=", target=1, by="2200.01.01")
+        assert m.metric == real and real in METRICS
+
+
+def test_strategy_instructions_list_every_metric_name():
+    from pilot.governor import STRATEGY_INSTRUCTIONS
+    from pilot.strategy import METRICS
+    for m in METRICS:
+        assert m in STRATEGY_INSTRUCTIONS, m

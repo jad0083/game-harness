@@ -15,6 +15,9 @@ DIRECTIVE_OF: dict[str, str | None] = {"economy": "consolidate_economy", "expans
 RANK_MEASURES = ("systems", "pops", "techs", "military_power", "economy_power", "tech_power", "colonies")
 METRICS = ("systems", "colonies", "pops", "techs_known", "military_power", "economy_power", "tech_power",
            *(f"rank:{m}" for m in RANK_MEASURES))
+# Spellings models use for the recorded measures (seen live: "rank:military" on 2452.03).
+_SHORT = {"military": "military_power", "economy": "economy_power", "tech": "tech_power", "planets": "colonies"}
+METRIC_ALIASES = {**_SHORT, "techs": "techs_known", **{f"rank:{k}": f"rank:{v}" for k, v in _SHORT.items()}}
 _ROW_KEY = {"colonies": "planets"}          # metrics rows store colonies as `planets`
 _DATE_RE = re.compile(r"^\d{4}\.(\d{2})\.\d{2}$")
 
@@ -33,6 +36,8 @@ class Milestone(BaseModel):
     by: str = Field(description="in-game date YYYY.MM.DD")
 
     def __init__(self, **data):
+        if isinstance(data.get("metric"), str):     # common model spellings of the recorded measures
+            data["metric"] = METRIC_ALIASES.get(data["metric"].strip(), data["metric"].strip())
         by = data.get("by")
         if by and not _valid_date(by):
             raise ValueError(f"by {by!r} is not a date YYYY.MM.DD")

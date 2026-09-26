@@ -73,8 +73,9 @@ class StrategyReview(BaseModel):
 STRATEGY_INSTRUCTIONS = """You are the Strategist: you set the empire's top-down strategy, one entry per pillar
 (economy, expansion, technology, diplomacy, defence, government, society). Each pillar: a unique priority
 (1 = first), a stance of one or two sentences, 1-3 goals, milestones on the briefing's measures
-(systems, colonies, pops, techs_known, military_power, economy_power, tech_power, rank:<measure>) with a
-target and an in-game date, and only for technology `prefer_techs` (tech ids to pick when offered; at most 6)
+(exactly these names: systems, colonies, pops, techs_known, military_power, economy_power, tech_power, rank:systems,
+rank:pops, rank:techs, rank:military_power, rank:economy_power, rank:tech_power, rank:colonies; a rank is 1 = best,
+so use op <= for it) with a target and an in-game date, and only for technology `prefer_techs` (tech ids to pick when offered; at most 6)
 and only for economy `market` (at most 1 small monthly order, amount 1-25; sell only a resource the briefing lists as
 IDLE, at most 20% of its monthly income). Market orders cannot use trade; sell only idle energy, minerals, food, consumer goods or alloys (strategic resources can only be bought). Priorities decide which directives the governor prefers.
 Everything must be achievable through directives, tech picks or market orders: the game's AI builds,
@@ -1191,7 +1192,8 @@ class Governor:
             self.log.emit("briefing_error", error=f"strategy review outcomes: {e}"[:200])
             return "(none)"
 
-    def _review_strategy(self, b: dict, trigger: str, retried: bool = False, errors: list[str] | None = None) -> None:
+    def _review_strategy(self, b: dict, trigger: str, retried: bool = False, errors: list[str] | None = None,
+                         rejected: str | None = None) -> None:
         """Strategist review: may keep the strategy or write a new version (pinned pillars stay). An invalid
         answer (including change=true with no strategy) is retried once with the reasons; still invalid →
         no change. Never raises and never pauses the game: any failure (reading the game for the prompt,
@@ -1207,6 +1209,7 @@ class Governor:
         self._pending_market = None
         started = time.time()
         retry_errors: list[str] | None = None
+        retry_rejected: str | None = None
         try:     # building the prompt reads the game (briefing text): inside, so it never raises out
             current = self.strategy.model_dump_json(indent=1) if self.strategy else "(none yet: write the first strategy)"
             prompt = [f"Strategy review, trigger: {trigger}.", "Current strategy:\n" + current,
@@ -1217,7 +1220,8 @@ class Governor:
             if misfits:     # kept as the human set them; the Strategist should plan around them
                 prompt.insert(2, "Warnings:\n" + "\n".join(misfits))
             if errors:
-                prompt.insert(0, "Your previous answer was rejected: " + "; ".join(errors) + ". Fix exactly these problems.")
+                prompt.insert(0, "Your previous answer was rejected: " + "; ".join(errors) + ". Fix exactly these problems"
+                                 " and return the whole strategy again.\nYour rejected answer:\n" + (rejected or "(none given)"))
             trend = self._trend(b)
             if trend:
                 prompt.append(trend)
@@ -1271,6 +1275,7 @@ class Governor:
 
             if errs and not retried:
                 retry_errors = errs             # one corrective retry: the model sees exactly what was wrong
+                retry_rejected = r.strategy.model_dump_json(indent=1) if r.strategy else None   # and the answer to fix
             elif errs:
                 self.log.emit("strategy_rejected", date=b["date"], errors=errs[:10])
             elif accepted:
@@ -1288,7 +1293,7 @@ class Governor:
             self.log.emit("episode_error", error=f"strategy review: {type(e).__name__}: {e}"[:500])
             return
         if retry_errors is not None:
-            self._review_strategy(b, trigger, retried=True, errors=retry_errors)
+            self._review_strategy(b, trigger, retried=True, errors=retry_errors, rejected=retry_rejected)
 
     def _set_strategy(self, s: Strategy, date: str, trigger: str, model: str) -> None:
         with self._strategy_lock:

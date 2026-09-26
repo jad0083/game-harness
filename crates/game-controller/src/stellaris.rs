@@ -1941,7 +1941,7 @@ impl Briefing {
             self.government, self.authority, self.ethics.join(", "), self.civics.join(", "), self.origin
         );
         s += &format!(
-            "Power: military {:.0}, economy {:.0}, tech {:.0}; victory rank {}. Systems owned {}, colonies {}, empire size {}, pops {}, fleet size {} (naval capacity used {}; the save has no maximum), upgraded starbases {}/{}\n",
+            "Power: military {:.0}, economy {:.0}, tech {:.0}; victory rank {}. Systems owned {}, colonies {}, empire size {}, pops {}, fleet size {} (naval capacity used {}; the maximum is not in the save, so never assume we are at it), upgraded starbases {}/{}\n",
             self.military_power, self.economy_power, self.tech_power, self.victory_rank,
             self.systems, self.planets.len(), self.empire_size, self.pops, self.fleet_size, self.used_naval_capacity,
             self.starbases.0, self.starbases.1
