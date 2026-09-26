@@ -44,10 +44,10 @@
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 
   /* ---- top bar ---- */
-  .bar { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px;
+  .bar { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px;
          padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--hair); }
   .brand { font-weight: 700; font-size: 17px; letter-spacing: -0.01em; margin-right: 4px; }
-  .campaign select { background: var(--raised); border: 1px solid var(--hair); border-radius: 8px; padding: 5px 8px; max-width: min(440px, 70vw); }
+  .campaign select { background: var(--raised); border: 1px solid var(--hair); border-radius: 8px; padding: 5px 8px; max-width: min(300px, 60vw); }
   .pill { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 13px; }
   .pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
   .pill.playing::before { background: var(--good); }
@@ -56,9 +56,14 @@
   .pill.stopped::before, .pill.viewer::before { background: var(--muted); }
   .fresh { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
   .fresh.lost { color: var(--warn); font-weight: 600; }
-  .facts { display: flex; flex-wrap: wrap; gap: 4px 16px; color: var(--ink-2); font-size: 13.5px; }
+  .facts { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--ink-2); font-size: 13.5px; }
   .facts b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
   .spacer { flex: 1; }
+  .picker { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+  .picker select { background: var(--raised); border: 1px solid var(--hair); border-radius: 8px; padding: 5px 8px; color: var(--ink); max-width: 230px; }
+  .toast { position: fixed; right: 16px; bottom: 16px; z-index: 10; background: var(--surface); border: 1px solid var(--hair);
+           border-left: 3px solid var(--accent); border-radius: 10px; padding: 10px 14px; font-size: 13.5px; max-width: min(420px, 90vw);
+           box-shadow: 0 6px 24px rgba(10, 18, 40, .14); }
   .btn { border: 1px solid var(--hair); background: var(--raised); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
   .btn:hover { border-color: var(--accent); }
   .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
@@ -87,9 +92,13 @@
   .seg { display: inline-flex; border: 1px solid var(--hair); border-radius: 8px; overflow: hidden; margin-left: auto; }
   .seg button { border: 0; background: transparent; padding: 4px 10px; cursor: pointer; font-size: 13px; color: var(--ink-2); }
   .seg button[aria-pressed="true"] { background: var(--raised); color: var(--ink); font-weight: 600; }
-  .standing { margin: 0 0 8px; font-size: 13.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
-  .standing b { color: var(--ink); font-weight: 600; }
-  .standing .behind { color: var(--warn); font-weight: 600; }
+  .standing { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+  .chip { display: grid; gap: 1px; padding: 6px 10px; border: 1px solid var(--hair); border-radius: 8px; background: var(--raised);
+          font-variant-numeric: tabular-nums; min-width: 96px; }
+  .chip b { font-size: 16px; font-weight: 700; }
+  .chip-label, .chip-sub { font-size: 11.5px; color: var(--muted); }
+  .chip.behind { border-color: var(--warn); box-shadow: inset 3px 0 0 var(--warn); }
+  .chip.behind b { color: var(--warn); }
   .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--ink-2); margin: 4px 0 6px; }
   .legend span { display: inline-flex; align-items: center; gap: 6px; }
   .legend i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
@@ -123,6 +132,7 @@
     .col { display: contents; }
     #p-chart { order: 1; } #p-dec { order: 2; } #p-tabs { order: 3; } #p-frame { order: 4; }
   }
+  .nw { white-space: nowrap; }
   .d-date { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 14px; }
   .d-meta { color: var(--muted); font-size: 12.5px; grid-column: 1; }
   .d-main { grid-column: 2; grid-row: 1 / span 2; min-width: 0; }
@@ -192,6 +202,7 @@
   .feed .t { color: var(--muted); font-variant-numeric: tabular-nums; }
   .feed .k { font-weight: 600; margin-right: 6px; }
   .feed .k.bad { color: var(--bad); } .feed .k.learn { color: var(--good); } .feed .k.human { color: var(--accent); }
+  #noframe { padding: 4px 0; text-align: left; }
   .frame img { width: 100%; display: block; border-radius: 8px; background: #000; aspect-ratio: 1568 / 882; object-fit: contain; }
   .stats { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--ink-2); margin-top: 10px; font-variant-numeric: tabular-nums; }
   .stats b { color: var(--ink); }
@@ -212,10 +223,14 @@
   <span class="fresh" id="fresh" aria-live="polite"></span>
   <div class="facts" id="facts"></div>
   <span class="spacer"></span>
-  <button class="btn live-only" id="b-pause" hidden>Pause</button>
-  <button class="btn live-only" id="b-resume" hidden>Resume</button>
+  <label class="picker live-only" hidden>Model <select id="model-select" aria-label="Model"></select></label>
+  <label class="picker live-only" hidden>Thinking <select id="thinking-select" aria-label="Thinking level">
+    <option value="off">off</option><option value="low">low</option><option value="medium">medium</option><option value="high">high</option>
+  </select></label>
+  <button class="btn live-only" id="b-toggle" hidden>Pause</button>
   <button class="btn danger live-only" id="b-stop" hidden>Stop</button>
 </div>
+<div class="toast" id="toast" role="status" hidden></div>
 <div class="banner" id="banner" hidden>
   <p id="banner-text"></p>
   <button class="btn primary" id="b-yes">Yes</button>
@@ -237,7 +252,7 @@
         </div>
       </header>
       <div class="body">
-        <p class="standing" id="standing" hidden></p>
+        <div class="standing" id="standing" hidden></div>
         <div class="legend" id="legend"></div>
         <div class="chartwrap" id="chartwrap"></div>
       </div>
@@ -326,12 +341,17 @@ async function loadStatus() {
   $("status").className = "pill " + st.replace(/ /g, "_");
   document.querySelectorAll(".live-only").forEach((b) => (b.hidden = !S.live));
   const info = S.status.info || {};
+  const canSwitch = S.live && (info.controls || []).includes("set_model");
+  document.querySelectorAll(".picker").forEach((el) => (el.hidden = !canSwitch));
+  if (canSwitch) syncPickers(info);
+  const paused = ["paused", "needs_attention"].includes(st);
+  $("b-toggle").textContent = paused ? "Resume" : "Pause";
   const facts = [];
   if (S.live) {
     facts.push(`<span>Date <b>${esc(S.status.game_date || "–")}</b></span>`);
     if (info.directive !== undefined) facts.push(`<span>Directive <b>${esc(human(info.directive) || "none")}</b></span>`);
     if (info.speed) facts.push(`<span>Speed <b>${esc(info.speed)}</b></span>`);
-    facts.push(`<span>Model <b>${esc(S.status.model)}</b></span>`);
+    if (!(info.controls || []).includes("set_model")) facts.push(`<span>Model <b>${esc(S.status.model)}</b></span>`);
   }
   $("facts").innerHTML = facts.join("");
   const q = S.status.pending_question;
@@ -428,8 +448,14 @@ function renderStanding(last) {
   if (!p || !Object.keys(p).length) { el.hidden = true; return; }
   const n = (last.peer_count || 0) + 1, behind = new Set(last.behind || []);
   const own = (k) => k === "techs" ? last.techs_known : last[k];
-  el.innerHTML = `Standing among ${esc(n)} empires, ours vs the others' median: ` + PEER_LABELS.filter(([k]) => p[k]).map(([k, label]) =>
-    `<span class="${behind.has(k) ? "behind" : ""}">${esc(label)} <b>${fmt(own(k))}</b> vs ${fmt(p[k].median)} (#${esc(p[k].rank)})${behind.has(k) ? ", falling behind" : ""}</span>`).join("; ");
+  const chips = PEER_LABELS.filter(([k]) => p[k]).map(([k, label]) =>
+    `<span class="chip${behind.has(k) ? " behind" : ""}" title="${behind.has(k) ? "Falling behind: below half the median of the other empires" : ""}">` +
+    `<span class="chip-label">${esc(label)}</span><b>${fmt(own(k))}</b><span class="chip-sub">median ${fmt(p[k].median)}, #${esc(p[k].rank)} of ${esc(n)}</span></span>`);
+  if (last.room != null) {
+    chips.push(`<span class="chip${last.room === 0 ? " behind" : ""}"><span class="chip-label">room to expand</span><b>${fmt(last.room)}</b>` +
+      `<span class="chip-sub">unclaimed within 2 jumps, ${fmt(last.room_surveyed || 0)} surveyed, ${fmt(last.construction_ships || 0)} construction ships</span></span>`);
+  }
+  el.innerHTML = chips.join("");
   el.hidden = false;
 }
 
@@ -484,6 +510,7 @@ function renderChart() {
     const x = X(Math.min(Math.max(d.month, x0), x1)), changed = d.outcome === "applied";
     const sel = S.sel && S.sel.run_id === d.run_id && S.sel.episode === d.episode;
     svg += `<g class="dmark" data-i="${idx}" tabindex="0" role="button" aria-label="Decision ${esc(d.date)}: ${esc(human(d.decision))}">
+      <title>${esc(d.date)}: ${esc(human(d.decision === "keep" ? "kept " + (d.current || "") : d.decision))}</title>
       <line x1="${x}" x2="${x}" y1="${T}" y2="${H - B + 2}" stroke="${sel ? "var(--accent)" : "var(--axis)"}" stroke-width="1" stroke-dasharray="${changed ? "0" : "3 3"}"/>
       <circle cx="${x}" cy="${H - 12}" r="${changed ? 6 : 4.5}" fill="${changed ? "var(--accent)" : "var(--surface)"}" stroke="var(--accent)" stroke-width="2"/>
       <rect x="${x - 10}" y="${H - 24}" width="20" height="24" fill="transparent"/></g>`;
@@ -541,7 +568,7 @@ function renderDecisions() {
     const sel = S.sel && S.sel.run_id === d.run_id && S.sel.episode === d.episode;
     return `<li class="${sel ? "sel" : ""}"><button data-i="${i}">
       <span class="d-date">${esc(d.date || "–")}</span>
-      <span class="d-meta">${d.model === "human" ? "you" : fmt(d.tokens_in) + " tokens"}${d.seconds ? ", " + esc(d.seconds) + " s" : ""}</span>
+      <span class="d-meta"><span class="nw">${d.model === "human" ? "you" : fmt(d.tokens_in) + " tokens"}</span>${d.seconds ? `<br><span class="nw">${esc(d.seconds)} s</span>` : ""}</span>
       <span class="d-main"><span class="d-head"><span class="dir${kept ? " kept" : ""}">${esc(label)}</span><span class="trigger">${esc(d.trigger || "")}</span></span>
       <p class="reason">${esc(d.reason || "")}</p>${afterText(d.result)}</span></button></li>`;
   }).join("");
@@ -632,6 +659,8 @@ function addMessage(ev) {
   const who = ev.role === "human" ? "You" : "Model";
   $("thread").insertAdjacentHTML("beforeend", `<div class="msg ${ev.role}"><span class="who">${who}, ${new Date(ev.t * 1000).toLocaleTimeString()}</span><p>${esc(ev.text)}</p></div>`);
   if (ev.role === "model") flag("talk");
+  const panel = $("tab-talk");
+  if (!panel.hidden) panel.scrollTop = panel.scrollHeight;
 }
 
 // ---------- tabs ----------
@@ -666,6 +695,7 @@ function describe(ev) {
     case "needs_attention": return ev.reason;
     case "run_start": return `run started: ${ev.model}${ev.speed ? ", speed " + ev.speed : ""}`;
     case "run_end": return "run ended";
+    case "model": return `now using ${ev.model} (${ev.thinking} thinking)`;
     default: { const { t, kind, ...rest } = ev; return JSON.stringify(rest).slice(0, 200); }
   }
 }
@@ -752,8 +782,33 @@ document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("clic
   renderChart();
 }));
 $("campaign").addEventListener("change", async (e) => { S.campaign = e.target.value; S.sel = null; await loadCampaignData(); });
-$("b-pause").addEventListener("click", () => control({ action: "pause" }));
-$("b-resume").addEventListener("click", () => control({ action: "resume" }));
+$("b-toggle").addEventListener("click", () => control({ action: $("b-toggle").textContent === "Pause" ? "pause" : "resume" }));
+
+let toastT;
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), 5000);
+}
+function syncPickers(info) {
+  const sel = $("model-select"), models = [...new Set([...(info.models || []), S.status.model])].filter(Boolean).sort();
+  const key = models.join("|");
+  if (sel.dataset.key !== key) {
+    sel.innerHTML = models.map((m) => `<option value="${esc(m)}">${esc(m.replace(/^google:/, ""))}</option>`).join("");
+    sel.dataset.key = key;
+  }
+  if (document.activeElement !== sel) sel.value = S.status.model;
+  if (document.activeElement !== $("thinking-select") && info.thinking) $("thinking-select").value = info.thinking;
+}
+async function switchModel() {
+  const model = $("model-select").value, thinking = $("thinking-select").value;
+  const r = await fetch("/control", { method: "POST", headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({ action: "set_model", model, thinking }) });
+  if (r.ok) toast(`Switched to ${model} with ${thinking} thinking, from the next model call.`);
+  else toast(`Could not switch: ${await r.text()}`);
+  loadStatus();
+}
+$("model-select").addEventListener("change", switchModel);
+$("thinking-select").addEventListener("change", switchModel);
 $("b-stop").addEventListener("click", () => { if (confirm("Stop the pilot? The game is paused when it stops.")) control({ action: "stop" }); });
 $("b-yes").addEventListener("click", () => control({ action: "answer", text: "yes" }));
 $("b-no").addEventListener("click", () => control({ action: "answer", text: "no" }));
