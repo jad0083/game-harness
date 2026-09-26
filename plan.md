@@ -121,6 +121,7 @@
 - [x] Dashboard redesign: readout strip, warm ivory on deep space, amber accent, Bricolage Grotesque + Fraunces, hairline sections instead of cards; PC status chip, campaign titles, markdown in the model's text, show-all decisions
 - [x] Game speed and decision interval shown and changeable on the dashboard (live and for the next run)
 - [x] Dashboard follows the live campaign; no-store responses; transient model errors retried
+- [ ] Strategy layer: seven pillar strategies set by a Strategist model role at reviews and events, framing each directive; tech picks and market orders; Strategy tab with edit and pin (spec docs/superpowers/specs/2026-09-26-strategy-layer-design.md, branch feat/strategy-layer)
 - [ ] War-readiness briefing (Theian postmortem): naval-capacity maximum, occupied planets, shipyards, fleets, production per planet, own vs. allies' battles; urgent triggers for military −50%, occupation, system lost
 - [ ] Directive read-back: check each directive's policies in the next save and report the ones that did not change; every directive sets all its policies
 - [ ] Two shipyards in different systems and alloys on two or more planets before any war (strategy rule and mod budget nudge)
