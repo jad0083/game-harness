@@ -125,8 +125,12 @@ def load_prefs(runs_dir: Path) -> dict:
             out["models"] = pool
     if isinstance(d.get("rotate"), bool):
         out["rotate"] = d["rotate"]
+    raw_roles = dict(d.get("roles") or {})
+    if "retrospective" in raw_roles and "strategy" not in raw_roles:
+        raw_roles["strategy"] = raw_roles.pop("retrospective")
+    raw_roles.pop("retrospective", None)
     try:
-        roles = check_roles(d.get("roles") or {})
+        roles = check_roles(raw_roles)
     except ValueError:
         roles = {}
     if roles:
@@ -139,7 +143,7 @@ MAX_POOL = 6
 # Where the pilot calls a model. "decisions" is the main list; the others use it unless given their own.
 ROLES = [
     {"id": "decisions", "label": "Decisions", "help": "The standing directive, every few in-game months (Stellaris governor)."},
-    {"id": "retrospective", "label": "Retrospectives", "help": "Reviews the campaign plan every few decisions and records rules: rare, benefits from a stronger model."},
+    {"id": "strategy", "label": "Strategy", "help": "Sets and reviews the pillar strategies at the start, every few decisions and on big events: use your best reasoning model."},
     {"id": "chat", "label": "Talk", "help": "Answers questions in the Talk tab: interactive, a fast model is enough."},
     {"id": "episodes", "label": "GC4 blockers", "help": "Galactic Civilizations IV blockers read from screenshots (needs a vision model)."},
 ]

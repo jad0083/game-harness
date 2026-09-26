@@ -27,6 +27,7 @@ from .agent import HumanChannel, model_settings, run_with_retry
 from .config import Settings
 from .events import EventLog
 from .learning import Journal, LearnedStore, LearningRejected
+from .strategy import Strategy, keep_pinned, milestone_status, validate
 from .trace import serialize
 
 DIRECTIVES = ("expand", "consolidate_economy", "tech_rush", "prepare_war", "defend", "diplomacy_first")
@@ -52,17 +53,24 @@ class GovernorDecision(BaseModel):
                       "dates, current focus), ONLY when the plan should change; otherwise empty")
 
 
-class Retrospective(BaseModel):
-    assessment: str = Field(description="What worked and what did not since the last review, citing numbers")
-    rules: list[str] = Field(default_factory=list, description="0-3 general rules learned (situation -> choice), "
-                             "each a full sentence; only what the evidence supports")
-    plan: str = Field(description="The revised campaign plan: goals, milestones with in-game target dates, current focus")
+class StrategyReview(BaseModel):
+    change: bool = Field(description="false when the current strategy should stay as it is")
+    strategy: Strategy | None = Field(default=None, description="the full new strategy when change is true")
+    assessment: str = Field(description="what worked and what did not since the last review, citing numbers")
+    rules: list[str] = Field(default_factory=list, description="0-3 general rules learned (situation -> choice)")
 
 
-RETRO_INSTRUCTIONS = """You review how a Stellaris empire has been governed. The game's own AI plays it; a governor
-picks one standing directive at a time. Compare the campaign plan with what happened: the decisions,
-their outcomes 12 months later, and the empire's standing against the other empires. Be concrete and
-brief, cite numbers, and propose only rules the evidence supports."""
+STRATEGY_INSTRUCTIONS = """You are the Strategist: you set the empire's top-down strategy, one entry per pillar
+(economy, expansion, technology, diplomacy, defence, government, society). Each pillar: a unique priority
+(1 = first), a stance of one or two sentences, 1-3 goals, milestones on the briefing's measures
+(systems, colonies, pops, techs_known, military_power, economy_power, tech_power, rank:<measure>) with a
+target and an in-game date, and only for technology `prefer_techs` (tech ids to pick when offered; at most 6)
+and only for economy `market` (at most 2 small monthly orders; sell only a resource the briefing lists as
+IDLE, at most 20% of its monthly income). Priorities decide which directives the governor prefers.
+Everything must be achievable through directives, tech picks or market orders: the game's AI builds,
+designs ships and moves fleets. Never change a pillar marked pinned: the human set it. If nothing
+material changed, answer change=false. Build on the empire's species, ethics, civics and origin.
+While at war, the defence stance must name its exit condition (peace, war exhaustion, or planets retaken). When a hostile neighbour's military is twice ours or more, a defence goal is two shipyards in different systems and alloy production on two or more planets; never reason from a naval-capacity cap the briefing does not show."""
 
 
 class StellarisGame(Protocol):
@@ -159,6 +167,16 @@ def _num(v) -> str:
     if not isinstance(v, (int, float)):
         return str(v)
     return f"{v:.0f}" if abs(v) >= 100 or float(v).is_integer() else f"{v:.1f}"
+
+
+def idle_resources(b: dict) -> set[str]:
+    """Resources the briefing would flag IDLE: large stock, positive net, over 10 years of income (trade: > 15,000)."""
+    out = set()
+    for k, v in (b.get("stockpile") or {}).items():
+        n = (b.get("net") or {}).get(k, 0)
+        if (k == "trade" and v > 15000 and n > 0) or (v > 5000 and n > 0 and v > n * 120):
+            out.add(k)
+    return out
 
 
 def urgent_changes(before: dict, now: dict) -> list[str]:
@@ -301,6 +319,8 @@ class Governor:
         self.last_change: int | None = None       # month of the last directive change
         self.last_briefing = ""                   # text of the latest briefing given to the model
         self.plan = ""                            # the campaign plan (goals, milestones), per campaign
+        self.strategy: Strategy | None = None     # the pillar strategy (Strategist), per campaign
+        self.review_requested: str | None = None  # pending review trigger after a failed strategy call
         self._since_retro = 0
         self.orders: list[str] = []               # standing orders, saved per campaign
         self.requests: queue.Queue[tuple[str, str]] = queue.Queue()   # ("decide", msg) | ("override", name)
@@ -338,8 +358,8 @@ class Governor:
 
     def _build(self, role: str, settings: Settings, model):
         text = self._text
-        if role == "retrospective":
-            return Agent(model, deps_type=GovDeps, output_type=Retrospective, instructions=RETRO_INSTRUCTIONS + "\n\n" + text,
+        if role == "strategy":
+            return Agent(model, deps_type=GovDeps, output_type=StrategyReview, instructions=STRATEGY_INSTRUCTIONS + "\n\n" + text,
                          tools=[Tool(f) for f in (consult, get_doc)], model_settings=governor_settings(settings), retries=2)
         if role == "chat":
             return Agent(model, deps_type=GovDeps, output_type=str, instructions=CHAT_INSTRUCTIONS + "\n\n" + text,
@@ -427,16 +447,12 @@ class Governor:
         self.set_models(pool)
 
     def _build_agents(self) -> None:
-        """(Re)build the decision, chat and retrospective agents for the current model settings."""
+        """(Re)build the decision and chat agents for the current model settings."""
         m, s, text = self._model_obj or self.s.model, self.s, self._text
         self.agent = build_governor(s, text, model=m)
         self.chat_agent: Agent[GovDeps, str] = Agent(
             m, deps_type=GovDeps, output_type=str, instructions=CHAT_INSTRUCTIONS + "\n\n" + text,
             tools=[Tool(f) for f in (consult, get_doc, recent_log, past_outcomes)],   # read-only
-            model_settings=governor_settings(s), retries=2)
-        self.retro_agent: Agent[GovDeps, Retrospective] = Agent(
-            m, deps_type=GovDeps, output_type=Retrospective, instructions=RETRO_INSTRUCTIONS + "\n\n" + text,
-            tools=[Tool(f) for f in (consult, get_doc)],    # outcomes are already in its prompt
             model_settings=governor_settings(s), retries=2)
 
     def set_model(self, model: str, thinking: str | None = None) -> None:
@@ -642,6 +658,8 @@ class Governor:
                 self.log.emit("journal", text="taking control: " + self.game.take_control().replace("\n", "; "))
                 b = self._fresh_briefing()
                 self._set_campaign(b)
+                if self.strategy is None:
+                    self._review_strategy(b, "start of run")
                 self._decide(b, "start of run")
                 return b
             except Exception as e:  # noqa: BLE001
@@ -710,7 +728,13 @@ class Governor:
                 self.plan = self.log.telemetry.latest_plan(self.log.campaign_id or "")
             except Exception as e:  # noqa: BLE001
                 self.log.emit("briefing_error", error=f"loading the plan: {e}"[:200])
+            try:
+                raw = self.log.telemetry.latest_strategy(self.log.campaign_id or "")
+                self.strategy = Strategy.model_validate({k: v for k, v in raw.items() if k != "reason"}) if raw else None
+            except Exception as e:  # noqa: BLE001
+                self.log.emit("briefing_error", error=f"loading the strategy: {e}"[:200])
         self.log.state.info["plan"] = self.plan
+        self.log.state.info["strategy"] = self.strategy.model_dump() if self.strategy else None
 
     def _run_until_next_decision(self, last: dict) -> tuple[dict | None, str]:
         start = months(last["date"])          # the interval can change mid-wait (dashboard)
@@ -864,9 +888,10 @@ class Governor:
             self.journal.note(d.note, b["date"])
         if d.plan.strip():
             self._set_plan(d.plan.strip(), b["date"], "decision")
-        self._since_retro += 1
-        if self.s.retro_every and self._since_retro >= self.s.retro_every:
-            self._retrospective(b)
+        if reason != "start of run":       # the strategist already reviewed for this decision point
+            self._since_retro += 1
+            if self.s.retro_every and self._since_retro >= self.s.retro_every:
+                self._review_strategy(b, f"scheduled after {self.s.retro_every} decisions")
 
     def _set_plan(self, text: str, date: str, source: str) -> None:
         text = html.unescape(text)            # models sometimes write "&amp;"; the dashboard escapes on display
@@ -874,51 +899,89 @@ class Governor:
         self.log.state.info["plan"] = text
         self.log.emit("plan", date=date, source=source, text=text)
 
-    def _retrospective(self, b: dict) -> None:
-        """Review plan vs outcomes and standing; revise the plan and record rules learned."""
-        self._since_retro = 0
-        self._status("deciding")
-        self.log.state.episodes += 1
-        n = self.log.state.episodes
-        tel, cid = self.log.telemetry, self.log.campaign_id
-        outcomes = tel.past_outcomes(cid) if tel is not None and cid else "(no telemetry)"
-        recent = [e for e in list(self.log.recent) if e["kind"] == "episode"][-10:]
-        prompt = ["Retrospective.", "Campaign plan:\n" + (self.plan or "(none)"),
-                  "Recent decisions:\n" + "\n".join(f"- {e.get('date')}: {e.get('decision')}" for e in recent),
-                  "Directive changes and what followed:\n" + outcomes,
-                  "Latest briefing:\n" + self.last_briefing]
-        started = time.time()
-        base = {"episode": n, "model": self.s.model, "thinking_level": self.s.governor_thinking, "game": self.s.game, "date": b["date"],
-                "trigger": f"retrospective after {self.s.retro_every} decisions", "current": current_directive(b)}
+    def _milestones_text(self) -> str:
+        if not self.strategy or self.log.telemetry is None or not self.log.campaign_id:
+            return "(none)"
         try:
-            result, _ = self._call(
-                "retrospective",
-                lambda agent: agent.run_sync("\n\n".join(prompt), deps=GovDeps(self.game, self.store, self.log),
-                                             usage_limits=UsageLimits(request_limit=self.s.max_requests_per_episode)),
-                on_try=lambda e: base.update(model=e["model"], thinking_level=e["thinking"]))
-        except Exception as e:  # noqa: BLE001 - a failed review never stops play
-            self.log.emit("episode_error", error=f"retrospective: {type(e).__name__}: {e}"[:500])
+            rows = self.log.telemetry.metrics_rows(self.log.campaign_id)
+        except Exception as e:  # noqa: BLE001 - telemetry is advisory; never block a review
+            self.log.emit("briefing_error", error=f"milestones: {e}"[:200])
+            return "(none)"
+        today = rows[-1]["date"] if rows else "2200.01.01"
+        out = []
+        for name, pl in sorted(self.strategy.pillars.items(), key=lambda kv: kv[1].priority):
+            for m in pl.milestones:
+                out.append(f"- {name}: {m.metric} {m.op} {m.target:g} by {m.by}: {milestone_status(m, rows, today)}")
+        return "\n".join(out) or "(none)"
+
+    def _past_outcomes_text(self) -> str:
+        if self.log.telemetry is None or not self.log.campaign_id:
+            return "(none)"
+        try:
+            return self.log.telemetry.past_outcomes(self.log.campaign_id)
+        except Exception as e:  # noqa: BLE001 - telemetry is advisory; never block a review
+            self.log.emit("briefing_error", error=f"strategy review outcomes: {e}"[:200])
+            return "(none)"
+
+    def _review_strategy(self, b: dict, trigger: str, retried: bool = False, errors: list[str] | None = None) -> None:
+        """Strategist review: may keep the strategy or write a new version (pinned pillars stay). An invalid
+        answer is retried once with the reasons; still invalid → no change."""
+        self._since_retro = 0
+        self.review_requested = None
+        current = self.strategy.model_dump_json(indent=1) if self.strategy else "(none yet: write the first strategy)"
+        prompt = [f"Strategy review, trigger: {trigger}.", "Current strategy:\n" + current,
+                  "Milestones (status computed from the recorded numbers):\n" + self._milestones_text(),
+                  "Directive changes and what followed:\n" + self._past_outcomes_text(),
+                  "Latest briefing:\n" + (self.last_briefing or self.game.briefing_text())]
+        if errors:
+            prompt.insert(0, "Your previous answer was rejected: " + "; ".join(errors) + ". Fix exactly these problems.")
+        trend = self._trend(b)
+        if trend:
+            prompt.append(trend)
+        deps = GovDeps(self.game, self.store, self.log)
+        base: dict = {}
+        ask = lambda agent: agent.run_sync("\n\n".join(prompt), deps=deps,
+                                           usage_limits=UsageLimits(request_limit=self.s.max_requests_per_episode))
+        try:
+            result, _entry = self._call("strategy", ask, on_try=lambda e: base.update(model=e["model"]))
+        except Exception as e:  # noqa: BLE001 - a failed review never stops play; retried at the next decision
+            self.review_requested = trigger
+            self.log.emit("episode_error", error=f"strategy review: {type(e).__name__}: {e}"[:500])
             return
-        r, usage = result.output, result.usage
-        base["model_version"] = served_model(result)
-        st = self.log.state
-        st.tokens_in += usage.input_tokens or 0
-        st.tokens_out += usage.output_tokens or 0
-        st.requests += usage.requests or 0
-        learned = []
+        r: StrategyReview = result.output
         for rule in r.rules[:3]:
             try:
-                self.store.add_rule(rule, f"retrospective {b['date']}")
-                learned.append(rule)
-                st.learned["rules"] = st.learned.get("rules", 0) + 1
-                self.log.emit("learned", category="rules", message="retrospective rule", rule=rule)
+                self.store.add_rule(rule, f"strategy review {b['date']}")
+                self.log.emit("learned", category="rules", message="strategy review rule", rule=rule)
             except LearningRejected as e:
                 self.log.emit("learn_rejected", category="rules", reason=str(e), rule=rule)
-        if r.plan.strip():
-            self._set_plan(r.plan.strip(), b["date"], "retrospective")
-        self.log.save_trace(n, {**base, "decision": "retrospective", "reason": r.assessment,
-                                "outcome": f"{len(learned)} rules learned", "seconds": round(time.time() - started, 1),
-                                "tokens_in": usage.input_tokens, "tokens_out": usage.output_tokens,
-                                "steps": serialize(result.all_messages())})
-        self.journal.note(f"Retrospective: {r.assessment}", b["date"])
-        self._status("playing")
+        self.log.emit("strategy_review", date=b["date"], trigger=trigger, change=bool(r.change and r.strategy),
+                      assessment=r.assessment[:2000], model=base.get("model"))
+        if not (r.change and r.strategy):
+            return
+        new = keep_pinned(r.strategy, self.strategy)
+        errs = validate(new, previous=self.strategy, tech_ids=self._tech_ids(), idle=idle_resources(b),
+                        income=b.get("net", {}))
+        if errs and not retried:
+            # one corrective retry: the model sees exactly what was wrong
+            return self._review_strategy(b, trigger, retried=True, errors=errs)
+        if errs:
+            self.log.emit("strategy_rejected", date=b["date"], errors=errs[:10])
+            return
+        self._set_strategy(new, b["date"], trigger, base.get("model", ""))
+
+    def _set_strategy(self, s: Strategy, date: str, trigger: str, model: str) -> None:
+        self.strategy = s
+        self.log.state.info["strategy"] = s.model_dump()
+        self.log.emit("strategy", date=date, trigger=trigger, model=model, reason=s.reason, strategy=s.model_dump())
+
+    def _tech_ids(self) -> set[str]:
+        """Tech ids from the corpus (for validating preferred techs); cached."""
+        if not hasattr(self, "_techs"):
+            import json as _json
+            path = self.s.corpus_dir / "data" / "tech.json"
+            try:
+                self._techs = {r["id"].split(":", 1)[1] for r in _json.loads(path.read_text(encoding="utf-8"))}
+            except (OSError, ValueError, KeyError):
+                self._techs = set()
+        return self._techs
