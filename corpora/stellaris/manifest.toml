@@ -136,6 +136,7 @@ sell = [873, 311]
 resources = { energy = [820, 335], minerals = [838, 335], food = [856, 335], consumer_goods = [873, 335], alloys = [820, 353], volatile_motes = [838, 353], exotic_gases = [856, 353], rare_crystals = [873, 353], sr_living_metal = [820, 371], sr_zro = [838, 371], sr_dark_matter = [856, 371] }   # no trade: it is not a market resource
 minus = [820, 388]
 plus = [855, 388]
+new_trade_amount = 10   # verified live 2387.07: a new monthly trade starts at 10
 confirm = [863, 451]
 remove = [787, 451]   # removal flow: click the order row (opens its edit dialog), then this button
 order_row_first = [380, 181]
