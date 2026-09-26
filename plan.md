@@ -136,5 +136,5 @@
 - [ ] Host registry (`hosts.toml`: name, agent URL, screen) and one governor service per host (own dashboard port, `GAME_AGENT_URL`); dashboard lists live runs of every host
 - [ ] Installer detects Civilization VI folders (documents, saves, logs, install) for the agent's read roots; update both hosts
 - [x] Screen positions per resolution: `res/<W>x<H>.toml` overlays selected by `GAME_RESOLUTION`; Stellaris 2560x1440 screens measured live on mini-rig2 (a8c53a9, 110e638)
-- [ ] Stellaris tech and market positions at 2560x1440 (the overlay refuses them until measured)
+- [x] Stellaris tech and market positions at 2560x1440: mapped from 4K by `scripts/res-map.py` (scale 1.2, anchors in `res/map.toml`), verified live with a tech pick and a market order added and removed (51143d9)
 - [x] Stellaris on mini-rig2: borderless, monthly autosave, tutorial off, Governor Bridge playset; governor service points at mini-rig2 (systemd drop-in) and plays the new Blooms of Gaea campaign (2026-09-26)
