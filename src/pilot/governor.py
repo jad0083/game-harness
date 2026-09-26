@@ -23,7 +23,7 @@ from pydantic_ai.exceptions import UsageLimitExceeded
 from pydantic_ai.messages import ModelResponse
 from pydantic_ai.usage import UsageLimits
 
-from .agent import HumanChannel, model_settings, run_with_retry
+from .agent import HumanChannel, model_settings, run_with_retry, transient
 from .config import Settings
 from .events import EventLog
 from .learning import Journal, LearnedStore, LearningRejected
@@ -273,8 +273,10 @@ something done, tell them to use "Decide now", a standing order, or an override 
 
 
 class Governor:
-    def __init__(self, settings: Settings, game: StellarisGame, log: EventLog, model=None):
+    def __init__(self, settings: Settings, game: StellarisGame, log: EventLog, model=None, fallback=None):
         self.s = settings
+        # tried once when the main model is still overloaded after the retries (503 high demand)
+        self._fallback_obj = fallback
         self.game = game
         self.log = log
         self.control = Control()
@@ -298,9 +300,38 @@ class Governor:
         self.orders: list[str] = []               # standing orders, saved per campaign
         self.requests: queue.Queue[tuple[str, str]] = queue.Queue()   # ("decide", msg) | ("override", name)
         log.state.info["controls"] = ["instruct", "chat", "order_add", "order_remove", "decide_now", "override",
-                                      "set_model", "set_speed", "set_months"]
+                                      "set_model", "set_fallback", "set_speed", "set_months"]
         log.state.info["thinking"] = settings.governor_thinking
+        log.state.info["fallback"] = settings.fallback_model or "none"
         log.state.info["directives"] = list(DIRECTIVES)
+
+    def set_fallback(self, model: str | None) -> None:
+        """The model tried once when the main one stays overloaded; "none" switches it off."""
+        from .models import valid_model
+        if model in (None, "", "none"):
+            self.s = replace(self.s, fallback_model=None)
+        elif valid_model(model):
+            self.s = replace(self.s, fallback_model=model)
+        else:
+            raise ValueError(f"not a model name: {model!r} (expected provider:name, or none)")
+        self._fallback_obj = None
+        self.log.state.info["fallback"] = self.s.fallback_model or "none"
+        self.log.emit("fallback_model", model=self.s.fallback_model or "none")
+
+    def _fallback_name(self):
+        if self._fallback_obj is not None:
+            return getattr(self._fallback_obj, "model_name", "fallback")
+        fb = self.s.fallback_model
+        return fb if fb and fb != self.s.model else None
+
+    def _fallback_agent(self):
+        """The decision agent on the fallback model (None when there is none or it is the main model)."""
+        m = self._fallback_obj or self._fallback_name()
+        if m is None:
+            return None
+        if getattr(self, "_fallback_cache", (None, None))[0] != m:
+            self._fallback_cache = (m, build_governor(self.s, self._text, model=m))
+        return self._fallback_cache[1]
 
     def _build_agents(self) -> None:
         """(Re)build the decision, chat and retrospective agents for the current model settings."""
@@ -487,6 +518,28 @@ class Governor:
             self._status("stopped")
             self.log.emit("run_end", decisions=self.log.state.episodes)
 
+    def _fresh_briefing(self) -> dict:
+        """The newest autosave, made fresh if it is old: a new or just-loaded game has none of its own
+        yet, so the newest save may belong to another campaign. Then play until the game writes one
+        (at most `fresh_save_wait_s`), so the first decision never acts on the wrong briefing."""
+        b = self.game.briefing()
+        modified = b.get("source_modified")
+        if not isinstance(modified, (int, float)) or time.time() - modified < self.s.stale_save_s:
+            return b
+        self.log.emit("journal", text=f"newest autosave is {(time.time() - modified) / 60:.0f} minutes old "
+                                      "(a new or just-loaded game?): playing until a fresh autosave is written")
+        self.game.set_paused(False)
+        deadline = time.time() + self.s.fresh_save_wait_s
+        try:
+            while time.time() < deadline and not self.control.stopping:
+                time.sleep(self.s.poll_s)
+                nb = self.game.briefing()
+                if nb.get("source") != b.get("source"):
+                    return nb
+        finally:
+            self.game.set_paused(True)
+        raise RuntimeError("no fresh autosave appeared; is the game running and unpaused?")
+
     def _start(self) -> dict | None:
         """Pause, set the speed, hand the empire to the AI, first briefing and decision. On failure,
         wait for the human (dashboard Resume) and try again; None if stopped meanwhile."""
@@ -496,7 +549,7 @@ class Governor:
                 self.game.set_speed(self.s.speed)
                 # the game's AI must play the empire (human_ai), not observer mode (no expansion)
                 self.log.emit("journal", text="taking control: " + self.game.take_control().replace("\n", "; "))
-                b = self.game.briefing()
+                b = self._fresh_briefing()
                 self._set_campaign(b)
                 self._decide(b, "start of run")
                 return b
@@ -664,11 +717,19 @@ class Governor:
         n = self.log.state.episodes
         base = {"episode": n, "model": self.s.model, "thinking_level": self.s.governor_thinking, "game": self.s.game,
                 "date": b["date"], "trigger": reason, "current": current}
+        def ask(agent):
+            return agent.run_sync("\n".join(prompt), deps=deps,
+                                  usage_limits=UsageLimits(request_limit=self.s.governor_max_requests))
         try:
-            result = run_with_retry(
-                lambda: self.agent.run_sync("\n".join(prompt), deps=deps,
-                                            usage_limits=UsageLimits(request_limit=self.s.governor_max_requests)),
-                self.s.retry_delays, self._on_retry)
+            try:
+                result = run_with_retry(lambda: ask(self.agent), self.s.retry_delays, self._on_retry)
+            except Exception as first:
+                fallback = self._fallback_agent()
+                if fallback is None or not transient(first):
+                    raise
+                self.log.emit("model_fallback", error=f"{type(first).__name__}: {first}"[:300],
+                              fallback=str(self._fallback_name()))
+                result = ask(fallback)
         except Exception as e:  # noqa: BLE001 - keep playing with the current directive
             if isinstance(e, UsageLimitExceeded):
                 e = RuntimeError(f"no answer within {self.s.governor_max_requests} model calls; "

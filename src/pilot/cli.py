@@ -180,6 +180,8 @@ def main(argv: list[str] | None = None) -> int:
     s.coords = a.coords or s.coords
     s.thinking = a.thinking or prefs.get("thinking") or s.thinking
     s.governor_thinking = a.thinking or prefs.get("thinking") or s.governor_thinking
+    if prefs.get("fallback"):
+        s.fallback_model = None if prefs["fallback"] == "none" else prefs["fallback"]
     game = a.game or (prefs.get("game") if a.cmd == "run" else None)
     if game and game != s.game:
         from .config import default_journal

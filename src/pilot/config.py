@@ -40,6 +40,9 @@ class Settings:
     governor_thinking: str = "medium"
     governor_max_requests: int = 4
     # waits between tries when the provider is overloaded or rate-limited (503/429/5xx)
+    fallback_model: str | None = "google:gemini-3.1-pro-preview"   # tried once when the main model stays overloaded
+    stale_save_s: float = 300.0                      # an autosave older than this at start may be another game's
+    fresh_save_wait_s: float = 600.0
     model_timeout_s: float = 120.0                    # per model request; decisions take ~20-30 s
     retry_delays: tuple[float, ...] = (5, 15, 45)      # model calls per governor decision (1 answer + up to 3 tool rounds)
     retro_every: int = 5                # Stellaris: a retrospective after every N model decisions (0 = never)
@@ -98,6 +101,9 @@ class Settings:
         s.coords = env.get("PILOT_COORDS", s.coords)
         s.thinking = env.get("PILOT_THINKING", s.thinking)
         s.governor_thinking = env.get("PILOT_GOVERNOR_THINKING", s.governor_thinking)
+        fb = env.get("PILOT_FALLBACK_MODEL")
+        if fb is not None:
+            s.fallback_model = None if fb.strip().lower() in ("", "none", "off") else fb.strip()
         s.image_detail = env.get("PILOT_IMAGE_DETAIL", s.image_detail)
         s.dashboard_port = int(env.get("PILOT_PORT", s.dashboard_port))
         s.turns_per_autopilot = int(env.get("PILOT_TURNS", s.turns_per_autopilot))

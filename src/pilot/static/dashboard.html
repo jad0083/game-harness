@@ -290,6 +290,7 @@
   <label class="picker" title="Thinking effort">Thinking <select id="thinking-select" aria-label="Thinking level">
     <option value="off">off</option><option value="low">low</option><option value="medium">medium</option><option value="high">high</option>
   </select></label>
+  <label class="picker" title="Tried once when the model stays overloaded after its retries (503 high demand); off to skip the decision instead">Fallback <select id="fallback-select" aria-label="Fallback model"></select></label>
   <button class="btn primary" id="b-start" hidden>Start run</button>
   <button class="btn live-only" id="b-toggle" hidden>Pause</button>
   <button class="btn danger live-only" id="b-stop" hidden>Stop</button>
@@ -443,7 +444,7 @@ async function loadStatus() {
   $("status").className = "pill " + st.replace(/ /g, "_");
   document.querySelectorAll(".live-only").forEach((b) => (b.hidden = !S.live));
   const info = S.status.info || {};
-  syncPickers(S.live ? { models: info.models, model: S.status.model, thinking: info.thinking } : null);
+  syncPickers(S.live ? { models: info.models, model: S.status.model, thinking: info.thinking, fallback: info.fallback } : null);
   $("b-start").hidden = S.live || !S.ok;
   renderReadout();
   const paused = ["paused", "needs_attention"].includes(st);
@@ -1028,6 +1029,31 @@ function syncPickers(live) {
   }
   if (document.activeElement !== sel && current) sel.value = current;
   if (document.activeElement !== $("thinking-select") && thinking) $("thinking-select").value = thinking;
+  const fb = (live && live.fallback) || cat.fallback || "none", fsel = $("fallback-select");
+  const fkey = "none|" + key;
+  if (fsel.dataset.key !== fkey) {
+    fsel.innerHTML = `<option value="none">off</option>` + models.map((m) => `<option value="${esc(m)}">${esc(m.replace(/^google:/, ""))}</option>`).join("");
+    fsel.dataset.key = fkey;
+  }
+  if (document.activeElement !== fsel) {
+    if (fb !== "none" && ![...fsel.options].some((o) => o.value === fb)) fsel.insertAdjacentHTML("beforeend", `<option value="${esc(fb)}">${esc(fb.replace(/^google:/, ""))}</option>`);
+    fsel.value = fb;
+  }
+}
+async function switchFallback() {
+  const fallback = $("fallback-select").value;
+  const r = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" },
+                                           body: JSON.stringify({ fallback }) });
+  if (!r.ok) { toast(`Could not save: ${await r.text()}`); return; }
+  let live = false;
+  if (S.live) {
+    const c = await fetch("/control", { method: "POST", headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ action: "set_fallback", model: fallback }) });
+    live = c.ok;
+  }
+  const what = fallback === "none" ? "No fallback model: an overloaded model skips the decision" : `Fallback model ${fallback.replace(/^google:/, "")}`;
+  toast(live ? `${what}, from now on and for later runs.` : `${what} for the next run.`);
+  await loadCatalog(); loadStatus();
 }
 async function switchModel() {
   const model = $("model-select").value, thinking = $("thinking-select").value;
@@ -1046,6 +1072,7 @@ async function switchModel() {
   loadStatus();
 }
 $("model-select").addEventListener("change", switchModel);
+$("fallback-select").addEventListener("change", switchFallback);
 
 async function setPace(kind) {
   const speed = $("pace-speed").value, months = +$("pace-months").value;

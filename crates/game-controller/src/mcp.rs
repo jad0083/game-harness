@@ -809,11 +809,13 @@ impl McpServer {
                 }))
             }
             "stellaris_briefing" => {
-                let (path, bytes) = crate::stellaris::fetch_latest_save(&self.client).await?;
+                let (path, bytes, modified) = crate::stellaris::fetch_latest_save_timed(&self.client).await?;
                 let b = crate::stellaris::brief_save(&bytes)?;
                 let text = if args.get("json").and_then(|v| v.as_bool()).unwrap_or(false) {
                     let mut v = serde_json::to_value(&b)?;
                     v["source"] = serde_json::Value::String(path.clone());
+                    // lets the governor tell a fresh save from one another game left behind
+                    v["source_modified"] = serde_json::json!(modified);
                     serde_json::to_string_pretty(&v)?
                 } else {
                     format!("{}(from {path})", b.to_text())

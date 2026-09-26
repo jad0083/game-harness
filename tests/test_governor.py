@@ -1009,3 +1009,51 @@ def test_strategy_core_keeps_directives_lessons_and_identity():
     assert "## 9. Governor directives" in core
     assert "## 10. Lessons from play" in core and "## 11. Species and empire identity" in core
     assert "## 8. Crisis preparation" not in core and "Crisis preparation" in core, "other sections stay in the index"
+
+
+def test_a_stale_autosave_at_start_waits_for_a_fresh_one(setup):
+    """A new or just-loaded game has no autosave of its own yet: the newest one belongs to another
+    campaign. The governor plays one month for a fresh save before its first decision."""
+    import time as _t
+    s, log = setup
+    old = {**briefing("2318.02.01"), "source": "save games/unitednationsofearth2_-6/autosave_2318.02.01.sav",
+           "source_modified": _t.time() - 3600}
+    new = {**briefing("2200.02.01"), "source": "save games/federatedtheian_-19/autosave_2200.02.01.sav",
+           "source_modified": _t.time()}
+    game = FakeStellaris([old, old, new, new])
+    Governor(s, game, log, model=decisions("expand")).run(max_decisions=1)
+    assert log.campaign_id == "stellaris/federatedtheian_-19"
+    assert ("paused", False) in game.actions, "the game ran to write a fresh autosave"
+    assert any(e["kind"] == "journal" and "fresh autosave" in e.get("text", "") for e in log.recent)
+
+
+def test_an_overloaded_model_falls_back_to_the_other_one(setup):
+    from pydantic_ai.exceptions import ModelHTTPError
+    s, log = setup
+    from dataclasses import replace
+    s = replace(s, retry_delays=(0,))
+    s.__class__ = setup[0].__class__
+
+    def overloaded(messages, info):
+        raise ModelHTTPError(503, "gemini-3.6-flash", "high demand")
+    game = FakeStellaris([briefing("2200.01.01")])
+    Governor(s, game, log, model=FunctionModel(overloaded), fallback=decisions("expand")).run(max_decisions=1)
+    kinds = [e["kind"] for e in log.recent]
+    assert "model_fallback" in kinds
+    assert "governor_directive_expand" in game.flags, "the fallback model's decision was applied"
+
+
+def test_fallback_model_is_saved_and_switchable_live(setup, tmp_path):
+    from pilot.models import load_prefs, save_prefs
+    assert save_prefs(tmp_path, fallback="google:gemini-3.1-pro-preview")["fallback"] == "google:gemini-3.1-pro-preview"
+    assert load_prefs(tmp_path)["fallback"] == "google:gemini-3.1-pro-preview"
+    assert save_prefs(tmp_path, fallback="none")["fallback"] == "none", "the fallback can be switched off"
+    with pytest.raises(ValueError):
+        save_prefs(tmp_path, fallback="not a model")
+    s, log = setup
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+    g.set_fallback("google:gemini-3.7-flash")
+    assert g.s.fallback_model == "google:gemini-3.7-flash" and log.state.info["fallback"] == "google:gemini-3.7-flash"
+    g.set_fallback("none")
+    assert g.s.fallback_model is None and g._fallback_agent() is None and log.state.info["fallback"] == "none"
+    assert "set_fallback" in log.state.info["controls"]
