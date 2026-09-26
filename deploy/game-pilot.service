@@ -13,6 +13,8 @@ WorkingDirectory=/mnt/codeman-cases/game-harness
 Environment=PYDANTIC_AI_NO_BANNER=1
 ExecStart=/mnt/codeman-cases/game-harness/.venv/bin/python -m pilot run
 KillSignal=SIGTERM
+# SIGTERM to the pilot only: it still needs its controller subprocess to pause the game on exit
+KillMode=mixed
 TimeoutStopSec=60
 Restart=no
 
