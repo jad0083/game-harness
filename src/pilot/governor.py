@@ -36,6 +36,9 @@ from .strategy import (
     milestone_status,
     pinned_misfits,
     ranking,
+    review_model,
+    strategist_instructions,
+    to_strategy,
     validate,
 )
 from .trace import serialize
@@ -73,15 +76,6 @@ class GovernorDecision(BaseModel):
     note: str = Field(default="", description="Optional one line for the game journal (war, first colony, crisis...)")
 
 
-class StrategyReview(BaseModel):
-    change: bool = Field(description="false when the current strategy should stay as it is")
-    strategy: Strategy | None = Field(default=None, description="the full new strategy when change is true")
-    assessment: str = Field(description="what worked and what did not since the last review, citing numbers")
-    rules: list[str] = Field(default_factory=list, description="0-3 general rules learned (situation -> choice)")
-    identity: str = Field(default="", description="how our species (its traits by name), ethics, civics and origin shape "
-                                                  "this strategy, and which pillars each trait affects")
-
-
 # Reviews that always have to show the strategy is built on our species (the user's rule): the first
 # strategy of a run and a review the human asked for.
 IDENTITY_TRIGGERS = ("start of run", "requested from the dashboard")
@@ -105,23 +99,6 @@ def identity_errors(identity: str, traits: list[str]) -> list[str]:
         return []
     return [(f"identity: say how our species' traits shape the strategy, naming at least {need} of them "
              f"(ours: {', '.join(traits)})")]
-
-
-STRATEGY_INSTRUCTIONS = """You are the Strategist: you set the empire's top-down strategy, one entry per pillar
-(economy, expansion, technology, diplomacy, defence, government, society). Each pillar: a unique priority
-(1 = first), a stance of one or two sentences, 1-3 goals, milestones on the briefing's measures
-(exactly these names: systems, colonies, pops, techs_known, military_power, economy_power, tech_power, rank:systems,
-rank:pops, rank:techs, rank:military_power, rank:economy_power, rank:tech_power, rank:colonies; a rank is 1 = best,
-so use op <= for it) with a target and an in-game date, and only for technology `prefer_techs` (tech ids to pick when offered; at most 6)
-and only for economy `market` (at most 1 small monthly order, amount 1-25; sell only a resource the briefing lists as
-IDLE, at most 20% of its monthly income). Market orders cannot use trade; sell only idle energy, minerals, food, consumer goods or alloys (strategic resources can only be bought). Priorities decide which directives the governor prefers.
-Everything must be achievable through directives, tech picks or market orders: the game's AI builds,
-designs ships and moves fleets. Never change a pillar marked pinned: the human set it. If nothing
-material changed, answer change=false. Build on the empire's species and its traits, ethics, civics and
-origin: fill `identity` with how they shape this strategy, naming the traits you rely on and the pillars they
-affect (e.g. industrious → economy on minerals; enduring → long wars are affordable), and weigh a
-neighbour's traits when dealing with or fighting it.
-While at war, the defence stance must name its exit condition (peace, war exhaustion, or planets retaken). When a hostile neighbour's military is twice ours or more, a defence goal is two shipyards in different systems and alloy production on two or more planets; never reason from a naval-capacity cap the briefing does not show."""
 
 
 class StellarisGame(Protocol):
@@ -396,6 +373,7 @@ class Governor:
         self.store = LearnedStore(settings.corpus_dir, settings.model, log.state.run_id)
         self.journal = Journal(settings.journal, settings.model)
         self.pillars: PillarSpec = load_pillars(settings.corpus_dir)   # the game's strategy guardrails
+        self._review_type: type[BaseModel] = review_model(self.pillars)
         text = (settings.corpus_dir / "pilot.md").read_text(encoding="utf-8")
         text += "\n\n" + strategy_core((settings.corpus_dir / "strategy.md").read_text(encoding="utf-8"))
         learned = settings.corpus_dir / "learned" / "strategy.md"
@@ -463,7 +441,8 @@ class Governor:
     def _build(self, role: str, settings: Settings, model):
         text = self._text
         if role == "strategy":
-            return Agent(model, deps_type=GovDeps, output_type=StrategyReview, instructions=STRATEGY_INSTRUCTIONS + "\n\n" + text,
+            return Agent(model, deps_type=GovDeps, output_type=self._review_type,
+                         instructions=strategist_instructions(self.pillars) + "\n\n" + text,
                          tools=[Tool(f) for f in (consult, get_doc)], model_settings=governor_settings(settings), retries=2)
         if role == "chat":
             return Agent(model, deps_type=GovDeps, output_type=str, instructions=CHAT_INSTRUCTIONS + "\n\n" + text,
@@ -1286,7 +1265,7 @@ class Governor:
                                                usage_limits=UsageLimits(request_limit=self.s.max_requests_per_episode))
             result, _entry = self._call("strategy", ask,
                                         on_try=lambda e: base.update(model=e["model"], thinking_level=e["thinking"]))
-            r: StrategyReview = result.output
+            r = result.output
             usage = result.usage
             base["model_version"] = served_model(result)
             st = self.log.state
@@ -1305,7 +1284,7 @@ class Governor:
             if r.change and r.strategy is None:
                 errs = ["change=true but no strategy given"]
             elif r.change and r.strategy is not None:
-                new = keep_pinned(apply_aliases(r.strategy, self.pillars), self.strategy)
+                new = keep_pinned(to_strategy(r.strategy, self.pillars), self.strategy)
                 errs = validate(new, self.pillars, previous=self.strategy, tech_ids=self._tech_ids(),
                                 idle=idle_resources(b), income=b.get("net", {}))
             else:

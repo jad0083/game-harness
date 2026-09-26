@@ -1374,7 +1374,7 @@ def _strategist(calls, *, change=True, pin_diplomacy_to=None):
         if pin_diplomacy_to:
             pillars["diplomacy"]["stance"] = pin_diplomacy_to
         body = {"change": change, "assessment": "ok", "rules": [],
-                "strategy": {"pillars": pillars, "focus": "grow", "reason": "start"} if change else None}
+                "strategy": {**pillars, "focus": "grow", "reason": "start"} if change else None}
         return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, body)])
     return FunctionModel(respond)
 
@@ -1444,18 +1444,31 @@ def test_saved_retrospective_models_move_to_the_strategy_role(tmp_path):
 
 
 def test_strategy_instructions_cover_the_defence_naval_cap_ruling():
-    from pilot.governor import STRATEGY_INSTRUCTIONS
+    from pilot.strategy import strategist_instructions
+    text = strategist_instructions(STELLARIS)
     assert ("While at war, the defence stance must name its exit condition (peace, war exhaustion, "
-            "or planets retaken).") in STRATEGY_INSTRUCTIONS
+            "or planets retaken).") in text
     assert ("When a hostile neighbour's military is twice ours or more, a defence goal is two "
             "shipyards in different systems and alloy production on two or more planets; never "
-            "reason from a naval-capacity cap the briefing does not show.") in STRATEGY_INSTRUCTIONS
+            "reason from a naval-capacity cap the briefing does not show.") in text
 
 
 def test_strategy_instructions_forbid_trade_market_orders():
-    from pilot.governor import STRATEGY_INSTRUCTIONS
+    from pilot.strategy import strategist_instructions
     assert ("Market orders cannot use trade; sell only idle energy, minerals, food, consumer goods "
-            "or alloys (strategic resources can only be bought).") in STRATEGY_INSTRUCTIONS
+            "or alloys (strategic resources can only be bought).") in strategist_instructions(STELLARIS)
+
+
+def test_strategy_instructions_allow_at_most_one_small_monthly_order():
+    from pilot.strategy import strategist_instructions
+    text = strategist_instructions(STELLARIS)
+    assert "at most 1 small monthly order" in text and "at most 2 small" not in text
+
+
+def test_strategy_instructions_list_every_metric_name():
+    from pilot.strategy import strategist_instructions
+    for m in STELLARIS.metrics:
+        assert m in strategist_instructions(STELLARIS), m
 
 
 def test_the_strategist_receives_the_naval_cap_ruling_in_its_prompt(setup):
@@ -2558,12 +2571,6 @@ def _pinned_energy_sell(amount=10):
                   market=[{"side": "sell", "resource": "energy", "amount": amount}])
 
 
-def test_strategy_instructions_allow_at_most_one_small_monthly_order():
-    from pilot.governor import STRATEGY_INSTRUCTIONS
-    assert "at most 1 small monthly order" in STRATEGY_INSTRUCTIONS
-    assert "at most 2 small" not in STRATEGY_INSTRUCTIONS
-
-
 def test_edit_pillar_is_not_blocked_by_a_pinned_pillar_that_no_longer_fits(setup):
     """Final review 1: the briefing checks apply to the edited pillar only."""
     s, log = setup
@@ -2926,12 +2933,6 @@ def test_rank_and_measure_aliases_map_to_the_recorded_metrics():
         assert m.metric == real and real in STELLARIS.metrics
 
 
-def test_strategy_instructions_list_every_metric_name():
-    from pilot.governor import STRATEGY_INSTRUCTIONS
-    for m in STELLARIS.metrics:
-        assert m in STRATEGY_INSTRUCTIONS, m
-
-
 # ---- Fix round 1, item 2: aliases are pinned at the governor (both write paths) -----------------
 
 def test_a_strategist_reviews_milestone_metric_is_stored_aliased(setup):
@@ -3012,3 +3013,48 @@ def test_the_strategist_prompt_names_our_species_and_traits(setup):
                  role_models={"strategy": _identity_strategist(["industrious enduring lithoids"], prompts)})
     g._review_strategy(_species_briefing("2200.01.01"), "start of run")
     assert "Our species: Lithoid humans" in prompts[0] and "industrious" in prompts[0]
+
+
+def test_a_named_field_review_is_accepted_with_its_milestones(setup):
+    """Live 2026-09-26: Claude returned `pillars: {}` twice for a dict-typed schema. With one named
+    field per pillar the answer is accepted and its milestones are kept."""
+    s, log = setup
+    calls, schemas = [], []
+    inner = _strategist(calls)
+
+    def respond(messages, info):
+        schemas.append(info.output_tools[0].parameters_json_schema)
+        return inner.function(messages, info)
+
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": FunctionModel(respond)})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    out = next(d for d in schemas[0]["$defs"].values() if "focus" in d.get("properties", {}))
+    assert set(STELLARIS.ids) <= set(out["properties"])
+    assert g.strategy is not None and set(g.strategy.pillars) == set(STELLARIS.ids)
+    assert g.strategy.pillars["defence"].milestones and g.strategy.pillars["technology"].milestones
+    assert not any(e["kind"] == "strategy_rejected" for e in log.recent)
+
+
+def test_the_corrective_retry_sends_back_the_named_field_shape(setup):
+    """Ruling 2: the corrective retry still includes the rejected answer, dumped as JSON of the
+    generated named-field shape (never the old {"pillars": {...}} shape)."""
+    s, log = setup
+    prompts = []
+    prios = {"defence": 1, "economy": 2, "technology": 3, "expansion": 4, "diplomacy": 5, "government": 6, "society": 7}
+
+    def bad_then_ok(messages, info):
+        prompts.append("\n".join(str(getattr(p, "content", "")) for m in messages for p in getattr(m, "parts", [])))
+        if len(prompts) == 1:
+            body = {"change": True, "assessment": "x", "rules": [], "strategy": {"focus": "f", "reason": "r"}}
+        else:
+            pillars = _pillars_body(prios)
+            body = {"change": True, "assessment": "ok", "rules": [], "strategy": {**pillars, "focus": "grow", "reason": "start"}}
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, body)])
+
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": FunctionModel(bad_then_ok)})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    assert len(prompts) == 2, "the first answer was rejected and retried once"
+    assert '"pillars"' not in prompts[1] and '"defence"' in prompts[1]
+    assert g.strategy is not None and set(g.strategy.pillars) == set(STELLARIS.ids)

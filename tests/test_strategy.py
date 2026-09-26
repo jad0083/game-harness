@@ -2,6 +2,8 @@
 import re
 import tomllib
 
+import pytest
+
 from pilot.config import REPO
 from pilot.pillars import load_pillars
 from pilot.strategy import (
@@ -399,3 +401,100 @@ def test_validation_uses_the_spec_metrics_and_pillar_count():
     bad = strat(society=Pillar(priority=8, stance="s", milestones=[Milestone(metric="culture", op=">=", target=1, by="2250.01.01")]))
     joined = " | ".join(validate(bad, SPEC, previous=None, tech_ids=set(), idle=set(), income={}))
     assert "society: priority must be 1..7" in joined and "society: unknown metric 'culture'" in joined
+
+
+# ---- the Strategist's schema is generated from the spec -------------------------------------------
+
+def _objects(node):
+    if isinstance(node, dict):
+        if node.get("type") == "object":
+            yield node
+        for v in node.values():
+            yield from _objects(v)
+    elif isinstance(node, list):
+        for v in node:
+            yield from _objects(v)
+
+
+def _strategy_out_schema(schema: dict) -> dict:
+    return next(d for d in schema["$defs"].values() if "focus" in d.get("properties", {}))
+
+
+def test_the_review_schema_has_one_named_field_per_pillar():
+    from pilot.strategy import review_model
+    schema = review_model(SPEC).model_json_schema()
+    out = _strategy_out_schema(schema)
+    assert set(out["properties"]) == {*SPEC.ids, "focus", "reason"}
+    assert "pillars" not in out["properties"]
+    loose = [o for o in _objects(schema) if not o.get("properties") and o.get("additionalProperties") not in (None, False)]
+    assert loose == [], "no object whose only shape is additionalProperties (Claude cannot fill those)"
+
+
+def test_a_claude_style_answer_converts_to_a_valid_strategy():
+    from pilot.strategy import review_model, to_strategy
+    ms = [{"metric": "rank:military", "op": "<=", "target": 3, "by": "2250.01.01"}]
+    answer = {"change": True, "assessment": "a", "rules": [], "strategy": {
+        "defence": {"priority": 1, "stance": "hold", "goals": ["g"], "milestones": ms},
+        "economy": {"priority": 2, "stance": "grow", "goals": ["g"], "milestones": ms,
+                    "market": [{"side": "buy", "resource": "alloys", "amount": 5}]},
+        "technology": {"priority": 3, "stance": "research", "goals": ["g"], "milestones": ms,
+                       "prefer_techs": ["tech_habitat_1"]},
+        "expansion": {"priority": 4, "stance": "s"}, "diplomacy": {"priority": 5, "stance": "s"},
+        "government": {"priority": 6, "stance": "s"}, "society": {"priority": 7, "stance": "s"},
+        "focus": "hold the line"}}
+    r = review_model(SPEC).model_validate(answer)
+    s = to_strategy(r.strategy, SPEC)
+    assert s.pillars["defence"].milestones[0].metric == "rank:military_power", "aliases applied"
+    assert s.pillars["economy"].market[0].resource == "alloys"
+    assert validate(s, SPEC, previous=None, tech_ids={"tech_habitat_1"}, idle=set(), income={}) == []
+
+
+def test_action_fields_exist_only_on_declaring_pillars():
+    import pydantic
+
+    from pilot.strategy import review_model
+    schema = review_model(SPEC).model_json_schema()
+    defs = schema["$defs"]
+    out = _strategy_out_schema(schema)
+
+    def pillar_props(pid):
+        ref = next(x["$ref"] for x in out["properties"][pid]["anyOf"] if "$ref" in x)
+        return set(defs[ref.rsplit("/", 1)[1]]["properties"])
+    assert "market" in pillar_props("economy") and "prefer_techs" not in pillar_props("economy")
+    assert "prefer_techs" in pillar_props("technology") and "market" not in pillar_props("technology")
+    assert not {"market", "prefer_techs"} & pillar_props("diplomacy")
+    with pytest.raises(pydantic.ValidationError):
+        review_model(SPEC).model_validate({"change": True, "assessment": "a", "strategy": {
+            "focus": "f", "diplomacy": {"priority": 1, "stance": "s", "prefer_techs": ["x"]}}})
+
+
+def test_the_stored_shape_and_human_fields_are_accepted_as_input():
+    from pilot.strategy import review_model, to_strategy
+    legacy = {"change": True, "assessment": "a", "strategy": {"focus": "f", "reason": "r", "pillars": {
+        "economy": {"priority": 1, "stance": "s", "pinned": True, "edited_by": "human"}}}}
+    s = to_strategy(review_model(SPEC).model_validate(legacy).strategy, SPEC)
+    assert set(s.pillars) == {"economy"} and s.pillars["economy"].pinned is False, "a model can never pin"
+
+
+def test_the_prompt_comes_from_the_spec():
+    from pilot.strategy import strategist_instructions
+    text = strategist_instructions(SPEC)
+    for pid, p in SPEC.pillars.items():
+        assert f"- {pid} ({p.label}): {p.description}" in text
+    for m in SPEC.metrics:
+        assert m in text
+    assert "Each of the 3 highest-priority pillars needs at least one milestone." in text
+    assert "at most 1 small monthly order, amount 1-25" in text and "at most 20% of its monthly income" in text
+    assert "Only technology: `prefer_techs` (tech ids to pick when offered; at most 6)." in text
+    assert SPEC.actions["market"].note in text and SPEC.instructions in text
+
+
+def test_the_review_schema_keeps_the_identity_field_for_the_species_guardrail():
+    """Ruling 1: the generated review model keeps `identity` with the same description the governor
+    used to check (the species guardrail lives in governor.py, unchanged)."""
+    from pilot.strategy import review_model
+    schema = review_model(SPEC).model_json_schema()
+    identity = schema["properties"]["identity"]
+    assert identity.get("default") == ""
+    assert "how our species" in identity["description"] and "traits by name" in identity["description"]
+    assert "which pillars each trait affects" in identity["description"]

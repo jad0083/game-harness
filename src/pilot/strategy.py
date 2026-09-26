@@ -10,7 +10,7 @@ import re
 from collections.abc import Mapping
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, create_model, model_validator
 
 from .pillars import ACTION_KINDS, ActionLimits, PillarSpec
 
@@ -261,3 +261,116 @@ def milestone_status(m: Milestone, rows: list[dict], today: str, row_keys: Mappi
     span = max(now_mo - past[0], 1)
     projected = now + (now - past[1]) / span * (_months(m.by) - now_mo)
     return "on_track" if ok(projected) else "at_risk"
+
+
+# ---- the Strategist's output: generated from the spec ---------------------------------------------
+
+class PillarOut(BaseModel):
+    """One pillar as the Strategist writes it; action fields are added per pillar from the spec."""
+    model_config = ConfigDict(extra="forbid")
+
+    priority: int = Field(description="unique; 1 = first")
+    stance: str = Field(description="one or two sentences")
+    goals: list[str] = Field(default_factory=list, description="1-3 goals")
+    milestones: list[Milestone] = Field(default_factory=list, description="measurable targets with a date")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _drop_human_fields(cls, data):
+        """`pinned`/`edited_by` are the human's: a model echoing them never pins anything."""
+        if isinstance(data, dict):
+            data = {k: v for k, v in data.items() if k not in ("pinned", "edited_by")}
+        return data
+
+
+class _StrategyOutBase(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    focus: str = Field(description="one line: what this strategy is about")
+    reason: str = Field(default="", description="why it was written or changed")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _lift_pillars(cls, data):
+        """An answer in the stored shape ({"pillars": {id: {...}}, "focus"}) is read as named fields."""
+        if isinstance(data, dict) and isinstance(data.get("pillars"), dict):
+            data = {**data["pillars"], **{k: v for k, v in data.items() if k != "pillars"}}
+        return data
+
+
+def _action_field(a: ActionLimits):
+    if a.kind == "tech":
+        return (list[str], Field(default_factory=list,
+                                 description=f"tech ids to pick when offered; at most {a.max_items}"))
+    return (list[MarketOrder], Field(default_factory=list,
+                                     description=f"at most {a.max_items} monthly order(s), amount "
+                                                 f"{a.amount_min}-{a.amount_max}; resources: {', '.join(a.resources)}"))
+
+
+def review_model(spec: PillarSpec) -> type[BaseModel]:
+    """The Strategist's output model for this game: `strategy` has one named optional field per
+    pillar (every provider sees named properties), each carrying only the actions it declares."""
+    fields = {}
+    for pid, p in spec.pillars.items():
+        extra = {spec.actions[k].field: _action_field(spec.actions[k]) for k in p.actions if k in spec.actions}
+        model = create_model(f"Pillar_{pid}", __base__=PillarOut, **extra) if extra else PillarOut
+        fields[pid] = (model | None, Field(default=None, description=f"{p.label}: {p.description}"))
+    out = create_model("StrategyOut", __base__=_StrategyOutBase, **fields)
+    return create_model(
+        "StrategyReview",
+        change=(bool, Field(description="false when the current strategy should stay as it is")),
+        strategy=(out | None, Field(default=None, description="the full new strategy when change is true")),
+        assessment=(str, Field(description="what worked and what did not since the last review, citing numbers")),
+        rules=(list[str], Field(default_factory=list, description="0-3 general rules learned (situation -> choice)")),
+        identity=(str, Field(default="", description="how our species (its traits by name), ethics, civics and origin "
+                                                      "shape this strategy, and which pillars each trait affects")),
+    )
+
+
+def to_strategy(out: BaseModel, spec: PillarSpec) -> Strategy:
+    """The stored `Strategy` from a generated `StrategyOut` (pillars the model left out stay out, so
+    `validate` names them missing); metric aliases applied."""
+    pillars = {}
+    for pid in spec.pillars:
+        p = getattr(out, pid, None)
+        if p is not None:
+            pillars[pid] = Pillar.model_validate(p.model_dump())
+    return apply_aliases(Strategy(pillars=pillars, focus=out.focus, reason=out.reason), spec)
+
+
+def strategist_instructions(spec: PillarSpec) -> str:
+    """The Strategist's instructions: pillars, metrics and action limits from the spec, then the
+    game's own rules (`[strategy] instructions`)."""
+    lines = [("You are the Strategist: you set the top-down strategy. Write one entry per pillar, each under "
+              "its own field named by the pillar id:")]
+    for p in spec.pillars.values():
+        ranks = f"ranks the directive {p.directive}" if p.directive else "ranks no directive"
+        lines.append(f"- {p.id} ({p.label}): {p.description} [{ranks}]")
+    lines.append(f"Each pillar: a unique priority (1..{len(spec.pillars)}, 1 = first), a stance of one or two "
+                 "sentences, 1-3 goals, and milestones on the briefing's measures (exactly these names: "
+                 + ", ".join(spec.metrics) + "; a rank is 1 = best, so use op <= for it) with a target and an "
+                 "in-game date YYYY.MM.DD.")
+    if spec.min_milestones_top:
+        lines.append(f"Each of the {spec.min_milestones_top} highest-priority pillars needs at least one milestone.")
+    for kind, a in spec.actions.items():
+        owners = spec.owners(kind)
+        if not owners:
+            continue
+        on = " and ".join(owners)
+        if kind == "tech":
+            lines.append(f"Only {on}: `{a.field}` (tech ids to pick when offered; at most {a.max_items}).")
+        else:
+            rule = (f"at most {a.max_items} small monthly order{'' if a.max_items == 1 else 's'}, amount "
+                    f"{a.amount_min}-{a.amount_max}; resources: {', '.join(a.resources)}")
+            if a.sell_requires_idle:
+                rule += "; sell only a resource the briefing lists as IDLE"
+            if a.sell_income_share is not None:
+                rule += f", at most {a.sell_income_share:.0%} of its monthly income"
+            lines.append(f"Only {on}: `{a.field}` ({rule}).")
+        if a.note:
+            lines.append(a.note)
+    lines.append("Priorities decide which directives the governor prefers. Never change a pillar marked pinned: "
+                 "the human set it. If nothing material changed, answer change=false.")
+    if spec.instructions:
+        lines.append(spec.instructions)
+    return "\n".join(lines)
