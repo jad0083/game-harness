@@ -2683,3 +2683,55 @@ def test_errored_decision_rows_with_a_null_decision_stay_visible(tmp_path):
             ds = await (await c.get("/api/decisions", params={"campaign": cid})).json()
             assert [d["decision"] for d in ds] == ["expand", None]
     asyncio.run(go())
+
+
+def _milestone_strategist(calls, by="2200.02.01"):
+    from pilot.strategy import Milestone, Pillar
+
+    def respond(messages, info):
+        calls.append("strategist")
+        pillars = {p: Pillar(priority=n, stance=f"{p} by model", goals=["g"]).model_dump() for p, n in PRIOS.items()}
+        pillars["economy"]["milestones"] = [Milestone(metric="pops", op=">=", target=1000, by=by).model_dump()]
+        body = {"change": True, "assessment": "ok", "rules": [],
+                "strategy": {"pillars": pillars, "focus": "grow", "reason": "start"}}
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, body)])
+    return FunctionModel(respond)
+
+
+def test_a_milestone_turning_missed_is_urgent_and_triggers_a_review(setup, tmp_path):
+    """Final review 8: a milestone newly turning `missed` (not missed at the previous check) is
+    an urgent reason, "milestone missed: <pillar> <metric>", which starts a (capped) review."""
+    from pilot.governor import EVENT_TRIGGERS
+    from pilot.telemetry import Telemetry
+    assert "milestone missed" in EVENT_TRIGGERS
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(s.runs_dir, "runm", s.model, telemetry=tel)
+    src = "save games/mile_1/x.sav"
+    game = FakeStellaris([{**briefing(d), "source": src, "pops": 50} for d in ("2200.01.01", "2200.02.01", "2200.03.01")])
+    calls = []
+    g = Governor(s, game, log, model=decisions("keep", "keep"), role_models={"strategy": _milestone_strategist(calls)})
+    g.run(max_decisions=2)
+    eps = [e for e in log.recent if e["kind"] == "episode"]
+    assert eps[1]["situation"] == "urgent: milestone missed: economy pops" and eps[1]["date"] == "2200.03.01"
+    assert any(e["kind"] == "strategy_review" and "milestone missed" in e["trigger"] for e in log.recent)
+
+
+def test_a_milestone_already_missed_does_not_fire_again(setup, tmp_path):
+    from pilot.governor import metrics
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(s.runs_dir, "runm2", s.model, telemetry=tel)
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": _milestone_strategist([], by="2199.06.01")})
+    log.set_campaign("stellaris", "mile_2", "Test")
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    for d in ("2200.01.01", "2200.02.01"):
+        log.emit("metrics", **{**metrics(briefing(d)), "pops": 50})
+    assert g._newly_missed_milestones("2200.01.01", "2200.02.01") == []
+    g2 = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"),
+                  role_models={"strategy": _milestone_strategist([], by="2200.01.01")})
+    g2.strategy = g.strategy.model_copy(deep=True)
+    g2.strategy.pillars["economy"].milestones[0].by = "2200.01.01"
+    assert g2._newly_missed_milestones("2200.01.01", "2200.02.01") == ["milestone missed: economy pops"]

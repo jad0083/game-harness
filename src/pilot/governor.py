@@ -892,6 +892,8 @@ class Governor:
                 self.log.state.game_date = b["date"]
                 self.log.state.turns_advanced = months(b["date"]) - months(last["date"]) + self.log.state.turns_advanced
             urgent = urgent_changes(last, b)
+            if b["date"] != last["date"]:
+                urgent += self._newly_missed_milestones(last["date"], b["date"])
             mil_base, mil_now = self._decision_military, b.get("military_power")
             if mil_base and mil_now is not None and mil_now <= 0.5 * mil_base and not any(u.startswith("military fell") for u in urgent):
                 urgent.append(f"military fell: {round(mil_base)} -> {round(mil_now)}")
@@ -1138,13 +1140,20 @@ class Governor:
         self.log.state.info["plan"] = text
         self.log.emit("plan", date=date, source=source, text=text)
 
-    def _milestones_text(self) -> str:
+    def _metrics_rows(self) -> list[dict] | None:
+        """This campaign's metrics rows (oldest first), or None when there is no telemetry or the
+        read failed (logged): milestones are advisory and never block play or a review."""
         if not self.strategy or self.log.telemetry is None or not self.log.campaign_id:
-            return "(none)"
+            return None
         try:
-            rows = self.log.telemetry.metrics_rows(self.log.campaign_id)
+            return self.log.telemetry.metrics_rows(self.log.campaign_id)
         except Exception as e:  # noqa: BLE001 - telemetry is advisory; never block a review
             self.log.emit("briefing_error", error=f"milestones: {e}"[:200])
+            return None
+
+    def _milestones_text(self) -> str:
+        rows = self._metrics_rows()
+        if rows is None:
             return "(none)"
         today = rows[-1]["date"] if rows else "2200.01.01"
         out = []
@@ -1152,6 +1161,15 @@ class Governor:
             for m in pl.milestones:
                 out.append(f"- {name}: {m.metric} {m.op} {m.target:g} by {m.by}: {milestone_status(m, rows, today)}")
         return "\n".join(out) or "(none)"
+
+    def _newly_missed_milestones(self, before: str, today: str) -> list[str]:
+        """Urgent reasons for milestones that are `missed` on `today` but were not on `before` (the
+        previous check's save date): each fires once, when its date passes unmet."""
+        strategy, rows = self.strategy, self._metrics_rows()
+        if strategy is None or rows is None:
+            return []
+        return [f"milestone missed: {name} {m.metric}" for name, pl in strategy.sorted_pillars() for m in pl.milestones
+                if milestone_status(m, rows, today) == "missed" and milestone_status(m, rows, before) != "missed"]
 
     def _past_outcomes_text(self) -> str:
         if self.log.telemetry is None or not self.log.campaign_id:
