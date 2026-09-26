@@ -14,6 +14,7 @@ import queue
 import re
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 from typing import ClassVar, Literal, Protocol
 
@@ -27,7 +28,7 @@ from .agent import HumanChannel, model_settings, run_with_retry
 from .config import Settings
 from .events import EventLog
 from .learning import Journal, LearnedStore, LearningRejected
-from .pillars import PillarSpec, load_pillars
+from .pillars import ACTION_KINDS, PillarsError, PillarSpec, load_pillars
 from .strategy import (
     Strategy,
     apply_aliases,
@@ -57,6 +58,20 @@ EVENT_TRIGGERS = ("new war", "war ended", "crisis", "colony lost", "boxed in", "
 # <id> in <field> (option n); unverified until the next autosave …"); a reply that matches neither
 # form (e.g. "nothing to pick: …") leaves no tech to watch.
 TECH_PICK_RE = re.compile(r"^(?:picked|clicked) (\S+) in (\w+)")
+
+# Action kind -> the game method that carries it out. A game whose object lacks the method has no
+# hook for that kind: a pillar declaring it is logged "not supported" once and skipped.
+ACTION_METHODS = {"tech": "pick_tech", "market": "market_sync"}
+
+
+def action_hooks(game) -> dict[str, Callable]:
+    out = {}
+    for kind, method in ACTION_METHODS.items():
+        fn = getattr(game, method, None)
+        if callable(fn):
+            out[kind] = fn
+    return out
+
 
 INSTRUCTIONS = """You are the governor of a Stellaris empire. The game's own AI runs the empire day to day;
 you steer it by choosing ONE standing directive, which the harness applies (policies and a flag the
@@ -372,8 +387,18 @@ class Governor:
         self.human = HumanChannel()
         self.store = LearnedStore(settings.corpus_dir, settings.model, log.state.run_id)
         self.journal = Journal(settings.journal, settings.model)
-        self.pillars: PillarSpec = load_pillars(settings.corpus_dir)   # the game's strategy guardrails
-        self._review_type: type[BaseModel] = review_model(self.pillars)
+        # the game's strategy guardrails; a missing or invalid file turns the strategy layer off
+        # (decisions as before the layer) with one clear error naming the file and key
+        self.pillars: PillarSpec | None = None
+        self.pillars_error = ""
+        try:
+            self.pillars = load_pillars(settings.corpus_dir)
+            self._review_type = review_model(self.pillars)
+        except PillarsError as e:
+            self.pillars_error = str(e)
+            log.emit("strategy_disabled", error=self.pillars_error[:500])
+        log.state.info["pillars"] = self.pillars.public() if self.pillars else None
+        self._unsupported: set[str] = set()       # action kinds already logged as "not supported"
         text = (settings.corpus_dir / "pilot.md").read_text(encoding="utf-8")
         text += "\n\n" + strategy_core((settings.corpus_dir / "strategy.md").read_text(encoding="utf-8"))
         learned = settings.corpus_dir / "learned" / "strategy.md"
@@ -413,6 +438,12 @@ class Governor:
         log.state.info["rotate"] = settings.rotate
         log.state.info["roles"] = dict(settings.roles or {})
         log.state.info["directives"] = list(DIRECTIVES)
+
+    def _spec(self) -> PillarSpec:
+        """The pillars spec, or ValueError (a 400 on the dashboard) while the strategy layer is off."""
+        if self.pillars is None:
+            raise ValueError(f"the strategy layer is off: {self.pillars_error}")
+        return self.pillars
 
     # ---- model pool ----------------------------------------------------------------------------
 
@@ -623,26 +654,31 @@ class Governor:
         self.requests.put(("override", directive))
         self.log.emit("instruction", text=f"Override: {directive}")
 
-    _PILLAR_FIELDS: ClassVar[set[str]] = {"stance", "goals", "milestones", "prefer_techs", "market", "priority"}
+    _GENERIC_FIELDS: ClassVar[set[str]] = {"stance", "goals", "milestones", "priority"}
 
     def edit_pillar(self, name: str, fields: dict) -> None:
-        """The human's edit: validated exactly like a model strategy (against the last briefing this
-        governor actually read: tech ids, idle resources and real monthly income), then pinned and
-        recorded as a new version. `priority` is never editable (priorities stay unique);
-        `prefer_techs`/`market` are still restricted to the technology/economy pillars by the same
-        `validate` a model strategy goes through. The whole read-modify-write is atomic (locked) so
-        it can never lose a concurrent edit or a review's commit."""
+        """The human's edit: validated like a model strategy under the game's spec (against the last
+        briefing this governor read: tech ids, idle resources and real monthly income), then pinned
+        and recorded as a new version. Editable: stance, goals, milestones and the action fields the
+        pillar declares in pillars.toml; `priority` is never editable (priorities stay unique). The
+        milestone rule is for model reviews only. The read-modify-write is atomic (locked)."""
         from .strategy import Pillar
-        if name not in self.pillars.pillars:
+        spec = self._spec()
+        if name not in spec.pillars:
             raise ValueError(f"unknown pillar {name!r}")
         if not isinstance(fields, dict):
-            # ValueError, not TypeError: the dashboard's control() catches ValueError uniformly and
-            # turns it into a 400 with this message, same as every other edit_pillar rejection
+            # ValueError, not TypeError: the dashboard's control() turns ValueError into a 400
             raise ValueError(f"fields must be an object, got {type(fields).__name__}")  # noqa: TRY004
-        unknown = sorted(set(fields) - self._PILLAR_FIELDS)
+        unknown = sorted(set(fields) - self._GENERIC_FIELDS - set(ACTION_KINDS.values()))
         if unknown:
             raise ValueError(f"unknown field(s): {', '.join(unknown)}")
-        editable = self._PILLAR_FIELDS - {"priority"}     # priority stays unique; never human-editable
+        own = {spec.actions[k].field for k in spec.pillars[name].actions if k in spec.actions}
+        for kind, fld in ACTION_KINDS.items():
+            if fld in fields and fld not in own:
+                owners = spec.owners(kind)
+                raise ValueError(f"{name}: only the {' / '.join(owners)} pillar may set {fld}" if owners
+                                 else f"{name}: {fld} is not an action in this game")
+        editable = (self._GENERIC_FIELDS - {"priority"}) | own
         with self._strategy_lock:
             if self.strategy is None:
                 raise ValueError("no strategy yet")
@@ -651,14 +687,11 @@ class Governor:
                                          "pinned": True, "edited_by": "human"})
             trigger = f"edited by human: {name}"
             s = apply_aliases(self.strategy.model_copy(update={"pillars": {**self.strategy.pillars, name: new},
-                                                              "reason": trigger}), self.pillars)
+                                                              "reason": trigger}), spec)
             b = self._last_b
             if s.pillars[name].market and b is None:
                 raise ValueError("no briefing yet: market orders can be edited after the first save is read")
-            # briefing checks (idle, income share) for the edited pillar only: another pinned
-            # pillar that no longer fits today's briefing must not block this edit; the milestone
-            # rule is for model reviews, never for a human edit
-            errs = validate(s, self.pillars, previous=None, tech_ids=self._tech_ids(), idle=idle_resources(b or {}),
+            errs = validate(s, spec, previous=None, tech_ids=self._tech_ids(), idle=idle_resources(b or {}),
                             income=(b or {}).get("net", {}), briefing_checked={name}, require_milestones=False)
             if errs:
                 raise ValueError("; ".join(errs))
@@ -678,6 +711,7 @@ class Governor:
     def request_review(self) -> None:
         """Run a strategy review now (between scheduled decisions, like decide_now). A human request
         is never held back by the 12-month event-review cap and does not count toward it."""
+        self._spec()
         self.requests.put(("review", "requested from the dashboard"))
         self.log.emit("instruction", text="Strategy review requested")
 
@@ -812,7 +846,7 @@ class Governor:
                 self.log.emit("journal", text="taking control: " + self.game.take_control().replace("\n", "; "))
                 b = self._fresh_briefing()
                 self._set_campaign(b)
-                reviewed = self.strategy is None
+                reviewed = self.strategy is None and self.pillars is not None
                 if reviewed:
                     self._review_strategy(b, "start of run")
                 self._decide(b, "start of run", reviewed_at_start=reviewed)
@@ -887,7 +921,14 @@ class Governor:
                 self.log.emit("briefing_error", error=f"loading the plan: {e}"[:200])
             try:
                 raw = self.log.telemetry.latest_strategy(self.log.campaign_id or "")
-                self.strategy = Strategy.model_validate(raw) if raw else None
+                stored = Strategy.model_validate(raw) if raw else None
+                if stored is not None and (self.pillars is None or set(stored.pillars) != set(self.pillars.ids)):
+                    if self.pillars is not None:
+                        self.log.emit("briefing_error", error=(
+                            f"stored strategy pillars {sorted(stored.pillars)} do not match "
+                            f"{self.s.pillars_file.name} {list(self.pillars.ids)}; a review at start writes a new one")[:300])
+                    stored = None
+                self.strategy = stored
             except Exception as e:  # noqa: BLE001
                 self.log.emit("briefing_error", error=f"loading the strategy: {e}"[:200])
         self.log.state.info["plan"] = self.plan
@@ -975,7 +1016,8 @@ class Governor:
         self.last_briefing = self.game.briefing_text()
         prompt = [f"Decision point: {reason}.",
                   f"Current directive: {current or 'none'}{held}.",
-                  frame_text(self.strategy, self.pillars, self._milestones_text()) or "No strategy yet.",
+                  (frame_text(self.strategy, self.pillars, self._milestones_text()) if self.pillars else "")
+                  or "No strategy yet.",
                   "Briefing from the latest autosave:", self.last_briefing]
         trend = self._trend(b)
         if trend:
@@ -1018,7 +1060,7 @@ class Governor:
         st.tokens_out += usage.output_tokens or 0
         st.requests += usage.requests or 0
         chosen = d.directive
-        ranked = ranking(self.strategy, self.pillars) if self.strategy else []
+        ranked = ranking(self.strategy, self.pillars) if self.strategy and self.pillars else []
         off_frame = bool(ranked) and chosen not in ("keep", current) and chosen not in ranked[:2]
         if off_frame and self.review_requested is None:   # keep the first pending request's trigger text
             self.review_requested = f"off-frame decision: {chosen} ({reason})"
@@ -1071,24 +1113,39 @@ class Governor:
         self.log.emit("strategy_action", action=action, result=result)
 
     def _carry_out_actions(self, b: dict) -> None:
-        """The strategy's player actions: preferred tech picks and monthly market orders (game
-        paused). Both tools compute their result from the last autosave, which stays stale until
-        the next monthly autosave, so each acts at most once per briefing date. Nothing here ever
-        raises out of this call, pauses the game, or undoes the decision already applied — any
-        failure, including malformed briefing data, is caught and logged as a strategy_action
-        event."""
-        if not self.strategy:
+        """The strategy's player actions, per the game's spec: each action kind a pillar declares runs
+        through the game's hook for it (ACTION_METHODS); a kind without a hook is logged "not
+        supported" once and skipped. Each tool acts at most once per briefing date (the result stays
+        stale until the next autosave). Nothing here ever raises out of this call, pauses the game,
+        or undoes the decision already applied — any failure is logged as a strategy_action event."""
+        if not self.strategy or self.pillars is None:
             return
-        try:
-            self._carry_out_tech_actions(b)
-            self._carry_out_market_actions(b)
-        except Exception as e:  # noqa: BLE001 - nothing here may stop play
-            self._log_action("error", f"failed: {e}"[:300])
+        hooks = action_hooks(self.game)
+        runners = {"tech": self._carry_out_tech_actions, "market": self._carry_out_market_actions}
+        for kind in self.pillars.actions:
+            if not self.pillars.owners(kind):
+                continue
+            hook = hooks.get(kind)
+            if hook is None:
+                if kind not in self._unsupported:
+                    self._unsupported.add(kind)
+                    self._log_action(kind, "not supported by this game; skipped")
+                continue
+            try:
+                runners[kind](b, hook)
+            except Exception as e:  # noqa: BLE001 - nothing here may stop play
+                self._log_action("error", f"failed: {e}"[:300])
 
-    def _carry_out_tech_actions(self, b: dict) -> None:
+    def _declared(self, kind: str) -> list:
+        """The items of action `kind` across the pillars that declare it, in priority order."""
+        owners = set(self.pillars.owners(kind))
+        fld = self.pillars.actions[kind].field
+        return [x for name, pl in self.strategy.sorted_pillars() if name in owners for x in getattr(pl, fld)]
+
+    def _carry_out_tech_actions(self, b: dict, pick_tech: Callable[[list[str]], str]) -> None:
         date = b.get("date")
-        tech = self.strategy.pillars.get("technology")
-        prefer = [t for t in (tech.prefer_techs if tech else []) if self._tech_misses.get(t, 0) < 1]
+        limit = self.pillars.actions["tech"].max_items
+        prefer = [t for t in dict.fromkeys(self._declared("tech")) if self._tech_misses.get(t, 0) < 1][:limit]
         fields = (b.get("research") or {}).values()
         researching = {((r or {}).get("current") or [None])[0] for r in fields}
         offered = {t for r in fields for t in (r or {}).get("alternatives", [])}
@@ -1109,7 +1166,7 @@ class Governor:
         if prefer and not researching & set(prefer) and date != self._tech_sync_date:
             self._tech_sync_date = date
             try:
-                res = self.game.pick_tech(prefer)
+                res = pick_tech(prefer)
                 self._log_action("tech", res)
                 m = TECH_PICK_RE.match(res)
                 if m:
@@ -1117,10 +1174,7 @@ class Governor:
             except Exception as e:  # noqa: BLE001 - actions never stop play
                 self._log_action("tech", f"failed: {e}"[:300])
 
-    def _carry_out_market_actions(self, b: dict) -> None:
-        limits = self.pillars.actions.get("market")
-        if limits is None:
-            return    # this game declares no market action: nothing to carry out
+    def _carry_out_market_actions(self, b: dict, market_sync: Callable[[list[dict]], str]) -> None:
         date = b.get("date")
         current = b.get("market_orders") or []
         pending_market, later = self._pending_market, date != self._market_sync_date
@@ -1129,11 +1183,10 @@ class Governor:
             if not self._same_orders(current, pending_market):
                 self._log_action("market", f"market orders did not stick: wanted {pending_market}, save has {current}")
                 self._market_stuck = True
-        owner = next(iter(self.pillars.owners("market")), None)   # the pillar the spec lets place market orders
-        econ = self.strategy.pillars.get(owner) if owner else None
+        limits = self.pillars.actions["market"]
         idle, income = idle_resources(b), b.get("net") or {}
         desired = []
-        for o in (econ.market if econ else []):
+        for o in self._declared("market"):
             errs = market_briefing_errors(o, limits, idle, income)
             if errs:     # a sell that no longer fits today's briefing (e.g. a pinned or older order)
                 if later:
@@ -1143,7 +1196,7 @@ class Governor:
         if not self._market_stuck and not self._same_orders(desired, current) and later:
             self._market_sync_date = date
             try:
-                res = self.game.market_sync(desired)
+                res = market_sync(desired)
                 self._log_action("market", res)
                 self._pending_market = desired
             except Exception as e:  # noqa: BLE001 - actions never stop play
@@ -1227,6 +1280,9 @@ class Governor:
         no change. Never raises and never pauses the game: any failure (reading the game for the prompt,
         the model call, or after it) is logged, the current strategy stays, and the review is retried
         at the next decision."""
+        if self.pillars is None:
+            self.log.emit("strategy_review_skipped", trigger=trigger, reason=f"strategy layer off: {self.pillars_error}"[:300])
+            return
         self._last_b = b     # cached for edit_pillar's market-order validation (idle resources, income)
         self._reviews_run += 1
         self._since_retro = 0
@@ -1345,14 +1401,16 @@ class Governor:
         self.log.emit("strategy", date=date, trigger=trigger, model=model, reason=s.reason, strategy=dumped)
 
     def _tech_ids(self) -> set[str]:
-        """Tech ids from the corpus (for validating preferred techs); cached once a read succeeds
-        (a failed read is logged and retried on the next call, never cached as empty)."""
+        """Ids for preferred techs, from `data/<ids_from_corpus>.json` of the corpus (the spec's tech
+        action); cached once a read succeeds (a failed read is logged and retried, never cached)."""
         if getattr(self, "_techs", None) is not None:
             return self._techs
-        import json as _json
-        path = self.s.corpus_dir / "data" / "tech.json"
+        tech = (self.pillars.actions.get("tech") if self.pillars else None)
+        if tech is None or not tech.ids_from_corpus:
+            return set()
+        path = self.s.corpus_dir / "data" / f"{tech.ids_from_corpus}.json"
         try:
-            techs = {r["id"].split(":", 1)[1] for r in _json.loads(path.read_text(encoding="utf-8"))}
+            techs = {r["id"].split(":", 1)[1] for r in json.loads(path.read_text(encoding="utf-8"))}
         except (OSError, ValueError, KeyError) as e:
             self.log.emit("briefing_error", error=f"tech ids: {e}"[:200])
             return set()

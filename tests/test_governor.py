@@ -3058,3 +3058,100 @@ def test_the_corrective_retry_sends_back_the_named_field_shape(setup):
     assert len(prompts) == 2, "the first answer was rejected and retried once"
     assert '"pillars"' not in prompts[1] and '"defence"' in prompts[1]
     assert g.strategy is not None and set(g.strategy.pillars) == set(STELLARIS.ids)
+
+
+# ---- game pillars: governor wiring ----------------------------------------------------------------
+
+def test_a_missing_pillars_file_turns_the_strategy_layer_off(setup):
+    s, log = setup
+    (s.corpus_dir / "pillars.toml").unlink()
+    calls, seen = [], []
+
+    def respond(messages, info):
+        seen.append(" ".join(str(p.content) for m in messages for p in getattr(m, "parts", []) if hasattr(p, "content")))
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"directive": "expand", "reason": "r"})])
+
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=FunctionModel(respond),
+                 role_models={"strategy": _strategist(calls)})
+    g.run(max_decisions=1)
+    assert calls == [], "no Strategist call without a pillars file"
+    assert g.pillars is None and "pillars.toml" in g.pillars_error
+    off = [e for e in log.recent if e["kind"] == "strategy_disabled"]
+    assert len(off) == 1 and "pillars.toml: missing" in off[0]["error"]
+    assert any("No strategy yet." in t for t in seen)
+    assert ("directive", "expand") in g.game.actions, "decisions run as before the layer"
+    assert log.state.info["pillars"] is None
+    with pytest.raises(ValueError, match="strategy layer is off"):
+        g.edit_pillar("economy", {"stance": "x"})
+    with pytest.raises(ValueError, match="strategy layer is off"):
+        g.request_review()
+
+
+def test_an_invalid_pillars_file_turns_the_layer_off_naming_the_key(setup):
+    s, log = setup
+    f = s.corpus_dir / "pillars.toml"
+    f.write_text(f.read_text(encoding="utf-8").replace('label = "Society"', 'label = "Society"\ncolour = "red"'),
+                 encoding="utf-8")
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+    off = [e for e in log.recent if e["kind"] == "strategy_disabled"]
+    assert g.pillars is None and len(off) == 1 and "pillars.society.colour: unknown key" in off[0]["error"]
+
+
+def test_a_stored_strategy_with_other_pillar_ids_is_treated_as_none(setup, tmp_path):
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    seed = EventLog(s.runs_dir, "seed", s.model, telemetry=tel)
+    seed.emit("run_start", game="stellaris", model=s.model)
+    seed.set_campaign("stellaris", "emp_z", "Empire Z")
+    seed.emit("strategy", date="2199.01.01", trigger="start of run", model="seed", reason="seed",
+              strategy={"pillars": {"navy": {"priority": 1, "stance": "s", "goals": []}}, "focus": "f"})
+    calls = []
+    log = EventLog(s.runs_dir, "run2", s.model, telemetry=tel)
+    g = Governor(s, FakeStellaris([{**briefing("2200.01.01"), "source": "save games/emp_z/x.sav"}]), log,
+                 model=decisions("keep"), role_models={"strategy": _strategist(calls)})
+    g.run(max_decisions=1)
+    assert calls and calls[0] == "strategist", "reviewed at start as if there were no strategy"
+    assert set(g.strategy.pillars) == set(STELLARIS.ids)
+    errs = [e for e in log.recent if e["kind"] == "briefing_error" and "do not match" in e.get("error", "")]
+    assert errs and "navy" in errs[0]["error"] and "economy" in errs[0]["error"]
+
+
+def test_a_declared_action_without_a_game_hook_is_skipped_once(setup):
+    from pilot.strategy import Pillar
+    s, log = setup
+
+    class NoMarket(FakeStellaris):
+        market_sync = None
+
+    game = NoMarket([briefing("2200.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    g.strategy = _strategy_with(
+        technology=Pillar(priority=3, stance="s", goals=["g"], prefer_techs=["tech_habitat_1"]),
+        economy=Pillar(priority=2, stance="s", goals=["g"], market=[{"side": "buy", "resource": "alloys", "amount": 5}]))
+    g._carry_out_actions(_idle_energy("2200.01.01"))
+    g._carry_out_actions(_idle_energy("2200.02.01"))
+    unsupported = [e for e in log.recent if e["kind"] == "strategy_action" and "not supported" in e.get("result", "")]
+    assert len(unsupported) == 1 and unsupported[0]["action"] == "market"
+    assert ("pick_tech", ["tech_habitat_1"]) in game.actions, "the supported action still runs"
+    assert log.state.status != "needs_attention"
+
+
+def test_edit_pillar_fields_follow_the_pillars_file(setup):
+    s, log = setup
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+    g.strategy = _strategy_with()
+    g._last_b = _idle_energy("2200.01.01")
+    with pytest.raises(ValueError, match="technology: only the economy pillar may set market"):
+        g.edit_pillar("technology", {"market": [{"side": "buy", "resource": "alloys", "amount": 5}]})
+    assert not g.strategy.pillars["technology"].pinned
+    g.edit_pillar("economy", {"market": [{"side": "buy", "resource": "alloys", "amount": 5}]})
+    assert g.strategy.pillars["economy"].market[0].resource == "alloys"
+    g.edit_pillar("society", {"milestones": [{"metric": "planets", "op": ">=", "target": 5, "by": "2230.01.01"}]})
+    assert g.strategy.pillars["society"].milestones[0].metric == "colonies", "aliases apply to human edits too"
+
+
+def test_the_pillars_spec_is_published_for_the_dashboard(setup):
+    s, log = setup
+    Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+    assert [p["id"] for p in log.state.info["pillars"]["pillars"]] == list(STELLARIS.ids)

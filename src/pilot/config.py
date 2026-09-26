@@ -80,6 +80,11 @@ class Settings:
         return REPO / "corpora" / self.game
 
     @property
+    def pillars_file(self) -> Path:
+        """The game's strategy pillars (docs/superpowers/specs/2026-09-26-game-pillars-design.md)."""
+        return self.corpus_dir / "pillars.toml"
+
+    @property
     def telemetry_db(self) -> Path:
         return self.runs_dir / "telemetry.sqlite"
 
