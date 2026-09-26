@@ -135,5 +135,6 @@
 - [x] Second game host mini-rig2 (192.168.1.159, 2560x1440): agent 1.4.0 installed and reachable with the shared token (2026-09-26)
 - [ ] Host registry (`hosts.toml`: name, agent URL, screen) and one governor service per host (own dashboard port, `GAME_AGENT_URL`); dashboard lists live runs of every host
 - [ ] Installer detects Civilization VI folders (documents, saves, logs, install) for the agent's read roots; update both hosts
-- [ ] Screen positions per resolution: Stellaris UI positions were calibrated at 3840x2160; verify or recalibrate at 2560x1440 before a governor runs on mini-rig2
-- [ ] Stellaris on mini-rig2: first launch (no documents folder yet), borderless window, monthly autosave, Governor Bridge mod
+- [x] Screen positions per resolution: `res/<W>x<H>.toml` overlays selected by `GAME_RESOLUTION`; Stellaris 2560x1440 screens measured live on mini-rig2 (a8c53a9, 110e638)
+- [ ] Stellaris tech and market positions at 2560x1440 (the overlay refuses them until measured)
+- [x] Stellaris on mini-rig2: borderless, monthly autosave, tutorial off, Governor Bridge playset; governor service points at mini-rig2 (systemd drop-in) and plays the new Blooms of Gaea campaign (2026-09-26)
