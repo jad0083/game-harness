@@ -40,6 +40,7 @@ class Settings:
     governor_thinking: str = "medium"
     governor_max_requests: int = 4
     # waits between tries when the provider is overloaded or rate-limited (503/429/5xx)
+    model_timeout_s: float = 120.0                    # per model request; decisions take ~20-30 s
     retry_delays: tuple[float, ...] = (5, 15, 45)      # model calls per governor decision (1 answer + up to 3 tool rounds)
     retro_every: int = 5                # Stellaris: a retrospective after every N model decisions (0 = never)
     image_detail: str = "medium"       # low | medium | high (Gemini media resolution)

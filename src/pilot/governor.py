@@ -382,7 +382,9 @@ class Governor:
         self.log.emit("status", status=status)
 
     def _on_retry(self, e, delay, attempt) -> None:
-        self.log.emit("model_retry", error=f"model {e.model_name} answered {e.status_code}", delay=delay, attempt=attempt)
+        what = (f"model {e.model_name} answered {e.status_code}" if hasattr(e, "status_code")
+                else f"model request timed out after {self.s.model_timeout_s:.0f} s ({type(e).__name__})")
+        self.log.emit("model_retry", error=what, delay=delay, attempt=attempt)
 
     def _needs_attention(self, why: str) -> None:
         """Stop acting and wait for the human (dashboard Resume) instead of crashing the run."""
