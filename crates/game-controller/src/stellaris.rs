@@ -897,6 +897,8 @@ pub struct PauseDetector {
     color: Option<([[u8; 3]; 2], f64)>,
     /// The in-game menu (Esc on the bare map): template, ROI, threshold, search radius.
     menu: Option<(image::RgbImage, [f64; 4], f64, u32)>,
+    /// The console is open: ROI and colour signature ([screens.console_open]).
+    console: Option<([f64; 4], [[u8; 3]; 2], f64)>,
 }
 
 impl PauseDetector {
@@ -916,7 +918,75 @@ impl PauseDetector {
             }
             None => None,
         };
-        Ok(PauseDetector { template, roi, threshold: def.template_threshold, search: def.template_search, color, menu })
+        let console = m.screens.get("console_open").and_then(|c| {
+            Some((c.template_roi?, c.color_range?, c.color_min_fraction.unwrap_or(0.3)))
+        });
+        Ok(PauseDetector { template, roi, threshold: def.template_threshold, search: def.template_search, color, menu, console })
+    }
+
+    /// Is the console open? (false when the manifest has no console signature)
+    pub fn frame_has_console(&self, frame: &image::RgbImage) -> bool {
+        let Some((roi, range, min)) = self.console else { return false };
+        let r = crate::imaging::roi_from_norm(frame.width(), frame.height(), roi);
+        crate::imaging::color_fraction(frame, r, range) >= min
+    }
+
+    /// Open the console, run `lines`, close it, checking on screen that it really opened before
+    /// typing (text typed onto the map would act as hotkeys) and that it closed afterwards.
+    pub async fn run_console(&self, client: &crate::client::AgentClient, lines: &[String]) -> Result<()> {
+        if self.console.is_none() {
+            return run_console(client, lines).await;
+        }
+        let pause = std::time::Duration::from_millis(300);
+        let open = |_: ()| async { Ok::<bool, anyhow::Error>(self.frame_has_console(&Self::frame(client).await?)) };
+        // Console `effect` runs on the selected object: with a planet or station selected, policies
+        // still reach the empire but country flags and the scoped confirmation do not (seen
+        // 2026-09-26). Esc drops the selection; on the bare map it opens the game menu, closed again.
+        if !open(()).await? {
+            require_foreground(client).await?;
+            client.key("esc", 1).await?;
+            tokio::time::sleep(std::time::Duration::from_millis(400)).await;
+            self.close_menu(client).await?;
+        }
+        // a console left open by an earlier failure: close it first so the key opens it again
+        if open(()).await? {
+            require_foreground(client).await?;
+            client.key(CONSOLE_KEY, 1).await?;
+            tokio::time::sleep(pause).await;
+        }
+        let mut opened = false;
+        for _ in 0..2 {
+            require_foreground(client).await?;
+            client.key(CONSOLE_KEY, 1).await?;
+            for _ in 0..4 {
+                tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+                if open(()).await? {
+                    opened = true;
+                    break;
+                }
+            }
+            if opened {
+                break;
+            }
+        }
+        if !opened {
+            bail!("the console did not open (no Debug View bar on screen); nothing was typed");
+        }
+        for line in lines {
+            require_foreground(client).await?;
+            client.type_text(line).await?;
+            require_foreground(client).await?;
+            client.key("enter", 1).await?;
+            tokio::time::sleep(pause).await;
+        }
+        require_foreground(client).await?;
+        client.key(CONSOLE_KEY, 1).await?;
+        tokio::time::sleep(pause).await;
+        if open(()).await? {
+            require_foreground(client).await?;
+            client.key(CONSOLE_KEY, 1).await?;
+        }
+        Ok(())
     }
 
     /// Is the in-game menu (Save Game / Load Game / … / Resume) open?
@@ -1084,13 +1154,13 @@ pub async fn take_control(
     // a scoped log proves the console reaches a real country (not observer mode)
     let probe = format!("HARNESS_SCOPE_CHECK {}", nonce());
     let (_, before) = client.files_read(DOCS_ROOT, "logs/game.log", 0, Some(0)).await?;
-    run_console(client, &[format!("effect {}", scoped_log(&probe))]).await?;
+    pause.run_console(client, &[format!("effect {}", scoped_log(&probe))]).await?;
     if !wait_for_log(client, before, &probe).await? {
-        run_console(client, &[format!("play {country}")]).await?;
+        pause.run_console(client, &[format!("play {country}")]).await?;
         done.push(format!("left observer mode (play {country})"));
         let again = format!("HARNESS_SCOPE_CHECK {}", nonce());
         let (_, before) = client.files_read(DOCS_ROOT, "logs/game.log", 0, Some(0)).await?;
-        run_console(client, &[format!("effect {}", scoped_log(&again))]).await?;
+        pause.run_console(client, &[format!("effect {}", scoped_log(&again))]).await?;
         if !wait_for_log(client, before, &again).await? {
             bail!("still no country scope after `play {country}`: is this the campaign of the newest autosave?");
         }
@@ -1214,7 +1284,10 @@ pub async fn apply_directive(
         }
         None => None,
     };
-    run_console(client, &lines).await?;
+    match pause {
+        Some(p) => p.run_console(client, &lines).await?,
+        None => run_console(client, &lines).await?,
+    }
     if let (Some(p), Some(false)) = (pause, was_paused) {
         p.set_paused(client, false).await?;
     }
@@ -2090,6 +2163,23 @@ situations={ situations={ 0=none 1={ country=0 type="rebellion_situation" progre
         assert!(line.contains("energy 39485 (over 803 years of income)"), "{line}");
         assert!(line.contains("trade 18824 of the 50,000 cap (+255/month"), "{line}");
         assert!(!line.contains("minerals") && !line.contains("alloys"), "small or shrinking stocks are not idle: {line}");
+    }
+
+    #[test]
+    fn console_is_recognised_by_its_debug_view_bar() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpora/stellaris");
+        let corpus = crate::corpus::GameCorpus::load_from_dir(&dir).unwrap();
+        let d = PauseDetector::from_manifest(&corpus.manifest).unwrap();
+        // fixtures: the (0,200)-(400,260) crop of real frames with the console open and closed
+        let load = |f: &str| {
+            let crop = image::open(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures").join(f)).unwrap().to_rgb8();
+            let mut frame = image::RgbImage::new(1568, 882);
+            image::imageops::replace(&mut frame, &crop, 0, 200);
+            frame
+        };
+        assert!(d.frame_has_console(&load("stellaris_console_open.jpg")));
+        assert!(!d.frame_has_console(&load("stellaris_console_closed.jpg")));
+        assert!(!d.frame_has_console(&image::RgbImage::new(1568, 882)));
     }
 
     #[test]
