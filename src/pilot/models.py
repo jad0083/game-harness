@@ -60,15 +60,43 @@ def load_prefs(runs_dir: Path) -> dict:
         out["model"] = d["model"]
     if d.get("thinking") in THINKING:
         out["thinking"] = d["thinking"]
+    if d.get("game") in GAMES:
+        out["game"] = d["game"]
+    if d.get("speed") in SPEEDS:
+        out["speed"] = d["speed"]
+    if isinstance(d.get("months"), int) and 1 <= d["months"] <= 120:
+        out["months"] = d["months"]
     return out
 
 
-def save_prefs(runs_dir: Path, model: str, thinking: str) -> dict:
-    if not valid_model(model):
-        raise ValueError(f"not a model name: {model!r} (expected provider:name)")
-    if thinking not in THINKING:
-        raise ValueError(f"thinking must be one of {', '.join(THINKING)}")
+GAMES = ("stellaris", "galciv4")
+SPEEDS = ("slowest", "slow", "normal", "fast", "fastest")
+
+
+def save_prefs(runs_dir: Path, model: str | None = None, thinking: str | None = None, **run: object) -> dict:
+    """Merge into the saved choices: model, thinking, and run settings (game, speed, months)."""
+    prefs = load_prefs(runs_dir)
+    if model is not None:
+        if not valid_model(model):
+            raise ValueError(f"not a model name: {model!r} (expected provider:name)")
+        prefs["model"] = model
+    if thinking is not None:
+        if thinking not in THINKING:
+            raise ValueError(f"thinking must be one of {', '.join(THINKING)}")
+        prefs["thinking"] = thinking
+    if run.get("game") is not None:
+        if run["game"] not in GAMES:
+            raise ValueError(f"game must be one of {', '.join(GAMES)}")
+        prefs["game"] = run["game"]
+    if run.get("speed") is not None:
+        if run["speed"] not in SPEEDS:
+            raise ValueError(f"speed must be one of {', '.join(SPEEDS)}")
+        prefs["speed"] = run["speed"]
+    if run.get("months") is not None:
+        m = run["months"]
+        if not isinstance(m, int) or not 1 <= m <= 120:
+            raise ValueError("months must be a whole number from 1 to 120")
+        prefs["months"] = m
     runs_dir.mkdir(parents=True, exist_ok=True)
-    prefs = {"model": model, "thinking": thinking}
     (runs_dir / PREFS_FILE).write_text(json.dumps(prefs, indent=1), encoding="utf-8")
     return prefs

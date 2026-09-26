@@ -150,11 +150,12 @@ def main(argv: list[str] | None = None) -> int:
     s.coords = a.coords or s.coords
     s.thinking = a.thinking or prefs.get("thinking") or s.thinking
     s.governor_thinking = a.thinking or prefs.get("thinking") or s.governor_thinking
-    if a.game and a.game != s.game:
+    game = a.game or (prefs.get("game") if a.cmd == "run" else None)
+    if game and game != s.game:
         from .config import default_journal
-        s.game = a.game
+        s.game = game
         if "PILOT_JOURNAL" not in os.environ:      # an explicit journal path wins over the game default
-            s.journal = default_journal(a.game)
+            s.journal = default_journal(game)
     if a.cmd == "check":
         return check(s)
     s.dashboard_port = a.port or s.dashboard_port
@@ -162,7 +163,9 @@ def main(argv: list[str] | None = None) -> int:
     s.commit_learnings = s.commit_learnings and not a.no_commit
     if a.speed:
         s.speed = "fastest" if a.speed == "faster" else a.speed
-    s.decide_every_months = a.months or s.decide_every_months
+    else:
+        s.speed = prefs.get("speed", s.speed)
+    s.decide_every_months = a.months or prefs.get("months") or s.decide_every_months
     return run(s, a.episodes)
 
 

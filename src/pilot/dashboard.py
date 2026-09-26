@@ -20,6 +20,7 @@ Telemetry (runs/telemetry.sqlite, across runs and models):
     GET  /api/plans?campaign=<id>|run=<id>      campaign plan versions, newest first
     GET  /api/models                            models to offer, and the saved choice for the next run
     POST /api/settings  {"model", "thinking"}   save that choice (applies to a live pilot too)
+    POST /api/run  {"game", "speed", "months"}   start a pilot run (game-pilot.service); viewer only
 """
 
 from __future__ import annotations
@@ -36,6 +37,7 @@ STATIC = Path(__file__).parent / "static"
 
 
 RUN_ID = re.compile(r"^[A-Za-z0-9_.-]+$")
+SERVICE = "game-pilot.service"      # deploy/game-pilot.service, started by the dashboard's Start run
 LIVE_STATES = {"starting", "playing", "deciding", "paused", "needs_attention"}
 
 
@@ -102,6 +104,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
     log = pilot.log if pilot else None
     runs_dir = runs_dir or (log.dir.parent if log else Path("runs"))
     tel = telemetry or (log.telemetry if log else None)
+    live_url = None                  # set for the viewer: finds a live run to refuse a second start
 
     def need_tel():
         if tel is None:
@@ -173,21 +176,45 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
             models_cache.update(t=now, models=await asyncio.to_thread(available_models, s), default=s.model)
         prefs = load_prefs(runs_dir)
         return web.json_response({"models": models_cache["models"], "model": prefs.get("model", models_cache["default"]),
-                                  "thinking": prefs.get("thinking", "medium")})
+                                  "thinking": prefs.get("thinking", "medium"), "game": prefs.get("game", "stellaris"),
+                                  "speed": prefs.get("speed", "normal"), "months": prefs.get("months", 12)})
 
     async def api_settings(request):
         """Save the model and thinking level for the next run (and the live run, if any)."""
         from .models import save_prefs
         body = await request.json()
         try:
-            prefs = save_prefs(runs_dir, str(body.get("model", "")), str(body.get("thinking", "medium")))
+            prefs = save_prefs(runs_dir, model=str(body.get("model", "")), thinking=str(body.get("thinking", "medium")))
         except ValueError as e:
             raise web.HTTPBadRequest(text=str(e)) from e
         if pilot is not None and hasattr(pilot, "set_model"):
             pilot.set_model(prefs["model"], prefs["thinking"])
         return web.json_response({"ok": True, **prefs, "applied_live": pilot is not None})
 
+    async def api_run(request):
+        """Start a pilot run as the game-pilot user service (settings saved for it first)."""
+        from .models import load_prefs, save_prefs
+        if log is not None:
+            raise web.HTTPConflict(text="this dashboard belongs to a running pilot")
+        body = await request.json()
+        try:
+            months = body.get("months")
+            save_prefs(runs_dir, game=body.get("game"), speed=body.get("speed"),
+                       months=int(months) if months not in (None, "") else None)
+        except (ValueError, TypeError) as e:
+            raise web.HTTPBadRequest(text=str(e)) from e
+        proxy_url = await live_url() if live_url else None
+        if proxy_url:
+            raise web.HTTPConflict(text="a pilot run is already live")
+        proc = await asyncio.create_subprocess_exec(
+            "systemctl", "--user", "start", SERVICE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT)
+        out, _ = await proc.communicate()
+        if proc.returncode != 0:
+            raise web.HTTPInternalServerError(text=f"could not start {SERVICE}: {out.decode(errors='replace')[:300]}")
+        return web.json_response({"ok": True, "started": SERVICE, **load_prefs(runs_dir)})
+
     api = [web.get("/api/campaigns", api_campaigns), web.get("/api/decisions", api_decisions),
+           web.post("/api/run", api_run),
            web.get("/api/models", api_models), web.post("/api/settings", api_settings),
            web.get("/api/plans", api_plans),
            web.get("/api/decision", api_decision), web.get("/api/metrics", api_metrics)]
@@ -250,6 +277,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
     if not log:
         # Always-on viewer: forward live endpoints to a running pilot's own dashboard, if any.
         proxy = LiveProxy(runs_dir)
+        live_url = proxy.url
 
         async def v_status(request):
             url = await proxy.url()

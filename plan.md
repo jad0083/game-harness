@@ -78,7 +78,7 @@
 - [ ] Long unattended Stellaris run in a real game (user's choice of empire), with learned rules committed
 - [x] `stellaris take-control` / MCP `stellaris_take_control`: human_ai ON (console reply read on screen), leaves observer mode; briefing reports systems owned
 - [x] Which directive levers the AI keeps: policies yes (20 months); console-added edicts no (cancelled within a month); briefing shows active edicts
-- [ ] Companion mod "Governor Bridge" (`corpora/stellaris/mod/`): additive AI budget entries gated on `governor_directive_*` (expand: outposts/colonies; prepare_war/defend: ships, starbases; consolidate/tech_rush: planets), `stellaris install-mod` / `bridge-check`, take-control reports it; agent 1.3 write roots (mod folder + dlc_load.json only). Built and tested; pending agent 1.3 deploy and a live load check
+- [x] Companion mod "Governor Bridge" (`corpora/stellaris/mod/`): additive AI budget entries gated on `governor_directive_*`, `stellaris install-mod` / `bridge-check`; deployed 2026-09-25 into United Nations of Earth 2 via a launcher playset "Governor Bridge" (bridge-check: loaded, no errors)
 - [ ] Surveying speed is not budget-driven (science ship count comes from engine defines): find another lever if the mod doesn't lift expansion
 - [ ] Screen templates: pause/date and event popups
 
@@ -99,3 +99,4 @@
 - [x] Dashboard design pass: standing as chips with expansion room, single pause/resume toggle, decision-mark tooltips, no-wrap meta, compact empty screen panel, Talk auto-scroll, confirmation toasts
 - [x] Agent 1.3.0 deployed on the PC (remotely, 2026-09-25): write root limited to mod/governor_bridge/, mod/governor_bridge.mod and dlc_load.json; other writes refused (403) on the PC
 - [x] Model and thinking pickers always visible: with no run they save the choice for the next run (runs/pilot-settings.json; command-line options still win), during a run they also switch it live
+- [x] Start a pilot run from the dashboard (game, speed, decision interval; runs game-pilot.service)

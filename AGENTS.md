@@ -223,6 +223,8 @@ $C stellaris brief                   # ~2 KB briefing from the newest autosave (
 $C stellaris take-control            # once per session: leave observer mode, human_ai ON (read on screen)
 $C stellaris install-mod             # upload the Governor Bridge mod and enable it (agent >= 1.3; restart the game)
 $C stellaris bridge-check            # is the mod loaded in the running game?
+# The Paradox Launcher opens when mods are enabled: its playset "Governor Bridge" holds only this
+# mod (the user's "Initial playset" is theirs); pick it on the launcher's Home, then RESUME.
 $C stellaris directive expand        # flags + policies on the empire; confirmed in game.log
 $C stellaris speed fastest           # slowest | slow | normal | fast | fastest
 $C stellaris pause                   # / resume — state read from the screen, safe to repeat
