@@ -909,3 +909,52 @@ def test_responses_are_never_cached(setup):
                 assert (await c.get(path)).headers.get("Cache-Control") == "no-store", path
 
     asyncio.run(go())
+
+
+def test_speed_and_months_can_be_changed_during_a_run(setup):
+    import threading
+    s, log = setup
+    s.decide_every_months = 24
+    s.poll_s = 0.3                                      # the change must land before the next poll
+    bs = [briefing(f"22{y:02d}.{m:02d}.01") for y in range(3) for m in (1, 7)]
+    game = FakeStellaris(bs)
+    gov = Governor(s, game, log, model=decisions("keep"))
+    t = threading.Thread(target=gov.run, daemon=True)
+    t.start()
+    assert _wait(lambda: log.state.episodes >= 1)
+    gov.set_speed("fastest")
+    gov.set_months(6)                                   # was 24: the next decision now comes at +6 months
+    assert _wait(lambda: log.state.episodes >= 2, secs=5), log.state.episodes
+    gov.stop(); t.join(timeout=5)
+    assert ("speed", "fastest") in game.actions
+    assert log.state.info["speed"] == "fastest" and log.state.info["every_months"] == 6
+    eps = [e for e in log.recent if e["kind"] == "episode"]
+    assert eps[1]["date"] == "2200.07.01", "decided 6 months after the first decision, not 24"
+    with pytest.raises(ValueError):
+        gov.set_speed("warp")
+    with pytest.raises(ValueError):
+        gov.set_months(0)
+
+
+def test_pace_controls_over_the_dashboard(setup):
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from pilot import models
+    from pilot.dashboard import make_app
+    s, log = setup
+    gov = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+
+    async def go():
+        async with TestClient(TestServer(make_app(gov))) as c:
+            assert (await c.post("/control", json={"action": "set_months", "months": 3})).status == 200
+            assert (await c.post("/control", json={"action": "set_speed", "speed": "fast"})).status == 200
+            assert (await c.post("/control", json={"action": "set_speed", "speed": "ludicrous"})).status == 400
+            assert (await c.post("/control", json={"action": "set_months", "months": "many"})).status == 400
+        async with TestClient(TestServer(make_app(None, s.runs_dir))) as v:     # no run: saved for later
+            assert (await v.post("/api/settings", json={"speed": "slow", "months": 9})).status == 200
+
+    asyncio.run(go())
+    assert gov.s.decide_every_months == 3 and gov.requests.get_nowait() == ("speed", "fast")
+    assert models.load_prefs(s.runs_dir) == {"speed": "slow", "months": 9}

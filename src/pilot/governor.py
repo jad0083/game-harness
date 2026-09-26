@@ -247,7 +247,7 @@ class Governor:
         self.orders: list[str] = []               # standing orders, saved per campaign
         self.requests: queue.Queue[tuple[str, str]] = queue.Queue()   # ("decide", msg) | ("override", name)
         log.state.info["controls"] = ["instruct", "chat", "order_add", "order_remove", "decide_now", "override",
-                                      "set_model"]
+                                      "set_model", "set_speed", "set_months"]
         log.state.info["thinking"] = settings.governor_thinking
         log.state.info["directives"] = list(DIRECTIVES)
 
@@ -327,6 +327,22 @@ class Governor:
         """Pause the game and have the model decide immediately (with an optional message)."""
         self.requests.put(("decide", text.strip()))
         self.log.emit("instruction", text=f"Decide now{': ' + text.strip() if text.strip() else ''}")
+
+    def set_speed(self, speed: str) -> None:
+        """Change the game speed; applied by the loop (never two things sending keys at once)."""
+        from .models import SPEEDS
+        if speed not in SPEEDS:
+            raise ValueError(f"speed must be one of {', '.join(SPEEDS)}")
+        self.requests.put(("speed", speed))
+        self.log.emit("instruction", text=f"Speed: {speed}")
+
+    def set_months(self, months: int) -> None:
+        """Change how many in-game months pass between scheduled decisions; applies at once."""
+        if not isinstance(months, int) or not 1 <= months <= 120:
+            raise ValueError("months must be a whole number from 1 to 120")
+        self.s = replace(self.s, decide_every_months=months)
+        self.log.state.info["every_months"] = months
+        self.log.emit("pace", every_months=months)
 
     def override(self, directive: str) -> None:
         """Apply a directive chosen by the human (recorded as a human decision)."""
@@ -447,6 +463,11 @@ class Governor:
             self._decide(b, "human request" + (f": {arg}" if arg else ""))
         elif kind == "override":
             self._override(b, arg)
+        elif kind == "speed":
+            self.game.set_speed(arg)
+            self.s = replace(self.s, speed=arg)
+            self.log.state.info["speed"] = arg
+            self.log.emit("pace", speed=arg)
         return b
 
     def _override(self, b: dict, directive: str) -> None:
@@ -495,7 +516,7 @@ class Governor:
         self.log.state.info["plan"] = self.plan
 
     def _run_until_next_decision(self, last: dict) -> tuple[dict | None, str]:
-        due = months(last["date"]) + self.s.decide_every_months
+        start = months(last["date"])          # the interval can change mid-wait (dashboard)
         self._status("playing")
         self.game.set_paused(False)
         while True:
@@ -528,7 +549,7 @@ class Governor:
             if urgent:
                 self.game.set_paused(True)
                 return b, "urgent: " + "; ".join(urgent)
-            if months(b["date"]) >= due:
+            if months(b["date"]) >= start + self.s.decide_every_months:
                 self.game.set_paused(True)
                 return b, f"scheduled ({self.s.decide_every_months} months)"
             last = b

@@ -92,6 +92,10 @@
   .ro-item b { display: block; font-size: 19px; font-weight: 600; line-height: 1.25; font-variation-settings: "opsz" 24; }
   .ro-item b.attn { color: var(--accent); }
   .ro-item .ro-sub { display: block; font-size: 13px; color: var(--ink-2); }
+  .ro-controls { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 13px; color: var(--ink-2); padding-top: 3px; }
+  .ro-controls label { display: inline-flex; align-items: center; gap: 6px; }
+  .ro-controls select, .ro-controls input { background: transparent; border: 1px solid var(--hair); border-radius: 6px; padding: 3px 6px; color: var(--ink); font-weight: 600; }
+  .ro-controls input { width: 56px; }
   @media (max-width: 700px) { .readout { gap: 8px 24px; padding: 14px 16px 12px; } .ro-date b { font-size: 36px; } }
 
   .banner { margin: 12px 24px 0; padding: 12px 14px; border-left: 3px solid var(--accent); background: var(--surface);
@@ -296,6 +300,15 @@
   <div class="ro-item"><span class="ro-label">Directive</span><b id="ro-directive">–</b><span class="ro-sub" id="ro-directive-sub"></span></div>
   <div class="ro-item"><span class="ro-label">Standing</span><b id="ro-standing">–</b><span class="ro-sub" id="ro-standing-sub"></span></div>
   <div class="ro-item"><span class="ro-label">Governor</span><b id="ro-gov">–</b><span class="ro-sub" id="ro-gov-sub"></span></div>
+  <div class="ro-item ro-pace" title="Game speed while the AI plays, and how often the model decides. Saved for later runs; during a run they apply at once.">
+    <span class="ro-label">Pace</span>
+    <span class="ro-controls">
+      <label>speed <select id="pace-speed" aria-label="Game speed">
+        <option value="slowest">slowest</option><option value="slow">slow</option><option value="normal">normal</option><option value="fast">fast</option><option value="fastest">fastest</option>
+      </select></label>
+      <label>decide every <input id="pace-months" type="number" min="1" max="120" aria-label="Months between decisions"> months</label>
+    </span>
+  </div>
 </section>
 
 <main>
@@ -543,6 +556,10 @@ function renderReadout() {
     stEl.className = behind.length ? "attn" : "";
     $("ro-standing-sub").textContent = behind.length ? `falling behind in ${behind.map(human).join(", ")}` : "keeping pace";
   } else { stEl.textContent = "–"; stEl.className = ""; $("ro-standing-sub").textContent = ""; }
+  const cat = S.catalog || {};
+  const speed = live ? info.speed : cat.speed, months = live ? info.every_months : cat.months;
+  if (document.activeElement !== $("pace-speed") && speed) $("pace-speed").value = speed;
+  if (document.activeElement !== $("pace-months") && months) $("pace-months").value = months;
   const st = S.status.status || "viewer";
   $("ro-gov").textContent = live ? ({ playing: "Watching the empire", deciding: "Deciding now", paused: "Paused", needs_attention: "Needs you" }[st] || st) : "Not running";
   $("ro-gov").className = st === "needs_attention" ? "attn" : "";
@@ -793,6 +810,7 @@ function describe(ev) {
     case "run_end": return "run ended";
     case "model": return `now using ${ev.model} (${ev.thinking} thinking)`;
     case "model_retry": return `${ev.error}; trying again in ${ev.delay} s`;
+    case "pace": return ev.speed ? `game speed ${ev.speed}` : `a decision every ${ev.every_months} in-game months`;
     default: { const { t, kind, ...rest } = ev; return JSON.stringify(rest).slice(0, 200); }
   }
 }
@@ -937,6 +955,24 @@ async function switchModel() {
   loadStatus();
 }
 $("model-select").addEventListener("change", switchModel);
+
+async function setPace(kind) {
+  const speed = $("pace-speed").value, months = +$("pace-months").value;
+  if (kind === "months" && !(months >= 1 && months <= 120)) { toast("Months must be a whole number from 1 to 120."); return; }
+  let r;
+  if (S.live) {
+    const body = kind === "speed" ? { action: "set_speed", speed } : { action: "set_months", months };
+    r = await fetch("/control", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  } else {
+    r = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" },
+                                       body: JSON.stringify(kind === "speed" ? { speed } : { months }) });
+  }
+  if (!r.ok) { toast(`Could not change: ${await r.text()}`); return; }
+  toast(kind === "speed" ? `Game speed ${speed}${S.live ? "" : " for the next run"}.` : `A decision every ${months} in-game months${S.live ? ", from now" : " for the next run"}.`);
+  await loadCatalog(); loadStatus();
+}
+$("pace-speed").addEventListener("change", () => setPace("speed"));
+$("pace-months").addEventListener("change", () => setPace("months"));
 
 function openStart() {
   const c = S.catalog || {}, open = (S.pc && S.pc.games) || [];

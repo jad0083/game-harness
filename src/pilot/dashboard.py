@@ -220,11 +220,13 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
         from .models import save_prefs
         body = await request.json()
         try:
-            prefs = save_prefs(runs_dir, model=str(body.get("model", "")), thinking=str(body.get("thinking", "medium")))
-        except ValueError as e:
+            months = body.get("months")
+            prefs = save_prefs(runs_dir, model=body.get("model") or None, thinking=body.get("thinking") or None,
+                               speed=body.get("speed") or None, months=int(months) if months not in (None, "") else None)
+        except (ValueError, TypeError) as e:
             raise web.HTTPBadRequest(text=str(e)) from e
-        if pilot is not None and hasattr(pilot, "set_model"):
-            pilot.set_model(prefs["model"], prefs["thinking"])
+        if pilot is not None and hasattr(pilot, "set_model") and body.get("model"):
+            pilot.set_model(prefs["model"], prefs.get("thinking"))
         return web.json_response({"ok": True, **prefs, "applied_live": pilot is not None})
 
     async def api_run(request):
@@ -403,6 +405,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
         return resp
 
     async def control(request):
+        from .models import save_prefs
         body = await request.json()
         action = body.get("action")
         if action == "pause":
@@ -418,6 +421,19 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
                 pilot.set_model(str(body.get("model", "")), body.get("thinking") or None)
             except ValueError as e:
                 raise web.HTTPBadRequest(text=str(e)) from e
+        elif action == "set_speed" and hasattr(pilot, "set_speed"):
+            try:
+                pilot.set_speed(str(body.get("speed", "")))
+                save_prefs(runs_dir, speed=str(body.get("speed", "")))
+            except ValueError as e:
+                raise web.HTTPBadRequest(text=str(e)) from e
+        elif action == "set_months" and hasattr(pilot, "set_months"):
+            try:
+                months = int(body.get("months"))
+                pilot.set_months(months)
+                save_prefs(runs_dir, months=months)
+            except (ValueError, TypeError) as e:
+                raise web.HTTPBadRequest(text=str(e)) from e
         elif action == "answer" and body.get("text", "").strip() and hasattr(pilot, "answer"):
             pilot.answer(body["text"].strip())
         elif action in ("chat", "order_add") and body.get("text", "").strip() and hasattr(pilot, action):
@@ -432,7 +448,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
             except ValueError as e:
                 raise web.HTTPBadRequest(text=str(e)) from e
         else:
-            raise web.HTTPBadRequest(text="action must be pause|resume|stop|instruct|answer|set_model|chat|order_add|order_remove|"
+            raise web.HTTPBadRequest(text="action must be pause|resume|stop|instruct|answer|set_model|set_speed|set_months|chat|order_add|order_remove|"
                                           "decide_now|override, with its text/index/directive")
         return web.json_response({"ok": True, "status": log.state.status})
 

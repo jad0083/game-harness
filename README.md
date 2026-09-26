@@ -236,7 +236,10 @@ run starts or ends), the live event stream during a run, campaign data every 10 
 every recorded campaign and, while a pilot runs, forwards its live controls (the pilot's own
 dashboard is on :8790).
 - **Readout** (under the top bar): the in-game date, the directive in force, our standing in systems,
-  and what the governor is doing; the top bar also shows whether the PC and its game are reachable.
+  what the governor is doing, and the **pace**: game speed and how many in-game months pass between
+  decisions. Both can be changed there: during a run they apply at once (speed at the next poll, the
+  interval immediately); otherwise they are saved for the next run. The top bar also shows whether
+  the PC and its game are reachable.
 - **Empire over time**: standing against the other empires (ours, median, rank; falling-behind
   highlighted) and the room to expand, then net income, stockpile, power (or a table) over in-game months, the directive
   in force above the chart, and a mark for every decision (click to read it).
