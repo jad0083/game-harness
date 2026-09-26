@@ -14,6 +14,7 @@ import json
 import os
 import signal
 import sys
+import threading
 import time
 
 from .config import REPO, Settings
@@ -74,15 +75,20 @@ def run(s: Settings, episodes: int | None) -> int:
         from .models import available_models
         log.state.info["models"] = available_models(s)
 
-    import threading
     threading.Thread(target=list_models, daemon=True, name="models").start()
     serve_in_background(pilot, s.dashboard_host, s.dashboard_port)
     print(f"pilot {run_id}: model {s.model}; dashboard http://{s.dashboard_host}:{s.dashboard_port}/ ; "
           f"log {log.dir / 'events.jsonl'}", flush=True)
 
+    done = threading.Event()
+
     def on_signal(*_):
-        print("stopping after the current step...", flush=True)
+        if pilot.control.stopping:              # second signal: leave now
+            os._exit(1)
+        print(f"stopping after the current step (at most {STOP_GRACE_S:.0f} s)...", flush=True)
         pilot.stop()
+        arm_stop_grace(done, STOP_GRACE_S, on_force=lambda: log.emit("run_end", forced=True,
+                       reason="a step (e.g. a model call) did not finish after the stop request"))
 
     signal.signal(signal.SIGTERM, on_signal)
     signal.signal(signal.SIGINT, on_signal)
@@ -92,9 +98,33 @@ def run(s: Settings, episodes: int | None) -> int:
         else:
             pilot.run(max_episodes=episodes)
     finally:
+        done.set()
         game.close()
         log.close()
     return 0
+
+
+STOP_GRACE_S = 20.0
+
+
+def arm_stop_grace(done: threading.Event, grace_s: float, on_force=None, force_exit=os._exit) -> threading.Thread:
+    """After a stop request, give the loop `grace_s` to finish its step, then exit anyway.
+
+    A model call cannot be interrupted, and one that hangs (a slow model, retries) kept the service
+    from stopping until systemd killed it. The governor pauses the game before every decision,
+    so leaving mid-call is safe; the unfinished decision is dropped."""
+    def watch() -> None:
+        if not done.wait(grace_s):
+            if on_force is not None:
+                try:
+                    on_force()
+                except Exception:  # noqa: BLE001, S110 - the exit matters more than the log line
+                    pass
+            force_exit(0)
+
+    t = threading.Thread(target=watch, daemon=True, name="stop-grace")
+    t.start()
+    return t
 
 
 def rebuild(s: Settings) -> int:
