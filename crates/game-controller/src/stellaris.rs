@@ -405,7 +405,7 @@ fn check_ident(s: &str) -> Result<()> {
 async fn require_foreground(client: &crate::client::AgentClient) -> Result<()> {
     let h = client.health().await?;
     let fg = h.get("foreground").and_then(|v| v.as_str()).unwrap_or("");
-    if !fg.contains(WINDOW_TITLE) {
+    if fg.trim() != WINDOW_TITLE {   // exact: a browser tab titled "Stellaris Wiki" must not pass
         bail!("refusing console input: foreground window is {fg:?}, not {WINDOW_TITLE:?}");
     }
     Ok(())
@@ -571,20 +571,25 @@ impl HumanAiReader {
         require_foreground(client).await?;
         client.key(CONSOLE_KEY, 1).await?;
         tokio::time::sleep(std::time::Duration::from_millis(300)).await;
-        let mut result = Err(anyhow!("could not read the console's reply to human_ai"));
+        let result = self.toggle_until(client, on).await;
+        // close the console even when reading failed, or later keys would type into it
+        let closed = match require_foreground(client).await {
+            Ok(()) => client.key(CONSOLE_KEY, 1).await,
+            Err(e) => Err(e),
+        };
+        result?;
+        closed
+    }
+
+    async fn toggle_until(&self, client: &crate::client::AgentClient, on: bool) -> Result<()> {
         for _ in 0..2 {
             match self.toggle_and_read(client).await? {
-                Some(state) if state == on => {
-                    result = Ok(());
-                    break;
-                }
+                Some(state) if state == on => return Ok(()),
                 Some(_) => continue, // toggled the wrong way: toggle again
                 None => break,
             }
         }
-        require_foreground(client).await?;
-        client.key(CONSOLE_KEY, 1).await?;
-        result
+        Err(anyhow!("could not read the console's reply to human_ai"))
     }
 }
 
@@ -606,6 +611,12 @@ pub async fn take_control(
     if !wait_for_log(client, before, &probe).await? {
         run_console(client, &[format!("play {country}")]).await?;
         done.push(format!("left observer mode (play {country})"));
+        let again = format!("HARNESS_SCOPE_CHECK {}", nonce());
+        let (_, before) = client.files_read(DOCS_ROOT, "logs/game.log", 0, Some(0)).await?;
+        run_console(client, &[format!("effect {}", scoped_log(&again))]).await?;
+        if !wait_for_log(client, before, &again).await? {
+            bail!("still no country scope after `play {country}`: is this the campaign of the newest autosave?");
+        }
     }
     reader.set(client, true).await?;
     done.push("human_ai is ON: the game's AI plays the empire".into());

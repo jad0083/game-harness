@@ -136,16 +136,17 @@ class Telemetry:
 
     def score(self, campaign_id: str, after_months: int = 12) -> int:
         """Fill `decisions.result` with metric deltas `after_months` later (where that far is known)."""
-        mets = self.query("SELECT month, data FROM metrics WHERE campaign_id=? AND month IS NOT NULL ORDER BY month",
-                          (campaign_id,))
+        mets = self.query("SELECT run_id, month, data FROM metrics WHERE campaign_id=? AND month IS NOT NULL "
+                          "ORDER BY month", (campaign_id,))
         if not mets:
             return 0
-        by_month = [(m["month"], json.loads(m["data"])) for m in mets]
         scored = 0
         for d in self.query("SELECT run_id, episode, month FROM decisions WHERE campaign_id=? AND month IS NOT NULL",
                             (campaign_id,)):
-            start = next((x for mo, x in by_month if mo >= d["month"]), None)
-            end = next((x for mo, x in by_month if mo >= d["month"] + after_months), None)
+            # same run only (a reloaded older save repeats months), and an end point close to the mark
+            run = [(m["month"], json.loads(m["data"])) for m in mets if m["run_id"] == d["run_id"]]
+            start = next((x for mo, x in run if mo >= d["month"]), None)
+            end = next((x for mo, x in run if d["month"] + after_months <= mo <= d["month"] + after_months + 3), None)
             if not start or not end:
                 continue
             delta = {k: round((end.get(k) or 0) - (start.get(k) or 0), 2) for k in SCORED}
@@ -176,22 +177,34 @@ class Telemetry:
 
     def rebuild(self, runs_dir: Path) -> int:
         """Recreate every table from runs/<id>/events.jsonl and traces/. Returns the runs loaded."""
-        with self._lock:
-            for table in ("events", "decisions", "metrics", "runs", "campaigns"):
-                self.db.execute(f"DELETE FROM {table}")  # fixed table names
         n = 0
-        for d in sorted(p for p in runs_dir.iterdir() if (p / "events.jsonl").exists()):
-            with open(d / "events.jsonl", encoding="utf-8") as f:
-                for line in f:
-                    try:
-                        ev: dict[str, Any] = json.loads(line)
-                    except ValueError:
-                        continue
-                    trace = None
-                    if ev.get("kind") == "trace" and ev.get("file") and (d / ev["file"]).exists():
-                        trace = json.loads((d / ev["file"]).read_text(encoding="utf-8"))
-                    self.record(d.name, ev, trace)
-            n += 1
-        for c in self.query("SELECT id FROM campaigns"):
-            self.score(c["id"])
+        with self._lock:
+            self.db.execute("BEGIN")
+        try:
+            with self._lock:
+                for table in ("events", "decisions", "metrics", "runs", "campaigns"):
+                    self.db.execute(f"DELETE FROM {table}")  # fixed table names
+            for d in sorted(p for p in runs_dir.iterdir() if (p / "events.jsonl").exists()):
+                with open(d / "events.jsonl", encoding="utf-8") as f:
+                    for line in f:
+                        try:
+                            ev: dict[str, Any] = json.loads(line)
+                        except ValueError:
+                            continue
+                        trace = None
+                        if ev.get("kind") == "trace" and ev.get("file") and (d / ev["file"]).exists():
+                            try:
+                                trace = json.loads((d / ev["file"]).read_text(encoding="utf-8"))
+                            except ValueError:
+                                trace = None           # a corrupt trace file: keep the decision row
+                        self.record(d.name, ev, trace)
+                n += 1
+            for c in self.query("SELECT id FROM campaigns"):
+                self.score(c["id"])
+            with self._lock:
+                self.db.execute("COMMIT")
+        except BaseException:
+            with self._lock:
+                self.db.execute("ROLLBACK")
+            raise
         return n

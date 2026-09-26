@@ -114,7 +114,10 @@ class McpGame:
     def ensure_foreground(self) -> None:
         """Input must only ever reach the game: bring its window to the front first."""
         health = json.loads(self._http("GET", "/health"))
-        if self.GAME_TITLE.lower() not in health.get("foreground", "").lower():
+        fg = health.get("foreground", "")
+        # Stellaris's window is titled exactly "Stellaris"; a substring would accept "Stellaris Wiki - Chrome"
+        ok = fg.strip() == self.GAME_TITLE if self.GAME_TITLE == "Stellaris" else self.GAME_TITLE.lower() in fg.lower()
+        if not ok:
             r = self.call("focus", title=self.GAME_TITLE)
             if r.is_error:
                 raise RuntimeError(f"cannot focus the game window: {r.text}")

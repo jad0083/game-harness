@@ -496,3 +496,73 @@ def test_failing_request_is_dropped_not_retried_in_a_tight_loop(setup):
     assert gov.requests.empty(), "the failed request was consumed"
     gov.stop()
     t.join(timeout=5)
+
+
+def test_notes_never_answer_a_question_only_answers_do():
+    from pilot.agent import HumanChannel
+    h = HumanChannel()
+    h.push("prioritise defence")               # a note: must not count as an answer
+    assert h.ask("Apply prepare_war?", timeout=0.1) is None
+    assert h.take_all() == ["prioritise defence"], "the note is still there for the next decision"
+    import threading
+    threading.Timer(0.05, lambda: h.answer("yes")).start()
+    assert h.ask("Apply prepare_war?", timeout=2) == "yes"
+
+
+def test_prepare_war_applies_only_after_an_explicit_yes(setup):
+    import threading
+    s, log = setup
+    s.ask_human_timeout_s = 3
+    game = FakeStellaris([briefing("2200.01.01")])
+    gov = Governor(s, game, log, model=decisions("prepare_war"))
+    def human():
+        _wait(lambda: bool(log.state.pending_question))
+        gov.instruct("you should prioritise defence")     # a note during the question
+        gov.answer("yes")
+    threading.Thread(target=human, daemon=True).start()
+    gov.run(max_decisions=1)
+    assert ("directive", "prepare_war") in game.actions
+    assert any(e["kind"] == "answer" and e["answer"] == "yes" for e in log.recent)
+
+
+def test_chat_history_keeps_whole_exchanges(setup):
+    s, log = setup
+    model, _ = recording_model()
+    gov = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=model)
+    for i in range(12):
+        gov._chat(f"question {i}")
+    hist = gov._chat_history()
+    from pydantic_ai.messages import ModelRequest, UserPromptPart
+    assert isinstance(hist[0], ModelRequest) and any(isinstance(p, UserPromptPart) for p in hist[0].parts), \
+        "history starts at the beginning of an exchange"
+    assert len(gov.chat_exchanges) <= 6
+
+
+def test_scoring_uses_the_same_run_and_a_nearby_end_point(tmp_path):
+    import json
+
+    from pilot.telemetry import Telemetry
+    tel = Telemetry(tmp_path / "t.sqlite")
+    for run in ("a", "b"):
+        tel.record(run, {"t": 1, "kind": "run_start", "game": "stellaris", "model": "m"})
+        tel.record(run, {"t": 1, "kind": "campaign", "game": "stellaris", "name": "c"})
+    tel.record("a", {"t": 2, "kind": "trace", "episode": 1, "date": "2200.01.01", "decision": "expand"})
+    tel.record("a", {"t": 2, "kind": "metrics", "date": "2200.01.01", "planets": 1})
+    tel.record("b", {"t": 3, "kind": "metrics", "date": "2201.01.01", "planets": 9})   # other run: ignored
+    assert tel.score("stellaris/c") == 0
+    tel.record("a", {"t": 4, "kind": "metrics", "date": "2205.01.01", "planets": 5})   # 5 years later: too far
+    assert tel.score("stellaris/c") == 0
+    tel.record("a", {"t": 5, "kind": "metrics", "date": "2201.02.01", "planets": 2})
+    assert tel.score("stellaris/c") == 1
+    res = json.loads(tel.query("SELECT result FROM decisions")[0]["result"])
+    assert res["planets"] == 1
+
+
+def test_rebuild_survives_a_corrupt_trace_file(setup, tmp_path):
+    from pilot.telemetry import Telemetry
+    s, log = setup
+    Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("expand")).run(max_decisions=1)
+    (log.dir / "traces/0001.json").write_text("{ not json")
+    tel = Telemetry(tmp_path / "r.sqlite")
+    assert tel.rebuild(s.runs_dir) == 1
+    assert tel.query("SELECT decision, trace FROM decisions")[0] == {"decision": "expand", "trace": None}
