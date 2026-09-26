@@ -9,6 +9,8 @@ agent.log
 screenshots/
 current_screen.jpg
 *.jpg
+# real-frame test fixtures are part of the test suite
+!crates/game-controller/tests/fixtures/*.jpg
 target/
 **/target/
 .claude/settings.local.json
