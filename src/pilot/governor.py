@@ -292,14 +292,8 @@ class Governor:
         self.log.emit("run_start", model=self.s.model, game=self.s.game, speed=self.s.speed,
                       every_months=self.s.decide_every_months)
         try:
-            self.game.set_paused(True)
-            self.game.set_speed(self.s.speed)
-            # the game's AI must play the empire (human_ai), not observer mode (no expansion)
-            self.log.emit("journal", text="taking control: " + self.game.take_control().replace("\n", "; "))
-            b = self.game.briefing()
-            self._set_campaign(b)
-            self._decide(b, "start of run")
-            while not self.control.stopping:
+            b = self._start()
+            while b is not None and not self.control.stopping:
                 if max_decisions is not None and self.log.state.episodes >= max_decisions:
                     break
                 try:
@@ -309,17 +303,20 @@ class Governor:
                         while self.control.paused and not self.control.stopping and self.requests.empty():
                             time.sleep(0.5)
                         if not self.requests.empty():
-                            b = self._handle_request(self.game.briefing())
+                            req = self.requests.get_nowait()      # consumed even if it fails below
+                            b = self._handle_request(req, self.game.briefing())
                         continue
                     b, reason = self._run_until_next_decision(b)
                     if b is None:
                         break
                     if reason == "request":
-                        b = self._handle_request(b)
+                        b = self._handle_request(self.requests.get_nowait(), b)
                     elif reason:
                         self._decide(b, reason)
-                except RuntimeError as e:   # game control failed (focus lost, a panel open, agent down)
-                    self._needs_attention(f"game control failed: {e}. Fix the game screen, then press Resume.")
+                except Exception as e:  # noqa: BLE001 - any game-control failure (agent down, focus lost, a panel open)
+                    self._needs_attention(f"game control failed: {type(e).__name__}: {e}. "
+                                          "Fix the game screen or the agent, then press Resume.")
+                    time.sleep(1.0)           # back off: never retry in a tight loop
         finally:
             try:
                 self.game.set_paused(True)
@@ -328,9 +325,29 @@ class Governor:
             self._status("stopped")
             self.log.emit("run_end", decisions=self.log.state.episodes)
 
-    def _handle_request(self, b: dict) -> dict:
-        """Run one queued human request (the game is paused)."""
-        kind, arg = self.requests.get_nowait()
+    def _start(self) -> dict | None:
+        """Pause, set the speed, hand the empire to the AI, first briefing and decision. On failure,
+        wait for the human (dashboard Resume) and try again; None if stopped meanwhile."""
+        while not self.control.stopping:
+            try:
+                self.game.set_paused(True)
+                self.game.set_speed(self.s.speed)
+                # the game's AI must play the empire (human_ai), not observer mode (no expansion)
+                self.log.emit("journal", text="taking control: " + self.game.take_control().replace("\n", "; "))
+                b = self.game.briefing()
+                self._set_campaign(b)
+                self._decide(b, "start of run")
+                return b
+            except Exception as e:  # noqa: BLE001
+                self._needs_attention(f"could not start: {type(e).__name__}: {e}. Fix the game or the agent, "
+                                      "then press Resume to try again.")
+                while self.control.paused and not self.control.stopping:
+                    time.sleep(0.5)
+        return None
+
+    def _handle_request(self, req: tuple[str, str], b: dict) -> dict:
+        """Run one human request (already taken from the queue; the game is paused)."""
+        kind, arg = req
         if kind == "decide":
             if arg:
                 self.human.push(arg)

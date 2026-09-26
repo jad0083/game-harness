@@ -2,6 +2,17 @@
 
 ## Open
 
+### Pilot / Stellaris (code review 2026-09-25, 7dc677a..616b501)
+- [ ] (medium) Chat history slice `[-20:]` can start with an orphan tool result; providers reject it and chat stays broken for the run (`governor._chat`)
+- [ ] (medium) `prepare_war` approval takes any pending note as the answer and treats text starting with "y" as yes; answers need their own channel (`HumanChannel.ask`)
+- [ ] (medium/low) `set_paused` Esc fallback: if the pause detector misreads the screen, Esc on the bare map opens the game menu
+- [ ] (low-medium) `HumanAiReader::set` leaves the console open when a screenshot or decode fails mid-read
+- [ ] (low-medium) `take_control` types `play <id>` with the id from the newest autosave of any campaign and doesn't re-check the scope probe afterwards; campaign detection uses the same newest-save rule
+- [ ] (low) Outcome scoring can mix metrics from different runs of a campaign (reloaded older save) and labels any later point "12 months later"
+- [ ] (low) `rebuild-telemetry` is not transactional; a corrupt trace file aborts it half-way
+- [ ] (low) Dashboard: some server numbers are not escaped; FAILED outcomes are double-escaped (`&amp;quot;`)
+- [ ] (low) Stellaris foreground check matches the substring "Stellaris" (a browser tab titled "Stellaris Wiki" would pass)
+
 ### Deployment
 
 ### Rust controller (`crates/game-controller`)
@@ -34,6 +45,7 @@
 - [ ] Agent key table has no numpad keys or `+`; Stellaris speed-up must use `=` (VK_OEM_PLUS) until added
 
 ## Resolved
+- [x] Governor crashed on non-RuntimeError failures (agent unreachable: URLError; MCP pipe; JSON), crashed on startup failures, and could spin on a failing queued request (2026-09-25, code review #1–3; any failure → needs-attention, startup retries after Resume, failed requests are consumed and followed by a back-off; 3 tests)
 - [x] Stellaris: in observer mode the AI never explored or expanded our empire (1 system 2200–2212 while AI empires reached 9–18); the spike had judged by starbase capacity (2026-09-25; switched to `human_ai`, 1 → 4 systems in 3.5 years; briefing now reports systems owned)
 - [x] Stellaris game.log drops repeated log text on the same in-game day, so repeated directives looked unconfirmed (2026-09-25; unique nonce per marker, 8 s polling)
 - [x] Corpus summary pointed every game at corpora/galciv4/data/README.md (2026-09-25; now names the loaded corpus directory)

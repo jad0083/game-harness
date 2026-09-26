@@ -405,3 +405,86 @@ def test_governor_thinks_more_than_episodes():
     s = Settings(model="google:gemini-3.8-flash", thinking="low")
     assert governor_settings(s)["google_thinking_config"]["thinking_level"] == "medium"
     assert governor_settings(Settings(model="google:x", governor_thinking="high"))["google_thinking_config"]["thinking_level"] == "high"
+
+
+def _run_bg(gov):
+    import threading
+    t = threading.Thread(target=gov.run, daemon=True)
+    t.start()
+    return t
+
+
+def _wait(pred, secs=3.0):
+    import time
+    end = time.time() + secs
+    while time.time() < end:
+        if pred():
+            return True
+        time.sleep(0.05)
+    return False
+
+
+def test_network_errors_flag_needs_attention_instead_of_crashing(setup):
+    from urllib.error import URLError
+    s, log = setup
+
+    class Flaky(FakeStellaris):
+        def set_paused(self, paused):
+            if paused is False:
+                raise URLError("agent unreachable")
+            return super().set_paused(paused)
+
+    gov = Governor(s, Flaky([briefing("2200.01.01")]), log, model=decisions("keep"))
+    t = _run_bg(gov)
+    assert _wait(lambda: log.state.status == "needs_attention"), log.state.status
+    assert t.is_alive(), "the run survives"
+    gov.stop()
+    t.join(timeout=5)
+
+
+def test_startup_failure_waits_for_resume_then_retries(setup):
+    s, log = setup
+    calls = {"n": 0}
+
+    class Stubborn(FakeStellaris):
+        def take_control(self):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise RuntimeError("could not read the console's reply to human_ai")
+            return super().take_control()
+
+    gov = Governor(s, Stubborn([briefing("2200.01.01")]), log, model=decisions("keep"))
+    t = _run_bg(gov)
+    assert _wait(lambda: log.state.status == "needs_attention")
+    assert log.state.episodes == 0
+    gov.resume()
+    assert _wait(lambda: log.state.episodes >= 1), "startup retried after Resume"
+    gov.stop()
+    t.join(timeout=5)
+    assert calls["n"] == 2
+
+
+def test_failing_request_is_dropped_not_retried_in_a_tight_loop(setup):
+    import time
+    s, log = setup
+
+    class Dead(FakeStellaris):
+        def briefing(self):
+            if self.dead:
+                raise ConnectionError("agent down")
+            return super().briefing()
+
+    game = Dead([briefing("2200.01.01")])
+    game.dead = False
+    gov = Governor(s, game, log, model=decisions("keep"))
+    t = _run_bg(gov)
+    assert _wait(lambda: log.state.episodes >= 1)
+    gov.pause()
+    game.dead = True
+    gov.decide_now("now please")
+    time.sleep(1.5)
+    n = sum(1 for e in log.recent if e["kind"] == "needs_attention")
+    assert 1 <= n <= 2, f"{n} needs_attention events: tight loop"
+    assert gov.requests.empty(), "the failed request was consumed"
+    gov.stop()
+    t.join(timeout=5)
