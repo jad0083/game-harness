@@ -63,3 +63,19 @@ Open questions for the build:
   read-only.
 - Save size and parse time late in the game.
 - Achievements are off for any game driven this way.
+
+## Build checks (same game, loaded from the 2200.11.01 autosave)
+- `game-controller stellaris directive expand` sent `play 0` → clear flags → set
+  `governor_directive_expand` + `diplo_stance_expansionist` → `observe`; `GOVERNOR_APPLIED expand`
+  appeared in game.log at once. The 2202.07.01 autosave (20 months later, run at Fastest) still
+  has the flag and the stance, so the AI kept the directive.
+- Over those 20 months the empire stayed at 1 planet, 1/3 starbases and 31 techs, while the
+  stockpiles grew. Every AI empire looks the same (flat tech counts, 0–2 new starbases). This is
+  4.5's early pace at Ensign, not an observer-mode problem: `tech_physics_1` costs 1,500
+  (`@tier1cost3`) against +12.8 physics per month.
+- **Speeds** (HUD label while running): Slowest, Slow, Normal, Fast, Fastest; `-`/`=` step
+  through them, and pressing them while paused also works. Fastest ≈ 2.5 in-game months per real second.
+  Only the 5 most recent autosaves are kept (2200.12 had rotated out by 2202.07).
+- Load Game lists save folders; "Load Latest Save" on United Nations of Earth loads the newest
+  autosave. Another folder ("Commonwealth of Man 3", 2219) is the user's own game: never touch it.
+

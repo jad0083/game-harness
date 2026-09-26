@@ -225,6 +225,31 @@ pub async fn run_console(client: &crate::client::AgentClient, lines: &[String]) 
     Ok(())
 }
 
+/// Game speeds, slowest first (verified 2026-09-25: `-`/`=` step through these; the HUD shows the
+/// name while unpaused). 4.5 has no "faster" step; it is accepted as a name for fastest.
+pub const SPEEDS: [&str; 5] = ["slowest", "slow", "normal", "fast", "fastest"];
+
+/// Index into [`SPEEDS`] for a speed name.
+pub fn speed_index(name: &str) -> Result<usize> {
+    let n = name.trim().to_lowercase();
+    let n = if n == "faster" { "fastest".to_string() } else { n };
+    SPEEDS.iter().position(|s| *s == n).ok_or_else(|| anyhow!("unknown speed {name:?}; use one of {}", SPEEDS.join(", ")))
+}
+
+/// Set the game speed: step down to slowest, then up to the wanted speed. Works paused or not.
+pub async fn set_speed(client: &crate::client::AgentClient, name: &str) -> Result<&'static str> {
+    let idx = speed_index(name)?;
+    for _ in 0..SPEEDS.len() - 1 {
+        require_foreground(client).await?;
+        client.key("-", 1).await?;
+    }
+    for _ in 0..idx {
+        require_foreground(client).await?;
+        client.key("=", 1).await?;
+    }
+    Ok(SPEEDS[idx])
+}
+
 /// Bytes of game.log after `offset` (and the new size), via the agent.
 pub async fn read_log_since(client: &crate::client::AgentClient, offset: u64) -> Result<(String, u64)> {
     let (bytes, size) = client.files_read(DOCS_ROOT, "logs/game.log", offset, None).await?;
@@ -542,6 +567,16 @@ mod tests {
         for bad in ["", "a b", "x\"", "x}", "Play", "x;observe", "a=b"] {
             assert!(check_ident(bad).is_err(), "{bad:?}");
         }
+    }
+
+    #[test]
+    fn speed_names() {
+        assert_eq!(speed_index("slowest").unwrap(), 0);
+        assert_eq!(speed_index("Normal").unwrap(), 2);
+        assert_eq!(speed_index("fast").unwrap(), 3);
+        assert_eq!(speed_index("faster").unwrap(), 4);
+        assert_eq!(speed_index("fastest").unwrap(), 4);
+        assert!(speed_index("ludicrous").is_err());
     }
 
     #[test]
