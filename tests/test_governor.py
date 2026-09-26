@@ -662,3 +662,77 @@ def test_plans_api(setup, tmp_path):
             assert ds[-1]["decision"] == "retrospective" and "bottleneck" in ds[-1]["reason"]
 
     asyncio.run(go())
+
+
+def test_instructions_carry_only_the_directive_section_of_the_strategy():
+    from pilot.governor import strategy_core
+    full = (REPO / "corpora/stellaris/strategy.md").read_text()
+    core = strategy_core(full)
+    assert "## 9. Governor directives" in core and "| Directive |" in core
+    assert "## 1. Opening" not in core and "Opening (first ~10 years)" in core, "other sections only as contents"
+    assert len(core) < len(full) / 2
+
+
+def test_decision_prompt_includes_past_outcomes(setup, tmp_path):
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(s.runs_dir, "r8", s.model, telemetry=tel)
+    model, seen = recording_model("expand")
+    game = FakeStellaris([{**briefing(f"22{i:02d}.01.01"), "source": "save games/e/x.sav"} for i in range(3)])
+    Governor(s, game, log, model=model).run(max_decisions=2)
+    assert any("Earlier directive changes in this campaign" in p and "expand (from none)" in p for p in seen)
+
+
+def test_model_can_be_switched_live_from_the_dashboard(setup, monkeypatch, tmp_path):
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from pilot.dashboard import make_app
+    from pilot.telemetry import Telemetry
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")      # constructing Gemini clients needs a key, not the network
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(s.runs_dir, "r9", s.model, telemetry=tel)
+    gov = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+    gov.run(max_decisions=1)
+    assert "set_model" in log.state.info["controls"]
+
+    async def go():
+        async with TestClient(TestServer(make_app(gov))) as c:
+            r = await c.post("/control", json={"action": "set_model", "model": "google:gemini-3.8-pro", "thinking": "high"})
+            assert r.status == 200, await r.text()
+            st = await (await c.get("/status")).json()
+            assert st["model"] == "google:gemini-3.8-pro" and st["info"]["thinking"] == "high"
+            assert (await c.post("/control", json={"action": "set_model", "model": "rm -rf /"})).status == 400
+            assert (await c.post("/control", json={"action": "set_model", "model": "google:x", "thinking": "max"})).status == 400
+
+    asyncio.run(go())
+    assert gov.s.model == "google:gemini-3.8-pro" and gov.s.governor_thinking == "high"
+    assert "gemini-3.8-pro" in str(gov.agent.model.model_name) and "gemini-3.8-pro" in str(gov.chat_agent.model.model_name)
+    assert any(e["kind"] == "model" and e["model"] == "google:gemini-3.8-pro" for e in log.recent)
+    # decisions keep the model that made them
+    assert tel.query("SELECT model FROM decisions WHERE run_id='r9'")[0]["model"] == "google:gemini-3.8-flash"
+
+
+def test_model_list_includes_current_and_configured(monkeypatch):
+    from pilot import models
+    monkeypatch.setattr(models, "google_models", lambda: ["google:gemini-3.8-flash", "google:gemini-3.8-pro"])
+    monkeypatch.setenv("PILOT_MODELS", "openai:gpt-5, bad model ,anthropic:claude-sonnet-5")
+    got = models.available_models(Settings(model="google:gemini-3.8-flash"))
+    assert got == sorted(["google:gemini-3.8-flash", "google:gemini-3.8-pro", "openai:gpt-5", "anthropic:claude-sonnet-5"])
+
+
+def test_a_decision_that_keeps_calling_tools_is_cut_off_and_keeps_the_directive(setup):
+    s, log = setup
+
+    def respond(messages, info: AgentInfo) -> ModelResponse:
+        return ModelResponse(parts=[ToolCallPart("consult", {"query": "more"})])   # never answers
+
+    game = FakeStellaris([briefing("2200.01.01")])
+    Governor(s, game, log, model=FunctionModel(respond)).run(max_decisions=1)
+    err = [e for e in log.recent if e["kind"] == "episode_error"]
+    assert err and "no answer within 4 model calls" in err[0]["error"]
+    assert not [a for a in game.actions if a[0] == "directive"]
+    assert sum(1 for a in game.actions if a[0] == "corpus") <= 4

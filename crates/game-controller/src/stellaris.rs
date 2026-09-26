@@ -889,8 +889,13 @@ impl Briefing {
             let cur = r.current.as_ref().map(|(t, p)| format!("{t} ({p:.0} pts)")).unwrap_or_else(|| "NONE".into());
             s += &format!("- {f}: {cur}; options: {}\n", r.alternatives.join(", "));
         }
+        // only the policies directives change or the governor weighs (all of them are in the JSON)
         s += "Policies: ";
-        s += &self.policies.iter().map(|(k, v)| format!("{k}={v}")).collect::<Vec<_>>().join(", ");
+        s += &["diplomatic_stance", "economic_policy", "war_philosophy", "trade_policy"]
+            .iter()
+            .filter_map(|k| self.policies.get(*k).map(|v| format!("{k}={v}")))
+            .collect::<Vec<_>>()
+            .join(", ");
         s += &format!("\nEdicts: {}", if self.edicts.is_empty() { "none".to_string() } else { self.edicts.join(", ") });
         s += "\nPlanets:\n";
         for p in &self.planets {
