@@ -145,7 +145,8 @@ def test_loads_are_cached_until_the_file_changes(tmp_path):
 
 def test_cached_spec_is_read_only(tmp_path):
     """The cached spec's dicts are immutable to prevent process-wide cache poisoning."""
-    spec = load_pillars(corpus(tmp_path))
+    d = corpus(tmp_path)          # written once: rewriting it would change the mtime and miss the cache
+    spec = load_pillars(d)
     # Try to modify pillars dict
     with pytest.raises(TypeError):
         spec.pillars["economy"] = None
@@ -159,7 +160,7 @@ def test_cached_spec_is_read_only(tmp_path):
     with pytest.raises(TypeError):
         spec.actions["new"] = None
     # Second load returns the same cached object
-    second = load_pillars(corpus(tmp_path))
+    second = load_pillars(d)
     assert second is spec
     assert second.pillars["economy"].label == "Economy"  # unchanged
 
