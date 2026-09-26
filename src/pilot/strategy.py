@@ -16,6 +16,12 @@ RANK_MEASURES = ("systems", "pops", "techs", "military_power", "economy_power", 
 METRICS = ("systems", "colonies", "pops", "techs_known", "military_power", "economy_power", "tech_power",
            *(f"rank:{m}" for m in RANK_MEASURES))
 _ROW_KEY = {"colonies": "planets"}          # metrics rows store colonies as `planets`
+_DATE_RE = re.compile(r"^\d{4}\.(\d{2})\.\d{2}$")
+
+
+def _valid_date(s: str) -> bool:
+    m = _DATE_RE.match(s)
+    return bool(m) and 1 <= int(m.group(1)) <= 12
 
 
 class Milestone(BaseModel):
@@ -28,12 +34,8 @@ class Milestone(BaseModel):
 
     def __init__(self, **data):
         by = data.get("by")
-        if by and not re.match(r"^\d{4}\.\d{2}\.\d{2}$", by):
+        if by and not _valid_date(by):
             raise ValueError(f"by {by!r} is not a date YYYY.MM.DD")
-        if by and re.match(r"^\d{4}\.\d{2}\.\d{2}$", by):
-            _, m, _ = map(int, by.split("."))
-            if not 1 <= m <= 12:
-                raise ValueError(f"by {by!r} is not a date YYYY.MM.DD")
         super().__init__(**data)
 
 
@@ -65,10 +67,13 @@ class Strategy(BaseModel):
     focus: str
     reason: str = ""
 
+    def sorted_pillars(self) -> list[tuple[str, Pillar]]:
+        """(name, pillar) pairs in priority order."""
+        return sorted(self.pillars.items(), key=lambda kv: kv[1].priority)
+
     def ranking(self) -> list[str]:
         """Directives in pillar-priority order (pillars without a directive are skipped)."""
-        ordered = sorted(self.pillars.items(), key=lambda kv: kv[1].priority)
-        return [DIRECTIVE_OF[p] for p, _ in ordered if DIRECTIVE_OF.get(p)]
+        return [DIRECTIVE_OF[p] for p, _ in self.sorted_pillars() if DIRECTIVE_OF.get(p)]
 
 
 def _months(date: str) -> int:
@@ -94,12 +99,8 @@ def validate(s: Strategy, *, previous: Strategy | None, tech_ids: set[str], idle
         if not 1 <= pl.priority <= len(PILLARS):
             errs.append(f"{name}: priority must be 1..{len(PILLARS)}")
         for m in pl.milestones:
-            if not re.match(r"^\d{4}\.\d{2}\.\d{2}$", m.by):
+            if not _valid_date(m.by):
                 errs.append(f"{name}: milestone by {m.by!r} is not a date YYYY.MM.DD")
-            else:
-                _, mo, _ = map(int, m.by.split("."))
-                if not 1 <= mo <= 12:
-                    errs.append(f"{name}: milestone by {m.by!r} is not a date YYYY.MM.DD")
             if m.metric not in METRICS:
                 errs.append(f"{name}: unknown metric {m.metric!r}")
         if pl.prefer_techs and name != "technology":

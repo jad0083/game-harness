@@ -233,7 +233,7 @@ def frame_text(strategy: Strategy | None, milestones: str) -> str:
         return ""
     lines = ["STRATEGY FRAME (from the Strategist; choose within it):",
              f"Directive ranking: {' > '.join(strategy.ranking())}", f"Focus: {strategy.focus}"]
-    for name, pl in sorted(strategy.pillars.items(), key=lambda kv: kv[1].priority):
+    for name, pl in strategy.sorted_pillars():
         lines.append(f"{pl.priority}. {name}{' (pinned by the human)' if pl.pinned else ''}: {pl.stance}")
     at_risk = [m for m in milestones.splitlines() if m.endswith(("at_risk", "missed"))]
     if at_risk:
@@ -964,6 +964,9 @@ class Governor:
         key = lambda o: (o.get("side"), o.get("resource"), o.get("amount"))
         return sorted(map(key, a)) == sorted(map(key, b))
 
+    def _log_action(self, action: str, result: str) -> None:
+        self.log.emit("strategy_action", action=action, result=result)
+
     def _carry_out_actions(self, b: dict) -> None:
         """The strategy's player actions: preferred tech picks and monthly market orders (game
         paused). Both tools compute their result from the last autosave, which stays stale until
@@ -977,7 +980,7 @@ class Governor:
             self._carry_out_tech_actions(b)
             self._carry_out_market_actions(b)
         except Exception as e:  # noqa: BLE001 - nothing here may stop play
-            self.log.emit("strategy_action", action="error", result=f"failed: {e}"[:300])
+            self._log_action("error", f"failed: {e}"[:300])
 
     def _carry_out_tech_actions(self, b: dict) -> None:
         date = b.get("date")
@@ -995,22 +998,21 @@ class Governor:
             elif pending in offered:
                 # still offered but not picked up as current: the pick did not stick
                 self._tech_misses[pending] = self._tech_misses.get(pending, 0) + 1
-                self.log.emit("strategy_action", action="tech",
-                              result=f"{pending} did not stick; skipped until the next review")
+                self._log_action("tech", f"{pending} did not stick; skipped until the next review")
                 prefer = [t for t in prefer if t != pending]
             else:
                 # neither current nor offered any more: researched to completion
-                self.log.emit("strategy_action", action="tech", result=f"researched {pending}")
+                self._log_action("tech", f"researched {pending}")
         if prefer and not researching & set(prefer) and date != self._tech_sync_date:
             self._tech_sync_date = date
             try:
                 res = self.game.pick_tech(prefer)
-                self.log.emit("strategy_action", action="tech", result=res)
+                self._log_action("tech", res)
                 m = TECH_PICK_RE.match(res)
                 if m:
                     self._pending_pick = m.group(1)
             except Exception as e:  # noqa: BLE001 - actions never stop play
-                self.log.emit("strategy_action", action="tech", result=f"failed: {e}"[:300])
+                self._log_action("tech", f"failed: {e}"[:300])
 
     def _carry_out_market_actions(self, b: dict) -> None:
         date = b.get("date")
@@ -1019,8 +1021,7 @@ class Governor:
         if pending_market is not None and later:
             self._pending_market = None
             if not self._same_orders(current, pending_market):
-                self.log.emit("strategy_action", action="market",
-                              result=f"market orders did not stick: wanted {pending_market}, save has {current}")
+                self._log_action("market", f"market orders did not stick: wanted {pending_market}, save has {current}")
                 self._market_stuck = True
         econ = self.strategy.pillars.get("economy")
         desired = [o.model_dump() for o in (econ.market if econ else [])]
@@ -1028,10 +1029,10 @@ class Governor:
             self._market_sync_date = date
             try:
                 res = self.game.market_sync(desired)
-                self.log.emit("strategy_action", action="market", result=res)
+                self._log_action("market", res)
                 self._pending_market = desired
             except Exception as e:  # noqa: BLE001 - actions never stop play
-                self.log.emit("strategy_action", action="market", result=f"failed: {e}"[:300])
+                self._log_action("market", f"failed: {e}"[:300])
 
     def _maybe_event_review(self, b: dict, trigger: str, retry: bool = False) -> bool:
         """Run a strategy review for a big event, at most once per 12 in-game months. `retry`
@@ -1068,7 +1069,7 @@ class Governor:
             return "(none)"
         today = rows[-1]["date"] if rows else "2200.01.01"
         out = []
-        for name, pl in sorted(self.strategy.pillars.items(), key=lambda kv: kv[1].priority):
+        for name, pl in self.strategy.sorted_pillars():
             for m in pl.milestones:
                 out.append(f"- {name}: {m.metric} {m.op} {m.target:g} by {m.by}: {milestone_status(m, rows, today)}")
         return "\n".join(out) or "(none)"
@@ -1109,16 +1110,10 @@ class Governor:
                 "date": b["date"], "trigger": trigger, "current": current_directive(b)}
         ask = lambda agent: agent.run_sync("\n\n".join(prompt), deps=deps,
                                            usage_limits=UsageLimits(request_limit=self.s.max_requests_per_episode))
+        retry_errors: list[str] | None = None
         try:
             result, _entry = self._call("strategy", ask,
                                         on_try=lambda e: base.update(model=e["model"], thinking_level=e["thinking"]))
-        except Exception as e:  # noqa: BLE001 - a failed review never stops play; retried at the next decision
-            self.review_requested = trigger
-            self._review_retry = True
-            self.log.emit("episode_error", error=f"strategy review: {type(e).__name__}: {e}"[:500])
-            return
-        retry_errors: list[str] | None = None
-        try:
             r: StrategyReview = result.output
             usage = result.usage
             base["model_version"] = served_model(result)
@@ -1166,7 +1161,7 @@ class Governor:
                 self.log.emit("strategy_rejected", date=b["date"], errors=errs[:10])
             elif accepted:
                 self._set_strategy(new, b["date"], trigger, base.get("model", ""))
-        except Exception as e:  # noqa: BLE001 - a failed review never stops play or pauses the game
+        except Exception as e:  # noqa: BLE001 - a failed review never stops play or pauses the game; retried at the next decision
             self.review_requested = trigger
             self._review_retry = True
             self.log.emit("episode_error", error=f"strategy review: {type(e).__name__}: {e}"[:500])
@@ -1176,8 +1171,9 @@ class Governor:
 
     def _set_strategy(self, s: Strategy, date: str, trigger: str, model: str) -> None:
         self.strategy = s
-        self.log.state.info["strategy"] = s.model_dump()
-        self.log.emit("strategy", date=date, trigger=trigger, model=model, reason=s.reason, strategy=s.model_dump())
+        dumped = s.model_dump()
+        self.log.state.info["strategy"] = dumped
+        self.log.emit("strategy", date=date, trigger=trigger, model=model, reason=s.reason, strategy=dumped)
 
     def _tech_ids(self) -> set[str]:
         """Tech ids from the corpus (for validating preferred techs); cached once a read succeeds
