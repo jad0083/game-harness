@@ -71,3 +71,10 @@ Strategy source: `corpora/galciv4/strategy.md`. Newest entries at the bottom.
   agent 1.1.0 not deployed; taxes/approval to watch.
 - **Resume**: answer the event (`scripts/play/act.sh click 480 618`), then `scripts/play/ap.sh 20`
   and follow AGENTS.md §4 for each stop.
+
+## Pilot log
+Entries written by the pilot app (google:gemini-3.8-flash).
+- **Oct 4, 2333**: Idle core world: Earth → Queued a Research District on Earth to clear the idle core world build queue blocker.
+- **Nov 14, 2333**: Boarding Colony Ship → Boarded a citizen from Earth onto T.A.S. Colony Ship-4 and confirmed Done.
+- **Dec 11, 2333**: Colonized Macrinus I; chose 'Install the new seals, whatever the cost' (+1 Pacifism) on Leaking Seals event.
+- **Dec 11, 2333**: Colonize Event: Leaking Seals → Colonized Macrinus I and resolved the 'Leaking Seals' colonize event by selecting 'Install the new seals, whatever the cost.'

@@ -16,3 +16,5 @@ incoming/
 .claude-images/
 .claude/worktrees/
 /play/
+.env
+/runs/

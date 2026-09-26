@@ -22,6 +22,7 @@ class RunState:
     episodes: int = 0
     last_stop: str = ""
     last_decision: str = ""
+    game_date: str = ""                # latest in-game date reported by a decision
     learned: dict[str, int] = field(default_factory=lambda: {"screens": 0, "rules": 0, "controls": 0})
     tokens_in: int = 0
     tokens_out: int = 0

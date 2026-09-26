@@ -66,7 +66,8 @@
     <h2>Game</h2>
     <img id="frame" alt="Latest game frame" src="/frame.jpg">
     <div class="stats">
-      <div class="stat"><b id="turns">0</b><span>turns advanced</span></div>
+      <div class="stat"><b id="gdate">–</b><span>in-game date</span></div>
+      <div class="stat"><b id="turns">0</b><span>verified autopilot turns</span></div>
       <div class="stat"><b id="episodes">0</b><span>decisions</span></div>
       <div class="stat"><b id="tokens">0</b><span>tokens in / out</span></div>
       <div class="stat"><b id="requests">0</b><span>model requests</span></div>
@@ -103,6 +104,7 @@ async function refresh() {
     $("status").className = "pill " + s.status;
     $("model").textContent = `${s.model} · run ${s.run_id}`;
     $("turns").textContent = s.turns_advanced;
+    $("gdate").textContent = s.game_date || "–";
     $("episodes").textContent = s.episodes;
     $("tokens").textContent = `${fmt(s.tokens_in)} / ${fmt(s.tokens_out)}`;
     $("requests").textContent = s.requests;

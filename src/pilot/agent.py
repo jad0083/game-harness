@@ -77,16 +77,26 @@ class HumanChannel:
             return None
 
 
+def image_metadata(s: Settings) -> dict | None:
+    """Per-image provider metadata. Gemini: media resolution trades image tokens for detail."""
+    detail = {"low": "MEDIA_RESOLUTION_LOW", "medium": "MEDIA_RESOLUTION_MEDIUM",
+              "high": "MEDIA_RESOLUTION_HIGH"}.get(s.image_detail)
+    if detail and s.provider.startswith("google"):
+        return {"media_resolution": {"level": detail}}   # google-genai PartMediaResolution
+    return None
+
+
+def frame_content(s: Settings, jpeg: bytes) -> BinaryContent:
+    return BinaryContent(data=jpeg, media_type="image/jpeg", vendor_metadata=image_metadata(s))
+
+
 def _image(ctx: RunContext[Deps], jpeg: bytes | None) -> list:
     if not jpeg:
         return []
     ctx.deps.frame = jpeg
     ctx.deps.store.remember_frame(jpeg)
     ctx.deps.log.frame(jpeg)
-    detail = {"low": "MEDIA_RESOLUTION_LOW", "medium": "MEDIA_RESOLUTION_MEDIUM",
-              "high": "MEDIA_RESOLUTION_HIGH"}.get(ctx.deps.settings.image_detail)
-    meta = {"media_resolution": detail} if detail and ctx.deps.settings.provider.startswith("google") else None
-    return [BinaryContent(data=jpeg, media_type="image/jpeg", vendor_metadata=meta)]
+    return [frame_content(ctx.deps.settings, jpeg)]
 
 
 def _act(ctx: RunContext[Deps], label: str, r: ToolResult) -> ToolReturn:
@@ -272,7 +282,7 @@ def run_episode(agent: Agent[Deps, EpisodeResult], deps: Deps, stop_text: str, f
     if frame:
         deps.frame = frame
         deps.store.remember_frame(frame)
-        content.append(BinaryContent(data=frame, media_type="image/jpeg"))
+        content.append(frame_content(deps.settings, frame))
     result = agent.run_sync(content, deps=deps,
                             usage_limits=UsageLimits(request_limit=deps.settings.max_requests_per_episode))
     return result.output, result.usage
