@@ -201,6 +201,11 @@ What went wrong in the first long campaign, and the rule each lesson gives:
   `consolidate_economy` turns spare minerals into districts). Energy sat at 14k–39k unspent all game (the
   AI does not sell surplus on the market). `IDLE stockpiles` means the economy is not the
   constraint: `consolidate_economy` is for deficits, housing and stability only.
+- **Trade piled up too** (18,800 and +255 a month by 2278; storage caps at 50,000). Trade and
+  energy only turn into alloys or minerals through the market (about 54% after the fee both ways,
+  best as small monthly orders); the governor has no market action yet, so treat an `IDLE` trade
+  or energy line as a sign that military and growth are capped elsewhere (naval capacity, planets),
+  not that more income is needed.
 - **Influence stayed at +4 to +6 a month for 110 years.** Outposts and habitats wait on it. Prefer
   influence sources when choosing between otherwise equal directives: `diplomacy_first` (envoys,
   federation) keeps influence working for us; `expand` spends it.

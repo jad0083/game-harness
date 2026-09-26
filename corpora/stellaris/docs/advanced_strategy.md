@@ -411,6 +411,26 @@ Crisis preparation rules:
 | Idle alloys + naval headroom + threat | `prepare_war` / `defend` |
 | 2370+ with no immediate threat | `tech_rush` then `defend` / `prepare_war` by 2390 |
 
+## Market and planet economy notes (Cedar Games, "Stellaris Planet and Economy Guide", 4.3.7)
+
+Recorded on 4.3.7 (June 2026); not re-checked against the 4.5.1 files unless marked.
+- **Market trades** cost the fee on each side: selling 100 food at the 30% fee gives 70 trade,
+  buying 100 minerals costs 130 trade, so converting one resource into another returns about
+  54%. Prices move with supply and demand and drift back over time: many small trades beat one
+  large trade. **Monthly trade orders** (a standing buy or sell at the end of every month) do this
+  automatically; early on, a small monthly mineral buy with surplus food/energy is recommended.
+  For the governor: idle energy or trade (the briefing's `IDLE` line) is only useful through the
+  market, which the game's AI does not do on its own (unverified).
+- **Colonies** add a flat 20 empire size each however developed they are (unverified for 4.5):
+  settle a world only when pops can be moved there to make it productive.
+- **Pop growth** is fastest at about half of a planet's capacity; resettling pops from a crowded
+  capital to a new colony raises growth on both.
+- **Fleets docked** at a starbase with crew quarters pay less upkeep and no trade logistics;
+  leaving port for a war raises energy, alloy and trade costs at once, so keep a reserve before
+  `prepare_war`.
+- **Planetary deficits** are covered by the empire but cost trade (logistics); specialised worlds
+  pay more of it, usually still worth it.
+
 ## Sources
 
 - Installed game files, Stellaris **v4.5.1** (read 2026-09-26 from the local copy under
@@ -434,6 +454,7 @@ Crisis preparation rules:
 - https://stellaris.paradoxwikis.com/Crisis — crisis timing and damage bonuses, verified 4.4.
 - https://stellaris.paradoxwikis.com/Ethics — ethic modifiers, verified 4.4.
 - https://stellaris.paradoxwikis.com/Trade — trade resource and market fee, verified 4.4.
+- https://www.youtube.com/watch?v=8JiqZYKU9PA — Cedar Games, Stellaris Planet and Economy Guide (4.3.7, 2026-06-19): market, pop growth, planet management.
 - https://stellaris.paradoxwikis.com/Stability — stability thresholds, revolt, deficit trade cost, verified 4.4.
 - https://stellaris.paradoxwikis.com/Influence — influence sinks and sources (thin), verified 4.4.
 - https://stellaris.paradoxwikis.com/Warfare — status quo, war exhaustion, verified 4.4 (local copy `docs/warfare.md`).

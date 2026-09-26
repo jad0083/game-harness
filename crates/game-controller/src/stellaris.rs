@@ -1552,10 +1552,18 @@ impl Briefing {
         }
         s += "\n";
         // more than 10 years of income sitting unspent: the AI cannot use it (a market sale would)
-        let idle: Vec<String> = ["energy", "minerals", "food", "alloys", "consumer_goods"].iter().filter_map(|k| {
+        // trade is the market currency (stockpile capped at 50,000, docs:advanced_strategy): idle trade
+        // could buy alloys or minerals on the market
+        let mut idle: Vec<String> = ["energy", "minerals", "food", "alloys", "consumer_goods"].iter().filter_map(|k| {
             let (v, n) = (*self.stockpile.get(*k)?, *self.net.get(*k)?);
             (v > 5000.0 && n > 0.0 && v > n * 120.0).then(|| format!("{k} {} (over {:.0} years of income)", num(v), v / n / 12.0))
         }).collect();
+        // trade is a currency, not a consumable: large and still growing means it is not being spent
+        if let (Some(&v), Some(&n)) = (self.stockpile.get("trade"), self.net.get("trade")) {
+            if v > 15000.0 && n > 0.0 {
+                idle.push(format!("trade {} of the 50,000 cap (+{}/month; spendable only on the market)", num(v), num(n)));
+            }
+        }
         if !idle.is_empty() {
             s += &format!("IDLE stockpiles (unused by the AI): {}\n", idle.join(", "));
         }
@@ -2021,6 +2029,20 @@ situations={ situations={ 0=none 1={ country=0 type="rebellion_situation" progre
         assert!(t.contains("Growth and fleet-capacity techs: have none; missing Orbital Habitats"), "{t}");
         assert!(t.contains("IDLE stockpiles (unused by the AI): energy"), "{t}");
         assert!(b.peers.stats.contains_key("colonies"));
+    }
+
+    #[test]
+    fn idle_stockpiles_flag_hoards_and_growing_trade() {
+        let mut b = Briefing::default();
+        for (k, v, n) in [("energy", 39485.0, 4.1), ("minerals", 900.0, 80.0), ("trade", 18824.0, 255.0), ("alloys", 20000.0, -3.0)] {
+            b.stockpile.insert(k.to_string(), v);
+            b.net.insert(k.to_string(), n);
+        }
+        let t = b.to_text();
+        let line = t.lines().find(|l| l.starts_with("IDLE stockpiles")).expect("an IDLE line");
+        assert!(line.contains("energy 39485 (over 803 years of income)"), "{line}");
+        assert!(line.contains("trade 18824 of the 50,000 cap (+255/month"), "{line}");
+        assert!(!line.contains("minerals") && !line.contains("alloys"), "small or shrinking stocks are not idle: {line}");
     }
 
     #[test]
