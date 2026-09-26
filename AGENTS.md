@@ -223,6 +223,8 @@ $C stellaris directive expand        # play 0 → flags + policies → observe; 
 $C stellaris speed fastest           # slowest | slow | normal | fast | fastest
 $C stellaris pause                   # / resume — state read from the screen, safe to repeat
 $C stellaris log -l 30               # tail of logs/game.log
+$C corpus search "atomic clock"      # 9,152 records from the game files: events with options, techs, policies…
+$C corpus get event:distar.311       # every option of an event with its effects
 .venv/bin/python -m pilot run --game stellaris --months 12   # the governor loop (speed: normal default)
 ```
 Rules:

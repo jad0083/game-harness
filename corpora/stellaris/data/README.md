@@ -1,16 +1,22 @@
-# Generated game data (planned — nothing generated yet)
+# Generated game data
 
 Files in this directory will be **generated** from the game's own script files by
-`scripts/extract-stellaris.py` (not written yet) and must never be edited by hand. Regenerate
-after every game patch:
+`scripts/extract-stellaris.py` and must never be edited by hand. Regenerate after every game patch:
 
 ```bash
-python3 scripts/extract-stellaris.py <folder containing common/, events/ and localisation/> --game-version <x.y.z>
+python3 scripts/fetch-stellaris-files.py              # PC install -> incoming/stellaris/ via the agent (~29 MB, ~1 s)
+python3 scripts/extract-stellaris.py incoming/stellaris   # -> corpora/stellaris/data/*.json (~2 s)
 ```
 
-The folders are `<install>\common`, `<install>\events` and `<install>\localisation\english` on the
-Windows PC (Steam: `steamapps\common\Stellaris`). The plan is for the extractor to read the
-install through the Windows agent; `scripts/receive-file.py` (a zip over the LAN) is the fallback.
+Generated for 4.5.1 (2026-09-25): tech 679, policy 56, edict 171, building 498, district 147,
+tradition 234, ascension_perk 49, civic 358, event 6,960 (only events a player sees: a title and
+options, `hide_window` skipped). Every record carries its localised name, a summary from
+`<key>_desc`, the script key as an alias, and `fields` with numbers resolved from
+`@variables`; effects and conditions are compact script text (`modifier`, `potential`,
+`choices` = `N. <option text> -> <tooltip>; <effects> [if <condition>]`). Techs also list
+`leads_to`; policies list every option with its description, modifier and conditions.
+`_meta.json` records the game version, DLC folders, localisation key count and any redefinition
+warnings.
 The script files themselves are not committed (Paradox's data). Record the game version with
 `--game-version`, and record which DLC are present, because many definitions are gated on
 `has_*_dlc` triggers.

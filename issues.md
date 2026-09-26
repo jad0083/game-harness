@@ -31,10 +31,10 @@
 - [ ] `.mcp.json` points at gitignored `./target/release/game-controller`; fresh clone has no MCP until `cargo build --release`, undocumented
 - [ ] `#![allow(dead_code, …)]` remains in `game-agent/main.rs`, `imaging.rs`, `mcp.rs` (removed from `corpus.rs`, `autopilot.rs`)
 - [ ] Python harness (`src/harness`, `windows_agent/agent.py`, 40 tests) is no longer deployed; its green suite covers nothing that runs (`agent.py` `settle` stub always returns `settled: True`)
-- [ ] Corpus summary for a corpus without records says "see corpora/galciv4/data/README.md" regardless of the game (game-specific path in the game-agnostic loader)
 - [ ] Agent key table has no numpad keys or `+`; Stellaris speed-up must use `=` (VK_OEM_PLUS) until added
 
 ## Resolved
+- [x] Corpus summary pointed every game at corpora/galciv4/data/README.md (2026-09-25; now names the loaded corpus directory)
 - [x] Live governor run died after 3 decisions: "could not resume the game: the Paused label did not disappear". Stellaris's system search (hotkey F) was open with keyboard focus, so Space went into the text box; stray keys typed while the pilot had focused the game are the likely cause (2026-09-25; set_paused now tries one Esc before giving up, and the governor flags needs-attention instead of crashing; reproduced and verified live)
 - [x] Governor: pausing from the dashboard triggered a model decision ("paused by the human" was treated as a decision point) (2026-09-25; fixed, regression test)
 - [x] Pilot auto-commit body named the model, against the no-model-names rule (2026-09-25; fixed)

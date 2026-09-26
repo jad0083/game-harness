@@ -389,3 +389,12 @@ def test_control_failure_flags_needs_attention_instead_of_crashing(setup):
 
 def test_default_speed_is_normal():
     assert Settings().speed == "normal"
+
+
+def test_explicit_journal_survives_game_switch(monkeypatch, tmp_path):
+    from pilot import cli
+    captured = {}
+    monkeypatch.setenv("PILOT_JOURNAL", str(tmp_path / "j.md"))
+    monkeypatch.setattr(cli, "check", lambda s: captured.setdefault("s", s) and 0)
+    cli.main(["check", "--game", "stellaris"])
+    assert captured["s"].game == "stellaris" and captured["s"].journal == tmp_path / "j.md"

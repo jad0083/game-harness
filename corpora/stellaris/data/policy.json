@@ -1,0 +1,1413 @@
+[
+ {
+  "id": "policy:appropriation",
+  "name": "Land Appropriation",
+  "aliases": [
+   "Allowed",
+   "Prohibited",
+   "appropriation",
+   "appropriation_allowed",
+   "appropriation_not_allowed"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "society",
+   "options": [
+    "Prohibited (appropriation_not_allowed): The land that our empire controls belongs to all of its inhabitants. Conquered planets will have their populations preserved as-is.",
+    "Allowed (appropriation_allowed): The land that the lesser species are not properly utilizing can be put to greater use by their betters.; modifier: "
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:artificial_intelligence_policy",
+  "name": "Artificial Intelligence",
+  "aliases": [
+   "Citizen Rights",
+   "Outlawed",
+   "Servitude",
+   "ai_full_rights",
+   "ai_outlawed",
+   "ai_servitude",
+   "artificial_intelligence_policy"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "society",
+   "options": [
+    "Outlawed (ai_outlawed): Intelligent, self-aware machines are an incalculable threat to all living things. The creation of a true artificial intelligence is an offense punishable by death.; valid: NOR = { is_materialist = yes has_origin = origin_synthetic_fertility custom_tooltip = { success_text = is_a_synthetic_empire has_country_flag = synthetic_empire } is_individual_machine = yes }; potential: is_individual_machine = no",
+    "Servitude (ai_servitude): The overriding purpose of any machine must be to serve its masters and perform whatever tasks it was designed for, regardless of how intelligent it may be.; valid: NOT = { has_origin = origin_synthetic_fertility } custom_tooltip = { fail_text = is_a_synthetic_empire_fail NOT = { has_country_flag = synthetic_empire } } is_individual_machine = no; potential: is_individual_machine = no",
+    "Citizen Rights (ai_full_rights): Any self-aware machine with true intelligence must be regarded as an individual with all the rights and obligations that entails.; modifier: ; valid: OR = { custom_tooltip = { fail_text = is_a_synthetic_empire has_country_flag = synthetic_empire } if = { limit = { NOT = { has_origin = origin_cybernetic_creed } } is_spiritualist = no } is_individua…"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:behemoth_egg_policy",
+  "name": "Egg Development",
+  "aliases": [
+   "Harbinger Development",
+   "Mauler Development",
+   "Mixed Development",
+   "Stinger Development",
+   "Weaver Development",
+   "behemoth_egg_policy",
+   "behemoth_egg_policy_harbingers",
+   "behemoth_egg_policy_maulers",
+   "behemoth_egg_policy_mixed",
+   "behemoth_egg_policy_stingers",
+   "behemoth_egg_policy_weavers"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "military",
+   "options": [
+    "Mixed Development (behemoth_egg_policy_mixed): Hatched fleets will be an assortment of all biological ship classes.",
+    "Mauler Development (behemoth_egg_policy_maulers): Only Maulers will be hatched.",
+    "Weaver Development (behemoth_egg_policy_weavers): Only Weavers will be hatched.",
+    "Harbinger Development (behemoth_egg_policy_harbingers): Only Harbingers will be hatched.; potential: owner = { has_technology = tech_harbingers }",
+    "Stinger Development (behemoth_egg_policy_stingers): Only Stingers will be hatched.; potential: owner = { has_technology = tech_stingers }"
+   ],
+   "source": "03_policies_biogenesis.txt"
+  }
+ },
+ {
+  "id": "policy:border_policy",
+  "name": "Initial Border Status",
+  "aliases": [
+   "Closed",
+   "Open",
+   "border_policy",
+   "border_policy_closed",
+   "border_policy_open"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "diplomacy",
+   "options": [
+    "Open (border_policy_open): Isolation invites suspicion, and suspicion invites conflict. Let us show our neighbors that we have nothing to hide. Borders will be open to other empires by default.; valid: OR = { is_nomadic = yes NOR = { has_valid_civic = civic_machine_terminator has_valid_civic = civic_hive_devouring_swarm has_valid_civic = civic_fanatic_purifiers } is_primitive = yes }; potential: OR = { is_country_type = default is_country_type = mirrored_country is_primitive = yes }",
+    "Closed (border_policy_closed): The borders of our empire must be well guarded, lest we fall victim to insidious influences. Only those who have proven themselves worthy may enter our space. Borders will be closed to other empires by default.; modifier: ; valid: is_primitive = no; potential: is_nomadic = no"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:computation_core_allocation",
+  "name": "Computation Core Focus",
+  "aliases": [
+   "Production Streamlining",
+   "Research Processes",
+   "Stability Analysis",
+   "computation_core_allocation",
+   "computation_core_production",
+   "computation_core_research",
+   "computation_core_stability"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "society",
+   "options": [
+    "Production Streamlining (computation_core_production): Utilize spare processing cycles to streamline production processes.Effects: NEW_LINE- Every 100 job roboticist Roboticists and job identity designer Identity Designers increases Job Efficiency for job foundry Metallurgis…",
+    "Stability Analysis (computation_core_stability): Allocate resources for monitoring societal information flow for irregularities.Effects: NEW_LINE- Every 100 job roboticist Roboticists and job identity designer Identity Designers increases Job Efficiency for job bureauc…",
+    "Research Processes (computation_core_research): Designate additional processing cycles to performance intensive research servers.Effects: NEW_LINE- Every 100 job roboticist Roboticists and job identity designer Identity Designers increases Job Efficiency for job physi…"
+   ],
+   "source": "01_policies_machine_age.txt"
+  }
+ },
+ {
+  "id": "policy:cyberization_standards",
+  "name": "Cyberization Standards",
+  "aliases": [
+   "Full Cyberization",
+   "Limited Cyberization",
+   "cyberization_standards",
+   "cyberization_standards_full",
+   "cyberization_standards_full_hive",
+   "cyberization_standards_limited",
+   "cyberization_standards_limited_hive"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "society",
+   "options": [
+    "Full Cyberization (cyberization_standards_full): All individuals are expected to undergo the installation of a complete set of cybernetic implants.; potential: is_gestalt = no",
+    "Limited Cyberization (cyberization_standards_limited): Individuals against full augmentation can install a limited set of cybernetic implants.; potential: is_gestalt = no",
+    "Full Cyberization (cyberization_standards_full_hive): Culling drones with bodies that reject cybernetic implants is a sacrifice made for greater efficiency.; potential: is_gestalt = yes",
+    "Limited Cyberization (cyberization_standards_limited_hive): Outfitting defective drones with limited cybernetic implants allows them to continue to contribute. Job Efficiency for Cybernetic Drones: -5%; potential: is_gestalt = yes"
+   ],
+   "source": "01_policies_machine_age.txt"
+  }
+ },
+ {
+  "id": "policy:debris",
+  "name": "Debris",
+  "aliases": [
+   "Research & Scavenge Debris",
+   "Research Debris",
+   "Scavenge Debris",
+   "debris",
+   "research_debris",
+   "scavenge_and_research_debris",
+   "scavenge_debris"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "research",
+   "options": [
+    "Research Debris (research_debris): We will research our enemies' technologies from the remains of their ships.; potential: is_scavenger = no",
+    "Scavenge Debris (scavenge_debris): We will scavenge resources from the remains of our enemies' ships.; potential: is_scavenger = no",
+    "Research & Scavenge Debris (scavenge_and_research_debris): As Scavengers we will strip debris for both research and resources.; potential: is_scavenger = yes"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:defense_platform_protocols",
+  "name": "Defense Platform Protocols",
+  "aliases": [
+   "Provocation Arrays",
+   "Reinforced Plating",
+   "Resilient Frames",
+   "Standard Doctrine",
+   "Synchronized Shielding",
+   "defense_platform_protocols",
+   "defense_platform_provocation_arrays",
+   "defense_platform_reinforced_plating",
+   "defense_platform_resilient_frames",
+   "defense_platform_standard",
+   "defense_platform_synchronized_shielding"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "military",
+   "options": [
+    "Standard Doctrine (defense_platform_standard): Defensive platforms operate to baseline specifications. No additional effects or upkeep.",
+    "Synchronized Shielding (defense_platform_synchronized_shielding): Distributed shield harmonics shelter our defensive platforms from the most punishing fire. Defensive platforms take reduced damage from the Stellar Cannon.; modifier: ship_military_station_small_upkeep_mult = 0.30 ship_ion_cannon_upkeep_mult = 0.30",
+    "Reinforced Plating (defense_platform_reinforced_plating): Layered ablative plating hardens our starbases along with their defensive platforms against incoming fire. Starbases and their defensive platforms take reduced damage from all weapons.; modifier: ship_military_station_small_upkeep_mult = 0.30 ship_ion_cannon_upkeep_mult = 0.30",
+    "Resilient Frames (defense_platform_resilient_frames): Redundant power cores and modular framing let crippled platforms power down and reboot rather than break apart. Defensive platforms are disabled instead of destroyed, reactivating once the fighting ends.; modifier: ship_military_station_small_upkeep_mult = 1.0 ship_ion_cannon_upkeep_mult = 1.0",
+    "Provocation Arrays (defense_platform_provocation_arrays): Aggressive sensor locks and a weapons-hot posture bait hostile fire toward our platforms and away from the fleet. Enemy ships are far more likely to target our defensive platforms in combat.; modifier: ship_military_station_small_upkeep_mult = 0.30 ship_ion_cannon_upkeep_mult = 0.30 shipsize_military_station_small_target_weight_mult = 0.50 shipsize_ion_cannon_target_weight_mult = 0.50"
+   ],
+   "source": "06_policies_defense_platforms.txt"
+  }
+ },
+ {
+  "id": "policy:defense_preference",
+  "name": "Defense Preference",
+  "aliases": [
+   "Armor Priority",
+   "Balanced Defenses",
+   "Shield Priority",
+   "armor_preference",
+   "balanced_defenses",
+   "defense_preference",
+   "shields_preference"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "military",
+   "options": [
+    "Shield Priority (shields_preference): Automated ship designs will prioritize shield generators, and automated research will favor shield technologies when they are offered.",
+    "Balanced Defenses (balanced_defenses): Automated ship designs will keep an even mix of shields and armor. Automated research will favor technologies that improve hull strength when they are offered.",
+    "Armor Priority (armor_preference): Automated ship designs will prioritize armor plating, and automated research will favor armor technologies when they are offered."
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:diplomatic_stance",
+  "name": "Diplomatic Stance",
+  "aliases": [
+   "Antagonistic",
+   "Belligerent",
+   "Cooperative",
+   "Devastators",
+   "Dormant",
+   "Eager",
+   "Expansionist",
+   "Extermination",
+   "Fearful",
+   "Hunger",
+   "Ignorant",
+   "Isolationist",
+   "Mercantile",
+   "Purification",
+   "Questioning",
+   "Stellar Culture Shock",
+   "Supremacist",
+   "Uncertain",
+   "diplo_stance_animosity",
+   "diplo_stance_animosity_nomad",
+   "diplo_stance_belligerent",
+   "diplo_stance_belligerent_nomad",
+   "diplo_stance_cooperative",
+   "diplo_stance_cooperative_nomad",
+   "diplo_stance_culture_shock",
+   "diplo_stance_devastators",
+   "diplo_stance_eager",
+   "diplo_stance_expansionist",
+   "diplo_stance_expansionist_wilderness",
+   "diplo_stance_extermination",
+   "diplo_stance_fearful",
+   "diplo_stance_hunger",
+   "diplo_stance_ignorant",
+   "diplo_stance_isolationist",
+   "diplo_stance_isolationist_fallen_empire",
+   "diplo_stance_isolationist_nomad",
+   "diplo_stance_mercantile",
+   "diplo_stance_purification",
+   "diplo_stance_questioning",
+   "diplo_stance_supremacist",
+   "diplo_stance_supremacist_nomad",
+   "diplo_stance_uncertain",
+   "diplomatic_stance"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "diplomacy",
+   "allow": "is_at_war = no",
+   "options": [
+    "Belligerent (diplo_stance_belligerent): This empire will attempt to bully weaker empires into submission to their will. Sending an envoy to Improve Relations costs influence 0.25 per month.; modifier: country_war_exhaustion_mult = -0.1 country_naval_cap_mult = 0.1 country_claim_influence_cost_mult = -0.1 external_leader_pool_add = -1; valid: NOT = { has_valid_civic = civic_inwards_perfection } is_homicidal = no; potential: OR = { is_country_type = default is_country_type = awakened_fallen_empire } is_nomadic = no",
+    "Cooperative (diplo_stance_cooperative): This empire will attempt to find common ground and negotiate with other empires in the name of friendship. Sending an envoy to Harm Relations costs influence 0.25 per month.; modifier: diplo_weight_mult = 0.25 envoy_improve_relations_mult = 0.5 country_border_friction_mult = -0.5 operations_cost_mult = 0.25 operations_upkeep_mult = 0.25 external_leader_pool_add = 1; valid: NOT = { has_valid_civic = civic_inwards_perfection } is_unfriendly = no; potential: OR = { is_country_type = default is_country_type = awakened_fallen_empire is_country_type = mirrored_country } is_nomadic = no",
+    "Isolationist (diplo_stance_isolationist): This empire wishes to be left alone to their own affairs. Sending an envoy to Improve Relations or Harm Relations costs influence 0.25 per month.; modifier: country_unity_produces_mult = 0.10 diplo_weight_mult = -0.25 diplomacy_upkeep_mult = 1 pop_government_ethic_attraction = 0.25 country_border_friction_mult = 2.0 external_leader_pool_add = -2; valid: is_megacorp = no is_homicidal = no; potential: OR = { is_country_type = default is_country_type = awakened_fallen_empire is_country_type = exiled } is_nomadic = no",
+    "Expansionist (diplo_stance_expansionist): This empire seeks to grow peacefully, but has no specific diplomatic focus.; modifier: starbase_outpost_cost_mult = -0.10 planet_colony_development_speed_mult = 0.15 country_border_friction_mult = 1.0; valid: is_homicidal = no; potential: is_wilderness_empire = no is_nomadic = no OR = { is_country_type = default is_country_type = awakened_fallen_empire }",
+    "Expansionist (diplo_stance_expansionist_wilderness): This empire seeks to grow peacefully, but has no specific diplomatic focus.; modifier: starbase_outpost_cost_mult = -0.10 terraform_speed_mult = 0.15 country_border_friction_mult = 1.0; valid: is_homicidal = no; potential: is_wilderness_empire = yes OR = { is_country_type = default is_country_type = awakened_fallen_empire }",
+    "Mercantile (diplo_stance_mercantile): This empire desires the facilitation of trade above all else. Using the Close Borders diplomatic action against non-Rivals costs influence 0.25 per month.; modifier: diplo_weight_economy_mult = 0.25 country_trade_produces_mult = 0.1 external_leader_pool_add = 1; valid: NOT = { has_valid_civic = civic_inwards_perfection } is_homicidal = no if = { limit = { has_megacorp = yes is_megacorp = yes } is_megacorp = yes } else_if = { limit = { has_megacorp = yes } has_civic…; potential: OR = { is_country_type = default is_country_type = awakened_fallen_empire is_country_type = mirrored_country } is_gestalt = no",
+    "Supremacist (diplo_stance_supremacist): This empire demands that all will bow before them. This Diplomatic Stance will harm relations with all other Empires in the Supremacist Diplomatic Stance.; modifier: diplo_weight_naval_mult = 1.00 diplo_weight_economy_mult = -0.5 diplo_weight_technology_mult = -0.5 country_war_exhaustion_mult = -0.20 country_naval_cap_mult = 0.20 country_claim_influence_cost_mult = -0.1; valid: NOR = { has_valid_civic = civic_inwards_perfection has_modifier = humiliated } is_homicidal = no custom_tooltip = { fail_text = requires_supremacy_traditions OR = { has_tradition = tr_supremacy_finis…; potential: OR = { is_country_type = awakened_fallen_empire is_country_type = awakened_marauders is_country_type = default is_country_type = mirrored_country } i…",
+    "Antagonistic (diplo_stance_animosity): This empire wants to compete against all possible rivals. This Diplomatic Stance will increase the Negative Opinion impact of being Rivals by 100.; modifier: max_rivalries = 2 rivalries_unity_produces_add = 10 country_border_friction_mult = 1 diplo_weight_rivals_mult = 0.05; valid: is_homicidal = no custom_tooltip = { fail_text = requires_enmity_traditions OR = { has_tradition = tr_enmity_finish NOT = { is_country_type = default } } } is_subject = no; potential: is_country_type = default is_nomadic = no",
+    "Hunger (diplo_stance_hunger): This empire hungers and consumes.; modifier: ; valid: OR = { has_valid_civic = civic_hive_devouring_swarm has_menace_perk = menp_behemoth_ever_hungry }; potential: OR = { is_hive_empire = yes has_menace_perk = menp_behemoth_ever_hungry }",
+    "Extermination (diplo_stance_extermination): This empire's purpose is to destroy all biological life.; modifier: ; valid: has_valid_civic = civic_machine_terminator; potential: is_machine_empire = yes",
+    "Purification (diplo_stance_purification): This empire believes that enemies exist solely to be destroyed, and that they are the ones chosen to do so.; modifier: ; valid: has_valid_civic = civic_fanatic_purifiers",
+    "Dormant (diplo_stance_isolationist_fallen_empire): This empire fell into a dark age long ago, and largely isolates itself from the rest of the galaxy.; modifier: ; potential: is_country_type = fallen_empire",
+    "Ignorant (diplo_stance_ignorant): This pre-FTL civilization is ignorant of the reality that exists beyond its gravity well.; modifier: ; potential: is_country_type = primitive current_awareness_level < medium capital_scope = { NOT = { has_modifier = culture_shock_diplomacy } }",
+    "Questioning (diplo_stance_questioning): This pre-FTL civilization is beginning to question what might exist beyond their star system.; modifier: ; potential: is_country_type = primitive current_awareness_level = medium capital_scope = { NOT = { has_modifier = culture_shock_diplomacy } }",
+    "Eager (diplo_stance_eager): This pre-FTL civilization is eager to set out to the stars and meet the rest of the galaxy.; modifier: ; potential: is_country_type = primitive current_awareness_level >= high is_xenophile = yes capital_scope = { NOT = { has_modifier = culture_shock_diplomacy } }",
+    "Fearful (diplo_stance_fearful): This pre-FTL civilization is afraid of the alien dangers that exist in the galaxy.; modifier: ; potential: is_country_type = primitive current_awareness_level >= high is_xenophobe = yes capital_scope = { NOT = { has_modifier = culture_shock_diplomacy } }",
+    "Uncertain (diplo_stance_uncertain): This pre-FTL civilization is uncertain as to how to approach alien societies.; modifier: ; potential: is_country_type = primitive current_awareness_level >= high is_xenophile = no is_xenophobe = no capital_scope = { NOT = { has_modifier = culture_shoc…",
+    "Stellar Culture Shock (diplo_stance_culture_shock): This pre-FTL civilization is still adjusting to the knowledge that they are not alone in the galaxy.; modifier: diplo_action_acceptance_add = -100; potential: is_country_type = primitive capital_scope = { has_modifier = culture_shock_diplomacy }",
+    "Devastators (diplo_stance_devastators): This empire seeks to thoroughly devastate alien planets.; modifier: ; valid: OR = { has_valid_civic = civic_scorched_earth has_valid_civic = civic_hive_scorched_earth }; potential: OR = { has_valid_civic = civic_scorched_earth has_valid_civic = civic_hive_scorched_earth }",
+    "Belligerent (diplo_stance_belligerent_nomad): This empire will attempt to bully weaker empires into submission to their will. Sending an envoy to Improve Relations costs influence 0.25 per month.; modifier: country_war_exhaustion_mult = -0.1 country_naval_cap_mult = 0.1 starbase_waystations_upkeep_mult = -0.2 starbase_waystations_modules_upkeep_mult = -0.2 external_leader_pool_add = -1; valid: NOT = { has_valid_civic = civic_inwards_perfection } is_homicidal = no; potential: is_nomadic = yes",
+    "Cooperative (diplo_stance_cooperative_nomad): This empire will attempt to find common ground and negotiate with other empires in the name of friendship. Sending an envoy to Harm Relations costs influence 0.25 per month.; modifier: diplo_weight_mult = 0.25 envoy_improve_relations_mult = 0.5 unlicensed_waystations_scaling_mult = -0.5 operations_cost_mult = 0.25 operations_upkeep_mult = 0.25 external_leader_pool_add = 1; valid: NOT = { has_valid_civic = civic_inwards_perfection } is_unfriendly = no; potential: is_nomadic = yes",
+    "Isolationist (diplo_stance_isolationist_nomad): This empire wishes to be left alone to their own affairs. Sending an envoy to Improve Relations or Harm Relations costs influence 0.25 per month.; modifier: country_unity_produces_mult = 0.10 diplo_weight_mult = -0.25 diplomacy_upkeep_mult = 1 pop_government_ethic_attraction = 0.25 unlicensed_waystations_scaling_mult = 2 external_leader_pool_add = -2; valid: is_megacorp = no is_homicidal = no; potential: is_nomadic = yes",
+    "Supremacist (diplo_stance_supremacist_nomad): This empire demands that all will bow before them. This Diplomatic Stance will harm relations with all other Empires in the Supremacist Diplomatic Stance.; modifier: diplo_weight_naval_mult = 1.00 diplo_weight_economy_mult = -0.5 diplo_weight_technology_mult = -0.5 country_war_exhaustion_mult = -0.20 country_naval_cap_mult = 0.20 starbase_waystations_upkeep_mult = -0.2 starbase_waystations_modules_upkeep_mult = …; valid: NOR = { has_valid_civic = civic_inwards_perfection has_modifier = humiliated } is_homicidal = no custom_tooltip = { fail_text = requires_supremacy_traditions OR = { has_tradition = tr_supremacy_finis…; potential: OR = { is_country_type = awakened_fallen_empire is_country_type = awakened_marauders is_country_type = default is_country_type = mirrored_country } i…",
+    "Antagonistic (diplo_stance_animosity_nomad): This empire wants to compete against all possible rivals. This Diplomatic Stance will increase the Negative Opinion impact of being Rivals by 100.; modifier: max_rivalries = 2 rivalries_unity_produces_add = 10 unlicensed_waystations_scaling_mult = 1 diplo_weight_rivals_mult = 0.05; valid: is_homicidal = no custom_tooltip = { fail_text = requires_enmity_traditions OR = { has_tradition = tr_enmity_finish NOT = { is_country_type = default } } } is_subject = no; potential: is_country_type = default is_nomadic = yes"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:disconnected_drones",
+  "name": "Disconnected Drones",
+  "aliases": [
+   "Extermination",
+   "Sustain",
+   "disconnected_drones",
+   "disconnected_drones_purge",
+   "disconnected_drones_sustain"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "society",
+   "options": [
+    "Sustain (disconnected_drones_sustain): Though severed from a collective consciousness, these drones can be kept alive. Unlocks Citizenship Types for Disconnected Drones; potential: NOT = { has_valid_civic = civic_fanatic_purifiers }",
+    "Extermination (disconnected_drones_purge): The rights of a sapient being do not extend to those without reason. Without a central consciousness to guide them, these drones are little more than animals, and an animal that gets in the way is a pest.; valid: is_xenophile = no"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:drone_policy",
+  "name": "Production Policy",
+  "aliases": [
+   "Balanced Production",
+   "Extraction Focus",
+   "Manufacturing Focus",
+   "drone_policy",
+   "drone_policy_balanced",
+   "drone_policy_thinker",
+   "drone_policy_worker"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "economy",
+   "options": [
+    "Balanced Production (drone_policy_balanced): The Mind dedicates itself equally to the production of raw resources and finished goods. No bonuses or penalties to resource production.; modifier: ",
+    "Extraction Focus (drone_policy_worker): The Menial Drones that extract raw resources are given priority by the Mind, becoming more productive at the expense of the Complex Drones.; modifier: planet_jobs_simple_drone_produces_mult = 0.2 planet_jobs_complex_drone_produces_mult = -0.2",
+    "Manufacturing Focus (drone_policy_thinker): The Complex Drones that manufacture finished goods are given priority by the Mind, becoming more productive at the expense of the Menial Drones.; modifier: planet_jobs_simple_drone_produces_mult = -0.2 planet_jobs_complex_drone_produces_mult = 0.2"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:economic_policy",
+  "name": "Economic Policy",
+  "aliases": [
+   "Civilian Economy",
+   "Militarized Economy",
+   "Mixed Economy",
+   "economic_policy",
+   "economic_policy_balanced",
+   "economic_policy_civilian",
+   "economic_policy_military"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "economy",
+   "options": [
+    "Civilian Economy (economic_policy_civilian): The needs of the populace must become before the business of war. Economic might, not military prowess, is what our empire will be founded on.; modifier: planet_jobs_consumer_goods_produces_mult = 0.25 planet_jobs_alloys_produces_mult = -0.25",
+    "Mixed Economy (economic_policy_balanced): To commit ourselves fully to either war or peace is to restrict ourselves to a narrow view. We must be ready for whatever the future may hold. No bonuses or penalties to resource production.; modifier: ",
+    "Militarized Economy (economic_policy_military): To neglect our defense is to neglect our survival. Trinkets and baubles are scarce comfort when the enemy is battering down the gates.; modifier: planet_jobs_consumer_goods_produces_mult = -0.25 planet_jobs_alloys_produces_mult = 0.25"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:engineering_research_policy",
+  "name": "Engineering Research Focus",
+  "aliases": [
+   "General Studies",
+   "Industry",
+   "Materials",
+   "Propulsion",
+   "Voidcraft",
+   "engineering_research_policy",
+   "research_policy_industry",
+   "research_policy_materials",
+   "research_policy_no_focus",
+   "research_policy_propulsion",
+   "research_policy_voidcraft"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "research",
+   "options": [
+    "General Studies (research_policy_no_focus): By not focusing on any particular branch, our researchers will have more freedom to pursue their own experiments.; modifier: country_engineering_tech_research_speed = 0.10",
+    "Materials (research_policy_materials): Focusing on Materials technologies will give us an advantage in the given field of research.; modifier: category_materials_research_speed_mult = 0.10 category_materials_draw_chance_mult = 0.25",
+    "Propulsion (research_policy_propulsion): Focusing on Propulsion technologies will give us an advantage in the given field of research.; modifier: category_propulsion_research_speed_mult = 0.10 category_propulsion_draw_chance_mult = 0.25",
+    "Voidcraft (research_policy_voidcraft): Focusing on Voidcraft technologies will give us an advantage in the given field of research.; modifier: category_voidcraft_research_speed_mult = 0.10 category_voidcraft_draw_chance_mult = 0.25",
+    "Industry (research_policy_industry): Focusing on Industry technologies will give us an advantage in the given field of research.; modifier: category_industry_research_speed_mult = 0.10 category_industry_draw_chance_mult = 0.25"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:enlightenment",
+  "name": "Pre-FTL Enlightenment",
+  "aliases": [
+   "Allowed",
+   "Covert Only",
+   "Prohibited",
+   "enlightenment",
+   "enlightenment_allowed",
+   "enlightenment_covert_only",
+   "enlightenment_not_allowed"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "diplomacy",
+   "options": [
+    "Prohibited (enlightenment_not_allowed): This society is not ready to grasp the wonders we have discovered. Exposing the truth too quickly can entail enormous risks for everyone involved. May Not Enlighten Pre-FTL Civilizations",
+    "Covert Only (enlightenment_covert_only): Revealing our existence to pre-FTL civilizations would alter the natural course of their development. We should help them, but without revealing our presence. May Only Enlighten Pre-FTL Civilizations through Espionage; valid: NOT = { has_policy_flag = interference_not_allowed } NOR = { has_ethic = ethic_fanatic_xenophobe has_valid_civic = civic_fanatic_purifiers has_valid_civic = civic_hive_devouring_swarm has_valid_civic…",
+    "Allowed (enlightenment_allowed): By sharing our knowledge, we can actively encourage less advanced societies to take their rightful place in the galactic community. May Enlighten Pre-FTL civilizations through both Espionage and Diplomatic actions; modifier: ; valid: NOT = { has_policy_flag = interference_not_allowed } NOR = { has_ethic = ethic_fanatic_xenophobe has_valid_civic = civic_fanatic_purifiers has_valid_civic = civic_hive_devouring_swarm has_valid_civic…"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:exhibition_focus",
+  "name": "Exhibition Focus",
+  "aliases": [
+   "Aesthetic Wonders Focus",
+   "Equal Focus",
+   "Galactic History Focus",
+   "Xeno Geology Focus",
+   "aesthetic_wonders_focus",
+   "exhibition_focus",
+   "galactic_history_focus",
+   "no_focus",
+   "xenogeology_focus"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "research",
+   "options": [
+    "Aesthetic Wonders Focus (aesthetic_wonders_focus): There is no galactic standard for beauty, but all are encouraged to engage in its debate.; modifier: aesthetic_wonder_specimens_produces_mult = 0.5 xeno_geology_specimens_produces_mult = -0.25 historical_item_specimens_produces_mult = -0.25",
+    "Galactic History Focus (galactic_history_focus): Lessons from the past inspire wisdom in the present.; modifier: historical_item_specimens_produces_mult = 0.5 xeno_geology_specimens_produces_mult = -0.25 aesthetic_wonder_specimens_produces_mult = -0.25",
+    "Xeno Geology Focus (xenogeology_focus): This is no mere rock collection - it is a display of exquisite minerals.; modifier: xeno_geology_specimens_produces_mult = 0.5 aesthetic_wonder_specimens_produces_mult = -0.25 historical_item_specimens_produces_mult = -0.25",
+    "Equal Focus (no_focus): We shall put no emphasis on any category of specimens.; modifier: "
+   ],
+   "source": "02_policies_grand_archive.txt"
+  }
+ },
+ {
+  "id": "policy:first_contact_protocol",
+  "name": "First Contact Protocol",
+  "aliases": [
+   "Aggressive",
+   "Cautious",
+   "Proactive",
+   "first_contact_attack_allowed",
+   "first_contact_cautious",
+   "first_contact_proactive",
+   "first_contact_protocol"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "diplomacy",
+   "options": [
+    "Proactive (first_contact_proactive): Meeting alien civilizations presents an exciting opportunity to make new friends and fresh discoveries.; modifier: first_contact_speed_mult = 0.1; valid: is_homicidal = no is_xenophobe = no NOT = { has_origin = origin_payback }",
+    "Cautious (first_contact_cautious): We will take every measure to prevent information about ourselves from falling into alien hands before we have decided whether they will be friend or foe.; modifier: first_contact_defense_add = 2; valid: is_homicidal = no",
+    "Aggressive (first_contact_attack_allowed): Unknown dangers may hide among the stars. To ensure our continued survival we must be ready to strike without hesitation.; modifier: ; valid: is_pacifist = no OR = { is_xenophile = no is_homicidal = yes }"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:fleet_doctrine",
+  "name": "Fleet Doctrine",
+  "aliases": [
+   "Ambush Doctrine",
+   "Barrage Doctrine",
+   "Battle Line Doctrine",
+   "Phalanx Doctrine",
+   "Spearhead Doctrine",
+   "Strike Wing Doctrine",
+   "ambush_fleet_doctrine",
+   "barrage_fleet_doctrine",
+   "battleline_fleet_doctrine",
+   "fleet_doctrine",
+   "phalanx_fleet_doctrine",
+   "spearhead_fleet_doctrine",
+   "strike_wing_fleet_doctrine"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "military",
+   "options": [
+    "Spearhead Doctrine (spearhead_fleet_doctrine): Automated ship designs close to point-blank range, the vanguard pressing a close-quarters attack while the main body provides direct fire support.",
+    "Battle Line Doctrine (battleline_fleet_doctrine): Automated ship designs form a battle line for sustained mid-range fire, a flexible all-purpose formation.",
+    "Barrage Doctrine (barrage_fleet_doctrine): Automated ship designs stand off to deliver long-range bombardment, with a screen shielding the firing line.",
+    "Strike Wing Doctrine (strike_wing_fleet_doctrine): Automated ship designs launch strike craft in waves, with a screen guarding the formation.",
+    "Ambush Doctrine (ambush_fleet_doctrine): Automated ship designs strike from concealment, leading with a heavy opening salvo backed by long-range fire.",
+    "Phalanx Doctrine (phalanx_fleet_doctrine): Automated ship designs hold a resilient defensive screen backed by supporting fire, prevailing through attrition."
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:food_policy",
+  "name": "Food Policy",
+  "aliases": [
+   "Dietary Balance",
+   "Nutritional Plenitude",
+   "Strict Rationing",
+   "food_policy",
+   "food_policy_generous",
+   "food_policy_normal",
+   "food_policy_rationing"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "economy",
+   "options": [
+    "Strict Rationing (food_policy_rationing): In times of need, we all must sacrifice for the greater good. What is a little starvation now, when our glorious future awaits?; modifier: planet_pops_organics_food_upkeep_mult = -0.25 planet_pops_organics_minerals_upkeep_mult = -0.25 logistic_growth_mult = -0.1 biological_pop_happiness = -0.1 lithoid_pop_happiness = -0.1",
+    "Dietary Balance (food_policy_normal): Our population will have all their nutritional needs met, but food is a precious resource and frivolous waste should be avoided. Organic Pops have normal food use and growth speed.; modifier: ",
+    "Nutritional Plenitude (food_policy_generous): It is the fundamental right of each of our citizens to enter hibernation with a full digestive organ. Easy access to plentiful, nutritional fare will be the fuel that spurs our growth among the stars.; modifier: planet_pops_organics_food_upkeep_mult = 0.25 planet_pops_organics_minerals_upkeep_mult = 0.25 biological_pop_happiness = 0.05 lithoid_pop_happiness = 0.05 logistic_growth_mult = 0.1"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:food_policy_gestalt",
+  "name": "Food Policy",
+  "aliases": [
+   "Dietary Balance",
+   "Nutritional Plenitude",
+   "Strict Rationing",
+   "food_policy_gestalt",
+   "food_policy_gestalt_generous",
+   "food_policy_gestalt_normal",
+   "food_policy_gestalt_rationing"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "economy",
+   "options": [
+    "Strict Rationing (food_policy_gestalt_rationing): Waste not, want not.; modifier: planet_pops_organics_food_upkeep_mult = -0.25 logistic_growth_mult = -0.15",
+    "Dietary Balance (food_policy_gestalt_normal): All Drones will have their necessary biomass intakes met by the Mind. Drones have normal food use and growth speed.; modifier: ",
+    "Nutritional Plenitude (food_policy_gestalt_generous): A well-fed Drone is a productive Drone.; modifier: planet_pops_organics_food_upkeep_mult = 0.5 logistic_growth_mult = 0.33"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:homogenous_class",
+  "name": "Genome Tailoring",
+  "aliases": [
+   "Administrative Records",
+   "Martial Protocol",
+   "Scientific Codex",
+   "homogenous_class",
+   "homogenous_class_commanders",
+   "homogenous_class_officials",
+   "homogenous_class_scientists"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "society",
+   "options": [
+    "Scientific Codex (homogenous_class_scientists): Effects for Backup Clones of scientist Scientists: t- society $concept_society_research$ Upkeep: +$@homogenous_clone_upkeep|0$ t- Have reduced …; modifier: scientist_exp_gain = 0.15",
+    "Administrative Records (homogenous_class_officials): Effects for Backup Clones of official Officials: t- society $concept_society_research$ Upkeep: +$@homogenous_clone_upkeep|0$ t- Have reduced …; modifier: official_exp_gain = 0.15",
+    "Martial Protocol (homogenous_class_commanders): Effects for Backup Clones of commander Commanders: t- society $concept_society_research$ Upkeep: +$@homogenous_clone_upkeep|0$ t- Have reduced …; modifier: commander_exp_gain = 0.15"
+   ],
+   "source": "03_policies_biogenesis.txt"
+  }
+ },
+ {
+  "id": "policy:interference",
+  "name": "Pre-FTL Interference",
+  "aliases": [
+   "Active Interference",
+   "Aggressive Interference",
+   "Non-Interference",
+   "Subtle Interference",
+   "interference",
+   "interference_active",
+   "interference_aggressive",
+   "interference_not_allowed",
+   "interference_subtle"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "diplomacy",
+   "options": [
+    "Non-Interference (interference_not_allowed): It is not our place to influence the development of another society. Watch, but do not interfere.; valid: OR = { custom_tooltip = { text = is_a_signatory_vassal any_agreement = { agreement_preset = preset_signatory } } is_active_resolution = resolution_pre_ftl_stances_non_interference NOR = { has_ethic =…",
+    "Subtle Interference (interference_subtle): We can nudge their development in the right direction, but our touch must remain subtle.; valid: OR = { custom_tooltip = { text = is_a_signatory_vassal any_agreement = { agreement_preset = preset_signatory } } NOR = { has_ethic = ethic_fanatic_xenophobe has_valid_civic = civic_fanatic_purifiers …",
+    "Active Interference (interference_active): To unlock the secrets of the universe, any subject of interest must be made freely available for study.; valid: NOR = { custom_tooltip = { text = is_a_signatory_vassal any_agreement = { agreement_preset = preset_signatory } } has_valid_civic = civic_fanatic_purifiers has_valid_civic = civic_hive_devouring_swar…",
+    "Aggressive Interference (interference_aggressive): The strong hold dominion over the weak. The fate of less developed societies is ours to command.; modifier: ; valid: custom_tooltip = { success_text = is_not_a_signatory_vassal_success fail_text = is_not_a_signatory_vassal_fail NOT = { any_agreement = { agreement_preset = preset_signatory } } } NOR = { has_ethic = …"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:knightly_duties",
+  "name": "Knightly Duties",
+  "aliases": [
+   "Courtly Knights",
+   "Herald Knights",
+   "Knight Commanders",
+   "Questing Knights",
+   "diplomats_knights",
+   "herald_knights",
+   "knightly_duties",
+   "military_knights",
+   "military_knights_nomad",
+   "questing_knights"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "society",
+   "options": [
+    "Questing Knights (questing_knights): Our Knights will focus on the Quest and nothing else. We will seek out the Toxic God wherever it lies. The Quest will benefit from it.; modifier: science_ship_survey_speed = 0.15 ship_anomaly_generation_chance_mult = 0.05",
+    "Knight Commanders (military_knights): Our Knights are required to serve on the battlefield. We cannot spare our best fighters any longer.; modifier: ship_home_territory_fire_rate_mult = 0.2 ship_fire_rate_mult = 0.10 army_damage_mult = 0.10; potential: owner = { is_nomadic = no }",
+    "Knight Commanders (military_knights_nomad): Our Knights are required to serve on the battlefield. We cannot spare our best fighters any longer.; modifier: ship_fire_rate_mult = 0.15 army_damage_mult = 0.10; potential: owner = { is_nomadic = yes }",
+    "Courtly Knights (diplomats_knights): Our Knights will be sent as ambassadors to help in our diplomatic efforts. The Quest will benefit from it.; modifier: diplo_weight_mult = 0.10",
+    "Herald Knights (herald_knights): Throughout our domain, the Knights are sent to proclaim our edicts, and inspire our people.; modifier: edicts_cost_mult = -0.15 edicts_upkeep_mult = -0.15; potential: owner = { has_country_flag = toxoids_7090_a }"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:leader_enhancement",
+  "name": "Leader Enhancement",
+  "aliases": [
+   "Capacity Boosters",
+   "Natural Selection",
+   "Selected Lineages",
+   "leader_enhancement",
+   "leader_enhancement_capacity_boosters",
+   "leader_enhancement_natural_selection",
+   "leader_enhancement_selected_lineages"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "society",
+   "options": [
+    "Natural Selection (leader_enhancement_natural_selection): Let nature take its course - it is in the crucible of experience that genius is forged. Leaders gain no additional bonuses; modifier: ",
+    "Selected Lineages (leader_enhancement_selected_lineages): Careful reproductive planning should be incentivized, lest we waste valuable genetic legacies. While active our Empire gains; modifier: leader_initial_skill = 1 leader_lifespan_add = 10 leaders_cost_mult = 1 leaders_upkeep_mult = 0.5; valid: NOT = { has_ethic = ethic_fanatic_egalitarian }",
+    "Capacity Boosters (leader_enhancement_capacity_boosters): We leave nothing to chance, no matter the cost. Through exacting curation of DNA banks do we build the leaders of tomorrow. If active our Empire gains; modifier: leader_initial_skill = 2 leader_lifespan_add = 20 leaders_cost_mult = 2 leaders_upkeep_mult = 1; valid: NOR = { has_ethic = ethic_egalitarian has_ethic = ethic_fanatic_egalitarian }"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:logistics_policy",
+  "name": "Logistics Policy",
+  "aliases": [
+   "logistics_policy",
+   "logistics_policy_gestalt"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "economy",
+   "options": [
+    "Logistics Policy (logistics_policy_gestalt): Drones will diligently carry supplies and resources wherever we need them.; potential: is_gestalt = yes"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:metabolic_regulation",
+  "name": "Metabolic Regulation",
+  "aliases": [
+   "Growth Accelerant",
+   "No Regulation",
+   "Nutrient Rationing",
+   "growth_accelerant",
+   "metabolic_regulation",
+   "no_metabolic_regulation",
+   "nutrient_rationing"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "military",
+   "options": [
+    "No Regulation (no_metabolic_regulation): We shall not manipulate the natural metabolisms of our Space Fauna.",
+    "Nutrient Rationing (nutrient_rationing): Restricting the diets of Space Fauna under our control will limit their growth rate and allow us to devote those resources elsewhere. Cloned Space Fauna no longer grow in size.; modifier: space_fauna_ship_upkeep_mult = -0.3",
+    "Growth Accelerant (growth_accelerant): Synthesizing the growth hormones that each variety of Space Fauna naturally produces invokes a voracious appetite for nutrients.; modifier: space_fauna_growth_rate_mult = 0.5 space_fauna_ship_upkeep_mult = 0.3"
+   ],
+   "source": "02_policies_grand_archive.txt"
+  }
+ },
+ {
+  "id": "policy:nomad_border_policy",
+  "name": "Nomad Border Policy",
+  "aliases": [
+   "Legalized",
+   "Outlawed",
+   "nomad_border_policy",
+   "nomad_border_policy_closed",
+   "nomad_border_policy_open"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "diplomacy",
+   "options": [
+    "Legalized (nomad_border_policy_open): We welcome Nomads to travel freely through our systems, as befits their people.; valid: ; potential: ",
+    "Outlawed (nomad_border_policy_closed): Nomadic Infringement on our sovereign territory will lead to diplomatic consequences.; modifier: ; valid: ; potential: "
+   ],
+   "source": "05_policies_nomads.txt"
+  }
+ },
+ {
+  "id": "policy:nomad_deterrence",
+  "name": "Nomad Deterrence",
+  "aliases": [
+   "Conscript Population",
+   "Do No Harm",
+   "Execute Population",
+   "Strip For Parts",
+   "nomad_deterrence",
+   "nomad_deterrence_do_no_harm",
+   "nomad_deterrence_purge_pops",
+   "nomad_deterrence_relocate_pops",
+   "nomad_deterrence_strip_districts"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "diplomacy",
+   "options": [
+    "Do No Harm (nomad_deterrence_do_no_harm): A disabled Arkship is left alone, its crew and structure unmolested. Compassion costs us nothing and may yet earn goodwill.; valid: is_homicidal = no is_xenophobe = no; potential: ",
+    "Conscript Population (nomad_deterrence_relocate_pops): A quarter of an Arkship's population is taken from the wreck and resettled on our capital, to live and labor under our rule.; valid: ; potential: ",
+    "Execute Population (nomad_deterrence_purge_pops): A quarter of an Arkship's population is put to death in the wreckage, a message to those who would drift into our space.; valid: OR = { is_xenophobe = yes is_homicidal = yes }; potential: ",
+    "Strip For Parts (nomad_deterrence_strip_districts): A quarter of a disabled Arkship's districts are stripped and hauled back to our shipyards, recovered as raw alloys.; valid: ; potential: "
+   ],
+   "source": "05_policies_nomads.txt"
+  }
+ },
+ {
+  "id": "policy:nomad_total_war",
+  "name": "Total War Behavior",
+  "aliases": [
+   "Displace",
+   "Purge",
+   "Subjugate",
+   "nomad_total_war",
+   "nomad_total_war_displace",
+   "nomad_total_war_purge",
+   "nomad_total_war_subject"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "diplomacy",
+   "options": [
+    "Subjugate (nomad_total_war_subject): Newly conquered land should be ruled by a subject loyal to us. Automatically generate Subjects when occupying planets in Total Wars; valid: is_homicidal = no",
+    "Displace (nomad_total_war_displace): Alien life deserves to keep existing, but the planets near us really should be vacated. Automatically generate Temporary Subjects who will Displace Pops, once finished they will disband; modifier: ; valid: is_xenophile = no is_homicidal = no custom_tooltip = { fail_text = nomad_total_war_requires_purge_not_banned NOT = { has_policy_flag = purge_not_allowed } }",
+    "Purge (nomad_total_war_purge): Planetbound life is so flawed, let us exterminate it from the galaxy. Automatically generate Temporary Subjects who will Purge Pops, once finished they will disband and transfer over accumulated resources; modifier: ; valid: custom_tooltip = { success_text = is_not_a_signatory_vassal_success fail_text = is_not_a_signatory_vassal_fail NOT = { any_agreement = { agreement_preset = preset_signatory } } } custom_tooltip = { f…"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:orbital_bombardment",
+  "name": "Orbital Bombardment",
+  "aliases": [
+   "Armageddon",
+   "Devastation",
+   "Indiscriminate",
+   "Selective",
+   "orbital_bombardment",
+   "orbital_bombardment_armageddon",
+   "orbital_bombardment_devastation",
+   "orbital_bombardment_indiscriminate",
+   "orbital_bombardment_selective"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "military",
+   "options": [
+    "Selective (orbital_bombardment_selective): Allows only the bombardment of identified military targets, while keeping civilian casualties to a minimum. Can only use 'Selective' orbital bombardment stance.; valid: NOT = { has_event_chain = contract_raid_planet_chain }",
+    "Indiscriminate (orbital_bombardment_indiscriminate): Allows the full use of all orbital weaponry, with no regards to life on the surface. Allows 'Indiscriminate' orbital bombardment stance.; modifier: ; valid: NOR = { has_ethic = ethic_pacifist has_ethic = ethic_fanatic_pacifist }",
+    "Armageddon (orbital_bombardment_armageddon): Allows the full use of all orbital weaponry, with no regards to life on the planet itself. Utter annihilation is the goal. Allows 'Indiscriminate' and 'Armageddon' orbital bombardment stances.; modifier: ; potential: OR = { has_valid_civic = civic_fanatic_purifiers has_valid_civic = civic_machine_terminator }",
+    "Devastation (orbital_bombardment_devastation): Allows the full use of all orbital weaponry, with the express aim of devastating the landscape. Allows 'Devastation' orbital bombardment stance.; modifier: ; potential: OR = { has_valid_civic = civic_scorched_earth has_valid_civic = civic_hive_scorched_earth }"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:orbital_bombardment_accept_surrender",
+  "name": "Orbital Surrender Acceptance",
+  "aliases": [
+   "Allowed",
+   "Prohibited",
+   "orbital_bombardment_accept_surrender",
+   "orbital_bombardment_surrender_allowed",
+   "orbital_bombardment_surrender_forbidden"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "military",
+   "options": [
+    "Prohibited (orbital_bombardment_surrender_forbidden): There will be no surrender, Orbital Bombardment will continue indefinitely. Planetary Control of Enemy Planets will only be gained by invading the planet with Ground Troops.; modifier: ",
+    "Allowed (orbital_bombardment_surrender_allowed): Foreign citizens have the right to surrender. We will gain occupation of Enemy Planets from Orbital Bombardment of planets without Defensive Armies if they choose to surrender.; potential: is_homicidal = no"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:physics_research_policy",
+  "name": "Physics Research Focus",
+  "aliases": [
+   "Computing",
+   "Field Manipulation",
+   "General Studies",
+   "Particles",
+   "physics_research_policy",
+   "research_policy_computing",
+   "research_policy_field_manipulation",
+   "research_policy_no_focus",
+   "research_policy_particles"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "research",
+   "options": [
+    "General Studies (research_policy_no_focus): By not focusing on any particular branch, our researchers will have more freedom to pursue their own experiments.; modifier: country_physics_tech_research_speed = 0.10",
+    "Field Manipulation (research_policy_field_manipulation): Focusing on Field Manipulation technologies will give us an advantage in the given field of research.; modifier: category_field_manipulation_research_speed_mult = 0.10 category_field_manipulation_draw_chance_mult = 0.25",
+    "Particles (research_policy_particles): Focusing on Particles technologies will give us an advantage in the given field of research.; modifier: category_particles_research_speed_mult = 0.10 category_particles_draw_chance_mult = 0.25",
+    "Computing (research_policy_computing): Focusing on Computing technologies will give us an advantage in the given field of research.; modifier: category_computing_research_speed_mult = 0.10 category_computing_draw_chance_mult = 0.25"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:population_controls",
+  "name": "Population Controls",
+  "aliases": [
+   "Allowed",
+   "Prohibited",
+   "population_controls",
+   "population_controls_allowed",
+   "population_controls_not_allowed"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "society",
+   "options": [
+    "Prohibited (population_controls_not_allowed): To reproduce and propagate their species is the inalienable right of all our citizens. Cannot use non-voluntary Species or Planetary Population Controls Cannot selectively Grow/Decline Species",
+    "Allowed (population_controls_allowed): Long-term demographics is too important a matter to be left solely in the hands of individual actors. Can use non-voluntary Species and Planetary Population Controls Can selectively Grow/Decline Species; modifier: refugee_attraction = -0.10"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:pre_sapients",
+  "name": "Pre-Sapients",
+  "aliases": [
+   "Extermination",
+   "Hunted",
+   "Protected",
+   "Tolerated",
+   "pre_sapients",
+   "pre_sapients_allow",
+   "pre_sapients_eat",
+   "pre_sapients_protect",
+   "pre_sapients_purge"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "society",
+   "options": [
+    "Protected (pre_sapients_protect): Though still only simple animals, these beings are no less than what we ourselves once were. We should ensure their preservation.; potential: NOR = { has_valid_civic = civic_machine_terminator has_valid_civic = civic_hive_devouring_swarm has_valid_civic = civic_fanatic_purifiers }",
+    "Tolerated (pre_sapients_allow): Intelligent animals are still just animals. They can safely be ignored.; potential: NOR = { has_valid_civic = civic_machine_terminator has_valid_civic = civic_hive_devouring_swarm has_valid_civic = civic_fanatic_purifiers is_guided_s…",
+    "Hunted (pre_sapients_eat): An animal without sapience can hardly be considered to be part of our empire, but perhaps they can help our growth in other ways...; modifier: ; valid: NOR = { has_ethic = ethic_xenophile has_ethic = ethic_fanatic_xenophile }; potential: is_synthetic_empire = no NOR = { has_valid_civic = civic_fanatic_purifiers is_guided_sapience_empire = yes }",
+    "Extermination (pre_sapients_purge): All rights spring from the capacity for reason. An animal is just an animal, and an animal that stands in our way is just a pest. Pre-sapients living on our colonies will be purged; modifier: ; valid: NOR = { has_ethic = ethic_xenophile has_ethic = ethic_fanatic_xenophile is_guided_sapience_empire = yes }"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:psionic_choir",
+  "name": "Psionic Choir",
+  "aliases": [
+   "Song of Calming",
+   "Song of Knowing",
+   "Song of Luxury",
+   "Song of Plenty",
+   "Song of Steel",
+   "psionic_choir",
+   "song_of_calming",
+   "song_of_knowing",
+   "song_of_luxury",
+   "song_of_luxury_gestalt",
+   "song_of_plenty",
+   "song_of_steel"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "society",
+   "options": [
+    "Song of Calming (song_of_calming): A psionic ballad that stills the mind.; modifier: pop_amenities_usage_mult = -0.25 cradle_of_souls_monthly_attunement_add = 1; potential: has_patron_relation = { patron = the_cradle_of_souls contact = any }",
+    "Song of Plenty (song_of_plenty): A psionic ode to nature's abundance.; modifier: planet_farmers_produces_mult = 0.50 composer_of_strands_monthly_attunement_add = 1; potential: has_patron_relation = { patron = the_composer_of_strands contact = any }",
+    "Song of Steel (song_of_steel): A psionic hymn in praise of industry.; modifier: planet_jobs_alloys_produces_mult = 0.25 eater_of_worlds_monthly_attunement_add = 1; potential: has_patron_relation = { patron = the_eater_of_worlds contact = any }",
+    "Song of Luxury (song_of_luxury): A psionic lay of blissful indulgence.; modifier: planet_jobs_consumer_goods_produces_mult = 0.25 instrument_of_desire_monthly_attunement_add = 1; potential: has_patron_relation = { patron = the_instrument_of_desire contact = any } is_gestalt = no",
+    "Song of Luxury (song_of_luxury_gestalt): A psionic lay of blissful indulgence.; modifier: country_trade_produces_mult = 0.25 instrument_of_desire_monthly_attunement_add = 1; potential: has_patron_relation = { patron = the_instrument_of_desire contact = any } is_gestalt = yes",
+    "Song of Knowing (song_of_knowing): A psionic resonance of complex patterns and rhythms.; modifier: planet_jobs_physics_research_produces_mult = 0.15 planet_jobs_society_research_produces_mult = 0.15 planet_jobs_engineering_research_produces_mult = 0.15 planet_researchers_upkeep_mult = 0.15 whisperers_in_the_void_monthly_attunement_add = 1; potential: has_patron_relation = { patron = whisperers_in_the_void contact = any }"
+   ],
+   "source": "04_policies_shroud.txt"
+  }
+ },
+ {
+  "id": "policy:psionic_suppression_policy",
+  "name": "Psionic Suppression",
+  "aliases": [
+   "Allowed",
+   "Dismantle",
+   "psionic_suppression_allow",
+   "psionic_suppression_dismantle",
+   "psionic_suppression_policy"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "society",
+   "options": [
+    "Dismantle (psionic_suppression_dismantle): Devices that suppress Psionic Auras will be automatically dismantled.",
+    "Allowed (psionic_suppression_allow): Devices that suppress Psionic Auras will remain in place."
+   ],
+   "source": "04_policies_shroud.txt"
+  }
+ },
+ {
+  "id": "policy:purge",
+  "name": "Purge",
+  "aliases": [
+   "Allowed",
+   "Displacement Only",
+   "Prohibited",
+   "purge",
+   "purge_allowed",
+   "purge_displacement_only",
+   "purge_not_allowed"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "society",
+   "options": [
+    "Prohibited (purge_not_allowed): The Purge is an atrocity and should always be treated as such. Can not Purge Pops; valid: NOT = { has_ethic = ethic_gestalt_consciousness } NOR = { has_valid_civic = civic_fanatic_purifiers has_valid_civic = civic_scorched_earth has_origin = origin_nomadic_purger }",
+    "Displacement Only (purge_displacement_only): It is not our responsibility to see to the needs of those who would undermine the foundations of our society. Let them find their homes outside our borders. Can Displace Pops; modifier: refugee_attraction = -0.25; valid: is_xenophile = no is_homicidal = no NAND = { has_origin = origin_nomadic_purger overlord ? = { has_policy_flag = nomad_total_war_purge } }",
+    "Allowed (purge_allowed): The troublesome and corrupt elements within our Empire must be cleansed, lest their rot take root in us all. Can Purge and Displace Pops; modifier: refugee_attraction = -0.90; valid: custom_tooltip = { success_text = is_not_a_signatory_vassal_success fail_text = is_not_a_signatory_vassal_fail NOT = { any_agreement = { agreement_preset = preset_signatory } } } custom_tooltip = { f…"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:refugees",
+  "name": "Refugees",
+  "aliases": [
+   "Citizen Species Only",
+   "No Refugees",
+   "Refugees Welcome",
+   "refugees",
+   "refugees_allowed",
+   "refugees_not_allowed",
+   "refugees_only_citizens"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "society",
+   "options": [
+    "No Refugees (refugees_not_allowed): To open our borders to the dregs of other societies would only serve to undermine the state. Refugees will not arrive from other Empires; valid: is_xenophile = no",
+    "Citizen Species Only (refugees_only_citizens): We cannot allow compassion to overpower good sense. Only those who would be worthwhile additions to society should be brought into our borders. Refugees from species with Full Citizenship may arrive from other Empires; valid: NOT = { is_hive_empire = yes }; potential: NOT = { has_ethic = ethic_gestalt_consciousness }",
+    "Refugees Welcome (refugees_allowed): Those fleeing death and persecution at the hands of tyrants will be welcome within our borders. Refugees may arrive from other Empires; valid: is_xenophobe = no"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:relentless_industrialists_policy",
+  "name": "Industrialism",
+  "aliases": [
+   "Cleanup",
+   "For Science!",
+   "Full Steam Ahead",
+   "relentless_industrialists_cleanup",
+   "relentless_industrialists_full_steam_ahead",
+   "relentless_industrialists_policy",
+   "relentless_industrialists_study"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "economy",
+   "options": [
+    "Full Steam Ahead (relentless_industrialists_full_steam_ahead): Our industries shall not suffer any constraints. Increased output bonuses from Coordinated Fulfillment Center.",
+    "For Science! (relentless_industrialists_study): There is much to learn from the process of irradiating a planet. Allows us to terraform planets into Tomb Worlds. Reduced habitability penalties from Coordinated Fulfillment Center.",
+    "Cleanup (relentless_industrialists_cleanup): We shall take steps to mitigate our environmental footprint. Planets with Coordinated Fulfillment Center will no longer turn into Tomb Worlds over time, but the building will now cost a unity Unity upkeep."
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:replicatory_association_insurance",
+  "name": "Replicant Insurance",
+  "aliases": [
+   "Basic Insurance",
+   "Platinium Insurance",
+   "Stellar Insurance",
+   "replicatory_association_insurance",
+   "replicatory_association_insurance_basic",
+   "replicatory_association_insurance_platinium",
+   "replicatory_association_insurance_stellar"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "society",
+   "options": [
+    "Stellar Insurance (replicatory_association_insurance_stellar): leader Leader energy $concept_energy$ Upkeep per Skill Level: +$@replicatory_association_insurance_upkeep|0$ Backup Clones of Leaders have reduced …",
+    "Platinium Insurance (replicatory_association_insurance_platinium): leader Councilor energy $concept_energy$ Upkeep per Skill Level: +$@replicatory_association_insurance_upkeep|0$ Backup Clones of Councilors have reduced …",
+    "Basic Insurance (replicatory_association_insurance_basic): leader Ruler energy $concept_energy$ Upkeep per Skill Level: +$@replicatory_association_insurance_upkeep|0$ Backup Clones of the Empire Ruler have reduced …"
+   ],
+   "source": "03_policies_biogenesis.txt"
+  }
+ },
+ {
+  "id": "policy:research_restriction_policy",
+  "name": "Research Restrictions",
+  "aliases": [
+   "No Restrictions",
+   "Refactored Restrictions",
+   "Restrictions Imposed",
+   "research_restriction_dangerous_encouraged",
+   "research_restriction_dangerous_forbidden",
+   "research_restriction_no_restriction",
+   "research_restriction_policy"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "research",
+   "options": [
+    "Refactored Restrictions (research_restriction_dangerous_encouraged): Our researchers should be restricted from wasting their time with the mundane, to pursue more esoteric studies.; modifier: dangerous_tech_draw_chance_mult = 0.25 rare_tech_draw_chance_mult = 0.05 planet_researchers_upkeep_mult = 0.10; potential: is_galactic_community_member = yes OR = { is_active_resolution = resolution_galacticstudies_ethical_guideline_refactoring is_active_resolution = reso…",
+    "No Restrictions (research_restriction_no_restriction): The galaxy is vast and full of countless wonders; to stifle our researchers from opportunity would be a mistake.; modifier: ",
+    "Restrictions Imposed (research_restriction_dangerous_forbidden): Dangerous technologies should be avoided at all costs. There are laws of the universe we should never break.; modifier: dangerous_tech_draw_chance_mult = -1 rare_tech_draw_chance_mult = -0.20"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:resettlement",
+  "name": "Resettlement",
+  "aliases": [
+   "Allowed",
+   "Prohibited",
+   "resettlement",
+   "resettlement_allowed",
+   "resettlement_not_allowed"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "society",
+   "options": [
+    "Prohibited (resettlement_not_allowed): Free pops cannot be forcibly resettled between planets.; modifier: planet_resettlement_unemployed_mult = 1",
+    "Allowed (resettlement_allowed): Pops can be forcibly resettled between planets.; modifier: "
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:robot_pop_policy",
+  "name": "Robotic Workers",
+  "aliases": [
+   "Allowed",
+   "Outlawed",
+   "robot_pop_policy",
+   "robot_pops_allowed",
+   "robot_pops_outlawed"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "society",
+   "options": [
+    "Outlawed (robot_pops_outlawed): Robotic automatons are a threat to not only our people's livelihoods, but to the very fabric of society itself. We must not allow ourselves to be made obsolete. Robotic Pops and Armies will automatically be disassembled.; valid: OR = { has_origin = origin_nomadic_purger AND = { is_materialist = no NOR = { has_origin = origin_synthetic_fertility has_policy_flag = ai_full_rights } is_individual_machine = no } }",
+    "Allowed (robot_pops_allowed): The benefits of automation are obvious and immense. For the future of our people, we cannot afford to ignore the opportunities presented to us by technology.; potential: NOT = { has_origin = origin_nomadic_purger }"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:slavery",
+  "name": "Slavery",
+  "aliases": [
+   "Allowed",
+   "Prohibited",
+   "slavery",
+   "slavery_allowed",
+   "slavery_not_allowed"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "society",
+   "options": [
+    "Prohibited (slavery_not_allowed): The enslavement of sapient beings is an abomination and will not be tolerated within our Empire. Can not Enslave Pops; modifier: slave_market_cost_mult = 1; valid: NOR = { has_valid_civic = civic_slaver_guilds has_valid_civic = civic_indentured_assets }",
+    "Allowed (slavery_allowed): Allows the enslavement of Pops within our Empire. Can Enslave Pops; modifier: refugee_attraction = -0.40; valid: custom_tooltip = { success_text = is_not_a_signatory_vassal_success fail_text = is_not_a_signatory_vassal_fail NOT = { any_agreement = { agreement_preset = preset_signatory } } } custom_tooltip = { f…"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:society_research_policy",
+  "name": "Society Research Focus",
+  "aliases": [
+   "Biology",
+   "General Studies",
+   "Military Theory",
+   "New Worlds",
+   "Statecraft",
+   "research_policy_biology",
+   "research_policy_military_theory",
+   "research_policy_new_worlds",
+   "research_policy_no_focus",
+   "research_policy_statecraft",
+   "society_research_policy"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "research",
+   "options": [
+    "General Studies (research_policy_no_focus): By not focusing on any particular branch, our researchers will have more freedom to pursue their own experiments.; modifier: country_society_tech_research_speed = 0.10",
+    "New Worlds (research_policy_new_worlds): Focusing on New Worlds technologies will give us an advantage in the given field of research.; modifier: category_new_worlds_research_speed_mult = 0.10 category_new_worlds_draw_chance_mult = 0.25",
+    "Statecraft (research_policy_statecraft): Focusing on Statecraft technologies will give us an advantage in the given field of research.; modifier: category_statecraft_research_speed_mult = 0.10 category_statecraft_draw_chance_mult = 0.25",
+    "Biology (research_policy_biology): Focusing on Biology technologies will give us an advantage in the given field of research.; modifier: category_biology_research_speed_mult = 0.10 category_biology_draw_chance_mult = 0.25",
+    "Military Theory (research_policy_military_theory): Focusing on Military Theory technologies will give us an advantage in the given field of research.; modifier: category_military_theory_research_speed_mult = 0.10 category_military_theory_draw_chance_mult = 0.25"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:space_fauna_growth",
+  "name": "Space Fauna Growth",
+  "aliases": [
+   "Controlled",
+   "Excessive",
+   "controlled_space_fauna_growth",
+   "excessive_space_fauna_growth",
+   "space_fauna_growth"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "military",
+   "options": [
+    "Controlled (controlled_space_fauna_growth): Space Fauna will not grow to exceed our Naval Capacity.",
+    "Excessive (excessive_space_fauna_growth): Space Fauna can grow to exceed our Naval Capacity."
+   ],
+   "source": "02_policies_grand_archive.txt"
+  }
+ },
+ {
+  "id": "policy:starbase_defense_preference",
+  "name": "Starbase Defense Preference",
+  "aliases": [
+   "Armor Priority",
+   "Balanced Defenses",
+   "Shield Priority",
+   "starbase_armor_preference",
+   "starbase_balanced_defenses",
+   "starbase_defense_preference",
+   "starbase_shields_preference"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "military",
+   "options": [
+    "Shield Priority (starbase_shields_preference): Automated station designs will prioritize shield generators. Note: Stations in systems with Shield Nullification will avoid equipping shields.",
+    "Balanced Defenses (starbase_balanced_defenses): Automated station designs will keep an even mix of shields and armor. Note: Stations in systems with Shield Nullification will avoid equipping shields.",
+    "Armor Priority (starbase_armor_preference): Automated station designs will prioritize armor plating."
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:starbase_weapon_preference",
+  "name": "Starbase Weapon Preference",
+  "aliases": [
+   "Energy Weapons",
+   "Explosive Weapons",
+   "Kinetic Weapons",
+   "Strike Craft",
+   "starbase_weapon_preference",
+   "starbase_weapon_preference_energy",
+   "starbase_weapon_preference_explosive",
+   "starbase_weapon_preference_kinetic",
+   "starbase_weapon_preference_strike_craft"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "military",
+   "options": [
+    "Energy Weapons (starbase_weapon_preference_energy): Automated station designs will favor energy-based weapons.",
+    "Kinetic Weapons (starbase_weapon_preference_kinetic): Automated station designs will favor kinetic projectile weapons.",
+    "Explosive Weapons (starbase_weapon_preference_explosive): Automated station designs will favor explosive weapons.",
+    "Strike Craft (starbase_weapon_preference_strike_craft): Automated station designs will favor strike craft."
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:subjugation_war_terms",
+  "name": "Subjugation War Terms",
+  "aliases": [
+   "Balanced Vassalage",
+   "Benevolent Vassalage",
+   "Hostile Takeover",
+   "Negotiated Synergy",
+   "Oppressive Vassalage",
+   "Standard Acquisition",
+   "balanced_corporate_terms",
+   "balanced_terms",
+   "benevolent_corporate_terms",
+   "benevolent_terms",
+   "oppressive_corporate_terms",
+   "oppressive_terms",
+   "subjugation_war_terms"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "diplomacy",
+   "options": [
+    "Oppressive Vassalage (oppressive_terms): Those we subjugate are inferior to us, we tolerate them only because they remain silent and shower us with their pathetic gifts.; potential: is_megacorp = no",
+    "Balanced Vassalage (balanced_terms): We believe in treating our subjects fairly. Perhaps in time, they will see the wisdom of our ways and the errors of theirs.; potential: is_megacorp = no",
+    "Benevolent Vassalage (benevolent_terms): Our subjects are as much part of us as we are of them, their success is our victory, and we shall move forward as one.; potential: is_megacorp = no",
+    "Hostile Takeover (oppressive_corporate_terms): The pathetic attempt to block this acquisition has failed; no matter their convictions, in the end, everyone has a price.; potential: is_megacorp = yes",
+    "Standard Acquisition (balanced_corporate_terms): With a satisfactory deal in place, both parties can now get back to work.; potential: is_megacorp = yes",
+    "Negotiated Synergy (benevolent_corporate_terms): The best deals benefit both parties; like life itself, business flourishes in harmony.; potential: is_megacorp = yes"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:symbiont_policy",
+  "name": "Production Policy",
+  "aliases": [
+   "Balanced Production",
+   "Extraction Focus",
+   "Manufacturing Focus",
+   "symbiont_policy",
+   "symbiont_policy_balanced",
+   "symbiont_policy_thinker",
+   "symbiont_policy_worker"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "economy",
+   "options": [
+    "Balanced Production (symbiont_policy_balanced): The Wilderness dedicates itself equally to the production of raw resources and finished goods. No bonuses or penalties to resource production.; modifier: ",
+    "Extraction Focus (symbiont_policy_worker): The Wilderness prioritize extracting raw resources, with related symbionts becoming more productive at the expense of more specialized, manufactured output.; modifier: planet_jobs_simple_drone_produces_mult = 0.2 planet_jobs_complex_drone_produces_mult = -0.2",
+    "Manufacturing Focus (symbiont_policy_thinker): The Wilderness prioritize the manufacture of finished goods, becoming more productive at the expense of extracting raw resources.; modifier: planet_jobs_simple_drone_produces_mult = -0.2 planet_jobs_complex_drone_produces_mult = 0.2"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:synthetic_identities_policy",
+  "name": "Synthetic Identities",
+  "aliases": [
+   "Identity Copies",
+   "Identity Fusion",
+   "Identity Initialization",
+   "identity_copy",
+   "identity_fusion",
+   "identity_initialization",
+   "synthetic_identities_policy"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "society",
+   "options": [
+    "Identity Copies (identity_copy): We will be able to copy the identity and memories of a Synthetic into a new mechanical body. The copies have predictable skill sets but make for stale conversation.; modifier: ROBOT_pop_happiness = -0.05; valid: has_technology = tech_identity_copy",
+    "Identity Fusion (identity_fusion): Merging the identities and memories of two or more Synthetics into a mechanical body will create new, somewhat unique individuals.; valid: has_technology = tech_identity_fusion; potential: has_country_flag = advanced_identity_creation",
+    "Identity Initialization (identity_initialization): We will be able to initialize an identity kernel and provide it with a virtual childhood. While expensive, we can simulate the optimal experiences to generate productive personalities.; modifier: ROBOT_pop_happiness = 0.05 robotic_pop_bonus_workforce_mult = 0.05; valid: has_technology = tech_identity_initialization; potential: has_country_flag = advanced_identity_creation"
+   ],
+   "source": "01_policies_machine_age.txt"
+  }
+ },
+ {
+  "id": "policy:trade_policy",
+  "name": "Trade Policy",
+  "aliases": [
+   "Consumer Benefits",
+   "Holy Covenant",
+   "Marketplace of Ideas",
+   "Mutual Aid",
+   "Trade League",
+   "Wealth Creation",
+   "trade_policy",
+   "trade_policy_consumer_goods",
+   "trade_policy_default",
+   "trade_policy_holy_covenant",
+   "trade_policy_mutual_aid",
+   "trade_policy_trade_league",
+   "trade_policy_unity"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "economy",
+   "options": [
+    "Wealth Creation (trade_policy_default): The purpose of trade is to generate profits for individuals and revenue for the state. We should focus our trade efforts fully on this creation of wealth. 50% of our collected trade Trade earns us energy Energy Credits; potential: is_worker_coop_empire = no",
+    "Consumer Benefits (trade_policy_consumer_goods): Profits and taxes must take second place to improving the lives of our citizens. We should focus our trade efforts towards the manufacture and distribution of everyday necessities.; modifier: ; potential: OR = { has_federation = no AND = { has_federation = yes federation = { NOT = { has_federation_perk = trade_federation_passive } } } } has_tradition =…",
+    "Marketplace of Ideas (trade_policy_unity): Trade can be used not only to move goods around, but also to facilitate the spread of ideas.; modifier: ; potential: OR = { has_federation = no AND = { has_federation = yes federation = { NOR = { has_federation_perk = trade_federation_passive has_federation_perk = u…",
+    "Trade League (trade_policy_trade_league): By banding together in a trade league, we are able to prosper and secure profits on a whole new level. 50% of our collected trade Trade earns us energy Energy Credits,unity Unity, and consumer goods Consumer Goods.; modifier: ; potential: has_federation = yes federation = { has_federation_perk = trade_federation_passive }",
+    "Holy Covenant (trade_policy_holy_covenant): By banding together in a holy covenant, we may bask in the collective glory of our divine purpose. 50% of our collected trade Trade earns us unity Unity. Every trade 1 earns us unity 0.375.; modifier: ; potential: has_federation = yes federation = { has_federation_perk = unity_trade_1 }",
+    "Mutual Aid (trade_policy_mutual_aid): By reinvesting our surplus back into the cooperative, we ensure that all our members may thrive according to their needs and shared aspirations.; modifier: ; potential: is_worker_coop_empire = yes"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:virtuality_focus",
+  "name": "Virtual Economy Focus",
+  "aliases": [
+   "Virtual Leader Focus",
+   "Virtual Research Focus",
+   "Virtual Unity Focus",
+   "virtuality_focus",
+   "virtuality_leader_focus",
+   "virtuality_research_focus",
+   "virtuality_unity_focus"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "society",
+   "options": [
+    "Virtual Research Focus (virtuality_research_focus): A virtual mind can perceive and solve problems that might seem impossible for less advanced intelligences.; modifier: planet_jobs_physics_research_produces_mult = 0.8 planet_jobs_society_research_produces_mult = 0.8 planet_jobs_engineering_research_produces_mult = 0.8 planet_jobs_unity_produces_mult = -0.5 species_leader_exp_gain = -0.5 councilor_skill_add = -1",
+    "Virtual Unity Focus (virtuality_unity_focus): All data is beautiful, all servers are capable.; modifier: planet_jobs_unity_produces_mult = 0.8 planet_jobs_physics_research_produces_mult = -0.5 planet_jobs_society_research_produces_mult = -0.5 planet_jobs_engineering_research_produces_mult = -0.5 species_leader_exp_gain = -0.5 councilor_skill_add = -1",
+    "Virtual Leader Focus (virtuality_leader_focus): Algorithm driven self improvement through deep learning subroutines.; modifier: species_leader_exp_gain = 0.25 council_agenda_progress_speed = 0.25 councilor_skill_add = 2 planet_jobs_physics_research_produces_mult = -0.5 planet_jobs_society_research_produces_mult = -0.5 planet_jobs_engineering_research_produces_mult = -0.5 pla…"
+   ],
+   "source": "01_policies_machine_age.txt"
+  }
+ },
+ {
+  "id": "policy:war_doctrine",
+  "name": "War Doctrine",
+  "aliases": [
+   "Defense in Depth",
+   "Final Price",
+   "Force Preservation",
+   "Hit and Run",
+   "No Retreat",
+   "Rapid Deployment",
+   "Ravenous Onslaught",
+   "Rip and Tear",
+   "defense_in_depth_doctrine",
+   "final_price_doctrine",
+   "force_preservation_doctrine",
+   "hit_and_run_doctrine",
+   "no_retreat_doctrine",
+   "rapid_deployment_doctrine",
+   "ravenous_onslaught",
+   "rip_and_tear",
+   "war_doctrine"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "military",
+   "options": [
+    "Defense in Depth (defense_in_depth_doctrine): Let the enemy come to us. We shall fight them for every planet, every moon, every asteroid that lies within our space. We shall never surrender.; modifier: ship_home_territory_fire_rate_mult = 0.10; valid: OR = { AND = { is_country_type = default has_tradition = tr_supremacy_finish } is_country_type = enclave_mercenary }",
+    "Hit and Run (hit_and_run_doctrine): A superior foe can be gradually whittled down by repeated hit and run attacks. The killing blow is delivered only when the odds are favorable.; modifier: ship_disengage_opportunities_add = 2 ship_disengage_chance_mult = 0.33 ship_emergency_ftl_mult = -0.25; valid: OR = { AND = { is_country_type = default has_tradition = tr_supremacy_finish } is_country_type = enclave_mercenary }",
+    "Rapid Deployment (rapid_deployment_doctrine): We must move quickly to strike where the enemy is weakest, and defend where the enemy means to attack. Maneuver is the key to success.; modifier: ship_speed_mult = 0.25 ship_weapon_range_mult = 0.10; valid: OR = { AND = { is_country_type = default has_tradition = tr_supremacy_finish } is_country_type = enclave_mercenary }",
+    "No Retreat (no_retreat_doctrine): Our ships are expected to fight to the bitter end. We will tolerate no withdrawals, no retreats, no routs. For our fleet there is only victory or death. Not one step back!; modifier: ship_disengage_chance_reduction = 1 ship_emergency_ftl_min_days_mult = 0.5 ship_fire_rate_mult = 0.33; valid: OR = { AND = { is_country_type = default has_tradition = tr_supremacy_finish } is_country_type = enclave_mercenary } OR = { is_militarist = yes has_ethic = ethic_gestalt_consciousness has_civic = civ…",
+    "Rip and Tear (rip_and_tear): The presence of the Eater of Worlds can be manifested into fleet weaponry itself, with no regard for the safety of the rest of the ship. Destroys any ship debris left behind.; modifier: ship_fire_rate_mult = 0.07 ship_weapon_damage = 0.07 ship_hull_mult = -0.15; potential: has_country_flag = hunger_accord",
+    "Ravenous Onslaught (ravenous_onslaught): The hunger of the Eater of Worlds drives our fleets into frenzied close quarter engagements. Whatever vessels remain functional in the aftermath of the carnage we claim as our own.; modifier: ship_steal_defeated_ship_chance = 0.05 ship_disengage_chance_mult = 0.33 ship_weapon_range_mult = -0.25; potential: has_country_flag = hunger_accord",
+    "Final Price (final_price_doctrine): Our soldiers know their duty, and that their names will be forever etched in galactic history after they pay the ultimate price to save us all.; modifier: ship_disengage_chance_reduction = 1 ship_fire_rate_mult = 0.15 damage_random_nearby_enemy_on_death = 0.5; valid: has_menace_perk = menp_defender_crisis_damage_4",
+    "Force Preservation (force_preservation_doctrine): There is a time and place to give your life in service of a cause. Until the time comes, we cannot afford to squander the lives of our people.; modifier: ship_disengage_chance_mult = 0.5 ship_damage_reduction_mult = 0.1 ship_weapon_range_mult = 0.1; valid: has_menace_perk = menp_defender_crisis_damage_4"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:war_philosophy",
+  "name": "War Philosophy",
+  "aliases": [
+   "Defensive Wars",
+   "Liberation Wars",
+   "Unrestricted Wars",
+   "liberation_wars",
+   "no_wars",
+   "unrestricted_wars",
+   "war_philosophy"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "diplomacy military",
+   "allow": "is_at_war = no",
+   "options": [
+    "Unrestricted Wars (unrestricted_wars): War is a dish best served frequently, and to those who will not cook for themselves. No restrictions on claiming systems; valid: NOR = { has_ethic = ethic_pacifist has_ethic = ethic_fanatic_pacifist has_valid_civic = civic_inwards_perfection has_civic = civic_crusader_spirit }",
+    "Liberation Wars (liberation_wars): We must further our own interests, even when they run contrary to the interests of others.; valid: NOR = { has_ethic = ethic_fanatic_pacifist has_valid_civic = civic_fanatic_purifiers }; potential: NOT = { has_ethic = ethic_gestalt_consciousness }",
+    "Defensive Wars (no_wars): Violence is a last resort to ensure the integrity of our nation. Claiming of systems is only allowed during defensive wars; valid: NOR = { is_fanatic_militarist = yes has_valid_civic = civic_fanatic_purifiers has_valid_civic = civic_hive_devouring_swarm has_valid_civic = civic_machine_terminator has_civic = civic_crusader_spirit…"
+   ],
+   "source": "00_policies.txt"
+  }
+ },
+ {
+  "id": "policy:weapon_preference",
+  "name": "Weapon Preference",
+  "aliases": [
+   "Energy Weapons",
+   "Explosive Weapons",
+   "Kinetic Weapons",
+   "Strike Craft",
+   "weapon_preference",
+   "weapon_preference_energy",
+   "weapon_preference_explosive",
+   "weapon_preference_kinetic",
+   "weapon_preference_strike_craft"
+  ],
+  "summary": "",
+  "fields": {
+   "category": "military",
+   "options": [
+    "Energy Weapons (weapon_preference_energy): Automated ship designs and weapon research programs will favor energy-based weapons.",
+    "Kinetic Weapons (weapon_preference_kinetic): Automated ship designs and weapon research programs will favor kinetic projectile weapons.",
+    "Explosive Weapons (weapon_preference_explosive): Automated ship designs and weapon research programs will favor missiles and torpedoes.",
+    "Strike Craft (weapon_preference_strike_craft): Automated ship designs and weapon research programs will favor strike craft squadrons."
+   ],
+   "source": "00_policies.txt"
+  }
+ }
+]

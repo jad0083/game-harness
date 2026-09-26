@@ -141,7 +141,9 @@ def main(argv: list[str] | None = None) -> int:
     s.thinking = a.thinking or s.thinking
     if a.game and a.game != s.game:
         from .config import default_journal
-        s.game, s.journal = a.game, default_journal(a.game)
+        s.game = a.game
+        if "PILOT_JOURNAL" not in os.environ:      # an explicit journal path wins over the game default
+            s.journal = default_journal(a.game)
     if a.cmd == "check":
         return check(s)
     s.dashboard_port = a.port or s.dashboard_port
