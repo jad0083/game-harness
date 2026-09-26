@@ -152,6 +152,10 @@ enum StellarisAction {
     },
     /// Set the game speed: slowest, slow, normal, fast, fastest ("faster" = fastest)
     Speed { name: String },
+    /// Pause the game (checked on screen; no-op if already paused)
+    Pause,
+    /// Resume the game (checked on screen; no-op if already running)
+    Resume,
     /// Last lines of the game's logs/game.log
     Log {
         #[arg(short, long, default_value_t = 30)]
@@ -260,7 +264,9 @@ async fn main() -> Result<()> {
                     println!("{l}");
                 }
             } else {
-                let lines = stellaris::apply_directive(&client, &directives, &name, country).await?;
+                let manifest = corpus::GameCorpus::load_from_dir(&dir)?.manifest;
+                let pause = stellaris::PauseDetector::from_manifest(&manifest)?;
+                let lines = stellaris::apply_directive(&client, &directives, &name, country, Some(&pause)).await?;
                 println!("Applied directive {name} to country {country} (confirmed in game.log):");
                 for l in lines {
                     println!("  {l}");
@@ -270,6 +276,13 @@ async fn main() -> Result<()> {
         Commands::Stellaris { action: StellarisAction::Speed { name } } => {
             let set = stellaris::set_speed(&client, &name).await?;
             println!("Speed set to {set}");
+        }
+        Commands::Stellaris { action: StellarisAction::Pause } | Commands::Stellaris { action: StellarisAction::Resume } => {
+            let want = matches!(cli.command, Commands::Stellaris { action: StellarisAction::Pause });
+            let dir = cli.corpus.clone().unwrap_or_else(|| PathBuf::from("corpora/stellaris"));
+            let pause = stellaris::PauseDetector::from_manifest(&corpus::GameCorpus::load_from_dir(&dir)?.manifest)?;
+            let pressed = pause.set_paused(&client, want).await?;
+            println!("{} ({})", if want { "Paused" } else { "Running" }, if pressed { "changed" } else { "already" });
         }
         Commands::Stellaris { action: StellarisAction::Log { lines } } => {
             let (text, _) = stellaris::read_log_since(&client, 0).await?;

@@ -69,12 +69,18 @@ pan_right = "d"
 # X attack target, T stance, V split, Delete disband. Not bound here: the governor model leaves
 # fleet orders to the native AI.
 
-# Screens are captured live later (see AGENTS.md §5 for the template procedure). Planned:
-#
-# [screens.pause_indicator]
-# description = "Pause state: the date widget (top right) shows 'Paused' / the speed pips go grey"
-# template = "templates/paused.png"          # to capture
-# template_roi = [..]                        # to measure
+# Screens (template procedure: AGENTS.md §5).
+
+[screens.paused]
+description = "Large yellow 'Paused' label above the selected-system banner (bottom centre); shown only while paused. The label pulses in brightness, so the colour signature decides (verified 2026-09-25: 23-47% yellow pixels paused, 0% running; the template alone scored 0.011-0.108 paused vs 0.20 running)."
+template = "templates/stellaris_paused.png"
+template_roi = [0.477, 0.9456, 0.0459, 0.0215]
+template_threshold = 0.06
+template_search = 3
+color_range = [[150, 120, 0], [255, 255, 110]]
+color_min_fraction = 0.08
+
+# Planned:
 #
 # [screens.date_readout]
 # description = "In-game date readout (top right, 'YYYY.MM.DD'); changes daily while unpaused"

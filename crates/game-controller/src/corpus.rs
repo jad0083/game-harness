@@ -97,6 +97,13 @@ pub struct ScreenDef {
     /// variable part changes glyph widths move by a pixel or two).
     #[serde(default = "default_template_search")]
     pub template_search: u32,
+    /// Colour signature: the screen matches when at least `color_min_fraction` of the pixels in
+    /// `template_roi` fall inside `color_range` ([[r,g,b] min, [r,g,b] max]). Robust to labels
+    /// that pulse in brightness, where a pixel template fails.
+    #[serde(default)]
+    pub color_range: Option<[[u8; 3]; 2]>,
+    #[serde(default)]
+    pub color_min_fraction: Option<f64>,
     /// The autopilot may close this screen on its own (informational popups only).
     #[serde(default)]
     pub auto_dismiss: bool,

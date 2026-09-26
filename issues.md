@@ -35,6 +35,7 @@
 - [ ] Agent key table has no numpad keys or `+`; Stellaris speed-up must use `=` (VK_OEM_PLUS) until added
 
 ## Resolved
+- [x] Stellaris pause was toggled blind with Space; runs at Fastest ended in the wrong state, and the first "Paused" template misread the pulsing label (distance 0.108) as running (2026-09-25; colour signature + checked `set_paused`, verified live 3× pause/resume cycles)
 - [x] Image test fixtures `crates/game-controller/tests/fixtures/*.jpg` were gitignored (`*.jpg`), so 3 imaging tests failed in any fresh clone (2026-09-25; ignore exception added, fixtures tracked, fresh clone tested)
 - [x] Agent reported no file roots: PS 5.1 wrote `roots.json` with a BOM and the loader ignored the parse error; re-registering an elevated scheduled task failed with Access denied (2026-09-25; 8d81a44, redeployed, 4 roots verified)
 - [x] 12 stray `*.jpg` crops in the repo root and `screenshots/` (2026-09-25; moved to gitignored `play/archive/`)
