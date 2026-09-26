@@ -1,14 +1,14 @@
 # Governor directives (strategy.md § 9), applied from the in-game console by
-# `game-controller stellaris directive <name>` / MCP `stellaris_directive`:
+# `game-controller stellaris directive <name>` / MCP `stellaris_directive`, with the game paused:
 #
-#   play <player country>                         take the empire back from the AI
 #   effect remove_country_flag = governor_directive_<other> …
-#   effect set_country_flag = governor_directive_<name> set_policy = {…} … log = "GOVERNOR_APPLIED <name>"
-#   observe                                       hand the empire back to the native AI
+#   effect set_country_flag = governor_directive_<name> set_policy = {…} …
+#          if = { limit = { exists = capital_scope } log = "GOVERNOR_APPLIED <name> <nonce>" }
 #
-# `play` must come first: while observing, console effects have no country scope and do nothing
-# (games/stellaris-spike/journal.md). Success is shown by the `GOVERNOR_APPLIED` line in game.log
-# and by the flag in the next autosave (the briefing lists governor flags).
+# The game's AI plays the empire under `human_ai` (see `stellaris take-control`); the player stays
+# in control, so the console's scope is the empire. The confirmation is logged only with a real
+# country scope (it fails loudly in observer mode) and carries a nonce, because game.log drops text
+# repeated on the same in-game day. The next autosave also shows the flag.
 #
 # Only policy options that exist in the game's common/policies (4.5.1, read 2026-09-25) are used.
 # A directive never adds resources or modifiers. `set_policy … cooldown = no` skips the normal

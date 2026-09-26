@@ -50,6 +50,7 @@ class StellarisGame(Protocol):
     def set_speed(self, speed: str) -> str: ...
     def directive(self, name: str) -> str: ...
     def log_tail(self, lines: int = 30) -> str: ...
+    def take_control(self) -> str: ...
     def screenshot(self): ...
     def corpus(self, tool: str, **args) -> str: ...
     def close(self) -> None: ...
@@ -80,6 +81,7 @@ def metrics(b: dict) -> dict:
     return {"date": b["date"], "stockpile": b.get("stockpile", {}), "net": b.get("net", {}),
             "military_power": b.get("military_power"), "economy_power": b.get("economy_power"),
             "tech_power": b.get("tech_power"), "pops": b.get("pops"), "planets": len(b.get("planets", [])),
+            "systems": b.get("systems"),
             "techs_known": b.get("techs_known"), "wars": len(b.get("wars", [])), "directive": current_directive(b)}
 
 
@@ -287,6 +289,8 @@ class Governor:
         try:
             self.game.set_paused(True)
             self.game.set_speed(self.s.speed)
+            # the game's AI must play the empire (human_ai), not observer mode (no expansion)
+            self.log.emit("journal", text="taking control: " + self.game.take_control().replace("\n", "; "))
             b = self.game.briefing()
             self._set_campaign(b)
             self._decide(b, "start of run")

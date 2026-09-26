@@ -172,14 +172,20 @@ downloads the newest `.sav`. Measured on a year-2200 medium galaxy: 1.26 MB fetc
 20 MB parsed in 42 ms, briefing ≈ 2 KB. Tests run against a real autosave
 (`tests/fixtures/stellaris_2200_11_01.sav`).
 
-Directives (`corpora/stellaris/directives.toml`) become console lines: `play <country>`, one
-`effect` clearing the other `governor_directive_*` flags, one `effect` setting this directive's
-flag and policies plus `log = "GOVERNOR_APPLIED <name>"`, then `observe`. Every identifier must
+The game's AI plays the player's empire under `human_ai` (observer mode was dropped: there the AI
+never explores or expands). `take_control` leaves observer mode if a scoped probe log is missing
+(`play <country>`), then sets `human_ai` ON by reading the console's reply on screen
+(`HumanAiReader`: `help` fills the console so the reply is on the bottom line; the closer of the
+ON/OFF templates wins, because the semi-transparent console shifts absolute distances).
+
+Directives (`corpora/stellaris/directives.toml`) become two console lines: one `effect` clearing
+the other `governor_directive_*` flags, one setting this directive's flag and policies plus a
+scoped `log` of `GOVERNOR_APPLIED <name> <nonce>` (logged only with a real country scope; the
+nonce matters because game.log drops text repeated on the same in-game day). Every identifier must
 match `[a-z0-9_]+`, so a directive cannot inject other commands. `run_console` checks that
-Stellaris is the foreground window before every keystroke, and `apply_directive` waits for the
-marker in `game.log` (read through the agent from its size before the call). It pauses the game
-first and restores the previous state afterwards, because between `play` and `observe` the empire
-is not AI-run and at Fastest the ~2 s of typing would be months of game time.
+Stellaris is the foreground window before every keystroke, and `apply_directive` polls `game.log`
+(written with a few seconds' delay) for up to 8 s. It pauses the game while typing and restores the
+previous state afterwards.
 
 Pause state comes from `[screens.paused]`: a colour signature (`color_range`,
 `color_min_fraction`; `imaging::color_fraction`) over the "Paused" label. That label pulses in

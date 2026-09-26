@@ -383,7 +383,7 @@ impl McpServer {
             }));
             tools.push(serde_json::json!({
                 "name": "stellaris_directive",
-                "description": "Apply one governor directive (see corpus strategy § Governor directives and directives.toml): takes the empire back with `play`, sets the directive flag and its policies, hands it back to the native AI with `observe`, and confirms the change in game.log. Hold a directive about 12 in-game months unless something urgent happens. Refuses if Stellaris is not the foreground window.",
+                "description": "Apply one governor directive (see corpus strategy § Governor directives and directives.toml): sets the directive flag and its policies on the player's empire (which the game's AI plays under human_ai; see stellaris_take_control) and confirms the change in game.log. Hold a directive about 12 in-game months unless something urgent happens. Refuses if Stellaris is not the foreground window.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -391,6 +391,11 @@ impl McpServer {
                     },
                     "required": ["name"]
                 }
+            }));
+            tools.push(serde_json::json!({
+                "name": "stellaris_take_control",
+                "description": "Hand the player's empire to the game's own AI: leave observer mode if needed and switch human_ai on (observer mode leaves the AI half-active: no exploration or expansion). The state is read from the console's reply on screen; leaves the game paused. Call once at the start of a session.",
+                "inputSchema": { "type": "object", "properties": {} }
             }));
             tools.push(serde_json::json!({
                 "name": "stellaris_speed",
@@ -819,15 +824,22 @@ impl McpServer {
                 let name = args.get("name").and_then(|v| v.as_str()).ok_or_else(|| anyhow::anyhow!("missing `name`"))?;
                 let dir = self.corpus.as_ref().map(|c| c.dir.clone()).ok_or_else(|| anyhow::anyhow!("no corpus loaded"))?;
                 let directives = crate::stellaris::Directives::load(&dir)?;
-                let (_, bytes) = crate::stellaris::fetch_latest_save(&self.client).await?;
-                let country = crate::stellaris::brief_save(&bytes)?.country;
                 let pause = self.corpus.as_ref().map(|c| crate::stellaris::PauseDetector::from_manifest(&c.manifest)).transpose()?;
-                let lines = crate::stellaris::apply_directive(&self.client, &directives, name, country, pause.as_ref()).await?;
+                let lines = crate::stellaris::apply_directive(&self.client, &directives, name, pause.as_ref()).await?;
                 let text = format!(
-                    "Directive {name} applied to country {country} and confirmed in game.log. Console lines:\n{}\nThe next monthly autosave will list governor_directive_{name} under Governor flags.",
+                    "Directive {name} applied and confirmed in game.log. Console lines:\n{}\nThe next monthly autosave will list governor_directive_{name} under Governor flags.",
                     lines.join("\n")
                 );
                 Ok(serde_json::json!({ "content": [{ "type": "text", "text": text }] }))
+            }
+            "stellaris_take_control" => {
+                let c = self.corpus.as_ref().ok_or_else(|| anyhow::anyhow!("no corpus loaded"))?;
+                let pause = crate::stellaris::PauseDetector::from_manifest(&c.manifest)?;
+                let reader = crate::stellaris::HumanAiReader::from_manifest(&c.manifest)?;
+                let (_, bytes) = crate::stellaris::fetch_latest_save(&self.client).await?;
+                let country = crate::stellaris::brief_save(&bytes)?.country;
+                let done = crate::stellaris::take_control(&self.client, &pause, &reader, country).await?;
+                Ok(serde_json::json!({ "content": [{ "type": "text", "text": done.join("\n") }] }))
             }
             "stellaris_speed" => {
                 let speed = args.get("speed").and_then(|v| v.as_str()).ok_or_else(|| anyhow::anyhow!("missing `speed`"))?;
@@ -941,6 +953,7 @@ mod tests {
         assert!(has(Some("stellaris")));
         let names: Vec<String> = McpServer::list_tools(Some("stellaris")).iter().map(|t| t["name"].as_str().unwrap().to_string()).collect();
         assert!(names.contains(&"stellaris_directive".to_string()) && names.contains(&"stellaris_log".to_string()));
+        assert!(names.contains(&"stellaris_take_control".to_string()));
         // The tool's directive enum must match corpora/stellaris/directives.toml.
         let tools = McpServer::list_tools(Some("stellaris"));
         let tool = tools.iter().find(|t| t["name"] == "stellaris_directive").unwrap();

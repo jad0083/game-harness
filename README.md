@@ -9,7 +9,7 @@ An ultra-low-latency, 100% Rust-powered autonomous AI game harness that plays tu
  │   └─ game-controller (Native Rust)      │         │   (Running borderless / windowed)       │
  │      • game corpus (manifest+data+docs)│         └─────────────────────────────────────────┘
  │      • autopilot (verified turn loop)   │                              ▲
- │      • stdio MCP server (19 tools, +5 Stellaris)      │  HTTP/TCP 8765               │ GDI / Win32 SendInput
+ │      • stdio MCP server (19 tools, +6 Stellaris)      │  HTTP/TCP 8765               │ GDI / Win32 SendInput
  │      • frame diff + luminance check     │ ──────────────► ┌─────────────────────────────────────────┐
  │                                         │ ◄────────────── │ game-agent.exe (Native Rust)            │
  │                                         │  (JPEG / JSON)  │   • Axum 0.8 HTTP API (:8765)           │
@@ -42,7 +42,7 @@ Without MCP, everything works from the shell: `scripts/play/act.sh`, `ap.sh`, `h
   (Earth, Mars, Artemis, Agena II, Macrinus III). Game log: [`games/terran-2329/journal.md`](games/terran-2329/journal.md).
 - Every turn is verified by the HUD date changing; the autopilot clears 9 kinds of known screens
   by itself and stops only for real decisions (events, research, builds, policies, trades).
-- **Stellaris** (4.5.1): the pilot app governs an empire over the native AI (observer mode +
+- **Stellaris** (4.5.1): the pilot app governs an empire over the native AI (`human_ai` +
   console directives, decisions from the monthly autosave). Verified live at Fastest speed on a
   throwaway game; see [`games/stellaris-spike/journal.md`](games/stellaris-spike/journal.md).
 - Agent 1.2.0 (configurable drag, read-only game folders) is deployed on the PC.
@@ -138,6 +138,7 @@ The compiled controller binary provides full programmatic access to all agent fu
 ./target/release/game-controller stellaris brief                      # newest autosave on the PC (agent >= 1.2)
 ./target/release/game-controller stellaris brief path/to/autosave.sav # local file, offline
 ./target/release/game-controller stellaris brief --json
+./target/release/game-controller stellaris take-control               # once per session: AI plays the empire (human_ai)
 ./target/release/game-controller stellaris directive expand --dry-run  # console lines only
 ./target/release/game-controller stellaris directive expand            # apply (Stellaris must be foreground)
 ./target/release/game-controller stellaris log -l 30                   # tail of logs/game.log
@@ -190,7 +191,8 @@ Gemini CLI — `.gemini/settings.json` (in this repo):
 | `game_state` | `{}` | Query live agent status, foreground window, and screen dimensions. |
 | `focus` | `title` | Bring target window to foreground by title substring. |
 | `stellaris_briefing` | `json` | *Stellaris corpus only.* Briefing from the newest monthly autosave (fetched via the agent's `/files`): date, government, stockpile and net per resource with deficits flagged, power, research and options, policies, planets, wars. About 2 KB of text. |
-| `stellaris_directive` | `name` | *Stellaris only.* Apply a governor directive from `corpora/stellaris/directives.toml`: `play <country>` → clear other directive flags, set `governor_directive_<name>` and its policies → `observe`; confirmed by `GOVERNOR_APPLIED <name>` in game.log. Checks the game is foreground before every keystroke. |
+| `stellaris_take_control` | `{}` | *Stellaris only.* Hand the empire to the game's AI: leave observer mode if needed, switch `human_ai` on (the console's reply is read on screen). Once per session. |
+| `stellaris_directive` | `name` | *Stellaris only.* Apply a governor directive from `corpora/stellaris/directives.toml`: clear other directive flags, set `governor_directive_<name>` and its policies; confirmed by a scoped `GOVERNOR_APPLIED <name> <nonce>` in game.log. Checks the game is foreground before every keystroke. |
 | `stellaris_speed` | `speed` | *Stellaris only.* Set the game speed: slowest, slow, normal, fast, fastest (`-` ×4 then `=` ×n; fastest ≈ 2.5 in-game months per second). |
 | `stellaris_pause` | `paused` | *Stellaris only.* Pause or resume; reads the state from the screen first (the yellow "Paused" label), so it is safe to repeat. |
 | `stellaris_log` | `lines` | *Stellaris only.* Tail of `logs/game.log`. |
@@ -245,7 +247,7 @@ those results before it decides. The JSONL logs in `runs/<id>/` stay the raw rec
 The database is local (gitignored); curated knowledge (`learned/`, strategy, journal) is committed.
 
 **Stellaris governor** (`src/pilot/governor.py`): pause → briefing from the newest autosave →
-the model returns one directive or `keep` → apply (`play` → flag + policies → `observe`) →
+the model returns one directive or `keep` → apply (flag + policies, console, game paused) →
 resume at `--speed` (default `normal`) → poll autosaves until `--months` have passed, a new war starts, or a
 resource turns negative → pause → decide again. The game is paused whenever the model thinks,
 so any speed is safe. `prepare_war` is applied only after a human "yes" on the dashboard. If the

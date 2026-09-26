@@ -54,7 +54,7 @@ CREATE INDEX IF NOT EXISTS metrics_campaign ON metrics(campaign_id, month);
 """
 
 # Numbers compared N months after a decision (from the governor's metrics events).
-SCORED = ("planets", "pops", "techs_known", "military_power", "economy_power", "tech_power")
+SCORED = ("systems", "planets", "pops", "techs_known", "military_power", "economy_power", "tech_power")
 
 
 def month_index(date: str | None) -> int | None:

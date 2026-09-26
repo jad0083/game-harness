@@ -62,9 +62,9 @@ def test_governor_decides_on_schedule_and_pauses_while_deciding(setup):
     gov.run(max_decisions=2)
 
     acts = [a for a in game.actions if a[0] != "corpus"]
-    assert acts[:3] == [("paused", True), ("speed", "fastest"), ("directive", "expand")]
+    assert acts[:4] == [("paused", True), ("speed", "fastest"), ("take_control",), ("directive", "expand")]
     # resumed after the first decision, paused again at the scheduled date (12 months later)
-    assert acts[3] == ("paused", False) and acts[4] == ("paused", True)
+    assert acts[4] == ("paused", False) and acts[5] == ("paused", True)
     assert ("directive", "keep") not in acts and acts.count(("directive", "expand")) == 1
     assert game.paused is True, "left paused at the end"
     assert log.state.episodes == 2 and log.state.game_date == "2201.01.01"

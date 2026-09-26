@@ -69,6 +69,10 @@ pub struct Briefing {
     pub empire_size: i64,
     pub pops: i64,
     pub starbases: (i64, i64),
+    /// Star systems the empire owns (distinct systems of its controlled planets): expansion.
+    pub systems: usize,
+    /// `last_date_was_human` (set when `play` runs; informational, not a control-state signal).
+    pub last_human: String,
     pub techs_known: usize,
     pub research: BTreeMap<String, Research>,
     pub policies: BTreeMap<String, String>,
@@ -109,16 +113,7 @@ pub const DOCS_ROOT: &str = "stellaris_docs";
 
 /// Newest autosave across all save folders, fetched through the agent: (path, bytes).
 pub async fn fetch_latest_save(client: &crate::client::AgentClient) -> Result<(String, Vec<u8>)> {
-    let mut best: Option<(u64, String)> = None;
-    for dir in client.files_list(DOCS_ROOT, "save games").await?.into_iter().filter(|e| e.is_dir) {
-        let rel = format!("save games/{}", dir.name);
-        for f in client.files_list(DOCS_ROOT, &rel).await? {
-            if !f.is_dir && f.name.ends_with(".sav") && best.as_ref().is_none_or(|(m, _)| f.modified > *m) {
-                best = Some((f.modified, format!("{rel}/{}", f.name)));
-            }
-        }
-    }
-    let (_, path) = best.context("no .sav files under 'save games'")?;
+    let (path, _) = latest_save_path(client).await?;
     let (bytes, _) = client.files_read(DOCS_ROOT, &path, 0, None).await?;
     Ok((path, bytes))
 }
@@ -158,12 +153,15 @@ impl Directives {
         Ok(d)
     }
 
-    /// Console lines that apply directive `name` to `country` (see directives.toml).
-    pub fn console_lines(&self, name: &str, country: u64) -> Result<Vec<String>> {
+    /// Console lines that apply directive `name` to the player's empire (see directives.toml).
+    /// The empire must be player-controlled with `human_ai` on (see `take_control`); the
+    /// confirmation line is logged only when the effect has a real country scope, so a directive
+    /// sent in observer mode fails loudly instead of silently doing nothing.
+    pub fn console_lines(&self, name: &str, nonce: &str) -> Result<Vec<String>> {
         let Some(def) = self.directive.get(name) else {
             bail!("unknown directive {name:?}; known: {}", self.directive.keys().cloned().collect::<Vec<_>>().join(", "))
         };
-        let mut lines = vec![format!("play {country}")];
+        let mut lines = vec![];
         let others: Vec<String> = self
             .directive
             .keys()
@@ -177,16 +175,44 @@ impl Directives {
         for (policy, option) in &def.policies {
             apply += &format!(" set_policy = {{ policy = {policy} option = {option} cooldown = no }}");
         }
-        apply += &format!(" log = \"{}\"", applied_marker(name));
+        apply += &format!(" {}", scoped_log(&applied_marker(name, nonce)));
         lines.push(apply);
-        lines.push("observe".into());
         Ok(lines)
     }
 }
 
-/// Text written to game.log when a directive's effects ran.
-pub fn applied_marker(name: &str) -> String {
-    format!("GOVERNOR_APPLIED {name}")
+/// Text written to game.log when a directive's effects ran (`nonce` keeps repeats visible).
+pub fn applied_marker(name: &str, nonce: &str) -> String {
+    format!("GOVERNOR_APPLIED {name} {nonce}")
+}
+
+/// Unique suffix for log markers: milliseconds since the Unix epoch, base 36.
+pub fn nonce() -> String {
+    let mut n = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis()).unwrap_or(0);
+    let mut s = String::new();
+    while n > 0 {
+        s.insert(0, std::char::from_digit((n % 36) as u32, 36).unwrap_or('0'));
+        n /= 36;
+    }
+    s
+}
+
+/// Poll game.log (written with a few seconds' delay) for `marker` after byte `offset`.
+async fn wait_for_log(client: &crate::client::AgentClient, offset: u64, marker: &str) -> Result<bool> {
+    for _ in 0..16 {
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+        if read_log_since(client, offset).await?.0.contains(marker) {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+/// A `log` effect that runs only with a real country scope (verified 2026-09-25: logged while
+/// playing, not while observing). The game writes identical log text only once per in-game day,
+/// so callers add a `nonce()` to every marker.
+pub fn scoped_log(text: &str) -> String {
+    format!("if = {{ limit = {{ exists = capital_scope }} log = \"{text}\" }}")
 }
 
 /// Script identifiers only: nothing that could smuggle other console commands.
@@ -314,6 +340,113 @@ impl PauseDetector {
     }
 }
 
+/// Reads the console's reply to `human_ai` ("… is now ON" / "… is now OFF") by comparing the
+/// last output line with both templates from the manifest.
+pub struct HumanAiReader {
+    on: image::RgbImage,
+    off: image::RgbImage,
+    roi: [f64; 4],
+    search: u32,
+}
+
+impl HumanAiReader {
+    pub fn from_manifest(m: &crate::corpus::GameManifest) -> Result<HumanAiReader> {
+        let load = |name: &str| -> Result<(image::RgbImage, [f64; 4], u32)> {
+            let def = m.screens.get(name).with_context(|| format!("manifest has no [screens.{name}]"))?;
+            let rel = def.template.as_ref().with_context(|| format!("[screens.{name}] has no template"))?;
+            let path = m.base_dir.clone().unwrap_or_default().join(rel);
+            let img = image::open(&path).with_context(|| format!("loading {}", path.display()))?.to_rgb8();
+            Ok((img, def.template_roi.context("no template_roi")?, def.template_search))
+        };
+        let (on, roi, search) = load("human_ai_on")?;
+        let (off, _, _) = load("human_ai_off")?;
+        Ok(HumanAiReader { on, off, roi, search })
+    }
+
+    /// Some(true) for ON, Some(false) for OFF, None when neither is clearly closer.
+    pub fn read_frame(&self, frame: &image::RgbImage) -> Option<bool> {
+        let r = crate::imaging::roi_from_norm(frame.width(), frame.height(), self.roi);
+        let d_on = crate::imaging::template_diff_search(frame, &self.on, r[0], r[1], self.search);
+        let d_off = crate::imaging::template_diff_search(frame, &self.off, r[0], r[1], self.search);
+        let (best, other) = if d_on < d_off { (d_on, d_off) } else { (d_off, d_on) };
+        // The console is semi-transparent over the map, so absolute distances drift with what is
+        // behind it (live OFF frame: 0.039 vs ON 0.071); the gap between the two decides.
+        (best < 0.08 && other - best > 0.015).then_some(d_on < d_off)
+    }
+
+    async fn toggle_and_read(&self, client: &crate::client::AgentClient) -> Result<Option<bool>> {
+        // `help` fills the console, so the reply always lands on the bottom line
+        for line in ["help", "human_ai"] {
+            require_foreground(client).await?;
+            client.type_text(line).await?;
+            require_foreground(client).await?;
+            client.key("enter", 1).await?;
+            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+        }
+        let jpeg = client.screenshot(None, None, None, None, Some(crate::imaging::MAX_SIDE as i32), Some(90)).await?;
+        Ok(self.read_frame(&crate::imaging::decode_rgb(&jpeg)?))
+    }
+
+    /// Switch `human_ai` to `on`, reading the console's reply after each toggle.
+    pub async fn set(&self, client: &crate::client::AgentClient, on: bool) -> Result<()> {
+        require_foreground(client).await?;
+        client.key(CONSOLE_KEY, 1).await?;
+        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+        let mut result = Err(anyhow!("could not read the console's reply to human_ai"));
+        for _ in 0..2 {
+            match self.toggle_and_read(client).await? {
+                Some(state) if state == on => {
+                    result = Ok(());
+                    break;
+                }
+                Some(_) => continue, // toggled the wrong way: toggle again
+                None => break,
+            }
+        }
+        require_foreground(client).await?;
+        client.key(CONSOLE_KEY, 1).await?;
+        result
+    }
+}
+
+/// Make sure the game's AI plays the player's empire: leave observer mode if needed (`play`), then
+/// switch `human_ai` on (checked on screen). Observer mode leaves the AI half-active (research and
+/// warships, but no exploration or expansion), so it is never used. Returns what was done.
+pub async fn take_control(
+    client: &crate::client::AgentClient,
+    pause: &PauseDetector,
+    reader: &HumanAiReader,
+    country: u64,
+) -> Result<Vec<String>> {
+    let mut done = vec![];
+    pause.set_paused(client, true).await?;
+    // a scoped log proves the console reaches a real country (not observer mode)
+    let probe = format!("HARNESS_SCOPE_CHECK {}", nonce());
+    let (_, before) = client.files_read(DOCS_ROOT, "logs/game.log", 0, Some(0)).await?;
+    run_console(client, &[format!("effect {}", scoped_log(&probe))]).await?;
+    if !wait_for_log(client, before, &probe).await? {
+        run_console(client, &[format!("play {country}")]).await?;
+        done.push(format!("left observer mode (play {country})"));
+    }
+    reader.set(client, true).await?;
+    done.push("human_ai is ON: the game's AI plays the empire".into());
+    Ok(done)
+}
+
+/// Path and modification time of the newest autosave.
+async fn latest_save_path(client: &crate::client::AgentClient) -> Result<(String, u64)> {
+    let mut best: Option<(u64, String)> = None;
+    for dir in client.files_list(DOCS_ROOT, "save games").await?.into_iter().filter(|e| e.is_dir) {
+        let rel = format!("save games/{}", dir.name);
+        for f in client.files_list(DOCS_ROOT, &rel).await? {
+            if !f.is_dir && f.name.ends_with(".sav") && best.as_ref().is_none_or(|(m, _)| f.modified > *m) {
+                best = Some((f.modified, format!("{rel}/{}", f.name)));
+            }
+        }
+    }
+    best.map(|(m, p)| (p, m)).context("no .sav files under 'save games'")
+}
+
 /// Bytes of game.log after `offset` (and the new size), via the agent.
 pub async fn read_log_since(client: &crate::client::AgentClient, offset: u64) -> Result<(String, u64)> {
     let (bytes, size) = client.files_read(DOCS_ROOT, "logs/game.log", offset, None).await?;
@@ -325,13 +458,12 @@ pub async fn apply_directive(
     client: &crate::client::AgentClient,
     directives: &Directives,
     name: &str,
-    country: u64,
     pause: Option<&PauseDetector>,
 ) -> Result<Vec<String>> {
-    let lines = directives.console_lines(name, country)?;
+    let tag = nonce();
+    let lines = directives.console_lines(name, &tag)?;
     let (_, before) = client.files_read(DOCS_ROOT, "logs/game.log", 0, Some(0)).await?;
-    // Pause first: between `play` and `observe` the empire is not AI-run, and at Fastest ~2 s of
-    // typing would be months of game time. Restore the previous state afterwards.
+    // Pause first: at Fastest ~2 s of typing would be months of game time. Restore it afterwards.
     let was_paused = match pause {
         Some(p) => {
             let was = p.is_paused(client).await?;
@@ -344,15 +476,12 @@ pub async fn apply_directive(
     if let (Some(p), Some(false)) = (pause, was_paused) {
         p.set_paused(client, false).await?;
     }
-    let marker = applied_marker(name);
-    for _ in 0..10 {
-        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
-        let (text, _) = read_log_since(client, before).await?;
-        if text.contains(&marker) {
-            return Ok(lines);
-        }
+    let marker = applied_marker(name, &tag);
+    if wait_for_log(client, before, &marker).await? {
+        return Ok(lines);
     }
-    bail!("directive {name} sent but {marker:?} did not appear in game.log; check the console")
+    bail!("directive {name} sent but {marker:?} did not appear in game.log: the empire is probably in observer \
+           mode or the console did not take the line; run `stellaris take-control`")
 }
 
 // ---- small reader helpers -------------------------------------------------------------------
@@ -417,6 +546,7 @@ pub fn brief_gamestate(gamestate: &[u8]) -> Result<Briefing> {
     let Some(c) = obj(&countries, &id) else { bail!("player country {id} not found") };
 
     b.name = name_of(&c);
+    b.last_human = string(&c, "last_date_was_human").unwrap_or_default();
     if let Some(g) = obj(&c, "government") {
         b.government = string(&g, "type").unwrap_or_default();
         b.authority = string(&g, "authority").unwrap_or_default();
@@ -480,6 +610,15 @@ pub fn brief_gamestate(gamestate: &[u8]) -> Result<Briefing> {
 
     // 4.5: `owned_planets` holds colony ids; a colony's `carrier` points at its planet.
     let planets = obj(&root, "planets").and_then(|p| obj(&p, "planet"));
+    if let Some(ps) = planets.as_ref() {
+        let mut systems = std::collections::BTreeSet::new();
+        for pid in strings(get(&c, "controlled_planets")) {
+            if let Some(origin) = obj(ps, &pid).and_then(|p| obj(&p, "coordinate")).and_then(|co| i64_(&co, "origin")) {
+                systems.insert(origin);
+            }
+        }
+        b.systems = systems.len();
+    }
     let colonies = obj(&root, "colony");
     for cid in strings(get(&c, "owned_planets")) {
         let Some(col) = colonies.as_ref().and_then(|cs| obj(cs, &cid)) else { continue };
@@ -535,9 +674,9 @@ impl Briefing {
             self.government, self.authority, self.ethics.join(", "), self.civics.join(", "), self.origin
         );
         s += &format!(
-            "Power: military {:.0}, economy {:.0}, tech {:.0}; victory rank {}. Empire size {}, pops {}, fleet size {}, starbases {}/{}\n",
+            "Power: military {:.0}, economy {:.0}, tech {:.0}; victory rank {}. Systems owned {}, empire size {}, pops {}, fleet size {}, upgraded starbases {}/{}\n",
             self.military_power, self.economy_power, self.tech_power, self.victory_rank,
-            self.empire_size, self.pops, self.fleet_size, self.starbases.0, self.starbases.1
+            self.systems, self.empire_size, self.pops, self.fleet_size, self.starbases.0, self.starbases.1
         );
         s += "Resources (stock, net/month):";
         for (k, v) in &self.stockpile {
@@ -604,6 +743,8 @@ mod tests {
         assert_eq!(earth.class, "continental");
         assert_eq!(earth.stability, Some(85.24));
         assert_eq!(earth.pops, Some(5327));
+        assert_eq!(b.systems, 1, "only Sol in 2200.11");
+        assert_eq!(b.last_human, "2200.09.24");
         assert!(b.wars.is_empty());
     }
 
@@ -625,18 +766,18 @@ mod tests {
     #[test]
     fn directive_console_lines_take_control_apply_and_hand_back() {
         let d = directives();
-        let lines = d.console_lines("expand", 0).unwrap();
-        assert_eq!(lines.first().unwrap(), "play 0");
-        assert_eq!(lines.last().unwrap(), "observe");
-        assert!(lines[1].starts_with("effect remove_country_flag = governor_directive_"));
-        assert!(!lines[1].contains("governor_directive_expand "));
-        let apply = &lines[2];
+        let lines = d.console_lines("expand", "k3x9").unwrap();
+        assert_eq!(lines.len(), 2, "no play/observe: the empire stays player-controlled under human_ai");
+        assert!(lines[0].starts_with("effect remove_country_flag = governor_directive_"));
+        assert!(!lines[0].contains("governor_directive_expand "));
+        let apply = &lines[1];
         assert!(apply.contains("set_country_flag = governor_directive_expand"));
         assert!(apply.contains("set_policy = { policy = diplomatic_stance option = diplo_stance_expansionist cooldown = no }"));
-        assert!(apply.ends_with("log = \"GOVERNOR_APPLIED expand\""));
+        assert!(apply.ends_with("if = { limit = { exists = capital_scope } log = \"GOVERNOR_APPLIED expand k3x9\" }"));
         assert!(lines.iter().all(|l| l.len() < 1000), "agent /type limit");
-        assert!(d.console_lines("nuke_everyone", 0).is_err());
-        assert_eq!(d.console_lines("defend", 7).unwrap()[0], "play 7");
+        assert!(d.console_lines("nuke_everyone", "x").is_err());
+        let (a, b) = (nonce(), { std::thread::sleep(std::time::Duration::from_millis(2)); nonce() });
+        assert!(a != b && a.chars().all(|c| c.is_ascii_alphanumeric()), "{a} {b}");
     }
 
     #[test]
@@ -663,6 +804,25 @@ mod tests {
         // Same label mid-pulse: the pixel template scored 0.108 here and misread it as running.
         assert!(d.frame_is_paused(&load("stellaris_paused_dim.jpg")));
         assert!(!d.frame_is_paused(&load("stellaris_running.jpg")));
+    }
+
+    #[test]
+    fn human_ai_reply_is_read_from_the_console_line() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpora/stellaris");
+        let corpus = crate::corpus::GameCorpus::load_from_dir(&dir).unwrap();
+        let r = HumanAiReader::from_manifest(&corpus.manifest).unwrap();
+        // fixtures: the (0,150)-(380,235) crop of real frames after `help` + `human_ai`
+        let load = |f: &str| {
+            let crop = image::open(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures").join(f)).unwrap().to_rgb8();
+            let mut frame = image::RgbImage::new(1568, 882);
+            image::imageops::replace(&mut frame, &crop, 0, 150);
+            frame
+        };
+        assert_eq!(r.read_frame(&load("stellaris_human_ai_on.jpg")), Some(true));
+        assert_eq!(r.read_frame(&load("stellaris_human_ai_off.jpg")), Some(false));
+        // a live frame with a different map behind the console (distances 0.039 / 0.071)
+        assert_eq!(r.read_frame(&load("stellaris_human_ai_off_live.jpg")), Some(false));
+        assert_eq!(r.read_frame(&image::RgbImage::new(1568, 882)), None, "no console: unknown");
     }
 
     #[test]

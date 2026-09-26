@@ -214,12 +214,14 @@ screenshots, or the game's raw XML (`incoming/`).
 ## 10. Stellaris (governor over the native AI)
 
 Verified live 2026-09-25 (`games/stellaris-spike/journal.md`). The empire is played by the game's
-own AI in **observer mode**; the model only picks one standing directive.
+own AI through **`human_ai`** (we stay the player); the model only picks one standing directive.
+**Never use observer mode**: there the AI does not explore or expand.
 
 ```bash
 C="./target/release/game-controller --corpus corpora/stellaris"
 $C stellaris brief                   # ~2 KB briefing from the newest autosave (read via the agent)
-$C stellaris directive expand        # play 0 → flags + policies → observe; confirmed in game.log
+$C stellaris take-control            # once per session: leave observer mode, human_ai ON (read on screen)
+$C stellaris directive expand        # flags + policies on the empire; confirmed in game.log
 $C stellaris speed fastest           # slowest | slow | normal | fast | fastest
 $C stellaris pause                   # / resume — state read from the screen, safe to repeat
 $C stellaris log -l 30               # tail of logs/game.log
@@ -230,8 +232,9 @@ $C corpus get event:distar.311       # every option of an event with its effects
 Rules:
 - **Never touch other save folders.** "Commonwealth of Man 3" is the user's own game. Test only
   in a throwaway, non-Ironman game; the console disables achievements.
-- While observing, console `effect` has no country scope and silently does nothing: always
-  `play <id>` first (the `directive` command does this).
+- While observing, console `effect` has no country scope and silently does nothing, and the AI
+  does not expand: run `stellaris take-control` (the governor does this at start).
+- game.log drops a log line whose text repeats on the same in-game day, and lags a few seconds.
 - Space toggles pause, so never press it blind; use `stellaris pause|resume`.
 - Directives are only those in `corpora/stellaris/directives.toml` (identifiers `[a-z0-9_]`); a
   new directive needs policy options that exist in the game's `common/policies`.

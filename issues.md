@@ -34,6 +34,8 @@
 - [ ] Agent key table has no numpad keys or `+`; Stellaris speed-up must use `=` (VK_OEM_PLUS) until added
 
 ## Resolved
+- [x] Stellaris: in observer mode the AI never explored or expanded our empire (1 system 2200–2212 while AI empires reached 9–18); the spike had judged by starbase capacity (2026-09-25; switched to `human_ai`, 1 → 4 systems in 3.5 years; briefing now reports systems owned)
+- [x] Stellaris game.log drops repeated log text on the same in-game day, so repeated directives looked unconfirmed (2026-09-25; unique nonce per marker, 8 s polling)
 - [x] Corpus summary pointed every game at corpora/galciv4/data/README.md (2026-09-25; now names the loaded corpus directory)
 - [x] Live governor run died after 3 decisions: "could not resume the game: the Paused label did not disappear". Stellaris's system search (hotkey F) was open with keyboard focus, so Space went into the text box; stray keys typed while the pilot had focused the game are the likely cause (2026-09-25; set_paused now tries one Esc before giving up, and the governor flags needs-attention instead of crashing; reproduced and verified live)
 - [x] Governor: pausing from the dashboard triggered a model decision ("paused by the human" was treated as a decision point) (2026-09-25; fixed, regression test)
