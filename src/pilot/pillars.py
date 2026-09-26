@@ -7,13 +7,14 @@ from __future__ import annotations
 
 import re
 import tomllib
+import types
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from pydantic import BaseModel
 
 # The action kinds the harness can validate and carry out, and the Pillar field each one fills.
-ACTION_KINDS: dict[str, str] = {"tech": "prefer_techs", "market": "market"}
+ACTION_KINDS: types.MappingProxyType[str, str] = types.MappingProxyType({"tech": "prefer_techs", "market": "market"})
 _ACTION_KEYS = {
     "tech": {"field", "max_items", "ids_from_corpus", "note"},
     "market": {"field", "max_items", "resources_from_manifest", "amount_min", "amount_max",
@@ -139,10 +140,12 @@ def _int(v) -> bool:
 
 def _directives(corpus: Path) -> set[str]:
     f = corpus / "directives.toml"
-    if not f.exists():
-        return set()
     try:
-        return set(tomllib.loads(f.read_text(encoding="utf-8")).get("directive", {}))
+        text = f.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        raise PillarsError(f"{f}: missing") from None
+    try:
+        return set(tomllib.loads(text).get("directive", {}))
     except tomllib.TOMLDecodeError as e:
         raise PillarsError(f"{f}: not valid TOML: {e}") from None
 
@@ -258,5 +261,6 @@ def _parse(path: Path, corpus: Path) -> PillarSpec:
     instructions = strat.get("instructions", "")
     if not isinstance(instructions, str):
         raise _err(path, "strategy.instructions", "must be text")
-    return PillarSpec(game=corpus.name, pillars=pillars, metrics=tuple(names), metric_aliases=aliases,
-                      row_keys=row_keys, actions=actions, min_milestones_top=top, instructions=instructions.strip())
+    return PillarSpec(game=corpus.name, pillars=types.MappingProxyType(pillars), metrics=tuple(names),
+                      metric_aliases=types.MappingProxyType(aliases), row_keys=types.MappingProxyType(row_keys),
+                      actions=types.MappingProxyType(actions), min_milestones_top=top, instructions=instructions.strip())

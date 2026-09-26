@@ -141,3 +141,35 @@ def test_loads_are_cached_until_the_file_changes(tmp_path):
     st = (d / "pillars.toml").stat()
     os.utime(d / "pillars.toml", ns=(st.st_atime_ns, st.st_mtime_ns + 1_000_000))
     assert load_pillars(d).pillars["society"].label == "People"
+
+
+def test_cached_spec_is_read_only(tmp_path):
+    """The cached spec's dicts are immutable to prevent process-wide cache poisoning."""
+    spec = load_pillars(corpus(tmp_path))
+    # Try to modify pillars dict
+    with pytest.raises(TypeError):
+        spec.pillars["economy"] = None
+    # Try to modify metric_aliases dict
+    with pytest.raises(TypeError):
+        spec.metric_aliases["new"] = "alias"
+    # Try to modify row_keys dict
+    with pytest.raises(TypeError):
+        spec.row_keys["new"] = "key"
+    # Try to modify actions dict
+    with pytest.raises(TypeError):
+        spec.actions["new"] = None
+    # Second load returns the same cached object
+    second = load_pillars(corpus(tmp_path))
+    assert second is spec
+    assert second.pillars["economy"].label == "Economy"  # unchanged
+
+
+def test_missing_directives_toml_gives_clear_error(tmp_path):
+    """When directives.toml is missing, report it clearly instead of saying a directive doesn't exist."""
+    d = tmp_path / "g"
+    d.mkdir(exist_ok=True)
+    shutil.copy(REPO / "corpora/stellaris" / "manifest.toml", d / "manifest.toml")
+    (d / "pillars.toml").write_text(MINI, encoding="utf-8")
+    # Don't copy directives.toml; let it be missing
+    with pytest.raises(PillarsError, match=r"directives\.toml: missing"):
+        load_pillars(d)
