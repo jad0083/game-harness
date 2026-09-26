@@ -9,7 +9,7 @@ An ultra-low-latency, 100% Rust-powered autonomous AI game harness that plays tu
  │   └─ game-controller (Native Rust)      │         │   (Running borderless / windowed)       │
  │      • game corpus (manifest+data+docs)│         └─────────────────────────────────────────┘
  │      • autopilot (verified turn loop)   │                              ▲
- │      • stdio MCP server (19 tools, +1 Stellaris)      │  HTTP/TCP 8765               │ GDI / Win32 SendInput
+ │      • stdio MCP server (19 tools, +3 Stellaris)      │  HTTP/TCP 8765               │ GDI / Win32 SendInput
  │      • frame diff + luminance check     │ ──────────────► ┌─────────────────────────────────────────┐
  │                                         │ ◄────────────── │ game-agent.exe (Native Rust)            │
  │                                         │  (JPEG / JSON)  │   • Axum 0.8 HTTP API (:8765)           │
@@ -133,6 +133,9 @@ The compiled controller binary provides full programmatic access to all agent fu
 ./target/release/game-controller stellaris brief                      # newest autosave on the PC (agent >= 1.2)
 ./target/release/game-controller stellaris brief path/to/autosave.sav # local file, offline
 ./target/release/game-controller stellaris brief --json
+./target/release/game-controller stellaris directive expand --dry-run  # console lines only
+./target/release/game-controller stellaris directive expand            # apply (Stellaris must be foreground)
+./target/release/game-controller stellaris log -l 30                   # tail of logs/game.log
 
 # 12. Launch Stdio MCP Server (Claude Code / Gemini / Antigravity)
 ./target/release/game-controller mcp
@@ -180,6 +183,8 @@ Gemini CLI — `.gemini/settings.json` (in this repo):
 | `game_state` | `{}` | Query live agent status, foreground window, and screen dimensions. |
 | `focus` | `title` | Bring target window to foreground by title substring. |
 | `stellaris_briefing` | `json` | *Stellaris corpus only.* Briefing from the newest monthly autosave (fetched via the agent's `/files`): date, government, stockpile and net per resource with deficits flagged, power, research and options, policies, planets, wars. About 2 KB of text. |
+| `stellaris_directive` | `name` | *Stellaris only.* Apply a governor directive from `corpora/stellaris/directives.toml`: `play <country>` → clear other directive flags, set `governor_directive_<name>` and its policies → `observe`; confirmed by `GOVERNOR_APPLIED <name>` in game.log. Checks the game is foreground before every keystroke. |
+| `stellaris_log` | `lines` | *Stellaris only.* Tail of `logs/game.log`. |
 
 ---
 

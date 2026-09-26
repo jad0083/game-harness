@@ -1,0 +1,39 @@
+# Governor directives (strategy.md § 9), applied from the in-game console by
+# `game-controller stellaris directive <name>` / MCP `stellaris_directive`:
+#
+#   play <player country>                         take the empire back from the AI
+#   effect remove_country_flag = governor_directive_<other> …
+#   effect set_country_flag = governor_directive_<name> set_policy = {…} … log = "GOVERNOR_APPLIED <name>"
+#   observe                                       hand the empire back to the native AI
+#
+# `play` must come first: while observing, console effects have no country scope and do nothing
+# (games/stellaris-spike/journal.md). Success is shown by the `GOVERNOR_APPLIED` line in game.log
+# and by the flag in the next autosave (the briefing lists governor flags).
+#
+# Only policy options that exist in the game's common/policies (4.5.1, read 2026-09-25) are used.
+# A directive never adds resources or modifiers. `set_policy … cooldown = no` skips the normal
+# 10-year lock, so directives should still change rarely (hold each ~12 months).
+
+[directive.expand]
+description = "Grow: outposts, colonies, exploration. Pick in the opening or while unclaimed habitable systems are near and no deficits."
+policies = { diplomatic_stance = "diplo_stance_expansionist" }
+
+[directive.consolidate_economy]
+description = "Fix deficits, housing, amenities and stability before anything else."
+policies = { economic_policy = "economic_policy_balanced" }
+
+[directive.tech_rush]
+description = "Research first while borders are safe and the economy is stable."
+policies = { economic_policy = "economic_policy_civilian" }
+
+[directive.prepare_war]
+description = "Alloys, naval capacity, claims. Only against a weaker neighbour, after ask_human."
+policies = { economic_policy = "economic_policy_military" }
+
+[directive.defend]
+description = "War on us or a stronger hostile neighbour on the border: fleets home, fortify chokepoints."
+policies = {}
+
+[directive.diplomacy_first]
+description = "Improve relations, pacts, federation and galactic community standing."
+policies = { diplomatic_stance = "diplo_stance_cooperative" }
