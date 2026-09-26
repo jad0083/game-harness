@@ -2,6 +2,7 @@
 
 ## Open
 
+- [ ] Stellaris event popups (e.g. a Declaration of War) stay open under `human_ai`: the AI does not click them and the governor does not look at the screen; harmless for time (they do not pause) but they cover the map and the pause label check's area stays clear. Dismissed by hand once (2263.04)
 - [ ] A governor decision hung indefinitely (gemini-pro-latest, 2216.02 and 2219.09, game paused, status stuck on "Deciding now"): model calls had no timeout. Fixed: every request has `model_timeout_s` = 120 (Gemini enforces it server-side as a deadline and answers 504, retried like a 503; client-side timeouts are retried too)
 - [x] `systemctl --user stop game-pilot.service` hung 60 s and was SIGKILLed while a decision's model call ran (gemini-pro-latest, 2026-09-26); fixed: after SIGTERM the loop gets 20 s, then the process exits (the game is paused before every decision); a second signal exits at once. Also `KillMode=mixed`: systemd had killed the controller subprocess too, so the pause on exit failed (broken pipe). Verified live: stop mid-decision 7.4 s, stop while running 0.9 s with the game left paused
 - [ ] The Paradox Launcher's window is also titled "Stellaris", so the exact-title foreground check cannot tell it from the game (seen 2026-09-26 on restart); a directive or pause while the launcher is up would send keys to it
@@ -29,9 +30,9 @@
 
 ### Rust agent (`crates/game-agent`)
 - [x] Installer picks the first *existing* docs folder: on the PC `stellaris_docs` resolved to a stale 2022 copy under `OneDrive\Documents` while Stellaris 4.5 likely writes to `MyDocuments` (`D:\OneDrive - Sacramento`); confirmed at launch: its logs stayed at 2022 while the game ran. Installer now picks the candidate with the newest files (2026-09-25) — deployed with agent 1.3.0 (roots.json lists the newest docs folder)
-- [ ] `main.rs:192-199` fallback token is a nanosecond timestamp in hex; `main.rs:214` non-constant-time compare; Python `--allow` client-IP list dropped — fixed in agent 1.4.0 (32 OS-random bytes, constant-time compare, tests); the IP allow-list stays dropped (firewall rule limits to the local subnet). Waiting for the 1.4.0 install
-- [ ] `main.rs:256` `x + w` can wrap in release, bypassing the bounds check (GDI then fails; no crash) — fixed in agent 1.4.0 (`region_ok` in i64, test). Waiting for the 1.4.0 install
-- [ ] Console-subsystem exe launched as an interactive logon task → console window on the game desktop at every logon — fixed in agent 1.4.0 (GUI subsystem, logs to agent.log). Waiting for the 1.4.0 install
+- [x] `main.rs:192-199` fallback token is a nanosecond timestamp in hex; `main.rs:214` non-constant-time compare; Python `--allow` client-IP list dropped — fixed in agent 1.4.0 (32 OS-random bytes, constant-time compare, tests); the IP allow-list stays dropped (firewall rule limits to the local subnet). Deployed 2026-09-26 (1.4.0 on the PC, no console window at logon)
+- [x] `main.rs:256` `x + w` can wrap in release, bypassing the bounds check (GDI then fails; no crash) — fixed in agent 1.4.0 (`region_ok` in i64, test). Deployed 2026-09-26 (1.4.0 on the PC, no console window at logon)
+- [x] Console-subsystem exe launched as an interactive logon task → console window on the game desktop at every logon — fixed in agent 1.4.0 (GUI subsystem, logs to agent.log). Deployed 2026-09-26 (1.4.0 on the PC, no console window at logon)
 - [x] Zero tests for the shipped agent binary — 24 agent tests now (batch/drag validation, files, keys, token, bounds); run by scripts/ci.sh
 
 ### Repo hygiene / docs
@@ -40,7 +41,7 @@
 - [ ] `.mcp.json` points at gitignored `./target/release/game-controller`; fresh clone has no MCP until `cargo build --release`, undocumented
 - [ ] `#![allow(dead_code, …)]` remains in `game-agent/main.rs`, `imaging.rs`, `mcp.rs` (removed from `corpus.rs`, `autopilot.rs`)
 - [ ] Python harness (`src/harness`, `windows_agent/agent.py`, 40 tests) is no longer deployed; its green suite covers nothing that runs (`agent.py` `settle` stub always returns `settled: True`)
-- [ ] Agent key table has no numpad keys or `+`; Stellaris speed-up must use `=` (VK_OEM_PLUS) until added — fixed in agent 1.4.0: `num0`-`num9`/`numpad0`-`numpad9`, `add`, `subtract`, `multiply`, `divide`, `decimal`, `plus`/`+`, `win`, `apps`, `printscreen` (tests). Waiting for the 1.4.0 install
+- [x] Agent key table has no numpad keys or `+`; Stellaris speed-up must use `=` (VK_OEM_PLUS) until added — fixed in agent 1.4.0: `num0`-`num9`/`numpad0`-`numpad9`, `add`, `subtract`, `multiply`, `divide`, `decimal`, `plus`/`+`, `win`, `apps`, `printscreen` (tests). Deployed 2026-09-26 (1.4.0 on the PC, no console window at logon)
 
 ## Resolved
 - [x] Dashboard kept showing the previously selected campaign when a run started on a different one, so a reload was needed to see the live game (2026-09-25; the page now follows the live campaign unless another was picked deliberately; all responses no-store; browser test)
