@@ -1,0 +1,58 @@
+# Screens and UI points for a 2560x1440 host (mini-rig2), measured live 2026-09-26 on 4.5.1 with
+# UI scaling 1.0 in 1568x882 image space. Loaded over manifest.toml when GAME_RESOLUTION=2560x1440.
+# The 4K templates do not match here (best score 0.19 for "Paused"): the UI scales differently.
+
+[screens.paused]
+description = "Large yellow 'Paused' label above the selected-system banner (bottom centre), 1440p (0.009 paused vs 0.254 running)"
+template = "templates/stellaris_paused_1440.png"
+template_roi = [0.4758, 0.9365, 0.0485, 0.0215]
+template_threshold = 0.06
+template_search = 3
+color_range = [[150, 120, 0], [255, 255, 110]]
+color_min_fraction = 0.08
+
+[screens.game_menu]
+description = "In-game menu (Resume button), 1440p (0.167 and 0.189 on frames without the menu)"
+template = "templates/stellaris_game_menu_1440.png"
+template_roi = [0.4719, 0.5952, 0.0587, 0.0227]
+template_threshold = 0.06
+template_search = 3
+
+[screens.console_open]
+description = "Console open (Debug View bar under the console output), 1440p (94-97% of the strip open, 0% closed or with the menu)"
+template = "templates/stellaris_console_open.png"
+template_roi = [0.0255, 0.3175, 0.2041, 0.0045]
+color_range = [[50, 100, 170], [140, 175, 255]]
+color_min_fraction = 0.3
+
+[screens.human_ai_on]
+description = "Console reply 'Human AI is now ON' (last output line), 1440p"
+template = "templates/stellaris_human_ai_on_1440.png"
+template_roi = [0.0568, 0.2698, 0.014, 0.0136]
+template_search = 2
+
+[screens.human_ai_off]
+description = "Console reply 'Human AI is now OFF' (last output line), 1440p (0.067 from ON)"
+template = "templates/stellaris_human_ai_off_1440.png"
+template_roi = [0.0568, 0.2698, 0.014, 0.0136]
+template_search = 2
+
+[ui.console]
+input = [200, 258]
+
+# Not yet measured at 1440p: [0, 0] makes the tech-pick and market tools refuse (never a 4K click).
+[ui.tech]
+swap = { physics = [0, 0], society = [0, 0], engineering = [0, 0] }
+first_option = [0, 0]
+
+[ui.market]
+open_click = [0, 0]
+add = [0, 0]
+buy = [0, 0]
+sell = [0, 0]
+resources = { energy = [0, 0], minerals = [0, 0], food = [0, 0], consumer_goods = [0, 0], alloys = [0, 0], volatile_motes = [0, 0], exotic_gases = [0, 0], rare_crystals = [0, 0], sr_living_metal = [0, 0], sr_zro = [0, 0], sr_dark_matter = [0, 0] }
+minus = [0, 0]
+plus = [0, 0]
+confirm = [0, 0]
+remove = [0, 0]
+order_row_first = [0, 0]
