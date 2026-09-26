@@ -125,7 +125,7 @@ def load_prefs(runs_dir: Path) -> dict:
             out["models"] = pool
     if isinstance(d.get("rotate"), bool):
         out["rotate"] = d["rotate"]
-    raw_roles = dict(d.get("roles") or {})
+    raw_roles = dict(d["roles"]) if isinstance(d.get("roles"), dict) else {}
     if "retrospective" in raw_roles and "strategy" not in raw_roles:
         raw_roles["strategy"] = raw_roles.pop("retrospective")
     raw_roles.pop("retrospective", None)

@@ -322,6 +322,7 @@ class Governor:
         self.strategy: Strategy | None = None     # the pillar strategy (Strategist), per campaign
         self.review_requested: str | None = None  # pending review trigger after a failed strategy call
         self._since_retro = 0
+        self._strategy_trace_n = 0                # negative trace/episode ids: never collide with a decision's
         self.orders: list[str] = []               # standing orders, saved per campaign
         self.requests: queue.Queue[tuple[str, str]] = queue.Queue()   # ("decide", msg) | ("override", name)
         log.state.info["controls"] = ["instruct", "chat", "order_add", "order_remove", "decide_now", "override",
@@ -658,9 +659,10 @@ class Governor:
                 self.log.emit("journal", text="taking control: " + self.game.take_control().replace("\n", "; "))
                 b = self._fresh_briefing()
                 self._set_campaign(b)
-                if self.strategy is None:
+                reviewed = self.strategy is None
+                if reviewed:
                     self._review_strategy(b, "start of run")
-                self._decide(b, "start of run")
+                self._decide(b, "start of run", reviewed_at_start=reviewed)
                 return b
             except Exception as e:  # noqa: BLE001
                 self._needs_attention(f"could not start: {type(e).__name__}: {e}. Fix the game or the agent, "
@@ -730,7 +732,7 @@ class Governor:
                 self.log.emit("briefing_error", error=f"loading the plan: {e}"[:200])
             try:
                 raw = self.log.telemetry.latest_strategy(self.log.campaign_id or "")
-                self.strategy = Strategy.model_validate({k: v for k, v in raw.items() if k != "reason"}) if raw else None
+                self.strategy = Strategy.model_validate(raw) if raw else None
             except Exception as e:  # noqa: BLE001
                 self.log.emit("briefing_error", error=f"loading the strategy: {e}"[:200])
         self.log.state.info["plan"] = self.plan
@@ -788,7 +790,7 @@ class Governor:
             self.log.emit("briefing_error", error=f"trends: {e}"[:200])
             return ""
 
-    def _decide(self, b: dict, reason: str) -> None:
+    def _decide(self, b: dict, reason: str, reviewed_at_start: bool = False) -> None:
         self._status("deciding")
         self.log.state.episodes += 1
         self.log.state.game_date = b["date"]
@@ -888,7 +890,7 @@ class Governor:
             self.journal.note(d.note, b["date"])
         if d.plan.strip():
             self._set_plan(d.plan.strip(), b["date"], "decision")
-        if reason != "start of run":       # the strategist already reviewed for this decision point
+        if not (reason == "start of run" and reviewed_at_start):   # a review just ran for this decision point
             self._since_retro += 1
             if self.s.retro_every and self._since_retro >= self.s.retro_every:
                 self._review_strategy(b, f"scheduled after {self.s.retro_every} decisions")
@@ -925,9 +927,12 @@ class Governor:
 
     def _review_strategy(self, b: dict, trigger: str, retried: bool = False, errors: list[str] | None = None) -> None:
         """Strategist review: may keep the strategy or write a new version (pinned pillars stay). An invalid
-        answer is retried once with the reasons; still invalid → no change."""
+        answer (including change=true with no strategy) is retried once with the reasons; still invalid →
+        no change. Never raises and never pauses the game: any failure past the model call is logged and
+        the current strategy stays, exactly like a failed model call."""
         self._since_retro = 0
         self.review_requested = None
+        started = time.time()
         current = self.strategy.model_dump_json(indent=1) if self.strategy else "(none yet: write the first strategy)"
         prompt = [f"Strategy review, trigger: {trigger}.", "Current strategy:\n" + current,
                   "Milestones (status computed from the recorded numbers):\n" + self._milestones_text(),
@@ -939,36 +944,68 @@ class Governor:
         if trend:
             prompt.append(trend)
         deps = GovDeps(self.game, self.store, self.log)
-        base: dict = {}
+        base = {"model": self.s.model, "thinking_level": self.s.governor_thinking, "game": self.s.game,
+                "date": b["date"], "trigger": trigger, "current": current_directive(b)}
         ask = lambda agent: agent.run_sync("\n\n".join(prompt), deps=deps,
                                            usage_limits=UsageLimits(request_limit=self.s.max_requests_per_episode))
         try:
-            result, _entry = self._call("strategy", ask, on_try=lambda e: base.update(model=e["model"]))
+            result, _entry = self._call("strategy", ask,
+                                        on_try=lambda e: base.update(model=e["model"], thinking_level=e["thinking"]))
         except Exception as e:  # noqa: BLE001 - a failed review never stops play; retried at the next decision
             self.review_requested = trigger
             self.log.emit("episode_error", error=f"strategy review: {type(e).__name__}: {e}"[:500])
             return
-        r: StrategyReview = result.output
-        for rule in r.rules[:3]:
-            try:
-                self.store.add_rule(rule, f"strategy review {b['date']}")
-                self.log.emit("learned", category="rules", message="strategy review rule", rule=rule)
-            except LearningRejected as e:
-                self.log.emit("learn_rejected", category="rules", reason=str(e), rule=rule)
-        self.log.emit("strategy_review", date=b["date"], trigger=trigger, change=bool(r.change and r.strategy),
-                      assessment=r.assessment[:2000], model=base.get("model"))
-        if not (r.change and r.strategy):
+        retry_errors: list[str] | None = None
+        try:
+            r: StrategyReview = result.output
+            usage = result.usage
+            base["model_version"] = served_model(result)
+            st = self.log.state
+            st.tokens_in += usage.input_tokens or 0
+            st.tokens_out += usage.output_tokens or 0
+            st.requests += usage.requests or 0
+            for rule in r.rules[:3]:
+                try:
+                    self.store.add_rule(rule, f"strategy review {b['date']}")
+                    st.learned["rules"] = st.learned.get("rules", 0) + 1
+                    self.log.emit("learned", category="rules", message="strategy review rule", rule=rule)
+                except LearningRejected as e:
+                    self.log.emit("learn_rejected", category="rules", reason=str(e), rule=rule)
+
+            new: Strategy | None = None
+            if r.change and r.strategy is None:
+                errs = ["change=true but no strategy given"]
+            elif r.change and r.strategy is not None:
+                new = keep_pinned(r.strategy, self.strategy)
+                errs = validate(new, previous=self.strategy, tech_ids=self._tech_ids(), idle=idle_resources(b),
+                                income=b.get("net", {}))
+            else:
+                errs = []
+            accepted = bool(r.change and new is not None and not errs)
+
+            self._strategy_trace_n -= 1        # negative: never collides with a decision's own episode number
+            n = self._strategy_trace_n
+            outcome = "accepted" if accepted else (("rejected: " + "; ".join(errs))[:300] if errs else "no change")
+            self.log.save_trace(n, {**base, "episode": n, "decision": "strategy_review", "reason": r.assessment,
+                                    "outcome": outcome, "seconds": round(time.time() - started, 1),
+                                    "tokens_in": usage.input_tokens, "tokens_out": usage.output_tokens,
+                                    "steps": serialize(result.all_messages())})
+            self.log.emit("strategy_review", date=b["date"], trigger=trigger, change=r.change, accepted=accepted,
+                          assessment=r.assessment[:2000], model=base.get("model"))
+            self.journal.note(f"Strategy review ({trigger}): {outcome} — {r.assessment}", b["date"])
+
+            if errs and not retried:
+                retry_errors = errs             # one corrective retry: the model sees exactly what was wrong
+            elif errs:
+                self.log.emit("strategy_rejected", date=b["date"], errors=errs[:10])
+            elif accepted:
+                self._set_strategy(new, b["date"], trigger, base.get("model", ""))
+        except Exception as e:  # noqa: BLE001 - a failed review never stops play or pauses the game
+            self.review_requested = trigger
+            self.log.emit("episode_error", error=f"strategy review: {type(e).__name__}: {e}"[:500])
             return
-        new = keep_pinned(r.strategy, self.strategy)
-        errs = validate(new, previous=self.strategy, tech_ids=self._tech_ids(), idle=idle_resources(b),
-                        income=b.get("net", {}))
-        if errs and not retried:
-            # one corrective retry: the model sees exactly what was wrong
-            return self._review_strategy(b, trigger, retried=True, errors=errs)
-        if errs:
-            self.log.emit("strategy_rejected", date=b["date"], errors=errs[:10])
-            return
-        self._set_strategy(new, b["date"], trigger, base.get("model", ""))
+        if retry_errors is not None:
+            self._review_strategy(b, trigger, retried=True, errors=retry_errors)
 
     def _set_strategy(self, s: Strategy, date: str, trigger: str, model: str) -> None:
         self.strategy = s
@@ -976,12 +1013,16 @@ class Governor:
         self.log.emit("strategy", date=date, trigger=trigger, model=model, reason=s.reason, strategy=s.model_dump())
 
     def _tech_ids(self) -> set[str]:
-        """Tech ids from the corpus (for validating preferred techs); cached."""
-        if not hasattr(self, "_techs"):
-            import json as _json
-            path = self.s.corpus_dir / "data" / "tech.json"
-            try:
-                self._techs = {r["id"].split(":", 1)[1] for r in _json.loads(path.read_text(encoding="utf-8"))}
-            except (OSError, ValueError, KeyError):
-                self._techs = set()
-        return self._techs
+        """Tech ids from the corpus (for validating preferred techs); cached once a read succeeds
+        (a failed read is logged and retried on the next call, never cached as empty)."""
+        if getattr(self, "_techs", None) is not None:
+            return self._techs
+        import json as _json
+        path = self.s.corpus_dir / "data" / "tech.json"
+        try:
+            techs = {r["id"].split(":", 1)[1] for r in _json.loads(path.read_text(encoding="utf-8"))}
+        except (OSError, ValueError, KeyError) as e:
+            self.log.emit("briefing_error", error=f"tech ids: {e}"[:200])
+            return set()
+        self._techs = techs
+        return techs

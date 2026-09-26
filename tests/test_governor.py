@@ -203,8 +203,10 @@ def test_telemetry_records_campaign_decisions_and_scores_outcomes(setup, tmp_pat
     assert log.campaign_id == cid
     runs = tel.query("SELECT * FROM runs")
     assert runs[0]["campaign_id"] == cid and runs[0]["game"] == "stellaris" and runs[0]["status"] == "ended"
-    ds = tel.query("SELECT * FROM decisions WHERE campaign_id=? ORDER BY episode", (cid,))
+    ds = tel.query("SELECT * FROM decisions WHERE campaign_id=? AND decision != 'strategy_review' ORDER BY episode", (cid,))
     assert [d["decision"] for d in ds] == ["expand", "keep", "keep"]
+    assert any(d["decision"] == "strategy_review" for d in
+              tel.query("SELECT decision FROM decisions WHERE campaign_id=?", (cid,))), "the start-of-run review also traces"
     # the model that actually answered (an alias like gemini-pro-latest resolves to a version) and the
     # thinking level are kept with every decision
     assert ds[0]["model_version"] and ds[0]["model_version"].startswith("function:"), ds[0]["model_version"]
@@ -220,7 +222,7 @@ def test_telemetry_records_campaign_decisions_and_scores_outcomes(setup, tmp_pat
     # the database can be recreated from the JSONL logs alone
     tel2 = Telemetry(tmp_path / "t2.sqlite")
     assert tel2.rebuild(s.runs_dir) >= 1
-    ds2 = tel2.query("SELECT decision, result FROM decisions WHERE campaign_id=? ORDER BY episode", (cid,))
+    ds2 = tel2.query("SELECT decision, result FROM decisions WHERE campaign_id=? AND decision != 'strategy_review' ORDER BY episode", (cid,))
     assert [d["decision"] for d in ds2] == ["expand", "keep", "keep"] and ds2[0]["result"] == ds[0]["result"]
 
 
@@ -253,9 +255,10 @@ def test_telemetry_api(setup, tmp_path):
     async def go():
         async with TestClient(TestServer(make_app(None, s.runs_dir, tel))) as c:
             camps = await (await c.get("/api/campaigns")).json()
-            assert camps[0]["id"] == "stellaris/empire_1" and camps[0]["decisions"] == 2 and camps[0]["runs"] == 1
+            # 3 = the start-of-run strategy review (its own trace row) plus the 2 real decisions
+            assert camps[0]["id"] == "stellaris/empire_1" and camps[0]["decisions"] == 3 and camps[0]["runs"] == 1
             ds = await (await c.get("/api/decisions", params={"campaign": "stellaris/empire_1"})).json()
-            assert [d["decision"] for d in ds] == ["expand", "keep"] and ds[0]["model"] == s.model
+            assert [d["decision"] for d in ds] == ["strategy_review", "expand", "keep"] and ds[1]["model"] == s.model
             one = await (await c.get("/api/decision", params={"run": "run9", "episode": "1"})).json()
             assert any(st["type"] == "tool_call" and st["tool"] == "consult" for st in one["trace"]["steps"])
             ms = await (await c.get("/api/metrics", params={"run": "run9"})).json()
@@ -585,7 +588,7 @@ def test_rebuild_survives_a_corrupt_trace_file(setup, tmp_path):
     (log.dir / "traces/0001.json").write_text("{ not json")
     tel = Telemetry(tmp_path / "r.sqlite")
     assert tel.rebuild(s.runs_dir) == 1
-    assert tel.query("SELECT decision, trace FROM decisions")[0] == {"decision": "expand", "trace": None}
+    assert tel.query("SELECT decision, trace FROM decisions WHERE decision='expand'")[0] == {"decision": "expand", "trace": None}
 
 
 def planner_model(retro_rules=("Survey before expanding: expand stalls when few reachable systems are surveyed.",)):
@@ -686,7 +689,8 @@ def test_plans_api(setup, tmp_path):
             plans = await (await c.get("/api/plans", params={"campaign": "stellaris/e1"})).json()
             assert [p["source"] for p in plans] == ["decision"], plans          # only decisions write the plan now
             ds = await (await c.get("/api/decisions", params={"campaign": "stellaris/e1"})).json()
-            assert [d["decision"] for d in ds] == ["expand", "keep", "keep"]
+            # a strategy review traces too: one at the start of run, one after 2 decisions (retro_every)
+            assert [d["decision"] for d in ds] == ["strategy_review", "expand", "keep", "keep", "strategy_review"]
 
     asyncio.run(go())
 
@@ -1396,3 +1400,178 @@ def test_the_strategist_receives_the_naval_cap_ruling_in_its_prompt(setup):
     combined = " ".join(seen)
     assert "the defence stance must name its exit condition" in combined
     assert "never reason from a naval-capacity cap the briefing does not show" in combined
+
+
+# ---- Task 3 fix round 1 -------------------------------------------------------------------------
+
+def test_strategy_review_updates_bookkeeping_and_saves_a_trace(setup):
+    """Item 1: tokens/requests grow, rules learned are counted, and a trace file is saved, like decisions."""
+    from pilot.strategy import Pillar
+    s, log = setup
+    prios = {"defence": 1, "economy": 2, "technology": 3, "expansion": 4, "diplomacy": 5, "government": 6, "society": 7}
+
+    def respond(messages, info):
+        pillars = {p: Pillar(priority=n, stance=f"{p} by model", goals=["g"]).model_dump() for p, n in prios.items()}
+        body = {"change": True, "assessment": "ok", "rules": ["Always expand early."],
+                "strategy": {"pillars": pillars, "focus": "grow", "reason": "start"}}
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, body)])
+
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": FunctionModel(respond)})
+    before = (log.state.tokens_in, log.state.requests, log.state.learned["rules"])
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    assert log.state.tokens_in > before[0]
+    assert log.state.requests > before[1]
+    assert log.state.learned["rules"] == before[2] + 1
+    trace_files = sorted((log.dir / "traces").glob("*.json"))
+    assert trace_files, "a trace file was saved for the review"
+    import json as _json
+    tr = _json.loads(trace_files[0].read_text())
+    assert tr["decision"] == "strategy_review" and tr["trigger"] == "start of run"
+    assert any(e["kind"] == "journal" or e["kind"] == "trace" for e in log.recent)
+
+
+def test_a_crash_after_the_model_call_never_pauses_the_game(setup, monkeypatch):
+    """Item 2: any exception past the model call (keep_pinned, validate, _set_strategy, event emits) is
+    caught, logged as an episode_error (not mislabeled as a game-control failure), review_requested is
+    set, the current strategy is kept, and the game is never paused; the decision still happens."""
+    import pilot.governor as governor_mod
+    s, log = setup
+    calls = []
+
+    def boom(*a, **k):
+        raise KeyError("boom")
+
+    monkeypatch.setattr(governor_mod, "validate", boom)
+    game = FakeStellaris([briefing("2200.01.01")])
+    g = Governor(s, game, log, model=decisions("expand"), role_models={"strategy": _strategist(calls)})
+    g.run(max_decisions=1)
+    assert g.strategy is None
+    assert g.review_requested == "start of run"
+    errs = [e for e in log.recent if e["kind"] == "episode_error"]
+    assert errs and "strategy review" in errs[0]["error"] and "game control" not in errs[0]["error"]
+    assert ("directive", "expand") in game.actions, "the decision still happened"
+    assert log.state.status != "needs_attention"
+    assert g.control.paused is False
+
+
+def test_change_true_without_a_strategy_is_retried_as_invalid_output(setup):
+    """Item 3: change=true with strategy=None is an invalid answer, retried once (not silently kept)."""
+    s, log = setup
+    calls = []
+
+    def respond(messages, info):
+        calls.append(1)
+        body = {"change": True, "assessment": "x", "rules": [], "strategy": None}
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, body)])
+
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": FunctionModel(respond)})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    assert len(calls) == 2, "retried once with the reasons"
+    assert g.strategy is None
+    rejected = [e for e in log.recent if e["kind"] == "strategy_rejected"]
+    assert rejected and "change=true but no strategy given" in rejected[0]["errors"][0]
+
+
+def test_a_rejected_then_retried_review_emits_one_strategy_review_per_answer(setup):
+    """Item 5: strategy_review is emitted after validation, once per model answer, each with `change`
+    (as the model answered) and `accepted` (whether a version was actually written) set correctly."""
+    s, log = setup
+    calls = []
+
+    def bad(messages, info):
+        calls.append("bad")
+        body = {"change": True, "assessment": "x", "rules": [], "strategy": {"pillars": {}, "focus": "f", "reason": "r"}}
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, body)])
+
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": FunctionModel(bad)})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    assert calls == ["bad", "bad"]
+    reviews = [e for e in log.recent if e["kind"] == "strategy_review"]
+    assert len(reviews) == 2, reviews
+    assert [r["change"] for r in reviews] == [True, True]
+    assert [r["accepted"] for r in reviews] == [False, False]
+
+
+def test_load_prefs_ignores_a_malformed_roles_value(tmp_path):
+    """Item 6: a non-dict `roles` in a saved settings file is ignored, not a crash."""
+    import json as _json
+
+    from pilot.models import load_prefs
+    (tmp_path / "pilot-settings.json").write_text(_json.dumps({"roles": 5}))
+    assert load_prefs(tmp_path).get("roles", {}) == {}
+
+
+def test_tech_ids_read_failure_is_not_cached_and_logs_an_event(setup):
+    """Item 4: a failed tech.json read logs an event and is retried on the next call (never cached empty)."""
+    s, log = setup
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+    assert g._tech_ids() == set()               # the test corpus fixture has no data/tech.json
+    assert any(e["kind"] == "briefing_error" and "tech ids" in e["error"] for e in log.recent)
+    n_errors = sum(1 for e in log.recent if e["kind"] == "briefing_error" and "tech ids" in e["error"])
+    assert g._tech_ids() == set()
+    assert sum(1 for e in log.recent if e["kind"] == "briefing_error" and "tech ids" in e["error"]) == n_errors + 1, \
+        "retried (and logged again), not cached as an empty set"
+
+
+def test_retro_every_skips_the_start_decision_when_a_review_just_ran(setup):
+    """Item 7 (half 1): the start-of-run decision does not also count toward the schedule when the
+    strategist already reviewed for it."""
+    from dataclasses import replace
+    s, log = setup
+    s2 = replace(s, retro_every=1)
+    s2.__class__ = s.__class__
+    calls = []
+    g = Governor(s2, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("expand"),
+                 role_models={"strategy": _strategist(calls)})
+    g.run(max_decisions=1)
+    assert calls == ["strategist"], calls
+    assert g._since_retro == 0
+
+
+def test_retro_every_counts_the_start_decision_when_no_review_ran(setup, tmp_path):
+    """Item 7 (half 2): when the campaign already has a strategy (no start-of-run review runs), the
+    start-of-run decision counts toward the schedule like any other."""
+    from dataclasses import replace
+
+    from pilot.strategy import PILLARS
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    s2 = replace(s, retro_every=1)
+    s2.__class__ = s.__class__
+    tel = Telemetry(tmp_path / "t.sqlite")
+    src = "save games/emp_x/x.sav"
+    seed = EventLog(s2.runs_dir, "seed", s2.model, telemetry=tel)
+    seed.emit("run_start", game="stellaris", model=s2.model)
+    seed.set_campaign("stellaris", "emp_x", "Empire X")
+    strategy = {"pillars": {p: {"priority": i + 1, "stance": f"{p} s", "goals": ["g"]} for i, p in enumerate(PILLARS)},
+                "focus": "grow", "reason": "seed"}
+    seed.emit("strategy", date="2199.01.01", trigger="start of run", model="seed", reason="seed", strategy=strategy)
+
+    calls = []
+    log2 = EventLog(s2.runs_dir, "run2", s2.model, telemetry=tel)
+    g = Governor(s2, FakeStellaris([{**briefing("2200.01.01"), "source": src}]), log2, model=decisions("expand"),
+                 role_models={"strategy": _strategist(calls)})
+    g._set_campaign({**briefing("2200.01.01"), "source": src})
+    assert g.strategy is not None and g.strategy.reason == "seed", "item 9: reason survives the reload"
+    g.run(max_decisions=1)
+    assert calls == ["strategist"], calls           # only the scheduled review fires, not a start-of-run one
+    reviews = [e for e in log2.recent if e["kind"] == "strategy_review"]
+    assert reviews and reviews[0]["trigger"] == "scheduled after 1 decisions"
+
+
+def test_when_every_strategy_model_fails_play_continues_with_the_current_strategy(setup):
+    """Item 8: every model in the strategy role failing never blocks a decision."""
+    s, log = setup
+
+    def always_fails(messages, info):
+        raise RuntimeError("boom")
+
+    game = FakeStellaris([briefing("2200.01.01")])
+    g = Governor(s, game, log, model=decisions("expand"), role_models={"strategy": FunctionModel(always_fails)})
+    g.run(max_decisions=1)
+    assert g.strategy is None
+    assert g.review_requested == "start of run"
+    assert any(e["kind"] == "episode_error" and "strategy review" in e["error"] for e in log.recent)
+    assert ("directive", "expand") in game.actions, "play continued: the real decision still happened"

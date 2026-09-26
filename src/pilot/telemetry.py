@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS metrics (
 CREATE INDEX IF NOT EXISTS metrics_campaign ON metrics(campaign_id, month);
 CREATE TABLE IF NOT EXISTS plans (
     campaign_id TEXT, run_id TEXT NOT NULL, t REAL NOT NULL,
-    date TEXT, source TEXT,         -- 'decision' | 'retrospective'
+    date TEXT, source TEXT,         -- 'decision'
     text TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS plans_campaign ON plans(campaign_id, t);
