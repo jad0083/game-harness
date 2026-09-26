@@ -14,61 +14,16 @@
   in .claude/rules/*.md or import other files with @path/to/file syntax.
 -->
 
-This file guides LLMs and coding agents when operating in this repository.
+The operating guide for this repository is **[AGENTS.md](AGENTS.md)** — shared by every model
+(Claude, Gemini, others). Read it before acting.
 
-## Project
-- **Project Name**: game-harness
-- **Goal**: Autonomous, ultra-low-latency 4X game player for *Galactic Civilizations IV: Supernova* on Windows (`192.168.1.77`) driven from Linux (`192.168.1.76`).
-- **Core Architecture**: 100% Rust static binaries (`crates/game-agent` on Windows, `crates/game-controller` on Linux). See `ARCHITECTURE.md`.
+@AGENTS.md
 
-## Primary Commands (100% Native Compiled Rust)
-- Health check: `./target/release/game-controller health`
-- Live state & windows: `./target/release/game-controller state`
-- Focus game window: `./target/release/game-controller focus "Galactic Civilizations"`
-- Capture screenshot: `./target/release/game-controller screenshot -o current_screen.jpg`
-- Click image coordinates: `./target/release/game-controller click <X> <Y> [--button right|left] [--count 1|2]`
-- Drag image coordinates: `./target/release/game-controller drag <X1> <Y1> <X2> <Y2> [--button left] [--hold-ms N --steps N --step-ms N --dwell-ms N --wiggle]` (slow the drag down if a drop does not register)
-- Send keypress / combo: `./target/release/game-controller key "<key>"`
-- Advance single turn: `./target/release/game-controller turn`
-- Autopilot loop (verified turns; stops on dialogs/blockers): `./target/release/game-controller autopilot --turns <N>`
-- Corpus overview: `./target/release/game-controller corpus`
-- Corpus search (ids + snippets): `./target/release/game-controller corpus search "<query>" --limit 5`
-- Corpus fetch by id: `./target/release/game-controller corpus get "<id>"` (e.g. `doc:anomalies#0`, `strategy#1`, `tech:colonial_policies`)
-- Corpus name lookups: `./target/release/game-controller corpus tech|improvement|order "<name>"`
-- Regenerate game data after a patch: `python3 scripts/extract-galciv4.py <dir with Gameplay/ and Text/> --game-version <v>` (see README "Game corpus")
-- Corpus strategy playbook: `./target/release/game-controller corpus strategy`
-- Stdio MCP server: `./target/release/game-controller mcp`
-- Run Rust test suite: `cargo test --workspace`; lint: `cargo clippy --workspace --all-targets`
-- Run legacy Python test suite: `.venv/bin/pytest -q` (that code is no longer deployed)
-
-## Golden Rules for LLMs
-1. **Prefer Hotkeys Over UI Clicks**: Keypresses (`tab`, `space`, `f`, `enter`, `1`, `2`, `3`, `esc`) are 100% deterministic, resolution-independent, and instant (<1ms).
-2. **Consult the game corpus** (`corpora/galciv4/`, see ARCHITECTURE.md §5):
-   - `manifest.toml`: hotkeys, 8 screen signatures, and macros (hand-verified).
-   - `strategy.md`: playbook for expansion, colony feeding, districts, ministers, and tech pathing.
-   - `data/*.json`: entity records generated from the game's own XML (130 techs, 528 improvements, 66 orders, 203 policies, 355 ship components, 167 starbase modules, 994 events — event records list each choice's exact outcome). Never hand-edit; when a wiki doc and a record disagree, the record wins.
-   - `docs/*.md`: reference prose with `Source:`/`License:` headers. Use `corpus_search` to get ids, then `corpus_get` for one chunk; do not dump whole docs into context.
-3. **Use the Autopilot Loop** for routine turn advancement instead of individual tool calls: `autopilot_turns` / `./target/release/game-controller autopilot --turns 25`. Each turn is verified by the HUD date readout changing. It stops and hands you a screenshot when a dialog is up (HUD dimmed) or a turn did **not** advance (something is blocking end-turn: idle unit, empty queue, popup); clear that, then resume. It refuses to run unless the game is the foreground window — call `focus` first.
-4. **Resolution & Coordinate Mapping**: Image space is 1568x882; remote screen is 3072x1728 (or 3840x2160). Both `click` and `drag` automatically scale coordinates using live target width/height headers.
-4b. **Screen signatures live in `corpora/galciv4/manifest.toml`** (`[screens.*]`: `luminance_roi`/`luminance_threshold` for dialog detection, `turn_indicator_roi` for turn verification). Adjust there, not in Rust, if the game's UI layout changes.
-5. **Handling Action Required Prompts**: When the turn button demands action (e.g. "Choose a region to improve" on Earth or "Colonial Charter" for policies/ministers), `Enter` navigates directly to that screen.
-   - On Planet Management: click the glowing empty tile and pick the district with the highest adjacency bonus (e.g. Manufacturing District next to minerals for +3).
-   - On Colonial Charter: assign recruited leaders to Ministers (Exploration for universal fleet speed, Technology for research boost).
-   - Press `Esc` to return to galaxy map once actions are committed.
-
-## Architecture & Code Style
-- 100% Rust architecture: Linux controller (`crates/game-controller`) and Windows agent (`crates/game-agent`).
-- The controller is game-agnostic: anything GalCiv-specific belongs under `corpora/galciv4/`, not in Rust.
-- Windows agent binary is cross-compiled via `cargo build --target x86_64-pc-windows-gnu --release --bin game-agent` and staged at `windows_agent/game-agent.exe`.
-- Zero runtime Python dependencies for active gameplay or agent execution.
-
-## Workflow
-
-- Full permissions are granted: read, write, edit, and execute without asking.
-- Commit after every meaningful change; never batch unrelated work.
-- Use conventional commits (`feat:` `fix:` `docs:` `refactor:` `test:` `chore:`); the message says what changed and why.
-- Run the tests and linter before declaring any task done.
-- Keep README and docs in sync with code changes.
+## Claude-specific notes
+- MCP: `.mcp.json` registers the `game` server (`./target/release/game-controller mcp`); build it
+  with `cargo build --release -p game-controller`.
+- Workflow: commit through `scripts/ci-commit.sh` (AGENTS.md §8); keep `plan.md`, `issues.md`,
+  README and ARCHITECTURE in sync; no AI attribution in commits or files.
 
 ## Codeman Environment
 

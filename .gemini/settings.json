@@ -1,0 +1,19 @@
+{
+  "contextFileName": [
+    "GEMINI.md",
+    "AGENTS.md"
+  ],
+  "mcpServers": {
+    "game": {
+      "command": "./target/release/game-controller",
+      "args": [
+        "mcp"
+      ],
+      "cwd": ".",
+      "env": {
+        "GAME_AGENT_URL": "http://192.168.1.77:8765"
+      },
+      "timeout": 600000
+    }
+  }
+}
