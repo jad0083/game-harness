@@ -14,11 +14,25 @@ def briefing(date: str, net: dict | None = None, wars: list | None = None) -> di
     return {"date": date, "net": net or {"energy": 5.0, "food": 3.0}, "wars": wars or [], "flags": []}
 
 
+def _is_strategy_review(info: AgentInfo) -> bool:
+    """True when a FunctionModel call is answering the Strategist's StrategyReview schema, not a
+    GovernorDecision: lets models written only for `decisions` ignore the strategist's implicit
+    start-of-run (and scheduled) review when a test does not script one of its own."""
+    return "change" in info.output_tools[0].parameters_json_schema.get("properties", {})
+
+
+def _quiet_no_change(info: AgentInfo) -> ModelResponse:
+    """A harmless StrategyReview answer ('no change'), for models that only script decisions."""
+    return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"change": False, "assessment": "n/a", "rules": []})])
+
+
 def decisions(*choices: str, consult_first: bool = False):
     """A model that returns the given directives in order (one per decision)."""
     calls = {"n": 0}
 
     def respond(messages, info: AgentInfo) -> ModelResponse:
+        if _is_strategy_review(info):
+            return _quiet_no_change(info)
         step = sum(isinstance(m, ModelResponse) for m in messages)
         if consult_first and step == 0 and calls["n"] == 0:
             return ModelResponse(parts=[ToolCallPart("consult", {"query": "diplomatic stance"})])
@@ -575,7 +589,9 @@ def test_rebuild_survives_a_corrupt_trace_file(setup, tmp_path):
 
 
 def planner_model(retro_rules=("Survey before expanding: expand stalls when few reachable systems are surveyed.",)):
-    """Decides with a plan on the first decision, keeps afterwards; answers retrospectives."""
+    """Decides with a plan on the first decision, keeps afterwards; the strategist writes a new
+    version (with rules learned) whenever it is reviewed."""
+    from pilot.strategy import PILLARS
     seen = []
 
     def respond(messages, info: AgentInfo) -> ModelResponse:
@@ -584,11 +600,13 @@ def planner_model(retro_rules=("Survey before expanding: expand stalls when few 
             for p in getattr(m, "parts", []):
                 if isinstance(p, UserPromptPart) and isinstance(p.content, str):
                     seen.append(p.content)
-        props = info.output_tools[0].parameters_json_schema.get("properties", {})
-        if "assessment" in props:
+        if _is_strategy_review(info):
+            strategy = {"pillars": {p: {"priority": i + 1, "stance": f"{p} stance", "goals": ["g"]}
+                                    for i, p in enumerate(PILLARS)},
+                        "focus": "Survey before expanding", "reason": "bottleneck in surveying"}
             return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {
-                "assessment": "Expansion lagged the median; surveying was the bottleneck.",
-                "rules": list(retro_rules), "plan": "1. Survey all systems within 2 jumps by 2203.\\n2. Reach 8 systems by 2205."})])
+                "change": True, "assessment": "Expansion lagged the median; surveying was the bottleneck.",
+                "rules": list(retro_rules), "strategy": strategy})])
         first = not any("Campaign plan:" in p and "Reach 6 systems" in p for p in seen)
         return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {
             "directive": "expand" if first else "keep", "reason": "r",
@@ -597,7 +615,7 @@ def planner_model(retro_rules=("Survey before expanding: expand stalls when few 
     return FunctionModel(respond), seen
 
 
-def test_campaign_plan_persists_and_retrospective_runs(setup, tmp_path):
+def test_campaign_plan_persists_and_the_strategist_reviews_on_schedule(setup, tmp_path):
 
     from pilot.telemetry import Telemetry
     s, _ = setup
@@ -608,16 +626,17 @@ def test_campaign_plan_persists_and_retrospective_runs(setup, tmp_path):
     game = FakeStellaris([{**briefing(f"22{i:02d}.01.01"), "source": src} for i in range(8)])
     model, seen = planner_model()
     gov = Governor(s, game, log, model=model)
-    gov.run(max_decisions=4)          # 3 decisions, then the retrospective counts as the 4th
+    gov.run(max_decisions=4)          # 4 decisions; the strategist also reviews at start and after 3
     plans = tel.query("SELECT date, text, source FROM plans WHERE campaign_id='stellaris/emp_1' ORDER BY t")
-    assert [p["source"] for p in plans] == ["decision", "retrospective"], plans
-    assert "Reach 6 systems" in plans[0]["text"] and "Survey all systems" in plans[1]["text"]
+    assert [p["source"] for p in plans] == ["decision"], plans          # only decisions write the plan now
+    assert "Reach 6 systems" in plans[0]["text"]
     assert any("Campaign plan:" in p and "Reach 6 systems" in p for p in seen), "the plan is shown to later decisions"
-    retro = [e for e in log.recent if e["kind"] == "trace" and e.get("decision") == "retrospective"]
-    assert retro and "bottleneck" in retro[0]["reason"]
+    hist = tel.strategy_history("stellaris/emp_1")
+    assert [h["trigger"] for h in hist] == ["scheduled after 3 decisions", "start of run"]
+    assert hist[0]["strategy"]["focus"] == "Survey before expanding"
     rules = (s.corpus_dir / "learned" / "strategy.md")
     assert rules.exists() and "Survey before expanding" in rules.read_text()
-    assert gov.plan.startswith("1. Survey all systems")
+    assert gov.plan.startswith("1. Reach 6 systems")
     gov._set_plan("Goals &amp; milestones", "2203.01.01", "decision")
     assert gov.plan == "Goals & milestones"
     # a new Governor for the same campaign picks the plan up again
@@ -631,6 +650,8 @@ def test_remember_rule_tool_records_a_rule(setup):
     s, log = setup
 
     def respond(messages, info: AgentInfo) -> ModelResponse:
+        if _is_strategy_review(info):
+            return _quiet_no_change(info)
         step = sum(isinstance(m, ModelResponse) for m in messages)
         if step == 0:
             return ModelResponse(parts=[ToolCallPart("remember_rule", {
@@ -663,9 +684,9 @@ def test_plans_api(setup, tmp_path):
     async def go():
         async with TestClient(TestServer(make_app(None, s.runs_dir, tel))) as c:
             plans = await (await c.get("/api/plans", params={"campaign": "stellaris/e1"})).json()
-            assert [p["source"] for p in plans] == ["retrospective", "decision"], plans
+            assert [p["source"] for p in plans] == ["decision"], plans          # only decisions write the plan now
             ds = await (await c.get("/api/decisions", params={"campaign": "stellaris/e1"})).json()
-            assert ds[-1]["decision"] == "retrospective" and "bottleneck" in ds[-1]["reason"]
+            assert [d["decision"] for d in ds] == ["expand", "keep", "keep"]
 
     asyncio.run(go())
 
@@ -734,6 +755,8 @@ def test_a_decision_that_keeps_calling_tools_is_cut_off_and_keeps_the_directive(
     s, log = setup
 
     def respond(messages, info: AgentInfo) -> ModelResponse:
+        if _is_strategy_review(info):
+            return _quiet_no_change(info)
         return ModelResponse(parts=[ToolCallPart("consult", {"query": "more"})])   # never answers
 
     game = FakeStellaris([briefing("2200.01.01")])
@@ -872,6 +895,8 @@ def test_a_transient_model_error_is_retried_and_the_decision_still_made(setup):
     calls = {"n": 0}
 
     def respond(messages, info: AgentInfo) -> ModelResponse:
+        if _is_strategy_review(info):
+            return _quiet_no_change(info)
         calls["n"] += 1
         if calls["n"] == 1:
             raise ModelHTTPError(status_code=503, model_name="gemini-3.8-flash", body={"error": "high demand"})
@@ -892,6 +917,8 @@ def test_a_permanent_model_error_is_not_retried(setup):
     calls = {"n": 0}
 
     def respond(messages, info: AgentInfo) -> ModelResponse:
+        if _is_strategy_review(info):
+            return _quiet_no_change(info)
         calls["n"] += 1
         raise ModelHTTPError(status_code=400, model_name="m", body={"error": "bad request"})
 
@@ -1118,6 +1145,8 @@ def test_thinking_settings_per_provider():
 
 def _recording(name, calls):
     def respond(messages, info):
+        if _is_strategy_review(info):
+            return _quiet_no_change(info)
         calls.append(name)
         return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"directive": "keep", "reason": name})])
     return FunctionModel(respond)
@@ -1167,35 +1196,28 @@ def test_provider_catalog_shows_which_providers_have_keys(monkeypatch):
     assert cat["anthropic"]["key_env"] == "ANTHROPIC_API_KEY"
 
 
-# ---- model roles: decisions, retrospectives and talk can each have their own models -----------
+# ---- model roles: decisions, strategy and talk can each have their own models ------------------
 
-def _retro_model(name, calls):
-    def respond(messages, info):
-        calls.append(name)
-        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name,
-                                                 {"assessment": name, "plan": "", "rules": []})])
-    return FunctionModel(respond)
-
-
-def test_retrospectives_use_their_own_models(setup):
+def test_the_strategist_uses_its_own_model(setup):
     from dataclasses import replace
     s, log = setup
-    s2 = replace(s, retro_every=2)
+    s2 = replace(s, retro_every=1)
     s2.__class__ = s.__class__
     calls = []
     game = FakeStellaris([briefing(f"22{i:02d}.01.01") for i in range(4)])
     Governor(s2, game, log, model=_recording("decide", calls),
-             role_models={"retrospective": _retro_model("retro", calls)}).run(max_decisions=2)
-    assert calls[:3] == ["decide", "decide", "retro"], calls
+             role_models={"strategy": _strategist(calls)}).run(max_decisions=2)
+    # the strategist reviews at the start of the run, then again after the next decision (retro_every=1)
+    assert calls == ["strategist", "decide", "decide", "strategist"], calls
 
 
 def test_roles_without_their_own_models_use_the_decision_models(setup):
     s, log = setup
     g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
-    assert [e["model"] for e in g._pool("retrospective")] == [e["model"] for e in g._pool("decisions")]
+    assert [e["model"] for e in g._pool("strategy")] == [e["model"] for e in g._pool("decisions")]
     g.set_roles({"chat": {"models": [{"model": "anthropic:claude-haiku-4-5", "thinking": "off"}], "rotate": False}})
     assert [e["model"] for e in g._pool("chat")] == ["anthropic:claude-haiku-4-5"]
-    assert g._pool("retrospective")[0]["model"] == g._pool("decisions")[0]["model"], "unset roles follow decisions"
+    assert g._pool("strategy")[0]["model"] == g._pool("decisions")[0]["model"], "unset roles follow decisions"
     assert log.state.info["roles"] == {"chat": {"models": [{"model": "anthropic:claude-haiku-4-5", "thinking": "off"}], "rotate": False}}
     g.set_roles({"chat": None})
     assert log.state.info["roles"] == {}
@@ -1205,10 +1227,10 @@ def test_roles_without_their_own_models_use_the_decision_models(setup):
 
 def test_role_settings_are_saved(tmp_path):
     from pilot.models import load_prefs, save_prefs
-    roles = {"retrospective": {"models": [{"model": "google:gemini-3.1-pro-preview", "thinking": "high"}], "rotate": False}}
+    roles = {"strategy": {"models": [{"model": "google:gemini-3.1-pro-preview", "thinking": "high"}], "rotate": False}}
     assert save_prefs(tmp_path, roles=roles)["roles"] == roles
     assert load_prefs(tmp_path)["roles"] == roles
-    assert "retrospective" not in save_prefs(tmp_path, roles={"retrospective": None}).get("roles", {}), "None = same as decisions"
+    assert "strategy" not in save_prefs(tmp_path, roles={"strategy": None}).get("roles", {}), "None = same as decisions"
 
 
 def test_any_model_failure_moves_on_to_the_next_model(setup):
@@ -1218,6 +1240,8 @@ def test_any_model_failure_moves_on_to_the_next_model(setup):
     calls = []
 
     def broken(messages, info):
+        if _is_strategy_review(info):
+            return _quiet_no_change(info)
         calls.append("a")
         raise ModelHTTPError(401, "anthropic:claude-x", "invalid x-api-key")
     game = FakeStellaris([briefing("2200.01.01")])
@@ -1236,6 +1260,8 @@ def test_a_failing_model_cools_down_behind_the_others(setup):
     calls = []
 
     def overloaded(messages, info):
+        if _is_strategy_review(info):
+            return _quiet_no_change(info)
         calls.append("a")
         raise ModelHTTPError(503, "gemini", "high demand")
     game = FakeStellaris([briefing("2200.01.01"), briefing("2201.01.01"), briefing("2202.01.01")])
@@ -1262,3 +1288,111 @@ def test_strategy_versions_are_stored_per_campaign(tmp_path):
     assert [h["trigger"] for h in hist] == ["war started", "start of run"]
     assert tel.metrics_rows(cid)[0]["planets"] == 4
     assert tel.latest_strategy("nope") is None
+
+
+# ---- Task 3: the Strategist (role `strategy`) replaces the retrospective -----------------------
+
+def _strategist(calls, *, change=True, pin_diplomacy_to=None):
+    from pilot.strategy import Pillar
+
+    prios = {"defence": 1, "economy": 2, "technology": 3, "expansion": 4, "diplomacy": 5, "government": 6, "society": 7}
+
+    def respond(messages, info):
+        calls.append("strategist")
+        pillars = {p: Pillar(priority=n, stance=f"{p} by model", goals=["g"]).model_dump() for p, n in prios.items()}
+        if pin_diplomacy_to:
+            pillars["diplomacy"]["stance"] = pin_diplomacy_to
+        body = {"change": change, "assessment": "ok", "rules": [],
+                "strategy": {"pillars": pillars, "focus": "grow", "reason": "start"} if change else None}
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, body)])
+    return FunctionModel(respond)
+
+
+def test_a_strategy_is_set_at_the_start_of_a_run(setup):
+    s, log = setup
+    calls = []
+    Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=_recording("decide", calls),
+             role_models={"strategy": _strategist(calls)}).run(max_decisions=1)
+    assert calls[0] == "strategist" and calls[1] == "decide"
+    assert any(e["kind"] == "strategy" for e in log.recent)
+
+
+def test_a_no_change_review_writes_no_version(setup):
+    from dataclasses import replace
+    s, log = setup
+    s2 = replace(s, retro_every=1)
+    s2.__class__ = s.__class__
+    calls = []
+    first = _strategist(calls)
+    g = Governor(s2, FakeStellaris([briefing(f"22{i:02d}.01.01") for i in range(3)]), log,
+                 model=_recording("decide", calls), role_models={"strategy": first})
+    g.run(max_decisions=1)
+    g._role_objs["strategy"] = _strategist(calls, change=False)
+    g.__dict__.pop("_agents", None)
+    g._review_strategy(briefing("2202.01.01"), "scheduled")
+    assert sum(1 for e in log.recent if e["kind"] == "strategy") == 1
+    assert any(e["kind"] == "strategy_review" and not e["change"] for e in log.recent)
+
+
+def test_the_strategist_cannot_change_a_pinned_pillar(setup):
+    from pilot.strategy import Pillar
+    s, log = setup
+    calls = []
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=_recording("decide", calls),
+                 role_models={"strategy": _strategist(calls)})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    g.strategy.pillars["diplomacy"] = Pillar(priority=5, stance="no federations", goals=["g"], pinned=True, edited_by="human")
+    g._role_objs["strategy"] = _strategist(calls, pin_diplomacy_to="join a federation")
+    g.__dict__.pop("_agents", None)
+    g._review_strategy(briefing("2201.01.01"), "scheduled")
+    assert g.strategy.pillars["diplomacy"].stance == "no federations"
+
+
+def test_an_invalid_strategy_is_retried_once_then_dropped(setup):
+    s, log = setup
+    calls = []
+
+    def bad(messages, info):
+        calls.append("bad")
+        body = {"change": True, "assessment": "x", "rules": [], "strategy": {"pillars": {}, "focus": "f", "reason": "r"}}
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, body)])
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": FunctionModel(bad)})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    assert calls == ["bad", "bad"] and g.strategy is None
+    assert any(e["kind"] == "strategy_rejected" for e in log.recent)
+
+
+def test_saved_retrospective_models_move_to_the_strategy_role(tmp_path):
+    import json as _json
+
+    from pilot.models import ROLE_IDS, load_prefs
+    assert "strategy" in ROLE_IDS and "retrospective" not in ROLE_IDS
+    (tmp_path / "pilot-settings.json").write_text(_json.dumps({"roles": {"retrospective": {
+        "models": [{"model": "google:gemini-3.1-pro-preview", "thinking": "high"}], "rotate": False}}}))
+    assert load_prefs(tmp_path)["roles"]["strategy"]["models"][0]["model"] == "google:gemini-3.1-pro-preview"
+
+
+def test_strategy_instructions_cover_the_defence_naval_cap_ruling():
+    from pilot.governor import STRATEGY_INSTRUCTIONS
+    assert ("While at war, the defence stance must name its exit condition (peace, war exhaustion, "
+            "or planets retaken).") in STRATEGY_INSTRUCTIONS
+    assert ("When a hostile neighbour's military is twice ours or more, a defence goal is two "
+            "shipyards in different systems and alloy production on two or more planets; never "
+            "reason from a naval-capacity cap the briefing does not show.") in STRATEGY_INSTRUCTIONS
+
+
+def test_the_strategist_receives_the_naval_cap_ruling_in_its_prompt(setup):
+    s, log = setup
+    seen = []
+
+    def respond(messages, info):
+        seen.append(info.instructions or "")
+        body = {"change": False, "assessment": "ok", "rules": [], "strategy": None}
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, body)])
+
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": FunctionModel(respond)})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    combined = " ".join(seen)
+    assert "the defence stance must name its exit condition" in combined
+    assert "never reason from a naval-capacity cap the briefing does not show" in combined
