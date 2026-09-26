@@ -22,7 +22,7 @@ REPO = Path(__file__).resolve().parents[1]
 DEFAULT_DIRS = [
     "common/technology", "common/policies", "common/edicts", "common/buildings", "common/districts",
     "common/traditions", "common/tradition_categories", "common/ascension_perks", "common/governments/civics",
-    "common/scripted_variables", "events", "localisation/english",
+    "common/scripted_variables", "common/traits", "common/planet_classes", "events", "localisation/english",
 ]
 SKIP_DIRS = {"name_lists", "random_names"}          # localisation/english sub-folders we don't need
 ROOT = "stellaris_install"

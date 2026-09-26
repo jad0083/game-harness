@@ -164,7 +164,7 @@ empire could not do itself.
 
 | Directive | AI emphasis (intended) | Pick when | Leave when |
 |---|---|---|---|
-| `expand` | Outposts, colony ships, science ships, starbase capacity; Map the Stars edict; Discovery/Expansion traditions | Opening; unclaimed habitable systems nearby; no hostile neighbour stronger than us; no deficits | Border closed by other empires, or influence/alloys run dry, or a deficit appears |
+| `expand` | Outposts, colony ships, science ships, starbase capacity; Map the Stars edict; Discovery/Expansion traditions | Opening; unclaimed habitable systems nearby; no hostile neighbour stronger than us; no deficits | Only when nothing is left to claim or settle (no unclaimed systems in reach, no colonisable planets, no habitat sites) or a deficit appears — never at a self-set milestone such as "12 systems"; low influence slows expansion but is not a reason to stop |
 | `consolidate_economy` | Districts/buildings for the deficient resources, housing and amenities, subsidies edicts, Prosperity | Any basic resource net < 0 with < ~12 months of stock; stability or housing warnings; after a burst of expansion | All nets positive with some buffer for ~2 years |
 | `tech_rush` | Research buildings/jobs and stations, scientists, Discovery; Civilian or Mixed economy | Safe borders (pacts, strong starbases), economy stable, behind in tech vs. neighbours or crisis approaching with outdated ships | A neighbour's fleet overtakes ours, or war is declared |
 | `prepare_war` | Alloys (Militarized economy only if the 10-year lock is acceptable), naval capacity, ship refits, claims, armies, Supremacy; Fleet Supremacy edict | A weaker neighbour with claimable systems, our fleet near naval capacity, no deficits, and ask_human confirmed the target | War declared (then `defend` or keep until the war ends), or the target gains allies that outmatch us |
@@ -174,4 +174,83 @@ empire could not do itself.
 Priority when several fit: **defend > consolidate_economy > prepare_war > expand >
 tech_rush > diplomacy_first** — survival, then solvency, then growth. Hold a directive at
 least ~12 in-game months unless an urgent line forces a change.
+
+## 10. Lessons from play (United Nations of Earth 2, 2203–2315, telemetry)
+
+What went wrong in the first long campaign, and the rule each lesson gives:
+- **Left `expand` too early.** The plan said "switch at 12 systems" (2216) with room still free;
+  by 2227 the borders were closed at 21 systems while the median reached 36 by 2275. Rule: the
+  `expand` leave condition above; the briefing's *Expansion room* and *Colonisable planets* lines
+  decide, not a plan milestone.
+- **Few planets, not a lazy AI.** Our 19 systems held 5 habitable planets and 4 were settled. The
+  gap to the peers was colonies (4 vs median 5, best 16) and pops. Rule: when *Colonisable planets
+  inside our borders* is none, growth must come from **Orbital Habitats** (`tech_habitat_1`;
+  vanilla AI builds them only once the tech is known and no normal colony target is left),
+  **terraforming** (`tech_terrestrial_sculpting`, `tech_climate_restoration`), **other species**
+  that like the climates we cannot use (see *Other species in the empire*; migration treaties with
+  friendly empires bring them), or **new territory** (war, only with `ask_human`). If Orbital
+  Habitats is missing while boxed in, `tech_rush` is the growth directive (the AI researches it
+  sooner with more research), then `expand` (the mod funds habitats under `expand` once the tech
+  is known).
+- **Military was capped, not unfunded.** Military stayed last while alloys piled up: the fleet sat
+  at naval capacity and the starbase cap was full. `defend` adds alloy budget, which cannot help
+  then. Rule: with `ALLOYS PILING UP`, prefer the directive that raises capacity — `tech_rush`
+  while the naval-capacity doctrines (*Growth and fleet-capacity techs* line) are missing — and use
+  `defend` for an actual war or a stronger hostile neighbour on the border.
+- **Idle stockpiles are not a reason to consolidate** (unless planets still have free district slots, where
+  `consolidate_economy` turns spare minerals into districts). Energy sat at 14k–39k unspent all game (the
+  AI does not sell surplus on the market). `IDLE stockpiles` means the economy is not the
+  constraint: `consolidate_economy` is for deficits, housing and stability only.
+- **Influence stayed at +4 to +6 a month for 110 years.** Outposts and habitats wait on it. Prefer
+  influence sources when choosing between otherwise equal directives: `diplomacy_first` (envoys,
+  federation) keeps influence working for us; `expand` spends it.
+- **Four defensive wars from 2227 on** against empires with 2–7x our military; we lost at most one
+  system each time, with the federation ally fighting beside us. Rule: a federation or defensive
+  pact is the cheapest defence for a small empire — `diplomacy_first` when a hostile neighbour is
+  stronger but not yet at war.
+
+- **Numbers behind these rules** (habitability 80% preferred / 60% same climate / 20% other;
+  outposts 75 influence; naval capacity base 20, +25/+50/+75/+100 from the Fleet Support
+  doctrines, +5 per anchorage; mid-game 2300, endgame 2400, crisis 25–50 years later): the
+  advanced strategy doc, `get_doc("doc:advanced_strategy#0")` and the chunks after it (read from the
+  4.5.1 game files).
+- **War stance**: `prepare_war` and `defend` set the belligerent stance (+10% naval capacity,
+  −10% war exhaustion); `expand` and `diplomacy_first` set their own stance again afterwards.
+
+## 11. Species and empire identity (ours and theirs)
+
+Every run can be a different species and government; read the *Species*, *Identity* and
+*Government* lines first and let them bend the choices above. Look up any trait, civic or
+tradition with `consult` (records `trait:…`, `civic:…`, `tradition:…`).
+
+Our own empire:
+- **Research traits** (intelligent, natural physicists/engineers/sociologists, erudite) or a
+  materialist/technocracy government: `tech_rush` pays more than for others.
+- **Growth traits** (rapid breeders, adaptive, extremely adaptive, nomadic, communal) or an
+  expansionist AI personality: `expand` pays more; hold it longer. Slow breeders / nonadaptive:
+  settle only preferred and same-climate worlds; habitats and other species matter sooner.
+- **Climate preference**: *Colonisable planets* lists each target's fit for our species
+  (preferred, same climate, other climate, any species). Other-climate worlds are poor for us but
+  may suit another species in the empire.
+- **Strong / very strong, militarist, distinguished admiralty**: war is cheaper for us;
+  `prepare_war` becomes reasonable against a weaker, claimable neighbour (still `ask_human`).
+- **Pacifist, xenophile, egalitarian, federation builders**: `diplomacy_first` and federations are
+  our strength; wars of conquest are off-limits for pacifists.
+- **Gestalt (hive / machine)**: no diplomacy stance politics with most empires, amenities and
+  stability work differently; prefer `expand` and `tech_rush`.
+
+Neighbours (the `who:` line under each):
+- **Fanatic xenophobe, fanatic militarist, hegemonic imperialists, honorbound warriors,
+  evangelising zealots, devouring swarm / determined exterminator / fanatic purifiers**: expect
+  war. If they share our border and outmatch us, `defend` early (starbases at the chokepoints)
+  and look for a defensive pact or federation partner against them.
+- **Xenophile, egalitarian, federation builders, erudite explorers, peaceful traders**: potential
+  partners. `diplomacy_first` can turn them into pacts, research agreements, migration treaties
+  (their species then settle worlds we cannot use) and federation members.
+- **Rapid breeders / expansion traditions** on a neighbour: they will outgrow us in pops; race
+  for the remaining space (`expand`) while it lasts.
+- **Their colonies, techs and traditions** show what they invest in: many colonies and expansion
+  traditions = economic weight later; supremacy traditions and high military = war risk.
+- **Fallen empires**: passive unless provoked; never a reason for `prepare_war`. An
+  *awakened* empire is a crisis: `defend`.
 

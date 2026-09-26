@@ -99,6 +99,99 @@ pub struct Neighbour {
     pub threat: f64,
     /// Relation flags that are set, e.g. "hostile", "rival", "alliance", "commercial pact", "at war".
     pub status: Vec<String>,
+    /// Their ethics, civics, species traits, AI personality, traditions and perks.
+    pub identity: Identity,
+    pub colonies: usize,
+}
+
+/// A species: display name, class, and its traits (script keys, e.g. "trait_adaptive").
+#[derive(Debug, Serialize, Default, Clone)]
+pub struct Species {
+    pub name: String,
+    pub class: String,
+    pub traits: Vec<String>,
+}
+
+/// Who an empire is: ethics, government, civics, origin, AI personality, founder species,
+/// tradition trees adopted (with "finished" marks) and ascension perks.
+#[derive(Debug, Serialize, Default, Clone)]
+pub struct Identity {
+    pub ethics: Vec<String>,
+    pub authority: String,
+    pub civics: Vec<String>,
+    pub origin: String,
+    pub personality: String,
+    pub species: Option<Species>,
+    pub traditions: Vec<String>,
+    pub ascension_perks: Vec<String>,
+}
+
+/// An uncolonised planet in our systems that some species can live on.
+#[derive(Debug, Serialize, Default, Clone)]
+pub struct ColonyTarget {
+    pub name: String,
+    pub class: String,
+    pub size: i64,
+    /// For our main species: "preferred", "same climate", "other climate", or "any species" (gaia,
+    /// habitats and other artificial worlds).
+    pub fit: String,
+}
+
+/// Techs that open growth or fleet capacity, and whether we have them.
+pub const KEY_TECHS: [(&str, &str); 8] = [
+    ("tech_habitat_1", "Orbital Habitats (build habitats in our systems)"),
+    ("tech_habitat_2", "Habitat Expansion"),
+    ("tech_terrestrial_sculpting", "Terrestrial Sculpting (terraforming)"),
+    ("tech_ecological_adaptation", "Ecological Adaptation (+habitability)"),
+    ("tech_climate_restoration", "Climate Restoration (terraform more classes)"),
+    ("tech_doctrine_navy_size_1", "Doctrine: Fleet Support (naval capacity)"),
+    ("tech_doctrine_navy_size_2", "Doctrine: Support Vessels (naval capacity)"),
+    ("tech_doctrine_navy_size_3", "Doctrine: Interstellar Logistics (naval capacity)"),
+];
+
+/// Colonizable planet classes by climate (common/planet_classes, 4.5.1 read 2026-09-26).
+const WET: [&str; 3] = ["continental", "ocean", "tropical"];
+const DRY: [&str; 4] = ["arid", "desert", "savannah", "volcanic"];
+const COLD: [&str; 3] = ["tundra", "arctic", "alpine"];
+/// Colonizable by any species (habitability does not depend on the climate preference).
+const ANY_SPECIES: [&str; 6] = ["gaia", "habitat", "ringworld_habitable", "shattered_ring_habitable", "relic", "city"];
+
+fn climate(class: &str) -> Option<&'static str> {
+    if WET.contains(&class) {
+        Some("wet")
+    } else if DRY.contains(&class) {
+        Some("dry")
+    } else if COLD.contains(&class) {
+        Some("cold")
+    } else {
+        None
+    }
+}
+
+/// How well a planet class suits a species with the given preferred class.
+fn fit(class: &str, preferred: Option<&str>) -> Option<String> {
+    if ANY_SPECIES.contains(&class) {
+        return Some("any species".into());
+    }
+    let cl = climate(class)?;
+    Some(match preferred {
+        Some(p) if p == class => "preferred".into(),
+        Some(p) if climate(p) == Some(cl) => "same climate".into(),
+        _ => "other climate".into(),
+    })
+}
+
+/// "trait_pc_continental_preference" → Some("continental").
+fn preferred_class(traits: &[String]) -> Option<String> {
+    traits.iter().find_map(|t| t.strip_prefix("trait_pc_").and_then(|x| x.strip_suffix("_preference")).map(str::to_string))
+}
+
+/// "trait_rapid_breeders" → "rapid breeders"; "trait_pc_ocean_preference" → "prefers ocean".
+pub fn trait_label(t: &str) -> String {
+    if let Some(c) = t.strip_prefix("trait_pc_").and_then(|x| x.strip_suffix("_preference")) {
+        return format!("prefers {c}");
+    }
+    t.trim_start_matches("trait_").replace('_', " ")
 }
 
 /// Our federation, if any.
@@ -168,13 +261,14 @@ pub struct Expansion {
 }
 
 /// Measures compared with other empires (name, label).
-pub const PEER_MEASURES: [(&str, &str); 6] = [
+pub const PEER_MEASURES: [(&str, &str); 7] = [
     ("systems", "systems"),
     ("pops", "pops"),
     ("techs", "techs"),
     ("military_power", "military"),
     ("economy_power", "economy"),
     ("tech_power", "tech power"),
+    ("colonies", "colonies"),
 ];
 
 #[derive(Debug, Serialize, Default)]
@@ -218,6 +312,15 @@ pub struct Briefing {
     /// Nearest empires we have contact with (see MAX_NEIGHBOURS).
     pub neighbours: Vec<Neighbour>,
     pub galaxy: Galaxy,
+    /// Our ethics, government, species and traditions.
+    pub identity: Identity,
+    /// Other species living in the empire (not the founder species).
+    pub other_species: Vec<Species>,
+    /// Uncolonised planets in our systems that can be settled.
+    pub colony_targets: Vec<ColonyTarget>,
+    /// Growth / naval techs known (script keys from KEY_TECHS).
+    pub key_techs_known: Vec<String>,
+    pub used_naval_capacity: i64,
 }
 
 fn expansion(
@@ -301,7 +404,7 @@ fn systems_of(c: &Obj, origins: &std::collections::HashMap<String, i64>) -> usiz
         .len()
 }
 
-fn empire_stats(c: &Obj, origins: &std::collections::HashMap<String, i64>) -> [f64; 6] {
+fn empire_stats(c: &Obj, origins: &std::collections::HashMap<String, i64>) -> [f64; 7] {
     let techs = obj(c, "tech_status").map(|ts| ts.fields().filter(|(k, _, _)| k.read_str() == "technology").count()).unwrap_or(0);
     [
         systems_of(c, origins) as f64,
@@ -310,6 +413,7 @@ fn empire_stats(c: &Obj, origins: &std::collections::HashMap<String, i64>) -> [f
         f64_(c, "military_power").unwrap_or(0.0),
         f64_(c, "economy_power").unwrap_or(0.0),
         f64_(c, "tech_power").unwrap_or(0.0),
+        strings(get(c, "owned_planets")).len() as f64,
     ]
 }
 
@@ -317,7 +421,7 @@ fn empire_stats(c: &Obj, origins: &std::collections::HashMap<String, i64>) -> [f
 /// kept: the governor learns where it stands, not what a specific rival has.
 fn peers(countries: &Obj, player: &str, c: &Obj, origins: &std::collections::HashMap<String, i64>) -> Peers {
     let ours = empire_stats(c, origins);
-    let others: Vec<[f64; 6]> = countries
+    let others: Vec<[f64; 7]> = countries
         .fields()
         .filter(|(k, _, _)| k.read_str() != player)
         .filter_map(|(_, _, v)| v.read_object().ok())
@@ -352,7 +456,7 @@ fn relations<'d, 't>(c: &Obj<'d, 't>) -> Vec<Obj<'d, 't>> {
 
 /// Empires we have contact with (regular and fallen), nearest first: at war with us, then those
 /// sharing a border, then by border distance. `at_war` holds the ids we are fighting.
-fn neighbours(countries: &Obj, us: u64, c: &Obj, origins: &std::collections::HashMap<String, i64>, at_war: &[u64]) -> Vec<Neighbour> {
+fn neighbours(root: &Obj, countries: &Obj, us: u64, c: &Obj, origins: &std::collections::HashMap<String, i64>, at_war: &[u64]) -> Vec<Neighbour> {
     let yes = |r: &Obj, k: &str| get(r, k).and_then(|v| v.read_string().ok()).as_deref() == Some("yes");
     let mut out = Vec::new();
     for r in relations(c) {
@@ -402,6 +506,8 @@ fn neighbours(countries: &Obj, us: u64, c: &Obj, origins: &std::collections::Has
             tech: f64_(&them, "tech_power").unwrap_or(0.0),
             systems: stats[0] as usize,
             techs: stats[2] as usize,
+            colonies: stats[6] as usize,
+            identity: identity(root, &them),
             border_range: i64_(&r, "border_range"),
             borders: yes(&r, "borders"),
             opinion_ours: i64_(&r, "relation_current"),
@@ -413,6 +519,49 @@ fn neighbours(countries: &Obj, us: u64, c: &Obj, origins: &std::collections::Has
     out.sort_by_key(|n| (!at_war.contains(&n.id), !n.borders, n.border_range.unwrap_or(i64::MAX)));
     out.truncate(MAX_NEIGHBOURS);
     out
+}
+
+/// A species from `species_db` by reference.
+fn species(root: &Obj, r: u64) -> Option<Species> {
+    let sp = obj(root, "species_db").and_then(|db| obj(&db, &r.to_string()))?;
+    let key = obj(&sp, "name").and_then(|n| string(&n, "key")).unwrap_or_default();
+    // prescripted species ("PRESCRIPTED_species_name_humans1") have no readable key: use the plural's stem
+    let name = match key.strip_prefix("PRESCRIPTED_species_name_") {
+        Some(stem) => {
+            let s = stem.trim_end_matches(|c: char| c.is_ascii_digit());
+            let mut ch = s.chars();
+            ch.next().map(|f| f.to_uppercase().collect::<String>() + ch.as_str()).unwrap_or_default()
+        }
+        None => name_of(&sp),
+    };
+    let traits = obj(&sp, "traits")
+        .map(|t| t.fields().filter(|(k, _, _)| k.read_str() == "trait").filter_map(|(_, _, v)| v.read_string().ok()).collect())
+        .unwrap_or_default();
+    Some(Species { name, class: string(&sp, "class").unwrap_or_default(), traits })
+}
+
+/// Ethics, government, species, traditions and perks of a country.
+fn identity(root: &Obj, c: &Obj) -> Identity {
+    let gov = obj(c, "government");
+    let traditions = strings(get(c, "traditions"));
+    let trees: Vec<String> = traditions
+        .iter()
+        .filter_map(|t| t.strip_prefix("tr_").and_then(|x| x.strip_suffix("_adopt")))
+        .map(|tree| {
+            let done = traditions.iter().any(|t| t == &format!("tr_{tree}_finish"));
+            format!("{}{}", tree.replace('_', " "), if done { " (finished)" } else { "" })
+        })
+        .collect();
+    Identity {
+        ethics: obj(c, "ethos").map(|e| strings(get(&e, "ethics"))).unwrap_or_default().iter().map(|e| e.trim_start_matches("ethic_").replace('_', " ")).collect(),
+        authority: gov.as_ref().and_then(|g| string(g, "authority")).unwrap_or_default().trim_start_matches("auth_").replace('_', " "),
+        civics: gov.as_ref().map(|g| strings(get(g, "civics"))).unwrap_or_default().iter().map(|x| x.trim_start_matches("civic_").replace('_', " ")).collect(),
+        origin: gov.as_ref().and_then(|g| string(g, "origin")).unwrap_or_default().trim_start_matches("origin_").replace('_', " "),
+        personality: string(c, "personality").unwrap_or_default().replace('_', " "),
+        species: get(c, "founder_species_ref").and_then(|v| v.read_scalar().ok()).and_then(|x| x.to_u64().ok()).and_then(|r| species(root, r)),
+        traditions: trees,
+        ascension_perks: strings(get(c, "ascension_perks")).iter().map(|x| x.trim_start_matches("ap_").replace('_', " ")).collect(),
+    }
 }
 
 fn readable_type(t: &str, prefix: &str) -> String {
@@ -1271,7 +1420,35 @@ pub fn brief_gamestate(gamestate: &[u8]) -> Result<Briefing> {
         }
     }
     let at_war: Vec<u64> = b.wars.iter().flat_map(|w| w.enemy_ids.iter().copied()).collect();
-    b.neighbours = neighbours(&countries, b.country, &c, &origins, &at_war);
+    b.neighbours = neighbours(&root, &countries, b.country, &c, &origins, &at_war);
+    b.identity = identity(&root, &c);
+    let founder = get(&c, "founder_species_ref").and_then(|v| v.read_scalar().ok()).and_then(|x| x.to_u64().ok());
+    b.other_species = strings(get(&c, "owned_species_refs"))
+        .iter()
+        .filter_map(|r| r.parse::<u64>().ok())
+        .filter(|r| Some(*r) != founder)
+        .filter_map(|r| species(&root, r))
+        .filter(|sp| !sp.traits.is_empty())
+        .take(6)
+        .collect();
+    let known: std::collections::HashSet<String> = obj(&c, "tech_status")
+        .map(|ts| ts.fields().filter(|(k, _, _)| k.read_str() == "technology").filter_map(|(_, _, v)| v.read_string().ok()).collect())
+        .unwrap_or_default();
+    b.key_techs_known = KEY_TECHS.iter().filter(|(t, _)| known.contains(*t)).map(|(t, _)| t.to_string()).collect();
+    b.used_naval_capacity = i64_(&c, "used_naval_capacity").unwrap_or(0);
+    let pref = b.identity.species.as_ref().and_then(|sp| preferred_class(&sp.traits));
+    if let Some(ps) = planets.as_ref() {
+        for pid in strings(get(&c, "controlled_planets")) {
+            let Some(p) = obj(ps, &pid) else { continue };
+            if get(&p, "colony").is_some() || get(&p, "owner").is_some() {
+                continue;
+            }
+            let class = string(&p, "planet_class").unwrap_or_default().trim_start_matches("pc_").to_string();
+            if let Some(f) = fit(&class, pref.as_deref()) {
+                b.colony_targets.push(ColonyTarget { name: name_of(&p), class, size: i64_(&p, "planet_size").unwrap_or(0), fit: f });
+            }
+        }
+    }
     b.galaxy = galaxy(&root, &countries, &c, b.country);
     Ok(b)
 }
@@ -1340,9 +1517,32 @@ impl Briefing {
             self.government, self.authority, self.ethics.join(", "), self.civics.join(", "), self.origin
         );
         s += &format!(
-            "Power: military {:.0}, economy {:.0}, tech {:.0}; victory rank {}. Systems owned {}, empire size {}, pops {}, fleet size {}, upgraded starbases {}/{}\n",
+            "Power: military {:.0}, economy {:.0}, tech {:.0}; victory rank {}. Systems owned {}, colonies {}, empire size {}, pops {}, fleet size {} (naval capacity used {}; the save has no maximum), upgraded starbases {}/{}\n",
             self.military_power, self.economy_power, self.tech_power, self.victory_rank,
-            self.systems, self.empire_size, self.pops, self.fleet_size, self.starbases.0, self.starbases.1
+            self.systems, self.planets.len(), self.empire_size, self.pops, self.fleet_size, self.used_naval_capacity,
+            self.starbases.0, self.starbases.1
+        );
+        let id = &self.identity;
+        if let Some(sp) = &id.species {
+            let pref = preferred_class(&sp.traits);
+            let clim = pref.as_deref().and_then(climate).map(|c| format!(" ({c} climate)")).unwrap_or_default();
+            s += &format!(
+                "Species: {} ({}): {}{clim}\n",
+                sp.name, sp.class, sp.traits.iter().map(|t| trait_label(t)).collect::<Vec<_>>().join(", ")
+            );
+        }
+        if !self.other_species.is_empty() {
+            let list: Vec<String> = self.other_species.iter().map(|sp| {
+                let pref = preferred_class(&sp.traits).map(|p| format!("prefers {p}")).unwrap_or_else(|| "no climate preference".into());
+                format!("{} ({pref})", sp.name)
+            }).collect();
+            s += &format!("Other species in the empire: {}\n", list.join(", "));
+        }
+        s += &format!(
+            "Identity: AI personality {}; traditions {}; ascension perks {}\n",
+            if id.personality.is_empty() { "none" } else { &id.personality },
+            if id.traditions.is_empty() { "none".to_string() } else { id.traditions.join(", ") },
+            if id.ascension_perks.is_empty() { "none".to_string() } else { id.ascension_perks.join(", ") }
         );
         s += "Resources (stock, net/month):";
         for (k, v) in &self.stockpile {
@@ -1351,6 +1551,14 @@ impl Briefing {
             s += &format!(" {k} {} ({}{}){flag};", num(*v), if n >= 0.0 { "+" } else { "" }, num(n));
         }
         s += "\n";
+        // more than 10 years of income sitting unspent: the AI cannot use it (a market sale would)
+        let idle: Vec<String> = ["energy", "minerals", "food", "alloys", "consumer_goods"].iter().filter_map(|k| {
+            let (v, n) = (*self.stockpile.get(*k)?, *self.net.get(*k)?);
+            (v > 5000.0 && n > 0.0 && v > n * 120.0).then(|| format!("{k} {} (over {:.0} years of income)", num(v), v / n / 12.0))
+        }).collect();
+        if !idle.is_empty() {
+            s += &format!("IDLE stockpiles (unused by the AI): {}\n", idle.join(", "));
+        }
         s += &format!("Research ({} techs known):\n", self.techs_known);
         for (f, r) in &self.research {
             let cur = r.current.as_ref().map(|(t, p)| format!("{t} ({p:.0} pts)")).unwrap_or_else(|| "NONE".into());
@@ -1405,6 +1613,14 @@ impl Briefing {
                     ratio(n.tech, self.tech_power), n.systems, n.techs, op(n.opinion_ours), op(n.opinion_theirs), n.threat,
                     if n.status.is_empty() { String::new() } else { format!("; {}", n.status.join(", ")) }
                 );
+                let i = &n.identity;
+                let traits = i.species.as_ref().map(|sp| format!("{} ({})", sp.name, sp.traits.iter().map(|t| trait_label(t)).collect::<Vec<_>>().join(", "))).unwrap_or_default();
+                s += &format!(
+                    "  who: {}; {}; civics {}; AI personality {}; species {traits}; colonies {}; traditions {}{}\n",
+                    i.ethics.join(", "), i.authority, i.civics.join(", "), i.personality, n.colonies,
+                    if i.traditions.is_empty() { "none".to_string() } else { i.traditions.join(", ") },
+                    if i.ascension_perks.is_empty() { String::new() } else { format!("; perks {}", i.ascension_perks.join(", ")) }
+                );
             }
         }
         let x = &self.expansion;
@@ -1418,6 +1634,18 @@ impl Briefing {
         } else if x.reach_unclaimed > 0 && x.construction_ships == 0 {
             s += "NO CONSTRUCTION SHIP: unclaimed systems are in reach but nothing can build outposts\n";
         }
+        if self.colony_targets.is_empty() {
+            s += "Colonisable planets inside our borders: none (growth needs habitats, terraforming, other species, or new territory)\n";
+        } else {
+            let list: Vec<String> = self.colony_targets.iter().map(|t| format!("{} ({} size {}, {})", t.name, t.class, t.size, t.fit)).collect();
+            s += &format!("Colonisable planets inside our borders ({}): {}\n", list.len(), list.join("; "));
+        }
+        let (have, missing): (Vec<_>, Vec<_>) = KEY_TECHS.iter().partition(|(t, _)| self.key_techs_known.iter().any(|k| k == t));
+        s += &format!(
+            "Growth and fleet-capacity techs: have {}; missing {}\n",
+            if have.is_empty() { "none".to_string() } else { have.iter().map(|(_, n)| *n).collect::<Vec<_>>().join(", ") },
+            if missing.is_empty() { "none".to_string() } else { missing.iter().map(|(_, n)| *n).collect::<Vec<_>>().join(", ") }
+        );
         if self.wars.is_empty() {
             s += "Wars: none\n";
         } else {
@@ -1655,8 +1883,9 @@ mod tests {
         // Each (resource, category) must be one a non-nomadic empire spends from in vanilla 4.5.1
         // (common/ai_budget, read 2026-09-26); e.g. influence in `starbases` is nomad-only, and
         // outposts take influence from `stations`.
-        const VANILLA: [(&str, &str); 9] = [
+        const VANILLA: [(&str, &str); 11] = [
             ("alloys", "ships"), ("alloys", "starbases"), ("alloys", "colonies"), ("alloys", "planets"),
+            ("alloys", "megastructures_habitat"), ("influence", "megastructures_habitat"),
             ("influence", "stations"), ("influence", "claims"), ("influence", "edicts"),
             ("minerals", "planets"), ("minerals", "stations"),
         ];
@@ -1759,6 +1988,39 @@ situations={ situations={ 0=none 1={ country=0 type="rebellion_situation" progre
         assert!(t.contains("voting now: industry collective waste management (proposed by Rihi Nar; we are against)"), "{t}");
         assert!(t.contains("CRISIS / galaxy-level threat: Prethoryn Scourge [swarm] military 90000"), "{t}");
         assert!(t.contains("Situation: rebellion situation, progress 42, approach crackdown"), "{t}");
+    }
+
+    #[test]
+    fn planet_fit_follows_the_species_climate_preference() {
+        let wet = Some("continental");
+        assert_eq!(fit("continental", wet).as_deref(), Some("preferred"));
+        assert_eq!(fit("ocean", wet).as_deref(), Some("same climate"));
+        assert_eq!(fit("tundra", wet).as_deref(), Some("other climate"));
+        assert_eq!(fit("gaia", wet).as_deref(), Some("any species"));
+        assert_eq!(fit("toxic", wet), None, "toxic worlds are not colonizable in 4.5");
+        assert_eq!(fit("barren", wet), None);
+        assert_eq!(preferred_class(&["trait_adaptive".into(), "trait_pc_arid_preference".into()]).as_deref(), Some("arid"));
+        assert_eq!(trait_label("trait_pc_ocean_preference"), "prefers ocean");
+        assert_eq!(trait_label("trait_rapid_breeders"), "rapid breeders");
+    }
+
+    #[test]
+    fn species_identity_and_key_techs_from_a_real_save() {
+        let b = brief_save(include_bytes!("../tests/fixtures/stellaris_2212_03_01.sav")).unwrap();
+        let sp = b.identity.species.as_ref().unwrap();
+        assert_eq!((sp.name.as_str(), sp.class.as_str()), ("Humans", "HUM"));
+        assert!(sp.traits.contains(&"trait_pc_continental_preference".to_string()), "{sp:?}");
+        assert_eq!(b.identity.personality, "federation builders");
+        assert_eq!(b.identity.ethics, vec!["fanatic egalitarian", "xenophile"]);
+        let n = &b.neighbours[0];
+        assert_eq!(n.identity.personality, "erudite explorers");
+        assert!(n.identity.species.as_ref().unwrap().traits.contains(&"trait_rapid_breeders".to_string()));
+        let t = b.to_text();
+        assert!(t.contains("Species: Humans (HUM): organic, adaptive, nomadic, wasteful, prefers continental (wet climate)"), "{t}");
+        assert!(t.contains("  who: xenophile, fanatic materialist; dictatorial; civics shadow council, philosopher king"), "{t}");
+        assert!(t.contains("Growth and fleet-capacity techs: have none; missing Orbital Habitats"), "{t}");
+        assert!(t.contains("IDLE stockpiles (unused by the AI): energy"), "{t}");
+        assert!(b.peers.stats.contains_key("colonies"));
     }
 
     #[test]

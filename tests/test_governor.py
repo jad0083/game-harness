@@ -676,7 +676,7 @@ def test_instructions_carry_only_the_directive_section_of_the_strategy():
     core = strategy_core(full)
     assert "## 9. Governor directives" in core and "| Directive |" in core
     assert "## 1. Opening" not in core and "Opening (first ~10 years)" in core, "other sections only as contents"
-    assert len(core) < len(full) / 2
+    assert len(core) < len(full) * 0.6, "the core stays well under the whole playbook (it is sent with every call)"
 
 
 def test_decision_prompt_includes_past_outcomes(setup, tmp_path):
@@ -1000,3 +1000,12 @@ def test_a_crisis_appearing_is_urgent():
     now = {"galaxy": {"crises": [["swarm", "Prethoryn Scourge", 90000.0]]}}
     assert urgent_changes(before, now) == ["crisis: Prethoryn Scourge (swarm) appeared"]
     assert urgent_changes(now, now) == []
+
+
+def test_strategy_core_keeps_directives_lessons_and_identity():
+    from pilot.config import REPO
+    from pilot.governor import strategy_core
+    core = strategy_core((REPO / "corpora/stellaris/strategy.md").read_text(encoding="utf-8"))
+    assert "## 9. Governor directives" in core
+    assert "## 10. Lessons from play" in core and "## 11. Species and empire identity" in core
+    assert "## 8. Crisis preparation" not in core and "Crisis preparation" in core, "other sections stay in the index"

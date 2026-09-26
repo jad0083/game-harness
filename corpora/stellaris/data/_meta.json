@@ -1,7 +1,7 @@
 {
  "game_version": "v4.5.1",
- "generated_at": "2026-09-26T03:28:39Z",
- "generator": "scripts/extract-stellaris.py @ a1c0569",
+ "generated_at": "2026-09-26T13:49:49Z",
+ "generator": "scripts/extract-stellaris.py @ e00de68",
  "counts": {
   "tech": 679,
   "policy": 56,
@@ -11,7 +11,9 @@
   "tradition": 234,
   "ascension_perk": 49,
   "civic": 358,
-  "event": 6960
+  "event": 6960,
+  "trait": 363,
+  "planet_class": 24
  },
  "dlc": [
   "dlc004_plantoid",
@@ -29,5 +31,14 @@
   "dlc025_nemesis"
  ],
  "localisation_keys": 112170,
- "warnings": []
+ "warnings": [
+  "common/planet_classes: random_list redefined in 00_planet_classes.txt",
+  "common/planet_classes: random_list redefined in 00_planet_classes.txt",
+  "common/planet_classes: random_list redefined in 00_planet_classes.txt",
+  "common/planet_classes: random_list redefined in 00_planet_classes.txt",
+  "common/planet_classes: random_list redefined in 00_planet_classes_distant_stars.txt",
+  "common/planet_classes: random_list redefined in 00_planet_classes_distant_stars.txt",
+  "common/planet_classes: random_list redefined in 00_planet_classes_distant_stars.txt",
+  "common/planet_classes: random_list redefined in 00_planet_classes_distant_stars.txt"
+ ]
 }

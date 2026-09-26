@@ -28,11 +28,14 @@ policies = { economic_policy = "economic_policy_civilian" }
 
 [directive.prepare_war]
 description = "Alloys, naval capacity, claims. Only against a weaker neighbour, after ask_human."
-policies = { economic_policy = "economic_policy_military" }
+# belligerent: +10% naval capacity, -10% war exhaustion, -10% claim cost (common/policies 4.5.1)
+policies = { economic_policy = "economic_policy_military", diplomatic_stance = "diplo_stance_belligerent" }
 
 [directive.defend]
 description = "War on us or a stronger hostile neighbour on the border: fleets home, fortify chokepoints."
-policies = {}
+# belligerent: +10% naval capacity and -10% war exhaustion while we fight; the next peacetime
+# directive (expand / diplomacy_first) sets its own stance again
+policies = { diplomatic_stance = "diplo_stance_belligerent" }
 
 [directive.diplomacy_first]
 description = "Improve relations, pacts, federation and galactic community standing."

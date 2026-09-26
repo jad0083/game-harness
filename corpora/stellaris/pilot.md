@@ -77,6 +77,14 @@ Directives never grant resources, stats or anything the empire could not do itse
   power by themselves: say so, and prefer the directive that uses what we have (e.g. `tech_rush`
   for naval-capacity techs, or `consolidate_economy`).
 - A `war ended` urgent line means leave `defend` unless another threat is listed.
+- **Species / Identity / Other species** (ours) and the **`who:`** line under each neighbour
+  (ethics, government, civics, AI personality, species traits, colonies, traditions, perks): apply
+  `strategy.md` §11 — they decide which directive pays for *this* empire and which neighbours
+  are threats or partners. `consult` any trait or civic you do not know.
+- **Colonisable planets inside our borders** and **Growth and fleet-capacity techs**: when there
+  is nothing left to settle and Orbital Habitats or the naval-capacity doctrines are missing,
+  `tech_rush` is the growth directive (§10). **IDLE stockpiles** mean resources are not the
+  constraint.
 - **Federation / Galactic Community / Crisis** lines: our federation (type, level, cohesion, who
   leads, members and associates), the resolution under vote with our stance, recent resolutions,
   and any endgame crisis or awakened empire. Allies in a federation make `defend` less urgent

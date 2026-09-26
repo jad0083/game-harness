@@ -233,13 +233,17 @@ def governor_settings(s: Settings):
     return model_settings(replace(s, thinking=s.governor_thinking))
 
 
+# Playbook sections every decision needs (matched in the `## ` heading); the rest are consulted.
+CORE_SECTIONS = ("directive", "lessons from play", "identity")
+
+
 def strategy_core(strategy: str) -> str:
     """The part of strategy.md every decision needs (the directives section), plus a table of contents
     for the rest, which the model reads with `consult` when a topic comes up. Keeps the fixed
     instructions short (and identical between calls, so providers can cache them)."""
     parts = re.split(r"(?m)^(?=## )", strategy)
     head, sections = parts[0], parts[1:]
-    core = [s for s in sections if "directive" in s.splitlines()[0].lower()]
+    core = [s for s in sections if any(w in s.splitlines()[0].lower() for w in CORE_SECTIONS)]
     toc = [s.splitlines()[0].lstrip("# ").strip() for s in sections if s not in core]
     out = head.split("---")[0].strip()
     if toc:

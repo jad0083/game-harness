@@ -373,6 +373,30 @@ class Extractor:
             out.append(self.record("civic", k, self.name(k), self.desc(k), fields))
         return out
 
+    def trait(self) -> list[dict]:
+        """Species traits (leader traits, which carry `leader_class`, are skipped)."""
+        out = []
+        for k, b, f in self.defs("common/traits"):
+            if not k.startswith("trait_") or get(b, "leader_class") is not None:
+                continue
+            fields = {"cost": scalar(get(b, "cost"), self.vars), "tags": values(get(b, "tags")) or None,
+                      "archetypes": values(get(b, "allowed_archetypes")) or None,
+                      "opposites": values(get(b, "opposites")) or None,
+                      "modifier": self.r(get(b, "modifier"), 300) or None,
+                      "triggered_modifier": self.r(get(b, "triggered_planet_modifier"), 200) or None, "source": f}
+            out.append(self.record("trait", k, self.name(k), self.desc(k), fields))
+        return out
+
+    def planet_class(self) -> list[dict]:
+        """Colonizable planet classes and their climate group (wet / dry / cold / artificial)."""
+        out = []
+        for k, b, f in self.defs("common/planet_classes"):
+            if get(b, "colonizable") != "yes":
+                continue
+            fields = {"climate": get(b, "climate"), "source": f}
+            out.append(self.record("planet_class", k, self.name(k), self.desc(k), fields))
+        return out
+
     def _text(self, v) -> str | None:
         """title/desc: a loc key, or a block with `text = key` (first one)."""
         if isinstance(v, str):
@@ -417,7 +441,8 @@ class Extractor:
         return list(out.values())
 
 
-KINDS = ["tech", "policy", "edict", "building", "district", "tradition", "ascension_perk", "civic", "event"]
+KINDS = ["tech", "policy", "edict", "building", "district", "tradition", "ascension_perk", "civic", "event",
+         "trait", "planet_class"]
 
 
 def git_commit() -> str:
