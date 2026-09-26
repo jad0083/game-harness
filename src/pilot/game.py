@@ -199,6 +199,14 @@ class McpGame:
         self.ensure_foreground()
         return self._checked(self.call("stellaris_take_control"))
 
+    def pick_tech(self, prefer: list[str]) -> str:
+        self.ensure_foreground()
+        return self._checked(self.call("stellaris_pick_tech", prefer=prefer))
+
+    def market_sync(self, orders: list[dict]) -> str:
+        self.ensure_foreground()
+        return self._checked(self.call("stellaris_market_sync", orders=orders))
+
     @staticmethod
     def _checked(r: ToolResult) -> str:
         if r.is_error:
@@ -311,6 +319,14 @@ class FakeStellaris:
     def take_control(self) -> str:
         self.actions.append(("take_control",))
         return "AI controls the empire"
+
+    def pick_tech(self, prefer: list[str]) -> str:
+        self.actions.append(("pick_tech", list(prefer)))
+        return "ok"
+
+    def market_sync(self, orders: list[dict]) -> str:
+        self.actions.append(("market_sync", list(orders)))
+        return "ok"
 
     def screenshot(self) -> ToolResult:
         return ToolResult("Screenshot", None)

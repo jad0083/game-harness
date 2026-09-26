@@ -50,6 +50,11 @@ pub struct GameManifest {
     pub screens: HashMap<String, ScreenDef>,
     #[serde(default)]
     pub macros: HashMap<String, MacroDef>,
+    /// Free-form `[ui.*]` tables (e.g. `[ui.tech]`, `[ui.market]`): calibrated screen positions
+    /// for game-specific interaction sequences that live in Rust, not the manifest's declarative
+    /// screens/macros. Read with `ui_point` (see `stellaris.rs`).
+    #[serde(default)]
+    pub ui: toml::Table,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

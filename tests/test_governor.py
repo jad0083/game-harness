@@ -103,6 +103,14 @@ def test_governor_decides_early_on_a_new_war(setup):
     assert ep["situation"].startswith("urgent: new war: Invasion of Sol")
 
 
+def test_fake_game_records_strategy_actions():
+    g = FakeStellaris([briefing("2200.01.01")])
+    assert g.pick_tech(["tech_habitat_1"]) == "ok"
+    assert g.market_sync([{"side": "sell", "resource": "energy", "amount": 11}]) == "ok"
+    assert ("pick_tech", ["tech_habitat_1"]) in g.actions
+    assert ("market_sync", [{"side": "sell", "resource": "energy", "amount": 11}]) in g.actions
+
+
 def test_prepare_war_needs_a_human_yes(setup):
     s, log = setup
     game = FakeStellaris([briefing("2200.01.01")])
