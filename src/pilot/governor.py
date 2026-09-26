@@ -373,7 +373,8 @@ class Governor:
         self.orders: list[str] = []               # standing orders, saved per campaign
         self.requests: queue.Queue[tuple[str, str]] = queue.Queue()   # ("decide", msg) | ("override", name)
         log.state.info["controls"] = ["instruct", "chat", "order_add", "order_remove", "decide_now", "override",
-                                      "set_model", "set_models", "set_roles", "set_fallback", "set_speed", "set_months"]
+                                      "set_model", "set_models", "set_roles", "set_fallback", "set_speed", "set_months",
+                                      "edit_pillar", "unpin_pillar", "review_strategy"]
         log.state.info["thinking"] = settings.governor_thinking
         log.state.info["pool"] = settings.pool()
         log.state.info["rotate"] = settings.rotate
@@ -587,6 +588,43 @@ class Governor:
             raise ValueError(f"unknown directive {directive!r}")
         self.requests.put(("override", directive))
         self.log.emit("instruction", text=f"Override: {directive}")
+
+    def edit_pillar(self, name: str, fields: dict) -> None:
+        """The human's edit: validated exactly like a model strategy (against the latest briefing's
+        tech ids, idle resources and income), then pinned and recorded as a new version. `priority`
+        is never editable (priorities stay unique); `prefer_techs`/`market` are still restricted to
+        the technology/economy pillars by the same `validate` a model strategy goes through."""
+        from .strategy import PILLARS, Pillar
+        if name not in PILLARS:
+            raise ValueError(f"unknown pillar {name!r}")
+        if self.strategy is None:
+            raise ValueError("no strategy yet")
+        cur = self.strategy.pillars[name].model_dump()
+        allowed = {"stance", "goals", "milestones", "prefer_techs", "market"}
+        new = Pillar.model_validate({**cur, **{k: v for k, v in fields.items() if k in allowed},
+                                     "pinned": True, "edited_by": "human"})
+        trigger = f"edited by human: {name}"
+        s = self.strategy.model_copy(update={"pillars": {**self.strategy.pillars, name: new}, "reason": trigger})
+        errs = validate(s, previous=None, tech_ids=self._tech_ids(), idle=idle_resources({}) | {o.resource for o in new.market},
+                        income={o.resource: o.amount * 5 for o in new.market})
+        if errs:
+            raise ValueError("; ".join(errs))
+        self._set_strategy(s, self.log.state.game_date or "", trigger, "human")
+
+    def unpin_pillar(self, name: str) -> None:
+        if self.strategy is None or name not in self.strategy.pillars:
+            raise ValueError(f"unknown pillar {name!r}")
+        p = self.strategy.pillars[name].model_copy(update={"pinned": False})
+        trigger = f"unpinned: {name}"
+        s = self.strategy.model_copy(update={"pillars": {**self.strategy.pillars, name: p}, "reason": trigger})
+        self._set_strategy(s, self.log.state.game_date or "", trigger, "human")
+
+    def request_review(self) -> None:
+        """Ask for a strategy review at the next decision; a cap-bypassing request, like a failed
+        review's own retry, so it runs even inside the 12-month event-review cap."""
+        self.review_requested = "requested from the dashboard"
+        self._review_retry = True
+        self.log.emit("instruction", text="Strategy review requested")
 
     def chat(self, text: str) -> None:
         """Ask the model something; it answers in the feed without acting on the game."""

@@ -18,6 +18,7 @@ Telemetry (runs/telemetry.sqlite, across runs and models):
     GET  /api/decision?run=<id>&episode=<n>     one decision with its full trace
     GET  /api/metrics?campaign=<id>|run=<id>    metric points over in-game time
     GET  /api/plans?campaign=<id>|run=<id>      campaign plan versions, newest first
+    GET  /api/strategy?campaign=<id>            current pillar strategy, milestone status, version history
     GET  /api/models                            models to offer, and the saved choice for the next run
     GET  /api/pc                                gaming PC: agent reachable, version, window in front, games open
     POST /api/settings  {"models": [{"model", "thinking"}, ...], "rotate"}   the model list (live too); older {"model", "thinking", "fallback"}
@@ -202,6 +203,24 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
         rows = await q(f"SELECT run_id, t, date, source, text FROM plans WHERE {where} ORDER BY t DESC", args)
         return web.json_response(rows)
 
+    async def api_strategy(request):
+        """The current pillar strategy, its milestones' status, and version history for a campaign."""
+        from .strategy import Strategy, milestone_status
+        cid = request.query.get("campaign") or (log.campaign_id if log else "")
+        if tel is None or not cid:
+            return web.json_response({"current": None, "milestones": [], "history": []})
+        cur = await asyncio.to_thread(tel.latest_strategy, cid)
+        rows = await asyncio.to_thread(tel.metrics_rows, cid)
+        hist = await asyncio.to_thread(tel.strategy_history, cid)
+        ms = []
+        if cur:
+            s = Strategy.model_validate({k: v for k, v in cur.items() if k != "reason"})
+            today = rows[-1]["date"] if rows else "2200.01.01"
+            for name, pl in s.pillars.items():
+                for m in pl.milestones:
+                    ms.append({"pillar": name, **m.model_dump(), "status": milestone_status(m, rows, today)})
+        return web.json_response({"current": cur, "milestones": ms, "history": hist})
+
     models_cache: dict = {}
 
     async def api_models(_):
@@ -283,7 +302,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
            web.get("/api/pc", api_pc),
            web.post("/api/run", api_run),
            web.get("/api/models", api_models), web.post("/api/settings", api_settings),
-           web.get("/api/plans", api_plans),
+           web.get("/api/plans", api_plans), web.get("/api/strategy", api_strategy),
            web.get("/api/decision", api_decision), web.get("/api/metrics", api_metrics)]
 
     def run_dir(request) -> Path:
@@ -443,6 +462,18 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
                 pilot.set_roles(body.get("roles") or {})
             except ValueError as e:
                 raise web.HTTPBadRequest(text=str(e)) from e
+        elif action == "edit_pillar" and hasattr(pilot, "edit_pillar"):
+            try:
+                pilot.edit_pillar(str(body.get("pillar", "")), dict(body.get("fields") or {}))
+            except ValueError as e:
+                raise web.HTTPBadRequest(text=str(e)) from e
+        elif action == "unpin_pillar" and hasattr(pilot, "unpin_pillar"):
+            try:
+                pilot.unpin_pillar(str(body.get("pillar", "")))
+            except ValueError as e:
+                raise web.HTTPBadRequest(text=str(e)) from e
+        elif action == "review_strategy" and hasattr(pilot, "request_review"):
+            pilot.request_review()
         elif action == "set_fallback" and hasattr(pilot, "set_fallback"):
             try:
                 pilot.set_fallback(str(body.get("model", "")) or None)
@@ -481,7 +512,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
                 raise web.HTTPBadRequest(text=str(e)) from e
         else:
             raise web.HTTPBadRequest(text="action must be pause|resume|stop|instruct|answer|set_model|set_models|set_roles|set_fallback|set_speed|set_months|chat|order_add|order_remove|"
-                                          "decide_now|override, with its text/index/directive")
+                                          "decide_now|override|edit_pillar|unpin_pillar|review_strategy, with its text/index/directive/pillar/fields")
         return web.json_response({"ok": True, "status": log.state.status})
 
     app = web.Application(middlewares=[no_store])

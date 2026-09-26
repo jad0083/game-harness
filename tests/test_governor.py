@@ -2144,3 +2144,139 @@ def test_a_pick_is_not_judged_on_the_save_it_was_made_on(setup):
     g._carry_out_actions(same)                       # e.g. "decide now" on the same save
     assert not [e for e in log.recent if e["kind"] == "strategy_action" and "did not stick" in e.get("result", "")]
     assert g._pending_pick == "tech_habitat_1", "still waiting for a later save"
+
+
+# ---- Task 8: dashboard API, human edit/pin/unpin, review now -----------------------------------
+
+def test_human_pillar_edits_pin_and_win_over_a_running_review(setup):
+    s, log = setup
+    calls = []
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": _strategist(calls)})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    g.edit_pillar("diplomacy", {"stance": "no federations", "goals": ["stay independent"]})
+    assert g.strategy.pillars["diplomacy"].pinned and g.strategy.pillars["diplomacy"].edited_by == "human"
+    g._role_objs["strategy"] = _strategist(calls, pin_diplomacy_to="join a federation")
+    g.__dict__.pop("_agents", None)
+    g._review_strategy(briefing("2201.01.01"), "scheduled")
+    assert g.strategy.pillars["diplomacy"].stance == "no federations"
+    g.unpin_pillar("diplomacy")
+    assert not g.strategy.pillars["diplomacy"].pinned
+    with pytest.raises(ValueError):
+        g.edit_pillar("happiness", {"stance": "x"})
+
+
+def test_strategy_api_returns_current_milestones_and_history(setup, tmp_path):
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from pilot.dashboard import make_app
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(s.runs_dir, "rs", s.model, telemetry=tel)
+    calls = []
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": _strategist(calls)})
+    log.emit("run_start", model=s.model, game=s.game)   # a runs row is needed before telemetry can attribute a campaign
+    log.set_campaign("stellaris", "c1", "Test")
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+
+    async def go():
+        async with TestClient(TestServer(make_app(g, s.runs_dir, tel))) as c:
+            r = await c.get(f"/api/strategy?campaign={log.campaign_id}")
+            body = await r.json()
+            assert body["current"]["focus"] == "grow" and len(body["history"]) == 1
+            r = await c.post("/control", json={"action": "edit_pillar", "pillar": "economy", "fields": {"stance": "save energy"}})
+            assert r.status == 200 and g.strategy.pillars["economy"].pinned
+            r = await c.post("/control", json={"action": "review_strategy"})
+            assert r.status == 200 and g.review_requested == "requested from the dashboard"
+    asyncio.run(go())
+
+
+def test_edit_pillar_rejects_an_invalid_edit_and_leaves_strategy_unchanged(setup):
+    """Ruling 1: a human edit is validated exactly like a model strategy; an invalid edit raises
+    ValueError with the reasons and never touches the strategy."""
+    s, log = setup
+    calls = []
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": _strategist(calls)})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    before = g.strategy.model_dump()
+    with pytest.raises(ValueError, match="only the technology pillar prefers techs"):
+        g.edit_pillar("diplomacy", {"prefer_techs": ["some_tech"]})
+    assert g.strategy.model_dump() == before, "a rejected edit must not change the strategy"
+
+
+def test_edit_pillar_ignores_priority_edits(setup):
+    """Ruling 1: priority is not an editable field (priorities stay unique)."""
+    s, log = setup
+    calls = []
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": _strategist(calls)})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    before = g.strategy.pillars["diplomacy"].priority
+    g.edit_pillar("diplomacy", {"stance": "no federations", "priority": 1})
+    assert g.strategy.pillars["diplomacy"].priority == before
+
+
+def test_edit_pillar_records_a_new_strategy_version_with_trigger_text(setup, tmp_path):
+    """Ruling 2: an applied edit is stored as a new strategy version (trigger 'edited by human:
+    <pillar>') so it survives a restart and appears in history."""
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t2.sqlite")
+    log = EventLog(s.runs_dir, "run-edit", s.model, telemetry=tel)
+    calls = []
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": _strategist(calls)})
+    log.emit("run_start", model=s.model, game=s.game)   # a runs row is needed before telemetry can attribute a campaign
+    log.set_campaign("stellaris", "edit-hist", "Test")
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    g.edit_pillar("economy", {"stance": "save energy"})
+    hist = tel.strategy_history(log.campaign_id)
+    assert hist[0]["trigger"] == "edited by human: economy"
+    assert hist[0]["strategy"]["pillars"]["economy"]["pinned"] is True
+    # survives a restart: a new Governor for the same campaign loads the edited version
+    g2 = Governor(s, FakeStellaris([briefing("2200.02.01")]),
+                 EventLog(s.runs_dir, "run-edit2", s.model, telemetry=tel), model=decisions("keep"))
+    g2._set_campaign({"source": "save games/edit-hist/x.sav"})
+    assert g2.strategy.pillars["economy"].stance == "save energy"
+    assert g2.strategy.pillars["economy"].pinned
+
+
+def test_request_review_bypasses_the_event_cap_like_a_failed_retry(setup):
+    """Ruling 4: review_strategy from the dashboard is a cap-bypassing request, like a failed
+    review's own retry, so it runs at the next decision even inside the 12-month event cap."""
+    s, log = setup
+    calls = []
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": _strategist(calls)})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    g._last_event_review_month = months("2200.01.01")   # a review just counted against the cap
+    g.request_review()
+    assert g.review_requested == "requested from the dashboard"
+    ran = g._maybe_event_review(briefing("2200.06.01"), g.review_requested, retry=g._review_retry)
+    assert ran, "a dashboard-requested review must bypass the 12-month cap"
+
+
+def test_control_edit_pillar_returns_400_for_an_invalid_edit(setup, tmp_path):
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from pilot.dashboard import make_app
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t3.sqlite")
+    log = EventLog(s.runs_dir, "rs2", s.model, telemetry=tel)
+    calls = []
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": _strategist(calls)})
+    log.set_campaign("stellaris", "c2", "Test")
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+
+    async def go():
+        async with TestClient(TestServer(make_app(g, s.runs_dir, tel))) as c:
+            r = await c.post("/control", json={"action": "edit_pillar", "pillar": "diplomacy",
+                                               "fields": {"prefer_techs": ["some_tech"]}})
+            assert r.status == 400
+            assert not g.strategy.pillars["diplomacy"].pinned
+
+            r = await c.post("/control", json={"action": "unpin_pillar", "pillar": "nope"})
+            assert r.status == 400
+    asyncio.run(go())
