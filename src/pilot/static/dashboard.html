@@ -55,7 +55,7 @@
   .brand { font-weight: 700; font-size: 17px; letter-spacing: -0.02em; font-variation-settings: "opsz" 24; }
   .brand::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--accent);
                    margin-right: 9px; vertical-align: 1px; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
-  .campaign select, .picker select { background: transparent; border: 1px solid var(--hair); border-radius: 6px; padding: 5px 8px; color: var(--ink); }
+  .campaign select { background: transparent; border: 1px solid var(--hair); border-radius: 6px; padding: 5px 8px; color: var(--ink); }
   .campaign select { max-width: min(320px, 60vw); font-weight: 600; }
   .pill { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 13px; }
   .pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
@@ -72,8 +72,6 @@
   .facts { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--ink-2); font-size: 13px; }
   .facts b { color: var(--ink); font-weight: 600; }
   .spacer { flex: 1; }
-  .picker { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
-  .picker select { max-width: 230px; }
   .btn { border: 1px solid var(--hair); background: transparent; border-radius: 6px; padding: 6px 12px; cursor: pointer; color: var(--ink); }
   .btn:hover { border-color: var(--accent); color: var(--accent); }
   .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
@@ -92,10 +90,6 @@
   .ro-item b { display: block; font-size: 19px; font-weight: 600; line-height: 1.25; font-variation-settings: "opsz" 24; }
   .ro-item b.attn { color: var(--accent); }
   .ro-item .ro-sub { display: block; font-size: 13px; color: var(--ink-2); }
-  .ro-controls { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 13px; color: var(--ink-2); padding-top: 3px; }
-  .ro-controls label { display: inline-flex; align-items: center; gap: 6px; }
-  .ro-controls select, .ro-controls input { background: transparent; border: 1px solid var(--hair); border-radius: 6px; padding: 3px 6px; color: var(--ink); font-weight: 600; }
-  .ro-controls input { width: 56px; }
   @media (max-width: 700px) { .readout { gap: 8px 24px; padding: 14px 16px 12px; } .ro-date b { font-size: 36px; } }
 
   .banner { margin: 12px 24px 0; padding: 12px 14px; border-left: 3px solid var(--accent); background: var(--surface);
@@ -255,6 +249,23 @@
   .stats b { color: var(--ink); }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
+  /* ---- settings dialog, pace summary, collapsible panels ---- */
+  dialog.settings { width: min(460px, 94vw); }
+  dialog fieldset { border: 0; border-top: 1px solid var(--hair); margin: 0; padding: 12px 0 0; display: grid; gap: 12px; }
+  dialog legend { padding: 0 8px 0 0; font-weight: 600; font-size: 13px; color: var(--ink); }
+  dialog .hint { font-size: 12.5px; color: var(--muted); }
+  dialog .inline-num { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-2); }
+  .ro-pace { background: none; border: 0; padding: 0; text-align: left; color: inherit; font: inherit; cursor: pointer; border-radius: 6px; }
+  .ro-pace:hover b, .ro-pace:focus-visible b { text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 4px; }
+  .panel > header .collapse { background: none; border: 0; padding: 0; color: inherit; font: inherit; cursor: pointer;
+                              display: inline-flex; align-items: center; gap: 8px; }
+  .panel > header .collapse::after { content: ""; width: 7px; height: 7px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+                                     transform: rotate(45deg) translateY(-2px); transition: transform .15s; }
+  .panel.collapsed > header .collapse::after { transform: rotate(-45deg); }
+  .panel.collapsed > header { margin-bottom: 0; }
+  .panel.collapsed > .body { display: none; }
+  @media (prefers-reduced-motion: reduce) { .panel > header .collapse::after { transition: none; } }
+
   /* ---- dialog + toast ---- */
   dialog { border: 1px solid var(--hair); border-top: 3px solid var(--accent); border-radius: 8px; background: var(--surface); color: var(--ink); padding: 18px 20px; width: min(420px, 92vw); }
   dialog::backdrop { background: rgba(6, 9, 20, .6); }
@@ -286,11 +297,7 @@
   <span class="pc" id="pc" title="The gaming PC and what is open on it"></span>
   <div class="facts" id="facts"></div>
   <span class="spacer"></span>
-  <label class="picker" title="The model the pilot uses; with no run active, it is saved for the next run">Model <select id="model-select" aria-label="Model"></select></label>
-  <label class="picker" title="Thinking effort">Thinking <select id="thinking-select" aria-label="Thinking level">
-    <option value="off">off</option><option value="low">low</option><option value="medium">medium</option><option value="high">high</option>
-  </select></label>
-  <label class="picker" title="Tried once when the model stays overloaded after its retries (503 high demand); off to skip the decision instead">Fallback <select id="fallback-select" aria-label="Fallback model"></select></label>
+  <button class="btn" id="b-settings" aria-haspopup="dialog" title="Model, thinking, fallback model, game speed and decision interval">Settings</button>
   <button class="btn primary" id="b-start" hidden>Start run</button>
   <button class="btn live-only" id="b-toggle" hidden>Pause</button>
   <button class="btn danger live-only" id="b-stop" hidden>Stop</button>
@@ -299,7 +306,7 @@
 <dialog id="start-dialog" aria-labelledby="start-title">
   <form method="dialog" id="start-form">
     <h2 id="start-title">Start a pilot run</h2>
-    <p class="hint">The pilot plays the game that is open on the PC, with the model chosen in the top bar.</p>
+    <p class="hint">The pilot plays the game that is open on the PC, with the model chosen in Settings.</p>
     <p class="hint warn" id="start-note" hidden>No game window is open on the PC right now. Start the game and load a save first.</p>
     <label>Game <select id="start-game"><option value="stellaris">Stellaris</option><option value="galciv4">Galactic Civilizations IV</option></select></label>
     <label class="stellaris-only">Game speed <select id="start-speed">
@@ -307,6 +314,29 @@
     </select></label>
     <label class="stellaris-only">Decide every <input id="start-months" type="number" min="1" max="120" value="12"> in-game months</label>
     <div class="row"><button class="btn" value="cancel">Cancel</button><button class="btn primary" id="start-go" value="start">Start</button></div>
+  </form>
+</dialog>
+<dialog id="settings-dialog" class="settings" aria-labelledby="settings-title">
+  <form method="dialog">
+    <h2 id="settings-title">Settings</h2>
+    <p class="hint" id="settings-hint">Changes apply at once to the running pilot and are saved for later runs.</p>
+    <fieldset>
+      <legend>Model</legend>
+      <label>Model <select id="model-select"></select></label>
+      <label>Thinking <select id="thinking-select">
+        <option value="off">off</option><option value="low">low</option><option value="medium">medium</option><option value="high">high</option>
+      </select></label>
+      <label>Fallback model <select id="fallback-select"></select>
+        <span class="hint">Tried once when the model is still overloaded after its retries (503 high demand). Off skips that decision instead.</span></label>
+    </fieldset>
+    <fieldset>
+      <legend>Pace</legend>
+      <label>Game speed while the AI plays <select id="pace-speed">
+        <option value="slowest">slowest</option><option value="slow">slow</option><option value="normal">normal</option><option value="fast">fast</option><option value="fastest">fastest</option>
+      </select></label>
+      <label>Decide every <span class="inline-num"><input id="pace-months" type="number" min="1" max="120"> in-game months</span></label>
+    </fieldset>
+    <div class="row"><button class="btn primary" value="close">Done</button></div>
   </form>
 </dialog>
 <div class="banner" id="banner" hidden>
@@ -320,15 +350,9 @@
   <div class="ro-item"><span class="ro-label">Directive</span><b id="ro-directive">–</b><span class="ro-sub" id="ro-directive-sub"></span></div>
   <div class="ro-item"><span class="ro-label">Standing</span><b id="ro-standing">–</b><span class="ro-sub" id="ro-standing-sub"></span></div>
   <div class="ro-item"><span class="ro-label">Governor</span><b id="ro-gov">–</b><span class="ro-sub" id="ro-gov-sub"></span></div>
-  <div class="ro-item ro-pace" title="Game speed while the AI plays, and how often the model decides. Saved for later runs; during a run they apply at once.">
-    <span class="ro-label">Pace</span>
-    <span class="ro-controls">
-      <label>speed <select id="pace-speed" aria-label="Game speed">
-        <option value="slowest">slowest</option><option value="slow">slow</option><option value="normal">normal</option><option value="fast">fast</option><option value="fastest">fastest</option>
-      </select></label>
-      <label>decide every <input id="pace-months" type="number" min="1" max="120" aria-label="Months between decisions"> months</label>
-    </span>
-  </div>
+  <button class="ro-item ro-pace" id="ro-pace-btn" title="Game speed and decision interval (open Settings to change)">
+    <span class="ro-label">Pace</span><b id="ro-pace">–</b><span class="ro-sub" id="ro-pace-sub"></span>
+  </button>
 </section>
 
 <main>
@@ -351,12 +375,12 @@
       </div>
     </section>
 
-    <section class="panel" id="p-nb" aria-labelledby="h-nb" hidden>
+    <section class="panel" id="p-nb" aria-labelledby="h-nb" data-collapsible hidden>
       <header><h2 id="h-nb">Neighbours</h2><span class="sub" id="nb-sub"></span></header>
       <div class="body" id="nb"></div>
     </section>
 
-    <section class="panel" id="p-dec" aria-labelledby="h-dec">
+    <section class="panel" id="p-dec" aria-labelledby="h-dec" data-collapsible>
       <header><h2 id="h-dec">Decisions</h2><span class="sub" id="dec-sub"></span></header>
       <div class="body"><ul class="decisions" id="decisions"></ul></div>
     </section>
@@ -585,6 +609,8 @@ function renderReadout() {
   const speed = live ? info.speed : cat.speed, months = live ? info.every_months : cat.months;
   if (document.activeElement !== $("pace-speed") && speed) $("pace-speed").value = speed;
   if (document.activeElement !== $("pace-months") && months) $("pace-months").value = months;
+  $("ro-pace").textContent = speed || "–";
+  $("ro-pace-sub").textContent = months ? `a decision every ${months} months` : "";
   const st = S.status.status || "viewer";
   $("ro-gov").textContent = live ? ({ playing: "Watching the empire", deciding: "Deciding now", paused: "Paused", needs_attention: "Needs you" }[st] || st) : "Not running";
   $("ro-gov").className = st === "needs_attention" ? "attn" : "";
@@ -1072,6 +1098,26 @@ async function switchModel() {
   loadStatus();
 }
 $("model-select").addEventListener("change", switchModel);
+$("b-settings").addEventListener("click", () => { loadCatalog().then(() => syncPickers(S.live ? liveModels() : null)); $("settings-dialog").showModal(); });
+$("ro-pace-btn").addEventListener("click", () => $("b-settings").click());
+function liveModels() {
+  const info = S.status.info || {};
+  return { models: info.models, model: S.status.model, thinking: info.thinking, fallback: info.fallback };
+}
+// Collapsible panels (heading button); the choice is remembered in this browser.
+for (const sec of document.querySelectorAll("[data-collapsible]")) {
+  const h2 = sec.querySelector("header h2"), key = "collapsed:" + sec.id;
+  const btn = document.createElement("button");
+  btn.className = "collapse"; btn.type = "button";
+  btn.setAttribute("aria-controls", sec.id);
+  h2.parentNode.insertBefore(btn, h2); btn.appendChild(h2);
+  const set = (c) => { sec.classList.toggle("collapsed", c); btn.setAttribute("aria-expanded", String(!c));
+                       try { localStorage.setItem(key, c ? "1" : "0"); } catch {} };
+  let start = false;
+  try { start = localStorage.getItem(key) === "1"; } catch {}
+  set(start);
+  btn.addEventListener("click", () => set(!sec.classList.contains("collapsed")));
+}
 $("fallback-select").addEventListener("change", switchFallback);
 
 async function setPace(kind) {
