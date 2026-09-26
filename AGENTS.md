@@ -257,4 +257,9 @@ Rules:
   only the first 4 offered techs are clickable) and `stellaris_market_sync` (a new monthly trade
   starts at 10; changes are computed from the last autosave, so call it at most once per autosave;
   trade is not a market resource).
+- **Other screen sizes**: positions and templates are measured at 3840x2160. A host with another size
+  sets `GAME_RESOLUTION` (e.g. `2560x1440`); the controller then merges `res/<W>x<H>.toml`. Its
+  `[ui.*]` points come from `scripts/res-map.py corpora/stellaris <W>x<H> --write` (one UI scale per
+  size in `res/map.toml`, each UI group pinned to top-left or the screen centre; verified within
+  1-2 px at 1440p); its screen templates are captured at that size (`capture-template.py`).
 

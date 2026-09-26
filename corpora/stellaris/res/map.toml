@@ -1,0 +1,25 @@
+# How the manifest's [ui.*] points (measured at 3840x2160, UI scaling 1.0) translate to another
+# screen size: each UI group is pinned to an anchor, and the whole UI scales by one factor per
+# resolution (in 1568x882 image space). Point' = anchor + scale * (point - anchor).
+# Verified live on mini-rig2 2026-09-26: every measured tech and market point within 1-2 px.
+# scripts/res-map.py writes the mapped points into res/<W>x<H>.toml.
+
+reference = "3840x2160"
+
+[scale]
+"2560x1440" = 1.2      # measured: tech swap (229,168) -> (275,201); market add (382,156) -> (458,187)
+
+# Anchors in image space. top_left = (0, 0); center = the screen centre (784, 441).
+[anchors]
+default = "top_left"
+"market.buy" = "center"
+"market.sell" = "center"
+"market.resources" = "center"
+"market.minus" = "center"
+"market.plus" = "center"
+"market.confirm" = "center"
+"market.remove" = "center"
+
+# Distances (pixels) that scale without an anchor.
+[distances]
+keys = ["tech.option_pitch", "market.order_row_pitch"]

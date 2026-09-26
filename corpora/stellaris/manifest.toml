@@ -127,7 +127,7 @@ clear_backspaces = 200
 [ui.tech]
 open_key = "f4"
 swap = { physics = [229, 168], society = [229, 249], engineering = [229, 331] }
-first_option = [390, 125]
+first_option = [390, 106]   # the card header strip (a body click does not select at 1440p; header verified at 4K 2381.03)
 option_pitch = 62
 visible_options = 4
 close_key = "esc"
