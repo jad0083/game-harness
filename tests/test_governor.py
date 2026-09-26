@@ -2651,3 +2651,35 @@ def test_an_event_review_still_runs_when_no_review_ran_in_the_decision(setup):
     g.run(max_decisions=2)
     reviews = [e for e in log.recent if e["kind"] == "strategy_review"]
     assert len(reviews) == 2 and reviews[1]["trigger"].startswith("urgent: new war")
+
+
+def test_errored_decision_rows_with_a_null_decision_stay_visible(tmp_path):
+    """Final review 7: `decision != 'strategy_review'` is NULL-unsafe in SQL (NULL != x is NULL),
+    so errored decisions (decision NULL) vanished from the dashboard's lists and counts and from
+    scoring. Only strategy_review rows are excluded."""
+    import asyncio
+    import json
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from pilot.dashboard import make_app
+    from pilot.telemetry import Telemetry
+    tel = Telemetry(tmp_path / "t.sqlite")
+    tel.start_run("r1", "stellaris", "m", {}, 1.0)
+    cid = tel.set_campaign("r1", "stellaris", "nulls", 1.0)
+    row = "INSERT INTO decisions(run_id, episode, campaign_id, t, date, month, decision) VALUES (?,?,?,?,?,?,?)"
+    tel._exec(row, ("r1", 1, cid, 1.0, "2200.01.01", 2200 * 12, "expand"))
+    tel._exec(row, ("r1", 2, cid, 2.0, "2200.01.01", 2200 * 12, None))            # an errored decision
+    tel._exec(row, ("r1", -1, cid, 3.0, "2200.01.01", 2200 * 12, "strategy_review"))
+    for date, month, pops in (("2200.01.01", 2200 * 12, 10), ("2201.01.01", 2201 * 12, 20)):
+        tel._exec("INSERT INTO metrics(run_id, campaign_id, t, date, month, data) VALUES (?,?,?,?,?,?)",
+                  ("r1", cid, 1.0, date, month, json.dumps({"pops": pops})))
+    assert tel.score(cid) == 2, "the errored row is scored like any decision; the review is not"
+
+    async def go():
+        async with TestClient(TestServer(make_app(None, tmp_path, tel))) as c:
+            camps = await (await c.get("/api/campaigns")).json()
+            assert camps[0]["decisions"] == 2
+            ds = await (await c.get("/api/decisions", params={"campaign": cid})).json()
+            assert [d["decision"] for d in ds] == ["expand", None]
+    asyncio.run(go())

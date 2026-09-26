@@ -193,7 +193,7 @@ class Telemetry:
             return 0
         scored = 0
         for d in self.query("SELECT run_id, episode, month FROM decisions WHERE campaign_id=? AND month IS NOT NULL"
-                            " AND decision != 'strategy_review'", (campaign_id,)):
+                            " AND (decision IS NULL OR decision != 'strategy_review')", (campaign_id,)):
             # same run only (a reloaded older save repeats months), and an end point close to the mark
             run = [(m["month"], json.loads(m["data"])) for m in mets if m["run_id"] == d["run_id"]]
             start = next((x for mo, x in run if mo >= d["month"]), None)
@@ -228,7 +228,8 @@ class Telemetry:
 
     def past_outcomes(self, campaign_id: str, limit: int = 12) -> str:
         """Text table of this campaign's earlier directive changes and what followed, for the model.
-        Excludes strategy review rows: they are not a directive change (Task 9 shows them separately)."""
+        Excludes strategy review rows: they are not a directive change (Task 9 shows them separately).
+        Errored decisions (decision NULL) are excluded on purpose too: they changed nothing."""
         rows = self.query(
             "SELECT date, decision, current, trigger, result FROM decisions WHERE campaign_id=? AND decision IS NOT NULL"
             " AND decision != 'keep' AND decision != 'strategy_review' ORDER BY month DESC LIMIT ?", (campaign_id, limit))

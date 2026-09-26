@@ -162,7 +162,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
         rows = await q(
             "SELECT c.id, c.game, c.name, c.title, c.created,"
             " (SELECT COUNT(*) FROM runs r WHERE r.campaign_id=c.id) AS runs,"
-            " (SELECT COUNT(*) FROM decisions d WHERE d.campaign_id=c.id AND d.decision != 'strategy_review') AS decisions,"
+            " (SELECT COUNT(*) FROM decisions d WHERE d.campaign_id=c.id AND (d.decision IS NULL OR d.decision != 'strategy_review')) AS decisions,"
             " (SELECT MAX(date) FROM metrics m WHERE m.campaign_id=c.id) AS latest,"
             " (SELECT GROUP_CONCAT(DISTINCT r.model) FROM runs r WHERE r.campaign_id=c.id) AS models"
             " FROM campaigns c ORDER BY c.created DESC")
@@ -176,7 +176,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
                        f" tokens_in, tokens_out, seconds, result, model_version, thinking,"
                        f" json_extract(trace,'$.off_frame') AS off_frame,"
                        f" COALESCE(model, (SELECT model FROM runs WHERE runs.id=decisions.run_id)) AS model"
-                       f" FROM decisions WHERE {where} AND decision != 'strategy_review' ORDER BY t", args)
+                       f" FROM decisions WHERE {where} AND (decision IS NULL OR decision != 'strategy_review') ORDER BY t", args)
         for r in rows:
             r["result"] = json.loads(r["result"]) if r["result"] else None
         return web.json_response(rows)
