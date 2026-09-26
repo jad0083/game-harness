@@ -127,6 +127,10 @@ def arm_stop_grace(done: threading.Event, grace_s: float, on_force=None, force_e
     return t
 
 
+def game_for_roles(a, prefs: dict) -> str:
+    return a.game or prefs.get("game") or "stellaris"
+
+
 def rebuild(s: Settings) -> int:
     from .telemetry import Telemetry
     tel = Telemetry(s.telemetry_db)
@@ -186,6 +190,10 @@ def main(argv: list[str] | None = None) -> int:
         s.models = tuple(prefs["models"])
         s.model, s.governor_thinking = prefs["models"][0]["model"], prefs["models"][0]["thinking"]
     s.rotate = bool(prefs.get("rotate", s.rotate))
+    s.roles = dict(prefs.get("roles") or {})
+    episodes = (s.roles.get("episodes") or {}).get("models")
+    if game_for_roles(a, prefs) == "galciv4" and episodes and not a.model:   # GC4 blockers: their own model
+        s.model, s.thinking = episodes[0]["model"], episodes[0]["thinking"]
     game = a.game or (prefs.get("game") if a.cmd == "run" else None)
     if game and game != s.game:
         from .config import default_journal

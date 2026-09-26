@@ -46,8 +46,12 @@ class Settings:
     # overloaded, or, with `rotate`, each decision starts at the next entry (spreads the load).
     models: tuple = ()
     rotate: bool = False
+    # Per role ("retrospective", "chat", "episodes"): {"models": [...], "rotate": bool}. A role that
+    # is not listed uses the decision models above.
+    roles: dict = field(default_factory=dict)
     stale_save_s: float = 300.0                      # an autosave older than this at start may be another game's
     fresh_save_wait_s: float = 600.0
+    model_cooldown_s: float = 600.0                  # a model that just failed goes behind the others this long
     model_timeout_s: float = 120.0                    # per model request; decisions take ~20-30 s
     retry_delays: tuple[float, ...] = (5, 15, 45)      # model calls per governor decision (1 answer + up to 3 tool rounds)
     retro_every: int = 5                # Stellaris: a retrospective after every N model decisions (0 = never)
