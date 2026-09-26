@@ -249,9 +249,11 @@ dashboard is on :8790).
   focus) and its earlier versions; it is written at the first decision, can be revised at any
   decision, and is reviewed at every retrospective.
 - **Activity**: the event feed.
-- **Top bar** (live runs): model and thinking pickers (Gemini models this key can use, plus
-  `PILOT_MODELS`; a switch applies from the next model call and each decision records its model),
-  pause/resume and stop.
+- **Top bar**: model and thinking pickers (Gemini models this key can use, plus `PILOT_MODELS`),
+  always shown. With no run active the choice is saved for the next `pilot run`
+  (`runs/pilot-settings.json`; command-line options still win); during a run it also switches the
+  running pilot from its next model call, and each decision records its model. Pause/resume and
+  stop appear during a run.
 
 ### Telemetry (`runs/telemetry.sqlite`)
 Every event, decision (with its full trace) and monthly metric point, grouped by **campaign** (the

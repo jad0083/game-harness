@@ -18,6 +18,8 @@ Telemetry (runs/telemetry.sqlite, across runs and models):
     GET  /api/decision?run=<id>&episode=<n>     one decision with its full trace
     GET  /api/metrics?campaign=<id>|run=<id>    metric points over in-game time
     GET  /api/plans?campaign=<id>|run=<id>      campaign plan versions, newest first
+    GET  /api/models                            models to offer, and the saved choice for the next run
+    POST /api/settings  {"model", "thinking"}   save that choice (applies to a live pilot too)
 """
 
 from __future__ import annotations
@@ -159,7 +161,34 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
         rows = await q(f"SELECT run_id, t, date, source, text FROM plans WHERE {where} ORDER BY t DESC", args)
         return web.json_response(rows)
 
+    models_cache: dict = {}
+
+    async def api_models(_):
+        """Models to offer (cached 10 min) and the saved choice for the next run."""
+        from .config import Settings
+        from .models import available_models, load_prefs
+        now = asyncio.get_running_loop().time()
+        if not models_cache or now - models_cache["t"] > 600:
+            s = Settings.from_env()
+            models_cache.update(t=now, models=await asyncio.to_thread(available_models, s), default=s.model)
+        prefs = load_prefs(runs_dir)
+        return web.json_response({"models": models_cache["models"], "model": prefs.get("model", models_cache["default"]),
+                                  "thinking": prefs.get("thinking", "medium")})
+
+    async def api_settings(request):
+        """Save the model and thinking level for the next run (and the live run, if any)."""
+        from .models import save_prefs
+        body = await request.json()
+        try:
+            prefs = save_prefs(runs_dir, str(body.get("model", "")), str(body.get("thinking", "medium")))
+        except ValueError as e:
+            raise web.HTTPBadRequest(text=str(e)) from e
+        if pilot is not None and hasattr(pilot, "set_model"):
+            pilot.set_model(prefs["model"], prefs["thinking"])
+        return web.json_response({"ok": True, **prefs, "applied_live": pilot is not None})
+
     api = [web.get("/api/campaigns", api_campaigns), web.get("/api/decisions", api_decisions),
+           web.get("/api/models", api_models), web.post("/api/settings", api_settings),
            web.get("/api/plans", api_plans),
            web.get("/api/decision", api_decision), web.get("/api/metrics", api_metrics)]
 
