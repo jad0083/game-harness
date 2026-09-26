@@ -1,0 +1,96 @@
+# Stellaris - Machine Executable Game Manifest
+# Used by the native Rust game-controller for hotkey lookups, screen signatures and macros.
+#
+# Provenance: "# verified" = confirmed on the user's PC; "# wiki: <page>" = stated by the official
+# wiki (stellaris.paradoxwikis.com, see docs/); everything else is "# unverified".
+# Stellaris hotkeys are not rebindable in-game (wiki: Hotkeys).
+
+[metadata]
+id = "stellaris"
+name = "Stellaris"
+version = "4.5.1"   # verified 2026-09-25: main menu shows "Cygnus v4.5.1 (358e)" (Steam)
+process_title = "Stellaris"   # unverified: window title not yet read through the agent
+native_resolution = [3840, 2160]   # the PC's desktop; the game runs borderless (verified 2026-09-25)
+downscaled_resolution = [1568, 882]
+
+[hotkeys]
+# --- Time ---
+pause = "space"                 # wiki: Hotkeys — "Pause / Unpause"
+speed_up = "="                  # wiki: Hotkeys — "Numpad or Keyboard +"; "=" is the agent's name for the
+                                # US =/+ key (VK_OEM_PLUS). Unverified in game.
+speed_down = "-"                # wiki: Hotkeys — "Numpad or Keyboard -" (VK_OEM_MINUS). Unverified in game.
+# Numpad +/- also work per the wiki, but the agent's key table (crates/game-agent/src/keys.rs)
+# has no numpad names yet.
+
+# --- Console ---
+# wiki: Console commands — "Shift+2, ALT+2+1, Shift+3, §, ~, ^, °, ² or ` (key varies based on
+# keyboard layout). For a QWERTY keyboard, the key is `. Else, try Shift+Alt+C."
+# Console is unavailable in ironman games; using it disables achievements.
+console = "`"                   # unverified on the user's layout (US QWERTY assumed; agent maps "`" to VK_OEM_3)
+console_fallback = "shift+alt+c"  # unverified
+
+# --- Main screens (function keys) ---
+# wiki: Hotkeys — F1..F10 open "Navigation menu item 1..10"; the player can rearrange the menu,
+# so what each key opens depends on the menu order. The screen names below are the commonly
+# listed default order (third-party lists; the wiki's own sub-headings disagree for F2/F3:
+# "Situation Log Menu - F2", "Market Menu - F3"). All unverified: read the navigation bar live.
+nav_1 = "f1"     # unverified: Government
+nav_2 = "f2"     # unverified: Contacts (or Situation Log per the wiki sub-heading)
+nav_3 = "f3"     # unverified: Situation Log (or Market per the wiki sub-heading)
+nav_4 = "f4"     # unverified: Technology
+nav_5 = "f5"     # unverified: Planets and Sectors
+nav_6 = "f6"     # unverified: Policies and Edicts
+nav_7 = "f7"     # unverified: Factions
+nav_8 = "f8"     # unverified: Traditions and Ascension Perks
+nav_9 = "f9"     # unverified: Expansion Planner
+nav_10 = "f10"   # unverified: Ship Designer
+# Tabs inside a window (wiki: Hotkeys): Z / X / C / V select the 1st..4th tab, e.g. Technology:
+# Z Physics, X Society, C Engineering, V Researched; Government: Z Government, C Demographics.
+tab_1 = "z"
+tab_2 = "x"
+tab_3 = "c"
+tab_4 = "v"
+screenshot = "f11"               # wiki: Hotkeys — PNG into Documents/Paradox Interactive/Stellaris/screenshots
+hide_ui = "ctrl+f9"              # wiki: Hotkeys
+
+# --- Selection & map ---
+close_window = "esc"            # wiki: Hotkeys — "Close active menu / Open main menu"
+home = "home"                   # wiki: Hotkeys — "Go to home system" (also backspace)
+outliner = "o"                  # wiki: Hotkeys — "Outliner Open/Close"
+galaxy_map = "m"                # wiki: Hotkeys — "Open/Close Galaxy Map" (listed as E M)
+system_search = "f"             # wiki: Hotkeys
+next_system = "tab"             # wiki: Hotkeys — cycles through your star systems
+focus_selected = "q"            # wiki: Hotkeys — camera focus / go to selected
+reset_camera = "r"              # wiki: Hotkeys
+pan_up = "w"                    # wiki: Hotkeys (W A S D)
+pan_left = "a"
+pan_down = "s"
+pan_right = "d"
+# Fleet window (wiki: Hotkeys): G merge, H stop, B return, C move, J jump, P patrol,
+# X attack target, T stance, V split, Delete disband. Not bound here: the governor model leaves
+# fleet orders to the native AI.
+
+# Screens are captured live later (see AGENTS.md §5 for the template procedure). Planned:
+#
+# [screens.pause_indicator]
+# description = "Pause state: the date widget (top right) shows 'Paused' / the speed pips go grey"
+# template = "templates/paused.png"          # to capture
+# template_roi = [..]                        # to measure
+#
+# [screens.date_readout]
+# description = "In-game date readout (top right, 'YYYY.MM.DD'); changes daily while unpaused"
+# turn_indicator_roi = [..]                  # to measure; used to confirm time advances
+#
+# [screens.event_popup]
+# description = "Event window (title, picture, text, option buttons); pauses the game when the
+#                event is set to pause, else stays open while time runs"
+# is_blocking = true
+# template = "templates/event_window_frame.png"   # a static part of the window frame
+#
+# [screens.console_open]
+# description = "Console window open (input line at the bottom); must be closed before resuming"
+# template = "templates/console_open.png"
+#
+# [screens.main_menu]
+# description = "Main menu (Continue / New Game / Load / ...); the game launches straight from
+#                Steam PLAY with no Paradox Launcher step (verified 2026-09-25)"
