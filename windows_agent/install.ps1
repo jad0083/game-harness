@@ -62,12 +62,24 @@ if ($env:GA_SRC) {
 # --- 2b. Read-only file roots (game saves, logs, game data) ----------------------
 # The agent serves files only from these folders, read-only (GET /files/*).
 Step 'Detecting game folders for read-only access'
-# Documents may be redirected (e.g. to OneDrive); check the usual places.
+# Documents may be redirected (e.g. to OneDrive) and a synced copy from another PC may sit next
+# to the live one, so check the usual places and pick the folder the game wrote to most recently.
 $docsDirs = @([Environment]::GetFolderPath('MyDocuments'), (Join-Path $env:USERPROFILE 'Documents'))
-if ($env:OneDrive) { $docsDirs += Join-Path $env:OneDrive 'Documents' }
+if ($env:OneDrive) { $docsDirs += $env:OneDrive; $docsDirs += Join-Path $env:OneDrive 'Documents' }
 $docsDirs = @($docsDirs | Where-Object { $_ } | Select-Object -Unique)
+function Get-LastWrite($dir) {
+    $f = Get-ChildItem $dir -File -Recurse -Depth 1 -ErrorAction SilentlyContinue |
+        Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if ($f) { $f.LastWriteTime } else { [datetime]::MinValue }
+}
 function Find-DocsFolder($rel) {
-    foreach ($d in $docsDirs) { $p = Join-Path $d $rel; if (Test-Path $p) { return $p } }
+    $found = @(foreach ($d in $docsDirs) { $p = Join-Path $d $rel; if (Test-Path $p) { $p } })
+    if ($found.Count -gt 1) {
+        foreach ($p in $found) { Write-Host "    candidate $p (last write $(Get-LastWrite $p))" }
+    }
+    if ($found.Count -gt 0) {
+        return ($found | Sort-Object { Get-LastWrite $_ } -Descending | Select-Object -First 1)
+    }
     # Not created yet (a game creates it on first launch): keep the likely path; /files/roots
     # reports exists=false until then.
     return (Join-Path $docsDirs[0] $rel)

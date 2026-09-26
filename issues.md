@@ -19,7 +19,7 @@
 - [ ] `clippy --all-targets`: 2 warnings (`corpus.rs:466`, `imaging.rs:28`); "0 warnings" achieved via `#![allow(dead_code, ...)]` in every file
 
 ### Rust agent (`crates/game-agent`)
-- [ ] Installer picks the first *existing* docs folder: on the PC `stellaris_docs` resolved to a stale 2022 copy under `OneDrive\Documents` while Stellaris 4.5 likely writes to `MyDocuments` (`D:\OneDrive - Sacramento`); confirm after launch and fix the order (2026-09-25)
+- [ ] Installer picks the first *existing* docs folder: on the PC `stellaris_docs` resolved to a stale 2022 copy under `OneDrive\Documents` while Stellaris 4.5 likely writes to `MyDocuments` (`D:\OneDrive - Sacramento`); confirmed at launch: its logs stayed at 2022 while the game ran. Installer now picks the candidate with the newest files (2026-09-25)
 - [ ] `main.rs:192-199` fallback token is a nanosecond timestamp in hex; `main.rs:214` non-constant-time compare; Python `--allow` client-IP list dropped
 - [ ] `main.rs:256` `x + w` can wrap in release, bypassing the bounds check (GDI then fails; no crash)
 - [ ] Console-subsystem exe launched as an interactive logon task → console window on the game desktop at every logon
