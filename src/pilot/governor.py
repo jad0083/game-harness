@@ -82,6 +82,8 @@ def metrics(b: dict) -> dict:
             "military_power": b.get("military_power"), "economy_power": b.get("economy_power"),
             "tech_power": b.get("tech_power"), "pops": b.get("pops"), "planets": len(b.get("planets", [])),
             "systems": b.get("systems"),
+            "peers": {k: {"median": v.get("median"), "rank": v.get("rank")} for k, v in (b.get("peers") or {}).get("stats", {}).items()},
+            "peer_count": (b.get("peers") or {}).get("empires"), "behind": (b.get("peers") or {}).get("behind", []),
             "techs_known": b.get("techs_known"), "wars": len(b.get("wars", [])), "directive": current_directive(b)}
 
 
@@ -95,6 +97,11 @@ def urgent_changes(before: dict, now: dict) -> list[str]:
     for res, net in now.get("net", {}).items():
         if net < 0 <= before.get("net", {}).get(res, 0):
             out.append(f"{res} net turned negative ({net:+.1f}/month)")
+    was_behind = set((before.get("peers") or {}).get("behind", []))
+    for m in (now.get("peers") or {}).get("behind", []):
+        if m not in was_behind:
+            st = now["peers"]["stats"].get(m, {})
+            out.append(f"falling behind other empires in {m} ({st.get('ours')} vs median {st.get('median')})")
     return out
 
 

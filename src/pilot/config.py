@@ -33,9 +33,10 @@ class Settings:
     # Coordinate convention the model is asked to use: "norm1000" ([0,1000] on both axes,
     # what Gemini is trained on) or "pixels" (1568x882 image pixels). "auto" picks per provider.
     coords: str = "auto"
-    thinking: str = "low"              # low | medium | high | off (provider-specific mapping)
-    # Stellaris governor decisions are rare and strategic: think more. At "low", Gemini often skips
-    # thinking entirely (no thought summary); "medium" returned one (~500 extra output tokens).
+    # low | medium | high | off (provider-specific mapping). Medium by default for proper reasoning:
+    # at "low", Gemini often skips thinking entirely.
+    thinking: str = "medium"
+    # Stellaris governor decisions (rare, strategic); set separately from GC4 episodes.
     governor_thinking: str = "medium"
     image_detail: str = "medium"       # low | medium | high (Gemini media resolution)
     images_in_context: int = 2         # older screenshots in an episode become text stubs

@@ -88,4 +88,6 @@
 - [x] Talk to and direct the live model: ask (read-only chat), note for next decision, decide now, standing orders, override, Yes/No
 - [x] Always-on LAN dashboard `http://192.168.1.76:8780/` (systemd user service, forwards live controls); `deploy/game-pilot.service` for the pilot itself
 - [x] Dashboard updates itself: live/history switching, event stream with de-duplication, periodic refresh, freshness indicator, reader follows the newest decision
-- [x] Governor thinks at `medium` (Gemini thought summaries in traces); GC4 episodes stay `low`
+- [x] Default model Gemini 3.8 Flash with `medium` thinking for GC4 episodes and Stellaris decisions (thought summaries in traces)
+- [x] Peer benchmarks in the Stellaris briefing (ours vs median/best of the other regular empires, rank, FALLING BEHIND line), urgent trigger when newly behind, standing line on the dashboard
+- [ ] Briefing: why expansion stalls (surveyed/unclaimed systems in reach, construction ships, border closure) so the governor can name the constraint

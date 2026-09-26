@@ -47,6 +47,35 @@ pub struct War {
     pub attacker: bool,
 }
 
+/// Our value, the other regular empires' median and best, and our rank (1 = best) for one measure.
+#[derive(Debug, Serialize, Default, Clone)]
+pub struct PeerStat {
+    pub ours: f64,
+    pub median: f64,
+    pub best: f64,
+    pub rank: usize,
+}
+
+#[derive(Debug, Serialize, Default)]
+pub struct Peers {
+    /// Other regular (`type="default"`) empires compared against.
+    pub empires: usize,
+    /// Measure name → comparison, in PEER_MEASURES order.
+    pub stats: BTreeMap<String, PeerStat>,
+    /// Measures where we are below half the median ("falling behind").
+    pub behind: Vec<String>,
+}
+
+/// Measures compared with other empires (name, label).
+pub const PEER_MEASURES: [(&str, &str); 6] = [
+    ("systems", "systems"),
+    ("pops", "pops"),
+    ("techs", "techs"),
+    ("military_power", "military"),
+    ("economy_power", "economy"),
+    ("tech_power", "tech power"),
+];
+
 #[derive(Debug, Serialize, Default)]
 pub struct Briefing {
     pub date: String,
@@ -81,6 +110,59 @@ pub struct Briefing {
     pub flags: Vec<String>,
     pub planets: Vec<Planet>,
     pub wars: Vec<War>,
+    /// How we compare with the other regular empires (galaxy-wide aggregates only).
+    pub peers: Peers,
+}
+
+/// Distinct star systems of a country's controlled planets.
+fn systems_of(c: &Obj, origins: &std::collections::HashMap<String, i64>) -> usize {
+    strings(get(c, "controlled_planets"))
+        .iter()
+        .filter_map(|pid| origins.get(pid))
+        .collect::<std::collections::BTreeSet<_>>()
+        .len()
+}
+
+fn empire_stats(c: &Obj, origins: &std::collections::HashMap<String, i64>) -> [f64; 6] {
+    let techs = obj(c, "tech_status").map(|ts| ts.fields().filter(|(k, _, _)| k.read_str() == "technology").count()).unwrap_or(0);
+    [
+        systems_of(c, origins) as f64,
+        i64_(c, "num_sapient_pops").unwrap_or(0) as f64,
+        techs as f64,
+        f64_(c, "military_power").unwrap_or(0.0),
+        f64_(c, "economy_power").unwrap_or(0.0),
+        f64_(c, "tech_power").unwrap_or(0.0),
+    ]
+}
+
+/// Compare the player with the other regular empires. Only aggregates (median, best, rank) are
+/// kept: the governor learns where it stands, not what a specific rival has.
+fn peers(countries: &Obj, player: &str, c: &Obj, origins: &std::collections::HashMap<String, i64>) -> Peers {
+    let ours = empire_stats(c, origins);
+    let others: Vec<[f64; 6]> = countries
+        .fields()
+        .filter(|(k, _, _)| k.read_str() != player)
+        .filter_map(|(_, _, v)| v.read_object().ok())
+        .filter(|o| string(o, "type").as_deref() == Some("default"))
+        .map(|o| empire_stats(&o, origins))
+        .collect();
+    let mut p = Peers { empires: others.len(), ..Default::default() };
+    if others.is_empty() {
+        return p;
+    }
+    for (i, (key, _)) in PEER_MEASURES.iter().enumerate() {
+        let mut vals: Vec<f64> = others.iter().map(|s| s[i]).collect();
+        vals.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        let n = vals.len();
+        let median = if n % 2 == 1 { vals[n / 2] } else { (vals[n / 2 - 1] + vals[n / 2]) / 2.0 };
+        let best = vals[n - 1];
+        let rank = 1 + vals.iter().filter(|v| **v > ours[i]).count();
+        if median > 0.0 && ours[i] < median * 0.5 {
+            p.behind.push((*key).to_string());
+        }
+        p.stats.insert((*key).to_string(), PeerStat { ours: ours[i], median, best, rank });
+    }
+    p
 }
 
 /// Extract `meta` and `gamestate` from a `.sav` ZIP.
@@ -615,15 +697,20 @@ pub fn brief_gamestate(gamestate: &[u8]) -> Result<Briefing> {
 
     // 4.5: `owned_planets` holds colony ids; a colony's `carrier` points at its planet.
     let planets = obj(&root, "planets").and_then(|p| obj(&p, "planet"));
-    if let Some(ps) = planets.as_ref() {
-        let mut systems = std::collections::BTreeSet::new();
-        for pid in strings(get(&c, "controlled_planets")) {
-            if let Some(origin) = obj(ps, &pid).and_then(|p| obj(&p, "coordinate")).and_then(|co| i64_(&co, "origin")) {
-                systems.insert(origin);
-            }
-        }
-        b.systems = systems.len();
-    }
+    // planet id -> star system id, for counting owned systems of every empire
+    let origins: std::collections::HashMap<String, i64> = planets
+        .as_ref()
+        .map(|ps| {
+            ps.fields()
+                .filter_map(|(k, _, v)| {
+                    let p = v.read_object().ok()?;
+                    Some((k.read_string(), i64_(&obj(&p, "coordinate")?, "origin")?))
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    b.systems = systems_of(&c, &origins);
+    b.peers = peers(&countries, &id, &c, &origins);
     let colonies = obj(&root, "colony");
     for cid in strings(get(&c, "owned_planets")) {
         let Some(col) = colonies.as_ref().and_then(|cs| obj(cs, &cid)) else { continue };
@@ -708,6 +795,24 @@ impl Briefing {
                 opt(p.stability), opt(p.free_housing), opt(p.free_amenities), opt(p.crime)
             );
         }
+        if self.peers.empires > 0 {
+            let n = self.peers.empires + 1;
+            s += &format!("Standing among {n} empires (ours / median of the others / best, our rank):");
+            for (key, label) in PEER_MEASURES {
+                if let Some(st) = self.peers.stats.get(key) {
+                    s += &format!(" {label} {} / {} / {} (#{} of {n});", num(st.ours), num(st.median), num(st.best), st.rank);
+                }
+            }
+            s += "\n";
+            if !self.peers.behind.is_empty() {
+                let parts: Vec<String> = self.peers.behind.iter().filter_map(|k| {
+                    let st = self.peers.stats.get(k)?;
+                    let label = PEER_MEASURES.iter().find(|(m, _)| m == k).map(|(_, l)| *l).unwrap_or(k.as_str());
+                    Some(format!("{label} {} vs median {}", num(st.ours), num(st.median)))
+                }).collect();
+                s += &format!("FALLING BEHIND (below half the median): {}\n", parts.join("; "));
+            }
+        }
         if self.wars.is_empty() {
             s += "Wars: none\n";
         } else {
@@ -753,6 +858,23 @@ mod tests {
         assert_eq!(b.last_human, "2200.09.24");
         assert!(b.wars.is_empty());
         assert!(b.edicts.is_empty());
+    }
+
+    #[test]
+    fn peers_flag_the_stagnant_empire() {
+        // 2212.03: our empire (observer mode) still had 1 system while the AI empires had 9-18
+        let b = brief_save(include_bytes!("../tests/fixtures/stellaris_2212_03_01.sav")).unwrap();
+        assert_eq!(b.peers.empires, 12, "regular AI empires in this medium galaxy");
+        let sys = &b.peers.stats["systems"];
+        assert_eq!(sys.ours, 1.0);
+        assert!(sys.median >= 8.0, "median {}", sys.median);
+        assert!(sys.rank > b.peers.empires / 2);
+        assert!(b.peers.behind.contains(&"systems".to_string()));
+        let t = b.to_text();
+        assert!(t.contains("FALLING BEHIND (below half the median): systems 1.0 vs median"), "{t}");
+        // 2200.11: everyone still has one system, nothing to flag for systems
+        let early = brief_save(SAVE).unwrap();
+        assert!(!early.peers.behind.contains(&"systems".to_string()));
     }
 
     #[test]

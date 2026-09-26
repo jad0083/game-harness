@@ -87,6 +87,9 @@
   .seg { display: inline-flex; border: 1px solid var(--hair); border-radius: 8px; overflow: hidden; margin-left: auto; }
   .seg button { border: 0; background: transparent; padding: 4px 10px; cursor: pointer; font-size: 13px; color: var(--ink-2); }
   .seg button[aria-pressed="true"] { background: var(--raised); color: var(--ink); font-weight: 600; }
+  .standing { margin: 0 0 8px; font-size: 13.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .standing b { color: var(--ink); font-weight: 600; }
+  .standing .behind { color: var(--warn); font-weight: 600; }
   .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--ink-2); margin: 4px 0 6px; }
   .legend span { display: inline-flex; align-items: center; gap: 6px; }
   .legend i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
@@ -230,6 +233,7 @@
         </div>
       </header>
       <div class="body">
+        <p class="standing" id="standing" hidden></p>
         <div class="legend" id="legend"></div>
         <div class="chartwrap" id="chartwrap"></div>
       </div>
@@ -393,9 +397,21 @@ function directiveSpans() {
   return spans;
 }
 
+const PEER_LABELS = [["systems", "systems"], ["pops", "pops"], ["techs", "techs"], ["military_power", "military"], ["economy_power", "economy"], ["tech_power", "tech power"]];
+function renderStanding(last) {
+  const el = $("standing"), p = last && last.peers;
+  if (!p || !Object.keys(p).length) { el.hidden = true; return; }
+  const n = (last.peer_count || 0) + 1, behind = new Set(last.behind || []);
+  const own = (k) => k === "techs" ? last.techs_known : last[k];
+  el.innerHTML = `Standing among ${esc(n)} empires, ours vs the others' median: ` + PEER_LABELS.filter(([k]) => p[k]).map(([k, label]) =>
+    `<span class="${behind.has(k) ? "behind" : ""}">${esc(label)} <b>${fmt(own(k))}</b> vs ${fmt(p[k].median)} (#${esc(p[k].rank)})${behind.has(k) ? ", falling behind" : ""}</span>`).join("; ");
+  el.hidden = false;
+}
+
 function renderChart() {
   const wrap = $("chartwrap"), view = S.view;
   const ms = S.metrics.filter((m) => m.month != null);
+  renderStanding(ms[ms.length - 1]);
   $("chart-sub").textContent = ms.length ? `${ms[0].date} to ${ms[ms.length - 1].date}` : "";
   if (!ms.length) {
     $("legend").innerHTML = "";

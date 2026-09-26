@@ -53,6 +53,9 @@ def test_helpers():
     assert any("new war: Border War (we are defender)" in r for r in reasons)
     assert any("food net turned negative" in r for r in reasons)
     assert urgent_changes(now, now) == []   # an existing deficit or war does not re-trigger
+    lag = {**now, "peers": {"behind": ["systems"], "stats": {"systems": {"ours": 1, "median": 10}}}}
+    assert any("falling behind other empires in systems (1 vs median 10)" in r for r in urgent_changes(now, lag))
+    assert not any("falling behind" in r for r in urgent_changes(lag, lag))
 
 
 def test_governor_decides_on_schedule_and_pauses_while_deciding(setup):
@@ -389,6 +392,11 @@ def test_control_failure_flags_needs_attention_instead_of_crashing(setup):
 
 def test_default_speed_is_normal():
     assert Settings().speed == "normal"
+
+
+def test_default_model_is_gemini_flash_with_medium_thinking():
+    s = Settings()
+    assert s.model == "google:gemini-3.8-flash" and s.thinking == "medium" and s.governor_thinking == "medium"
 
 
 def test_explicit_journal_survives_game_switch(monkeypatch, tmp_path):
