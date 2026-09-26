@@ -381,6 +381,25 @@ impl McpServer {
                     }
                 }
             }));
+            tools.push(serde_json::json!({
+                "name": "stellaris_directive",
+                "description": "Apply one governor directive (see corpus strategy § Governor directives and directives.toml): takes the empire back with `play`, sets the directive flag and its policies, hands it back to the native AI with `observe`, and confirms the change in game.log. Hold a directive about 12 in-game months unless something urgent happens. Refuses if Stellaris is not the foreground window.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "name": { "type": "string", "enum": ["expand", "consolidate_economy", "tech_rush", "prepare_war", "defend", "diplomacy_first"] }
+                    },
+                    "required": ["name"]
+                }
+            }));
+            tools.push(serde_json::json!({
+                "name": "stellaris_log",
+                "description": "Last lines of the game's logs/game.log (script log effects carry the in-game date, e.g. directive confirmations and events).",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": { "lines": { "type": "integer", "default": 30 } }
+                }
+            }));
         }
         tools
     }
@@ -776,6 +795,26 @@ impl McpServer {
                 };
                 Ok(serde_json::json!({ "content": [{ "type": "text", "text": text }] }))
             }
+            "stellaris_directive" => {
+                let name = args.get("name").and_then(|v| v.as_str()).ok_or_else(|| anyhow::anyhow!("missing `name`"))?;
+                let dir = self.corpus.as_ref().map(|c| c.dir.clone()).ok_or_else(|| anyhow::anyhow!("no corpus loaded"))?;
+                let directives = crate::stellaris::Directives::load(&dir)?;
+                let (_, bytes) = crate::stellaris::fetch_latest_save(&self.client).await?;
+                let country = crate::stellaris::brief_save(&bytes)?.country;
+                let lines = crate::stellaris::apply_directive(&self.client, &directives, name, country).await?;
+                let text = format!(
+                    "Directive {name} applied to country {country} and confirmed in game.log. Console lines:\n{}\nThe next monthly autosave will list governor_directive_{name} under Governor flags.",
+                    lines.join("\n")
+                );
+                Ok(serde_json::json!({ "content": [{ "type": "text", "text": text }] }))
+            }
+            "stellaris_log" => {
+                let n = args.get("lines").and_then(|v| v.as_u64()).unwrap_or(30).min(500) as usize;
+                let (text, _) = crate::stellaris::read_log_since(&self.client, 0).await?;
+                let all: Vec<&str> = text.lines().collect();
+                let tail = all[all.len().saturating_sub(n)..].join("\n");
+                Ok(serde_json::json!({ "content": [{ "type": "text", "text": tail }] }))
+            }
             _ => anyhow::bail!("Unknown tool: {}", name),
         }
     }
@@ -866,6 +905,17 @@ mod tests {
     fn stellaris_tools_only_for_the_stellaris_corpus() {
         let has = |g| McpServer::list_tools(g).iter().any(|t| t["name"] == "stellaris_briefing");
         assert!(has(Some("stellaris")));
+        let names: Vec<String> = McpServer::list_tools(Some("stellaris")).iter().map(|t| t["name"].as_str().unwrap().to_string()).collect();
+        assert!(names.contains(&"stellaris_directive".to_string()) && names.contains(&"stellaris_log".to_string()));
+        // The tool's directive enum must match corpora/stellaris/directives.toml.
+        let tools = McpServer::list_tools(Some("stellaris"));
+        let tool = tools.iter().find(|t| t["name"] == "stellaris_directive").unwrap();
+        let mut listed: Vec<String> =
+            tool["inputSchema"]["properties"]["name"]["enum"].as_array().unwrap().iter().map(|v| v.as_str().unwrap().to_string()).collect();
+        listed.sort();
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpora/stellaris");
+        let defined: Vec<String> = crate::stellaris::Directives::load(&dir).unwrap().directive.into_keys().collect();
+        assert_eq!(listed, defined);
         assert!(!has(Some("galciv4")));
         assert!(!has(None));
     }

@@ -123,6 +123,135 @@ pub async fn fetch_latest_save(client: &crate::client::AgentClient) -> Result<(S
     Ok((path, bytes))
 }
 
+// ---- governor directives (console bridge) ------------------------------------------------
+
+/// Window title substring of the game; input is refused unless it is in the foreground.
+pub const WINDOW_TITLE: &str = "Stellaris";
+/// Console toggle key (verified on the user's US layout, 2026-09-25).
+pub const CONSOLE_KEY: &str = "`";
+
+#[derive(Debug, serde::Deserialize)]
+pub struct DirectiveDef {
+    pub description: String,
+    #[serde(default)]
+    pub policies: BTreeMap<String, String>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct Directives {
+    pub directive: BTreeMap<String, DirectiveDef>,
+}
+
+impl Directives {
+    /// Load `directives.toml` from a Stellaris corpus directory.
+    pub fn load(corpus_dir: &std::path::Path) -> Result<Directives> {
+        let path = corpus_dir.join("directives.toml");
+        let text = std::fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
+        let d: Directives = toml::from_str(&text).with_context(|| format!("parsing {}", path.display()))?;
+        for (name, def) in &d.directive {
+            check_ident(name)?;
+            for (k, v) in &def.policies {
+                check_ident(k)?;
+                check_ident(v)?;
+            }
+        }
+        Ok(d)
+    }
+
+    /// Console lines that apply directive `name` to `country` (see directives.toml).
+    pub fn console_lines(&self, name: &str, country: u64) -> Result<Vec<String>> {
+        let Some(def) = self.directive.get(name) else {
+            bail!("unknown directive {name:?}; known: {}", self.directive.keys().cloned().collect::<Vec<_>>().join(", "))
+        };
+        let mut lines = vec![format!("play {country}")];
+        let others: Vec<String> = self
+            .directive
+            .keys()
+            .filter(|k| *k != name)
+            .map(|k| format!("remove_country_flag = governor_directive_{k}"))
+            .collect();
+        if !others.is_empty() {
+            lines.push(format!("effect {}", others.join(" ")));
+        }
+        let mut apply = format!("effect set_country_flag = governor_directive_{name}");
+        for (policy, option) in &def.policies {
+            apply += &format!(" set_policy = {{ policy = {policy} option = {option} cooldown = no }}");
+        }
+        apply += &format!(" log = \"{}\"", applied_marker(name));
+        lines.push(apply);
+        lines.push("observe".into());
+        Ok(lines)
+    }
+}
+
+/// Text written to game.log when a directive's effects ran.
+pub fn applied_marker(name: &str) -> String {
+    format!("GOVERNOR_APPLIED {name}")
+}
+
+/// Script identifiers only: nothing that could smuggle other console commands.
+fn check_ident(s: &str) -> Result<()> {
+    if s.is_empty() || !s.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_') {
+        bail!("invalid identifier {s:?} (allowed: a-z 0-9 _)");
+    }
+    Ok(())
+}
+
+async fn require_foreground(client: &crate::client::AgentClient) -> Result<()> {
+    let h = client.health().await?;
+    let fg = h.get("foreground").and_then(|v| v.as_str()).unwrap_or("");
+    if !fg.contains(WINDOW_TITLE) {
+        bail!("refusing console input: foreground window is {fg:?}, not {WINDOW_TITLE:?}");
+    }
+    Ok(())
+}
+
+/// Open the console, run `lines`, close it. Checks the game is in the foreground before every
+/// keystroke; if focus is lost midway, stops (the console may be left open).
+pub async fn run_console(client: &crate::client::AgentClient, lines: &[String]) -> Result<()> {
+    let pause = std::time::Duration::from_millis(300);
+    require_foreground(client).await?;
+    client.key(CONSOLE_KEY, 1).await?;
+    tokio::time::sleep(pause).await;
+    for line in lines {
+        require_foreground(client).await?;
+        client.type_text(line).await?;
+        require_foreground(client).await?;
+        client.key("enter", 1).await?;
+        tokio::time::sleep(pause).await;
+    }
+    require_foreground(client).await?;
+    client.key(CONSOLE_KEY, 1).await?;
+    Ok(())
+}
+
+/// Bytes of game.log after `offset` (and the new size), via the agent.
+pub async fn read_log_since(client: &crate::client::AgentClient, offset: u64) -> Result<(String, u64)> {
+    let (bytes, size) = client.files_read(DOCS_ROOT, "logs/game.log", offset, None).await?;
+    Ok((String::from_utf8_lossy(&bytes).into_owned(), size))
+}
+
+/// Apply a directive and confirm it from game.log. Returns the console lines sent.
+pub async fn apply_directive(
+    client: &crate::client::AgentClient,
+    directives: &Directives,
+    name: &str,
+    country: u64,
+) -> Result<Vec<String>> {
+    let lines = directives.console_lines(name, country)?;
+    let (_, before) = client.files_read(DOCS_ROOT, "logs/game.log", 0, Some(0)).await?;
+    run_console(client, &lines).await?;
+    let marker = applied_marker(name);
+    for _ in 0..10 {
+        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+        let (text, _) = read_log_since(client, before).await?;
+        if text.contains(&marker) {
+            return Ok(lines);
+        }
+    }
+    bail!("directive {name} sent but {marker:?} did not appear in game.log; check the console")
+}
+
 // ---- small reader helpers -------------------------------------------------------------------
 
 fn get<'d, 't>(obj: &Obj<'d, 't>, key: &str) -> Option<Val<'d, 't>> {
@@ -384,6 +513,35 @@ mod tests {
         assert!(t.contains("food 580 (-3.0) DEFICIT"), "{t}");
         assert!(t.contains("diplomatic_stance=diplo_stance_isolationist"));
         assert!(t.len() < 4000, "briefing is {} bytes", t.len());
+    }
+
+    fn directives() -> Directives {
+        Directives::load(&std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpora/stellaris")).unwrap()
+    }
+
+    #[test]
+    fn directive_console_lines_take_control_apply_and_hand_back() {
+        let d = directives();
+        let lines = d.console_lines("expand", 0).unwrap();
+        assert_eq!(lines.first().unwrap(), "play 0");
+        assert_eq!(lines.last().unwrap(), "observe");
+        assert!(lines[1].starts_with("effect remove_country_flag = governor_directive_"));
+        assert!(!lines[1].contains("governor_directive_expand "));
+        let apply = &lines[2];
+        assert!(apply.contains("set_country_flag = governor_directive_expand"));
+        assert!(apply.contains("set_policy = { policy = diplomatic_stance option = diplo_stance_expansionist cooldown = no }"));
+        assert!(apply.ends_with("log = \"GOVERNOR_APPLIED expand\""));
+        assert!(lines.iter().all(|l| l.len() < 1000), "agent /type limit");
+        assert!(d.console_lines("nuke_everyone", 0).is_err());
+        assert_eq!(d.console_lines("defend", 7).unwrap()[0], "play 7");
+    }
+
+    #[test]
+    fn directive_identifiers_are_whitelisted() {
+        assert!(check_ident("diplo_stance_expansionist").is_ok());
+        for bad in ["", "a b", "x\"", "x}", "Play", "x;observe", "a=b"] {
+            assert!(check_ident(bad).is_err(), "{bad:?}");
+        }
     }
 
     #[test]

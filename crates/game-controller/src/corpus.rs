@@ -359,6 +359,8 @@ impl Item<'_> {
 
 #[derive(Debug, Clone)]
 pub struct GameCorpus {
+    /// Directory the corpus was loaded from (game-specific files such as directives.toml).
+    pub dir: std::path::PathBuf,
     pub manifest: GameManifest,
     pub strategy: String,
     records: Vec<Record>,
@@ -384,6 +386,7 @@ impl GameCorpus {
         let strategy = std::fs::read_to_string(dir.join("strategy.md")).unwrap_or_default();
 
         let mut corpus = Self {
+            dir: dir.to_path_buf(),
             manifest,
             strategy: strategy.clone(),
             records: Vec::new(),

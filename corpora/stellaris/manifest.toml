@@ -9,7 +9,7 @@
 id = "stellaris"
 name = "Stellaris"
 version = "4.5.1"   # verified 2026-09-25: main menu shows "Cygnus v4.5.1 (358e)" (Steam)
-process_title = "Stellaris"   # unverified: window title not yet read through the agent
+process_title = "Stellaris"   # verified 2026-09-25: agent /windows lists the game window as "Stellaris"
 native_resolution = [3840, 2160]   # the PC's desktop; the game runs borderless (verified 2026-09-25)
 downscaled_resolution = [1568, 882]
 
@@ -26,7 +26,7 @@ speed_down = "-"                # wiki: Hotkeys — "Numpad or Keyboard -" (VK_O
 # wiki: Console commands — "Shift+2, ALT+2+1, Shift+3, §, ~, ^, °, ² or ` (key varies based on
 # keyboard layout). For a QWERTY keyboard, the key is `. Else, try Shift+Alt+C."
 # Console is unavailable in ironman games; using it disables achievements.
-console = "`"                   # unverified on the user's layout (US QWERTY assumed; agent maps "`" to VK_OEM_3)
+console = "`"                   # verified 2026-09-25: opens/closes the console on the user's PC (agent key "`" = VK_OEM_3)
 console_fallback = "shift+alt+c"  # unverified
 
 # --- Main screens (function keys) ---

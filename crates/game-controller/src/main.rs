@@ -140,6 +140,21 @@ enum StellarisAction {
         #[arg(long)]
         json: bool,
     },
+    /// Apply a governor directive from directives.toml (play <country> → effects → observe)
+    Directive {
+        name: String,
+        /// Player country id (default: read from the newest autosave)
+        #[arg(long)]
+        country: Option<u64>,
+        /// Print the console lines without sending anything
+        #[arg(long)]
+        dry_run: bool,
+    },
+    /// Last lines of the game's logs/game.log
+    Log {
+        #[arg(short, long, default_value_t = 30)]
+        lines: usize,
+    },
 }
 
 #[derive(Subcommand)]
@@ -176,7 +191,9 @@ async fn main() -> Result<()> {
     // Corpus commands work offline: they never contact the agent, so they must not need its token.
     let offline = matches!(
         cli.command,
-        Commands::Corpus { .. } | Commands::Stellaris { action: StellarisAction::Brief { file: Some(_), .. } }
+        Commands::Corpus { .. }
+            | Commands::Stellaris { action: StellarisAction::Brief { file: Some(_), .. } }
+            | Commands::Stellaris { action: StellarisAction::Directive { dry_run: true, .. } }
     );
     let token = cli.token.as_deref().or(if offline { Some("offline") } else { None });
     let client = Arc::new(AgentClient::new(cli.agent_url.as_deref(), token)?);
@@ -224,6 +241,35 @@ async fn main() -> Result<()> {
             } else {
                 print!("{}", b.to_text());
                 eprintln!("({source}: {} KB, fetch {:?}, parse {:?})", bytes.len() / 1024, fetched, start.elapsed() - fetched);
+            }
+        }
+        Commands::Stellaris { action: StellarisAction::Directive { name, country, dry_run } } => {
+            let dir = cli.corpus.clone().unwrap_or_else(|| PathBuf::from("corpora/stellaris"));
+            let directives = stellaris::Directives::load(&dir)?;
+            let country = match country {
+                Some(c) => c,
+                None if dry_run => 0,
+                None => stellaris::brief_save(&stellaris::fetch_latest_save(&client).await?.1)?.country,
+            };
+            if dry_run {
+                let lines = directives.console_lines(&name, country)?;
+                println!("# {name}: {}", directives.directive[&name].description);
+                for l in lines {
+                    println!("{l}");
+                }
+            } else {
+                let lines = stellaris::apply_directive(&client, &directives, &name, country).await?;
+                println!("Applied directive {name} to country {country} (confirmed in game.log):");
+                for l in lines {
+                    println!("  {l}");
+                }
+            }
+        }
+        Commands::Stellaris { action: StellarisAction::Log { lines } } => {
+            let (text, _) = stellaris::read_log_since(&client, 0).await?;
+            let all: Vec<&str> = text.lines().collect();
+            for l in &all[all.len().saturating_sub(lines)..] {
+                println!("{l}");
             }
         }
         Commands::Corpus { action } => {
