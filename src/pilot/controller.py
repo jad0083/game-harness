@@ -128,6 +128,8 @@ class Pilot:
         st.tokens_out += getattr(usage, "output_tokens", 0) or 0
         st.requests += getattr(usage, "requests", 0) or 0
         st.last_decision = f"{result.situation}: {result.decision}"
+        if result.game_date:
+            st.game_date = result.game_date
         self.log.emit("episode", situation=result.situation, decision=result.decision, date=result.game_date,
                       resolved=result.resolved, actions=deps.actions, seconds=round(time.time() - started, 1),
                       tokens_in=getattr(usage, "input_tokens", 0), tokens_out=getattr(usage, "output_tokens", 0))

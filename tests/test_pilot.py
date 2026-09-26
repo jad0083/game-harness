@@ -55,6 +55,16 @@ def test_coordinate_conventions():
         coords.to_image(1, 1, "inches")
 
 
+def test_gemini_image_metadata_matches_the_sdk_type():
+    from google.genai import types
+
+    from pilot.agent import image_metadata
+
+    meta = image_metadata(Settings(model="google:gemini-3.8-flash", image_detail="medium"))
+    types.PartMediaResolution.model_validate(meta["media_resolution"])   # raises if the shape is wrong
+    assert image_metadata(Settings(model="openai:gpt-5")) is None
+
+
 def test_autopilot_report_classification():
     assert classify_report("Advanced 2 turn(s), then stopped at turn 3: a dialog is up (HUD dimmed") == "dialog"
     assert classify_report("Advanced 0 turn(s), then stopped at turn 1: turn indicator unchanged ... blocking end-turn") == "blocked"
@@ -184,7 +194,7 @@ def test_pilot_loop_resolves_a_blocker_and_records_it(corpus, tmp_path):
     assert {"autopilot", "consult", "action", "journal", "episode", "run_end"} <= set(kinds)
     ep = next(e for e in log.recent if e["kind"] == "episode")
     assert ep["resolved"] is True and ep["situation"] == "Event: Space Creature Migration"
-    assert log.state.episodes == 1 and log.state.turns_advanced == 2
+    assert log.state.episodes == 1 and log.state.turns_advanced == 2 and log.state.game_date == "Jul 1, 2333"
     assert "Protected the space creatures" in (tmp_path / "journal.md").read_text()
     assert LearnedStore(corpus, "m", "r").recall("space creature")
     assert (log.dir / "events.jsonl").exists() and (log.dir / "latest.jpg").exists()
