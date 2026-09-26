@@ -15,7 +15,7 @@ import re
 import threading
 import time
 from dataclasses import dataclass, replace
-from typing import Literal, Protocol
+from typing import ClassVar, Literal, Protocol
 
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent, RunContext, Tool
@@ -359,6 +359,8 @@ class Governor:
         self.last_briefing = ""                   # text of the latest briefing given to the model
         self.plan = ""                            # the campaign plan (goals, milestones), per campaign
         self.strategy: Strategy | None = None     # the pillar strategy (Strategist), per campaign
+        self._strategy_lock = threading.Lock()    # guards every read-modify-write of self.strategy
+        self._last_b: dict | None = None          # the last structured briefing read for a decision/review
         self.review_requested: str | None = None  # pending review trigger (off-frame, or after a failed call)
         self._review_retry: bool = False          # review_requested was set by a failed review call (bypasses the cap)
         self._decision_military: float | None = None   # military_power as of the last decision (military-fell baseline)
@@ -589,35 +591,53 @@ class Governor:
         self.requests.put(("override", directive))
         self.log.emit("instruction", text=f"Override: {directive}")
 
+    _PILLAR_FIELDS: ClassVar[set[str]] = {"stance", "goals", "milestones", "prefer_techs", "market", "priority"}
+
     def edit_pillar(self, name: str, fields: dict) -> None:
-        """The human's edit: validated exactly like a model strategy (against the latest briefing's
-        tech ids, idle resources and income), then pinned and recorded as a new version. `priority`
-        is never editable (priorities stay unique); `prefer_techs`/`market` are still restricted to
-        the technology/economy pillars by the same `validate` a model strategy goes through."""
+        """The human's edit: validated exactly like a model strategy (against the last briefing this
+        governor actually read: tech ids, idle resources and real monthly income), then pinned and
+        recorded as a new version. `priority` is never editable (priorities stay unique);
+        `prefer_techs`/`market` are still restricted to the technology/economy pillars by the same
+        `validate` a model strategy goes through. The whole read-modify-write is atomic (locked) so
+        it can never lose a concurrent edit or a review's commit."""
         from .strategy import PILLARS, Pillar
         if name not in PILLARS:
             raise ValueError(f"unknown pillar {name!r}")
-        if self.strategy is None:
-            raise ValueError("no strategy yet")
-        cur = self.strategy.pillars[name].model_dump()
-        allowed = {"stance", "goals", "milestones", "prefer_techs", "market"}
-        new = Pillar.model_validate({**cur, **{k: v for k, v in fields.items() if k in allowed},
-                                     "pinned": True, "edited_by": "human"})
-        trigger = f"edited by human: {name}"
-        s = self.strategy.model_copy(update={"pillars": {**self.strategy.pillars, name: new}, "reason": trigger})
-        errs = validate(s, previous=None, tech_ids=self._tech_ids(), idle=idle_resources({}) | {o.resource for o in new.market},
-                        income={o.resource: o.amount * 5 for o in new.market})
-        if errs:
-            raise ValueError("; ".join(errs))
-        self._set_strategy(s, self.log.state.game_date or "", trigger, "human")
+        if not isinstance(fields, dict):
+            # ValueError, not TypeError: the dashboard's control() catches ValueError uniformly and
+            # turns it into a 400 with this message, same as every other edit_pillar rejection
+            raise ValueError(f"fields must be an object, got {type(fields).__name__}")  # noqa: TRY004
+        unknown = sorted(set(fields) - self._PILLAR_FIELDS)
+        if unknown:
+            raise ValueError(f"unknown field(s): {', '.join(unknown)}")
+        editable = self._PILLAR_FIELDS - {"priority"}     # priority stays unique; never human-editable
+        with self._strategy_lock:
+            if self.strategy is None:
+                raise ValueError("no strategy yet")
+            cur = self.strategy.pillars[name].model_dump()
+            new = Pillar.model_validate({**cur, **{k: v for k, v in fields.items() if k in editable},
+                                         "pinned": True, "edited_by": "human"})
+            trigger = f"edited by human: {name}"
+            s = self.strategy.model_copy(update={"pillars": {**self.strategy.pillars, name: new}, "reason": trigger})
+            b = self._last_b
+            if new.market and b is None:
+                raise ValueError("no briefing yet: market orders can be edited after the first save is read")
+            errs = validate(s, previous=None, tech_ids=self._tech_ids(), idle=idle_resources(b or {}),
+                            income=(b or {}).get("net", {}))
+            if errs:
+                raise ValueError("; ".join(errs))
+            self.strategy = s
+        self._publish_strategy(s, self.log.state.game_date or "", trigger, "human")
 
     def unpin_pillar(self, name: str) -> None:
-        if self.strategy is None or name not in self.strategy.pillars:
-            raise ValueError(f"unknown pillar {name!r}")
-        p = self.strategy.pillars[name].model_copy(update={"pinned": False})
-        trigger = f"unpinned: {name}"
-        s = self.strategy.model_copy(update={"pillars": {**self.strategy.pillars, name: p}, "reason": trigger})
-        self._set_strategy(s, self.log.state.game_date or "", trigger, "human")
+        with self._strategy_lock:
+            if self.strategy is None or name not in self.strategy.pillars:
+                raise ValueError(f"unknown pillar {name!r}")
+            p = self.strategy.pillars[name].model_copy(update={"pinned": False})
+            trigger = f"unpinned: {name}"
+            s = self.strategy.model_copy(update={"pillars": {**self.strategy.pillars, name: p}, "reason": trigger})
+            self.strategy = s
+        self._publish_strategy(s, self.log.state.game_date or "", trigger, "human")
 
     def request_review(self) -> None:
         """Ask for a strategy review at the next decision; a cap-bypassing request, like a failed
@@ -888,6 +908,7 @@ class Governor:
 
     def _decide(self, b: dict, reason: str, reviewed_at_start: bool = False) -> None:
         self._status("deciding")
+        self._last_b = b     # cached for edit_pillar's market-order validation (idle resources, income)
         self._decision_military = b.get("military_power")   # baseline for "military fell" until the next decision
         self.log.state.episodes += 1
         self.log.state.game_date = b["date"]
@@ -1126,6 +1147,7 @@ class Governor:
         answer (including change=true with no strategy) is retried once with the reasons; still invalid →
         no change. Never raises and never pauses the game: any failure past the model call is logged and
         the current strategy stays, exactly like a failed model call."""
+        self._last_b = b     # cached for edit_pillar's market-order validation (idle resources, income)
         self._since_retro = 0
         self.review_requested = None
         self._review_retry = False
@@ -1198,7 +1220,14 @@ class Governor:
             elif errs:
                 self.log.emit("strategy_rejected", date=b["date"], errors=errs[:10])
             elif accepted:
-                self._set_strategy(new, b["date"], trigger, base.get("model", ""))
+                # `new` was computed from a `self.strategy` snapshot taken before/around the model
+                # call (and before the rule-learning, trace-saving and journal I/O just above); a
+                # human edit or pin landed via the dashboard in that window must not be discarded,
+                # so it is re-applied against the *live* strategy atomically with the commit.
+                with self._strategy_lock:
+                    new = keep_pinned(new, self.strategy)
+                    self.strategy = new
+                self._publish_strategy(new, b["date"], trigger, base.get("model", ""))
         except Exception as e:  # noqa: BLE001 - a failed review never stops play or pauses the game; retried at the next decision
             self.review_requested = trigger
             self._review_retry = True
@@ -1208,7 +1237,13 @@ class Governor:
             self._review_strategy(b, trigger, retried=True, errors=retry_errors)
 
     def _set_strategy(self, s: Strategy, date: str, trigger: str, model: str) -> None:
-        self.strategy = s
+        with self._strategy_lock:
+            self.strategy = s
+        self._publish_strategy(s, date, trigger, model)
+
+    def _publish_strategy(self, s: Strategy, date: str, trigger: str, model: str) -> None:
+        """Record `s` (already assigned to `self.strategy`) as a new version. Pure I/O: never called
+        while holding `_strategy_lock`."""
         dumped = s.model_dump()
         self.log.state.info["strategy"] = dumped
         self.log.emit("strategy", date=date, trigger=trigger, model=model, reason=s.reason, strategy=dumped)

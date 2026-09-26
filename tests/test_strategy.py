@@ -222,3 +222,36 @@ def test_forbid_extra_fields_in_models():
         assert False, "should reject unknown field"
     except ValueError:
         pass
+
+
+# ---- Task 8 fix round 1, item 4: pillar content caps -------------------------------------------
+
+def test_a_too_long_stance_is_rejected():
+    s = strat(economy=Pillar(priority=2, stance="s" * 401, goals=["g"]))
+    assert any("stance is over 400 characters" in e for e in
+              validate(s, previous=None, tech_ids=set(), idle=set(), income={}))
+
+
+def test_a_stance_at_exactly_the_cap_is_accepted():
+    s = strat(economy=Pillar(priority=2, stance="s" * 400, goals=["g"]))
+    assert not any("stance is over" in e for e in
+                  validate(s, previous=None, tech_ids=set(), idle=set(), income={}))
+
+
+def test_too_many_goals_are_rejected():
+    s = strat(economy=Pillar(priority=2, stance="s", goals=["a", "b", "c", "d"]))
+    assert any("at most 3 goals" in e for e in
+              validate(s, previous=None, tech_ids=set(), idle=set(), income={}))
+
+
+def test_a_too_long_goal_is_rejected():
+    s = strat(economy=Pillar(priority=2, stance="s", goals=["g" * 201]))
+    assert any("a goal is over 200 characters" in e for e in
+              validate(s, previous=None, tech_ids=set(), idle=set(), income={}))
+
+
+def test_too_many_milestones_are_rejected():
+    ms = [Milestone(metric="systems", op=">=", target=n, by="2250.01.01") for n in range(7)]
+    s = strat(economy=Pillar(priority=2, stance="s", goals=["g"], milestones=ms))
+    assert any("at most 6 milestones" in e for e in
+              validate(s, previous=None, tech_ids=set(), idle=set(), income={}))

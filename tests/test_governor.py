@@ -2280,3 +2280,176 @@ def test_control_edit_pillar_returns_400_for_an_invalid_edit(setup, tmp_path):
             r = await c.post("/control", json={"action": "unpin_pillar", "pillar": "nope"})
             assert r.status == 400
     asyncio.run(go())
+
+
+# ---- Task 8 fix round 1 --------------------------------------------------------------------
+
+def test_edit_pillar_allows_a_stance_only_edit_before_any_briefing(setup):
+    """Item 1: a human edit with no market orders is fine even before the governor has ever
+    read a briefing (self._last_b is None)."""
+    from pilot.strategy import Pillar, Strategy
+    s, log = setup
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+    assert g._last_b is None
+    prios = {"defence": 1, "economy": 2, "technology": 3, "expansion": 4, "diplomacy": 5, "government": 6, "society": 7}
+    g.strategy = Strategy(pillars={p: Pillar(priority=n, stance=f"{p} stance", goals=["g"]) for p, n in prios.items()},
+                          focus="hold")
+    g.edit_pillar("economy", {"stance": "save for a war"})
+    assert g.strategy.pillars["economy"].stance == "save for a war" and g.strategy.pillars["economy"].pinned
+
+
+def test_edit_pillar_rejects_a_market_order_with_no_briefing_yet(setup):
+    """Item 1: a market-order edit before any briefing is rejected, not silently allowed."""
+    from pilot.strategy import Pillar, Strategy
+    s, log = setup
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+    prios = {"defence": 1, "economy": 2, "technology": 3, "expansion": 4, "diplomacy": 5, "government": 6, "society": 7}
+    g.strategy = Strategy(pillars={p: Pillar(priority=n, stance=f"{p} stance", goals=["g"]) for p, n in prios.items()},
+                          focus="hold")
+    with pytest.raises(ValueError, match="no briefing yet"):
+        g.edit_pillar("economy", {"market": [{"side": "sell", "resource": "energy", "amount": 5}]})
+
+
+def test_edit_pillar_market_order_is_checked_against_the_real_briefing_idle_state(setup):
+    """Item 1: idle/income for a human market edit come from the governor's own last briefing,
+    not from the edit itself (a real, non-idle resource must still be rejected)."""
+    s, log = setup
+    calls = []
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": _strategist(calls)})
+    g._review_strategy(briefing("2200.01.01", net={"energy": 50}), "start of run")   # no stockpile: energy is not idle
+    assert g._last_b is not None
+    with pytest.raises(ValueError, match="not idle"):
+        g.edit_pillar("economy", {"market": [{"side": "sell", "resource": "energy", "amount": 5}]})
+
+
+def test_edit_pillar_market_order_over_20pct_of_real_income_is_rejected(setup):
+    """Item 1: the 20%-of-income cap is computed from the real briefing's net income."""
+    s, log = setup
+    calls = []
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": _strategist(calls)})
+    b = {**briefing("2200.01.01", net={"energy": 50}), "stockpile": {"energy": 10000}}   # idle, income 50/month
+    g._review_strategy(b, "start of run")
+    with pytest.raises(ValueError, match="over"):
+        g.edit_pillar("economy", {"market": [{"side": "sell", "resource": "energy", "amount": 20}]})   # cap is 10
+
+
+def test_edit_pillar_market_order_within_cap_is_accepted(setup):
+    s, log = setup
+    calls = []
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": _strategist(calls)})
+    b = {**briefing("2200.01.01", net={"energy": 50}), "stockpile": {"energy": 10000}}
+    g._review_strategy(b, "start of run")
+    g.edit_pillar("economy", {"market": [{"side": "sell", "resource": "energy", "amount": 5}]})   # within the cap of 10
+    assert g.strategy.pillars["economy"].market[0].amount == 5
+
+
+def test_a_human_edit_landing_during_a_review_survives_the_commit(setup):
+    """Item 2: a human edit/pin that lands after the model has answered but before the review
+    commits its new strategy must not be lost. Simulated by hooking `journal.note`, which the
+    review calls right before it assigns the new strategy."""
+    s, log = setup
+    calls = []
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": _strategist(calls)})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+
+    real_note = g.journal.note
+
+    def hooked_note(*a, **kw):
+        g.edit_pillar("diplomacy", {"stance": "no federations, landed mid-commit"})
+        return real_note(*a, **kw)
+    g.journal.note = hooked_note
+
+    g._role_objs["strategy"] = _strategist(calls, pin_diplomacy_to="join a federation")
+    g.__dict__.pop("_agents", None)
+    g._review_strategy(briefing("2201.01.01"), "scheduled")
+    assert g.strategy.pillars["diplomacy"].stance == "no federations, landed mid-commit"
+    assert g.strategy.pillars["diplomacy"].edited_by == "human"
+
+
+def test_control_edit_pillar_rejects_a_non_dict_fields_body(setup, tmp_path):
+    """Item 3: a malformed `fields` body (not an object) is a 400, never a 500."""
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from pilot.dashboard import make_app
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t4.sqlite")
+    log = EventLog(s.runs_dir, "rs3", s.model, telemetry=tel)
+    calls = []
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": _strategist(calls)})
+    log.set_campaign("stellaris", "c3", "Test")
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+
+    async def go():
+        async with TestClient(TestServer(make_app(g, s.runs_dir, tel))) as c:
+            for bad in (5, True, [1]):
+                r = await c.post("/control", json={"action": "edit_pillar", "pillar": "economy", "fields": bad})
+                assert r.status == 400, (bad, r.status)
+    asyncio.run(go())
+
+
+def test_control_edit_pillar_rejects_unknown_field_names(setup, tmp_path):
+    """Item 3: an unknown field name is a 400 naming it, not silently dropped."""
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from pilot.dashboard import make_app
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t5.sqlite")
+    log = EventLog(s.runs_dir, "rs4", s.model, telemetry=tel)
+    calls = []
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": _strategist(calls)})
+    log.set_campaign("stellaris", "c4", "Test")
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+
+    async def go():
+        async with TestClient(TestServer(make_app(g, s.runs_dir, tel))) as c:
+            r = await c.post("/control", json={"action": "edit_pillar", "pillar": "economy",
+                                               "fields": {"nonsense": 1, "focus": "x"}})
+            assert r.status == 400
+            text = await r.text()
+            assert "nonsense" in text and "focus" in text
+            assert not g.strategy.pillars["economy"].pinned
+    asyncio.run(go())
+
+
+def test_edit_pillar_rejects_non_dict_fields_and_unknown_field_names(setup):
+    """Item 3, governor-level: same checks are enforced by Governor.edit_pillar itself."""
+    s, log = setup
+    calls = []
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": _strategist(calls)})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    with pytest.raises(ValueError):
+        g.edit_pillar("economy", 5)
+    with pytest.raises(ValueError, match="nonsense"):
+        g.edit_pillar("economy", {"nonsense": 1})
+
+
+def test_api_strategy_degrades_instead_of_500_on_an_unparseable_historical_strategy(setup, tmp_path):
+    """Item 5: a stored strategy row that no longer matches the current Strategy schema (e.g. an
+    older format) must not crash the API; the raw dict and empty milestones are served instead."""
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from pilot.dashboard import make_app
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t6.sqlite")
+    log = EventLog(s.runs_dir, "rs5", s.model, telemetry=tel)
+    log.emit("run_start", model=s.model, game=s.game)
+    log.set_campaign("stellaris", "c5", "Test")
+    log.emit("strategy", date="2200.01.01", trigger="start of run", model="m",
+             reason="", strategy={"pillars": {"economy": {"not": "a valid pillar shape"}}, "focus": "grow"})
+
+    async def go():
+        async with TestClient(TestServer(make_app(None, s.runs_dir, tel))) as c:
+            r = await c.get(f"/api/strategy?campaign={log.campaign_id}")
+            assert r.status == 200
+            body = await r.json()
+            assert body["current"]["focus"] == "grow" and body["milestones"] == []
+    asyncio.run(go())

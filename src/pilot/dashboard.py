@@ -214,11 +214,15 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
         hist = await asyncio.to_thread(tel.strategy_history, cid)
         ms = []
         if cur:
-            s = Strategy.model_validate({k: v for k, v in cur.items() if k != "reason"})
-            today = rows[-1]["date"] if rows else "2200.01.01"
-            for name, pl in s.pillars.items():
-                for m in pl.milestones:
-                    ms.append({"pillar": name, **m.model_dump(), "status": milestone_status(m, rows, today)})
+            try:
+                s = Strategy.model_validate({k: v for k, v in cur.items() if k != "reason"})
+            except ValueError:
+                s = None    # an older/foreign strategy shape: serve the raw record, no milestone status
+            if s is not None:
+                today = rows[-1]["date"] if rows else "2200.01.01"
+                for name, pl in s.pillars.items():
+                    for m in pl.milestones:
+                        ms.append({"pillar": name, **m.model_dump(), "status": milestone_status(m, rows, today)})
         return web.json_response({"current": cur, "milestones": ms, "history": hist})
 
     models_cache: dict = {}
@@ -463,9 +467,10 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
             except ValueError as e:
                 raise web.HTTPBadRequest(text=str(e)) from e
         elif action == "edit_pillar" and hasattr(pilot, "edit_pillar"):
+            fields = body.get("fields")
             try:
-                pilot.edit_pillar(str(body.get("pillar", "")), dict(body.get("fields") or {}))
-            except ValueError as e:
+                pilot.edit_pillar(str(body.get("pillar", "")), {} if fields is None else fields)
+            except (ValueError, TypeError) as e:
                 raise web.HTTPBadRequest(text=str(e)) from e
         elif action == "unpin_pillar" and hasattr(pilot, "unpin_pillar"):
             try:

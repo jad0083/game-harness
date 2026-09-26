@@ -98,6 +98,15 @@ def validate(s: Strategy, *, previous: Strategy | None, tech_ids: set[str], idle
         seen[pl.priority] = name
         if not 1 <= pl.priority <= len(PILLARS):
             errs.append(f"{name}: priority must be 1..{len(PILLARS)}")
+        if len(pl.stance) > 400:
+            errs.append(f"{name}: stance is over 400 characters")
+        if len(pl.goals) > 3:
+            errs.append(f"{name}: at most 3 goals")
+        for g in pl.goals:
+            if len(g) > 200:
+                errs.append(f"{name}: a goal is over 200 characters")
+        if len(pl.milestones) > 6:
+            errs.append(f"{name}: at most 6 milestones")
         for m in pl.milestones:
             if not _valid_date(m.by):
                 errs.append(f"{name}: milestone by {m.by!r} is not a date YYYY.MM.DD")
