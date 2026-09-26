@@ -252,8 +252,9 @@ dashboard is on :8790).
 - **Top bar**: model and thinking pickers (Gemini models this key can use, plus `PILOT_MODELS`),
   always shown. With no run active the choice is saved for the next `pilot run`
   (`runs/pilot-settings.json`; command-line options still win); during a run it also switches the
-  running pilot from its next model call, and each decision records its model. Pause/resume and
-  stop appear during a run.
+  running pilot from its next model call, and each decision records its model. With no run active,
+  **Start run** asks for the game, speed and decision interval and starts `game-pilot.service`;
+  pause/resume and stop appear during a run.
 
 ### Telemetry (`runs/telemetry.sqlite`)
 Every event, decision (with its full trace) and monthly metric point, grouped by **campaign** (the

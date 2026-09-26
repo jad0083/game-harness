@@ -805,3 +805,40 @@ def test_model_choice_is_saved_for_the_next_run_without_a_live_pilot(setup, monk
     seen.clear()
     cli.main(["run", "--game", "stellaris", "--model", "google:gemini-3.8-flash"])
     assert seen["s"].model == "google:gemini-3.8-flash"
+
+
+def test_start_run_from_the_dashboard_saves_settings_and_starts_the_service(setup, monkeypatch):
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from pilot import cli, dashboard, models
+    s, _ = setup
+    calls = []
+
+    class Proc:
+        returncode = 0
+        async def communicate(self):
+            return b"", b""
+
+    async def fake_exec(*args, **kw):
+        calls.append(args)
+        return Proc()
+
+    monkeypatch.setattr(dashboard.asyncio, "create_subprocess_exec", fake_exec)
+
+    async def go():
+        async with TestClient(TestServer(dashboard.make_app(None, s.runs_dir))) as c:
+            r = await c.post("/api/run", json={"game": "stellaris", "speed": "fast", "months": 6})
+            assert r.status == 200, await r.text()
+            assert (await c.post("/api/run", json={"game": "chess"})).status == 400
+            assert (await c.post("/api/run", json={"months": 500})).status == 400
+
+    asyncio.run(go())
+    assert calls == [("systemctl", "--user", "start", "game-pilot.service")]
+    assert models.load_prefs(s.runs_dir) == {"game": "stellaris", "speed": "fast", "months": 6}
+    seen = {}
+    monkeypatch.setenv("PILOT_RUNS_DIR", str(s.runs_dir))
+    monkeypatch.setattr(cli, "run", lambda st, ep: seen.setdefault("s", st) and 0)
+    cli.main(["run"])                                   # what the service runs
+    assert (seen["s"].game, seen["s"].speed, seen["s"].decide_every_months) == ("stellaris", "fast", 6)

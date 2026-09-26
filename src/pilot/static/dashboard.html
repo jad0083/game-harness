@@ -61,6 +61,14 @@
   .spacer { flex: 1; }
   .picker { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
   .picker select { background: var(--raised); border: 1px solid var(--hair); border-radius: 8px; padding: 5px 8px; color: var(--ink); max-width: 230px; }
+  dialog { border: 1px solid var(--hair); border-radius: 12px; background: var(--surface); color: var(--ink); padding: 18px 20px; width: min(420px, 92vw); }
+  dialog::backdrop { background: rgba(8, 12, 24, .55); }
+  dialog h2 { margin: 0 0 4px; font-size: 17px; }
+  dialog form { display: grid; gap: 12px; }
+  dialog label { display: grid; gap: 4px; font-size: 13.5px; color: var(--ink-2); }
+  dialog select, dialog input { padding: 7px 10px; border-radius: 8px; border: 1px solid var(--hair); background: var(--raised); color: var(--ink); }
+  dialog input[type=number] { width: 90px; }
+  dialog .row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
   .toast { position: fixed; right: 16px; bottom: 16px; z-index: 10; background: var(--surface); border: 1px solid var(--hair);
            border-left: 3px solid var(--accent); border-radius: 10px; padding: 10px 14px; font-size: 13.5px; max-width: min(420px, 90vw);
            box-shadow: 0 6px 24px rgba(10, 18, 40, .14); }
@@ -227,10 +235,23 @@
   <label class="picker" title="Thinking effort">Thinking <select id="thinking-select" aria-label="Thinking level">
     <option value="off">off</option><option value="low">low</option><option value="medium">medium</option><option value="high">high</option>
   </select></label>
+  <button class="btn primary" id="b-start" hidden>Start run</button>
   <button class="btn live-only" id="b-toggle" hidden>Pause</button>
   <button class="btn danger live-only" id="b-stop" hidden>Stop</button>
 </div>
 <div class="toast" id="toast" role="status" hidden></div>
+<dialog id="start-dialog" aria-labelledby="start-title">
+  <form method="dialog" id="start-form">
+    <h2 id="start-title">Start a pilot run</h2>
+    <p class="hint">The pilot plays the game that is open on the PC, with the model chosen in the top bar.</p>
+    <label>Game <select id="start-game"><option value="stellaris">Stellaris</option><option value="galciv4">Galactic Civilizations IV</option></select></label>
+    <label class="stellaris-only">Game speed <select id="start-speed">
+      <option value="slowest">slowest</option><option value="slow">slow</option><option value="normal">normal</option><option value="fast">fast</option><option value="fastest">fastest</option>
+    </select></label>
+    <label class="stellaris-only">Decide every <input id="start-months" type="number" min="1" max="120" value="12"> in-game months</label>
+    <div class="row"><button class="btn" value="cancel">Cancel</button><button class="btn primary" id="start-go" value="start">Start</button></div>
+  </form>
+</dialog>
 <div class="banner" id="banner" hidden>
   <p id="banner-text"></p>
   <button class="btn primary" id="b-yes">Yes</button>
@@ -306,7 +327,8 @@
             <div class="inline"><select id="override-dir"></select><button class="btn" id="override">Apply directive</button></div>
           </div>
         </div>
-        <p class="hint" id="talk-off" hidden>Talking to the model needs a live run. Start one with <code>python -m pilot run</code>.</p>
+        <div id="talk-off" hidden><p class="hint">No run is active, so there is no model to talk to. Start a run and the model is available here: ask it questions, give it notes and standing orders, or override its decisions.</p>
+          <button class="btn primary" id="b-start-2">Start run</button></div>
       </div>
       <div class="tabpanel" id="tab-plan" role="tabpanel" hidden><div id="plan"></div></div>
       <div class="tabpanel" id="tab-activity" role="tabpanel" hidden><ul class="feed" id="feed"></ul></div>
@@ -342,6 +364,7 @@ async function loadStatus() {
   document.querySelectorAll(".live-only").forEach((b) => (b.hidden = !S.live));
   const info = S.status.info || {};
   syncPickers(S.live ? { models: info.models, model: S.status.model, thinking: info.thinking } : null);
+  $("b-start").hidden = S.live || !S.ok;
   const paused = ["paused", "needs_attention"].includes(st);
   $("b-toggle").textContent = paused ? "Resume" : "Pause";
   const facts = [];
@@ -823,6 +846,27 @@ async function switchModel() {
   loadStatus();
 }
 $("model-select").addEventListener("change", switchModel);
+
+function openStart() {
+  const c = S.catalog || {};
+  if (c.game) $("start-game").value = c.game;
+  if (c.speed) $("start-speed").value = c.speed;
+  if (c.months) $("start-months").value = c.months;
+  document.querySelectorAll(".stellaris-only").forEach((el) => (el.hidden = $("start-game").value !== "stellaris"));
+  $("start-dialog").showModal();
+}
+$("b-start").addEventListener("click", openStart);
+$("b-start-2").addEventListener("click", openStart);
+$("start-game").addEventListener("change", () =>
+  document.querySelectorAll(".stellaris-only").forEach((el) => (el.hidden = $("start-game").value !== "stellaris")));
+$("start-dialog").addEventListener("close", async () => {
+  if ($("start-dialog").returnValue !== "start") return;
+  const body = { game: $("start-game").value, speed: $("start-speed").value, months: +$("start-months").value };
+  const r = await fetch("/api/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  toast(r.ok ? `Starting a ${body.game === "stellaris" ? "Stellaris" : "GalCiv4"} run. The page switches to it in a few seconds.`
+             : `Could not start: ${await r.text()}`);
+  await loadCatalog();
+});
 $("thinking-select").addEventListener("change", switchModel);
 $("b-stop").addEventListener("click", () => { if (confirm("Stop the pilot? The game is paused when it stops.")) control({ action: "stop" }); });
 $("b-yes").addEventListener("click", () => control({ action: "answer", text: "yes" }));
