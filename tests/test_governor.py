@@ -1408,6 +1408,12 @@ def test_strategy_instructions_cover_the_defence_naval_cap_ruling():
             "reason from a naval-capacity cap the briefing does not show.") in STRATEGY_INSTRUCTIONS
 
 
+def test_strategy_instructions_forbid_trade_market_orders():
+    from pilot.governor import STRATEGY_INSTRUCTIONS
+    assert ("Market orders cannot use trade; sell only idle energy, minerals, food, consumer goods, "
+            "alloys or strategic resources.") in STRATEGY_INSTRUCTIONS
+
+
 def test_the_strategist_receives_the_naval_cap_ruling_in_its_prompt(setup):
     s, log = setup
     seen = []

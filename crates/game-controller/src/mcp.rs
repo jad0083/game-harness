@@ -1113,12 +1113,12 @@ mod tests {
     fn validate_market_orders_checks_count_side_amount_and_resource() {
         let mut resources = toml::Table::new();
         resources.insert("energy".into(), toml::Value::Array(vec![toml::Value::Integer(820), toml::Value::Integer(335)]));
-        resources.insert("trade".into(), toml::Value::Array(vec![toml::Value::Integer(0), toml::Value::Integer(0)]));
+        resources.insert("sr_zro".into(), toml::Value::Array(vec![toml::Value::Integer(0), toml::Value::Integer(0)]));
         let o = |side: &str, resource: &str, amount: i64| crate::stellaris::MarketOrderSpec { side: side.into(), resource: resource.into(), amount };
 
         assert!(validate_market_orders(&[o("sell", "energy", 11)], &resources).is_ok());
         // a resource with an uncalibrated [0,0] point is still a valid key here; ui_point refuses it later
-        assert!(validate_market_orders(&[o("sell", "trade", 5)], &resources).is_ok());
+        assert!(validate_market_orders(&[o("sell", "sr_zro", 5)], &resources).is_ok());
 
         let three = vec![o("sell", "energy", 1), o("buy", "energy", 2), o("sell", "energy", 3)];
         assert!(validate_market_orders(&three, &resources).unwrap_err().to_string().contains("at most 2"));

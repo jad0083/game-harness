@@ -180,19 +180,17 @@ def test_validation_missing_income_for_sold_resource():
     assert any("no monthly income known for minerals" in e for e in errs)
 
 
-def test_trade_order_cap_is_fixed_not_income_based():
-    """Trade orders have fixed cap of 25, independent of income."""
-    # sell trade 10 with income={} should have no errors (10 <= 25)
+def test_trade_market_orders_are_rejected():
+    """Trade cannot be sold or bought on the Market (not a market resource)."""
     s = strat(economy=Pillar(priority=2, stance="s", goals=["g"],
                              market=[{"side": "sell", "resource": "trade", "amount": 10}]))
     errs = validate(s, previous=None, tech_ids=set(), idle={"trade"}, income={})
-    assert len(errs) == 0
+    assert any("trade cannot be sold or bought on the market" in e for e in errs)
 
-    # sell trade 30 should error (30 > 25)
     s2 = strat(economy=Pillar(priority=2, stance="s", goals=["g"],
-                              market=[{"side": "sell", "resource": "trade", "amount": 30}]))
-    errs2 = validate(s2, previous=None, tech_ids=set(), idle={"trade"}, income={})
-    assert any("trade 30 is over 25" in e for e in errs2)
+                              market=[{"side": "buy", "resource": "trade", "amount": 5}]))
+    errs2 = validate(s2, previous=None, tech_ids=set(), idle=set(), income={})
+    assert any("trade cannot be sold or bought on the market" in e for e in errs2)
 
 
 def test_forbid_extra_fields_in_models():

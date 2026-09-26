@@ -1414,13 +1414,28 @@ pub struct MarketOrderSpec {
 pub struct TechPick {
     pub field: String,
     pub tech: String,
-    /// 0-based position of `tech` in the field's offered alternatives (the screen lists them in this order)
+    /// 0-based position of `tech` among the techs actually shown on screen (see `offered_techs`).
     pub option_index: usize,
 }
 
-/// The first preferred tech that is offered in a field whose current research is below 10% of its
-/// cost (fields already researching a preferred tech are left alone).
-pub fn choose_tech_pick(research: &BTreeMap<String, Research>, prefer: &[String], cost: &dyn Fn(&str) -> Option<f64>) -> Option<TechPick> {
+/// The techs a field's swap button actually shows on screen (verified live 2381.03): the save's
+/// `alternatives` lists what comes before the current tech, then the current tech itself; entries
+/// after it are not shown. Capped to `visible` (how many cards fit on screen).
+fn offered_techs(r: &Research, visible: usize) -> &[String] {
+    let before_current = match &r.current {
+        Some((cur, _)) => match r.alternatives.iter().position(|t| t == cur) {
+            Some(p) => &r.alternatives[..p],
+            None => &r.alternatives[..],
+        },
+        None => &r.alternatives[..],
+    };
+    &before_current[..before_current.len().min(visible)]
+}
+
+/// The first preferred tech that is offered on screen (see `offered_techs`) in a field whose
+/// current research is below 10% of its cost (fields already researching a preferred tech are
+/// left alone).
+pub fn choose_tech_pick(research: &BTreeMap<String, Research>, prefer: &[String], cost: &dyn Fn(&str) -> Option<f64>, visible: usize) -> Option<TechPick> {
     for want in prefer {
         for (field, r) in research {
             if let Some((cur, _)) = &r.current {
@@ -1428,7 +1443,7 @@ pub fn choose_tech_pick(research: &BTreeMap<String, Research>, prefer: &[String]
                     continue;
                 }
             }
-            let Some(idx) = r.alternatives.iter().position(|t| t == want) else { continue };
+            let Some(idx) = offered_techs(r, visible).iter().position(|t| t == want) else { continue };
             let started = r.current.as_ref().map(|(t, p)| cost(t).map(|c| *p >= 0.1 * c).unwrap_or(*p > 0.0)).unwrap_or(false);
             if !started {
                 return Some(TechPick { field: field.clone(), tech: want.clone(), option_index: idx });
@@ -1481,7 +1496,8 @@ pub async fn pick_tech(
     prefer: &[String],
     cost: &dyn Fn(&str) -> Option<f64>,
 ) -> Result<String> {
-    let Some(pick) = choose_tech_pick(research, prefer, cost) else {
+    let visible = ui.get("tech").and_then(|s| s.get("visible_options")).and_then(|v| v.as_integer()).unwrap_or(4) as usize;
+    let Some(pick) = choose_tech_pick(research, prefer, cost, visible) else {
         return Ok("nothing to pick: no preferred tech offered in a field that is free to change".into());
     };
     pause.set_paused(client, true).await?;
@@ -1526,6 +1542,20 @@ fn describe_orders(orders: &[MarketOrderSpec]) -> String {
     orders.iter().map(|o| format!("{} {} {}", o.side, o.resource, o.amount)).collect::<Vec<_>>().join(", ")
 }
 
+/// Row y-positions for `idxs` (any order, e.g. highest first), each `order_row_first_y + pitch *
+/// i`. Refuses when `pitch` is 0 (not yet calibrated: only row 0's position was ever measured)
+/// and a row other than the first is requested, rather than clicking the wrong row.
+fn removal_rows(order_row_first_y: i32, pitch: i32, idxs: &[usize]) -> Result<Vec<i32>> {
+    idxs.iter()
+        .map(|&i| {
+            if i > 0 && pitch == 0 {
+                bail!("ui.market.order_row_pitch is not calibrated for more than the first row; cannot remove the order at row {i}");
+            }
+            Ok(order_row_first_y + pitch * i as i32)
+        })
+        .collect()
+}
+
 /// Screen steps for `remove` and `add`, run after the Market dialog is open (`ui.market`). Kept
 /// separate from `sync_market` so the Market can always be closed afterwards, success or failure.
 async fn apply_market_changes(
@@ -1540,10 +1570,12 @@ async fn apply_market_changes(
     idxs.sort_unstable_by(|a, b| b.cmp(a));
     if !idxs.is_empty() {
         let (rx, ry) = ui_point(ui, "market", "order_row_first")?;
-        let pitch = ui.get("market").and_then(|m| m.get("order_row_pitch")).and_then(|v| v.as_integer()).unwrap_or(14) as i32;
+        let pitch = ui.get("market").and_then(|m| m.get("order_row_pitch")).and_then(|v| v.as_integer()).unwrap_or(0) as i32;
         let remove_pt = ui_point(ui, "market", "remove")?;
-        for i in idxs {
-            click_ui_point(client, (rx, ry + pitch * i as i32)).await?;
+        let rows = removal_rows(ry, pitch, &idxs)?;
+        // Removal flow: clicking the order row opens its edit dialog, then Remove closes it.
+        for row_y in rows {
+            click_ui_point(client, (rx, row_y)).await?;
             tokio::time::sleep(std::time::Duration::from_millis(300)).await;
             click_ui_point(client, remove_pt).await?;
             tokio::time::sleep(std::time::Duration::from_millis(400)).await;
@@ -2454,21 +2486,46 @@ situations={ situations={ 0=none 1={ country=0 type="rebellion_situation" progre
     #[test]
     fn tech_pick_prefers_offered_techs_and_leaves_started_research_alone() {
         let mut research = BTreeMap::new();
+        // The save lists alternatives that come before the current tech, then the current tech
+        // itself; anything after it is not shown on screen (verified live 2381.03).
         research.insert("engineering".to_string(), Research { current: Some(("tech_mining_2".into(), 50.0)),
-            alternatives: vec!["tech_mining_2".into(), "tech_habitat_1".into(), "tech_lasers_2".into()] });
+            alternatives: vec!["tech_habitat_1".into(), "tech_lasers_2".into(), "tech_mining_2".into()] });
         research.insert("society".to_string(), Research { current: Some(("tech_gene_crops".into(), 900.0)),
-            alternatives: vec!["tech_gene_crops".into(), "tech_doctrine_navy_size_2".into()] });
+            alternatives: vec!["tech_doctrine_navy_size_2".into(), "tech_gene_crops".into()] });
         let cost = |t: &str| Some(if t == "tech_mining_2" { 1000.0 } else { 2000.0 });
         let prefer = vec!["tech_doctrine_navy_size_2".to_string(), "tech_habitat_1".to_string()];
-        let pick = choose_tech_pick(&research, &prefer, &cost).unwrap();
-        // society is 45% done (900/2000): not swapped; engineering is 5% done: swapped to habitats (option 2)
-        assert_eq!((pick.field.as_str(), pick.tech.as_str(), pick.option_index), ("engineering", "tech_habitat_1", 1));
+        let pick = choose_tech_pick(&research, &prefer, &cost, 4).unwrap();
+        // society is 45% done (900/2000): not swapped even though tech_doctrine_navy_size_2 is
+        // offered there; engineering is 5% done: swapped to tech_habitat_1 (the first offered slot)
+        assert_eq!((pick.field.as_str(), pick.tech.as_str(), pick.option_index), ("engineering", "tech_habitat_1", 0));
         // already researching a preferred tech: nothing to do
         let mut r2 = research.clone();
         r2.get_mut("engineering").unwrap().current = Some(("tech_habitat_1".into(), 0.0));
-        assert!(choose_tech_pick(&r2, &["tech_habitat_1".to_string()], &cost).is_none());
+        assert!(choose_tech_pick(&r2, &["tech_habitat_1".to_string()], &cost, 4).is_none());
         // no preferred tech offered: nothing
-        assert!(choose_tech_pick(&research, &["tech_zro_1".to_string()], &cost).is_none());
+        assert!(choose_tech_pick(&research, &["tech_zro_1".to_string()], &cost, 4).is_none());
+    }
+
+    #[test]
+    fn tech_pick_only_offers_techs_shown_on_screen() {
+        // [a, b, c, current, x]: x comes after the current tech in the save's alternatives list
+        // and is not shown on screen; option_index counts position among what IS shown.
+        let mut research = BTreeMap::new();
+        research.insert("physics".to_string(), Research { current: Some(("current".into(), 0.0)),
+            alternatives: vec!["a".into(), "b".into(), "c".into(), "current".into(), "x".into()] });
+        let cost = |_: &str| Some(1000.0);
+        let pick = choose_tech_pick(&research, &["c".to_string()], &cost, 4).unwrap();
+        assert_eq!((pick.field.as_str(), pick.tech.as_str(), pick.option_index), ("physics", "c", 2));
+        // "x" is after "current" in the save's list: never on screen, never picked
+        assert!(choose_tech_pick(&research, &["x".to_string()], &cost, 4).is_none());
+
+        // Only the first `visible` (4) of the offered (before-current) techs are clickable.
+        let mut research2 = BTreeMap::new();
+        research2.insert("physics".to_string(), Research { current: Some(("current".into(), 0.0)),
+            alternatives: vec!["p0".into(), "p1".into(), "p2".into(), "p3".into(), "p4".into(), "current".into()] });
+        assert!(choose_tech_pick(&research2, &["p4".to_string()], &cost, 4).is_none(), "5th offered option is off-screen");
+        let pick2 = choose_tech_pick(&research2, &["p3".to_string()], &cost, 4).unwrap();
+        assert_eq!(pick2.option_index, 3, "4th offered option (index 3) is still on screen");
     }
 
     #[test]
@@ -2494,6 +2551,17 @@ situations={ situations={ 0=none 1={ country=0 type="rebellion_situation" progre
         assert!(err.contains("ui.market.remove") && err.contains("not calibrated"), "{err}");
 
         assert_eq!(ui_point(&ui, "market", "add").unwrap(), (382, 156));
+    }
+
+    #[test]
+    fn removal_rows_refuses_a_second_row_when_pitch_is_uncalibrated() {
+        // Only the first row's position is known live (only one order existed to measure from);
+        // removing anything but that first row would click the wrong place, so it must refuse.
+        assert_eq!(removal_rows(181, 0, &[0]).unwrap(), vec![181]);
+        let err = removal_rows(181, 0, &[1, 0]).unwrap_err().to_string();
+        assert!(err.contains("order_row_pitch") && err.contains("not calibrated"), "{err}");
+        // once calibrated (non-zero pitch), any row is fine
+        assert_eq!(removal_rows(181, 14, &[1, 0]).unwrap(), vec![195, 181]);
     }
 
     #[test]

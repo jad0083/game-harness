@@ -71,7 +71,7 @@ STRATEGY_INSTRUCTIONS = """You are the Strategist: you set the empire's top-down
 (systems, colonies, pops, techs_known, military_power, economy_power, tech_power, rank:<measure>) with a
 target and an in-game date, and only for technology `prefer_techs` (tech ids to pick when offered; at most 6)
 and only for economy `market` (at most 2 small monthly orders; sell only a resource the briefing lists as
-IDLE, at most 20% of its monthly income). Priorities decide which directives the governor prefers.
+IDLE, at most 20% of its monthly income). Market orders cannot use trade; sell only idle energy, minerals, food, consumer goods, alloys or strategic resources. Priorities decide which directives the governor prefers.
 Everything must be achievable through directives, tech picks or market orders: the game's AI builds,
 designs ships and moves fleets. Never change a pillar marked pinned: the human set it. If nothing
 material changed, answer change=false. Build on the empire's species, ethics, civics and origin.
