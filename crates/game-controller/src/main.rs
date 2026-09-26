@@ -3,8 +3,9 @@ mod client;
 mod corpus;
 mod imaging;
 mod mcp;
+mod stellaris;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use client::AgentClient;
 use std::path::PathBuf;
@@ -119,8 +120,26 @@ enum Commands {
         action: Option<CorpusAction>,
     },
 
+    /// Stellaris: read autosaves into a governor briefing
+    Stellaris {
+        #[command(subcommand)]
+        action: StellarisAction,
+    },
+
     /// Run stdio Model Context Protocol (MCP) server for Claude / Gemini / Antigravity
     Mcp,
+}
+
+#[derive(Subcommand)]
+enum StellarisAction {
+    /// Briefing of the player's empire from a .sav file, or from the newest autosave on the PC
+    Brief {
+        /// Local .sav file; omit to fetch the newest autosave through the agent
+        file: Option<PathBuf>,
+        /// Print JSON instead of text
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -155,7 +174,10 @@ enum CorpusAction {
 async fn main() -> Result<()> {
     let cli = Cli::parse();
     // Corpus commands work offline: they never contact the agent, so they must not need its token.
-    let offline = matches!(cli.command, Commands::Corpus { .. });
+    let offline = matches!(
+        cli.command,
+        Commands::Corpus { .. } | Commands::Stellaris { action: StellarisAction::Brief { file: Some(_), .. } }
+    );
     let token = cli.token.as_deref().or(if offline { Some("offline") } else { None });
     let client = Arc::new(AgentClient::new(cli.agent_url.as_deref(), token)?);
 
@@ -188,6 +210,21 @@ async fn main() -> Result<()> {
             let elapsed = start.elapsed().as_secs_f64() * 1000.0;
             println!("Live Game State (took {:.2}ms):", elapsed);
             println!("{}", serde_json::to_string_pretty(&s)?);
+        }
+        Commands::Stellaris { action: StellarisAction::Brief { file, json } } => {
+            let start = Instant::now();
+            let (source, bytes) = match file {
+                Some(f) => (f.display().to_string(), std::fs::read(&f).with_context(|| format!("reading {}", f.display()))?),
+                None => stellaris::fetch_latest_save(&client).await?,
+            };
+            let fetched = start.elapsed();
+            let b = stellaris::brief_save(&bytes)?;
+            if json {
+                println!("{}", serde_json::to_string_pretty(&b)?);
+            } else {
+                print!("{}", b.to_text());
+                eprintln!("({source}: {} KB, fetch {:?}, parse {:?})", bytes.len() / 1024, fetched, start.elapsed() - fetched);
+            }
         }
         Commands::Corpus { action } => {
             if let Some(c) = corpus {

@@ -9,7 +9,7 @@ An ultra-low-latency, 100% Rust-powered autonomous AI game harness that plays tu
  │   └─ game-controller (Native Rust)      │         │   (Running borderless / windowed)       │
  │      • game corpus (manifest+data+docs)│         └─────────────────────────────────────────┘
  │      • autopilot (verified turn loop)   │                              ▲
- │      • stdio MCP server (19 tools)      │  HTTP/TCP 8765               │ GDI / Win32 SendInput
+ │      • stdio MCP server (19 tools, +1 Stellaris)      │  HTTP/TCP 8765               │ GDI / Win32 SendInput
  │      • frame diff + luminance check     │ ──────────────► ┌─────────────────────────────────────────┐
  │                                         │ ◄────────────── │ game-agent.exe (Native Rust)            │
  │                                         │  (JPEG / JSON)  │   • Axum 0.8 HTTP API (:8765)           │
@@ -129,7 +129,12 @@ The compiled controller binary provides full programmatic access to all agent fu
 ./target/release/game-controller corpus order "Draft Colonists"
 ./target/release/game-controller corpus strategy
 
-# 11. Launch Stdio MCP Server (Claude Code / Gemini / Antigravity)
+# 11. Stellaris: briefing of the player's empire from an autosave
+./target/release/game-controller stellaris brief                      # newest autosave on the PC (agent >= 1.2)
+./target/release/game-controller stellaris brief path/to/autosave.sav # local file, offline
+./target/release/game-controller stellaris brief --json
+
+# 12. Launch Stdio MCP Server (Claude Code / Gemini / Antigravity)
 ./target/release/game-controller mcp
 ```
 
@@ -174,6 +179,7 @@ Gemini CLI — `.gemini/settings.json` (in this repo):
 | `corpus_strategy` | `{}` | The complete strategic playbook (`strategy.md`). |
 | `game_state` | `{}` | Query live agent status, foreground window, and screen dimensions. |
 | `focus` | `title` | Bring target window to foreground by title substring. |
+| `stellaris_briefing` | `json` | *Stellaris corpus only.* Briefing from the newest monthly autosave (fetched via the agent's `/files`): date, government, stockpile and net per resource with deficits flagged, power, research and options, policies, planets, wars. About 2 KB of text. |
 
 ---
 
