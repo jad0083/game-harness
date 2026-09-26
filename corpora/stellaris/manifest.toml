@@ -80,6 +80,16 @@ template_search = 3
 color_range = [[150, 120, 0], [255, 255, 110]]
 color_min_fraction = 0.08
 
+# The in-game menu (Esc on the bare map). Verified 2026-09-25 (4.5.1): it opens over the map, the
+# "Paused" label stays visible beneath it, and a second Esc closes it. Template: the Resume button
+# (distance 0.187 on the same frame without the menu). `stellaris pause|resume` closes it first.
+[screens.game_menu]
+description = "In-game menu (Save Game / Load Game / Settings / Exit / Resume); Esc closes it"
+template = "templates/stellaris_game_menu.png"
+template_roi = [0.4719, 0.5782, 0.0587, 0.0204]
+template_threshold = 0.06
+template_search = 3
+
 # The console's reply to `human_ai` ("Human AI is now ON" / "... OFF"), read on the bottom output
 # line after `help` has filled the console. The two words are told apart by which template is
 # closer (verified 2026-09-25: 0.048 apart; each matches itself at ~0.01).

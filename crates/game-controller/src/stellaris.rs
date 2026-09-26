@@ -463,6 +463,8 @@ pub struct PauseDetector {
     search: u32,
     /// Colour signature (preferred: the "Paused" label pulses, which defeats the template).
     color: Option<([[u8; 3]; 2], f64)>,
+    /// The in-game menu (Esc on the bare map): template, ROI, threshold, search radius.
+    menu: Option<(image::RgbImage, [f64; 4], f64, u32)>,
 }
 
 impl PauseDetector {
@@ -473,7 +475,47 @@ impl PauseDetector {
         let template = image::open(&path).with_context(|| format!("loading {}", path.display()))?.to_rgb8();
         let roi = def.template_roi.context("[screens.paused] has no template_roi")?;
         let color = def.color_range.map(|r| (r, def.color_min_fraction.unwrap_or(0.05)));
-        Ok(PauseDetector { template, roi, threshold: def.template_threshold, search: def.template_search, color })
+        let menu = match m.screens.get("game_menu") {
+            Some(g) => {
+                let rel = g.template.as_ref().context("[screens.game_menu] has no template")?;
+                let path = m.base_dir.clone().unwrap_or_default().join(rel);
+                let img = image::open(&path).with_context(|| format!("loading {}", path.display()))?.to_rgb8();
+                Some((img, g.template_roi.context("[screens.game_menu] has no template_roi")?, g.template_threshold, g.template_search))
+            }
+            None => None,
+        };
+        Ok(PauseDetector { template, roi, threshold: def.template_threshold, search: def.template_search, color, menu })
+    }
+
+    /// Is the in-game menu (Save Game / Load Game / … / Resume) open?
+    pub fn frame_has_menu(&self, frame: &image::RgbImage) -> bool {
+        let Some((t, roi, threshold, search)) = &self.menu else { return false };
+        let r = crate::imaging::roi_from_norm(frame.width(), frame.height(), *roi);
+        crate::imaging::template_diff_search(frame, t, r[0], r[1], *search) <= *threshold
+    }
+
+    async fn frame(client: &crate::client::AgentClient) -> Result<image::RgbImage> {
+        let jpeg = client.screenshot(None, None, None, None, Some(crate::imaging::MAX_SIDE as i32), Some(75)).await?;
+        crate::imaging::decode_rgb(&jpeg)
+    }
+
+    /// Close the in-game menu if it is open (Esc toggles it; the "Paused" label shows beneath it,
+    /// so a pause check alone cannot see it). Returns whether a key was pressed.
+    pub async fn close_menu(&self, client: &crate::client::AgentClient) -> Result<bool> {
+        let mut pressed = false;
+        for _ in 0..2 {
+            if !self.frame_has_menu(&Self::frame(client).await?) {
+                return Ok(pressed);
+            }
+            require_foreground(client).await?;
+            client.key("esc", 1).await?;
+            pressed = true;
+            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+        }
+        if self.frame_has_menu(&Self::frame(client).await?) {
+            bail!("the game menu is still open after two Esc presses");
+        }
+        Ok(pressed)
     }
 
     pub fn frame_is_paused(&self, frame: &image::RgbImage) -> bool {
@@ -485,23 +527,25 @@ impl PauseDetector {
     }
 
     pub async fn is_paused(&self, client: &crate::client::AgentClient) -> Result<bool> {
-        let jpeg = client.screenshot(None, None, None, None, Some(crate::imaging::MAX_SIDE as i32), Some(75)).await?;
-        Ok(self.frame_is_paused(&crate::imaging::decode_rgb(&jpeg)?))
+        Ok(self.frame_is_paused(&Self::frame(client).await?))
     }
 
     /// Pause or resume, checking the screen before and after (Space toggles, so a blind press
     /// can invert the state). If Space has no effect, a text box or panel probably has keyboard
-    /// focus (seen: "Search known star systems"); one Esc closes it before a last try.
-    /// Returns whether a key was pressed.
+    /// focus (seen: "Search known star systems"); one Esc closes it before a last try. On the
+    /// bare map that Esc opens the in-game menu instead (which also shows "Paused"), so the menu
+    /// is closed again before the state is read. Returns whether a key was pressed.
     pub async fn set_paused(&self, client: &crate::client::AgentClient, paused: bool) -> Result<bool> {
+        let closed = self.close_menu(client).await?;
         if self.is_paused(client).await? == paused {
-            return Ok(false);
+            return Ok(closed);
         }
         for attempt in 0..3 {
             if attempt == 2 {
                 require_foreground(client).await?;
                 client.key("esc", 1).await?;
                 tokio::time::sleep(std::time::Duration::from_millis(400)).await;
+                self.close_menu(client).await?;
                 if self.is_paused(client).await? == paused {
                     return Ok(true);
                 }
@@ -1140,6 +1184,23 @@ mod tests {
         // Same label mid-pulse: the pixel template scored 0.108 here and misread it as running.
         assert!(d.frame_is_paused(&load("stellaris_paused_dim.jpg")));
         assert!(!d.frame_is_paused(&load("stellaris_running.jpg")));
+    }
+
+    #[test]
+    fn game_menu_is_recognised_under_the_paused_label() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpora/stellaris");
+        let corpus = crate::corpus::GameCorpus::load_from_dir(&dir).unwrap();
+        let d = PauseDetector::from_manifest(&corpus.manifest).unwrap();
+        // Fixtures: the (680,270)-(890,600) crop of real paused frames with and without the menu.
+        let load = |f: &str| {
+            let crop = image::open(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures").join(f)).unwrap().to_rgb8();
+            let mut frame = image::RgbImage::new(1568, 882);
+            image::imageops::replace(&mut frame, &crop, 680, 270);
+            frame
+        };
+        assert!(d.frame_has_menu(&load("stellaris_game_menu.jpg")));
+        assert!(!d.frame_has_menu(&load("stellaris_no_menu.jpg")), "the map behind the menu is not the menu");
+        assert!(!d.frame_has_menu(&image::RgbImage::new(1568, 882)));
     }
 
     #[test]

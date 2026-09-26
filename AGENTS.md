@@ -129,6 +129,7 @@ When the same blocker needs the same answer twice, automate it:
    ```bash
    .venv/bin/python scripts/play/capture-template.py play/current_screen.jpg X0 Y0 X1 Y1 my_screen \
        --against play/s.jpg other_frames.jpg        # other frames should be >= 0.10
+   # add --corpus stellaris for a Stellaris template (default: galciv4)
    ```
 3. Add to `manifest.toml` (normalized coords = image px / 1568 or / 882):
    ```toml
@@ -240,6 +241,8 @@ Rules:
   does not expand: run `stellaris take-control` (the governor does this at start).
 - game.log drops a log line whose text repeats on the same in-game day, and lags a few seconds.
 - Space toggles pause, so never press it blind; use `stellaris pause|resume`.
+- Esc on the bare map opens the in-game menu ("Paused" still shows beneath it); `stellaris
+  pause|resume` recognises it (`[screens.game_menu]`) and closes it first.
 - Directives are only those in `corpora/stellaris/directives.toml` (identifiers `[a-z0-9_]`); a
   new directive needs policy options that exist in the game's `common/policies`.
 - Settings used: autosave Monthly (`settings.txt` `autosave=2`), tutorial off.

@@ -5,7 +5,7 @@
 - [ ] Telemetry: one decision made on United Nations of Earth 2 (2203.10) during the model-switch test is recorded under the old throwaway campaign, stretching its chart to 2201 (history kept as recorded; the campaign guard prevents new cases)
 
 ### Pilot / Stellaris (code review 2026-09-25, 7dc677a..616b501)
-- [ ] (medium/low) `set_paused` Esc fallback: if the pause detector misreads the screen, Esc on the bare map opens the game menu
+- [x] (medium/low) `set_paused` Esc fallback: if the pause detector misreads the screen, Esc on the bare map opens the game menu — fixed: `[screens.game_menu]` template (Resume button); `stellaris pause|resume` closes the menu before and after the Esc fallback (verified live 2026-09-25 with the menu open)
 
 ### Deployment
 
