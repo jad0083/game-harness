@@ -511,7 +511,10 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
             except ValueError as e:
                 raise web.HTTPBadRequest(text=str(e)) from e
         elif action == "review_strategy" and hasattr(pilot, "request_review"):
-            pilot.request_review()
+            try:
+                pilot.request_review()
+            except ValueError as e:
+                raise web.HTTPBadRequest(text=str(e)) from e
         elif action == "set_fallback" and hasattr(pilot, "set_fallback"):
             try:
                 pilot.set_fallback(str(body.get("model", "")) or None)

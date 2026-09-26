@@ -3113,8 +3113,9 @@ def test_a_stored_strategy_with_other_pillar_ids_is_treated_as_none(setup, tmp_p
     g.run(max_decisions=1)
     assert calls and calls[0] == "strategist", "reviewed at start as if there were no strategy"
     assert set(g.strategy.pillars) == set(STELLARIS.ids)
-    errs = [e for e in log.recent if e["kind"] == "briefing_error" and "do not match" in e.get("error", "")]
-    assert errs and "navy" in errs[0]["error"] and "economy" in errs[0]["error"]
+    mismatches = [e for e in log.recent if e["kind"] == "strategy_mismatch"]
+    assert len(mismatches) == 1
+    assert mismatches[0]["stored"] == ["navy"] and set(mismatches[0]["spec"]) == set(STELLARIS.ids)
 
 
 def test_a_declared_action_without_a_game_hook_is_skipped_once(setup):
@@ -3155,3 +3156,47 @@ def test_the_pillars_spec_is_published_for_the_dashboard(setup):
     s, log = setup
     Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
     assert [p["id"] for p in log.state.info["pillars"]["pillars"]] == list(STELLARIS.ids)
+
+
+def test_no_review_is_attempted_while_the_strategy_layer_is_off(setup):
+    """Fix round 1, item 1: with the layer off, neither the scheduled retro-review check nor the
+    event-review call site (run loop) may reach _review_strategy — zero strategy_review_skipped
+    events even after more than retro_every decisions plus an urgent event, and decisions still
+    run normally."""
+    from dataclasses import replace
+    s, log = setup
+    (s.corpus_dir / "pillars.toml").unlink()
+    s2 = replace(s, retro_every=2, decide_every_months=1)
+    s2.__class__ = s.__class__
+    war = [{"name": "Test War", "attacker": False}]
+    briefings = [briefing("2200.01.01"), briefing("2200.02.01"), briefing("2200.03.01", wars=war),
+                 briefing("2200.04.01", wars=war)]
+    game = FakeStellaris(briefings)
+    g = Governor(s2, game, log, model=decisions("keep", "keep", "keep", "keep"))
+    g.run(max_decisions=4)
+    assert log.state.episodes == 4, "decisions still run with the layer off"
+    assert not any(e["kind"] == "strategy_review_skipped" for e in log.recent)
+    assert sum(1 for e in log.recent if e["kind"] == "strategy_disabled") == 1
+
+
+def test_control_review_strategy_returns_400_when_the_layer_is_off(setup, tmp_path):
+    """Fix round 1, item 2: the dashboard's review_strategy control must not 500 when the strategy
+    layer is off; request_review's ValueError is turned into a 400, like unpin_pillar."""
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from pilot.dashboard import make_app
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    (s.corpus_dir / "pillars.toml").unlink()
+    tel = Telemetry(tmp_path / "t7.sqlite")
+    log = EventLog(s.runs_dir, "rs7", s.model, telemetry=tel)
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+    log.set_campaign("stellaris", "c7", "Test")
+
+    async def go():
+        async with TestClient(TestServer(make_app(g, s.runs_dir, tel))) as c:
+            r = await c.post("/control", json={"action": "review_strategy"})
+            assert r.status == 400
+    asyncio.run(go())

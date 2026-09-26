@@ -799,7 +799,7 @@ class Governor:
                         self._decide(b, reason)
                         still_pending = pending and self.review_requested is not None
                         event = reason.startswith("urgent:") and any(t in reason for t in EVENT_TRIGGERS)
-                        if self._reviews_run == reviews_before and (still_pending or event):
+                        if self._reviews_run == reviews_before and (still_pending or event) and self.pillars is not None:
                             self._maybe_event_review(b, self.review_requested or reason, retry=self._review_retry)
                 except Exception as e:  # noqa: BLE001 - any game-control failure (agent down, focus lost, a panel open)
                     self._needs_attention(f"game control failed: {type(e).__name__}: {e}. "
@@ -924,9 +924,7 @@ class Governor:
                 stored = Strategy.model_validate(raw) if raw else None
                 if stored is not None and (self.pillars is None or set(stored.pillars) != set(self.pillars.ids)):
                     if self.pillars is not None:
-                        self.log.emit("briefing_error", error=(
-                            f"stored strategy pillars {sorted(stored.pillars)} do not match "
-                            f"{self.s.pillars_file.name} {list(self.pillars.ids)}; a review at start writes a new one")[:300])
+                        self.log.emit("strategy_mismatch", stored=sorted(stored.pillars), spec=list(self.pillars.ids))
                     stored = None
                 self.strategy = stored
             except Exception as e:  # noqa: BLE001
@@ -1100,7 +1098,7 @@ class Governor:
         self._carry_out_actions(b)
         if not (reason == "start of run" and reviewed_at_start):   # a review just ran for this decision point
             self._since_retro += 1
-            if self.s.retro_every and self._since_retro >= self.s.retro_every:
+            if self.s.retro_every and self._since_retro >= self.s.retro_every and self.pillars is not None:
                 self._review_strategy(b, f"scheduled after {self.s.retro_every} decisions")
 
     @staticmethod
