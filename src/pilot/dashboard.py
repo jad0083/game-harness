@@ -136,12 +136,30 @@ def list_runs(runs_dir: Path, live_id: str | None = None) -> list[dict]:
     return out
 
 
-def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Application:
-    """Dashboard for a live `pilot` (Pilot or Governor), or read-only over `runs_dir` when pilot is None."""
+def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path | None = None) -> web.Application:
+    """Dashboard for a live `pilot` (Pilot or Governor), or read-only over `runs_dir` when pilot is None.
+    `corpora` is where each game's pillars file is read (default: the repo's corpora/)."""
+    from .config import REPO
     log = pilot.log if pilot else None
     runs_dir = runs_dir or (log.dir.parent if log else Path("runs"))
     tel = telemetry or (log.telemetry if log else None)
+    corpora = corpora or (REPO / "corpora")
     live_url = None                  # set for the viewer: finds a live run to refuse a second start
+
+    def campaign_spec(cid: str):
+        """The pillars spec of a campaign's game (id '<game>/<name>'), or None when the game has no
+        valid pillars file. The live governor's own spec wins for its game."""
+        from .pillars import PillarsError, load_pillars
+        game = cid.split("/", 1)[0]
+        live = getattr(pilot, "pillars", None)
+        if live is not None and getattr(getattr(pilot, "s", None), "game", None) == game:
+            return live
+        if not re.fullmatch(r"[a-z0-9_]+", game):
+            return None
+        try:
+            return load_pillars(corpora / game)
+        except PillarsError:
+            return None
 
     def need_tel():
         if tel is None:
@@ -220,10 +238,13 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
             except ValueError:
                 s = None    # an older/foreign strategy shape: serve the raw record, no milestone status
             if s is not None:
+                spec = campaign_spec(cid)
+                row_keys = spec.row_keys if spec else {}
                 today = rows[-1]["date"] if rows else "2200.01.01"
                 for name, pl in s.pillars.items():
                     for m in pl.milestones:
-                        ms.append({"pillar": name, **m.model_dump(), "status": milestone_status(m, rows, today)})
+                        ms.append({"pillar": name, **m.model_dump(),
+                                  "status": milestone_status(m, rows, today, row_keys)})
         return web.json_response({"current": cur, "milestones": ms, "history": hist})
 
     models_cache: dict = {}

@@ -1,24 +1,19 @@
 """Pillar strategies: the governor's top-down frame (docs/superpowers/specs/2026-09-26-strategy-layer-design.md).
 
+Game-agnostic: the pillars, directive mapping, metrics, aliases and action limits come from the
+game's `PillarSpec` (pillars.py; docs/superpowers/specs/2026-09-26-game-pillars-design.md).
 Pure data and rules; no model calls, no game input."""
 
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-PILLARS = ("economy", "expansion", "technology", "diplomacy", "defence", "government", "society")
-DIRECTIVE_OF: dict[str, str | None] = {"economy": "consolidate_economy", "expansion": "expand", "technology": "tech_rush",
-                                       "diplomacy": "diplomacy_first", "defence": "defend", "government": None, "society": None}
-RANK_MEASURES = ("systems", "pops", "techs", "military_power", "economy_power", "tech_power", "colonies")
-METRICS = ("systems", "colonies", "pops", "techs_known", "military_power", "economy_power", "tech_power",
-           *(f"rank:{m}" for m in RANK_MEASURES))
-# Spellings models use for the recorded measures (seen live: "rank:military" on 2452.03).
-_SHORT = {"military": "military_power", "economy": "economy_power", "tech": "tech_power", "planets": "colonies"}
-METRIC_ALIASES = {**_SHORT, "techs": "techs_known", **{f"rank:{k}": f"rank:{v}" for k, v in _SHORT.items()}}
-_ROW_KEY = {"colonies": "planets"}          # metrics rows store colonies as `planets`
+from .pillars import ACTION_KINDS, ActionLimits, PillarSpec
+
 _DATE_RE = re.compile(r"^\d{4}\.(\d{2})\.\d{2}$")
 
 
@@ -36,8 +31,8 @@ class Milestone(BaseModel):
     by: str = Field(description="in-game date YYYY.MM.DD")
 
     def __init__(self, **data):
-        if isinstance(data.get("metric"), str):     # common model spellings of the recorded measures
-            data["metric"] = METRIC_ALIASES.get(data["metric"].strip(), data["metric"].strip())
+        if isinstance(data.get("metric"), str):     # aliases are the game's: apply_aliases(s, spec)
+            data["metric"] = data["metric"].strip()
         by = data.get("by")
         if by and not _valid_date(by):
             raise ValueError(f"by {by!r} is not a date YYYY.MM.DD")
@@ -77,9 +72,18 @@ class Strategy(BaseModel):
         """(name, pillar) pairs in priority order."""
         return sorted(self.pillars.items(), key=lambda kv: kv[1].priority)
 
-    def ranking(self) -> list[str]:
-        """Directives in pillar-priority order (pillars without a directive are skipped)."""
-        return [DIRECTIVE_OF[p] for p, _ in self.sorted_pillars() if DIRECTIVE_OF.get(p)]
+
+def ranking(s: Strategy, spec: PillarSpec) -> list[str]:
+    """Directives in pillar-priority order (pillars without a directive, or not in the spec, are skipped)."""
+    return [d for p, _ in s.sorted_pillars() if (d := spec.directive_of(p))]
+
+
+def apply_aliases(s: Strategy, spec: PillarSpec) -> Strategy:
+    """`s` with every milestone metric spelled as the spec's recorded measure."""
+    pillars = {name: pl.model_copy(update={"milestones": [m.model_copy(update={"metric": spec.alias(m.metric)})
+                                                          for m in pl.milestones]})
+               for name, pl in s.pillars.items()}
+    return s.model_copy(update={"pillars": pillars})
 
 
 def _months(date: str) -> int:
@@ -87,33 +91,23 @@ def _months(date: str) -> int:
     return y * 12 + m - 1
 
 
-# One set of market rules, shared with the controller's market_sync tool (mcp.rs
-# validate_market_orders; tests keep the two equal). MARKET_RESOURCES are the keys of
-# corpora/stellaris/manifest.toml [ui.market.resources]; trade is not a market resource.
-MARKET_RESOURCES = ("energy", "minerals", "food", "consumer_goods", "alloys", "volatile_motes", "exotic_gases",
-                    "rare_crystals", "sr_living_metal", "sr_zro", "sr_dark_matter")
-MARKET_MIN_AMOUNT = 1
-MARKET_MAX_AMOUNT = 25
-SELL_INCOME_SHARE = 0.2      # a sell order takes at most 20% of that resource's monthly income
-# At most one order until ui.market.order_row_pitch is measured live: the controller can only
-# find (and so remove) the first order row.
-MAX_MARKET_ORDERS = 1
-
-
-def market_briefing_errors(o: MarketOrder, idle: set[str], income: dict[str, float]) -> list[str]:
-    """Why a market order does not fit today's briefing: a sell must be of an IDLE resource and at
-    most 20% of its monthly income. Buys have no briefing-dependent rule."""
+def market_briefing_errors(o: MarketOrder, limits: ActionLimits, idle: set[str], income: dict[str, float]) -> list[str]:
+    """Why a market order does not fit today's briefing, per the spec's limits: a sell must be of an
+    IDLE resource (sell_requires_idle) and at most sell_income_share of its monthly income. Buys
+    have no briefing-dependent rule."""
     if o.side != "sell":
         return []
     errs = []
-    if o.resource not in idle:
+    if limits.sell_requires_idle and o.resource not in idle:
         errs.append(f"selling {o.resource} but it is not idle")
-    if o.resource not in income:
-        errs.append(f"no monthly income known for {o.resource}")
-    else:
-        cap = SELL_INCOME_SHARE * max(income[o.resource], 0.0)
-        if o.amount > cap:
-            errs.append(f"sell {o.resource} {o.amount} is over {cap:.0f} (20% of monthly income)")
+    if limits.sell_income_share is not None:
+        if o.resource not in income:
+            errs.append(f"no monthly income known for {o.resource}")
+        else:
+            cap = limits.sell_income_share * max(income[o.resource], 0.0)
+            if o.amount > cap:
+                errs.append(f"sell {o.resource} {o.amount} is over {cap:.0f} "
+                            f"({limits.sell_income_share:.0%} of monthly income)")
     return errs
 
 
@@ -133,65 +127,79 @@ def _briefing_checked(s: Strategy, previous: Strategy | None) -> set[str]:
     return out
 
 
-def validate(s: Strategy, *, previous: Strategy | None, tech_ids: set[str], idle: set[str],
-             income: dict[str, float], briefing_checked: set[str] | None = None) -> list[str]:
-    """Reasons the strategy cannot be used (empty = valid).
-
-    Structural checks (pillars, priorities, sizes, metrics, dates, techs, market resource, side,
-    amount and count) apply to every pillar. Briefing-dependent checks (sell only an idle resource,
-    at most 20% of its income) apply only to `briefing_checked` pillars — by default the ones that
-    changed versus `previous` and are not pinned there, so a pinned or untouched pillar that no
-    longer fits today's briefing never blocks a review (see `pinned_misfits`)."""
-    checked = _briefing_checked(s, previous) if briefing_checked is None else briefing_checked
+def _action_errors(name: str, kind: str, items: list, a: ActionLimits, tech_ids: set[str], idle: set[str],
+                   income: dict[str, float], briefing: bool) -> list[str]:
     errs: list[str] = []
-    for p in PILLARS:
-        if p not in s.pillars:
-            errs.append(f"missing pillar {p}")
-    for p in s.pillars:
-        if p not in PILLARS:
-            errs.append(f"unknown pillar {p!r}")
+    if kind == "tech":
+        if len(items) > a.max_items:
+            errs.append(f"{name}: at most {a.max_items} preferred techs")
+        errs.extend(f"{name}: unknown tech {t!r}" for t in items if t not in tech_ids)
+        return errs
+    if len(items) > a.max_items:
+        errs.append(f"{name}: at most {a.max_items} market order{'' if a.max_items == 1 else 's'}")
+    for o in items:
+        if o.resource not in a.resources:
+            errs.append(f"{name}: unknown market resource {o.resource!r}")
+        if a.amount_max is not None and not a.amount_min <= o.amount <= a.amount_max:
+            errs.append(f"{name}: {o.side} {o.resource} amount must be {a.amount_min}..{a.amount_max}")
+        if briefing and o.resource in a.resources:
+            errs.extend(f"{name}: {e}" for e in market_briefing_errors(o, a, idle, income))
+    return errs
+
+
+def validate(s: Strategy, spec: PillarSpec, *, previous: Strategy | None, tech_ids: set[str], idle: set[str],
+             income: dict[str, float], briefing_checked: set[str] | None = None,
+             require_milestones: bool = True) -> list[str]:
+    """Reasons the strategy cannot be used under the game's spec (empty = valid).
+
+    Structural checks (pillars, priorities, sizes, metrics, dates, action ownership and limits) apply
+    to every pillar. Briefing-dependent checks (sell only an idle resource, at most a share of its
+    income) apply only to `briefing_checked` pillars — by default the ones that changed versus
+    `previous` and are not pinned there, so a pinned or untouched pillar that no longer fits today's
+    briefing never blocks a review (see `pinned_misfits`). With `require_milestones`, each unpinned
+    pillar among the top `spec.min_milestones_top` by priority needs a milestone (human edits pass False)."""
+    checked = _briefing_checked(s, previous) if briefing_checked is None else briefing_checked
+    n = len(spec.pillars)
+    errs: list[str] = []
+    errs.extend(f"missing pillar {p}" for p in spec.pillars if p not in s.pillars)
+    errs.extend(f"unknown pillar {p!r}" for p in s.pillars if p not in spec.pillars)
     seen: dict[int, str] = {}
     for name, pl in s.pillars.items():
         if pl.priority in seen:
             errs.append(f"duplicate priority {pl.priority} ({seen[pl.priority]}, {name})")
         seen[pl.priority] = name
-        if not 1 <= pl.priority <= len(PILLARS):
-            errs.append(f"{name}: priority must be 1..{len(PILLARS)}")
+        if not 1 <= pl.priority <= n:
+            errs.append(f"{name}: priority must be 1..{n}")
         if len(pl.stance) > 400:
             errs.append(f"{name}: stance is over 400 characters")
         if len(pl.goals) > 3:
             errs.append(f"{name}: at most 3 goals")
-        for g in pl.goals:
-            if len(g) > 200:
-                errs.append(f"{name}: a goal is over 200 characters")
+        if any(len(g) > 200 for g in pl.goals):
+            errs.append(f"{name}: a goal is over 200 characters")
         if len(pl.milestones) > 6:
             errs.append(f"{name}: at most 6 milestones")
         for m in pl.milestones:
             if not _valid_date(m.by):
                 errs.append(f"{name}: milestone by {m.by!r} is not a date YYYY.MM.DD")
-            if m.metric not in METRICS:
+            if m.metric not in spec.metrics:
                 errs.append(f"{name}: unknown metric {m.metric!r}")
-        if pl.prefer_techs and name != "technology":
-            errs.append(f"{name}: only the technology pillar prefers techs")
-        if len(pl.prefer_techs) > 6:
-            errs.append(f"{name}: at most 6 preferred techs")
-        for t in pl.prefer_techs:
-            if t not in tech_ids:
-                errs.append(f"{name}: unknown tech {t!r}")
-        if pl.market and name != "economy":
-            errs.append(f"{name}: only the economy pillar places market orders")
-        if len(pl.market) > MAX_MARKET_ORDERS:
-            errs.append(f"{name}: at most {MAX_MARKET_ORDERS} market order")
-        for o in pl.market:
-            if o.resource == "trade":
-                errs.append(f"{name}: trade cannot be sold or bought on the market")
+        declared = spec.pillars[name].actions if name in spec.pillars else ()
+        for kind, fld in ACTION_KINDS.items():
+            items = getattr(pl, fld)
+            if not items:
                 continue
-            if o.resource not in MARKET_RESOURCES:
-                errs.append(f"{name}: unknown market resource {o.resource!r}")
-            if not MARKET_MIN_AMOUNT <= o.amount <= MARKET_MAX_AMOUNT:
-                errs.append(f"{name}: {o.side} {o.resource} amount must be {MARKET_MIN_AMOUNT}..{MARKET_MAX_AMOUNT}")
-            if name in checked:
-                errs.extend(f"{name}: {e}" for e in market_briefing_errors(o, idle, income))
+            if kind not in declared:
+                owners = spec.owners(kind)
+                errs.append(f"{name}: only the {' / '.join(owners)} pillar may set {fld}" if owners
+                            else f"{name}: {fld} is not an action in this game")
+            if kind in spec.actions:
+                errs.extend(_action_errors(name, kind, items, spec.actions[kind], tech_ids, idle, income,
+                                           name in checked))
+    if require_milestones and spec.min_milestones_top:
+        for name, pl in s.sorted_pillars()[:spec.min_milestones_top]:
+            if not pl.pinned and not pl.milestones:
+                errs.append(f"{name}: priority {pl.priority} is in the top {spec.min_milestones_top} "
+                            "and needs at least one milestone")
     if previous is not None:
         for name, pl in previous.pillars.items():
             if pl.pinned and name in s.pillars and _content(s.pillars[name]) != _content(pl):
@@ -199,14 +207,17 @@ def validate(s: Strategy, *, previous: Strategy | None, tech_ids: set[str], idle
     return errs
 
 
-def pinned_misfits(s: Strategy, *, idle: set[str], income: dict[str, float]) -> list[str]:
+def pinned_misfits(s: Strategy, spec: PillarSpec, *, idle: set[str], income: dict[str, float]) -> list[str]:
     """One line per pinned pillar whose market orders no longer fit today's briefing, for the
     Strategist's prompt (such a pillar is kept, never rejected: only the human can change it)."""
+    limits = spec.actions.get("market")
+    if limits is None:
+        return []
     out = []
     for name, pl in s.sorted_pillars():
         if not pl.pinned:
             continue
-        errs = [e for o in pl.market for e in market_briefing_errors(o, idle, income)]
+        errs = [e for o in pl.market for e in market_briefing_errors(o, limits, idle, income)]
         if errs:
             out.append(f"pinned {name} no longer fits: {'; '.join(errs)}")
     return out
@@ -223,17 +234,18 @@ def keep_pinned(new: Strategy, previous: Strategy | None) -> Strategy:
     return new.model_copy(update={"pillars": pillars})
 
 
-def metric_value(row: dict, metric: str) -> float | None:
+def metric_value(row: dict, metric: str, row_keys: Mapping[str, str] | None = None) -> float | None:
+    """A metric from a metrics row; `row_keys` maps a metric to the row field that stores it."""
     if metric.startswith("rank:"):
         st = (row.get("peers") or {}).get(metric[5:]) or {}
         return st.get("rank")
-    v = row.get(_ROW_KEY.get(metric, metric))
+    v = row.get((row_keys or {}).get(metric, metric))
     return float(v) if isinstance(v, (int, float)) else None
 
 
-def milestone_status(m: Milestone, rows: list[dict], today: str) -> str:
+def milestone_status(m: Milestone, rows: list[dict], today: str, row_keys: Mapping[str, str] | None = None) -> str:
     """met / on_track / at_risk / missed, from metrics rows (oldest first) up to `today`."""
-    series = [(_months(r["date"]), metric_value(r, m.metric)) for r in rows if r.get("date")]
+    series = [(_months(r["date"]), metric_value(r, m.metric, row_keys)) for r in rows if r.get("date")]
     series = [(mo, v) for mo, v in series if v is not None and mo <= _months(today)]
     ok = (lambda v: v >= m.target) if m.op == ">=" else (lambda v: v <= m.target)
     if any(ok(v) for _, v in series):

@@ -27,7 +27,17 @@ from .agent import HumanChannel, model_settings, run_with_retry
 from .config import Settings
 from .events import EventLog
 from .learning import Journal, LearnedStore, LearningRejected
-from .strategy import Strategy, keep_pinned, market_briefing_errors, milestone_status, pinned_misfits, validate
+from .pillars import PillarSpec, load_pillars
+from .strategy import (
+    Strategy,
+    apply_aliases,
+    keep_pinned,
+    market_briefing_errors,
+    milestone_status,
+    pinned_misfits,
+    ranking,
+    validate,
+)
 from .trace import serialize
 
 DIRECTIVES = ("expand", "consolidate_economy", "tech_rush", "prepare_war", "defend", "diplomacy_first")
@@ -266,13 +276,13 @@ def urgent_changes(before: dict, now: dict) -> list[str]:
     return out
 
 
-def frame_text(strategy: Strategy | None, milestones: str) -> str:
-    """The strategy frame shown to a decision: the pillar ranking, focus, stances and any
-    at-risk/missed milestones, replacing the old free-text campaign plan."""
+def frame_text(strategy: Strategy | None, spec: PillarSpec, milestones: str) -> str:
+    """The strategy frame shown to a decision: the pillar ranking (from the game's spec), focus,
+    stances and any at-risk/missed milestones, replacing the old free-text campaign plan."""
     if strategy is None:
         return ""
     lines = ["STRATEGY FRAME (from the Strategist; choose within it):",
-             f"Directive ranking: {' > '.join(strategy.ranking())}", f"Focus: {strategy.focus}"]
+             f"Directive ranking: {' > '.join(ranking(strategy, spec))}", f"Focus: {strategy.focus}"]
     for name, pl in strategy.sorted_pillars():
         lines.append(f"{pl.priority}. {name}{' (pinned by the human)' if pl.pinned else ''}: {pl.stance}")
     at_risk = [m for m in milestones.splitlines() if m.endswith(("at_risk", "missed"))]
@@ -385,6 +395,7 @@ class Governor:
         self.human = HumanChannel()
         self.store = LearnedStore(settings.corpus_dir, settings.model, log.state.run_id)
         self.journal = Journal(settings.journal, settings.model)
+        self.pillars: PillarSpec = load_pillars(settings.corpus_dir)   # the game's strategy guardrails
         text = (settings.corpus_dir / "pilot.md").read_text(encoding="utf-8")
         text += "\n\n" + strategy_core((settings.corpus_dir / "strategy.md").read_text(encoding="utf-8"))
         learned = settings.corpus_dir / "learned" / "strategy.md"
@@ -642,8 +653,8 @@ class Governor:
         `prefer_techs`/`market` are still restricted to the technology/economy pillars by the same
         `validate` a model strategy goes through. The whole read-modify-write is atomic (locked) so
         it can never lose a concurrent edit or a review's commit."""
-        from .strategy import PILLARS, Pillar
-        if name not in PILLARS:
+        from .strategy import Pillar
+        if name not in self.pillars.pillars:
             raise ValueError(f"unknown pillar {name!r}")
         if not isinstance(fields, dict):
             # ValueError, not TypeError: the dashboard's control() catches ValueError uniformly and
@@ -660,14 +671,16 @@ class Governor:
             new = Pillar.model_validate({**cur, **{k: v for k, v in fields.items() if k in editable},
                                          "pinned": True, "edited_by": "human"})
             trigger = f"edited by human: {name}"
-            s = self.strategy.model_copy(update={"pillars": {**self.strategy.pillars, name: new}, "reason": trigger})
+            s = apply_aliases(self.strategy.model_copy(update={"pillars": {**self.strategy.pillars, name: new},
+                                                              "reason": trigger}), self.pillars)
             b = self._last_b
-            if new.market and b is None:
+            if s.pillars[name].market and b is None:
                 raise ValueError("no briefing yet: market orders can be edited after the first save is read")
-            # briefing checks (idle, 20% of income) for the edited pillar only: another pinned
-            # pillar that no longer fits today's briefing must not block this edit
-            errs = validate(s, previous=None, tech_ids=self._tech_ids(), idle=idle_resources(b or {}),
-                            income=(b or {}).get("net", {}), briefing_checked={name})
+            # briefing checks (idle, income share) for the edited pillar only: another pinned
+            # pillar that no longer fits today's briefing must not block this edit; the milestone
+            # rule is for model reviews, never for a human edit
+            errs = validate(s, self.pillars, previous=None, tech_ids=self._tech_ids(), idle=idle_resources(b or {}),
+                            income=(b or {}).get("net", {}), briefing_checked={name}, require_milestones=False)
             if errs:
                 raise ValueError("; ".join(errs))
             self.strategy = s
@@ -983,7 +996,7 @@ class Governor:
         self.last_briefing = self.game.briefing_text()
         prompt = [f"Decision point: {reason}.",
                   f"Current directive: {current or 'none'}{held}.",
-                  frame_text(self.strategy, self._milestones_text()) or "No strategy yet.",
+                  frame_text(self.strategy, self.pillars, self._milestones_text()) or "No strategy yet.",
                   "Briefing from the latest autosave:", self.last_briefing]
         trend = self._trend(b)
         if trend:
@@ -1026,7 +1039,7 @@ class Governor:
         st.tokens_out += usage.output_tokens or 0
         st.requests += usage.requests or 0
         chosen = d.directive
-        ranked = self.strategy.ranking() if self.strategy else []
+        ranked = ranking(self.strategy, self.pillars) if self.strategy else []
         off_frame = bool(ranked) and chosen not in ("keep", current) and chosen not in ranked[:2]
         if off_frame and self.review_requested is None:   # keep the first pending request's trigger text
             self.review_requested = f"off-frame decision: {chosen} ({reason})"
@@ -1138,7 +1151,7 @@ class Governor:
         idle, income = idle_resources(b), b.get("net") or {}
         desired = []
         for o in (econ.market if econ else []):
-            errs = market_briefing_errors(o, idle, income)
+            errs = market_briefing_errors(o, self.pillars.actions["market"], idle, income)
             if errs:     # a sell that no longer fits today's briefing (e.g. a pinned or older order)
                 if later:
                     self._log_action("market", f"skipped sell {o.resource}: {'; '.join(errs)}"[:300])
@@ -1197,7 +1210,8 @@ class Governor:
         out = []
         for name, pl in self.strategy.sorted_pillars():
             for m in pl.milestones:
-                out.append(f"- {name}: {m.metric} {m.op} {m.target:g} by {m.by}: {milestone_status(m, rows, today)}")
+                out.append(f"- {name}: {m.metric} {m.op} {m.target:g} by {m.by}: "
+                          f"{milestone_status(m, rows, today, self.pillars.row_keys)}")
         return "\n".join(out) or "(none)"
 
     def _newly_missed_milestones(self, before: str, today: str) -> list[str]:
@@ -1208,7 +1222,8 @@ class Governor:
             return []
         try:
             return [f"milestone missed: {name} {m.metric}" for name, pl in strategy.sorted_pillars() for m in pl.milestones
-                    if milestone_status(m, rows, today) == "missed" and milestone_status(m, rows, before) != "missed"]
+                    if milestone_status(m, rows, today, self.pillars.row_keys) == "missed"
+                    and milestone_status(m, rows, before, self.pillars.row_keys) != "missed"]
         except Exception as e:  # noqa: BLE001 - runs in the poll loop; raising would pause the governor
             self.log.emit("briefing_error", error=f"milestone check: {type(e).__name__}: {e}"[:200])
             return []
@@ -1250,7 +1265,8 @@ class Governor:
             if sp_name or sp_traits:
                 prompt.insert(1, f"Our species: {sp_name}; traits: {', '.join(sp_traits) or 'none listed'}. "
                                  "The strategy must be built on them (fill `identity`).")
-            misfits = pinned_misfits(self.strategy, idle=idle_resources(b), income=b.get("net") or {}) if self.strategy else []
+            misfits = pinned_misfits(self.strategy, self.pillars, idle=idle_resources(b),
+                                     income=b.get("net") or {}) if self.strategy else []
             if misfits:     # kept as the human set them; the Strategist should plan around them
                 prompt.insert(2, "Warnings:\n" + "\n".join(misfits))
             if errors:
@@ -1285,9 +1301,9 @@ class Governor:
             if r.change and r.strategy is None:
                 errs = ["change=true but no strategy given"]
             elif r.change and r.strategy is not None:
-                new = keep_pinned(r.strategy, self.strategy)
-                errs = validate(new, previous=self.strategy, tech_ids=self._tech_ids(), idle=idle_resources(b),
-                                income=b.get("net", {}))
+                new = keep_pinned(apply_aliases(r.strategy, self.pillars), self.strategy)
+                errs = validate(new, self.pillars, previous=self.strategy, tech_ids=self._tech_ids(),
+                                idle=idle_resources(b), income=b.get("net", {}))
             else:
                 errs = []
             if r.change or trigger in IDENTITY_TRIGGERS:     # a new strategy, or one the human asked for
