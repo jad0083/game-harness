@@ -194,7 +194,9 @@ Commit through the CI gate — it runs `scripts/ci.sh` and commits only if every
 ```bash
 git add <paths> && scripts/ci-commit.sh "type(scope): what changed" "why, and how it was verified"
 ```
-Conventional commits (`feat` `fix` `docs` `refactor` `test` `chore`). **No AI/assistant
+`ci-commit.sh` skips the Rust stages when no staged file needs them (`scripts/ci-needs-rust.sh`:
+Rust sources, Cargo files, corpora outside `learned/`, the CI scripts); `scripts/ci.sh` alone runs
+everything. Conventional commits (`feat` `fix` `docs` `refactor` `test` `chore`). **No AI/assistant
 attribution** anywhere (no "Co-Authored-By", no "generated with", no model names in code or
 commit messages). One logical change per commit. Never commit `.agent_token`, `play/`,
 screenshots, or the game's raw XML (`incoming/`).

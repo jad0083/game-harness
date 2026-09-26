@@ -4,7 +4,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 log="$(mktemp)"
-if ! scripts/ci.sh >"$log" 2>&1; then
+if ! CI_CHANGED_FILES="$(git diff --cached --name-only)" scripts/ci.sh >"$log" 2>&1; then
   echo "CI FAILED — nothing committed. Last lines:"; tail -25 "$log"; exit 1
 fi
 tail -2 "$log"
