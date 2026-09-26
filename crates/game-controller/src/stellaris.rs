@@ -20,7 +20,7 @@ use std::io::Read;
 type Obj<'d, 't> = ObjectReader<'d, 't, Utf8Encoding>;
 type Val<'d, 't> = ValueReader<'d, 't, Utf8Encoding>;
 
-#[derive(Debug, Serialize, Default)]
+#[derive(Debug, Serialize, Default, Clone)]
 pub struct Research {
     /// Tech being researched and its progress (research points invested).
     pub current: Option<(String, f64)>,
@@ -321,6 +321,8 @@ pub struct Briefing {
     /// Growth / naval techs known (script keys from KEY_TECHS).
     pub key_techs_known: Vec<String>,
     pub used_naval_capacity: i64,
+    /// Our active monthly market orders (`market.monthly_trades` for our country).
+    pub market_orders: Vec<MarketOrderSpec>,
 }
 
 fn expansion(
@@ -1396,6 +1398,55 @@ fn resources(o: &Obj) -> BTreeMap<String, f64> {
         .collect()
 }
 
+// ---- strategy actions (tech picks, market orders) ----------------------------------------------
+
+#[derive(Debug, Clone, PartialEq, Serialize, serde::Deserialize)]
+pub struct MarketOrderSpec {
+    pub side: String,
+    pub resource: String,
+    pub amount: i64,
+}
+
+// TechPick/choose_tech_pick/market_diff are pure selection logic; the governor loop that calls
+// them with a live `prefer`/`desired` list and a corpus tech-cost lookup is wired in separately.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[allow(dead_code)]
+pub struct TechPick {
+    pub field: String,
+    pub tech: String,
+    /// 0-based position of `tech` in the field's offered alternatives (the screen lists them in this order)
+    pub option_index: usize,
+}
+
+/// The first preferred tech that is offered in a field whose current research is below 10% of its
+/// cost (fields already researching a preferred tech are left alone).
+#[allow(dead_code)]
+pub fn choose_tech_pick(research: &BTreeMap<String, Research>, prefer: &[String], cost: &dyn Fn(&str) -> Option<f64>) -> Option<TechPick> {
+    for want in prefer {
+        for (field, r) in research {
+            if let Some((cur, _)) = &r.current {
+                if prefer.contains(cur) {
+                    continue;
+                }
+            }
+            let Some(idx) = r.alternatives.iter().position(|t| t == want) else { continue };
+            let started = r.current.as_ref().map(|(t, p)| cost(t).map(|c| *p >= 0.1 * c).unwrap_or(*p > 0.0)).unwrap_or(false);
+            if !started {
+                return Some(TechPick { field: field.clone(), tech: want.clone(), option_index: idx });
+            }
+        }
+    }
+    None
+}
+
+/// Orders to add and to remove so the save's monthly trades equal `desired`.
+#[allow(dead_code)]
+pub fn market_diff(current: &[MarketOrderSpec], desired: &[MarketOrderSpec]) -> (Vec<MarketOrderSpec>, Vec<MarketOrderSpec>) {
+    let add = desired.iter().filter(|d| !current.contains(d)).cloned().collect();
+    let remove = current.iter().filter(|c| !desired.contains(c)).cloned().collect();
+    (add, remove)
+}
+
 /// Build a briefing from the unzipped `gamestate` text.
 pub fn brief_gamestate(gamestate: &[u8]) -> Result<Briefing> {
     let tape = TextTape::from_slice(gamestate).map_err(|e| anyhow!("gamestate parse error: {e}"))?;
@@ -1562,6 +1613,17 @@ pub fn brief_gamestate(gamestate: &[u8]) -> Result<Briefing> {
         }
     }
     b.galaxy = galaxy(&root, &countries, &c, b.country);
+    if let Some(trades) = obj(&root, "market").and_then(|m| get(&m, "monthly_trades")).and_then(|v| v.read_array().ok()) {
+        for t in trades.values().filter_map(|x| x.read_object().ok()) {
+            let Some(td) = obj(&t, "trade_data") else { continue };
+            if i64_(&td, "country").map(|c| c as u64) != Some(b.country) {
+                continue;
+            }
+            let side = match string(&td, "trade_type").as_deref() { Some("market_sell") => "sell", Some("market_buy") => "buy", _ => continue };
+            b.market_orders.push(MarketOrderSpec { side: side.into(), resource: string(&td, "resource").unwrap_or_default(),
+                                                   amount: i64_(&t, "amount").unwrap_or(0) });
+        }
+    }
     Ok(b)
 }
 
@@ -2220,5 +2282,45 @@ situations={ situations={ 0=none 1={ country=0 type="rebellion_situation" progre
     fn rejects_non_saves() {
         assert!(brief_save(b"not a zip").is_err());
         assert!(brief_gamestate(b"date=\"2200.01.01\"\n").is_err()); // no country section
+    }
+
+    #[test]
+    fn tech_pick_prefers_offered_techs_and_leaves_started_research_alone() {
+        let mut research = BTreeMap::new();
+        research.insert("engineering".to_string(), Research { current: Some(("tech_mining_2".into(), 50.0)),
+            alternatives: vec!["tech_mining_2".into(), "tech_habitat_1".into(), "tech_lasers_2".into()] });
+        research.insert("society".to_string(), Research { current: Some(("tech_gene_crops".into(), 900.0)),
+            alternatives: vec!["tech_gene_crops".into(), "tech_doctrine_navy_size_2".into()] });
+        let cost = |t: &str| Some(if t == "tech_mining_2" { 1000.0 } else { 2000.0 });
+        let prefer = vec!["tech_doctrine_navy_size_2".to_string(), "tech_habitat_1".to_string()];
+        let pick = choose_tech_pick(&research, &prefer, &cost).unwrap();
+        // society is 45% done (900/2000): not swapped; engineering is 5% done: swapped to habitats (option 2)
+        assert_eq!((pick.field.as_str(), pick.tech.as_str(), pick.option_index), ("engineering", "tech_habitat_1", 1));
+        // already researching a preferred tech: nothing to do
+        let mut r2 = research.clone();
+        r2.get_mut("engineering").unwrap().current = Some(("tech_habitat_1".into(), 0.0));
+        assert!(choose_tech_pick(&r2, &["tech_habitat_1".to_string()], &cost).is_none());
+        // no preferred tech offered: nothing
+        assert!(choose_tech_pick(&research, &["tech_zro_1".to_string()], &cost).is_none());
+    }
+
+    #[test]
+    fn market_diff_adds_missing_and_removes_unwanted_orders() {
+        let o = |s: &str, r: &str, a: i64| MarketOrderSpec { side: s.into(), resource: r.into(), amount: a };
+        let (add, remove) = market_diff(&[o("sell", "energy", 11), o("buy", "food", 5)], &[o("sell", "energy", 11), o("sell", "trade", 20)]);
+        assert_eq!(add, vec![o("sell", "trade", 20)]);
+        assert_eq!(remove, vec![o("buy", "food", 5)]);
+    }
+
+    #[test]
+    fn briefing_reads_our_monthly_trades() {
+        let gs = br#"date="2201.10.01"
+player={ { name="x" country=0 } }
+country={ 0={ name={ key="NAME_Us" } type="default" } }
+market={ monthly_trades={ { trade_data={ trade_type=market_sell resource="energy" country=0 } amount=11 price=0 id=0 }
+                          { trade_data={ trade_type=market_buy resource="minerals" country=7 } amount=5 price=0 id=1 } } }
+"#;
+        let b = brief_gamestate(gs).unwrap();
+        assert_eq!(b.market_orders, vec![MarketOrderSpec { side: "sell".into(), resource: "energy".into(), amount: 11 }]);
     }
 }
