@@ -254,6 +254,15 @@
   dialog fieldset { border: 0; border-top: 1px solid var(--hair); margin: 0; padding: 12px 0 0; display: grid; gap: 12px; }
   dialog legend { padding: 0 8px 0 0; font-weight: 600; font-size: 13px; color: var(--ink); }
   dialog .hint { font-size: 12.5px; color: var(--muted); }
+  .stabs { display: flex; gap: 18px; border-bottom: 1px solid var(--hair); margin: 4px 0 2px; }
+  .stabs button, .roles button { background: none; border: 0; color: var(--ink-2); font: inherit; cursor: pointer; }
+  .stabs button { padding: 6px 0 8px; font-weight: 600; border-bottom: 2px solid transparent; }
+  .stabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+  .roles { display: flex; flex-wrap: wrap; gap: 6px; }
+  .roles button { border: 1px solid var(--hair); border-radius: 999px; padding: 3px 12px; font-size: 13px; }
+  .roles button[aria-selected="true"] { color: var(--ink); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+  .roles button .own { color: var(--muted); font-size: 11.5px; margin-left: 6px; }
+  [data-spanel="models"] { display: grid; gap: 10px; padding-top: 12px; }
   dialog label.check { display: flex; align-items: center; gap: 8px; color: var(--ink); }
   dialog label.check input { width: 16px; height: 16px; accent-color: var(--accent); }
   .pool { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; counter-reset: pool; }
@@ -330,14 +339,23 @@
   <form method="dialog">
     <h2 id="settings-title">Settings</h2>
     <p class="hint" id="settings-hint">Changes apply at once to the running pilot and are saved for later runs.</p>
-    <fieldset>
-      <legend>Models</legend>
-      <label class="check"><input type="checkbox" id="rotate"> Take turns between these models</label>
-      <p class="hint" id="pool-hint"></p>
-      <ol class="pool" id="pool" aria-label="Models in order"></ol>
-      <div><button type="button" class="btn" id="pool-add">Add model</button></div>
-    </fieldset>
-    <fieldset>
+    <div class="stabs" role="tablist" aria-label="Settings sections">
+      <button type="button" role="tab" data-stab="models" aria-selected="true">Models</button>
+      <button type="button" role="tab" data-stab="game" aria-selected="false">Game</button>
+    </div>
+    <div data-spanel="models" role="tabpanel">
+      <div class="roles" role="tablist" aria-label="Where the models are used" id="roles"></div>
+      <p class="hint" id="role-help"></p>
+      <label class="check" id="inherit-row" hidden><input type="checkbox" id="inherit"> Same models as Decisions</label>
+      <p class="hint" id="inherit-summary" hidden></p>
+      <div id="role-editor">
+        <label class="check"><input type="checkbox" id="rotate"> Take turns between these models</label>
+        <p class="hint" id="pool-hint"></p>
+        <ol class="pool" id="pool" aria-label="Models in order"></ol>
+        <div><button type="button" class="btn" id="pool-add">Add model</button></div>
+      </div>
+    </div>
+    <fieldset data-spanel="game" role="tabpanel" hidden>
       <legend>Pace</legend>
       <label>Game speed while the AI plays <select id="pace-speed">
         <option value="slowest">slowest</option><option value="slow">slow</option><option value="normal">normal</option><option value="fast">fast</option><option value="fastest">fastest</option>
@@ -1053,18 +1071,29 @@ async function loadCatalog() {
 // ---- model list: provider, model and thinking per entry; first decides unless taking turns ----
 const THINK = ["off", "low", "medium", "high"];
 const shortName = (m) => m.replace(/^[a-z-]+:/, "");
-function poolFrom(live) {
-  const cat = S.catalog || {};
-  return JSON.parse(JSON.stringify((live && live.models && live.models.length ? live.models : cat.pool) || []));
+// S.edit = role being edited; S.pools[role] = its list (null = same as decisions); S.rotates[role].
+function poolFor(role) { return role === "decisions" || !S.pools[role] ? S.pools.decisions : S.pools[role]; }
+function renderRoles() {
+  const meta = (S.catalog || {}).role_meta || [{ id: "decisions", label: "Decisions", help: "" }];
+  $("roles").innerHTML = meta.map((r) => `<button type="button" role="tab" data-role="${esc(r.id)}" aria-selected="${r.id === S.edit}">${esc(r.label)}${r.id !== "decisions" && S.pools[r.id] ? `<span class="own">own</span>` : ""}</button>`).join("");
+  const r = meta.find((x) => x.id === S.edit) || meta[0];
+  $("role-help").textContent = r.help || "";
+  const isMain = S.edit === "decisions", inherits = !isMain && !S.pools[S.edit];
+  $("inherit-row").hidden = isMain;
+  $("inherit").checked = inherits;
+  $("inherit-summary").hidden = !inherits;
+  $("inherit-summary").textContent = inherits ? "Uses: " + S.pools.decisions.map((e) => `${shortName(e.model)} (${e.thinking})`).join(", ") : "";
+  $("role-editor").hidden = inherits;
+  if (!inherits) renderPool();
 }
 function renderPool() {
   const cat = S.catalog || { providers: [] }, provs = cat.providers || [];
   const byId = Object.fromEntries(provs.map((p) => [p.id, p]));
-  const pool = S.pool || [];
-  $("rotate").checked = !!S.rotate;
-  $("pool-hint").textContent = S.rotate
-    ? "Each decision starts with the next model in the list; if it is overloaded, the others are tried in order."
-    : "The first model makes every decision; the others are tried in order when it is overloaded (503 high demand).";
+  const pool = poolFor(S.edit), rotate = !!S.rotates[S.edit];
+  $("rotate").checked = rotate;
+  $("pool-hint").textContent = rotate
+    ? "Each call starts with the next model in the list; if a model fails, the next one is tried."
+    : "The first model is used; if it fails (overloaded, bad key, no answer), the next one is tried, and so on.";
   $("pool").innerHTML = pool.map((e, i) => {
     const pid = e.model.split(":")[0], prov = byId[pid] || { models: [], configured: false, label: pid };
     const models = [...new Set([...(prov.models || []), e.model])].sort();
@@ -1082,26 +1111,31 @@ function renderPool() {
 let poolT;
 function savePoolSoon() { clearTimeout(poolT); poolT = setTimeout(savePool, 350); }
 async function savePool() {
-  const body = { models: S.pool, rotate: !!S.rotate };
+  const roles = {};
+  for (const r of ((S.catalog || {}).role_meta || [])) {
+    if (r.id !== "decisions") roles[r.id] = S.pools[r.id] ? { models: S.pools[r.id], rotate: !!S.rotates[r.id] } : null;
+  }
+  const body = { models: S.pools.decisions, rotate: !!S.rotates.decisions, roles };
   const r = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   if (!r.ok) { toast(`Could not save: ${await r.text()}`); return; }
   let live = false;
   if (S.live) {
-    const c = await fetch("/control", { method: "POST", headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({ action: "set_models", ...body }) });
-    live = c.ok;
+    const post = (b) => fetch("/control", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) });
+    const [a, b] = await Promise.all([post({ action: "set_models", models: body.models, rotate: body.rotate }), post({ action: "set_roles", roles })]);
+    live = a.ok && b.ok;
   }
-  const first = shortName(S.pool[0].model);
-  toast(`${S.rotate ? `Taking turns between ${S.pool.length} models` : `${first} decides, ${S.pool.length - 1} fallback${S.pool.length === 2 ? "" : "s"}`}${live ? ", from the next decision; saved for later runs." : "; saved for the next run."}`);
+  const label = (((S.catalog || {}).role_meta || []).find((x) => x.id === S.edit) || { label: "Models" }).label;
+  const pool = poolFor(S.edit), own = S.edit === "decisions" || S.pools[S.edit];
+  toast(`${label}: ${!own ? "same models as Decisions" : S.rotates[S.edit] ? `taking turns between ${pool.length} models` : `${shortName(pool[0].model)} first${pool.length > 1 ? `, then ${pool.length - 1} more` : ""}`}${live ? "; applied now and saved." : "; saved for the next run."}`);
   await loadCatalog();
 }
 $("pool").addEventListener("change", (e) => {
   const li = e.target.closest("li"); if (!li) return;
-  const i = +li.dataset.i, entry = S.pool[i];
+  const pool = poolFor(S.edit), i = +li.dataset.i, entry = pool[i];
   if (e.target.classList.contains("pv")) {
     const prov = ((S.catalog || {}).providers || []).find((p) => p.id === e.target.value);
     entry.model = (prov && prov.models && prov.models[0]) || `${e.target.value}:`;
-    renderPool();
+    renderRoles();
     if (!entry.model.endsWith(":")) savePoolSoon();
     return;
   }
@@ -1111,21 +1145,40 @@ $("pool").addEventListener("change", (e) => {
 });
 $("pool").addEventListener("click", (e) => {
   if (!e.target.classList.contains("rm")) return;
-  S.pool.splice(+e.target.closest("li").dataset.i, 1);
-  renderPool(); savePoolSoon();
+  poolFor(S.edit).splice(+e.target.closest("li").dataset.i, 1);
+  renderRoles(); savePoolSoon();
 });
 $("pool-add").addEventListener("click", () => {
-  const last = S.pool[S.pool.length - 1] || { model: "google:", thinking: "medium" };
-  S.pool.push({ model: last.model, thinking: last.thinking });
-  renderPool(); savePoolSoon();
+  const pool = poolFor(S.edit), last = pool[pool.length - 1] || { model: "google:", thinking: "medium" };
+  pool.push({ model: last.model, thinking: last.thinking });
+  renderRoles(); savePoolSoon();
 });
-$("rotate").addEventListener("change", (e) => { S.rotate = e.target.checked; renderPool(); savePoolSoon(); });
+$("rotate").addEventListener("change", (e) => { S.rotates[S.edit] = e.target.checked; renderRoles(); savePoolSoon(); });
+$("inherit").addEventListener("change", (e) => {
+  S.pools[S.edit] = e.target.checked ? null : JSON.parse(JSON.stringify(S.pools.decisions));
+  S.rotates[S.edit] = false;
+  renderRoles(); savePoolSoon();
+});
+$("roles").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-role]"); if (!b) return;
+  S.edit = b.dataset.role; renderRoles();
+});
+document.querySelectorAll("[data-stab]").forEach((b) => b.addEventListener("click", () => {
+  document.querySelectorAll("[data-stab]").forEach((x) => x.setAttribute("aria-selected", String(x === b)));
+  document.querySelectorAll("[data-spanel]").forEach((pnl) => { pnl.hidden = pnl.dataset.spanel !== b.dataset.stab; });
+}));
 $("b-settings").addEventListener("click", async () => {
   await loadCatalog();
-  const info = S.status.info || {};
-  S.pool = poolFrom(S.live ? { models: info.pool } : null);
-  S.rotate = S.live && info.rotate !== undefined ? info.rotate : !!(S.catalog || {}).rotate;
-  renderPool();
+  const cat = S.catalog || {}, info = S.status.info || {};
+  const live = S.live && Array.isArray(info.pool) && info.pool.length;
+  S.pools = { decisions: JSON.parse(JSON.stringify(live ? info.pool : cat.pool || [])) };
+  S.rotates = { decisions: live && info.rotate !== undefined ? !!info.rotate : !!cat.rotate };
+  const roles = (S.live && info.roles) || cat.roles || {};
+  for (const [role, cfg] of Object.entries(roles)) {
+    S.pools[role] = JSON.parse(JSON.stringify(cfg.models || [])); S.rotates[role] = !!cfg.rotate;
+  }
+  S.edit = S.edit || "decisions";
+  renderRoles();
   $("settings-dialog").showModal();
 });
 $("ro-pace-btn").addEventListener("click", () => $("b-settings").click());

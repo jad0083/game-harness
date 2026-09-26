@@ -38,7 +38,7 @@ def setup(tmp_path):
         shutil.copy(REPO / "corpora/stellaris" / f, corpus / f)
     s = Settings(model="google:gemini-3.8-flash", runs_dir=tmp_path / "runs", journal=tmp_path / "journal.md",
                  commit_learnings=False, game="stellaris", speed="fastest", decide_every_months=12, poll_s=0,
-                 ask_human_timeout_s=0.05)
+                 ask_human_timeout_s=0.05, fallback_model=None)      # tests never reach a real provider
     s.__class__ = type("S", (Settings,), {"corpus_dir": property(lambda self: corpus)})
     return s, EventLog(s.runs_dir, "run1", s.model)
 
@@ -1147,3 +1147,80 @@ def test_provider_catalog_shows_which_providers_have_keys(monkeypatch):
     assert cat["google"]["configured"] and cat["google"]["models"] == ["google:m1"]
     assert not cat["anthropic"]["configured"] and cat["anthropic"]["models"] == []
     assert cat["anthropic"]["key_env"] == "ANTHROPIC_API_KEY"
+
+
+# ---- model roles: decisions, retrospectives and talk can each have their own models -----------
+
+def _retro_model(name, calls):
+    def respond(messages, info):
+        calls.append(name)
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name,
+                                                 {"assessment": name, "plan": "", "rules": []})])
+    return FunctionModel(respond)
+
+
+def test_retrospectives_use_their_own_models(setup):
+    from dataclasses import replace
+    s, log = setup
+    s2 = replace(s, retro_every=2)
+    s2.__class__ = s.__class__
+    calls = []
+    game = FakeStellaris([briefing(f"22{i:02d}.01.01") for i in range(4)])
+    Governor(s2, game, log, model=_recording("decide", calls),
+             role_models={"retrospective": _retro_model("retro", calls)}).run(max_decisions=2)
+    assert calls[:3] == ["decide", "decide", "retro"], calls
+
+
+def test_roles_without_their_own_models_use_the_decision_models(setup):
+    s, log = setup
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+    assert [e["model"] for e in g._pool("retrospective")] == [e["model"] for e in g._pool("decisions")]
+    g.set_roles({"chat": {"models": [{"model": "anthropic:claude-haiku-4-5", "thinking": "off"}], "rotate": False}})
+    assert [e["model"] for e in g._pool("chat")] == ["anthropic:claude-haiku-4-5"]
+    assert g._pool("retrospective")[0]["model"] == g._pool("decisions")[0]["model"], "unset roles follow decisions"
+    assert log.state.info["roles"] == {"chat": {"models": [{"model": "anthropic:claude-haiku-4-5", "thinking": "off"}], "rotate": False}}
+    g.set_roles({"chat": None})
+    assert log.state.info["roles"] == {}
+    with pytest.raises(ValueError):
+        g.set_roles({"nonsense": {"models": [{"model": "google:x", "thinking": "low"}]}})
+
+
+def test_role_settings_are_saved(tmp_path):
+    from pilot.models import load_prefs, save_prefs
+    roles = {"retrospective": {"models": [{"model": "google:gemini-3.1-pro-preview", "thinking": "high"}], "rotate": False}}
+    assert save_prefs(tmp_path, roles=roles)["roles"] == roles
+    assert load_prefs(tmp_path)["roles"] == roles
+    assert "retrospective" not in save_prefs(tmp_path, roles={"retrospective": None}).get("roles", {}), "None = same as decisions"
+
+
+def test_any_model_failure_moves_on_to_the_next_model(setup):
+    """Not only overload: a bad key, a missing model or an unusable answer also hands over."""
+    from pydantic_ai.exceptions import ModelHTTPError
+    s, log = setup
+    calls = []
+
+    def broken(messages, info):
+        calls.append("a")
+        raise ModelHTTPError(401, "anthropic:claude-x", "invalid x-api-key")
+    game = FakeStellaris([briefing("2200.01.01")])
+    Governor(s, game, log, model=FunctionModel(broken), fallback=_recording("b", calls)).run(max_decisions=1)
+    assert calls == ["a", "b"], "a non-transient error is not retried; the next model decides"
+    assert any(e["kind"] == "model_fallback" for e in log.recent)
+
+
+def test_a_failing_model_cools_down_behind_the_others(setup):
+    from dataclasses import replace
+
+    from pydantic_ai.exceptions import ModelHTTPError
+    s, log = setup
+    s2 = replace(s, retry_delays=(0,))
+    s2.__class__ = s.__class__
+    calls = []
+
+    def overloaded(messages, info):
+        calls.append("a")
+        raise ModelHTTPError(503, "gemini", "high demand")
+    game = FakeStellaris([briefing("2200.01.01"), briefing("2201.01.01"), briefing("2202.01.01")])
+    Governor(s2, game, log, model=FunctionModel(overloaded), fallback=_recording("b", calls)).run(max_decisions=2)
+    # decision 1: a (+1 retry) fails, b answers; decision 2: a is cooling down, so b goes first
+    assert calls == ["a", "a", "b", "b"], calls

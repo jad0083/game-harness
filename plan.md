@@ -98,6 +98,7 @@
 - [ ] Evaluate isolationist stance for a boxed-in research phase (+10% unity, but −25% diplomatic weight; conflicts with federation play)
 - [x] Live test: player actions under `human_ai` persist — a research pick (swap button in the Technology screen, F4) and a monthly market order (Market → Add new monthly trade) both held 13 in-game months (2026-09-26)
 - [x] Model list in Settings: provider (Google, Anthropic, OpenAI) + model + thinking per entry, add/remove, and "take turns" to spread load; with turns off the first decides and the rest are fallbacks in order (2026-09-26)
+- [x] Model roles: Decisions, Retrospectives, Talk and GC4 blockers each use their own model list or the decision models (Settings → Models); any model failure moves on to the next model, and a failed model cools down behind the others for 10 minutes (2026-09-26)
 - [ ] Governor market action: (keep each order small so prices do not drift; buy the resource in deficit, pay with the idle one) a small monthly sell order for idle energy/trade into alloys or minerals (player action through the market screen; needs a live check that the AI keeps the order)
 - [ ] Governor Bridge: `expand` funds orbital habitats once `tech_habitat_1` is known; `prepare_war`/`defend` set the belligerent stance — files uploaded, live at the next game start
 - [x] Briefing: federation (type, level, cohesion, leader, members), Galactic Community vote and recent resolutions, crises and awakened empires, our situations; a crisis appearing is an urgent trigger

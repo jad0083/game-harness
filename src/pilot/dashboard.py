@@ -205,7 +205,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
     async def api_models(_):
         """Models to offer (cached 10 min) and the saved choice for the next run."""
         from .config import Settings
-        from .models import available_models, load_prefs, provider_catalog
+        from .models import ROLES, available_models, load_prefs, provider_catalog
         now = asyncio.get_running_loop().time()
         if not models_cache or now - models_cache["t"] > 600:
             s = Settings.from_env()
@@ -219,6 +219,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
                                   "pool": prefs.get("models") or Settings(model=prefs.get("model", models_cache["default"]),
                                                                           governor_thinking=prefs.get("thinking", "medium")).pool(),
                                   "rotate": prefs.get("rotate", False),
+                                  "roles": prefs.get("roles", {}), "role_meta": ROLES,
                                   "speed": prefs.get("speed", "normal"), "months": prefs.get("months", 12)})
 
     async def api_settings(request):
@@ -230,7 +231,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
             prefs = save_prefs(runs_dir, model=body.get("model") or None, thinking=body.get("thinking") or None,
                                speed=body.get("speed") or None, months=int(months) if months not in (None, "") else None,
                                fallback=body.get("fallback") or None, models=body.get("models"),
-                               rotate=body.get("rotate"))
+                               rotate=body.get("rotate"), roles=body.get("roles"))
         except (ValueError, TypeError) as e:
             raise web.HTTPBadRequest(text=str(e)) from e
         if pilot is not None and hasattr(pilot, "set_model") and body.get("model"):
@@ -239,6 +240,8 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
             pilot.set_fallback(prefs["fallback"])
         if pilot is not None and hasattr(pilot, "set_models") and (body.get("models") or body.get("rotate") is not None):
             pilot.set_models(prefs["models"], prefs.get("rotate", False))
+        if pilot is not None and hasattr(pilot, "set_roles") and body.get("roles") is not None:
+            pilot.set_roles(body["roles"])
         return web.json_response({"ok": True, **prefs, "applied_live": pilot is not None})
 
     async def api_run(request):
@@ -433,6 +436,11 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
                 pilot.set_models(body.get("models") or [], body.get("rotate"))
             except ValueError as e:
                 raise web.HTTPBadRequest(text=str(e)) from e
+        elif action == "set_roles" and hasattr(pilot, "set_roles"):
+            try:
+                pilot.set_roles(body.get("roles") or {})
+            except ValueError as e:
+                raise web.HTTPBadRequest(text=str(e)) from e
         elif action == "set_fallback" and hasattr(pilot, "set_fallback"):
             try:
                 pilot.set_fallback(str(body.get("model", "")) or None)
@@ -470,7 +478,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
             except ValueError as e:
                 raise web.HTTPBadRequest(text=str(e)) from e
         else:
-            raise web.HTTPBadRequest(text="action must be pause|resume|stop|instruct|answer|set_model|set_models|set_fallback|set_speed|set_months|chat|order_add|order_remove|"
+            raise web.HTTPBadRequest(text="action must be pause|resume|stop|instruct|answer|set_model|set_models|set_roles|set_fallback|set_speed|set_months|chat|order_add|order_remove|"
                                           "decide_now|override, with its text/index/directive")
         return web.json_response({"ok": True, "status": log.state.status})
 

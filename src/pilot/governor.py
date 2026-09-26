@@ -23,7 +23,7 @@ from pydantic_ai.exceptions import UsageLimitExceeded
 from pydantic_ai.messages import ModelResponse
 from pydantic_ai.usage import UsageLimits
 
-from .agent import HumanChannel, model_settings, run_with_retry, transient
+from .agent import HumanChannel, model_settings, run_with_retry
 from .config import Settings
 from .events import EventLog
 from .learning import Journal, LearnedStore, LearningRejected
@@ -273,10 +273,12 @@ something done, tell them to use "Decide now", a standing order, or an override 
 
 
 class Governor:
-    def __init__(self, settings: Settings, game: StellarisGame, log: EventLog, model=None, fallback=None):
+    def __init__(self, settings: Settings, game: StellarisGame, log: EventLog, model=None, fallback=None,
+                 role_models: dict | None = None):
         self.s = settings
         # tried once when the main model is still overloaded after the retries (503 high demand)
         self._fallback_obj = fallback
+        self._role_objs = dict(role_models or {})     # role -> Model instance (tests)
         self.game = game
         self.log = log
         self.control = Control()
@@ -300,16 +302,25 @@ class Governor:
         self.orders: list[str] = []               # standing orders, saved per campaign
         self.requests: queue.Queue[tuple[str, str]] = queue.Queue()   # ("decide", msg) | ("override", name)
         log.state.info["controls"] = ["instruct", "chat", "order_add", "order_remove", "decide_now", "override",
-                                      "set_model", "set_models", "set_fallback", "set_speed", "set_months"]
+                                      "set_model", "set_models", "set_roles", "set_fallback", "set_speed", "set_months"]
         log.state.info["thinking"] = settings.governor_thinking
         log.state.info["pool"] = settings.pool()
         log.state.info["rotate"] = settings.rotate
+        log.state.info["roles"] = dict(settings.roles or {})
         log.state.info["directives"] = list(DIRECTIVES)
 
     # ---- model pool ----------------------------------------------------------------------------
 
-    def _pool(self) -> list[dict]:
-        """The models in order ({"model", "thinking", "obj"}); `obj` is a Model instance in tests."""
+    def _pool(self, role: str = "decisions") -> list[dict]:
+        """A role's models in order ({"model", "thinking", "obj"}); roles without their own use the
+        decision models. `obj` is a Model instance in tests."""
+        if role != "decisions":
+            if role in self._role_objs:
+                obj = self._role_objs[role]
+                return [{"model": getattr(obj, "model_name", role), "thinking": self.s.governor_thinking, "obj": obj}]
+            own = (self.s.roles or {}).get(role)
+            if own and own.get("models"):
+                return [dict(m) for m in own["models"]]
         pool = self.s.pool()
         if self._model_obj is not None:
             pool[0] = {**pool[0], "obj": self._model_obj}
@@ -318,26 +329,80 @@ class Governor:
                               "thinking": pool[0]["thinking"], "obj": self._fallback_obj}]
         return pool
 
-    def _agent_for(self, entry: dict):
-        """The decision agent for one pool entry, built once per (model, thinking)."""
-        key = (entry.get("obj") and id(entry["obj"]), entry["model"], entry["thinking"])
+    def _rotates(self, role: str) -> bool:
+        own = (self.s.roles or {}).get(role) if role != "decisions" else None
+        return bool(own["rotate"]) if own and own.get("models") else bool(self.s.rotate)
+
+    def _build(self, role: str, settings: Settings, model):
+        text = self._text
+        if role == "retrospective":
+            return Agent(model, deps_type=GovDeps, output_type=Retrospective, instructions=RETRO_INSTRUCTIONS + "\n\n" + text,
+                         tools=[Tool(f) for f in (consult, get_doc)], model_settings=governor_settings(settings), retries=2)
+        if role == "chat":
+            return Agent(model, deps_type=GovDeps, output_type=str, instructions=CHAT_INSTRUCTIONS + "\n\n" + text,
+                         tools=[Tool(f) for f in (consult, get_doc, recent_log, past_outcomes)],   # read-only
+                         model_settings=governor_settings(settings), retries=2)
+        return build_governor(settings, text, model=model)
+
+    def _agent_for(self, entry: dict, role: str = "decisions"):
+        """The agent for one role and model entry, built once per (role, model, thinking)."""
+        key = (role, entry.get("obj") and id(entry["obj"]), entry["model"], entry["thinking"])
         cache = self.__dict__.setdefault("_agents", {})
         if key not in cache:
             model = entry.get("obj") or entry["model"]
             settings = replace(self.s, governor_thinking=entry["thinking"],
                                model=entry["model"] if isinstance(model, str) else self.s.model)
-            cache[key] = build_governor(settings, self._text, model=model)
+            cache[key] = self._build(role, settings, model)
         return cache[key]
 
-    def _order(self) -> list[dict]:
-        """This decision's models: the pool as listed, or starting one further on each time (rotate)."""
-        pool = self._pool()
-        if not self.s.rotate or len(pool) < 2:
+    def _order(self, role: str = "decisions") -> list[dict]:
+        """This call's models: the role's list as given, or one further on each time (take turns)."""
+        pool = self._pool(role)
+        if not self._rotates(role) or len(pool) < 2:
             return pool
-        turn = self.__dict__.get("_turn", 0)
-        self._turn = turn + 1
+        turns = self.__dict__.setdefault("_turns", {})
+        turn = turns.get(role, 0)
+        turns[role] = turn + 1
         i = turn % len(pool)
         return pool[i:] + pool[:i]
+
+    def _call(self, role: str, ask, on_try=None):
+        """Run `ask(agent)` on the role's models in order. Overload (503/429/timeouts) is retried on
+        the first model; any failure (overload after the retries, a bad key, a missing model, an
+        unusable answer) moves on to the next model. A model that failed sits behind the others for
+        `model_cooldown_s`, so a sustained outage does not cost the retry waits every time.
+        Returns (result, entry used)."""
+        failed = self.__dict__.setdefault("_failed_at", {})
+        now = time.time()
+        cooling = lambda e: now - failed.get(e["model"], 0) < self.s.model_cooldown_s
+        order = sorted(self._order(role), key=cooling)       # stable: the configured order otherwise
+        for i, entry in enumerate(order):
+            if on_try:
+                on_try(entry)
+            agent = self._agent_for(entry, role)
+            try:
+                result = (run_with_retry(lambda agent=agent: ask(agent), self.s.retry_delays, self._on_retry)
+                          if i == 0 and not cooling(entry) else ask(agent))
+                failed.pop(entry["model"], None)
+                return result, entry
+            except Exception as e:
+                failed[entry["model"]] = time.time()
+                if i == len(order) - 1:
+                    raise
+                self.log.emit("model_fallback", role=role, model=entry["model"],
+                              error=f"{type(e).__name__}: {e}"[:300], fallback=order[i + 1]["model"])
+        raise RuntimeError(f"no models for {role}")
+
+    def set_roles(self, roles: dict) -> None:
+        """Give roles their own models ({role: {"models", "rotate"}}); None = use the decision models."""
+        from .models import check_roles
+        merged = {**(self.s.roles or {}), **{k: v for k, v in roles.items()}}
+        clean = check_roles({k: v for k, v in merged.items() if v})
+        check_roles({k: v for k, v in roles.items() if v})      # reject unknown roles in the request
+        self.s = replace(self.s, roles=clean)
+        self.__dict__.pop("_agents", None)
+        self.log.state.info["roles"] = clean
+        self.log.emit("roles", roles=clean)
 
     def set_models(self, models: list[dict], rotate: bool | None = None) -> None:
         """Replace the model pool (each with its thinking level) and whether they take turns."""
@@ -467,9 +532,9 @@ class Governor:
                    f"Latest briefing:\n{self.last_briefing or '(no decision yet)'}",
                    f"Last decision: {self.log.state.last_decision or 'none'}", f"The human asks: {text}"]
             try:
-                result = self.chat_agent.run_sync("\n\n".join(ctx), deps=GovDeps(self.game, self.store, self.log),
-                                                  message_history=self._chat_history() or None,
-                                                  usage_limits=UsageLimits(request_limit=8))
+                result, _ = self._call("chat", lambda agent: agent.run_sync(
+                    "\n\n".join(ctx), deps=GovDeps(self.game, self.store, self.log),
+                    message_history=self._chat_history() or None, usage_limits=UsageLimits(request_limit=8)))
             except Exception as e:  # noqa: BLE001
                 self.log.emit("chat", role="model", text=f"(could not answer: {type(e).__name__}: {e})"[:500])
                 return
@@ -743,21 +808,9 @@ class Governor:
         def ask(agent):
             return agent.run_sync("\n".join(prompt), deps=deps,
                                   usage_limits=UsageLimits(request_limit=self.s.governor_max_requests))
-        order = self._order()
         try:
-            result = None
-            for i, entry in enumerate(order):
-                base.update(model=entry["model"], thinking_level=entry["thinking"])
-                try:
-                    # the first model gets the retries; the others one try each, only after an overload
-                    agent = self._agent_for(entry)
-                    result = (run_with_retry(lambda agent=agent: ask(agent), self.s.retry_delays, self._on_retry)
-                              if i == 0 else ask(agent))
-                    break
-                except Exception as e:
-                    if not transient(e) or i == len(order) - 1:
-                        raise
-                    self.log.emit("model_fallback", error=f"{type(e).__name__}: {e}"[:300], fallback=order[i + 1]["model"])
+            result, _ = self._call("decisions", ask,
+                                   on_try=lambda e: base.update(model=e["model"], thinking_level=e["thinking"]))
         except Exception as e:  # noqa: BLE001 - keep playing with the current directive
             if isinstance(e, UsageLimitExceeded):
                 e = RuntimeError(f"no answer within {self.s.governor_max_requests} model calls; "
@@ -835,10 +888,11 @@ class Governor:
         base = {"episode": n, "model": self.s.model, "thinking_level": self.s.governor_thinking, "game": self.s.game, "date": b["date"],
                 "trigger": f"retrospective after {self.s.retro_every} decisions", "current": current_directive(b)}
         try:
-            result = run_with_retry(
-                lambda: self.retro_agent.run_sync("\n\n".join(prompt), deps=GovDeps(self.game, self.store, self.log),
-                                                  usage_limits=UsageLimits(request_limit=self.s.max_requests_per_episode)),
-                self.s.retry_delays, self._on_retry)
+            result, _ = self._call(
+                "retrospective",
+                lambda agent: agent.run_sync("\n\n".join(prompt), deps=GovDeps(self.game, self.store, self.log),
+                                             usage_limits=UsageLimits(request_limit=self.s.max_requests_per_episode)),
+                on_try=lambda e: base.update(model=e["model"], thinking_level=e["thinking"]))
         except Exception as e:  # noqa: BLE001 - a failed review never stops play
             self.log.emit("episode_error", error=f"retrospective: {type(e).__name__}: {e}"[:500])
             return

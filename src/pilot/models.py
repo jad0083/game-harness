@@ -125,10 +125,38 @@ def load_prefs(runs_dir: Path) -> dict:
             out["models"] = pool
     if isinstance(d.get("rotate"), bool):
         out["rotate"] = d["rotate"]
+    try:
+        roles = check_roles(d.get("roles") or {})
+    except ValueError:
+        roles = {}
+    if roles:
+        out["roles"] = roles
     return out
 
 
 MAX_POOL = 6
+
+# Where the pilot calls a model. "decisions" is the main list; the others use it unless given their own.
+ROLES = [
+    {"id": "decisions", "label": "Decisions", "help": "The standing directive, every few in-game months (Stellaris governor)."},
+    {"id": "retrospective", "label": "Retrospectives", "help": "Reviews the campaign plan every few decisions and records rules: rare, benefits from a stronger model."},
+    {"id": "chat", "label": "Talk", "help": "Answers questions in the Talk tab: interactive, a fast model is enough."},
+    {"id": "episodes", "label": "GC4 blockers", "help": "Galactic Civilizations IV blockers read from screenshots (needs a vision model)."},
+]
+ROLE_IDS = [r["id"] for r in ROLES if r["id"] != "decisions"]
+
+
+def check_roles(roles) -> dict:
+    """{role: {"models": [...], "rotate": bool} | None}; None or no models = use the decision models."""
+    if not isinstance(roles, dict):
+        raise ValueError("roles must be an object of role -> {models, rotate}")  # noqa: TRY004 - the API maps ValueError to 400
+    out = {}
+    for role, cfg in roles.items():
+        if role not in ROLE_IDS:
+            raise ValueError(f"unknown role {role!r}; roles: {', '.join(ROLE_IDS)}")
+        if cfg and cfg.get("models"):
+            out[role] = {"models": check_pool(cfg["models"]), "rotate": bool(cfg.get("rotate", False))}
+    return out
 
 
 def check_pool(models) -> list[dict]:
@@ -167,6 +195,9 @@ def save_prefs(runs_dir: Path, model: str | None = None, thinking: str | None = 
         prefs["model"], prefs["thinking"] = pool[0]["model"], pool[0]["thinking"]
     if run.get("rotate") is not None:
         prefs["rotate"] = bool(run["rotate"])
+    if run.get("roles") is not None:
+        merged = {**prefs.get("roles", {}), **run["roles"]}
+        prefs["roles"] = check_roles({k: val for k, val in merged.items() if val})
     if run.get("fallback") is not None:
         fb = str(run["fallback"])
         if fb != "none" and not valid_model(fb):

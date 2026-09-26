@@ -278,7 +278,9 @@ periods on the chart; each decision records the model release that answered (an 
 identity (AI personality, traditions, ascension perks), colonisable planets in our borders with how
 well they suit our species, which growth and naval-capacity techs we have, and idle stockpiles; each
 neighbour gets a `who:` line (ethics, government, civics, AI personality, species traits,
-traditions). The governor's models are a list in Settings: each entry is a provider (Google, Anthropic,
+traditions). Settings → Models sets models per role (Decisions, Retrospectives, Talk, GC4 blockers; a role
+without its own list uses the decision models). Any model failure moves on to the next model in the
+list; a model that just failed goes behind the others for 10 minutes. Each role's models are a list: each entry is a provider (Google, Anthropic,
 OpenAI; keys `GOOGLE_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` in `.env`), a model and a
 thinking level. The first model decides and the others are tried in order when it stays
 overloaded after its retries, or, with "take turns", each decision starts at the next model; at start, a stale newest autosave (a new or
