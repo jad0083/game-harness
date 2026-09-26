@@ -160,7 +160,7 @@ Each screen is handled at most once per attempt; at most 4 dismissals per turn. 
 - `detect_change_bbox` — crop of the changed region handed to the model with a `ModalEvent`.
 
 ### D. Stdio MCP Server (`mcp.rs`)
-Exposes 19 Model Context Protocol tools over JSON-RPC stdio: screen and input tools, autopilot, and the corpus tools (`corpus_search`, `corpus_get`, `corpus_tech`, `corpus_improvement`, `corpus_order`, `corpus_info`, `corpus_strategy`). Game-specific tools are listed only when their corpus is loaded: `stellaris_briefing`, `stellaris_directive` and `stellaris_log` with `corpora/stellaris`.
+Exposes 19 Model Context Protocol tools over JSON-RPC stdio: screen and input tools, autopilot, and the corpus tools (`corpus_search`, `corpus_get`, `corpus_tech`, `corpus_improvement`, `corpus_order`, `corpus_info`, `corpus_strategy`). Game-specific tools are listed only when their corpus is loaded: `stellaris_briefing`, `stellaris_directive`, `stellaris_speed` and `stellaris_log` with `corpora/stellaris`.
 
 ### E. Stellaris save reader (`stellaris.rs`)
 Reads a `.sav` (ZIP of `meta` + `gamestate`, Clausewitz text) with the `jomini` parser and builds

@@ -393,6 +393,15 @@ impl McpServer {
                 }
             }));
             tools.push(serde_json::json!({
+                "name": "stellaris_speed",
+                "description": "Set the game speed (works paused or running; the HUD shows it while running). Fastest runs about 2.5 in-game months per real second. Refuses if Stellaris is not the foreground window.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": { "speed": { "type": "string", "enum": ["slowest", "slow", "normal", "fast", "fastest"] } },
+                    "required": ["speed"]
+                }
+            }));
+            tools.push(serde_json::json!({
                 "name": "stellaris_log",
                 "description": "Last lines of the game's logs/game.log (script log effects carry the in-game date, e.g. directive confirmations and events).",
                 "inputSchema": {
@@ -807,6 +816,11 @@ impl McpServer {
                     lines.join("\n")
                 );
                 Ok(serde_json::json!({ "content": [{ "type": "text", "text": text }] }))
+            }
+            "stellaris_speed" => {
+                let speed = args.get("speed").and_then(|v| v.as_str()).ok_or_else(|| anyhow::anyhow!("missing `speed`"))?;
+                let set = crate::stellaris::set_speed(&self.client, speed).await?;
+                Ok(serde_json::json!({ "content": [{ "type": "text", "text": format!("Speed set to {set}.") }] }))
             }
             "stellaris_log" => {
                 let n = args.get("lines").and_then(|v| v.as_u64()).unwrap_or(30).min(500) as usize;

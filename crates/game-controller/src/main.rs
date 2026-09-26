@@ -150,6 +150,8 @@ enum StellarisAction {
         #[arg(long)]
         dry_run: bool,
     },
+    /// Set the game speed: slowest, slow, normal, fast, fastest ("faster" = fastest)
+    Speed { name: String },
     /// Last lines of the game's logs/game.log
     Log {
         #[arg(short, long, default_value_t = 30)]
@@ -264,6 +266,10 @@ async fn main() -> Result<()> {
                     println!("  {l}");
                 }
             }
+        }
+        Commands::Stellaris { action: StellarisAction::Speed { name } } => {
+            let set = stellaris::set_speed(&client, &name).await?;
+            println!("Speed set to {set}");
         }
         Commands::Stellaris { action: StellarisAction::Log { lines } } => {
             let (text, _) = stellaris::read_log_since(&client, 0).await?;

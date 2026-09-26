@@ -16,9 +16,8 @@ downscaled_resolution = [1568, 882]
 [hotkeys]
 # --- Time ---
 pause = "space"                 # wiki: Hotkeys — "Pause / Unpause"
-speed_up = "="                  # wiki: Hotkeys — "Numpad or Keyboard +"; "=" is the agent's name for the
-                                # US =/+ key (VK_OEM_PLUS). Unverified in game.
-speed_down = "-"                # wiki: Hotkeys — "Numpad or Keyboard -" (VK_OEM_MINUS). Unverified in game.
+speed_up = "="                  # verified 2026-09-25: steps Normal → Fast → Fastest (US =/+ key, VK_OEM_PLUS)
+speed_down = "-"                # verified 2026-09-25: steps down to Slowest. Speeds: Slowest, Slow, Normal, Fast, Fastest
 # Numpad +/- also work per the wiki, but the agent's key table (crates/game-agent/src/keys.rs)
 # has no numpad names yet.
 
