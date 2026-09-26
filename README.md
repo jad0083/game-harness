@@ -214,7 +214,7 @@ Python: 55 tests (extractor fixtures, offline corpus CLI, legacy harness).
 echo 'GEMINI_API_KEY=…' >> .env                 # or OPENAI_API_KEY / ANTHROPIC_API_KEY
 .venv/bin/python -m pilot check --game stellaris
 .venv/bin/python -m pilot run --game galciv4                                   # vision episodes per blocker
-.venv/bin/python -m pilot run --game stellaris --speed fastest --months 12      # governor
+.venv/bin/python -m pilot run --game stellaris --months 12   # governor; --speed normal (default) … fastest
 .venv/bin/python -m pilot run --model openai:gpt-5 --game stellaris --episodes 3 --no-commit
 ```
 Environment overrides: `PILOT_MODEL`, `PILOT_GAME`, `PILOT_SPEED`, `PILOT_DECIDE_MONTHS`,
@@ -246,9 +246,11 @@ The database is local (gitignored); curated knowledge (`learned/`, strategy, jou
 
 **Stellaris governor** (`src/pilot/governor.py`): pause → briefing from the newest autosave →
 the model returns one directive or `keep` → apply (`play` → flag + policies → `observe`) →
-resume at `--speed` → poll autosaves until `--months` have passed, a new war starts, or a
+resume at `--speed` (default `normal`) → poll autosaves until `--months` have passed, a new war starts, or a
 resource turns negative → pause → decide again. The game is paused whenever the model thinks,
-so any speed is safe. `prepare_war` is applied only after a human "yes" on the dashboard.
+so any speed is safe. `prepare_war` is applied only after a human "yes" on the dashboard. If the
+game stops responding to pause/resume (e.g. a text box has keyboard focus; the controller tries
+one Esc first), the governor stops acting and flags *needs attention* until you press Resume.
 Measured with Gemini 3.8 Flash: ~6.2k input / ~0.4k output tokens and ~2 s per decision.
 
 ## Game corpus

@@ -360,3 +360,32 @@ def test_viewer_forwards_live_controls_to_the_running_pilot(setup):
         await live.close()
 
     asyncio.run(go())
+
+
+def test_control_failure_flags_needs_attention_instead_of_crashing(setup):
+    import threading
+    import time
+    s, log = setup
+
+    class Stuck(FakeStellaris):
+        def set_paused(self, paused):
+            if paused is False:
+                raise RuntimeError("could not resume the game: the Paused label did not disappear")
+            return super().set_paused(paused)
+
+    gov = Governor(s, Stuck([briefing("2200.01.01")]), log, model=decisions("keep"))
+    t = threading.Thread(target=gov.run, daemon=True)
+    t.start()
+    for _ in range(40):
+        if log.state.status == "needs_attention":
+            break
+        time.sleep(0.05)
+    assert log.state.status == "needs_attention" and gov.control.paused
+    assert any(e["kind"] == "needs_attention" and "Paused label" in e["reason"] for e in log.recent)
+    gov.stop()
+    t.join(timeout=5)
+    assert not t.is_alive()
+
+
+def test_default_speed_is_normal():
+    assert Settings().speed == "normal"

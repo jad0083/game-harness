@@ -49,7 +49,7 @@ class Settings:
     # Stellaris governor: game speed while the AI plays (slowest | slow | normal | fast | fastest;
     # the game is paused while the model decides), in-game months between scheduled decisions,
     # and seconds between autosave polls.
-    speed: str = "fast"
+    speed: str = "normal"
     campaign: str = ""                 # campaign name for telemetry; default: save folder / journal dir
     decide_every_months: int = 12
     poll_s: float = 2.0

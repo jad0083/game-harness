@@ -35,6 +35,7 @@
 - [ ] Agent key table has no numpad keys or `+`; Stellaris speed-up must use `=` (VK_OEM_PLUS) until added
 
 ## Resolved
+- [x] Live governor run died after 3 decisions: "could not resume the game: the Paused label did not disappear". Stellaris's system search (hotkey F) was open with keyboard focus, so Space went into the text box; stray keys typed while the pilot had focused the game are the likely cause (2026-09-25; set_paused now tries one Esc before giving up, and the governor flags needs-attention instead of crashing; reproduced and verified live)
 - [x] Governor: pausing from the dashboard triggered a model decision ("paused by the human" was treated as a decision point) (2026-09-25; fixed, regression test)
 - [x] Pilot auto-commit body named the model, against the no-model-names rule (2026-09-25; fixed)
 - [x] Stellaris pause was toggled blind with Space; runs at Fastest ended in the wrong state, and the first "Paused" template misread the pulsing label (distance 0.108) as running (2026-09-25; colour signature + checked `set_paused`, verified live 3× pause/resume cycles)

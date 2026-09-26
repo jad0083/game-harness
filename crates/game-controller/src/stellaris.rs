@@ -285,12 +285,22 @@ impl PauseDetector {
     }
 
     /// Pause or resume, checking the screen before and after (Space toggles, so a blind press
-    /// can invert the state). Returns whether a key was pressed.
+    /// can invert the state). If Space has no effect, a text box or panel probably has keyboard
+    /// focus (seen: "Search known star systems"); one Esc closes it before a last try.
+    /// Returns whether a key was pressed.
     pub async fn set_paused(&self, client: &crate::client::AgentClient, paused: bool) -> Result<bool> {
         if self.is_paused(client).await? == paused {
             return Ok(false);
         }
-        for _ in 0..2 {
+        for attempt in 0..3 {
+            if attempt == 2 {
+                require_foreground(client).await?;
+                client.key("esc", 1).await?;
+                tokio::time::sleep(std::time::Duration::from_millis(400)).await;
+                if self.is_paused(client).await? == paused {
+                    return Ok(true);
+                }
+            }
             require_foreground(client).await?;
             client.key("space", 1).await?;
             for _ in 0..5 {
