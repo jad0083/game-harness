@@ -40,6 +40,11 @@ NEEDS_HUMAN = {"prepare_war"}      # strategy.md: only after the human confirmed
 EVENT_TRIGGERS = ("new war", "war ended", "crisis", "colony lost", "boxed in", "milestone missed",
                   "off-frame", "military fell")
 
+# The tool's own reply names the tech it actually picked ("picked <id> in <field>", or "clicked
+# <id> in <field> (option n); unverified until the next autosave …"); a reply that matches neither
+# form (e.g. "nothing to pick: …") leaves no tech to watch.
+TECH_PICK_RE = re.compile(r"^(?:picked|clicked) (\S+) in (\w+)")
+
 INSTRUCTIONS = """You are the governor of a Stellaris empire. The game's own AI runs the empire day to day;
 you steer it by choosing ONE standing directive, which the harness applies (policies and a flag the
 AI keeps). The game is paused while you decide. Answer with `keep` unless the situation changed
@@ -361,6 +366,8 @@ class Governor:
         self._pending_pick: str | None = None     # a tech picked last time, watched for whether it stuck
         self._tech_sync_date: str | None = None   # briefing date of the last pick_tech attempt (at most one per date)
         self._market_sync_date: str | None = None  # briefing date of the last market_sync attempt (ditto)
+        self._pending_market: list[dict] | None = None   # orders last synced, watched for whether they stuck
+        self._market_stuck: bool = False          # a sync did not stick: no retry until the next review
         self._since_retro = 0
         self._strategy_trace_n = 0                # negative episode ids for strategy review traces (see _review_strategy)
         self.orders: list[str] = []               # standing orders, saved per campaign
@@ -960,40 +967,67 @@ class Governor:
     def _carry_out_actions(self, b: dict) -> None:
         """The strategy's player actions: preferred tech picks and monthly market orders (game
         paused). Both tools compute their result from the last autosave, which stays stale until
-        the next monthly autosave, so each acts at most once per briefing date. A failure of
-        either tool is logged and never raises out of here, never pauses the game, and never
-        undoes the decision already applied."""
+        the next monthly autosave, so each acts at most once per briefing date. Nothing here ever
+        raises out of this call, pauses the game, or undoes the decision already applied — any
+        failure, including malformed briefing data, is caught and logged as a strategy_action
+        event."""
         if not self.strategy:
             return
+        try:
+            self._carry_out_tech_actions(b)
+            self._carry_out_market_actions(b)
+        except Exception as e:  # noqa: BLE001 - nothing here may stop play
+            self.log.emit("strategy_action", action="error", result=f"failed: {e}"[:300])
+
+    def _carry_out_tech_actions(self, b: dict) -> None:
         date = b.get("date")
         tech = self.strategy.pillars.get("technology")
         prefer = [t for t in (tech.prefer_techs if tech else []) if self._tech_misses.get(t, 0) < 1]
-        researching = {((r or {}).get("current") or [None])[0] for r in (b.get("research") or {}).values()}
-        pending = self._pending_pick
-        if pending and pending not in researching:
-            self._tech_misses[pending] = self._tech_misses.get(pending, 0) + 1
-            self.log.emit("strategy_action", action="tech",
-                          result=f"{pending} did not stick; skipped until the next review")
-            prefer = [t for t in prefer if t != pending]
-        self._pending_pick = None
+        fields = (b.get("research") or {}).values()
+        researching = {((r or {}).get("current") or [None])[0] for r in fields}
+        offered = {t for r in fields for t in (r or {}).get("alternatives", [])}
+        pending, self._pending_pick = self._pending_pick, None
+        if pending:
+            if pending in researching:
+                pass    # still being researched: stuck, nothing to verify yet
+            elif pending in offered:
+                # still offered but not picked up as current: the pick did not stick
+                self._tech_misses[pending] = self._tech_misses.get(pending, 0) + 1
+                self.log.emit("strategy_action", action="tech",
+                              result=f"{pending} did not stick; skipped until the next review")
+                prefer = [t for t in prefer if t != pending]
+            else:
+                # neither current nor offered any more: researched to completion
+                self.log.emit("strategy_action", action="tech", result=f"researched {pending}")
         if prefer and not researching & set(prefer) and date != self._tech_sync_date:
             self._tech_sync_date = date
             try:
                 res = self.game.pick_tech(prefer)
                 self.log.emit("strategy_action", action="tech", result=res)
-                if res.startswith("picked") or res == "ok":
-                    offered = [t for r in (b.get("research") or {}).values() for t in (r or {}).get("alternatives", [])]
-                    self._pending_pick = next((t for t in prefer if t in offered), prefer[0])
+                m = TECH_PICK_RE.match(res)
+                if m:
+                    self._pending_pick = m.group(1)
             except Exception as e:  # noqa: BLE001 - actions never stop play
                 self.log.emit("strategy_action", action="tech", result=f"failed: {e}"[:300])
 
+    def _carry_out_market_actions(self, b: dict) -> None:
+        date = b.get("date")
+        current = b.get("market_orders") or []
+        pending_market, later = self._pending_market, date != self._market_sync_date
+        if pending_market is not None and later:
+            self._pending_market = None
+            if not self._same_orders(current, pending_market):
+                self.log.emit("strategy_action", action="market",
+                              result=f"market orders did not stick: wanted {pending_market}, save has {current}")
+                self._market_stuck = True
         econ = self.strategy.pillars.get("economy")
         desired = [o.model_dump() for o in (econ.market if econ else [])]
-        current = b.get("market_orders") or []
-        if not self._same_orders(desired, current) and date != self._market_sync_date:
+        if not self._market_stuck and not self._same_orders(desired, current) and later:
             self._market_sync_date = date
             try:
-                self.log.emit("strategy_action", action="market", result=self.game.market_sync(desired))
+                res = self.game.market_sync(desired)
+                self.log.emit("strategy_action", action="market", result=res)
+                self._pending_market = desired
             except Exception as e:  # noqa: BLE001 - actions never stop play
                 self.log.emit("strategy_action", action="market", result=f"failed: {e}"[:300])
 
@@ -1055,6 +1089,8 @@ class Governor:
         self.review_requested = None
         self._review_retry = False
         self._tech_misses = {}
+        self._market_stuck = False
+        self._pending_market = None
         started = time.time()
         current = self.strategy.model_dump_json(indent=1) if self.strategy else "(none yet: write the first strategy)"
         prompt = [f"Strategy review, trigger: {trigger}.", "Current strategy:\n" + current,

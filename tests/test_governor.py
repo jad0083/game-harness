@@ -1859,6 +1859,26 @@ def test_decision_prompt_says_no_strategy_yet_when_there_is_none(setup):
 
 # ---- Task 7: the governor carries out the actions and verifies them ---------------------------
 
+class _TechTool(FakeStellaris):
+    """A FakeStellaris whose pick_tech replies with the tool's own wording — either the classic
+    "picked <id> in <field>" or the newer "clicked <id> in <field> (option n); unverified until
+    the next autosave …" — naming whichever prefer[index] it clicks (plain FakeStellaris always
+    replies "ok", which names nothing)."""
+
+    def __init__(self, briefings, index=0, field="engineering", clicked=False):
+        super().__init__(briefings)
+        self.index = index
+        self.field = field
+        self.clicked = clicked
+
+    def pick_tech(self, prefer):
+        self.actions.append(("pick_tech", list(prefer)))
+        tech = prefer[self.index]
+        if self.clicked:
+            return f"clicked {tech} in {self.field} (option {self.index + 1}); unverified until the next autosave"
+        return f"picked {tech} in {self.field}"
+
+
 def test_decisions_carry_out_the_strategy_actions(setup):
     from pilot.strategy import Pillar
     s, log = setup
@@ -1971,14 +1991,14 @@ def test_tech_misses_reset_at_each_review(setup):
     from pilot.strategy import Pillar
     s, log = setup
     calls = []
-    game = FakeStellaris([briefing("2200.01.01")])
+    game = _TechTool([briefing("2200.01.01")])
     g = Governor(s, game, log, model=decisions("keep"), role_models={"strategy": _strategist(calls)})
     g._review_strategy(briefing("2200.01.01"), "start of run")
     g.strategy.pillars["technology"] = Pillar(priority=3, stance="s", goals=["g"], prefer_techs=["tech_habitat_1"])
     offered = {**briefing("2200.02.01"), "research": {"engineering": {"current": ["tech_mining_2", 5.0],
                                                                        "alternatives": ["tech_mining_2", "tech_habitat_1"]}}}
-    g._carry_out_actions(offered)                  # picks
-    g._carry_out_actions(offered)                  # miss recorded, no retry
+    g._carry_out_actions(offered)                  # picks (game replies "picked tech_habitat_1 in engineering")
+    g._carry_out_actions(offered)                  # still offered but not current: a miss, no retry
     assert g._tech_misses.get("tech_habitat_1") == 1
 
     g._review_strategy(briefing("2200.03.01"), "scheduled")   # resets the miss counter
@@ -1989,3 +2009,120 @@ def test_tech_misses_reset_at_each_review(setup):
                                                                       "alternatives": ["tech_mining_2", "tech_habitat_1"]}}}
     g._carry_out_actions(later)
     assert sum(1 for a in game.actions if a[0] == "pick_tech") == 2, "retried after the review reset the miss count"
+
+
+def test_the_tech_actually_picked_is_parsed_from_the_tools_reply(setup):
+    """Fix round 1, item 1: the pending pick comes from the tool's own reply (both the classic
+    "picked …" and the newer "clicked … (option n); unverified …" forms), not a guess — proven
+    with a two-tech prefer list where the tool clicks the second one."""
+    from pilot.strategy import Pillar
+    s, log = setup
+    game = _TechTool([briefing("2200.01.01")], index=1, clicked=True)
+    g = Governor(s, game, log, model=decisions("keep"), role_models={"strategy": _strategist([])})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    g.strategy.pillars["technology"] = Pillar(priority=3, stance="s", goals=["g"],
+                                              prefer_techs=["tech_habitat_1", "tech_mining_2"])
+    g._carry_out_actions(briefing("2200.01.01"))
+    assert ("pick_tech", ["tech_habitat_1", "tech_mining_2"]) in game.actions
+    assert g._pending_pick == "tech_mining_2", "parsed from the reply, not guessed from the offers"
+
+
+def test_an_unmatched_reply_leaves_no_pending_pick(setup):
+    """Fix round 1, item 1: a reply that matches neither form (e.g. "nothing to pick: …") is not
+    turned into a pending pick."""
+    from pilot.strategy import Pillar
+    s, log = setup
+
+    class NothingToPick(FakeStellaris):
+        def pick_tech(self, prefer):
+            self.actions.append(("pick_tech", list(prefer)))
+            return "nothing to pick: no research screen is open"
+
+    game = NothingToPick([briefing("2200.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"), role_models={"strategy": _strategist([])})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    g.strategy.pillars["technology"] = Pillar(priority=3, stance="s", goals=["g"], prefer_techs=["tech_habitat_1"])
+    g._carry_out_actions(briefing("2200.01.01"))
+    assert g._pending_pick is None
+
+
+def test_a_tech_still_offered_but_not_current_counts_as_a_miss(setup):
+    """Fix round 1, item 2 (miss case): the picked tech is neither current research nor gone from
+    the offers, so it is still listed among some field's alternatives — a miss."""
+    from pilot.strategy import Pillar
+    s, log = setup
+    game = _TechTool([briefing("2200.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"), role_models={"strategy": _strategist([])})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    g.strategy.pillars["technology"] = Pillar(priority=3, stance="s", goals=["g"], prefer_techs=["tech_habitat_1"])
+    g._carry_out_actions(briefing("2200.01.01"))              # picks tech_habitat_1
+    still_offered = {**briefing("2200.02.01"), "research": {"engineering": {
+        "current": ["tech_mining_2", 5.0], "alternatives": ["tech_mining_2", "tech_habitat_1"]}}}
+    g._carry_out_actions(still_offered)
+    assert g._tech_misses.get("tech_habitat_1") == 1
+    misses = [e for e in log.recent if e["kind"] == "strategy_action" and e.get("action") == "tech"
+              and "did not stick" in e["result"]]
+    assert misses
+
+
+def test_a_tech_gone_from_the_offers_is_treated_as_researched_not_a_miss(setup):
+    """Fix round 1, item 2 (completed case): the picked tech is neither current research nor
+    offered any more anywhere — it finished, not a miss."""
+    from pilot.strategy import Pillar
+    s, log = setup
+    game = _TechTool([briefing("2200.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"), role_models={"strategy": _strategist([])})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    g.strategy.pillars["technology"] = Pillar(priority=3, stance="s", goals=["g"], prefer_techs=["tech_habitat_1"])
+    g._carry_out_actions(briefing("2200.01.01"))              # picks tech_habitat_1
+    completed = {**briefing("2200.02.01"), "research": {"engineering": {
+        "current": ["tech_mining_2", 5.0], "alternatives": ["tech_mining_2", "tech_shipyard_1"]}}}
+    g._carry_out_actions(completed)
+    assert "tech_habitat_1" not in g._tech_misses
+    researched = [e for e in log.recent if e["kind"] == "strategy_action" and e.get("action") == "tech"
+                  and e["result"] == "researched tech_habitat_1"]
+    assert researched
+
+
+def test_market_orders_that_do_not_stick_wait_for_the_next_review(setup):
+    """Fix round 1, item 3: after a sync, the next later save is checked against what was asked
+    for; a mismatch is logged and not retried until the following review resets the flag."""
+    from pilot.strategy import Pillar
+    s, log = setup
+    calls = []
+    game = FakeStellaris([briefing("2200.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"), role_models={"strategy": _strategist(calls)})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    g.strategy.pillars["economy"] = Pillar(priority=2, stance="s", goals=["g"],
+                                           market=[{"side": "sell", "resource": "energy", "amount": 5}])
+    g._carry_out_actions(briefing("2200.01.01"))          # syncs
+    assert sum(1 for a in game.actions if a[0] == "market_sync") == 1
+
+    g._carry_out_actions(briefing("2200.02.01"))          # later save still shows no orders: did not stick
+    assert sum(1 for a in game.actions if a[0] == "market_sync") == 1, "not retried right after the mismatch"
+    stuck = [e for e in log.recent if e["kind"] == "strategy_action" and e.get("action") == "market"
+             and "did not stick" in e["result"]]
+    assert stuck
+
+    g._carry_out_actions(briefing("2200.03.01"))          # still stuck: no further attempts before a review
+    assert sum(1 for a in game.actions if a[0] == "market_sync") == 1
+
+    g._review_strategy(briefing("2200.04.01"), "scheduled")     # resets the give-up flag
+    g.strategy.pillars["economy"] = Pillar(priority=2, stance="s", goals=["g"],
+                                           market=[{"side": "sell", "resource": "energy", "amount": 5}])
+    g._carry_out_actions(briefing("2200.05.01"))
+    assert sum(1 for a in game.actions if a[0] == "market_sync") == 2, "retried after the review reset the flag"
+
+
+def test_malformed_briefing_data_does_not_raise_out_of_carry_out_actions(setup):
+    """Fix round 1, item 4: the whole body is wrapped so even malformed briefing data cannot raise
+    out of _carry_out_actions; the failure is logged as a strategy_action event instead."""
+    from pilot.strategy import Pillar
+    s, log = setup
+    game = FakeStellaris([briefing("2200.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"), role_models={"strategy": _strategist([])})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    g.strategy.pillars["technology"] = Pillar(priority=3, stance="s", goals=["g"], prefer_techs=["tech_habitat_1"])
+    bad = {**briefing("2200.01.01"), "research": "not a dict"}   # .values() will fail
+    g._carry_out_actions(bad)   # must not raise
+    assert any(e["kind"] == "strategy_action" and e.get("action") == "error" for e in log.recent)
