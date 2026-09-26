@@ -239,6 +239,34 @@ mod color_tests {
     }
 }
 
+/// Fraction (0..1) of pixels whose "bright text" state differs between `template` and the region of
+/// `frame` at (x, y), searched ±`search` px. A pixel is text when all three channels are >= `thr`.
+/// Unlike `template_diff`, this ignores what is behind semi-transparent text.
+pub fn text_mask_diff_search(frame: &RgbImage, template: &RgbImage, x: u32, y: u32, search: u32, thr: u8) -> f64 {
+    let (tw, th) = template.dimensions();
+    let is_text = |p: &image::Rgb<u8>| p[0] >= thr && p[1] >= thr && p[2] >= thr;
+    let s = search as i64;
+    let mut best = 1.0f64;
+    for dy in -s..=s {
+        for dx in -s..=s {
+            let (ox, oy) = (x as i64 + dx, y as i64 + dy);
+            if ox < 0 || oy < 0 || ox as u32 + tw > frame.width() || oy as u32 + th > frame.height() {
+                continue;
+            }
+            let mut mismatch = 0u64;
+            for ty in 0..th {
+                for tx in 0..tw {
+                    let a = is_text(frame.get_pixel(ox as u32 + tx, oy as u32 + ty));
+                    let b = is_text(template.get_pixel(tx, ty));
+                    mismatch += (a != b) as u64;
+                }
+            }
+            best = best.min(mismatch as f64 / (tw as f64 * th as f64));
+        }
+    }
+    best
+}
+
 /// Mean difference (0..1) between `template` and the same-sized region of `frame` whose
 /// top-left corner is (x, y). Returns 1.0 when the region does not fit in the frame.
 pub fn template_diff(frame: &RgbImage, template: &RgbImage, x: u32, y: u32) -> f64 {

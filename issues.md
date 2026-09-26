@@ -37,6 +37,8 @@
 - [ ] Agent key table has no numpad keys or `+`; Stellaris speed-up must use `=` (VK_OEM_PLUS) until added
 
 ## Resolved
+- [x] `take-control` failed to read the console's reply to human_ai when a bright nebula was behind the semi-transparent console (template distances 0.103 / 0.130); the governor correctly waited for the human instead of crashing (2026-09-25; replies are now read from white-text masks: right word ≤ 0.023, wrong ≥ 0.057 on 4 real frames; fixture added)
+- [x] Model picker listed Gemini models that cannot play (TTS, image, transcription, robotics, computer-use) (2026-09-25; filtered; test)
 - [x] Every "learned" / "learn_rejected" event raised TypeError: `emit(kind, …)` was also given `kind=` as data, so the governor's `remember_rule` and GC4's learning tools failed whenever a model used them (found 2026-09-25 while adding retrospectives; data key renamed to `category`; regression test)
 - [x] (medium) Chat history slice `[-20:]` can start with an orphan tool result; providers reject it and chat stays broken for the run (`governor._chat`) (2026-09-25; whole exchanges kept (last 6); test)
 - [x] (medium) `prepare_war` approval takes any pending note as the answer and treats text starting with "y" as yes; answers need their own channel (`HumanChannel.ask`) (2026-09-25; answers have their own channel (dashboard Yes/No/answer box); notes never answer; exact yes; tests)

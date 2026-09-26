@@ -736,3 +736,22 @@ def test_a_decision_that_keeps_calling_tools_is_cut_off_and_keeps_the_directive(
     assert err and "no answer within 4 model calls" in err[0]["error"]
     assert not [a for a in game.actions if a[0] == "directive"]
     assert sum(1 for a in game.actions if a[0] == "corpus") <= 4
+
+
+def test_models_that_cannot_play_are_filtered(monkeypatch):
+    from pilot import models
+
+    class M:
+        def __init__(self, name):
+            self.name, self.supported_actions = f"models/{name}", ["generateContent"]
+
+    class Client:
+        def __init__(self, api_key):
+            self.models = self
+        def list(self):
+            return [M(n) for n in ("gemini-3.8-flash", "gemini-3.8-flash-tts", "gemini-3-pro-image", "gemini-3.1-pro-preview",
+                                   "gemini-robotics-er-2-preview", "gemini-3.5-transcribe", "gemini-2.5-computer-use-preview")]
+    import google.genai
+    monkeypatch.setattr(google.genai, "Client", Client)
+    monkeypatch.setenv("GEMINI_API_KEY", "k")
+    assert models.google_models() == ["google:gemini-3.8-flash", "google:gemini-3.1-pro-preview"]
