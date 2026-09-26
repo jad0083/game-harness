@@ -1764,3 +1764,80 @@ def test_military_falling_by_half_triggers_an_early_decision_and_a_capped_review
     ep = [e for e in log.recent if e["kind"] == "episode"][1]
     assert ep["situation"].startswith("urgent: military fell: 1000 -> 400")
     assert any(e["kind"] == "strategy_review" and "military fell" in e["trigger"] for e in log.recent)
+
+
+# ---- Task 4 fix round 1 ----------------------------------------------------------------------
+
+def test_off_frame_reviews_are_capped_and_a_refused_one_is_dropped(setup):
+    """Item 1 (critical): off-frame requests go through the *normal* capped review path (unlike a
+    failed review's own retry, which bypasses it) — 8 off-frame decisions within 12 in-game months
+    produce at most one strategist review, and a refused (capped) request is dropped rather than
+    re-firing on every later decision."""
+    from dataclasses import replace
+    s, log = setup
+    s2 = replace(s, decide_every_months=1, retro_every=0)   # isolate the off-frame path from the periodic retrospective
+    s2.__class__ = s.__class__
+    calls = []
+    # ranking (from _strategist): defend > consolidate_economy > tech_rush > expand > diplomacy_first;
+    # the top 2 (defend, consolidate_economy) are never picked, so every one of these 8 is off-frame,
+    # and consecutive picks always differ from `current` so off_frame fires every single time
+    choices = ("tech_rush", "expand", "diplomacy_first", "tech_rush", "expand", "diplomacy_first", "tech_rush", "expand")
+    game = FakeStellaris([briefing(f"2200.{i:02d}.01") for i in range(1, 9)])
+    g = Governor(s2, game, log, model=decisions(*choices), role_models={"strategy": _strategist(calls)})
+    g.run(max_decisions=8)
+    reviews = [e for e in log.recent if e["kind"] == "strategy_review"]
+    off_frame_reviews = [r for r in reviews if r["trigger"].startswith("off-frame")]
+    assert len(off_frame_reviews) == 1, reviews   # the mandatory start-of-run review is separate
+    skips = [e for e in log.recent if e["kind"] == "strategy_review_skipped"]
+    assert skips and all(s["reason"] == "within 12 months of the last event review" for s in skips)
+    assert g.review_requested is None, "the last refused request was dropped, not left to re-fire forever"
+
+
+def test_military_fell_compares_against_the_last_decisions_briefing_not_the_previous_poll(setup):
+    """Item 2 (important): a slow decline that never drops >=50% between two consecutive polls, but
+    has dropped >=50% since the briefing of the last decision, still fires 'military fell'."""
+    s, log = setup
+    calls = []
+    b0 = {**briefing("2200.01.01"), "military_power": 1000}
+    polls = [{**briefing(f"2200.0{i}.01"), "military_power": m} for i, m in zip(range(2, 6), (850, 700, 550, 400))]
+    game = FakeStellaris([b0, *polls])
+    g = Governor(s, game, log, model=decisions("keep", "keep"), role_models={"strategy": _strategist(calls)})
+    g.run(max_decisions=2)
+    ep = [e for e in log.recent if e["kind"] == "episode"][1]
+    assert ep["situation"].startswith("urgent: military fell: 1000 -> 400"), ep["situation"]
+    assert ep["date"] == "2200.05.01", "fires only once the cumulative drop from the last decision reaches half"
+
+
+def test_the_off_frame_cutoff_is_the_top_two_of_the_ranking(setup):
+    """Item 3: pin the boundary exactly — the 2nd-ranked directive is in the frame, the 3rd-ranked
+    is off it."""
+    from dataclasses import replace
+    s, log = setup
+    s2 = replace(s, decide_every_months=1)
+    s2.__class__ = s.__class__
+    calls = []
+    game = FakeStellaris([briefing("2200.01.01"), briefing("2200.02.01")])
+    g = Governor(s2, game, log, model=decisions("consolidate_economy", "tech_rush"),
+                 role_models={"strategy": _strategist(calls)})
+    g.run(max_decisions=2)
+    assert g.strategy.ranking()[:3] == ["defend", "consolidate_economy", "tech_rush"]
+    traces = {e["decision"]: e for e in log.recent if e["kind"] == "trace"}
+    assert traces["consolidate_economy"]["off_frame"] is False, "2nd-ranked is within the frame"
+    assert traces["tech_rush"]["off_frame"] is True, "3rd-ranked is off it"
+
+
+def test_decision_prompt_says_no_strategy_yet_when_there_is_none(setup):
+    """Item 4: the decision prompt falls back to 'No strategy yet.' when there is no strategy."""
+    s, log = setup
+    seen = []
+
+    def always_fails(messages, info):
+        raise RuntimeError("boom")
+
+    def respond(messages, info):
+        seen.append(" ".join(str(p.content) for m in messages for p in getattr(m, "parts", []) if hasattr(p, "content")))
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"directive": "keep", "reason": "r"})])
+
+    Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=FunctionModel(respond),
+             role_models={"strategy": FunctionModel(always_fails)}).run(max_decisions=1)
+    assert any("No strategy yet." in t for t in seen)
