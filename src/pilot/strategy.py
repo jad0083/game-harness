@@ -4,9 +4,10 @@ Pure data and rules; no model calls, no game input."""
 
 from __future__ import annotations
 
+import re
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 PILLARS = ("economy", "expansion", "technology", "diplomacy", "defence", "government", "society")
 DIRECTIVE_OF: dict[str, str | None] = {"economy": "consolidate_economy", "expansion": "expand", "technology": "tech_rush",
@@ -18,19 +19,35 @@ _ROW_KEY = {"colonies": "planets"}          # metrics rows store colonies as `pl
 
 
 class Milestone(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     metric: str
     op: Literal[">=", "<="]
     target: float
     by: str = Field(description="in-game date YYYY.MM.DD")
 
+    def __init__(self, **data):
+        by = data.get("by")
+        if by and not re.match(r"^\d{4}\.\d{2}\.\d{2}$", by):
+            raise ValueError(f"by {by!r} is not a date YYYY.MM.DD")
+        if by and re.match(r"^\d{4}\.\d{2}\.\d{2}$", by):
+            _, m, _ = map(int, by.split("."))
+            if not 1 <= m <= 12:
+                raise ValueError(f"by {by!r} is not a date YYYY.MM.DD")
+        super().__init__(**data)
+
 
 class MarketOrder(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     side: Literal["sell", "buy"]
     resource: str
     amount: int = Field(gt=0)
 
 
 class Pillar(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     priority: int
     stance: str
     goals: list[str] = Field(default_factory=list)
@@ -42,6 +59,8 @@ class Pillar(BaseModel):
 
 
 class Strategy(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     pillars: dict[str, Pillar]
     focus: str
     reason: str = ""
@@ -75,29 +94,41 @@ def validate(s: Strategy, *, previous: Strategy | None, tech_ids: set[str], idle
         if not 1 <= pl.priority <= len(PILLARS):
             errs.append(f"{name}: priority must be 1..{len(PILLARS)}")
         for m in pl.milestones:
+            if not re.match(r"^\d{4}\.\d{2}\.\d{2}$", m.by):
+                errs.append(f"{name}: milestone by {m.by!r} is not a date YYYY.MM.DD")
+            else:
+                _, mo, _ = map(int, m.by.split("."))
+                if not 1 <= mo <= 12:
+                    errs.append(f"{name}: milestone by {m.by!r} is not a date YYYY.MM.DD")
             if m.metric not in METRICS:
                 errs.append(f"{name}: unknown metric {m.metric!r}")
         if pl.prefer_techs and name != "technology":
             errs.append(f"{name}: only the technology pillar prefers techs")
         if len(pl.prefer_techs) > 6:
-            errs.append("technology: at most 6 preferred techs")
+            errs.append(f"{name}: at most 6 preferred techs")
         for t in pl.prefer_techs:
             if t not in tech_ids:
-                errs.append(f"technology: unknown tech {t!r}")
+                errs.append(f"{name}: unknown tech {t!r}")
         if pl.market and name != "economy":
             errs.append(f"{name}: only the economy pillar places market orders")
         if len(pl.market) > 2:
-            errs.append("economy: at most 2 market orders")
+            errs.append(f"{name}: at most 2 market orders")
         for o in pl.market:
             cap = 25 if o.resource == "trade" else 0.2 * max(income.get(o.resource, 0.0), 0.0)
             if o.side == "sell" and o.resource not in idle:
-                errs.append(f"economy: selling {o.resource} but it is not idle")
-            if o.side == "sell" and o.amount > cap:
-                errs.append(f"economy: sell {o.resource} {o.amount} is over {cap:.0f} (20% of monthly income)")
+                errs.append(f"{name}: selling {o.resource} but it is not idle")
+            if o.side == "sell":
+                if o.resource not in income:
+                    errs.append(f"{name}: no monthly income known for {o.resource}")
+                elif o.amount > cap:
+                    errs.append(f"{name}: sell {o.resource} {o.amount} is over {cap:.0f} (20% of monthly income)")
     if previous is not None:
         for name, pl in previous.pillars.items():
-            if pl.pinned and name in s.pillars and s.pillars[name].model_dump() != pl.model_dump():
-                errs.append(f"{name} is pinned by the human and must not change")
+            if pl.pinned and name in s.pillars:
+                prev_content = pl.model_dump(exclude={"pinned", "edited_by"})
+                new_content = s.pillars[name].model_dump(exclude={"pinned", "edited_by"})
+                if new_content != prev_content:
+                    errs.append(f"{name} is pinned by the human and must not change")
     return errs
 
 
@@ -108,7 +139,7 @@ def keep_pinned(new: Strategy, previous: Strategy | None) -> Strategy:
     pillars = dict(new.pillars)
     for name, pl in previous.pillars.items():
         if pl.pinned:
-            pillars[name] = pl
+            pillars[name] = pl.model_copy(deep=True)
     return new.model_copy(update={"pillars": pillars})
 
 
@@ -132,7 +163,9 @@ def milestone_status(m: Milestone, rows: list[dict], today: str) -> str:
     if len(series) < 2:
         return "at_risk"
     now_mo, now = series[-1]
-    past = next(((mo, v) for mo, v in reversed(series) if now_mo - mo >= 12), series[0])
+    past = next(((mo, v) for mo, v in reversed(series) if now_mo - mo >= 12), None)
+    if past is None:
+        return "at_risk"
     span = max(now_mo - past[0], 1)
     projected = now + (now - past[1]) / span * (_months(m.by) - now_mo)
     return "on_track" if ok(projected) else "at_risk"
