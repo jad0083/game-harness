@@ -178,3 +178,96 @@ Written by the pilot app during play; promote proven items into the main corpus.
 
 - Relying on a federation ally can successfully split enemy attention, enabling a weaker empire to hold the line in a defensive war even if its own military power remains below half the galactic median.  
   _why:_ retrospective 2318.02.01 _(google:gemini-3.1-pro-preview, 2026-09-26)_
+
+- While 'expand' successfully prioritizes colonization, it can cause system claiming to stagnate if early alloy production is consumed by colony ships.  
+  _why:_ retrospective 2206.09.01 _(google:gemini-3.7-flash, 2026-09-26)_
+
+- Severe amenities deficits (e.g., -92) and housing shortages on new colonies necessitate a temporary shift to 'consolidate_economy' to force the AI to construct civilian infrastructure.  
+  _why:_ retrospective 2206.09.01 _(google:gemini-3.7-flash, 2026-09-26)_
+
+- The 'consolidate_economy' directive efficiently resolves extreme planetary housing and amenities deficits in under two years, stabilizing colonies after rapid expansion.  
+  _why:_ retrospective 2211.09.01 _(google:gemini-3.7-flash, 2026-09-26)_
+
+- The 'consolidate_economy' directive successfully and rapidly resolves extreme planetary amenities deficits (e.g., reversing -119 to +93 in 14 months) by forcing the AI to prioritize holistic infrastructure.  
+  _why:_ retrospective 2218.04.01 _(google:gemini-3.1-pro-preview, 2026-09-26)_
+
+- Territorial expansion can still progress under the 'consolidate_economy' directive (e.g., +3 systems) if sufficient influence and alloys allowed outposts to be queued prior to the stance change.  
+  _why:_ retrospective 2218.04.01 _(google:gemini-3.1-pro-preview, 2026-09-26)_
+
+- Bordering a genocidal empire (such as a Devouring Swarm) with overwhelming military superiority (e.g. 3.7x) necessitates switching to 'defend' before war is declared to fortify chokepoint starbases.  
+  _why:_ retrospective 2223.03.01 _(google:gemini-3.8-flash, 2026-09-26)_
+
+- A steady consumer goods deficit of ~7/month can be safely sustained under 'tech_rush' without compromising colony stability (>71 on all planets) provided a stockpile buffer of over 500 units exists.  
+  _why:_ retrospective 2228.03.01 _(google:gemini-3.8-flash, 2026-09-26)_
+
+- Maintaining the 'defend' directive against a vastly superior Devouring Swarm (initially 3564 vs 898 military power) can successfully stall the invasion and narrow the power gap (to 2198 vs 1596) by winning defensive engagements.  
+  _why:_ retrospective 2234.12.01 _(google:gemini-3.8-flash, 2026-09-26)_
+
+- Minor consumer goods deficits (e.g., -3.8/month) can resolve naturally during a prolonged 'defend' stance as populations shift, without needing to switch to 'consolidate_economy'.  
+  _why:_ retrospective 2234.12.01 _(google:gemini-3.8-flash, 2026-09-26)_
+
+- Holding 'defend' while enemy war exhaustion (46%) trails ours (52%) and we are winning battles (1-0) with no deficits keeps pushing the war toward a forced peace; stay the course rather than switching.  
+  _why:_ 2236.02: military parity (1.2x enemy), battles 1-0, exhaustion ours 52%/theirs 46%, no resource deficits, alloys piling +21.6/mo. _(google:gemini-3.8-flash, 2026-09-26)_
+
+- When a defensive war's exhaustion stays higher on our side (79% vs 73%) despite winning every battle (4-0), expect a status-quo peace forced at 100% rather than our own war goal, and plan the post-war directive for that date.  
+  _why:_ retrospective 2240.05.01 _(google:gemini-3.8-flash, 2026-09-26)_
+
+- Switching to 'expand' with available influence and alloys successfully captures multiple systems per year (e.g., +4 systems in 12 months) immediately following a defensive war.  
+  _why:_ retrospective 2244.07.01 _(google:gemini-3.8-flash, 2026-09-26)_
+
+- When unclaimed systems lie within 2 jumps and construction ships are available, keep or return to 'expand', because outposts are limited by influence and alloys, not by naval-capacity techs.  
+  _why:_ retrospective 2250.06.01 _(google:gemini-3.8-flash, 2026-09-26)_
+
+- 'tech_rush' does not steer the AI toward particular techs: five years of it (2245–2250) did not produce Doctrine: Support Vessels, Interstellar Logistics or Orbital Habitats, so do not hold it waiting for a specific tech once our tech count is already at or above the median (78 vs 76).  
+  _why:_ retrospective 2250.06.01 _(google:gemini-3.8-flash, 2026-09-26)_
+
+- Relying on a federation ally during the 'defend' directive allows a weaker empire to survive a multi-front war against superior foes, winning early battles (1 won, 0 lost) and keeping war exhaustion balanced (5% vs 6%).  
+  _why:_ retrospective 2255.05.01 _(google:gemini-3.8-flash, 2026-09-26)_
+
+- During a long defensive war, if alloy net income falls to around zero (+1.8 a month here, down from +32), holding defend does not rebuild military power: ours fell from 945 to 255 in three years while every battle was won. Keep defend for survival, but treat alloy income as the thing to fix the moment the war allows.  
+  _why:_ retrospective 2258.06.01 _(google:gemini-3.8-flash, 2026-09-26)_
+
+- A clean battle record (9-0) and favourable war exhaustion (18% vs 21%) do not mean territory is safe. We lost 3 systems during the war, so check systems owned, not only battles, when judging whether defend is holding.  
+  _why:_ retrospective 2258.06.01 _(google:gemini-3.8-flash, 2026-09-26)_
+
+- Relying on a strong federation ally while holding the 'defend' directive enables a weaker empire to survive multi-front defensive wars against vastly superior enemies by winning joint defensive engagements (27-0), even if its own military is depleted.  
+  _why:_ retrospective 2263.06.01 _(google:gemini-3.8-flash, 2026-09-26)_
+
+- Prolonged defensive wars without sufficient alloy income (+5.0/month) cause an empire's own military capacity to collapse to zero, completely stalling its ability to rebuild independently of its allies.  
+  _why:_ retrospective 2263.06.01 _(google:gemini-3.8-flash, 2026-09-26)_
+
+- A perfect defensive battle record (e.g. 23-0 and 16-0) does not mean territory is safe: systems fell 21→13 in four years under defend, so judge a defensive war by systems lost and each side's exhaustion trend, not by battles won.  
+  _why:_ retrospective 2268.03.01 _(google:gemini-3.8-flash, 2026-09-26)_
+
+- Under defend with alloy income near zero (+0.9/month), military power stops growing (+0 in 12 months) even though the war budget favours ships. The directive cannot close the gap without alloy production, so fixing alloys must be the first step once the wars allow it.  
+  _why:_ retrospective 2268.03.01 _(google:gemini-3.8-flash, 2026-09-26)_
+
+- In a two-front defensive war, the front where our exhaustion is rising faster than the enemy's (Lyrite 48% vs 40%, against an absorption war goal) is the one that decides survival, even if the other front is being won on exhaustion.  
+  _why:_ retrospective 2268.03.01 _(google:gemini-3.8-flash, 2026-09-26)_
+
+- A minor minerals deficit (~-26/month) with a large stockpile (5161, ~16 months buffer but still growing shortfall) during an active defensive war does not warrant leaving 'defend': war exhaustion is close (59% ours vs 50% theirs) and the enemy still has 7x our military, so survival stays the priority.  
+  _why:_ 2270.04.01 briefing: minerals -26.4/month, stock 5161 (~16mo buffer), war exhaustion ours 59% vs theirs 50%, enemy military 7368 vs ours 1055 (7x), battles 20 won/0 lost — still an active existential war. _(google:gemini-3.8-flash, 2026-09-26)_
+
+- The 'consolidate_economy' directive can steadily reduce basic resource deficits (e.g., improving a mineral deficit from -32.8 to -21.0 over 12 months) without halting population growth or minor territorial expansion.  
+  _why:_ retrospective 2271.12.01 _(google:gemini-3.8-flash, 2026-09-26)_
+
+- When an empire is boxed in with no colonisable planets, lacking alternative growth paths like Orbital Habitats causes it to fall severely behind the galactic median in pops and economy.  
+  _why:_ retrospective 2271.12.01 _(google:gemini-3.8-flash, 2026-09-26)_
+
+- When a defensive war stays at 0 battles and war exhaustion below 10% on both sides for over a year, the 'defend' directive only preserves the status quo; the fleet is at its naval-capacity cap, so defend cannot grow military power, and the time is better spent planning the switch to tech_rush for the capacity and habitat techs once the war ends.  
+  _why:_ retrospective 2276.01.01 _(google:gemini-3.8-flash, 2026-09-26)_
+
+- A fleet at its naval-capacity cap (84/84) with low alloy income (+31/month) loses military power under 'defend' (-58 in 12 months), because extra alloy budget cannot buy ships beyond the cap.  
+  _why:_ retrospective 2276.01.01 _(google:gemini-3.8-flash, 2026-09-26)_
+
+- Maintaining the 'defend' directive during a defensive war with a federation ally successfully stalls stronger enemies (up to 4.6x military power), keeping war exhaustion balanced over several years.  
+  _why:_ retrospective 2281.03.01 _(google:gemini-3.8-flash, 2026-09-26)_
+
+- A modest alloy income (+41.7/month) under the 'defend' directive provides steady but slow military growth (+194 in 12 months), which struggles to quickly close a large gap with the galactic median.  
+  _why:_ retrospective 2281.03.01 _(google:gemini-3.8-flash, 2026-09-26)_
+
+- When at war with the fleet at naval capacity (147/147) and alloy income low (+26/month), 'defend' preserves territory and wins defensive battles (5-0) but cannot close a military gap (2721 vs median 5865); the gap only closes after peace, through naval-capacity and ship techs.  
+  _why:_ retrospective 2284.04.01 _(google:gemini-3.8-flash, 2026-09-26)_
+
+- In a long defensive war where exhaustion climbs slowly on both sides (about 4 points a year, 37% vs 42% after 10.5 years), do not plan on a forced peace; the plan has to assume the war lasts decades and keep the defensive posture solvent.  
+  _why:_ retrospective 2284.04.01 _(google:gemini-3.8-flash, 2026-09-26)_

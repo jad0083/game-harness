@@ -121,3 +121,8 @@
 - [x] Dashboard redesign: readout strip, warm ivory on deep space, amber accent, Bricolage Grotesque + Fraunces, hairline sections instead of cards; PC status chip, campaign titles, markdown in the model's text, show-all decisions
 - [x] Game speed and decision interval shown and changeable on the dashboard (live and for the next run)
 - [x] Dashboard follows the live campaign; no-store responses; transient model errors retried
+- [ ] War-readiness briefing (Theian postmortem): naval-capacity maximum, occupied planets, shipyards, fleets, production per planet, own vs. allies' battles; urgent triggers for military −50%, occupation, system lost
+- [ ] Directive read-back: check each directive's policies in the next save and report the ones that did not change; every directive sets all its policies
+- [ ] Two shipyards in different systems and alloys on two or more planets before any war (strategy rule and mod budget nudge)
+- [ ] Monthly fleet snapshot in telemetry to find what destroys ships in peacetime
+- [ ] Full decision prompts in traces (no 6,000-character cut)

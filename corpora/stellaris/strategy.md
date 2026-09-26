@@ -192,11 +192,12 @@ What went wrong in the first long campaign, and the rule each lesson gives:
   Habitats is missing while boxed in, `tech_rush` is the growth directive (the AI researches it
   sooner with more research), then `expand` (the mod funds habitats under `expand` once the tech
   is known).
-- **Military was capped, not unfunded.** Military stayed last while alloys piled up: the fleet sat
-  at naval capacity and the starbase cap was full. `defend` adds alloy budget, which cannot help
-  then. Rule: with `ALLOYS PILING UP`, prefer the directive that raises capacity — `tech_rush`
-  while the naval-capacity doctrines (*Growth and fleet-capacity techs* line) are missing — and use
-  `defend` for an actual war or a stronger hostile neighbour on the border.
+- **Military stayed last while alloys piled up.** In this campaign the in-game top bar showed the
+  fleet at naval capacity; the save itself has no maximum. Do not generalise it: in the Theian
+  campaign the same pattern was ship losses and an occupied shipyard at 51/115 used (§12).
+  With `ALLOYS PILING UP`, check shipyards and losses first; raise capacity (`tech_rush` for the
+  naval doctrines) only when the cap is confirmed, and use `defend` for an actual war or a
+  stronger hostile neighbour on the border.
 - **Idle stockpiles are not a reason to consolidate** (unless planets still have free district slots, where
   `consolidate_economy` turns spare minerals into districts). Energy sat at 14k–39k unspent all game (the
   AI does not sell surplus on the market). `IDLE stockpiles` means the economy is not the
@@ -272,3 +273,29 @@ Neighbours (the `who:` line under each):
 - **Fallen empires**: passive unless provoked; never a reason for `prepare_war`. An
   *awakened* empire is a crisis: `defend`.
 
+## 12. Lessons from the Theian campaign (2200–2282, telemetry and frames; lost 32 → 13 systems)
+
+Root causes, most important first:
+- **One shipyard, one alloy world, both in the capital system.** When the capital (Theia) was
+  occupied in 2257, alloy income fell from about +40 to +2 to +5 a month and no ship could be
+  built; military sat at 0 from 2261 to 2265. Rule: before any war, and whenever a hostile
+  neighbour has 2x our military, keep **two or more shipyards in different systems** and alloy
+  production on **two or more planets**. An occupied capital is an emergency, not a stat.
+- **A false premise ran strategy for nine years.** The harness's own hint said "likely at naval
+  capacity"; the models wrote "capped 48/48" and ran `tech_rush` for naval techs from 2245 to
+  2254 while the fleet was at 76/117, then 51/115. Never reason from a cap the briefing does
+  not show (the briefing will carry the maximum once the briefing work lands, plan.md).
+- **Peacetime military collapses were losses.** Military fell sharply in 2224, 2226, 2244–45, 2248
+  and 2251, utility and construction ships included (11 → 2, 5 → 0 in 2244–45): ships were being
+  destroyed, likely by monsters. A fall of half or more is a loss to investigate
+  (`MILITARY FELL`), never a reason to change economy directives.
+- **Battle counts included allies.** "Won 20–0" counted the Oklarr ally's battles while we were
+  losing planets. Judge a war by our own planets, systems and exhaustion.
+- **`defend` held for 16 years with no exit test**, and `tech_rush` left the economy policy on
+  balanced for seven years without anyone noticing. A war stance needs an exit condition
+  (peace, exhaustion, planets retaken), and a directive is only in effect once its policies read
+  back from the save.
+- **Model churn.** Alternating two models produced four directive changes in 2243–2254. One
+  strategy per campaign (the strategy layer) and one decision model per campaign are safer.
+- **Idle resources never used.** 16–21k energy sat idle through the alloy crash; monthly market
+  orders (energy → alloys) would have kept ships coming.

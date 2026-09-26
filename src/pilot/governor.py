@@ -129,8 +129,8 @@ def served_model(result) -> str:
 def trends(old: dict | None, now: dict) -> str:
     """One line comparing two metrics snapshots (about 12 months apart), for the decision prompt.
 
-    Flags alloys piling up while military stays flat: the AI then cannot turn more military budget
-    into ships (fleet at naval capacity, starbases at their cap), which the save does not show."""
+    Flags alloys piling up while military stays flat, and military falling by half or more. The
+    save has no naval-capacity maximum, so neither flag names a cause it cannot show."""
     if not old:
         return ""
     span = months(now["date"]) - months(old["date"])
@@ -145,9 +145,12 @@ def trends(old: dict | None, now: dict) -> str:
     line = f"Change since {old['date']} ({span} months): " + ", ".join(parts) + "."
     mil_old = old.get("military_power") or 0
     if a_now > 1000 and a_now > 1.5 * max(a_old, 1) and d("military_power") < 0.1 * max(mil_old, 1):
-        line += (" ALLOYS PILING UP while military is flat: the AI is not converting alloys into ships"
-                 " (likely at naval capacity or the starbase cap), so a directive that adds military budget"
-                 " will not raise military power by itself.")
+        line += (" ALLOYS PILING UP while military is flat: the AI is not converting alloys into ships."
+                 " Causes include lost or occupied shipyards, ship losses, and the fleet cap; the save has"
+                 " no naval-capacity maximum, so do not assume the cap.")
+    if mil_old > 0 and d("military_power") <= -0.5 * mil_old:
+        line += (f" MILITARY FELL {-d('military_power') / mil_old:.0%}: ships were lost (battles, monsters)"
+                 " or could not be rebuilt (occupied shipyards, alloy income); this is not a capacity cap.")
     return line
 
 

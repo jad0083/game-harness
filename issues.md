@@ -2,6 +2,11 @@
 
 ## Open
 
+- [ ] Theian postmortem (2026-09-26): the `trends()` hint said "likely at naval capacity" while the fleet sat at 51/115; the models chased naval techs 2245–2254 and five false "capped" rules entered `learned/strategy.md` (hint reworded, `MILITARY FELL` flag added, rules purged; open until the service runs it)
+- [ ] Briefing lacks the naval-capacity maximum, occupied planets (the occupied capital showed as a normal colony), shipyards, fleets, production per planet, and our own battles apart from allies' ("won 20–0" counted the Oklarr ally's)
+- [ ] A directive is confirmed from game.log only, not read back: `tech_rush` left the economy policy on balanced 2245.04–2252.07 unnoticed; `defend` does not reset the economy policy or end the peace-festivals edict
+- [ ] No urgent trigger for military falling by half, a planet occupied or a system lost; `defend` has no exit test (held 16 years)
+- [ ] Decision traces cut at 6,000 characters (`MAX_TEXT`, `src/pilot/trace.py`): every war line of the briefing is missing from stored prompts
 - [x] Directives failed twice (2218.04, 2219.05 in the Theian test): console `effect` runs on the selected map object, so with a mining station selected the policies changed but the directive flag and the confirmation did not. Fixed: the console is opened only after Esc drops the selection (game menu closed again) and only when the Debug View bar shows it really opened; verified by applying `expand` by hand after deselecting (2026-09-26)
 - [x] Event popups under `human_ai`: the game's AI answers them itself (game.log: "selectedOption 0, human -1"); only informational popups such as a declaration of war stay on screen
 - [x] Starting a run on a brand-new game read the newest autosave, which belonged to another campaign (the new game had none yet); the start decision was `keep`, so nothing was applied, but a change would have hit the wrong empire. Fixed: when the newest autosave is over 5 minutes old at start, the governor plays until a fresh one is written (2026-09-26)
