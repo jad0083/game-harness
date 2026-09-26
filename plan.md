@@ -78,3 +78,11 @@
 - [ ] Long unattended Stellaris run in a real game (user's choice of empire), with learned rules committed
 - [ ] Test which directives the AI keeps long term (edicts, economy, war); decide on a companion bridge mod (directive events, AI weights, `log` hooks)
 - [ ] Screen templates: pause/date and event popups
+
+## Pilot app: observability and control
+- [x] Decision traces: prompt, Gemini thought summaries, tool calls and results, answer, tokens, time (`runs/<id>/traces/`)
+- [x] Telemetry per campaign in SQLite (`runs/telemetry.sqlite`), rebuildable from the JSONL logs; outcome scoring 12 months later; governor tool `past_outcomes`
+- [x] Dashboard: campaign charts with directive lane and decision marks, decision list with outcomes, reasoning reader, activity feed; dark/light, phone layout
+- [x] Talk to and direct the live model: ask (read-only chat), note for next decision, decide now, standing orders, override, Yes/No
+- [x] Always-on LAN dashboard `http://192.168.1.76:8780/` (systemd user service, forwards live controls); `deploy/game-pilot.service` for the pilot itself
+

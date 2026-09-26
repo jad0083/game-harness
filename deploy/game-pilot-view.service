@@ -1,0 +1,18 @@
+# Always-on dashboard over recorded pilot runs, on the LAN (http://<this machine>:8780/).
+# Forwards live controls to a running pilot (its own dashboard on 8790). Install:
+#   cp deploy/game-pilot-view.service ~/.config/systemd/user/ && systemctl --user daemon-reload
+#   systemctl --user enable --now game-pilot-view.service
+[Unit]
+Description=Game Pilot dashboard (history + live controls)
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/mnt/codeman-cases/game-harness
+Environment=PYDANTIC_AI_NO_BANNER=1
+ExecStart=/mnt/codeman-cases/game-harness/.venv/bin/python -m pilot view --port 8780
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

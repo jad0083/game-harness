@@ -71,7 +71,7 @@ class Pilot:
 
     def run(self, max_episodes: int | None = None) -> None:
         self._status("playing")
-        self.log.state.info.update(game=self.s.game)
+        self.log.state.info.update(game=self.s.game, controls=["instruct"])
         self.log.emit("run_start", model=self.s.model, game=self.s.game, coords=self.s.coord_space)
         self.log.set_campaign(self.s.game, self.s.campaign or self.s.journal.parent.name)
         unresolved = processing = 0

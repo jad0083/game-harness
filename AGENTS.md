@@ -19,6 +19,7 @@ Everything below was verified in live play on 2026-09-25 unless marked **unverif
 | Game journal | `games/terran-2329/journal.md` | What happened in the current game and why. Read it before resuming play. |
 | Stellaris | `corpora/stellaris/`, `crates/game-controller/src/stellaris.rs`, `src/pilot/governor.py` | Governor over the native AI: autosave briefing, console directives, speed and pause. See §10. |
 | Pilot app | `src/pilot/` (`python -m pilot`) | Autonomous player with any LLM API key (README → "Pilot app"). |
+| Dashboard | `http://192.168.1.76:8780/` (`deploy/game-pilot-view.service`) | Decision traces (thinking, tool calls), campaign charts, and talking to / directing the live model. Telemetry in `runs/telemetry.sqlite`. |
 
 Hard facts:
 - Screen 3840×2160 (DPI-aware agent). All screenshots and all coordinates you pass are in

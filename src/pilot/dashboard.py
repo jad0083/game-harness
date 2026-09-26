@@ -27,24 +27,68 @@ import re
 import threading
 from pathlib import Path
 
-from aiohttp import web
+from aiohttp import ClientError, ClientSession, ClientTimeout, web
 
 STATIC = Path(__file__).parent / "static"
 
 
 RUN_ID = re.compile(r"^[A-Za-z0-9_.-]+$")
+LIVE_STATES = {"starting", "playing", "deciding", "paused", "needs_attention"}
+
+
+class LiveProxy:
+    """Finds the live pilot run (newest run whose status.json names a dashboard port that answers)."""
+
+    def __init__(self, runs_dir: Path):
+        self.runs_dir = runs_dir
+        self._url: str | None = None
+        self._checked = 0.0
+        self._session: ClientSession | None = None
+
+    def session(self) -> ClientSession:
+        if self._session is None or self._session.closed:
+            self._session = ClientSession()
+        return self._session
+
+    def forget(self) -> None:
+        self._url, self._checked = None, 0.0
+
+    async def close(self) -> None:
+        if self._session:
+            await self._session.close()
+
+    async def url(self) -> str | None:
+        now = asyncio.get_running_loop().time()
+        if now - self._checked < 5:
+            return self._url
+        self._checked, self._url = now, None
+        for run in list_runs(self.runs_dir):
+            st = run.get("_status") or {}
+            port = (st.get("info") or {}).get("port")
+            if not port or st.get("status") not in LIVE_STATES:
+                continue
+            url = f"http://127.0.0.1:{int(port)}"
+            try:
+                async with self.session().get(url + "/status", timeout=ClientTimeout(total=2)) as r:
+                    if r.status == 200 and (await r.json()).get("run_id") == run["id"]:
+                        self._url = url
+                        break
+            except (OSError, TimeoutError, ClientError, ValueError):
+                continue
+        return self._url
 
 
 def list_runs(runs_dir: Path, live_id: str | None = None) -> list[dict]:
     out = []
-    for d in sorted((p for p in runs_dir.iterdir() if p.is_dir()), reverse=True) if runs_dir.exists() else []:
+    dirs = [p for p in runs_dir.iterdir() if (p / "events.jsonl").exists()] if runs_dir.exists() else []
+    for d in sorted(dirs, reverse=True):
         st = {}
         if (d / "status.json").exists():
             try:
                 st = json.loads((d / "status.json").read_text())
             except ValueError:
                 st = {}
-        out.append({"id": d.name, "live": d.name == live_id, "model": st.get("model", ""),
+        out.append({"id": d.name, "live": d.name == live_id, "model": st.get("model", ""), "_status": st,
                     "game": (st.get("info") or {}).get("game", ""), "decisions": st.get("episodes", 0),
                     "date": st.get("game_date", ""), "status": st.get("status", "")})
     return out
@@ -114,12 +158,13 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
 
     def run_dir(request) -> Path:
         rid = request.match_info["run"]
-        if not RUN_ID.match(rid) or not (runs_dir / rid).is_dir():
+        if not RUN_ID.match(rid) or not (runs_dir / rid / "events.jsonl").exists():
             raise web.HTTPNotFound()
         return runs_dir / rid
 
     async def runs(_):
-        return web.json_response(list_runs(runs_dir, log.state.run_id if log else None))
+        rows = list_runs(runs_dir, log.state.run_id if log else None)
+        return web.json_response([{k: v for k, v in r.items() if k != "_status"} for r in rows])
 
     def read_events(path: Path, kinds: set[str]) -> list[dict]:
         out = []
@@ -167,8 +212,53 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
         return web.json_response({**log.state.as_dict(), "live": True}, dumps=lambda o: json.dumps(o, default=str))
 
     if not log:
+        # Always-on viewer: forward live endpoints to a running pilot's own dashboard, if any.
+        proxy = LiveProxy(runs_dir)
+
+        async def v_status(request):
+            url = await proxy.url()
+            if url:
+                try:
+                    async with proxy.session().get(url + "/status", timeout=ClientTimeout(total=3)) as r:
+                        return web.json_response(await r.json())
+                except (OSError, TimeoutError, ClientError):
+                    proxy.forget()
+            return await status(request)
+
+        async def v_forward(request):
+            url = await proxy.url()
+            if not url:
+                raise web.HTTPServiceUnavailable(text="no live pilot run")
+            body = await request.read() if request.method == "POST" else None
+            try:
+                async with proxy.session().request(request.method, url + request.path_qs, data=body,
+                                                   headers={"Content-Type": request.content_type},
+                                                   timeout=ClientTimeout(total=30)) as r:
+                    return web.Response(body=await r.read(), status=r.status,
+                                        content_type=r.content_type, headers={"Cache-Control": "no-store"})
+            except (OSError, TimeoutError, ClientError) as e:
+                proxy.forget()
+                raise web.HTTPBadGateway(text=f"live pilot unreachable: {e}") from e
+
+        async def v_events(request):
+            url = await proxy.url()
+            if not url:
+                raise web.HTTPServiceUnavailable(text="no live pilot run")
+            resp = web.StreamResponse(headers={"Content-Type": "text/event-stream", "Cache-Control": "no-cache"})
+            await resp.prepare(request)
+            try:
+                async with proxy.session().get(url + "/events", timeout=ClientTimeout(total=None, sock_read=60)) as r:
+                    async for chunk in r.content.iter_any():
+                        await resp.write(chunk)
+            except (OSError, TimeoutError, ClientError, ConnectionResetError, asyncio.CancelledError):
+                pass
+            return resp
+
         app = web.Application()
-        app.add_routes([web.get("/", index), web.get("/status", status), *history, *api])
+        app.on_cleanup.append(lambda _: proxy.close())
+        app.add_routes([web.get("/", index), web.get("/status", v_status), web.get("/events", v_events),
+                        web.get("/events.json", v_forward), web.get("/frame.jpg", v_forward),
+                        web.post("/control", v_forward), *history, *api])
         return app
 
     async def frame(_):
@@ -211,8 +301,20 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
             pilot.stop()
         elif action == "instruct" and body.get("text", "").strip():
             pilot.instruct(body["text"].strip())
+        elif action in ("chat", "order_add") and body.get("text", "").strip() and hasattr(pilot, action):
+            getattr(pilot, action)(body["text"].strip())
+        elif action == "order_remove" and hasattr(pilot, "order_remove") and str(body.get("index", "")).isdigit():
+            pilot.order_remove(int(body["index"]))
+        elif action == "decide_now" and hasattr(pilot, "decide_now"):
+            pilot.decide_now(body.get("text", "") or "")
+        elif action == "override" and hasattr(pilot, "override"):
+            try:
+                pilot.override(str(body.get("directive", "")))
+            except ValueError as e:
+                raise web.HTTPBadRequest(text=str(e)) from e
         else:
-            raise web.HTTPBadRequest(text="action must be pause|resume|stop|instruct (with text)")
+            raise web.HTTPBadRequest(text="action must be pause|resume|stop|instruct|chat|order_add|order_remove|"
+                                          "decide_now|override, with its text/index/directive")
         return web.json_response({"ok": True, "status": log.state.status})
 
     app = web.Application()

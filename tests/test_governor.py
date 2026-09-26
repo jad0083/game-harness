@@ -160,7 +160,7 @@ def test_history_endpoints_serve_runs_traces_and_metrics(setup):
             assert t["decision"] == "keep" and t["trigger"].startswith("scheduled")
             assert (await c.get("/runs/run1/trace/9")).status == 404
             assert (await c.get("/runs/..%2Fetc/events")).status == 404
-            assert (await c.post("/control", json={"action": "pause"})).status in (404, 405)
+            assert (await c.post("/control", json={"action": "pause"})).status == 503   # no live run
             assert (await c.get("/")).status == 200
 
     asyncio.run(go())
@@ -239,5 +239,124 @@ def test_telemetry_api(setup, tmp_path):
             assert ms[0]["date"] == "2200.01.01" and "net" in ms[0]
             assert (await c.get("/api/decisions")).status == 400
             assert (await c.get("/api/decision", params={"run": "run9", "episode": "x"})).status == 400
+
+    asyncio.run(go())
+
+
+def recording_model(choice: str = "keep"):
+    """Decides `choice`, answers chat in text, and records every prompt it was given."""
+    seen: list[str] = []
+
+    def respond(messages, info: AgentInfo) -> ModelResponse:
+        from pydantic_ai.messages import TextPart, UserPromptPart
+        for m in messages:
+            for p in getattr(m, "parts", []):
+                if isinstance(p, UserPromptPart) and isinstance(p.content, str):
+                    seen.append(p.content)
+        if not info.output_tools:          # the chat agent answers in plain text
+            return ModelResponse(parts=[TextPart("Food is fine: +3/month.")])
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"directive": choice, "reason": "r"})])
+
+    return FunctionModel(respond), seen
+
+
+def test_standing_orders_reach_every_decision_and_persist(setup):
+    s, log = setup
+    model, seen = recording_model()
+    gov = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=model)
+    gov.log.set_campaign("stellaris", "c1")
+    gov.order_add("Never declare war.")
+    gov.order_add("Prioritise research.")
+    gov.order_remove(1)
+    gov.run(max_decisions=1)
+    assert any("STANDING ORDERS" in p and "1. Never declare war." in p and "research" not in p for p in seen)
+    assert (s.runs_dir / "orders" / "stellaris_c1.json").exists()
+    gov2 = Governor(s, FakeStellaris([briefing("2200.01.01")]), EventLog(s.runs_dir, "run2", s.model), model=model)
+    gov2._set_campaign({"source": "save games/c1/x.sav"})
+    assert gov2.orders == ["Never declare war."]
+    assert any(e["kind"] == "orders" for e in log.recent)
+
+
+def test_decide_now_and_override_run_between_scheduled_decisions(setup):
+    s, log = setup
+    model, seen = recording_model("tech_rush")
+    game = FakeStellaris([briefing("2200.01.01"), briefing("2200.02.01")])
+    gov = Governor(s, game, log, model=model)
+    gov.decide_now("We need more alloys")
+    gov.override("defend")
+    gov.run(max_decisions=3)
+    eps = [e for e in log.recent if e["kind"] == "episode"]
+    assert eps[1]["situation"] == "human request: We need more alloys"
+    assert any("HUMAN INSTRUCTIONS (follow these): We need more alloys" in p for p in seen)
+    assert eps[2]["situation"] == "human override" and ("directive", "defend") in game.actions
+    import json
+    t = json.loads((log.dir / "traces/0003.json").read_text())
+    assert t["model"] == "human" and t["decision"] == "defend"
+    with pytest.raises(ValueError):
+        gov.override("nuke")
+
+
+def test_chat_answers_without_touching_the_game(setup):
+    s, log = setup
+    model, _ = recording_model()
+    game = FakeStellaris([briefing("2200.01.01")])
+    gov = Governor(s, game, log, model=model)
+    gov.chat("How is food?")
+    for _ in range(50):
+        if any(e["kind"] == "chat" and e["role"] == "model" for e in log.recent):
+            break
+        import time
+        time.sleep(0.05)
+    answer = next(e for e in log.recent if e["kind"] == "chat" and e["role"] == "model")
+    assert answer["text"] == "Food is fine: +3/month."
+    assert not [a for a in game.actions if a[0] in ("directive", "paused", "speed")]
+
+
+def test_pausing_does_not_trigger_a_decision(setup):
+    import threading
+    import time
+    s, log = setup
+    model, _ = recording_model()
+    gov = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=model)
+    t = threading.Thread(target=gov.run, daemon=True)
+    t.start()
+    time.sleep(0.2)
+    gov.pause()
+    time.sleep(0.3)
+    gov.stop()
+    t.join(timeout=5)
+    assert log.state.episodes == 1, "only the start-of-run decision"
+
+
+def test_viewer_ignores_non_run_folders(setup, tmp_path):
+    from pilot.dashboard import list_runs
+    s, log = setup
+    Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep")).run(max_decisions=1)
+    (s.runs_dir / "orders").mkdir(exist_ok=True)
+    assert [r["id"] for r in list_runs(s.runs_dir)] == ["run1"]
+
+
+def test_viewer_forwards_live_controls_to_the_running_pilot(setup):
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from pilot.dashboard import make_app
+    s, log = setup
+    gov = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+
+    async def go():
+        live = TestServer(make_app(gov))
+        await live.start_server()
+        log.state.info["port"] = live.port
+        log.state.status = "playing"
+        log.emit("status", status="playing")           # writes status.json with the port
+        async with TestClient(TestServer(make_app(None, s.runs_dir))) as viewer:
+            st = await (await viewer.get("/status")).json()
+            assert st["live"] is True and st["run_id"] == "run1"
+            r = await viewer.post("/control", json={"action": "order_add", "text": "Keep the peace"})
+            assert r.status == 200 and gov.orders == ["Keep the peace"]
+            assert (await viewer.post("/control", json={"action": "bogus"})).status == 400
+        await live.close()
 
     asyncio.run(go())

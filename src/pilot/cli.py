@@ -68,6 +68,7 @@ def run(s: Settings, episodes: int | None) -> int:
         pilot = Governor(s, game, log)
     else:
         pilot = Pilot(s, game, log)
+    log.state.info["port"] = s.dashboard_port      # lets the always-on viewer find this run
     serve_in_background(pilot, s.dashboard_host, s.dashboard_port)
     print(f"pilot {run_id}: model {s.model}; dashboard http://{s.dashboard_host}:{s.dashboard_port}/ ; "
           f"log {log.dir / 'events.jsonl'}", flush=True)
@@ -120,7 +121,7 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument("--thinking", choices=["off", "low", "medium", "high"])
     sub.add_parser("rebuild-telemetry", help="recreate runs/telemetry.sqlite from the run logs")
     view_p = sub.add_parser("view", help="read-only dashboard over recorded runs")
-    view_p.add_argument("--port", type=int, default=8790)
+    view_p.add_argument("--port", type=int, default=8780)
     run_p = sub.choices["run"]
     run_p.add_argument("--port", type=int)
     run_p.add_argument("--turns", type=int, help="turns per autopilot call")
