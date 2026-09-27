@@ -17,8 +17,8 @@
 - [x] Tests for the Rust MCP coordinate mapping and for the agent's batch validation (`cargo test --workspace`: 18)
 - [ ] Decide the Python harness's fate: delete, or keep as the reference implementation with its tests pointed at what runs
 - [x] Stop tracking `game-agent.exe` (scripts/serve-agent.sh builds it from source before serving)
-- [ ] Deploy agent 1.5.0 (security fixes: token length, file paths, read cap, pinned install, firewall) on both PCs
-- [ ] Per-host agent tokens: `serve-agent.sh <host>` serves `.agent_token.<host>`; switch each PC to its own token at the next reinstall
+- [ ] Deploy agent 1.5.0 (security fixes: token length, file paths, read cap, pinned install, firewall) on both PCs — mini-rig2 done 2026-09-26 (`GA_FW_PROFILE='Domain,Private'` there); main PC pending
+- [ ] Per-host agent tokens: `serve-agent.sh <host>` serves `.agent_token.<host>`; switch each PC to its own token at the next reinstall — mini-rig2 switched (token in `.env` and the services' drop-ins); main PC pending
 - [x] Deploy agent 1.4.0 (no console window, agent.log, numpad/win/plus keys, OS-random token) — deployed 2026-09-26 by typing the installer one-liner into the PC's PowerShell through the agent itself
 - [x] Deploy agent 1.2.0 (configurable drag + read-only game-folder access; 4 roots verified on the PC 2026-09-25)
 - [ ] Retry placing Earth's Capital City with the slow drag
@@ -138,7 +138,7 @@
 - [x] CI skips the Rust stages for commits with no Rust, Cargo or corpus files (`scripts/ci-needs-rust.sh`)
 - [x] Game pillars: each game defines its strategy pillars, metrics and actions in `corpora/<game>/pillars.toml`; the strategy layer, decisions, actions and dashboard use them as guardrails (spec docs/design/2026-09-26-game-pillars-design.md; deployed 2e9f24d on mini-rig2, two live reviews accepted with milestones and trait-based identity)
 - [ ] Civilization VI integration (after game pillars)
-- [ ] Dashboard access key: `PILOT_DASHBOARD_KEY` or `runs/dashboard.key`, one link per browser (`python -m pilot dashboard-link`), JSON-only same-origin changes
+- [x] Dashboard access key: `PILOT_DASHBOARD_KEY` or `runs/dashboard.key`, one link per browser (`python -m pilot dashboard-link`), JSON-only same-origin changes
 
 ## Hosts
 - [x] Second game host mini-rig2 (2560x1440): agent 1.4.0 installed and reachable with the shared token (2026-09-26)
