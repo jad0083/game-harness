@@ -36,6 +36,7 @@ from .config import Settings
 from .events import EventLog
 from .learning import Journal, LearnedStore, LearningRejected
 from .pillars import ACTION_KINDS, OrdersSpec, PillarsError, PillarSpec, load_pillars
+from .stellaris_market import buy_errors, idle_fill
 from .stellaris_record import (
     NO_OP_PREFIX,
     OPEN,
@@ -99,10 +100,9 @@ ACTION_RECORD_HEADING = ("Action record in this campaign (each directive, tech p
                          "the saves until it resolves):")
 
 
-def market_calibration(corpus_dir: Path) -> str:
-    """A hash of the `[ui.market]` positions the controller clicks with (the manifest's table, and
-    `res/<W>x<H>.toml`'s under GAME_RESOLUTION): a market suspension holds only while it is the same
-    (ruling 6), so a recalibration commit lifts it."""
+def _market_table(corpus_dir: Path) -> dict:
+    """The `[ui.market]` table the controller clicks with: the manifest's, and `res/<W>x<H>.toml`'s under
+    GAME_RESOLUTION ({} when unreadable)."""
     table: dict = {}
     try:
         table = dict(tomllib.loads((Path(corpus_dir) / "manifest.toml").read_text(encoding="utf-8"))
@@ -113,7 +113,21 @@ def market_calibration(corpus_dir: Path) -> str:
             table.update((tomllib.loads(over.read_text(encoding="utf-8")).get("ui") or {}).get("market") or {})
     except (OSError, ValueError, AttributeError):
         pass
-    return hashlib.sha256(json.dumps(table, sort_keys=True, default=str).encode()).hexdigest()[:12]
+    return table
+
+
+def market_calibration(corpus_dir: Path) -> str:
+    """A hash of the `[ui.market]` positions the controller clicks with: a market suspension holds only
+    while it is the same (ruling 6), so a recalibration commit lifts it."""
+    return hashlib.sha256(json.dumps(_market_table(corpus_dir), sort_keys=True, default=str).encode()).hexdigest()[:12]
+
+
+def market_measured(corpus_dir: Path) -> set[str]:
+    """Resources whose new monthly trade has a measured start amount (`new_trade_amount` in `[ui.market]`):
+    the controller refuses to add the others (alloys and sr_* until live check L2), so the idle-trade
+    fill never picks them."""
+    start = _market_table(corpus_dir).get("new_trade_amount")
+    return set(start) if isinstance(start, dict) else set()
 
 
 # Action kind -> the game method that carries it out. A game whose object lacks the method has no
@@ -551,6 +565,10 @@ class Governor:
         self._tech_noops = 0                      # "nothing to pick" replies since the last review
         self._review_noops = 0                    # ...as of the review being written (and its retry)
         self._market_cal = market_calibration(settings.corpus_dir)   # [ui.market] hash (market suspension)
+        self._market_measured = market_measured(settings.corpus_dir)  # new trades with a measured start amount
+        self._market_note = ""                    # the last sync's idle-trade line, for the next decision
+        self._prev_save: dict | None = None       # the save before the newest one followed (the AI's own buys)
+        self._last_save: dict | None = None
         self._since_retro = 0
         self._strategy_trace_n = 0                # negative episode ids for strategy review traces (see _review_strategy)
         self._clock: Callable[[], float] = time.monotonic   # the watchdog's wall clock (tests inject one)
@@ -1289,6 +1307,7 @@ class Governor:
                   (frame_text(self.strategy, self.pillars, self._milestones_text(), press, current)
                    if self.pillars else "")
                   or "No strategy yet.",
+                  *([f"Market (last sync): {self._market_note}."] if self._market_note else []),
                   "Briefing from the latest autosave:", self.last_briefing]
         trend = self._trend(b)
         if trend:
@@ -1450,8 +1469,10 @@ class Governor:
                 self._resolve_action(tech_action(", ".join(prefer), "", date), "no_op", None, res, date)
 
     def _carry_out_market_actions(self, b: dict, market_sync: Callable[[list[dict]], str]) -> None:
-        """Sync the declared monthly trades (stellaris_market_sync). Each side and resource the sync
-        changes is followed in the next saves (ruling 2); one that did not take twice in a row with
+        """Sync the declared monthly trades (stellaris_market_sync). A sell must fit today's briefing and
+        a buy the buy rules (ruling 9, stellaris_market.py); while trade is IDLE and no declared order
+        passed, the slot is filled with deficit cover (the idle-trade fill). Each side and resource the
+        sync changes is followed in the next saves (ruling 2); one that did not take twice in a row with
         today's `[ui.market]` calibration is suspended until a recalibration (ruling 6), keeping any
         order of it the save already holds, as for a resource whose start amount is not measured."""
         date = b.get("date")
@@ -1461,10 +1482,11 @@ class Governor:
         idle, income = idle_resources(b), b.get("net") or {}
         desired = []
         for o in self._declared("market"):
-            errs = market_briefing_errors(o, limits, idle, income)
-            if errs:     # a sell that no longer fits today's briefing (e.g. a pinned or older order)
+            errs = market_briefing_errors(o, limits, idle, income) + self._buy_errors(o.model_dump(), b, current, idle)
+            if errs:     # a sell or buy that does not fit today's briefing (e.g. a pinned or older order)
                 if later:
-                    self._log_action("market", f"skipped sell {o.resource}: {'; '.join(errs)}"[:300])
+                    what = f"sell {o.resource}" if o.side == "sell" else f"buy {o.resource} {o.amount}"
+                    self._log_action("market", f"skipped {what}: {'; '.join(errs)}"[:300])
                 continue
             blocked = ("start amount not measured (the controller refuses to add it)"
                        if o.resource in self._market_unmeasured else self._market_suspension(o.side, o.resource))
@@ -1473,7 +1495,8 @@ class Governor:
                 # the controller keeps an unmeasured one) while that amount passes the checks the
                 # declared order passed
                 held = [h for h in self._kept_for([o.model_dump()], current)
-                        if not market_briefing_errors(o.model_copy(update={"amount": h.get("amount")}), limits, idle, income)]
+                        if not market_briefing_errors(o.model_copy(update={"amount": h.get("amount")}), limits, idle, income)
+                        and not self._buy_errors(h, b, current, idle)]
                 if later:
                     what = (", ".join(f"kept {h['side']} {h['resource']} {h['amount']}" for h in held)
                             + f" ({o.amount} wanted)" if held else f"skipped {o.side} {o.resource} {o.amount}")
@@ -1481,6 +1504,11 @@ class Governor:
                 desired += held
                 continue
             desired.append(o.model_dump())
+        fill, self._market_note = self._idle_fill(b, desired, current, idle, limits)
+        if fill:
+            desired.append(fill)
+        if self._market_note and later:
+            self._log_action("market", self._market_note[:300])
         if self._same_orders(desired, current) or not later:
             return
         self._market_sync_date = date
@@ -1499,11 +1527,43 @@ class Governor:
         # place is
         wanted = [o for o in desired if not any(self._same_orders([o], [r]) for r in refused)] \
             + self._kept_for(refused, current)
+        auto = {(fill["side"], fill["resource"])} if fill else set()
         for c in self._market_changes(wanted, current):
             for a in [a for a in self._actions if a["kind"] == "market"
                       and (a["expect"]["side"], a["expect"]["resource"]) == (c["side"], c["resource"])]:
                 self._resolve_action(a, *self._superseded(a), date)
-            self._open_action(market_action(c, date, self._market_cal))
+            extra = {"auto": "idle_fill"} if c["amount"] and (c["side"], c["resource"]) in auto else {}
+            self._open_action(market_action(c, date, self._market_cal, **extra))
+
+    def _buy_errors(self, o: dict, b: dict, current: list[dict], idle: set[str], *, crisis: bool = False) -> list[str]:
+        """Why buy `o` breaks the buy rules on save `b` (ruling 9); [] for a sell or without rules. An
+        order of that resource already in the save is kept up to the "never" price."""
+        rules = self.pillars.actions["market"].buy if self.pillars and "market" in self.pillars.actions else None
+        if rules is None or o.get("side") != "buy":
+            return []
+        placed = any((c.get("side"), c.get("resource")) == ("buy", o.get("resource")) for c in current)
+        try:
+            return buy_errors(o, b, self._prev_save, rules, idle, placed=placed, crisis=crisis)
+        except Exception as e:  # noqa: BLE001 - a malformed save never stops play; the buy waits
+            return [f"buy rules: {type(e).__name__}: {e}"]
+
+    def _idle_fill(self, b: dict, desired: list[dict], current: list[dict], idle: set[str],
+                   limits) -> tuple[dict | None, str]:
+        """The idle-trade fill (ruling 9): while the briefing flags trade IDLE and no declared order
+        passed, the first deficit to cover that passes the buy rules, has a measured start amount and is
+        not suspended. (order or None, the line for the next decision; "" when trade is not idle)."""
+        rules = limits.buy
+        if desired or rules is None or not rules.idle_fill or "trade" not in idle:
+            return None, ""
+        placed = lambda o: any((c.get("side"), c.get("resource")) == (o["side"], o["resource"]) for c in current)
+        try:
+            order, why = idle_fill(b, self._prev_save, limits, idle, self._market_measured - self._market_unmeasured,
+                                   self._market_suspension, placed=placed)
+        except Exception as e:  # noqa: BLE001 - a malformed save never stops play
+            return None, f"trade idle: the fill failed ({type(e).__name__}: {e})"
+        if order is None:
+            return None, f"trade idle: nothing qualifies to buy ({why})"
+        return order, f"trade idle: filled with buy {order['resource']} {order['amount']} (deficit cover)"
 
     @staticmethod
     def _market_changes(wanted: list[dict], current: list[dict]) -> list[dict]:
@@ -1586,16 +1646,18 @@ class Governor:
         if not date or date == self._followed_date or date[:1] == "T":
             return
         self._followed_date = self._now_date = date
+        if self._last_save is None or self._last_save.get("date") != date:
+            self._prev_save, self._last_save = self._last_save, b
         spec = self._orders_spec()
         for a in list(self._actions):
-            state = a.get("state")
+            before = (a.get("state"), a.get("dry", 0))      # what a restart needs to carry on following it
             try:
                 result, by, detail = judge(a, b, spec.open_cap_turns, spec.open_grace_turns)
             except Exception as e:  # noqa: BLE001 - the record is advisory
                 self.log.emit("briefing_error", error=f"action record ({a.get('key')}): {type(e).__name__}: {e}"[:200])
                 continue
             if result == OPEN:
-                if a.get("state") != state:
+                if (a.get("state"), a.get("dry", 0)) != before:
                     self.log.emit("order_followed", ref=a["ref"], action=a)   # seen in force: kept across restarts
                 continue
             self._resolve_action(a, result, by, detail, date)
@@ -1667,6 +1729,12 @@ class Governor:
             if self._market_suspension(side, res):
                 lines.append(f"- market {side} {res}: suspended after 2 did not take in a row with this [ui.market] "
                              "calibration; a recalibration lifts it")
+        latest = {r.get("key"): r for r in rows}
+        placed = {f"{o.get('side')} {o.get('resource')}" for o in ((self._last_save or {}).get("market_orders") or [])}
+        for key, r in latest.items():
+            # ruling 10: in the order list, but no trade (shown while the newest save still holds it)
+            if r.get("by") == "not executing" and (self._last_save is None or " ".join(str(r.get("id")).split()[:2]) in placed):
+                lines.append(f"- {key}: took (not executing): {r.get('detail') or ''}")
         noops = sum(1 for r in rows if r.get("key") == "tech" and r.get("result") == "no_op")
         if noops:
             picks = sum(1 for r in rows if r.get("key") == "tech" and r.get("result") not in ("no_op", "failed")) \

@@ -314,6 +314,15 @@ Rules:
   order of them to add is refused on its own until that is measured (removals and other adds still go,
   but an order of the same side and resource already placed stays at its amount); changes are computed from the last autosave, so call it at
   most once per autosave; trade is not a market resource).
+- **Market buy rules** (`[actions.market.buy]` in pillars.toml): every buy, declared or automatic,
+  keeps 2,500 trade after a year of its cost over the trade income, costs at most a quarter of that
+  income plus the surplus over two years, is not placed above +50% price (not kept above +100%), stays
+  within one base amount a month (six on the galactic market), and is never a resource the AI buys
+  itself (under 6 months of cover, or bought since the last save), an IDLE one, or alloys at 95% of
+  naval capacity. While trade is IDLE and no declared order passes, the slot is filled with deficit
+  cover (6-24 months of stock left, 36 for motes, gases, crystals); else the next decision reads
+  "trade idle: nothing qualifies to buy (reason)". A buy in the order list that trades nothing in 2
+  saves (`market.trades_net`) is recorded took (not executing).
 - **Action record**: every directive, tech pick, market order and posture is followed in the
   autosaves until it resolves (`order_outcome` events: took, held, researched; overridden, failed,
   did not take, did not stick, removed; not judged: superseded, locked, no-op), with a stick rate per

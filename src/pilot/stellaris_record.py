@@ -8,7 +8,7 @@ one `order_outcome` row (the Civ VI row shape, so both games share `record.order
 |---|---|---|---|
 | `directive <name>` | `took` (flag in the next save and nothing set to follow), `held` (every policy the game reported set still reads back at our next directive or after `open_cap_turns`) | `failed` (no flag in the next save), `overridden` (a reported policy reads back another option dated on or after our apply) | `superseded` (our next directive before a save), `locked` (the game set none of its policies) |
 | `tech` | `researched` (gone from current and offered), `held` (still researched at the next review or after the cap) | `did_not_stick` (still offered, not researched), `failed` (the tool failed) | `no_op` ("nothing to pick") |
-| `market <side> <resource>` | `took` (a removal gone in the next save), `held` (present at our next change or after the cap) | `did_not_take` (the next save differs), `removed` (gone later without our sync), `failed` (the tool failed) | `superseded` |
+| `market <side> <resource>` | `took` (a removal gone in the next save; a buy in the list that trades nothing in 2 saves, by "not executing"), `held` (present at our next change or after the cap) | `did_not_take` (the next save differs), `removed` (gone later without our sync), `failed` (the tool failed) | `superseded` |
 | `posture <name>` | `took` (flag as sent in the next save) | `did_not_take` | `superseded` |
 
 Pure: actions are plain dicts (persisted as `order_followed` events); `judge` updates an action's
@@ -83,12 +83,14 @@ def tech_action(tech: str, field: str, date: str) -> dict:
     return _action("tech", "tech", tech, date, {"tech": tech, "field": field})
 
 
-def market_action(order: dict, date: str, calibration: str) -> dict:
+def market_action(order: dict, date: str, calibration: str, *, key: str | None = None, **extra) -> dict:
     """A monthly trade set to `order["amount"]` (0: removed) on the save of `date`; `calibration`
-    is the hash of the `[ui.market]` positions it was clicked with (ruling 6)."""
+    is the hash of the `[ui.market]` positions it was clicked with (ruling 6). `key` names a war
+    crisis step ("crisis market buy alloys"), judged as any market order; `extra` is kept with it
+    (e.g. `auto`: the idle-trade fill)."""
     side, res, amount = order["side"], order["resource"], int(order.get("amount") or 0)
-    return _action("market", f"market {side} {res}", f"{side} {res} {amount}", date,
-                   {"side": side, "resource": res, "amount": amount}, calibration=calibration)
+    return _action("market", key or f"market {side} {res}", f"{side} {res} {amount}", date,
+                   {"side": side, "resource": res, "amount": amount}, calibration=calibration, **extra)
 
 
 def posture_action(name: str, on: bool, date: str) -> dict:
@@ -110,7 +112,7 @@ def judge(a: dict, b: dict, cap: int, grace: int) -> tuple[str, str | None, str]
     if verdict[0] != OPEN or a["state"] == "sent":
         return verdict
     if elapsed >= cap:
-        return "held", None, f"followed {elapsed} months to {date}"
+        return "held", None, f"followed {elapsed} months to {date}" + _last_trade(a)
     return verdict
 
 
@@ -180,7 +182,39 @@ def _judge_market(a: dict, b: dict, date: str) -> tuple[str, str | None, str]:
     if now != want:
         return ("removed", str(now) if now else None,
                 f"{side} {res} {want} {'gone' if not now else f'now {now}'} in the save of {date}")
+    return _judge_trading(a, b, date)
+
+
+# a buy in the order list with no trade in this many saves after the one that first showed it is
+# recorded `took` by "not executing" (ruling 10)
+DRY_SAVES = 2
+
+
+def _judge_trading(a: dict, b: dict, date: str) -> tuple[str, str | None, str]:
+    """Ruling 10: `net` leaves market trades out, so whether a buy in the order list trades shows only in
+    `market.trades_net` (last month's monthly trades). A buy with none of its resource bought in
+    DRY_SAVES saves after the one that first showed it resolves as `took` by "not executing"; without
+    a market block the check is the order list alone."""
+    e = a["expect"]
+    market = b.get("market")
+    trades = market.get("trades_net") if isinstance(market, dict) else None
+    if e["side"] != "buy" or not e["amount"] or not isinstance(trades, dict):
+        return OPEN, None, ""
+    got = float(trades.get(e["resource"]) or 0.0)
+    if got > 0:
+        a["dry"] = 0
+        a["last_trade"] = f"+{got:g} {e['resource']} for {max(0.0, -float(trades.get('trade') or 0.0)):g} trade"
+        return OPEN, None, ""
+    a["dry"] = a.get("dry", 0) + 1
+    if a["dry"] >= DRY_SAVES:
+        detail = (f"buy {e['resource']} {e['amount']} is in the order list but no {e['resource']} bought in the "
+                  f"monthly trades of {a['dry']} saves to {date}")
+        return "took", "not executing", detail
     return OPEN, None, ""
+
+
+def _last_trade(a: dict) -> str:
+    return f"; last month {a['last_trade']}" if a.get("last_trade") else ""
 
 
 def _judge_posture(a: dict, b: dict, date: str) -> tuple[str, str | None, str]:
@@ -195,7 +229,7 @@ def supersede(a: dict) -> tuple[str, str]:
     """Our own next order of the same kind replaced `a`: `held` once it was seen in force, else
     `superseded` (never judged)."""
     if a["state"] in ("took", "current"):
-        return "held", "in force until our next order"
+        return "held", "in force until our next order" + _last_trade(a)
     return "superseded", "our next order came before a save showed this one"
 
 
@@ -253,8 +287,8 @@ def market_suspended(rows: list[dict], side: str, resource: str, calibration: st
     """Two `did_not_take` in a row for this side and resource, both clicked with today's `[ui.market]`
     calibration (ruling 6): its orders are suspended until a recalibration changes the hash. A
     `failed` sync (an agent timeout) or a success in between breaks the run."""
-    key = f"market {side} {resource}"
-    mine = sorted((r for r in rows if r.get("key") == key and r.get("result") in JUDGED),
+    keys = (f"market {side} {resource}", f"crisis market {side} {resource}")   # the same clicks either way
+    mine = sorted((r for r in rows if r.get("key") in keys and r.get("result") in JUDGED),
                   key=lambda r: (r.get("turn") or 0, str(r.get("date") or "")))
     last = mine[-2:]
     return len(last) == 2 and all(r["result"] == "did_not_take" and r.get("calibration") == calibration for r in last)

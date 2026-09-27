@@ -426,3 +426,52 @@ def test_stellaris_metrics_name_their_peer_median_keys():
 def test_a_peer_key_for_an_unknown_metric_is_rejected(tmp_path):
     with pytest.raises(PillarsError, match=re.escape("metrics.peer_keys.bogus")):
         load_pillars(civ_corpus(tmp_path, CIV_MINI.replace("[metrics]\n", '[metrics]\npeer_keys = { bogus = "x" }\n')))
+
+
+# ---- Stellaris market buy rules (docs/design/2026-09-27-stellaris-levers-design.md, ruling 9) --------
+
+def test_the_stellaris_market_buy_rules():
+    spec = load_pillars(REPO / "corpora/stellaris")
+    market = spec.actions["market"]
+    buy = market.buy
+    assert (market.amount_max, market.max_items) == (25, 1), "amounts and slots change only after live check L2"
+    assert (buy.base_amount["energy"], buy.base_amount["consumer_goods"], buy.base_amount["alloys"],
+            buy.base_amount["rare_crystals"], buy.base_amount["sr_zro"]) == (100, 50, 25, 10, 5)
+    assert set(buy.base_amount) == set(market.resources), "every market resource has a base price"
+    assert (buy.fee, buy.trade_reserve, buy.income_share, buy.crisis_income_share, buy.surplus_months) == (
+        0.3, 2500, 0.25, 0.5, 24)
+    assert (buy.skip_above_pct, buy.never_above_pct) == (50, 100)
+    assert dict(buy.volume) == {"internal": 1, "galactic": 6}
+    assert (buy.ai_cover_months, buy.cover_months, buy.strategic_cover_months) == (6, 24, 36)
+    assert buy.strategic == ("volatile_motes", "exotic_gases", "rare_crystals")
+    assert (buy.naval_full, buy.cover_factor, buy.idle_fill) == (0.95, 1.2, True)
+    assert spec.public()["actions"]["market"]["buy"]["trade_reserve"] == 2500
+
+
+def test_a_market_table_without_buy_rules_has_none(tmp_path):
+    assert load_pillars(corpus(tmp_path)).actions["market"].buy is None
+
+
+_BUY = "\n[actions.market.buy]\nbase_amount = { energy = 100, alloys = 25 }\n"
+
+
+@pytest.mark.parametrize("table, where", [
+    ("\n[actions.market.buy]\nfee = 0.3\n", "actions.market.buy.base_amount: required"),
+    ("\n[actions.market.buy]\nbase_amount = { energy = 0 }\n", "actions.market.buy.base_amount.energy"),
+    ("\n[actions.market.buy]\nbase_amount = { gold = 10 }\n", "actions.market.buy.base_amount.gold"),
+    (_BUY + "fee = 1.5\n", "actions.market.buy.fee"),
+    (_BUY + "trade_reserve = -1\n", "actions.market.buy.trade_reserve"),
+    (_BUY + "income_share = 0\n", "actions.market.buy.income_share"),
+    (_BUY + "crisis_income_share = 0.1\n", "actions.market.buy.crisis_income_share"),
+    (_BUY + "never_above_pct = 40\n", "actions.market.buy.never_above_pct"),
+    (_BUY + "volume = { internal = 0 }\n", "actions.market.buy.volume.internal"),
+    (_BUY + "volume = { lunar = 1 }\n", "actions.market.buy.volume.lunar"),
+    (_BUY + "cover_months = 3\n", "actions.market.buy.cover_months"),
+    (_BUY + 'strategic = ["gold"]\n', "actions.market.buy.strategic"),
+    (_BUY + "naval_full = 1.5\n", "actions.market.buy.naval_full"),
+    (_BUY + "idle_fill = 1\n", "actions.market.buy.idle_fill"),
+    (_BUY + "colour = 1\n", "actions.market.buy.colour: unknown key"),
+])
+def test_bad_buy_rules_are_rejected(tmp_path, table, where):
+    with pytest.raises(PillarsError, match=re.escape(where)):
+        load_pillars(corpus(tmp_path, MINI + table))

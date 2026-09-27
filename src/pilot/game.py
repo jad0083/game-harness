@@ -287,7 +287,8 @@ class FakeStellaris:
 
     def __init__(self, briefings: list[dict], advance_only_when_running: bool = False,
                  self_pause_after: int | None = None, *, reverts: dict[str, str] | None = None,
-                 locked: tuple[str, ...] = (), market_sticky: bool = True, pick_reply: str | None = None):
+                 locked: tuple[str, ...] = (), market_sticky: bool = True, pick_reply: str | None = None,
+                 trades: dict | str | None = None):
         self.briefings = list(briefings)
         self.actions: list[tuple] = []
         self.paused = True
@@ -303,6 +304,9 @@ class FakeStellaris:
         # like the game: the next saves hold the synced market orders (False: the sync did not take)
         self.market_sticky = market_sticky
         self.market_orders: list[dict] | None = None
+        # last month's monthly trades in `market.trades_net` (levers ruling 10): a dict as given, or
+        # "orders": what the synced orders traded (a buy +amount, a sell -amount); None: as scripted
+        self.trades = trades
         self.pick_reply = pick_reply          # pick_tech's reply ("{tech}" = prefer[0]); None: "ok"
         # like the real game: while paused, reading the save again returns the same save
         self.advance_only_when_running = advance_only_when_running
@@ -331,6 +335,11 @@ class FakeStellaris:
             b["policy_dates"] = {**(b.get("policy_dates") or {}), **self.policy_dates}
         if self.market_orders is not None:
             b["market_orders"] = [dict(o) for o in self.market_orders]
+        if self.trades is not None:
+            traded = dict(self.trades) if isinstance(self.trades, dict) else {
+                o["resource"]: float(o["amount"]) * (1 if o["side"] == "buy" else -1) for o in self.market_orders or []}
+            b["market"] = {"kind": "galactic", "fluct": {}, "bought": {}, "sold": {},
+                           **(b.get("market") or {}), "trades_net": traded}
         return b
 
     def _date(self) -> str:

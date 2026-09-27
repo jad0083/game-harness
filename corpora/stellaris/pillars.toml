@@ -97,7 +97,31 @@ amount_min = 1
 amount_max = 25
 sell_income_share = 0.2        # a sell takes at most 20% of that resource's monthly income
 sell_requires_idle = true      # sell only a resource the briefing flags IDLE
-note = "Market orders cannot use trade; sell only idle energy, minerals, food or consumer goods (strategic resources can only be bought); alloys and sr_* orders are not placed until their start amount is measured."
+note = "Market orders cannot use trade; sell only idle energy, minerals, food or consumer goods (strategic resources can only be bought); alloys and sr_* orders are not placed until their start amount is measured. Buys pass the buy rules at every sync: 2,500 trade kept, at most a quarter of the trade income plus the surplus over two years, no new order above +50% price (none kept above +100%), never a resource the AI buys itself (under 6 months of cover, or it bought some since the last save), an IDLE one, or alloys with the fleet at 95% of naval capacity. While trade is IDLE and no order of yours passes, the harness fills the slot with deficit cover (a resource with 6-24 months of stock left)."
+
+# Buy rules (docs/design/2026-09-27-stellaris-levers-design.md, ruling 9), checked at every sync for the
+# declared buys and the automatic ones. Price per unit = 100 / base_amount x (1 + fluctuation) x (1 + fee);
+# a buy is allowed only if trade - 12 x max(0, cost - trade income) >= trade_reserve (where the AI's own
+# market spending starts), and its cost is at most income_share x trade income + (trade - trade_reserve)
+# / surplus_months. `volume` caps a monthly trade in base amounts (price decay and impact per base amount
+# are inferred, unverified: live check L1).
+[actions.market.buy]
+base_amount = { energy = 100, minerals = 100, food = 100, consumer_goods = 50, alloys = 25, volatile_motes = 10, exotic_gases = 10, rare_crystals = 10, sr_living_metal = 5, sr_zro = 5, sr_dark_matter = 5 }   # market_amount, common/strategic_resources 4.5.1
+fee = 0.3
+trade_reserve = 2500
+income_share = 0.25
+crisis_income_share = 0.5      # alloys in a war crisis
+surplus_months = 24
+skip_above_pct = 50            # no new order while the price is over +50%...
+never_above_pct = 100          # ...and an order in place is dropped over +100%
+volume = { internal = 1, galactic = 6 }
+ai_cover_months = 6            # AI_MARKET_BUY_MONTHS_OF_COVER: under it the AI buys by itself
+cover_months = 24              # deficit cover: 6..24 months of stock left...
+strategic_cover_months = 36    # ...36 for motes, gases and crystals
+strategic = ["volatile_motes", "exotic_gases", "rare_crystals"]
+naval_full = 0.95              # no alloys at 95% of naval capacity (outside a war crisis)
+cover_factor = 1.2             # deficit cover buys 1.2 x the monthly deficit
+idle_fill = true
 
 # Equals mcp.rs stellaris_pick_tech's limit on `prefer`.
 [actions.tech]

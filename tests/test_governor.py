@@ -2035,7 +2035,7 @@ def test_market_sync_is_skipped_when_orders_already_match_regardless_of_order(se
         {"side": "buy", "resource": "energy", "amount": 5},
         {"side": "buy", "resource": "minerals", "amount": 3},
     ])
-    b = {**briefing("2200.01.01"), "market_orders": [
+    b = {**_trading(briefing("2200.01.01")), "market_orders": [
         {"side": "buy", "resource": "minerals", "amount": 3},
         {"side": "buy", "resource": "energy", "amount": 5},
     ]}
@@ -2599,6 +2599,13 @@ def test_a_review_is_not_blocked_by_a_pinned_pillar_that_no_longer_fits_and_is_w
     assert "pinned economy no longer fits: selling energy but it is not idle" in prompts[0]
 
 
+def _trading(b: dict, trade: float = 10000.0, income: float = 100.0) -> dict:
+    """`b` with a trade stock that pays for buys under the buy rules (levers ruling 9) and is not IDLE
+    (under 15,000), so no idle-trade fill joins in."""
+    return {**b, "stockpile": {**(b.get("stockpile") or {}), "trade": trade},
+            "net": {**(b.get("net") or {}), "trade": income}}
+
+
 def _idle_energy(date: str) -> dict:
     """A briefing where energy is idle (big stock, positive net) with a 20% cap of 20."""
     return {**briefing(date, net={"energy": 100.0, "food": 3.0}), "stockpile": {"energy": 20000}}
@@ -2639,26 +2646,26 @@ def test_an_unmeasured_market_order_is_left_out_and_the_rest_of_the_sync_still_g
     game = Controller([briefing("2200.01.01")])
     g = Governor(s, game, log, model=decisions("keep"))
     g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[alloys]))
-    g._carry_out_actions({**briefing("2200.01.01"), "market_orders": [cg]})    # a stale order from before
+    g._carry_out_actions({**_trading(briefing("2200.01.01")), "market_orders": [cg]})    # a stale order from before
     assert game.actions.count(("market_sync", [alloys])) == 1
 
     def market_log():
         return [e["result"] for e in log.recent if e["kind"] == "strategy_action" and e.get("action") == "market"]
 
     # the next save holds no order: the controller did what it said, so nothing failed to stick
-    g._carry_out_actions({**briefing("2200.02.01"), "market_orders": []})
+    g._carry_out_actions({**_trading(briefing("2200.02.01")), "market_orders": []})
     assert not any("did not stick" in r for r in market_log()), market_log()
     assert not any(r["result"] == "did_not_take" for r in g._action_rows), g._action_rows
     assert sum(1 for a in game.actions if a[0] == "market_sync") == 1, "the refused order is not sent again"
     assert any("skipped buy alloys 5" in r and "start amount not measured" in r for r in market_log()), market_log()
 
     # an alloys order already in the save stays: keeping it adds nothing
-    g._carry_out_actions({**briefing("2200.03.01"), "market_orders": [alloys]})
+    g._carry_out_actions({**_trading(briefing("2200.03.01")), "market_orders": [alloys]})
     assert sum(1 for a in game.actions if a[0] == "market_sync") == 1
 
     # other resources still sync
     g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[food]))
-    g._carry_out_actions({**briefing("2200.04.01"), "market_orders": []})
+    g._carry_out_actions({**_trading(briefing("2200.04.01")), "market_orders": []})
     assert ("market_sync", [food]) in game.actions
     # the reply this test fakes is the controller's own wording (stellaris.rs MarketPlan::reply)
     rs = (REPO / "crates/game-controller/src/stellaris.rs").read_text(encoding="utf-8")
@@ -2683,7 +2690,7 @@ def test_an_unmeasured_order_at_another_amount_keeps_the_one_in_the_save(setup):
     game = Controller([briefing("2200.01.01")])
     g = Governor(s, game, log, model=decisions("keep"))
     g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[alloys5]))
-    g._carry_out_actions({**briefing("2200.01.01"), "market_orders": [alloys7]})
+    g._carry_out_actions({**_trading(briefing("2200.01.01")), "market_orders": [alloys7]})
     assert game.actions.count(("market_sync", [alloys5])) == 1
 
     def market_log():
@@ -2692,7 +2699,7 @@ def test_an_unmeasured_order_at_another_amount_keeps_the_one_in_the_save(setup):
     # the next save still buys 7: that is what the controller said, so nothing failed to stick, and
     # the kept order is asked for as it is (no sync that would remove it)
     for month in ("2200.02.01", "2200.03.01"):
-        g._carry_out_actions({**briefing(month), "market_orders": [alloys7]})
+        g._carry_out_actions({**_trading(briefing(month)), "market_orders": [alloys7]})
     assert not any("did not stick" in r for r in market_log()), market_log()
     assert not any(r["result"] == "did_not_take" for r in g._action_rows), g._action_rows
     assert sum(1 for a in game.actions if a[0] == "market_sync") == 1, game.actions
@@ -2755,7 +2762,7 @@ def test_market_actions_are_skipped_when_the_game_has_no_market_action(tmp_path)
         shutil.copy(REPO / "corpora/stellaris" / f, corpus / f)
     text = (REPO / "corpora/stellaris/pillars.toml").read_text(encoding="utf-8")
     text = text.replace('actions = ["market"]\n', "")               # economy no longer declares it
-    text = re.sub(r"\[actions\.market\][\s\S]*?(?=\n#|\n\[)", "", text)  # and the limits table is gone
+    text = re.sub(r"\[actions\.market(\.buy)?\][\s\S]*?(?=\n#|\n\[)", "", text)  # and the limits tables are gone
     (corpus / "pillars.toml").write_text(text, encoding="utf-8")
 
     s = Settings(model="google:gemini-3.8-flash", runs_dir=tmp_path / "runs", journal=tmp_path / "journal.md",
@@ -4247,17 +4254,17 @@ def test_two_market_orders_that_did_not_take_suspend_that_resource_until_recalib
 
     def syncs():
         return sum(1 for a in game.actions if a[0] == "market_sync")
-    g._carry_out_actions({**briefing("2250.01.01"), "market_orders": []})
-    g._carry_out_actions({**briefing("2250.02.01"), "market_orders": six})     # did not take; sent again
+    g._carry_out_actions({**_trading(briefing("2250.01.01")), "market_orders": []})
+    g._carry_out_actions({**_trading(briefing("2250.02.01")), "market_orders": six})     # did not take; sent again
     assert syncs() == 2 and [r["result"] for r in g._action_rows] == ["did_not_take"]
-    g._carry_out_actions({**briefing("2250.03.01"), "market_orders": six})     # twice in a row: suspended
+    g._carry_out_actions({**_trading(briefing("2250.03.01")), "market_orders": six})     # twice in a row: suspended
     assert syncs() == 2 and [r["result"] for r in g._action_rows] == ["did_not_take", "did_not_take"]
     assert "wanted buy consumer_goods 15, the save of 2250.03.01 has 6" in g._action_rows[-1]["detail"]
     assert any("suspended" in e["result"] and "[ui.market]" in e["result"] for e in log.recent
                if e["kind"] == "strategy_action")
     g._review_strategy(briefing("2250.04.01"), "scheduled")                     # a review does not lift it
     g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[buy]))
-    g._carry_out_actions({**briefing("2250.05.01"), "market_orders": six})
+    g._carry_out_actions({**_trading(briefing("2250.05.01")), "market_orders": six})
     assert syncs() == 2
     assert "suspended after 2 did not take" in g._action_record_text()
     manifest = s.corpus_dir / "manifest.toml"            # a recalibration commit changes [ui.market]
@@ -4265,7 +4272,7 @@ def test_two_market_orders_that_did_not_take_suspend_that_resource_until_recalib
                         encoding="utf-8")
     g2 = Governor(s, game, log, model=decisions("keep"))
     g2._action_rows, g2.strategy = list(g._action_rows), g.strategy
-    g2._carry_out_actions({**briefing("2250.06.01"), "market_orders": six})
+    g2._carry_out_actions({**_trading(briefing("2250.06.01")), "market_orders": six})
     assert syncs() == 3, "lifted by the new calibration"
 
 
@@ -4282,7 +4289,7 @@ def test_a_market_sync_that_fails_is_recorded_as_failed_and_suspends_nothing(set
     buy = {"side": "buy", "resource": "food", "amount": 12}
     g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[buy]))
     for d in ("2250.01.01", "2250.02.01", "2250.03.01"):
-        g._carry_out_actions({**briefing(d), "market_orders": []})
+        g._carry_out_actions({**_trading(briefing(d)), "market_orders": []})
     assert [(r["key"], r["result"]) for r in g._action_rows] == [("market buy food", "failed")] * 3
     assert sum(1 for a in game.actions if a[0] == "market_sync") == 3
 
@@ -4294,8 +4301,8 @@ def test_a_market_order_that_took_is_followed_until_removed(setup):
     g = Governor(s, game, log, model=decisions("keep"))
     buy = {"side": "buy", "resource": "food", "amount": 12}
     g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[buy]))
-    g._carry_out_actions({**briefing("2250.01.01"), "market_orders": []})
-    g._carry_out_actions({**briefing("2250.02.01"), "market_orders": [buy]})
+    g._carry_out_actions({**_trading(briefing("2250.01.01")), "market_orders": []})
+    g._carry_out_actions({**_trading(briefing("2250.02.01")), "market_orders": [buy]})
     assert g._action_rows == [] and sum(1 for a in game.actions if a[0] == "market_sync") == 1
     g._follow({**briefing("2250.05.01"), "market_orders": []})
     assert [(r["key"], r["result"]) for r in g._action_rows] == [("market buy food", "removed")]
@@ -4426,3 +4433,117 @@ def test_the_corrective_retry_of_a_review_keeps_the_tech_offers(setup):
         g._carry_out_actions({**briefing(d), "research": offer})
     g._review_strategy({**briefing("2200.05.01"), "research": offer}, "scheduled")
     assert len(prompts) == 2 and all("offered now: physics: tech_lasers_1, tech_shields_1" in p for p in prompts)
+
+
+# ---- market buy rules and the idle-trade fill (levers design rulings 9-10) --------------------------
+
+def _market_briefing(date: str, *, trade=20000.0, income=100.0, stock=None, net=None, fluct=None, trades=None,
+                     orders=None) -> dict:
+    """A briefing with a galactic market block; trade 20,000 (+100 a month) is IDLE."""
+    b = _trading(briefing(date, net={"energy": 5.0, **(net or {})}), trade, income)
+    b["stockpile"].update(stock or {})
+    return {**b, "market": {"kind": "galactic", "fluct": dict(fluct or {}), "bought": {}, "sold": {},
+                            "trades_net": dict(trades or {})}, "market_orders": list(orders or [])}
+
+
+def _market_log(log) -> list[str]:
+    return [e["result"] for e in log.recent if e["kind"] == "strategy_action" and e.get("action") == "market"]
+
+
+def test_a_declared_buy_that_breaks_a_buy_rule_is_skipped_and_one_in_place_is_kept_to_plus_100(setup):
+    from pilot.strategy import Pillar
+    s, log = setup
+    game = FakeStellaris([briefing("2250.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    order = {"side": "buy", "resource": "minerals", "amount": 10}
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[order]))
+    g._carry_out_actions(_market_briefing("2250.01.01", trade=10000, fluct={"minerals": 60}))
+    assert not any(a[0] == "market_sync" for a in game.actions)
+    assert any("skipped buy minerals 10" in r and "no new order above +50%" in r for r in _market_log(log)), _market_log(log)
+    # the same order already in the save stays while the price is at +100% or less; above it goes
+    g._carry_out_actions(_market_briefing("2250.02.01", trade=10000, fluct={"minerals": 60}, orders=[order]))
+    assert not any(a[0] == "market_sync" for a in game.actions)
+    g._carry_out_actions(_market_briefing("2250.03.01", trade=10000, fluct={"minerals": 120}, orders=[order]))
+    assert ("market_sync", []) in game.actions
+
+
+def test_idle_trade_fills_the_empty_slot_with_deficit_cover_and_follows_it(setup):
+    s, log = setup
+    game = FakeStellaris([briefing("2250.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    g.strategy = _strategy_with()                                           # no market order declared
+    b = _market_briefing("2250.01.01", stock={"minerals": 300}, net={"minerals": -20.0})
+    g._carry_out_actions(b)
+    fill = {"side": "buy", "resource": "minerals", "amount": 24}
+    assert ("market_sync", [fill]) in game.actions
+    followed = [a for a in g._actions if a["kind"] == "market"]
+    assert [(a["key"], a.get("auto")) for a in followed] == [("market buy minerals", "idle_fill")]
+    assert "trade idle: filled with buy minerals 24" in g._market_note
+    assert any("trade idle: filled with buy minerals 24" in r for r in _market_log(log))
+
+
+def test_a_declared_order_that_passes_leaves_no_room_for_the_fill(setup):
+    from pilot.strategy import Pillar
+    s, log = setup
+    game = FakeStellaris([briefing("2250.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    food = {"side": "buy", "resource": "food", "amount": 10}
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[food]))
+    g._carry_out_actions(_market_briefing("2250.01.01", stock={"minerals": 300}, net={"minerals": -20.0}))
+    assert [a for a in game.actions if a[0] == "market_sync"] == [("market_sync", [food])]
+
+
+def test_idle_trade_with_nothing_to_buy_says_why_in_the_next_decision(setup):
+    s, log = setup
+    seen: list[str] = []
+    b = _market_briefing("2250.01.01")                                     # IDLE trade, no deficit
+    game = FakeStellaris([b, {**b, "date": "2251.01.01"}])
+    g = Governor(s, game, log, model=_prompts_model(seen, "keep"), role_models={"strategy": _strategist([])})
+    g.run(max_decisions=2)
+    assert not any(a[0] == "market_sync" for a in game.actions)
+    assert "trade idle: nothing qualifies to buy (no resource in deficit" in seen[-1]
+    assert "trade idle" not in seen[0], "the note comes from the sync after the first decision"
+
+
+def test_a_buy_that_never_trades_is_recorded_took_not_executing(setup):
+    from pilot.strategy import Pillar
+    s, log = setup
+    game = FakeStellaris([briefing("2250.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    order = {"side": "buy", "resource": "minerals", "amount": 10}
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[order]))
+    g._carry_out_actions(_market_briefing("2250.01.01", trade=10000))
+    assert ("market_sync", [order]) in game.actions
+    for d in ("2250.02.01", "2250.03.01", "2250.04.01"):
+        g._carry_out_actions(_market_briefing(d, trade=10000, orders=[order]))
+    assert [(r["key"], r["result"], r["by"]) for r in g._action_rows] == [("market buy minerals", "took", "not executing")]
+    text = g._action_record_section()
+    assert "market buy minerals: took (not executing)" in text and "no minerals bought" in text
+    assert sum(1 for a in game.actions if a[0] == "market_sync") == 1, "the order stays; nothing is re-sent"
+    g._follow(_market_briefing("2250.05.01", trade=10000))           # the order is gone from the save
+    assert "not executing" not in g._action_record_section()
+
+
+def test_a_buy_that_trades_stays_followed(setup):
+    from pilot.strategy import Pillar
+    s, log = setup
+    game = FakeStellaris([briefing("2250.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    order = {"side": "buy", "resource": "minerals", "amount": 10}
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[order]))
+    g._carry_out_actions(_market_briefing("2250.01.01", trade=10000))
+    for d in ("2250.02.01", "2250.03.01", "2250.04.01"):
+        g._carry_out_actions(_market_briefing(d, trade=10000, orders=[order],
+                                              trades={"minerals": 10.0, "trade": -13.0}))
+    assert g._action_rows == [] and [a["key"] for a in g._actions] == ["market buy minerals"]
+    assert g._actions[0]["last_trade"] == "+10 minerals for 13 trade"
+    followed = [e for e in log.recent if e["kind"] == "order_followed"]
+    assert len(followed) == 2, "sent, then seen in force: a trade each month is no new event"
+
+
+def test_the_fake_game_fills_trades_from_its_orders(setup):
+    game = FakeStellaris([briefing("2250.01.01"), briefing("2250.02.01")], trades="orders")
+    game.market_sync([{"side": "buy", "resource": "minerals", "amount": 10}, {"side": "sell", "resource": "food", "amount": 5}])
+    game.briefing()
+    assert game.briefing()["market"]["trades_net"] == {"minerals": 10.0, "food": -5.0}
+    assert FakeStellaris([briefing("2250.01.01")], trades={}).briefing()["market"]["trades_net"] == {}

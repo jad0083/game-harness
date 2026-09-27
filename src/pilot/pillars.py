@@ -27,8 +27,12 @@ _ACTION_KEYS = {
                                  "gold_reserve_per_deficit", "pantheon_reserve", "prophet_faith_reserve",
                                  "skip_turns_left", "defence_first", "defender_classes", "defence_cooldown_turns"},
     "market": {"field", "max_items", "resources_from_manifest", "amount_min", "amount_max",
-               "sell_income_share", "sell_requires_idle", "note"},
+               "sell_income_share", "sell_requires_idle", "note", "buy"},
 }
+_BUY_KEYS = {"base_amount", "fee", "trade_reserve", "income_share", "crisis_income_share", "surplus_months",
+             "skip_above_pct", "never_above_pct", "volume", "ai_cover_months", "cover_months",
+             "strategic_cover_months", "strategic", "naval_full", "cover_factor", "idle_fill"}
+MARKET_KINDS = ("internal", "galactic")
 _ACTION_REQUIRED = {**dict.fromkeys(ID_LIST_KINDS, ("max_items", "ids_from_corpus")),
                     "purchase": ("max_items", "ids_from_corpus", "gold_reserve", "treasury_share"),
                     "market": ("max_items", "resources_from_manifest", "amount_max")}
@@ -60,6 +64,30 @@ class PillarDef:
 
 
 @dataclass(frozen=True)
+class BuyRules:
+    """Stellaris market buy rules (docs/design/2026-09-27-stellaris-levers-design.md, ruling 9; applied by
+    stellaris_market.py at every sync, to declared buys and the automatic idle-trade fill). Percentages
+    are price fluctuations over base; amounts are per month."""
+    base_amount: types.MappingProxyType          # resource -> market_amount: base price = 100 / it, volume unit
+    fee: float = 0.30                  # market fee on top of the price
+    trade_reserve: float = 2500.0      # trade kept after 12 months of the buy's cost over trade income
+    income_share: float = 0.25         # spend cap: this share of the monthly trade income...
+    crisis_income_share: float = 0.5   # ...or this for alloys in a war crisis...
+    surplus_months: float = 24.0       # ...plus the trade over the reserve spread over this many months
+    skip_above_pct: float = 50.0       # no new order above this fluctuation...
+    never_above_pct: float = 100.0     # ...and none kept above this one
+    volume: types.MappingProxyType = field(default_factory=lambda: types.MappingProxyType(
+        {"internal": 1.0, "galactic": 6.0}))    # base amounts a month per market kind
+    ai_cover_months: float = 6.0       # under this many months of stock the AI buys by itself
+    cover_months: float = 24.0         # deficit cover: stocks lasting ai_cover_months..this
+    strategic_cover_months: float = 36.0   # ...or this for the `strategic` resources
+    strategic: tuple[str, ...] = ()
+    naval_full: float = 0.95           # no alloys outside a war crisis at this share of naval capacity or more
+    cover_factor: float = 1.2          # deficit cover buys this x the monthly deficit
+    idle_fill: bool = True             # fill an empty slot with deficit cover while trade is IDLE
+
+
+@dataclass(frozen=True)
 class ActionLimits:
     kind: str
     field: str
@@ -86,6 +114,7 @@ class ActionLimits:
     defence_first: bool = False          # a city in danger with no defender on its tile gets one first
     defender_classes: tuple[str, ...] = ()   # unit classes (data/unit.json fields.class) that defend a city
     defence_cooldown_turns: int = 0      # at most one defender purchase per city per this many turns
+    buy: BuyRules | None = None          # market: the buy rules ([actions.market.buy]); None: buys unchecked
 
     @property
     def corpus_files(self) -> tuple[str, ...]:
@@ -181,7 +210,12 @@ class PillarSpec:
                                 "pantheon_reserve": a.pantheon_reserve, "prophet_faith_reserve": a.prophet_faith_reserve,
                                 "skip_turns_left": a.skip_turns_left, "defence_first": a.defence_first,
                                 "defender_classes": list(a.defender_classes),
-                                "defence_cooldown_turns": a.defence_cooldown_turns}
+                                "defence_cooldown_turns": a.defence_cooldown_turns,
+                                "buy": None if a.buy is None else {
+                                    **{k: getattr(a.buy, k) for k in sorted(_BUY_KEYS)
+                                       if k not in ("base_amount", "volume", "strategic")},
+                                    "base_amount": dict(a.buy.base_amount), "volume": dict(a.buy.volume),
+                                    "strategic": list(a.buy.strategic)}}
                             for k, a in self.actions.items()},
                 "orders": None if self.orders is None else {
                     "window_turns": self.orders.window_turns, "min_resolved": self.orders.min_resolved,
@@ -351,10 +385,69 @@ def _action(path: Path, corpus: Path, kind: str, t) -> ActionLimits:
     if buyout["defence_first"] and not classes:
         raise _err(path, f"{where}.defender_classes", "defence_first needs the unit classes that defend a city")
     buyout["defender_classes"] = tuple(c.strip() for c in classes)
+    buy = _buy_rules(path, f"{where}.buy", t["buy"], resources) if "buy" in t else None
     return ActionLimits(kind=kind, field=fld, max_items=t["max_items"], ids_from_corpus=ids, resources=resources,
                         amount_min=lo, amount_max=hi, sell_income_share=None if share is None else float(share),
                         sell_requires_idle=idle, note=note.strip(), max_orders=orders, full_ids=full,
-                        **reserves, **shares, **buyout)
+                        buy=buy, **reserves, **shares, **buyout)
+
+
+def _buy_rules(path: Path, where: str, t, resources: tuple[str, ...]) -> BuyRules:
+    """`[actions.market.buy]`: every base amount names a market resource of the manifest; shares are
+    fractions, months and prices positive, the "never" price at or above the "skip" one."""
+    if not isinstance(t, dict):
+        raise _err(path, where, "must be a table")
+    _unknown(path, where, t, _BUY_KEYS)
+    raw = t.get("base_amount")
+    if not isinstance(raw, dict) or not raw:
+        raise _err(path, f"{where}.base_amount", "required: a table of market_amount per resource")
+    for res, v in raw.items():
+        if res not in resources:
+            raise _err(path, f"{where}.base_amount.{res}", "not a market resource in the manifest")
+        if not _num(v) or v <= 0:
+            raise _err(path, f"{where}.base_amount.{res}", "must be a number > 0")
+    d = BuyRules(base_amount=types.MappingProxyType({}))
+    vals: dict = {}
+    for key, ok, msg in (
+            ("fee", lambda v: 0 <= v < 1, "a number in [0, 1)"),
+            ("trade_reserve", lambda v: v >= 0, "a number >= 0"),
+            ("income_share", lambda v: 0 < v <= 1, "a number in (0, 1]"),
+            ("crisis_income_share", lambda v: 0 < v <= 1, "a number in (0, 1]"),
+            ("surplus_months", lambda v: v > 0, "a number > 0"),
+            ("skip_above_pct", lambda v: v >= 0, "a number >= 0"),
+            ("never_above_pct", lambda v: v >= 0, "a number >= 0"),
+            ("ai_cover_months", lambda v: v >= 0, "a number >= 0"),
+            ("cover_months", lambda v: v > 0, "a number > 0"),
+            ("strategic_cover_months", lambda v: v > 0, "a number > 0"),
+            ("naval_full", lambda v: 0 < v <= 1, "a number in (0, 1]"),
+            ("cover_factor", lambda v: v > 0, "a number > 0")):
+        v = t.get(key, getattr(d, key))
+        if not _num(v) or not ok(v):
+            raise _err(path, f"{where}.{key}", f"must be {msg}")
+        vals[key] = float(v)
+    if vals["crisis_income_share"] < vals["income_share"]:
+        raise _err(path, f"{where}.crisis_income_share", "must be at least income_share")
+    if vals["never_above_pct"] < vals["skip_above_pct"]:
+        raise _err(path, f"{where}.never_above_pct", "must be at least skip_above_pct")
+    for key in ("cover_months", "strategic_cover_months"):
+        if vals[key] < vals["ai_cover_months"]:
+            raise _err(path, f"{where}.{key}", "must be at least ai_cover_months")
+    volume = t.get("volume", dict(d.volume))
+    if not isinstance(volume, dict):
+        raise _err(path, f"{where}.volume", "must be a table")
+    _unknown(path, f"{where}.volume", volume, set(MARKET_KINDS))
+    for k, v in volume.items():
+        if not _num(v) or v <= 0:
+            raise _err(path, f"{where}.volume.{k}", "must be a number > 0")
+    strategic = t.get("strategic", [])
+    if not isinstance(strategic, list) or not all(isinstance(r, str) and r in raw for r in strategic):
+        raise _err(path, f"{where}.strategic", "must list resources of base_amount")
+    fill = t.get("idle_fill", True)
+    if not isinstance(fill, bool):
+        raise _err(path, f"{where}.idle_fill", "must be true or false")
+    return BuyRules(base_amount=types.MappingProxyType({k: float(v) for k, v in raw.items()}),
+                    volume=types.MappingProxyType({**dict(d.volume), **{k: float(v) for k, v in volume.items()}}),
+                    strategic=tuple(strategic), idle_fill=fill, **vals)
 
 
 def _num(v) -> bool:

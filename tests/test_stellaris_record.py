@@ -164,3 +164,40 @@ def test_two_did_not_take_in_a_row_suspend_a_market_order_until_the_calibration_
     broken = [two[0], row("failed", when="2250.02.15"), two[1]]
     assert not market_suspended(broken, "buy", "consumer_goods", "cal1"), "a timeout (failed) breaks the run"
     assert not market_suspended([*two, row("took", when="2250.04.01")], "buy", "consumer_goods", "cal1")
+
+
+def test_a_buy_in_the_order_list_that_never_executes_is_recorded_took_not_executing():
+    """Ruling 10: `net` leaves market trades out, so a buy that sits in the order list without trading
+    shows only in `trades_net` (last month's monthly trades): none in 2 saves after it was seen."""
+    order = {"side": "buy", "resource": "minerals", "amount": 10}
+    a = market_action(order, "2250.01.01", "cal1")
+    s = lambda d, trades: {"date": d, "market_orders": [order], "market": {"kind": "galactic", "trades_net": trades}}
+    assert judge(a, s("2250.02.01", {}), CAP, GRACE)[0] == "open" and a["state"] == "took", \
+        "the save that first shows it may predate its first trade"
+    assert judge(a, s("2250.03.01", {}), CAP, GRACE)[0] == "open"
+    result, by, detail = judge(a, s("2250.04.01", {"energy": -5.0, "trade": 4.0}), CAP, GRACE)
+    assert (result, by) == ("took", "not executing") and "no minerals bought" in detail
+
+
+def test_a_buy_that_trades_is_followed_and_named_with_its_last_trade_when_held():
+    order = {"side": "buy", "resource": "minerals", "amount": 10}
+    a = market_action(order, "2250.01.01", "cal1")
+    trading = {"minerals": 10.0, "trade": -13.0}
+    for d in ("2250.02.01", "2250.03.01", "2250.04.01", "2250.05.01"):
+        save_ = {"date": d, "market_orders": [order], "market": {"kind": "galactic", "trades_net": trading}}
+        assert judge(a, save_, CAP, GRACE)[0] == "open"
+    result, detail = supersede(a)
+    assert result == "held" and "+10 minerals for 13 trade" in detail
+    blind = market_action(order, "2250.01.01", "cal1")
+    for d in ("2250.02.01", "2250.03.01", "2250.04.01", "2250.05.01"):
+        assert judge(blind, {"date": d, "market_orders": [order]}, CAP, GRACE)[0] == "open", \
+            "without a market block the check is the order list alone"
+
+
+def test_market_actions_can_carry_the_crisis_key_and_count_toward_the_suspension():
+    order = {"side": "buy", "resource": "alloys", "amount": 25}
+    a = market_action(order, "2250.01.01", "cal1", key="crisis market buy alloys")
+    assert a["key"] == "crisis market buy alloys" and a["kind"] == "market"
+    rows = [outcome_row(market_action(order, d, "cal1", key="crisis market buy alloys"), "did_not_take", None, "",
+                        d2) for d, d2 in (("2250.01.01", "2250.02.01"), ("2250.03.01", "2250.04.01"))]
+    assert market_suspended(rows, "buy", "alloys", "cal1"), "the click arithmetic is the same for crisis orders"

@@ -253,8 +253,8 @@ Each pillar has:
 - a stance that cites figures from the briefing, and concrete goals;
 - **milestones** `{metric, op, target, by}` (every pillar has one; the heaviest has a checkpoint and
   an end target), whose status (met, on track, at risk, missed) comes from telemetry;
-- actions: preferred techs (technology) and one small monthly market order (economy; only an idle
-  resource, at most 25 and 20% of its income).
+- actions: preferred techs (technology) and one small monthly market order (economy; a sell only of
+  an idle resource, at most 25 and 20% of its income; a buy under the buy rules below).
 
 **Pressure drives decisions.** Before each decision the governor computes every pillar's pressure
 = weight × milestone need (met 0.3, on track 1, at risk 1.5, missed 2; a pillar without milestones
@@ -292,6 +292,34 @@ fractional start amount is measured live: the rest of the sync, removals include
 refused order is not waited for in the next save, and later decisions skip it with that reason; an
 order of the same side and resource already in the save, e.g. buy alloys 7 when the strategy wants
 5, is kept at its amount rather than removed, while it passes the declared order's checks).
+
+**Market buy rules** (Stellaris; levers design rulings 9-10, `[actions.market.buy]` in
+`corpora/stellaris/pillars.toml`, `src/pilot/stellaris_market.py`), checked at every sync for the
+declared buys and the automatic ones; a buy that breaks one is skipped with the reason (an order of it
+in the save is then removed, as a sell that no longer fits):
+- price per unit = 100 / market amount x (1 + fluctuation) x 1.3 (the fee), the fluctuation from the
+  briefing's market block (0 without one);
+- the reserve: trade - 12 x (cost over the monthly trade income) must leave 2,500 (where the AI's own
+  market spending starts); the spend cap: cost <= 0.25 x trade income + (trade - 2,500) / 24 (0.5 of
+  the income for alloys in a war crisis);
+- the price guard: no new order above +50%; an order already placed stays up to +100%;
+- the volume: at most one base amount a month on the internal market, six on the galactic one
+  (alloys 25 or 150, consumer goods 50 or 300, motes, gases and crystals 10 or 60);
+- never what the AI buys anyway: a deficit with under 6 months of stock (the AI buys there itself),
+  a resource the AI bought since the last save (our own monthly trade left out), an IDLE one, alloys
+  with the fleet at 95% of naval capacity or more (from the Governor Bridge export) outside a crisis.
+
+**Idle-trade fill.** While the briefing flags trade IDLE and no declared order passed, the slot is
+filled with deficit cover: the resource in deficit with the fewest months of stock between 6 and 24
+(36 for motes, gases and crystals), 1.2 x its monthly deficit (at most the volume and 25), that passes
+the rules, has a measured start amount (not alloys or sr_* until live check L2) and is not suspended.
+Otherwise nothing is bought and the next decision reads "trade idle: nothing qualifies to buy
+(reason)". `amount_max` stays 25 and one order until L2 measures the click step and the second row.
+
+**Read-back.** The next save shows whether an order took (`market_orders`); `market.trades_net` (last
+month's monthly trades) shows whether it trades. A buy in the order list with none of its resource
+bought in 2 saves after the one that first showed it is recorded **took (not executing)**, and the
+action record says so; a held order's line names its last trade (e.g. `+10 minerals for 13 trade`).
 
 **Action record** (Stellaris; spec `docs/design/2026-09-27-stellaris-levers-design.md`, rulings 2-6):
 sending is not the outcome, so every directive, tech pick, market order and posture is followed in
