@@ -220,7 +220,11 @@ empire spends from in vanilla; subplans (focus and naval_cap only, optional, nam
 merged into the six vanilla economic plans; and the read channel, a hidden triggered-only
 `governor_bridge.1` on `on_monthly_pulse_country` that exports `max_naval_capacity` and
 `used_naval_capacity_integer` to `governor_naval_cap` / `governor_naval_used` for the country
-carrying `governor_bridge_player`, which `take_control` sets in its scope probe. Nothing in it
+carrying `governor_bridge_player`, which `take_control` sets in its scope probe. Country variables
+outlive the mod (a restart with another playset keeps the last export), so the briefing counts the
+export as current only while `governor_naval_used` agrees with the save's `used_naval_capacity`
+(within max(2, 2%)); otherwise `governor_vars_stale` is set and the text keeps "the maximum is not
+in the save". The use printed is always the save's own. Nothing in it
 adds resources, modifiers or policies; `stellaris.rs` tests parse every file and check each rule.
 `bridge_loaded` sends one console line per version trigger (`governor_bridge_version_2`, then
 `governor_bridge_present`), because an unknown trigger fails its whole effect, and returns the

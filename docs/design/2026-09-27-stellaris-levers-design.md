@@ -1025,6 +1025,10 @@ dashboard during state-changing checks.
     `take-control`, `bridge-check` v2.
   - error.log is clean.
   - `governor_naval_cap` is in the next autosave and matches the fleet manager's naval capacity.
+  - `governor_naval_used` equals that autosave's own `used_naval_capacity`, i.e. the export runs before
+    the save is written. The briefing treats the export as current only within max(2, 2%) of the save's
+    use (variables outlive the mod); if the export lags a month, a changing fleet reads stale and the
+    event needs a month stamp.
 - **L5, posture probes (G2-G4).** The fork-and-reload A/B for `naval_cap`, `research_focus`, `ship_upgrades`
   and `war_crisis`, 24 months per arm, then the isolation check.
 - **L6, stall and popups.**

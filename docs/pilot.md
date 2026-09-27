@@ -73,7 +73,8 @@ steer the AI's own spending (naval capacity and ship refits under `defend`/`prep
 under `tech_rush`, and a war-crisis posture for defence armies and platforms); every posture stays
 disabled until its live probe passes, so for now none is set. The mod v2 also writes the naval
 capacity into each autosave for the governed empire, so the briefing shows used/max once it is
-installed.
+installed, and only while that export agrees with the save's own use: a campaign later loaded
+without the mod keeps the last export, which the briefing calls stale (`governor_vars_stale`).
 
 The loop: pause → briefing from the newest autosave → the model returns a directive or `keep` →
 apply → resume → poll autosaves until the decision interval has passed or something urgent

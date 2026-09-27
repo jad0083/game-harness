@@ -276,7 +276,10 @@ Rules:
   `enabled = false`** until its live probe passes (a fork-and-reload A/B from one autosave on a
   throwaway game, 24 in-game months per arm); a disabled posture is never set, and enabling one is a
   data commit. v2 also exports the naval capacity each month for the empire `take-control` marked
-  (`governor_bridge_player`), so the briefing shows "naval capacity used/max (from the mod)".
+  (`governor_bridge_player`), so the briefing shows "naval capacity used/max (from the mod)" while
+  the export agrees with the save's own use (within max(2, 2%)); variables outlive the mod, so an
+  export that disagrees is flagged `governor_vars_stale` and the line keeps "the maximum is not in
+  the save".
 - **Date-stall watchdog**: when the autosave date has not moved for max(300 s, 10 x the run's
   median real month) while the governor wants the game running, it takes a screenshot, logs `stall`
   and resumes the game once (`self_paused` if it had paused itself); still stuck one limit later, it

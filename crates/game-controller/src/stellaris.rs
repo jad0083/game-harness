@@ -418,6 +418,9 @@ pub struct Briefing {
     pub shipyards: Vec<Shipyard>,
     /// Country variables named `governor_*` (exported by the Governor Bridge mod).
     pub governor_vars: BTreeMap<String, f64>,
+    /// The mod's export is not current (see `naval_export_fresh`): variables stay in the save after
+    /// the mod stops running, so `governor_vars` then holds the last export, not today's values.
+    pub governor_vars_stale: bool,
 }
 
 fn expansion(
@@ -2223,6 +2226,7 @@ pub fn brief_gamestate(gamestate: &[u8]) -> Result<Briefing> {
         .unwrap_or_default();
     b.key_techs_known = KEY_TECHS.iter().filter(|(t, _)| known.contains(*t)).map(|(t, _)| t.to_string()).collect();
     b.used_naval_capacity = i64_(&c, "used_naval_capacity").unwrap_or(0);
+    b.governor_vars_stale = !b.governor_vars.is_empty() && !naval_export_fresh(&b.governor_vars, b.used_naval_capacity);
     let pref = b.identity.species.as_ref().and_then(|sp| preferred_class(&sp.traits));
     if let Some(ps) = planets.as_ref() {
         for pid in strings(get(&c, "controlled_planets")) {
@@ -2431,6 +2435,20 @@ fn market_info(root: &Obj, c: &Obj, us: u64) -> Option<MarketInfo> {
     })
 }
 
+/// Is the Governor Bridge's naval-capacity export current? Country variables stay in the save after
+/// the mod stops running (a restart with another playset, a disabled mod), so a lone export proves
+/// nothing. The export is taken as current only while its `governor_naval_used` agrees with the
+/// save's own `used_naval_capacity`, within max(2, 2%) for a ship finished the same day after the
+/// export. A cap without its use cannot be checked and is not current. The check cannot tell a stale
+/// export while the fleet's use has not changed since; the AI builds up to its cap, so that holds
+/// only for short spells.
+fn naval_export_fresh(vars: &BTreeMap<String, f64>, used: i64) -> bool {
+    match (vars.get("governor_naval_cap"), vars.get("governor_naval_used")) {
+        (Some(_), Some(&exported)) => (exported - used as f64).abs() <= (0.02 * used as f64).max(2.0),
+        _ => false,
+    }
+}
+
 /// "2230.01.01" → (2230, 1, 1); `None` for anything else.
 fn ymd(date: &str) -> Option<(i64, i64, i64)> {
     let mut it = date.trim().split('.').map(|x| x.parse::<i64>().ok());
@@ -2533,13 +2551,15 @@ impl Briefing {
             "Government: {} / {}; ethics: {}; civics: {}; origin: {}\n",
             self.government, self.authority, self.ethics.join(", "), self.civics.join(", "), self.origin
         );
-        // the Governor Bridge mod exports the maximum monthly; without it only the use is known
-        let naval = match self.governor_vars.get("governor_naval_cap") {
-            Some(cap) => {
-                let used = self.governor_vars.get("governor_naval_used").copied().unwrap_or(self.used_naval_capacity as f64);
-                format!(", naval capacity {used:.0}/{cap:.0} (from the mod)")
-            }
-            None => format!(" (naval capacity used {}; the maximum is not in the save, so never assume we are at it)", self.used_naval_capacity),
+        // the Governor Bridge mod exports the maximum monthly; without it, or when its export is
+        // stale, only the use is known. The use printed is always the save's own.
+        let naval = match self.governor_vars.get("governor_naval_cap").filter(|_| !self.governor_vars_stale) {
+            Some(cap) => format!(", naval capacity {}/{cap:.0} (from the mod)", self.used_naval_capacity),
+            None => format!(
+                " (naval capacity used {}; the maximum is not in the save, so never assume we are at it{})",
+                self.used_naval_capacity,
+                if self.governor_vars_stale { "; the Governor Bridge export is stale, not today's" } else { "" }
+            ),
         };
         s += &format!(
             "Power: military {:.0}, economy {:.0}, tech {:.0}; victory rank {}. Systems owned {}, colonies {}, empire size {}, pops {}, fleet size {}{naval}, upgraded starbases {}/{}\n",
@@ -3876,8 +3896,10 @@ market={
         assert!(t.contains("- Outpost (arid size 10): OCCUPIED by Them;"), "{t}");
         assert!(t.contains("battles won 3, lost 6 (our side, allies included); ours in the last 12 months: won 1, lost 1, ships lost 4; ground battles at our colonies 1; a status quo can be forced on us (since 2229.12.01)"), "{t}");
         assert!(t.contains("Shipyards: Sol (OCCUPIED), Alpha\n"), "{t}");
-        assert!(t.contains("naval capacity 131/147 (from the mod)"), "{t}");
-        assert!(!t.contains("the maximum is not in the save"), "{t}");
+        // the mod's export disagrees with the save's own use (131 vs 120): stale, so not shown as live
+        assert!(t.contains("naval capacity used 120; the maximum is not in the save"), "{t}");
+        assert!(t.contains("the Governor Bridge export is stale"), "{t}");
+        assert!(!t.contains("from the mod") && !t.contains("/147"), "{t}");
         assert!(t.contains("Market (galactic; price vs base): alloys +46%, consumer_goods +38%, minerals -30%; our monthly trades last month: energy -11, trade +8\n"), "{t}");
         // a quiet early save: no market, shipyard or occupation lines, and the naval note stays
         let quiet = brief_save(SAVE).unwrap().to_text();
@@ -3885,6 +3907,42 @@ market={
             assert!(!quiet.contains(absent), "{absent}: {quiet}");
         }
         assert!(quiet.contains("the maximum is not in the save"));
+    }
+
+    #[test]
+    fn mod_naval_capacity_is_live_only_while_it_agrees_with_the_saves_own_use() {
+        // country variables outlive the mod: a campaign loaded without it keeps the last export
+        // forever, so the export counts only while its `used` matches the save's used_naval_capacity
+        let with_used = |used: &str| {
+            let gs = String::from_utf8(LEVERS_GAMESTATE.to_vec()).unwrap().replace("used_naval_capacity=120", &format!("used_naval_capacity={used}"));
+            brief_gamestate(gs.as_bytes()).unwrap()
+        };
+        let fresh = with_used("131");
+        assert!(!fresh.governor_vars_stale);
+        assert!(fresh.to_text().contains("naval capacity 131/147 (from the mod)"), "{}", fresh.to_text());
+        assert!(!fresh.to_text().contains("the maximum is not in the save"));
+        // a ship finished the same day after the export: the use printed is always the save's own
+        let same_day = with_used("132");
+        assert!(!same_day.governor_vars_stale);
+        assert!(same_day.to_text().contains("naval capacity 132/147 (from the mod)"), "{}", same_day.to_text());
+        // the mod stopped long ago: the save's use moved on and the export is not the maximum now
+        for used in ["250", "120"] {
+            let stale = with_used(used);
+            let t = stale.to_text();
+            assert!(stale.governor_vars_stale, "{used}");
+            assert!(t.contains(&format!("naval capacity used {used}; the maximum is not in the save, so never assume we are at it")), "{t}");
+            assert!(t.contains("the Governor Bridge export is stale") && !t.contains("from the mod"), "{t}");
+        }
+        // the JSON keeps the raw variables and says they are stale
+        let v = serde_json::to_value(with_used("250")).unwrap();
+        assert_eq!(v["governor_vars_stale"], serde_json::json!(true));
+        assert_eq!(v["governor_vars"]["governor_naval_cap"], serde_json::json!(147.0));
+        // a cap without its use cannot be checked, so it is not shown either
+        let gs = String::from_utf8(LEVERS_GAMESTATE.to_vec()).unwrap().replace(" governor_naval_used=131", "");
+        let b = brief_gamestate(gs.as_bytes()).unwrap();
+        assert!(b.governor_vars_stale && !b.to_text().contains("from the mod"));
+        // no mod variables at all: nothing to be stale
+        assert!(!brief_save(SAVE).unwrap().governor_vars_stale);
     }
 
     #[test]

@@ -86,7 +86,8 @@ Directives never grant resources, stats or anything the empire could not do itse
 - **Change since …** (about 12 months): systems, pops, military against the others' median,
   tech power and the alloy stock. `ALLOYS PILING UP` means the AI is not turning alloys into
   ships; without the Governor Bridge mod the save has no naval-capacity maximum (with it the power
-  line reads `naval capacity used/max (from the mod)`), so never assume the cap (the Theian campaign lost
+  line reads `naval capacity used/max (from the mod)`; an export that no longer matches the save is
+  called stale and gives no maximum), so never assume the cap (the Theian campaign lost
   nine years chasing a cap that did not exist, 51/115 used). Look for lost or occupied shipyards
   and ship losses first. `MILITARY FELL n%` means ships were lost or cannot be rebuilt: a loss,
   not a cap.
