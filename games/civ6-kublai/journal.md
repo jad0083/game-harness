@@ -126,3 +126,33 @@ reads, checks and orders only between turns.
   timeout) was reported "unknown"; the model repeated it at T37 and it was not refused. T37 and T41:
   urgent decisions on gold below the reserve (36 < 60), a missed science milestone and threatened
   cities; Slingers ordered in both cities, stuck.
+
+## 2026-09-27 — snapshot defence fields checked live, read-only (T124-T134)
+
+Levers design ruling 11 (`docs/design/2026-09-27-civ6-levers-design.md`), check L1. The live
+governor (from `main`) kept playing; every query ran while it was deciding (the game idle between
+turns). Five tuner queries in all: the snapshot (guard, install of the branch's library, call) and
+two read-only Lua probes. No order, autoplay or state-changing Lua was sent; the live governor
+re-installed its own library at its next call.
+
+- **Snapshot at T124** (8.1 KB, answered in about 1 s): every city has `x`/`y` matching the T61
+  query (Beijing 22,21, Chengdu 24,16, Haarlem 16,21, Xi'an 26,13), `buildings` (Beijing: Monument,
+  Palace, Granary, Shrine; Xi'an: Granary, Walls), `garrison` null in all six cities (no land unit on
+  a city tile), `defense` garrison 200/200 everywhere, walls 0/0 except Xi'an 100/100 (walls built
+  since T61). No city was threatened, so the per-threat lists did not run. `religion`: pantheon
+  Initiation Rites, religion Buddhism, 4 of 4 religions founded, prophet points 34, and a prophet
+  cost of 2147483647 (no Prophet left: now read as null). `blockers_all`: RESEARCH and UNITS —
+  research was idle at T124 (the gap ruling 16 closes).
+- **Probe at T129**: the nearest enemy land unit was an Australian Catapult 4 tiles from Xi'an
+  (bombard 35, range 2, promotion class SIEGE); the City Center's `GetDefenseStrength()` is 28;
+  `GetComponentID()` works on districts; `GetCommandTargets(RANGE_ATTACK)` on walled Xi'an answers
+  (19 plots, 0 targets); Beijing's defenders cost half as much faith as gold (Spearman 260 gold / 130
+  faith); `GetRange()` and `GetAttacksRemaining()` answer for our units.
+- **Probe at T134** (`SimulateAttackVersus` with an enemy as the attacker, Xi'an as the defender):
+  an Archer and a Warrior 4 tiles away previewed 1 damage for every combat type, the Catapult 0
+  (`SimulateAttackInto` gave no defender table for it). The preview's `DAMAGE_TO` is the garrison's
+  share while walls stand, so a 0 preview now counts only with walls up; without walls it falls back
+  to the damage formula.
+- **Autoplay start timeouts**: the live run waited for a human four times (T57, T99, T117, T120),
+  each time after the autoplay call timed out on the tuner and the polls read inactive; each Resume
+  started it at once. The branch sends such a start again, twice, before waiting.

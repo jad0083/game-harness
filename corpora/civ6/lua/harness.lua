@@ -266,11 +266,12 @@ end
 -- the game's own combat preview gives no answer.
 local BASE_DAMAGE, DAMAGE_PER_STRENGTH = 24, 0.04
 
--- One attack of an enemy unit on the City Center: the game's combat preview (as UnitPanel.lua
--- uses it), else the formula with the unit's strength against the district's defence strength.
--- A preview of 0 is no answer (seen live at T129: an enemy Catapult 4 tiles from Xi'an previewed
--- 0 damage; any real attack does some).
-local function attack_damage(e, kind, d, busy)
+-- One attack of an enemy unit on the City Center's garrison: the game's combat preview (as
+-- UnitPanel.lua uses it), else the formula with the unit's strength against the district's defence
+-- strength. The preview's DAMAGE_TO is the garrison's share: while walls stand they take the rest
+-- (seen live at T134 on Xi'an, walls 100: an Archer and a Warrior previewed 1, a Catapult 0), so a
+-- preview of 0 counts only while walls stand; without walls it is no answer.
+local function attack_damage(e, kind, d, busy, walls_up)
   local ctype, strength = nil, e.u:GetCombat()
   if kind == 'ranged' or kind == 'siege' then
     ctype, strength = CombatTypes.RANGED, e.u:GetRangedCombat()
@@ -283,7 +284,7 @@ local function attack_damage(e, kind, d, busy)
     if ok and type(r) == 'table' then
       local D = r[CombatResultParameters.DEFENDER]
       local dmg = type(D) == 'table' and D[CombatResultParameters.DAMAGE_TO] or nil
-      if type(dmg) == 'number' and dmg > 0 then return dmg, 'simulated' end
+      if type(dmg) == 'number' and (dmg > 0 or walls_up) then return dmg, 'simulated' end
     end
   end
   local ok, def = pcall(function() return d:GetDefenseStrength() end)
@@ -338,6 +339,7 @@ local function danger_detail(me, c, info, hostile)
   local d = center_of(c)
   local busy = false
   pcall(function() busy = UI.IsGameCoreBusy() end)
+  local walls_up = (info.defense or {}).walls_hp ~= nil and info.defense.walls_hp > 0
   pcall(function()
     local enemies, capture, incoming, from = {}, 0, 0, nil
     for _, e in ipairs(hostile) do
@@ -349,7 +351,7 @@ local function danger_detail(me, c, info, hostile)
       local reach = 1
       if kind == 'ranged' or kind == 'siege' then pcall(function() reach = e.u:GetRange() end) end
       if d and e.dist >= 1 and e.dist <= reach then
-        local dmg, src = attack_damage(e, kind, d, busy)
+        local dmg, src = attack_damage(e, kind, d, busy, walls_up)
         if dmg then
           incoming = incoming + dmg
           from = (from == nil or from == src) and src or 'mixed'

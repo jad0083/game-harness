@@ -31,7 +31,7 @@ local function members(list)
   return { Members = function() local i = 0 return function() i = i + 1 if list[i] then return i, list[i] end end end }
 end
 
-MOCK = { busy = false, simulate_fails = false, simulate_zero = false, religion_fails = false, turn = 61 }
+MOCK = { busy = false, simulate_fails = false, simulate_zero = false, religion_fails = false, turn = 61, walls = 0 }
 
 GameInfo = {
   Units = tbl({
@@ -129,14 +129,14 @@ local function district(dtype, x, y, garrison_damage, walls)
     IsUnderSiege = function() return false end,
     GetX = function() return x end, GetY = function() return y end,
     GetDamage = function(_, dt) return dt == DefenseTypes.DISTRICT_GARRISON and garrison_damage or 0 end,
-    GetMaxDamage = function(_, dt) return dt == DefenseTypes.DISTRICT_GARRISON and 200 or walls end,
+    GetMaxDamage = function(_, dt) return dt == DefenseTypes.DISTRICT_GARRISON and 200 or (walls or MOCK.walls) end,
     GetComponentID = function() return { district = dtype } end,
     GetDefenseStrength = function() return 28 end,
   }
 end
 
 local function city(t)
-  local d = district('DISTRICT_CITY_CENTER', t.x, t.y, t.garrison_damage or 0, t.walls or 0)
+  local d = district('DISTRICT_CITY_CENTER', t.x, t.y, t.garrison_damage or 0, t.walls)
   local producing = GameInfo.Units[t.producing] or GameInfo.Buildings[t.producing]
   return {
     GetID = function() return t.id end, GetName = function() return t.name end,

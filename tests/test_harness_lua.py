@@ -70,7 +70,7 @@ def test_a_threatened_city_lists_enemies_defenders_incoming_and_prices():
 
 @pytest.mark.parametrize("setup", ["MOCK.simulate_fails = true", "MOCK.simulate_zero = true"])
 def test_without_a_combat_preview_incoming_uses_the_damage_formula(setup):
-    """No preview, or a preview of 0 (seen live at T129 for a Catapult 4 tiles away): the formula."""
+    """No preview, or a preview of 0 with no walls standing: the formula."""
     s = snapshot(*runtime(), setup)
     beijing = s["cities"][0]
     assert beijing["incoming_from"] == "formula"
@@ -91,3 +91,11 @@ def test_a_failing_new_field_is_left_out_and_the_snapshot_still_answers():
     s = snapshot(*runtime(), "MOCK.religion_fails = true; CityManager.GetCommandTargets = nil")
     assert s["ok"] is True and "religion" not in s
     assert "can_strike" not in s["cities"][0] and "enemies" in s["cities"][0]
+
+
+def test_a_zero_preview_stands_while_walls_do():
+    """Live T134, Xi'an with walls 100: the preview gives the garrison's share, 0 or 1."""
+    s = snapshot(*runtime(), "MOCK.simulate_zero = true; MOCK.walls = 100")
+    beijing = s["cities"][0]
+    assert beijing["defense"]["walls_hp"] == 100
+    assert (beijing["incoming"], beijing["incoming_from"]) == (0, "simulated")
