@@ -6,6 +6,7 @@ Pure data and rules; no model calls, no game input."""
 
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import Mapping
 from typing import Literal
@@ -277,9 +278,12 @@ class PillarOut(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def _drop_human_fields(cls, data):
-        """`pinned`/`edited_by` are the human's: a model echoing them never pins anything."""
+        """`pinned`/`edited_by` are the human's: a model echoing them never pins anything. An empty
+        action list is dropped too (the stored shape carries every action field on every pillar); a
+        non-empty one on a pillar that does not declare it still fails."""
         if isinstance(data, dict):
-            data = {k: v for k, v in data.items() if k not in ("pinned", "edited_by")}
+            data = {k: v for k, v in data.items() if k not in ("pinned", "edited_by")
+                    and not (k in ACTION_KINDS.values() and k not in cls.model_fields and v == [])}
         return data
 
 
@@ -292,9 +296,10 @@ class _StrategyOutBase(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def _lift_pillars(cls, data):
-        """An answer in the stored shape ({"pillars": {id: {...}}, "focus"}) is read as named fields."""
+        """An answer in the stored shape ({"pillars": {id: {...}}, "focus", "identity"}) is read as named
+        fields; its top-level `identity` is dropped (the review's own `identity` field carries it)."""
         if isinstance(data, dict) and isinstance(data.get("pillars"), dict):
-            data = {**data["pillars"], **{k: v for k, v in data.items() if k != "pillars"}}
+            data = {**data["pillars"], **{k: v for k, v in data.items() if k not in ("pillars", "identity")}}
         return data
 
 
@@ -327,6 +332,19 @@ def review_model(spec: PillarSpec) -> type[BaseModel]:
         identity=(str, Field(default="", description="how our species (its traits by name), ethics, civics and origin "
                                                       "shape this strategy, and which pillars each trait affects")),
     )
+
+
+def strategy_for_prompt(s: Strategy, spec: PillarSpec) -> str:
+    """`s` as JSON in the Strategist's output shape (one field per pillar in priority order, only the
+    action fields the pillar declares, then focus and reason; no pinned/edited_by, no identity), so
+    an answer that echoes it validates against `review_model(spec)`."""
+    out: dict = {}
+    for name, pl in s.sorted_pillars():
+        declared = spec.pillars[name].actions if name in spec.pillars else ()
+        keep = {"priority", "stance", "goals", "milestones"} | {ACTION_KINDS[k] for k in declared if k in ACTION_KINDS}
+        out[name] = pl.model_dump(include=keep)
+    out.update(focus=s.focus, reason=s.reason)
+    return json.dumps(out, indent=1, ensure_ascii=False)
 
 
 def to_strategy(out: BaseModel, spec: PillarSpec) -> Strategy:

@@ -3056,7 +3056,9 @@ def test_the_corrective_retry_sends_back_the_named_field_shape(setup):
                  role_models={"strategy": FunctionModel(bad_then_ok)})
     g._review_strategy(briefing("2200.01.01"), "start of run")
     assert len(prompts) == 2, "the first answer was rejected and retried once"
-    assert '"pillars"' not in prompts[1] and '"defence"' in prompts[1]
+    rejected = prompts[1].split("Your rejected answer:\n", 1)[1].split("\n\n", 1)[0]
+    assert '"pillars"' not in prompts[1] and '"focus": "f"' in rejected
+    assert "missing pillar defence" in prompts[1], "the reasons name the pillars the answer left out"
     assert g.strategy is not None and set(g.strategy.pillars) == set(STELLARIS.ids)
 
 
@@ -3282,3 +3284,64 @@ def test_dashboard_strategy_tab_reads_the_spec_not_a_copied_map():
     assert "DIRECTIVE_OF" not in html
     assert "data.spec" in html and "function specIndex(" in html
     assert 'name === "technology"' not in html and 'name === "economy"' not in html
+
+
+# ---- final review fixes -------------------------------------------------------------------------
+
+def _main_shape_strategy(**over):
+    """A strategy as main stores it (every action field on every pillar, identity), top 3 with milestones."""
+    from pilot.strategy import Strategy
+    body = _pillars_body(PRIOS)
+    for p in body.values():
+        p.update(prefer_techs=[], market=[], pinned=False, edited_by="model")
+    body["economy"].update(pinned=True, edited_by="human", market=[{"side": "buy", "resource": "alloys", "amount": 5}])
+    for k, v in over.items():
+        body[k].update(v)
+    return Strategy.model_validate({"pillars": body, "focus": "hold", "reason": "seed", "identity": "industrious"})
+
+
+def _echo_strategist(prompts: list[str], *, spoil_first: bool = False):
+    """Answers change=true with the strategy JSON its own prompt shows (a verbatim echo)."""
+    import json
+
+    def respond(messages, info):
+        text = "\n".join(str(getattr(p, "content", "")) for m in messages for p in getattr(m, "parts", []))
+        prompts.append(text)
+        shown = json.loads(text.split("Current strategy:\n", 1)[1].split("\n\n", 1)[0])
+        if spoil_first and len(prompts) == 1:
+            shown["defence"]["milestones"] = []          # rejected: a top-3 pillar without a milestone
+        elif spoil_first:
+            shown = json.loads(text.split("Your rejected answer:\n", 1)[1].split("\n\n", 1)[0])
+            shown["defence"]["milestones"] = [{"metric": "systems", "op": ">=", "target": 12, "by": "2231.01.01"}]
+        body = {"change": True, "assessment": "echo", "rules": [], "strategy": shown}
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, body)])
+    return FunctionModel(respond)
+
+
+def test_a_strategist_echoing_the_prompts_strategy_is_accepted(setup):
+    s, log = setup
+    prompts = []
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": _echo_strategist(prompts)})
+    g.strategy = _main_shape_strategy()
+    g._review_strategy(briefing("2200.01.01"), "scheduled")
+    assert len(prompts) == 1 and not any(e["kind"] == "strategy_rejected" for e in log.recent)
+    shown = prompts[0].split("Current strategy:\n", 1)[1].split("\n\n", 1)[0]
+    assert '"pillars"' not in shown and '"pinned"' not in shown and '"identity"' not in shown
+    assert "Pinned by the human" in prompts[0] and "economy" in prompts[0].split("Pinned by the human", 1)[1][:80]
+    assert any(e["kind"] == "strategy_review" and e["accepted"] for e in log.recent)
+    assert g.strategy.pillars["economy"].pinned, "the human's pin is kept"
+
+
+def test_the_corrective_retry_shows_the_rejected_answer_in_the_output_shape(setup):
+    s, log = setup
+    prompts = []
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": _echo_strategist(prompts, spoil_first=True)})
+    g.strategy = _main_shape_strategy()
+    g._review_strategy(briefing("2200.01.01"), "scheduled")
+    assert len(prompts) == 2
+    rejected = prompts[1].split("Your rejected answer:\n", 1)[1].split("\n\n", 1)[0]
+    assert '"pinned"' not in rejected and "null" not in rejected and '"prefer_techs"' not in rejected.split('"technology"')[0]
+    assert not any(e["kind"] == "strategy_rejected" for e in log.recent), "the fixed echo is accepted"
+    assert g.strategy.pillars["defence"].milestones[0].target == 12

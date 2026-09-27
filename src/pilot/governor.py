@@ -39,6 +39,7 @@ from .strategy import (
     ranking,
     review_model,
     strategist_instructions,
+    strategy_for_prompt,
     to_strategy,
     validate,
 )
@@ -1293,7 +1294,10 @@ class Governor:
         retry_errors: list[str] | None = None
         retry_rejected: str | None = None
         try:     # building the prompt reads the game (briefing text): inside, so it never raises out
-            current = self.strategy.model_dump_json(indent=1) if self.strategy else "(none yet: write the first strategy)"
+            # shown in the answer's own shape, so a model that echoes it (change=true) validates
+            current = (strategy_for_prompt(self.strategy, self.pillars) if self.strategy
+                       else "(none yet: write the first strategy)")
+            pinned = [name for name, pl in self.strategy.sorted_pillars() if pl.pinned] if self.strategy else []
             prompt = [f"Strategy review, trigger: {trigger}.", "Current strategy:\n" + current,
                       "Milestones (status computed from the recorded numbers):\n" + self._milestones_text(),
                       "Directive changes and what followed:\n" + self._past_outcomes_text(),
@@ -1304,6 +1308,9 @@ class Governor:
                                  "The strategy must be built on them (fill `identity`).")
             misfits = pinned_misfits(self.strategy, self.pillars, idle=idle_resources(b),
                                      income=b.get("net") or {}) if self.strategy else []
+            if pinned:      # pinned/edited_by are not in the shown shape; the pins are named here
+                prompt.insert(2, "Pinned by the human (kept exactly as shown, whatever you answer): "
+                                 + ", ".join(pinned) + ".")
             if misfits:     # kept as the human set them; the Strategist should plan around them
                 prompt.insert(2, "Warnings:\n" + "\n".join(misfits))
             if errors:
@@ -1366,7 +1373,8 @@ class Governor:
 
             if errs and not retried:
                 retry_errors = errs             # one corrective retry: the model sees exactly what was wrong
-                retry_rejected = r.strategy.model_dump_json(indent=1) if r.strategy else None   # and the answer to fix
+                retry_rejected = (strategy_for_prompt(to_strategy(r.strategy, self.pillars), self.pillars)
+                                  if r.strategy else None)       # and the answer to fix, in the output shape
             elif errs:
                 self.log.emit("strategy_rejected", date=b["date"], errors=errs[:10])
             elif accepted:

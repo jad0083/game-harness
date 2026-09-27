@@ -529,3 +529,47 @@ def test_action_field_rejects_an_unknown_action_kind():
     from pilot.strategy import _action_field
     with pytest.raises(ValueError, match="unknown action kind"):
         _action_field(ActionLimits(kind="something_else", field="x", max_items=1))
+
+
+# ---- final review, item 1: an answer that echoes the prompt's strategy must validate -------------
+
+def _main_shape() -> dict:
+    """A strategy as main stores it: every pillar with empty action lists, pinned/edited_by and identity."""
+    s = strat(economy=Pillar(priority=2, stance="s", goals=["g"], milestones=[_M], pinned=True, edited_by="human",
+                             market=[MarketOrder(side="buy", resource="alloys", amount=5)]))
+    return s.model_copy(update={"identity": "industrious lithoids", "reason": "r"}).model_dump()
+
+
+def test_the_stored_main_shape_validates_as_a_review_strategy():
+    from pilot.strategy import review_model, to_strategy
+    dumped = _main_shape()
+    assert dumped["pillars"]["diplomacy"]["market"] == [] and dumped["identity"]
+    r = review_model(SPEC).model_validate({"change": True, "assessment": "a", "strategy": dumped})
+    s = to_strategy(r.strategy, SPEC)
+    assert set(s.pillars) == set(SPEC.ids) and s.pillars["economy"].market[0].resource == "alloys"
+    assert not s.pillars["economy"].pinned, "a model can never pin"
+
+
+def test_a_non_empty_undeclared_action_still_fails():
+    import pydantic
+
+    from pilot.strategy import review_model
+    dumped = _main_shape()
+    dumped["pillars"]["diplomacy"]["market"] = [{"side": "buy", "resource": "alloys", "amount": 5}]
+    with pytest.raises(pydantic.ValidationError, match="market"):
+        review_model(SPEC).model_validate({"change": True, "assessment": "a", "strategy": dumped})
+
+
+def test_the_prompt_shows_the_strategy_in_the_output_shape():
+    import json
+
+    from pilot.strategy import review_model, strategy_for_prompt
+    s = Strategy.model_validate(_main_shape())
+    text = strategy_for_prompt(s, SPEC)
+    shown = json.loads(text)
+    assert "pillars" not in shown and "identity" not in shown and shown["focus"] == "hold the line"
+    assert set(SPEC.ids) <= set(shown)
+    assert "market" in shown["economy"] and "prefer_techs" in shown["technology"]
+    assert not {"market", "prefer_techs"} & set(shown["diplomacy"])
+    assert "pinned" not in text and "edited_by" not in text
+    review_model(SPEC).model_validate({"change": True, "assessment": "a", "strategy": shown})
