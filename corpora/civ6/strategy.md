@@ -106,8 +106,13 @@ CivBench A.6):
 - Spend when the turns saved times the item's value beats the other uses of the gold or faith
   (tile purchases for districts and luxuries, unit upgrades, great person patronage). Gold above
   about 500 with no named purchase is usually better spent (CivBench A.6).
-- Keep a reserve of about 5 turns of maintenance; one purchase at most half the treasury unless a
-  city is threatened, in which case buy defenders or walls at once.
+- Keep a small gold reserve (30, more with a deficit) and, until a pantheon is founded, its faith
+  price; one purchase at most half the balance unless a city is in danger (enemies next to it that
+  can take it, a damaged garrison, or enemies near an empty tile), in which case buy a defender
+  there at once, with faith when the game allows it (about half the gold price). Walls cannot be
+  bought: they come from production after Masonry, and only a city with walls can strike.
+- Faith is a currency, not a score: in the Kublai campaign it sat unspent from 38 to 402 while a
+  Warrior was bought with 160 gold. Balances are never milestones; faith and gold per turn are.
 - Never buy what finishes in 2 turns or less. Always read the **live** price in the game; never
   compute it from the corpus (the purchase formula uses `GOLD_PURCHASE_MULTIPLIER 2` and
   `PURCHASE_DIVISOR 5`, but the exact formula is unverified).

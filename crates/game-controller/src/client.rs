@@ -383,8 +383,9 @@ impl AgentClient {
         Ok((out, size))
     }
 
-    /// One /files/read request (the agent may return fewer bytes than asked).
-    async fn files_read_page(&self, root: &str, path: &str, offset: u64, max: Option<u64>) -> Result<(Vec<u8>, u64)> {
+    /// One /files/read request (the agent may return fewer bytes than asked): the bytes and the
+    /// file's total size.
+    pub async fn files_read_page(&self, root: &str, path: &str, offset: u64, max: Option<u64>) -> Result<(Vec<u8>, u64)> {
         let mut q = vec![("root", root.to_string()), ("path", path.to_string()), ("offset", offset.to_string())];
         if let Some(m) = max {
             q.push(("max", m.to_string()));

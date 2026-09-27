@@ -81,6 +81,20 @@ The compiled controller binary provides full programmatic access to all agent fu
 ./target/release/game-controller --corpus corpora/civ6 civ6 autoplay 5         # 1..50 turns by the game's AI
 ./target/release/game-controller --corpus corpora/civ6 civ6 autoplay-status    # / autoplay-stop
 ./target/release/game-controller --corpus corpora/civ6 civ6 quiet-popups      # popups.toml handlers removed (also on library install)
+# The last stand's calls (controller only, never model orders; numeric city and unit IDs; a city's
+# `id` is in the snapshot):
+./target/release/game-controller --corpus corpora/civ6 civ6 turn-ready         # read-only: our turn, idle, no popup
+./target/release/game-controller --corpus corpora/civ6 civ6 ls-state 65536     # read-only (GameCore): units within 3 tiles
+./target/release/game-controller --corpus corpora/civ6 civ6 last-stand-step 65536 --damage '{"63:5":69}' --skip city:65536
+#     requests ONE action (city strike, ranged attack, retreat) or prints {"done": true}; changes the game
+./target/release/game-controller --corpus corpora/civ6 civ6 finish-moves 131073  # GameCore: the unit keeps its place this turn
+# District placement, stage A (read-only): per city the districts placed, where each district it could
+# place may go (the game's own check) and the plot facts around it; the scorer rates them:
+./target/release/game-controller --corpus corpora/civ6 civ6 district-plots [--city 65536]
+.venv/bin/python scripts/civ6-placement.py [--json saved.json] [--campaign civ6/<leader>_<seed>] [--save out.json]
+# The AI's own strategies (read-only; one agent read of civ6_appdata:Logs/AI_Victories.csv, at most 64 KB):
+./target/release/game-controller civ6 ai-strategies --offset 0 --player 0
+#     {"rows": [[turn, strategy, "Following"|"Stopped"], …], "next": <offset for the next read>, "restarted": …}
 
 # 13. Launch Stdio MCP Server (Claude Code / Gemini / Antigravity)
 ./target/release/game-controller mcp

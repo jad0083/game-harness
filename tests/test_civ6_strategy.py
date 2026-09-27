@@ -100,3 +100,27 @@ def test_stellaris_strategies_keep_calendar_dates():
     stellaris = load_pillars(REPO / "corpora/stellaris")
     text = strategist_instructions(stellaris)
     assert "YYYY.MM.DD" in text and "T<turn>" not in text
+
+
+def test_a_milestone_on_a_balance_is_rejected():
+    """E7 of docs/design/2026-09-27-civ6-levers-design.md: faith >= 200 by T70 paid for hoarding."""
+    hoard = civ_strategy(faith={"milestones": [Milestone(metric="faith", op=">=", target=200, by="T70")]})
+    assert any("faith: faith is a balance, not a milestone metric here" in e and "milestone_exclude" in e
+               for e in errors(hoard))
+    treasury = civ_strategy(economy={"milestones": [Milestone(metric="treasury", op=">=", target=300, by="T90")]})
+    from pilot.strategy import apply_aliases
+    assert any("economy: gold is a balance" in e for e in errors(apply_aliases(treasury, SPEC)))
+    assert errors(civ_strategy(faith={"milestones": [Milestone(metric="faith_yield", op=">=", target=10, by="T70")]})) == []
+    text = strategist_instructions(SPEC)
+    assert "never gold or faith: a balance rewards hoarding" in text
+    names = text.split("exactly these names: ")[1].split(";")[0].split(", ")
+    assert "faith_yield" in names and "faith" not in names and "gold" not in names
+
+
+def test_balance_milestones_bind_the_strategist_not_pins_or_human_edits():
+    pinned = civ_strategy(economy={"milestones": [Milestone(metric="gold", op=">=", target=60, by="T130")],
+                                   "pinned": True})
+    assert errors(pinned) == [], "a pinned pillar comes back unchanged in every answer"
+    human = civ_strategy(economy={"milestones": [Milestone(metric="gold", op=">=", target=60, by="T130")]})
+    assert validate(human, SPEC, previous=None, tech_ids=set(), idle=set(), income={}, ids=IDS,
+                    briefing_checked={"science"}, require_milestones=False) == [], "a human edit elsewhere"

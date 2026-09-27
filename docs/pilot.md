@@ -28,7 +28,8 @@ PC in use.
 | `PILOT_MODEL`, `PILOT_MODELS` | default model; extra models offered in the dashboard |
 | `PILOT_GAME`, `PILOT_SPEED`, `PILOT_DECIDE_MONTHS`, `PILOT_POLL_S` | game, Stellaris speed, months between decisions, autosave poll |
 | `PILOT_DECIDE_TURNS` | Civilization VI: turns the game's AI plays between decisions (default 5; `--decide-turns`) |
-| `PILOT_AUTOPLAY_CHUNK` | Civilization VI: turns per autoplay call in peace (default 3, which keeps the AI's multi-turn plans); at war or with a threatened city it plays one turn at a time |
+| `PILOT_AUTOPLAY_CHUNK` | Civilization VI: turns per autoplay call in peace (default 3, which keeps the AI's multi-turn plans); at war with a major or with a city in danger it plays one turn at a time |
+| `PILOT_LAST_STAND`, `PILOT_LAST_STAND_MAX` | Civilization VI: scripted actions for a city about to fall (default `0`, off until the live checklist L6 passes); at most this many stands in a row per city (default 3) |
 | `PILOT_THINKING`, `PILOT_GOVERNOR_THINKING` | thinking level for GC4 episodes / Stellaris decisions (default `medium`) |
 | `PILOT_RETRO_EVERY` | strategy review every N decisions (default 5) |
 | `PILOT_PORT`, `PILOT_RUNS_DIR`, `PILOT_CAMPAIGN`, `PILOT_COMMIT`, `PILOT_JOURNAL` | live dashboard port, run folder, campaign id, commit learned knowledge, journal file |
@@ -95,31 +96,113 @@ helper library `corpora/civ6/lua/harness.lua` inside the game through the agent'
 The loop: snapshot → decide → apply orders → read back → then N times: autoplay **one** turn, poll
 the cheap `autoplay-status` every second until the game hands the turn back, take a snapshot while
 the game is idle → decide again after N turns or as soon as something urgent happens (a new war, a
-city lost or threatened, a new era, a great person or wonder race lost, gold below the purchase
+city lost, threatened or about to fall, a new era, a great person or wonder race lost, gold below the purchase
 reserve); stopping early is simply not starting the next turn. The tuner does not answer while the
 AI plays its turn, so unanswered status polls are expected; only the turn's deadline counts (10
 minutes, for long late-game turns). A turn that does not start (20 s) or end in time, or a game that
-gives no snapshot three times between turns, stops the run until the human presses Resume. Orders,
+gives no snapshot three times between turns, stops the run until the human presses Resume (an
+autoplay call whose reply was lost and that did not start is first sent again, twice, but only
+while `civ6 turn-ready` reads the game idle at the same turn for 20 s: autoplay reads inactive
+before its last turn ends, so a start that runs is waited for, never sent twice). Orders,
 snapshots and human requests only ever happen between turns. `PILOT_AUTOPLAY_CHUNK` lets the AI play
 several turns per call (urgent checks then run between chunks). Each autoplay call turns the
 tutorial advisor off for the session: its popups wait for a click and hold the turn forever.
 
-- **Snapshot** (`game-controller civ6 snapshot`, about 2 KB): turn, era and era score, civ and leader,
-  yields, treasury and faith, research and civic with turns left, what can be researched,
-  progressed and slotted now, government and policy slots, every city (population, production and
-  turns left, districts, threats, what it can build), units by type, the majors met with score and
-  military strength, wars, great person points, the end-turn blocker. The briefing names every item
-  by its corpus id (`tech:pottery`, `unit:settler`).
+- **Snapshot** (`game-controller civ6 snapshot`, 2-11 KB; 10.3 KB with six cities at T202): turn, era
+  and era score, civ and leader, yields, treasury and faith, research and civic with turns left,
+  what can be researched, progressed and slotted now, government and policy slots, every city
+  (position, population, production and turns left, districts, buildings, the land unit on its tile,
+  garrison and walls HP, threats, what it can build, the AI's own top 3 builds with their scores
+  (`recommend`); for a threatened city also its enemies and
+  defenders, capture threats, incoming damage, whether it can strike and what a defender costs in
+  gold and faith), units by type, the majors met with score and military strength, wars, great
+  person points, pantheon and religion, every end-turn blocker. The briefing names every item by
+  its corpus id (`tech:pottery`, `unit:settler`).
 - **Orders** are structured, never Lua: `research`, `civic`, `policies`, `production`, `purchase`
   (see `corpora/civ6/pilot.md`). The governor checks each against the corpus, the snapshot (options,
-  the city's buildable items) and `pillars.toml` (orders per decision; purchases keep the gold reserve
-  and take at most the treasury share, or everything above the reserve for a threatened city); the
+  the city's buildable items) and `pillars.toml` (orders per decision; purchases keep the reserves and
+  take at most the treasury share, or everything above the reserve for a city in danger); the
   controller checks the ids again and encodes every argument as a Lua string literal. Wonders and new
   districts need a tile and are refused (placement is not supported yet). `price` (a tool) reads a
   live purchase price.
 - **Read-back**: a fresh snapshot right after the orders shows which took; one that did not is
-  reported to the next decision and refused if it is repeated unchanged. The next decision also
-  hears which orders the AI changed during autoplay.
+  reported to the next decision and refused if it is repeated unchanged.
+- **Order record** (spec `docs/design/2026-09-27-civ6-levers-design.md`, rulings 12-16): every order
+  that took is followed on each snapshot until it resolves: `completed` (a tech or civic left the
+  options, a unit's count rose, a building appeared), `held` (still current when its window of
+  turns left + 3, at most 20, ends), `overridden` (the AI switched while it was still available),
+  `invalidated`, `superseded` by our own later order, or `unknown`. Each resolved, refused or lost
+  order emits an `order_outcome` event and each order still followed an `order_followed` event;
+  telemetry keeps both, so the record and the open orders survive restarts. The
+  decision prompt and the Strategist get one line per kind (research, civic, policies, production
+  fill or replace, purchase gold or faith) with its stick rate over the last 30 turns (`[orders]` in
+  `pillars.toml`), flagged "does not stick here" at 50% or less (a production order for what the
+  city already builds changes nothing and stays out of the record); the dashboard gets
+  `info.order_record`. `scripts/civ6-backfill-orders.py` recovers the apply-time outcomes (refused,
+  lost, purchases) of traces written before the record: read-only by default, `--write` once when
+  deploying (a run of its own, `runs/<time>-backfill/events.jsonl` named by the earliest backfilled
+  decision so it sorts among the runs by time, and the database, so `rebuild-telemetry` keeps the rows).
+- **Buy-outs** (rulings 17-21): a city is *in danger* (not merely threatened) when it is under siege,
+  its garrison is damaged, two enemies that can capture it stand next to it, or two enemies are
+  near an empty city tile; only then does a purchase there get the threatened share, and one-turn
+  autoplay chunks follow it too (with war against a major and a city about to fall). The gold reserve is `gold_reserve` plus
+  `gold_reserve_per_deficit` per gold of deficit; faith keeps the pantheon's live price until one is
+  founded. Purchases are checked after the other orders, a defender for a city in danger first; while
+  such a city has no unit on its tile, other purchases are refused, unless a defender for it was
+  tried in the decision (whatever the answer) or it finishes one of its own within 2 turns; a
+  defender ordered with gold is bought with faith when the snapshot's `defence_prices` (or a `price`
+  answer) allow it and it fits; a production order for a defender there is bought instead; a second
+  land unit on a city tile, a defender bought in the same city within 5 turns, what the city
+  finishes within 2 turns anyway and a known price over the cap are refused before sending. `gold`
+  and `faith` balances cannot be milestone metrics (`[metrics] milestone_exclude`).
+- **The AI's own plan** (ruling 29): the briefing shows each city's top 3 builds from the game's AI
+  (`GetBuildRecommendations`, the Production panel's call) and our player's strategies from the
+  game's log `Logs/AI_Victories.csv` (e.g. "science victory (since T56, stopped T76)"; of the era
+  strategies, which keep "Following" once started, only the latest). Each decision
+  reads that log once (`game-controller civ6 ai-strategies`: one agent read from where the last one
+  ended, at most 64 KB). A production order's row keeps the city's top 3 at order time, and an
+  override records `top3_hit`: whether the AI's replacement was in it; the record shows how often
+  it was. The scores are on their own scale; if `top3_hit` stays near chance after 10 overrides the
+  line leaves the briefing (the design's test).
+- **District placement, stage A** (ruling 30; read-only, not part of the loop):
+  `scripts/civ6-placement.py` reads `game-controller civ6 district-plots` once (where each district a
+  city could place may go, by the game's own check, and the plot facts around it) and rates each plot:
+  adjacency from the game's rules (`corpora/civ6/data/_adjacency.json`) x the share of effort of the
+  district's pillar (relative to an even split; the campaign's latest strategy weights, or
+  `--shares`), minus the tile given up (resource 3, improvement 2, feature 1) and, where the plot is
+  the best plot of a district of a heavier pillar, what that district would lose. A wonder counts
+  for adjacency once built (the reply lists our built wonders; a plot shows its wonder while it is
+  still being built) and is never a district. It rates the districts the AI placed the same way
+  against the free plots the game offers that city now, and prints stage B's verdict: go when our
+  best plot beats the AI's by at least +1 adjacency on average over at least 4 districts. A district
+  whose city offers fewer than 3 other plots to compare with is not rateable and left out (its gain
+  of 0 would measure a full city). No placement order exists yet.
+- **Last stand** (rulings 22-27, off unless `PILOT_LAST_STAND=1`): a city is *about to fall* when a
+  unit that can capture it (melee or cavalry) stands next to it, no walls stand, and its garrison is
+  at half its hit points or less, or one attack from each enemy in range would take the rest
+  (`about_to_fall`). The change to falling is urgent ("city falling: X"), so the model decides first
+  and its purchases are read back. Then, at the hand-back, the governor runs scripted actions before
+  the AI plays the turn, one per call: a city strike (only with walls), ranged and siege attacks on
+  hostile units within 3 tiles (a sure kill first, by the weakest shooter that kills), and the
+  retreat of units at 40% HP or less next to a capturer (never the garrison). Each action is read
+  back in GameCore (`civ6 ls-state`): it `took`, `did_not_take` or is `unknown`; anything but
+  `took`, a lost reply (never resent), a popup or a changed turn stops the stand at once. Units that
+  acted and still have moves are pinned (`civ6 finish-moves`), then one-turn autoplay hands the turn
+  back: the AI plays the rest of it (no manual end turn). That autoplay never starts while
+  `turn-ready` reads a turn playing (autoplay on, the turn over or sent) or does not answer, and a
+  game already on the next turn gets no hand-back (the loop reads it afresh). At most 8 actions and 90 s per stand, 3
+  stands in a row per city (a stand stopped before its first step, e.g. by a popup, does not
+  count); targets are barbarians or players at war with us whose attack would not
+  change a war state, never civilians, and never a unit standing in a district that is not ours (a
+  City Center or Encampment would take the hit). Each action is an `order_outcome` row (keys `stand
+  city_strike`, `stand ranged`, `stand retreat`, `stand pin`) and each stand a `last_stand` event and
+  a journal line; the next snapshot checks whether the AI moved a pinned unit (`last_stand_check`).
+  When the first action of two stands does not take, the stand turns itself off for the run
+  (`last_stand_off`).
+- **Blockers**: with no research or no civic in progress and no valid order for it, the governor asks
+  the model once more; if the answer still has none, it orders the strategy's first preferred item
+  the game offers (else the first offered) and reports it "filled by the governor". A decision whose
+  model call fails (an outage, the usage limit, every model of the pool) fills them the same way.
 - **Strategy**: `corpora/civ6/pillars.toml` in share mode (science, culture, faith, economy,
   military, expansion, diplomacy) with milestones on turns (`T60`); reviews as for Stellaris.
 - **Campaign** `civ6/<leader>_<map seed>`; metrics rows per turn (`date` `T<turn>`), so telemetry,

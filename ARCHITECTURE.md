@@ -233,7 +233,20 @@ re-installed when missing) and calls one library function per command: `Harness.
 order templates and `AutoplayManager` stretches. Orders arrive as JSON naming corpus ids; the
 controller maps each id to the game's type key from `data/` and writes every argument as an escaped
 Lua string literal, so no model text is ever evaluated. The pilot (`src/pilot/civ6_governor.py`)
-drives these commands; see `docs/pilot.md`.
+drives these commands; see `docs/pilot.md`. It follows every order that took on each later
+snapshot until it completes, holds or is replaced by the AI (`held_outcome` in `src/pilot/civ6.py`)
+and emits an `order_outcome` event per resolved order; `Telemetry.campaign_events` reloads them, so
+the stick rate per kind of order spans every run of a campaign. A city about to fall can get a
+scripted last stand before the AI plays the turn (off by default): the controller's `civ6
+last-stand-step` requests one action in `InGame`, `civ6 ls-state` reads the result back in
+`GameCore` (whose unit damage does not lag), `civ6 finish-moves` pins the units that acted, and a
+one-turn autoplay hands the turn back; these commands take numeric IDs only and stay out of the
+model-facing `order` JSON. The briefing also carries the AI's own plan: each city's top 3 builds
+from the snapshot and our player's strategies from the game's `Logs/AI_Victories.csv`, which `civ6
+ai-strategies` reads through the agent's file API in one bounded read per decision. District
+placement is read-only so far: `civ6 district-plots` returns where each district may go (the game's
+own check) and the facts of the plots around each city, and `src/pilot/civ6_placement.py` scores
+them with the adjacency rules the extractor writes as data (`data/_adjacency.json`).
 
 The loader rejects nameless records and duplicate ids at startup, so a bad extract fails the build rather than a game turn. The raw XML is not committed (Stardock's data); `data/_meta.json` records the game version and generator commit for reproducibility.
 

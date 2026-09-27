@@ -56,7 +56,10 @@ without prefix>` (`tech:writing`, `unit:roman_legion`, `great_person:hypatia`) a
 always an alias (`corpus get` by id; `search "TECH_WRITING"` finds it). Unique units, buildings,
 districts and improvements name their civilization or leader in `unique_to`. The record contract,
 the layering rules and the check against the game's own debug database are in
-`corpora/civ6/data/README.md`.
+`corpora/civ6/data/README.md`. `data/_adjacency.json` (not a record file) keeps the district
+adjacency rules as data (`Adjacency_YieldChanges`, `District_Adjacencies`, `DistrictReplaces`,
+placement flags, resource classes, natural wonders) for the placement scorer
+(`src/pilot/civ6_placement.py`).
 
 ```bash
 # copy Base/Assets/Gameplay/Data, Base/Assets/Text/en_US and DLC/*/{*.modinfo,Data,Text} once,

@@ -1,0 +1,2136 @@
+{
+ "Adjacency_YieldChanges": [
+  {
+   "ID": "Aqueduct_Production",
+   "Description": "LOC_DISTRICT_AQUEDUCT_PRODUCTION",
+   "YieldType": "YIELD_PRODUCTION",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_AQUEDUCT",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "BaseDistrict_Science",
+   "Description": "LOC_DISTRICT_BASE_DISTRICT_SCIENCE",
+   "YieldType": "YIELD_SCIENCE",
+   "YieldChange": 4,
+   "TilesRequired": 1,
+   "AdjacentResourceClass": "NO_RESOURCECLASS",
+   "Self": 1
+  },
+  {
+   "ID": "Batey_BonusResourceAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_CULTURE",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "ObsoleteCivic": "CIVIC_EXPLORATION",
+   "AdjacentResourceClass": "RESOURCECLASS_BONUS"
+  },
+  {
+   "ID": "Batey_EntertainmentComplexAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_CULTURE",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_ENTERTAINMENT_COMPLEX",
+   "ObsoleteCivic": "CIVIC_EXPLORATION",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Batey_LateBonusResourceAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_CULTURE",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "PrereqCivic": "CIVIC_EXPLORATION",
+   "AdjacentResourceClass": "RESOURCECLASS_BONUS"
+  },
+  {
+   "ID": "Batey_LateEntertainmentComplexAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_CULTURE",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_ENTERTAINMENT_COMPLEX",
+   "PrereqCivic": "CIVIC_EXPLORATION",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Bath_Production",
+   "Description": "LOC_DISTRICT_BATH_PRODUCTION",
+   "YieldType": "YIELD_PRODUCTION",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_BATH",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Canal_Production",
+   "Description": "LOC_DISTRICT_CANAL_PRODUCTION",
+   "YieldType": "YIELD_PRODUCTION",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_CANAL",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Chateau_Luxury",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_GOLD",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentResourceClass": "RESOURCECLASS_LUXURY"
+  },
+  {
+   "ID": "Chateau_River",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_GOLD",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentRiver": 1,
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Chateau_WonderEarly",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_CULTURE",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentWonder": 1,
+   "ObsoleteTech": "TECH_FLIGHT",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Chateau_WonderLate",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_CULTURE",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentWonder": 1,
+   "PrereqTech": "TECH_FLIGHT",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "ColossalHead_FaithForestEarly",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FAITH",
+   "YieldChange": 1,
+   "TilesRequired": 2,
+   "AdjacentFeature": "FEATURE_FOREST",
+   "ObsoleteCivic": "CIVIC_HUMANISM",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "ColossalHead_FaithForestLate",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FAITH",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentFeature": "FEATURE_FOREST",
+   "PrereqCivic": "CIVIC_HUMANISM",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "ColossalHead_FaithJungleEarly",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FAITH",
+   "YieldChange": 1,
+   "TilesRequired": 2,
+   "AdjacentFeature": "FEATURE_JUNGLE",
+   "ObsoleteCivic": "CIVIC_HUMANISM",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "ColossalHead_FaithJungleLate",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FAITH",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentFeature": "FEATURE_JUNGLE",
+   "PrereqCivic": "CIVIC_HUMANISM",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Commerical_Hub_Production",
+   "Description": "LOC_DISTRICT_COMMERCIAL_HUB_PRODUCTION",
+   "YieldType": "YIELD_PRODUCTION",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_COMMERCIAL_HUB",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Copacabana_Culture",
+   "Description": "LOC_DISTRICT_COPACABANA_CULTURE",
+   "YieldType": "YIELD_CULTURE",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_WATER_STREET_CARNIVAL",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Cothon_Gold",
+   "Description": "LOC_DISTRICT_COTHON_GOLD",
+   "YieldType": "YIELD_GOLD",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_COTHON",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Dam_Production",
+   "Description": "LOC_DISTRICT_DAM_PRODUCTION",
+   "YieldType": "YIELD_PRODUCTION",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_DAM",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "District_Culture",
+   "Description": "LOC_DISTRICT_DISTRICT_CULTURE",
+   "YieldType": "YIELD_CULTURE",
+   "YieldChange": 1,
+   "TilesRequired": 2,
+   "OtherDistrictAdjacent": 1,
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "District_Culture_City_Center",
+   "Description": "LOC_DISTRICT_CULTURE_CITY_CENTER",
+   "YieldType": "YIELD_CULTURE",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_CITY_CENTER",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "District_Culture_Major",
+   "Description": "LOC_DISTRICT_DISTRICT_CULTURE_MAJOR",
+   "YieldType": "YIELD_CULTURE",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "OtherDistrictAdjacent": 1,
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "District_Culture_Standard",
+   "Description": "LOC_DISTRICT_DISTRICT_CULTURE_STANDARD",
+   "YieldType": "YIELD_CULTURE",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "OtherDistrictAdjacent": 1,
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "District_Faith",
+   "Description": "LOC_DISTRICT_DISTRICT_FAITH",
+   "YieldType": "YIELD_FAITH",
+   "YieldChange": 1,
+   "TilesRequired": 2,
+   "OtherDistrictAdjacent": 1,
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "District_Gold",
+   "Description": "LOC_DISTRICT_DISTRICT_GOLD",
+   "YieldType": "YIELD_GOLD",
+   "YieldChange": 1,
+   "TilesRequired": 2,
+   "OtherDistrictAdjacent": 1,
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "District_Production",
+   "Description": "LOC_DISTRICT_DISTRICT_PRODUCTION",
+   "YieldType": "YIELD_PRODUCTION",
+   "YieldChange": 1,
+   "TilesRequired": 2,
+   "OtherDistrictAdjacent": 1,
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "District_Science",
+   "Description": "LOC_DISTRICT_DISTRICT_SCIENCE",
+   "YieldType": "YIELD_SCIENCE",
+   "YieldChange": 1,
+   "TilesRequired": 2,
+   "OtherDistrictAdjacent": 1,
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "EntertainmentComplex_Culture",
+   "Description": "LOC_DISTRICT_ENTERTAINMENT_CULTURE",
+   "YieldType": "YIELD_CULTURE",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_ENTERTAINMENT_COMPLEX",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Farm_FoodObservatoryAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_PRODUCTION",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_OBSERVATORY",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Farm_FoodSeowonAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FOOD",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_SEOWON",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Farm_Science",
+   "Description": "LOC_DISTRICT_FARM_SCIENCE",
+   "YieldType": "YIELD_SCIENCE",
+   "YieldChange": 1,
+   "TilesRequired": 2,
+   "AdjacentImprovement": "IMPROVEMENT_FARM",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Farms_MechanizedAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FOOD",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentImprovement": "IMPROVEMENT_FARM",
+   "PrereqTech": "TECH_REPLACEABLE_PARTS",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Farms_MedievalAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FOOD",
+   "YieldChange": 1,
+   "TilesRequired": 2,
+   "AdjacentImprovement": "IMPROVEMENT_FARM",
+   "PrereqCivic": "CIVIC_FEUDALISM",
+   "ObsoleteTech": "TECH_REPLACEABLE_PARTS",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Fishery_SeaResourceAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FOOD",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentSeaResource": 1,
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Fishingboats_Seastead_Production",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_PRODUCTION",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentImprovement": "IMPROVEMENT_SEASTEAD",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Forest_Faith",
+   "Description": "LOC_DISTRICT_FOREST_FAITH",
+   "YieldType": "YIELD_FAITH",
+   "YieldChange": 1,
+   "TilesRequired": 2,
+   "AdjacentFeature": "FEATURE_FOREST",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "GBR_Science",
+   "Description": "LOC_FEATURE_BARRIER_REEF_SCIENCE",
+   "YieldType": "YIELD_SCIENCE",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentFeature": "FEATURE_BARRIER_REEF",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Geothermal_Science",
+   "Description": "LOC_DISTRICT_GEOTHERMAL_SCIENCE",
+   "YieldType": "YIELD_SCIENCE",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentFeature": "FEATURE_GEOTHERMAL_FISSURE",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "GolfCourse_CityCenterAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_CULTURE",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_CITY_CENTER",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "GolfCourse_EntertainmentComplexAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_CULTURE",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_ENTERTAINMENT_COMPLEX",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Government_Culture",
+   "Description": "LOC_DISTRICT_GOVERNMENT_CULTURE",
+   "YieldType": "YIELD_CULTURE",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_GOVERNMENT",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Government_Faith",
+   "Description": "LOC_DISTRICT_GOVERNMENT_FAITH",
+   "YieldType": "YIELD_FAITH",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_GOVERNMENT",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Government_Gold",
+   "Description": "LOC_DISTRICT_GOVERNMENT_GOLD",
+   "YieldType": "YIELD_GOLD",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_GOVERNMENT",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Government_Production",
+   "Description": "LOC_DISTRICT_GOVERNMENT_PRODUCTION",
+   "YieldType": "YIELD_PRODUCTION",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_GOVERNMENT",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Government_Science",
+   "Description": "LOC_DISTRICT_GOVERNMENT_SCIENCE",
+   "YieldType": "YIELD_SCIENCE",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_GOVERNMENT",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "GreatWall_Culture",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_CULTURE",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentImprovement": "IMPROVEMENT_GREAT_WALL",
+   "PrereqTech": "TECH_CASTLES",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "GreatWall_Gold",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_GOLD",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentImprovement": "IMPROVEMENT_GREAT_WALL",
+   "PrereqTech": "TECH_MASONRY",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Hacienda_AdvancedHaciendaAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_PRODUCTION",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentImprovement": "IMPROVEMENT_HACIENDA",
+   "PrereqCivic": "CIVIC_RAPID_DEPLOYMENT",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Hacienda_HaciendaAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_PRODUCTION",
+   "YieldChange": 1,
+   "TilesRequired": 2,
+   "AdjacentImprovement": "IMPROVEMENT_HACIENDA",
+   "ObsoleteCivic": "CIVIC_RAPID_DEPLOYMENT",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Hacienda_MechanizedPlantationAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FOOD",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentImprovement": "IMPROVEMENT_PLANTATION",
+   "PrereqTech": "TECH_REPLACEABLE_PARTS",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Hacienda_PlantationAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FOOD",
+   "YieldChange": 1,
+   "TilesRequired": 2,
+   "AdjacentImprovement": "IMPROVEMENT_PLANTATION",
+   "ObsoleteTech": "TECH_REPLACEABLE_PARTS",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Harbor_City_Gold",
+   "Description": "LOC_DISTRICT_CITY_CENTER_GOLD",
+   "YieldType": "YIELD_GOLD",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_CITY_CENTER",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Harbor_Gold",
+   "Description": "LOC_DISTRICT_HARBOR_GOLD",
+   "YieldType": "YIELD_GOLD",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_HARBOR",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Hills_Faith1",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FAITH",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentTerrain": "TERRAIN_GRASS_HILLS",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Hills_Faith2",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FAITH",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentTerrain": "TERRAIN_PLAINS_HILLS",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Hills_Faith3",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FAITH",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentTerrain": "TERRAIN_DESERT_HILLS",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Hills_Faith4",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FAITH",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentTerrain": "TERRAIN_TUNDRA_HILLS",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Hills_Faith5",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FAITH",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentTerrain": "TERRAIN_SNOW_HILLS",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Hippodrome_Culture",
+   "Description": "LOC_DISTRICT_HIPPODROME_CULTURE",
+   "YieldType": "YIELD_CULTURE",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_HIPPODROME",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Hockey_SnowAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_CULTURE",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentTerrain": "TERRAIN_SNOW",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Hockey_SnowHillsAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_CULTURE",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentTerrain": "TERRAIN_SNOW_HILLS",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Hockey_TundraAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_CULTURE",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentTerrain": "TERRAIN_TUNDRA",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Hockey_TundraHillsAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_CULTURE",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentTerrain": "TERRAIN_TUNDRA_HILLS",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Holy_Site_Gold",
+   "Description": "LOC_DISTRICT_HOLY_SITE_GOLD",
+   "YieldType": "YIELD_GOLD",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_HOLY_SITE",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Jungle_Science",
+   "Description": "LOC_DISTRICT_JUNGLE_SCIENCE",
+   "YieldType": "YIELD_SCIENCE",
+   "YieldChange": 1,
+   "TilesRequired": 2,
+   "AdjacentFeature": "FEATURE_JUNGLE",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Kampung_FoodFishingBoats",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FOOD",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentImprovement": "IMPROVEMENT_FISHING_BOATS",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Kurgan_Faith",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FAITH",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentImprovement": "IMPROVEMENT_PASTURE",
+   "ObsoleteTech": "TECH_STIRRUPS",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Kurgan_Faith_Stirrups",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FAITH",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentImprovement": "IMPROVEMENT_PASTURE",
+   "PrereqTech": "TECH_STIRRUPS",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Lavra_Gold",
+   "Description": "LOC_DISTRICT_LAVRA_GOLD",
+   "YieldType": "YIELD_GOLD",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_LAVRA",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "LumberMill_HalfProduction",
+   "Description": "LOC_DISTRICT_LUMBER_MILL_PRODUCTION",
+   "YieldType": "YIELD_PRODUCTION",
+   "YieldChange": 1,
+   "TilesRequired": 2,
+   "AdjacentImprovement": "IMPROVEMENT_LUMBER_MILL",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Mahavihara_Campus_Science_Early",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_SCIENCE",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_CAMPUS",
+   "ObsoleteTech": "TECH_SCIENTIFIC_THEORY",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Mahavihara_Campus_Science_Late",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_SCIENCE",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_CAMPUS",
+   "PrereqTech": "TECH_SCIENTIFIC_THEORY",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Mahavihara_Holy_Site_Faith",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FAITH",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_HOLY_SITE",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Mahavihara_Lavra_Faith",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FAITH",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_LAVRA",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Mahavihara_Observatory_Science_Early",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_SCIENCE",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_OBSERVATORY",
+   "ObsoleteTech": "TECH_SCIENTIFIC_THEORY",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Mahavihara_Observatory_Science_Late",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_SCIENCE",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_OBSERVATORY",
+   "PrereqTech": "TECH_SCIENTIFIC_THEORY",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Mekewap_FirstBonusAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FOOD",
+   "YieldChange": 1,
+   "TilesRequired": 2,
+   "ObsoleteCivic": "CIVIC_CONSERVATION",
+   "AdjacentResourceClass": "RESOURCECLASS_BONUS"
+  },
+  {
+   "ID": "Mekewap_SecondBonusAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FOOD",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "PrereqCivic": "CIVIC_CONSERVATION",
+   "AdjacentResourceClass": "RESOURCECLASS_BONUS"
+  },
+  {
+   "ID": "Mekewap_ThirdBonusAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_GOLD",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "PrereqTech": "TECH_CARTOGRAPHY",
+   "AdjacentResourceClass": "RESOURCECLASS_LUXURY"
+  },
+  {
+   "ID": "Mine_Production",
+   "Description": "LOC_DISTRICT_MINE_PRODUCTION",
+   "YieldType": "YIELD_PRODUCTION",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentImprovement": "IMPROVEMENT_MINE",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Mine_ScienceSeowonAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_SCIENCE",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_SEOWON",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Minel_HalfProduction",
+   "Description": "LOC_DISTRICT_MINES_HALF_PRODUCTION",
+   "YieldType": "YIELD_PRODUCTION",
+   "YieldChange": 1,
+   "TilesRequired": 2,
+   "AdjacentImprovement": "IMPROVEMENT_MINE",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Mission_Science_Campus",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_SCIENCE",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_CAMPUS",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Mission_Science_HolySite",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_SCIENCE",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_HOLY_SITE",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Moai_FirstBonusAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_CULTURE",
+   "YieldChange": 1,
+   "TilesRequired": 2,
+   "AdjacentImprovement": "IMPROVEMENT_MOAI",
+   "ObsoleteCivic": "CIVIC_MEDIEVAL_FAIRES",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Moai_SecondBonusAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_CULTURE",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentImprovement": "IMPROVEMENT_MOAI",
+   "PrereqCivic": "CIVIC_MEDIEVAL_FAIRES",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Monastery_DistrictAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FAITH",
+   "YieldChange": 1,
+   "TilesRequired": 2,
+   "OtherDistrictAdjacent": 1,
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Mound_MechanizedAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FOOD",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "OtherDistrictAdjacent": 1,
+   "PrereqTech": "TECH_REPLACEABLE_PARTS",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Mound_MedievalAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FOOD",
+   "YieldChange": 1,
+   "TilesRequired": 2,
+   "OtherDistrictAdjacent": 1,
+   "PrereqCivic": "CIVIC_FEUDALISM",
+   "ObsoleteTech": "TECH_REPLACEABLE_PARTS",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Mountain_Faith1",
+   "Description": "LOC_DISTRICT_MOUNTAIN_FAITH1",
+   "YieldType": "YIELD_FAITH",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentTerrain": "TERRAIN_GRASS_MOUNTAIN",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Mountain_Faith2",
+   "Description": "LOC_DISTRICT_MOUNTAIN_FAITH2",
+   "YieldType": "YIELD_FAITH",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentTerrain": "TERRAIN_PLAINS_MOUNTAIN",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Mountain_Faith3",
+   "Description": "LOC_DISTRICT_MOUNTAIN_FAITH3",
+   "YieldType": "YIELD_FAITH",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentTerrain": "TERRAIN_DESERT_MOUNTAIN",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Mountain_Faith4",
+   "Description": "LOC_DISTRICT_MOUNTAIN_FAITH4",
+   "YieldType": "YIELD_FAITH",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentTerrain": "TERRAIN_TUNDRA_MOUNTAIN",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Mountain_Faith5",
+   "Description": "LOC_DISTRICT_MOUNTAIN_FAITH5",
+   "YieldType": "YIELD_FAITH",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentTerrain": "TERRAIN_SNOW_MOUNTAIN",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Mountains_Science1",
+   "Description": "LOC_DISTRICT_MOUNTAINS_SCIENCE1",
+   "YieldType": "YIELD_SCIENCE",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentTerrain": "TERRAIN_GRASS_MOUNTAIN",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Mountains_Science2",
+   "Description": "LOC_DISTRICT_MOUNTAINS_SCIENCE2",
+   "YieldType": "YIELD_SCIENCE",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentTerrain": "TERRAIN_PLAINS_MOUNTAIN",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Mountains_Science3",
+   "Description": "LOC_DISTRICT_MOUNTAINS_SCIENCE3",
+   "YieldType": "YIELD_SCIENCE",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentTerrain": "TERRAIN_DESERT_MOUNTAIN",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Mountains_Science4",
+   "Description": "LOC_DISTRICT_MOUNTAINS_SCIENCE4",
+   "YieldType": "YIELD_SCIENCE",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentTerrain": "TERRAIN_TUNDRA_MOUNTAIN",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Mountains_Science5",
+   "Description": "LOC_DISTRICT_MOUNTAINS_SCIENCE5",
+   "YieldType": "YIELD_SCIENCE",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentTerrain": "TERRAIN_SNOW_MOUNTAIN",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "NaturalWonder_Faith",
+   "Description": "LOC_DISTRICT_NATURALWONDER_FAITH",
+   "YieldType": "YIELD_FAITH",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentNaturalWonder": 1,
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "NegativeDistrict_Science",
+   "Description": "LOC_DISTRICT_NEGATIVE_DISTRICT_SCIENCE",
+   "YieldType": "YIELD_SCIENCE",
+   "YieldChange": -1,
+   "TilesRequired": 1,
+   "OtherDistrictAdjacent": 1,
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Outback_Outback_Food",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FOOD",
+   "YieldChange": 1,
+   "TilesRequired": 2,
+   "AdjacentImprovement": "IMPROVEMENT_OUTBACK_STATION",
+   "PrereqCivic": "CIVIC_RAPID_DEPLOYMENT",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Outback_Outback_Production",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_PRODUCTION",
+   "YieldChange": 1,
+   "TilesRequired": 2,
+   "AdjacentImprovement": "IMPROVEMENT_OUTBACK_STATION",
+   "PrereqTech": "TECH_STEAM_POWER",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Outback_Pasture_Food",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FOOD",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentImprovement": "IMPROVEMENT_PASTURE",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Pairidaeza_CityCenterAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_GOLD",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_CITY_CENTER",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Pairidaeza_CommercialHubAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_GOLD",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_COMMERCIAL_HUB",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Pairidaeza_HolySiteAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_CULTURE",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_HOLY_SITE",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Pairidaeza_TheaterAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_CULTURE",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_THEATER",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Pamukkale_Culture",
+   "Description": "LOC_DISTRICT_PAMUKKALE_CULTURE",
+   "YieldType": "YIELD_CULTURE",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentFeature": "FEATURE_PAMUKKALE",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Pamukkale_Faith",
+   "Description": "LOC_DISTRICT_PAMUKKALE_FAITH",
+   "YieldType": "YIELD_FAITH",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentFeature": "FEATURE_PAMUKKALE",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Pamukkale_Gold",
+   "Description": "LOC_DISTRICT_PAMUKKALE_GOLD",
+   "YieldType": "YIELD_GOLD",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentFeature": "FEATURE_PAMUKKALE",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Pamukkale_Science",
+   "Description": "LOC_DISTRICT_PAMUKKALE_SCIENCE",
+   "YieldType": "YIELD_SCIENCE",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentFeature": "FEATURE_PAMUKKALE",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Pasture_Outback_Production",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_PRODUCTION",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentImprovement": "IMPROVEMENT_OUTBACK_STATION",
+   "PrereqTech": "TECH_STEAM_POWER",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Plantation_AdvancedHaciendaAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_PRODUCTION",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentImprovement": "IMPROVEMENT_HACIENDA",
+   "PrereqCivic": "CIVIC_RAPID_DEPLOYMENT",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Plantation_HaciendaAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_PRODUCTION",
+   "YieldChange": 1,
+   "TilesRequired": 2,
+   "AdjacentImprovement": "IMPROVEMENT_HACIENDA",
+   "ObsoleteCivic": "CIVIC_RAPID_DEPLOYMENT",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Plantation_Science",
+   "Description": "LOC_DISTRICT_PLANTATION_SCIENCE",
+   "YieldType": "YIELD_SCIENCE",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentImprovement": "IMPROVEMENT_PLANTATION",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Polder_Polder_Food_Early",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FOOD",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentImprovement": "IMPROVEMENT_POLDER",
+   "ObsoleteTech": "TECH_REPLACEABLE_PARTS",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Polder_Polder_Food_Late",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FOOD",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentImprovement": "IMPROVEMENT_POLDER",
+   "PrereqTech": "TECH_REPLACEABLE_PARTS",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Polder_Polder_Production",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_PRODUCTION",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentImprovement": "IMPROVEMENT_POLDER",
+   "PrereqTech": "TECH_REPLACEABLE_PARTS",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Pyramid_CampusAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_SCIENCE",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_CAMPUS",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Pyramid_CityCenterAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FOOD",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_CITY_CENTER",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Pyramid_CommercialHubAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_GOLD",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_COMMERCIAL_HUB",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Pyramid_HarborAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_GOLD",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_HARBOR",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Pyramid_HolySiteAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FAITH",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_HOLY_SITE",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Pyramid_IndustrialZoneAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_PRODUCTION",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_INDUSTRIAL_ZONE",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Pyramid_TheaterAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_CULTURE",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_THEATER",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Quarry_Production",
+   "Description": "LOC_DISTRICT_QUARRY_PRODUCTION",
+   "YieldType": "YIELD_PRODUCTION",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentImprovement": "IMPROVEMENT_QUARRY",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Quarry_Production2",
+   "Description": "LOC_DISTRICT_QUARRY_PRODUCTION",
+   "YieldType": "YIELD_PRODUCTION",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentImprovement": "IMPROVEMENT_QUARRY",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Reef_Science",
+   "Description": "LOC_DISTRICT_REEF_SCIENCE",
+   "YieldType": "YIELD_SCIENCE",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentFeature": "FEATURE_REEF",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Resource_Production",
+   "Description": "LOC_DISTRICT_RESOURCE_PRODUCTION",
+   "YieldType": "YIELD_PRODUCTION",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentResource": 1,
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "River_Gold",
+   "Description": "LOC_DISTRICT_RIVER_GOLD",
+   "YieldType": "YIELD_GOLD",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentRiver": 1,
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "RoyalDock_City_Gold",
+   "Description": "LOC_DISTRICT_CITY_CENTER_GOLD",
+   "YieldType": "YIELD_GOLD",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_CITY_CENTER",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "RoyalDock_Gold",
+   "Description": "LOC_DISTRICT_ROYAL_NAVY_DOCKYARD_GOLD",
+   "YieldType": "YIELD_GOLD",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_ROYAL_NAVY_DOCKYARD",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "SeaResource_Gold",
+   "Description": "LOC_DISTRICT_SEARESOURCE_GOLD",
+   "YieldType": "YIELD_GOLD",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentSeaResource": 1,
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Seastead_Fishingboats_Production",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_PRODUCTION",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentImprovement": "IMPROVEMENT_FISHING_BOATS",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Seastead_Reef_Culture",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_CULTURE",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentFeature": "FEATURE_REEF",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Strategic_Production",
+   "Description": "LOC_DISTRICT_STRATEGIC_PRODUCTION",
+   "YieldType": "YIELD_PRODUCTION",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentResourceClass": "RESOURCECLASS_STRATEGIC"
+  },
+  {
+   "ID": "Strategic_Production2",
+   "Description": "LOC_DISTRICT_STRATEGIC2_PRODUCTION",
+   "YieldType": "YIELD_PRODUCTION",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentResourceClass": "RESOURCECLASS_STRATEGIC"
+  },
+  {
+   "ID": "StreetCarnival_Culture",
+   "Description": "LOC_DISTRICT_STREET_CARNIVAL_CULTURE",
+   "YieldType": "YIELD_CULTURE",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_STREET_CARNIVAL",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Terrace_AqueductAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_PRODUCTION",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_AQUEDUCT",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Terrace_DesertMountainAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FOOD",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentTerrain": "TERRAIN_DESERT_MOUNTAIN",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Terrace_GrassMountainAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FOOD",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentTerrain": "TERRAIN_GRASS_MOUNTAIN",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Terrace_MechanizedAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FOOD",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentImprovement": "IMPROVEMENT_TERRACE_FARM",
+   "PrereqTech": "TECH_REPLACEABLE_PARTS",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Terrace_MedievalAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FOOD",
+   "YieldChange": 1,
+   "TilesRequired": 2,
+   "AdjacentImprovement": "IMPROVEMENT_TERRACE_FARM",
+   "PrereqCivic": "CIVIC_FEUDALISM",
+   "ObsoleteTech": "TECH_REPLACEABLE_PARTS",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Terrace_PlainsMountainAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FOOD",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentTerrain": "TERRAIN_PLAINS_MOUNTAIN",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Terrace_SnowMountainAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FOOD",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentTerrain": "TERRAIN_SNOW_MOUNTAIN",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Terrace_TundraMountainAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_FOOD",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentTerrain": "TERRAIN_TUNDRA_MOUNTAIN",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "TradingDome_LuxuryAdjacency",
+   "Description": "Placeholder",
+   "YieldType": "YIELD_GOLD",
+   "YieldChange": 1,
+   "TilesRequired": 1,
+   "AdjacentResourceClass": "RESOURCECLASS_LUXURY"
+  },
+  {
+   "ID": "WaterPark_Culture",
+   "Description": "LOC_DISTRICT_WATER_PARK_CULTURE",
+   "YieldType": "YIELD_CULTURE",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentDistrict": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  },
+  {
+   "ID": "Wonder_Culture",
+   "Description": "LOC_DISTRICT_WONDER_CULTURE",
+   "YieldType": "YIELD_CULTURE",
+   "YieldChange": 2,
+   "TilesRequired": 1,
+   "AdjacentWonder": 1,
+   "AdjacentResourceClass": "NO_RESOURCECLASS"
+  }
+ ],
+ "District_Adjacencies": [
+  {
+   "DistrictType": "DISTRICT_ACROPOLIS",
+   "YieldChangeId": "District_Culture_City_Center"
+  },
+  {
+   "DistrictType": "DISTRICT_ACROPOLIS",
+   "YieldChangeId": "District_Culture_Standard"
+  },
+  {
+   "DistrictType": "DISTRICT_ACROPOLIS",
+   "YieldChangeId": "EntertainmentComplex_Culture"
+  },
+  {
+   "DistrictType": "DISTRICT_ACROPOLIS",
+   "YieldChangeId": "Government_Culture"
+  },
+  {
+   "DistrictType": "DISTRICT_ACROPOLIS",
+   "YieldChangeId": "Pamukkale_Culture"
+  },
+  {
+   "DistrictType": "DISTRICT_ACROPOLIS",
+   "YieldChangeId": "WaterPark_Culture"
+  },
+  {
+   "DistrictType": "DISTRICT_ACROPOLIS",
+   "YieldChangeId": "Wonder_Culture"
+  },
+  {
+   "DistrictType": "DISTRICT_CAMPUS",
+   "YieldChangeId": "District_Science"
+  },
+  {
+   "DistrictType": "DISTRICT_CAMPUS",
+   "YieldChangeId": "GBR_Science"
+  },
+  {
+   "DistrictType": "DISTRICT_CAMPUS",
+   "YieldChangeId": "Geothermal_Science"
+  },
+  {
+   "DistrictType": "DISTRICT_CAMPUS",
+   "YieldChangeId": "Government_Science"
+  },
+  {
+   "DistrictType": "DISTRICT_CAMPUS",
+   "YieldChangeId": "Jungle_Science"
+  },
+  {
+   "DistrictType": "DISTRICT_CAMPUS",
+   "YieldChangeId": "Mountains_Science1"
+  },
+  {
+   "DistrictType": "DISTRICT_CAMPUS",
+   "YieldChangeId": "Mountains_Science2"
+  },
+  {
+   "DistrictType": "DISTRICT_CAMPUS",
+   "YieldChangeId": "Mountains_Science3"
+  },
+  {
+   "DistrictType": "DISTRICT_CAMPUS",
+   "YieldChangeId": "Mountains_Science4"
+  },
+  {
+   "DistrictType": "DISTRICT_CAMPUS",
+   "YieldChangeId": "Mountains_Science5"
+  },
+  {
+   "DistrictType": "DISTRICT_CAMPUS",
+   "YieldChangeId": "Pamukkale_Science"
+  },
+  {
+   "DistrictType": "DISTRICT_CAMPUS",
+   "YieldChangeId": "Reef_Science"
+  },
+  {
+   "DistrictType": "DISTRICT_COMMERCIAL_HUB",
+   "YieldChangeId": "Cothon_Gold"
+  },
+  {
+   "DistrictType": "DISTRICT_COMMERCIAL_HUB",
+   "YieldChangeId": "District_Gold"
+  },
+  {
+   "DistrictType": "DISTRICT_COMMERCIAL_HUB",
+   "YieldChangeId": "Government_Gold"
+  },
+  {
+   "DistrictType": "DISTRICT_COMMERCIAL_HUB",
+   "YieldChangeId": "Harbor_Gold"
+  },
+  {
+   "DistrictType": "DISTRICT_COMMERCIAL_HUB",
+   "YieldChangeId": "Pamukkale_Gold"
+  },
+  {
+   "DistrictType": "DISTRICT_COMMERCIAL_HUB",
+   "YieldChangeId": "River_Gold"
+  },
+  {
+   "DistrictType": "DISTRICT_COMMERCIAL_HUB",
+   "YieldChangeId": "RoyalDock_Gold"
+  },
+  {
+   "DistrictType": "DISTRICT_COTHON",
+   "YieldChangeId": "District_Gold"
+  },
+  {
+   "DistrictType": "DISTRICT_COTHON",
+   "YieldChangeId": "Government_Gold"
+  },
+  {
+   "DistrictType": "DISTRICT_COTHON",
+   "YieldChangeId": "Harbor_City_Gold"
+  },
+  {
+   "DistrictType": "DISTRICT_COTHON",
+   "YieldChangeId": "SeaResource_Gold"
+  },
+  {
+   "DistrictType": "DISTRICT_HANSA",
+   "YieldChangeId": "Aqueduct_Production"
+  },
+  {
+   "DistrictType": "DISTRICT_HANSA",
+   "YieldChangeId": "Canal_Production"
+  },
+  {
+   "DistrictType": "DISTRICT_HANSA",
+   "YieldChangeId": "Commerical_Hub_Production"
+  },
+  {
+   "DistrictType": "DISTRICT_HANSA",
+   "YieldChangeId": "Dam_Production"
+  },
+  {
+   "DistrictType": "DISTRICT_HANSA",
+   "YieldChangeId": "District_Production"
+  },
+  {
+   "DistrictType": "DISTRICT_HANSA",
+   "YieldChangeId": "Government_Production"
+  },
+  {
+   "DistrictType": "DISTRICT_HANSA",
+   "YieldChangeId": "Resource_Production"
+  },
+  {
+   "DistrictType": "DISTRICT_HARBOR",
+   "YieldChangeId": "District_Gold"
+  },
+  {
+   "DistrictType": "DISTRICT_HARBOR",
+   "YieldChangeId": "Government_Gold"
+  },
+  {
+   "DistrictType": "DISTRICT_HARBOR",
+   "YieldChangeId": "Harbor_City_Gold"
+  },
+  {
+   "DistrictType": "DISTRICT_HARBOR",
+   "YieldChangeId": "SeaResource_Gold"
+  },
+  {
+   "DistrictType": "DISTRICT_HOLY_SITE",
+   "YieldChangeId": "District_Faith"
+  },
+  {
+   "DistrictType": "DISTRICT_HOLY_SITE",
+   "YieldChangeId": "Forest_Faith"
+  },
+  {
+   "DistrictType": "DISTRICT_HOLY_SITE",
+   "YieldChangeId": "Government_Faith"
+  },
+  {
+   "DistrictType": "DISTRICT_HOLY_SITE",
+   "YieldChangeId": "Mountain_Faith1"
+  },
+  {
+   "DistrictType": "DISTRICT_HOLY_SITE",
+   "YieldChangeId": "Mountain_Faith2"
+  },
+  {
+   "DistrictType": "DISTRICT_HOLY_SITE",
+   "YieldChangeId": "Mountain_Faith3"
+  },
+  {
+   "DistrictType": "DISTRICT_HOLY_SITE",
+   "YieldChangeId": "Mountain_Faith4"
+  },
+  {
+   "DistrictType": "DISTRICT_HOLY_SITE",
+   "YieldChangeId": "Mountain_Faith5"
+  },
+  {
+   "DistrictType": "DISTRICT_HOLY_SITE",
+   "YieldChangeId": "NaturalWonder_Faith"
+  },
+  {
+   "DistrictType": "DISTRICT_HOLY_SITE",
+   "YieldChangeId": "Pamukkale_Faith"
+  },
+  {
+   "DistrictType": "DISTRICT_INDUSTRIAL_ZONE",
+   "YieldChangeId": "Aqueduct_Production"
+  },
+  {
+   "DistrictType": "DISTRICT_INDUSTRIAL_ZONE",
+   "YieldChangeId": "Bath_Production"
+  },
+  {
+   "DistrictType": "DISTRICT_INDUSTRIAL_ZONE",
+   "YieldChangeId": "Canal_Production"
+  },
+  {
+   "DistrictType": "DISTRICT_INDUSTRIAL_ZONE",
+   "YieldChangeId": "Dam_Production"
+  },
+  {
+   "DistrictType": "DISTRICT_INDUSTRIAL_ZONE",
+   "YieldChangeId": "District_Production"
+  },
+  {
+   "DistrictType": "DISTRICT_INDUSTRIAL_ZONE",
+   "YieldChangeId": "Government_Production"
+  },
+  {
+   "DistrictType": "DISTRICT_INDUSTRIAL_ZONE",
+   "YieldChangeId": "LumberMill_HalfProduction"
+  },
+  {
+   "DistrictType": "DISTRICT_INDUSTRIAL_ZONE",
+   "YieldChangeId": "Minel_HalfProduction"
+  },
+  {
+   "DistrictType": "DISTRICT_INDUSTRIAL_ZONE",
+   "YieldChangeId": "Quarry_Production"
+  },
+  {
+   "DistrictType": "DISTRICT_INDUSTRIAL_ZONE",
+   "YieldChangeId": "Strategic_Production"
+  },
+  {
+   "DistrictType": "DISTRICT_LAVRA",
+   "YieldChangeId": "District_Faith"
+  },
+  {
+   "DistrictType": "DISTRICT_LAVRA",
+   "YieldChangeId": "Forest_Faith"
+  },
+  {
+   "DistrictType": "DISTRICT_LAVRA",
+   "YieldChangeId": "Government_Faith"
+  },
+  {
+   "DistrictType": "DISTRICT_LAVRA",
+   "YieldChangeId": "Mountain_Faith1"
+  },
+  {
+   "DistrictType": "DISTRICT_LAVRA",
+   "YieldChangeId": "Mountain_Faith2"
+  },
+  {
+   "DistrictType": "DISTRICT_LAVRA",
+   "YieldChangeId": "Mountain_Faith3"
+  },
+  {
+   "DistrictType": "DISTRICT_LAVRA",
+   "YieldChangeId": "Mountain_Faith4"
+  },
+  {
+   "DistrictType": "DISTRICT_LAVRA",
+   "YieldChangeId": "Mountain_Faith5"
+  },
+  {
+   "DistrictType": "DISTRICT_LAVRA",
+   "YieldChangeId": "NaturalWonder_Faith"
+  },
+  {
+   "DistrictType": "DISTRICT_LAVRA",
+   "YieldChangeId": "Pamukkale_Faith"
+  },
+  {
+   "DistrictType": "DISTRICT_OBSERVATORY",
+   "YieldChangeId": "District_Science"
+  },
+  {
+   "DistrictType": "DISTRICT_OBSERVATORY",
+   "YieldChangeId": "Farm_Science"
+  },
+  {
+   "DistrictType": "DISTRICT_OBSERVATORY",
+   "YieldChangeId": "GBR_Science"
+  },
+  {
+   "DistrictType": "DISTRICT_OBSERVATORY",
+   "YieldChangeId": "Government_Science"
+  },
+  {
+   "DistrictType": "DISTRICT_OBSERVATORY",
+   "YieldChangeId": "Pamukkale_Science"
+  },
+  {
+   "DistrictType": "DISTRICT_OBSERVATORY",
+   "YieldChangeId": "Plantation_Science"
+  },
+  {
+   "DistrictType": "DISTRICT_OPPIDUM",
+   "YieldChangeId": "Government_Production"
+  },
+  {
+   "DistrictType": "DISTRICT_OPPIDUM",
+   "YieldChangeId": "Quarry_Production2"
+  },
+  {
+   "DistrictType": "DISTRICT_OPPIDUM",
+   "YieldChangeId": "Strategic_Production2"
+  },
+  {
+   "DistrictType": "DISTRICT_ROYAL_NAVY_DOCKYARD",
+   "YieldChangeId": "District_Gold"
+  },
+  {
+   "DistrictType": "DISTRICT_ROYAL_NAVY_DOCKYARD",
+   "YieldChangeId": "Government_Gold"
+  },
+  {
+   "DistrictType": "DISTRICT_ROYAL_NAVY_DOCKYARD",
+   "YieldChangeId": "RoyalDock_City_Gold"
+  },
+  {
+   "DistrictType": "DISTRICT_ROYAL_NAVY_DOCKYARD",
+   "YieldChangeId": "SeaResource_Gold"
+  },
+  {
+   "DistrictType": "DISTRICT_SEOWON",
+   "YieldChangeId": "BaseDistrict_Science"
+  },
+  {
+   "DistrictType": "DISTRICT_SEOWON",
+   "YieldChangeId": "Government_Science"
+  },
+  {
+   "DistrictType": "DISTRICT_SEOWON",
+   "YieldChangeId": "NegativeDistrict_Science"
+  },
+  {
+   "DistrictType": "DISTRICT_SUGUBA",
+   "YieldChangeId": "District_Gold"
+  },
+  {
+   "DistrictType": "DISTRICT_SUGUBA",
+   "YieldChangeId": "Government_Gold"
+  },
+  {
+   "DistrictType": "DISTRICT_SUGUBA",
+   "YieldChangeId": "Holy_Site_Gold"
+  },
+  {
+   "DistrictType": "DISTRICT_SUGUBA",
+   "YieldChangeId": "Lavra_Gold"
+  },
+  {
+   "DistrictType": "DISTRICT_SUGUBA",
+   "YieldChangeId": "Pamukkale_Gold"
+  },
+  {
+   "DistrictType": "DISTRICT_SUGUBA",
+   "YieldChangeId": "River_Gold"
+  },
+  {
+   "DistrictType": "DISTRICT_THANH",
+   "YieldChangeId": "District_Culture_Major"
+  },
+  {
+   "DistrictType": "DISTRICT_THEATER",
+   "YieldChangeId": "Copacabana_Culture"
+  },
+  {
+   "DistrictType": "DISTRICT_THEATER",
+   "YieldChangeId": "District_Culture"
+  },
+  {
+   "DistrictType": "DISTRICT_THEATER",
+   "YieldChangeId": "EntertainmentComplex_Culture"
+  },
+  {
+   "DistrictType": "DISTRICT_THEATER",
+   "YieldChangeId": "Government_Culture"
+  },
+  {
+   "DistrictType": "DISTRICT_THEATER",
+   "YieldChangeId": "Hippodrome_Culture"
+  },
+  {
+   "DistrictType": "DISTRICT_THEATER",
+   "YieldChangeId": "Pamukkale_Culture"
+  },
+  {
+   "DistrictType": "DISTRICT_THEATER",
+   "YieldChangeId": "StreetCarnival_Culture"
+  },
+  {
+   "DistrictType": "DISTRICT_THEATER",
+   "YieldChangeId": "WaterPark_Culture"
+  },
+  {
+   "DistrictType": "DISTRICT_THEATER",
+   "YieldChangeId": "Wonder_Culture"
+  }
+ ],
+ "DistrictReplaces": {
+  "DISTRICT_ACROPOLIS": "DISTRICT_THEATER",
+  "DISTRICT_BATH": "DISTRICT_AQUEDUCT",
+  "DISTRICT_HANSA": "DISTRICT_INDUSTRIAL_ZONE",
+  "DISTRICT_LAVRA": "DISTRICT_HOLY_SITE",
+  "DISTRICT_MBANZA": "DISTRICT_NEIGHBORHOOD",
+  "DISTRICT_STREET_CARNIVAL": "DISTRICT_ENTERTAINMENT_COMPLEX",
+  "DISTRICT_ROYAL_NAVY_DOCKYARD": "DISTRICT_HARBOR",
+  "DISTRICT_HIPPODROME": "DISTRICT_ENTERTAINMENT_COMPLEX",
+  "DISTRICT_OPPIDUM": "DISTRICT_INDUSTRIAL_ZONE",
+  "DISTRICT_IKANDA": "DISTRICT_ENCAMPMENT",
+  "DISTRICT_SEOWON": "DISTRICT_CAMPUS",
+  "DISTRICT_WATER_STREET_CARNIVAL": "DISTRICT_WATER_ENTERTAINMENT_COMPLEX",
+  "DISTRICT_COTHON": "DISTRICT_HARBOR",
+  "DISTRICT_SUGUBA": "DISTRICT_COMMERCIAL_HUB",
+  "DISTRICT_OBSERVATORY": "DISTRICT_CAMPUS",
+  "DISTRICT_THANH": "DISTRICT_ENCAMPMENT"
+ },
+ "Districts": {
+  "DISTRICT_ACROPOLIS": {
+   "OnePerCity": true
+  },
+  "DISTRICT_AERODROME": {
+   "OnePerCity": true
+  },
+  "DISTRICT_AQUEDUCT": {
+   "Aqueduct": true,
+   "OnePerCity": true
+  },
+  "DISTRICT_BATH": {
+   "Aqueduct": true,
+   "OnePerCity": true
+  },
+  "DISTRICT_CAMPUS": {
+   "OnePerCity": true
+  },
+  "DISTRICT_CANAL": {},
+  "DISTRICT_COMMERCIAL_HUB": {
+   "OnePerCity": true
+  },
+  "DISTRICT_COTHON": {
+   "Coast": true,
+   "AdjacentToLand": true,
+   "OnePerCity": true
+  },
+  "DISTRICT_DAM": {},
+  "DISTRICT_DIPLOMATIC_QUARTER": {
+   "OnePerCity": true
+  },
+  "DISTRICT_ENCAMPMENT": {
+   "NoAdjacentCity": true,
+   "OnePerCity": true
+  },
+  "DISTRICT_ENTERTAINMENT_COMPLEX": {
+   "OnePerCity": true
+  },
+  "DISTRICT_GOVERNMENT": {
+   "OnePerCity": true
+  },
+  "DISTRICT_HANSA": {
+   "OnePerCity": true
+  },
+  "DISTRICT_HARBOR": {
+   "Coast": true,
+   "AdjacentToLand": true,
+   "OnePerCity": true
+  },
+  "DISTRICT_HIPPODROME": {
+   "OnePerCity": true
+  },
+  "DISTRICT_HOLY_SITE": {
+   "OnePerCity": true
+  },
+  "DISTRICT_IKANDA": {
+   "NoAdjacentCity": true,
+   "OnePerCity": true
+  },
+  "DISTRICT_INDUSTRIAL_ZONE": {
+   "OnePerCity": true
+  },
+  "DISTRICT_LAVRA": {
+   "OnePerCity": true
+  },
+  "DISTRICT_MBANZA": {},
+  "DISTRICT_NEIGHBORHOOD": {},
+  "DISTRICT_OBSERVATORY": {
+   "OnePerCity": true
+  },
+  "DISTRICT_OPPIDUM": {
+   "OnePerCity": true
+  },
+  "DISTRICT_PRESERVE": {
+   "NoAdjacentCity": true,
+   "OnePerCity": true
+  },
+  "DISTRICT_ROYAL_NAVY_DOCKYARD": {
+   "Coast": true,
+   "AdjacentToLand": true,
+   "OnePerCity": true
+  },
+  "DISTRICT_SEOWON": {
+   "OnePerCity": true
+  },
+  "DISTRICT_SPACEPORT": {
+   "OnePerCity": true
+  },
+  "DISTRICT_STREET_CARNIVAL": {
+   "OnePerCity": true
+  },
+  "DISTRICT_SUGUBA": {
+   "OnePerCity": true
+  },
+  "DISTRICT_THANH": {
+   "NoAdjacentCity": true,
+   "OnePerCity": true
+  },
+  "DISTRICT_THEATER": {
+   "OnePerCity": true
+  },
+  "DISTRICT_WATER_ENTERTAINMENT_COMPLEX": {
+   "Coast": true,
+   "AdjacentToLand": true,
+   "OnePerCity": true
+  },
+  "DISTRICT_WATER_STREET_CARNIVAL": {
+   "Coast": true,
+   "AdjacentToLand": true,
+   "OnePerCity": true
+  }
+ },
+ "District_ValidTerrains": [
+  {
+   "DistrictType": "DISTRICT_ACROPOLIS",
+   "TerrainType": "TERRAIN_GRASS_HILLS"
+  },
+  {
+   "DistrictType": "DISTRICT_ACROPOLIS",
+   "TerrainType": "TERRAIN_PLAINS_HILLS"
+  },
+  {
+   "DistrictType": "DISTRICT_ACROPOLIS",
+   "TerrainType": "TERRAIN_TUNDRA_HILLS"
+  },
+  {
+   "DistrictType": "DISTRICT_ACROPOLIS",
+   "TerrainType": "TERRAIN_SNOW_HILLS"
+  },
+  {
+   "DistrictType": "DISTRICT_ACROPOLIS",
+   "TerrainType": "TERRAIN_DESERT_HILLS"
+  },
+  {
+   "DistrictType": "DISTRICT_AERODROME",
+   "TerrainType": "TERRAIN_GRASS"
+  },
+  {
+   "DistrictType": "DISTRICT_AERODROME",
+   "TerrainType": "TERRAIN_PLAINS"
+  },
+  {
+   "DistrictType": "DISTRICT_AERODROME",
+   "TerrainType": "TERRAIN_TUNDRA"
+  },
+  {
+   "DistrictType": "DISTRICT_AERODROME",
+   "TerrainType": "TERRAIN_SNOW"
+  },
+  {
+   "DistrictType": "DISTRICT_AERODROME",
+   "TerrainType": "TERRAIN_DESERT"
+  },
+  {
+   "DistrictType": "DISTRICT_SPACEPORT",
+   "TerrainType": "TERRAIN_GRASS"
+  },
+  {
+   "DistrictType": "DISTRICT_SPACEPORT",
+   "TerrainType": "TERRAIN_PLAINS"
+  },
+  {
+   "DistrictType": "DISTRICT_SPACEPORT",
+   "TerrainType": "TERRAIN_TUNDRA"
+  },
+  {
+   "DistrictType": "DISTRICT_SPACEPORT",
+   "TerrainType": "TERRAIN_SNOW"
+  },
+  {
+   "DistrictType": "DISTRICT_SPACEPORT",
+   "TerrainType": "TERRAIN_DESERT"
+  },
+  {
+   "DistrictType": "DISTRICT_SEOWON",
+   "TerrainType": "TERRAIN_GRASS_HILLS"
+  },
+  {
+   "DistrictType": "DISTRICT_SEOWON",
+   "TerrainType": "TERRAIN_PLAINS_HILLS"
+  },
+  {
+   "DistrictType": "DISTRICT_SEOWON",
+   "TerrainType": "TERRAIN_TUNDRA_HILLS"
+  },
+  {
+   "DistrictType": "DISTRICT_SEOWON",
+   "TerrainType": "TERRAIN_SNOW_HILLS"
+  },
+  {
+   "DistrictType": "DISTRICT_SEOWON",
+   "TerrainType": "TERRAIN_DESERT_HILLS"
+  },
+  {
+   "DistrictType": "DISTRICT_CANAL",
+   "TerrainType": "TERRAIN_GRASS"
+  },
+  {
+   "DistrictType": "DISTRICT_CANAL",
+   "TerrainType": "TERRAIN_PLAINS"
+  },
+  {
+   "DistrictType": "DISTRICT_CANAL",
+   "TerrainType": "TERRAIN_TUNDRA"
+  },
+  {
+   "DistrictType": "DISTRICT_CANAL",
+   "TerrainType": "TERRAIN_SNOW"
+  },
+  {
+   "DistrictType": "DISTRICT_CANAL",
+   "TerrainType": "TERRAIN_DESERT"
+  }
+ ],
+ "ResourceClasses": {
+  "RESOURCE_BANANAS": "RESOURCECLASS_BONUS",
+  "RESOURCE_CATTLE": "RESOURCECLASS_BONUS",
+  "RESOURCE_COPPER": "RESOURCECLASS_BONUS",
+  "RESOURCE_CRABS": "RESOURCECLASS_BONUS",
+  "RESOURCE_DEER": "RESOURCECLASS_BONUS",
+  "RESOURCE_FISH": "RESOURCECLASS_BONUS",
+  "RESOURCE_RICE": "RESOURCECLASS_BONUS",
+  "RESOURCE_SHEEP": "RESOURCECLASS_BONUS",
+  "RESOURCE_STONE": "RESOURCECLASS_BONUS",
+  "RESOURCE_WHEAT": "RESOURCECLASS_BONUS",
+  "RESOURCE_CITRUS": "RESOURCECLASS_LUXURY",
+  "RESOURCE_COCOA": "RESOURCECLASS_LUXURY",
+  "RESOURCE_COFFEE": "RESOURCECLASS_LUXURY",
+  "RESOURCE_COTTON": "RESOURCECLASS_LUXURY",
+  "RESOURCE_DIAMONDS": "RESOURCECLASS_LUXURY",
+  "RESOURCE_DYES": "RESOURCECLASS_LUXURY",
+  "RESOURCE_FURS": "RESOURCECLASS_LUXURY",
+  "RESOURCE_GYPSUM": "RESOURCECLASS_LUXURY",
+  "RESOURCE_INCENSE": "RESOURCECLASS_LUXURY",
+  "RESOURCE_IVORY": "RESOURCECLASS_LUXURY",
+  "RESOURCE_JADE": "RESOURCECLASS_LUXURY",
+  "RESOURCE_MARBLE": "RESOURCECLASS_LUXURY",
+  "RESOURCE_MERCURY": "RESOURCECLASS_LUXURY",
+  "RESOURCE_PEARLS": "RESOURCECLASS_LUXURY",
+  "RESOURCE_SALT": "RESOURCECLASS_LUXURY",
+  "RESOURCE_SILK": "RESOURCECLASS_LUXURY",
+  "RESOURCE_SILVER": "RESOURCECLASS_LUXURY",
+  "RESOURCE_SPICES": "RESOURCECLASS_LUXURY",
+  "RESOURCE_SUGAR": "RESOURCECLASS_LUXURY",
+  "RESOURCE_TEA": "RESOURCECLASS_LUXURY",
+  "RESOURCE_TOBACCO": "RESOURCECLASS_LUXURY",
+  "RESOURCE_TRUFFLES": "RESOURCECLASS_LUXURY",
+  "RESOURCE_WHALES": "RESOURCECLASS_LUXURY",
+  "RESOURCE_WINE": "RESOURCECLASS_LUXURY",
+  "RESOURCE_JEANS": "RESOURCECLASS_LUXURY",
+  "RESOURCE_PERFUME": "RESOURCECLASS_LUXURY",
+  "RESOURCE_COSMETICS": "RESOURCECLASS_LUXURY",
+  "RESOURCE_TOYS": "RESOURCECLASS_LUXURY",
+  "RESOURCE_CINNAMON": "RESOURCECLASS_LUXURY",
+  "RESOURCE_CLOVES": "RESOURCECLASS_LUXURY",
+  "RESOURCE_ALUMINUM": "RESOURCECLASS_STRATEGIC",
+  "RESOURCE_COAL": "RESOURCECLASS_STRATEGIC",
+  "RESOURCE_HORSES": "RESOURCECLASS_STRATEGIC",
+  "RESOURCE_IRON": "RESOURCECLASS_STRATEGIC",
+  "RESOURCE_NITER": "RESOURCECLASS_STRATEGIC",
+  "RESOURCE_OIL": "RESOURCECLASS_STRATEGIC",
+  "RESOURCE_URANIUM": "RESOURCECLASS_STRATEGIC",
+  "RESOURCE_ANTIQUITY_SITE": "RESOURCECLASS_ARTIFACT",
+  "RESOURCE_SHIPWRECK": "RESOURCECLASS_ARTIFACT",
+  "RESOURCE_AMBER": "RESOURCECLASS_LUXURY",
+  "RESOURCE_OLIVES": "RESOURCECLASS_LUXURY",
+  "RESOURCE_TURTLES": "RESOURCECLASS_LUXURY",
+  "RESOURCE_MAIZE": "RESOURCECLASS_BONUS",
+  "RESOURCE_HONEY": "RESOURCECLASS_LUXURY"
+ },
+ "NaturalWonders": [
+  "FEATURE_BARRIER_REEF",
+  "FEATURE_BERMUDA_TRIANGLE",
+  "FEATURE_CHOCOLATEHILLS",
+  "FEATURE_CLIFFS_DOVER",
+  "FEATURE_CRATER_LAKE",
+  "FEATURE_DEAD_SEA",
+  "FEATURE_DELICATE_ARCH",
+  "FEATURE_DEVILSTOWER",
+  "FEATURE_EVEREST",
+  "FEATURE_EYE_OF_THE_SAHARA",
+  "FEATURE_EYJAFJALLAJOKULL",
+  "FEATURE_FOUNTAIN_OF_YOUTH",
+  "FEATURE_GALAPAGOS",
+  "FEATURE_GIANTS_CAUSEWAY",
+  "FEATURE_GOBUSTAN",
+  "FEATURE_HA_LONG_BAY",
+  "FEATURE_IKKIL",
+  "FEATURE_KILIMANJARO",
+  "FEATURE_LAKE_RETBA",
+  "FEATURE_LYSEFJORDEN",
+  "FEATURE_MATTERHORN",
+  "FEATURE_PAITITI",
+  "FEATURE_PAMUKKALE",
+  "FEATURE_PANTANAL",
+  "FEATURE_PIOPIOTAHI",
+  "FEATURE_RORAIMA",
+  "FEATURE_TORRES_DEL_PAINE",
+  "FEATURE_TSINGY",
+  "FEATURE_UBSUNUR_HOLLOW",
+  "FEATURE_ULURU",
+  "FEATURE_VESUVIUS",
+  "FEATURE_WHITEDESERT",
+  "FEATURE_YOSEMITE",
+  "FEATURE_ZHANGYE_DANXIA"
+ ]
+}

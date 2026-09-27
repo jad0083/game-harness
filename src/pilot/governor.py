@@ -1367,6 +1367,12 @@ class Governor:
                        f"{r['other_rate']:+g}/yr otherwise{verdict}")
         return "\n".join(out) or "(no data yet)"
 
+    def _records_section(self) -> str:
+        """The Strategist's record of what its levers did: here each directive's record; a game with
+        other levers (Civ VI orders) gives its own."""
+        return ("Directive record in this campaign (its pillar's first milestone metric, per in-game year):\n"
+                + self._directive_records_text())
+
     def _milestones_text(self) -> str:
         rows = self._metrics_rows()
         if rows is None:
@@ -1431,8 +1437,7 @@ class Governor:
             prompt = [f"Strategy review, trigger: {trigger}.", "Current strategy:\n" + current,
                       "Milestones (status computed from the recorded numbers):\n" + self._milestones_text(),
                       "Directive changes and what followed:\n" + self._past_outcomes_text(),
-                      "Directive record in this campaign (its pillar's first milestone metric, per in-game year):\n"
-                      + self._directive_records_text(),
+                      self._records_section(),
                       "Latest briefing:\n" + (self.last_briefing or self.game.briefing_text())]
             sp_name, sp_traits = species_terms(b)
             if sp_name or sp_traits:

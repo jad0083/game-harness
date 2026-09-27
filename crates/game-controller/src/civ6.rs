@@ -189,6 +189,109 @@ fn purchase_key(ids: &CorpusIds, id: &str) -> Result<String> {
     Ok(key)
 }
 
+// ---- last stand (docs/design/2026-09-27-civ6-levers-design.md, rulings 22-27) ------------------
+// Controller subcommands only: they stay out of the model-facing `Order`. Cities and units are named
+// by their numeric game ID (GameCore has no Locale to look names up).
+
+/// A numeric game ID: digits only, so no other text reaches Lua through it.
+pub fn numeric_id(what: &str, s: &str) -> Result<u64> {
+    let t = s.trim();
+    if t.is_empty() || t.len() > 12 || !t.bytes().all(|b| b.is_ascii_digit()) {
+        bail!("{what} must be a numeric game ID (digits only), got {s:?}");
+    }
+    Ok(t.parse()?)
+}
+
+/// Read-only (GameCore): damage, moves and attacks of every unit within 3 tiles of our city.
+pub fn ls_state_call(city: &str) -> Result<(&'static str, String)> {
+    Ok((STATE_CORE, format!("Harness.run(Harness.ls_state, {})", numeric_id("city", city)?)))
+}
+
+/// End the moves of our unit this turn (GameCore), so the hand-back's AI cannot move it.
+pub fn finish_moves_call(unit: &str) -> Result<(&'static str, String)> {
+    Ok((STATE_CORE, format!("Harness.run(Harness.finish_moves, {})", numeric_id("unit", unit)?)))
+}
+
+/// Read-only (InGame): our turn, the engine idle, nothing modal on screen.
+pub const TURN_READY_CALL: (&str, &str) = (STATE_UI, "Harness.run(Harness.turn_ready)");
+
+const MAX_STAND_ENTRIES: usize = 256;
+
+/// One last-stand action for our city (InGame). `damage` is ls-state's authoritative damage as
+/// JSON `{"<owner>:<unit id>": 0..=1000}`; `skip` lists the actors already used this turn,
+/// comma-separated `city:<id>` / `unit:<id>`.
+pub fn last_stand_step_call(city: &str, damage: &str, skip: &str) -> Result<(&'static str, String)> {
+    let city = numeric_id("city", city)?;
+    let raw = if damage.trim().is_empty() { "{}" } else { damage };
+    let map: serde_json::Map<String, serde_json::Value> =
+        serde_json::from_str(raw).context("--damage must be a JSON object {\"<owner>:<unit id>\": damage}")?;
+    if map.len() > MAX_STAND_ENTRIES {
+        bail!("--damage: at most {MAX_STAND_ENTRIES} units");
+    }
+    let mut dmg = Vec::new();
+    for (k, v) in &map {
+        let Some((owner, id)) = k.split_once(':') else { bail!("--damage key {k:?} must be <owner>:<unit id>") };
+        let (owner, id) = (numeric_id("owner", owner)?, numeric_id("unit", id)?);
+        let Some(d) = v.as_u64().filter(|d| *d <= 1000) else { bail!("--damage {k:?}: damage must be a whole number 0..1000") };
+        dmg.push(format!("[{}] = {d}", lua_str(&format!("{owner}:{id}"))));
+    }
+    let mut used = Vec::new();
+    for e in skip.split(',').map(str::trim).filter(|e| !e.is_empty()) {
+        let Some((kind, id)) = e.split_once(':').filter(|(k, _)| *k == "city" || *k == "unit") else {
+            bail!("--skip entry {e:?} must be city:<id> or unit:<id>")
+        };
+        used.push(format!("[{}] = true", lua_str(&format!("{kind}:{}", numeric_id(kind, id)?))));
+    }
+    if used.len() > MAX_STAND_ENTRIES {
+        bail!("--skip: at most {MAX_STAND_ENTRIES} actors");
+    }
+    Ok((STATE_UI, format!("Harness.run(Harness.last_stand_step, {city}, {{{}}}, {{{}}})", dmg.join(", "), used.join(", "))))
+}
+
+// ---- district placement, read-only (docs/design/2026-09-27-civ6-levers-design.md, ruling 30) ----
+
+/// Read-only (InGame): per city (all, or the one given by numeric ID) the districts placed, where
+/// each district it could place may go, and the facts of the plots around it.
+pub fn district_plots_call(city: Option<&str>) -> Result<(&'static str, String)> {
+    let arg = match city {
+        Some(c) => numeric_id("city", c)?.to_string(),
+        None => "nil".into(),
+    };
+    Ok((STATE_UI, format!("Harness.run(Harness.district_plots, {arg})")))
+}
+
+// ---- the AI's intent (docs/design/2026-09-27-civ6-levers-design.md, ruling 29) -----------------
+
+/// The game's log of AI strategies: "Game Turn, Player, Strategy, Status" rows, appended whenever a
+/// player's strategy starts ("Following") or stops ("Stopped"), under the agent's `civ6_appdata`
+/// root (`%LOCALAPPDATA%\Firaxis Games\Sid Meier's Civilization VI`).
+pub const AI_LOG_ROOT: &str = "civ6_appdata";
+pub const AI_LOG_PATH: &str = "Logs/AI_Victories.csv";
+/// At most this much of the log per read (the whole log was about 10 KB at T77).
+pub const AI_LOG_MAX: u64 = 64 * 1024;
+
+/// The reply of `civ6 ai-strategies`: one player's complete rows in `chunk`, read at `offset` of a
+/// file of `size` bytes, and the offset to read from next (a partial last line waits for it). A file
+/// smaller than `offset` was started again (a new game session): no rows, read again from 0.
+pub fn ai_strategies_reply(chunk: &[u8], offset: u64, size: u64, player: u32) -> serde_json::Value {
+    if offset > size {
+        return serde_json::json!({"ok": true, "size": size, "offset": offset, "next": 0, "restarted": true, "rows": []});
+    }
+    let end = chunk.iter().rposition(|&b| b == b'\n').map_or(0, |i| i + 1);
+    let mut rows = Vec::new();
+    for line in String::from_utf8_lossy(&chunk[..end]).lines() {
+        let f: Vec<&str> = line.split(',').map(str::trim).collect();
+        if f.len() != 4 {
+            continue;
+        }
+        let (Ok(turn), Ok(who)) = (f[0].parse::<u32>(), f[1].parse::<u32>()) else { continue };     // the header
+        if who == player {
+            rows.push(serde_json::json!([turn, f[2], f[3]]));
+        }
+    }
+    serde_json::json!({"ok": true, "size": size, "offset": offset, "next": offset + end as u64, "restarted": false, "rows": rows})
+}
+
 /// `Harness.run(Harness.autoplay, n)`.
 pub fn autoplay_call(turns: u32) -> Result<String> {
     if !(1..=MAX_AUTOPLAY_TURNS).contains(&turns) {
@@ -516,6 +619,63 @@ mod tests {
     }
 
     #[test]
+    fn last_stand_calls_take_numeric_ids_and_run_in_the_ruled_states() {
+        assert_eq!(ls_state_call("65536").unwrap(), (STATE_CORE, "Harness.run(Harness.ls_state, 65536)".to_string()));
+        assert_eq!(finish_moves_call(" 131073 ").unwrap(), (STATE_CORE, "Harness.run(Harness.finish_moves, 131073)".to_string()));
+        assert_eq!(TURN_READY_CALL, (STATE_UI, "Harness.run(Harness.turn_ready)"));
+        assert_eq!(last_stand_step_call("65536", "", "").unwrap(),
+                   (STATE_UI, "Harness.run(Harness.last_stand_step, 65536, {}, {})".to_string()));
+        let (state, call) = last_stand_step_call("65536", r#"{"63:5": 69, "4:131072": 0}"#, "city:65536, unit:7").unwrap();
+        assert_eq!(state, STATE_UI);
+        assert_eq!(call, r#"Harness.run(Harness.last_stand_step, 65536, {["4:131072"] = 0, ["63:5"] = 69}, {["city:65536"] = true, ["unit:7"] = true})"#);
+    }
+
+    #[test]
+    fn last_stand_calls_refuse_anything_but_numbers_where_an_id_is_required() {
+        let hostile = "65536) Players[0]:GetTreasury():SetGoldBalance(99999) --";
+        for bad in ["Beijing", "", "-1", "1e5", "0x10", hostile, "12345678901234"] {
+            assert!(ls_state_call(bad).unwrap_err().to_string().contains("numeric game ID"), "{bad:?}");
+            assert!(finish_moves_call(bad).is_err(), "{bad:?}");
+            assert!(last_stand_step_call(bad, "{}", "").is_err(), "{bad:?}");
+        }
+        let err = |d: &str, s: &str| last_stand_step_call("65536", d, s).unwrap_err().to_string();
+        assert!(err(r#"{"63:5": "x\"); os.exit() --"}"#, "").contains("whole number"));
+        assert!(err(r#"{"63:5": 1001}"#, "").contains("whole number"));
+        assert!(err(r#"{"63:5": -1}"#, "").contains("whole number"));
+        assert!(err(r#"{"x\"]=1}--:5": 1}"#, "").contains("numeric game ID"));
+        assert!(err(r#"{"635": 1}"#, "").contains("<owner>:<unit id>"));
+        assert!(err("[1, 2]", "").contains("JSON object"));
+        assert!(err("{}", "tile:5").contains("city:<id> or unit:<id>"));
+        assert!(err("{}", r#"unit:5"] = true}) os.exit() --"#).contains("numeric game ID"));
+    }
+
+    #[test]
+    fn district_plots_is_read_only_in_game_with_an_optional_numeric_city() {
+        assert_eq!(district_plots_call(None).unwrap(), (STATE_UI, "Harness.run(Harness.district_plots, nil)".to_string()));
+        assert_eq!(district_plots_call(Some("65536")).unwrap().1, "Harness.run(Harness.district_plots, 65536)");
+        assert!(district_plots_call(Some("Beijing")).is_err());
+        assert!(district_plots_call(Some("1) os.exit() --")).is_err());
+    }
+
+    #[test]
+    fn ai_strategies_keep_one_players_complete_rows() {
+        let log = b"Game Turn, Player, Strategy, Status\n1, 0, STRATEGY_EARLY_EXPLORATION, Following\n\
+                    1, 1, STRATEGY_EARLY_EXPLORATION, Following\n56, 0, VICTORY_STRATEGY_SCIENCE_VICTORY, Following\n76, 0, VICT";
+        let r = ai_strategies_reply(log, 0, 500, 0);
+        assert_eq!(r["rows"], serde_json::json!([[1, "STRATEGY_EARLY_EXPLORATION", "Following"],
+                                                 [56, "VICTORY_STRATEGY_SCIENCE_VICTORY", "Following"]]));
+        let partial = log.len() - "76, 0, VICT".len();
+        assert_eq!(r["next"], partial as u64, "a partial last line waits for the next read");
+        let more = b"76, 0, VICTORY_STRATEGY_SCIENCE_VICTORY, Stopped\n";
+        let r = ai_strategies_reply(more, partial as u64, 500, 0);
+        assert_eq!(r["rows"], serde_json::json!([[76, "VICTORY_STRATEGY_SCIENCE_VICTORY", "Stopped"]]));
+        assert_eq!(r["next"], (partial + more.len()) as u64);
+        assert_eq!(ai_strategies_reply(log, 0, 500, 1)["rows"].as_array().unwrap().len(), 1, "player 1");
+        let restarted = ai_strategies_reply(b"", 900, 120, 0);
+        assert_eq!((restarted["restarted"].as_bool(), restarted["next"].as_u64()), (Some(true), Some(0)));
+    }
+
+    #[test]
     fn a_false_ok_is_a_failed_reply() {
         assert!(!reply_ok(&serde_json::json!({"ok": false, "error": "x"})));
         assert!(reply_ok(&serde_json::json!({"ok": true, "active": false})));
@@ -537,6 +697,8 @@ mod tests {
         let g = lib.guarded("Harness.run(Harness.snapshot)");
         assert!(g.starts_with(&format!("if Harness and Harness.version == \"{}\" then Harness.run(Harness.snapshot) else print(\"HARNESS_MISSING\") end", lib.version)));
         assert!(lib.source.contains("MIT License"), "civ6-mcp attribution");
+        // the agent refuses tuner code over 64 KiB (crates/game-agent/src/tuner.rs MAX_CODE)
+        assert!(lib.install_code().len() < 64 * 1024, "the install chunk is {} bytes", lib.install_code().len());
     }
 
     #[test]
@@ -623,5 +785,76 @@ mod tests {
             assert!(parse_popups(&t).is_err(), "{bad:?} accepted");
         }
         assert!(parse_popups("[[quiet]]\nstate = \"S\"\nevent = \"E\"\n").is_err(), "a missing field is an error");
+    }
+
+    /// A tuner agent with the guards' semantics: the library is installed or not, the popups quiet
+    /// or not, and a guarded chunk runs its call only when both hold (or when the chunk sets
+    /// `Harness.popups_quiet` itself). Counts the chunks that ran a call containing `marker`.
+    async fn guarded_tuner(installed: bool, quiet: bool, marker: &'static str)
+        -> (String, std::sync::Arc<std::sync::atomic::AtomicUsize>) {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        let runs = std::sync::Arc::new(AtomicUsize::new(0));
+        let counter = runs.clone();
+        tokio::spawn(async move {
+            let (mut installed, mut quiet) = (installed, quiet);
+            loop {
+                let (mut sock, _) = listener.accept().await.unwrap();
+                let mut req = Vec::new();
+                let mut buf = vec![0u8; 65536];
+                let body = loop {
+                    let n = sock.read(&mut buf).await.unwrap();
+                    req.extend_from_slice(&buf[..n]);
+                    let text = String::from_utf8_lossy(&req).to_string();
+                    if let Some((head, body)) = text.split_once("\r\n\r\n") {
+                        let len = head.lines().find_map(|l| l.to_ascii_lowercase().strip_prefix("content-length:")
+                            .map(|v| v.trim().parse::<usize>().unwrap())).unwrap_or(0);
+                        if body.len() >= len || n == 0 {
+                            break body.to_string();
+                        }
+                    }
+                };
+                let code = serde_json::from_str::<serde_json::Value>(&body).unwrap()["code"].as_str().unwrap().to_string();
+                let out: Vec<String> = if code.starts_with("local HARNESS_VERSION") {
+                    installed = true;
+                    vec!["installed".into()]
+                } else if code.starts_with("if Events and Events.") {
+                    vec!["QUIET".into()]
+                } else if !installed {
+                    vec![MISSING.into()]
+                } else if code.contains("if Harness.popups_quiet then") && !quiet {
+                    vec![LOUD.into()]
+                } else {
+                    quiet = quiet || code.contains("Harness.popups_quiet = true");
+                    if code.contains(marker) {
+                        counter.fetch_add(1, Ordering::SeqCst);
+                    }
+                    vec![r#"{"ok":true,"action":"ranged_attack"}"#.into()]
+                };
+                let reply = serde_json::json!({"ok": true, "state": "InGame", "result": "", "extra": [], "output": out}).to_string();
+                let head = format!("HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n",
+                                   reply.len());
+                sock.write_all(head.as_bytes()).await.unwrap();
+                sock.write_all(reply.as_bytes()).await.unwrap();
+            }
+        });
+        (url, runs)
+    }
+
+    #[tokio::test]
+    async fn a_state_changing_ingame_call_runs_once_through_the_popup_guard() {
+        // The last stand's step changes the game: after a load (library missing) or while the popups
+        // are loud, the first attempt must run nothing, and the call runs exactly once afterwards.
+        let lib = Library::load(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpora/civ6")).unwrap();
+        let (_, call) = last_stand_step_call("65536", "", "").unwrap();
+        for (installed, quiet) in [(false, false), (true, false), (true, true)] {
+            let (url, runs) = guarded_tuner(installed, quiet, "Harness.last_stand_step").await;
+            let client = AgentClient::new(Some(&url), Some("t")).unwrap();
+            let v = call_with(&client, &lib, STATE_UI, &call, 1_000).await.unwrap();
+            assert_eq!(v["action"], "ranged_attack");
+            assert_eq!(runs.load(std::sync::atomic::Ordering::SeqCst), 1, "installed {installed}, quiet {quiet}");
+        }
     }
 }

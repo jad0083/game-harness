@@ -60,6 +60,11 @@ not exist in the install (the game skips them too) and the foreign-key rows left
 ## Contract
 
 - `<kind>.json` — a JSON array of records for one kind. The file stem is the kind.
+- `_adjacency.json` — the district adjacency rules as data for the placement scorer
+  (`src/pilot/civ6_placement.py`, levers design ruling 30): `Adjacency_YieldChanges` and
+  `District_Adjacencies` rows with the game's column names (NULL, 0 and false columns left out),
+  `DistrictReplaces` (unique district -> the district it replaces), `Districts` (placement flags of
+  the districts that need a tile), `District_ValidTerrains`, `ResourceClasses` and `NaturalWonders`.
 - `_meta.json` — `{ "game_version", "ruleset", "generated_at", "generator": "<script @ commit>",
   "source": "xml-layered", "counts": {kind: n}, "dlc": [pack folders], "dlc_names", "modes",
   "localisation_keys", "operations", "check_against", "warnings" }`. Files starting with `_` are not

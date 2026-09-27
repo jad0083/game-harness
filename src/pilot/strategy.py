@@ -283,6 +283,9 @@ def validate(s: Strategy, spec: PillarSpec, *, previous: Strategy | None, tech_i
                             else f"{name}: milestone by {m.by!r} is not a date YYYY.MM.DD")
             if m.metric not in spec.metrics:
                 errs.append(f"{name}: unknown metric {m.metric!r}")
+            elif m.metric in spec.milestone_exclude and require_milestones and not pl.pinned:
+                errs.append(f"{name}: {m.metric} is a balance, not a milestone metric here (pillars.toml [metrics] "
+                            "milestone_exclude: a stock rewards hoarding); use a per-turn measure")
         declared = spec.pillars[name].actions if name in spec.pillars else ()
         for kind, fld in ACTION_KINDS.items():
             items = getattr(pl, fld)
@@ -483,7 +486,10 @@ def strategist_instructions(spec: PillarSpec) -> str:
                  + (f", the heaviest at least {w.spread:g} x the lightest" if w.spread > 1 else "")
                  + "; the governor steers by weight x how far behind the pillar's milestones are), a stance of one or two "
                  "sentences, 1-3 goals, and milestones on the briefing's measures (exactly these names: "
-                 + ", ".join(spec.metrics) + "; a rank is 1 = best, so use op <= for it) with a target and "
+                 + ", ".join(m for m in spec.metrics if m not in spec.milestone_exclude)
+                 + "; a rank is 1 = best, so use op <= for it"
+                 + (f"; never {' or '.join(spec.milestone_exclude)}: a balance rewards hoarding"
+                    if spec.milestone_exclude else "") + ") with a target and "
                  + ("a turn written T<turn> (e.g. T60)." if spec.date_format == "turns" else "an in-game date YYYY.MM.DD."))
     if spec.min_milestones_top:
         lines.append(f"Each of the {spec.min_milestones_top} highest-priority pillars needs at least one milestone.")
