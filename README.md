@@ -58,7 +58,7 @@ Without MCP, everything works from the shell: `scripts/play/act.sh`, `ap.sh`, `h
 | **Linux Native Controller** | [`crates/game-controller`](crates/game-controller) → `target/release/game-controller` (build with `cargo build --release`; `.mcp.json` points here) | Compiled native Rust (`x86_64-unknown-linux-gnu`) | ~1 ms agent round-trip; autopilot that verifies each turn by the HUD date changing and stops on dialogs or blockers; in-memory corpus (search <1 ms); stdio MCP server. |
 | **Game Corpus** | [`corpora/galciv4/`](corpora/galciv4/) | `manifest.toml` + `templates/*.png` + generated `data/*.json` + `docs/*.md` + `strategy.md` | 34 hotkeys, 17 screens (9 recognised by template), 3 macros; 130 techs, 528 improvements, 66 executive orders, 203 policies, 355 ship components, 167 starbase modules and 994 events generated from the game's own XML by `scripts/extract-galciv4.py`; 13 reference docs chunked into 168 searchable pieces. |
 | **Stellaris corpus** | [`corpora/stellaris/`](corpora/stellaris/) | `manifest.toml`, `directives.toml`, `templates/`, `docs/*.md`, `strategy.md`, `pilot.md` | 9,152 records generated from the game's own files by `scripts/extract-stellaris.py` (679 techs, 56 policies, 171 edicts, 498 buildings, 147 districts, 234 traditions, 49 ascension perks, 358 civics, 6,960 events with every option); 46 wiki reference docs; 6 governor directives; pause-state screen; verified console/speed keys. Save reader in `crates/game-controller/src/stellaris.rs`. |
-| **Pilot app** | [`src/pilot/`](src/pilot/) (`python -m pilot`) | Python 3.13, pydantic-ai (any provider: Gemini, OpenAI, Anthropic, Ollama) | Plays autonomously with an API key: GC4 blockers as vision episodes; Stellaris as a text-only governor. Live dashboard on :8790; run logs in `runs/`. |
+| **Pilot app** | [`src/pilot/`](src/pilot/) (`python -m pilot`) | Python 3.13, pydantic-ai (any provider: Gemini, OpenAI, Anthropic, Ollama; Claude via the Claude Code CLI) | Plays autonomously with an API key: GC4 blockers as vision episodes; Stellaris as a text-only governor. Live dashboard on :8790; run logs in `runs/`. |
 | **Play helpers** | [`scripts/play/`](scripts/play/) | Bash + Python | `act.sh` (one action + frame), `ap.sh` (autopilot), `hover.sh` (tooltips), `capture-template.py` (new known screens). |
 | **Legacy Python harness** | [`src/harness/`](src/harness/), `windows_agent/agent.py` | Python 3.12 | The first implementation; **not deployed**. Its tests still run in CI. |
 
@@ -289,7 +289,14 @@ traditions). Settings → Models sets models per role (Decisions, Strategy, Talk
 without its own list uses the decision models). Any model failure moves on to the next model in the
 list; a model that just failed goes behind the others for 10 minutes. Each role's models are a list: each entry is a provider (Google, Anthropic,
 OpenAI; keys `GOOGLE_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` in `.env`), a model and a
-thinking level. The first model decides and the others are tried in order when it stays
+thinking level. The provider **Claude Code (subscription)** (`claude-code:opus|sonnet|haiku|fable`)
+needs no API key: it runs the headless Claude Code CLI (`claude -p`, found on PATH or in
+`~/.local/bin`, logged in with the Claude subscription), so it is billed to the subscription and
+subject to its usage limits, never to an Anthropic API organization (the `ANTHROPIC_*` key variables
+are removed from its environment). Each call is single-shot and text-only: no tools (`consult`,
+`get_doc`) and no screenshots, and the thinking level becomes the CLI's `--effort`. It is best for
+the Strategy role, with a Google model after it in the list as the fallback (a usage limit or CLI
+error moves on to the next model); `python -m pilot check` reports whether `claude` is found. The first model decides and the others are tried in order when it stays
 overloaded after its retries, or, with "take turns", each decision starts at the next model; at start, a stale newest autosave (a new or
 just-loaded game) makes the governor play until a fresh one exists. The briefing names each war's sides, goals, war exhaustion and battles, lists the nearest
 empires against ours (strength ratios, opinion both ways, rival/pact flags), and the prompt adds

@@ -1082,6 +1082,7 @@ function thinkingHint(model) {
   const provider = String(model || "").split(":")[0];
   if (provider === "anthropic") return "No thinking was returned for this decision. Claude decides for itself whether to think (adaptive thinking) and often answers directly; its reason above is its reasoning.";
   if (provider.startsWith("google")) return "No thinking was returned for this decision. Gemini returns thought summaries only when thinking is on.";
+  if (provider === "claude-code") return "No thinking is returned through Claude Code: the CLI gives only the answer; the thinking level sets its effort.";
   if (provider === "openai") return "No thinking was returned for this decision. OpenAI models keep their reasoning hidden.";
   return "No thinking was returned for this decision.";
 }
@@ -1314,10 +1315,10 @@ function renderPool() {
   $("pool").innerHTML = pool.map((e, i) => {
     const pid = e.model.split(":")[0], prov = byId[pid] || { models: [], configured: false, label: pid };
     const models = [...new Set([...(prov.models || []), e.model])].sort();
-    const note = !prov.configured ? `No API key: add ${prov.key_env || pid.toUpperCase() + "_API_KEY"} to the pilot's .env to use ${prov.label}.`
+    const note = !prov.configured ? (prov.hint || `No API key: add ${prov.key_env || pid.toUpperCase() + "_API_KEY"} to the pilot's .env to use ${prov.label}.`)
                : prov.error ? `Could not list ${prov.label} models: ${prov.error}` : "";
     return `<li data-i="${i}">
-      <select class="pv" aria-label="Provider for model ${i + 1}">${provs.map((p) => `<option value="${esc(p.id)}"${p.id === pid ? " selected" : ""}>${esc(p.label)}${p.configured ? "" : " (no API key)"}</option>`).join("")}</select>
+      <select class="pv" aria-label="Provider for model ${i + 1}">${provs.map((p) => `<option value="${esc(p.id)}"${p.id === pid ? " selected" : ""}>${esc(p.label)}${p.configured ? "" : p.key_env ? " (no API key)" : " (not set up)"}</option>`).join("")}</select>
       <select class="md" aria-label="Model ${i + 1}">${models.map((m) => `<option value="${esc(m)}"${m === e.model ? " selected" : ""}>${esc(shortName(m))}</option>`).join("")}</select>
       <select class="th" aria-label="Thinking for model ${i + 1}">${THINK.map((t) => `<option${t === e.thinking ? " selected" : ""}>${t}</option>`).join("")}</select>
       <button type="button" class="rm" aria-label="Remove model ${i + 1}"${pool.length < 2 ? " disabled" : ""}>×</button>

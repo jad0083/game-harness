@@ -25,6 +25,7 @@ from pydantic_ai.messages import ModelResponse
 from pydantic_ai.usage import UsageLimits
 
 from .agent import HumanChannel, model_settings, run_with_retry
+from .claude_code import resolve_model
 from .config import Settings
 from .events import EventLog
 from .learning import Journal, LearnedStore, LearningRejected
@@ -355,7 +356,7 @@ def strategy_core(strategy: str) -> str:
 
 
 def build_governor(s: Settings, briefing: str, model=None) -> Agent[GovDeps, GovernorDecision]:
-    return Agent(model or s.model, deps_type=GovDeps, output_type=GovernorDecision,
+    return Agent(resolve_model(model or s.model), deps_type=GovDeps, output_type=GovernorDecision,
                  instructions=INSTRUCTIONS + "\n\n" + briefing,
                  tools=[Tool(f) for f in (consult, get_doc, recent_log, remember_rule)],   # outcomes are in the prompt
                  model_settings=governor_settings(s), retries=2)
@@ -473,6 +474,7 @@ class Governor:
 
     def _build(self, role: str, settings: Settings, model):
         text = self._text
+        model = resolve_model(model)
         if role == "strategy":
             return Agent(model, deps_type=GovDeps, output_type=self._review_type,
                          instructions=strategist_instructions(self.pillars) + "\n\n" + text,
@@ -564,7 +566,7 @@ class Governor:
 
     def _build_agents(self) -> None:
         """(Re)build the decision and chat agents for the current model settings."""
-        m, s, text = self._model_obj or self.s.model, self.s, self._text
+        m, s, text = resolve_model(self._model_obj or self.s.model), self.s, self._text
         self.agent = build_governor(s, text, model=m)
         self.chat_agent: Agent[GovDeps, str] = Agent(
             m, deps_type=GovDeps, output_type=str, instructions=CHAT_INSTRUCTIONS + "\n\n" + text,
