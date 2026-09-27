@@ -280,8 +280,10 @@ Rules:
   `[ui.tech]`/`[ui.market]` of the manifest, calibrated on 4.5.1): `stellaris_pick_tech` (clicking a
   field's swap button drops its current research at once, so it only swaps a field under 10% done;
   only the first 4 offered techs are clickable) and `stellaris_market_sync` (a new monthly trade
-  starts at 10; changes are computed from the last autosave, so call it at most once per autosave;
-  trade is not a market resource).
+  starts at 0.1 x the resource's market amount: 10 energy, minerals, food; 5 consumer goods; 1 motes,
+  gases, crystals (`new_trade_amount` in `[ui.market]`); alloys and sr_* start at a fraction and are
+  refused unsent until that is measured; changes are computed from the last autosave, so call it at
+  most once per autosave; trade is not a market resource).
 - **Other screen sizes**: positions and templates are measured at 3840x2160. A host with another size
   sets `GAME_RESOLUTION` (e.g. `2560x1440`); the controller then merges `res/<W>x<H>.toml`. Its
   `[ui.*]` points come from `scripts/res-map.py corpora/stellaris <W>x<H> --write` (one UI scale per

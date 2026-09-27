@@ -1603,14 +1603,40 @@ fn removal_rows(order_row_first_y: i32, pitch: i32, idxs: &[usize]) -> Result<Ve
         .collect()
 }
 
-/// Which button to click, and how many times, to move a new monthly trade's amount from `start`
-/// (the dialog's default, `ui.market.new_trade_amount`) to `target`.
-fn amount_clicks(start: i64, target: i64) -> (&'static str, u32) {
-    match target - start {
+/// The amount a new monthly trade of `resource` starts at in the "Add new monthly trade" dialog
+/// (`ui.market.new_trade_amount.<resource>`): 0.1 x the resource's `market_amount`, so 10 for
+/// energy, 5 for consumer goods, 1 for rare crystals. A resource missing from the table (alloys and
+/// sr_*, whose start is a fraction) is refused: no click count can be computed for it yet.
+fn trade_start(ui: &toml::Table, resource: &str) -> Result<i64> {
+    let starts = ui.get("market").and_then(|m| m.get("new_trade_amount")).context("manifest has no ui.market.new_trade_amount")?;
+    let starts = starts
+        .as_table()
+        .context("ui.market.new_trade_amount must be a per-resource table: a new trade's start amount differs by resource")?;
+    match starts.get(resource).and_then(|v| v.as_integer()) {
+        Some(n) if n > 0 => Ok(n),
+        _ => bail!(
+            "start amount not measured for {resource}: a new monthly trade of it starts at 0.1 x its market amount, \
+             and how the dialog shows and steps that start is not measured yet (ui.market.new_trade_amount)"
+        ),
+    }
+}
+
+/// Which button to click, and how many times, to move a new monthly trade of `resource` from its
+/// start amount (`trade_start`) to `target`.
+fn amount_clicks(ui: &toml::Table, resource: &str, target: i64) -> Result<(&'static str, u32)> {
+    Ok(match target - trade_start(ui, resource)? {
         0 => ("none", 0),
         d if d > 0 => ("plus", d as u32),
         d => ("minus", (-d) as u32),
+    })
+}
+
+/// Refuse a sync before anything is sent when an order to add has no measured start amount.
+fn check_new_trades(ui: &toml::Table, add: &[MarketOrderSpec]) -> Result<()> {
+    for o in add {
+        amount_clicks(ui, &o.resource, o.amount).with_context(|| format!("refusing to add {} {} {}; nothing was sent", o.side, o.resource, o.amount))?;
     }
+    Ok(())
 }
 
 /// Screen steps for `remove` and `add`, run after the Market dialog is open (`ui.market`). Kept
@@ -1646,11 +1672,6 @@ async fn apply_market_changes(
         let plus_pt = ui_point(ui, "market", "plus")?;
         let minus_pt = ui_point(ui, "market", "minus")?;
         let confirm_pt = ui_point(ui, "market", "confirm")?;
-        let new_trade_amount = ui
-            .get("market")
-            .and_then(|m| m.get("new_trade_amount"))
-            .and_then(|v| v.as_integer())
-            .context("manifest has no ui.market.new_trade_amount")?;
         let resources = ui.get("market").and_then(|m| m.get("resources")).and_then(|r| r.as_table()).context("manifest ui.market has no resources table")?;
         for order in add {
             click_ui_point(client, add_pt).await?;
@@ -1666,8 +1687,8 @@ async fn apply_market_changes(
             click_ui_point(client, (rx, ry)).await?;
             tokio::time::sleep(std::time::Duration::from_millis(300)).await;
 
-            // A new trade dialog starts at `new_trade_amount` (verified live 2387.07: 10), not 0.
-            let (button, clicks) = amount_clicks(new_trade_amount, order.amount);
+            // A new trade dialog starts at the resource's own start amount, not 0 (see `trade_start`).
+            let (button, clicks) = amount_clicks(ui, &order.resource, order.amount)?;
             let button_pt = match button {
                 "plus" => plus_pt,
                 "minus" => minus_pt,
@@ -1703,6 +1724,8 @@ pub async fn sync_market(
     if add.is_empty() && remove.is_empty() {
         return Ok("orders already match".into());
     }
+    // before the game is paused or the Market opened: a refused add leaves everything as it was
+    check_new_trades(ui, &add)?;
     pause.set_paused(client, true).await?;
     pause.close_menu(client).await?;
 
@@ -2704,18 +2727,71 @@ country={
         assert_eq!(removal_rows(181, 14, &[1, 0]).unwrap(), vec![195, 181]);
     }
 
-    #[test]
-    fn amount_clicks_computes_the_button_and_count_from_the_dialogs_default() {
-        // A new monthly trade starts at the manifest's ui.market.new_trade_amount (verified live
-        // 2387.07): a lower amount needs minus clicks, a higher one plus clicks, no change none.
+    fn stellaris_manifest(resolution: Option<&str>) -> crate::corpus::GameManifest {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpora/stellaris/manifest.toml");
-        let manifest: toml::Table = std::fs::read_to_string(path).unwrap().parse().unwrap();
-        let start = manifest["ui"]["market"]["new_trade_amount"].as_integer().unwrap();
-        assert!((2..25).contains(&start), "the dialog default is inside the 1..=25 order range: {start}");
-        assert_eq!(amount_clicks(start, start - 1), ("minus", 1));
-        assert_eq!(amount_clicks(start, 1), ("minus", (start - 1) as u32));
-        assert_eq!(amount_clicks(start, 25), ("plus", (25 - start) as u32));
-        assert_eq!(amount_clicks(start, start), ("none", 0));
+        crate::corpus::GameManifest::load_for_resolution(path, resolution).expect("stellaris manifest loads")
+    }
+
+    fn order(side: &str, resource: &str, amount: i64) -> MarketOrderSpec {
+        MarketOrderSpec { side: side.into(), resource: resource.into(), amount }
+    }
+
+    #[test]
+    fn amount_clicks_start_from_each_resources_own_start_amount() {
+        // A new monthly trade starts at 0.1 x the resource's market_amount (defines
+        // MARKET_MONTHLY_TRADE_FRACTION; common/strategic_resources 4.5.1), not at 10 for all.
+        let ui = stellaris_manifest(None).ui;
+        for (res, start) in [("energy", 10), ("minerals", 10), ("food", 10), ("consumer_goods", 5),
+                             ("volatile_motes", 1), ("exotic_gases", 1), ("rare_crystals", 1)] {
+            assert_eq!(trade_start(&ui, res).unwrap(), start, "{res}");
+            assert_eq!(amount_clicks(&ui, res, start).unwrap(), ("none", 0), "{res}");
+        }
+        assert_eq!(amount_clicks(&ui, "energy", 9).unwrap(), ("minus", 1));
+        assert_eq!(amount_clicks(&ui, "energy", 25).unwrap(), ("plus", 15));
+        assert_eq!(amount_clicks(&ui, "consumer_goods", 1).unwrap(), ("minus", 4));
+        assert_eq!(amount_clicks(&ui, "consumer_goods", 12).unwrap(), ("plus", 7));
+        // run 20260926-152042: "buy rare_crystals 15" was read back as 6, i.e. the real start of 1
+        // plus the 5 clicks computed from an assumed start of 10; from a start of 1 it is 14 clicks
+        assert_eq!(amount_clicks(&ui, "rare_crystals", 15).unwrap(), ("plus", 14));
+        assert_eq!(1 + (15 - 10), 6, "the old arithmetic reproduces the failed read-back");
+    }
+
+    #[test]
+    fn fractional_start_amounts_are_refused_before_the_market_opens() {
+        // alloys start at 2.5 and sr_* at 0.5: how the dialog shows and steps a fraction is not
+        // measured yet (live check L2), so no click count can be computed for them
+        let ui = stellaris_manifest(None).ui;
+        for res in ["alloys", "sr_living_metal", "sr_zro", "sr_dark_matter"] {
+            let err = amount_clicks(&ui, res, 5).unwrap_err().to_string();
+            assert!(err.contains("start amount not measured") && err.contains(res), "{err}");
+        }
+        assert!(check_new_trades(&ui, &[order("buy", "food", 5), order("sell", "energy", 20)]).is_ok());
+        let err = check_new_trades(&ui, &[order("buy", "food", 5), order("buy", "alloys", 5)]).unwrap_err().to_string();
+        assert!(err.contains("alloys") && err.contains("nothing was sent"), "{err}");
+        // keeping an alloys order that already exists adds nothing, so it needs no start amount
+        let (add, remove) = market_diff(&[order("buy", "alloys", 5)], &[order("buy", "alloys", 5), order("buy", "food", 5)]);
+        assert!(remove.is_empty() && check_new_trades(&ui, &add).is_ok());
+        // every market resource is either measured or refused by name, never guessed
+        let market = ui["market"].as_table().unwrap();
+        let starts = market["new_trade_amount"].as_table().unwrap();
+        let resources = market["resources"].as_table().unwrap();
+        assert!(starts.keys().all(|k| resources.contains_key(k)), "{starts:?}");
+        let mut unmeasured: Vec<&str> = resources.keys().filter(|k| !starts.contains_key(*k)).map(String::as_str).collect();
+        unmeasured.sort_unstable();
+        assert_eq!(unmeasured, ["alloys", "sr_dark_matter", "sr_living_metal", "sr_zro"]);
+        // the old single start (10 for everything) is refused rather than applied to every resource
+        let old: toml::Table = toml::from_str("[market]\nnew_trade_amount = 10\n").unwrap();
+        assert!(trade_start(&old, "energy").unwrap_err().to_string().contains("per-resource"));
+    }
+
+    #[test]
+    fn the_1440p_overlay_keeps_the_per_resource_start_amounts() {
+        // res/2560x1440.toml replaces [ui.market] keys one by one: an integer there would undo the table
+        let ui = stellaris_manifest(Some("2560x1440")).ui;
+        assert_eq!(trade_start(&ui, "rare_crystals").unwrap(), 1);
+        assert_eq!(trade_start(&ui, "consumer_goods").unwrap(), 5);
+        assert_eq!(trade_start(&ui, "food").unwrap(), 10);
+        assert!(trade_start(&ui, "alloys").is_err());
     }
 
     #[test]

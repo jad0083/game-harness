@@ -341,7 +341,8 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   table, `latest_strategy`, `strategy_history`, `metrics_rows`; dashboard `/api/strategy`, control
   actions `edit_pillar`, `unpin_pillar`, `review_strategy`. Rust: `choose_tech_pick` (only the
   alternatives listed before the current tech, first 4 visible), `market_diff`, `amount_clicks`
-  (a new trade starts at 10), `pick_tech`/`sync_market` (paused, foreground-checked, screen always
+  (from the resource's own start amount, `trade_start`: 0.1 x its market amount; alloys and sr_* are
+  refused before anything is sent until measured), `pick_tech`/`sync_market` (paused, foreground-checked, screen always
   closed), positions in `corpora/stellaris/manifest.toml` `[ui.tech]`/`[ui.market]` (calibrated live
   on 4.5.1). The old free-text plan (`plan` events, `/api/plans`) remains readable history only.
 - `static/dashboard.html`: one file, no build step; SVG charts (palette validated for both themes;

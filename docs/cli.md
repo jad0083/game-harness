@@ -132,5 +132,5 @@ Gemini CLI — `.gemini/settings.json` (in this repo):
 | `stellaris_pause` | `paused` | *Stellaris only.* Pause or resume; reads the state from the screen first (the yellow "Paused" label), so it is safe to repeat. |
 | `stellaris_log` | `lines` | *Stellaris only.* Tail of `logs/game.log`. |
 | `stellaris_pick_tech` | `prefer` | *Stellaris only.* Pick the first preferred tech (≤ 6 ids) offered in a field under 10% done: Technology → swap → option card (only the first 4 offered are clickable); unverified until the next autosave. |
-| `stellaris_market_sync` | `orders` | *Stellaris only.* Make the monthly market trades equal `orders` (≤ 2 of `{side, resource, amount 1..25}`, resources from the manifest); computed from the last autosave, so call at most once per autosave. |
+| `stellaris_market_sync` | `orders` | *Stellaris only.* Make the monthly market trades equal `orders` (≤ 2 of `{side, resource, amount 1..25}`, resources from the manifest); a new trade starts at the resource's own amount (`[ui.market]` `new_trade_amount`: 10 energy/minerals/food, 5 consumer goods, 1 motes/gases/crystals), and adding alloys or sr_* is refused before anything is sent until their fractional start is measured; computed from the last autosave, so call at most once per autosave. |
 

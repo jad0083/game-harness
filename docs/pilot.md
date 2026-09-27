@@ -167,7 +167,8 @@ species traits the strategy builds on. A review may add up to 3 rules to
 **Actions** are carried out through the game's screens after a decision, at most once per
 autosave, and checked in a later save: `stellaris_pick_tech` (only in a research field under 10%
 done) and `stellaris_market_sync` (monthly trades follow the strategy; hand-placed trades are
-removed once a strategy exists).
+removed once a strategy exists; a sync that would add alloys or sr_* is refused before anything is
+sent and logged as failed, until their fractional start amount is measured live).
 
 **Your edits.** *Edit* on a pillar changes it and pins it (a review never changes a pinned pillar);
 changing its weight rescales the other unpinned pillars so the total stays 100. *Unpin* hands it

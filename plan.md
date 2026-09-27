@@ -91,6 +91,7 @@
 - [ ] Directive efficacy: a directive that does not move its pillar's metric (held 2+ years, no faster than otherwise) loses half its pressure; its record goes to the frame and the Strategist (spec ruling 13)
 - [ ] Event boosts to milestone need (war → defence) and share-mode consumers for GalCiv IV / Civ VI
 - [ ] Stellaris levers from the Civ VI lessons (2026-09-27): a record per action kind, buy-out rules (market), crisis response when a war goes badly, deeper mod-steered AI (Governor Bridge), and a planet-development check; research → design with rulings → build → review → deploy (live checks when Stellaris is the running game)
+- [ ] Stellaris market: a new monthly trade starts from the resource's own amount (0.1 x its market amount; levers ruling 8); alloys and sr_* refused unsent until the live market check measures their fractional start
 
 ## Pilot app: observability and control
 - [x] Decision traces: prompt, Gemini thought summaries, tool calls and results, answer, tokens, time (`runs/<id>/traces/`)

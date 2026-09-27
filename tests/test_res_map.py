@@ -33,3 +33,16 @@ def test_an_unknown_resolution_is_refused():
     import pytest
     with pytest.raises(KeyError):
         res_map.mapped_ui(REPO / "corpora/stellaris", "1234x567")
+
+
+def test_writing_twice_keeps_one_generated_header_and_the_measured_screens(tmp_path):
+    import shutil
+    corpus = tmp_path / "stellaris"
+    shutil.copytree(REPO / "corpora/stellaris", corpus, ignore=shutil.ignore_patterns("data", "docs", "templates", "mod"))
+    out = corpus / "res/2560x1440.toml"
+    for _ in range(2):
+        assert res_map.main([str(corpus), "2560x1440", "--write"]) == 0
+    text = out.read_text(encoding="utf-8")
+    assert text.count("# [ui.*] below: generated") == 1, text
+    assert "[screens.paused]" in text, "the measured screens before the generated part are kept"
+    assert "new_trade_amount = { energy = 10," in text, "per-resource start amounts reach the overlay"
