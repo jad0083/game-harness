@@ -79,10 +79,15 @@ pub struct OwnBattles {
     /// Ships our side lost in those battles.
     pub ships_lost: i64,
     /// Invasions of our colonies over the whole war: ground battles at a colony we own now in which
-    /// our own country defended (not an ally's colony we took later, not our retakes). 4.5.1 saves
-    /// date ground battles 0.01.01, so a rise between two saves is a new invasion; a fall means an
-    /// invaded colony was lost, itself a crisis sign, and can hide a new invasion in that interval.
+    /// our own country defended (not an ally's colony we took later, not our retakes); the length
+    /// of `invasions`. Not a signal between saves: a colony we lose and retake counts its old
+    /// invasion again, so the count also rises on our own retake.
     pub ground_at_our_colonies: usize,
+    /// Those invasions' indices in the war's battle list. 4.5.1 saves date ground battles 0.01.01,
+    /// but the list is append-only and chronological (the 2393 save: 233 battles from the war's first
+    /// months on), so an index identifies a battle across saves of one war (`War::id`). A new
+    /// invasion since an earlier save is an index at or past that save's `War::battle_count`.
+    pub invasions: Vec<usize>,
 }
 
 /// The save's `<side>_force_peace`: set on the side whose war exhaustion passed 100%, so the other
@@ -128,6 +133,8 @@ const MARKET_RESOURCES: [&str; 11] = [
 
 #[derive(Debug, Serialize, Default)]
 pub struct War {
+    /// The war's key in the save's `war` block: pairs a war across saves.
+    pub id: String,
     pub name: String,
     pub attacker: bool,
     pub start: String,
@@ -143,6 +150,8 @@ pub struct War {
     /// Battles our side won and lost, allies' included.
     pub battles_won: usize,
     pub battles_lost: usize,
+    /// Battles in the war's list so far, both sides and allies (see `OwnBattles::invasions`).
+    pub battle_count: usize,
     pub own_battles_12m: OwnBattles,
     pub force_peace: Option<ForcePeace>,
 }
@@ -2312,9 +2321,10 @@ pub fn brief_gamestate(gamestate: &[u8]) -> Result<Briefing> {
     b.market = market_info(&root, &c, b.country);
 
     if let Some(wars) = obj(&root, "war") {
-        for (_, _, w) in wars.fields() {
+        for (key, _, w) in wars.fields() {
             let Ok(w) = w.read_object() else { continue };
-            if let Some(war) = war_of(&w, b.country, &countries, &b.date, &owned) {
+            if let Some(mut war) = war_of(&w, b.country, &countries, &b.date, &owned) {
+                war.id = key.read_str().into_owned();
                 b.wars.push(war);
             }
         }
@@ -2602,8 +2612,10 @@ fn war_of(w: &Obj, us: u64, countries: &Obj, now: &str, colonies: &[String]) -> 
     // only battles that list our country (allies' wins once read as ours, e.g. "won 20-0")
     let (mut won, mut lost) = (0, 0);
     let mut own = OwnBattles::default();
+    let mut battle_count = 0;
     if let Some(battles) = get(w, "battles").and_then(|v| v.read_array().ok()) {
-        for bt in battles.values().filter_map(|x| x.read_object().ok()) {
+        for (index, bt) in battles.values().filter_map(|x| x.read_object().ok()).enumerate() {
+            battle_count = index + 1;
             let ids = |k: &str| strings(get(&bt, k)).iter().filter_map(|x| x.parse::<u64>().ok()).collect::<Vec<_>>();
             let (atk, def) = (ids("attackers"), ids("defenders"));
             let attacker_won = get(&bt, "attacker_victory").and_then(|v| v.read_string().ok()).as_deref() == Some("yes");
@@ -2612,7 +2624,7 @@ fn war_of(w: &Obj, us: u64, countries: &Obj, now: &str, colonies: &[String]) -> 
             // an invasion of one of our colonies: our own country defended it (a ground battle lists
             // the colony's holder then, so an ally's colony we hold now is not ours, nor is our retake)
             if ground && def.contains(&us) && get(&bt, "colony").and_then(|v| v.read_string().ok()).is_some_and(|col| colonies.contains(&col)) {
-                own.ground_at_our_colonies += 1;
+                own.invasions.push(index);
             }
             let we_defended = def.iter().any(|c| ours.contains(c));
             if !we_attacked && !we_defended {
@@ -2626,6 +2638,7 @@ fn war_of(w: &Obj, us: u64, countries: &Obj, now: &str, colonies: &[String]) -> 
             }
         }
     }
+    own.ground_at_our_colonies = own.invasions.len();
     let (our_side, their_side) = if attacker { ("attacker", "defender") } else { ("defender", "attacker") };
     let flag = |side: &str| string(w, &format!("{side}_force_peace")).as_deref() == Some("yes");
     let (ours_fp, theirs_fp) = (flag(our_side), flag(their_side));
@@ -2635,6 +2648,7 @@ fn war_of(w: &Obj, us: u64, countries: &Obj, now: &str, colonies: &[String]) -> 
         date: string(w, &format!("{}_force_peace_date", if ours_fp { our_side } else { their_side })).unwrap_or_default(),
     });
     Some(War {
+        id: String::new(),
         name: format!("{} vs {}", names(&who(&attackers)), names(&who(&defenders))),
         attacker,
         start: string(w, "start_date").unwrap_or_default(),
@@ -2646,6 +2660,7 @@ fn war_of(w: &Obj, us: u64, countries: &Obj, now: &str, colonies: &[String]) -> 
         their_exhaustion: if attacker { def_ex } else { att_ex },
         battles_won: won,
         battles_lost: lost,
+        battle_count,
         own_battles_12m: own,
         force_peace,
     })
@@ -4076,6 +4091,32 @@ market={
         // force peace: set on the side whose exhaustion passed 100% (the 2393 save's enemy)
         let fp = w.force_peace.as_ref().expect("force peace");
         assert_eq!((fp.ours, fp.theirs, fp.date.as_str()), (true, false, "2229.12.01"), "we defend, and the defenders are exhausted");
+    }
+
+    #[test]
+    fn a_retaken_colony_brings_back_no_new_invasion() {
+        // a total war: colony 11 is invaded (A), passes to the enemy (B), and we take it back (C).
+        // The bare count goes 1, 0, 1, so "a rise is a new invasion" would fire on our own retake;
+        // the identities (indices in the war's append-only battle list) show nothing new in C, and
+        // a real invasion after it (D) is the only index at or past the previous save's battle count
+        let a = LEVERS_GAMESTATE.to_vec();
+        let text = |b: &[u8]| String::from_utf8(b.to_vec()).unwrap();
+        let b = text(&a).replace("owned_planets={ 10 11 }", "owned_planets={ 10 }");
+        let add_battle = |gs: &str, battle: &str| gs.replace("\n    }\n    attacker_war_exhaustion", &format!("\n        {battle}\n    }}\n    attacker_war_exhaustion"));
+        let c = add_battle(&text(&a), "{ defenders={ 3 } attackers={ 0 } system=4294967295 colony=11 attacker_victory=yes date=\"0.01.01\" attacker_losses=1 defender_losses=5 type=armies }");
+        let d = add_battle(&c, "{ defenders={ 0 } attackers={ 3 } system=4294967295 colony=10 attacker_victory=no date=\"0.01.01\" attacker_losses=9 defender_losses=2 type=armies }");
+        let war = |gs: &[u8]| brief_gamestate(gs).unwrap().wars.remove(0);
+        let (wa, wb, wc, wd) = (war(&a), war(b.as_bytes()), war(c.as_bytes()), war(d.as_bytes()));
+        assert_eq!(wa.id, "0");
+        assert_eq!((wa.battle_count, wa.own_battles_12m.invasions.clone()), (9, vec![5]));
+        assert_eq!((wb.battle_count, wb.own_battles_12m.invasions.clone()), (9, vec![]), "colony 11 is not ours in B");
+        assert_eq!((wc.battle_count, wc.own_battles_12m.invasions.clone()), (10, vec![5]), "the retake lists us as attacker");
+        assert_eq!((wd.battle_count, wd.own_battles_12m.invasions.clone()), (11, vec![5, 10]));
+        let counts: Vec<usize> = [&wa, &wb, &wc, &wd].iter().map(|w| w.own_battles_12m.ground_at_our_colonies).collect();
+        assert_eq!(counts, [1, 0, 1, 2], "the bare count rises on the retake (C) as on the invasion (D)");
+        let new_since = |prev: &War, now: &War| now.own_battles_12m.invasions.iter().copied().filter(|&i| i >= prev.battle_count).collect::<Vec<_>>();
+        assert_eq!(new_since(&wb, &wc), Vec::<usize>::new(), "no new invasion when we retake the colony");
+        assert_eq!(new_since(&wc, &wd), vec![10]);
     }
 
     #[test]

@@ -90,7 +90,10 @@ personality), wars with sides and exhaustion (battles of our side, then our own 
 months, invasions of our colonies, a status quo that can be forced), occupied colonies, shipyards at
 war, market prices against base with last month's trades, and the nearest empires with strength
 ratios and opinion both ways. The JSON form also carries policy dates, each colony's jobs,
-unemployment, districts and queue, and the mod's `governor_*` variables, for the governor's rules.
+unemployment, districts and queue, each war's id and battle count with the invasions' places in
+its battle list (a colony we lose and retake counts its old invasion again, so only a place past
+the previous save's count is a new invasion), and the mod's `governor_*` variables, for the
+governor's rules.
 The prompt adds a 12-month trend line and what earlier directive changes led to.
 
 If the game stops answering pause and resume (for example a text box holds the keyboard), the

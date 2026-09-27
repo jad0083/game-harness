@@ -177,7 +177,9 @@ system with our colony), the market (galactic once formed and our slot has acces
 fluctuations by resource index, our cumulative bought/sold, last month's `monthly_trades` budget
 line), `force_peace` per war, our own battles (only those listing our country, 12 months; ground
 battles are undated and counted as invasions over the war, only where our own country defended a
-colony we own, not an ally's colony we took later) and `governor_*` country variables;
+colony we own, not an ally's colony we took later; each war's `id` and `battle_count` and the
+invasions' indices in its append-only battle list identify them across saves, since the bare count
+also rises when we retake a colony we lost) and `governor_*` country variables;
 each top-level block is walked once. `fetch_latest_save` lists `save games/*/` through the agent's `stellaris_docs` root and
 downloads the newest `.sav`. Measured on a year-2200 medium galaxy: 1.26 MB fetched in 16 ms,
 20 MB parsed in 42 ms, briefing ≈ 2 KB. Tests run against a real autosave

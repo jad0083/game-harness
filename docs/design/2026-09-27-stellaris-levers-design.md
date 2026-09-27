@@ -276,7 +276,7 @@ votes for the mod levers, and 2 of 2 for the other two findings.
      |---|---|---|
      | 3 | `policy_dates` (policy → date) | `active_policies[].date` (seen in the 2272 save) |
      | 9-10 | `market = {kind: galactic\|internal, fluct: {res: pct}, bought: {res}, sold: {res}, trades_net: {res}}` | top-level `market` (`fluctuations`, `resources_bought`/`resources_sold` for our country, `internal_market_fluctuations`); `budget.last_month.trade_balance.monthly_trades` |
-     | 12-16 | `planets[].occupied`; `wars[].force_peace` (ours, theirs, date); `wars[].own_battles_12m {won, lost, ships_lost, ground_at_our_colonies}`; `shipyards[] {system, occupied}` | planet `owner` ≠ `controller`; war `*_force_peace*`; battles filtered to those listing **our** country (not our side); `starbase_mgr` with a `shipyard` module |
+     | 12-16 | `planets[].occupied`; `wars[].force_peace` (ours, theirs, date); `wars[].own_battles_12m {won, lost, ships_lost, ground_at_our_colonies, invasions}`, `wars[].{id, battle_count}`; `shipyards[] {system, occupied}` | planet `owner` ≠ `controller`; war `*_force_peace*`; battles filtered to those listing **our** country (not our side); `starbase_mgr` with a `shipyard` module |
      | 19 | `governor_vars` (e.g. `governor_naval_cap`, `governor_naval_used`) | `country.variables` |
      | 22 | `planets[].{amenities_usage, total_housing, employable, jobs_open, unemployed, designation, district_levels, queued, growth}` | colony block, `pop_jobs`, `districts`, `construction.item_mgr` |
 
@@ -515,7 +515,10 @@ votes for the mod levers, and 2 of 2 for the other two findings.
       - **C2** systems ≤ (max over the last 12 months) − 2;
       - **C3** military ≤ 0.5 × (max over the last 12 months), which includes 0;
       - **C4** a colony was lost (the existing trigger, at war);
-      - **C5** a ground battle at one of our colonies in the last save (an invasion);
+      - **C5** a ground battle at one of our colonies in the last save (an invasion): an index in
+        `own_battles_12m.invasions` at or past the previous save's `battle_count` for the same war `id`,
+        never a rise of `ground_at_our_colonies` (amended after the re-review: a colony we lose and
+        retake counts its old invasion again);
       - **C6** a colony below stability 25 on 2 saves in a row (ruling 22).
 
       Never entry on its own:
