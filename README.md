@@ -111,8 +111,10 @@ This is a tool for a home network, not the internet.
 - The dashboard can start runs and steer the game, so every request needs a principal: each
   browser holds its own revocable session (`runs/auth.sqlite`, hashes only), the service key
   (`PILOT_DASHBOARD_KEY` or `runs/dashboard.key`, 0600) works only as a header from the controller
-  itself, and scripts elsewhere use scoped tokens. Host names are allow-listed (no DNS rebinding);
-  changes must be JSON with the dashboard's own Origin. Details:
+  itself, and scripts elsewhere use scoped tokens. A browser signs in once with a one-time code
+  from a signed-in browser (⋯ > Add a device: QR code, link or three words) or from
+  `python -m pilot dashboard-link` on the controller. Host names are allow-listed (no DNS
+  rebinding); changes must be JSON with the dashboard's own Origin. Details:
   [docs/pilot.md](docs/pilot.md#signing-in).
 - API keys belong in `.env` (gitignored); never commit `runs/`, `play/` or `incoming/`.
 

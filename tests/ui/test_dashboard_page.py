@@ -93,7 +93,7 @@ def test_page_shows_the_carried_over_notice_once(browser, live_servers):
     load(w)
     w.page.wait_for_selector("#notices:not([hidden])", timeout=5000)
     assert "own sign-in" in w.page.text_content("#notices")
-    w.page.click("#notices button")
+    w.page.click("#notices [data-dismiss]")
     w.page.reload()
     w.page.wait_for_selector("#decisions li button")
     w.page.wait_for_timeout(800)

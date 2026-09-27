@@ -29,6 +29,13 @@ def _time_limit():
 DASHBOARD_TEST_KEY = "test-dashboard-key"
 
 
+@pytest.fixture
+def clock():
+    """An injectable wall clock for the sign-in tests (authkit.Clock); advance it with clock.t += s."""
+    from authkit import Clock
+    return Clock()
+
+
 @pytest.fixture(autouse=True)
 def _auth_db(tmp_path, monkeypatch):
     """Every dashboard's sign-in store lives in the test's temp dir (never runs/auth.sqlite)."""

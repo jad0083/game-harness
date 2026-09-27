@@ -18,6 +18,8 @@ import asyncio
 import contextlib
 import hashlib
 import hmac
+import html
+import io
 import ipaddress
 import json
 import logging
@@ -33,6 +35,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from http.cookies import SimpleCookie
 from pathlib import Path
+from typing import ClassVar
 from urllib.parse import quote, urlsplit
 
 from aiohttp import web
@@ -65,9 +68,17 @@ KEEPALIVE_S = 15.0
 AUDIT_KEEP_S, AUDIT_MAX_ROWS = 90 * DAY, 10_000
 NAME_MAX = 60
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
-PUBLIC_PATHS = {("GET", "/pair"), ("POST", "/pair"), ("GET", "/static/signin.js"), ("GET", "/favicon.svg")}
+# public routes (POST /pair/key is answered only when PILOT_KEY_SIGNIN is on; otherwise it is a 404)
+PUBLIC_PATHS = {("GET", "/pair"), ("POST", "/pair"), ("POST", "/pair/key"), ("GET", "/static/signin.js"),
+                ("GET", "/favicon.svg")}
+STATIC = Path(__file__).parent / "static"
+WORDS_FILE = Path(__file__).with_name("pair_words.txt")
+MAX_BROWSER_GRANTS = 3
+WORDS_OFF_AFTER = 5                      # wrong words in all, while codes are live, switch typed words off
 IN_APP = re.compile(r"; wv\)|FBAN|FBAV|Instagram|Line/|GSA/|LinkedInApp|Snapchat|Twitter|Slack|Teams/|MicroMessenger")
 REALM = 'Bearer realm="Game Pilot"'
+FAVICON = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" '
+           'fill="#f0b34a" stroke="#8a5a10" stroke-width="1.5"/></svg>')
 ID_RE = re.compile(r"[0-9a-f]{10}")
 
 SCHEMA = """
@@ -257,6 +268,64 @@ def _bearer(request: web.Request) -> str | None:
 
 def _ago(t: float | None, now: float) -> str:
     return time.strftime("%H:%M", time.localtime(t)) if t else ""
+
+
+# ---------------------------------------------------------------- three-word codes
+
+def _load_words() -> list[str]:
+    words = [w.strip() for w in WORDS_FILE.read_text(encoding="utf-8").splitlines()
+             if w.strip() and not w.startswith("#")]
+    assert len({w[:3] for w in words}) == len(words), "every 3-letter prefix must be unique"
+    return words
+
+
+WORDS = _load_words()
+CODE_WORDS = [w for w in WORDS if w.isalpha()]   # "yo-yo" would split in two when typed: never drawn
+_BY_PREFIX = {w[:3]: w for w in CODE_WORDS}
+
+
+def canonical_words(text: str | None) -> str | None:
+    """'Maple-ORBIT crane' or 'map orb cra' -> 'maple orbit crane'; None unless exactly three tokens
+    (split on anything that is not a letter), each the prefix (3 letters or more) of a listed word."""
+    tokens = re.findall(r"[a-z]+", (text or "").lower())
+    if len(tokens) != 3:
+        return None
+    out = []
+    for t in tokens:
+        w = _BY_PREFIX.get(t[:3]) if len(t) >= 3 else None
+        if not w or not w.startswith(t):
+            return None
+        out.append(w)
+    return " ".join(out)
+
+
+def lan_address() -> str:
+    """This machine's LAN address (the outgoing interface), for links when no public URL is set."""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sk:
+            sk.connect(("192.0.2.1", 9))       # sends nothing; picks the outgoing interface
+            return sk.getsockname()[0]
+    except OSError:
+        return socket.gethostname()
+
+
+def qr_svg(url: str) -> str | None:
+    """The link as an inline SVG QR code (dark on white, quiet zone), or None without segno."""
+    try:
+        import segno
+    except ImportError:
+        return None
+    return segno.make(url, error="m").svg_inline(scale=4, border=4, dark="#000", light="#fff", omitsize=True)
+
+
+def qr_text(url: str) -> str | None:
+    try:
+        import segno
+    except ImportError:
+        return None
+    buf = io.StringIO()
+    segno.make(url, error="m").terminal(out=buf, compact=True)
+    return buf.getvalue()
 
 
 # ---------------------------------------------------------------- the service key
@@ -528,22 +597,111 @@ class AuthStore:
                     and row["last_seen_at"] - row["prev_seen_at"] <= TWO_ADDRESSES_S)
 
     # -- grants (sign-in codes)
-    def create_grant(self, created_by: str) -> dict:
-        """A grant with a 256-bit link token (`<id>.<secret>`); the link face only (typed words come
-        with the sign-in page). Expires in 10 minutes."""
+    def create_grant(self, created_by: str, words: bool = False) -> dict:
+        """A grant with two faces: a 256-bit link token (`<id>.<secret>`) and, with `words`, three
+        words (only their sha256 is kept; redrawn on a clash). One grant, used once, within 10
+        minutes. A browser holds one live grant (a new one cancels it) and browsers hold at most three
+        in all (`GrantLimit`); the CLI and the old-link carry-over are not limited."""
         ident, secret = secrets.token_hex(5), secrets.token_urlsafe(32)
         now = self.now()
-        self._x("INSERT INTO grants (id, link_hash, created_at, expires_at, created_by, state) VALUES (?,?,?,?,?,?)",
-                (ident, digest(secret), now, now + GRANT_TTL_S, created_by, "waiting"))
-        self.audit("grant_created", None, created_by if ID_RE.fullmatch(created_by or "") else None,
-                   {"grant": ident, "by": created_by})
-        return {"id": ident, "link": f"{ident}.{secret}", "expires_at": now + GRANT_TTL_S}
+        by_browser = bool(ID_RE.fullmatch(created_by or ""))
+        with self._lock:
+            if by_browser:
+                self.db.execute("UPDATE grants SET state='cancelled' WHERE created_by=? AND state='waiting'", (created_by,))
+                live = self.db.execute("SELECT COUNT(*) FROM grants WHERE state='waiting' AND expires_at>? AND "
+                                       "created_by NOT IN ('cli', 'legacy_link')", (now,)).fetchone()[0]
+                if live >= MAX_BROWSER_GRANTS:
+                    raise GrantLimit(f"{live} codes are open; cancel one or let it expire")
+            for _ in range(20):
+                typed = " ".join(secrets.choice(CODE_WORDS) for _ in range(3)) if words else None
+                try:
+                    self.db.execute("INSERT INTO grants (id, link_hash, words_hash, created_at, expires_at, created_by,"
+                                    " state) VALUES (?,?,?,?,?,?,?)",
+                                    (ident, digest(secret), digest(typed) if typed else None, now, now + GRANT_TTL_S,
+                                     created_by, "waiting"))
+                    break
+                except sqlite3.IntegrityError:
+                    continue                                # the same three words are in use: draw again
+            else:
+                raise RuntimeError("could not draw unused words")
+        self.audit("grant_created", None, created_by if by_browser else None, {"grant": ident, "by": created_by})
+        return {"id": ident, "link": f"{ident}.{secret}", "words": typed, "expires_at": now + GRANT_TTL_S}
+
+    def grant_by_words(self, canonical: str) -> dict | None:
+        rows = self._rows("SELECT * FROM grants WHERE words_hash=?", (digest(canonical),))
+        return rows[0] if rows else None
+
+    def grant_by_link(self, link: str | None) -> dict | None:
+        ident, secret = split_cred(link, "")
+        rows = self._rows("SELECT * FROM grants WHERE id=?", (ident,)) if ident else []
+        if not rows or not hmac.compare_digest(rows[0]["link_hash"], digest(secret)):
+            return None
+        return rows[0]
+
+    def redeem(self, kind: str, value: str, *, ip: str | None, user_agent: str = "", client: str = "",
+               name: str = "", presenter: str | None = None) -> tuple[str, dict]:
+        """Spend a grant by its words (canonical) or link: ('ok', {device, cred}) | ('already', {}) |
+        ('wrong', {}) | ('expired', {}) | ('conflict', {device, used_ip, used_at}). A spent grant
+        presented by anyone but the device it made signs that device out (ruling 42)."""
+        g = self.grant_by_words(value) if kind == "words" else self.grant_by_link(value)
+        if g is None:
+            return "wrong", {}
+        now = self.now()
+        if g["state"] in ("used", "conflict"):
+            if presenter and presenter == g["device_id"]:
+                return "already", {}
+            dev = self.device(g["device_id"]) if g["device_id"] else None
+            if g["state"] == "used":
+                self._x("UPDATE grants SET state='conflict' WHERE id=?", (g["id"],))
+                if dev:
+                    self.revoke(dev["id"], "conflict", by="conflict", ip=ip)
+                self.audit("grant_conflict", ip, dev["id"] if dev else None,
+                           {"grant": g["id"], "device": dev["name"] if dev else None, "how": kind})
+            return "conflict", {"device": dev["name"] if dev else "a browser", "used_ip": g["used_ip"],
+                                "used_at": g["used_at"]}
+        if g["state"] != "waiting" or now > g["expires_at"]:
+            if g["state"] == "waiting":
+                self._x("UPDATE grants SET state='expired' WHERE id=? AND state='waiting'", (g["id"],))
+            return "expired", {}
+        with self._lock:                  # spend and mint in one transaction: others see both or neither
+            self.db.execute("BEGIN IMMEDIATE")
+            try:
+                spent = self.db.execute("UPDATE grants SET state='used', used_at=?, used_ip=? WHERE id=? AND "
+                                        "state='waiting'", (now, ip, g["id"])).rowcount
+                if spent:
+                    row, cred = self.create_device("browser", name=clip_name(name, device_name(user_agent, client)),
+                                                   created_via=kind, created_by=g["created_by"], ip=ip,
+                                                   user_agent=user_agent, grant_id=g["id"],
+                                                   legacy=g["created_by"] == "legacy_link")
+                    self.db.execute("UPDATE grants SET device_id=? WHERE id=?", (row["id"], g["id"]))
+                self.db.execute("COMMIT")
+            except BaseException:
+                self.db.execute("ROLLBACK")
+                raise
+        if not spent:                                       # another request spent it a moment ago
+            return self.redeem(kind, value, ip=ip, user_agent=user_agent, client=client, name=name, presenter=presenter)
+        return "ok", {"device": row, "cred": cred}
+
+    def switch_words_off(self) -> int:
+        """Typed words stop working for every live grant; their links and QR codes keep working."""
+        n = self._x("UPDATE grants SET words_hash=NULL WHERE state='waiting' AND expires_at>? AND "
+                    "created_by != 'legacy_link'", (self.now(),)).rowcount
+        self.audit("words_switched_off", None, None, {"grants": n})
+        return n
+
+    def live_grants(self) -> list[dict]:
+        return self._rows("SELECT id, created_by, words_hash IS NULL AS words_off FROM grants WHERE state='waiting'"
+                          " AND expires_at>?", (self.now(),))
+
+    def cancel_grant(self, ident: str, by: str) -> bool:
+        return bool(self._x("UPDATE grants SET state='cancelled' WHERE id=? AND created_by=? AND state='waiting'",
+                            (ident, by)).rowcount)
 
     def grant(self, ident: str) -> dict | None:
         rows = self._rows("SELECT * FROM grants WHERE id=?", (ident,))
         if rows:
             rows[0].pop("link_hash", None)
-            rows[0].pop("words_hash", None)
+            rows[0]["words_off"] = rows[0].pop("words_hash", None) is None and rows[0]["created_by"] != "legacy_link"
         return rows[0] if rows else None
 
     def grants(self) -> list[dict]:
@@ -564,6 +722,56 @@ class AuthStore:
             self.db.execute("DELETE FROM auth_events WHERE t < ?", (now - AUDIT_KEEP_S,))
             self.db.execute("DELETE FROM auth_events WHERE id NOT IN (SELECT id FROM auth_events ORDER BY t DESC"
                             " LIMIT ?)", (AUDIT_MAX_ROWS,))
+
+
+# ---------------------------------------------------------------- the audit in words
+
+EVENT_WORDS = {
+    "signin": "signed in", "signin_failed": "failed sign-in tries", "throttled": "sign-in tries paused",
+    "words_switched_off": "typed words switched off", "grant_created": "sign-in code made",
+    "grant_conflict": "a used sign-in code tried again", "signed_out": "signed out",
+    "revoked": "signed out by another device", "revoke_others": "all other devices signed out",
+    "idle": "signed out after 180 days unused", "service_key_refused_lan": "service key refused from the network",
+    "host_refused": "unknown host name refused", "token_created": "script token made",
+    "token_revoked": "script token revoked", "key_rotated": "service key rotated",
+    "legacy_kept": "carried-over device kept", "legacy_revoked": "carried-over device signed out",
+    "unlock": "sign-in pauses lifted", "control": "control"}
+BAD_EVENTS = {"signin_failed", "throttled", "words_switched_off", "grant_conflict", "service_key_refused_lan",
+              "host_refused"}
+
+
+def name_of(store: AuthStore, ident: str | None) -> str:
+    """A device id (or 'cli') as people read it."""
+    if not ident or ident in ("idle", "conflict", "legacy_link", "recovery_key"):
+        return ""
+    if ident == "cli":
+        return "the controller"
+    row = store.device(ident)
+    return row["name"] if row else ident
+
+
+def audit_sentences(store: AuthStore, n: int = 20) -> list[dict]:
+    """The newest audit rows as sentences ('Failed sign-in tries, 192.168.1.50 (100 times)')."""
+    out = []
+    for e in store.audit_rows(n):
+        detail = json.loads(e["detail"] or "{}")
+        what = EVENT_WORDS.get(e["event"], e["event"].replace("_", " "))
+        if e["event"] == "signin" and detail.get("how"):
+            what = f"signed in ({detail['how'].replace('_', ' ')})"
+        if e["event"] == "control" and detail.get("action"):
+            what = f"control: {detail['action']}"
+        if e["event"] == "revoked" and detail.get("by"):
+            what = f"signed out by {name_of(store, detail['by']) or detail['by']}"
+        who = name_of(store, e["device_id"])
+        text = (what[0].upper() + what[1:] + (f", {who}" if who else "") + (f", {e['ip']}" if e["ip"] else "")
+                + (f" ({e['count']} times)" if e["count"] > 1 else ""))
+        out.append({"t": e["t"], "event": e["event"], "ip": e["ip"], "count": e["count"], "text": text,
+                    "bad": e["event"] in BAD_EVENTS})
+    return out
+
+
+class GrantLimit(Exception):
+    """Browsers already hold the most live sign-in codes allowed."""
 
 
 # ---------------------------------------------------------------- throttles (in memory)
@@ -682,6 +890,7 @@ class Auth:
         self.keepalive_s = keepalive_s
         self.public_url, self.extra_hosts = public_url, extra_hosts
         self.key_signin, self.add_device = key_signin, add_device
+        self._wrong_words = 0                        # wrong typed words while codes are live (ruling 41)
         self._minting: dict[tuple, tuple[float, str, str]] = {}
         self._mint_locks: dict[int, asyncio.Lock] = {}
 
@@ -708,14 +917,7 @@ class Auth:
 
     # -- names
     def who(self, ident: str | None) -> str:
-        if not ident:
-            return ""
-        if ident == "cli":
-            return "the controller"
-        if ident == "idle":
-            return ""
-        row = self.store.device(ident)
-        return row["name"] if row else ident
+        return name_of(self.store, ident)
 
     # -- cookies (written in on_response_prepare, so they also reach files, streams and raised errors)
     @staticmethod
@@ -906,7 +1108,7 @@ class Auth:
         p: Principal | None = request.get(PRINCIPAL)
         return bool(p) and p.recheck()
 
-    # -- routes: who am I, devices
+    # -- notices, devices, the audit in words
     def notices(self, me: Principal) -> list[dict]:
         now = self.now()
         out = []
@@ -914,17 +1116,35 @@ class Auth:
             out.append({"kind": "carried_over", "id": f"carried:{me.id}", "at": me.row["created_at"],
                         "text": "This browser now has its own sign-in. See Devices."})
         for d in self.store.list_devices():
-            if d["kind"] == "browser" and self.store.two_addresses(d) and now - d["last_seen_at"] < NOTICE_S:
+            if d["kind"] != "browser":
+                continue
+            if d["id"] != me.id and now - d["created_at"] < NOTICE_S:
+                how = ("carried over from the old link" if d.get("created_via") == "legacy_cookie"
+                       else "signed in with the recovery key" if d.get("created_via") == "recovery_key"
+                       else f"added from {self.who(d.get('created_by')) or 'a sign-in code'}")
+                out.append({"kind": "new_device", "id": f"new:{d['id']}", "at": d["created_at"],
+                            "text": f"New device signed in: {d['name']}, {how} at {_ago(d['created_at'], now)}"
+                                    f"{', ' + d['created_ip'] if d.get('created_ip') else ''}. Review devices."})
+            if self.store.two_addresses(d) and now - d["last_seen_at"] < NOTICE_S:
                 out.append({"kind": "two_addresses", "id": f"two:{d['id']}:{int(d['last_seen_at'])}",
                             "at": d["last_seen_at"],
                             "text": f"{d['name']} was used from two addresses ({d['prev_ip']} and {d['last_ip']}) "
                                     "within 10 minutes. Review devices."})
+        for e in self.store.audit_rows(200):
+            if e["event"] == "grant_conflict" and now - e["t"] < NOTICE_S:
+                detail = json.loads(e["detail"] or "{}")
+                out.append({"kind": "conflict", "id": f"conflict:{e['id']}", "at": e["t"],
+                            "text": f"A used sign-in code was tried again from {e['ip'] or 'an unknown address'}. "
+                                    f"The browser it had signed in ({detail.get('device') or 'unknown'}) was signed out. "
+                                    "Review devices."})
         return out
 
     def device_view(self, d: dict, me: str, now: float) -> dict:
         badges = []
         if d.get("legacy"):
             badges.append("carried over from the old link")
+        if d.get("created_via") == "recovery_key":
+            badges.append("signed in with the recovery key")
         if self.store.two_addresses(d) and now - (d.get("last_seen_at") or 0) < NOTICE_S:
             badges.append("used from two addresses")
         if now - d["created_at"] < NOTICE_S:
@@ -934,6 +1154,233 @@ class Auth:
         return {**{k: d.get(k) for k in keep}, "legacy": bool(d.get("legacy")), "created_by": self.who(d.get("created_by"))
                 if d.get("created_by") not in (None, "legacy_link") else d.get("created_by"),
                 "badges": badges, "current": d["id"] == me}
+
+    def log_rows(self, n: int = 20) -> list[dict]:
+        return audit_sentences(self.store, n)
+
+    # -- links
+    def link_base(self, request: web.Request | None = None, port: int = 8780) -> str:
+        """The base of sign-in links: PILOT_PUBLIC_URL, else the host the creating browser used (when
+        allowed and not loopback), else this machine's LAN address."""
+        if self.public_url:
+            return self.public_url
+        if request is not None:
+            h = request.host or ""
+            name = host_name(h)
+            if h and name != "localhost" and not is_loopback(name) and allowed_host(h, self.extra_hosts):
+                return f"{request.scheme}://{h}"
+            port = request.url.port or port
+        return f"http://{lan_address()}:{port}"
+
+    def session_device(self, request: web.Request) -> dict | None:
+        row, why = self.store.check("browser", request.cookies.get(SESSION_COOKIE))
+        return None if why else row
+
+    # -- the sign-in page
+    MESSAGES: ClassVar[dict[str, tuple[str, str]]] = {
+        "signed_out": ("note", "You signed out of this browser."),
+        "idle": ("note", "This browser was signed out after 180 days without use."),
+        "conflict": ("err", ("This browser was signed out: its sign-in code was used again by another browser. "
+                             "Make a new code on a browser that is signed in.")),
+        "wrong": ("err", "Those words don't match a current code. Codes last 10 minutes and work once."),
+        "words_off": ("err", ("Typed words were switched off after 5 wrong tries on your network. "
+                              "Use the link or QR code instead.")),
+        "expired": ("err", "This code has expired. Make a new one on the other device."),
+        "used": ("err", "This code was already used."),
+        "bad_words": ("err", "Type the three words of the code, separated by spaces."),
+    }
+
+    def _message(self, state: str, request: web.Request, **kw) -> tuple[str, str]:
+        if state == "revoked":
+            row, _ = self.store.check("browser", request.cookies.get(SESSION_COOKIE))
+            if row and row.get("revoked_at") and row.get("revoke_reason") in ("revoked", "revoke_others"):
+                by = self.who(row.get("revoked_by"))
+                return "note", f"This browser was signed out{' from ' + by if by else ''} at {_ago(row['revoked_at'], 0)}."
+            return "note", "This browser was signed out."
+        if state == "old_link":
+            until = float(self.store.meta("legacy_until") or 0)
+            when = f" on {time.strftime('%-d %b', time.localtime(until))}" if until and until < self.now() else ""
+            return "note", f"Links with ?key= stopped working{when}. Sign in with a code from a browser that is signed in."
+        if state == "too_many":
+            m, s = divmod(int(kw.get("wait", 60)), 60)
+            return "err", (f"Too many tries from this network. Try again in <span class=\"count\" id=\"count\">"
+                           f"{m}:{s:02d}</span>. Browsers already signed in keep working.")
+        if state == "cookie_blocked":
+            return "err", (f"This browser did not keep the sign-in. Allow cookies for "
+                           f"{host_name(request.host or '') or 'this address'}, then use a new code.")
+        if state == "conflict_used":
+            return "err", kw.get("text", "")
+        if state == "wrong":
+            left = kw.get("left")
+            tail = f" {left} more {'try' if left == 1 else 'tries'} before a short wait." if left is not None else ""
+            return "err", self.MESSAGES["wrong"][1] + tail
+        return self.MESSAGES.get(state, ("", ""))
+
+    def render(self, request: web.Request, status: int = 200, state: str = "", nxt: str = "/", wait: int = 0,
+               **kw) -> web.Response:
+        cls, text = self._message(state, request, wait=wait, **kw)
+        if state != "too_many":
+            text = html.escape(text, quote=False)
+        message = f'<p class="{cls}" id="state" role="alert">{text}</p>' if text else ""
+        ua = request.headers.get("User-Agent", "")
+        app = in_app_browser(ua)
+        inapp = ""
+        if app:
+            inapp = (f'<div class="warn" id="inapp"><p>You opened this inside {html.escape(app)}. A sign-in here stays '
+                     'inside that app. Open this page in your browser: menu &gt; Open in browser. The link isn\'t used '
+                     'up until you press Sign in.</p><label class="field" for="inapp-address">This page\'s address'
+                     f'<input type="text" id="inapp-address" readonly value="{html.escape(str(request.url))}"></label>'
+                     '<button type="button" class="plain" id="inapp-copy">Copy the address</button></div>')
+        keyform = ""
+        if self.key_signin:
+            keyform = ('<details id="keyform"><summary>Use the recovery key</summary>'
+                       '<form method="post" action="/pair/key" autocomplete="on">'
+                       '<input class="vh" type="text" name="username" value="pilot" autocomplete="username" '
+                       'tabindex="-1" aria-hidden="true">'
+                       f'<input type="hidden" name="next" value="{html.escape(nxt)}">'
+                       '<label class="field" for="key">Recovery key<input type="password" id="key" name="key" '
+                       'autocomplete="current-password" required></label>'
+                       '<button class="primary" type="submit">Sign in with the key</button></form>'
+                       '<p class="hint">Your password manager can keep it. It works from any computer on your network '
+                       'and crosses it unencrypted.</p></details>')
+        page = (STATIC / "pair.html").read_text(encoding="utf-8")
+        values = {"state": html.escape(state), "wait": str(int(wait)), "next": html.escape(nxt), "message": message,
+                  "inapp": inapp, "keyform": keyform, "name": html.escape(device_name(ua))}
+        for k, v in values.items():
+            page = page.replace("{{" + k + "}}", v)
+        headers = {"Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; "
+                   "img-src 'self' data:; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+                   # same-origin, not no-referrer: under no-referrer browsers send "Origin: null" on the page's own
+                   # POSTs (Fetch: a POST's origin is serialised as null for that policy), and a sign-in needs a
+                   # matching Origin; links to other sites still get no Referer, and a fragment is never in one
+                   "Referrer-Policy": "same-origin"}
+        if wait:
+            headers["Retry-After"] = str(int(wait))
+        return web.Response(status=status, text=page, content_type="text/html", headers=headers)
+
+    def _signed_in(self, request: web.Request, cred: str, nxt: str, form: bool) -> web.Response:
+        self.set_session(request, cred)
+        check = "/pair?check=1&next=" + quote(nxt, safe="")
+        return see_other(check) if form else web.json_response({"ok": True, "next": check})
+
+    def _refused(self, request: web.Request, form: bool, status: int, error: str, state: str, nxt: str,
+                 **kw) -> web.Response:
+        if form:
+            return self.render(request, status, state, nxt, **kw)
+        _, text = self._message(state, request, **kw)
+        text = re.sub(r"<[^>]+>", "", text)
+        headers = {"Retry-After": str(int(kw["wait"]))} if kw.get("wait") else {}
+        extra = {k: v for k, v in kw.items() if k in ("left", "words_off")}
+        return web.json_response({"error": error, "reason": text, "fix": "", **extra}, status=status, headers=headers)
+
+    async def pair_get(self, request: web.Request) -> web.StreamResponse:
+        nxt = safe_next(request.query.get("next"))
+        if self.session_device(request):
+            return see_other(nxt)                   # signed in already (and the cookie stuck, after check=1)
+        if request.query.get("check") == "1":
+            return self.render(request, 200, "cookie_blocked", nxt)
+        reason = request.query.get("reason", "")
+        state = reason if reason in ("signed_out", "revoked", "idle", "old_link", "conflict") else ""
+        return self.render(request, 200, state, nxt)
+
+    async def pair_post(self, request: web.Request) -> web.StreamResponse:
+        ip = request.remote
+        bucket = bucket_of(ip)
+        ctype = request.content_type
+        form = ctype in ("application/x-www-form-urlencoded", "multipart/form-data")
+        if form:
+            if request.headers.get("Origin") is None:           # a form needs a matching Origin (checked earlier)
+                return json_error(403, "origin_required", "A form sign-in needs its Origin.", "Use a current browser.")
+            body = {k: str(v) for k, v in (await request.post()).items()}
+            if body.get("link"):
+                return json_error(403, "link_in_form", "A sign-in link is sent by the page's script, never in a form.",
+                                  "Open the link in a browser with script on, or type the words.")
+        elif ctype == "application/json":
+            try:
+                body = await request.json()
+            except ValueError:
+                body = None
+            if not isinstance(body, dict):
+                return json_error(400, "bad_request", "Send a JSON object.")
+        else:
+            return json_error(403, "json_only", "Send JSON (or the page's own form).")
+        nxt = safe_next(body.get("next"))
+        mine = self.session_device(request)
+        link, typed = body.get("link"), body.get("words")
+        ua = request.headers.get("User-Agent", "")
+        opts = {"ip": ip, "user_agent": ua, "client": str(body.get("client") or "")[:20],
+                "name": str(body.get("name") or ""), "presenter": mine["id"] if mine else None}
+        if link:
+            if mine:                                             # signed in already: on to next, the code unspent
+                return web.json_response({"ok": True, "already": True, "next": nxt})
+            status, info = await asyncio.to_thread(self.store.redeem, "link", str(link), **opts)
+            if status == "wrong":
+                self.throttle.fail(bucket)
+                await asyncio.to_thread(self.store.audit, "signin_failed", ip, None, {"how": "link"})
+        elif typed is not None:
+            words = canonical_words(str(typed))
+            if words is None:
+                return self._refused(request, form, 400, "bad_words", "bad_words", nxt)
+            if mine:
+                return web.json_response({"ok": True, "already": True, "next": nxt}) if not form else see_other(nxt)
+            wait = self.throttle.reserve(bucket)                 # check-and-count before any await
+            if wait > 0:
+                await asyncio.to_thread(self.store.audit, "throttled", ip, None, {"how": "words"})
+                await asyncio.to_thread(self.store.audit, "signin_failed", ip, None, {"how": "words"})
+                return self._refused(request, form, 429, "too_many", "too_many", nxt, wait=max(1, int(wait + 0.999)))
+            status, info = await asyncio.to_thread(self.store.redeem, "words", words, **opts)
+            if status == "wrong":
+                await asyncio.to_thread(self.store.audit, "signin_failed", ip, None, {"how": "words"})
+                live = await asyncio.to_thread(self.store.live_grants)
+                if live:
+                    self._wrong_words += 1
+                    if self._wrong_words >= WORDS_OFF_AFTER:
+                        self._wrong_words = 0
+                        await asyncio.to_thread(self.store.switch_words_off)
+                    live = await asyncio.to_thread(self.store.live_grants)
+                words_off = any(g["words_off"] and g["created_by"] != "legacy_link" for g in live)
+                left = max(0, Throttle.PER_BUCKET - self.throttle.failures(bucket))
+                if words_off:
+                    return self._refused(request, form, 401, "wrong_code", "words_off", nxt, words_off=True, left=left)
+                return self._refused(request, form, 401, "wrong_code", "wrong", nxt, left=left, words_off=False)
+            self.throttle.refund(bucket)                        # the words matched a code: no guess
+        else:
+            return json_error(400, "bad_request", "Send the code's link or its three words.")
+        if status == "ok":
+            return self._signed_in(request, info["cred"], nxt, form)
+        if status == "already":
+            return see_other(nxt) if form else web.json_response({"ok": True, "already": True, "next": nxt})
+        if status == "wrong":
+            return self._refused(request, form, 401, "wrong_code", "wrong", nxt)
+        if status == "expired":
+            return self._refused(request, form, 410, "expired", "expired", nxt)
+        ago = int(self.now() - (info.get("used_at") or self.now()))
+        text = (f"This code was already used by another browser ({info.get('device')}, {info.get('used_ip') or 'unknown'},"
+                f" {ago} s ago). For safety that sign-in was signed out. If both were you, make a new code; if not, "
+                "someone on your network may be copying traffic.")
+        return self._refused(request, form, 409, "conflict", "conflict_used", nxt, text=text)
+
+    async def pair_key(self, request: web.Request) -> web.StreamResponse:
+        """The recovery-key form (PILOT_KEY_SIGNIN=1 only): a password-manager-friendly form; throttled
+        like the words; each use makes a device flagged 'signed in with the recovery key'."""
+        if request.headers.get("Origin") is None or request.content_type not in (
+                "application/x-www-form-urlencoded", "multipart/form-data"):
+            return json_error(403, "origin_required", "The recovery form needs its Origin.", "Use a current browser.")
+        body = {k: str(v) for k, v in (await request.post()).items()}
+        nxt = safe_next(body.get("next"))
+        bucket = bucket_of(request.remote)
+        wait = self.throttle.reserve(bucket)
+        if wait > 0:
+            return self.render(request, 429, "too_many", nxt, wait=max(1, int(wait + 0.999)))
+        if not self.keys.matches(body.get("key", "")):
+            await asyncio.to_thread(self.store.audit, "signin_failed", request.remote, None, {"how": "recovery_key"})
+            return self.render(request, 401, "wrong", nxt)
+        self.throttle.refund(bucket)
+        ua = request.headers.get("User-Agent", "")
+        _, cred = await asyncio.to_thread(self.store.create_device, "browser", name=device_name(ua),
+                                          created_via="recovery_key", created_by="recovery_key", ip=request.remote,
+                                          user_agent=ua)
+        return self._signed_in(request, cred, nxt, form=True)
 
     def routes(self) -> list[web.RouteDef]:
         async def me(request):
@@ -980,8 +1427,71 @@ class Auth:
                 return web.json_response({"ok": ok})
             return json_error(400, "bad_action", "action must be signout, revoke, revoke_others or rename.")
 
-        return [web.get("/api/auth/me", me), web.get("/api/auth/devices", devices),
-                web.post("/api/auth/devices", devices_post)]
+        async def grants_post(request):
+            p = need_browser(request)
+            if self.add_device == "cli":
+                return json_error(403, "cli_only", "Adding devices is limited to the computer that runs Game Pilot.",
+                                  "On that computer run: python -m pilot dashboard-link")
+            try:
+                g = await asyncio.to_thread(self.store.create_grant, p.id, True)
+            except GrantLimit as e:
+                return json_error(429, "too_many_codes", f"Too many sign-in codes are open: {e}.",
+                                  "Cancel a code on another browser, or wait 10 minutes.")
+            url = f"{self.link_base(request)}/pair#c={g['link']}"
+            return web.json_response({"id": g["id"], "words": g["words"], "link": url, "qr_svg": qr_svg(url),
+                                      "expires_at": g["expires_at"], "ttl": GRANT_TTL_S})
+
+        def own_grant(request, p: Principal) -> dict:
+            g = self.store.grant(request.match_info["id"])
+            if not g or g["created_by"] != p.id:
+                raise web.HTTPNotFound(text=json.dumps({"error": "not_found", "reason": "No such code.", "fix": ""}),
+                                       content_type="application/json")
+            return g
+
+        async def grant_get(request):
+            p = need_browser(request)
+            g = own_grant(request, p)
+            state = "expired" if g["state"] == "waiting" and self.now() > g["expires_at"] else g["state"]
+            dev = self.store.device(g["device_id"]) if g.get("device_id") else None
+            return web.json_response({"state": state, "expires_at": g["expires_at"], "words_off": g["words_off"],
+                                      "ttl": max(0, round(g["expires_at"] - self.now())),
+                                      "device": {"id": dev["id"], "name": dev["name"], "ip": dev["created_ip"]} if dev else None})
+
+        async def grant_cancel(request):
+            p = need_browser(request)
+            own_grant(request, p)
+            ok = await asyncio.to_thread(self.store.cancel_grant, request.match_info["id"], p.id)
+            return web.json_response({"ok": ok})
+
+        async def log_get(request):
+            need_browser(request)
+            return web.json_response({"events": await asyncio.to_thread(self.log_rows, 20)})
+
+        async def unlock(request):
+            p: Principal = request[PRINCIPAL]
+            if p.kind != "service":
+                return json_error(403, "service_only", "Only the controller can lift sign-in pauses.",
+                                  "On the controller run: python -m pilot dashboard-devices unlock")
+            self.throttle.unlock()
+            self._wrong_words = 0
+            await asyncio.to_thread(self.store.audit, "unlock", request.remote)
+            return web.json_response({"ok": True})
+
+        async def signin_js(_):
+            return web.FileResponse(STATIC / "signin.js", headers={"Content-Type": "application/javascript"})
+
+        async def favicon(_):
+            return web.Response(text=FAVICON, content_type="image/svg+xml")
+
+        routes = [web.get("/pair", self.pair_get), web.post("/pair", self.pair_post),
+                  web.get("/static/signin.js", signin_js), web.get("/favicon.svg", favicon),
+                  web.get("/api/auth/me", me), web.get("/api/auth/devices", devices),
+                  web.post("/api/auth/devices", devices_post), web.post("/api/auth/grants", grants_post),
+                  web.get("/api/auth/grants/{id}", grant_get), web.post("/api/auth/grants/{id}/cancel", grant_cancel),
+                  web.get("/api/auth/log", log_get), web.post("/api/auth/unlock", unlock)]
+        if self.key_signin:
+            routes.append(web.post("/pair/key", self.pair_key))
+        return routes
 
     def install(self, app: web.Application) -> None:
         """Routes, the response hook (headers, cookies) and hourly housekeeping on a viewer app."""

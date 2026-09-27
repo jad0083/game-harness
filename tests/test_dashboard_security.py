@@ -53,14 +53,17 @@ def test_key_is_generated_once_and_stored_private(tmp_path, monkeypatch):
 
 
 def test_dashboard_link_cli_prints_the_link(tmp_path, monkeypatch):
+    """A one-time sign-in link (the code in its fragment) and three words, never the key."""
     from pilot import cli
     monkeypatch.setenv("PILOT_DASHBOARD_KEY", KEY)
+    monkeypatch.setenv("PILOT_RUNS_DIR", str(tmp_path / "runs"))
     out = io.StringIO()
     with redirect_stdout(out):
-        assert cli.main(["dashboard-link", "--port", "8781"]) == 0
-    link = out.getvalue().strip()
-    assert link.startswith("http://") and link.endswith(f":8781/?key={KEY}")
-    assert "0.0.0.0" not in link
+        assert cli.main(["dashboard-link", "--port", "8781", "--no-qr"]) == 0
+    text = out.getvalue()
+    link = next(w for w in text.split() if "/pair#c=" in w)
+    assert link.startswith("http://") and ":8781/pair#c=" in link and "0.0.0.0" not in link
+    assert "and type:" in text and KEY not in text and "key=" not in text
 
 
 # ---------- access ----------
@@ -220,6 +223,9 @@ def test_run_id_rejects_traversal(rid):
     assert not dashboard.RUN_ID.match(rid)
 
 
-def test_the_access_page_offers_a_box_for_the_key():
-    from pilot.dashboard import LOCKED_PAGE
-    assert '<form method="get" action="/"' in LOCKED_PAGE and 'name="key"' in LOCKED_PAGE
+def test_the_sign_in_page_offers_a_box_for_the_words(tmp_path):
+    async def go():
+        async with TestClient(TestServer(viewer(tmp_path)), headers=NO_KEY) as c:
+            return await (await c.get("/pair")).text()
+    page = asyncio.run(go())
+    assert '<form method="post" action="/pair"' in page and 'name="words"' in page

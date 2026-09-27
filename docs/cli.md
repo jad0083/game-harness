@@ -151,3 +151,16 @@ Gemini CLI — `.gemini/settings.json` (in this repo):
 | `stellaris_pick_tech` | `prefer` | *Stellaris only.* Pick the first preferred tech (≤ 6 ids) offered in a field under 10% done: Technology → swap → option card (only the first 4 offered are clickable); unverified until the next autosave. |
 | `stellaris_market_sync` | `orders` | *Stellaris only.* Make the monthly market trades equal `orders` (≤ 2 of `{side, resource, amount 1..25}`, resources from the manifest); a new trade starts at the resource's own amount (`[ui.market]` `new_trade_amount`: 10 energy/minerals/food, 5 consumer goods, 1 motes/gases/crystals), and an alloys or sr_* order to add is refused on its own until their fractional start is measured (the reply lists it as "not added (start amount not measured)"; removals and other adds still go, but a current order of the same side and resource is kept at its amount and listed as "kept (start amount not measured)"; a `new_trade_amount` that is missing or not a per-resource table fails the whole sync); computed from the last autosave, so call at most once per autosave. |
 
+
+## Pilot: dashboard sign-in (`python -m pilot`)
+
+These open the viewer's sign-in store (`runs/auth.sqlite`, or `PILOT_AUTH_DB`) directly, so they
+work with both services down. None of them prints the service key.
+
+```bash
+.venv/bin/python -m pilot dashboard-link [--port 8780] [--no-qr] [--wait]   # a one-time sign-in: link, three words, QR code
+.venv/bin/python -m pilot dashboard-devices                                  # signed-in browsers and script tokens
+.venv/bin/python -m pilot dashboard-devices rename ID NAME | revoke ID | revoke-all [--except ID]
+.venv/bin/python -m pilot dashboard-devices log [-n 20]                      # the sign-in activity, as sentences
+.venv/bin/python -m pilot dashboard-devices unlock [--port 8780]             # lift the pauses on typed codes (asks the viewer over loopback)
+```

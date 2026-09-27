@@ -5,7 +5,10 @@
     python -m pilot run --game stellaris [--speed fast|fastest|...] [--months N]
     python -m pilot run --game civ6 [--decide-turns N]  # the game's AI plays N turns between decisions
     python -m pilot view [--port P]           # read-only dashboard over recorded runs
-    python -m pilot dashboard-link [--port P] # the dashboard link with its access key
+    python -m pilot dashboard-link [--port P] [--no-qr] [--wait]   # sign a browser in: a one-time link,
+                                              # three words and a QR code (never the key)
+    python -m pilot dashboard-devices [list | rename ID NAME | revoke ID | revoke-all [--except ID] |
+                                       log [-n N] | unlock [--port P]]
     python -m pilot rebuild-telemetry         # recreate runs/telemetry.sqlite from the run logs
 """
 
@@ -18,6 +21,7 @@ import signal
 import sys
 import threading
 import time
+from pathlib import Path
 
 from .config import REPO, Settings
 
@@ -182,11 +186,98 @@ def view(s: Settings, port: int) -> int:
     return 0
 
 
-def dashboard_link(s: Settings, port: int) -> int:
-    from .dashboard import dashboard_key
-    from .dashboard import dashboard_link as link
-    print(link(s.dashboard_host, port, dashboard_key(s.runs_dir)))
-    return 0
+WAIT_POLL_S = 1.0
+
+
+def auth_store(s: Settings):
+    """The sign-in store (the viewer's), opened directly: works with both services down."""
+    from .auth import AuthStore
+    return AuthStore(Path(os.environ.get("PILOT_AUTH_DB") or s.runs_dir / "auth.sqlite"))
+
+
+def dashboard_link(s: Settings, port: int, qr: bool = True, wait: bool = False) -> int:
+    """A one-time sign-in (10 minutes): a link with the code in its fragment, three words to type and
+    a QR code. Safe to print and to run by an agent: whoever uses it shows up in Devices; never K."""
+    from .auth import lan_address, qr_text
+    store = auth_store(s)
+    g = store.create_grant("cli", words=True)
+    base = os.environ.get("PILOT_PUBLIC_URL", "").strip().rstrip("/") or f"http://{lan_address()}:{port}"
+    url = f"{base}/pair#c={g['link']}"
+    print("Sign in a browser (works once, for 10 minutes):")
+    print(f"  {url}")
+    print(f"or open {base}/ and type: {g['words']}")
+    if qr:
+        text = qr_text(url)
+        print(text if text else "(no QR code: segno is not installed; .venv/bin/pip install segno)")
+    sys.stdout.flush()
+    if not wait:
+        return 0
+    while True:
+        row = store.grant(g["id"])
+        if row["state"] == "used":
+            dev = store.device(row["device_id"])
+            print(f"Signed in: {dev['name'] if dev else 'a browser'}", flush=True)
+            return 0
+        if row["state"] != "waiting" or time.time() > row["expires_at"]:
+            print("The code was not used in time; make a new one." if row["state"] != "conflict"
+                  else "The code was used twice; that sign-in was signed out.", flush=True)
+            return 1
+        time.sleep(WAIT_POLL_S)
+
+
+def dashboard_devices(s: Settings, a) -> int:
+    """List, rename and sign out devices; read the sign-in log; lift the sign-in pauses."""
+    import urllib.error
+    import urllib.request
+
+    from .auth import audit_sentences, dashboard_key, name_of
+    store = auth_store(s)
+    when = lambda t: time.strftime("%d %b %H:%M", time.localtime(t)) if t else "never"
+    act = a.action or "list"
+    if act == "list":
+        rows = store.list_devices()
+        if not rows:
+            print("No devices signed in. Sign one in: python -m pilot dashboard-link")
+        for d in rows:
+            badges = ", ".join(b for b in (("carried over from the old link" if d["legacy"] else ""),
+                                          ("recovery key" if d["created_via"] == "recovery_key" else "")) if b)
+            kind = d["kind"] if d["kind"] == "browser" else f"script ({d['scope']})"
+            print(f"{d['id']}  {kind:<16} {d['name']:<30} last used {when(d['last_seen_at'])}"
+                  f"{' from ' + d['last_ip'] if d['last_ip'] else ''}; signed in {when(d['created_at'])} by "
+                  f"{name_of(store, d['created_by']) or d['created_via'].replace('_', ' ')}{'; ' + badges if badges else ''}")
+        return 0
+    if act == "rename":
+        ok = store.rename(a.id, a.name)
+        print("Renamed." if ok else f"No signed-in device {a.id}.")
+        return 0 if ok else 1
+    if act == "revoke":
+        ok = store.revoke(a.id, "revoked", by="cli")
+        print("Signed out; its next request is refused." if ok else f"No signed-in device {a.id}.")
+        return 0 if ok else 1
+    if act == "revoke-all":
+        n = sum(store.revoke(d["id"], "revoked", by="cli") for d in store.list_devices() if d["id"] != a.keep)
+        print(f"Signed out {n} device{'s' if n != 1 else ''} and script token{'s' if n != 1 else ''}"
+              f"{', kept ' + a.keep if a.keep else ''}.")
+        return 0
+    if act == "log":
+        for e in reversed(audit_sentences(store, a.n)):
+            print(f"{when(e['t'])}  {e['text']}")
+        return 0
+    if act == "unlock":
+        req = urllib.request.Request(f"http://127.0.0.1:{a.port}/api/auth/unlock", data=b"{}", method="POST",
+                                     headers={"X-Pilot-Key": dashboard_key(s.runs_dir), "Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=5) as r:     # loopback only: the viewer takes K only from there
+                json.load(r)
+        except urllib.error.HTTPError as e:
+            print(f"The viewer refused: {e.code} {e.read().decode(errors='replace')[:300]}")
+            return 1
+        except (urllib.error.URLError, OSError):
+            print(f"No viewer answers on port {a.port}; its throttles live in memory, so a restart clears them too.")
+            return 0
+        print("Sign-in pauses lifted: typed words work again from every address.")
+        return 0
+    return 2
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -202,8 +293,24 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("rebuild-telemetry", help="recreate runs/telemetry.sqlite from the run logs")
     view_p = sub.add_parser("view", help="read-only dashboard over recorded runs")
     view_p.add_argument("--port", type=int, default=8780)
-    link_p = sub.add_parser("dashboard-link", help="print the dashboard link with its access key")
-    link_p.add_argument("--port", type=int, default=8780, help="the viewer's port (the live pilot's: PILOT_PORT)")
+    link_p = sub.add_parser("dashboard-link", help="sign a browser in: a one-time link, three words and a QR code")
+    link_p.add_argument("--port", type=int, default=8780, help="the viewer's port")
+    link_p.add_argument("--no-qr", action="store_true", help="no terminal QR code")
+    link_p.add_argument("--wait", action="store_true", help="wait until the code is used and name the browser")
+    dev_p = sub.add_parser("dashboard-devices", help="list, rename and sign out devices; the sign-in log; unlock")
+    dev_sub = dev_p.add_subparsers(dest="action")
+    dev_sub.add_parser("list")
+    r = dev_sub.add_parser("rename")
+    r.add_argument("id")
+    r.add_argument("name")
+    r = dev_sub.add_parser("revoke")
+    r.add_argument("id")
+    r = dev_sub.add_parser("revoke-all", help="sign out every browser and revoke every script token")
+    r.add_argument("--except", dest="keep", default="", help="a device id to keep")
+    r = dev_sub.add_parser("log")
+    r.add_argument("-n", type=int, default=20)
+    r = dev_sub.add_parser("unlock", help="lift the throttles on typed sign-in words (asks the viewer over loopback)")
+    r.add_argument("--port", type=int, default=8780)
     run_p = sub.choices["run"]
     run_p.add_argument("--port", type=int)
     run_p.add_argument("--turns", type=int, help="turns per autopilot call")
@@ -218,7 +325,9 @@ def main(argv: list[str] | None = None) -> int:
     if a.cmd == "view":
         return view(s, a.port)
     if a.cmd == "dashboard-link":
-        return dashboard_link(s, a.port)
+        return dashboard_link(s, a.port, qr=not a.no_qr, wait=a.wait)
+    if a.cmd == "dashboard-devices":
+        return dashboard_devices(s, a)
     if a.cmd == "rebuild-telemetry":
         return rebuild(s)
     # the dashboard's model choice beats the environment; command-line options beat both

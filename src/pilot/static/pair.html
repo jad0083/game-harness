@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Sign in · Game Pilot</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<style>
+  /* The dashboard's tokens (light values darkened for contrast, dark is the identity) and system
+     fonts only, so nothing leaves the network before sign-in. */
+  :root {
+    --plane: #ece9e1; --surface: #f8f7f3; --raised: #e6e2d8; --hair: #d4cfc3;
+    --ink: #1b1d29; --ink-2: #4a4d5c; --muted: #5f6271;
+    --accent: #8a5a10; --accent-ink: #fffaf0; --sensor: #156f68; --bad: #a82e28; --warn: #9a4f12;
+    --sans: "Bricolage Grotesque", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --plane: #0e1220; --surface: #141a2a; --raised: #1b2236; --hair: #29314a;
+      --ink: #efeadd; --ink-2: #c6c2b5; --muted: #9a9cab;
+      --accent: #f0b34a; --accent-ink: #1a1305; --sensor: #63d1c6; --bad: #ff7b7b; --warn: #ffa54f;
+    }
+  }
+  :root[data-theme="dark"] {
+    --plane: #0e1220; --surface: #141a2a; --raised: #1b2236; --hair: #29314a;
+    --ink: #efeadd; --ink-2: #c6c2b5; --muted: #9a9cab;
+    --accent: #f0b34a; --accent-ink: #1a1305; --sensor: #63d1c6; --bad: #ff7b7b; --warn: #ffa54f;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; min-height: 100svh; background: var(--plane); color: var(--ink);
+         font: 16px/1.5 var(--sans); display: grid; place-items: start center; padding: 10vh 16px 32px; }
+  main { width: 100%; max-width: 380px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; letter-spacing: .01em; margin: 0 0 20px 2px; color: var(--ink-2); }
+  .brand::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--accent);
+                   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+  .card { background: var(--surface); border: 1px solid var(--hair); border-top: 3px solid var(--accent);
+          border-radius: 10px; padding: 24px 22px 20px; }
+  h1 { font-size: 22px; line-height: 1.25; margin: 0 0 4px; font-weight: 650; }
+  .lede { margin: 0 0 18px; color: var(--ink-2); font-size: 15px; }
+  .note, .err, .warn { border-radius: 8px; padding: 10px 12px; margin: 0 0 16px; font-size: 14.5px; }
+  .note { background: var(--raised); color: var(--ink-2); }
+  .err { background: color-mix(in srgb, var(--bad) 12%, var(--surface)); color: var(--ink); border-left: 3px solid var(--bad); }
+  .warn { background: color-mix(in srgb, var(--warn) 12%, var(--surface)); color: var(--ink); border-left: 3px solid var(--warn); }
+  .warn p { margin: 0 0 8px; }
+  form { display: grid; gap: 10px; margin: 0; }
+  label.field { display: grid; gap: 6px; font-size: 14px; font-weight: 600; color: var(--ink-2); }
+  input[type=text], input[type=password] { width: 100%; font: 16px/1.4 var(--sans); color: var(--ink);
+         background: var(--plane); border: 1px solid var(--hair); border-radius: 8px; padding: 11px 12px; }
+  input[readonly] { font: 13px/1.4 var(--mono); color: var(--ink-2); }
+  input:focus-visible, button:focus-visible, summary:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .hint { margin: -4px 0 4px; font-size: 13.5px; color: var(--muted); }
+  .primary { font: 600 16px var(--sans); color: var(--accent-ink); background: var(--accent); border: 0; border-radius: 8px;
+             padding: 12px 16px; cursor: pointer; min-height: 46px; width: 100%; }
+  .primary[disabled] { opacity: .55; cursor: not-allowed; }
+  .plain { font: 14.5px var(--sans); color: var(--sensor); background: none; border: 0; padding: 10px 0; cursor: pointer; text-decoration: underline; }
+  .help { margin: 16px 0 0; font-size: 14px; color: var(--ink-2); }
+  details { margin-top: 14px; font-size: 14px; color: var(--ink-2); }
+  summary { cursor: pointer; color: var(--sensor); width: fit-content; min-height: 32px; }
+  details p { margin: 8px 0 0; }
+  code { font: 13px var(--mono); background: var(--raised); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+  a { color: var(--sensor); }
+  .vh { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+  .foot { margin: 14px 2px 0; font-size: 12.5px; color: var(--muted); }
+  .count { font-variant-numeric: tabular-nums; font-weight: 600; }
+  [hidden] { display: none !important; }
+  @media (forced-colors: active) { .card, .err, .warn { border: 1px solid CanvasText; } }
+</style>
+</head>
+<body data-state="{{state}}" data-wait="{{wait}}">
+<main>
+  <div class="brand">Game Pilot</div>
+  <div class="card">
+    {{inapp}}
+    <section id="v-signin">
+      <h1>Sign in this browser</h1>
+      <p class="lede">Game Pilot can steer the games on your PC, so each browser signs in once. It stays signed in until you sign it out.</p>
+      {{message}}
+      <form method="post" action="/pair" id="words-form">
+        <input type="hidden" name="next" id="next" value="{{next}}">
+        <input type="hidden" name="client" id="client" value="">
+        <label class="field" for="words">Sign-in code
+          <input type="text" id="words" name="words" placeholder="three words, e.g. maple orbit crane" required maxlength="100"
+                 autocomplete="one-time-code" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="go">
+        </label>
+        <p class="hint">The first three letters of each word are enough.</p>
+        <button class="primary" type="submit" id="submit">Sign in</button>
+      </form>
+      <p class="help">Get a code on a browser that is already signed in: ⋯ &gt; Add a device. On a phone, scan the QR code there with the camera.</p>
+      <details id="nobody">
+        <summary>No browser signed in anywhere?</summary>
+        <p>On the computer that runs Game Pilot, run <code>python -m pilot dashboard-link</code>. An agent working there can run it for you.</p>
+      </details>
+      {{keyform}}
+    </section>
+    <section id="v-confirm" hidden>
+      <h1>Sign in this browser?</h1>
+      <p class="lede">Adds this browser to Game Pilot's devices. The link works once; signing in here uses it up.</p>
+      <p class="err" id="confirm-error" role="alert" hidden></p>
+      <form id="confirm-form">
+        <label class="field" for="name">Name
+          <input type="text" id="name" maxlength="60" autocomplete="off" value="{{name}}">
+        </label>
+        <button class="primary" type="submit" id="confirm-go">Sign in</button>
+      </form>
+      <p><a href="/pair" id="type-instead">Type the words instead</a></p>
+    </section>
+  </div>
+  <p class="foot">Opened from another app? A sign-in belongs to the browser you sign in with. Private windows forget it when they close.</p>
+  <p class="foot">This connection is not encrypted (plain HTTP on your local network). Sign out devices you don't recognise.</p>
+</main>
+<script src="/static/signin.js"></script>
+</body>
+</html>

@@ -13,7 +13,7 @@ echo 'GEMINI_API_KEY=…' >> .env                  # or OPENAI_API_KEY / ANTHROP
 .venv/bin/python -m pilot run --game galciv4      # a vision episode per blocker
 .venv/bin/python -m pilot run --game stellaris --months 12   # governor; --speed normal (default) … fastest
 .venv/bin/python -m pilot view                    # dashboard over the recorded runs
-.venv/bin/python -m pilot dashboard-link          # the dashboard link with its access key
+.venv/bin/python -m pilot dashboard-link          # sign a browser in: one-time link, three words, QR code
 ```
 
 As services: `deploy/game-pilot.service` (the pilot) and `deploy/game-pilot-view.service` (the
@@ -350,10 +350,42 @@ The dashboard listens on the LAN, so every request needs a principal (design:
   so other web pages cannot drive the pilot through your browser. Every response is `no-store`,
   cannot be framed and carries `nosniff` and a `Referrer-Policy`. API 401s are JSON
   (`error`, `reason`, `fix`, `by`, `at`) with `WWW-Authenticate`; page loads go to `/pair`.
-- `GET /api/auth/me` names the principal and returns notices (carried over, a device used from two
-  addresses within 10 minutes); `GET/POST /api/auth/devices` list, rename, revoke, sign out the
-  others or this browser. Sign-ins, sign-outs, refusals and control actions go to an audit table,
-  one row per event, address and minute. The live pilot (8790) still takes the key as before.
+- **Signing a browser in** (`/pair`, the sign-in page; it looks like the dashboard on a phone, in
+  light and dark): a signed-in browser opens ⋯ > **Add a device**, which shows a QR code (behind
+  "Show QR code" on a phone), three words ("maple · orbit · crane") and the link with **Copy link**
+  (it selects the text and copies without the clipboard API, which plain HTTP lacks). The phone
+  scans the code, another browser opens the link, or anyone types the words on the sign-in page (the
+  first three letters of each are enough). A code works once, within 10 minutes; the sheet shows
+  "Signed in: Brave on Windows, 192.168.1.77" when it is used. With no browser signed in anywhere,
+  run `python -m pilot dashboard-link` on the controller (it prints the link, the words and a
+  terminal QR code, never the key; an agent may run it; `--wait` names the browser that used it).
+  The link carries its code in the fragment (`/pair#c=…`), so the code never reaches a request
+  line, a log or a link preview, and only the tap on "Sign in" spends it; the address bar loses it
+  afterwards. A browser inside another app (a chat app's WebView) is told so and can open the page
+  in the real browser without using the code up. `PILOT_ADD_DEVICE=cli` limits adding devices to
+  the controller.
+- **Guessing and replays**: 5 wrong typed codes from one address in 10 minutes pause typing there
+  (429, with a countdown); 20 anywhere pause it for everyone; 5 wrong ones in all switch the words
+  of the open codes off (their links and QR codes still work). A valid link is never throttled,
+  signed-in browsers and scripts never are. `python -m pilot dashboard-devices unlock` lifts the
+  pauses (so does a viewer restart). A code used a second time by another browser signs out the
+  browser it had signed in and tells every signed-in page ("A used sign-in code was tried again").
+- **Devices** (Settings > Devices, or ⋯ > Devices): this browser (rename, sign out), the other
+  browsers with how and when they signed in and their last use and address (badges: new, carried
+  over from the old link, used from two addresses) and **Sign out**, the script tokens with
+  **Revoke**, **Sign out all other devices**, and the recent sign-in activity. Other signed-in
+  pages show a notice for 24 h after a new device signs in. From the controller:
+  `python -m pilot dashboard-devices [list | rename ID NAME | revoke ID | revoke-all [--except ID] |
+  log [-n N] | unlock]`.
+- **Recovery key form** (off; `PILOT_KEY_SIGNIN=1` turns it on): a password-manager-friendly form on
+  the sign-in page that takes the service key; throttled like the words, and it sends the key over
+  plain HTTP, so keep it off unless needed.
+- `GET /api/auth/me` names the principal and returns notices (carried over, new devices, a used code
+  tried again, a device used from two addresses within 10 minutes); `/api/auth/devices`,
+  `/api/auth/grants`, `/api/auth/log` serve the panels (browsers only); `POST /api/auth/unlock`
+  takes the service key from loopback. Sign-ins, failures, sign-outs, refusals and control actions
+  go to an audit table, one row per event, address and minute. The live pilot (8790) still takes
+  the key as before.
 - `/api/pc` reports only whether the agent is online, its version, which known games are open and
   whether one is in front, never window titles.
 

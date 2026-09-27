@@ -405,6 +405,17 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   and Origin rules for changes, scopes. Cookies and security headers are written in
   `on_response_prepare` (as headers: aiohttp has already serialised `response.cookies` there), so
   they reach files, streams and raised errors. Runners use `RUNNER_KWARGS` (no access log).
+  Signing in: `pair_words.txt` (the EFF short wordlist 2.0, vendored with its CC BY 3.0 US notice;
+  "yo-yo" is never drawn), `canonical_words` (three tokens split on non-letters, each a 3+ letter
+  prefix of a word), grants with a link token and a `words_hash` (`create_grant`: one live grant per
+  browser, three across browsers, the CLI exempt), `redeem` (spend and mint in one `BEGIN IMMEDIATE`
+  transaction; a spent grant from another client revokes the device it made, `conflict`),
+  `switch_words_off`, and the `/pair` handlers: `pair.html` rendered server-side (states from a fixed
+  set, the in-app warning from the user agent, strict CSP) and `static/signin.js` (the fragment code,
+  the confirm view, `navigator.brave`, `replaceState`, the countdown). Typed words reserve a
+  throttle slot before any await and refund it when they matched a code. `audit_sentences` turns
+  the audit into the Devices panel's activity and `dashboard-devices log`; `cli.py` opens the store
+  directly for `dashboard-link` and `dashboard-devices` (the viewer may be down).
 - Game pillars: `pillars.py` loads and validates `corpora/<game>/pillars.toml` into a read-only
   `PillarSpec` (pillars, metrics, aliases, row keys, action limits, min milestones, instructions),
   cached per file and mtime; unknown keys, directives missing from `directives.toml`, actions without
