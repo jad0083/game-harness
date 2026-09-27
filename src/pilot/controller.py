@@ -15,6 +15,7 @@ from .events import EventLog
 from .game import Game
 from .learning import Journal, LearnedStore
 from .trace import serialize
+from .wording import attention
 
 DISMISSED_RE = re.compile(r"Dismissed on advanced turns: (.+)\.")
 ALREADY_RE = re.compile(r"already dismissed: ([^)]+)\)")
@@ -84,6 +85,8 @@ class Pilot:
         self.human.answer(text)
 
     def _status(self, status: str) -> None:
+        if status != "needs_attention":
+            self.log.state.info.pop("attention", None)       # the dashboard's card goes with the stop
         self.log.state.status = status
         self.log.emit("status", status=status)
 
@@ -115,17 +118,17 @@ class Pilot:
                     processing += 1
                     if processing >= MAX_PROCESSING:
                         self._needs_attention("the game has been processing a turn for several minutes "
-                                              "(possible GC4 turn hang; see AGENTS.md §7)")
+                                              "(possible GC4 turn hang; see AGENTS.md §7)", category="screen")
                     continue
                 if report.stop == "error":
-                    self._needs_attention(f"autopilot error: {report.text[:200]}")
+                    self._needs_attention(f"autopilot error: {report.text[:200]}", category="control_failed")
                     continue
                 processing = 0
 
                 resolved = self._episode(report.text, report.frame)
                 unresolved = 0 if resolved else unresolved + 1
                 if unresolved >= MAX_UNRESOLVED:
-                    self._needs_attention(f"{MAX_UNRESOLVED} blockers in a row were not resolved")
+                    self._needs_attention(f"{MAX_UNRESOLVED} blockers in a row were not resolved", category="screen")
                     unresolved = 0
                 if max_episodes is not None and self.log.state.episodes >= max_episodes:
                     break
@@ -184,8 +187,11 @@ class Pilot:
                 self.log.emit("learned_disabled", screen=name)
                 self.game.reload()
 
-    def _needs_attention(self, why: str) -> None:
-        self.log.emit("needs_attention", reason=why)
+    def _needs_attention(self, why: str, category: str = "screen") -> None:
+        """Wait for the human; `category` (view.CATEGORIES) picks the dashboard's recovery steps."""
+        self.log.state.info["attention"] = attention(why, category, list(self.log.recent), date=self.log.state.game_date,
+                                                     frame=self.log.state.frame_path)
+        self.log.emit("needs_attention", reason=why, category=category)
         self.log.state.status = "needs_attention"
         self.control.paused = True
 

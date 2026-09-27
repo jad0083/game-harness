@@ -15,7 +15,7 @@ try:
 except ImportError:          # pragma: no cover - the shared .venv has it; a fresh one may not
     sync_playwright = None
 
-from uikit import MODELS, PC_CIV6, UI_KEY, Served, seed_runs
+from uikit import MODELS, PC_CIV6, UI_KEY, Served, seed_scenario
 
 from pilot.auth import Auth
 
@@ -43,14 +43,20 @@ def pytest_collection_modifyitems(config, items):
 
 
 @pytest.fixture
-def ui_runs(tmp_path, monkeypatch):
+def scenario() -> str:
+    """The live Civ VI run's state (uikit.seed_scenario); a test overrides it with parametrize."""
+    return "playing"
+
+
+@pytest.fixture
+def ui_runs(tmp_path, monkeypatch, scenario):
     """runs/ with a finished Stellaris campaign and a live Civ VI run (a fake pilot with no frames)."""
     from pilot import dashboard, models
     monkeypatch.setenv("PILOT_DASHBOARD_KEY", UI_KEY)
     monkeypatch.setattr(dashboard, "pc_status", lambda: dict(PC_CIV6))
     monkeypatch.setattr(models, "available_models", lambda s: list(MODELS))
     monkeypatch.setattr(models, "provider_catalog", lambda s: [])
-    runs = seed_runs(tmp_path / "runs")
+    runs = seed_scenario(tmp_path / "runs", scenario)
     yield runs
     runs["log"].close()
     runs["tel"].close()
@@ -63,7 +69,7 @@ def live_servers(ui_runs):
     log = ui_runs["log"]
     live = Served(make_app(ui_runs["pilot"], key=UI_KEY))
     log.state.info["port"] = live.port
-    log.emit("status", status="playing")
+    log.emit("status", status=log.state.status)
     auth = Auth.from_env(ui_runs["runs"], key=UI_KEY, keepalive_s=0.2)
     viewer = Served(make_app(None, ui_runs["runs"], ui_runs["tel"], key=UI_KEY, auth=auth))
     yield {**ui_runs, "live": live, "viewer": viewer, "auth": auth}

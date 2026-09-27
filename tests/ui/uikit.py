@@ -25,7 +25,8 @@ CONTEXTS = {
 }
 
 
-PC_CIV6 = {"online": True, "version": "1.6.1", "games": ["civ6"], "game_in_front": True, "front_game": "civ6"}
+PC_CIV6 = {"online": True, "state": "on", "host": "mini-rig2", "version": "1.6.1", "games": ["civ6"], "game_in_front": True,
+           "front_game": "civ6"}
 MODELS = ["google:gemini-3.8-flash", "google:gemini-3.1-pro-preview"]
 CIV6_METRICS = [{"date": f"T{t}", "turn": t, "score": 40 + t, "military": 300 + 5 * t, "science": 20.5 + t / 10,
                  "culture": 12.0 + t / 20, "faith_yield": 4.0, "gold_yield": 9.5 + t / 10, "production": 30 + t / 5,
@@ -112,6 +113,56 @@ def seed_runs(runs: Path) -> dict:
     return {"runs": runs, "tel": tel, "log": log, "pilot": FakePilot(log)}
 
 
+def _jpeg() -> bytes:
+    """A small game-screen stand-in (Pillow is a dev dependency; without it no frame)."""
+    try:
+        import io
+
+        from PIL import Image
+    except ImportError:                  # pragma: no cover
+        return b""
+    buf = io.BytesIO()
+    Image.new("RGB", (160, 90), (40, 60, 90)).save(buf, "JPEG")
+    return buf.getvalue()
+
+
+def seed_scenario(runs: Path, scenario: str = "playing") -> dict:
+    """seed_runs, then the live Civ VI run in one of the governor line's states: playing, needs (autoplay
+    did not start at T57, 6 h 52 min ago), deciding (the fallback model's second call), paused, question."""
+    import time
+    out = seed_runs(runs)
+    log, st = out["log"], out["log"].state
+    now = time.time()
+    if scenario == "needs":
+        log.emit("briefing_error", error="autoplay at T57: Error: Failed /tuner/lua\n\nCaused by:\n    0: operation timed out")
+        st.status = "needs_attention"
+        st.info["attention"] = {"reason": "autoplay did not start at T57 (still inactive after 21 s). Check the game "
+                                          "(a dialog, a crash, the main menu), then press Resume.",
+                                "category": "transient", "since": now - 24720, "date": "T57", "date_now": "T57",
+                                "auto_recover": False, "next_probe_at": None, "probes": 0,
+                                "errors": ["the game's tuner did not answer (timed out)"],
+                                "raw": ["autoplay at T57: Error: Failed /tuner/lua\n\nCaused by:\n    0: operation timed out"],
+                                "frame": ""}
+        log.emit("needs_attention", reason=st.info["attention"]["reason"], category="transient")
+    elif scenario == "needs_old":          # a pilot from before info.attention: only the event
+        st.status = "needs_attention"
+        log.emit("needs_attention", reason="game control failed: RuntimeError: the tuner is off. Fix the game, then Resume.")
+    elif scenario == "deciding":
+        st.status = "deciding"
+        st.info["deciding"] = {"since": now - 72, "trigger": "urgent: city threatened: Chengdu (2 enemy units near)",
+                               "model": "google:gemini-3.1-pro-preview", "attempt": 2, "max_attempts": 2, "retry_at": None,
+                               "retries": 0, "after": [{"model": "google:gemini-3.8-flash", "error": "overloaded (503)"}]}
+    elif scenario == "paused":
+        st.status = "paused"
+        from pilot.events import acting
+        with acting("Pixel phone", "d1"):
+            log.emit("control", action="pause")
+    elif scenario == "question":
+        st.pending_question = "Apply 'prepare_war'? The Tzynn border fleets outnumber ours."
+        st.question_deadline, st.default_if_silent = now + 45, "no"
+    return out
+
+
 class Served:
     """An aiohttp app on 127.0.0.1:<free port>, in its own thread and event loop."""
 
@@ -169,6 +220,7 @@ class FakePilot:
     def resume(self):
         self.calls.append("resume")
         self.log.state.status = "playing"
+        self.log.state.info.pop("attention", None)
 
     def stop(self):
         self.calls.append("stop")
@@ -176,6 +228,18 @@ class FakePilot:
     def instruct(self, text):
         self.calls.append(("instruct", text))
         self.log.emit("instruction", text=text)
+
+    def answer(self, text):
+        self.calls.append(("answer", text))
+        self.log.state.pending_question, self.log.state.question_deadline = "", 0.0
+
+    @property
+    def game(self):
+        """The game's screen, for "Capture the game screen"."""
+        class Game:
+            def screenshot(self):
+                return type("Shot", (), {"image": _jpeg()})()
+        return Game()
 
 
 class Watched:

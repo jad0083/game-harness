@@ -203,6 +203,8 @@ def check_pool(models) -> list[dict]:
             raise ValueError(f"not a model name: {name!r} (expected provider:name)")
         if th not in THINKING:
             raise ValueError(f"thinking must be one of {', '.join(THINKING)}")
+        if any(o["model"] == name for o in out):     # a fallback to the model that just failed helps nobody
+            raise ValueError(f"{name} is in the list twice; each model once")
         out.append({"model": name, "thinking": th})
     return out
 

@@ -236,10 +236,13 @@ def learn_screen(ctx: RunContext[Deps], name: str, x0: float, y0: float, x1: flo
 
 def ask_human(ctx: RunContext[Deps], question: str) -> str:
     """Ask the human watching the dashboard. Play continues with your best judgement if nobody answers."""
-    ctx.deps.log.state.pending_question = question
+    st = ctx.deps.log.state
+    st.pending_question = question
+    st.question_deadline = time.time() + ctx.deps.settings.ask_human_timeout_s
+    st.default_if_silent = "its best judgement, nothing irreversible"
     ctx.deps.log.emit("question", question=question)
     answer = ctx.deps.human.ask(question, ctx.deps.settings.ask_human_timeout_s)
-    ctx.deps.log.state.pending_question = ""
+    st.pending_question, st.question_deadline, st.default_if_silent = "", 0.0, ""
     ctx.deps.log.emit("answer", answer=answer or "(no answer)")
     return answer or "No answer yet; proceed with your best judgement and avoid irreversible actions."
 

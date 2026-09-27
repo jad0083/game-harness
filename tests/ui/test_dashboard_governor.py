@@ -1,0 +1,159 @@
+"""The governor line, the needs-you card, the tab title and favicon, the bar's exits (U3; rulings 5-8,
+10, 11, 17), against a live Civ VI fixture in each state."""
+
+from __future__ import annotations
+
+import pytest
+from uikit import CONTEXTS, contrast_failures, open_context
+
+pytestmark = pytest.mark.ui
+
+
+def load(w):
+    w.page.goto(w.base + "/", wait_until="domcontentloaded")
+    w.page.wait_for_selector("#decisions li button", timeout=15000)
+    w.page.wait_for_timeout(800)
+
+
+def no_overflow(page) -> bool:
+    return page.evaluate("document.documentElement.scrollWidth <= document.documentElement.clientWidth")
+
+
+@pytest.mark.parametrize("scenario", ["needs"])
+@pytest.mark.parametrize("name", list(CONTEXTS))
+def test_needs_you_card_has_reason_age_cost_steps_and_resume(browser, live_servers, name, tmp_path):
+    w = open_context(browser, name, live_servers)
+    load(w)
+    page = w.page
+    assert page.text_content("#gov-line") == "Needs you: autoplay did not start at T57."
+    assert page.get_attribute("#gov", "data-state") == "needs" and page.is_visible("#gov-card")
+    assert page.text_content("#gov-age") == "waiting 6 h 52 min"
+    assert page.text_content("#gov-cost").startswith("The game is stopped at T57.")
+    steps = page.eval_on_selector_all("#gov-steps li", "ls => ls.map(l => l.textContent)")
+    assert steps[0] == "Press Resume. This cleared 14 of 15 such stops." and len(steps) == 2
+    assert "1 error, raw text" in page.text_content("#gov-raw-sum")
+    assert page.is_hidden("#gov-raw-body pre")                        # raw text one disclosure away
+    page.focus("#gov-resume")
+    assert page.evaluate("document.activeElement.id") == "gov-resume"
+    assert page.title() == "Needs you – T57 – Game Pilot"
+    assert page.get_attribute("#favicon", "href").startswith("data:image/svg+xml")
+    assert page.get_attribute("#gov-announce", "role") == "alert"
+    assert no_overflow(page)
+    page.screenshot(path=str(tmp_path / f"needs-{name}.png"), full_page=True)
+    assert contrast_failures(page, "#gov") == []
+    assert w.errors == [] and w.failed == []
+    w.context.close()
+
+
+@pytest.mark.parametrize("scenario", ["needs"])
+def test_resume_from_the_card_and_capture_the_screen(browser, live_servers):
+    w = open_context(browser, "desktop-light", live_servers)
+    load(w)
+    page = w.page
+    page.click("#gov-capture")
+    page.wait_for_selector("#gov-frame:not([hidden])", timeout=5000)
+    assert live_servers["log"].state.frame_path
+    cap = next(e for e in live_servers["log"].recent if e["kind"] == "capture")
+    assert cap["by"] == "Chrome on Windows"
+    page.click("#gov-resume")
+    page.wait_for_function("document.getElementById('gov').dataset.state === 'playing'", timeout=5000)
+    assert "resume" in live_servers["pilot"].calls
+    assert page.text_content("#toast") == "Resumed"
+    assert page.title() == "T57 – Game Pilot"
+    w.context.close()
+
+
+def test_playing_says_what_the_ai_plays_and_when_the_next_decision_is(browser, live_servers):
+    w = open_context(browser, "desktop-dark", live_servers)
+    load(w)
+    page = w.page
+    assert page.text_content("#gov-line") == "The AI is playing T57."
+    facts = page.text_content("#gov-facts")
+    assert "Next decision at T60 (every 5 turns)." in facts and "Answered by Gemini 3.1 Pro." in facts
+    page.click("#gov-facts [data-pace]")                              # the pace opens Settings > Game
+    page.wait_for_selector("#settings-dialog[open]")
+    assert page.is_visible("#pace-months")
+    w.context.close()
+
+
+@pytest.mark.parametrize("scenario", ["deciding"])
+def test_deciding_ticks_and_names_the_model_and_its_fallback(browser, live_servers):
+    w = open_context(browser, "desktop-light", live_servers)
+    load(w)
+    page = w.page
+    line = page.text_content("#gov-line")
+    assert line.startswith("Deciding T57: 1 min 1") and line.endswith("s.")
+    page.wait_for_timeout(1100)
+    assert page.text_content("#gov-line") != line                    # the elapsed time ticks
+    assert page.get_attribute("#gov-line .tick", "aria-hidden") == "true"
+    assert "Gemini 3.1 Pro, call 2 of 2, after Gemini 3.8 Flash was overloaded (503)." in page.text_content("#gov-facts")
+    assert page.title() == "Deciding – T57 – Game Pilot"
+    w.context.close()
+
+
+@pytest.mark.parametrize("scenario", ["question"])
+def test_a_question_waits_in_the_governor_line_with_its_deadline(browser, live_servers):
+    w = open_context(browser, "phone-dark", live_servers)
+    load(w)
+    page = w.page
+    assert page.text_content("#gov-line").startswith("Question for you: Apply 'prepare_war'?")
+    assert "means: no." in page.text_content("#gov-facts")
+    page.click('#gov-actions [data-answer="yes"]')
+    page.wait_for_function("document.getElementById('gov').dataset.state !== 'question'", timeout=5000)
+    assert ("answer", "yes") in live_servers["pilot"].calls
+    assert no_overflow(page)
+    w.context.close()
+
+
+@pytest.mark.parametrize("scenario", ["paused"])
+def test_paused_says_who_paused_and_offers_resume(browser, live_servers):
+    w = open_context(browser, "desktop-light", live_servers)
+    load(w)
+    page = w.page
+    assert page.text_content("#gov-line").startswith("Paused from Pixel phone at T57, ")
+    assert page.is_visible('#gov-actions [data-act="resume"]')
+    w.context.close()
+
+
+def test_a_past_campaign_says_so_and_links_to_the_live_one(browser, live_servers):
+    w = open_context(browser, "desktop-light", live_servers)
+    load(w)
+    page = w.page
+    page.select_option("#campaign", "stellaris/theia")
+    page.wait_for_function("document.getElementById('gov').dataset.state === 'history'")
+    assert page.text_content("#gov-line").startswith("Viewing a past campaign: last played 2288.06")
+    assert "Live now: Civ VI T57, Kublai Khan, China." in page.text_content("#gov-facts")
+    assert page.title() == "Game Pilot"
+    page.click("#gov-facts [data-live]")
+    page.wait_for_function("document.getElementById('gov').dataset.state === 'playing'")
+    assert page.input_value("#campaign") == "civ6/kublai"
+    w.context.close()
+
+
+def test_stop_confirms_in_the_games_words(browser, live_servers):
+    w = open_context(browser, "desktop-dark", live_servers)
+    load(w)
+    page = w.page
+    assert page.is_hidden("#b-stop")                                   # inside the ⋯ menu
+    page.click("#b-more")
+    page.click('#more-menu [data-act="stop"]')
+    page.wait_for_selector("#stop-dialog[open]")
+    assert page.text_content("#stop-text") == "The AI finishes this turn and the game stays at T57."
+    page.click('#stop-dialog button[value="cancel"]')
+    assert "stop" not in live_servers["pilot"].calls
+    assert page.text_content("#pc") == "mini-rig2 · Civ VI in front · agent 1.6.1"
+    w.context.close()
+
+
+@pytest.mark.parametrize("scenario", ["needs_old"])
+def test_an_older_pilot_without_attention_still_shows_the_card(browser, live_servers):
+    """Every page change works against a pilot that lacks the new fields (Rollout's deploy rule)."""
+    w = open_context(browser, "desktop-light", live_servers)
+    load(w)
+    page = w.page
+    assert page.text_content("#gov-line") == "Needs you at T57."
+    assert page.text_content("#gov-cost").startswith("Game control failed: RuntimeError: the tuner is off.")
+    assert page.text_content("#gov-age").startswith("waiting ")
+    assert page.eval_on_selector_all("#gov-steps li", "ls => ls.length") == 2
+    assert w.errors == []
+    w.context.close()

@@ -34,8 +34,8 @@ def test_civ6_readout_speaks_turns(browser, live_servers):
     w = open_context(browser, "desktop-light", live_servers)
     load(w)
     page = w.page
-    assert page.text_content("#ro-pace-sub") == "a decision every 5 turns"
-    assert page.is_hidden("#ro-directive") and page.is_hidden("#ro-standing")   # Civ VI has neither
+    assert "(every 5 turns)" in page.text_content("#gov-facts")
+    assert "Directive" not in page.text_content("#figures")                 # Civ VI has none
     assert "Civ VI" in page.text_content("#pc")
     camp = page.eval_on_selector("#campaign", "s => [...s.options].map(o => o.textContent)")
     assert camp == ["Kublai Khan, China (live), 2 decisions", "Theian Union, 1 decision"]

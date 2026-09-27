@@ -363,6 +363,8 @@ Rules:
 - Menus, when the screen must be used: the UI ignores a click without a preceding hover (move the
   mouse onto the button, then click), and the "Continue" screen after loading needs a key press.
 - Throwaway games only: the tuner turns achievements off.
+- The dashboard's *Capture the game screen* (and the frame on its needs-you card) is the agent's
+  screenshot (`game-controller screenshot`): read-only, no input and no focus change.
 - The scripted last stand for a city about to fall (`PILOT_LAST_STAND=1`; off by default) sends
   unit and city actions: `civ6 last-stand-step`, `ls-state`, `finish-moves`, `turn-ready` (numeric
   IDs, never model orders). Its first live use follows the L6 checklist of

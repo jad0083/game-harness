@@ -304,8 +304,30 @@ running pilot (whose own dashboard is on `PILOT_PORT`, 8790, on 127.0.0.1). It r
   recovery steps per stop. A figure, view, column or cell whose data the game or the running pilot
   does not publish is hidden, never shown as "–". Game ids read as names (`CIVILIZATION_GERMANY` →
   Germany, `unit:trader` → Trader) from the corpus, with prefix-strip and title-case as the fallback.
-- **Readout**: in-game date, what the governor is doing, and the pace (speed and the interval between
-  decisions). Civ VI has no speed; its pace is the turns the AI plays between decisions.
+- **The bar** carries the brand, the campaign, the PC chip, Pause/Resume (live), Settings and ⋯
+  (Stop the run…, Start run, Add a device, Devices, Sign out). Stop always confirms in the game's
+  words ("The AI finishes this turn and the game stays at T310"). The PC chip names the host, the
+  game in front and the agent's version, and says "busy" (no answer in 3 s just after a turn),
+  "not answering", "offline" (connection refused) or "refuses our token".
+- **The governor line** (the hero, under the bar) says in one sentence whether the run needs you,
+  with the date in it, then one line of facts: "The AI is playing T307." / "Next decision at T312
+  (every 5 turns). Last turn 42 s. Answered by Gemini 3.1 Pro (fallback)."; "Deciding T310: 1 min
+  12 s." with the model, its call number and the model it fell back from, and "Retrying in 0:12";
+  "Paused from Pixel phone at T310, 4 min ago." with Resume; "Question for you: …" with Yes, No, an
+  answer box and "No answer in 0:31 means: no."; "Viewing a past campaign …" with a link to the live
+  one; "No run is playing." with Start run. The pace in the facts opens Settings > Game. A second
+  line appears when more than 1 of the last 5 decisions in the hour fell back or failed ("Gemini
+  3.8 Flash is overloaded: 3 of the last 5 calls fell back to 3.1 Pro."; `GET /api/health?run=`),
+  and Settings > Models marks a model whose calls fail on billing or a refused key, with *Remove
+  from list*; the list takes each model once.
+- **Needs you** turns the governor line into the page's one filled block: the stop in words ("Needs
+  you: autoplay did not start at T57."), how long it has waited, what it costs (Civ VI: "The game
+  is stopped at T57"; Stellaris: "The game ran on without the governor: 2274.09 → 2282.08"),
+  whether it retries by itself, the recovery steps for its category from the game's view,
+  *Resume*, *Capture the game screen* (`POST /api/capture`: the agent's screenshot, read-only for
+  the game, stored as the run's frame and named after the device) and *What happened* (the reason,
+  the errors behind the stop cut to their cause, the raw text). The tab title ("Needs you – T57 –
+  Game Pilot") and the favicon carry the state outside the page.
 - **Figures**: from the view's `[[figures]]`: value, label and a subline with our place among the
   rivals ("#4 of 4, median 42, behind the median", in the warning colour with those words) or what
   purchases keep back. Stellaris leads with the directive in force and the standing.

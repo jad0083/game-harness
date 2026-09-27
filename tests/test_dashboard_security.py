@@ -191,7 +191,8 @@ def test_pc_status_does_not_expose_the_window_title(monkeypatch):
     monkeypatch.setattr("urllib.request.urlopen", fake_agent("Inbox - private mail", ["Stellaris", "Inbox - private mail"], calls))
     st = dashboard.pc_status()
     assert "Inbox" not in json.dumps(st)
-    assert st == {"online": True, "version": "1.4.0", "games": ["stellaris"], "game_in_front": False, "front_game": None}
+    assert {k: v for k, v in st.items() if k != "host"} == {"online": True, "state": "on", "version": "1.4.0",
+                                                            "games": ["stellaris"], "game_in_front": False, "front_game": None}
     monkeypatch.setattr("urllib.request.urlopen", fake_agent("Stellaris", ["Stellaris"], calls))
     st = dashboard.pc_status()
     assert st["game_in_front"] is True and st["front_game"] == "stellaris"

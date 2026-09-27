@@ -22,6 +22,8 @@ Telemetry (runs/telemetry.sqlite, across runs and models):
     GET  /api/models                            models to offer, and the saved choice for the next run
     GET  /api/pc                                gaming PC: agent reachable, version, games open, game in front
     GET  /api/view?campaign=<id>|game=<game>    how the page speaks about the game (corpora/<game>/dashboard.toml)
+    GET  /api/health?run=<id>                   model health: the last decision calls that fell back or failed
+    POST /api/capture  {}                       the game screen now, stored as the run's frame (live run)
     POST /api/settings  {"models": [{"model", "thinking"}, ...], "rotate"}   the model list (live too); older {"model", "thinking", "fallback"}
     POST /api/run  {"game", "speed", "months"}   start a pilot run (game-pilot.service); viewer only
 
@@ -43,6 +45,7 @@ import logging
 import os
 import re
 import threading
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -161,11 +164,18 @@ def game_of(title: str) -> str | None:
 
 def pc_status() -> dict:
     """Agent health and open game windows on the gaming PC (read-only calls). Window titles stay
-    here: the answer only says which known games are open and whether one is in front."""
+    here: the answer only says which known games are open and whether one is in front. `state`
+    tells the chip's cases apart (ruling 10): on, offline (the connection was refused), timeout (no
+    answer in 3 s: the page shows "busy" when the live run just finished a turn, else "not
+    answering"), refused (the agent refused our token), error."""
+    import socket
+    import urllib.error
     import urllib.request
+    from urllib.parse import urlparse
 
     from .config import REPO, Settings
     url = Settings().agent_url.rstrip("/")
+    host = urlparse(url).hostname or url
     try:
         token = os.environ.get("GAME_AGENT_TOKEN") or (REPO / ".agent_token").read_text().strip()
         hdr = {"Authorization": f"Bearer {token}"}
@@ -174,11 +184,16 @@ def pc_status() -> dict:
         with urllib.request.urlopen(urllib.request.Request(url + "/windows", headers=hdr), timeout=3) as r:
             titles = [w.get("title", "") for w in json.load(r).get("windows", [])]
     except Exception as e:  # noqa: BLE001 - offline is a normal answer here
-        return {"online": False, "error": str(e)[:120]}
+        reason = getattr(e, "reason", e)
+        state = ("refused" if isinstance(e, urllib.error.HTTPError) and e.code in (401, 403)
+                 else "offline" if isinstance(reason, ConnectionRefusedError)
+                 else "timeout" if isinstance(reason, (TimeoutError, socket.timeout)) or "timed out" in str(e).lower()
+                 else "error")
+        return {"online": False, "state": state, "host": host, "error": str(e)[:120]}
     games = sorted({g for g in map(game_of, titles) if g})
     front = game_of(h.get("foreground") or "")
-    return {"online": True, "version": h.get("version"), "games": games, "game_in_front": front is not None,
-            "front_game": front}
+    return {"online": True, "state": "on", "host": host, "version": h.get("version"), "games": games,
+            "game_in_front": front is not None, "front_game": front}
 
 
 def list_runs(runs_dir: Path, live_id: str | None = None) -> list[dict]:
@@ -196,6 +211,45 @@ def list_runs(runs_dir: Path, live_id: str | None = None) -> list[dict]:
                     "date": st.get("game_date", ""), "status": st.get("status", ""),
                     "frame": (d / "latest.jpg").exists()})
     return out
+
+
+HEALTH_WINDOW_S = 3600       # model health looks at the decisions of the last hour...
+HEALTH_CALLS = 5             # ...and at most this many of them
+
+
+def model_health(events: list[dict], now: float | None = None) -> dict:
+    """Ruling 9: of the last `HEALTH_CALLS` decisions in the hour before `now` (the run's newest
+    event, so it also works for history), how many fell back to another model or got no answer;
+    the model they fell back from (the commonest), to, and why; models whose errors are billing or
+    a refused key (Settings marks those)."""
+    from collections import Counter
+
+    from .wording import cause
+    now = now if now is not None else max((e.get("t", 0) for e in events), default=0)
+    calls, pending = [], []
+    billing: dict[str, str] = {}
+    for e in events:
+        kind = e.get("kind")
+        if kind in ("model_fallback", "model_retry", "episode_error") and e.get("error"):
+            why = cause(e["error"])
+            if e.get("model") and why.startswith(("billing", "the provider refused")):
+                billing.setdefault(e["model"], why)
+        if kind == "model_fallback" and e.get("role", "decisions") == "decisions":
+            pending.append(e)
+        elif kind == "trace" and (e.get("episode") or 0) > 0 and e.get("decision") != "strategy_review":
+            calls.append({"t": e.get("t", 0), "model": e.get("model"), "fell_back": bool(pending),
+                          "failed": e.get("outcome") == "error", "from": [p.get("model") for p in pending],
+                          "why": [cause(p.get("error")) for p in pending]})
+            pending = []
+    recent = [c for c in calls if c["t"] >= now - HEALTH_WINDOW_S][-HEALTH_CALLS:]
+    bad = [c for c in recent if c["fell_back"] or c["failed"]]
+    frm = Counter(m for c in bad for m in c["from"]).most_common(1)
+    to = Counter(c["model"] for c in bad if c["fell_back"] and not c["failed"]).most_common(1)
+    why = Counter(w for c in bad for w in c["why"]).most_common(1)
+    return {"calls": len(recent), "bad": len(bad), "failed": sum(1 for c in bad if c["failed"]),
+            "from_model": frm[0][0] if frm else None, "to_model": to[0][0] if to else None,
+            "cause": why[0][0] if why else None, "last_fell_back": bool(calls and calls[-1]["fell_back"]),
+            "billing": [{"model": m, "cause": w} for m, w in billing.items()], "window_s": HEALTH_WINDOW_S}
 
 
 def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path | None = None,
@@ -492,7 +546,17 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
             raise web.HTTPNotFound()
         return web.FileResponse(p, headers={"Cache-Control": "no-store"})
 
-    history = [web.get("/runs", runs), web.get("/runs/{run}/events", run_events),
+    async def api_health(request):
+        """Model health of a run (live or recorded), from its events (ruling 9)."""
+        rid = request.query.get("run", "") or (log.state.run_id if log else "")
+        if not RUN_ID.match(rid) or not (runs_dir / rid / "events.jsonl").exists():
+            raise web.HTTPNotFound()
+        evs = await asyncio.to_thread(read_events, runs_dir / rid / "events.jsonl",
+                                      {"trace", "model_fallback", "model_retry", "episode_error"})
+        live = log is not None and log.state.run_id == rid
+        return web.json_response(model_health(evs, now=time.time() if live else None))
+
+    history = [web.get("/runs", runs), web.get("/runs/{run}/events", run_events), web.get("/api/health", api_health),
                web.get("/runs/{run}/trace/{n}", run_trace), web.get("/runs/{run}/frame.jpg", run_frame)]
 
     async def index(_):
@@ -584,7 +648,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
         app.on_cleanup.append(lambda _: proxy.close())
         app.add_routes([web.get("/", index), web.get("/status", v_status), web.get("/events", v_events),
                         web.get("/events.json", v_forward), web.get("/frame.jpg", v_forward),
-                        web.post("/control", v_forward), *history, *api])
+                        web.post("/control", v_forward), web.post("/api/capture", v_forward), *history, *api])
         return app
 
     # the live pilot: the service key as a header from loopback only (the viewer, scripts on this machine)
@@ -621,6 +685,33 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
         finally:
             log.unsubscribe(q)
         return resp
+
+    async def capture(request):
+        """The game screen now (the agent's screenshot: read-only for the game), stored as the run's
+        frame and on the needs-you card, with who asked (ruling 7)."""
+        by, by_id = request.get(ACTOR_KEY) or ("the controller", None)
+        shoot = getattr(getattr(pilot, "game", None), "screenshot", None)
+        if shoot is None:
+            return web.json_response({"error": "no_capture", "reason": "This run cannot capture the game screen."},
+                                     status=409)
+        try:
+            shot = await asyncio.to_thread(shoot)
+        except Exception as e:  # noqa: BLE001 - said to the page, never raised
+            shot, why = None, str(e)
+        else:
+            why = ""
+        image = getattr(shot, "image", None)
+        if not image:
+            from .wording import cause
+            return web.json_response({"error": "capture_failed", "reason": "The game screen could not be captured"
+                                      + (f": {cause(why)}." if why else "."), "fix": "Check the PC and its agent."},
+                                     status=502)
+        frame = log.frame(image)
+        if isinstance(log.state.info.get("attention"), dict):
+            log.state.info["attention"]["frame"] = frame
+        with acting(by, by_id):
+            log.emit("capture", frame=frame)
+        return web.json_response({"ok": True, "frame": frame})
 
     async def control(request):
         by, by_id = request.get(ACTOR_KEY) or ("the controller", None)
@@ -716,7 +807,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
     app.on_response_prepare.append(service.on_prepare)
     app.add_routes([web.get("/", index), web.get("/status", status), web.get("/frame.jpg", frame),
                     web.get("/events", events), web.get("/events.json", events_json), web.post("/control", control),
-                    *history, *api])
+                    web.post("/api/capture", capture), *history, *api])
     return app
 
 

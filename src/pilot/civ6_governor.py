@@ -149,10 +149,17 @@ def playing_reasons(why) -> list[str]:
 
 class Civ6Stuck(RuntimeError):
     """The game did not play or hand back a turn in time, or stopped answering between turns."""
+    category = "screen"          # the dashboard's stop category: a popup or a scene holds the turn
 
 
 class _NotStarted(Civ6Stuck):
     """Autoplay still reads inactive after the start grace (and the turn has not moved)."""
+    category = "transient"       # Resume cleared 14 of 15 such stops
+
+
+class _NoAnswer(Civ6Stuck):
+    """No snapshot between turns: the game (its tuner) or the agent does not answer."""
+    category = "unreachable"
 
 
 @dataclass
@@ -323,7 +330,8 @@ class Civ6Governor(Governor):
             except Exception as e:  # noqa: BLE001
                 # a timeout (the AI still playing its last turn when the run starts) is retried by itself
                 self._needs_attention(f"could not start: {type(e).__name__}: {e}. Load the game (with the tuner "
-                                      "enabled) and press Resume to try again.", auto_recover=self._transient(e))
+                                      "enabled) and press Resume to try again.", auto_recover=self._transient(e),
+                                      category="unreachable" if self._transient(e) else "control_failed")
                 self._wait_for_resume()
         return None
 
@@ -366,12 +374,13 @@ class Civ6Governor(Governor):
                                                                   left=target - last["turn"]))
                 b = self._snapshot_between_turns()
             except Civ6Stuck as e:
-                self._needs_attention(f"{e}. Check the game (a dialog, a crash, the main menu), then press Resume.")
+                self._needs_attention(f"{e}. Check the game (a dialog, a crash, the main menu), then press Resume.",
+                                      category=e.category)
                 return last, ""
             if getattr(self, "_campaign_key", None) and (b.get("leader"), b.get("map_seed")) != self._campaign_key:
                 self._needs_attention(f"the game changed: {b.get('leader')} on map {b.get('map_seed')}, this run governs "
                                       f"{self._campaign_key[0]} on map {self._campaign_key[1]}. Load that game again and "
-                                      "press Resume, or start a new run.")
+                                      "press Resume, or start a new run.", category="game_changed")
                 return last, ""
             self.log.emit("metrics", **metrics(b))
             self._track(b)
@@ -401,7 +410,7 @@ class Civ6Governor(Governor):
             try:
                 self.game.autoplay(n)
             except GameRefused as e:
-                raise Civ6Stuck(f"autoplay did not start at T{turn}: {e}"[:400]) from e
+                raise _NotStarted(f"autoplay did not start at T{turn}: {e}"[:400]) from e
             except Exception as e:  # noqa: BLE001 - no reply: it may have started; the polls tell
                 lost = True
                 self.log.emit("briefing_error", error=f"autoplay at T{turn}: {e}"[:200])
@@ -501,7 +510,7 @@ class Civ6Governor(Governor):
                 self.log.emit("briefing_error", error=f"snapshot: {e}"[:200])
                 if i + 1 < self.snapshot_tries:
                     time.sleep(self.status_poll_s)
-        raise Civ6Stuck(f"no snapshot after {self.snapshot_tries} tries: {err}"[:400])
+        raise _NoAnswer(f"no snapshot after {self.snapshot_tries} tries: {err}"[:400])
 
     # ---- the last stand (docs/design/2026-09-27-civ6-levers-design.md, rulings 22-27) ------------
     #
@@ -916,7 +925,7 @@ class Civ6Governor(Governor):
         return None
 
     def _decide(self, b: dict, reason: str, reviewed_at_start: bool = False) -> None:
-        self._status("deciding")
+        self._status("deciding", trigger=reason)
         self._last_b = b
         self.log.state.episodes += 1
         self.log.state.game_date = b["date"]

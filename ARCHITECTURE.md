@@ -456,6 +456,19 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   resource that the save holds while it passes the declared order's checks), `pick_tech`/`sync_market` (paused, foreground-checked, screen always
   closed), positions in `corpora/stellaris/manifest.toml` `[ui.tech]`/`[ui.market]` (calibrated live
   on 4.5.1). The old free-text plan (`plan` events, `/api/plans`) remains readable history only.
+- The governor line's data (docs/design/2026-09-27-dashboard-v2-design.md, rulings 6-11, 17): the
+  pilots' `_needs_attention(why, category=…)` set `info.attention` (`wording.attention`: reason,
+  category, since, date, auto_recover, next_probe_at, probes, the last errors cut to their cause and
+  raw, frame), each call site naming its category (`view.CATEGORIES`: transient, screen,
+  unreachable, game_changed, stall, control_failed; Civ VI's stops carry theirs on the exception
+  class); leaving needs attention drops it. `_status("deciding", trigger=…)` starts
+  `info.deciding` (`_call` fills model, attempt of max_attempts, the models that failed before,
+  `_on_retry` the retry time) and `info.answered` names the model that gave the last decision and
+  whether it was a fallback. A question sets `question_deadline` and `default_if_silent`.
+  `wording.cause()` cuts an error chain to one line. `dashboard.model_health` counts a run's last
+  decisions that fell back or failed (`/api/health`); `/api/capture` stores the game screen as the
+  run's frame (the live pilot; the viewer forwards); `ControllerCiv6.screenshot` is the
+  controller's `screenshot` (read-only). `pc_status` adds the host and a `state`.
 - `view.py`: each game's dashboard view (`corpora/<game>/dashboard.toml`, validated into one JSON shape
   with defaults; a missing or broken file gives the default view and the error, so the page still
   renders) and `Names` (ids to names from the game's corpus records, `aliases[0]` being the type

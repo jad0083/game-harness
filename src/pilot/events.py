@@ -43,9 +43,14 @@ class RunState:
     tokens_out: int = 0
     requests: int = 0
     pending_question: str = ""
+    question_deadline: float = 0.0     # when an open question times out (wall clock), 0 when none
+    default_if_silent: str = ""        # what the governor does when nobody answers ("no")
     started_at: float = field(default_factory=time.time)
     frame_path: str = ""
     info: dict[str, Any] = field(default_factory=dict)   # game-specific: game, speed, directive…
+    # info also carries what the dashboard shows while it lasts: `attention` (why the run needs the
+    # human, docs/design/2026-09-27-dashboard-v2-design.md ruling 7), `deciding` (the decision being
+    # made, ruling 11) and `answered` (the model that gave the last decision, ruling 6)
 
     def as_dict(self) -> dict[str, Any]:
         d = dict(self.__dict__)

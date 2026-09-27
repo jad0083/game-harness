@@ -52,6 +52,7 @@ from .strategy import (
     validate,
 )
 from .trace import serialize
+from .wording import attention, cause
 
 DIRECTIVES = ("expand", "consolidate_economy", "tech_rush", "prepare_war", "defend", "diplomacy_first")
 NEEDS_HUMAN = {"prepare_war"}      # strategy.md: only after the human confirmed the target
@@ -568,18 +569,29 @@ class Governor:
         failed = self.__dict__.setdefault("_failed_at", {})
         now = time.time()
         cooling = lambda e: now - failed.get(e["model"], 0) < self.s.model_cooldown_s
-        order = sorted(self._order(role), key=cooling)       # stable: the configured order otherwise
+        configured = self._order(role)
+        order = sorted(configured, key=cooling)       # stable: the configured order otherwise
+        # the dashboard: which model is working on the decision, and later who answered (rulings 6, 11)
+        deciding = self.log.state.info.get("deciding") if role == "decisions" else None
+        tried: list[dict] = []
         for i, entry in enumerate(order):
             if on_try:
                 on_try(entry)
+            if deciding is not None:
+                deciding.update(model=entry["model"], attempt=i + 1, max_attempts=len(order), retry_at=None,
+                                after=list(tried), skipped=[e["model"] for e in order[i + 1:] if cooling(e)])
             agent = self._agent_for(entry, role)
             try:
                 result = (run_with_retry(lambda agent=agent: ask(agent), self.s.retry_delays, self._on_retry)
                           if i == 0 and not cooling(entry) else ask(agent))
                 failed.pop(entry["model"], None)
+                if role == "decisions":
+                    self.log.state.info["answered"] = {"model": entry["model"], "after": tried, "t": round(time.time(), 1),
+                                                       "fallback": entry["model"] != configured[0]["model"]}
                 return result, entry
             except Exception as e:
                 failed[entry["model"]] = time.time()
+                tried.append({"model": entry["model"], "error": cause(f"{type(e).__name__}: {e}")})
                 if i == len(order) - 1:
                     raise
                 self.log.emit("model_fallback", role=role, model=entry["model"],
@@ -802,13 +814,26 @@ class Governor:
     def _chat_history(self) -> list:
         return [m for ex in self.chat_exchanges for m in ex]
 
-    def _status(self, status: str) -> None:
+    def _status(self, status: str, trigger: str = "") -> None:
+        """The run's status. Leaving needs attention drops the card's `attention`; "deciding" starts
+        `info.deciding` (which model, which attempt, a retry wait; ruling 11), anything else ends it."""
+        info = self.log.state.info
+        if status != "needs_attention":
+            info.pop("attention", None)
+        if status == "deciding":
+            info["deciding"] = {"since": round(time.time(), 1), "trigger": trigger, "model": "", "attempt": 0,
+                                "max_attempts": 0, "retry_at": None, "retries": 0, "after": []}
+        else:
+            info.pop("deciding", None)
         self.log.state.status = status
         self.log.emit("status", status=status)
 
     def _on_retry(self, e, delay, attempt) -> None:
         what = (f"model {e.model_name} answered {e.status_code}" if hasattr(e, "status_code")
                 else f"model request timed out after {self.s.model_timeout_s:.0f} s ({type(e).__name__})")
+        d = self.log.state.info.get("deciding")
+        if d is not None:                       # the dashboard counts down to the next try
+            d.update(retry_at=round(time.time() + delay, 1), retries=attempt, waiting=cause(what))
         self.log.emit("model_retry", error=what, delay=delay, attempt=attempt)
 
     recover_every_s: float = 30.0     # how often a transient failure probes the agent again
@@ -821,21 +846,26 @@ class Governor:
         return isinstance(e, (urllib.error.URLError, TimeoutError, ConnectionError, socket.timeout)) \
             or "timed out" in str(e).lower()
 
-    def _needs_attention(self, why: str, *, auto_recover: bool = False) -> None:
+    def _needs_attention(self, why: str, *, auto_recover: bool = False, category: str = "control_failed") -> None:
         """Stop acting and wait for the human (dashboard Resume) instead of crashing the run. With
         `auto_recover` (a transient network failure) the wait also probes the agent every
-        `recover_every_s` by pausing the game, and carries on by itself once that works."""
+        `recover_every_s` by pausing the game, and carries on by itself once that works. `category`
+        (view.CATEGORIES) picks the dashboard's recovery steps; `info.attention` holds the card."""
         self._auto_recover = auto_recover
         self._next_probe = time.time() + self.recover_every_s
         self.control.paused = True
         self.log.state.status = "needs_attention"
+        frame = ""
         try:
             shot = self.game.screenshot()
             if getattr(shot, "image", None):
-                self.log.frame(shot.image)
+                frame = self.log.frame(shot.image)
         except Exception:  # noqa: BLE001, S110 - the frame is only a convenience here
             pass
-        self.log.emit("needs_attention", reason=why[:500])
+        self.log.state.info["attention"] = attention(why, category, list(self.log.recent), date=self.log.state.game_date,
+                                                     auto_recover=auto_recover, frame=frame,
+                                                     next_probe_at=round(self._next_probe, 1) if auto_recover else None)
+        self.log.emit("needs_attention", reason=why[:500], category=category)
 
     def _probe_recovered(self) -> bool:
         """While waiting after a transient failure: try to pause the game; if the agent answers, the
@@ -847,6 +877,9 @@ class Governor:
         try:
             self.game.set_paused(True)
         except Exception as e:  # noqa: BLE001 - still unreachable: keep waiting
+            att = self.log.state.info.get("attention")
+            if att is not None:
+                att.update(probes=att.get("probes", 0) + 1, next_probe_at=round(self._next_probe, 1))
             self.log.emit("recover_probe", error=f"{type(e).__name__}: {e}"[:200])
             return False
         self._auto_recover = False
@@ -901,7 +934,7 @@ class Governor:
                     self._needs_attention(f"game control failed: {type(e).__name__}: {e}. "
                                           + ("Retrying by itself while the agent does not answer; Resume also works."
                                              if transient else "Fix the game screen or the agent, then press Resume."),
-                                          auto_recover=transient)
+                                          auto_recover=transient, category="unreachable" if transient else "control_failed")
                     time.sleep(1.0)           # back off: never retry in a tight loop
         finally:
             try:
@@ -951,7 +984,8 @@ class Governor:
                 return b
             except Exception as e:  # noqa: BLE001
                 self._needs_attention(f"could not start: {type(e).__name__}: {e}. Fix the game or the agent, "
-                                      "then press Resume to try again.", auto_recover=self._transient(e))
+                                      "then press Resume to try again.", auto_recover=self._transient(e),
+                                      category="unreachable" if self._transient(e) else "control_failed")
                 self._wait_for_resume()
         return None
 
@@ -1071,7 +1105,7 @@ class Governor:
                 self.game.set_paused(True)
                 self._needs_attention(f"the game changed: newest autosave is from {folder!r}, this run governs "
                                       f"{self._folder!r}. Load that game again and press Resume, or stop this run "
-                                      "and start a new one for the new game.")
+                                      "and start a new one for the new game.", category="game_changed")
                 return last, ""
             if blind:
                 blind = False
@@ -1135,7 +1169,8 @@ class Governor:
         self.log.emit("stall", date=date, seconds=round(held), limit=round(limit), frame=frame)
         self._needs_attention(f"the game date has not advanced for {round(held)} s (still {date}): a popup that paused "
                               "the game, another game loaded, the launcher or a crash may hold it. Nothing was sent to "
-                              f"the game. Screenshot at the stall: {frame or 'none'}. Check the PC, then press Resume.")
+                              f"the game. Screenshot at the stall: {frame or 'none'}. Check the PC, then press Resume.",
+                              category="stall")
         return True
 
     def _unread_too_long(self, since: float, e: BaseException) -> bool:
@@ -1151,11 +1186,13 @@ class Governor:
         if held < limit:
             return False
         self.log.state.status = "needs_attention"
-        self.log.emit("needs_attention", reason=(
-            f"the newest autosave could not be read for {round(held)} s ({type(e).__name__}: {e})"[:300]
-            + ": the agent may be away (the PC asleep, the network down, the agent reinstalled) or the save "
-            "unreadable. Nothing was sent to the game, which runs on without the governor. The run carries "
-            "on by itself as soon as a save of this campaign reads again; Resume also works."))
+        why = (f"the newest autosave could not be read for {round(held)} s ({type(e).__name__}: {e})"[:300]
+               + ": the agent may be away (the PC asleep, the network down, the agent reinstalled) or the save "
+               "unreadable. Nothing was sent to the game, which runs on without the governor. The run carries "
+               "on by itself as soon as a save of this campaign reads again; Resume also works.")
+        self.log.state.info["attention"] = attention(why, "unreachable", list(self.log.recent), auto_recover=True,
+                                                     date=self.log.state.game_date)
+        self.log.emit("needs_attention", reason=why, category="unreachable")
         return True
 
     def _frame(self) -> str:
@@ -1180,7 +1217,7 @@ class Governor:
             return ""
 
     def _decide(self, b: dict, reason: str, reviewed_at_start: bool = False) -> None:
-        self._status("deciding")
+        self._status("deciding", trigger=reason)
         self._last_b = b     # cached for edit_pillar's market-order validation (idle resources, income)
         self._decision_military = b.get("military_power")   # baseline for "military fell" until the next decision
         self.log.state.episodes += 1
@@ -1263,9 +1300,10 @@ class Governor:
             if chosen in NEEDS_HUMAN:
                 q = f"Apply '{chosen}'? {d.reason}"
                 st.pending_question = q
+                st.question_deadline, st.default_if_silent = time.time() + self.s.ask_human_timeout_s, "no"
                 self.log.emit("question", question=q)
                 answer = self.human.ask(q, self.s.ask_human_timeout_s) or ""
-                st.pending_question = ""
+                st.pending_question, st.question_deadline, st.default_if_silent = "", 0.0, ""
                 self.log.emit("answer", answer=answer or "(no answer)")
                 if answer.strip().lower() not in ("y", "yes"):
                     chosen, applied = "keep", f"not applied ({chosen} needs a human yes)"

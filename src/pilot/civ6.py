@@ -141,7 +141,15 @@ class ControllerCiv6:
         return "ok"
 
     def screenshot(self):
-        return None
+        """The game screen through the agent (`game-controller screenshot`: read-only, no input, no
+        focus change), for the dashboard's needs-you card and "Capture the game screen" (dashboard
+        v2 design, ruling 7); an object with `.image` (None when the capture failed)."""
+        import tempfile
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory(prefix="civ6-shot-") as d:
+            out = Path(d) / "screen.jpg"
+            code, _, _ = self._run("screenshot", "--out", str(out))
+            return SimpleNamespace(image=out.read_bytes() if code == 0 and out.exists() else None)
 
     def close(self) -> None:
         pass
