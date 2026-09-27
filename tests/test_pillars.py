@@ -230,3 +230,97 @@ def test_the_stellaris_stall_rule():
 def test_bad_stall_rules_are_rejected(tmp_path, table, where):
     with pytest.raises(PillarsError, match=re.escape(where)):
         load_pillars(corpus(tmp_path, MINI + f"\n[weights]\n{table}\n"))
+
+
+# ---- Civilization VI: share mode, no directives, id-list actions, turn dates -----------------------
+
+def test_the_civ6_file_is_share_mode_with_order_actions():
+    spec = load_pillars(REPO / "corpora/civ6")
+    assert spec.game == "civ6"
+    assert spec.ids == ("science", "culture", "faith", "economy", "military", "expansion", "diplomacy")
+    assert all(spec.directive_of(p) is None for p in spec.ids)
+    assert spec.weights.mode == "share" and spec.weights.stall_years == 0
+    assert spec.date_format == "turns"
+    assert {"science", "culture", "gold", "faith", "cities", "pop", "military", "score", "era_score",
+            "techs_known", "civics_known", "rank:score", "rank:military"} <= set(spec.metrics)
+    assert spec.owners("tech") == ["science"] and spec.owners("civic") == ["culture"]
+    assert "military" in spec.owners("production") and "expansion" in spec.owners("production")
+    assert set(spec.owners("purchase")) >= {"economy", "military"}
+    fields = {k: a.field for k, a in spec.actions.items()}
+    assert fields == {"tech": "prefer_techs", "civic": "prefer_civics", "policy": "prefer_policies",
+                      "production": "prefer_production", "purchase": "prefer_purchases"}
+    assert spec.actions["production"].ids_from_corpus == ("unit", "building", "district", "project")
+    assert all(a.full_ids for a in spec.actions.values())
+    buy = spec.actions["purchase"]
+    assert buy.gold_reserve > 0 and buy.faith_reserve >= 0 and 0 < buy.treasury_share <= 0.5
+    assert buy.threatened_share > buy.treasury_share
+    assert all(a.max_orders >= 1 for a in spec.actions.values())
+    assert "T60" in spec.instructions
+
+
+def test_directives_toml_is_needed_only_when_a_pillar_ranks_a_directive(tmp_path):
+    d = tmp_path / "g"
+    d.mkdir()
+    shutil.copy(REPO / "corpora/stellaris/manifest.toml", d / "manifest.toml")
+    (d / "pillars.toml").write_text('[metrics]\nnames = ["cities"]\n[pillars.science]\nlabel = "Science"\n'
+                                    'description = "Research."\n', encoding="utf-8")
+    assert load_pillars(d).directive_of("science") is None
+
+
+CIV_MINI = '''[strategy]
+date_format = "turns"
+[metrics]
+names = ["cities", "gold"]
+[weights]
+mode = "share"
+[pillars.economy]
+label = "Economy"
+description = "Gold."
+actions = ["purchase", "production"]
+[actions.purchase]
+max_items = 3
+max_orders = 1
+ids_from_corpus = ["unit", "building"]
+full_ids = true
+gold_reserve = 100
+faith_reserve = 0
+treasury_share = 0.5
+threatened_share = 0.9
+[actions.production]
+max_items = 4
+ids_from_corpus = ["unit", "building", "district", "project"]
+full_ids = true
+'''
+
+
+def civ_corpus(tmp_path, text=CIV_MINI):
+    d = tmp_path / "c"
+    d.mkdir(exist_ok=True)
+    shutil.copy(REPO / "corpora/civ6/manifest.toml", d / "manifest.toml")
+    (d / "pillars.toml").write_text(text, encoding="utf-8")
+    return d
+
+
+def test_a_minimal_civ6_style_file_loads(tmp_path):
+    spec = load_pillars(civ_corpus(tmp_path))
+    buy = spec.actions["purchase"]
+    assert (buy.field, buy.max_orders, buy.gold_reserve, buy.treasury_share, buy.threatened_share) == \
+        ("prefer_purchases", 1, 100, 0.5, 0.9)
+    assert spec.actions["production"].max_orders == 1        # default: one order per decision
+
+
+@pytest.mark.parametrize("old, new, where", [
+    ('date_format = "turns"', 'date_format = "moons"', "strategy.date_format"),
+    ("treasury_share = 0.5", "treasury_share = 1.5", "actions.purchase.treasury_share"),
+    ("threatened_share = 0.9", "threatened_share = 0.2", "actions.purchase.threatened_share"),
+    ("gold_reserve = 100", "gold_reserve = -1", "actions.purchase.gold_reserve"),
+    ("max_orders = 1", "max_orders = 0", "actions.purchase.max_orders"),
+    ('ids_from_corpus = ["unit", "building"]', 'ids_from_corpus = ["unit", "Bad!"]', "actions.purchase.ids_from_corpus"),
+    ("full_ids = true\ngold", 'full_ids = "yes"\ngold', "actions.purchase.full_ids"),
+    ("[actions.production]\nmax_items = 4", "[actions.production]\nmax_items = 4\ngold_reserve = 5",
+     "actions.production.gold_reserve"),
+])
+def test_bad_civ6_limits_are_rejected(tmp_path, old, new, where):
+    assert old in CIV_MINI
+    with pytest.raises(PillarsError, match=re.escape(where)):
+        load_pillars(civ_corpus(tmp_path, CIV_MINI.replace(old, new)))

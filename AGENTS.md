@@ -18,6 +18,7 @@ Everything below was verified in live play on 2026-09-25 unless marked **unverif
 | Play helpers | `scripts/play/` | Shell wrappers for the act → look → decide loop (`act.sh`, `ap.sh`, `hover.sh`, `capture-template.py`). |
 | Game journal | `games/terran-2329/journal.md` | What happened in the current game and why. Read it before resuming play. |
 | Stellaris | `corpora/stellaris/`, `crates/game-controller/src/stellaris.rs`, `src/pilot/governor.py` | Governor over the native AI: autosave briefing, console directives, speed and pause. See §10. |
+| Civilization VI | `corpora/civ6/` (with `lua/harness.lua`), `crates/game-controller/src/civ6.rs`, `src/pilot/civ6_governor.py` | Governor over the native AI: Lua snapshot and structured orders through the tuner, autoplay stretches. See §11. |
 | Pilot app | `src/pilot/` (`python -m pilot`) | Autonomous player with any LLM API key (README → "Pilot app"). |
 | Dashboard | `http://192.168.1.76:8780/` (`deploy/game-pilot-view.service`) | Decision traces (thinking, tool calls), campaign charts, and talking to / directing the live model. Telemetry in `runs/telemetry.sqlite`. |
 
@@ -286,4 +287,41 @@ Rules:
   `[ui.*]` points come from `scripts/res-map.py corpora/stellaris <W>x<H> --write` (one UI scale per
   size in `res/map.toml`, each UI group pinned to top-left or the screen centre; verified within
   1-2 px at 1440p); its screen templates are captured at that size (`capture-template.py`).
+
+## 11. Civilization VI (governor over the native AI)
+
+Verified live 2026-09-26 on mini-rig2 (`games/civ6-kublai/journal.md`; spec
+`docs/design/2026-09-26-civ6-governor-design.md`). The game's own AI plays our civilization through
+`AutoplayManager` for a few turns at a time; the model gives macro orders between those stretches.
+The game must run with `EnableTuner 1` and a game loaded; no input is sent to the window.
+
+```bash
+C="./target/release/game-controller --corpus corpora/civ6"
+$C civ6 snapshot                      # one JSON document (installs corpora/civ6/lua/harness.lua if missing)
+$C civ6 order '{"kind":"research","id":"tech:pottery"}'          # also civic, policies, production, purchase, price
+$C civ6 order '{"kind":"production","city":"Beijing","id":"unit:settler"}'
+$C civ6 order '{"kind":"purchase","city":"Beijing","id":"unit:warrior","currency":"gold","max_cost":150}'
+$C civ6 autoplay 5                    # the AI plays 5 turns, then hands the civ back
+$C civ6 autoplay-status               # / autoplay-stop
+$C civ6 lua --state InGame "print(Game.GetCurrentGameTurn())"   # raw Lua, for investigation only
+.venv/bin/python -m pilot run --game civ6 --decide-turns 5        # the governor loop (docs/pilot.md)
+```
+Rules:
+- Tuner output comes back only through `print()`; the library prints one JSON line per call.
+- Orders name corpus ids and are checked against `corpora/civ6/data` before any Lua is built; the
+  model's text reaches Lua only as encoded string literals. Never send model-written Lua.
+- Research and civics are set in the `GameCore` state (the UI's request sent from the tuner is
+  ignored); everything else runs in `InGame` (GameCore lacks the government, policy slots, era score,
+  military strength and purchase prices). The library installs itself into each state on first use.
+- Policy cards change for free only in the turn a civic completes (`policies_unlock_cost` is 0);
+  wonders and new districts need a tile, which is not supported yet.
+- The tuner does not answer while the AI plays its turn (calls time out): the governor autoplays one
+  turn at a time and only reads or orders between turns; never repeat an order blindly after a timeout.
+- Tutorial advisor popups hold an autoplay turn forever (seen at T17, cleared by clicking OK):
+  `Harness.autoplay` sets `UserConfiguration` `TutorialLevel` to -1 for the session.
+- One-turn autoplay costs the AI its multi-turn plans (a Settler idle for 7 turns, no pantheon; a
+  4-turn stretch settled and chose one at once): `PILOT_AUTOPLAY_CHUNK` sets turns per call.
+- Menus, when the screen must be used: the UI ignores a click without a preceding hover (move the
+  mouse onto the button, then click), and the "Continue" screen after loading needs a key press.
+- Throwaway games only: the tuner turns achievements off.
 

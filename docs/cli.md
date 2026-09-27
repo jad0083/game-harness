@@ -71,6 +71,15 @@ The compiled controller binary provides full programmatic access to all agent fu
 ./target/release/game-controller civ6 lua --state InGame --timeout-ms 10000 "print('hi')"
 #     prints the result (the game's first reply), then each printed line; errors (game not
 #     listening: HTTP 502, no reply in time: 504, unknown state: 400) exit non-zero
+# The governor surface (library corpora/civ6/lua/harness.lua, installed into the game's Lua state on
+# first use and whenever the file changes; each prints one JSON line):
+./target/release/game-controller --corpus corpora/civ6 civ6 snapshot   # the game as one JSON document
+./target/release/game-controller --corpus corpora/civ6 civ6 order '{"kind":"research","id":"tech:pottery"}'
+#     kinds: research {id}, civic {id}, policies {ids}, production {city, id},
+#     purchase {city, id, currency gold|faith, max_cost?}, price {city, id, currency} (read-only);
+#     ids are corpus ids, checked against data/ first; exit 2 when the game or the check refuses
+./target/release/game-controller --corpus corpora/civ6 civ6 autoplay 5         # 1..50 turns by the game's AI
+./target/release/game-controller --corpus corpora/civ6 civ6 autoplay-status    # / autoplay-stop
 
 # 13. Launch Stdio MCP Server (Claude Code / Gemini / Antigravity)
 ./target/release/game-controller mcp

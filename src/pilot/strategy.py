@@ -14,14 +14,22 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, create_model, model_validator
 
-from .pillars import ACTION_KINDS, ActionLimits, PillarSpec
+from .pillars import ACTION_KINDS, ID_LIST_KINDS, ActionLimits, PillarSpec
 
 _DATE_RE = re.compile(r"^\d{4}\.(\d{2})\.\d{2}$")
+_TURN_RE = re.compile(r"^T(\d{1,4})$")        # turn-based games (Civ VI): T60 = turn 60
 
 
 def _valid_date(s: str) -> bool:
+    if _TURN_RE.match(s):
+        return True
     m = _DATE_RE.match(s)
     return bool(m) and 1 <= int(m.group(1)) <= 12
+
+
+def _date_fits(s: str, spec: PillarSpec) -> bool:
+    """The date is in the game's format (calendar YYYY.MM.DD, or T<turn>)."""
+    return bool(_TURN_RE.match(s)) if spec.date_format == "turns" else bool(_DATE_RE.match(s)) and _valid_date(s)
 
 
 class Milestone(BaseModel):
@@ -30,14 +38,14 @@ class Milestone(BaseModel):
     metric: str
     op: Literal[">=", "<="]
     target: float
-    by: str = Field(description="in-game date YYYY.MM.DD")
+    by: str = Field(description="in-game date YYYY.MM.DD, or T<turn> in a turn-based game")
 
     def __init__(self, **data):
         if isinstance(data.get("metric"), str):     # aliases are the game's: apply_aliases(s, spec)
             data["metric"] = data["metric"].strip()
         by = data.get("by")
         if by and not _valid_date(by):
-            raise ValueError(f"by {by!r} is not a date YYYY.MM.DD")
+            raise ValueError(f"by {by!r} is not a date YYYY.MM.DD or a turn T<turn>")
         super().__init__(**data)
 
 
@@ -59,6 +67,10 @@ class Pillar(BaseModel):
     milestones: list[Milestone] = Field(default_factory=list)
     prefer_techs: list[str] = Field(default_factory=list)
     market: list[MarketOrder] = Field(default_factory=list)
+    prefer_civics: list[str] = Field(default_factory=list)
+    prefer_policies: list[str] = Field(default_factory=list)
+    prefer_production: list[str] = Field(default_factory=list)
+    prefer_purchases: list[str] = Field(default_factory=list)
     pinned: bool = False
     edited_by: Literal["model", "human"] = "model"
 
@@ -128,6 +140,10 @@ def apply_aliases(s: Strategy, spec: PillarSpec) -> Strategy:
 
 
 def _months(date: str) -> int:
+    """Months since year 0, or the turn for a T<turn> date (one step of the game's clock)."""
+    t = _TURN_RE.match(date)
+    if t:
+        return int(t.group(1))
     y, m, *_ = (int(x) for x in date.split("."))
     return y * 12 + m - 1
 
@@ -170,12 +186,20 @@ def _briefing_checked(s: Strategy, previous: Strategy | None) -> set[str]:
 
 
 def _action_errors(name: str, kind: str, items: list, a: ActionLimits, tech_ids: set[str], idle: set[str],
-                   income: dict[str, float], briefing: bool) -> list[str]:
+                   income: dict[str, float], briefing: bool, ids: Mapping[str, set[str]] | None = None) -> list[str]:
     errs: list[str] = []
     if kind == "tech":
+        known = (ids or {}).get("tech", tech_ids)
         if len(items) > a.max_items:
             errs.append(f"{name}: at most {a.max_items} preferred techs")
-        errs.extend(f"{name}: unknown tech {t!r}" for t in items if t not in tech_ids)
+        errs.extend(f"{name}: unknown tech {t!r}" for t in items if t not in known)
+        return errs
+    if kind in ID_LIST_KINDS:
+        if len(items) > a.max_items:
+            errs.append(f"{name}: at most {a.max_items} in {a.field}")
+        known = (ids or {}).get(kind)
+        if known is not None:
+            errs.extend(f"{name}: unknown {kind} {t!r}" for t in items if t not in known)
         return errs
     if len(items) > a.max_items:
         errs.append(f"{name}: at most {a.max_items} market order{'' if a.max_items == 1 else 's'}")
@@ -228,7 +252,7 @@ def _detail_errors(s: Strategy, spec: PillarSpec) -> list[str]:
 
 def validate(s: Strategy, spec: PillarSpec, *, previous: Strategy | None, tech_ids: set[str], idle: set[str],
              income: dict[str, float], briefing_checked: set[str] | None = None,
-             require_milestones: bool = True) -> list[str]:
+             require_milestones: bool = True, ids: Mapping[str, set[str]] | None = None) -> list[str]:
     """Reasons the strategy cannot be used under the game's spec (empty = valid).
 
     Structural checks (pillars, priorities, sizes, metrics, dates, action ownership and limits) apply
@@ -236,7 +260,9 @@ def validate(s: Strategy, spec: PillarSpec, *, previous: Strategy | None, tech_i
     income) apply only to `briefing_checked` pillars — by default the ones that changed versus
     `previous` and are not pinned there, so a pinned or untouched pillar that no longer fits today's
     briefing never blocks a review (see `pinned_misfits`). With `require_milestones`, each unpinned
-    pillar among the top `spec.min_milestones_top` by priority needs a milestone (human edits pass False)."""
+    pillar among the top `spec.min_milestones_top` by priority needs a milestone (human edits pass False).
+    `ids` holds the known ids per id-list action kind (tech, civic, policy, production, purchase); a
+    kind missing from it is checked for size only (tech falls back to `tech_ids`)."""
     checked = _briefing_checked(s, previous) if briefing_checked is None else briefing_checked
     errs: list[str] = []
     errs.extend(f"missing pillar {p}" for p in spec.pillars if p not in s.pillars)
@@ -252,8 +278,9 @@ def validate(s: Strategy, spec: PillarSpec, *, previous: Strategy | None, tech_i
         if len(pl.milestones) > 6:
             errs.append(f"{name}: at most 6 milestones")
         for m in pl.milestones:
-            if not _valid_date(m.by):
-                errs.append(f"{name}: milestone by {m.by!r} is not a date YYYY.MM.DD")
+            if not _date_fits(m.by, spec):
+                errs.append(f"{name}: milestone by {m.by!r} is not a turn T<turn>" if spec.date_format == "turns"
+                            else f"{name}: milestone by {m.by!r} is not a date YYYY.MM.DD")
             if m.metric not in spec.metrics:
                 errs.append(f"{name}: unknown metric {m.metric!r}")
         declared = spec.pillars[name].actions if name in spec.pillars else ()
@@ -267,7 +294,7 @@ def validate(s: Strategy, spec: PillarSpec, *, previous: Strategy | None, tech_i
                             else f"{name}: {fld} is not an action in this game")
             if kind in spec.actions:
                 errs.extend(_action_errors(name, kind, items, spec.actions[kind], tech_ids, idle, income,
-                                           name in checked))
+                                           name in checked, ids))
     if require_milestones and spec.min_milestones_top:
         for rank, (name, pl) in enumerate(s.sorted_pillars()[:spec.min_milestones_top], 1):
             if not pl.pinned and not pl.milestones:
@@ -382,10 +409,15 @@ class _StrategyOutBase(BaseModel):
         return data
 
 
+ID_LIST_TEXT = {"tech": "tech ids to pick when offered", "civic": "civic ids to progress when offered",
+                "policy": "policy ids to slot", "production": "unit, building, district or project ids to build",
+                "purchase": "unit or building ids to buy with gold or faith"}
+
+
 def _action_field(a: ActionLimits):
-    if a.kind == "tech":
+    if a.kind in ID_LIST_KINDS:
         return (list[str], Field(default_factory=list,
-                                 description=f"tech ids to pick when offered; at most {a.max_items}"))
+                                 description=f"{ID_LIST_TEXT[a.kind]}; at most {a.max_items}"))
     if a.kind == "market":
         return (list[MarketOrder], Field(default_factory=list,
                                          description=f"at most {a.max_items} monthly order(s), amount "
@@ -451,8 +483,8 @@ def strategist_instructions(spec: PillarSpec) -> str:
                  + (f", the heaviest at least {w.spread:g} x the lightest" if w.spread > 1 else "")
                  + "; the governor steers by weight x how far behind the pillar's milestones are), a stance of one or two "
                  "sentences, 1-3 goals, and milestones on the briefing's measures (exactly these names: "
-                 + ", ".join(spec.metrics) + "; a rank is 1 = best, so use op <= for it) with a target and an "
-                 "in-game date YYYY.MM.DD.")
+                 + ", ".join(spec.metrics) + "; a rank is 1 = best, so use op <= for it) with a target and "
+                 + ("a turn written T<turn> (e.g. T60)." if spec.date_format == "turns" else "an in-game date YYYY.MM.DD."))
     if spec.min_milestones_top:
         lines.append(f"Each of the {spec.min_milestones_top} highest-priority pillars needs at least one milestone.")
     if spec.min_milestones_each:
@@ -472,8 +504,9 @@ def strategist_instructions(spec: PillarSpec) -> str:
         if not owners:
             continue
         on = " and ".join(owners)
-        if kind == "tech":
-            lines.append(f"Only {on}: `{a.field}` (tech ids to pick when offered; at most {a.max_items}).")
+        if kind in ID_LIST_KINDS:
+            lines.append(f"Only {on}: `{a.field}` ({ID_LIST_TEXT[kind]}; at most {a.max_items}"
+                         + ("; corpus ids with their kind, e.g. tech:pottery" if a.full_ids else "") + ").")
         else:
             rule = (f"at most {a.max_items} small monthly order{'' if a.max_items == 1 else 's'}, amount "
                     f"{a.amount_min}-{a.amount_max}; resources: {', '.join(a.resources)}")
@@ -484,12 +517,14 @@ def strategist_instructions(spec: PillarSpec) -> str:
             lines.append(f"Only {on}: `{a.field}` ({rule}).")
         if a.note:
             lines.append(a.note)
-    lines.append("Priorities decide which directives the governor prefers. Never change a pillar marked pinned: "
-                 "the human set it. If nothing material changed, answer change=false.")
-    lines.append("Build on our species (race) and its traits, ethics, civics and origin: fill `identity` with how "
-                 "they shape this strategy, naming the traits you rely on and the pillars they affect (e.g. "
-                 "industrious → economy on minerals; enduring → long wars are affordable), and weigh a "
-                 "neighbour's traits when dealing with or fighting it.")
+    lines.append(("Weights decide each pillar's share of the decisions' effort." if spec.weights.mode == "share"
+                  else "Priorities decide which directives the governor prefers.")
+                 + " Never change a pillar marked pinned: the human set it. If nothing material changed, answer change=false.")
+    lines.append(spec.identity or (
+        "Build on our species (race) and its traits, ethics, civics and origin: fill `identity` with how "
+        "they shape this strategy, naming the traits you rely on and the pillars they affect (e.g. "
+        "industrious → economy on minerals; enduring → long wars are affordable), and weigh a "
+        "neighbour's traits when dealing with or fighting it."))
     if spec.instructions:
         lines.append(spec.instructions)
     return "\n".join(lines)

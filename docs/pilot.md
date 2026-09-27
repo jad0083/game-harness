@@ -1,7 +1,8 @@
 # Pilot app: an LLM that plays on its own
 
 `src/pilot/` (`python -m pilot`) plays through the controller with any model provider: Galactic
-Civilizations IV turn by turn from screenshots, Stellaris as a governor over the game's own AI.
+Civilizations IV turn by turn from screenshots, Stellaris and Civilization VI as a governor over the
+game's own AI.
 Everything it does is recorded and shown on a dashboard where you can watch, ask and steer.
 
 ## Running
@@ -26,6 +27,8 @@ PC in use.
 | `GAME_RESOLUTION` | the PC's screen size when it is not 3840x2160, e.g. `2560x1440` (see [corpus.md](corpus.md)) |
 | `PILOT_MODEL`, `PILOT_MODELS` | default model; extra models offered in the dashboard |
 | `PILOT_GAME`, `PILOT_SPEED`, `PILOT_DECIDE_MONTHS`, `PILOT_POLL_S` | game, Stellaris speed, months between decisions, autosave poll |
+| `PILOT_DECIDE_TURNS` | Civilization VI: turns the game's AI plays between decisions (default 5; `--decide-turns`) |
+| `PILOT_AUTOPLAY_CHUNK` | Civilization VI: turns per autoplay call in peace (default 3, which keeps the AI's multi-turn plans); at war or with a threatened city it plays one turn at a time |
 | `PILOT_THINKING`, `PILOT_GOVERNOR_THINKING` | thinking level for GC4 episodes / Stellaris decisions (default `medium`) |
 | `PILOT_RETRO_EVERY` | strategy review every N decisions (default 5) |
 | `PILOT_PORT`, `PILOT_RUNS_DIR`, `PILOT_CAMPAIGN`, `PILOT_COMMIT`, `PILOT_JOURNAL` | live dashboard port, run folder, campaign id, commit learned knowledge, journal file |
@@ -76,6 +79,52 @@ opinion both ways. The prompt adds a 12-month trend line and what earlier direct
 
 If the game stops answering pause and resume (for example a text box holds the keyboard), the
 governor stops acting and flags *needs attention* until you press Resume.
+
+## Civilization VI governor
+
+`src/pilot/civ6_governor.py`, `src/pilot/civ6.py`; spec `docs/design/2026-09-26-civ6-governor-design.md`.
+The game's own AI plays our civilization through `AutoplayManager` (units, tiles, city management,
+district and wonder placement, diplomacy); the model gives macro orders between stretches of
+autoplay. No screenshots: everything goes through the controller's `civ6` commands, which run the
+helper library `corpora/civ6/lua/harness.lua` inside the game through the agent's tuner relay.
+
+```bash
+.venv/bin/python -m pilot run --game civ6 --decide-turns 5     # the game loaded with EnableTuner 1
+```
+
+The loop: snapshot → decide → apply orders → read back → then N times: autoplay **one** turn, poll
+the cheap `autoplay-status` every second until the game hands the turn back, take a snapshot while
+the game is idle → decide again after N turns or as soon as something urgent happens (a new war, a
+city lost or threatened, a new era, a great person or wonder race lost, gold below the purchase
+reserve); stopping early is simply not starting the next turn. The tuner does not answer while the
+AI plays its turn, so unanswered status polls are expected; only the turn's deadline counts (10
+minutes, for long late-game turns). A turn that does not start (20 s) or end in time, or a game that
+gives no snapshot three times between turns, stops the run until the human presses Resume. Orders,
+snapshots and human requests only ever happen between turns. `PILOT_AUTOPLAY_CHUNK` lets the AI play
+several turns per call (urgent checks then run between chunks). Each autoplay call turns the
+tutorial advisor off for the session: its popups wait for a click and hold the turn forever.
+
+- **Snapshot** (`game-controller civ6 snapshot`, about 2 KB): turn, era and era score, civ and leader,
+  yields, treasury and faith, research and civic with turns left, what can be researched,
+  progressed and slotted now, government and policy slots, every city (population, production and
+  turns left, districts, threats, what it can build), units by type, the majors met with score and
+  military strength, wars, great person points, the end-turn blocker. The briefing names every item
+  by its corpus id (`tech:pottery`, `unit:settler`).
+- **Orders** are structured, never Lua: `research`, `civic`, `policies`, `production`, `purchase`
+  (see `corpora/civ6/pilot.md`). The governor checks each against the corpus, the snapshot (options,
+  the city's buildable items) and `pillars.toml` (orders per decision; purchases keep the gold reserve
+  and take at most the treasury share, or everything above the reserve for a threatened city); the
+  controller checks the ids again and encodes every argument as a Lua string literal. Wonders and new
+  districts need a tile and are refused (placement is not supported yet). `price` (a tool) reads a
+  live purchase price.
+- **Read-back**: a fresh snapshot right after the orders shows which took; one that did not is
+  reported to the next decision and refused if it is repeated unchanged. The next decision also
+  hears which orders the AI changed during autoplay.
+- **Strategy**: `corpora/civ6/pillars.toml` in share mode (science, culture, faith, economy,
+  military, expansion, diplomacy) with milestones on turns (`T60`); reviews as for Stellaris.
+- **Campaign** `civ6/<leader>_<map seed>`; metrics rows per turn (`date` `T<turn>`), so telemetry,
+  milestones and the dashboard work as for Stellaris. The dashboard's pace control sets the turns
+  between decisions; directives, overrides and speed do not apply.
 
 ## Strategy layer
 
