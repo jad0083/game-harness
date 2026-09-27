@@ -4810,7 +4810,9 @@ def test_six_quiet_saves_end_the_crisis_and_restore_the_cadence(setup):
     assert eps[1].startswith("urgent: war going badly") and eps[2].startswith("scheduled (3 months)")
     assert eps[3] == "urgent: war crisis over: 6 quiet saves", eps
     assert g.s.decide_every_months == 12 and log.state.info["crisis"] is None
-    assert [e["event"] for e in log.recent if e["kind"] == "crisis"] == ["enter", "ladder", "exit", "closed"]
+    events = [e["event"] for e in log.recent if e["kind"] == "crisis"]
+    assert [e for e in events if e != "state"] == ["enter", "ladder", "exit", "closed"]
+    assert events.count("state") == 5, "each quiet save before the exit writes the state (a restart keeps it)"
 
 
 def test_the_humans_cadence_during_a_crisis_is_kept_at_its_end(setup):
@@ -4931,6 +4933,62 @@ def test_a_restarted_governor_carries_on_the_crisis_and_its_entry_limit(setup, t
     g2.run(max_decisions=1)
     assert g2._crisis_on() and g2.s.decide_every_months == 3 and log2.state.info["crisis"]["active"]
     assert not any(e["kind"] == "crisis" and e["event"] == "enter" for e in log2.recent), "no second entry"
+
+
+_THEIA = "save games/theia_1/autosave.sav"
+
+
+def _theia(b: dict) -> dict:
+    return {**b, "source": _THEIA}
+
+
+def test_a_restart_keeps_the_quiet_saves_counted(setup, tmp_path):
+    """Ruling 14's exit after 6 quiet saves holds across a restart: 3 quiet saves in the first run, 3 in
+    the second."""
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    first = [_theia(b) for b in _crisis_saves()[:5]]                     # 2256.01 - 2256.05
+    g = Governor(s, FakeStellaris(first), EventLog(s.runs_dir, "run21", s.model, telemetry=tel),
+                 model=decisions("expand", "keep"))
+    g.run(max_decisions=3)
+    assert g._crisis_on() and g._crisis["quiet"] == 3
+    log2 = EventLog(s.runs_dir, "run22", s.model, telemetry=tel)
+    g2 = Governor(s, FakeStellaris([_theia(b) for b in _crisis_saves()[5:]]), log2, model=decisions("keep"))
+    g2.run(max_decisions=2)
+    eps = [e["situation"] for e in log2.recent if e["kind"] == "episode"]
+    assert eps[1] == "urgent: war crisis over: 6 quiet saves", eps
+
+
+def test_a_restart_keeps_the_humans_override_during_a_crisis(setup, tmp_path):
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    saves = [_theia(_war_save("2256.01.01")), _theia(_war_save("2256.02.01", occupied=True))]
+    g = Governor(s, FakeStellaris(saves), EventLog(s.runs_dir, "run23", s.model, telemetry=tel),
+                 model=decisions("expand", "keep"))
+    g.run(max_decisions=2)
+    g._override(_theia(_war_save("2256.03.01", occupied=True)), "consolidate_economy")
+    game = FakeStellaris([_theia(_war_save("2256.04.01", occupied=True))])
+    game.flags = ["governor_directive_consolidate_economy"]
+    Governor(s, game, EventLog(s.runs_dir, "run24", s.model, telemetry=tel), model=decisions("keep")).run(max_decisions=1)
+    assert ("directive", "defend") not in game.actions, "the human's choice stands until the crisis ends"
+
+
+def test_a_restart_keeps_the_status_quo_question_asked_after_the_entry(setup, tmp_path):
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    weak = lambda d, **kw: _theia(_war_save(d, military_power=400.0, **kw))
+    saves = [_theia(_war_save("2256.01.01")), weak("2256.02.01"), weak("2256.03.01"), weak("2256.04.01"),
+             weak("2256.05.01", occupied=True)]
+    log = EventLog(s.runs_dir, "run25", s.model, telemetry=tel)
+    Governor(s, FakeStellaris(saves), log, model=decisions("expand", "keep")).run(max_decisions=3)
+    asked = [e for e in log.recent if e["kind"] == "question"]
+    assert len(asked) == 1 and "occupied: Arnvoss" in asked[0]["question"], "asked at 2256.05, not at the entry (C3)"
+    log2 = EventLog(s.runs_dir, "run26", s.model, telemetry=tel)
+    Governor(s, FakeStellaris([weak("2256.06.01", occupied=True)]), log2, model=decisions("keep")).run(max_decisions=1)
+    assert not any(e["kind"] == "question" for e in log2.recent), "once per war per 12 months, across a restart"
 
 
 def _crisis_left_by_a_run(s, tel, event: str, state: dict) -> None:

@@ -8,6 +8,7 @@ one standing directive. The game is paused while the model decides, so any game 
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import html
 import json
@@ -598,6 +599,7 @@ class Governor:
         # run at the next decision: "enter", "exit" or None
         self._crisis: dict | None = None
         self._crisis_pending: str | None = None
+        self._crisis_saved: dict | None = None    # the state as the last `crisis` event wrote it
         self._since_retro = 0
         self._strategy_trace_n = 0                # negative episode ids for strategy review traces (see _review_strategy)
         self._clock: Callable[[], float] = time.monotonic   # the watchdog's wall clock (tests inject one)
@@ -1107,6 +1109,7 @@ class Governor:
     def _override(self, b: dict, directive: str) -> None:
         if self._crisis_on():
             self._crisis["human_directive"] = directive     # the human's choice stands for this crisis
+            self._save_crisis_state(b["date"])              # ...also after a restart
         self.log.state.episodes += 1
         n = self.log.state.episodes
         current = current_directive(b)
@@ -1260,14 +1263,30 @@ class Governor:
             self._crisis_pending = "enter"
             texts = [t for _c, t in state["conditions"]]
             out.append("war going badly: " + "; ".join(texts))
-            self.log.emit("crisis", event="enter", date=b["date"], conditions=texts, state=dict(state))
+            self._emit_crisis("enter", b["date"], conditions=texts)
         elif event:
             why = event.removeprefix("exit: ")
             self._crisis_pending = "exit"
             out.append(f"war crisis over: {why}")
-            self.log.emit("crisis", event="exit", date=b["date"], why=why, state=dict(state))
+            self._emit_crisis("exit", b["date"], why=why)
+        else:
+            self._save_crisis_state(b["date"])      # quiet saves and conditions survive a restart
         self._publish_crisis()
         return out
+
+    def _emit_crisis(self, event: str, date: str, **extra) -> None:
+        """A `crisis` event carrying the whole state, which `_load_crisis` reads back after a restart:
+        enter / exit (their ladder still to run), ladder / closed (it ran), or state (it changed
+        between those: quiet saves, conditions, the human's directive, the status-quo asks)."""
+        if event == "state":
+            extra["pending"] = self._crisis_pending
+        self.log.emit("crisis", event=event, date=date, state=copy.deepcopy(self._crisis or {}), **extra)
+        self._crisis_saved = copy.deepcopy(self._crisis)
+
+    def _save_crisis_state(self, date: str) -> None:
+        """A `state` event when an active crisis changed since its last event (nothing otherwise)."""
+        if self._crisis_on() and self._crisis != self._crisis_saved:
+            self._emit_crisis("state", date)
 
     def _publish_crisis(self) -> None:
         """The crisis for the dashboard (`crisis`: since, conditions, quiet saves, the need boost, the
@@ -1437,11 +1456,13 @@ class Governor:
                 self._crisis_row("cadence", "done", f"decisions every {prior} months again", date)
         if self._crisis_on():
             self._crisis_status_quo(b)
-        if ladder == "enter":
-            self.log.emit("crisis", event="ladder", date=date, state=dict(self._crisis))
-        elif ladder == "exit":
-            self.log.emit("crisis", event="closed", date=date, state=dict(self._crisis))
         self._crisis_pending = None
+        if ladder == "enter":
+            self._emit_crisis("ladder", date)
+        elif ladder == "exit":
+            self._emit_crisis("closed", date)
+        else:
+            self._save_crisis_state(date)            # e.g. a status-quo question asked since the entry
         self._publish_crisis()
 
     def _crisis_status_quo(self, b: dict) -> None:
@@ -1467,10 +1488,11 @@ class Governor:
         self.log.emit("pace", every_months=every, by=by)
 
     def _load_crisis(self) -> None:
-        """The campaign's war crisis from earlier runs (the newest `crisis` event's state): an active one
-        carries on at the crisis pace, and each war keeps its 12-month entry limit. A run that stopped
-        after an entry or an exit, before its ladder ran (`ladder` / `closed` not yet written), leaves
-        that ladder to the next decision. Advisory."""
+        """The campaign's war crisis from earlier runs (the newest `crisis` event's state, with its quiet
+        saves, the human's directive and the status-quo asks): an active one carries on at the crisis
+        pace, and each war keeps its 12-month entry limit. A run that stopped after an entry or an exit,
+        before its ladder ran (`ladder` / `closed` not yet written), leaves that ladder to the next
+        decision. Advisory."""
         self._crisis, self._crisis_pending, self._observed_b = None, None, None
         tel, cid = self.log.telemetry, self.log.campaign_id
         if tel is not None and cid:
@@ -1478,10 +1500,12 @@ class Governor:
                 events = tel.campaign_events(cid, "crisis")
                 last = next((e for e in reversed(events) if isinstance(e.get("state"), dict)), None)
                 if last:
+                    ev = last.get("event")
                     self._crisis = dict(last["state"])
-                    self._crisis_pending = last.get("event") if last.get("event") in ("enter", "exit") else None
+                    self._crisis_pending = ev if ev in ("enter", "exit") else last.get("pending") if ev == "state" else None
             except Exception as e:  # noqa: BLE001 - advisory
                 self.log.emit("briefing_error", error=f"loading the war crisis: {e}"[:200])
+        self._crisis_saved = copy.deepcopy(self._crisis)
         if self._crisis_on() and self._crisis_pending != "enter":     # the entry's ladder sets the pace
             prior = self.s.decide_every_months
             self._crisis.update(pace_prior=prior, pace_human=False)
