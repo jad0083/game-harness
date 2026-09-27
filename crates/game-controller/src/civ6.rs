@@ -21,6 +21,8 @@ pub const STATE_UI: &str = "InGame";
 pub const STATE_CORE: &str = "GameCore";
 /// Printed by a guarded call when the library is not installed (or is another version).
 const MISSING: &str = "HARNESS_MISSING";
+/// Printed instead of an InGame call while this load's popups are not quieted yet.
+const LOUD: &str = "HARNESS_POPUPS_LOUD";
 /// Autoplay stretches are short: the governor decides again between them.
 pub const MAX_AUTOPLAY_TURNS: u32 = 50;
 
@@ -298,11 +300,60 @@ pub fn autoplay_call(turns: u32) -> Result<String> {
     Ok(format!("Harness.run(Harness.autoplay, {turns})"))
 }
 
-/// The library file and its version (FNV-1a of the text: any edit re-installs it).
+/// A popup that holds the game's engine event until it is closed (`corpora/civ6/popups.toml`):
+/// during autoplay nobody closes it and the AI's turn never ends, so its handler is removed.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct QuietPopup {
+    /// The popup's own Lua state (its handlers are globals there).
+    pub state: String,
+    pub event: String,
+    pub handler: String,
+}
+
+impl QuietPopup {
+    /// Removes the handler; prints QUIET, QUIET_ABSENT (the state has no such handler or event: a
+    /// renamed handler) or QUIET_ERR with the reason. Removing it twice is harmless (checked live).
+    pub fn code(&self) -> String {
+        let (e, h) = (&self.event, &self.handler);
+        format!("if Events and Events.{e} and {h} then local ok, err = pcall(function() Events.{e}.Remove({h}) end) \
+                 print(ok and \"QUIET\" or (\"QUIET_ERR \" .. tostring(err))) else print(\"QUIET_ABSENT\") end")
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct PopupsFile {
+    #[serde(default)]
+    quiet: Vec<QuietPopup>,
+}
+
+fn lua_name(s: &str) -> bool {
+    let mut c = s.chars();
+    matches!(c.next(), Some(f) if f.is_ascii_alphabetic() || f == '_') && c.all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
+}
+
+/// The `[[quiet]]` entries of a popups table; every name must be a plain Lua identifier (they are
+/// written into Lua as they are).
+pub fn parse_popups(text: &str) -> Result<Vec<QuietPopup>> {
+    let f: PopupsFile = toml::from_str(text)?;
+    for p in &f.quiet {
+        for (field, v) in [("state", &p.state), ("event", &p.event), ("handler", &p.handler)] {
+            if !lua_name(v) {
+                bail!("popups: {field} {v:?} is not a Lua name");
+            }
+        }
+    }
+    Ok(f.quiet)
+}
+
+/// The library file and its version (FNV-1a of the text: any edit re-installs it), with the popups
+/// to quiet after installing it into `InGame`.
 pub struct Library {
     pub path: PathBuf,
     pub source: String,
     pub version: String,
+    pub popups: Vec<QuietPopup>,
 }
 
 impl Library {
@@ -314,7 +365,10 @@ impl Library {
             h ^= b as u64;
             h = h.wrapping_mul(0x100000001b3);
         }
-        Ok(Self { path, source, version: format!("{h:016x}") })
+        let table = corpus.join("popups.toml");
+        let text = std::fs::read_to_string(&table).with_context(|| format!("reading {}", table.display()))?;
+        let popups = parse_popups(&text).with_context(|| format!("in {}", table.display()))?;
+        Ok(Self { path, source, version: format!("{h:016x}"), popups })
     }
 
     /// The chunk that installs the library (a no-op when this version is already there).
@@ -325,6 +379,12 @@ impl Library {
     /// `call` run only when this version is installed; otherwise it prints the missing marker.
     pub fn guarded(&self, call: &str) -> String {
         format!("if Harness and Harness.version == {} then {call} else print({}) end", lua_str(&self.version), lua_str(MISSING))
+    }
+
+    /// [`Self::guarded`], and `call` runs only once the popups are quiet (`Harness.popups_quiet`);
+    /// otherwise it prints the loud marker and nothing runs.
+    pub fn guarded_quiet(&self, call: &str) -> String {
+        self.guarded(&format!("if Harness.popups_quiet then {call} else print({}) end", lua_str(LOUD)))
     }
 }
 
@@ -357,22 +417,72 @@ pub async fn call(client: &AgentClient, lib: &Library, state: &str, call: &str) 
 }
 
 /// `call` waiting at most `wait_ms` for the game's first reply (a status poll during the AI's turn
-/// should give up quickly: the tuner is silent then).
+/// should give up quickly: the tuner is silent then). In InGame the call waits for the popups: after
+/// a load (library missing) or while an earlier attempt left some unsettled, they are quieted first,
+/// before the call can start autoplay, and the reply gains `popups_quieted`.
 pub async fn call_with(client: &AgentClient, lib: &Library, state: &str, call: &str, wait_ms: u64) -> Result<serde_json::Value> {
-    let guarded = lib.guarded(call);
-    let lines = printed(&client.tuner_lua(state, &guarded, Some(wait_ms)).await?);
-    if !lines.iter().any(|l| l.trim() == MISSING) {
+    let ui = state == STATE_UI && !lib.popups.is_empty();
+    let first = if ui { lib.guarded_quiet(call) } else { lib.guarded(call) };
+    let lines = printed(&client.tuner_lua(state, &first, Some(wait_ms)).await?);
+    let missing = lines.iter().any(|l| l.trim() == MISSING);
+    if !missing && !lines.iter().any(|l| l.trim() == LOUD) {
         return parse_output(&lines);
     }
-    let installed = printed(&client.tuner_lua(state, &lib.install_code(), Some(15_000)).await?);
-    if installed.iter().any(|l| l.contains("ERR") || l.contains("rror")) {
-        bail!("installing {} in {state} failed: {}", lib.path.display(), installed.join(" ").chars().take(600).collect::<String>());
+    if missing {
+        let installed = printed(&client.tuner_lua(state, &lib.install_code(), Some(15_000)).await?);
+        if installed.iter().any(|l| l.contains("ERR") || l.contains("rror")) {
+            bail!("installing {} in {state} failed: {}", lib.path.display(), installed.join(" ").chars().take(600).collect::<String>());
+        }
     }
-    let lines = printed(&client.tuner_lua(state, &guarded, Some(15_000)).await?);
+    let mut quieted = None;
+    let mut call = call.to_string();
+    if ui {
+        let q = quiet_popups(client, &lib.popups).await;
+        if q.iter().all(|l| quiet_settled(l)) {
+            call = format!("Harness.popups_quiet = true {call}");
+        } else {
+            eprintln!("popups not all quieted (retried on the next InGame call): {}", q.join(", "));
+        }
+        quieted = Some(q);
+    }
+    let lines = printed(&client.tuner_lua(state, &lib.guarded(&call), Some(15_000)).await?);
     if lines.iter().any(|l| l.trim() == MISSING) {
         bail!("the library did not stay installed in {state} (is a game loaded?)");
     }
-    parse_output(&lines)
+    let mut v = parse_output(&lines)?;
+    if let (Some(q), Some(o)) = (quieted, v.as_object_mut()) {
+        o.insert("popups_quieted".into(), q.into());
+    }
+    Ok(v)
+}
+
+/// The QUIET line a popup call printed, else what it printed instead.
+fn quiet_outcome(lines: &[String]) -> String {
+    lines.iter().find(|l| l.starts_with("QUIET")).cloned()
+        .or_else(|| lines.first().cloned())
+        .unwrap_or_else(|| "no reply".into())
+}
+
+/// Whether a `quiet_popups` line needs no retry: removed, absent from a state that exists (a
+/// handler renamed by a patch shows up here, in the reply), or no such state in this ruleset (a game
+/// without Gathering Storm has no disaster popup).
+pub fn quiet_settled(line: &str) -> bool {
+    line.ends_with(" QUIET") || line.ends_with(" QUIET_ABSENT") || line.contains("no Lua state named")
+}
+
+/// Remove the handlers of the popups that would hold an autoplay turn, one tuner call each; one
+/// `<state>.<handler> <outcome>` per popup, where the outcome is QUIET, QUIET_ABSENT, QUIET_ERR …,
+/// or `failed: …` (a timeout or a missing state).
+pub async fn quiet_popups(client: &AgentClient, popups: &[QuietPopup]) -> Vec<String> {
+    let mut out = Vec::with_capacity(popups.len());
+    for p in popups {
+        let outcome = match client.tuner_lua(&p.state, &p.code(), Some(5_000)).await {
+            Ok(r) => quiet_outcome(&printed(&r)),
+            Err(e) => format!("failed: {}", e.to_string().chars().take(200).collect::<String>()),
+        };
+        out.push(format!("{}.{} {outcome}", p.state, p.handler));
+    }
+    out
 }
 
 /// Whether a library reply reports success (`{"ok": false, ...}` makes the command exit 2).
@@ -616,5 +726,135 @@ mod tests {
         broken.as_object_mut().unwrap().remove("cities");
         assert!(check_snapshot(&broken).unwrap_err().to_string().contains("cities"));
         assert!(check_snapshot(&serde_json::json!({"ok": false, "error": "boom"})).unwrap_err().to_string().contains("boom"));
+    }
+
+    #[test]
+    fn engine_locking_popups_are_listed() {
+        let lib = Library::load(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpora/civ6")).unwrap();
+        let names: Vec<String> = lib.popups.iter().map(|p| format!("{}.{}.{}", p.state, p.event, p.handler)).collect();
+        for want in ["WonderBuiltPopup.WonderCompleted.OnWonderCompleted", "NaturalWonderPopup.NaturalWonderRevealed.OnNaturalWonderRevealed",
+                     "ProjectBuiltPopup.CityProjectCompletedNarrative.OnProjectComplete", "NaturalDisasterPopup.RandomEventStarted.OnRandomEventStarted",
+                     "NaturalDisasterPopup.RandomEventOccurred.OnRandomEventOccurred", "RockBandMoviePopup.PostTourismBomb.OnRockBandConcert"] {
+            assert!(names.iter().any(|n| n == want), "{want} missing from popups.toml");
+        }
+    }
+
+    #[test]
+    fn quieting_a_popup_removes_its_handler_and_says_what_happened() {
+        let p = QuietPopup { state: "WonderBuiltPopup".into(), event: "WonderCompleted".into(), handler: "OnWonderCompleted".into() };
+        assert_eq!(p.code(), concat!(
+            "if Events and Events.WonderCompleted and OnWonderCompleted then ",
+            "local ok, err = pcall(function() Events.WonderCompleted.Remove(OnWonderCompleted) end) ",
+            "print(ok and \"QUIET\" or (\"QUIET_ERR \" .. tostring(err))) else print(\"QUIET_ABSENT\") end"));
+        assert_eq!(quiet_outcome(&["x".into(), "QUIET".into()]), "QUIET");
+        assert_eq!(quiet_outcome(&["ERR:Runtime Error: boom".into()]), "ERR:Runtime Error: boom");
+        assert_eq!(quiet_outcome(&[]), "no reply");
+        assert!(quiet_settled("WonderBuiltPopup.OnWonderCompleted QUIET"));
+        assert!(quiet_settled("WonderBuiltPopup.OnWonderCompleted QUIET_ABSENT"));
+        assert!(quiet_settled("RockBandMoviePopup.OnRockBandConcert failed: agent 400: no Lua state named \"RockBandMoviePopup\""));
+        assert!(!quiet_settled("WonderBuiltPopup.OnWonderCompleted failed: timed out"));
+        assert!(!quiet_settled("WonderBuiltPopup.OnWonderCompleted QUIET_ERR boom"));
+        assert!(!quiet_settled("WonderBuiltPopup.OnWonderCompleted no reply"));
+    }
+
+    #[test]
+    fn ingame_calls_wait_until_the_popups_are_quiet() {
+        let lib = Library::load(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpora/civ6")).unwrap();
+        assert_eq!(lib.guarded_quiet("Harness.run(Harness.autoplay, 3)"),
+                   format!("if Harness and Harness.version == \"{}\" then if Harness.popups_quiet then Harness.run(Harness.autoplay, 3) \
+                            else print(\"HARNESS_POPUPS_LOUD\") end else print(\"HARNESS_MISSING\") end", lib.version));
+    }
+
+    #[test]
+    fn the_popups_table_is_required() {
+        let dir = std::env::temp_dir().join(format!("civ6-nopopups-{}", std::process::id()));
+        std::fs::create_dir_all(dir.join("lua")).unwrap();
+        std::fs::write(dir.join("lua/harness.lua"), "-- test").unwrap();
+        let err = Library::load(&dir).err().expect("a corpus without popups.toml is refused").to_string();
+        assert!(err.contains("popups.toml"), "{err}");
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn a_popup_table_entry_must_be_plain_lua_names() {
+        let ok = "[[quiet]]\nstate = \"WonderBuiltPopup\"\nevent = \"WonderCompleted\"\nhandler = \"OnWonderCompleted\"\n";
+        assert_eq!(parse_popups(ok).unwrap().len(), 1);
+        assert!(parse_popups("").unwrap().is_empty());
+        for bad in ["OnX) os.exit(", "", "1abc", "a.b", "a b"] {
+            let t = format!("[[quiet]]\nstate = \"S\"\nevent = \"E\"\nhandler = {}\n", toml::Value::String(bad.into()));
+            assert!(parse_popups(&t).is_err(), "{bad:?} accepted");
+        }
+        assert!(parse_popups("[[quiet]]\nstate = \"S\"\nevent = \"E\"\n").is_err(), "a missing field is an error");
+    }
+
+    /// A tuner agent with the guards' semantics: the library is installed or not, the popups quiet
+    /// or not, and a guarded chunk runs its call only when both hold (or when the chunk sets
+    /// `Harness.popups_quiet` itself). Counts the chunks that ran a call containing `marker`.
+    async fn guarded_tuner(installed: bool, quiet: bool, marker: &'static str)
+        -> (String, std::sync::Arc<std::sync::atomic::AtomicUsize>) {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        let runs = std::sync::Arc::new(AtomicUsize::new(0));
+        let counter = runs.clone();
+        tokio::spawn(async move {
+            let (mut installed, mut quiet) = (installed, quiet);
+            loop {
+                let (mut sock, _) = listener.accept().await.unwrap();
+                let mut req = Vec::new();
+                let mut buf = vec![0u8; 65536];
+                let body = loop {
+                    let n = sock.read(&mut buf).await.unwrap();
+                    req.extend_from_slice(&buf[..n]);
+                    let text = String::from_utf8_lossy(&req).to_string();
+                    if let Some((head, body)) = text.split_once("\r\n\r\n") {
+                        let len = head.lines().find_map(|l| l.to_ascii_lowercase().strip_prefix("content-length:")
+                            .map(|v| v.trim().parse::<usize>().unwrap())).unwrap_or(0);
+                        if body.len() >= len || n == 0 {
+                            break body.to_string();
+                        }
+                    }
+                };
+                let code = serde_json::from_str::<serde_json::Value>(&body).unwrap()["code"].as_str().unwrap().to_string();
+                let out: Vec<String> = if code.starts_with("local HARNESS_VERSION") {
+                    installed = true;
+                    vec!["installed".into()]
+                } else if code.starts_with("if Events and Events.") {
+                    vec!["QUIET".into()]
+                } else if !installed {
+                    vec![MISSING.into()]
+                } else if code.contains("if Harness.popups_quiet then") && !quiet {
+                    vec![LOUD.into()]
+                } else {
+                    quiet = quiet || code.contains("Harness.popups_quiet = true");
+                    if code.contains(marker) {
+                        counter.fetch_add(1, Ordering::SeqCst);
+                    }
+                    vec![r#"{"ok":true,"action":"ranged_attack"}"#.into()]
+                };
+                let reply = serde_json::json!({"ok": true, "state": "InGame", "result": "", "extra": [], "output": out}).to_string();
+                let head = format!("HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n",
+                                   reply.len());
+                sock.write_all(head.as_bytes()).await.unwrap();
+                sock.write_all(reply.as_bytes()).await.unwrap();
+            }
+        });
+        (url, runs)
+    }
+
+    #[tokio::test]
+    async fn a_state_changing_ingame_call_runs_once_through_the_popup_guard() {
+        // The last stand's step changes the game: after a load (library missing) or while the popups
+        // are loud, the first attempt must run nothing, and the call runs exactly once afterwards.
+        let lib = Library::load(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpora/civ6")).unwrap();
+        let (_, call) = last_stand_step_call("65536", "", "").unwrap();
+        for (installed, quiet) in [(false, false), (true, false), (true, true)] {
+            let (url, runs) = guarded_tuner(installed, quiet, "Harness.last_stand_step").await;
+            let client = AgentClient::new(Some(&url), Some("t")).unwrap();
+            let v = call_with(&client, &lib, STATE_UI, &call, 1_000).await.unwrap();
+            assert_eq!(v["action"], "ranged_attack");
+            assert_eq!(runs.load(std::sync::atomic::Ordering::SeqCst), 1, "installed {installed}, quiet {quiet}");
+        }
     }
 }

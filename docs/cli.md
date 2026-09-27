@@ -80,6 +80,7 @@ The compiled controller binary provides full programmatic access to all agent fu
 #     ids are corpus ids, checked against data/ first; exit 2 when the game or the check refuses
 ./target/release/game-controller --corpus corpora/civ6 civ6 autoplay 5         # 1..50 turns by the game's AI
 ./target/release/game-controller --corpus corpora/civ6 civ6 autoplay-status    # / autoplay-stop
+./target/release/game-controller --corpus corpora/civ6 civ6 quiet-popups      # popups.toml handlers removed (also on library install)
 # The last stand's calls (controller only, never model orders; numeric city and unit IDs; a city's
 # `id` is in the snapshot):
 ./target/release/game-controller --corpus corpora/civ6 civ6 turn-ready         # read-only: our turn, idle, no popup

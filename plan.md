@@ -90,6 +90,7 @@
 - [x] Weighted pillars: weights (sum 100) instead of priorities; each decision sees directive pressure = weight × milestone need with a suggestion and switch margin (share mode defined for many-lever games); decisions name what they serve; dashboard shows weight × need = pressure (spec 2026-09-26-weighted-pillars-design.md; deployed e8da86c, live: Opus wrote weights, decision followed the suggestion)
 - [ ] Directive efficacy: a directive that does not move its pillar's metric (held 2+ years, no faster than otherwise) loses half its pressure; its record goes to the frame and the Strategist (spec ruling 13)
 - [ ] Event boosts to milestone need (war → defence) and share-mode consumers for GalCiv IV / Civ VI
+- [ ] Stellaris levers from the Civ VI lessons (2026-09-27): a record per action kind, buy-out rules (market), crisis response when a war goes badly, deeper mod-steered AI (Governor Bridge), and a planet-development check; research → design with rulings → build → review → deploy (live checks when Stellaris is the running game)
 
 ## Pilot app: observability and control
 - [x] Decision traces: prompt, Gemini thought summaries, tool calls and results, answer, tokens, time (`runs/<id>/traces/`)
@@ -144,6 +145,7 @@
 - [x] Civ VI pillars.toml, hotkeys and screens once the game can be read (tuner relay or saves) and played — pillars.toml in share mode live; hotkeys/screens not needed while the governor plays through the tuner
 - [x] Civ VI governor (spec docs/design/2026-09-26-civ6-governor-design.md): `corpora/civ6/lua/harness.lua` (snapshot, orders, autoplay; checked live), controller `civ6 snapshot|order|autoplay|autoplay-stop|autoplay-status`, `corpora/civ6/pillars.toml` in share mode, `python -m pilot run --game civ6` (first live runs; not yet a service) — deployed 4f6a969, one-turn/3-turn autoplay, review fixes
 - [x] Civ VI governor as a service on mini-rig2 (drop-in `PILOT_GAME=civ6`) with the dashboard following the campaign — running via runs/pilot-settings.json game=civ6 (dashboard Start run offers Civ VI)
+- [x] Civ VI: engine-locking popups (wonder movies, natural wonders, projects, disasters, rock bands) quieted on every library install (`corpora/civ6/popups.toml`, `civ6 quiet-popups`)
 - [ ] Civ VI district and wonder placement (a tile planner, design option 2), so production orders can name them
 - [ ] Civ VI MCP tools for snapshot, orders and autoplay
 - [ ] Civ VI order record: every order followed until it completes, holds or the AI replaces it; `order_outcome` events reloaded per campaign; stick rate per kind in the decision prompt and the Strategist (`[orders]` in pillars.toml); idle research/civic asked again, then filled by the governor; a timed-out autoplay start sent again twice (levers design, rulings 12-16)

@@ -168,6 +168,29 @@ re-installed its own library at its next call.
   refused unchanged. For T43-T61 this matches E1 (the T51 refusal); the rest of E1 (the T35 purchase
   and lost order) lies in the scratch runs.
 
+## 2026-09-27 — a wonder movie stalls autoplay (T134)
+
+- **Stall**: the governor stopped with "T134 did not end within 600 s (14 status polls
+  unanswered)". The screen showed "A WORLD WONDER HAS BEEN CREATED!" (our Pyramids): the game's
+  `WonderBuiltPopup` locks the engine event (`ExclusivePopupManager:Lock` →
+  `UI.ReferenceCurrentEvent()`) until the popup closes, so the AI's turn never finished and the tuner
+  stayed silent. Closed by hand (hover + click on the X), then a queue of old Research/Civic
+  Completed popups (Animal Husbandry, Pottery, Craftsmanship, Foreign Trade…), which do not lock;
+  autoplay had already handed back at T135. Resumed from the dashboard: T137-T138 in ~9 s each.
+- **Which popups lock** (read from the game's UI Lua on mini-rig2, GS 1.0.12.68): WonderBuilt
+  (`Events.WonderCompleted` → `OnWonderCompleted`), NaturalWonder (`NaturalWonderRevealed`),
+  ProjectBuilt (`CityProjectCompletedNarrative` → `OnProjectComplete`), NaturalDisaster
+  (`RandomEventStarted`, `RandomEventOccurred`) and RockBandMovie (`PostTourismBomb` →
+  `OnRockBandConcert`). GS's EraCompletePopup does not lock by default; tech/civic, boost, era
+  review, dedication, World Congress and crisis popups do not use the lock.
+- **Each popup is its own tuner state** (`civ6 lua --state WonderBuiltPopup …`); its handlers are
+  globals there (`_G` itself is nil). `Events.<Event>.Remove(<handler>)` in each of the five states
+  answered `removed true` — the movies are off until the game reloads. The controller must repeat
+  this on every library install (a load resets the UI contexts).
+- **State at T134**: 6 cities, pop 22, score 186, military 218; gold 0 at +1/turn; faith 358.
+  The T134 decision repeated the civic blocker ("civic is None"), asked for Conscription with no
+  free military/wildcard slot (refused by the game) and a Trader in Chengdu that did not start.
+
 ## 2026-09-27 — the AI's own plan and district placement checked live, read-only (T202-T207)
 
 Levers design, checks L2 and L3 (rulings 29 and 30, stage A). The live governor (from `main`) kept
@@ -219,3 +242,15 @@ re-installed its own library at its next call.
   fails closed on it (no action, only the hand-back), so as it stands it would rarely act; the L6
   checklist must measure how often a popup is up at the hand-back and whether closing it first is
   acceptable (issues.md).
+
+## 2026-09-27 — a leader scene holds the turn (T240)
+
+- Autoplay did not start at T240 after six earlier transient "did not start" stops that a resume
+  cleared. The screen showed John Curtin (Australia): "You can imagine how the mustering of your
+  forces along our borders must look?" with *My troops are merely passing by* / *You were right to
+  worry (Declare War)!*. Answered "merely passing by" (the governor has no mandate for wars), then
+  Goodbye (each needed hover + a second click). A "Chinese Empire Makes History" timeline followed;
+  its X ignored clicks, and `OnClose()` in the `HistoricMoments` tuner state closed it
+  (`IsHidden` false → true). Resumed: T243 and T245 played; the AI made the new era's dedication.
+- State at T240: science +56, culture +34.9, gold 523 (+34.9), faith 378, a Crossbowman army;
+  Jerusalem (city-state) and Jiaodong nearby.
