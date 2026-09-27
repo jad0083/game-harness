@@ -33,14 +33,18 @@ from .pillars import ACTION_KINDS, PillarsError, PillarSpec, load_pillars
 from .strategy import (
     Strategy,
     apply_aliases,
+    directive_pressure,
     keep_pinned,
     market_briefing_errors,
     milestone_status,
     pinned_misfits,
-    ranking,
+    pressures,
+    rebalance,
     review_model,
+    shares,
     strategist_instructions,
     strategy_for_prompt,
+    suggestion,
     to_strategy,
     validate,
 )
@@ -91,6 +95,8 @@ class GovernorDecision(BaseModel):
                        "diplomacy_first"] = Field(description="The directive to hold from now on, or 'keep'")
     reason: str = Field(description="One or two sentences citing the briefing numbers that decided it")
     note: str = Field(default="", description="Optional one line for the game journal (war, first colony, crisis...)")
+    serves: str = Field(default="", description="The pillar and milestone this choice works toward, "
+                                                "e.g. 'economy: economy_power >= 1080 by 2250.01.01'")
 
 
 # Reviews that always have to show the strategy is built on our species (the user's rule): the first
@@ -270,20 +276,39 @@ def urgent_changes(before: dict, now: dict) -> list[str]:
     return out
 
 
-def frame_text(strategy: Strategy | None, spec: PillarSpec, milestones: str) -> str:
-    """The strategy frame shown to a decision: the pillar ranking (from the game's spec), focus,
-    stances and any at-risk/missed milestones, replacing the old free-text campaign plan."""
+def frame_text(strategy: Strategy | None, spec: PillarSpec, milestones: str, press: dict | None = None,
+               current: str | None = None) -> str:
+    """The strategy frame shown to a decision: pressure (weight x milestone need) per directive with a
+    suggestion (exclusive mode) or each pillar's share of effort (share mode), focus, stances and any
+    at-risk/missed milestones. `press` is `strategy.pressures(...)`; None means no metrics yet, so
+    pressure = weight."""
     if strategy is None:
         return ""
-    lines = ["STRATEGY FRAME (from the Strategist; choose within it):",
-             f"Directive ranking: {' > '.join(ranking(strategy, spec))}", f"Focus: {strategy.focus}"]
+    lines = ["STRATEGY FRAME (from the Strategist; choose within it):", f"Focus: {strategy.focus}"]
+    if press is None:
+        press = pressures(strategy, spec, lambda _n, _m: "")
+        lines.append("(no metrics yet: pressure = weight)")
+
+    def why(pillar: str) -> str:
+        p = press[pillar]
+        status = p["status"] or ("no data" if strategy.pillars[pillar].milestones else "no milestones")
+        return f"{pillar} {p['weight']} x {status} {p['need']:g}"
+    if spec.weights.mode == "share":
+        sh = shares(press)
+        lines.append("Share of effort (weight x milestone need): " + ", ".join(f"{n} {sh[n]}%" for n in press))
+    else:
+        ranked = directive_pressure(press, spec)
+        lines.append("Directive pressure (weight x milestone need): "
+                     + " > ".join(f"{d} {p:g} ({why(pl)})" for d, p, pl in ranked))
+        sug = suggestion(ranked, current, spec.weights.switch_margin)
+        lines.append(f"Suggested: {'keep ' + current if sug == 'keep' and current else sug}")
     for name, pl in strategy.sorted_pillars():
-        lines.append(f"{pl.priority}. {name}{' (pinned by the human)' if pl.pinned else ''}: {pl.stance}")
+        lines.append(f"{name} (weight {pl.weight}{', pinned by the human' if pl.pinned else ''}): {pl.stance}")
     at_risk = [m for m in milestones.splitlines() if m.endswith(("at_risk", "missed"))]
     if at_risk:
         lines.append("Milestones at risk or missed:\n" + "\n".join(at_risk))
-    lines.append("Pick the highest-ranked directive that fits the briefing, or keep. Choose a directive outside "
-                 "this ranking only for an urgent line (new war, deficit, crisis) and say so in the reason.")
+    lines.append("Take the suggestion unless the briefing gives a reason not to (a new war, a deficit, a crisis); "
+                 "then say why in the reason. Name the pillar and milestone your choice works toward in `serves`.")
     return "\n".join(lines)
 
 
@@ -658,13 +683,14 @@ class Governor:
         self.requests.put(("override", directive))
         self.log.emit("instruction", text=f"Override: {directive}")
 
-    _GENERIC_FIELDS: ClassVar[set[str]] = {"stance", "goals", "milestones", "priority"}
+    _GENERIC_FIELDS: ClassVar[set[str]] = {"stance", "goals", "milestones", "priority", "weight"}
 
     def edit_pillar(self, name: str, fields: dict) -> None:
         """The human's edit: validated like a model strategy under the game's spec (against the last
         briefing this governor read: tech ids, idle resources and real monthly income), then pinned
         and recorded as a new version. Editable: stance, goals, milestones and the action fields the
-        pillar declares in pillars.toml; `priority` is never editable (priorities stay unique). The
+        pillar declares in pillars.toml, and `weight` (the other unpinned pillars are rescaled so the
+        weights still sum to 100); `priority` is derived from the weights and never editable. The
         milestone rule is for model reviews only. The read-modify-write is atomic (locked)."""
         from .strategy import Pillar
         spec = self._spec()
@@ -690,8 +716,10 @@ class Governor:
             new = Pillar.model_validate({**cur, **{k: v for k, v in fields.items() if k in editable},
                                          "pinned": True, "edited_by": "human"})
             trigger = f"edited by human: {name}"
-            s = apply_aliases(self.strategy.model_copy(update={"pillars": {**self.strategy.pillars, name: new},
-                                                              "reason": trigger}), spec)
+            pillars = {**self.strategy.pillars, name: new}
+            if "weight" in fields:
+                pillars = rebalance(pillars, name)
+            s = apply_aliases(Strategy(**{**self.strategy.model_dump(), "pillars": pillars, "reason": trigger}), spec)
             b = self._last_b
             if s.pillars[name].market and b is None:
                 raise ValueError("no briefing yet: market orders can be edited after the first save is read")
@@ -1016,10 +1044,12 @@ class Governor:
         self.log.state.info["directive"] = current or ""
         held = "" if self.last_change is None else f" (held {months(b['date']) - self.last_change} months)"
         extra = self.human.take_all()
+        press = self._pressures() if self.strategy and self.pillars else None
         self.last_briefing = self.game.briefing_text()
         prompt = [f"Decision point: {reason}.",
                   f"Current directive: {current or 'none'}{held}.",
-                  (frame_text(self.strategy, self.pillars, self._milestones_text()) if self.pillars else "")
+                  (frame_text(self.strategy, self.pillars, self._milestones_text(), press, current)
+                   if self.pillars else "")
                   or "No strategy yet.",
                   "Briefing from the latest autosave:", self.last_briefing]
         trend = self._trend(b)
@@ -1063,7 +1093,11 @@ class Governor:
         st.tokens_out += usage.output_tokens or 0
         st.requests += usage.requests or 0
         chosen = d.directive
-        ranked = ranking(self.strategy, self.pillars) if self.strategy and self.pillars else []
+        if self.strategy and self.pillars:
+            by_pressure = press or pressures(self.strategy, self.pillars, lambda _n, _m: "")
+            ranked = [r[0] for r in directive_pressure(by_pressure, self.pillars)]
+        else:
+            ranked = []
         off_frame = bool(ranked) and chosen not in ("keep", current) and chosen not in ranked[:2]
         if off_frame and self.review_requested is None:   # keep the first pending request's trigger text
             self.review_requested = f"off-frame decision: {chosen} ({reason})"
@@ -1093,7 +1127,7 @@ class Governor:
                       seconds=round(time.time() - started, 1),
                       tokens_in=usage.input_tokens, tokens_out=usage.output_tokens)
         self.log.save_trace(n, {**base, "decision": d.directive, "reason": d.reason, "outcome": applied,
-                                "off_frame": off_frame, "seconds": round(time.time() - started, 1),
+                                "off_frame": off_frame, "serves": d.serves, "seconds": round(time.time() - started, 1),
                                 "tokens_in": usage.input_tokens, "tokens_out": usage.output_tokens,
                                 "steps": serialize(result.all_messages())})
         self.store.add_episode(reason, f"{d.directive} ({applied}): {d.reason}", applied, b["date"])
@@ -1239,6 +1273,20 @@ class Governor:
             return self.log.telemetry.metrics_rows(self.log.campaign_id)
         except Exception as e:  # noqa: BLE001 - telemetry is advisory; never block a review
             self.log.emit("briefing_error", error=f"milestones: {e}"[:200])
+            return None
+
+    def _pressures(self) -> dict | None:
+        """Pressure per pillar from this campaign's metrics rows, or None without rows (the frame then
+        uses pressure = weight). Never raises: it runs before every decision."""
+        rows = self._metrics_rows()
+        if not rows or self.strategy is None or self.pillars is None:
+            return None
+        today = rows[-1]["date"]
+        try:
+            return pressures(self.strategy, self.pillars,
+                             lambda _n, m: milestone_status(m, rows, today, self.pillars.row_keys))
+        except Exception as e:  # noqa: BLE001 - advisory; the decision still runs on weights
+            self.log.emit("briefing_error", error=f"pressure: {type(e).__name__}: {e}"[:200])
             return None
 
     def _milestones_text(self) -> str:

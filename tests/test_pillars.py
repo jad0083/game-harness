@@ -187,3 +187,32 @@ def test_missing_directives_toml_gives_clear_error(tmp_path):
 def test_detail_rules_are_checked(tmp_path, line, where):
     with pytest.raises(PillarsError, match=re.escape(where)):
         load_pillars(corpus(tmp_path, MINI.replace("min_milestones_top = 1", f"min_milestones_top = 1\n{line}")))
+
+
+# ---- [weights]: weight bounds, milestone need and how pressure acts (weighted pillars spec) ---------
+
+def test_the_stellaris_weights_table():
+    w = load_pillars(REPO / "corpora/stellaris").weights
+    assert (w.mode, w.min, w.max, w.spread, w.switch_margin) == ("exclusive", 5, 50, 2.0, 1.25)
+    assert w.need == {"met": 0.3, "on_track": 1.0, "at_risk": 1.5, "missed": 2.0}
+
+
+def test_weights_default_when_the_table_is_absent(tmp_path):
+    w = load_pillars(corpus(tmp_path)).weights
+    assert (w.mode, w.min, w.max, w.spread, w.switch_margin) == ("exclusive", 0, 100, 1.0, 1.0)
+    assert w.need == {"met": 1.0, "on_track": 1.0, "at_risk": 1.0, "missed": 1.0}
+
+
+@pytest.mark.parametrize("table, where", [
+    ('mode = "both"', 'weights.mode: must be "exclusive" or "share"'),
+    ("min = 60", "weights.min: must be 0..50 (at most 100 / 2 pillars)"),
+    ("max = 30", "weights.max: must be min..100 and leave room for 100 across 2 pillars"),
+    ("spread = 0.5", "weights.spread: must be a number >= 1"),
+    ("switch_margin = 0.9", "weights.switch_margin: must be a number >= 1"),
+    ("colour = 1", "weights.colour: unknown key"),
+    ("need = { met = -1 }", "weights.need.met: must be a number >= 0"),
+    ("need = { soon = 1 }", "weights.need.soon: unknown key"),
+])
+def test_bad_weights_are_rejected(tmp_path, table, where):
+    with pytest.raises(PillarsError, match=re.escape(where)):
+        load_pillars(corpus(tmp_path, MINI + f"\n[weights]\n{table}\n"))

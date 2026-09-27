@@ -311,7 +311,11 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   table (`tech` → `pick_tech`, `market` → `market_sync`).
 - Strategy layer: `strategy.py` is pure (Pillar, Milestone, MarketOrder, Strategy with
   `ranking()`; `validate` — structural checks on all pillars, briefing checks (idle, income) only on
-  changed unpinned pillars; `keep_pinned`; `milestone_status` from metrics rows). `governor.py`:
+  changed unpinned pillars; `keep_pinned`; `milestone_status` from metrics rows; weights: `Strategy`
+  derives each pillar's rank from its weight and converts a ranked strategy to weights on load
+  (`default_weights`), `pressures` = weight x `[weights.need]` of the pillar's worst milestone status,
+  `directive_pressure` / `suggestion` (exclusive mode) or `shares` (share mode) for `frame_text`,
+  `rebalance` for a human weight edit). `governor.py`:
   `_review_strategy` (role `strategy`, `StrategyReview` output, one corrective retry, `strategy` and
   `strategy_review` events, saved as a decision row with `decision = "strategy_review"` and a
   negative episode, excluded wherever directive decisions are meant), `_maybe_event_review` (12-month

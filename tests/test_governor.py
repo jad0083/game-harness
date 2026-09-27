@@ -20,7 +20,9 @@ _MS_EARLY = {"metric": "systems", "op": ">=", "target": 8, "by": "2226.01.01"}
 def _pillars_body(prios: dict[str, int], stance: str = "{p} by model") -> dict:
     """Strategist answer pillars meeting pillars.toml's detail rules: a milestone on every pillar (two
     dates on priority 1), two goals, and a figure in each stance."""
-    return {p: {"priority": n, "stance": stance.format(p=p) + " (12)", "goals": ["g", "g2"],
+    from pilot.strategy import default_weights
+    w = default_weights(len(prios), 5)
+    return {p: {"weight": w[n - 1], "stance": stance.format(p=p) + " (12)", "goals": ["g", "g2"],
                 "milestones": [_MS_EARLY, _MS] if n == 1 else [_MS]}
             for p, n in prios.items()}
 
@@ -1719,7 +1721,10 @@ def test_decisions_get_the_strategy_frame(setup):
     calls = []
     Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=FunctionModel(respond),
              role_models={"strategy": _strategist(calls)}).run(max_decisions=1)
-    assert any("STRATEGY FRAME" in t and "defend > consolidate_economy > tech_rush > expand > diplomacy_first" in t for t in seen)
+    import re
+    order = re.compile(r"Directive pressure \(weight x milestone need\): defend [\d.]+ .*> consolidate_economy .*> "
+                       r"tech_rush .*> expand .*> diplomacy_first")
+    assert any("STRATEGY FRAME" in t and order.search(t) for t in seen)
 
 
 def test_an_off_frame_choice_is_tagged_and_schedules_a_review(setup):
@@ -2303,7 +2308,7 @@ def test_edit_pillar_rejects_an_invalid_edit_and_leaves_strategy_unchanged(setup
 
 
 def test_edit_pillar_ignores_priority_edits(setup):
-    """Ruling 1: priority is not an editable field (priorities stay unique)."""
+    """Priority is derived from the weights: an edit of it is ignored (edit `weight` instead)."""
     s, log = setup
     calls = []
     g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": _strategist(calls)})
@@ -3517,3 +3522,140 @@ def test_a_failing_claude_code_strategist_falls_back_to_the_next_model(setup, mo
     assert fb and fb[0]["model"] == "claude-code:opus" and fb[0]["fallback"] == "google:gemini-test"
     assert "usage limit" in fb[0]["error"]
     assert g.strategy is not None
+
+
+
+# ---- weighted pillars: pressure in the decision frame (weighted pillars spec) ----------------------
+
+def _press(**p):
+    base = {"defence": 30, "economy": 22, "technology": 16, "expansion": 12, "diplomacy": 8, "government": 7, "society": 5}
+    need = {"met": 0.3, "on_track": 1.0, "at_risk": 1.5, "missed": 2.0}
+    out = {}
+    for name, w in base.items():
+        st = p.get(name, "on_track")
+        out[name] = {"weight": w, "need": need[st], "status": st, "pressure": round(w * need[st], 1)}
+    return out
+
+
+def test_the_frame_shows_directive_pressure_and_a_suggestion():
+    from pilot.governor import frame_text
+    text = frame_text(_strategy_with(), STELLARIS, "(none)", _press(defence="met", economy="at_risk"), current="defend")
+    assert "Directive pressure (weight x milestone need): consolidate_economy 33 (economy 22 x at_risk 1.5) > " \
+           "tech_rush 16 (technology 16 x on_track 1) > expand 12" in text
+    assert "Suggested: consolidate_economy" in text
+    assert "Directive ranking" not in text
+    kept = frame_text(_strategy_with(), STELLARIS, "(none)", _press(), current="defend")
+    assert "Suggested: keep defend" in kept
+
+
+def test_the_frame_in_share_mode_shows_shares_of_effort():
+    import dataclasses
+
+    from pilot.governor import frame_text
+    spec = dataclasses.replace(STELLARIS, weights=dataclasses.replace(STELLARIS.weights, mode="share"))
+    text = frame_text(_strategy_with(), spec, "(none)", _press(), current=None)
+    assert "Share of effort (weight x milestone need): defence 30%, economy 22%" in text
+    assert "Suggested" not in text
+
+
+def test_the_frame_without_metrics_says_pressure_is_the_weight():
+    from pilot.governor import frame_text
+    text = frame_text(_strategy_with(), STELLARIS, "(none)", None, current=None)
+    assert "no metrics yet: pressure = weight" in text and "defend 21 (defence 21 x no milestones 1)" in text
+
+
+def test_the_off_frame_cutoff_follows_pressure_not_weight(setup, monkeypatch):
+    """A directive two places down by weight is in the frame when its pillar's pressure is top 2."""
+    s, log = setup
+    game = FakeStellaris([briefing("2200.01.01")])
+    g = Governor(s, game, log, model=decisions("tech_rush"), role_models={"strategy": _strategist([])})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    monkeypatch.setattr(g, "_pressures", lambda: _press(technology="missed", defence="met"))
+    g.run(max_decisions=1)
+    trace = [e for e in log.recent if e["kind"] == "trace" and e.get("decision") == "tech_rush"][-1]
+    assert trace["off_frame"] is False
+
+
+def test_the_decision_records_what_it_serves(setup):
+    s, log = setup
+
+    def respond(messages, info):
+        if _is_strategy_review(info):
+            return _quiet_no_change(info)
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {
+            "directive": "keep", "reason": "r", "serves": "economy: economy_power >= 1080 by 2250.01.01"})])
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=FunctionModel(respond))
+    g.run(max_decisions=1)
+    trace = [e for e in log.recent if e["kind"] == "trace"][-1]
+    assert trace["serves"] == "economy: economy_power >= 1080 by 2250.01.01"
+
+
+def test_a_weight_edit_rescales_the_other_unpinned_pillars(setup):
+    s, log = setup
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": _strategist([])})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    g.edit_pillar("society", {"weight": 20})
+    ws = {n: pl.weight for n, pl in g.strategy.pillars.items()}
+    assert ws["society"] == 20 and sum(ws.values()) == 100 and g.strategy.pillars["society"].pinned
+    assert ws["defence"] > ws["economy"] > ws["government"], "the others keep their order"
+
+
+def test_a_weight_edit_that_breaks_a_bound_is_rejected(setup):
+    s, log = setup
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": _strategist([])})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    before = g.strategy
+    with pytest.raises(ValueError, match="weight must be 5..50"):
+        g.edit_pillar("society", {"weight": 60})
+    assert g.strategy is before
+
+
+def test_api_strategy_serves_weights_and_pressure_for_a_ranked_strategy(setup, tmp_path):
+    """A strategy stored with priorities only comes back with converted weights and each pillar's pressure."""
+    import shutil
+
+    from pilot.dashboard import make_app
+    stored = {"pillars": {p: {"priority": n, "stance": f"{p} 1", "goals": ["g"],
+                              "milestones": [{"metric": "systems", "op": ">=", "target": 2, "by": "2250.01.01"}]
+                              if p == "economy" else []} for p, n in PRIOS.items()}, "focus": "hold"}
+    tel, corpora = _viewer_campaign(tmp_path, "stellaris", stored, None)
+    shutil.rmtree(corpora / "stellaris")
+    shutil.copytree(REPO / "corpora/stellaris", corpora / "stellaris",
+                    ignore=shutil.ignore_patterns("data", "docs", "learned", "templates", "mod", "res"))
+    body = _get_strategy(make_app(None, tmp_path / "runs", tel, corpora=corpora), "stellaris/c1")
+    ws = {n: p["weight"] for n, p in body["current"]["pillars"].items()}
+    assert ws == {"defence": 21, "economy": 19, "technology": 17, "expansion": 14, "diplomacy": 12,
+                  "government": 10, "society": 7}
+    assert body["pressure"]["economy"] == {"weight": 19, "need": 0.3, "status": "met", "pressure": 5.7}, "systems 3 >= 2"
+    assert body["pressure"]["defence"]["pressure"] == 21.0
+
+
+def test_the_frame_without_metrics_says_no_data_for_pillars_with_milestones():
+    from pilot.governor import frame_text
+    from pilot.strategy import Milestone, Pillar
+    m = Milestone(metric="systems", op=">=", target=3, by="2250.01.01")
+    text = frame_text(_strategy_with(defence=Pillar(priority=1, stance="d", milestones=[m])), STELLARIS, "(none)", None)
+    assert "(defence 21 x no data 1)" in text
+
+
+def test_a_weight_edit_during_a_review_keeps_the_weights_summing_to_100(setup, monkeypatch):
+    """The human pins a new weight after the Strategist's answer was validated but before it is
+    committed (the journal note in between); the accepted review keeps the pin and rescales the rest
+    instead of saving weights that no longer sum to 100."""
+    s, log = setup
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": _strategist([])})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    real_note, edited = g.journal.note, {"done": False}
+
+    def note(text, date):
+        if text.startswith("Strategy review") and not edited["done"]:
+            edited["done"] = True
+            g.edit_pillar("society", {"weight": 20})
+        return real_note(text, date)
+    monkeypatch.setattr(g.journal, "note", note)
+    g._review_strategy(briefing("2200.02.01"), "requested from the dashboard")
+    assert edited["done"]
+    assert [e["accepted"] for e in log.recent if e["kind"] == "strategy_review"][-1] is True
+    ws = {n: pl.weight for n, pl in g.strategy.pillars.items()}
+    assert ws["society"] == 20 and sum(ws.values()) == 100
+    assert sorted(pl.priority for pl in g.strategy.pillars.values()) == list(range(1, 8))

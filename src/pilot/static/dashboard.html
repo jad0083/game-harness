@@ -229,6 +229,19 @@
   .p-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
   .pillar h3 { margin: 0; font-size: 17px; font-family: var(--serif); font-weight: 400; font-variation-settings: "opsz" 24; }
   .p-num { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  .p-weight { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 2px 0 10px; font-size: 13px;
+              color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .p-weight b { color: var(--ink); font-weight: 600; }
+  .p-need::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px;
+                    vertical-align: 1px; background: var(--muted); }
+  .p-need.good::before { background: var(--good); } .p-need.warn::before { background: var(--warn); }
+  .p-need.bad::before { background: var(--bad); }
+  .p-share { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); }
+  .p-bar { width: 120px; height: 6px; border-radius: 3px; background: var(--grid); overflow: hidden; }
+  .p-bar i { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
+  .t-serves { margin: -6px 0 12px; font-size: 13.5px; color: var(--ink-2); }
+  .p-form .weight-row { display: flex; align-items: center; gap: 10px; }
+  .p-form .weight-row input { width: 5.5em; flex: none; }
   .pillar .stance { margin: 6px 0 0; font-family: var(--serif); font-size: 15.5px; line-height: 1.5; max-width: 60ch; }
   .pillar .goals { margin: 6px 0 0; padding-left: 18px; font-size: 13.5px; color: var(--ink-2); }
   .pillar .goals li { margin: 2px 0; }
@@ -608,7 +621,18 @@ function milestoneRow(m) {
     <span class="tag${st[0] ? " " + st[0] : ""}" title="${esc(st[2])}"><i aria-hidden="true">${st[1]}</i>${esc(st[2])}</span></li>`;
 }
 
-function pillarCard(name, pl, ms, byId) {
+// The pillar's pull on decisions, spelled out: weight x milestone need = pressure, and its share of
+// all pressure as a bar. Without metrics (no pressure yet) only the weight shows.
+function weightLine(pl, p, total) {
+  if (!pl.weight) return "";
+  if (!p) return `<div class="p-weight"><span>Weight <b>${esc(pl.weight)}</b></span></div>`;
+  const st = MS_STATUS[p.status] || ["", "", (pl.milestones || []).length ? "no data" : "no milestones"];
+  const share = total ? Math.round(100 * p.pressure / total) : 0;
+  return `<div class="p-weight"><span>Weight <b>${esc(pl.weight)}</b> × <span class="p-need ${st[0]}">${esc(st[2])} ${esc(p.need)}</span> = pressure <b>${esc(fmt(p.pressure))}</b></span>
+    <span class="p-share"><span class="p-bar" role="img" aria-label="${share}% of all pressure"><i style="width:${share}%"></i></span>${share}% of all pressure</span></div>`;
+}
+
+function pillarCard(name, pl, ms, byId, p = null, total = 0) {
   const def = byId[name] || {};
   const acts = pillarActions(byId, name);
   const goals = (pl.goals || []).map((g) => `<li>${esc(g)}</li>`).join("");
@@ -617,8 +641,9 @@ function pillarCard(name, pl, ms, byId) {
   if (acts.includes("tech") && (pl.prefer_techs || []).length) actions.push(`Prefers: ${esc(pl.prefer_techs.join(", "))}`);
   if (acts.includes("market")) (pl.market || []).forEach((o) => actions.push(`Market: ${esc(o.side)} ${esc(o.resource)} ${fmt(o.amount)}/month`));
   return `<article class="pillar" data-pillar="${esc(name)}">
-    <div class="p-head"><h3 title="${esc(def.description || "")}">${esc(pillarLabel(byId, name))}</h3><span class="p-num">priority ${esc(pl.priority)}</span>
+    <div class="p-head"><h3 title="${esc(def.description || "")}">${esc(pillarLabel(byId, name))}</h3><span class="p-num">${pl.weight ? "rank" : "priority"} ${esc(pl.priority)}</span>
       ${pl.pinned ? `<span class="tag" title="Pinned by a human edit: a review will never change it">pinned</span>` : ""}</div>
+    ${weightLine(pl, p, total)}
     <p class="stance">${esc(pl.stance || "")}</p>
     ${goals ? `<ul class="goals">${goals}</ul>` : ""}
     ${msRows ? `<ul class="ms-list">${msRows}</ul>` : ""}
@@ -649,6 +674,7 @@ function openEditForm(name, pillar, byId, spec) {
   const limits = (spec && spec.actions) || {};
   const slot = art.querySelector(".p-form-slot");
   slot.innerHTML = `<form class="p-form">
+    ${pillar.weight ? `<label>Weight<span class="weight-row"><input name="weight" type="number" min="${esc((spec && spec.weights && spec.weights.min) || 1)}" max="${esc((spec && spec.weights && spec.weights.max) || 100)}" value="${esc(pillar.weight)}" data-was="${esc(pillar.weight)}"><span>The other unpinned pillars rescale so the total stays 100.</span></span></label>` : ""}
     <label>Stance<textarea name="stance">${esc(pillar.stance || "")}</textarea></label>
     <label>Goals (one per line, up to 3)<textarea name="goals">${esc((pillar.goals || []).join("\n"))}</textarea></label>
     ${acts.includes("tech") ? `<label>Prefer techs (comma list, up to ${esc((limits.tech || {}).max_items || "")})<input name="prefer_techs" value="${esc((pillar.prefer_techs || []).join(", "))}"></label>` : ""}
@@ -666,6 +692,7 @@ function openEditForm(name, pillar, byId, spec) {
 async function submitEdit(name, slot, onSaved) {
   const form = slot.querySelector("form");
   const fields = { stance: form["stance"].value, goals: form["goals"].value.split("\n").map((s) => s.trim()).filter(Boolean).slice(0, 3) };
+  if (form["weight"] && form["weight"].value !== form["weight"].dataset.was) fields.weight = +form["weight"].value;
   if (form["prefer_techs"]) fields.prefer_techs = form["prefer_techs"].value.split(",").map((s) => s.trim()).filter(Boolean);
   const rows = form.querySelectorAll(".market-row").length;
   if (rows) {
@@ -717,18 +744,22 @@ function renderStrategy(data) {
   }
   const spec = data.spec || null, byId = specIndex(spec);
   const pillars = Object.entries(cur.pillars || {}).sort((a, b) => (a[1].priority || 0) - (b[1].priority || 0));
-  const ranking = pillars.map(([name]) => byId[name] && byId[name].directive).filter(Boolean).map(human).join(", ");
+  const press = data.pressure || {}, totalP = Object.values(press).reduce((t, p) => t + p.pressure, 0);
+  const byPressure = Object.keys(press).length
+    ? [...pillars].sort((a, b) => ((press[b[0]] || {}).pressure || 0) - ((press[a[0]] || {}).pressure || 0)) : pillars;
+  const ranking = byPressure.map(([name]) => byId[name] && byId[name].directive
+    ? `${human(byId[name].directive)}${press[name] ? " " + fmt(press[name].pressure) : ""}` : "").filter(Boolean).join(", ");
   const last = (data.history && data.history[0]) || {};
   const past = (data.history || []).slice(1);
   const msByPillar = {};
   (data.milestones || []).forEach((m) => { (msByPillar[m.pillar] = msByPillar[m.pillar] || []).push(m); });
 
   let h = `<div class="strategy-head">
-    <div class="t-meta"><span>Focus: ${esc(cur.focus || "–")}</span><span>Ranking: ${esc(ranking || "–")}</span></div>
+    <div class="t-meta"><span>Focus: ${esc(cur.focus || "–")}</span><span>${Object.keys(press).length ? "By pressure" : "Ranking"}: ${esc(ranking || "–")}</span></div>
     ${cur.identity ? `<p class="t-reason">Built on: ${md(tidy(cur.identity))}</p>` : ""}
     <div class="t-when">Last review: ${esc(last.date || "–")}, ${esc(tidy(last.trigger || ""))}, ${esc(last.model || "–")}</div>
   </div>`;
-  h += pillars.map(([name, pl]) => pillarCard(name, pl, msByPillar[name] || [], byId)).join("");
+  h += pillars.map(([name, pl]) => pillarCard(name, pl, msByPillar[name] || [], byId, press[name] || null, totalP)).join("");
   if (past.length) {
     h += `<details class="strategy-history"><summary>History (${past.length} version${past.length === 1 ? "" : "s"})</summary>
       <table class="data"><thead><tr><th>Date</th><th>Trigger</th><th>Model</th><th>Reason</th></tr></thead><tbody>` +
@@ -1075,6 +1106,7 @@ function renderTrace(d) {
   let h = `<div class="t-when">${esc(d.date)}, ${esc(tidy(d.trigger || ""))}</div>
     <div class="t-decision">${kept ? "Kept " + esc(human(d.current || "no directive")) : esc(human(d.decision))}</div>
     <p class="t-reason">${md(tidy(d.reason || ""))}</p>
+    ${t.serves ? `<p class="t-serves">Works toward: ${esc(t.serves)}</p>` : ""}
     <div class="t-meta"><span>${esc(d.model === "human" ? "Your decision" : modelLabel(d))}</span><span>${esc(d.outcome || "")}</span>
     ${d.tokens_in ? `<span>${fmt(d.tokens_in)} tokens in, ${fmt(d.tokens_out)} out</span>` : ""}${d.seconds ? `<span>${esc(d.seconds)} s</span>` : ""}</div>`;
   if (d.result) h += afterText(d.result).replace('class="after"', 'class="after" style="margin:-4px 0 14px"');

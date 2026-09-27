@@ -252,9 +252,9 @@ dashboard is on :8790).
   decision*; *Decide now* (pauses and decides immediately); *Standing orders* (in every decision
   until removed, saved per campaign); *Override* (apply a directive yourself, recorded as yours);
   Yes/No when the model asks for confirmation (e.g. `prepare_war`).
-- **Strategy**: the campaign's pillar strategy — focus, directive ranking, one card per pillar
-  (economy, expansion, technology, diplomacy, defence, government, society) in priority order with
-  its stance, goals, milestones and their status (met, on track, at risk, missed), and actions
+- **Strategy**: the campaign's pillar strategy — focus, directives by pressure, one card per pillar
+  (economy, expansion, technology, diplomacy, defence, government, society), heaviest first, with
+  its weight, pressure and share of all pressure (a bar), its stance, goals, milestones and their status (met, on track, at risk, missed), and actions
   (preferred techs, a monthly market order). *Edit* changes a pillar and pins it (the Strategist
   never changes a pinned pillar; the edit is checked like a model strategy and a rejection shows
   its reason); *Unpin* hands it back; *Review strategy now* runs a review at once; *History* lists
@@ -314,10 +314,14 @@ pillars below; a new game adds its own file and action tools.
 
 **Strategy layer** (`src/pilot/strategy.py`, `governor.py`): a **Strategist** (model role
 `strategy`; give it a strong reasoning model) keeps one strategy per campaign: seven pillars with a
-unique priority, a stance, goals, measurable milestones (`{metric, op, target, by}`, status computed
+weight (all sum to 100), a stance, goals, measurable milestones (`{metric, op, target, by}`, status computed
 from telemetry) and two actions — preferred techs (technology) and at most one small monthly market
 order (economy; sell only an idle resource, at most 25 and 20% of its income; trade is not a market
-resource). It reviews at the start of a campaign without a strategy, every `PILOT_RETRO_EVERY`
+resource). Each decision sees every directive's **pressure** = its pillar's weight x milestone need
+(met 0.3, on track 1, at risk 1.5, missed 2; `[weights]` in pillars.toml) and a suggestion: the top
+directive, or keep while the current one is within the switch margin; the model names what its choice
+serves (`serves`, shown in the trace). Editing a pillar's weight rescales the other unpinned pillars.
+Strategies stored with priorities convert to weights on load. It reviews at the start of a campaign without a strategy, every `PILOT_RETRO_EVERY`
 decisions (default 5; "no change" writes no version), on big events (war started or ended, crisis,
 colony lost, boxed in, military fell by half, a milestone turned missed, an off-frame decision; at
 most one per 12 in-game months) and on *Review strategy now*. Its output is validated (invalid →

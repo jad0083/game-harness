@@ -151,7 +151,8 @@ pop/faction numbers as approximate until generated data exists.
 
 The governor model does not micro-manage; it picks **one** standing directive and the
 native AI executes it. Since the strategy layer, the directive is chosen within the **strategy
-frame**: the Strategist's pillar priorities rank the directives (economy → `consolidate_economy`,
+frame**: the Strategist's pillar weights, times how far behind each pillar's milestones are, give
+each directive a pressure (economy → `consolidate_economy`,
 expansion → `expand`, technology → `tech_rush`, diplomacy → `diplomacy_first`, defence → `defend`),
 and the harness itself carries out the preferred tech picks and the monthly market order. The game's AI plays the empire through **`human_ai`** (we stay the
 player; `stellaris take-control` switches it on and checks the console's reply). **Observer mode
