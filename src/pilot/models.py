@@ -207,7 +207,7 @@ def check_pool(models) -> list[dict]:
     return out
 
 
-GAMES = ("stellaris", "galciv4")
+GAMES = ("stellaris", "galciv4", "civ6")
 SPEEDS = ("slowest", "slow", "normal", "fast", "fastest")
 
 

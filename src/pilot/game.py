@@ -67,6 +67,7 @@ class McpGame:
                  title: str = "Galactic Civilizations"):
         self.cmd = [str(controller), "--corpus", str(corpus), "mcp"]
         self.env = {"GAME_AGENT_URL": agent_url, "PATH": "/usr/bin:/bin"}
+        token = token or os.environ.get("GAME_AGENT_TOKEN", "").strip() or None   # the PC's own token first
         if token:
             self.env["GAME_AGENT_TOKEN"] = token
         if os.environ.get("GAME_RESOLUTION"):      # the host's screen size selects res/<W>x<H>.toml
