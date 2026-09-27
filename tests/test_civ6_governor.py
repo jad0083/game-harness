@@ -898,6 +898,30 @@ def test_a_timed_out_autoplay_start_is_sent_again(setup):
     assert "sent again (1 of 2)" in events and "sent again (2 of 2)" in events and '"needs_attention"' not in events
 
 
+def test_a_lost_start_is_sent_again_when_turn_ready_shows_only_a_popup_and_some_polls_go_unanswered(setup):
+    # live 2026-09-27 T360: the reply was lost, the start never ran, turn-ready showed only an old
+    # Civic Completed card and missed some polls; the run waited 20 minutes for a start that never came
+    game = FakeCiv6(FIXTURE, index=INDEX, lost_start_not_run=1, popup=True, turn_ready_silent=2)
+    g = governor(setup, game, orders_model([]))
+    g.status_poll_s, g.start_grace_s, g.turn_deadline_s = 0.01, 0.05, 30.0
+    assert not run_briefly(g), "waited for the human"
+    events = (setup[0].runs_dir / "civ1" / "events.jsonl").read_text()
+    assert "sent again (1 of 2)" in events
+    assert game.state["turn"] >= FIXTURE["turn"] + 3
+
+
+def test_a_lost_start_that_turn_ready_cannot_clear_stops_in_bounded_time(setup):
+    import time
+    game = FakeCiv6(FIXTURE, index=INDEX, lost_start_not_run=3, turn_ready_silent=1)
+    g = governor(setup, game, orders_model([]))
+    g.status_poll_s, g.start_grace_s, g.turn_deadline_s = 0.01, 0.05, 600.0
+    t0 = time.time()
+    assert run_briefly(g, limit_s=20.0), "an unclear lost start ends with the human"
+    assert time.time() - t0 < 15, "not after the 600 s turn deadline"
+    assert "did not start" in g.log.recent[-1].get("reason", "") or any(
+        "did not start" in e.get("reason", "") for e in g.log.recent if e["kind"] == "needs_attention")
+
+
 def test_a_start_that_never_runs_after_two_retries_waits_for_the_human(setup):
     game = FakeCiv6(FIXTURE, index=INDEX, lost_start_not_run=3)
     g = governor(setup, game, orders_model([]))

@@ -172,7 +172,8 @@ class FakeCiv6:
     target takes the predicted damage and dies at 100, the attacker spends its attack, a retreat
     moves the unit) unless `stand_ignored`; `stand_lost_reply` loses the step's reply after it ran;
     `ls_fails` fails that many `ls_state` reads first; `popup` makes `turn_ready` (and every step)
-    not ready; `pin_ignored` leaves `finish_moves` without effect.
+    not ready; `pin_ignored` leaves `finish_moves` without effect; `turn_ready_silent` makes every
+    n-th `turn_ready` call time out (1: every call), as the tuner does right after hand-backs.
     The AI's strategy log: `ai_log` rows (turn, player, strategy, status); `ai_strategies` returns
     those from `offset` on (the offset counts rows here, bytes in the real log)."""
 
@@ -183,7 +184,8 @@ class FakeCiv6:
                  lost_start_reply: bool = False, blink: bool = False, lost_start_not_run: int = 0,
                  ls: dict | None = None, stand: list[dict] | None = None, stand_effect=None,
                  stand_ignored: bool = False, stand_lost_reply: bool = False, ls_fails: int = 0,
-                 popup: bool = False, pin_ignored: bool = False, ai_log: list[tuple] | None = None):
+                 popup: bool = False, pin_ignored: bool = False, ai_log: list[tuple] | None = None,
+                 turn_ready_silent: int = 0):
         self.state = copy.deepcopy(base)
         self.events = dict(events or {})
         self.replies = dict(replies or {})
@@ -201,6 +203,7 @@ class FakeCiv6:
         self.stand_effect = stand_effect or _stand_apply
         self.stand_ignored, self.stand_lost_reply, self.ls_fails = stand_ignored, stand_lost_reply, ls_fails
         self.popup, self.pin_ignored = popup, pin_ignored
+        self.turn_ready_silent, self._turn_ready_calls = turn_ready_silent, 0
         self.ai_log = list(ai_log or [])
         self.actions: list[tuple] = []
         self.active = False
@@ -295,6 +298,9 @@ class FakeCiv6:
     def turn_ready(self) -> dict:
         self.actions.append(("turn_ready", self.active))
         self._tick("turn_ready")
+        self._turn_ready_calls += 1
+        if self.turn_ready_silent and self._turn_ready_calls % self.turn_ready_silent == 0:
+            raise TimeoutError("turn-ready: no reply")
         why = (["autoplay active"] if self.active else []) + (["on screen: TechCivicCompletedPopup"] if self.popup else [])
         return {"ok": True, "ready": not why, "why": why, "turn": self.state["turn"]}
 

@@ -466,8 +466,20 @@ class Civ6Governor(Governor):
                 if state == "wait":
                     self.log.emit("briefing_error", error=f"{e}; its reply was lost and turn-ready reads {seen}: it may "
                                                           "be running, so it is waited for, not sent again"[:300])
-                    self._wait_turns(turn, n, started, float("inf"))
-                    return
+                    try:
+                        # bounded: a start that runs shows within a few grace periods (T360 waited 20 minutes
+                        # for one that never ran)
+                        self._wait_turns(turn, n, time.time(), self.start_grace_s * 6)
+                        return
+                    except _NotStarted:
+                        state, seen = self._after_lost_start(turn)
+                    if isinstance(state, int):
+                        self.log.emit("turn", turn=state, turns=state - turn, seconds=round(time.time() - started, 1),
+                                      note="read by turn-ready after a lost start reply")
+                        return
+                    if state == "wait":
+                        raise Civ6Stuck(f"autoplay did not start at T{turn}: its reply was lost and turn-ready still "
+                                        f"reads {seen}"[:400]) from e
                 self.log.emit("briefing_error", error=f"{e}; its reply was lost and turn-ready reads the game idle at "
                                                       f"T{turn}, so it is sent again ({attempt + 1} of "
                                                       f"{self.start_retries})"[:300])
@@ -483,7 +495,7 @@ class Civ6Governor(Governor):
         while True:
             try:
                 r = self.game.turn_ready()
-            except Exception as e:  # noqa: BLE001 - no answer: the AI may be playing
+            except Exception as e:  # noqa: BLE001 - no answer: proves neither idle nor playing
                 r, seen = None, f"no answer ({type(e).__name__})"
             if r is not None:
                 why, now_turn = [str(w) for w in r.get("why") or []], r.get("turn")
@@ -499,8 +511,8 @@ class Civ6Governor(Governor):
                     idle_since = time.time()
                 elif time.time() - idle_since >= self.start_grace_s:
                     return "resend", seen
-            else:
-                idle_since = None
+            # an unanswered poll leaves the idle clock running: the tuner often misses polls right after
+            # a hand-back (T360), and a running start shows as a playing reason on an answered poll
             if time.time() > deadline:
                 return "wait", seen
             time.sleep(max(self.status_poll_s, self.start_grace_s / 5))
