@@ -11,7 +11,7 @@ STATIC = Path(__file__).resolve().parents[1] / "src" / "pilot" / "static"
 # rules whose text is the model's own words: its reason, thinking, answer, stances, the strategy
 # summary and plan, its Talk replies, and the stance a human edits in its place
 MODEL_VOICE = {".reason", ".t-decision", ".t-reason", ".step.thinking p", ".step.text p", ".plan-text",
-               ".pillar h3", ".pillar .stance", ".p-form textarea", ".msg.model p"}
+               ".pillar h3", ".pillar .stance", ".p-form textarea", ".msg.model p", ".s-summary"}
 
 
 def css(page: str) -> str:

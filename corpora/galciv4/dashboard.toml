@@ -1,0 +1,29 @@
+# Galactic Civilizations IV on the dashboard (docs/design/2026-09-27-dashboard-v2-design.md, rulings 2,
+# 3 and 29). The pilot plays the screen itself, one blocker at a time: no figures, chart or rivals
+# until it records metrics, and the levers tab is the screen (the latest frame).
+
+[game]
+name = "Galactic Civilizations IV"
+short = "GalCiv IV"
+time_unit = "turn"
+cadence = ""                       # per blocker, not on a schedule
+decision_noun = "clicks on the screen"
+levers = "screen"
+levers_label = "Screen"
+frames = true
+speed = false
+override = false
+chart_title = "Over time"
+talk_placeholder = "Leave a note for the next blocker"
+decide_now_help = ""
+stop_confirm = "The pilot stops after this action."
+decisions_help = "Blockers read from screenshots (GalCiv IV pilot)."
+
+[recovery.screen]
+title = "A blocker the pilot cannot clear"
+steps = ["Look at the game: a dialog, a turn that keeps processing (the GC4 turn hang, AGENTS.md section 7).",
+         "Clear it by hand, then Resume."]
+
+[recovery.control_failed]
+title = "The autopilot failed"
+steps = ["Read What happened below.", "Fix the game or the agent, then Resume."]

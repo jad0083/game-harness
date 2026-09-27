@@ -21,6 +21,7 @@ Telemetry (runs/telemetry.sqlite, across runs and models):
     GET  /api/strategy?campaign=<id>            current pillar strategy, milestone status, version history, the game's pillars spec
     GET  /api/models                            models to offer, and the saved choice for the next run
     GET  /api/pc                                gaming PC: agent reachable, version, games open, game in front
+    GET  /api/view?campaign=<id>|game=<game>    how the page speaks about the game (corpora/<game>/dashboard.toml)
     POST /api/settings  {"models": [{"model", "thinking"}, ...], "rotate"}   the model list (live too); older {"model", "thinking", "fallback"}
     POST /api/run  {"game", "speed", "months"}   start a pilot run (game-pilot.service); viewer only
 
@@ -61,6 +62,7 @@ from .auth import (
     lan_address,
 )
 from .events import acting
+from .view import Names, Views
 
 if TYPE_CHECKING:
     from .pillars import PillarSpec
@@ -208,6 +210,10 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
     tel = telemetry or (log.telemetry if log else None)
     corpora = corpora or (REPO / "corpora")
     live_url = None                  # set for the viewer: finds a live run to refuse a second start
+    views, names = Views(corpora), Names(corpora)
+
+    def game_of_campaign(cid: str) -> str:
+        return cid.split("/", 1)[0] if cid else ""
 
     def campaign_spec(cid: str, stored: bool = True) -> tuple[PillarSpec | None, str]:
         """The pillars spec of a campaign's game (id '<game>/<name>'), and "" for no error; or
@@ -288,10 +294,27 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
         r["result"] = json.loads(r["result"]) if r["result"] else None
         return web.json_response(r)
 
+    def readable_rows(rows: list[dict], game: str) -> list[dict]:
+        """Rivals keep their id and get a readable name (CIVILIZATION_GERMANY -> Germany)."""
+        for r in rows:
+            for n in r.get("neighbours") or []:
+                if isinstance(n, dict) and n.get("name") != (name := names.name(game, n.get("name"))):
+                    n["id"], n["name"] = n["name"], name
+        return rows
+
     async def api_metrics(request):
         where, args = scope(request)
-        rows = await q(f"SELECT date, month, data FROM metrics WHERE {where} ORDER BY month, t", args)
-        return web.json_response([{"date": r["date"], "month": r["month"], **json.loads(r["data"])} for r in rows])
+        rows = await q(f"SELECT date, month, campaign_id, data FROM metrics WHERE {where} ORDER BY month, t", args)
+        game = game_of_campaign(rows[0]["campaign_id"] or "") if rows else ""
+        out = [{"date": r["date"], "month": r["month"], **json.loads(r["data"])} for r in rows]
+        return web.json_response(await asyncio.to_thread(readable_rows, out, game))
+
+    async def api_view(request):
+        """How the page speaks about a game: the campaign's (or the live run's) dashboard.toml."""
+        game = request.query.get("game") or game_of_campaign(request.query.get("campaign", "")) \
+            or (getattr(getattr(pilot, "s", None), "game", None) if pilot else None) \
+            or game_of_campaign(log.campaign_id or "" if log else "") or ((log.state.info or {}).get("game", "") if log else "")
+        return web.json_response(await asyncio.to_thread(views.get, game))
 
     async def api_plans(request):
         where, args = scope(request)
@@ -330,8 +353,16 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
                                                                   if (d := spec.directive_of(name)) and rows else None))
             if s is not None:   # weights as the governor sees them (a ranked strategy converts on load)
                 cur = {**s.model_dump(), "reason": cur.get("reason", "")}
+        ids = {i for pl in ((cur or {}).get("pillars") or {}).values() if isinstance(pl, dict)
+               for v in pl.values() if isinstance(v, list) for i in v if isinstance(i, str)}
+        # the latest review results (accepted, rejected, skipped), newest first, for the Review button
+        reviews = await q("SELECT e.t, e.kind, e.data FROM events e JOIN runs r ON r.id = e.run_id WHERE r.campaign_id=?"
+                          " AND e.kind IN ('strategy_review', 'strategy_rejected', 'strategy_review_skipped')"
+                          " ORDER BY e.t DESC LIMIT 8", (cid,))
         return web.json_response({"current": cur, "milestones": ms, "history": hist, "spec": public, "error": error,
-                                  "pressure": press})
+                                  "pressure": press,
+                                  "names": await asyncio.to_thread(names.names, game_of_campaign(cid), sorted(ids)),
+                                  "reviews": [{"t": r["t"], "kind": r["kind"], **json.loads(r["data"])} for r in reviews]})
 
     models_cache: dict = {}
 
@@ -411,7 +442,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
         return web.json_response(data)
 
     api = [web.get("/api/campaigns", api_campaigns), web.get("/api/decisions", api_decisions),
-           web.get("/api/pc", api_pc),
+           web.get("/api/pc", api_pc), web.get("/api/view", api_view),
            web.post("/api/run", api_run),
            web.get("/api/models", api_models), web.post("/api/settings", api_settings),
            web.get("/api/plans", api_plans), web.get("/api/strategy", api_strategy),

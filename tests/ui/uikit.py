@@ -28,9 +28,34 @@ CONTEXTS = {
 PC_CIV6 = {"online": True, "version": "1.6.1", "games": ["civ6"], "game_in_front": True, "front_game": "civ6"}
 MODELS = ["google:gemini-3.8-flash", "google:gemini-3.1-pro-preview"]
 CIV6_METRICS = [{"date": f"T{t}", "turn": t, "score": 40 + t, "military": 300 + 5 * t, "science": 20.5 + t / 10,
-                 "culture": 12.0 + t / 20, "gold": 200 + t, "faith": 60 + t, "cities": 5 + t // 20,
-                 "techs_known": 20 + t // 3, "civics_known": 18 + t // 4, "pop": 30 + t // 2}
+                 "culture": 12.0 + t / 20, "faith_yield": 4.0, "gold_yield": 9.5 + t / 10, "production": 30 + t / 5,
+                 "gold": 200 + t, "faith": 60 + t, "cities": 5 + t // 20, "techs_known": 20 + t // 3,
+                 "civics_known": 18 + t // 4, "pop": 30 + t // 2, "wars": 1 if t >= 55 else 0,
+                 "peers": {"score": {"rank": 1, "median": 80, "ours": 40 + t}, "military": {"rank": 2, "median": 560, "ours": 300 + 5 * t},
+                           "techs": {"rank": 4, "median": 42, "ours": 20 + t // 3}, "civics": {"rank": 2, "median": 30, "ours": 18 + t // 4},
+                           "cities": {"rank": 2, "median": 6, "ours": 5 + t // 20}},
+                 "peer_count": 3,
+                 "neighbours": [{"name": "CIVILIZATION_GERMANY", "military": 700, "score": 88, "cities": 6, "at_war": t >= 55},
+                                {"name": "CIVILIZATION_NETHERLANDS", "military": 420, "score": 75, "cities": 4, "at_war": False},
+                                {"name": "CIVILIZATION_AUSTRALIA", "military": 510, "score": 80, "cities": 5, "at_war": False}]}
                 for t in range(50, 58)]
+CIV6_STRATEGY = {"focus": "Hold Chengdu, then out-tech Germany", "identity": "Kublai Khan's trading posts:\n- a free "
+                 "economic policy slot\n- Eureka and Inspiration from each new trading post\nso traders pay twice.",
+                 "reason": "war with Germany",
+                 "pillars": {"military": {"weight": 30, "priority": 1, "stance": "Two slingers per threatened city (military 560 median).",
+                                          "goals": ["Hold Chengdu"], "prefer_production": ["unit:slinger"], "milestones": []},
+                             "science": {"weight": 25, "priority": 2, "stance": "Campus in every city (science 25.6).",
+                                         "goals": ["Writing then Currency"], "prefer_techs": ["tech:writing"], "milestones": []},
+                             "economy": {"weight": 20, "priority": 3, "stance": "Traders to Beijing (gold 9.5 a turn).",
+                                         "goals": ["Two traders"], "prefer_production": ["unit:trader"], "milestones": []},
+                             "culture": {"weight": 10, "priority": 4, "stance": "Monuments (culture 14.6).", "goals": [],
+                                         "milestones": []},
+                             "faith": {"weight": 5, "priority": 5, "stance": "Keep 25 faith for a pantheon (faith 117).",
+                                       "goals": [], "milestones": []},
+                             "expansion": {"weight": 5, "priority": 6, "stance": "A settler once Chengdu holds (7 cities).",
+                                           "goals": [], "milestones": []},
+                             "diplomacy": {"weight": 5, "priority": 7, "stance": "Peace with Australia (score 80).",
+                                           "goals": [], "milestones": []}}}
 
 
 def _trace(log: EventLog, n: int, **fields) -> None:
@@ -49,10 +74,18 @@ def seed_runs(runs: Path) -> dict:
     old.emit("run_start", game="stellaris", model="google:gemini-3.8-flash", speed="fast")
     old.set_campaign("stellaris", "theia", "Theian Union")
     for i, mo in enumerate(range(1, 7)):
-        old.emit("metrics", date=f"2288.{mo:02d}.01", systems=20 + i, planets=8, pops=90 + i,
+        old.emit("metrics", date=f"2288.{mo:02d}.01", systems=20 + i, planets=8, pops=90 + i, techs_known=140 + i,
                  net={"energy": 40 + i, "minerals": 30, "food": 10, "alloys": 12, "influence": 2, "unity": 8},
                  stockpile={"energy": 900, "minerals": 800, "food": 500, "alloys": 300, "influence": 100, "unity": 400},
-                 military_power=5000 + 100 * i, economy_power=3000, tech_power=2000)
+                 military_power=5000 + 100 * i, economy_power=3000, tech_power=2000, directive="expand",
+                 room=3, room_surveyed=2, construction_ships=1, behind=["pops"] if i > 3 else [],
+                 peers={"systems": {"rank": 3, "median": 18}, "pops": {"rank": 6, "median": 200},
+                        "techs": {"rank": 4, "median": 150}, "military_power": {"rank": 2, "median": 4000}},
+                 peer_count=8,
+                 neighbours=[{"name": "Tzynn Empire", "military": 9000, "economy": 2500, "tech": 2100, "systems": 30,
+                              "opinion": -40, "status": ["rival", "on our border"]},
+                             {"name": "Glebsig Foundation", "military": 3000, "economy": 5000, "tech": 1900,
+                              "systems": 15, "opinion": 60, "status": ["commercial pact"]}])
     _trace(old, 1, game="stellaris", date="2288.03.01", trigger="scheduled", decision="expand",
            reason="Room to grow toward the core.", outcome="applied", current="diplomacy_first")
     old.state.status = "stopped"
@@ -64,6 +97,8 @@ def seed_runs(runs: Path) -> dict:
     log.set_campaign("civ6", "kublai", "Kublai Khan, China")
     for m in CIV6_METRICS:
         log.emit("metrics", **m)
+    log.emit("strategy", date="T50", trigger="start of run", model="google:gemini-3.1-pro-preview",
+             reason=CIV6_STRATEGY["reason"], strategy={k: v for k, v in CIV6_STRATEGY.items() if k != "reason"})
     _trace(log, 1, date="T52", trigger="scheduled", decision="orders", outcome="research tech:writing: stuck",
            reason="Chengdu is under siege; buy a slinger with faith and keep science on Writing.")
     _trace(log, 2, date="T55", trigger="city threatened (Chengdu)", outcome="error",

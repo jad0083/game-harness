@@ -1441,7 +1441,8 @@ class Governor:
         last = getattr(self, "_last_event_review_month", None)
         now = months(b["date"])
         if not bypass and last is not None and now - last < 12:
-            self.log.emit("strategy_review_skipped", trigger=trigger, reason="within 12 months of the last event review")
+            self.log.emit("strategy_review_skipped", trigger=trigger, reason="within 12 months of the last event review",
+                          date=b["date"], next_after=last + 12)
             if self.review_requested == trigger:
                 self.review_requested = None
             return False

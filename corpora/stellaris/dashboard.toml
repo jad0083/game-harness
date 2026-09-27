@@ -1,0 +1,138 @@
+# Stellaris on the dashboard (docs/design/2026-09-27-dashboard-v2-design.md, rulings 2, 3 and 29): the
+# page's nouns, units, figures, chart views, outcome keys, rivals and recovery steps. Read by
+# src/pilot/view.py and served by GET /api/view. Metric keys are the governor's metrics rows
+# (src/pilot/governor.py `metrics`; `net.<resource>` and `stockpile.<resource>` are nested); the test
+# checks them against pillars.toml [metrics] and the recovery categories against the governors'.
+
+[game]
+name = "Stellaris"
+short = "Stellaris"
+time_unit = "month"                # dates "2288.08"; cadence "every 12 months"
+cadence = "every_months"
+decision_noun = "a directive"
+levers = "actions"
+levers_label = "Actions"
+frames = true                      # a screenshot at every decision
+speed = true
+override = true
+chart_title = "Empire over time"
+rivals_label = "Neighbours"
+talk_placeholder = "Ask why it chose this directive"
+decide_now_help = "Pauses the game and decides now."
+stop_confirm = "The game is paused and the governor stops."
+review_window = "12 months"
+decisions_help = "The standing directive, every few in-game months (Stellaris governor)."
+
+[labels]
+systems = "Systems"
+planets = "Colonies"
+pops = "Pops"
+techs_known = "Techs"
+military_power = "Military"
+economy_power = "Economy"
+tech_power = "Technology"
+room = "Room within 2 jumps"
+"net.energy" = "Energy"
+"net.minerals" = "Minerals"
+"net.food" = "Food"
+"net.alloys" = "Alloys"
+"net.influence" = "Influence"
+"net.unity" = "Unity"
+"stockpile.energy" = "Energy"
+"stockpile.minerals" = "Minerals"
+"stockpile.food" = "Food"
+"stockpile.alloys" = "Alloys"
+"stockpile.influence" = "Influence"
+"stockpile.unity" = "Unity"
+"rank:systems" = "Systems"
+"rank:pops" = "Pops"
+"rank:techs" = "Techs"
+"rank:military_power" = "Military"
+"rank:economy_power" = "Economy"
+"rank:tech_power" = "Technology"
+
+[[figures]]
+key = "directive"
+kind = "directive"
+label = "Directive"
+
+[[figures]]
+key = "standing"
+kind = "standing"
+label = "Standing"
+rank = "rank:systems"
+
+[[figures]]
+key = "systems"
+rank = "rank:systems"
+
+[[figures]]
+key = "pops"
+rank = "rank:pops"
+
+[[figures]]
+key = "techs_known"
+rank = "rank:techs"
+
+[[figures]]
+key = "military_power"
+rank = "rank:military_power"
+
+[[figures]]
+key = "economy_power"
+rank = "rank:economy_power"
+
+[[figures]]
+key = "room"
+sub = "{room_surveyed} surveyed, {construction_ships} construction ships"
+
+[chart.net]
+label = "Net income"
+series = ["net.energy", "net.minerals", "net.food", "net.alloys", "net.influence", "net.unity"]
+
+[chart.stock]
+label = "Stockpile"
+series = ["stockpile.energy", "stockpile.minerals", "stockpile.food", "stockpile.alloys", "stockpile.influence", "stockpile.unity"]
+
+[chart.power]
+label = "Power"
+series = ["military_power", "economy_power", "tech_power"]
+
+[outcomes]
+keys = ["systems", "planets", "pops", "techs_known", "military_power", "economy_power", "tech_power"]
+window = "{n} months later"
+watch = { military_power = -2000, systems = -2, planets = -1 }
+deficits = true                    # resources whose net income turned negative
+
+[rivals]
+label = "Neighbours"
+tags = "status"
+columns = [
+  { key = "military", label = "Military", kind = "ratio", ours = "military_power", title = "Their military as a multiple of ours" },
+  { key = "economy", label = "Economy", kind = "times", ours = "economy_power", wide_only = true },
+  { key = "tech", label = "Tech", kind = "times", ours = "tech_power", wide_only = true },
+  { key = "systems", label = "Systems" },
+  { key = "opinion", label = "Opinion", title = "Their opinion of us" },
+  { key = "military", label = "Trend", kind = "trend", ours = "military_power", wide_only = true, title = "Their military as a multiple of ours, over the campaign" },
+]
+note = "Military, economy and tech are theirs as a multiple of ours (the bar's tick is 1×, equal strength); opinion is theirs of us; the trend line is their military against ours since records began. Nearest first, with empires at war with us and on our border leading."
+
+[recovery.unreachable]
+title = "The PC or the agent does not answer"
+steps = ["It tries again by itself and carries on once the agent answers; the game runs on without the governor meanwhile.",
+         "Resume also works once the PC is awake."]
+
+[recovery.control_failed]
+title = "The governor could not control the game"
+steps = ["Read What happened below; it names the step that failed (a panel left open, the game minimised).",
+         "Fix the game screen, then Resume."]
+
+[recovery.game_changed]
+title = "A different game is loaded"
+steps = ["Load the campaign's save, or stop this run and start a new one for this game.",
+         "Then Resume."]
+
+[recovery.stall]
+title = "The game date stopped moving"
+steps = ["Look at the PC: a popup that paused the game, another game loaded, the launcher or a crash can hold the date.",
+         "Nothing was sent to the game. Resume once it plays again."]

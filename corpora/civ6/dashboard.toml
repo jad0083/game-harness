@@ -1,0 +1,132 @@
+# Civilization VI on the dashboard (docs/design/2026-09-27-dashboard-v2-design.md, rulings 2, 3 and
+# 29): the page's nouns, units, figures, chart views, outcome keys, rivals and recovery steps. Read by
+# src/pilot/view.py and served by GET /api/view. Metric keys are the governor's metrics rows
+# (src/pilot/civ6.py `metrics`); tests/test_dashboard_view.py checks them against pillars.toml
+# [metrics] and the recovery categories against the ones the governors set. A figure, view or column
+# whose data a run does not publish is hidden on the page, never shown as "–".
+
+[game]
+name = "Civilization VI"
+short = "Civ VI"
+time_unit = "turn"                 # dates "T307"; cadence "every 5 turns"
+cadence = "decide_turns"           # the status info field holding the turns between decisions
+decision_noun = "orders"           # what the model gives
+levers = "orders"                  # the levers tab: orders | actions | screen
+levers_label = "Orders"
+frames = false                     # the run records no frames; a capture is fetched when info.frame_at says so
+speed = false                      # the AI plays at the game's own autoplay pace
+override = false                   # no directive to apply by hand
+chart_title = "Yields over time"
+rivals_label = "Civilizations met"
+talk_placeholder = "Ask why it chose these orders"
+decide_now_help = "Decides before the next autoplay turn."
+stop_confirm = "The AI finishes this turn and the game stays at {date}."
+review_window = "12 turns"
+decisions_help = "Orders between autoplay stretches, every few turns (Civ VI governor)."
+
+[labels]
+score = "Score"
+military = "Military"
+techs_known = "Techs"
+civics_known = "Civics"
+cities = "Cities"
+pop = "Population"
+gold = "Gold"
+faith = "Faith"
+science = "Science"
+culture = "Culture"
+faith_yield = "Faith per turn"
+gold_yield = "Gold per turn"
+production = "Production"
+food = "Food"
+era_score = "Era score"
+"rank:score" = "Score"
+"rank:military" = "Military"
+"rank:techs" = "Techs"
+"rank:civics" = "Civics"
+"rank:cities" = "Cities"
+at_war = "At war"
+
+# Figures on Now: value large, label under, rank or reserve as a subline.
+[[figures]]
+key = "rank:score"
+label = "Score"
+
+[[figures]]
+key = "rank:military"
+label = "Military"
+
+[[figures]]
+key = "techs_known"
+rank = "rank:techs"
+
+[[figures]]
+key = "civics_known"
+rank = "rank:civics"
+
+[[figures]]
+key = "cities"
+rank = "rank:cities"
+
+[[figures]]
+key = "gold"
+keep = "gold_keep"                 # info.reserves: what purchases keep back
+
+[[figures]]
+key = "faith"
+keep = "faith_keep"
+
+[chart.yields]
+label = "Yields"
+series = ["science", "culture", "faith_yield", "gold_yield", "production"]
+
+[chart.balances]
+label = "Balances"
+series = ["gold", "faith"]
+
+[chart.rank]
+label = "Rank"
+series = ["rank:score", "rank:military", "rank:techs", "rank:civics"]
+invert = true                      # 1 = best, at the top
+
+# The outcome line of a decision: these keys' change some turns later (telemetry.score).
+[outcomes]
+keys = ["score", "military", "science", "techs_known", "civics_known", "pop"]
+window = "{n} turns later"
+watch = { military = -100, score = -20, pop = -3 }   # a drop this large or larger is flagged "watch"
+
+[rivals]
+label = "Civilizations met"
+columns = [
+  { key = "score", label = "Score", ours = "score" },
+  { key = "military", label = "Military", kind = "ratio", ours = "military", title = "Their military strength as a multiple of ours" },
+  { key = "cities", label = "Cities", ours = "cities" },
+  { key = "at_war", label = "At war", kind = "flag" },
+]
+note = "Military is theirs as a multiple of ours (the bar's tick is 1×, equal strength)."
+
+# What to do when the run stops and needs you (ruling 7), per stop category.
+[recovery.transient]
+title = "Autoplay did not start"
+steps = ["Press Resume. This cleared 14 of 15 such stops.",
+         "Still stuck: look at the game for a popup or a movie, click it away, then Resume."]
+
+[recovery.screen]
+title = "Something on the game screen is holding the turn"
+steps = ["Look at the PC: a wonder movie, a leader's statement or a timeline can hold the turn.",
+         "Click through it, then Resume."]
+
+[recovery.unreachable]
+title = "The game does not answer"
+steps = ["Check the game is running with the tuner on (EnableTuner 1) and a game is loaded.",
+         "Then Resume."]
+
+[recovery.game_changed]
+title = "A different game is loaded"
+steps = ["Load the campaign's save, or stop this run and start a new one for this game.",
+         "Then Resume."]
+
+[recovery.control_failed]
+title = "The governor could not start"
+steps = ["Read What happened below; it names the step that failed.",
+         "Load the game with the tuner on, then Resume."]

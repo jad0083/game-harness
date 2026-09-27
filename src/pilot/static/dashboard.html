@@ -124,20 +124,24 @@
   @media (max-width: 1000px) {
     main { display: flex; flex-direction: column; align-items: stretch; }   /* each panel as wide as the screen, never its content */
     .col { display: contents; }
-    #p-chart { order: 1; } #p-dec { order: 2; } #p-tabs { order: 3; } #p-frame { order: 4; }
+    #p-figures { order: 0; } #p-chart { order: 1; } #p-dec { order: 2; } #p-tabs { order: 3; } #p-frame { order: 4; }
   }
 
   /* ---- chart ---- */
   .seg { display: inline-flex; border-bottom: 1px solid var(--hair); margin-left: auto; }
   .seg button { border: 0; background: transparent; padding: 4px 10px 6px; cursor: pointer; font-size: 13px; color: var(--muted); margin-bottom: -1px; }
   .seg button[aria-pressed="true"] { color: var(--ink); font-weight: 600; border-bottom: 2px solid var(--accent); }
-  .standing { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 0 0 14px; }
-  .chip { display: grid; gap: 0; min-width: 84px; }
-  .chip b { font-size: 22px; font-weight: 500; line-height: 1.1; font-variation-settings: "opsz" 28; }
-  .chip-label { font-size: 12.5px; color: var(--muted); }
-  .chip-sub { font-size: 12px; color: var(--ink-2); }
-  .chip.behind b { color: var(--accent); }
-  .chip.behind .chip-sub em { color: var(--accent); font-style: normal; font-weight: 600; }
+  /* figures: the value large and tabular, its label under it, rank or reserve as a subline; a figure
+     behind the median says so in words, in --warn */
+  #p-figures { padding: 16px 0 14px; }
+  .figures { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 14px 20px; }
+  .fig { display: grid; align-content: start; min-width: 0; }
+  .fig b { font-size: 22px; font-weight: 500; line-height: 1.15; font-variant-numeric: tabular-nums; font-variation-settings: "opsz" 28; }
+  .fig b.word { font-size: 17px; font-weight: 600; line-height: 1.3; }
+  .fig-label { font-size: 13px; color: var(--ink-2); }
+  .fig-sub { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .fig.behind .fig-sub { color: var(--warn); font-weight: 600; }
+  @media (max-width: 600px) { .figures { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 14px; } }
   .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--ink-2); margin: 4px 0 6px; }
   .legend span { display: inline-flex; align-items: center; gap: 6px; }
   .legend i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
@@ -245,7 +249,6 @@
   .pillar:first-child { border-top: 0; padding-top: 0; }
   .p-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
   .pillar h3 { margin: 0; font-size: 17px; font-family: var(--serif); font-weight: 400; font-variation-settings: "opsz" 24; }
-  .p-num { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
   .p-weight { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 2px 0 10px; font-size: 13px;
               color: var(--ink-2); font-variant-numeric: tabular-nums; }
   .p-weight b { color: var(--ink); font-weight: 600; }
@@ -279,7 +282,20 @@
   .p-form .row { display: flex; gap: 8px; margin-top: 2px; }
   .strategy-history { margin-top: 16px; }
   .strategy-history table.data th, .strategy-history table.data td { text-align: left; white-space: normal; }
-  .strategy-review { margin-top: 16px; }
+  .strategy-review { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+  .review-result { font-size: 13.5px; color: var(--ink-2); flex: 1 1 240px; }
+  .s-focus { margin: 0 0 8px; font-weight: 600; }
+  .effort { margin: 0 0 12px; }
+  .effort-label { display: block; font-size: 13px; color: var(--ink-2); margin-bottom: 4px; }
+  .effort-bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--grid); gap: 2px; }
+  .effort-bar i { display: block; height: 100%; }
+  .s-summary { font-family: var(--serif); font-size: 16px; line-height: 1.55; max-width: 68ch; margin: 6px 0 2px; }
+  .s-summary p, .s-summary ul { margin: 0 0 6px; }
+  .s-summary ul { padding-left: 20px; }
+  .s-summary.folded { max-height: 4.65em; overflow: hidden; mask-image: linear-gradient(to bottom, #000 60%, transparent); }
+  .s-summary-label { font-family: var(--sans); font-size: 13px; color: var(--ink-2); margin-right: 6px; }
+  .linkish { background: none; border: 0; padding: 4px 0; color: var(--sensor); cursor: pointer; font-size: 13.5px; text-decoration: underline; text-underline-offset: 3px; }
+  .rescale { font-size: 12.5px; color: var(--ink-2); }
 
   /* ---- talk ---- */
   .thread { display: grid; gap: 12px; margin-bottom: 14px; }
@@ -448,12 +464,12 @@
   <form method="dialog" id="start-form">
     <h2 id="start-title">Start a pilot run</h2>
     <p class="hint">The pilot plays the game that is open on the PC, with the model chosen in Settings.</p>
-    <p class="hint warn" id="start-note" hidden>No game window is open on the PC right now. Start the game and load a save first.</p>
+    <p class="hint warn" id="start-note" hidden></p>
     <label>Game <select id="start-game"><option value="stellaris">Stellaris</option><option value="galciv4">Galactic Civilizations IV</option><option value="civ6">Civilization VI</option></select></label>
-    <label class="stellaris-only">Game speed <select id="start-speed">
+    <label>Game speed <select id="start-speed">
       <option value="slowest">slowest</option><option value="slow">slow</option><option value="normal">normal</option><option value="fast">fast</option><option value="fastest">fastest</option>
     </select></label>
-    <label class="stellaris-only">Decide every <input id="start-months" type="number" min="1" max="120" value="12"> in-game months</label>
+    <label>Decide every <input id="start-months" type="number" min="1" max="120" value="12"> in-game months</label>
     <div class="row"><button class="btn" value="cancel">Cancel</button><button class="btn primary" id="start-go" value="start">Start</button></div>
   </form>
 </dialog>
@@ -501,6 +517,7 @@
         <option value="slowest">slowest</option><option value="slow">slow</option><option value="normal">normal</option><option value="fast">fast</option><option value="fastest">fastest</option>
       </select> <span class="saved" id="pace-speed-saved" role="status"></span></label>
       <label>Decide every <span class="inline-num"><input id="pace-months" type="number" min="1" max="120"> <span id="pace-unit">in-game months</span> <span class="saved" id="pace-months-saved" role="status"></span></span></label>
+      <p class="hint" id="pace-hint" hidden></p>
     </fieldset>
     <div data-spanel="devices" role="tabpanel" hidden>
       <div id="dev-this"></div>
@@ -524,8 +541,6 @@
 </div>
 <section class="readout" id="readout" aria-label="Empire readout">
   <div class="ro-date"><span class="ro-label" id="ro-date-label">In-game date</span><b id="ro-date">–</b></div>
-  <div class="ro-item" id="ro-directive-cell"><span class="ro-label">Directive</span><b id="ro-directive">–</b><span class="ro-sub" id="ro-directive-sub"></span></div>
-  <div class="ro-item" id="ro-standing-cell"><span class="ro-label">Standing</span><b id="ro-standing">–</b><span class="ro-sub" id="ro-standing-sub"></span></div>
   <div class="ro-item"><span class="ro-label">Governor</span><b id="ro-gov">–</b><span class="ro-sub" id="ro-gov-sub"></span></div>
   <button class="ro-item ro-pace" id="ro-pace-btn" title="Game speed and decision interval (open Settings to change)">
     <span class="ro-label">Pace</span><b id="ro-pace">–</b><span class="ro-sub" id="ro-pace-sub"></span>
@@ -534,19 +549,17 @@
 
 <main>
   <div class="col">
+    <section class="panel" id="p-figures" aria-label="Figures" hidden>
+      <div class="figures" id="figures"></div>
+    </section>
+
     <section class="panel" id="p-chart" aria-labelledby="h-chart">
       <header>
-        <h2 id="h-chart">Empire over time</h2>
+        <h2 id="h-chart">Over time</h2>
         <span class="sub" id="chart-sub"></span>
-        <div class="seg" role="group" aria-label="Chart">
-          <button data-view="net" aria-pressed="true">Net income</button>
-          <button data-view="stock" aria-pressed="false">Stockpile</button>
-          <button data-view="power" aria-pressed="false">Power</button>
-          <button data-view="table" aria-pressed="false">Table</button>
-        </div>
+        <div class="seg" role="group" aria-label="Chart view" id="chart-views"></div>
       </header>
       <div class="body">
-        <div class="standing" id="standing" hidden></div>
         <div class="legend" id="legend"></div>
         <div class="chartwrap" id="chartwrap"></div>
       </div>
@@ -582,6 +595,7 @@
       </div>
       <div class="tabpanel" id="tab-reasoning" role="tabpanel"></div>
       <div class="tabpanel" id="tab-talk" role="tabpanel" hidden>
+        <p class="hint" id="thread-empty">Nothing said yet. Ask the governor why it did something, or leave a note it will read at the next decision.</p>
         <div class="thread" id="thread"></div>
         <div id="talk-controls">
           <div class="composer">
@@ -625,7 +639,7 @@ const GAME_NAMES = { stellaris: "Stellaris", galciv4: "GalCiv IV", civ6: "Civ VI
 const gameNow = () => (S.live && S.campaign === (S.status.info || {}).campaign && (S.status.info || {}).game)
   || String(S.campaign || "").split("/")[0] || (S.status.info || {}).game || "";
 // Turn-based games (Civ VI, GalCiv IV) count turns; Stellaris counts in-game months.
-const turnBased = () => ["civ6", "galciv4"].includes(gameNow());
+const turnBased = () => S.spec.known ? S.spec.game.time_unit === "turn" : ["civ6", "galciv4"].includes(gameNow());
 // long floats from older records (405.92577500000004) read as one decimal
 const tidy = (s) => String(s ?? "").replace(/-?\d+\.\d{3,}/g, (m) => (+m).toFixed(1));
 // the model writes light markdown: bold and italic only, applied after escaping
@@ -694,15 +708,39 @@ async function loadNotices() {
 }
 const api = async (u) => { const r = await fetch(u); if (!r.ok) throw new Error(`${u}: ${r.status}`); return r.json(); };
 
-const S = { live: false, status: {}, campaign: null, decisions: [], metrics: [], view: "net", sel: null, mode: "chat", strategy: null, reviewPending: false };
+const S = { live: false, status: {}, campaign: null, decisions: [], metrics: [], chartView: "", sel: null, mode: "chat", strategy: null, reviewPending: false };
 
-const SERIES = {
-  net:   [["energy", "Energy"], ["minerals", "Minerals"], ["food", "Food"], ["alloys", "Alloys"], ["influence", "Influence"], ["unity", "Unity"]],
-  stock: [["energy", "Energy"], ["minerals", "Minerals"], ["food", "Food"], ["alloys", "Alloys"], ["influence", "Influence"], ["unity", "Unity"]],
-  power: [["military_power", "Military"], ["economy_power", "Economy"], ["tech_power", "Technology"]],
-};
-const value = (m, view, key) => view === "net" ? m.net?.[key] : view === "stock" ? m.stockpile?.[key] : m[key];
-const color = (i) => `var(--s${i + 1})`;
+// ---------- the game's view: corpora/<game>/dashboard.toml through /api/view ----------
+// Each game speaks its own units and nouns from data; a figure, view or column the game (or the
+// running pilot) does not publish is hidden, never shown as "–".
+const BLANK_VIEW = { id: "", known: false, labels: {}, figures: [], chart: [], outcomes: null, rivals: null, recovery: {},
+  game: { name: "", short: "", time_unit: "month", cadence: "", decision_noun: "decisions", levers: "", levers_label: "",
+          frames: false, speed: false, override: false, chart_title: "Over time", rivals_label: "", review_window: "",
+          talk_placeholder: "Ask the governor", decide_now_help: "", stop_confirm: "The governor stops.", decisions_help: "" } };
+S.spec = BLANK_VIEW;
+const specs = {};
+async function loadSpec(game) {
+  if (!game) return BLANK_VIEW;
+  if (!specs[game]) {
+    try { specs[game] = await api("/api/view?game=" + encodeURIComponent(game)); }
+    catch { return S.spec.id === game ? S.spec : BLANK_VIEW; }
+  }
+  return specs[game];
+}
+// a metric's words (the view's labels), a metric's value in a metrics row: "net.energy" is nested,
+// "rank:techs" is our place among the rivals (1 = best)
+const mlabel = (key) => S.spec.labels[key] || human(String(key).replace(/^rank:/, ""));
+function metricValue(m, key) {
+  if (!m) return undefined;
+  if (key.startsWith("rank:")) { const p = (m.peers || {})[key.slice(5)]; return p ? p.rank : undefined; }
+  if (key.includes(".")) { const [head, tail] = key.split("."); return (m[head] || {})[tail]; }
+  return m[key];
+}
+// "T307" stays; "2288.08.01" reads "2288.08" (the day is always the 1st)
+const gdate = (d) => /^\d+\.\d+\.\d+$/.test(String(d || "")) ? String(d).slice(0, -3) : String(d || "");
+// six series colours, validated for both themes; a seventh and later line or share is neutral ink
+const color = (i) => i < 6 ? `var(--s${i + 1})` : "var(--ink-2)";
+const sentence = (x) => { const t = String(x || ""); return t.charAt(0).toUpperCase() + t.slice(1); };
 
 // ---------- status & campaign ----------
 async function loadStatus() {
@@ -733,7 +771,7 @@ async function loadStatus() {
   document.querySelector('[data-mode="chat"]').hidden = !controls.includes("chat");
   document.querySelector('[data-mode="decide_now"]').hidden = !controls.includes("decide_now");
   $("orders-section").hidden = !controls.includes("order_add");
-  $("override-section").hidden = !controls.includes("override");
+  $("override-section").hidden = !controls.includes("override") || !S.spec.game.override;
   if (!controls.includes("chat") && S.mode === "chat" && S.live) setMode("instruct");
   renderOrders(info.orders || []);
   if ($("override-dir").options.length === 0 && info.directives)
@@ -749,6 +787,7 @@ async function loadStatus() {
 async function loadCampaigns() {
   let camps = [];
   try { camps = await api("/api/campaigns"); } catch { /* no telemetry yet */ }
+  S.camps = camps;
   const live = (S.status.info || {}).campaign;
   const sel = $("campaign");
   sel.innerHTML = camps.map((c) => `<option value="${esc(c.id)}">${esc(c.title || human(c.name))}${c.id === live ? " (live)" : ""}, ${esc(plural(c.decisions, "decision"))}</option>`).join("")
@@ -781,9 +820,31 @@ function pillarActions(byId, id) { return (byId[id] && byId[id].actions) || []; 
 const MS_STATUS = { met: ["good", "✓", "met"], on_track: ["", "→", "on track"],
                     at_risk: ["warn", "⚠", "at risk"], missed: ["bad", "✕", "missed"] };
 
-function reviewButtonHtml() {
-  return S.reviewPending ? `<button class="btn" id="review-now" disabled>Review requested…</button>`
-                        : `<button class="btn" id="review-now">Review strategy now</button>`;
+// A month index (telemetry.month_index) in the game's unit: 318 -> "T318", 27464 -> "2288.09".
+const gmonth = (mo) => S.spec.game.time_unit === "turn" ? `T${mo}` : `${Math.floor(mo / 12)}.${String(mo % 12 + 1).padStart(2, "0")}`;
+// The weights before and after the newest review: "science 30 → 35, culture 20 → 15".
+function weightChange(history, byId) {
+  const [now, before] = history || [];
+  const w = (v) => Object.fromEntries(Object.entries(((v || {}).strategy || {}).pillars || {}).map(([k, p]) => [k, p.weight]));
+  const a = w(before), b = w(now);
+  return Object.keys(b).filter((k) => a[k] != null && a[k] !== b[k]).map((k) => `${pillarLabel(byId, k).toLowerCase()} ${a[k]} → ${b[k]}`).join(", ");
+}
+// What the last review did, next to its button: accepted (with the weight changes), rejected (and
+// why), or skipped (and when the next may run, in game units).
+function reviewResult(data, byId) {
+  const r = ((data && data.reviews) || [])[0];
+  if (!r) return "";
+  if (r.kind === "strategy_review_skipped")
+    return `Review skipped at ${gdate(r.date || "")}: ${r.next_after != null ? `within ${S.spec.game.review_window || "12 months"} of the last review; next after ${gmonth(r.next_after)}` : tidy(r.reason || "")}.`.replace(" at :", ":");
+  if (r.kind === "strategy_rejected") return `Rejected: ${(r.errors || []).slice(0, 2).map(tidy).join("; ")} (sent back once).`;
+  if (r.accepted) { const ch = weightChange(data.history, byId); return `Accepted at ${gdate(r.date)}${ch ? ": " + ch : ""}.`; }
+  return `No change at ${gdate(r.date)}${r.change ? ": " + tidy(r.change) : ""}.`;
+}
+function reviewButtonHtml(data, byId) {
+  const result = S.reviewPending ? "" : reviewResult(data, byId);
+  return (S.reviewPending ? `<button class="btn" id="review-now" disabled>Review requested…</button>`
+                          : `<button class="btn" id="review-now">Review strategy now</button>`)
+    + (result ? `<span class="review-result" role="status">${esc(result)}</span>` : "");
 }
 function wireReviewButton() {
   const btn = $("review-now");
@@ -798,39 +859,43 @@ function wireReviewButton() {
 
 function milestoneRow(m) {
   const st = MS_STATUS[m.status] || ["", "", m.status || ""];
-  return `<li><span class="ms-metric">${esc(human(m.metric))} ${esc(m.op)} ${fmt(m.target)} by ${esc(m.by)}</span>
+  return `<li><span class="ms-metric">${esc(mlabel(m.metric))} ${esc(m.op)} ${fmt(m.target)} by ${esc(gdate(m.by))}</span>
     <span class="tag${st[0] ? " " + st[0] : ""}" title="${esc(st[2])}"><i aria-hidden="true">${st[1]}</i>${esc(st[2])}</span></li>`;
 }
 
-// The pillar's pull on decisions, spelled out: weight x milestone need = pressure, and its share of
-// all pressure as a bar. Without metrics (no pressure yet) only the weight shows.
-function weightLine(pl, p, total) {
+// The pillar's pull on decisions. Share mode (many levers at once, Civ VI): its share of the effort,
+// never "rank" or "pressure". Exclusive mode (one standing directive, Stellaris): weight x milestone
+// need = pressure, with its share of all pressure. Without metrics (no pressure yet) the weight share.
+function weightLine(pl, p, total, share, weightTotal) {
   if (!pl.weight) return "";
+  const pct = p && total ? Math.round(100 * p.pressure / total) : Math.round(100 * pl.weight / (weightTotal || 100));
+  const bar = (label) => `<span class="p-share"><span class="p-bar" role="img" aria-label="${pct}% ${label}"><i style="width:${pct}%"></i></span>${pct}% ${label}</span>`;
+  if (share) return `<div class="p-weight">${bar("of effort")}</div>`;
   if (!p) return `<div class="p-weight"><span>Weight <b>${esc(pl.weight)}</b></span></div>`;
   const st = MS_STATUS[p.status] || ["", "", (pl.milestones || []).length ? "no data" : "no milestones"];
-  const share = total ? Math.round(100 * p.pressure / total) : 0;
   const r = p.record, stall = p.efficacy && p.efficacy < 1 && r
-    ? ` × <span class="p-need bad" title="${esc(`${human(r.metric)} ${r.held_rate >= 0 ? "+" : ""}${r.held_rate}/yr over ${r.held_years} years with ${human(r.directive || "its directive")} vs ${r.other_rate >= 0 ? "+" : ""}${r.other_rate}/yr otherwise`)}">not working here ${esc(p.efficacy)}</span>` : "";
-  return `<div class="p-weight"><span>Weight <b>${esc(pl.weight)}</b> × <span class="p-need ${st[0]}">${esc(st[2])} ${esc(p.need)}</span>${stall} = pressure <b>${esc(fmt(p.pressure))}</b></span>
-    <span class="p-share"><span class="p-bar" role="img" aria-label="${share}% of all pressure"><i style="width:${share}%"></i></span>${share}% of all pressure</span></div>`;
+    ? ` · <span class="p-need bad" title="${esc(`${human(r.metric)} ${r.held_rate >= 0 ? "+" : ""}${r.held_rate}/yr over ${r.held_years} years with ${human(r.directive || "its directive")} vs ${r.other_rate >= 0 ? "+" : ""}${r.other_rate}/yr otherwise`)}">not working here ×${esc(p.efficacy)}</span>` : "";
+  return `<div class="p-weight"><span>weight <b>${esc(pl.weight)}</b> · <span class="p-need ${st[0]}">need ×${esc(p.need)} (${esc(st[2])})</span>${stall} · pressure <b>${esc(fmt(p.pressure))}</b></span>
+    ${bar("of all pressure")}</div>`;
 }
 
-function pillarCard(name, pl, ms, byId, p = null, total = 0) {
+function pillarCard(name, pl, ms, byId, p, total, share, weightTotal, names) {
   const def = byId[name] || {};
   const acts = pillarActions(byId, name);
+  const nm = (ids) => ids.map((i) => names[i] || human(String(i).replace(/^[a-z_]+:/, ""))).join(", ");
   const goals = (pl.goals || []).map((g) => `<li>${esc(g)}</li>`).join("");
   const msRows = ms.map(milestoneRow).join("");
   const actions = [];
-  if (acts.includes("tech") && (pl.prefer_techs || []).length) actions.push(`Prefers: ${esc(pl.prefer_techs.join(", "))}`);
-  if (acts.includes("market")) (pl.market || []).forEach((o) => actions.push(`Market: ${esc(o.side)} ${esc(o.resource)} ${fmt(o.amount)}/month`));
+  if (acts.includes("tech") && (pl.prefer_techs || []).length) actions.push(`Prefers: ${esc(nm(pl.prefer_techs))}`);
+  if (acts.includes("market")) (pl.market || []).forEach((o) => actions.push(`Market: ${esc(o.side)} ${esc(human(o.resource))} ${fmt(o.amount)} a month`));
   for (const [kind, field, label] of [["civic", "prefer_civics", "Civics"], ["policy", "prefer_policies", "Policies"],
                                       ["production", "prefer_production", "Builds"], ["purchase", "prefer_purchases", "Buys"]]) {
-    if (acts.includes(kind) && (pl[field] || []).length) actions.push(`${label}: ${esc(pl[field].join(", "))}`);
+    if (acts.includes(kind) && (pl[field] || []).length) actions.push(`${label}: ${esc(nm(pl[field]))}`);
   }
   return `<article class="pillar" data-pillar="${esc(name)}">
-    <div class="p-head"><h3 title="${esc(def.description || "")}">${esc(pillarLabel(byId, name))}</h3><span class="p-num">${pl.weight ? "rank" : "priority"} ${esc(pl.priority)}</span>
+    <div class="p-head"><h3 title="${esc(def.description || "")}">${esc(pillarLabel(byId, name))}</h3>
       ${pl.pinned ? `<span class="tag" title="Pinned by a human edit: a review will never change it">pinned</span>` : ""}</div>
-    ${weightLine(pl, p, total)}
+    ${weightLine(pl, p, total, share, weightTotal)}
     <p class="stance">${esc(pl.stance || "")}</p>
     ${goals ? `<ul class="goals">${goals}</ul>` : ""}
     ${msRows ? `<ul class="ms-list">${msRows}</ul>` : ""}
@@ -854,14 +919,23 @@ function marketFieldsHtml(orders, limits) {
   return `<div class="market-fields"><span>Market orders (up to ${n}${esc(range)}${esc(res)})</span>${rows}</div>`;
 }
 
-function openEditForm(name, pillar, byId, spec) {
+// How the other unpinned weights rescale when this one changes (the governor keeps the sum at 100).
+function rescalePreview(name, value, pillars, byId) {
+  const others = Object.entries(pillars).filter(([k, p]) => k !== name && !p.pinned && p.weight);
+  const pinned = Object.entries(pillars).filter(([k, p]) => k !== name && p.pinned).reduce((t, [, p]) => t + (p.weight || 0), 0);
+  const was = others.reduce((t, [, p]) => t + p.weight, 0), left = 100 - value - pinned;
+  if (!was || !Number.isFinite(value)) return "";
+  return "Then: " + others.map(([k, p]) => `${pillarLabel(byId, k).toLowerCase()} ${p.weight} → ${Math.round(p.weight * left / was)}`).join(", ");
+}
+
+function openEditForm(name, pillar, byId, spec, pillars) {
   const art = $("strategy").querySelector(`article[data-pillar="${CSS.escape(name)}"]`);
   if (!art) return;
   const acts = pillarActions(byId, name);
   const limits = (spec && spec.actions) || {};
   const slot = art.querySelector(".p-form-slot");
   slot.innerHTML = `<form class="p-form">
-    ${pillar.weight ? `<label>Weight<span class="weight-row"><input name="weight" type="number" min="${esc((spec && spec.weights && spec.weights.min) || 1)}" max="${esc((spec && spec.weights && spec.weights.max) || 100)}" value="${esc(pillar.weight)}" data-was="${esc(pillar.weight)}"><span>The other unpinned pillars rescale so the total stays 100.</span></span></label>` : ""}
+    ${pillar.weight ? `<label>Weight<span class="weight-row"><input name="weight" type="number" min="${esc((spec && spec.weights && spec.weights.min) || 1)}" max="${esc((spec && spec.weights && spec.weights.max) || 100)}" value="${esc(pillar.weight)}" data-was="${esc(pillar.weight)}"><span class="rescale" aria-live="polite">The other unpinned pillars rescale so the total stays 100.</span></span></label>` : ""}
     <label>Stance<textarea name="stance">${esc(pillar.stance || "")}</textarea></label>
     <label>Goals (one per line, up to 3)<textarea name="goals">${esc((pillar.goals || []).join("\n"))}</textarea></label>
     ${acts.includes("tech") ? `<label>Prefer techs (comma list, up to ${esc((limits.tech || {}).max_items || "")})<input name="prefer_techs" value="${esc((pillar.prefer_techs || []).join(", "))}"></label>` : ""}
@@ -869,6 +943,10 @@ function openEditForm(name, pillar, byId, spec) {
     <p class="p-error" hidden></p>
     <div class="row"><button type="submit" class="btn primary">Save</button><button type="button" class="btn" data-cancel>Cancel</button></div>
   </form>`;
+  const weight = slot.querySelector('input[name="weight"]');
+  if (weight) weight.addEventListener("input", () => {
+    slot.querySelector(".rescale").textContent = rescalePreview(name, +weight.value, pillars, byId) || "The other unpinned pillars rescale so the total stays 100.";
+  });
   const editBtn = art.querySelector(`[data-edit]`), unpinBtn = art.querySelector(`[data-unpin]`);
   editBtn.hidden = true; if (unpinBtn) unpinBtn.hidden = true;
   const close = () => { slot.innerHTML = ""; editBtn.hidden = false; if (unpinBtn) unpinBtn.hidden = false; };
@@ -878,9 +956,9 @@ function openEditForm(name, pillar, byId, spec) {
 
 async function submitEdit(name, slot, onSaved) {
   const form = slot.querySelector("form");
-  const fields = { stance: form["stance"].value, goals: form["goals"].value.split("\n").map((s) => s.trim()).filter(Boolean).slice(0, 3) };
+  const fields = { stance: form["stance"].value, goals: form["goals"].value.split("\n").map((x) => x.trim()).filter(Boolean).slice(0, 3) };
   if (form["weight"] && form["weight"].value !== form["weight"].dataset.was) fields.weight = +form["weight"].value;
-  if (form["prefer_techs"]) fields.prefer_techs = form["prefer_techs"].value.split(",").map((s) => s.trim()).filter(Boolean);
+  if (form["prefer_techs"]) fields.prefer_techs = form["prefer_techs"].value.split(",").map((x) => x.trim()).filter(Boolean);
   const rows = form.querySelectorAll(".market-row").length;
   if (rows) {
     const market = [];
@@ -897,72 +975,115 @@ async function submitEdit(name, slot, onSaved) {
     r = await fetch("/control", { method: "POST", headers: { "Content-Type": "application/json" },
                                   body: JSON.stringify({ action: "edit_pillar", pillar: name, fields }) });
   } catch (e) {
-    const err = slot.querySelector(".p-error"); err.textContent = "Could not reach the server: " + e.message; err.hidden = false; btn.disabled = false;
+    const err = slot.querySelector(".p-error"); err.textContent = "Not saved: the dashboard did not answer (" + e.message + ")."; err.hidden = false; btn.disabled = false;
     return;
   }
   if (!r.ok) {
     const err = slot.querySelector(".p-error");
-    err.textContent = (await r.text()) || "The edit was rejected.";
+    err.textContent = `Not saved: ${await whyRefused(r)}`;
     err.hidden = false;
     btn.disabled = false;
-    return;         // Ruling: show the server's reason inline, keep the form open
+    return;         // the server's reason inline, the form stays open
   }
-  toast(`${human(name)}: edit saved and pinned.`);
+  toast(`${human(name)}: saved and pinned.`);
   onSaved();
   loadStatus();
+}
+
+// The model's strategy summary: light markdown with lists, folded to 3 lines with "Read all".
+function mdBlock(text) {
+  const out = [];
+  let list = null;
+  for (const line of String(text || "").split("\n")) {
+    const m = /^\s*(?:[-*•]|\d+[.)])\s+(.*)$/.exec(line);
+    if (m) { if (!list) { list = []; out.push(list); } list.push(m[1]); continue; }
+    list = null;
+    if (line.trim()) out.push(line.trim());
+  }
+  return out.map((x) => Array.isArray(x) ? `<ul>${x.map((i) => `<li>${md(tidy(i))}</li>`).join("")}</ul>` : `<p>${md(tidy(x))}</p>`).join("");
 }
 
 function renderStrategy(data) {
   const box = $("strategy");
   const cur = data && data.current;
-  // Ruling: a broken/missing pillars file, the governor reporting the strategy layer is off, or a
-  // stored strategy that no longer matches the game's pillars shows one plain line with the reason
-  // instead of pillar cards. The server's message is complete; only a pillars-file error ("pillars: …")
-  // gets the "Strategy layer off" prefix.
+  // A broken/missing pillars file, the strategy layer off, or a stored strategy that no longer
+  // matches the game's pillars: one plain line with the reason instead of pillar cards.
   if (data && data.error) {
     const msg = data.error.startsWith("pillars: ") ? `Strategy layer off: ${data.error}` : data.error;
     box.innerHTML = `<p class="empty">${esc(msg.charAt(0).toUpperCase() + msg.slice(1))}</p>`;
     return;
   }
+  const byId = specIndex(data && data.spec);
   if (!cur) {
-    box.innerHTML = `<p class="empty">No strategy yet. The first review runs at the start of the run.</p><div class="strategy-review">${reviewButtonHtml()}</div>`;
+    box.innerHTML = `<p class="empty">No strategy yet. The first review runs at the start of the run.</p><div class="strategy-review">${reviewButtonHtml(data, byId)}</div>`;
     wireReviewButton();
     return;
   }
-  const spec = data.spec || null, byId = specIndex(spec);
-  const pillars = Object.entries(cur.pillars || {}).sort((a, b) => (a[1].priority || 0) - (b[1].priority || 0));
+  const spec = data.spec || null, names = data.names || {};
+  const share = ((spec && spec.weights) || {}).mode === "share";
+  const pillars = Object.entries(cur.pillars || {}).sort((a, b) => (b[1].weight || 0) - (a[1].weight || 0) || (a[1].priority || 0) - (b[1].priority || 0));
   const press = data.pressure || {}, totalP = Object.values(press).reduce((t, p) => t + p.pressure, 0);
-  const byPressure = Object.keys(press).length
-    ? [...pillars].sort((a, b) => ((press[b[0]] || {}).pressure || 0) - ((press[a[0]] || {}).pressure || 0)) : pillars;
-  const ranking = byPressure.map(([name]) => byId[name] && byId[name].directive
-    ? `${human(byId[name].directive)}${press[name] ? " " + fmt(press[name].pressure) : ""}` : "").filter(Boolean).join(", ");
+  const weightTotal = pillars.reduce((t, [, p]) => t + (p.weight || 0), 0);
   const last = (data.history && data.history[0]) || {};
   const past = (data.history || []).slice(1);
   const msByPillar = {};
   (data.milestones || []).forEach((m) => { (msByPillar[m.pillar] = msByPillar[m.pillar] || []).push(m); });
-
+  const shareOf = (name) => press[name] && totalP ? press[name].pressure / totalP : ((cur.pillars[name] || {}).weight || 0) / (weightTotal || 1);
+  let top;
+  if (share) {          // where the effort goes: one stacked bar, largest first
+    const parts = pillars.filter(([n]) => shareOf(n) > 0).map(([n], i) => [n, shareOf(n), i]);
+    top = `<div class="effort"><span class="effort-label">Where the effort goes</span>
+      <div class="effort-bar" role="img" aria-label="${esc(parts.map(([n, v]) => `${pillarLabel(byId, n)} ${Math.round(100 * v)}%`).join(", "))}">${parts.map(([, v, i]) => `<i style="width:${(100 * v).toFixed(1)}%;background:${color(i)}"></i>`).join("")}</div>
+      <div class="legend">${parts.map(([n, v, i]) => `<span><i style="background:${color(i)}"></i>${esc(pillarLabel(byId, n))} ${Math.round(100 * v)}%</span>`).join("")}</div></div>`;
+  } else {
+    const ranking = [...pillars].sort((a, b) => ((press[b[0]] || {}).pressure || 0) - ((press[a[0]] || {}).pressure || 0))
+      .map(([name]) => byId[name] && byId[name].directive ? `${human(byId[name].directive)}${press[name] ? " " + fmt(press[name].pressure) : ""}` : "").filter(Boolean).join(", ");
+    top = ranking ? `<div class="t-meta"><span>${Object.keys(press).length ? "By pressure" : "Ranking"}: ${esc(ranking)}</span></div>` : "";
+  }
   let h = `<div class="strategy-head">
-    <div class="t-meta"><span>Focus: ${esc(cur.focus || "–")}</span><span>${Object.keys(press).length ? "By pressure" : "Ranking"}: ${esc(ranking || "–")}</span></div>
-    ${cur.identity ? `<p class="t-reason">Built on: ${md(tidy(cur.identity))}</p>` : ""}
-    <div class="t-when">Last review: ${esc(last.date || "–")}, ${esc(tidy(last.trigger || ""))}, ${esc(last.model || "–")}</div>
+    ${cur.focus ? `<p class="s-focus">Focus: ${esc(tidy(cur.focus))}</p>` : ""}
+    ${top}
+    ${cur.identity ? `<div class="s-summary folded" id="s-summary"><span class="s-summary-label">Built on</span>${mdBlock(cur.identity)}</div>
+      <button type="button" class="linkish" id="s-summary-more" aria-controls="s-summary" aria-expanded="false">Read all</button>` : ""}
+    <div class="t-when">Last review ${esc(gdate(last.date || ""))}${last.trigger ? ", " + esc(tidy(last.trigger)) : ""}${last.model ? ", " + esc(shortModel({ model: last.model })) : ""}</div>
   </div>`;
-  h += pillars.map(([name, pl]) => pillarCard(name, pl, msByPillar[name] || [], byId, press[name] || null, totalP)).join("");
+  h += pillars.map(([name, pl]) => pillarCard(name, pl, msByPillar[name] || [], byId, press[name] || null, totalP, share, weightTotal, names)).join("");
   if (past.length) {
-    h += `<details class="strategy-history"><summary>History (${past.length} version${past.length === 1 ? "" : "s"})</summary>
+    h += `<details class="strategy-history"><summary>History (${plural(past.length, "version")})</summary>
       <table class="data"><thead><tr><th>Date</th><th>Trigger</th><th>Model</th><th>Reason</th></tr></thead><tbody>` +
-      past.map((v) => `<tr><td>${esc(v.date || "")}</td><td>${esc(tidy(v.trigger || ""))}</td><td>${esc(v.model || "")}</td><td>${esc(tidy((v.strategy || {}).reason || ""))}</td></tr>`).join("") +
+      past.map((v) => `<tr><td>${esc(gdate(v.date || ""))}</td><td>${esc(tidy(v.trigger || ""))}</td><td>${esc(shortModel({ model: v.model || "" }))}</td><td>${esc(tidy((v.strategy || {}).reason || ""))}</td></tr>`).join("") +
       `</tbody></table></details>`;
   }
-  h += `<div class="strategy-review">${reviewButtonHtml()}</div>`;
+  h += `<div class="strategy-review">${reviewButtonHtml(data, byId)}</div>`;
   box.innerHTML = h;
   wireReviewButton();
-  box.querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => openEditForm(b.dataset.edit, cur.pillars[b.dataset.edit], byId, spec)));
+  const more = $("s-summary-more");
+  if (more) {
+    const sum = $("s-summary");
+    more.hidden = String(cur.identity).length < 220 && !String(cur.identity).includes("\n");   // measured blind: the tab may be hidden
+    more.addEventListener("click", () => {
+      const open = sum.classList.toggle("folded") === false;
+      more.textContent = open ? "Fold" : "Read all"; more.setAttribute("aria-expanded", String(open));
+    });
+  }
+  box.querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => openEditForm(b.dataset.edit, cur.pillars[b.dataset.edit], byId, spec, cur.pillars)));
   box.querySelectorAll("[data-unpin]").forEach((b) => b.addEventListener("click", () => {
     if (confirm(`Unpin ${pillarLabel(byId, b.dataset.unpin)}? A future review may change it again.`)) control({ action: "unpin_pillar", pillar: b.dataset.unpin });
   }));
 }
 
+// The view of the campaign's game, applied to everything that speaks about the game.
+async function applySpec() {
+  const spec = await loadSpec(gameNow());
+  if (spec === S.spec) return;
+  S.spec = spec;
+  S.chartView = "";
+  setMode(S.mode);
+  $("override-section").hidden = !S.spec.game.override || !((S.status.info || {}).controls || []).includes("override");
+}
+
 async function loadCampaignData() {
+  await applySpec();
   if (!S.campaign) { S.strategy = null; renderChart(); renderDecisions(); renderStrategy(null); return; }
   const cid = S.campaign, qs = "campaign=" + encodeURIComponent(cid);
   const [decisions, metrics, strategy] = await Promise.all([api("/api/decisions?" + qs), api("/api/metrics?" + qs),
@@ -1038,21 +1159,55 @@ function directiveSpans() {
   return spans;
 }
 
-const PEER_LABELS = [["systems", "systems"], ["pops", "pops"], ["techs", "techs"], ["military_power", "military"], ["economy_power", "economy"], ["tech_power", "tech power"]];
-function renderStanding(last) {
-  const el = $("standing"), p = last && last.peers;
-  if (!p || !Object.keys(p).length) { el.hidden = true; return; }
-  const n = (last.peer_count || 0) + 1, behind = new Set(last.behind || []);
-  const own = (k) => k === "techs" ? last.techs_known : last[k];
-  const chips = PEER_LABELS.filter(([k]) => p[k]).map(([k, label]) =>
-    `<span class="chip${behind.has(k) ? " behind" : ""}" title="${behind.has(k) ? "Falling behind: below half the median of the other empires" : ""}">` +
-    `<span class="chip-label">${esc(label)}</span><b>${fmt(own(k))}</b><span class="chip-sub">median ${fmt(p[k].median)}, #${esc(p[k].rank)} of ${esc(n)}${behind.has(k) ? ", <em>falling behind</em>" : ""}</span></span>`);
-  if (last.room != null) {
-    chips.push(`<span class="chip${last.room === 0 ? " behind" : ""}"><span class="chip-label">room to expand</span><b>${fmt(last.room)}</b>` +
-      `<span class="chip-sub">unclaimed within 2 jumps, ${fmt(last.room_surveyed || 0)} surveyed, ${fmt(last.construction_ships || 0)} construction ships</span></span>`);
+// Figures (ruling 12): the view's [[figures]], each hidden when the game or run does not publish it.
+function renderFigures(last) {
+  const out = [], n = last ? (last.peer_count || 0) + 1 : 0;
+  const peer = (key) => last && last.peers ? last.peers[String(key).replace(/^rank:/, "")] : null;
+  const falling = new Set((last && last.behind) || []);
+  const info = S.live && S.campaign === (S.status.info || {}).campaign ? (S.status.info || {}) : null;
+  const lastDec = S.decisions[S.decisions.length - 1];
+  const rankSub = (p, key) => {
+    let sub = `#${p.rank} of ${n}` + (p.median != null ? `, median ${fmt(p.median)}` : "");
+    const k = String(key).replace(/^rank:/, "");
+    if (falling.has(k)) return [sub + ", falling behind", true];
+    if (p.ours != null && p.median != null && p.ours < p.median) return [sub + ", behind the median", true];
+    return [sub, false];
+  };
+  for (const f of S.spec.figures) {
+    let value = null, sub = "", warn = false, word = false;
+    if (f.kind === "directive") {
+      const dir = info && info.directive !== undefined ? info.directive
+        : (last && last.directive) || (lastDec && (lastDec.outcome === "applied" ? lastDec.decision : lastDec.current));
+      if (!dir) continue;
+      value = sentence(human(dir)); word = true;
+      const since = [...S.decisions].reverse().find((d) => d.outcome === "applied" && d.decision === dir);
+      sub = since ? `since ${gdate(since.date)}` : "";
+    } else if (f.kind === "standing") {
+      const p = peer(f.rank);
+      if (!p || p.rank == null || !n) continue;
+      value = `#${p.rank} of ${n}`;
+      warn = falling.size > 0;
+      sub = warn ? `falling behind in ${[...falling].map((k) => mlabel("rank:" + k).toLowerCase()).join(", ")}`
+                 : `in ${mlabel(f.rank).toLowerCase()}, keeping pace`;
+    } else if (f.kind === "rank") {
+      const p = peer(f.key);
+      if (!p || p.rank == null || !n) continue;
+      value = `#${p.rank} of ${n}`;
+      if (p.median != null) sub = `median ${fmt(p.median)}`;
+      if (p.ours != null && p.median != null && p.ours < p.median) { warn = true; sub += ", behind the median"; }
+    } else {
+      const v = metricValue(last, f.key);
+      if (v == null || !Number.isFinite(+v)) continue;
+      value = fmt(+v);
+      const p = f.rank ? peer(f.rank) : null;
+      if (p && p.rank != null && n) [sub, warn] = rankSub(p, f.rank);
+      if (f.keep && info && info.reserves && info.reserves[f.keep] != null) sub = `keeps ${fmt(info.reserves[f.keep])}`;
+      if (f.sub) sub = f.sub.replace(/\{(\w+)\}/g, (_, k) => fmt(last[k] ?? 0));
+    }
+    out.push(`<div class="fig${warn ? " behind" : ""}"><b${word ? ' class="word"' : ""}>${esc(value)}</b><span class="fig-label">${esc(f.label)}</span>${sub ? `<span class="fig-sub">${esc(sub)}</span>` : ""}</div>`);
   }
-  el.innerHTML = chips.join("");
-  el.hidden = false;
+  $("figures").innerHTML = out.join("");
+  $("p-figures").hidden = !out.length;
 }
 
 function renderReadout() {
@@ -1062,28 +1217,22 @@ function renderReadout() {
   const date = live ? (S.status.game_date || (last && last.date)) : (last && last.date);
   $("ro-date").textContent = date || "–";
   $("ro-date-label").textContent = live ? "In-game date, live" : "In-game date at the last record";
-  const dir = live && info.directive !== undefined ? info.directive : (last && last.directive) || (lastDec && (lastDec.outcome === "applied" ? lastDec.decision : lastDec.current));
-  // absent means hidden: only Stellaris has directives, and a game without peer figures has no standing
-  $("ro-directive-cell").hidden = !dir && gameNow() !== "stellaris";
-  $("ro-directive").textContent = dir ? human(dir) : "none";
-  $("ro-directive-sub").textContent = lastDec && dir ? `since ${lastDec.date}` : "";
-  const p = last && last.peers, sysP = p && p.systems, n = last ? (last.peer_count || 0) + 1 : 0;
-  const behind = (last && last.behind) || [];
-  const stEl = $("ro-standing");
-  if (sysP) {
-    stEl.textContent = `#${sysP.rank} of ${n} in systems`;
-    stEl.className = behind.length ? "attn" : "";
-    $("ro-standing-sub").textContent = behind.length ? `falling behind in ${behind.map(human).join(", ")}` : "keeping pace";
-  } else { stEl.textContent = ""; stEl.className = ""; $("ro-standing-sub").textContent = ""; }
-  $("ro-standing-cell").hidden = !sysP;
-  const cat = S.catalog || {}, turns = turnBased();
-  // Civ VI: the AI plays `decide_turns` turns between decisions, at the game's own pace (no speed)
-  const speed = turns ? "" : live ? info.speed : cat.speed;
-  const every = turns ? (live ? info.decide_turns : null) : (live ? info.every_months : cat.months);
+  const cat = S.catalog || {}, turns = turnBased(), g = S.spec.game;
+  // the Game settings follow the game's view: a speed only where the game has one (not Civ VI, whose
+  // AI plays at its own autoplay pace), the interval bound to the view's cadence field (decide_turns
+  // for Civ VI, every_months for Stellaris); the saved preference is Stellaris's months only, so a
+  // turn-based game's interval can be changed only while its run is live
+  const hasSpeed = S.spec.known ? g.speed : !turns;
+  const cadence = g.cadence || (turns ? "decide_turns" : "every_months");
+  const speed = !hasSpeed ? "" : live ? info.speed : cat.speed;
+  const every = live ? info[cadence] : (cadence === "every_months" ? cat.months : null);
   const unit = turns ? "turns" : "months";
   if (document.activeElement !== $("pace-speed") && speed) $("pace-speed").value = speed;
   if (document.activeElement !== $("pace-months") && every) $("pace-months").value = every;
-  $("pace-speed").closest("label").hidden = turns;
+  $("pace-speed").closest("label").hidden = !hasSpeed;
+  $("pace-months").closest("label").hidden = !every && !(live && cadence);
+  $("pace-hint").hidden = !$("pace-months").closest("label").hidden || !cadence;
+  $("pace-hint").textContent = `${g.short || "This game"} sets its interval when a run starts; change it here while the run is live.`;
   $("pace-unit").textContent = turns ? "turns" : "in-game months";
   $("ro-pace").textContent = speed || (turns && every ? "game's own pace" : "");
   $("ro-pace-sub").textContent = every ? `a decision every ${plural(every, unit.slice(0, -1))}` : "";
@@ -1097,38 +1246,60 @@ function renderReadout() {
     : (lastDec ? `last decision ${when(lastDec.t)} by ${(lastDec.model || "").replace(/^google:/, "")}` : "");
 }
 
+// The chart's views are the game's [chart.*] tables plus the table of every recorded figure.
+function renderChartViews() {
+  const views = [...S.spec.chart.map((c) => [c.id, c.label]), ["table", "Table"]];
+  if (!views.some(([id]) => id === S.chartView)) S.chartView = views[0][0];
+  const key = views.map((v) => v.join(":")).join("|") + "|" + S.chartView;
+  if ($("chart-views").dataset.key === key) return;
+  $("chart-views").dataset.key = key;
+  $("chart-views").innerHTML = views.map(([id, lbl]) => `<button type="button" data-view="${esc(id)}" aria-pressed="${id === S.chartView}">${esc(lbl)}</button>`).join("");
+}
+
 function renderChart() {
-  const wrap = $("chartwrap"), view = S.view;
+  const wrap = $("chartwrap");
   const ms = S.metrics.filter((m) => m.month != null);
   ms.forEach((m, i) => { m.prev = i ? ms[i - 1].month : null; });
-  renderNeighbours(ms);
-  renderStanding(ms[ms.length - 1]);
-  $("chart-sub").textContent = ms.length ? `${ms[0].date} to ${ms[ms.length - 1].date}` : "";
+  renderRivals(ms);
+  renderFigures(ms[ms.length - 1]);
+  renderChartViews();
+  $("h-chart").textContent = S.spec.game.chart_title || "Over time";
+  $("chart-sub").textContent = ms.length ? `${gdate(ms[0].date)} to ${gdate(ms[ms.length - 1].date)}` : "";
+  // absent means hidden: a game that records no figures (GalCiv) has no chart panel
+  $("p-chart").hidden = !ms.length && !S.spec.chart.length;
   if (!ms.length) {
     $("legend").innerHTML = "";
     wrap.innerHTML = `<p class="empty">No game figures recorded in this campaign yet.</p>`;
     return;
   }
-  if (view === "table") return renderTable(ms);
-  const series = SERIES[view];
-  $("legend").innerHTML = series.map(([, label], i) => `<span><i style="background:${color(i)}"></i>${label}</span>`).join("");
-  const W = Math.max(wrap.clientWidth, 320), H = 280, L = 48, R = view === "power" ? 84 : 14, T = 30, B = 44;
+  const cv = S.spec.chart.find((c) => c.id === S.chartView);
+  if (!cv) return renderTable(ms);
+  const series = cv.series.map((k) => [k, mlabel(k)]);
+  $("legend").innerHTML = series.map(([, lbl], i) => `<span><i style="background:${color(i)}"></i>${esc(lbl)}</span>`).join("");
+  const direct = series.length <= 4;          // few lines: each is also named at its end
+  const W = Math.max(wrap.clientWidth, 320), H = 280, L = 48, R = direct ? 92 : 14, T = 30, B = 44;
   const x0 = ms[0].month, x1 = Math.max(ms[ms.length - 1].month, x0 + 1);
   let lo = Infinity, hi = -Infinity;
-  for (const m of ms) for (const [k] of series) { const v = value(m, view, k); if (Number.isFinite(v)) { lo = Math.min(lo, v); hi = Math.max(hi, v); } }
-  if (hi === -Infinity) {        // this game records none of this view's figures: say so, never draw a NaN axis
-    const label = document.querySelector(`[data-view="${view}"]`).textContent.toLowerCase();
+  for (const m of ms) for (const [k] of series) { const v = metricValue(m, k); if (Number.isFinite(v)) { lo = Math.min(lo, v); hi = Math.max(hi, v); } }
+  if (hi === -Infinity) {        // this campaign records none of this view's figures: say so, never draw a NaN axis
     renderTable(ms);
-    wrap.insertAdjacentHTML("afterbegin", `<p class="empty">This campaign records no ${esc(label)} figures; these are the ones it records.</p>`);
+    wrap.insertAdjacentHTML("afterbegin", `<p class="empty">This campaign records no ${esc(cv.label.toLowerCase())} figures; these are the ones it records.</p>`);
     return;
   }
-  if (view !== "net") lo = Math.min(lo, 0);
-  const ticks = niceTicks(lo, hi);
+  let ticks;
+  if (cv.invert) {                // ranks: 1 (best) at the top, whole places only
+    lo = 1; hi = Math.max(hi, 2);
+    const step = Math.max(1, Math.ceil((hi - lo) / 5));
+    ticks = []; for (let t = 1; t <= hi + step - 1; t += step) ticks.push(t);
+  } else {
+    if (cv.id !== "net" && lo >= 0) lo = 0;
+    ticks = niceTicks(lo, hi);
+  }
   const y0 = ticks[0], y1 = ticks[ticks.length - 1];
   const X = (mo) => L + (mo - x0) / (x1 - x0) * (W - L - R);
-  const Y = (v) => T + (1 - (v - y0) / (y1 - y0 || 1)) * (H - T - B);
-  let svg = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(document.querySelector(`[data-view="${view}"]`).textContent)} over in-game time">`;
-  // wars: shaded spans behind the lines (from the monthly records)
+  const Y = cv.invert ? (v) => T + (v - y0) / (y1 - y0 || 1) * (H - T - B) : (v) => T + (1 - (v - y0) / (y1 - y0 || 1)) * (H - T - B);
+  let svg = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(cv.label)} over in-game time">`;
+  // wars: shaded spans behind the lines (from the recorded rows)
   const wars = [];
   for (const m of ms) {
     if (m.wars > 0) { const last = wars[wars.length - 1]; if (last && last.to === m.prev) last.to = m.month; else wars.push({ from: m.month, to: m.month }); }
@@ -1140,29 +1311,29 @@ function renderChart() {
   if (wars.length) $("legend").innerHTML += `<span><i class="war"></i>at war</span>`;
   // directive lane (top)
   const spans = directiveSpans();
-  spans.forEach((s, i) => {
-    const a = Math.max(X(Math.max(s.from, x0)), L), b = i + 1 < spans.length ? X(spans[i + 1].from) : W - R;
+  spans.forEach((sp, i) => {
+    const a = Math.max(X(Math.max(sp.from, x0)), L), b = i + 1 < spans.length ? X(spans[i + 1].from) : W - R;
     if (b <= L) return;
     svg += `<rect x="${a}" y="4" width="${Math.max(b - a - 2, 1)}" height="18" rx="4" fill="var(--raised)" stroke="var(--hair)"/>`;
-    if (b - a > 60) svg += `<text class="lane-label${i === spans.length - 1 ? " current" : ""}" x="${a + 8}" y="17">${esc(human(s.name))}</text>`;
+    if (b - a > 60) svg += `<text class="lane-label${i === spans.length - 1 ? " current" : ""}" x="${a + 8}" y="17">${esc(human(sp.name))}</text>`;
   });
   // grid + y ticks
-  for (const t of ticks) svg += `<line x1="${L}" x2="${W - R}" y1="${Y(t)}" y2="${Y(t)}" stroke="${t === 0 ? "var(--axis)" : "var(--grid)"}" stroke-width="1"/><text x="${L - 8}" y="${Y(t) + 4}" text-anchor="end">${fmt(t)}</text>`;
-  // x ticks: turns ("T250") for turn-based games, years for Stellaris
-  if (String(ms[0].date).startsWith("T")) {
+  for (const t of ticks) svg += `<line x1="${L}" x2="${W - R}" y1="${Y(t)}" y2="${Y(t)}" stroke="${t === 0 ? "var(--axis)" : "var(--grid)"}" stroke-width="1"/><text x="${L - 8}" y="${Y(t) + 4}" text-anchor="end">${cv.invert ? "#" + t : fmt(t)}</text>`;
+  // x ticks in the game's unit: turns ("T250") or years
+  if (S.spec.game.time_unit === "turn" || String(ms[0].date).startsWith("T")) {
     const step = [1, 2, 5, 10, 25, 50, 100, 250].find((k) => (x1 - x0) / k <= 6) || 500;
     for (let t = Math.ceil(x0 / step) * step; t <= x1; t += step) svg += `<text x="${X(t)}" y="${H - B + 18}" text-anchor="middle">T${t}</text>`;
   } else {
     const yrs = Math.max(1, Math.ceil((x1 - x0) / 12 / 6));
     for (let mo = Math.ceil(x0 / 12) * 12; mo <= x1; mo += 12 * yrs) svg += `<text x="${X(mo)}" y="${H - B + 18}" text-anchor="middle">${Math.floor(mo / 12)}</text>`;
   }
-  // lines
-  series.forEach(([k], i) => {
-    const pts = ms.map((m) => [X(m.month), value(m, view, k)]).filter(([, v]) => Number.isFinite(v)).map(([x, v]) => `${x.toFixed(1)},${Y(v).toFixed(1)}`);
+  // lines, each named at its end when there are few
+  series.forEach(([k, lbl], i) => {
+    const pts = ms.map((m) => [X(m.month), metricValue(m, k)]).filter(([, v]) => Number.isFinite(v)).map(([x, v]) => `${x.toFixed(1)},${Y(v).toFixed(1)}`);
     if (pts.length) svg += `<polyline points="${pts.join(" ")}" fill="none" stroke="${color(i)}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
-    if (view === "power") {
-      const last = [...ms].reverse().find((m) => value(m, view, k) != null);
-      if (last) svg += `<text x="${W - R + 8}" y="${Y(value(last, view, k)) + 4}" style="fill:var(--ink-2)">${esc(series[i][1])}</text>`;
+    if (direct) {
+      const last = [...ms].reverse().find((m) => Number.isFinite(metricValue(m, k)));
+      if (last) svg += `<text x="${W - R + 8}" y="${Y(metricValue(last, k)) + 4}" style="fill:var(--ink-2)">${esc(lbl)}</text>`;
     }
   });
   // decision marks (bottom)
@@ -1170,13 +1341,13 @@ function renderChart() {
     if (d.month == null || d.month < x0 - 1) return;
     const x = X(Math.min(Math.max(d.month, x0), x1)), changed = d.outcome === "applied";
     const sel = S.sel && S.sel.run_id === d.run_id && S.sel.episode === d.episode;
-    svg += `<g class="dmark" data-i="${idx}" tabindex="0" role="button" aria-label="Decision ${esc(d.date)}: ${esc(human(d.decision))}">
-      <title>${esc(d.date)}: ${esc(human(d.decision === "keep" ? "kept " + (d.current || "") : d.decision))}</title>
+    svg += `<g class="dmark" data-i="${idx}" tabindex="0" role="button" aria-label="Decision ${esc(gdate(d.date))}: ${esc(human(d.decision))}">
+      <title>${esc(gdate(d.date))}: ${esc(human(d.decision === "keep" ? "kept " + (d.current || "") : d.decision))}</title>
       <line x1="${x}" x2="${x}" y1="${T}" y2="${H - B + 2}" stroke="${sel ? "var(--accent)" : "var(--axis)"}" stroke-width="1" stroke-opacity="${changed || sel ? 1 : 0.5}"/>
       <circle cx="${x}" cy="${H - 12}" r="${changed ? 6 : 4.5}" fill="${changed ? "var(--accent)" : "var(--surface)"}" stroke="var(--accent)" stroke-width="2"/>
       <rect x="${x - 10}" y="${H - 24}" width="20" height="24" fill="transparent"/></g>`;
   });
-  // strategy review marks: a thin diamond on the directive lane at each version's month
+  // strategy review marks: a thin diamond on the directive lane at each version's date
   const reviews = (S.strategy && S.strategy.history) || [];
   const shown = reviews.filter((r) => monthOf(r.date) != null && monthOf(r.date) >= x0 - 1 && monthOf(r.date) <= x1);
   shown.forEach((r) => {
@@ -1188,7 +1359,7 @@ function renderChart() {
   svg += `<line id="xhair" x1="0" x2="0" y1="${T}" y2="${H - B}" stroke="var(--ink-2)" stroke-width="1" visibility="hidden"/>`;
   svg += `<g id="hdots"></g><rect id="hit" x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent"/></svg><div class="tip" id="tip" hidden></div>`;
   wrap.innerHTML = svg;
-  wrap.querySelectorAll(".dmark").forEach((g) => {
+  wrap.querySelectorAll(".dmark[data-i]").forEach((g) => {
     const pick = () => selectDecision(S.decisions[+g.dataset.i]);
     g.addEventListener("click", pick);
     g.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
@@ -1200,8 +1371,8 @@ function renderChart() {
     const m = ms.reduce((a, b) => Math.abs(b.month - mo) < Math.abs(a.month - mo) ? b : a);
     const x = X(m.month);
     xh.setAttribute("x1", x); xh.setAttribute("x2", x); xh.setAttribute("visibility", "visible");
-    dots.innerHTML = series.map(([k], i) => { const v = value(m, view, k); return v == null ? "" : `<circle cx="${x}" cy="${Y(v)}" r="4" fill="${color(i)}" stroke="var(--surface)" stroke-width="2"/>`; }).join("");
-    tip.innerHTML = `<b>${esc(m.date)}</b>` + series.map(([k, label], i) => `<div><span><i style="background:${color(i)}"></i>${label}</span><span>${fmt(value(m, view, k))}</span></div>`).join("");
+    dots.innerHTML = series.map(([k], i) => { const v = metricValue(m, k); return Number.isFinite(v) ? `<circle cx="${x}" cy="${Y(v)}" r="4" fill="${color(i)}" stroke="var(--surface)" stroke-width="2"/>` : ""; }).join("");
+    tip.innerHTML = `<b>${esc(gdate(m.date))}</b>` + series.map(([k, lbl], i) => `<div><span><i style="background:${color(i)}"></i>${esc(lbl)}</span><span>${Number.isFinite(metricValue(m, k)) ? (cv.invert ? "#" : "") + fmt(metricValue(m, k)) : ""}</span></div>`).join("");
     tip.hidden = false;
     const left = x / scale + 14, maxLeft = box.width - tip.offsetWidth - 4;
     tip.style.left = (left > maxLeft ? x / scale - tip.offsetWidth - 14 : left) + "px";
@@ -1241,18 +1412,18 @@ function shortModel(d) {
   return d.thinking ? `${name} · ${d.thinking}` : name;
 }
 
-// ---------- neighbours ----------
+// ---------- rivals (Neighbours, Civilizations met) ----------
 const NB_BAD = ["AT WAR", "rival", "hostile", "they rival us", "they closed borders"];
 const NB_GOOD = ["alliance", "friendly", "commercial pact", "research agreement", "defensive pact"];
 function ratioCell(t, o) {
-  if (!o || t == null) return "–";
+  if (!o || t == null) return "";
   const r = t / o, w = Math.min(r / 3, 1) * 100;
   const fill = r > 1.25 ? "var(--bad)" : r < 0.8 ? "var(--good)" : "var(--ink-2)";
   return `<span class="ratio" title="${fmt(t)} vs our ${fmt(o)}"><span>${r.toFixed(1)}×</span><span class="bar"><span style="width:${w}%;background:${fill}"></span><em></em></span></span>`;
 }
-function times(t, o) { return !o || t == null ? "–" : (t / o).toFixed(1) + "×"; }
+function times(t, o) { return !o || t == null ? "" : (t / o).toFixed(1) + "×"; }
 function spark(points) {
-  if (points.length < 2) return "–";
+  if (points.length < 2) return "";
   const W = 84, H = 22, xs = points.map((p) => p[0]), ys = points.map((p) => p[1]);
   const x0 = Math.min(...xs), x1 = Math.max(...xs) || x0 + 1, hi = Math.max(1.2, ...ys);
   const X = (x) => 2 + (x - x0) / ((x1 - x0) || 1) * (W - 4), Y = (y) => H - 2 - y / hi * (H - 4);
@@ -1261,41 +1432,47 @@ function spark(points) {
     <line x1="2" x2="${W - 2}" y1="${Y(1)}" y2="${Y(1)}" stroke="var(--axis)" stroke-dasharray="3 3"/>
     <polyline points="${pts}" fill="none" stroke="var(--s1)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
 }
-function renderNeighbours(ms) {
-  const panel = $("p-nb"), last = [...ms].reverse().find((m) => m.neighbours && m.neighbours.length);
-  if (!last) { panel.hidden = true; return; }
+function renderRivals(ms) {
+  const panel = $("p-nb"), spec = S.spec.rivals, last = [...ms].reverse().find((m) => m.neighbours && m.neighbours.length);
+  if (!spec || !last) { panel.hidden = true; return; }
   panel.hidden = false;
-  $("nb-sub").textContent = `${last.date}, compared with us`;
-  const hist = (name) => ms.filter((m) => m.military_power && m.neighbours).map((m) => {
+  $("h-nb").textContent = spec.label;
+  $("nb-sub").textContent = `${gdate(last.date)}, compared with us`;
+  const hist = (name, c) => ms.filter((m) => m[c.ours] && m.neighbours).map((m) => {
     const n = m.neighbours.find((x) => x.name === name);
-    return n && n.military != null ? [m.month, n.military / m.military_power] : null;
+    return n && n[c.key] != null ? [m.month, n[c.key] / m[c.ours]] : null;
   }).filter(Boolean);
+  const cell = (n, c) => {
+    const v = n[c.key], ours = c.ours ? last[c.ours] : null;
+    if (c.kind === "ratio") return ratioCell(v, ours);
+    if (c.kind === "times") return times(v, ours);
+    if (c.kind === "trend") return spark(hist(n.name, c));
+    if (c.kind === "flag") return v ? `<span class="tag bad">${esc(c.label.toLowerCase())}</span>` : "";
+    return v == null ? "" : fmt(v);
+  };
+  // a column no rival has a value for is left out (absent means hidden)
+  const cols = spec.columns.filter((c) => c.kind === "trend" || last.neighbours.some((n) => n[c.key] != null && n[c.key] !== false));
   const rows = last.neighbours.map((n) => {
-    const tags = (n.status || []).map((t) => `<span class="tag${NB_BAD.includes(t) ? " bad" : NB_GOOD.includes(t) ? " good" : ""}">${esc(t)}</span>`).join("");
-    return `<tr><td class="who"><b>${esc(n.name)}</b>${tags ? `<div class="tags">${tags}</div>` : ""}</td>
-      <td>${ratioCell(n.military, last.military_power)}</td>
-      <td class="hide-s" title="${fmt(n.economy)} vs our ${fmt(last.economy_power)}">${times(n.economy, last.economy_power)}</td>
-      <td class="hide-s" title="${fmt(n.tech)} vs our ${fmt(last.tech_power)}">${times(n.tech, last.tech_power)}</td>
-      <td>${fmt(n.systems)}</td>
-      <td>${n.opinion == null ? "–" : fmt(n.opinion)}</td>
-      <td class="hide-s">${spark(hist(n.name))}</td></tr>`;
+    const tags = spec.tags ? (n[spec.tags] || []).map((t) => `<span class="tag${NB_BAD.includes(t) ? " bad" : NB_GOOD.includes(t) ? " good" : ""}">${esc(t)}</span>`).join("") : "";
+    return `<tr><td class="who"><b>${esc(n.name)}</b>${tags ? `<div class="tags">${tags}</div>` : ""}</td>` +
+      cols.map((c) => `<td${c.wide_only ? ' class="hide-s"' : ""}>${cell(n, c)}</td>`).join("") + `</tr>`;
   }).join("");
-  $("nb").innerHTML = `<div class="nbwrap"><table class="nb"><thead><tr><th>Empire</th><th>Military</th><th class="hide-s">Economy</th>
-    <th class="hide-s">Tech</th><th>Systems</th><th title="Their opinion of us">Opinion</th><th class="hide-s" title="Their military as a multiple of ours, over the campaign">Trend</th></tr></thead><tbody>${rows}</tbody></table></div>
-    <p class="nb-note">Military, economy and tech are theirs as a multiple of ours (the bar's tick is 1×, equal strength); opinion is theirs of us; the trend line is their military against ours since records began. Nearest first, with empires at war with us and on our border leading.</p>`;
+  $("nb").innerHTML = `<div class="nbwrap"><table class="nb"><thead><tr><th>${esc(S.spec.game.time_unit === "turn" ? "Civilization" : "Empire")}</th>` +
+    cols.map((c) => `<th${c.wide_only ? ' class="hide-s"' : ""}${c.title ? ` title="${esc(c.title)}"` : ""}>${esc(c.label)}</th>`).join("") +
+    `</tr></thead><tbody>${rows}</tbody></table></div>${spec.note ? `<p class="nb-note">${esc(spec.note)}</p>` : ""}`;
 }
 
+// Every figure this campaign records, newest first: the view's series and figures where it has them,
+// else every number in the rows.
 function renderTable(ms) {
   $("legend").innerHTML = "";
-  const known = [...SERIES.net.map(([k, l]) => ["net." + k, l + " / mo"]), ["planets", "Planets"], ["pops", "Pops"], ["military_power", "Military"], ["economy_power", "Economy"], ["tech_power", "Technology"]];
-  const get = (m, c) => c.startsWith("net.") ? m.net?.[c.slice(4)] : m[c];
-  // the columns this campaign records: the Stellaris set where it has them, else every number it records
-  const shown = known.filter(([c]) => ms.some((m) => Number.isFinite(get(m, c))));
+  const keys = [...new Set([...S.spec.chart.flatMap((c) => c.series), ...S.spec.figures.filter((f) => ["value", "rank"].includes(f.kind)).map((f) => f.key)])];
+  const shown = keys.filter((k) => ms.some((m) => Number.isFinite(metricValue(m, k)))).map((k) => [k, mlabel(k)]);
   const other = [...new Set(ms.flatMap((m) => Object.keys(m)))]
-    .filter((k) => !["month", "prev", "t"].includes(k) && ms.some((m) => typeof m[k] === "number")).map((k) => [k, human(k)]);
+    .filter((k) => !["month", "prev", "t", "turn"].includes(k) && ms.some((m) => typeof m[k] === "number")).map((k) => [k, mlabel(k)]);
   const cols = [["date", "Date"], ...(shown.length ? shown : other)];
-  $("chartwrap").innerHTML = `<div class="tablewrap"><table class="data"><thead><tr>${cols.map(([, l]) => `<th>${l}</th>`).join("")}</tr></thead><tbody>` +
-    [...ms].reverse().map((m) => `<tr>${cols.map(([c]) => `<td>${c === "date" ? esc(m.date) : fmt(get(m, c))}</td>`).join("")}</tr>`).join("") + `</tbody></table></div>`;
+  $("chartwrap").innerHTML = `<div class="tablewrap"><table class="data"><thead><tr>${cols.map(([, l]) => `<th>${esc(l)}</th>`).join("")}</tr></thead><tbody>` +
+    [...ms].reverse().map((m) => `<tr>${cols.map(([c]) => `<td>${c === "date" ? esc(gdate(m.date)) : Number.isFinite(metricValue(m, c)) ? fmt(metricValue(m, c)) : ""}</td>`).join("")}</tr>`).join("") + `</tbody></table></div>`;
 }
 
 // ---------- decisions ----------
@@ -1407,10 +1584,11 @@ function thinkingHint(model) {
 function setMode(m) {
   S.mode = m;
   document.querySelectorAll("#modes button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === m)));
+  const g = S.spec.game;
   const cfg = {
-    chat: ["Ask", "Ask why it chose a directive, or what it plans next", "Asking never changes the game."],
+    chat: ["Ask", g.talk_placeholder || "Ask why it decided as it did, or what it plans next", "Asking never changes the game."],
     instruct: ["Add note", "Guidance for the next decision only", "Used once, at the next decision point."],
-    decide_now: ["Decide now", "Optional: what the model should weigh right now", "Pauses the game and asks the model to decide now."],
+    decide_now: ["Decide now", "Optional: what the model should weigh right now", g.decide_now_help || "Asks the model to decide now."],
   }[m];
   $("send").textContent = cfg[0]; $("msg").placeholder = cfg[1]; $("mode-hint").textContent = cfg[2];
 }
@@ -1463,6 +1641,7 @@ function addMessage(ev) {
   const key = `${ev.t}|${ev.role}|${ev.text}`;
   if (seenChat.has(key)) return;          // history load and the live stream's replay overlap
   seenChat.add(key);
+  $("thread-empty").hidden = true;
   const who = ev.role === "human" ? (ev.by && ev.by !== "the controller" ? `You (${ev.by})` : "You") : "Model";
   $("thread").insertAdjacentHTML("beforeend", `<div class="msg ${ev.role}"><span class="who">${who}, ${new Date(ev.t * 1000).toLocaleTimeString()}</span><p>${ev.role === "model" ? md(ev.text) : esc(ev.text)}</p></div>`);
   if (ev.role === "model") flag("talk");
@@ -1571,6 +1750,11 @@ async function sync() {
     try { (await api("/events.json?n=300")).forEach((e) => { if (isNew(e)) { addFeed(e); if (e.kind === "chat") addMessage(e); } }); } catch { /* older server */ }
     connect();
     await loadCampaigns(); await loadCampaignData();
+    if (S.starting && Date.now() - S.starting.at < 600000) {
+      const c = (S.camps || []).find((x) => x.id === (S.status.info || {}).campaign);
+      toast(`Started ${S.spec.game.short || GAME_NAMES[S.starting.game] || S.starting.game}${c ? ", " + (c.title || human(c.name)) : ""}${S.status.game_date ? ", " + gdate(S.status.game_date) : ""}.`);
+      S.starting = null;
+    }
   } else if (!S.live && wasLive === true) {                       // the run ended
     disconnect();
     await loadCampaigns(); await loadCampaignData();
@@ -1604,11 +1788,11 @@ function freshness() {
 }
 
 // ---------- wiring ----------
-document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => {
-  S.view = b.dataset.view;
-  document.querySelectorAll("[data-view]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+$("chart-views").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-view]"); if (!b) return;
+  S.chartView = b.dataset.view;
   renderChart();
-}));
+});
 $("campaign").addEventListener("change", async (e) => {
   S.campaign = e.target.value; clearReasoning();
   S.pinned = S.campaign !== (S.status.info || {}).campaign;     // a deliberate look at another campaign
@@ -1640,7 +1824,10 @@ const shortName = (m) => m.replace(/^[a-z-]+:/, "");
 // S.edit = role being edited; S.pools[role] = its list (null = same as decisions); S.rotates[role].
 function poolFor(role) { return role === "decisions" || !S.pools[role] ? S.pools.decisions : S.pools[role]; }
 function renderRoles() {
-  const meta = (S.catalog || {}).role_meta || [{ id: "decisions", label: "Decisions", help: "" }];
+  // the decisions role's help is the game's; the GC4 blockers role exists only for GalCiv
+  const meta = ((S.catalog || {}).role_meta || [{ id: "decisions", label: "Decisions", help: "" }])
+    .filter((r) => r.id !== "episodes" || gameNow() === "galciv4")
+    .map((r) => r.id === "decisions" && S.spec.game.decisions_help ? { ...r, help: S.spec.game.decisions_help } : r);
   $("roles").innerHTML = meta.map((r) => `<button type="button" role="tab" data-role="${esc(r.id)}" aria-selected="${r.id === S.edit}">${esc(r.label)}${r.id !== "decisions" && S.pools[r.id] ? `<span class="own">own</span>` : ""}</button>`).join("");
   const r = meta.find((x) => x.id === S.edit) || meta[0];
   $("role-help").textContent = r.help || "";
@@ -1951,29 +2138,40 @@ async function setPace(kind) {
 $("pace-speed").addEventListener("change", () => setPace("speed"));
 $("pace-months").addEventListener("change", () => setPace("months"));
 
+// Start run follows the game: the game in front on the PC is preselected, a warning appears only
+// when the chosen game is not in front, and only that game's fields show (speed and months for
+// Stellaris; Civ VI decides every PILOT_DECIDE_TURNS turns at the game's own pace).
+async function startFields() {
+  const game = $("start-game").value, spec = await loadSpec(game), front = (S.pc || {}).front_game;
+  $("start-speed").closest("label").hidden = !spec.game.speed;
+  $("start-months").closest("label").hidden = spec.game.cadence !== "every_months";
+  $("start-note").hidden = !S.pc || !S.pc.online || front === game;
+  $("start-note").textContent = `${GAME_NAMES[game] || game} is not in front on the PC. Bring it to the front with the campaign's save loaded, then start.`;
+}
 function openStart() {
   const c = S.catalog || {}, open = (S.pc && S.pc.games) || [];
-  if (c.game) $("start-game").value = c.game;
-  if (open.length === 1) $("start-game").value = open[0];
-  $("start-note").hidden = !!open.length;
+  $("start-game").value = (S.pc && S.pc.front_game) || (open.length === 1 ? open[0] : c.game) || "stellaris";
   if (c.speed) $("start-speed").value = c.speed;
   if (c.months) $("start-months").value = c.months;
-  document.querySelectorAll(".stellaris-only").forEach((el) => (el.hidden = $("start-game").value !== "stellaris"));
+  startFields();
   $("start-dialog").showModal();
 }
 $("b-start").addEventListener("click", openStart);
 $("b-start-2").addEventListener("click", openStart);
-$("start-game").addEventListener("change", () =>
-  document.querySelectorAll(".stellaris-only").forEach((el) => (el.hidden = $("start-game").value !== "stellaris")));
+$("start-game").addEventListener("change", startFields);
 $("start-dialog").addEventListener("close", async () => {
   if ($("start-dialog").returnValue !== "start") return;
   const body = { game: $("start-game").value, speed: $("start-speed").value, months: +$("start-months").value };
   const r = await fetch("/api/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  toast(r.ok ? `Starting a ${GAME_NAMES[body.game] || body.game} run. The page switches to it in a few seconds.`
+  if (r.ok) S.starting = { game: body.game, at: Date.now() };
+  toast(r.ok ? `Starting ${GAME_NAMES[body.game] || body.game}. The page switches to the run once it plays.`
              : `Could not start: ${await whyRefused(r)}`, r.ok ? "" : "bad");
   await loadCatalog();
 });
-$("b-stop").addEventListener("click", () => { if (confirm("Stop the pilot? The game is paused when it stops.")) control({ action: "stop" }); });
+$("b-stop").addEventListener("click", () => {
+  const date = gdate(S.status.game_date || "");
+  if (confirm(`Stop the run? ${S.spec.game.stop_confirm.replace("{date}", date || "its date")}`)) control({ action: "stop" });
+});
 $("b-yes").addEventListener("click", () => control({ action: "answer", text: "yes" }));
 $("b-no").addEventListener("click", () => control({ action: "answer", text: "no" }));
 $("b-answer").addEventListener("click", () => { const t = $("answer-text").value.trim(); if (t) { control({ action: "answer", text: t }); $("answer-text").value = ""; } });

@@ -456,6 +456,14 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   resource that the save holds while it passes the declared order's checks), `pick_tech`/`sync_market` (paused, foreground-checked, screen always
   closed), positions in `corpora/stellaris/manifest.toml` `[ui.tech]`/`[ui.market]` (calibrated live
   on 4.5.1). The old free-text plan (`plan` events, `/api/plans`) remains readable history only.
+- `view.py`: each game's dashboard view (`corpora/<game>/dashboard.toml`, validated into one JSON shape
+  with defaults; a missing or broken file gives the default view and the error, so the page still
+  renders) and `Names` (ids to names from the game's corpus records, `aliases[0]` being the type
+  key; prefix-strip and title-case as the fallback). `/api/view` serves the view; `/api/metrics`
+  gives rivals a readable `name` next to their `id`; `/api/strategy` adds `names` for the ids in the
+  strategy and the latest `reviews` (accepted, rejected, skipped with `next_after`).
+  `tests/test_dashboard_view.py` checks every view's metric keys against `pillars.toml [metrics]`
+  and the game's metrics rows, and its outcome keys against `telemetry.SCORED`.
 - `static/dashboard.html`: one file, no build step; SVG charts (palette validated for both themes;
   light-mode relief via legend, hover values and a table view). Dates reach the axis through
   `monthOf` (months for "2288.08.01", the turn for "T57", like `telemetry.month_index`, null

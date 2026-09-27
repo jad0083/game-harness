@@ -298,11 +298,21 @@ back.
 running pilot (whose own dashboard is on `PILOT_PORT`, 8790, on 127.0.0.1). It refreshes itself: status every
 3 s, the live event stream during a run, campaign data every 10 s otherwise.
 
-- **Readout**: in-game date, directive in force, standing, what the governor is doing, and the pace
-  (speed and months between decisions, both changeable). Each game shows only what it has: Civ VI
-  has no directive, standing or speed, and its pace is the turns the AI plays between decisions.
-- **Empire over time**: standing against the other empires, net income, stockpiles and power over
-  in-game months, with the directive in force, war periods and a mark per decision.
+- **Each game speaks its own words** from `corpora/<game>/dashboard.toml` (served by `GET
+  /api/view?campaign=|game=`): time unit and date format, the cadence field, the decision noun, the
+  levers tab, figures, chart views and series, outcome keys and window, the rivals table and the
+  recovery steps per stop. A figure, view, column or cell whose data the game or the running pilot
+  does not publish is hidden, never shown as "–". Game ids read as names (`CIVILIZATION_GERMANY` →
+  Germany, `unit:trader` → Trader) from the corpus, with prefix-strip and title-case as the fallback.
+- **Readout**: in-game date, what the governor is doing, and the pace (speed and the interval between
+  decisions). Civ VI has no speed; its pace is the turns the AI plays between decisions.
+- **Figures**: from the view's `[[figures]]`: value, label and a subline with our place among the
+  rivals ("#4 of 4, median 42, behind the median", in the warning colour with those words) or what
+  purchases keep back. Stellaris leads with the directive in force and the standing.
+- **Over time**: the view's chart views (Civ VI: yields, balances, rank with 1 at the top; Stellaris:
+  net income, stockpile, power) plus a table of every recorded figure, with war periods, the
+  directive lane and a mark per decision. The rivals table (Civilizations met, Neighbours) has the
+  view's columns; a column no rival has a value for is left out.
 - **Decisions**: date, directive, trigger, model, the reason, and what changed 12 months later. A
   decision whose model calls all failed reads "No decision" with the cause (e.g. "the model was
   overloaded (503)"); Reasoning keeps the raw error one disclosure away.
@@ -314,10 +324,20 @@ running pilot (whose own dashboard is on `PILOT_PORT`, 8790, on 127.0.0.1). It r
   the game does not record falls back to the table of the figures it does record.
 - **Talk** (live): ask the model about its reasoning, leave a note for the next decision, decide
   now, standing orders, override a directive, answer confirmations.
-- **Strategy**: focus, directives by pressure, one card per pillar (weight × need = pressure, share
-  of all pressure, stance, goals, milestones with status, actions), Edit / Unpin, *Review strategy
-  now*, and the version history.
-- **Settings**: models per role; with no run active, *Start run* starts `game-pilot.service`.
+- **Strategy**: the focus, then where the effort goes as one stacked bar (share mode, Civ VI) or the
+  directives by pressure (exclusive mode, Stellaris); the strategy summary folded to three lines
+  with *Read all* (its lists render as lists); one card per pillar (share mode: "34% of effort";
+  exclusive mode: weight · need × · pressure, with the share bar; stance, goals, milestones with
+  dates in game units, preferred items by name), Edit (a weight change previews how the other
+  unpinned weights rescale) / Unpin, *Review strategy now* with the last review's result beside it
+  (accepted with the weight changes, rejected and why, or skipped with the next eligible date), and
+  the version history.
+- **Settings**: models per role (the decisions role's help is the game's; the GC4 blockers role only
+  for GalCiv); Game: a speed only where the game has one, the interval bound to the game's cadence
+  field (Civ VI's turns only while its run is live). With no run active, *Start run* starts
+  `game-pilot.service`, with the game in front on the PC preselected, a warning only when the chosen
+  game is not in front, only that game's fields, and a toast naming the game and campaign that
+  started.
   Changes save at once, and each field says "Saved" (or why not) next to itself.
 - A refused action (the live pilot answers 400, a change the dashboard refuses) is said in a toast
   with the server's reason; the page never blocks on a dialog box. Light mode's text colours pass
