@@ -960,7 +960,9 @@ def held_outcome(c: Checked, base: dict, now: dict, window: int) -> tuple[str, s
         if not missing:
             return current
         unlocked = (options or {}).get("policies")
-        if unlocked is not None and not any(k in unlocked for k in missing):
+        if unlocked is None:
+            return "unknown", None                          # an obsolete card swapped out, or the AI's choice
+        if not any(k in unlocked for k in missing):
             return "invalidated", None
         instead = sorted(k for k in slotted if k and k not in e["policies"])
         return "overridden", ", ".join(instead) or None

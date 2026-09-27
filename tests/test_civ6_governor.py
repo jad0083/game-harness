@@ -555,6 +555,11 @@ def test_policies_changed_by_the_ai_are_overridden():
     assert held_outcome(c, base, snap(47), 20) == ("held", None)
     gone = snap(30, policy_slots=slots, options={**FIXTURE["options"], "policies": []})
     assert held_outcome(c, base, gone, 20) == ("invalidated", None)
+    # without the unlocked cards (the options read failed) a replaced card may be an obsolete one the
+    # game swapped out (invalidated) or the AI's choice (overridden): neither can be told
+    assert held_outcome(c, base, snap(30, policy_slots=slots, options=None), 20) == ("unknown", None)
+    no_cards = {k: v for k, v in FIXTURE["options"].items() if k != "policies"}
+    assert held_outcome(c, base, snap(30, policy_slots=slots, options=no_cards), 20) == ("unknown", None)
 
 
 def _rows(key: str, results: list[str], start: int = 10, step: int = 4) -> list[dict]:
