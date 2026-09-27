@@ -1,0 +1,139 @@
+{
+ "autoplay": {
+  "active": false,
+  "turns": 0
+ },
+ "blocker": "ENDTURN_BLOCKING_UNITS",
+ "cities": [
+  {
+   "capital": true,
+   "damaged": false,
+   "districts": [],
+   "enemies_near": 0,
+   "food": 6,
+   "id": 65536,
+   "loyalty": 100,
+   "name": "Beijing",
+   "pop": 2,
+   "producing": "UNIT_BUILDER",
+   "production": 5,
+   "threatened": false,
+   "turns_left": 4,
+   "under_siege": false,
+   "wonders": []
+  }
+ ],
+ "civ": "CIVILIZATION_CHINA",
+ "civ_name": "China",
+ "civic": {
+  "civic": "CIVIC_CODE_OF_LAWS",
+  "turns_left": 2
+ },
+ "civics_known": 0,
+ "dark_age_threshold": 11,
+ "era": "ERA_ANCIENT",
+ "era_index": 0,
+ "era_score": 2,
+ "faith": 8,
+ "gold": 50,
+ "golden_age_threshold": 25,
+ "government": "GOVERNMENT_CHIEFDOM",
+ "great_people": {
+  "current": [
+   {
+    "class": "GREAT_PERSON_CLASS_GENERAL",
+    "cost": 60,
+    "ours": 0
+   },
+   {
+    "class": "GREAT_PERSON_CLASS_ADMIRAL",
+    "cost": 60,
+    "ours": 0
+   },
+   {
+    "class": "GREAT_PERSON_CLASS_ENGINEER",
+    "cost": 120,
+    "ours": 0
+   },
+   {
+    "class": "GREAT_PERSON_CLASS_MERCHANT",
+    "cost": 60,
+    "ours": 0
+   },
+   {
+    "class": "GREAT_PERSON_CLASS_PROPHET",
+    "cost": 60,
+    "ours": 0
+   },
+   {
+    "class": "GREAT_PERSON_CLASS_SCIENTIST",
+    "cost": 60,
+    "ours": 0
+   },
+   {
+    "class": "GREAT_PERSON_CLASS_WRITER",
+    "cost": 60,
+    "ours": 0
+   },
+   {
+    "class": "GREAT_PERSON_CLASS_ARTIST",
+    "cost": 240,
+    "ours": 0
+   },
+   {
+    "class": "GREAT_PERSON_CLASS_MUSICIAN",
+    "cost": 420,
+    "ours": 0
+   }
+  ],
+  "past": [],
+  "recruited": 0
+ },
+ "leader": "LEADER_KUBLAI_KHAN_CHINA",
+ "leader_name": "Kublai Khan (China)",
+ "majors": [],
+ "map_seed": "702403662",
+ "military": 24,
+ "ok": true,
+ "player": 0,
+ "policies_unlock_cost": 0,
+ "policy_slots": [
+  {
+   "slot": 0,
+   "type": "military"
+  },
+  {
+   "slot": 1,
+   "type": "economic"
+  },
+  {
+   "slot": 2,
+   "type": "economic"
+  }
+ ],
+ "research": {
+  "tech": "TECH_MINING",
+  "turns_left": 6
+ },
+ "score": 10,
+ "techs_known": 0,
+ "turn": 9,
+ "units": {
+  "by_class": {
+   "land_combat": 1
+  },
+  "by_type": {
+   "UNIT_WARRIOR": 1
+  },
+  "total": 1
+ },
+ "wars": [],
+ "yields": {
+  "culture": 2.598,
+  "faith": 1,
+  "food": 6,
+  "gold": 5,
+  "production": 5,
+  "science": 3
+ }
+}

@@ -1,4 +1,5 @@
 mod autopilot;
+mod civ6;
 mod client;
 mod corpus;
 mod imaging;
@@ -188,6 +189,18 @@ enum Civ6Action {
         #[arg(long)]
         timeout_ms: Option<u64>,
     },
+    /// One JSON document of the game for the governor (installs corpora/civ6/lua/harness.lua
+    /// into the game's Lua state when missing)
+    Snapshot,
+    /// Carry out one structured order, e.g. '{"kind":"research","id":"tech:pottery"}'; kinds:
+    /// research, civic, policies, production, purchase, price (read-only). Prints the game's reply
+    Order { json: String },
+    /// Let the game's AI play our civ for N turns (AutoplayManager), then hand it back
+    Autoplay { turns: u32 },
+    /// Stop autoplay now
+    AutoplayStop,
+    /// Whether autoplay is running, its turns and the current turn
+    AutoplayStatus,
 }
 
 #[derive(Subcommand)]
@@ -354,6 +367,34 @@ async fn main() -> Result<()> {
             } else {
                 r.output.iter().for_each(|l| println!("{l}"));
             }
+        }
+        Commands::Civ6 { action: Civ6Action::Snapshot } => {
+            let dir = cli.corpus.clone().unwrap_or_else(|| PathBuf::from("corpora/civ6"));
+            let lib = civ6::Library::load(&dir)?;
+            let v = civ6::call(&client, &lib, civ6::STATE_UI, "Harness.run(Harness.snapshot)").await?;
+            civ6::check_snapshot(&v)?;
+            println!("{}", serde_json::to_string(&v)?);
+        }
+        Commands::Civ6 { action: Civ6Action::Order { json } } => {
+            let dir = cli.corpus.clone().unwrap_or_else(|| PathBuf::from("corpora/civ6"));
+            let order = civ6::Order::parse(&json)?;
+            let (state, call) = civ6::order_call(&order, &civ6::CorpusIds::load(&dir)?)?;
+            let v = civ6::call(&client, &civ6::Library::load(&dir)?, state, &call).await?;
+            println!("{}", serde_json::to_string(&v)?);
+            if v.get("ok") == Some(&serde_json::Value::Bool(false)) {
+                std::process::exit(2);
+            }
+        }
+        Commands::Civ6 { action: Civ6Action::Autoplay { turns } } => {
+            let dir = cli.corpus.clone().unwrap_or_else(|| PathBuf::from("corpora/civ6"));
+            let v = civ6::call(&client, &civ6::Library::load(&dir)?, civ6::STATE_UI, &civ6::autoplay_call(turns)?).await?;
+            println!("{}", serde_json::to_string(&v)?);
+        }
+        Commands::Civ6 { action: Civ6Action::AutoplayStop } | Commands::Civ6 { action: Civ6Action::AutoplayStatus } => {
+            let dir = cli.corpus.clone().unwrap_or_else(|| PathBuf::from("corpora/civ6"));
+            let f = if matches!(cli.command, Commands::Civ6 { action: Civ6Action::AutoplayStop }) { "autoplay_stop" } else { "autoplay_status" };
+            let v = civ6::call(&client, &civ6::Library::load(&dir)?, civ6::STATE_UI, &format!("Harness.run(Harness.{f})")).await?;
+            println!("{}", serde_json::to_string(&v)?);
         }
         Commands::Corpus { action } => {
             if let Some(c) = corpus {
