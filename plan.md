@@ -93,7 +93,7 @@
 - [x] Neighbours' identity in the briefing: ethics, government, civics, AI personality, species traits, colonies, traditions, perks
 - [x] Corpus: 363 species traits and 24 colonisable planet classes from the game files; advanced strategy doc (4.5.1 files + wiki); playbook §10 lessons from play and §11 species and identity, both sent with every decision
 - [x] Directives set policies only under each option's `valid` trigger; `expand`/`diplomacy_first` also set proactive first contact — live check that the policies change in game — verified 2026-09-26 in a new Theian game: the save holds `first_contact_protocol = first_contact_proactive`
-- [ ] Model provider `claude-code:*` (Claude Code CLI, Claude subscription instead of an API key) for any role, Strategy first; falls back to the next model on a usage limit or CLI error
+- [x] Model provider `claude-code:*` (Claude Code CLI, Claude subscription instead of an API key) for any role, Strategy first; falls back to the next model on a usage limit or CLI error
 - [ ] Economic-plan subplans gated on directive flags (naval capacity under `defend`/`prepare_war`, research under `tech_rush`, pops under `expand`, small strategic-resource targets when one runs out) — test against the game files, then measure over ~10 in-game years
 - [ ] Evaluate carrier doctrine under `prepare_war` (`fleet_doctrine = strike_wing_fleet_doctrine`, cruisers and hangars known): live test that the AI's refreshed designs raise fleet power
 - [ ] Evaluate isolationist stance for a boxed-in research phase (+10% unity, but −25% diplomatic weight; conflicts with federation play)
@@ -140,4 +140,3 @@
 - [x] Stellaris tech and market positions at 2560x1440: mapped from 4K by `scripts/res-map.py` (scale 1.2, anchors in `res/map.toml`), verified live with a tech pick and a market order added and removed (51143d9)
 - [x] Stellaris on mini-rig2: borderless, monthly autosave, tutorial off, Governor Bridge playset; governor service points at mini-rig2 (systemd drop-in) and plays the new Blooms of Gaea campaign (2026-09-26)
 - [ ] Buy-outs per game (economy pillar action): Stellaris converts idle stock into the bottleneck resource on the market (no rush-buy exists); GalCiv4 rushes builds with credits (verify in play first); Civilization VI buys units, buildings, tiles and great people with gold or faith. Rule: spend when turns saved times the item's value beats the resource's other uses, keep a reserve, buy at once for a threatened city or planet
-- [ ] Claude Code provider (`claude-code:<model>`): model calls through the headless `claude -p` CLI on the user's subscription (no API key), JSON-schema answers, fallback to the next model on limits or errors; first for the Strategy role
