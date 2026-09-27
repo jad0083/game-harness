@@ -4738,6 +4738,24 @@ def test_the_need_boost_row_says_why_nothing_was_boosted(setup, monkeypatch):
     assert (row["result"], row["detail"]) == ("no_op", "no pillar ranks defend")
 
 
+def test_the_crisis_alloys_order_takes_the_market_slot_from_a_declared_order(setup):
+    """Ruling 9: at most 1 order until L2, and the crisis order takes the first slot: the declared
+    order the save already holds is removed in the same sync that adds the alloys."""
+    from pilot.strategy import Pillar
+    s, log = setup
+    _alloys_measured(s)
+    food = {"side": "buy", "resource": "food", "amount": 10}
+    game = FakeStellaris([_war_save("2256.01.01"), _war_save("2256.02.01", occupied=True)])
+    g = Governor(s, game, log, model=decisions("expand", "keep"), role_models={"strategy": _review_prompts([])})
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[food]))
+    g.run(max_decisions=2)
+    syncs = [a for a in game.actions if a[0] == "market_sync"]
+    assert syncs == [("market_sync", [food]), ("market_sync", [{"side": "buy", "resource": "alloys", "amount": 25}])], syncs
+    assert "skipped buy food 10: the war crisis alloys order takes the slot" in _market_log(log)
+    assert [(r["key"], r["result"]) for r in g._action_rows if r["key"] == "market buy food"] == [("market buy food", "held")]
+    assert [a["expect"]["amount"] for a in g._actions if a["key"] == "market buy food"] == [0], "its removal is followed"
+
+
 def test_no_alloys_without_a_shipyard_in_a_system_we_control(setup):
     s, log = setup
     _alloys_measured(s)
