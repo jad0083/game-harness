@@ -1462,8 +1462,11 @@ def test_strategy_instructions_cover_the_defence_naval_cap_ruling():
 
 def test_strategy_instructions_forbid_trade_market_orders():
     from pilot.strategy import strategist_instructions
-    assert ("Market orders cannot use trade; sell only idle energy, minerals, food, consumer goods "
-            "or alloys (strategic resources can only be bought).") in strategist_instructions(STELLARIS)
+    text = strategist_instructions(STELLARIS)
+    assert ("Market orders cannot use trade; sell only idle energy, minerals, food or consumer goods "
+            "(strategic resources can only be bought);") in text
+    # alloys and sr_* have no measured start amount yet: the controller refuses to add them
+    assert "alloys and sr_* orders are not placed until their start amount is measured" in text
 
 
 def test_strategy_instructions_allow_at_most_one_small_monthly_order():
@@ -2632,6 +2635,51 @@ def test_sells_that_no_longer_fit_are_dropped_before_market_sync(setup):
     assert ("market_sync", []) in game.actions, "the stale sell is removed, not kept"
     skipped = [e for e in log.recent if e["kind"] == "strategy_action" and "skipped sell energy" in e.get("result", "")]
     assert skipped and "not idle" in skipped[0]["result"]
+
+
+def test_an_unmeasured_market_order_is_left_out_and_the_rest_of_the_sync_still_goes(setup):
+    """Review fix: the controller refuses an add with no measured start amount (alloys, sr_*) per
+    order and still removes stale orders; the governor keeps the refused order out of what it
+    waits to see in the save (no false "did not stick") and stops sending it, with a skipped log."""
+    from pilot.strategy import Pillar
+    s, log = setup
+    alloys, cg, food = ({"side": "buy", "resource": r, "amount": 5} for r in ("alloys", "consumer_goods", "food"))
+
+    class Controller(FakeStellaris):
+        def market_sync(self, orders):
+            self.actions.append(("market_sync", list(orders)))
+            if orders == [alloys]:
+                return ("added none; removed buy consumer_goods 5; not added (start amount not measured): "
+                        "buy alloys 5; the next autosave confirms it")
+            return "added buy food 5; removed none; the next autosave confirms it"
+
+    game = Controller([briefing("2200.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[alloys]))
+    g._carry_out_actions({**briefing("2200.01.01"), "market_orders": [cg]})    # a stale order from before
+    assert game.actions.count(("market_sync", [alloys])) == 1
+
+    def market_log():
+        return [e["result"] for e in log.recent if e["kind"] == "strategy_action" and e.get("action") == "market"]
+
+    # the next save holds no order: the controller did what it said, so nothing failed to stick
+    g._carry_out_actions({**briefing("2200.02.01"), "market_orders": []})
+    assert not any("did not stick" in r for r in market_log()), market_log()
+    assert not g._market_stuck
+    assert sum(1 for a in game.actions if a[0] == "market_sync") == 1, "the refused order is not sent again"
+    assert any("skipped buy alloys 5" in r and "start amount not measured" in r for r in market_log()), market_log()
+
+    # an alloys order already in the save stays: keeping it adds nothing
+    g._carry_out_actions({**briefing("2200.03.01"), "market_orders": [alloys]})
+    assert sum(1 for a in game.actions if a[0] == "market_sync") == 1
+
+    # other resources still sync
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[food]))
+    g._carry_out_actions({**briefing("2200.04.01"), "market_orders": []})
+    assert ("market_sync", [food]) in game.actions
+    # the reply this test fakes is the controller's own wording (stellaris.rs MarketPlan::reply)
+    rs = (REPO / "crates/game-controller/src/stellaris.rs").read_text(encoding="utf-8")
+    assert '"; not added (start amount not measured): {}"' in rs
 
 
 def test_sells_that_still_fit_are_synced(setup):

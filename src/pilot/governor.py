@@ -67,6 +67,10 @@ EVENT_TRIGGERS = ("new war", "war ended", "crisis", "colony lost", "boxed in", "
 # <id> in <field> (option n); unverified until the next autosave …"); a reply that matches neither
 # form (e.g. "nothing to pick: …") leaves no tech to watch.
 TECH_PICK_RE = re.compile(r"^(?:picked|clicked) (\S+) in (\w+)")
+# stellaris_market_sync names each add it refused for want of a measured start amount (alloys and
+# sr_* until live check L2) as "not added (start amount not measured): buy alloys 5, sell sr_zro 1";
+# removals and the other adds went ahead.
+MARKET_REFUSED_RE = re.compile(r"not added \(start amount not measured\): ([^;]+)")
 
 # Action kind -> the game method that carries it out. A game whose object lacks the method has no
 # hook for that kind: a pillar declaring it is logged "not supported" once and skipped.
@@ -470,6 +474,7 @@ class Governor:
         self._market_sync_date: str | None = None  # briefing date of the last market_sync attempt (ditto)
         self._pending_market: list[dict] | None = None   # orders last synced, watched for whether they stuck
         self._market_stuck: bool = False          # a sync did not stick: no retry until the next review
+        self._market_unmeasured: set[str] = set()   # resources the controller refused to add (no measured start)
         self._since_retro = 0
         self._strategy_trace_n = 0                # negative episode ids for strategy review traces (see _review_strategy)
         self._clock: Callable[[], float] = time.monotonic   # the watchdog's wall clock (tests inject one)
@@ -1356,15 +1361,35 @@ class Governor:
                 if later:
                     self._log_action("market", f"skipped sell {o.resource}: {'; '.join(errs)}"[:300])
                 continue
+            if o.resource in self._market_unmeasured and not any(self._same_orders([o.model_dump()], [c]) for c in current):
+                # the controller cannot add it yet; an order already in the save is kept as it is
+                if later:
+                    self._log_action("market", f"skipped {o.side} {o.resource} {o.amount}: start amount not measured "
+                                               "(the controller refuses to add it)")
+                continue
             desired.append(o.model_dump())
         if not self._market_stuck and not self._same_orders(desired, current) and later:
             self._market_sync_date = date
             try:
                 res = market_sync(desired)
                 self._log_action("market", res)
-                self._pending_market = desired
+                refused = self._refused_orders(res)
+                self._market_unmeasured |= {o["resource"] for o in refused}
+                # what the controller left out is not waited for in the next save
+                self._pending_market = [o for o in desired if not any(self._same_orders([o], [r]) for r in refused)]
             except Exception as e:  # noqa: BLE001 - actions never stop play
                 self._log_action("market", f"failed: {e}"[:300])
+
+    @staticmethod
+    def _refused_orders(reply: str) -> list[dict]:
+        """The orders a market_sync reply says it did not add (MARKET_REFUSED_RE)."""
+        m = MARKET_REFUSED_RE.search(reply or "")
+        out = []
+        for part in (m.group(1).split(",") if m else []):
+            words = part.split()
+            if len(words) == 3 and words[2].isdigit():
+                out.append({"side": words[0], "resource": words[1], "amount": int(words[2])})
+        return out
 
     def _maybe_event_review(self, b: dict, trigger: str, retry: bool = False) -> bool:
         """Run a strategy review for a big event, at most once per 12 in-game months. `retry`

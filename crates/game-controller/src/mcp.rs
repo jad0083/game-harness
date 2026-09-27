@@ -453,7 +453,7 @@ impl McpServer {
             }));
             tools.push(serde_json::json!({
                 "name": "stellaris_market_sync",
-                "description": "Make the empire's monthly Market trades match `orders` (at most 2): removes any current order not listed and adds any listed order that is missing, through the Market screen's Add/Remove dialogs. A new trade starts at the resource's own amount (10 energy, minerals, food; 5 consumer goods; 1 motes, gases, crystals); adding alloys or sr_* is refused before anything is sent, until their fractional start is measured. Never leaves the Market open, even on error. Refuses if Stellaris is not the foreground window. Changes are computed from the last autosave; call at most once per autosave.",
+                "description": "Make the empire's monthly Market trades match `orders` (at most 2): removes any current order not listed and adds any listed order that is missing, through the Market screen's Add/Remove dialogs. A new trade starts at the resource's own amount (10 energy, minerals, food; 5 consumer goods; 1 motes, gases, crystals); an order of alloys or sr_* to add is refused on its own until their fractional start is measured (the reply lists it after \"not added (start amount not measured):\"; removals and other adds still go). Never leaves the Market open, even on error. Refuses if Stellaris is not the foreground window. Changes are computed from the last autosave; call at most once per autosave.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -1145,6 +1145,7 @@ mod tests {
         let tool = tools.iter().find(|t| t["name"] == "stellaris_market_sync").unwrap();
         let desc = tool["description"].as_str().unwrap();
         assert!(desc.contains("Changes are computed from the last autosave; call at most once per autosave."), "{desc}");
+        assert!(desc.contains("refused on its own") && desc.contains("removals and other adds still go"), "{desc}");
     }
 
     #[test]

@@ -301,8 +301,8 @@ Rules:
   field's swap button drops its current research at once, so it only swaps a field under 10% done;
   only the first 4 offered techs are clickable) and `stellaris_market_sync` (a new monthly trade
   starts at 0.1 x the resource's market amount: 10 energy, minerals, food; 5 consumer goods; 1 motes,
-  gases, crystals (`new_trade_amount` in `[ui.market]`); alloys and sr_* start at a fraction and are
-  refused unsent until that is measured; changes are computed from the last autosave, so call it at
+  gases, crystals (`new_trade_amount` in `[ui.market]`); alloys and sr_* start at a fraction, so an
+  order of them to add is refused on its own until that is measured (removals and other adds still go); changes are computed from the last autosave, so call it at
   most once per autosave; trade is not a market resource).
 - **Other screen sizes**: positions and templates are measured at 3840x2160. A host with another size
   sets `GAME_RESOLUTION` (e.g. `2560x1440`); the controller then merges `res/<W>x<H>.toml`. Its

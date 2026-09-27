@@ -82,7 +82,7 @@ amount_min = 1
 amount_max = 25
 sell_income_share = 0.2        # a sell takes at most 20% of that resource's monthly income
 sell_requires_idle = true      # sell only a resource the briefing flags IDLE
-note = "Market orders cannot use trade; sell only idle energy, minerals, food, consumer goods or alloys (strategic resources can only be bought)."
+note = "Market orders cannot use trade; sell only idle energy, minerals, food or consumer goods (strategic resources can only be bought); alloys and sr_* orders are not placed until their start amount is measured."
 
 # Equals mcp.rs stellaris_pick_tech's limit on `prefer`.
 [actions.tech]
