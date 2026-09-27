@@ -77,7 +77,7 @@ def test_a_revoked_browser_sees_the_signed_out_banner_and_stops(browser, live_se
     live_servers["auth"].store.revoke(w.device, "revoked", by="cli")
     page.wait_for_selector("#locked:not([hidden])", timeout=5000)
     text = page.text_content("#locked")
-    assert "signed out" in text and "the controller" in text
+    assert "signed out from the computer that runs Game Pilot" in text and "controller" not in text
     href = page.get_attribute("#locked a", "href")
     assert href.startswith("/pair?reason=revoked&next=")
     page.wait_for_timeout(300)

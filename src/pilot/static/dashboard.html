@@ -3192,7 +3192,7 @@ $("more-menu").addEventListener("click", (e) => {
   else if (b.dataset.act === "settings") openSettings();
 });
 async function signOutHere() {
-  if (!confirm("Sign out this browser? To sign in again you need a code from another signed-in browser, or python -m pilot dashboard-link on the controller.")) return;
+  if (!confirm("Sign out this browser? To sign in again you need a code from another signed-in browser, or python -m pilot dashboard-link on the computer that runs Game Pilot.")) return;
   const r = await postJson("/api/auth/devices", { action: "signout" });
   if (r.ok) location.href = "/pair?reason=signed_out";
 }
@@ -3273,7 +3273,7 @@ $("add-copy").addEventListener("click", () => {
 $("dev-add").addEventListener("click", () => { $("settings-dialog").close(); openAdd(); });
 
 const VIA = { link: "with a link", words: "with typed words", legacy_cookie: "carried over from the old link",
-              recovery_key: "with the recovery key", cli: "from the controller" };
+              recovery_key: "with the recovery key", cli: "with a code from the computer that runs Game Pilot" };
 function howSignedIn(d) {
   const from = d.created_by && !["legacy_cookie", "cli", "recovery_key"].includes(d.created_via) ? ` from ${d.created_by}` : "";
   return `signed in ${onDate(d.created_at)} ${VIA[d.created_via] || String(d.created_via).replace(/_/g, " ")}${from}`;
@@ -3295,7 +3295,7 @@ async function loadDevices() {
       <span class="dname">${esc(d.name)}</span>
       <span class="dmeta">${d.scope === "read" ? "read only" : "control"} · last used ${ago(d.last_seen_at)}${d.last_ip ? ", " + esc(d.last_ip) : ""}</span>
       <span class="dact"><button type="button" class="btn" data-signout="${esc(d.id)}" data-name="${esc(d.name)}">Revoke</button></span></li>`).join("")
-    : `<li class="hint">No script tokens. Make one on the controller: python -m pilot dashboard-token create --name NAME --scope read</li>`;
+    : `<li class="hint">No script tokens. Make one on the computer that runs Game Pilot: python -m pilot dashboard-token create --name NAME --scope read</li>`;
   document.querySelectorAll("#dev-list [data-signout], #dev-scripts [data-signout]").forEach((b) => b.addEventListener("click", async () => {
     if (!confirm(`Sign out ${b.dataset.name}? Its next request is refused; it can sign in again with a new code.`)) return;
     const r = await postJson("/api/auth/devices", { action: "revoke", id: b.dataset.signout });

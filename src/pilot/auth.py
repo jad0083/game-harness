@@ -462,7 +462,7 @@ class AuthStore:
             self.recreated = True
             stamp = time.strftime("%Y%m%d-%H%M%S")
             log.error("auth store %s is corrupt (%s): moved aside to %s.corrupt-%s; browsers sign in again "
-                      "(python -m pilot dashboard-link), scripts on the controller keep working with the key",
+                      "(python -m pilot dashboard-link), scripts on this computer keep working with the key",
                       self.path, e, self.path.name, stamp)
             for suffix in ("", "-wal", "-shm"):
                 p = Path(str(self.path) + suffix)
@@ -846,31 +846,58 @@ BAD_EVENTS = {"signin_failed", "throttled", "words_switched_off", "grant_conflic
               "host_refused"}
 
 
+HERE = "the computer that runs Game Pilot"     # how pages name the controller (never "controller" or "cli")
+HOW_WORDS = {"words": "with typed words", "link": "with a link", "cli": f"with a code from {HERE}",
+             "legacy_cookie": "carried over from the old link", "legacy_link": "with an old key link",
+             "recovery_key": "with the recovery key"}
+
+
 def name_of(store: AuthStore, ident: str | None) -> str:
     """A device id (or 'cli') as people read it."""
     if not ident or ident in ("idle", "conflict", "legacy_link", "recovery_key"):
         return ""
     if ident == "cli":
-        return "the controller"
+        return HERE
     row = store.device(ident)
     return row["name"] if row else ident
 
 
+# what a device did, said after its name ("Firefox on Linux signed out by Chrome on Android")
+DEVICE_VERBS = {"signin": "signed in", "signed_out": "signed out", "revoked": "was signed out",
+                "idle": "was signed out after 180 days unused", "revoke_others": "signed out all other devices",
+                "legacy_kept": "was kept at the key rotation", "legacy_revoked": "was signed out at the key rotation",
+                "token_revoked": "was revoked", "grant_created": "made a sign-in code"}
+
+
 def audit_sentences(store: AuthStore, n: int = 20) -> list[dict]:
-    """The newest audit rows as sentences ('Failed sign-in tries, 192.168.1.50 (100 times)')."""
+    """The newest audit rows as sentences: the device first when there is one ('Firefox on Linux
+    signed out by Chrome on Android, 192.168.1.140'), else the event ('Failed sign-in tries,
+    192.168.1.50 (100 times)')."""
     out = []
     for e in store.audit_rows(n):
         detail = json.loads(e["detail"] or "{}")
-        what = EVENT_WORDS.get(e["event"], e["event"].replace("_", " "))
-        if e["event"] == "signin" and detail.get("how"):
-            what = f"signed in ({detail['how'].replace('_', ' ')})"
-        if e["event"] == "control" and detail.get("action"):
-            what = CONTROL_AUDIT.get(detail["action"], f"control: {str(detail['action']).replace('_', ' ')}")
-        if e["event"] == "revoked" and detail.get("by"):
-            what = f"signed out by {name_of(store, detail['by']) or detail['by']}"
         who = name_of(store, e["device_id"])
-        text = (what[0].upper() + what[1:] + (f", {who}" if who else "") + (f", {e['ip']}" if e["ip"] else "")
-                + (f" ({e['count']} times)" if e["count"] > 1 else ""))
+        verb = DEVICE_VERBS.get(e["event"])
+        if e["event"] == "signin":
+            by = detail.get("by")
+            verb = "signed in " + HOW_WORDS.get(detail.get("how"), "")
+            if by and ID_RE.fullmatch(str(by)) and detail.get("how") in ("words", "link"):
+                verb += f" from {name_of(store, by)}"
+            elif by == "cli" and detail.get("how") in ("words", "link"):
+                verb = "signed in " + HOW_WORDS["cli"]
+            verb = verb.strip()
+        if e["event"] == "control" and detail.get("action"):
+            verb = CONTROL_AUDIT.get(detail["action"], f"used {str(detail['action']).replace('_', ' ')}")
+        if e["event"] in ("revoked", "signed_out") and detail.get("by") and detail["by"] != e["device_id"]:
+            verb = f"signed out by {name_of(store, detail['by']) or detail['by']}"
+        if who and verb:
+            text = f"{who} {verb}"
+        else:
+            what = EVENT_WORDS.get(e["event"], e["event"].replace("_", " "))
+            if e["event"] == "control" and verb:
+                what = verb
+            text = what[0].upper() + what[1:] + (f", {who}" if who else "")
+        text += (f", {e['ip']}" if e["ip"] else "") + (f" ({e['count']} times)" if e["count"] > 1 else "")
         out.append({"t": e["t"], "event": e["event"], "ip": e["ip"], "count": e["count"], "text": text,
                     "bad": e["event"] in BAD_EVENTS})
     return out
@@ -991,13 +1018,13 @@ class Principal:
 REASONS = {
     "sign_in_required": ("This browser is not signed in.",
                          ("Sign in at /pair with a code from a signed-in browser (the ⋯ menu, Add a device), or run "
-                          "python -m pilot dashboard-link on the controller.")),
+                          "python -m pilot dashboard-link on the computer that runs Game Pilot.")),
     "revoked": ("This browser was signed out.", "Sign in again at /pair."),
     "idle": ("This browser was signed out after 180 days without use.", "Sign in again at /pair."),
     "conflict": ("This browser's sign-in code was used again by another browser, so its sign-in was ended.",
                  "Sign in again with a new code; if that was not you, review Devices."),
-    "service_key_loopback_only": (("The service key works only from the controller itself (127.0.0.1), and never "
-                                   "through a proxy."),
+    "service_key_loopback_only": (("The service key works only from the computer that runs Game Pilot itself "
+                                   "(127.0.0.1), and never through a proxy."),
                                   ("On another machine use a script token: python -m pilot dashboard-token create "
                                    "--name NAME --scope read")),
     "bad_token": ("The token is unknown, expired or revoked.",
@@ -1191,7 +1218,8 @@ class Auth:
         if not allowed_host(request.host or "", self.extra_hosts):
             await asyncio.to_thread(self.store.audit, "host_refused", request.remote, None,
                                     {"host": (request.host or "")[:100]})
-            return web.Response(status=421, text="Unknown host name. Open the dashboard by the controller's address; "
+            return web.Response(status=421, text="Unknown host name. Open the dashboard by the address of the computer "
+                                                 "that runs Game Pilot; "
                                                  "to allow a name, add it to PILOT_DASHBOARD_HOSTS.")
         if (self.public_url and request.method == "GET" and "text/html" in request.headers.get("Accept", "")
                 and not is_loopback(request.remote)
@@ -1228,7 +1256,7 @@ class Auth:
                                   "Create a control token for changes.")
         if request.path.startswith("/api/auth/") and principal.kind == "script" and request.path != "/api/auth/me":
             return json_error(403, "browser_only", "Script tokens cannot manage devices or sign-ins.",
-                              "Use a signed-in browser or the CLI on the controller.")
+                              "Use a signed-in browser, or a terminal on the computer that runs Game Pilot.")
         # 6. the principal, for handlers and the forwarded X-Pilot-Device
         request[PRINCIPAL] = principal
         if principal.row is not None and principal.kind in ("browser", "script"):
@@ -1275,6 +1303,7 @@ class Auth:
             if d["id"] != me.id and now - d["created_at"] < NOTICE_S:
                 how = ("carried over from the old link" if d.get("created_via") == "legacy_cookie"
                        else "signed in with the recovery key" if d.get("created_via") == "recovery_key"
+                       else f"added {HOW_WORDS['cli']}" if d.get("created_by") == "cli"
                        else f"added from {self.who(d.get('created_by')) or 'a sign-in code'}")
                 out.append({"kind": "new_device", "id": f"new:{d['id']}", "at": d["created_at"],
                             "text": f"New device signed in: {d['name']}, {how} at {_ago(d['created_at'], now)}"
@@ -1555,7 +1584,7 @@ class Auth:
             p: Principal = request[PRINCIPAL]
             if p.kind != "browser":
                 raise web.HTTPForbidden(text=json.dumps({"error": "browser_only", "reason": "Only a signed-in browser "
-                                        "can do this.", "fix": "Use the CLI on the controller."}),
+                                        "can do this.", "fix": "Use a terminal on the computer that runs Game Pilot."}),
                                         content_type="application/json")
             return p
 
@@ -1631,8 +1660,8 @@ class Auth:
         async def unlock(request):
             p: Principal = request[PRINCIPAL]
             if p.kind != "service":
-                return json_error(403, "service_only", "Only the controller can lift sign-in pauses.",
-                                  "On the controller run: python -m pilot dashboard-devices unlock")
+                return json_error(403, "service_only", "Only the computer that runs Game Pilot can lift sign-in pauses.",
+                                  "There, run: python -m pilot dashboard-devices unlock")
             self.throttle.unlock()
             self._wrong_words = 0
             await asyncio.to_thread(self.store.audit, "unlock", request.remote)

@@ -704,7 +704,7 @@ def test_dashboard_devices_list_rename_revoke_and_log(tmp_path, monkeypatch):
     assert run_cli("dashboard-devices", "revoke-all", "--except", a["id"])[0] == 0
     assert not store.device(a["id"])["revoked_at"] and store.device(c["id"])["revoked_at"]
     code, out = run_cli("dashboard-devices", "log", "-n", "5")
-    assert code == 0 and "Signed out by the controller, Pixel phone" in out
+    assert code == 0 and "Pixel phone signed out by the computer that runs Game Pilot" in out
 
 
 def test_dashboard_devices_unlock_calls_the_viewer_over_loopback(tmp_path, monkeypatch):
