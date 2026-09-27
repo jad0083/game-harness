@@ -126,3 +126,26 @@ reads, checks and orders only between turns.
   timeout) was reported "unknown"; the model repeated it at T37 and it was not refused. T37 and T41:
   urgent decisions on gold below the reserve (36 < 60), a missed science milestone and threatened
   cities; Slingers ordered in both cities, stuck.
+
+## 2026-09-27 — a wonder movie stalls autoplay (T134)
+
+- **Stall**: the governor stopped with "T134 did not end within 600 s (14 status polls
+  unanswered)". The screen showed "A WORLD WONDER HAS BEEN CREATED!" (our Pyramids): the game's
+  `WonderBuiltPopup` locks the engine event (`ExclusivePopupManager:Lock` →
+  `UI.ReferenceCurrentEvent()`) until the popup closes, so the AI's turn never finished and the tuner
+  stayed silent. Closed by hand (hover + click on the X), then a queue of old Research/Civic
+  Completed popups (Animal Husbandry, Pottery, Craftsmanship, Foreign Trade…), which do not lock;
+  autoplay had already handed back at T135. Resumed from the dashboard: T137-T138 in ~9 s each.
+- **Which popups lock** (read from the game's UI Lua on mini-rig2, GS 1.0.12.68): WonderBuilt
+  (`Events.WonderCompleted` → `OnWonderCompleted`), NaturalWonder (`NaturalWonderRevealed`),
+  ProjectBuilt (`CityProjectCompletedNarrative` → `OnProjectComplete`), NaturalDisaster
+  (`RandomEventStarted`, `RandomEventOccurred`) and RockBandMovie (`PostTourismBomb` →
+  `OnRockBandConcert`). GS's EraCompletePopup does not lock by default; tech/civic, boost, era
+  review, dedication, World Congress and crisis popups do not use the lock.
+- **Each popup is its own tuner state** (`civ6 lua --state WonderBuiltPopup …`); its handlers are
+  globals there (`_G` itself is nil). `Events.<Event>.Remove(<handler>)` in each of the five states
+  answered `removed true` — the movies are off until the game reloads. The controller must repeat
+  this on every library install (a load resets the UI contexts).
+- **State at T134**: 6 cities, pop 22, score 186, military 218; gold 0 at +1/turn; faith 358.
+  The T134 decision repeated the civic blocker ("civic is None"), asked for Conscription with no
+  free military/wildcard slot (refused by the game) and a Trader in Chengdu that did not start.
