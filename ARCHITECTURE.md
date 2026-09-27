@@ -486,6 +486,11 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   40 calls, the last turn's time) and emits `popups_quieted` once per library install (the
   controller's reply field, kept by `ControllerCiv6` until read); `info.last_stand` (armed or off,
   its limit, the streak, why it turned off, the stand running) is always there.
+- `notify.py` (ruling 8): `Notifier.check(state)` posts to `PILOT_NOTIFY_URL` (ntfy) at the 5 min, 30 min
+  and 2 h marks of a stop (`status == "needs_attention"`, keyed by `info.attention.since`, else first
+  seen) and once after it, with the view's recovery title as the words and `PILOT_PUBLIC_URL` as the
+  click action; `cli.run` starts its 15 s daemon thread only when the variable is an http(s) URL.
+  A failed post is logged, never raised.
 - The chart (ruling 12): `renderChart` lays out the lanes above the plot (directive, reviews), the
   plot, the axis with decision ticks and last-stand marks (`/api/orders` `stands`), and the end labels
   (sorted by height and pushed 13 px apart). `#chartwrap` is the single tab stop (`role="group"`,

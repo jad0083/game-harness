@@ -114,6 +114,8 @@ def run(s: Settings, episodes: int | None) -> int:
 
     threading.Thread(target=list_models, daemon=True, name="models").start()
     serve_in_background(pilot, s.live_host, s.dashboard_port)
+    from .notify import start_notifier
+    start_notifier(log)          # an ntfy notice when a stop lasts (PILOT_NOTIFY_URL; off by default)
     print(f"pilot {run_id}: model {s.model}; live dashboard on {s.live_host}:{s.dashboard_port} (reached through "
           f"the viewer); log {log.dir / 'events.jsonl'}", flush=True)
 

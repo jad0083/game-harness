@@ -36,6 +36,7 @@ PC in use.
 | `PILOT_DASHBOARD_KEY` | the dashboard's service key (default: generated once into `runs/dashboard.key`); a header from the controller only |
 | `PILOT_LIVE_HOST`, `PILOT_VIEW_HOST` | bind addresses of the live pilot's dashboard (default `127.0.0.1`) and of the viewer (default `0.0.0.0`; `view --host`) |
 | `PILOT_PUBLIC_URL`, `PILOT_DASHBOARD_HOSTS` | the viewer's canonical address for links and QR codes (page loads on other names are redirected there), and extra host names it answers to (comma list) |
+| `PILOT_NOTIFY_URL` | an ntfy topic's full URL (e.g. a self-hosted server or a long random topic): the live pilot posts a notice when the run has needed you for 5 min, 30 min and 2 h, and once when it no longer does; unset = off (the default) |
 | `PILOT_AUTH_DB`, `PILOT_ADD_DEVICE`, `PILOT_KEY_SIGNIN` | the sign-in store (default `runs/auth.sqlite`); `cli` limits adding devices to the controller; `1` turns the recovery-key form on (default off) |
 
 ## Models
@@ -331,6 +332,13 @@ running pilot (whose own dashboard is on `PILOT_PORT`, 8790, on 127.0.0.1). It r
   the game, stored as the run's frame and named after the device) and *What happened* (the reason,
   the errors behind the stop cut to their cause, the raw text). The tab title ("Needs you – T57 –
   Game Pilot") and the favicon carry the state outside the page.
+- **Outside the page** (opt-in, `PILOT_NOTIFY_URL`): the live pilot posts to an ntfy topic when the
+  run has needed you for 5 minutes, again at 30 minutes and 2 hours, and once when it no longer
+  does: "Game Pilot needs you: Civ VI, autoplay did not start at T57 (5 min)", "Game Pilot no longer
+  needs you: Civ VI is playing again at T57 (after 7 min)". Tapping it opens the dashboard's plain
+  address (`PILOT_PUBLIC_URL`, else this machine's address on 8780). No key, cookie or token is ever
+  in it; whoever knows the topic learns that a run is stuck, so use a self-hosted server or a long
+  random topic. Off by default.
 - **Figures**: from the view's `[[figures]]`: value, label and a subline with our place among the
   rivals ("#4 of 4, median 42, behind the median", in the warning colour with those words) or what
   purchases keep back. Stellaris leads with the directive in force and the standing.

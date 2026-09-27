@@ -116,6 +116,9 @@ This is a tool for a home network, not the internet.
   `python -m pilot dashboard-link` on the controller. Host names are allow-listed (no DNS
   rebinding); changes must be JSON with the dashboard's own Origin. Details:
   [docs/pilot.md](docs/pilot.md#signing-in).
+- The optional ntfy notice when a stop lasts (`PILOT_NOTIFY_URL`, off by default) carries no
+  credential: the game, what stopped, for how long and the dashboard's plain address. Anyone who
+  knows the topic can read that, so use a self-hosted server or a long random topic.
 - API keys belong in `.env` (gitignored); never commit `runs/`, `play/` or `incoming/`.
 
 ## Development
