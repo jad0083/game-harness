@@ -1009,7 +1009,7 @@ mod tests {
 
     #[test]
     fn reported_version_is_the_crate_version() {
-        assert_eq!(VERSION, "1.6.0");
+        assert_eq!(VERSION, "1.6.1");
     }
 
     #[test]

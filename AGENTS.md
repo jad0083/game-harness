@@ -185,6 +185,9 @@ wiki prose in `docs/`. Never hand-edit `corpora/galciv4/data/`.
   on 127.0.0.1:4318 only): `GET /tuner/states`, `POST /tuner/lua`; controller
   `game-controller civ6 states` and `civ6 lua [--state GameCore] "<code>"`. One tuner client at a
   time, so close FireTuner while it runs.
+  Verified live (1.6.1): the game lists states as index/name pairs (the game-state VM is
+  `GameCore_Tuner`, index 3 in a loaded game); `return` values are not echoed, so write Lua that
+  `print()`s its result; the reply's `output` holds the printed lines.
 - Full list: `issues.md`.
 
 ## 8. Recording what you learn (required)

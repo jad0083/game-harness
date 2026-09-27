@@ -340,15 +340,19 @@ async fn main() -> Result<()> {
         Commands::Civ6 { action: Civ6Action::States } => {
             let s = client.tuner_states().await?;
             println!("{}", s.app);
-            for (i, name) in s.states.iter().enumerate() {
+            for (i, name) in s.states.iter().enumerate().filter(|(_, n)| !n.is_empty()) {
                 println!("{i}\t{name}");
             }
         }
         Commands::Civ6 { action: Civ6Action::Lua { code, state, timeout_ms } } => {
             let r = client.tuner_lua(&state, &code, timeout_ms).await?;
-            println!("{}", r.result);
-            for line in &r.extra {
-                println!("{line}");
+            if r.output.is_empty() && r.extra.is_empty() {
+                println!("{}", r.result);       // an agent before 1.6.1
+            } else if r.output.is_empty() {
+                println!("{}", r.result);
+                r.extra.iter().for_each(|l| println!("{l}"));
+            } else {
+                r.output.iter().for_each(|l| println!("{l}"));
             }
         }
         Commands::Corpus { action } => {
