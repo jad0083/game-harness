@@ -767,6 +767,33 @@ def test_an_idle_civic_is_asked_again_then_filled_by_the_governor(setup):
     assert first["orders"][0]["by"] == "governor" and first["retried_for"] == ["civic"]
 
 
+def test_an_idle_civic_and_research_are_filled_when_the_model_gives_no_answer(setup):
+    """Ruling 16's fallback needs no model: a decision whose model call fails (an outage, the usage
+    limit, every model of the pool) still fills an idle research or civic (E3: T57 needed a human)."""
+    def down(messages, info: AgentInfo) -> ModelResponse:
+        if is_review(info):
+            return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name,
+                                                     {"change": False, "assessment": "n/a", "rules": []})])
+        raise RuntimeError("model unavailable")
+
+    game = FakeCiv6({**FIXTURE, "civic": None, "research": None}, index=INDEX)
+    g = governor(setup, game, FunctionModel(down))
+    g.run(max_decisions=1)
+    assert orders_sent(game) == [{"kind": "research", "id": "tech:pottery"},
+                                 {"kind": "civic", "id": "civic:craftsmanship"}], "the first offered of each"
+    first = traces(setup)[0]
+    assert first["outcome"] == "error" and "model unavailable" in first["error"]
+    assert [o["order"] for o in first["orders"]] == ["research tech:pottery (filled by the governor)",
+                                                     "civic civic:craftsmanship (filled by the governor)"]
+    assert [o["outcome"] for o in first["orders"]] == ["stuck", "stuck"]
+    assert "civic civic:craftsmanship (filled by the governor): carried out and read back" in g._report
+    idle_only_civic = FakeCiv6({**FIXTURE, "civic": None}, index=INDEX)
+    s, _ = setup
+    g2 = governor((s, EventLog(s.runs_dir, "civ2", s.model)), idle_only_civic, FunctionModel(down))
+    g2.run(max_decisions=1)
+    assert orders_sent(idle_only_civic) == [{"kind": "civic", "id": "civic:craftsmanship"}], "research is running"
+
+
 def test_an_idle_research_answered_on_the_retry_is_not_filled(setup):
     seen: list[str] = []
     game = FakeCiv6({**FIXTURE, "research": None}, index=INDEX)

@@ -199,7 +199,8 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   (`last_stand_off`).
 - **Blockers**: with no research or no civic in progress and no valid order for it, the governor asks
   the model once more; if the answer still has none, it orders the strategy's first preferred item
-  the game offers (else the first offered) and reports it "filled by the governor".
+  the game offers (else the first offered) and reports it "filled by the governor". A decision whose
+  model call fails (an outage, the usage limit, every model of the pool) fills them the same way.
 - **Strategy**: `corpora/civ6/pillars.toml` in share mode (science, culture, faith, economy,
   military, expansion, diplomacy) with milestones on turns (`T60`); reviews as for Stellaris.
 - **Campaign** `civ6/<leader>_<map seed>`; metrics rows per turn (`date` `T<turn>`), so telemetry,

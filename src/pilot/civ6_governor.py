@@ -871,14 +871,35 @@ class Civ6Governor(Governor):
         self._resolved = []
         return out
 
-    def _idle_without_order(self, b: dict, d: Civ6Decision) -> list[str]:
-        """Research or civic with nothing in progress (and something to choose) that the answer gives
-        no valid order for (ruling 16)."""
+    @staticmethod
+    def _idle_kinds(b: dict) -> list[str]:
+        """Research or civic with nothing in progress and something to choose (ruling 16)."""
         opts = b.get("options") or {}
+        return [kind for kind, offered in (("research", "techs"), ("civic", "civics"))
+                if not b.get(kind) and opts.get(offered)]
+
+    def _idle_without_order(self, b: dict, d: Civ6Decision) -> list[str]:
+        """Idle research or civic (`_idle_kinds`) that the answer gives no valid order for."""
         valid = {c.order["kind"] for c in check_orders(d.orders, b, self.pillars, self.index, self._failed_last)
                  if not c.error}
-        return [kind for kind, offered in (("research", "techs"), ("civic", "civics"))
-                if not b.get(kind) and opts.get(offered) and kind not in valid]
+        return [kind for kind in self._idle_kinds(b) if kind not in valid]
+
+    def _fill_without_answer(self, b: dict, error: str) -> list[dict]:
+        """Ruling 16's fallback when the decision got no answer (an outage, the usage limit, every model
+        of the pool failing): it needs no model, so an idle research or civic is still filled. The
+        orders are applied and reported like a decision's; earlier reports and did-not-stick keys
+        are kept, since no model has seen them yet."""
+        orders = [o for kind in self._idle_kinds(b) if (o := self._fill(b, kind)) is not None]
+        if not orders:
+            return []
+        report, failed = self._report, self._failed_last
+        d = Civ6Decision(orders=orders, reason="no answer from the model: the governor filled what stood idle")
+        outcomes, _ = self._apply(d, b, {order_key(o.model_dump()) for o in orders}, {})
+        self._report, self._failed_last = report + self._report, failed | self._failed_last
+        summary = "; ".join(f"{o['order']}: {o['outcome']}" for o in outcomes)
+        self.log.state.last_decision = f"{b['date']}: {summary} — no answer from the model"
+        self.journal.note(f"No answer from the model ({error[:120]}); {summary}", b["date"])
+        return outcomes
 
     def _fill(self, b: dict, kind: str) -> Civ6Order | None:
         """The governor's own choice for an idle research or civic: the first item of the strategy's
@@ -939,12 +960,14 @@ class Civ6Governor(Governor):
         try:
             result, _ = self._call("decisions", ask,
                                    on_try=lambda e: base.update(model=e["model"], thinking_level=e["thinking"]))
-        except Exception as e:  # noqa: BLE001 - keep playing: the AI carries on with the current choices
+        except Exception as e:  # noqa: BLE001 - keep playing: the AI carries on (idle research/civic filled)
             if isinstance(e, UsageLimitExceeded):
                 e = RuntimeError(f"no answer within {self.s.governor_max_requests} model calls; no orders given")
             self.log.emit("episode_error", error=f"{type(e).__name__}: {e}"[:500])
+            filled = self._fill_without_answer(b, f"{type(e).__name__}: {e}")
             self.log.save_trace(n, {**base, "outcome": "error", "error": f"{type(e).__name__}: {e}"[:2000],
                                     "seconds": round(time.time() - started, 1),
+                                    **({"orders": filled} if filled else {}),
                                     "steps": [{"type": "prompt", "text": "\n".join(prompt)}]})
             return
         d, usage = result.output, result.usage
