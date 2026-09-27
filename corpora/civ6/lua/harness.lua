@@ -8,8 +8,8 @@
 -- (JSON-style string literals of corpus type keys, numbers); nothing here evaluates text.
 --
 -- API names for purchases (CityCommandTypes.PURCHASE, GetGold():GetPurchaseCost), production
--- (CityOperationTypes.BUILD with VALUE_EXCLUSIVE), research and civics
--- (UI.RequestPlayerOperation RESEARCH / PROGRESS_CIVIC), policies (UNLOCK_POLICIES, then
+-- (CityOperationTypes.BUILD with VALUE_EXCLUSIVE), research and civics (GameCore's
+-- SetResearchingTech / SetProgressingCivic), policies (UNLOCK_POLICIES, then
 -- RequestPolicyChanges; slot types 0 economic, 1 military, 2 diplomatic, 3 wildcard), the build
 -- queue's current item (GetCurrentProductionTypeHash), era score (Game.GetEras()) and military
 -- strength (GetStats():GetMilitaryStrength()) are ported from civ6-mcp
@@ -59,7 +59,7 @@ encode = function(v, depth)
   if t == 'number' then
     if v ~= v or v == math.huge or v == -math.huge then return 'null' end
     if v == math.floor(v) and math.abs(v) < 1e15 then return string.format('%d', v) end
-    return string.format('%.4g', v)
+    return string.format('%.14g', v)          -- full precision (a treasury over 10,000 stays exact)
   end
   if t == 'string' then return enc_string(v) end
   if t == 'table' then
@@ -241,6 +241,29 @@ local function majors(me)
   return out
 end
 
+local function wonders_elsewhere(me)
+  local rows = {}
+  for row in GameInfo.Buildings() do
+    if row.IsWonder then rows[#rows + 1] = row end
+  end
+  local out, seen = H.array(), {}
+  for i = 0, 63 do
+    local p = Players[i]
+    if i ~= me and p and p:IsAlive() then
+      for _, c in p:GetCities():Members() do
+        local b = c:GetBuildings()
+        for _, row in ipairs(rows) do
+          if not seen[row.BuildingType] and b:HasBuilding(row.Index) then
+            seen[row.BuildingType] = true
+            out[#out + 1] = row.BuildingType
+          end
+        end
+      end
+    end
+  end
+  return out
+end
+
 local function blocker(me)
   local b = NotificationManager.GetFirstEndTurnBlocking(me)
   if b == nil or b == EndTurnBlockingTypes.NO_ENDTURN_BLOCKING then return nil end
@@ -360,6 +383,7 @@ function H.snapshot()
   local seed = MapConfiguration.GetValue('RANDOM_SEED')
   local gp_ok, gp = pcall(great_people, me)
   local opt_ok, opt = pcall(options, me, p)
+  local we_ok, we = pcall(wonders_elsewhere, me)
   return {
     turn = Game.GetCurrentGameTurn(), player = me,
     civ = cfg:GetCivilizationTypeName(), leader = cfg:GetLeaderTypeName(),
@@ -386,6 +410,7 @@ function H.snapshot()
     units = { total = total, by_class = by_class, by_type = by_type },
     majors = known, wars = wars,
     great_people = gp_ok and gp or nil,
+    wonders_elsewhere = we_ok and we or nil,
     options = opt_ok and opt or nil,
     blocker = blocker(me),
     autoplay = { active = AutoplayManager.IsActive(), turns = AutoplayManager.GetTurns() },
@@ -394,16 +419,14 @@ end
 
 -- ---- orders ------------------------------------------------------------------------------------
 
--- Research or civic. In GameCore the setter changes it at once (checked here); in InGame the
--- UI's request is sent instead (seen live: ignored from the tuner, so the controller sends these
--- two orders to GameCore). Every prerequisite must be known: the GameCore setter does not check.
+-- Research or civic, through the GameCore setters (the UI's request sent from the tuner is
+-- ignored, seen live), so these two run only in the GameCore state. The setter changes it at once
+-- (checked here) but does not check prerequisites: every one must be known.
 local function progress(kind, key)
   local me = H.me()
-  local tbl, getter, op, param, prereqs, col, pcol = 'Technologies', 'GetTechs', 'RESEARCH', 'PARAM_TECH_TYPE',
-    'TechnologyPrereqs', 'Technology', 'PrereqTech'
+  local tbl, getter, prereqs, col, pcol = 'Technologies', 'GetTechs', 'TechnologyPrereqs', 'Technology', 'PrereqTech'
   if kind == 'civic' then
-    tbl, getter, op, param, prereqs, col, pcol = 'Civics', 'GetCulture', 'PROGRESS_CIVIC', 'PARAM_CIVIC_TYPE',
-      'CivicPrereqs', 'Civic', 'PrereqCivic'
+    tbl, getter, prereqs, col, pcol = 'Civics', 'GetCulture', 'CivicPrereqs', 'Civic', 'PrereqCivic'
   end
   local row = GameInfo[tbl][key]
   if row == nil then return fail('unknown ' .. kind .. ' ' .. tostring(key)) end
@@ -419,16 +442,11 @@ local function progress(kind, key)
   end
   if #missing > 0 then return fail(key .. ' needs ' .. table.concat(missing, ', ') .. ' first') end
   local set = kind == 'civic' and holder.SetProgressingCivic or holder.SetResearchingTech
-  if set then
-    set(holder, row.Index)
-    local now = kind == 'civic' and holder:GetProgressingCivic() or holder:GetResearchingTech()
-    if now ~= row.Index then return fail(key .. ' was not taken by the game') end
-    return { set = key }
-  end
-  local params = {}
-  params[PlayerOperations[param]] = row.Index
-  UI.RequestPlayerOperation(me, PlayerOperations[op], params)
-  return { requested = key }
+  if not set then return fail(kind .. ' orders run in the GameCore state only') end
+  set(holder, row.Index)
+  local now = kind == 'civic' and holder:GetProgressingCivic() or holder:GetResearchingTech()
+  if now ~= row.Index then return fail(key .. ' was not taken by the game') end
+  return { set = key }
 end
 
 function H.set_research(key) return progress('tech', key) end

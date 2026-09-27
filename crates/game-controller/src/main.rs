@@ -381,7 +381,7 @@ async fn main() -> Result<()> {
             let (state, call) = civ6::order_call(&order, &civ6::CorpusIds::load(&dir)?)?;
             let v = civ6::call(&client, &civ6::Library::load(&dir)?, state, &call).await?;
             println!("{}", serde_json::to_string(&v)?);
-            if v.get("ok") == Some(&serde_json::Value::Bool(false)) {
+            if !civ6::reply_ok(&v) {
                 std::process::exit(2);
             }
         }
@@ -389,12 +389,18 @@ async fn main() -> Result<()> {
             let dir = cli.corpus.clone().unwrap_or_else(|| PathBuf::from("corpora/civ6"));
             let v = civ6::call(&client, &civ6::Library::load(&dir)?, civ6::STATE_UI, &civ6::autoplay_call(turns)?).await?;
             println!("{}", serde_json::to_string(&v)?);
+            if !civ6::reply_ok(&v) {
+                std::process::exit(2);
+            }
         }
         Commands::Civ6 { action: Civ6Action::AutoplayStop } | Commands::Civ6 { action: Civ6Action::AutoplayStatus } => {
             let dir = cli.corpus.clone().unwrap_or_else(|| PathBuf::from("corpora/civ6"));
             let f = if matches!(cli.command, Commands::Civ6 { action: Civ6Action::AutoplayStop }) { "autoplay_stop" } else { "autoplay_status" };
             let v = civ6::call(&client, &civ6::Library::load(&dir)?, civ6::STATE_UI, &format!("Harness.run(Harness.{f})")).await?;
             println!("{}", serde_json::to_string(&v)?);
+            if !civ6::reply_ok(&v) {
+                std::process::exit(2);
+            }
         }
         Commands::Corpus { action } => {
             if let Some(c) = corpus {

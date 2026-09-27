@@ -266,6 +266,11 @@ pub async fn call(client: &AgentClient, lib: &Library, state: &str, call: &str) 
     parse_output(&lines)
 }
 
+/// Whether a library reply reports success (`{"ok": false, ...}` makes the command exit 2).
+pub fn reply_ok(v: &serde_json::Value) -> bool {
+    v.get("ok") != Some(&serde_json::Value::Bool(false))
+}
+
 /// Fields every snapshot has; a snapshot without them is an error, not something to decide on.
 pub const SNAPSHOT_KEYS: &[&str] = &["turn", "civ", "leader", "yields", "gold", "faith", "cities", "majors", "wars", "units", "policy_slots"];
 
@@ -392,6 +397,12 @@ mod tests {
             let o = Order::Purchase { city: CityRef::Name("Beijing".into()), id: id.clone(), currency: Currency::Gold, max_cost: None };
             assert!(order_call(&o, &ids).unwrap_err().to_string().contains("cannot be bought"), "{id}");
         }
+    }
+
+    #[test]
+    fn a_false_ok_is_a_failed_reply() {
+        assert!(!reply_ok(&serde_json::json!({"ok": false, "error": "x"})));
+        assert!(reply_ok(&serde_json::json!({"ok": true, "active": false})));
     }
 
     #[test]
