@@ -4547,3 +4547,76 @@ def test_the_fake_game_fills_trades_from_its_orders(setup):
     game.briefing()
     assert game.briefing()["market"]["trades_net"] == {"minerals": 10.0, "food": -5.0}
     assert FakeStellaris([briefing("2250.01.01")], trades={}).briefing()["market"]["trades_net"] == {}
+
+
+# ---- the planet check, stage A (levers design ruling 22) --------------------------------------------
+
+def _colony(stability=70.0, amenities=10.0, pops=800, **extra) -> dict:
+    return {"id": 7, "name": "Arnvoss", "pops": pops, "stability": stability, "free_amenities": amenities,
+            "free_housing": 50.0, "employable": pops, "unemployed": 0, "capital": False, "occupied": False,
+            "queued": [], **extra}
+
+
+def test_a_planet_below_25_twice_is_urgent_once_and_the_check_line_reaches_the_decision(setup):
+    s, log = setup
+    seen: list[str] = []
+    low = lambda d: {**briefing(d), "planets": [_colony(stability=20.0, amenities=-253.0)]}
+    game = FakeStellaris([low(d) for d in ("2294.01.01", "2294.02.01", "2294.03.01", "2294.04.01")])
+    g = Governor(s, game, log, model=_prompts_model(seen, "keep"))
+    g.set_months(2)
+    g.run(max_decisions=3)
+    eps = [e["situation"] for e in log.recent if e["kind"] == "episode"]
+    assert eps[1] == "urgent: planet crisis: Arnvoss stability 20", eps
+    assert eps[2].startswith("scheduled"), "the transition fires once"
+    assert "Planet check:" not in seen[1], "2 saves 1 month apart are not yet a lasting problem"
+    assert "Planet check: Arnvoss stability 20 (4 saves), amenities -253; nothing queued here" in seen[2]
+    assert log.state.info["planet_check"] == "Planet check: Arnvoss stability 20 (4 saves), amenities -253; nothing queued here"
+    assert any(e["kind"] == "strategy_review" and "planet crisis" in e["trigger"] for e in log.recent), \
+        "a planet crisis starts a review"
+
+
+def test_each_metrics_row_keeps_the_colonies_for_the_check(setup):
+    s, log = setup
+    game = FakeStellaris([{**briefing("2250.01.01"), "planets": [_colony()]}])
+    g = Governor(s, game, log, model=decisions("keep"))
+    g.run(max_decisions=1)
+    row = next(e for e in log.recent if e["kind"] == "metrics")
+    assert row["colonies"] == {"7": [800, 10.0, 70.0, ""]} and row["stability_loss"] == pytest.approx(3.0)
+
+
+def test_the_planet_triggers_are_stellaris_only():
+    from pilot.civ6_governor import Civ6Governor
+    assert {"planet crisis", "planet losing pops"} <= set(Governor.event_triggers)
+    assert "planet losing pops" not in Civ6Governor.event_triggers
+
+
+def test_the_strategist_sees_the_planet_record_before_the_directive_record(setup):
+    s, log = setup
+    prompts: list[str] = []
+    g = Governor(s, FakeStellaris([briefing("2252.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": _review_prompts(prompts)})
+    g.strategy = _strategy_with()
+    g._rows = [{"date": "2250.01.01", "directive": "consolidate_economy", "colonies": {"1": [800, -200, 60, "a"]}},
+               {"date": "2251.01.01", "directive": "defend", "colonies": {"1": [800, -190, 60, "a"]}}]
+    g._review_strategy(briefing("2252.01.01"), "scheduled")
+    text = prompts[-1]
+    assert "- consolidate_economy: amenities +10 per planet-year over 1 planet-year on 1 planet" in text
+    assert text.index("Planet record") < text.index("Directive record in this campaign")
+    assert "Directive record in this campaign" in text.split("Latest briefing:")[0].split("Planet record")[-1]
+
+
+def test_a_restarted_governor_keeps_checking_planets_from_the_campaign_rows(setup, tmp_path):
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    src = "save games/theia_1/autosave.sav"
+    low = lambda d: {**briefing(d), "source": src, "planets": [_colony(amenities=-300.0)]}
+    first = FakeStellaris([low("2290.01.01"), low("2290.02.01")])
+    g = Governor(s, first, EventLog(s.runs_dir, "run9", s.model, telemetry=tel), model=decisions("keep"))
+    g.set_months(1)
+    g.run(max_decisions=2)
+    seen: list[str] = []
+    second = FakeStellaris([low("2290.03.01")])
+    g2 = Governor(s, second, EventLog(s.runs_dir, "run10", s.model, telemetry=tel), model=_prompts_model(seen, "keep"))
+    g2.run(max_decisions=1)
+    assert "Planet check: Arnvoss amenities -300 (3 saves); nothing queued here" in seen[0]

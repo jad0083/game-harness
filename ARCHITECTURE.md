@@ -426,7 +426,12 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   room), `idle_fill` (deficit cover while trade is IDLE); numbers in `BuyRules`, `[actions.market.buy]`;
   the governor's `_buy_errors`/`_idle_fill` in `_carry_out_market_actions`, the save before the newest
   kept by `_follow`, the fill's line shown to the next decision; a buy that took but trades nothing in
-  2 saves (`market.trades_net`) is recorded `took` by "not executing"),
+  2 saves (`market.trades_net`) is recorded `took` by "not executing"), the planet check
+  (`stellaris_planets.py`, pure: `colony_codes` per save, `colony_row` into each metrics row,
+  `planet_issues` (persisted 2 months), `planet_line`, `planet_urgent`, `planet_record`,
+  `stability_loss`; the governor's `_observe` builds the save's row once per date from the last 24
+  months of rows (`_rows`, seeded from telemetry by `_load_rows`), the Stellaris-only trigger tuple
+  `STELLARIS_TRIGGERS` on `Governor.event_triggers`),
   `edit_pillar`/`unpin_pillar`/`request_review` under `_strategy_lock`. Telemetry: `strategies`
   table, `latest_strategy`, `strategy_history`, `metrics_rows`; dashboard `/api/strategy`, control
   actions `edit_pillar`, `unpin_pillar`, `review_strategy`. Rust: `choose_tech_pick` (only the

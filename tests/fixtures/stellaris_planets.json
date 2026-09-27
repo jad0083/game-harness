@@ -1,0 +1,351 @@
+{
+ "theia_2272": {
+  "date": "2272.05.01",
+  "net": {
+   "minerals": 33.46
+  },
+  "planets": [
+   {
+    "amenities_usage": 6787.64,
+    "capital": true,
+    "class": "desert",
+    "crime": 12.42031,
+    "designation": "capital",
+    "district_levels": {
+     "city": 17,
+     "generator": 2,
+     "mining": 5
+    },
+    "employable": 6276,
+    "free_amenities": 1472.248,
+    "free_housing": 10530.0,
+    "growth": 6.0,
+    "id": 13,
+    "jobs_open": 508,
+    "name": "Theia",
+    "occupied": false,
+    "occupier": null,
+    "pops": 6276,
+    "queued": [],
+    "size": 18,
+    "stability": 74.859,
+    "total_housing": 16800.0,
+    "unemployed": 0
+   },
+   {
+    "amenities_usage": 2500.0,
+    "capital": false,
+    "class": "gaia",
+    "crime": 0.0,
+    "designation": "city",
+    "district_levels": {
+     "city": 7,
+     "mining": 1
+    },
+    "employable": 2326,
+    "free_amenities": 166.95,
+    "free_housing": 4148.7,
+    "growth": 3.0,
+    "id": 2534,
+    "jobs_open": 100,
+    "name": "Balkenvoss",
+    "occupied": false,
+    "occupier": null,
+    "pops": 2026,
+    "queued": [
+     "district_farming"
+    ],
+    "size": 19,
+    "stability": 75.073,
+    "total_housing": 6100.0,
+    "unemployed": 26
+   },
+   {
+    "amenities_usage": 770.0,
+    "capital": false,
+    "class": "desert",
+    "crime": 0.0,
+    "designation": "mining",
+    "district_levels": {
+     "city": 1,
+     "mining": 1
+    },
+    "employable": 272,
+    "free_amenities": 643.5625,
+    "free_housing": 1130.0,
+    "growth": 2.0,
+    "id": 5634,
+    "jobs_open": 248,
+    "name": "Arnvoss",
+    "occupied": false,
+    "occupier": null,
+    "pops": 272,
+    "queued": [],
+    "size": 12,
+    "stability": 87.5293,
+    "total_housing": 1400.0,
+    "unemployed": 0
+   }
+  ],
+  "wars": 0
+ },
+ "theia_2393": {
+  "date": "2393.11.01",
+  "net": {
+   "minerals": 53.16
+  },
+  "planets": [
+   {
+    "amenities_usage": 5357.32,
+    "capital": false,
+    "class": "arid",
+    "crime": 0.33137,
+    "designation": "city",
+    "district_levels": {
+     "city": 7,
+     "farming": 1,
+     "generator": 1,
+     "mining": 6
+    },
+    "employable": 3828,
+    "free_amenities": 1956.636,
+    "free_housing": 7031.0,
+    "growth": 9.0,
+    "id": 3488,
+    "jobs_open": 1878,
+    "name": "Largoll",
+    "occupied": false,
+    "occupier": null,
+    "pops": 3828,
+    "queued": [],
+    "size": 15,
+    "stability": 73.036,
+    "total_housing": 10900.0,
+    "unemployed": 6
+   },
+   {
+    "amenities_usage": 4530.03,
+    "capital": true,
+    "class": "arid",
+    "crime": 1.55195,
+    "designation": "capital",
+    "district_levels": {
+     "city": 11,
+     "farming": 1,
+     "generator": 1,
+     "mining": 1
+    },
+    "employable": 4290,
+    "free_amenities": 2788.47,
+    "free_housing": 10185.8,
+    "growth": 5.0,
+    "id": 3485,
+    "jobs_open": 310,
+    "name": "Riak I",
+    "occupied": false,
+    "occupier": null,
+    "pops": 4290,
+    "queued": [],
+    "size": 21,
+    "stability": 85.407,
+    "total_housing": 14500.0,
+    "unemployed": 0
+   },
+   {
+    "amenities_usage": 3804.83,
+    "capital": false,
+    "class": "alpine",
+    "crime": 0.0,
+    "designation": "foundry",
+    "district_levels": {
+     "city": 4,
+     "mining": 2
+    },
+    "employable": 2549,
+    "free_amenities": 1656.47,
+    "free_housing": 4422.6,
+    "growth": 3.0,
+    "id": 5634,
+    "jobs_open": 251,
+    "name": "Gal Bothar",
+    "occupied": false,
+    "occupier": null,
+    "pops": 2549,
+    "queued": [],
+    "size": 12,
+    "stability": 76.91616,
+    "total_housing": 7000.0,
+    "unemployed": 0
+   },
+   {
+    "amenities_usage": 1490.72,
+    "capital": false,
+    "class": "arid",
+    "crime": 0.0,
+    "designation": "research",
+    "district_levels": {
+     "city": 1
+    },
+    "employable": 666,
+    "free_amenities": -326.076,
+    "free_housing": 521.8,
+    "growth": 0.0,
+    "id": 1804,
+    "jobs_open": 162,
+    "name": "Wintered Stane",
+    "occupied": false,
+    "occupier": null,
+    "pops": 666,
+    "queued": [],
+    "size": 10,
+    "stability": 61.8894,
+    "total_housing": 1200.0,
+    "unemployed": 0
+   },
+   {
+    "amenities_usage": 983.0,
+    "capital": false,
+    "class": "gaia",
+    "crime": 0.0,
+    "designation": "bureau",
+    "district_levels": {
+     "city": 10,
+     "farming": 2,
+     "mining": 2
+    },
+    "employable": 484,
+    "free_amenities": 899.35984,
+    "free_housing": 3742.94,
+    "growth": 1.0,
+    "id": 2534,
+    "jobs_open": 4556,
+    "name": "Balkenvoss",
+    "occupied": false,
+    "occupier": null,
+    "pops": 484,
+    "queued": [],
+    "size": 19,
+    "stability": 84.46,
+    "total_housing": 4212.64,
+    "unemployed": 0
+   }
+  ],
+  "wars": 1
+ },
+ "une2_2256": {
+  "date": "2256.01.01",
+  "net": {
+   "minerals": 66.22
+  },
+  "planets": [
+   {
+    "amenities_usage": 6840.4,
+    "capital": true,
+    "class": "continental",
+    "crime": 0.0,
+    "designation": "capital",
+    "district_levels": {
+     "city": 9,
+     "farming": 4,
+     "generator": 3,
+     "mining": 2
+    },
+    "employable": 6318,
+    "free_amenities": 1950.15,
+    "free_housing": 6687.3,
+    "growth": 7.0,
+    "id": 3,
+    "jobs_open": 782,
+    "name": "Earth",
+    "occupied": false,
+    "occupier": null,
+    "pops": 6318,
+    "queued": [],
+    "size": 18,
+    "stability": 74.3602,
+    "total_housing": 13000.0,
+    "unemployed": 0
+   },
+   {
+    "amenities_usage": 2244.55,
+    "capital": false,
+    "class": "continental",
+    "crime": 1.834,
+    "designation": "mining",
+    "district_levels": {
+     "city": 2,
+     "generator": 1,
+     "mining": 1
+    },
+    "employable": 1519,
+    "free_amenities": 3372.95,
+    "free_housing": 2983.0,
+    "growth": 2.0,
+    "id": 218,
+    "jobs_open": 181,
+    "name": "St Yegorov",
+    "occupied": false,
+    "occupier": null,
+    "pops": 1519,
+    "queued": [],
+    "size": 12,
+    "stability": 76.9382,
+    "total_housing": 4500.0,
+    "unemployed": 0
+   },
+   {
+    "amenities_usage": 2040.0,
+    "capital": false,
+    "class": "continental",
+    "crime": 3.79227,
+    "designation": "research",
+    "district_levels": {
+     "city": 1
+    },
+    "employable": 1408,
+    "free_amenities": 1107.625,
+    "free_housing": 393.0,
+    "growth": 1.0,
+    "id": 304,
+    "jobs_open": 100,
+    "name": "Las Veredas",
+    "occupied": false,
+    "occupier": null,
+    "pops": 1408,
+    "queued": [
+     "district_city"
+    ],
+    "size": 24,
+    "stability": 72.9188,
+    "total_housing": 1800.0,
+    "unemployed": 8
+   },
+   {
+    "amenities_usage": 685.3,
+    "capital": false,
+    "class": "tundra",
+    "crime": 1.12169,
+    "designation": "factory",
+    "district_levels": {
+     "city": 1
+    },
+    "employable": 409,
+    "free_amenities": -270.925,
+    "free_housing": 1191.0,
+    "growth": 0.0,
+    "id": 4860,
+    "jobs_open": 191,
+    "name": "Nueva Sonora",
+    "occupied": false,
+    "occupier": null,
+    "pops": 109,
+    "queued": [],
+    "size": 14,
+    "stability": 48.971,
+    "total_housing": 1300.0,
+    "unemployed": 0
+   }
+  ],
+  "wars": 1
+ }
+}

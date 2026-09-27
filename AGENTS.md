@@ -323,6 +323,11 @@ Rules:
   cover (6-24 months of stock left, 36 for motes, gases, crystals); else the next decision reads
   "trade idle: nothing qualifies to buy (reason)". A buy in the order list that trades nothing in 2
   saves (`market.trades_net`) is recorded took (not executing).
+- **Planet check** (read-only): a colony under stability 50, amenities under -100 (300+ pops), housing
+  under 0 (1,000+ pops), 5% unemployed (not the capital), 20% fewer pops than its 12-month peak, or
+  occupied, for 2+ months, is named in the decision prompt's `Planet check:` line with a hint
+  (nothing queued, minerals net < 0). `planet crisis` (under 25 on 2 saves in a row) and `planet
+  losing pops` (1,000+ pops) are urgent once and start a review. No directive repairs grown colonies.
 - **Action record**: every directive, tech pick, market order and posture is followed in the
   autosaves until it resolves (`order_outcome` events: took, held, researched; overridden, failed,
   did not take, did not stick, removed; not judged: superseded, locked, no-op), with a stick rate per

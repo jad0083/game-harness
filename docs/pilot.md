@@ -278,7 +278,8 @@ effort instead.
 
 **Reviews** run at the start of a campaign without a strategy, every `PILOT_RETRO_EVERY`
 decisions, on big events (war, crisis, colony lost, boxed in, military fell by half, a milestone
-missed, an off-frame decision; at most one per 12 in-game months) and on *Review strategy now*. An
+missed, an off-frame decision, a planet crisis or a planet losing pops; at most one per 12 in-game
+months) and on *Review strategy now*. An
 answer is validated; an invalid one gets one corrective retry with its errors and the rejected
 answer, then the strategy stays. Reviews started at the beginning of a run or by you must name the
 species traits the strategy builds on. A review may add up to 3 rules to
@@ -346,6 +347,23 @@ followed (`order_followed`).
   "does not stick here" at 50% or less. It goes to the decision prompt ("Action record in this
   campaign", after the past outcomes), to the Strategist (before the directive record) and to the
   dashboard (`order_record`). It is advisory: no pressure factor.
+
+**Planet check** (Stellaris, read-only; levers design ruling 22, `src/pilot/stellaris_planets.py`).
+A colony has a problem when its stability is under 50, its free amenities under -100 on 300+ pops,
+its free housing under 0 on 1,000+ pops, 5% or more of its employable pops unemployed (not the
+capital), its pops 20% under their peak of the last 12 months, or it is occupied (pops count working
+robots). It is flagged once the problem persists across saves at least 2 months apart with none
+between them without it, and the decision prompt gets one line naming the flagged planets only, with
+a cause hint: `Planet check: Arnvoss stability 18 (3 saves), amenities -253, housing -283; nothing
+queued here` (also "minerals net < 0"; on the dashboard as `planet_check`). Two urgent reasons fire
+once, at the transition, and start a review (12-month cap): `planet crisis: <name> stability <n>` (a
+colony under 25 on 2 saves in a row) and `planet losing pops: <name> -<p>% in 12 months` (1,000+
+pops). Each metrics row keeps every colony's pops, amenities, stability and problems (`colonies`) and
+the estimate of job output lost to stability under 75 (`stability_loss`, percent; the go criterion of
+a later planet lever), so the check survives a restart. The Strategist gets the planet record: per
+directive held, the amenity change per planet-year on colonies with a deficit. No directive repairs
+grown colonies (+5 to +14 amenities a planet-year under consolidate_economy); two learned rules
+that said otherwise were corrected.
 
 **Your edits.** *Edit* on a pillar changes it and pins it (a review never changes a pinned pillar);
 changing its weight rescales the other unpinned pillars so the total stays 100. *Unpin* hands it

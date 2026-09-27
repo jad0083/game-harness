@@ -37,6 +37,15 @@ from .events import EventLog
 from .learning import Journal, LearnedStore, LearningRejected
 from .pillars import ACTION_KINDS, OrdersSpec, PillarsError, PillarSpec, load_pillars
 from .stellaris_market import buy_errors, idle_fill
+from .stellaris_planets import (
+    colony_row,
+    planet_issues,
+    planet_line,
+    planet_record,
+    planet_record_text,
+    planet_urgent,
+    stability_loss,
+)
 from .stellaris_record import (
     NO_OP_PREFIX,
     OPEN,
@@ -83,6 +92,9 @@ NEEDS_HUMAN = {"prepare_war"}      # strategy.md: only after the human confirmed
 # no strategy exists yet, bypasses that cap.
 EVENT_TRIGGERS = ("new war", "war ended", "crisis", "colony lost", "boxed in", "milestone missed",
                   "off-frame", "military fell")
+# Stellaris's own (levers design): the planet check's urgent reasons (ruling 22). EVENT_TRIGGERS stays
+# as it is, since Civ VI spreads it into its own tuple.
+STELLARIS_TRIGGERS = (*EVENT_TRIGGERS, "planet crisis", "planet losing pops")
 
 # The tool's own reply names the tech it actually picked ("picked <id> in <field>", or "clicked
 # <id> in <field> (option n); unverified until the next autosave …"); a reply that matches neither
@@ -500,7 +512,8 @@ something done, tell them to use "Decide now", a standing order, or an override 
 
 
 class Governor:
-    event_triggers: ClassVar[tuple[str, ...]] = EVENT_TRIGGERS    # urgent reasons that start a strategy review
+    event_triggers: ClassVar[tuple[str, ...]] = STELLARIS_TRIGGERS    # urgent reasons that start a strategy review
+    rows_months: ClassVar[int] = 24                # metrics rows kept in memory (planet check, war crisis)
     human_paused: bool = False       # paused from the dashboard: only the human's Resume ends it
     # date-stall watchdog (Stellaris; levers design ruling 23): the autosave date unchanged for
     # max(stall_floor_s, 10 x the median real seconds per month of this run's last stall_months)
@@ -569,6 +582,11 @@ class Governor:
         self._market_note = ""                    # the last sync's idle-trade line, for the next decision
         self._prev_save: dict | None = None       # the save before the newest one followed (the AI's own buys)
         self._last_save: dict | None = None
+        # the campaign's recent metrics rows, oldest first (seeded from telemetry at the campaign's start):
+        # the planet check reads each colony's earlier problems from them (ruling 22)
+        self._rows: list[dict] = []
+        self._observed: dict | None = None        # the newest save's metrics row
+        self._planet_line = ""                    # the planet check's line for the newest save
         self._since_retro = 0
         self._strategy_trace_n = 0                # negative episode ids for strategy review traces (see _review_strategy)
         self._clock: Callable[[], float] = time.monotonic   # the watchdog's wall clock (tests inject one)
@@ -1109,6 +1127,7 @@ class Governor:
         self.log.set_campaign(self.s.game, name, b.get("name") or "")
         self._load_campaign_state()
         self._load_action_record()
+        self._load_rows()
 
     def _load_campaign_state(self) -> None:
         """Standing orders, plan and strategy saved for the campaign just named."""
@@ -1137,6 +1156,56 @@ class Governor:
                 self.log.emit("briefing_error", error=f"loading the strategy: {e}"[:200])
         self.log.state.info["plan"] = self.plan
         self.log.state.info["strategy"] = self.strategy.model_dump() if self.strategy else None
+
+    def _load_rows(self) -> None:
+        """The campaign's last `rows_months` of metrics rows from telemetry (earlier runs), so the planet
+        check carries on across a restart. Advisory: a failed read starts from none."""
+        self._rows, self._observed = [], None
+        tel, cid = self.log.telemetry, self.log.campaign_id
+        if tel is None or not cid:
+            return
+        try:
+            rows = [r for r in tel.metrics_rows(cid) if r.get("date") and str(r["date"])[:1] != "T"]
+        except Exception as e:  # noqa: BLE001 - advisory
+            self.log.emit("briefing_error", error=f"loading the metrics rows: {e}"[:200])
+            return
+        if rows:
+            last = months(rows[-1]["date"])
+            self._rows = [r for r in rows if last - months(r["date"]) <= self.rows_months]
+
+    def _observe(self, b: dict) -> tuple[dict, list[str]]:
+        """Once per save date: the save's metrics row (with each colony's problems and the stability-loss
+        estimate), kept in `_rows`, and the urgent reasons of the planet check's transitions (ruling 22).
+        Returns (row, urgent reasons); a save already seen returns its row and no reasons. Advisory: a
+        malformed save gives the plain row."""
+        date = str(b.get("date") or "")
+        if self._observed is not None and self._observed.get("date") == date:
+            return self._observed, []
+        row, urgent = metrics(b), []
+        if date and date[:1] != "T":
+            before = [r for r in self._rows if months(r["date"]) < months(date)]
+            try:
+                row["colonies"] = colony_row(b, before)
+                row["stability_loss"] = stability_loss(b)
+                urgent = planet_urgent(b, before)
+                self._planet_line = planet_line(planet_issues(b, before))
+            except Exception as e:  # noqa: BLE001 - the check is advisory
+                self.log.emit("briefing_error", error=f"planet check: {type(e).__name__}: {e}"[:200])
+            self.log.state.info["planet_check"] = self._planet_line
+            self._rows = [r for r in before if months(date) - months(r["date"]) <= self.rows_months] + [row]
+        self._observed = row
+        return row, urgent
+
+    def _planet_record_section(self) -> str:
+        """The Strategist's planet record (ruling 22): per directive, the amenity change per planet-year on
+        colonies with an amenity deficit, from the campaign's metrics rows; "" without data."""
+        try:
+            text = planet_record_text(planet_record(self._metrics_rows() or self._rows))
+        except Exception as e:  # noqa: BLE001 - advisory
+            self.log.emit("briefing_error", error=f"planet record: {type(e).__name__}: {e}"[:200])
+            return ""
+        return ("Planet record in this campaign (free amenities on colonies with a deficit under -100, per "
+                "directive held; advisory):\n" + text) if text else ""
 
     def _run_until_next_decision(self, last: dict) -> tuple[dict | None, str]:
         start = months(last["date"])          # the interval can change mid-wait (dashboard)
@@ -1175,9 +1244,11 @@ class Governor:
                 if self.log.state.status == "needs_attention":
                     self._status("playing")
                 self.log.emit("recovered", reason="the newest autosave of this campaign reads again")
+            observed: list[str] = []
             if b["date"] != last["date"]:
                 self._date_moved(months(b["date"]) - months(last["date"]))
-                self.log.emit("metrics", **metrics(b))
+                row, observed = self._observe(b)
+                self.log.emit("metrics", **row)
                 self._follow(b)
                 self.log.state.game_date = b["date"]
                 self.log.state.turns_advanced = months(b["date"]) - months(last["date"]) + self.log.state.turns_advanced
@@ -1188,7 +1259,7 @@ class Governor:
                 if self._stalled(b["date"]):
                     return last, ""
             unread_since = None
-            urgent = urgent_changes(last, b)
+            urgent = urgent_changes(last, b) + observed
             if b["date"] != last["date"]:
                 urgent += self._newly_missed_milestones(last["date"], b["date"])
             mil_base, mil_now = self._decision_military, b.get("military_power")
@@ -1283,7 +1354,7 @@ class Governor:
         self._decision_military = b.get("military_power")   # baseline for "military fell" until the next decision
         self.log.state.episodes += 1
         self.log.state.game_date = b["date"]
-        self.log.emit("metrics", **metrics(b))
+        self.log.emit("metrics", **self._observe(b)[0])
         self._follow(b)
         if self.log.telemetry is not None and self.log.campaign_id:
             try:
@@ -1312,6 +1383,8 @@ class Governor:
         trend = self._trend(b)
         if trend:
             prompt.append(trend)
+        if self._planet_line:
+            prompt.append(self._planet_line + " (read-only; a directive switch does not repair grown colonies)")
         if self.log.telemetry is not None and self.log.campaign_id:
             try:   # given up front, so the model rarely needs a second call for it
                 prompt.append("Earlier directive changes in this campaign and what followed 12 months later:\n"
@@ -1917,7 +1990,7 @@ class Governor:
             prompt = [f"Strategy review, trigger: {trigger}.", "Current strategy:\n" + current,
                       "Milestones (status computed from the recorded numbers):\n" + self._milestones_text(),
                       "Directive changes and what followed:\n" + self._past_outcomes_text(),
-                      *[x for x in (self._action_record_section(b, noops),) if x],
+                      *[x for x in (self._action_record_section(b, noops), self._planet_record_section()) if x],
                       self._records_section(),
                       "Latest briefing:\n" + (self.last_briefing or self.game.briefing_text())]
             sp_name, sp_traits = species_terms(b)

@@ -26,8 +26,11 @@ Written by the pilot app during play; promote proven items into the main corpus.
 - A large energy stockpile can safely absorb temporary energy deficits during a war, allowing the empire to remain in a 'defend' posture without needing to switch to 'consolidate_economy'.  
   _why:_ retrospective 2230.05.01 _(google:gemini-3.6-flash, 2026-09-26)_
 
-- The 'consolidate_economy' directive effectively repairs severe amenity deficits and low stability, capable of raising a planet's stability by over 30 points in a single year.  
-  _why:_ retrospective 2235.05.01 _(google:gemini-3.6-flash, 2026-09-26)_
+- A wartime amenity deficit that recovers after peace (Las Veredas, 2235: stability up 30 points in a year) is the war ending, not 'consolidate_economy'. Do not switch directives to repair a colony's amenities.  
+  _why:_ corrected 2026-09-27 (levers design ruling 22, E10): the retrospective of 2235.05.01 credited consolidate_economy with a Las Veredas deficit that rebounded after peace
+
+- 'consolidate_economy' does not repair grown-colony amenity deficits: over four campaigns it moved them +5 to +14 amenities a planet-year and cleared 2 of 63-70 year-long intervals, most of them on 3 late Theian planets. Every colony under stability 25 was at war (Arnvoss 2294, Largoll 2338, the capital 2383): the Planet check line names such colonies and a planet crisis starts a strategy review; a directive switch does not fix them.  
+  _why:_ levers design ruling 22 (E10), measured on telemetry 2026-09-27
 
 - A prolonged defensive war preserves territory but typically causes an empire's technological and military growth to stagnate, falling behind peaceful peers.  
   _why:_ retrospective 2235.05.01 _(google:gemini-3.6-flash, 2026-09-26)_
@@ -188,8 +191,8 @@ Written by the pilot app during play; promote proven items into the main corpus.
 - The 'consolidate_economy' directive efficiently resolves extreme planetary housing and amenities deficits in under two years, stabilizing colonies after rapid expansion.  
   _why:_ retrospective 2211.09.01 _(google:gemini-3.7-flash, 2026-09-26)_
 
-- The 'consolidate_economy' directive successfully and rapidly resolves extreme planetary amenities deficits (e.g., reversing -119 to +93 in 14 months) by forcing the AI to prioritize holistic infrastructure.  
-  _why:_ retrospective 2218.04.01 _(google:gemini-3.1-pro-preview, 2026-09-26)_
+- A new colony's early amenities deficit (e.g. -119 to +93 in 14 months) clears as the colony grows, under any directive; it is no evidence for 'consolidate_economy'.  
+  _why:_ corrected 2026-09-27 (levers design ruling 22, E10): new colonies cleared their deficits under every directive
 
 - Territorial expansion can still progress under the 'consolidate_economy' directive (e.g., +3 systems) if sufficient influence and alloys allowed outposts to be queued prior to the stance change.  
   _why:_ retrospective 2218.04.01 _(google:gemini-3.1-pro-preview, 2026-09-26)_
