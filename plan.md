@@ -128,7 +128,7 @@
 - [ ] Monthly fleet snapshot in telemetry to find what destroys ships in peacetime
 - [ ] Full decision prompts in traces (no 6,000-character cut)
 - [x] CI skips the Rust stages for commits with no Rust, Cargo or corpus files (`scripts/ci-needs-rust.sh`)
-- [ ] Game pillars: each game defines its strategy pillars, metrics and actions in `corpora/<game>/pillars.toml`; the strategy layer, decisions, actions and dashboard use them as guardrails (spec docs/superpowers/specs/2026-09-26-game-pillars-design.md)
+- [x] Game pillars: each game defines its strategy pillars, metrics and actions in `corpora/<game>/pillars.toml`; the strategy layer, decisions, actions and dashboard use them as guardrails (spec docs/superpowers/specs/2026-09-26-game-pillars-design.md; deployed 2e9f24d on mini-rig2, two live reviews accepted with milestones and trait-based identity)
 - [ ] Civilization VI integration (after game pillars)
 
 ## Hosts
