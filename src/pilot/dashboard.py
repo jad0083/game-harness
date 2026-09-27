@@ -207,8 +207,8 @@ def pc_status() -> dict:
     import os
     import urllib.request
 
-    from .config import REPO
-    url = os.environ.get("GAME_AGENT_URL", "http://192.168.1.77:8765").rstrip("/")
+    from .config import REPO, Settings
+    url = Settings().agent_url.rstrip("/")
     try:
         token = os.environ.get("GAME_AGENT_TOKEN") or (REPO / ".agent_token").read_text().strip()
         hdr = {"Authorization": f"Bearer {token}"}

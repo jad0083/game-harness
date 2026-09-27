@@ -177,3 +177,36 @@ def test_run_id_accepts_real_ids(rid):
 @pytest.mark.parametrize("rid", ["..", ".", ".hidden", "a/b", "a\\b", "a..b", ""])
 def test_run_id_rejects_traversal(rid):
     assert not dashboard.RUN_ID.match(rid)
+
+
+# ---------- /api/pc ----------
+
+class FakeResp(io.BytesIO):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+
+def fake_agent(foreground: str, titles: list[str], calls: list):
+    def urlopen(req, timeout=None):
+        calls.append(req.full_url)
+        if req.full_url.endswith("/health"):
+            return FakeResp(json.dumps({"version": "1.4.0", "foreground": foreground}).encode())
+        return FakeResp(json.dumps({"windows": [{"title": t} for t in titles]}).encode())
+    return urlopen
+
+
+def test_pc_status_uses_the_configured_agent_url(monkeypatch):
+    from pilot.config import Settings
+    calls: list = []
+    monkeypatch.setenv("GAME_AGENT_TOKEN", "t")
+    monkeypatch.setattr("urllib.request.urlopen", fake_agent("", [], calls))
+    monkeypatch.setenv("GAME_AGENT_URL", "http://10.9.9.9:1234/")
+    dashboard.pc_status()
+    assert calls[0] == "http://10.9.9.9:1234/health"
+    monkeypatch.delenv("GAME_AGENT_URL")
+    calls.clear()
+    dashboard.pc_status()
+    assert calls[0] == Settings().agent_url.rstrip("/") + "/health"
