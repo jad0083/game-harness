@@ -587,6 +587,10 @@ end
 -- The game's AI plays our civ for `turns` turns, then hands it back.
 function H.autoplay(turns)
   local me = H.me()
+  -- Tutorial advisor popups wait for a click and hold the turn forever (seen live at T17): turn
+  -- them off for this session (UserConfiguration only; the saved options are left alone).
+  local tutorial = UserConfiguration.GetValue('TutorialLevel')
+  if tutorial ~= nil and tutorial ~= -1 then UserConfiguration.SetValue('TutorialLevel', -1) end
   AutoplayManager.SetReturnAsPlayer(me)
   AutoplayManager.SetObserveAsPlayer(me)
   AutoplayManager.SetTurns(turns)

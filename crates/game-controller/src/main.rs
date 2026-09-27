@@ -396,7 +396,8 @@ async fn main() -> Result<()> {
         Commands::Civ6 { action: Civ6Action::AutoplayStop } | Commands::Civ6 { action: Civ6Action::AutoplayStatus } => {
             let dir = cli.corpus.clone().unwrap_or_else(|| PathBuf::from("corpora/civ6"));
             let f = if matches!(cli.command, Commands::Civ6 { action: Civ6Action::AutoplayStop }) { "autoplay_stop" } else { "autoplay_status" };
-            let v = civ6::call(&client, &civ6::Library::load(&dir)?, civ6::STATE_UI, &format!("Harness.run(Harness.{f})")).await?;
+            let wait = if f == "autoplay_status" { 3_000 } else { 15_000 };
+            let v = civ6::call_with(&client, &civ6::Library::load(&dir)?, civ6::STATE_UI, &format!("Harness.run(Harness.{f})"), wait).await?;
             println!("{}", serde_json::to_string(&v)?);
             if !civ6::reply_ok(&v) {
                 std::process::exit(2);

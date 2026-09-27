@@ -250,8 +250,14 @@ fn printed(r: &crate::client::LuaReply) -> Vec<String> {
 
 /// Run a library call in `state`, installing the library there first when it is missing.
 pub async fn call(client: &AgentClient, lib: &Library, state: &str, call: &str) -> Result<serde_json::Value> {
+    call_with(client, lib, state, call, 15_000).await
+}
+
+/// `call` waiting at most `wait_ms` for the game's first reply (a status poll during the AI's turn
+/// should give up quickly: the tuner is silent then).
+pub async fn call_with(client: &AgentClient, lib: &Library, state: &str, call: &str, wait_ms: u64) -> Result<serde_json::Value> {
     let guarded = lib.guarded(call);
-    let lines = printed(&client.tuner_lua(state, &guarded, Some(15_000)).await?);
+    let lines = printed(&client.tuner_lua(state, &guarded, Some(wait_ms)).await?);
     if !lines.iter().any(|l| l.trim() == MISSING) {
         return parse_output(&lines);
     }
