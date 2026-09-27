@@ -32,7 +32,7 @@ The model plays each game the way that game allows:
 |---|---|---|
 | **Galactic Civilizations IV** | The controller ends turns itself (each one verified by the date changing) and clears known screens; the model decides only real choices (events, research, builds, policies, trades) from screenshots. | Played live |
 | **Stellaris** | The game's own AI plays the empire; the model is a **governor** that picks one standing directive (expand, consolidate economy, tech rush, defend, …) from the monthly autosave, within a strategy of weighted pillars and milestones, and places tech picks and market trades. | Played live |
-| **Civilization VI** | Planned: game state and orders through the game's Lua tuner. | Connectivity spike |
+| **Civilization VI** | The game's own AI plays a few turns at a time (autoplay); the model is a **governor** that reads a Lua snapshot through the game's tuner and gives structured orders between stretches (research, civic, policies, production, purchases), within weighted pillars in share mode. | Governor (first live runs) |
 
 ## Quick start
 
@@ -70,7 +70,7 @@ the controller directly: `.mcp.json`, `.gemini/settings.json`.
 |---|---|
 | [AGENTS.md](AGENTS.md) | The operating guide for any model working here: play loop, decisions, recoveries, how to record what it learns |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Components, turn verification, known screens, coordinate scaling, agent API |
-| [docs/pilot.md](docs/pilot.md) | The pilot app: models, the Stellaris governor, the strategy layer, dashboard, telemetry |
+| [docs/pilot.md](docs/pilot.md) | The pilot app: models, the Stellaris and Civilization VI governors, the strategy layer, dashboard, telemetry |
 | [docs/cli.md](docs/cli.md) | Controller CLI and MCP tools |
 | [docs/corpus.md](docs/corpus.md) | Game corpora, generated records, other screen sizes |
 | [PLAYING.md](PLAYING.md) | Verified controls for Galactic Civilizations IV |
@@ -80,7 +80,7 @@ the controller directly: `.mcp.json`, `.gemini/settings.json`.
 
 ```
 crates/game-agent        Windows agent (HTTP API: screenshot, input, windows, files)
-crates/game-controller   Linux controller (CLI, MCP server, autopilot, corpus, Stellaris saves)
+crates/game-controller   Linux controller (CLI, MCP server, autopilot, corpus, Stellaris saves, Civ VI Lua)
 src/pilot                Pilot app, governor, strategy layer, dashboard
 corpora/<game>           Everything game-specific
 scripts                  CI, agent installer server, extractors, play helpers

@@ -226,6 +226,15 @@ Generic records — `id`, `name`, `aliases`, `summary`, `fields` — so the extr
 
 Civilization VI (`corpora/civ6/`, `scripts/extract-civ6.py`) has no single rules file: the extractor rebuilds the game's in-memory rules database from the base XML and each DLC's modinfo actions for the Gathering Storm ruleset, then renders 1,783 records in 29 kinds (civs, leaders, units, districts with adjacency, techs with eurekas, policies, great people, emergencies, resolutions, …) with the game's own text; see `docs/corpus.md` and `corpora/civ6/data/README.md`.
 
+The Civilization VI governor reads and acts through Lua, never the screen: the controller
+(`crates/game-controller/src/civ6.rs`) installs `corpora/civ6/lua/harness.lua` into the game's
+`InGame` and `GameCore` Lua states through the agent's tuner relay (versioned by a hash of the file,
+re-installed when missing) and calls one library function per command: `Harness.snapshot()`, the
+order templates and `AutoplayManager` stretches. Orders arrive as JSON naming corpus ids; the
+controller maps each id to the game's type key from `data/` and writes every argument as an escaped
+Lua string literal, so no model text is ever evaluated. The pilot (`src/pilot/civ6_governor.py`)
+drives these commands; see `docs/pilot.md`.
+
 The loader rejects nameless records and duplicate ids at startup, so a bad extract fails the build rather than a game turn. The raw XML is not committed (Stardock's data); `data/_meta.json` records the game version and generator commit for reproducibility.
 
 ### Chunks (`docs/*.md`, `strategy.md`)

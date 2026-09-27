@@ -142,6 +142,10 @@
 - [x] Civ VI corpus: `scripts/extract-civ6.py` rebuilds the Gathering Storm + DLC rules database from the game's XML (modinfo criteria, load order, cascading deletes) → 1,783 records in 29 kinds; 16 docs (13 wiki pages, civ6-mcp playbook, CivBench appendix, links); first `strategy.md`; manifest with the window title; loads in the controller and CI
 - [ ] Civ VI corpus: compare the Gathering Storm build with a GS `DebugGameplay.sqlite` (`CopyDatabasesToDisk 1`, load a GS game; `--check-against`) and the DLC load order in `Logs/Modding.log`
 - [ ] Civ VI pillars.toml, hotkeys and screens once the game can be read (tuner relay or saves) and played
+- [ ] Civ VI governor (spec docs/design/2026-09-26-civ6-governor-design.md): `corpora/civ6/lua/harness.lua` (snapshot, orders, autoplay; checked live), controller `civ6 snapshot|order|autoplay|autoplay-stop|autoplay-status`, `corpora/civ6/pillars.toml` in share mode, `python -m pilot run --game civ6` (first live runs; not yet a service)
+- [ ] Civ VI governor as a service on mini-rig2 (drop-in `PILOT_GAME=civ6`) with the dashboard following the campaign
+- [ ] Civ VI district and wonder placement (a tile planner, design option 2), so production orders can name them
+- [ ] Civ VI MCP tools for snapshot, orders and autoplay
 - [x] Dashboard access key: `PILOT_DASHBOARD_KEY` or `runs/dashboard.key`, one link per browser (`python -m pilot dashboard-link`), JSON-only same-origin changes
 
 ## Hosts
