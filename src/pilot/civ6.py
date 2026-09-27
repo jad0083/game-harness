@@ -130,13 +130,14 @@ class FakeCiv6:
     during the AI's turn processing), `start_fails` (autoplay answers ok: false), `never_starts`
     (autoplay answers ok but no turn is played), `stop_raises`, `readback_fails` (the snapshot after
     orders fails), `transport` (orders time out after they ran), `lost_start_reply` (the first
-    autoplay call times out but runs)."""
+    autoplay call times out but runs), `blink` (autoplay reads inactive once before its last turn
+    ends, as seen live)."""
 
     def __init__(self, base: dict, events: dict | None = None, replies: dict | None = None,
                  prices: dict | None = None, sticks: bool = True, index: CorpusIndex | None = None, ai=None,
                  busy: bool = False, start_fails: bool = False, never_starts: bool = False,
                  stop_raises: bool = False, readback_fails: bool = False, transport: bool = False,
-                 lost_start_reply: bool = False):
+                 lost_start_reply: bool = False, blink: bool = False):
         self.state = copy.deepcopy(base)
         self.events = dict(events or {})
         self.replies = dict(replies or {})
@@ -147,6 +148,7 @@ class FakeCiv6:
         self.busy, self.start_fails, self.never_starts = busy, start_fails, never_starts
         self.stop_raises, self.readback_fails, self.transport = stop_raises, readback_fails, transport
         self.lost_start_reply = lost_start_reply
+        self.blink, self._blinked = blink, False
         self.actions: list[tuple] = []
         self.active = False
         self.remaining = 0
@@ -182,6 +184,10 @@ class FakeCiv6:
     briefing = snapshot
 
     def autoplay_status(self) -> dict:
+        if self.blink and self.active and self.remaining == 1 and not self._blinked:
+            # like the real game: before the last turn ends, autoplay already reads inactive
+            self._blinked = True
+            return {"ok": True, "active": False, "turns": 0, "turn": self.state["turn"]}
         self._tick("autoplay_status")
         return {"ok": True, "active": self.active, "turns": self.remaining, "turn": self.state["turn"]}
 

@@ -429,6 +429,17 @@ def test_a_wonder_the_ai_dropped_is_not_a_lost_race():
                           wonders={"BUILDING_PYRAMIDS"}) == ["wonder race lost: BUILDING_PYRAMIDS in Beijing"]
 
 
+def test_autoplay_reading_inactive_before_its_last_turn_is_not_its_end(setup):
+    s, _ = setup
+    s.autoplay_chunk = 3
+    game = FakeCiv6(FIXTURE, index=INDEX, blink=True)
+    g = governor(setup, game, orders_model([{"kind": "research", "id": "tech:pottery"}], []))
+    g.run(max_decisions=2)
+    assert game.state["turn"] == FIXTURE["turn"] + 3
+    assert traces(setup)[1]["date"] == f"T{FIXTURE['turn'] + 3}"
+    assert all(not a[2] for a in game.actions if a[0] == "order"), "no order while the last turn still runs"
+
+
 def test_a_lost_reply_to_autoplay_is_not_a_failure(setup):
     game = FakeCiv6(FIXTURE, index=INDEX, lost_start_reply=True)
     g = governor(setup, game, orders_model([]))

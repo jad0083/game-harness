@@ -245,6 +245,7 @@ class Civ6Governor(Governor):
         except Exception as e:  # noqa: BLE001 - no reply: it may have started; the polls tell
             self.log.emit("briefing_error", error=f"autoplay at T{turn}: {e}"[:200])
         seen_active, misses, deadline = False, 0, self.turn_deadline_s * n
+        idle_since: tuple[float, int] | None = None
         while True:
             time.sleep(self.status_poll_s)
             try:
@@ -259,10 +260,17 @@ class Civ6Governor(Governor):
                 seen_active = seen_active or bool(st.get("active")) or st.get("turn", turn) > turn
                 if not seen_active and elapsed > self.start_grace_s:
                     raise Civ6Stuck(f"autoplay did not start at T{turn} (still inactive after {elapsed:.0f} s)")
-                if seen_active and not st.get("active") and st.get("turn", turn) > turn:
-                    self.log.emit("turn", turn=st["turn"], turns=st["turn"] - turn, seconds=round(elapsed, 1),
-                                  unanswered_polls=misses, note="autoplay ended early")
-                    return
+                # Autoplay reads inactive (turns 0) before its last turn ends (seen live), so an early
+                # end counts only when the turn stays unchanged for the start grace.
+                if seen_active and not st.get("active"):
+                    if idle_since is None or idle_since[1] != st.get("turn"):
+                        idle_since = (time.time(), st.get("turn"))
+                    elif time.time() - idle_since[0] > self.start_grace_s:
+                        self.log.emit("turn", turn=st["turn"], turns=st["turn"] - turn, seconds=round(elapsed, 1),
+                                      unanswered_polls=misses, note="autoplay ended early")
+                        return
+                else:
+                    idle_since = None
             if elapsed > deadline:
                 self._stop_autoplay()
                 raise Civ6Stuck(f"T{turn} did not end within {deadline:.0f} s ({misses} status polls unanswered)")
