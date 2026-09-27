@@ -1,0 +1,710 @@
+[
+ {
+  "id": "belief:cathedral",
+  "name": "Cathedral",
+  "aliases": [
+   "BELIEF_CATHEDRAL"
+  ],
+  "summary": "Worship: Allows construction of Cathedrals (+3 Faith, 1 slot for religious art).",
+  "fields": {
+   "class": "Worship",
+   "effect": "Allows construction of Cathedrals (+3 Faith, 1 slot for religious art)."
+  }
+ },
+ {
+  "id": "belief:choral_music",
+  "name": "Choral Music",
+  "aliases": [
+   "BELIEF_CHORAL_MUSIC"
+  ],
+  "summary": "Follower: Shrines and Temples provide Culture equal to their intrinsic Faith output.",
+  "fields": {
+   "class": "Follower",
+   "effect": "Shrines and Temples provide Culture equal to their intrinsic Faith output."
+  }
+ },
+ {
+  "id": "belief:city_patron_goddess",
+  "name": "City Patron Goddess",
+  "aliases": [
+   "BELIEF_CITY_PATRON_GODDESS"
+  ],
+  "summary": "Pantheon: +25% Production toward districts in cities without a specialty district.",
+  "fields": {
+   "class": "Pantheon",
+   "effect": "+25% Production toward districts in cities without a specialty district."
+  }
+ },
+ {
+  "id": "belief:cross_cultural_dialogue",
+  "name": "Cross-Cultural Dialogue",
+  "aliases": [
+   "BELIEF_CROSS_CULTURAL_DIALOGUE"
+  ],
+  "summary": "Founder: +1 Science for every 4 followers of this Religion.",
+  "fields": {
+   "class": "Founder",
+   "effect": "+1 Science for every 4 followers of this Religion."
+  }
+ },
+ {
+  "id": "belief:dance_of_the_aurora",
+  "name": "Dance of the Aurora",
+  "aliases": [
+   "BELIEF_DANCE_OF_THE_AURORA"
+  ],
+  "summary": "Pantheon: Holy Site districts get +1 Faith from adjacent Tundra tiles.",
+  "fields": {
+   "class": "Pantheon",
+   "effect": "Holy Site districts get +1 Faith from adjacent Tundra tiles."
+  }
+ },
+ {
+  "id": "belief:dar_e_mehr",
+  "name": "Dar-e Mehr",
+  "aliases": [
+   "BELIEF_DAR_E_MEHR"
+  ],
+  "summary": "Worship: Allows construction of Dar-e Mehrs (+3 Faith, +1 additional Faith for each era since constructed or last repaired. Cannot be pillaged by natural disasters.).",
+  "fields": {
+   "class": "Worship",
+   "effect": "Allows construction of Dar-e Mehrs (+3 Faith, +1 additional Faith for each era since constructed or last repaired. Cannot be pillaged by natural disasters.)."
+  }
+ },
+ {
+  "id": "belief:defender_of_faith",
+  "name": "Defender of the Faith",
+  "aliases": [
+   "BELIEF_DEFENDER_OF_FAITH"
+  ],
+  "summary": "Enhancer: Combat units gain +5 Combat Strength when within the borders of friendly cities that follow this Religion.",
+  "fields": {
+   "class": "Enhancer",
+   "effect": "Combat units gain +5 Combat Strength when within the borders of friendly cities that follow this Religion."
+  }
+ },
+ {
+  "id": "belief:desert_folklore",
+  "name": "Desert Folklore",
+  "aliases": [
+   "BELIEF_DESERT_FOLKLORE"
+  ],
+  "summary": "Pantheon: Holy Site districts get +1 Faith from adjacent Desert tiles.",
+  "fields": {
+   "class": "Pantheon",
+   "effect": "Holy Site districts get +1 Faith from adjacent Desert tiles."
+  }
+ },
+ {
+  "id": "belief:divine_inspiration",
+  "name": "Divine Inspiration",
+  "aliases": [
+   "BELIEF_DIVINE_INSPIRATION"
+  ],
+  "summary": "Follower: All world wonders provide +4 Faith.",
+  "fields": {
+   "class": "Follower",
+   "effect": "All world wonders provide +4 Faith."
+  }
+ },
+ {
+  "id": "belief:divine_spark",
+  "name": "Divine Spark",
+  "aliases": [
+   "BELIEF_DIVINE_SPARK"
+  ],
+  "summary": "Pantheon: +1 Great Person Points from Holy Sites (Prophet), Campuses with a Library (Scientist), and Theater Squares with an Amphitheater (Writer).",
+  "fields": {
+   "class": "Pantheon",
+   "effect": "+1 Great Person Points from Holy Sites (Prophet), Campuses with a Library (Scientist), and Theater Squares with an Amphitheater (Writer)."
+  }
+ },
+ {
+  "id": "belief:earth_goddess",
+  "name": "Earth Goddess",
+  "aliases": [
+   "BELIEF_EARTH_GODDESS"
+  ],
+  "summary": "Pantheon: +1 Faith from tiles with Breathtaking Appeal.",
+  "fields": {
+   "class": "Pantheon",
+   "effect": "+1 Faith from tiles with Breathtaking Appeal."
+  }
+ },
+ {
+  "id": "belief:feed_the_world",
+  "name": "Feed the World",
+  "aliases": [
+   "BELIEF_FEED_THE_WORLD"
+  ],
+  "summary": "Follower: Shrines and Temple provide +3 Food and +2 Housing each.",
+  "fields": {
+   "class": "Follower",
+   "effect": "Shrines and Temple provide +3 Food and +2 Housing each."
+  }
+ },
+ {
+  "id": "belief:fertility_rites",
+  "name": "Fertility Rites",
+  "aliases": [
+   "BELIEF_FERTILITY_RITES"
+  ],
+  "summary": "Pantheon: When chosen receive a Builder in your capital. City growth rate is 10% higher.",
+  "fields": {
+   "class": "Pantheon",
+   "effect": "When chosen receive a Builder in your capital. City growth rate is 10% higher."
+  }
+ },
+ {
+  "id": "belief:god_of_craftsmen",
+  "name": "God of Craftsmen",
+  "aliases": [
+   "BELIEF_GOD_OF_CRAFTSMEN"
+  ],
+  "summary": "Pantheon: +1 Production and +1 Faith from improved Strategic resources.",
+  "fields": {
+   "class": "Pantheon",
+   "effect": "+1 Production and +1 Faith from improved Strategic resources."
+  }
+ },
+ {
+  "id": "belief:god_of_healing",
+  "name": "God of Healing",
+  "aliases": [
+   "BELIEF_GOD_OF_HEALING"
+  ],
+  "summary": "Pantheon: Increases Healing by +30 in your Holy Site district, or any adjacent tiles.",
+  "fields": {
+   "class": "Pantheon",
+   "effect": "Increases Healing by +30 in your Holy Site district, or any adjacent tiles."
+  }
+ },
+ {
+  "id": "belief:god_of_the_forge",
+  "name": "God of the Forge",
+  "aliases": [
+   "BELIEF_GOD_OF_THE_FORGE"
+  ],
+  "summary": "Pantheon: +25% Production toward Ancient and Classical military units.",
+  "fields": {
+   "class": "Pantheon",
+   "effect": "+25% Production toward Ancient and Classical military units."
+  }
+ },
+ {
+  "id": "belief:god_of_the_open_sky",
+  "name": "God of the Open Sky",
+  "aliases": [
+   "BELIEF_GOD_OF_THE_OPEN_SKY"
+  ],
+  "summary": "Pantheon: +1 Culture from Pastures.",
+  "fields": {
+   "class": "Pantheon",
+   "effect": "+1 Culture from Pastures."
+  }
+ },
+ {
+  "id": "belief:god_of_the_sea",
+  "name": "God of the Sea",
+  "aliases": [
+   "BELIEF_GOD_OF_THE_SEA"
+  ],
+  "summary": "Pantheon: +1 Production from Fishing Boats.",
+  "fields": {
+   "class": "Pantheon",
+   "effect": "+1 Production from Fishing Boats."
+  }
+ },
+ {
+  "id": "belief:god_of_war",
+  "name": "God of War",
+  "aliases": [
+   "BELIEF_GOD_OF_WAR"
+  ],
+  "summary": "Pantheon: Bonus Faith equal to 50% of the strength of each combat unit killed within 8 tiles of a Holy Site district. (on Standard Speed)",
+  "fields": {
+   "class": "Pantheon",
+   "effect": "Bonus Faith equal to 50% of the strength of each combat unit killed within 8 tiles of a Holy Site district. (on Standard Speed)"
+  }
+ },
+ {
+  "id": "belief:goddess_of_festivals",
+  "name": "Goddess of Festivals",
+  "aliases": [
+   "BELIEF_GODDESS_OF_FESTIVALS"
+  ],
+  "summary": "Pantheon: +1 Culture from Plantations.",
+  "fields": {
+   "class": "Pantheon",
+   "effect": "+1 Culture from Plantations."
+  }
+ },
+ {
+  "id": "belief:goddess_of_fire",
+  "name": "Fire Goddess",
+  "aliases": [
+   "BELIEF_GODDESS_OF_FIRE"
+  ],
+  "summary": "Pantheon: +2 Faith from Geothermal Fissures and Volcanic Soil.",
+  "fields": {
+   "class": "Pantheon",
+   "effect": "+2 Faith from Geothermal Fissures and Volcanic Soil."
+  }
+ },
+ {
+  "id": "belief:goddess_of_the_hunt",
+  "name": "Goddess of the Hunt",
+  "aliases": [
+   "BELIEF_GODDESS_OF_THE_HUNT"
+  ],
+  "summary": "Pantheon: +1 Food and +1 Production from Camps.",
+  "fields": {
+   "class": "Pantheon",
+   "effect": "+1 Food and +1 Production from Camps."
+  }
+ },
+ {
+  "id": "belief:gurdwara",
+  "name": "Gurdwara",
+  "aliases": [
+   "BELIEF_GURDWARA"
+  ],
+  "summary": "Worship: Allows construction of Gurdwaras (+3 Faith, +2 Food, +1 Housing).",
+  "fields": {
+   "class": "Worship",
+   "effect": "Allows construction of Gurdwaras (+3 Faith, +2 Food, +1 Housing)."
+  }
+ },
+ {
+  "id": "belief:holy_order",
+  "name": "Holy Order",
+  "aliases": [
+   "BELIEF_HOLY_ORDER"
+  ],
+  "summary": "Enhancer: Missionaries and Apostles are 30% cheaper to purchase.",
+  "fields": {
+   "class": "Enhancer",
+   "effect": "Missionaries and Apostles are 30% cheaper to purchase."
+  }
+ },
+ {
+  "id": "belief:holy_waters",
+  "name": "Holy Waters",
+  "aliases": [
+   "BELIEF_HOLY_WATERS"
+  ],
+  "summary": "Enhancer: Increases Healing of your religious units by +10 in Holy Site districts belonging to cities with your majority religion, or any adjacent tiles.",
+  "fields": {
+   "class": "Enhancer",
+   "effect": "Increases Healing of your religious units by +10 in Holy Site districts belonging to cities with your majority religion, or any adjacent tiles."
+  }
+ },
+ {
+  "id": "belief:initiation_rites",
+  "name": "Initiation Rites",
+  "aliases": [
+   "BELIEF_INITIATION_RITES"
+  ],
+  "summary": "Pantheon: +50 Faith for each Barbarian Outpost cleared. The unit that cleared the Barbarian Outpost heals +100 HP.",
+  "fields": {
+   "class": "Pantheon",
+   "effect": "+50 Faith for each Barbarian Outpost cleared. The unit that cleared the Barbarian Outpost heals +100 HP."
+  }
+ },
+ {
+  "id": "belief:itinerant_preachers",
+  "name": "Itinerant Preachers",
+  "aliases": [
+   "BELIEF_ITINERANT_PREACHERS"
+  ],
+  "summary": "Enhancer: Religion spreads to cities 30% further away.",
+  "fields": {
+   "class": "Enhancer",
+   "effect": "Religion spreads to cities 30% further away."
+  }
+ },
+ {
+  "id": "belief:jesuit_education",
+  "name": "Jesuit Education",
+  "aliases": [
+   "BELIEF_JESUIT_EDUCATION"
+  ],
+  "summary": "Follower: May purchase Campus and Theater Square district buildings with Faith.",
+  "fields": {
+   "class": "Follower",
+   "effect": "May purchase Campus and Theater Square district buildings with Faith."
+  }
+ },
+ {
+  "id": "belief:just_war",
+  "name": "Crusade",
+  "aliases": [
+   "BELIEF_JUST_WAR"
+  ],
+  "summary": "Enhancer: Combat units gain +10 Combat Strength when within the borders of foreign cities that follow this Religion.",
+  "fields": {
+   "class": "Enhancer",
+   "effect": "Combat units gain +10 Combat Strength when within the borders of foreign cities that follow this Religion."
+  }
+ },
+ {
+  "id": "belief:lady_of_the_reeds_and_marshes",
+  "name": "Lady of the Reeds and Marshes",
+  "aliases": [
+   "BELIEF_LADY_OF_THE_REEDS_AND_MARSHES"
+  ],
+  "summary": "Pantheon: +2 Production from Marsh, Oasis, and Desert Floodplains.",
+  "fields": {
+   "class": "Pantheon",
+   "effect": "+2 Production from Marsh, Oasis, and Desert Floodplains."
+  }
+ },
+ {
+  "id": "belief:lay_ministry",
+  "name": "Lay Ministry",
+  "aliases": [
+   "BELIEF_LAY_MINISTRY"
+  ],
+  "summary": "Founder: +1 Faith or +1 Culture from each Holy Site or Theater Square district respectively for each city following this Religion.",
+  "fields": {
+   "class": "Founder",
+   "effect": "+1 Faith or +1 Culture from each Holy Site or Theater Square district respectively for each city following this Religion."
+  }
+ },
+ {
+  "id": "belief:meeting_house",
+  "name": "Meeting House",
+  "aliases": [
+   "BELIEF_MEETING_HOUSE"
+  ],
+  "summary": "Worship: Allows construction of Meeting Houses (+3 Faith, +2 Production).",
+  "fields": {
+   "class": "Worship",
+   "effect": "Allows construction of Meeting Houses (+3 Faith, +2 Production)."
+  }
+ },
+ {
+  "id": "belief:missionary_zeal",
+  "name": "Missionary Zeal",
+  "aliases": [
+   "BELIEF_MISSIONARY_ZEAL"
+  ],
+  "summary": "Enhancer: Religious units ignore Movement costs of terrain and features.",
+  "fields": {
+   "class": "Enhancer",
+   "effect": "Religious units ignore Movement costs of terrain and features."
+  }
+ },
+ {
+  "id": "belief:monastic_isolation",
+  "name": "Monastic Isolation",
+  "aliases": [
+   "BELIEF_MONASTIC_ISOLATION"
+  ],
+  "summary": "Enhancer: Your Religion's pressure never drops due to losses in Theological Combat.",
+  "fields": {
+   "class": "Enhancer",
+   "effect": "Your Religion's pressure never drops due to losses in Theological Combat."
+  }
+ },
+ {
+  "id": "belief:monument_to_the_gods",
+  "name": "Monument to the Gods",
+  "aliases": [
+   "BELIEF_MONUMENT_TO_THE_GODS"
+  ],
+  "summary": "Pantheon: +15% Production towards Ancient and Classical era wonders.",
+  "fields": {
+   "class": "Pantheon",
+   "effect": "+15% Production towards Ancient and Classical era wonders."
+  }
+ },
+ {
+  "id": "belief:mosque",
+  "name": "Mosque",
+  "aliases": [
+   "BELIEF_MOSQUE"
+  ],
+  "summary": "Worship: Allows construction of Mosques (+3 Faith). Missionaries and Apostles +1 Spread.",
+  "fields": {
+   "class": "Worship",
+   "effect": "Allows construction of Mosques (+3 Faith). Missionaries and Apostles +1 Spread."
+  }
+ },
+ {
+  "id": "belief:pagoda",
+  "name": "Pagoda",
+  "aliases": [
+   "BELIEF_PAGODA"
+  ],
+  "summary": "Worship: Allows construction of Pagodas (+3 Faith, +1 Diplomatic Favor per turn.).",
+  "fields": {
+   "class": "Worship",
+   "effect": "Allows construction of Pagodas (+3 Faith, +1 Diplomatic Favor per turn.)."
+  }
+ },
+ {
+  "id": "belief:papal_primacy",
+  "name": "Papal Primacy",
+  "aliases": [
+   "BELIEF_PAPAL_PRIMACY"
+  ],
+  "summary": "Founder: When you send an Envoy to a City-State it adds 200 Religious pressure to that City-State.",
+  "fields": {
+   "class": "Founder",
+   "effect": "When you send an Envoy to a City-State it adds 200 Religious pressure to that City-State."
+  }
+ },
+ {
+  "id": "belief:pilgrimage",
+  "name": "Pilgrimage",
+  "aliases": [
+   "BELIEF_PILGRIMAGE"
+  ],
+  "summary": "Founder: +2 Faith for each city following this Religion.",
+  "fields": {
+   "class": "Founder",
+   "effect": "+2 Faith for each city following this Religion."
+  }
+ },
+ {
+  "id": "belief:religious_colonization",
+  "name": "Religious Colonization",
+  "aliases": [
+   "BELIEF_RELIGIOUS_COLONIZATION"
+  ],
+  "summary": "Enhancer: Cities start with this Religion in place if founded by a player who has this as their majority Religion.",
+  "fields": {
+   "class": "Enhancer",
+   "effect": "Cities start with this Religion in place if founded by a player who has this as their majority Religion."
+  }
+ },
+ {
+  "id": "belief:religious_community",
+  "name": "Religious Community",
+  "aliases": [
+   "BELIEF_RELIGIOUS_COMMUNITY"
+  ],
+  "summary": "Follower: International Trade Routes provide +2 Gold to cities with Holy Sites and an additional +2 Gold for every building in the Holy Site district.",
+  "fields": {
+   "class": "Follower",
+   "effect": "International Trade Routes provide +2 Gold to cities with Holy Sites and an additional +2 Gold for every building in the Holy Site district."
+  }
+ },
+ {
+  "id": "belief:religious_idols",
+  "name": "Religious Idols",
+  "aliases": [
+   "BELIEF_RELIGIOUS_IDOLS"
+  ],
+  "summary": "Pantheon: +2 Faith from Mines over Luxury and Bonus resources.",
+  "fields": {
+   "class": "Pantheon",
+   "effect": "+2 Faith from Mines over Luxury and Bonus resources."
+  }
+ },
+ {
+  "id": "belief:religious_settlements",
+  "name": "Religious Settlements",
+  "aliases": [
+   "BELIEF_RELIGIOUS_SETTLEMENTS"
+  ],
+  "summary": "Pantheon: When chosen receive a Settler in your capital. Border expansion rate is 15% faster.",
+  "fields": {
+   "class": "Pantheon",
+   "effect": "When chosen receive a Settler in your capital. Border expansion rate is 15% faster."
+  }
+ },
+ {
+  "id": "belief:religious_unity",
+  "name": "Religious Unity",
+  "aliases": [
+   "BELIEF_RELIGIOUS_UNITY"
+  ],
+  "summary": "Founder: +1 Envoy at each City-State when it first adopts this Religion, in addition to any envoy from a City-State quest.",
+  "fields": {
+   "class": "Founder",
+   "effect": "+1 Envoy at each City-State when it first adopts this Religion, in addition to any envoy from a City-State quest."
+  }
+ },
+ {
+  "id": "belief:reliquaries",
+  "name": "Reliquaries",
+  "aliases": [
+   "BELIEF_RELIQUARIES"
+  ],
+  "summary": "Follower: Relics have triple yield of both Faith and Tourism.",
+  "fields": {
+   "class": "Follower",
+   "effect": "Relics have triple yield of both Faith and Tourism."
+  }
+ },
+ {
+  "id": "belief:river_goddess",
+  "name": "River Goddess",
+  "aliases": [
+   "BELIEF_RIVER_GODDESS"
+  ],
+  "summary": "Pantheon: +2 Amenities and +2 Housing to cities if they have a Holy Site district adjacent to a River.",
+  "fields": {
+   "class": "Pantheon",
+   "effect": "+2 Amenities and +2 Housing to cities if they have a Holy Site district adjacent to a River."
+  }
+ },
+ {
+  "id": "belief:sacred_path",
+  "name": "Sacred Path",
+  "aliases": [
+   "BELIEF_SACRED_PATH"
+  ],
+  "summary": "Pantheon: Holy Site districts get +1 Faith from adjacent Rainforest tiles.",
+  "fields": {
+   "class": "Pantheon",
+   "effect": "Holy Site districts get +1 Faith from adjacent Rainforest tiles."
+  }
+ },
+ {
+  "id": "belief:sacred_places",
+  "name": "Sacred Places",
+  "aliases": [
+   "BELIEF_SACRED_PLACES"
+  ],
+  "summary": "Founder: +2 Science, Culture, Gold, and Faith for each city following this Religion that has a World Wonder.",
+  "fields": {
+   "class": "Founder",
+   "effect": "+2 Science, Culture, Gold, and Faith for each city following this Religion that has a World Wonder."
+  }
+ },
+ {
+  "id": "belief:scripture",
+  "name": "Scripture",
+  "aliases": [
+   "BELIEF_SCRIPTURE"
+  ],
+  "summary": "Enhancer: Religious spread from adjacent city pressure is 25% stronger. Boosted to 50% once Printing is researched.",
+  "fields": {
+   "class": "Enhancer",
+   "effect": "Religious spread from adjacent city pressure is 25% stronger. Boosted to 50% once Printing is researched."
+  }
+ },
+ {
+  "id": "belief:stewardship",
+  "name": "Stewardship",
+  "aliases": [
+   "BELIEF_STEWARDSHIP"
+  ],
+  "summary": "Founder: +1 Science or +1 Gold from each Campus or Commercial Hub district respectively for each city following this Religion.",
+  "fields": {
+   "class": "Founder",
+   "effect": "+1 Science or +1 Gold from each Campus or Commercial Hub district respectively for each city following this Religion."
+  }
+ },
+ {
+  "id": "belief:stone_circles",
+  "name": "Stone Circles",
+  "aliases": [
+   "BELIEF_STONE_CIRCLES"
+  ],
+  "summary": "Pantheon: +2 Faith from Quarries.",
+  "fields": {
+   "class": "Pantheon",
+   "effect": "+2 Faith from Quarries."
+  }
+ },
+ {
+  "id": "belief:stupa",
+  "name": "Stupa",
+  "aliases": [
+   "BELIEF_STUPA"
+  ],
+  "summary": "Worship: Allows construction of Stupas (+3 Faith, +1 Amenity).",
+  "fields": {
+   "class": "Worship",
+   "effect": "Allows construction of Stupas (+3 Faith, +1 Amenity)."
+  }
+ },
+ {
+  "id": "belief:synagogue",
+  "name": "Synagogue",
+  "aliases": [
+   "BELIEF_SYNAGOGUE"
+  ],
+  "summary": "Worship: Allows construction of Synagogues (+5 Faith).",
+  "fields": {
+   "class": "Worship",
+   "effect": "Allows construction of Synagogues (+5 Faith)."
+  }
+ },
+ {
+  "id": "belief:tithe",
+  "name": "Tithe",
+  "aliases": [
+   "BELIEF_TITHE"
+  ],
+  "summary": "Founder: +3 Gold for each city following the Religion.",
+  "fields": {
+   "class": "Founder",
+   "effect": "+3 Gold for each city following the Religion."
+  }
+ },
+ {
+  "id": "belief:warrior_monks",
+  "name": "Warrior Monks",
+  "aliases": [
+   "BELIEF_WARRIOR_MONKS"
+  ],
+  "summary": "Follower: Allows spending Faith to train Warriors Monks (A land combat unit) and Culture Bomb adjacent tiles when completing a Holy Site.",
+  "fields": {
+   "class": "Follower",
+   "effect": "Allows spending Faith to train Warriors Monks (A land combat unit) and Culture Bomb adjacent tiles when completing a Holy Site."
+  }
+ },
+ {
+  "id": "belief:wat",
+  "name": "Wat",
+  "aliases": [
+   "BELIEF_WAT"
+  ],
+  "summary": "Worship: Allows construction of Wats (+3 Faith, +2 Science).",
+  "fields": {
+   "class": "Worship",
+   "effect": "Allows construction of Wats (+3 Faith, +2 Science)."
+  }
+ },
+ {
+  "id": "belief:work_ethic",
+  "name": "Work Ethic",
+  "aliases": [
+   "BELIEF_WORK_ETHIC"
+  ],
+  "summary": "Follower: Holy Site district’s Faith adjacency bonus provides Production as well.",
+  "fields": {
+   "class": "Follower",
+   "effect": "Holy Site district’s Faith adjacency bonus provides Production as well."
+  }
+ },
+ {
+  "id": "belief:world_church",
+  "name": "World Church",
+  "aliases": [
+   "BELIEF_WORLD_CHURCH"
+  ],
+  "summary": "Founder: +1 Culture for every 4 followers of this Religion.",
+  "fields": {
+   "class": "Founder",
+   "effect": "+1 Culture for every 4 followers of this Religion."
+  }
+ },
+ {
+  "id": "belief:zen_meditation",
+  "name": "Zen Meditation",
+  "aliases": [
+   "BELIEF_ZEN_MEDITATION"
+  ],
+  "summary": "Follower: +1 Amenity in cities with 2 specialty districts.",
+  "fields": {
+   "class": "Follower",
+   "effect": "+1 Amenity in cities with 2 specialty districts."
+  }
+ }
+]

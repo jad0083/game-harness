@@ -1,0 +1,752 @@
+[
+ {
+  "id": "feature:barrier_reef",
+  "name": "Great Barrier Reef",
+  "aliases": [
+   "FEATURE_BARRIER_REEF"
+  ],
+  "summary": "Natural wonder. +3 Food, +2 Science. Two tile natural wonder that can be found on coastal terrain and provides +3 Food and +2 Science. Major adjacency bonus to the Campus district.",
+  "fields": {
+   "natural_wonder": true,
+   "yields": "+3 Food, +2 Science",
+   "appeal": 2,
+   "tiles": 2,
+   "description": "Two tile natural wonder that can be found on coastal terrain and provides +3 Food and +2 Science. Major adjacency bonus to the Campus district."
+  }
+ },
+ {
+  "id": "feature:bermuda_triangle",
+  "name": "Bermuda Triangle",
+  "aliases": [
+   "FEATURE_BERMUDA_TRIANGLE"
+  ],
+  "summary": "Natural wonder. no yield change. Three tile natural wonder. Provides +5 Science to adjacent tiles.",
+  "fields": {
+   "natural_wonder": true,
+   "adjacent_yields": "+5 Science",
+   "appeal": 2,
+   "tiles": 3,
+   "description": "Three tile natural wonder. Provides +5 Science to adjacent tiles. Units that enter it are teleported to an ocean far away, but naval units that do so earn the ability 'Mysterious Currents' (+1 Movement)."
+  }
+ },
+ {
+  "id": "feature:burning_forest",
+  "name": "Burning Woods",
+  "aliases": [
+   "FEATURE_BURNING_FOREST"
+  ],
+  "summary": "no yield change. Woods engulfed in flame.",
+  "fields": {
+   "movement_cost": 1,
+   "defense": 3,
+   "appeal": -1,
+   "description": "Woods engulfed in flame."
+  }
+ },
+ {
+  "id": "feature:burning_jungle",
+  "name": "Burning Rainforest",
+  "aliases": [
+   "FEATURE_BURNING_JUNGLE"
+  ],
+  "summary": "no yield change. A rainforest engulfed in flame.",
+  "fields": {
+   "movement_cost": 1,
+   "defense": 3,
+   "appeal": -1,
+   "description": "A rainforest engulfed in flame."
+  }
+ },
+ {
+  "id": "feature:burnt_forest",
+  "name": "Burnt Woods",
+  "aliases": [
+   "FEATURE_BURNT_FOREST"
+  ],
+  "summary": "no yield change. Woods regrowing after a fire.",
+  "fields": {
+   "movement_cost": 1,
+   "defense": 3,
+   "appeal": -1,
+   "description": "Woods regrowing after a fire."
+  }
+ },
+ {
+  "id": "feature:burnt_jungle",
+  "name": "Burnt Rainforest",
+  "aliases": [
+   "FEATURE_BURNT_JUNGLE"
+  ],
+  "summary": "no yield change. A rainforest regrowing after a fire.",
+  "fields": {
+   "movement_cost": 1,
+   "defense": 3,
+   "appeal": -1,
+   "description": "A rainforest regrowing after a fire."
+  }
+ },
+ {
+  "id": "feature:chocolatehills",
+  "name": "Chocolate Hills",
+  "aliases": [
+   "FEATURE_CHOCOLATEHILLS"
+  ],
+  "summary": "Natural wonder. +1 Food, +2 Production, +1 Science. Four tile natural wonder. It provides +1 Food, +2 Production, and +1 Science.",
+  "fields": {
+   "natural_wonder": true,
+   "yields": "+1 Food, +2 Production, +1 Science",
+   "movement_cost": 1,
+   "defense": 3,
+   "appeal": 2,
+   "tiles": 4,
+   "description": "Four tile natural wonder. It provides +1 Food, +2 Production, and +1 Science."
+  }
+ },
+ {
+  "id": "feature:cliffs_dover",
+  "name": "Cliffs of Dover",
+  "aliases": [
+   "FEATURE_CLIFFS_DOVER"
+  ],
+  "summary": "Natural wonder. +3 Culture, +3 Gold, +2 Food. Two tile natural wonder. It appears with Cliffs adjacent to water and provides +3 Culture, +2 Food, and +3 Gold.",
+  "fields": {
+   "natural_wonder": true,
+   "yields": "+3 Culture, +3 Gold, +2 Food",
+   "appeal": 4,
+   "tiles": 2,
+   "description": "Two tile natural wonder. It appears with Cliffs adjacent to water and provides +3 Culture, +2 Food, and +3 Gold. Provides +4 appeal, instead of the standard +2 appeal of Natural Wonders, to adjacent tiles. Improvements cannot be placed on it."
+  }
+ },
+ {
+  "id": "feature:crater_lake",
+  "name": "Crater Lake",
+  "aliases": [
+   "FEATURE_CRATER_LAKE"
+  ],
+  "summary": "Natural wonder. +5 Faith, +1 Science. One tile natural wonder. It appears as a Lake and provides +5 Faith, +1 Science, and Fresh Water.",
+  "fields": {
+   "natural_wonder": true,
+   "yields": "+5 Faith, +1 Science",
+   "appeal": 2,
+   "fresh_water": true,
+   "tiles": 1,
+   "description": "One tile natural wonder. It appears as a Lake and provides +5 Faith, +1 Science, and Fresh Water."
+  }
+ },
+ {
+  "id": "feature:dead_sea",
+  "name": "Dead Sea",
+  "aliases": [
+   "FEATURE_DEAD_SEA"
+  ],
+  "summary": "Natural wonder. +2 Culture, +2 Faith. Two tile natural wonder. It appears as a Lake and provides +2 Faith and +2 Culture. Units heal completely if they heal for one turn adjacent to the Dead Sea.",
+  "fields": {
+   "natural_wonder": true,
+   "yields": "+2 Culture, +2 Faith",
+   "appeal": 2,
+   "tiles": 2,
+   "description": "Two tile natural wonder. It appears as a Lake and provides +2 Faith and +2 Culture. Units heal completely if they heal for one turn adjacent to the Dead Sea. Does not provide Fresh Water."
+  }
+ },
+ {
+  "id": "feature:delicate_arch",
+  "name": "Delicate Arch",
+  "aliases": [
+   "FEATURE_DELICATE_ARCH"
+  ],
+  "summary": "Natural wonder. no yield change. One tile impassable natural wonder. Provides +2 Faith and +1 Gold to adjacent tiles.",
+  "fields": {
+   "natural_wonder": true,
+   "adjacent_yields": "+2 Faith, +1 Gold",
+   "appeal": 2,
+   "impassable": true,
+   "tiles": 1,
+   "description": "One tile impassable natural wonder. Provides +2 Faith and +1 Gold to adjacent tiles."
+  }
+ },
+ {
+  "id": "feature:devilstower",
+  "name": "Mato Tipila",
+  "aliases": [
+   "FEATURE_DEVILSTOWER"
+  ],
+  "summary": "Natural wonder. no yield change. One tile impassable natural wonder. Provides +1 Faith and +1 Production to adjacent tiles.",
+  "fields": {
+   "natural_wonder": true,
+   "adjacent_yields": "+1 Faith, +1 Production",
+   "appeal": 2,
+   "impassable": true,
+   "tiles": 1,
+   "description": "One tile impassable natural wonder. Provides +1 Faith and +1 Production to adjacent tiles."
+  }
+ },
+ {
+  "id": "feature:everest",
+  "name": "Mount Everest",
+  "aliases": [
+   "FEATURE_EVEREST"
+  ],
+  "summary": "Natural wonder. no yield change. Three tile impassable natural wonder. Provides +1 Faith to adjacent tiles. Religious units who move next to Mount Everest ignore Hills for the rest of the game.",
+  "fields": {
+   "natural_wonder": true,
+   "adjacent_yields": "+1 Faith",
+   "appeal": 2,
+   "impassable": true,
+   "tiles": 3,
+   "description": "Three tile impassable natural wonder. Provides +1 Faith to adjacent tiles. Religious units who move next to Mount Everest ignore Hills for the rest of the game."
+  }
+ },
+ {
+  "id": "feature:eye_of_the_sahara",
+  "name": "Eye of the Sahara",
+  "aliases": [
+   "FEATURE_EYE_OF_THE_SAHARA"
+  ],
+  "summary": "Natural wonder. +2 Production, +1 Science. Three tile natural wonder. Provides +2 Production and +1 Science. After the game reaches the Atomic Era it provides an additional +1 Production and +3 Science.",
+  "fields": {
+   "natural_wonder": true,
+   "yields": "+2 Production, +1 Science",
+   "appeal": 2,
+   "tiles": 3,
+   "description": "Three tile natural wonder. Provides +2 Production and +1 Science. After the game reaches the Atomic Era it provides an additional +1 Production and +3 Science."
+  }
+ },
+ {
+  "id": "feature:eyjafjallajokull",
+  "name": "Eyjafjallajökull",
+  "aliases": [
+   "FEATURE_EYJAFJALLAJOKULL"
+  ],
+  "summary": "Natural wonder. no yield change. Two tile impassable natural wonder. It appears as a Volcano and provides +1 Culture and +1 Food.",
+  "fields": {
+   "natural_wonder": true,
+   "adjacent_yields": "+1 Culture, +1 Food",
+   "appeal": 2,
+   "impassable": true,
+   "tiles": 2,
+   "description": "Two tile impassable natural wonder. It appears as a Volcano and provides +1 Culture and +1 Food. On eruption it gives medium yields and is most likely to damage buildings and districts. Infrequently erupts, but is always active."
+  }
+ },
+ {
+  "id": "feature:floodplains",
+  "name": "Desert Floodplains",
+  "aliases": [
+   "FEATURE_FLOODPLAINS"
+  ],
+  "summary": "+2 Food. This low-lying area adjacent to a River has flooded before, giving it more Food production than a usual Desert tile.",
+  "fields": {
+   "yields": "+2 Food",
+   "defense": -2,
+   "appeal": -1,
+   "description": "This low-lying area adjacent to a River has flooded before, giving it more Food production than a usual Desert tile. If the River floods again structures built on this tile may be damaged or destroyed, but the tile is also likely to gain additional yields."
+  }
+ },
+ {
+  "id": "feature:floodplains_grassland",
+  "name": "Grassland Floodplains",
+  "aliases": [
+   "FEATURE_FLOODPLAINS_GRASSLAND"
+  ],
+  "summary": "no yield change. This low-lying area adjacent to a River has not yet flooded so it starts the game with the same yields as a flat Grasslands tile.",
+  "fields": {
+   "defense": -2,
+   "appeal": -1,
+   "description": "This low-lying area adjacent to a River has not yet flooded so it starts the game with the same yields as a flat Grasslands tile. If the River floods again structures built on this tile may be damaged or destroyed, but the tile is also likely to gain additional yields."
+  }
+ },
+ {
+  "id": "feature:floodplains_plains",
+  "name": "Plains Floodplains",
+  "aliases": [
+   "FEATURE_FLOODPLAINS_PLAINS"
+  ],
+  "summary": "no yield change. This low-lying area adjacent to a River has not yet flooded so it starts the game with the same yields as a flat Plains tile.",
+  "fields": {
+   "defense": -2,
+   "appeal": -1,
+   "description": "This low-lying area adjacent to a River has not yet flooded so it starts the game with the same yields as a flat Plains tile. If the River floods again structures built on this tile may be damaged or destroyed, but the tile is also likely to gain additional yields."
+  }
+ },
+ {
+  "id": "feature:forest",
+  "name": "Woods",
+  "aliases": [
+   "FEATURE_FOREST"
+  ],
+  "summary": "+1 Production.",
+  "fields": {
+   "yields": "+1 Production",
+   "movement_cost": 1,
+   "defense": 3,
+   "appeal": 1,
+   "removable": true
+  }
+ },
+ {
+  "id": "feature:fountain_of_youth",
+  "name": "Fountain of Youth",
+  "aliases": [
+   "FEATURE_FOUNTAIN_OF_YOUTH"
+  ],
+  "summary": "Natural wonder. +4 Science, +4 Faith. One tile natural wonder. Provides +4 Science, +4 Faith, and Fresh Water.",
+  "fields": {
+   "natural_wonder": true,
+   "yields": "+4 Science, +4 Faith",
+   "appeal": 2,
+   "fresh_water": true,
+   "tiles": 1,
+   "description": "One tile natural wonder. Provides +4 Science, +4 Faith, and Fresh Water. Land combat units that enter it receive the ability 'Water of Life' (+10 HP healing in any territory)."
+  }
+ },
+ {
+  "id": "feature:galapagos",
+  "name": "Galápagos Islands",
+  "aliases": [
+   "FEATURE_GALAPAGOS"
+  ],
+  "summary": "Natural wonder. no yield change. Two tile impassable natural wonder. It appears on coastal terrain and provides +2 Science to adjacent tiles.",
+  "fields": {
+   "natural_wonder": true,
+   "adjacent_yields": "+2 Science",
+   "appeal": 2,
+   "impassable": true,
+   "tiles": 2,
+   "description": "Two tile impassable natural wonder. It appears on coastal terrain and provides +2 Science to adjacent tiles."
+  }
+ },
+ {
+  "id": "feature:geothermal_fissure",
+  "name": "Geothermal Fissure",
+  "aliases": [
+   "FEATURE_GEOTHERMAL_FISSURE"
+  ],
+  "summary": "+1 Science. The ground in this area, probably located near a boundary between two continents, has been ruptured by subterranean geothermal activity.",
+  "fields": {
+   "yields": "+1 Science",
+   "description": "The ground in this area, probably located near a boundary between two continents, has been ruptured by subterranean geothermal activity. Heated water and steam escape from the ground here, making it ideal to place structures such as Aqueducts, Roman Baths, and Hungarian Thermal Baths nearby."
+  }
+ },
+ {
+  "id": "feature:giants_causeway",
+  "name": "Giant's Causeway",
+  "aliases": [
+   "FEATURE_GIANTS_CAUSEWAY"
+  ],
+  "summary": "Natural wonder. no yield change. Land combat units that enter adjacent plots receive the ability 'Spear of Fionn' (+5 combat strength). Adjacent plots yield +1 Culture.",
+  "fields": {
+   "natural_wonder": true,
+   "adjacent_yields": "+1 Culture",
+   "appeal": 2,
+   "impassable": true,
+   "tiles": 2,
+   "description": "Land combat units that enter adjacent plots receive the ability 'Spear of Fionn' (+5 combat strength). Adjacent plots yield +1 Culture."
+  }
+ },
+ {
+  "id": "feature:gobustan",
+  "name": "Gobustan",
+  "aliases": [
+   "FEATURE_GOBUSTAN"
+  ],
+  "summary": "Natural wonder. +3 Culture, +1 Production. Three tile natural wonder. It provides +3 Culture and +1 Production.",
+  "fields": {
+   "natural_wonder": true,
+   "yields": "+3 Culture, +1 Production",
+   "movement_cost": 1,
+   "defense": 3,
+   "appeal": 2,
+   "tiles": 3,
+   "description": "Three tile natural wonder. It provides +3 Culture and +1 Production."
+  }
+ },
+ {
+  "id": "feature:ha_long_bay",
+  "name": "Hạ Long Bay",
+  "aliases": [
+   "FEATURE_HA_LONG_BAY"
+  ],
+  "summary": "Natural wonder. +3 Food, +1 Culture, +1 Production. Two tile natural wonder that can be found on coastal terrain and provides +3 Food, +1 Production, and +1 Culture.",
+  "fields": {
+   "natural_wonder": true,
+   "yields": "+3 Food, +1 Culture, +1 Production",
+   "defense": 15,
+   "appeal": 2,
+   "tiles": 2,
+   "description": "Two tile natural wonder that can be found on coastal terrain and provides +3 Food, +1 Production, and +1 Culture. +15 Combat Strength when defending in this tile."
+  }
+ },
+ {
+  "id": "feature:ice",
+  "name": "Ice",
+  "aliases": [
+   "FEATURE_ICE"
+  ],
+  "summary": "no yield change.",
+  "fields": {
+   "impassable": true
+  }
+ },
+ {
+  "id": "feature:ikkil",
+  "name": "Ik-Kil",
+  "aliases": [
+   "FEATURE_IKKIL"
+  ],
+  "summary": "Natural wonder. no yield change. One tile impassable natural wonder. +50% Production when producing wonders and districts in adjacent tiles. It provides Fresh Water.",
+  "fields": {
+   "natural_wonder": true,
+   "appeal": 2,
+   "impassable": true,
+   "fresh_water": true,
+   "tiles": 1,
+   "description": "One tile impassable natural wonder. +50% Production when producing wonders and districts in adjacent tiles. It provides Fresh Water."
+  }
+ },
+ {
+  "id": "feature:jungle",
+  "name": "Rainforest",
+  "aliases": [
+   "FEATURE_JUNGLE"
+  ],
+  "summary": "+1 Food.",
+  "fields": {
+   "yields": "+1 Food",
+   "movement_cost": 1,
+   "defense": 3,
+   "appeal": -1,
+   "removable": true
+  }
+ },
+ {
+  "id": "feature:kilimanjaro",
+  "name": "Mount Kilimanjaro",
+  "aliases": [
+   "FEATURE_KILIMANJARO"
+  ],
+  "summary": "Natural wonder. no yield change. One tile impassable natural wonder. It appears as a Volcano and provides +2 Food to adjacent tiles.",
+  "fields": {
+   "natural_wonder": true,
+   "adjacent_yields": "+2 Food",
+   "appeal": 2,
+   "impassable": true,
+   "tiles": 1,
+   "description": "One tile impassable natural wonder. It appears as a Volcano and provides +2 Food to adjacent tiles. On eruption it gives low yields and is most likely to damage improvements and buildings. Infrequently erupts, but is always active."
+  }
+ },
+ {
+  "id": "feature:lake_retba",
+  "name": "Lake Retba",
+  "aliases": [
+   "FEATURE_LAKE_RETBA"
+  ],
+  "summary": "Natural wonder. +2 Culture, +2 Gold, +1 Production. Two tile natural wonder. It appears as a Lake and provides +2 Culture, +2 Gold, and +1 Production. Does not provide Fresh Water.",
+  "fields": {
+   "natural_wonder": true,
+   "yields": "+2 Culture, +2 Gold, +1 Production",
+   "appeal": 2,
+   "tiles": 2,
+   "description": "Two tile natural wonder. It appears as a Lake and provides +2 Culture, +2 Gold, and +1 Production. Does not provide Fresh Water."
+  }
+ },
+ {
+  "id": "feature:lysefjorden",
+  "name": "Lysefjord",
+  "aliases": [
+   "FEATURE_LYSEFJORDEN"
+  ],
+  "summary": "Natural wonder. no yield change. Naval combat units that enter adjacent plots are granted their next promotion. Adjacent plots yield +1 Production.",
+  "fields": {
+   "natural_wonder": true,
+   "adjacent_yields": "+1 Production",
+   "appeal": 2,
+   "impassable": true,
+   "tiles": 3,
+   "description": "Naval combat units that enter adjacent plots are granted their next promotion. Adjacent plots yield +1 Production."
+  }
+ },
+ {
+  "id": "feature:marsh",
+  "name": "Marsh",
+  "aliases": [
+   "FEATURE_MARSH"
+  ],
+  "summary": "+1 Food.",
+  "fields": {
+   "yields": "+1 Food",
+   "movement_cost": 1,
+   "defense": -2,
+   "appeal": -1,
+   "removable": true
+  }
+ },
+ {
+  "id": "feature:matterhorn",
+  "name": "Matterhorn",
+  "aliases": [
+   "FEATURE_MATTERHORN"
+  ],
+  "summary": "Natural wonder. no yield change. One tile impassable natural wonder. Provides +1 Culture to adjacent tiles.",
+  "fields": {
+   "natural_wonder": true,
+   "adjacent_yields": "+1 Culture",
+   "appeal": 2,
+   "impassable": true,
+   "tiles": 1,
+   "description": "One tile impassable natural wonder. Provides +1 Culture to adjacent tiles. Land combat units who move next to the Matterhorn ignore Hills for the rest of the game and gain +3Combat Strength when fighting in hills."
+  }
+ },
+ {
+  "id": "feature:oasis",
+  "name": "Oasis",
+  "aliases": [
+   "FEATURE_OASIS"
+  ],
+  "summary": "+3 Food, +1 Gold.",
+  "fields": {
+   "yields": "+3 Food, +1 Gold",
+   "appeal": 1,
+   "fresh_water": true
+  }
+ },
+ {
+  "id": "feature:paititi",
+  "name": "Païtiti",
+  "aliases": [
+   "FEATURE_PAITITI"
+  ],
+  "summary": "Natural wonder. no yield change. Three-tile impassable natural wonder. Provides +3 Gold and +2 Culture to adjacent tiles.",
+  "fields": {
+   "natural_wonder": true,
+   "adjacent_yields": "+3 Gold, +2 Culture",
+   "appeal": 2,
+   "impassable": true,
+   "tiles": 3,
+   "description": "Three-tile impassable natural wonder. Provides +3 Gold and +2 Culture to adjacent tiles. The city that owns the tile receives +4 Gold on its outgoing international Trade Routes."
+  }
+ },
+ {
+  "id": "feature:pamukkale",
+  "name": "Pamukkale",
+  "aliases": [
+   "FEATURE_PAMUKKALE"
+  ],
+  "summary": "Natural wonder. no yield change. Two tile impassable natural wonder. +1 Amenity. It provides an additional Amenity if adjacent to an Entertainment Complex.",
+  "fields": {
+   "natural_wonder": true,
+   "appeal": 2,
+   "impassable": true,
+   "fresh_water": true,
+   "tiles": 2,
+   "description": "Two tile impassable natural wonder. +1 Amenity. It provides an additional Amenity if adjacent to an Entertainment Complex. Major adjacency bonus to Theater Square, Campus, and Commercial Hub districts. Standard adjacency bonus to the Holy Site district. It provides Fresh Water."
+  }
+ },
+ {
+  "id": "feature:pantanal",
+  "name": "Pantanal",
+  "aliases": [
+   "FEATURE_PANTANAL"
+  ],
+  "summary": "Natural wonder. +2 Culture, +2 Food. Four tile natural wonder. Provides +2 Food and +2 Culture.",
+  "fields": {
+   "natural_wonder": true,
+   "yields": "+2 Culture, +2 Food",
+   "movement_cost": 1,
+   "defense": -2,
+   "appeal": 2,
+   "tiles": 4,
+   "description": "Four tile natural wonder. Provides +2 Food and +2 Culture."
+  }
+ },
+ {
+  "id": "feature:piopiotahi",
+  "name": "Piopiotahi",
+  "aliases": [
+   "FEATURE_PIOPIOTAHI"
+  ],
+  "summary": "Natural wonder. no yield change. Three tile impassable natural wonder. Provides +1 Culture and +1 Gold to adjacent tiles.",
+  "fields": {
+   "natural_wonder": true,
+   "adjacent_yields": "+1 Culture, +1 Gold",
+   "appeal": 2,
+   "impassable": true,
+   "tiles": 3,
+   "description": "Three tile impassable natural wonder. Provides +1 Culture and +1 Gold to adjacent tiles."
+  }
+ },
+ {
+  "id": "feature:reef",
+  "name": "Reef",
+  "aliases": [
+   "FEATURE_REEF"
+  ],
+  "summary": "+1 Food, +1 Production.",
+  "fields": {
+   "yields": "+1 Food, +1 Production",
+   "defense": 3
+  }
+ },
+ {
+  "id": "feature:roraima",
+  "name": "Mount Roraima",
+  "aliases": [
+   "FEATURE_RORAIMA"
+  ],
+  "summary": "Natural wonder. no yield change. Four tile impassable natural wonder. Provides +1 Faith and +1 Science to adjacent tiles.",
+  "fields": {
+   "natural_wonder": true,
+   "adjacent_yields": "+1 Faith, +1 Science",
+   "appeal": 2,
+   "impassable": true,
+   "tiles": 4,
+   "description": "Four tile impassable natural wonder. Provides +1 Faith and +1 Science to adjacent tiles."
+  }
+ },
+ {
+  "id": "feature:torres_del_paine",
+  "name": "Torres del Paine",
+  "aliases": [
+   "FEATURE_TORRES_DEL_PAINE"
+  ],
+  "summary": "Natural wonder. no yield change. Two tile impassable natural wonder. Doubles the terrain yields of all adjacent tiles.",
+  "fields": {
+   "natural_wonder": true,
+   "appeal": 2,
+   "impassable": true,
+   "tiles": 2,
+   "description": "Two tile impassable natural wonder. Doubles the terrain yields of all adjacent tiles."
+  }
+ },
+ {
+  "id": "feature:tsingy",
+  "name": "Tsingy de Bemaraha",
+  "aliases": [
+   "FEATURE_TSINGY"
+  ],
+  "summary": "Natural wonder. no yield change. One tile impassable natural wonder. Provides +1 Culture and +1 Science to adjacent tiles.",
+  "fields": {
+   "natural_wonder": true,
+   "adjacent_yields": "+1 Culture, +1 Science",
+   "appeal": 2,
+   "impassable": true,
+   "tiles": 1,
+   "description": "One tile impassable natural wonder. Provides +1 Culture and +1 Science to adjacent tiles."
+  }
+ },
+ {
+  "id": "feature:ubsunur_hollow",
+  "name": "Ubsunur Hollow",
+  "aliases": [
+   "FEATURE_UBSUNUR_HOLLOW"
+  ],
+  "summary": "Natural wonder. +2 Faith, +1 Food, +1 Production. Four tile natural wonder. Provides +2 Faith, +1 Food, and +1 Production.",
+  "fields": {
+   "natural_wonder": true,
+   "yields": "+2 Faith, +1 Food, +1 Production",
+   "movement_cost": 1,
+   "defense": -2,
+   "appeal": 2,
+   "tiles": 4,
+   "description": "Four tile natural wonder. Provides +2 Faith, +1 Food, and +1 Production."
+  }
+ },
+ {
+  "id": "feature:uluru",
+  "name": "Uluru",
+  "aliases": [
+   "FEATURE_ULURU"
+  ],
+  "summary": "Natural wonder. no yield change. One tile impassable natural wonder. Provides +2 Culture and +2 Faith to adjacent tiles. Provides +4 Appeal to adjacent tiles instead of the usual +2.",
+  "fields": {
+   "natural_wonder": true,
+   "adjacent_yields": "+2 Faith, +2 Culture",
+   "appeal": 4,
+   "impassable": true,
+   "tiles": 1,
+   "description": "One tile impassable natural wonder. Provides +2 Culture and +2 Faith to adjacent tiles. Provides +4 Appeal to adjacent tiles instead of the usual +2."
+  }
+ },
+ {
+  "id": "feature:vesuvius",
+  "name": "Mount Vesuvius",
+  "aliases": [
+   "FEATURE_VESUVIUS"
+  ],
+  "summary": "Natural wonder. no yield change. One tile impassable natural wonder. It appears as a Volcano and provides +1 Production to adjacent tiles.",
+  "fields": {
+   "natural_wonder": true,
+   "adjacent_yields": "+1 Production",
+   "appeal": 2,
+   "impassable": true,
+   "tiles": 1,
+   "description": "One tile impassable natural wonder. It appears as a Volcano and provides +1 Production to adjacent tiles. On Eruption it gives high yields to adjacent tiles, but large Citizen Population loss. It is always active."
+  }
+ },
+ {
+  "id": "feature:volcanic_soil",
+  "name": "Volcanic Soil",
+  "aliases": [
+   "FEATURE_VOLCANIC_SOIL"
+  ],
+  "summary": "no yield change. This land adjacent to a volcano has suffered from a previous eruption.",
+  "fields": {
+   "description": "This land adjacent to a volcano has suffered from a previous eruption. Although people and structures may have been damaged, the rich deposits of minerals the volcano has brought forth have probably enhanced the yields here. Rebuilding in this area may therefore be worthwhile, especially if the volcano goes dormant."
+  }
+ },
+ {
+  "id": "feature:volcano",
+  "name": "Volcano",
+  "aliases": [
+   "FEATURE_VOLCANO"
+  ],
+  "summary": "no yield change. This mountain tile, probably located near a boundary between two continents, starts the game as an inactive volcanic site but may become active as the game prog…",
+  "fields": {
+   "description": "This mountain tile, probably located near a boundary between two continents, starts the game as an inactive volcanic site but may become active as the game progresses. Once active, beware -- an eruption could occur at any time. Volcanic eruptions damage features and structures in adjacent tiles but may also leave behind volcanic soil that boosts the yields from that location."
+  }
+ },
+ {
+  "id": "feature:whitedesert",
+  "name": "Sahara el Beyda",
+  "aliases": [
+   "FEATURE_WHITEDESERT"
+  ],
+  "summary": "Natural wonder. +1 Culture, +4 Gold, +1 Science. Four tile natural wonder. It provides +1 Science, +1 Culture, and +4 Gold.",
+  "fields": {
+   "natural_wonder": true,
+   "yields": "+1 Culture, +4 Gold, +1 Science",
+   "appeal": 2,
+   "tiles": 4,
+   "description": "Four tile natural wonder. It provides +1 Science, +1 Culture, and +4 Gold."
+  }
+ },
+ {
+  "id": "feature:yosemite",
+  "name": "Yosemite",
+  "aliases": [
+   "FEATURE_YOSEMITE"
+  ],
+  "summary": "Natural wonder. no yield change. Two tile impassable natural wonder. Provides +1 Gold, +1 Food, and +1 Science to adjacent tiles.",
+  "fields": {
+   "natural_wonder": true,
+   "adjacent_yields": "+1 Gold, +1 Science, +1 Food",
+   "appeal": 2,
+   "impassable": true,
+   "tiles": 2,
+   "description": "Two tile impassable natural wonder. Provides +1 Gold, +1 Food, and +1 Science to adjacent tiles."
+  }
+ },
+ {
+  "id": "feature:zhangye_danxia",
+  "name": "Zhangye Danxia",
+  "aliases": [
+   "FEATURE_ZHANGYE_DANXIA"
+  ],
+  "summary": "Natural wonder. no yield change. Three tile impassable natural wonder. Provides 2 Great General points and 2 Great Merchant points if you own at least one of these tiles.",
+  "fields": {
+   "natural_wonder": true,
+   "appeal": 2,
+   "impassable": true,
+   "tiles": 3,
+   "description": "Three tile impassable natural wonder. Provides 2 Great General points and 2 Great Merchant points if you own at least one of these tiles."
+  }
+ }
+]

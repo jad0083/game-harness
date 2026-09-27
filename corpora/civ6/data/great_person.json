@@ -1,0 +1,3943 @@
+[
+ {
+  "id": "great_person:abdus_salam",
+  "name": "Abdus Salam",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_ABDUS_SALAM"
+  ],
+  "summary": "Great Scientist, Information Era. Triggers the Eureka moment for all technologies from the Information era.",
+  "fields": {
+   "class": "Great Scientist",
+   "era": "Information Era",
+   "charges": 1,
+   "action": "Triggers the Eureka moment for all technologies from the Information era.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Campus"
+   ]
+  }
+ },
+ {
+  "id": "great_person:abu_al_qasim_al_zahrawi",
+  "name": "Abu al-Qasim al-Zahrawi",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_ABU_AL_QASIM_AL_ZAHRAWI"
+  ],
+  "summary": "Great Scientist, Medieval Era. Triggers the Eureka moment for 1 random technology from the Medieval or Renaissance era. Wounded land units can heal +5 HP each turn.",
+  "fields": {
+   "class": "Great Scientist",
+   "era": "Medieval Era",
+   "charges": 1,
+   "action": "Triggers the Eureka moment for 1 random technology from the Medieval or Renaissance era. Wounded land units can heal +5 HP each turn.",
+   "passive": "+20 HP healing for the player's units within 1 tile."
+  }
+ },
+ {
+  "id": "great_person:ada_lovelace",
+  "name": "Ada Lovelace",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_ADA_LOVELACE"
+  ],
+  "summary": "Great Engineer, Industrial Era. Lets this city build one more district than the Citizen Population limit allows. Triggers the Eureka moment for the Computers technology.",
+  "fields": {
+   "class": "Great Engineer",
+   "era": "Industrial Era",
+   "charges": 1,
+   "action": "Lets this city build one more district than the Citizen Population limit allows. Triggers the Eureka moment for the Computers technology.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: City Center"
+   ]
+  }
+ },
+ {
+  "id": "great_person:adam_smith",
+  "name": "Adam Smith",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_ADAM_SMITH"
+  ],
+  "summary": "Great Merchant, Industrial Era. Grant 1 Governor Title or recruit a new Governor. Gain 500 Gold.",
+  "fields": {
+   "class": "Great Merchant",
+   "era": "Industrial Era",
+   "charges": 1,
+   "action": "Grant 1 Governor Title or recruit a new Governor. Gain 500 Gold.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Commercial Hub"
+   ]
+  }
+ },
+ {
+  "id": "great_person:adi_shankara",
+  "name": "Adi Shankara",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_ADI_SHANKARA"
+  ],
+  "summary": "Great Prophet, Medieval Era. Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+  "fields": {
+   "class": "Great Prophet",
+   "era": "Medieval Era",
+   "action": "Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+   "action_requires": [
+    "owned tile"
+   ]
+  }
+ },
+ {
+  "id": "great_person:aethelflaed",
+  "name": "Æthelflæd",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_AETHELFLAED"
+  ],
+  "summary": "Great General, Medieval Era. Grants +2 Loyalty per turn for this city.",
+  "fields": {
+   "class": "Great General",
+   "era": "Medieval Era",
+   "charges": 1,
+   "action": "Grants +2 Loyalty per turn for this city.",
+   "passive": "+5 Combat Strength and +1 Movement to Medieval and Renaissance era land units within 2 tiles.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: City Center"
+   ]
+  }
+ },
+ {
+  "id": "great_person:ahmad_shah_massoud",
+  "name": "Ahmad Shah Massoud",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_AHMAD_SHAH_MASSOUD"
+  ],
+  "summary": "Great General, Information Era. Instantly creates a Modern Anti-Tank unit with 1 promotion level.",
+  "fields": {
+   "class": "Great General",
+   "era": "Information Era",
+   "charges": 1,
+   "action": "Instantly creates a Modern Anti-Tank unit with 1 promotion level.",
+   "passive": "+5 Combat Strength and +1 Movement to Information era land units within 2 tiles.",
+   "action_requires": [
+    "no military unit"
+   ]
+  }
+ },
+ {
+  "id": "great_person:alan_turing",
+  "name": "Alan Turing",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_ALAN_TURING"
+  ],
+  "summary": "Great Scientist, Modern Era. Triggers the Eureka moment for Computers and 1 random technology from the Modern era.",
+  "fields": {
+   "class": "Great Scientist",
+   "era": "Modern Era",
+   "charges": 1,
+   "action": "Triggers the Eureka moment for Computers and 1 random technology from the Modern era.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Campus"
+   ]
+  }
+ },
+ {
+  "id": "great_person:albert_einstein",
+  "name": "Albert Einstein",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_ALBERT_EINSTEIN"
+  ],
+  "summary": "Great Scientist, Modern Era. Research Labs provide +4 Science. Triggers the Eureka moment for 1 random technology from the Modern or Atomic era.",
+  "fields": {
+   "class": "Great Scientist",
+   "era": "Modern Era",
+   "charges": 1,
+   "action": "Research Labs provide +4 Science. Triggers the Eureka moment for 1 random technology from the Modern or Atomic era.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Campus"
+   ]
+  }
+ },
+ {
+  "id": "great_person:alexander_pushkin",
+  "name": "Alexander Pushkin",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_ALEXANDER_PUSHKIN"
+  ],
+  "summary": "Great Writer, Industrial Era. Creates Great Works: Eugene Onegin, Boris Godunov.",
+  "fields": {
+   "class": "Great Writer",
+   "era": "Industrial Era",
+   "action": "Creates Great Works: Eugene Onegin, Boris Godunov.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Eugene Onegin",
+    "Boris Godunov"
+   ]
+  }
+ },
+ {
+  "id": "great_person:alfred_nobel",
+  "name": "Alfred Nobel",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_ALFRED_NOBEL"
+  ],
+  "summary": "Great Scientist, Modern Era. Triggers the Eureka moment for 1 random technology from the Modern or Atomic era. Applies 100 free Great People points towards recruiting all current and future Great People.",
+  "fields": {
+   "class": "Great Scientist",
+   "era": "Modern Era",
+   "charges": 1,
+   "action": "Triggers the Eureka moment for 1 random technology from the Modern or Atomic era. Applies 100 free Great People points towards recruiting all current and future Great People.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Campus"
+   ]
+  }
+ },
+ {
+  "id": "great_person:alvar_aalto",
+  "name": "Alvar Aalto",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_ALVAR_AALTO"
+  ],
+  "summary": "Great Engineer, Modern Era. This city provides +1 Appeal to any tiles it owns.",
+  "fields": {
+   "class": "Great Engineer",
+   "era": "Modern Era",
+   "charges": 1,
+   "action": "This city provides +1 Appeal to any tiles it owns.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: City Center"
+   ]
+  }
+ },
+ {
+  "id": "great_person:amrita_sher_gil",
+  "name": "Amrita Sher-Gil",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_AMRITA_SHER_GIL"
+  ],
+  "summary": "Great Artist, Information Era. Creates Great Works: Three Girls, Bride's Toilet, Self Portrait.",
+  "fields": {
+   "class": "Great Artist",
+   "era": "Information Era",
+   "action": "Creates Great Works: Three Girls, Bride's Toilet, Self Portrait.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Three Girls",
+    "Bride's Toilet",
+    "Self Portrait"
+   ]
+  }
+ },
+ {
+  "id": "great_person:ana_nzinga",
+  "name": "Amina",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_ANA_NZINGA"
+  ],
+  "summary": "Great General, Renaissance Era. Gain 1 Envoy.",
+  "fields": {
+   "class": "Great General",
+   "era": "Renaissance Era",
+   "charges": 1,
+   "action": "Gain 1 Envoy.",
+   "passive": "+5 Combat Strength and +1 Movement to Renaissance and Industrial era land units within 2 tiles."
+  }
+ },
+ {
+  "id": "great_person:andrey_rublev",
+  "name": "Andrei Rublev",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_ANDREY_RUBLEV"
+  ],
+  "summary": "Great Artist, Renaissance Era. Creates Great Works: Annunciation, Saviour in Glory, Ascension.",
+  "fields": {
+   "class": "Great Artist",
+   "era": "Renaissance Era",
+   "action": "Creates Great Works: Annunciation, Saviour in Glory, Ascension.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Annunciation",
+    "Saviour in Glory",
+    "Ascension"
+   ]
+  }
+ },
+ {
+  "id": "great_person:angelica_kauffman",
+  "name": "Angelica Kauffman",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_ANGELICA_KAUFFMAN"
+  ],
+  "summary": "Great Artist, Modern Era. Creates Great Works: Anna Maria Jenkins and Thomas Jenkins, Portrait of Johann Joachim Winckelmann, Sarah Harrop as a Muse.",
+  "fields": {
+   "class": "Great Artist",
+   "era": "Modern Era",
+   "action": "Creates Great Works: Anna Maria Jenkins and Thomas Jenkins, Portrait of Johann Joachim Winckelmann, Sarah Harrop as a Muse.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Anna Maria Jenkins and Thomas Jenkins",
+    "Portrait of Johann Joachim Winckelmann",
+    "Sarah Harrop as a Muse"
+   ]
+  }
+ },
+ {
+  "id": "great_person:antonin_dvorak",
+  "name": "Antonin Dvorak",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_ANTONIN_DVORAK"
+  ],
+  "summary": "Great Musician, Atomic Era. Creates Great Works: New World Symphony (no. 9) - Mvt. 4, Serenade for Strings, Op. 22 - Mvt. 2.",
+  "fields": {
+   "class": "Great Musician",
+   "era": "Atomic Era",
+   "action": "Creates Great Works: New World Symphony (no. 9) - Mvt. 4, Serenade for Strings, Op. 22 - Mvt. 2.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "New World Symphony (no. 9) - Mvt. 4",
+    "Serenade for Strings, Op. 22 - Mvt. 2"
+   ]
+  }
+ },
+ {
+  "id": "great_person:antonio_carlos_gomez",
+  "name": "Antônio Carlos Gomes",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_ANTONIO_CARLOS_GOMEZ"
+  ],
+  "summary": "Great Musician, Modern Era. Creates Great Works: Fosca - Mvt. 1 (Abertura), Alvorada.",
+  "fields": {
+   "class": "Great Musician",
+   "era": "Modern Era",
+   "action": "Creates Great Works: Fosca - Mvt. 1 (Abertura), Alvorada.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Fosca - Mvt. 1 (Abertura)",
+    "Alvorada"
+   ]
+  }
+ },
+ {
+  "id": "great_person:antonio_vivaldi",
+  "name": "Antonio Vivaldi",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_ANTONIO_VIVALDI"
+  ],
+  "summary": "Great Musician, Industrial Era. Creates Great Works: Four Seasons: Winter, La Notte Concerto.",
+  "fields": {
+   "class": "Great Musician",
+   "era": "Industrial Era",
+   "action": "Creates Great Works: Four Seasons: Winter, La Notte Concerto.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Four Seasons: Winter",
+    "La Notte Concerto"
+   ]
+  }
+ },
+ {
+  "id": "great_person:artemisia",
+  "name": "Artemisia",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_ARTEMISIA"
+  ],
+  "summary": "Great Admiral, Classical Era. Grants 1 promotion level to a military naval unit.",
+  "fields": {
+   "class": "Great Admiral",
+   "era": "Classical Era",
+   "charges": 1,
+   "action": "Grants 1 promotion level to a military naval unit.",
+   "passive": "+5 Combat Strength and +1 Movement to Classical and Medieval era naval units within 2 tiles.",
+   "action_requires": [
+    "military unit domain: Domain sea",
+    "unit can gain experience"
+   ]
+  }
+ },
+ {
+  "id": "great_person:aryabhata",
+  "name": "Aryabhata",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_ARYABHATA"
+  ],
+  "summary": "Great Scientist, Classical Era. Triggers the Eureka moment for 3 random technologies from the Classical or Medieval era.",
+  "fields": {
+   "class": "Great Scientist",
+   "era": "Classical Era",
+   "charges": 1,
+   "action": "Triggers the Eureka moment for 3 random technologies from the Classical or Medieval era.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Campus"
+   ]
+  }
+ },
+ {
+  "id": "great_person:beatrix_potter",
+  "name": "Beatrix Potter",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_BEATRIX_POTTER"
+  ],
+  "summary": "Great Writer, Modern Era. Creates Great Works: The Tale of Peter Rabbit, The Tailor of Gloucester.",
+  "fields": {
+   "class": "Great Writer",
+   "era": "Modern Era",
+   "action": "Creates Great Works: The Tale of Peter Rabbit, The Tailor of Gloucester.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "The Tale of Peter Rabbit",
+    "The Tailor of Gloucester"
+   ]
+  }
+ },
+ {
+  "id": "great_person:bhasa",
+  "name": "Bhasa",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_BHASA"
+  ],
+  "summary": "Great Writer, Classical Era. Creates Great Works: The Madhyama Vyayoga, Pratima-nataka.",
+  "fields": {
+   "class": "Great Writer",
+   "era": "Classical Era",
+   "action": "Creates Great Works: The Madhyama Vyayoga, Pratima-nataka.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "The Madhyama Vyayoga",
+    "Pratima-nataka"
+   ]
+  }
+ },
+ {
+  "id": "great_person:bi_sheng",
+  "name": "Bi Sheng",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_BI_SHENG"
+  ],
+  "summary": "Great Engineer, Medieval Era. Lets this city build one more district than the Citizen Population limit allows. Triggers the Eureka moment for the Printing technology.",
+  "fields": {
+   "class": "Great Engineer",
+   "era": "Medieval Era",
+   "charges": 1,
+   "action": "Lets this city build one more district than the Citizen Population limit allows. Triggers the Eureka moment for the Printing technology.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: City Center"
+   ]
+  }
+ },
+ {
+  "id": "great_person:bodhidharma",
+  "name": "Bodhidharma",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_BODHIDHARMA"
+  ],
+  "summary": "Great Prophet, Medieval Era. Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+  "fields": {
+   "class": "Great Prophet",
+   "era": "Medieval Era",
+   "action": "Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+   "action_requires": [
+    "owned tile"
+   ]
+  }
+ },
+ {
+  "id": "great_person:boris_orlovsky",
+  "name": "Boris Orlovsky",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_BORIS_ORLOVSKY"
+  ],
+  "summary": "Great Artist, Information Era. Creates Great Works: Mikhail Kutuzov, Alexander Column, Bust of Tsar Alexander.",
+  "fields": {
+   "class": "Great Artist",
+   "era": "Information Era",
+   "action": "Creates Great Works: Mikhail Kutuzov, Alexander Column, Bust of Tsar Alexander.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Mikhail Kutuzov",
+    "Alexander Column",
+    "Bust of Tsar Alexander"
+   ]
+  }
+ },
+ {
+  "id": "great_person:boudica",
+  "name": "Boudica",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_BOUDICA"
+  ],
+  "summary": "Great General, Classical Era. Converts adjacent Barbarian units to your control.",
+  "fields": {
+   "class": "Great General",
+   "era": "Classical Era",
+   "charges": 1,
+   "action": "Converts adjacent Barbarian units to your control.",
+   "passive": "+5 Combat Strength and +1 Movement to Classical and Medieval era land units within 2 tiles.",
+   "action_requires": [
+    "adjacent barbarian unit"
+   ]
+  }
+ },
+ {
+  "id": "great_person:carl_sagan",
+  "name": "Carl Sagan",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_CARL_SAGAN"
+  ],
+  "summary": "Great Scientist, Information Era. Grants 3000 Production towards Space Race project construction.",
+  "fields": {
+   "class": "Great Scientist",
+   "era": "Information Era",
+   "charges": 1,
+   "action": "Grants 3000 Production towards Space Race project construction.",
+   "action_requires": [
+    "owned tile",
+    "incomplete space race project",
+    "completed district type: Spaceport"
+   ]
+  }
+ },
+ {
+  "id": "great_person:charles_correa",
+  "name": "Charles Correa",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_CHARLES_CORREA"
+  ],
+  "summary": "Great Engineer, Information Era. This city provides +2 Appeal to any tiles it owns.",
+  "fields": {
+   "class": "Great Engineer",
+   "era": "Information Era",
+   "charges": 1,
+   "action": "This city provides +2 Appeal to any tiles it owns.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: City Center"
+   ]
+  }
+ },
+ {
+  "id": "great_person:charles_darwin",
+  "name": "Charles Darwin",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_CHARLES_DARWIN"
+  ],
+  "summary": "Great Scientist, Industrial Era. Gain 500 Science (on Standard speed) for each natural wonder tile here or adjacent.",
+  "fields": {
+   "class": "Great Scientist",
+   "era": "Industrial Era",
+   "charges": 1,
+   "action": "Gain 500 Science (on Standard speed) for each natural wonder tile here or adjacent.",
+   "action_requires": [
+    "on or adjacent natural wonder"
+   ]
+  }
+ },
+ {
+  "id": "great_person:chester_nimitz",
+  "name": "Chester Nimitz",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_CHESTER_NIMITZ"
+  ],
+  "summary": "Great Admiral, Atomic Era. Instantly creates a Submarine unit with 1 promotion level. Grants 1 Oil per Turn. +20% Production towards units of the Naval Raider promotion class.",
+  "fields": {
+   "class": "Great Admiral",
+   "era": "Atomic Era",
+   "charges": 1,
+   "action": "Instantly creates a Submarine unit with 1 promotion level. Grants 1 Oil per Turn. +20% Production towards units of the Naval Raider promotion class.",
+   "passive": "+5 Combat Strength and +1 Movement to Atomic and Information era naval units within 2 tiles.",
+   "action_requires": [
+    "no military unit"
+   ]
+  }
+ },
+ {
+  "id": "great_person:ching_shih",
+  "name": "Ching Shih",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_CHING_SHIH"
+  ],
+  "summary": "Great Admiral, Industrial Era. Gain 500 Gold (on Standard speed). Military units get +60% rewards for plundering sea Trade Routes.",
+  "fields": {
+   "class": "Great Admiral",
+   "era": "Industrial Era",
+   "charges": 1,
+   "action": "Gain 500 Gold (on Standard speed). Military units get +60% rewards for plundering sea Trade Routes.",
+   "passive": "+5 Combat Strength and +1 Movement to Industrial and Modern era naval units within 2 tiles."
+  }
+ },
+ {
+  "id": "great_person:clancy_fernando",
+  "name": "Clancy Fernando",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_CLANCY_FERNANDO"
+  ],
+  "summary": "Great Admiral, Information Era. Grants 1 promotion level and +200% combat experience to a military naval unit.",
+  "fields": {
+   "class": "Great Admiral",
+   "era": "Information Era",
+   "charges": 1,
+   "action": "Grants 1 promotion level and +200% combat experience to a military naval unit.",
+   "passive": "+5 Combat Strength and +1 Movement to Information era naval units within 2 tiles.",
+   "action_requires": [
+    "military unit domain: Domain sea",
+    "unit can gain experience"
+   ]
+  }
+ },
+ {
+  "id": "great_person:clara_schumann",
+  "name": "Clara Schumann",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_CLARA_SCHUMANN"
+  ],
+  "summary": "Great Musician, Atomic Era. Creates Great Works: Prelude and Fugue Op. 16, No. 3, Toccatina in A minor.",
+  "fields": {
+   "class": "Great Musician",
+   "era": "Atomic Era",
+   "action": "Creates Great Works: Prelude and Fugue Op. 16, No. 3, Toccatina in A minor.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Prelude and Fugue Op. 16, No. 3",
+    "Toccatina in A minor"
+   ]
+  }
+ },
+ {
+  "id": "great_person:claude_monet",
+  "name": "Claude Monet",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_CLAUDE_MONET"
+  ],
+  "summary": "Great Artist, Atomic Era. Creates Great Works: Water Lilies, Impression, Sunrise, Haystack at Giverny.",
+  "fields": {
+   "class": "Great Artist",
+   "era": "Atomic Era",
+   "action": "Creates Great Works: Water Lilies, Impression, Sunrise, Haystack at Giverny.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Water Lilies",
+    "Impression, Sunrise",
+    "Haystack at Giverny"
+   ]
+  }
+ },
+ {
+  "id": "great_person:colaeus",
+  "name": "Colaeus",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_COLAEUS"
+  ],
+  "summary": "Great Merchant, Classical Era. Grants 1 free copy of the Luxury resource on this tile to your Capital city. Gain 100 Faith.",
+  "fields": {
+   "class": "Great Merchant",
+   "era": "Classical Era",
+   "charges": 1,
+   "action": "Grants 1 free copy of the Luxury resource on this tile to your Capital city. Gain 100 Faith.",
+   "action_requires": [
+    "visible luxury"
+   ]
+  }
+ },
+ {
+  "id": "great_person:commandante_antonio_paez",
+  "name": "José Antonio Páez",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_COMMANDANTE_ANTONIO_PAEZ"
+  ],
+  "summary": "Comandante General, Ancient Era. Grants +4 Combat Strength to Cavalry class units within 2 tiles.",
+  "fields": {
+   "class": "Comandante General",
+   "era": "Ancient Era",
+   "charges": 1,
+   "action": "Grants +4 Combat Strength to Cavalry class units within 2 tiles.",
+   "passive": "+5 Combat Strength to land units within 2 tiles.",
+   "action_requires": [
+    "nearby unit with tag a: Class light cavalry",
+    "nearby unit with tag b: Class heavy cavalry"
+   ]
+  }
+ },
+ {
+  "id": "great_person:commandante_jose_de_sucre",
+  "name": "Antonio José de Sucre",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_COMMANDANTE_JOSE_DE_SUCRE"
+  ],
+  "summary": "Comandante General, Ancient Era. Instantly creates the strongest land combat unit you can build with 1 promotion level. Unit has no resource maintenance cost.",
+  "fields": {
+   "class": "Comandante General",
+   "era": "Ancient Era",
+   "charges": 1,
+   "action": "Instantly creates the strongest land combat unit you can build with 1 promotion level. Unit has no resource maintenance cost.",
+   "passive": "+5 Combat Strength to land units within 2 tiles.",
+   "action_requires": [
+    "no military unit"
+   ]
+  }
+ },
+ {
+  "id": "great_person:commandante_macgregor",
+  "name": "Gregor MacGregor",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_COMMANDANTE_MACGREGOR"
+  ],
+  "summary": "Comandante General, Ancient Era. Grants 1 promotion level to a military land unit and Gold equal to 50% of the purchase cost of the unit.",
+  "fields": {
+   "class": "Comandante General",
+   "era": "Ancient Era",
+   "charges": 1,
+   "action": "Grants 1 promotion level to a military land unit and Gold equal to 50% of the purchase cost of the unit.",
+   "passive": "+5 Combat Strength to land units within 2 tiles.",
+   "action_requires": [
+    "military unit domain: Domain land",
+    "unit can gain experience"
+   ]
+  }
+ },
+ {
+  "id": "great_person:commandante_marino",
+  "name": "Santiago Mariño",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_COMMANDANTE_MARINO"
+  ],
+  "summary": "Comandante General, Ancient Era. Grants +4 Combat Strength to Melee and Anti-Cavalry class units within 2 tiles.",
+  "fields": {
+   "class": "Comandante General",
+   "era": "Ancient Era",
+   "charges": 1,
+   "action": "Grants +4 Combat Strength to Melee and Anti-Cavalry class units within 2 tiles.",
+   "passive": "+5 Combat Strength to land units within 2 tiles.",
+   "action_requires": [
+    "nearby unit with tag a: Class melee",
+    "nearby unit with tag b: Class anti cavalry"
+   ]
+  }
+ },
+ {
+  "id": "great_person:commandante_montilla",
+  "name": "Mariano Montilla",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_COMMANDANTE_MONTILLA"
+  ],
+  "summary": "Comandante General, Ancient Era. Land units within 2 tiles gain +4 Combat Strength when attacking districts.",
+  "fields": {
+   "class": "Comandante General",
+   "era": "Ancient Era",
+   "charges": 1,
+   "action": "Land units within 2 tiles gain +4 Combat Strength when attacking districts.",
+   "passive": "+5 Combat Strength to land units within 2 tiles.",
+   "action_requires": [
+    "land military unit within xtiles: 2"
+   ]
+  }
+ },
+ {
+  "id": "great_person:commandante_narino",
+  "name": "Antonio Nariño",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_COMMANDANTE_NARINO"
+  ],
+  "summary": "Comandante General, Ancient Era. Increase Trade Route capacity by 1. Grants a Trader unit in the nearest city.",
+  "fields": {
+   "class": "Comandante General",
+   "era": "Ancient Era",
+   "charges": 1,
+   "action": "Increase Trade Route capacity by 1. Grants a Trader unit in the nearest city.",
+   "passive": "+5 Combat Strength to land units within 2 tiles."
+  }
+ },
+ {
+  "id": "great_person:commandante_paula_santander",
+  "name": "Francisco de Paula Santander",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_COMMANDANTE_PAULA_SANTANDER"
+  ],
+  "summary": "Comandante General, Ancient Era. Grants 1 Governor Title.",
+  "fields": {
+   "class": "Comandante General",
+   "era": "Ancient Era",
+   "charges": 1,
+   "action": "Grants 1 Governor Title.",
+   "passive": "+5 Combat Strength to land units within 2 tiles."
+  }
+ },
+ {
+  "id": "great_person:commandante_piar",
+  "name": "Manuel Piar",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_COMMANDANTE_PIAR"
+  ],
+  "summary": "Comandante General, Ancient Era. Grants +7 Combat Strength to a land unit.",
+  "fields": {
+   "class": "Comandante General",
+   "era": "Ancient Era",
+   "charges": 1,
+   "action": "Grants +7 Combat Strength to a land unit.",
+   "passive": "+5 Combat Strength to land units within 2 tiles.",
+   "action_requires": [
+    "military unit domain: Domain land"
+   ]
+  }
+ },
+ {
+  "id": "great_person:commandante_ribas",
+  "name": "José Félix Ribas",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_COMMANDANTE_RIBAS"
+  ],
+  "summary": "Comandante General, Ancient Era. Enemy units within 2 tiles lose 30 HP.",
+  "fields": {
+   "class": "Comandante General",
+   "era": "Ancient Era",
+   "charges": 1,
+   "action": "Enemy units within 2 tiles lose 30 HP.",
+   "passive": "+5 Combat Strength to land units within 2 tiles.",
+   "action_requires": [
+    "enemy military unit within xtiles: 2"
+   ]
+  }
+ },
+ {
+  "id": "great_person:commandante_urdaneta",
+  "name": "Rafael Urdaneta",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_COMMANDANTE_URDANETA"
+  ],
+  "summary": "Comandante General, Ancient Era. All land combat units within 2 tiles regain all Movement and attack capability.",
+  "fields": {
+   "class": "Comandante General",
+   "era": "Ancient Era",
+   "charges": 1,
+   "action": "All land combat units within 2 tiles regain all Movement and attack capability.",
+   "passive": "+5 Combat Strength to land units within 2 tiles.",
+   "action_requires": [
+    "land military unit within xtiles: 2"
+   ]
+  }
+ },
+ {
+  "id": "great_person:confucius",
+  "name": "Confucius",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_CONFUCIUS"
+  ],
+  "summary": "Great Prophet, Classical Era. Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+  "fields": {
+   "class": "Great Prophet",
+   "era": "Classical Era",
+   "action": "Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+   "action_requires": [
+    "owned tile"
+   ]
+  }
+ },
+ {
+  "id": "great_person:dandara",
+  "name": "Dandara",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_DANDARA"
+  ],
+  "summary": "Great General, Industrial Era. Grants a Warrior Monk with 1 promotion.",
+  "fields": {
+   "class": "Great General",
+   "era": "Industrial Era",
+   "charges": 2,
+   "action": "Grants a Warrior Monk with 1 promotion.",
+   "passive": "+5 Combat Strength and +1 Movement to Industrial and Modern era land units within 2 tiles.",
+   "action_requires": [
+    "no military unit"
+   ]
+  }
+ },
+ {
+  "id": "great_person:dimitrie_cantemir",
+  "name": "Dimitrie Cantemir",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_DIMITRIE_CANTEMIR"
+  ],
+  "summary": "Great Musician, Industrial Era. Creates Great Works: Peşrev Adjem Yegiahi, Prince Of Moldavia, Uzzusule Beresvan.",
+  "fields": {
+   "class": "Great Musician",
+   "era": "Industrial Era",
+   "action": "Creates Great Works: Peşrev Adjem Yegiahi, Prince Of Moldavia, Uzzusule Beresvan.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Peşrev Adjem Yegiahi",
+    "Prince Of Moldavia",
+    "Uzzusule Beresvan"
+   ]
+  }
+ },
+ {
+  "id": "great_person:dmitri_mendeleev",
+  "name": "Dmitri Mendeleev",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_DMITRI_MENDELEEV"
+  ],
+  "summary": "Great Scientist, Industrial Era. Triggers the Eureka moment for Chemistry and 1 random technology from the Industrial era.",
+  "fields": {
+   "class": "Great Scientist",
+   "era": "Industrial Era",
+   "charges": 1,
+   "action": "Triggers the Eureka moment for Chemistry and 1 random technology from the Industrial era.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Campus"
+   ]
+  }
+ },
+ {
+  "id": "great_person:donatello",
+  "name": "Donatello",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_DONATELLO"
+  ],
+  "summary": "Great Artist, Renaissance Era. Creates Great Works: St. Mark, Equestrian statue of Gattamelata, Judith Slaying Holofernes.",
+  "fields": {
+   "class": "Great Artist",
+   "era": "Renaissance Era",
+   "action": "Creates Great Works: St. Mark, Equestrian statue of Gattamelata, Judith Slaying Holofernes.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "St. Mark",
+    "Equestrian statue of Gattamelata",
+    "Judith Slaying Holofernes"
+   ]
+  }
+ },
+ {
+  "id": "great_person:douglas_macarthur",
+  "name": "Douglas MacArthur",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_DOUGLAS_MACARTHUR"
+  ],
+  "summary": "Great General, Atomic Era. Instantly creates a Tank unit with 1 promotion level. Grants 1 Oil per Turn.",
+  "fields": {
+   "class": "Great General",
+   "era": "Atomic Era",
+   "charges": 1,
+   "action": "Instantly creates a Tank unit with 1 promotion level. Grants 1 Oil per Turn.",
+   "passive": "+5 Combat Strength and +1 Movement to Atomic and Information era land units within 2 tiles.",
+   "action_requires": [
+    "no military unit"
+   ]
+  }
+ },
+ {
+  "id": "great_person:dwight_eisenhower",
+  "name": "Dwight Eisenhower",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_DWIGHT_EISENHOWER"
+  ],
+  "summary": "Great General, Atomic Era. +5% Production towards military units.",
+  "fields": {
+   "class": "Great General",
+   "era": "Atomic Era",
+   "charges": 1,
+   "action": "+5% Production towards military units.",
+   "passive": "+5 Combat Strength and +1 Movement to Atomic and Information era land units within 2 tiles."
+  }
+ },
+ {
+  "id": "great_person:edgar_allen_poe",
+  "name": "Edgar Allan Poe",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_EDGAR_ALLEN_POE"
+  ],
+  "summary": "Great Writer, Industrial Era. Creates Great Works: The Tell-Tale Heart, The Raven.",
+  "fields": {
+   "class": "Great Writer",
+   "era": "Industrial Era",
+   "action": "Creates Great Works: The Tell-Tale Heart, The Raven.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "The Tell-Tale Heart",
+    "The Raven"
+   ]
+  }
+ },
+ {
+  "id": "great_person:edmonia_lewis",
+  "name": "Edmonia Lewis",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_EDMONIA_LEWIS"
+  ],
+  "summary": "Great Artist, Atomic Era. Creates Great Works: The Death of Cleopatra, Marriage of Hiawatha and Minnehaha, Hagar.",
+  "fields": {
+   "class": "Great Artist",
+   "era": "Atomic Era",
+   "action": "Creates Great Works: The Death of Cleopatra, Marriage of Hiawatha and Minnehaha, Hagar.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "The Death of Cleopatra",
+    "Marriage of Hiawatha and Minnehaha",
+    "Hagar"
+   ]
+  }
+ },
+ {
+  "id": "great_person:el_cid",
+  "name": "El Cid",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_EL_CID"
+  ],
+  "summary": "Great General, Medieval Era. Forms a Corps out of a military land unit.",
+  "fields": {
+   "class": "Great General",
+   "era": "Medieval Era",
+   "charges": 1,
+   "action": "Forms a Corps out of a military land unit.",
+   "passive": "+5 Combat Strength and +1 Movement to Medieval and Renaissance era land units within 2 tiles.",
+   "action_requires": [
+    "military unit domain: Domain land",
+    "unit military formation: Standard military formation"
+   ]
+  }
+ },
+ {
+  "id": "great_person:el_greco",
+  "name": "El Greco",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_EL_GRECO"
+  ],
+  "summary": "Great Artist, Industrial Era. Creates Great Works: Adoration of the Magi, The Assumption of the Virgin, View of Toledo.",
+  "fields": {
+   "class": "Great Artist",
+   "era": "Industrial Era",
+   "action": "Creates Great Works: Adoration of the Magi, The Assumption of the Virgin, View of Toledo.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Adoration of the Magi",
+    "The Assumption of the Virgin",
+    "View of Toledo"
+   ]
+  }
+ },
+ {
+  "id": "great_person:emilie_du_chatelet",
+  "name": "Emilie du Chatelet",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_EMILIE_DU_CHATELET"
+  ],
+  "summary": "Great Scientist, Renaissance Era. Triggers the Eureka moment for 3 random technologies from the Renaissance or Industrial era.",
+  "fields": {
+   "class": "Great Scientist",
+   "era": "Renaissance Era",
+   "charges": 1,
+   "action": "Triggers the Eureka moment for 3 random technologies from the Renaissance or Industrial era.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Campus"
+   ]
+  }
+ },
+ {
+  "id": "great_person:emily_dickinson",
+  "name": "Emily Dickinson",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_EMILY_DICKINSON"
+  ],
+  "summary": "Great Writer, Modern Era. Creates Great Works: A Bird came down, Success is counted sweetest.",
+  "fields": {
+   "class": "Great Writer",
+   "era": "Modern Era",
+   "action": "Creates Great Works: A Bird came down, Success is counted sweetest.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "A Bird came down",
+    "Success is counted sweetest"
+   ]
+  }
+ },
+ {
+  "id": "great_person:erwin_schrodinger",
+  "name": "Erwin Schrödinger",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_ERWIN_SCHRODINGER"
+  ],
+  "summary": "Great Scientist, Atomic Era. Triggers the Eureka moment for 3 random technologies from the Atomic or Information era.",
+  "fields": {
+   "class": "Great Scientist",
+   "era": "Atomic Era",
+   "charges": 1,
+   "action": "Triggers the Eureka moment for 3 random technologies from the Atomic or Information era.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Campus"
+   ]
+  }
+ },
+ {
+  "id": "great_person:estee_lauder",
+  "name": "Estée Lauder",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_ESTEE_LAUDER"
+  ],
+  "summary": "Great Merchant, Information Era. Grants 2 Perfume, a uniquely manufactured Luxury resource which provides +6 Amenities.",
+  "fields": {
+   "class": "Great Merchant",
+   "era": "Information Era",
+   "charges": 1,
+   "action": "Grants 2 Perfume, a uniquely manufactured Luxury resource which provides +6 Amenities.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Commercial Hub"
+   ]
+  }
+ },
+ {
+  "id": "great_person:euclid",
+  "name": "Euclid",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_EUCLID"
+  ],
+  "summary": "Great Scientist, Classical Era. Triggers the Eureka moment for Mathematics and 1 random technology from the Medieval era.",
+  "fields": {
+   "class": "Great Scientist",
+   "era": "Classical Era",
+   "charges": 1,
+   "action": "Triggers the Eureka moment for Mathematics and 1 random technology from the Medieval era.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Campus"
+   ]
+  }
+ },
+ {
+  "id": "great_person:f_scott_fitzgerald",
+  "name": "F. Scott Fitzgerald",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_F_SCOTT_FITZGERALD"
+  ],
+  "summary": "Great Writer, Modern Era. Creates Great Works: This Side of Paradise, The Beautiful and Damned.",
+  "fields": {
+   "class": "Great Writer",
+   "era": "Modern Era",
+   "action": "Creates Great Works: This Side of Paradise, The Beautiful and Damned.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "This Side of Paradise",
+    "The Beautiful and Damned"
+   ]
+  }
+ },
+ {
+  "id": "great_person:ferdinand_magellan",
+  "name": "Ferdinand Magellan",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_FERDINAND_MAGELLAN"
+  ],
+  "summary": "Great Admiral, Renaissance Era. Grants 1 free copy of the Luxury resource on this tile to your Capital city. Gain 300 Gold (on Standard speed).",
+  "fields": {
+   "class": "Great Admiral",
+   "era": "Renaissance Era",
+   "charges": 1,
+   "action": "Grants 1 free copy of the Luxury resource on this tile to your Capital city. Gain 300 Gold (on Standard speed).",
+   "passive": "+5 Combat Strength and +1 Movement to Renaissance and Industrial era naval units within 2 tiles.",
+   "action_requires": [
+    "visible luxury"
+   ]
+  }
+ },
+ {
+  "id": "great_person:filippo_brunelleschi",
+  "name": "Filippo Brunelleschi",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_FILIPPO_BRUNELLESCHI"
+  ],
+  "summary": "Great Engineer, Renaissance Era. Grants 315 Production towards wonder construction.",
+  "fields": {
+   "class": "Great Engineer",
+   "era": "Renaissance Era",
+   "charges": 2,
+   "action": "Grants 315 Production towards wonder construction.",
+   "action_requires": [
+    "owned tile",
+    "incomplete wonder"
+   ]
+  }
+ },
+ {
+  "id": "great_person:francis_drake",
+  "name": "Francis Drake",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_FRANCIS_DRAKE"
+  ],
+  "summary": "Great Admiral, Renaissance Era. Instantly creates a Privateer unit with 1 promotion level. Military units get +50% rewards for plundering sea Trade Routes.",
+  "fields": {
+   "class": "Great Admiral",
+   "era": "Renaissance Era",
+   "charges": 1,
+   "action": "Instantly creates a Privateer unit with 1 promotion level. Military units get +50% rewards for plundering sea Trade Routes.",
+   "passive": "+5 Combat Strength and +1 Movement to Renaissance and Industrial era naval units within 2 tiles.",
+   "action_requires": [
+    "no military unit"
+   ]
+  }
+ },
+ {
+  "id": "great_person:francis_of_assisi",
+  "name": "Francis of Assisi",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_FRANCIS_OF_ASSISI"
+  ],
+  "summary": "Great Prophet, Renaissance Era. Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+  "fields": {
+   "class": "Great Prophet",
+   "era": "Renaissance Era",
+   "action": "Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+   "action_requires": [
+    "owned tile"
+   ]
+  }
+ },
+ {
+  "id": "great_person:franz_liszt",
+  "name": "Franz Liszt",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_FRANZ_LISZT"
+  ],
+  "summary": "Great Musician, Modern Era. Creates Great Works: Transcendental Étude No. 9, Mephisto Waltz No. 1 \"The Dance in the Village Inn\".",
+  "fields": {
+   "class": "Great Musician",
+   "era": "Modern Era",
+   "action": "Creates Great Works: Transcendental Étude No. 9, Mephisto Waltz No. 1 \"The Dance in the Village Inn\".",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Transcendental Étude No. 9",
+    "Mephisto Waltz No. 1 \"The Dance in the Village Inn\""
+   ]
+  }
+ },
+ {
+  "id": "great_person:franz_von_hipper",
+  "name": "Franz von Hipper",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_FRANZ_VON_HIPPER"
+  ],
+  "summary": "Great Admiral, Modern Era. Instantly creates a Battleship unit with 1 promotion level. Grants 1 Coal per Turn.",
+  "fields": {
+   "class": "Great Admiral",
+   "era": "Modern Era",
+   "charges": 1,
+   "action": "Instantly creates a Battleship unit with 1 promotion level. Grants 1 Coal per Turn.",
+   "passive": "+5 Combat Strength and +1 Movement to Modern and Atomic era naval units within 2 tiles.",
+   "action_requires": [
+    "no military unit"
+   ]
+  }
+ },
+ {
+  "id": "great_person:frederic_chopin",
+  "name": "Frederic Chopin",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_FREDERIC_CHOPIN"
+  ],
+  "summary": "Great Musician, Modern Era. Creates Great Works: Nocturne in E flat Major, Valse Brillante Op. 18.",
+  "fields": {
+   "class": "Great Musician",
+   "era": "Modern Era",
+   "action": "Creates Great Works: Nocturne in E flat Major, Valse Brillante Op. 18.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Nocturne in E flat Major",
+    "Valse Brillante Op. 18"
+   ]
+  }
+ },
+ {
+  "id": "great_person:gabriela_mistral",
+  "name": "Gabriela Mistral",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_GABRIELA_MISTRAL"
+  ],
+  "summary": "Great Writer, Information Era. Creates Great Works: Lecturas para mujeres (Books for Women), Sonetos de la Muerte (Sonnets of Death).",
+  "fields": {
+   "class": "Great Writer",
+   "era": "Information Era",
+   "action": "Creates Great Works: Lecturas para mujeres (Books for Women), Sonetos de la Muerte (Sonnets of Death).",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Lecturas para mujeres (Books for Women)",
+    "Sonetos de la Muerte (Sonnets of Death)"
+   ]
+  }
+ },
+ {
+  "id": "great_person:gaius_duilius",
+  "name": "Gaius Duilius",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_GAIUS_DUILIUS"
+  ],
+  "summary": "Great Admiral, Classical Era. Forms a Fleet out of a military naval unit.",
+  "fields": {
+   "class": "Great Admiral",
+   "era": "Classical Era",
+   "charges": 1,
+   "action": "Forms a Fleet out of a military naval unit.",
+   "passive": "+5 Combat Strength and +1 Movement to Classical and Medieval era naval units within 2 tiles.",
+   "action_requires": [
+    "military unit domain: Domain sea",
+    "unit military formation: Standard military formation"
+   ]
+  }
+ },
+ {
+  "id": "great_person:galileo_galilei",
+  "name": "Galileo Galilei",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_GALILEO_GALILEI"
+  ],
+  "summary": "Great Scientist, Renaissance Era. Gain 250 Science (on Standard speed) for each adjacent Mountain tile.",
+  "fields": {
+   "class": "Great Scientist",
+   "era": "Renaissance Era",
+   "charges": 1,
+   "action": "Gain 250 Science (on Standard speed) for each adjacent Mountain tile.",
+   "action_requires": [
+    "adjacent mountain"
+   ]
+  }
+ },
+ {
+  "id": "great_person:gauhar_jaan",
+  "name": "Gauhar Jaan",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_GAUHAR_JAAN"
+  ],
+  "summary": "Great Musician, Information Era. Creates Great Works: Raga Khamaj Jogiya, Raga Bhairavi.",
+  "fields": {
+   "class": "Great Musician",
+   "era": "Information Era",
+   "action": "Creates Great Works: Raga Khamaj Jogiya, Raga Bhairavi.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Raga Khamaj Jogiya",
+    "Raga Bhairavi"
+   ]
+  }
+ },
+ {
+  "id": "great_person:geoffrey_chaucer",
+  "name": "Geoffrey Chaucer",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_GEOFFREY_CHAUCER"
+  ],
+  "summary": "Great Writer, Medieval Era. Creates Great Works: The Canterbury Tales, Troilus and Criseyde.",
+  "fields": {
+   "class": "Great Writer",
+   "era": "Medieval Era",
+   "action": "Creates Great Works: The Canterbury Tales, Troilus and Criseyde.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "The Canterbury Tales",
+    "Troilus and Criseyde"
+   ]
+  }
+ },
+ {
+  "id": "great_person:georgy_zhukov",
+  "name": "Georgy Zhukov",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_GEORGY_ZHUKOV"
+  ],
+  "summary": "Great General, Atomic Era. +50% flanking bonus for all land units.",
+  "fields": {
+   "class": "Great General",
+   "era": "Atomic Era",
+   "charges": 1,
+   "action": "+50% flanking bonus for all land units.",
+   "passive": "+5 Combat Strength and +1 Movement to Atomic and Information era land units within 2 tiles."
+  }
+ },
+ {
+  "id": "great_person:giovanni_de_medici",
+  "name": "Giovanni de' Medici",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_GIOVANNI_DE_MEDICI"
+  ],
+  "summary": "Great Merchant, Renaissance Era. Instantly builds a Bank and Market in this district. The Bank gets 2 Great Work slots, which can hold anything.",
+  "fields": {
+   "class": "Great Merchant",
+   "era": "Renaissance Era",
+   "charges": 1,
+   "action": "Instantly builds a Bank and Market in this district. The Bank gets 2 Great Work slots, which can hold anything.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Commercial Hub"
+   ]
+  }
+ },
+ {
+  "id": "great_person:grace_hopper",
+  "name": "Grace Hopper",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_GRACE_HOPPER"
+  ],
+  "summary": "Great Admiral, Atomic Era. Gain 2 randomly-chosen free technologies.",
+  "fields": {
+   "class": "Great Admiral",
+   "era": "Atomic Era",
+   "charges": 1,
+   "action": "Gain 2 randomly-chosen free technologies.",
+   "passive": "+5 Combat Strength and +1 Movement to Atomic and Information era naval units within 2 tiles."
+  }
+ },
+ {
+  "id": "great_person:gustav_klimt",
+  "name": "Gustav Klimt",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_GUSTAV_KLIMT"
+  ],
+  "summary": "Great Artist, Information Era. Creates Great Works: The Kiss, Avenue in the Park of Schloss Kammer, Farm Garden with Sunflowers.",
+  "fields": {
+   "class": "Great Artist",
+   "era": "Information Era",
+   "action": "Creates Great Works: The Kiss, Avenue in the Park of Schloss Kammer, Farm Garden with Sunflowers.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "The Kiss",
+    "Avenue in the Park of Schloss Kammer",
+    "Farm Garden with Sunflowers"
+   ]
+  }
+ },
+ {
+  "id": "great_person:gustave_eiffel",
+  "name": "Gustave Eiffel",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_GUSTAVE_EIFFEL"
+  ],
+  "summary": "Great Engineer, Industrial Era. Grants 480 Production towards wonder construction.",
+  "fields": {
+   "class": "Great Engineer",
+   "era": "Industrial Era",
+   "charges": 2,
+   "action": "Grants 480 Production towards wonder construction.",
+   "action_requires": [
+    "owned tile",
+    "incomplete wonder"
+   ]
+  }
+ },
+ {
+  "id": "great_person:gustavus_adolphus",
+  "name": "Gustavus Adolphus",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_GUSTAVUS_ADOLPHUS"
+  ],
+  "summary": "Great General, Renaissance Era. Instantly creates a Bombard unit with 1 promotion level.",
+  "fields": {
+   "class": "Great General",
+   "era": "Renaissance Era",
+   "charges": 1,
+   "action": "Instantly creates a Bombard unit with 1 promotion level.",
+   "passive": "+5 Combat Strength and +1 Movement to Renaissance and Industrial era land units within 2 tiles.",
+   "action_requires": [
+    "no military unit"
+   ]
+  }
+ },
+ {
+  "id": "great_person:haji_huud",
+  "name": "Haji Huud",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_HAJI_HUUD"
+  ],
+  "summary": "Great Prophet, Renaissance Era. Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+  "fields": {
+   "class": "Great Prophet",
+   "era": "Renaissance Era",
+   "action": "Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+   "action_requires": [
+    "owned tile"
+   ]
+  }
+ },
+ {
+  "id": "great_person:hannibal_barca",
+  "name": "Hannibal Barca",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_HANNIBAL_BARCA"
+  ],
+  "summary": "Great General, Classical Era. Grants 1 promotion level to a military land unit.",
+  "fields": {
+   "class": "Great General",
+   "era": "Classical Era",
+   "charges": 1,
+   "action": "Grants 1 promotion level to a military land unit.",
+   "passive": "+5 Combat Strength and +1 Movement to Classical and Medieval era land units within 2 tiles.",
+   "action_requires": [
+    "military unit domain: Domain land",
+    "unit can gain experience"
+   ]
+  }
+ },
+ {
+  "id": "great_person:hanno_the_navigator",
+  "name": "Hanno the Navigator",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_HANNO_THE_NAVIGATOR"
+  ],
+  "summary": "Great Admiral, Classical Era. Creates a naval melee unit with +2 Movement.",
+  "fields": {
+   "class": "Great Admiral",
+   "era": "Classical Era",
+   "charges": 1,
+   "action": "Creates a naval melee unit with +2 Movement.",
+   "passive": "+5 Combat Strength and +1 Movement to Classical and Medieval era naval units within 2 tiles.",
+   "action_requires": [
+    "no military unit"
+   ]
+  }
+ },
+ {
+  "id": "great_person:hasegawa_tohaku",
+  "name": "Hasegawa Tōhaku",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_HASEGAWA_TOHAKU"
+  ],
+  "summary": "Great Artist, Industrial Era. Creates Great Works: Pine Trees, Maple Tree, Birds and Flowers.",
+  "fields": {
+   "class": "Great Artist",
+   "era": "Industrial Era",
+   "action": "Creates Great Works: Pine Trees, Maple Tree, Birds and Flowers.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Pine Trees",
+    "Maple Tree",
+    "Birds and Flowers"
+   ]
+  }
+ },
+ {
+  "id": "great_person:helena_rubinstein",
+  "name": "Helena Rubinstein",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_HELENA_RUBINSTEIN"
+  ],
+  "summary": "Great Merchant, Atomic Era. Grants 2 Cosmetics, a uniquely manufactured Luxury resource which provides +4 Amenities.",
+  "fields": {
+   "class": "Great Merchant",
+   "era": "Atomic Era",
+   "charges": 1,
+   "action": "Grants 2 Cosmetics, a uniquely manufactured Luxury resource which provides +4 Amenities.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Commercial Hub"
+   ]
+  }
+ },
+ {
+  "id": "great_person:hg_wells",
+  "name": "H.G. Wells",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_HG_WELLS"
+  ],
+  "summary": "Great Writer, Atomic Era. Creates Great Works: The War of the Worlds, The Time Machine.",
+  "fields": {
+   "class": "Great Writer",
+   "era": "Atomic Era",
+   "action": "Creates Great Works: The War of the Worlds, The Time Machine.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "The War of the Worlds",
+    "The Time Machine"
+   ]
+  }
+ },
+ {
+  "id": "great_person:hieronymus_bosch",
+  "name": "Hieronymus Bosch",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_HIERONYMUS_BOSCH"
+  ],
+  "summary": "Great Artist, Renaissance Era. Creates Great Works: The Garden of Earthly Delights, The Last Judgement, The Haywain Triptych.",
+  "fields": {
+   "class": "Great Artist",
+   "era": "Renaissance Era",
+   "action": "Creates Great Works: The Garden of Earthly Delights, The Last Judgement, The Haywain Triptych.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "The Garden of Earthly Delights",
+    "The Last Judgement",
+    "The Haywain Triptych"
+   ]
+  }
+ },
+ {
+  "id": "great_person:hildegard_of_bingen",
+  "name": "Hildegard of Bingen",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_HILDEGARD_OF_BINGEN"
+  ],
+  "summary": "Great Scientist, Medieval Era. This Holy Site district's Faith adjacency bonus provides Science as well. Gain 100 Faith.",
+  "fields": {
+   "class": "Great Scientist",
+   "era": "Medieval Era",
+   "charges": 1,
+   "action": "This Holy Site district's Faith adjacency bonus provides Science as well. Gain 100 Faith.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Holy Site"
+   ]
+  }
+ },
+ {
+  "id": "great_person:himerios",
+  "name": "Himerios",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_HIMERIOS"
+  ],
+  "summary": "Great Admiral, Medieval Era. Grants 1 promotion level and +25% combat experience to a military naval unit.",
+  "fields": {
+   "class": "Great Admiral",
+   "era": "Medieval Era",
+   "charges": 1,
+   "action": "Grants 1 promotion level and +25% combat experience to a military naval unit.",
+   "passive": "+5 Combat Strength and +1 Movement to Medieval and Renaissance era naval units within 2 tiles.",
+   "action_requires": [
+    "military unit domain: Domain sea",
+    "unit can gain experience"
+   ]
+  }
+ },
+ {
+  "id": "great_person:homer",
+  "name": "Homer",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_HOMER"
+  ],
+  "summary": "Great Writer, Classical Era. Creates Great Works: Iliad, Odyssey.",
+  "fields": {
+   "class": "Great Writer",
+   "era": "Classical Era",
+   "action": "Creates Great Works: Iliad, Odyssey.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Iliad",
+    "Odyssey"
+   ]
+  }
+ },
+ {
+  "id": "great_person:horatio_nelson",
+  "name": "Horatio Nelson",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_HORATIO_NELSON"
+  ],
+  "summary": "Great Admiral, Industrial Era. Instantly builds a Lighthouse and Shipyard in this district. +50% flanking bonus for all naval units.",
+  "fields": {
+   "class": "Great Admiral",
+   "era": "Industrial Era",
+   "charges": 1,
+   "action": "Instantly builds a Lighthouse and Shipyard in this district. +50% flanking bonus for all naval units.",
+   "passive": "+5 Combat Strength and +1 Movement to Industrial and Modern era naval units within 2 tiles.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Harbor"
+   ]
+  }
+ },
+ {
+  "id": "great_person:hypatia",
+  "name": "Hypatia",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_HYPATIA"
+  ],
+  "summary": "Great Scientist, Classical Era. Instantly builds a Library in this district. Libraries provide +1 Science.",
+  "fields": {
+   "class": "Great Scientist",
+   "era": "Classical Era",
+   "charges": 1,
+   "action": "Instantly builds a Library in this district. Libraries provide +1 Science.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Campus"
+   ]
+  }
+ },
+ {
+  "id": "great_person:ibn_fadlan",
+  "name": "Ibn Fadlan",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_IBN_FADLAN"
+  ],
+  "summary": "Great Merchant, Medieval Era. Increases Trade Route capacity by 1. Your Trade Routes to city-states now grant you +2 Faith.",
+  "fields": {
+   "class": "Great Merchant",
+   "era": "Medieval Era",
+   "charges": 1,
+   "action": "Increases Trade Route capacity by 1. Your Trade Routes to city-states now grant you +2 Faith.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Commercial Hub"
+   ]
+  }
+ },
+ {
+  "id": "great_person:ibn_khaldun",
+  "name": "Ibn Khaldun",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_IBN_KHALDUN"
+  ],
+  "summary": "Great Scientist, Renaissance Era. Chosen Campus gains 2 Housing and 1 Amenities. Increases non-Food yield benefits of Happiness in your empire by 40%.",
+  "fields": {
+   "class": "Great Scientist",
+   "era": "Renaissance Era",
+   "charges": 1,
+   "action": "Chosen Campus gains 2 Housing and 1 Amenities. Increases non-Food yield benefits of Happiness in your empire by 40%.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Campus"
+   ]
+  }
+ },
+ {
+  "id": "great_person:imhotep",
+  "name": "Imhotep",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_IMHOTEP"
+  ],
+  "summary": "Great Engineer, Medieval Era. Grants 175 Production towards wonder construction, doubled if the wonder is from the Ancient or Classical Era.",
+  "fields": {
+   "class": "Great Engineer",
+   "era": "Medieval Era",
+   "charges": 2,
+   "action": "Grants 175 Production towards wonder construction, doubled if the wonder is from the Ancient or Classical Era.",
+   "action_requires": [
+    "owned tile",
+    "incomplete wonder"
+   ]
+  }
+ },
+ {
+  "id": "great_person:irenaeus",
+  "name": "Irenaeus",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_IRENAEUS"
+  ],
+  "summary": "Great Prophet, Medieval Era. Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+  "fields": {
+   "class": "Great Prophet",
+   "era": "Medieval Era",
+   "action": "Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+   "action_requires": [
+    "owned tile"
+   ]
+  }
+ },
+ {
+  "id": "great_person:irene_of_athens",
+  "name": "Irene of Athens",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_IRENE_OF_ATHENS"
+  ],
+  "summary": "Great Merchant, Medieval Era. Grant 1 Governor Title or recruit a new Governor.",
+  "fields": {
+   "class": "Great Merchant",
+   "era": "Medieval Era",
+   "charges": 1,
+   "action": "Grant 1 Governor Title or recruit a new Governor.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Commercial Hub"
+   ]
+  }
+ },
+ {
+  "id": "great_person:isaac_newton",
+  "name": "Isaac Newton",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_ISAAC_NEWTON"
+  ],
+  "summary": "Great Scientist, Renaissance Era. Instantly builds a University and Library in this district. Universities provide +2 Science.",
+  "fields": {
+   "class": "Great Scientist",
+   "era": "Renaissance Era",
+   "charges": 1,
+   "action": "Instantly builds a University and Library in this district. Universities provide +2 Science.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Campus"
+   ]
+  }
+ },
+ {
+  "id": "great_person:isidore_of_miletus",
+  "name": "Isidore of Miletus",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_ISIDORE_OF_MILETUS"
+  ],
+  "summary": "Great Engineer, Medieval Era. Grants 215 Production towards wonder construction.",
+  "fields": {
+   "class": "Great Engineer",
+   "era": "Medieval Era",
+   "charges": 2,
+   "action": "Grants 215 Production towards wonder construction.",
+   "action_requires": [
+    "owned tile",
+    "incomplete wonder"
+   ]
+  }
+ },
+ {
+  "id": "great_person:jakob_fugger",
+  "name": "Jakob Fugger",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_JAKOB_FUGGER"
+  ],
+  "summary": "Great Merchant, Renaissance Era. Gain 200 Gold. Gain 2 Envoys.",
+  "fields": {
+   "class": "Great Merchant",
+   "era": "Renaissance Era",
+   "charges": 1,
+   "action": "Gain 200 Gold. Gain 2 Envoys.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Commercial Hub"
+   ]
+  }
+ },
+ {
+  "id": "great_person:james_joyce",
+  "name": "James Joyce",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_JAMES_JOYCE"
+  ],
+  "summary": "Great Writer, Modern Era. Creates Great Works: Ulysses, Dubliners.",
+  "fields": {
+   "class": "Great Writer",
+   "era": "Modern Era",
+   "action": "Creates Great Works: Ulysses, Dubliners.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Ulysses",
+    "Dubliners"
+   ]
+  }
+ },
+ {
+  "id": "great_person:james_of_st_george",
+  "name": "James of St. George",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_JAMES_OF_ST_GEORGE"
+  ],
+  "summary": "Great Engineer, Medieval Era. Instantly builds Ancient and Medieval Walls in this city.",
+  "fields": {
+   "class": "Great Engineer",
+   "era": "Medieval Era",
+   "charges": 3,
+   "action": "Instantly builds Ancient and Medieval Walls in this city.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: City Center",
+    "missing building type: Medieval Walls"
+   ]
+  }
+ },
+ {
+  "id": "great_person:james_watt",
+  "name": "James Watt",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_JAMES_WATT"
+  ],
+  "summary": "Great Engineer, Industrial Era. Instantly builds a Factory and Workshop in this district. Factories provide +2 Production.",
+  "fields": {
+   "class": "Great Engineer",
+   "era": "Industrial Era",
+   "charges": 1,
+   "action": "Instantly builds a Factory and Workshop in this district. Factories provide +2 Production.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Industrial Zone"
+   ]
+  }
+ },
+ {
+  "id": "great_person:james_young",
+  "name": "James Young",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_JAMES_YOUNG"
+  ],
+  "summary": "Great Scientist, Industrial Era. Reveals Oil without the normal technology requirement. Triggers the Eureka moment for 2 random technologies from the Industrial or Modern era.",
+  "fields": {
+   "class": "Great Scientist",
+   "era": "Industrial Era",
+   "charges": 1,
+   "action": "Reveals Oil without the normal technology requirement. Triggers the Eureka moment for 2 random technologies from the Industrial or Modern era.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Campus"
+   ]
+  }
+ },
+ {
+  "id": "great_person:jamsetji_tata",
+  "name": "Jamsetji Tata",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_JAMSETJI_TATA"
+  ],
+  "summary": "Great Merchant, Information Era. Campus districts provide +10 Tourism.",
+  "fields": {
+   "class": "Great Merchant",
+   "era": "Information Era",
+   "charges": 1,
+   "action": "Campus districts provide +10 Tourism.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Campus"
+   ]
+  }
+ },
+ {
+  "id": "great_person:janaki_ammal",
+  "name": "Janaki Ammal",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_JANAKI_AMMAL"
+  ],
+  "summary": "Great Scientist, Atomic Era. Gain 400 Science for each Rainforest tile here or adjacent.",
+  "fields": {
+   "class": "Great Scientist",
+   "era": "Atomic Era",
+   "charges": 1,
+   "action": "Gain 400 Science for each Rainforest tile here or adjacent.",
+   "action_requires": [
+    "on or adjacent feature type: Rainforest"
+   ]
+  }
+ },
+ {
+  "id": "great_person:jane_austen",
+  "name": "Jane Austen",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_JANE_AUSTEN"
+  ],
+  "summary": "Great Writer, Industrial Era. Creates Great Works: Pride and Prejudice, Sense and Sensibility.",
+  "fields": {
+   "class": "Great Writer",
+   "era": "Industrial Era",
+   "action": "Creates Great Works: Pride and Prejudice, Sense and Sensibility.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Pride and Prejudice",
+    "Sense and Sensibility"
+   ]
+  }
+ },
+ {
+  "id": "great_person:jane_drew",
+  "name": "Jane Drew",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_JANE_DREW"
+  ],
+  "summary": "Great Engineer, Atomic Era. +4 Housing for this city. +3 Amenities for this city.",
+  "fields": {
+   "class": "Great Engineer",
+   "era": "Atomic Era",
+   "charges": 1,
+   "action": "+4 Housing for this city. +3 Amenities for this city.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: City Center"
+   ]
+  }
+ },
+ {
+  "id": "great_person:jang_seung_eop",
+  "name": "Jang Seung-eop",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_JANG_SEUNG_EOP"
+  ],
+  "summary": "Great Artist, Modern Era. Creates Great Works: Samin munnyeondo, Rooster, Ssangma inmuldo.",
+  "fields": {
+   "class": "Great Artist",
+   "era": "Modern Era",
+   "action": "Creates Great Works: Samin munnyeondo, Rooster, Ssangma inmuldo.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Samin munnyeondo",
+    "Rooster",
+    "Ssangma inmuldo"
+   ]
+  }
+ },
+ {
+  "id": "great_person:joan_of_arc",
+  "name": "Jeanne d'Arc",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_JOAN_OF_ARC"
+  ],
+  "summary": "Great General, Renaissance Era. Creates a Relic.",
+  "fields": {
+   "class": "Great General",
+   "era": "Renaissance Era",
+   "charges": 1,
+   "action": "Creates a Relic.",
+   "passive": "+5 Combat Strength and +1 Movement to Renaissance and Industrial era land units within 2 tiles.",
+   "action_requires": [
+    "player relic slot"
+   ]
+  }
+ },
+ {
+  "id": "great_person:joaquim_marques_lisboa",
+  "name": "Joaquim Marques Lisboa",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_JOAQUIM_MARQUES_LISBOA"
+  ],
+  "summary": "Great Admiral, Modern Era. Accumulate 25% less war weariness than usual.",
+  "fields": {
+   "class": "Great Admiral",
+   "era": "Modern Era",
+   "charges": 1,
+   "action": "Accumulate 25% less war weariness than usual.",
+   "passive": "+5 Combat Strength and +1 Movement to Modern and Atomic era naval units within 2 tiles."
+  }
+ },
+ {
+  "id": "great_person:johann_sebastian_bach",
+  "name": "Johann Sebastian Bach",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_JOHANN_SEBASTIAN_BACH"
+  ],
+  "summary": "Great Musician, Industrial Era. Creates Great Works: \"Little\" Fugue in G minor, Cello Suite No. 1 in G Major.",
+  "fields": {
+   "class": "Great Musician",
+   "era": "Industrial Era",
+   "action": "Creates Great Works: \"Little\" Fugue in G minor, Cello Suite No. 1 in G Major.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "\"Little\" Fugue in G minor",
+    "Cello Suite No. 1 in G Major"
+   ]
+  }
+ },
+ {
+  "id": "great_person:johann_wolfgang_von_goethe",
+  "name": "Johann Wolfgang von Goethe",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_JOHANN_WOLFGANG_VON_GOETHE"
+  ],
+  "summary": "Great Writer, Industrial Era. Creates Great Works: Faust, The Sorrows of Young Werther.",
+  "fields": {
+   "class": "Great Writer",
+   "era": "Industrial Era",
+   "action": "Creates Great Works: Faust, The Sorrows of Young Werther.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Faust",
+    "The Sorrows of Young Werther"
+   ]
+  }
+ },
+ {
+  "id": "great_person:john_a_roebling",
+  "name": "John Roebling",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_JOHN_A_ROEBLING"
+  ],
+  "summary": "Great Engineer, Atomic Era. +2 Housing for this city. +1 Amenity for this city.",
+  "fields": {
+   "class": "Great Engineer",
+   "era": "Atomic Era",
+   "charges": 2,
+   "action": "+2 Housing for this city. +1 Amenity for this city.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: City Center"
+   ]
+  }
+ },
+ {
+  "id": "great_person:john_jacob_astor",
+  "name": "John Jacob Astor",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_JOHN_JACOB_ASTOR"
+  ],
+  "summary": "Great Merchant, Industrial Era. Gain 500 Gold. Gain 2 Envoys.",
+  "fields": {
+   "class": "Great Merchant",
+   "era": "Industrial Era",
+   "charges": 1,
+   "action": "Gain 500 Gold. Gain 2 Envoys.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Commercial Hub"
+   ]
+  }
+ },
+ {
+  "id": "great_person:john_monash",
+  "name": "John Monash",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_JOHN_MONASH"
+  ],
+  "summary": "Great General, Modern Era. Grants 1 promotion level and +75% combat experience to a military land unit.",
+  "fields": {
+   "class": "Great General",
+   "era": "Modern Era",
+   "charges": 1,
+   "action": "Grants 1 promotion level and +75% combat experience to a military land unit.",
+   "passive": "+5 Combat Strength and +1 Movement to Modern and Atomic era land units within 2 tiles.",
+   "action_requires": [
+    "military unit domain: Domain land",
+    "unit can gain experience"
+   ]
+  }
+ },
+ {
+  "id": "great_person:john_rockefeller",
+  "name": "John Rockefeller",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_JOHN_ROCKEFELLER"
+  ],
+  "summary": "Great Merchant, Modern Era. Grants 3 Oil per Turn. Your Trade Routes gain +2 Gold for each Strategic resource at the destination city.",
+  "fields": {
+   "class": "Great Merchant",
+   "era": "Modern Era",
+   "charges": 1,
+   "action": "Grants 3 Oil per Turn. Your Trade Routes gain +2 Gold for each Strategic resource at the destination city.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Commercial Hub"
+   ]
+  }
+ },
+ {
+  "id": "great_person:john_spilsbury",
+  "name": "John Spilsbury",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_JOHN_SPILSBURY"
+  ],
+  "summary": "Great Merchant, Industrial Era. Grants 1 Toys, a uniquely manufactured Luxury resource which provides +4 Amenities.",
+  "fields": {
+   "class": "Great Merchant",
+   "era": "Industrial Era",
+   "charges": 1,
+   "action": "Grants 1 Toys, a uniquely manufactured Luxury resource which provides +4 Amenities.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Commercial Hub"
+   ]
+  }
+ },
+ {
+  "id": "great_person:john_the_baptist",
+  "name": "John the Baptist",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_JOHN_THE_BAPTIST"
+  ],
+  "summary": "Great Prophet, Classical Era. Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+  "fields": {
+   "class": "Great Prophet",
+   "era": "Classical Era",
+   "action": "Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+   "action_requires": [
+    "owned tile"
+   ]
+  }
+ },
+ {
+  "id": "great_person:joseph_paxton",
+  "name": "Joseph Paxton",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_JOSEPH_PAXTON"
+  ],
+  "summary": "Great Engineer, Information Era. This district's regional buildings reach 3 tiles farther. This district's regional buildings provide +1 Amenity.",
+  "fields": {
+   "class": "Great Engineer",
+   "era": "Information Era",
+   "charges": 1,
+   "action": "This district's regional buildings reach 3 tiles farther. This district's regional buildings provide +1 Amenity.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Entertainment Complex"
+   ]
+  }
+ },
+ {
+  "id": "great_person:juventino_rosas",
+  "name": "Juventino Rosas",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_JUVENTINO_ROSAS"
+  ],
+  "summary": "Great Musician, Atomic Era. Creates Great Works: Sobre las olas, Vals Carmen.",
+  "fields": {
+   "class": "Great Musician",
+   "era": "Atomic Era",
+   "action": "Creates Great Works: Sobre las olas, Vals Carmen.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Sobre las olas",
+    "Vals Carmen"
+   ]
+  }
+ },
+ {
+  "id": "great_person:kamal_ud_din_behzad",
+  "name": "Kamāl ud-Dīn Behzād",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_KAMAL_UD_DIN_BEHZAD"
+  ],
+  "summary": "Great Artist, Renaissance Era. Creates Great Works: Battleground of Timur and Egyptian King, Yusef and Zuleykha, Timur Granting Audience On The Occasion Of His Accession.",
+  "fields": {
+   "class": "Great Artist",
+   "era": "Renaissance Era",
+   "action": "Creates Great Works: Battleground of Timur and Egyptian King, Yusef and Zuleykha, Timur Granting Audience On The Occasion Of His Accession.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Battleground of Timur and Egyptian King",
+    "Yusef and Zuleykha",
+    "Timur Granting Audience On The Occasion Of His Accession"
+   ]
+  }
+ },
+ {
+  "id": "great_person:karel_capek",
+  "name": "Karel Capek",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_KAREL_CAPEK"
+  ],
+  "summary": "Great Writer, Information Era. Creates Great Works: Rossum’s Universal Robots (R.U.R.), War with the Newts.",
+  "fields": {
+   "class": "Great Writer",
+   "era": "Information Era",
+   "action": "Creates Great Works: Rossum’s Universal Robots (R.U.R.), War with the Newts.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Rossum’s Universal Robots (R.U.R.)",
+    "War with the Newts"
+   ]
+  }
+ },
+ {
+  "id": "great_person:katsushika_hokusai",
+  "name": "Katsushika Hokusai",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_KATSUSHIKA_HOKUSAI"
+  ],
+  "summary": "Great Artist, Modern Era. Creates Great Works: The Great Wave off Kanagawa, Lake Suwa in Shinano Province, Fine Wind, Clear Morning.",
+  "fields": {
+   "class": "Great Artist",
+   "era": "Modern Era",
+   "action": "Creates Great Works: The Great Wave off Kanagawa, Lake Suwa in Shinano Province, Fine Wind, Clear Morning.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "The Great Wave off Kanagawa",
+    "Lake Suwa in Shinano Province",
+    "Fine Wind, Clear Morning"
+   ]
+  }
+ },
+ {
+  "id": "great_person:kenzo_tange",
+  "name": "Kenzo Tange",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_KENZO_TANGE"
+  ],
+  "summary": "Great Engineer, Information Era. Grants Tourism in each of this city's Districts equal to its adjacency bonus (halved for Gold).",
+  "fields": {
+   "class": "Great Engineer",
+   "era": "Information Era",
+   "charges": 1,
+   "action": "Grants Tourism in each of this city's Districts equal to its adjacency bonus (halved for Gold).",
+   "action_requires": [
+    "owned tile"
+   ]
+  }
+ },
+ {
+  "id": "great_person:laozi",
+  "name": "Laozi",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_LAOZI"
+  ],
+  "summary": "Great Prophet, Classical Era. Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+  "fields": {
+   "class": "Great Prophet",
+   "era": "Classical Era",
+   "action": "Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+   "action_requires": [
+    "owned tile"
+   ]
+  }
+ },
+ {
+  "id": "great_person:laskarina_bouboulina",
+  "name": "Laskarina Bouboulina",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_LASKARINA_BOUBOULINA"
+  ],
+  "summary": "Great Admiral, Industrial Era. Grants 1 promotion level and +50% combat experience to a military naval unit.",
+  "fields": {
+   "class": "Great Admiral",
+   "era": "Industrial Era",
+   "charges": 1,
+   "action": "Grants 1 promotion level and +50% combat experience to a military naval unit.",
+   "passive": "+5 Combat Strength and +1 Movement to Industrial and Modern era naval units within 2 tiles.",
+   "action_requires": [
+    "military unit domain: Domain sea",
+    "unit can gain experience"
+   ]
+  }
+ },
+ {
+  "id": "great_person:leif_erikson",
+  "name": "Leif Erikson",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_LEIF_ERIKSON"
+  ],
+  "summary": "Great Admiral, Medieval Era. +1 sight range for all naval units. Allows all naval units to move over ocean tiles without the normal technology requirement.",
+  "fields": {
+   "class": "Great Admiral",
+   "era": "Medieval Era",
+   "charges": 1,
+   "action": "+1 sight range for all naval units. Allows all naval units to move over ocean tiles without the normal technology requirement.",
+   "passive": "+5 Combat Strength and +1 Movement to Medieval and Renaissance era naval units within 2 tiles."
+  }
+ },
+ {
+  "id": "great_person:leo_tolstoy",
+  "name": "Leo Tolstoy",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_LEO_TOLSTOY"
+  ],
+  "summary": "Great Writer, Modern Era. Creates Great Works: War and Peace, Anna Karenina.",
+  "fields": {
+   "class": "Great Writer",
+   "era": "Modern Era",
+   "action": "Creates Great Works: War and Peace, Anna Karenina.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "War and Peace",
+    "Anna Karenina"
+   ]
+  }
+ },
+ {
+  "id": "great_person:leonardo_da_vinci",
+  "name": "Leonardo da Vinci",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_LEONARDO_DA_VINCI"
+  ],
+  "summary": "Great Engineer, Renaissance Era. Workshops provide +3 Culture. Triggers the Eureka moment for 1 random technology from the Modern era.",
+  "fields": {
+   "class": "Great Engineer",
+   "era": "Renaissance Era",
+   "charges": 1,
+   "action": "Workshops provide +3 Culture. Triggers the Eureka moment for 1 random technology from the Modern era.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Industrial Zone"
+   ]
+  }
+ },
+ {
+  "id": "great_person:levi_strauss",
+  "name": "Levi Strauss",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_LEVI_STRAUSS"
+  ],
+  "summary": "Great Merchant, Atomic Era. Grants 2 Jeans, a uniquely manufactured Luxury resource which provides +4 Amenities.",
+  "fields": {
+   "class": "Great Merchant",
+   "era": "Atomic Era",
+   "charges": 1,
+   "action": "Grants 2 Jeans, a uniquely manufactured Luxury resource which provides +4 Amenities.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Commercial Hub"
+   ]
+  }
+ },
+ {
+  "id": "great_person:li_bai",
+  "name": "Li Bai",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_LI_BAI"
+  ],
+  "summary": "Great Writer, Medieval Era. Creates Great Works: Drinking Alone by Moonlight, In the Mountains on a Summer Day.",
+  "fields": {
+   "class": "Great Writer",
+   "era": "Medieval Era",
+   "action": "Creates Great Works: Drinking Alone by Moonlight, In the Mountains on a Summer Day.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Drinking Alone by Moonlight",
+    "In the Mountains on a Summer Day"
+   ]
+  }
+ },
+ {
+  "id": "great_person:liliuokalani",
+  "name": "Lili'uokalani",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_LILIUOKALANI"
+  ],
+  "summary": "Great Musician, Atomic Era. Creates Great Works: Lili’uokalani’s Prayer, Sanoe.",
+  "fields": {
+   "class": "Great Musician",
+   "era": "Atomic Era",
+   "action": "Creates Great Works: Lili’uokalani’s Prayer, Sanoe.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Lili’uokalani’s Prayer",
+    "Sanoe"
+   ]
+  }
+ },
+ {
+  "id": "great_person:liu_tianhua",
+  "name": "Liu Tianhua",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_LIU_TIANHUA"
+  ],
+  "summary": "Great Musician, Modern Era. Creates Great Works: Liáng Xiāo, Kong Shan Niao Yu.",
+  "fields": {
+   "class": "Great Musician",
+   "era": "Modern Era",
+   "action": "Creates Great Works: Liáng Xiāo, Kong Shan Niao Yu.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Liáng Xiāo",
+    "Kong Shan Niao Yu"
+   ]
+  }
+ },
+ {
+  "id": "great_person:ludwig_van_beethoven",
+  "name": "Ludwig van Beethoven",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_LUDWIG_VAN_BEETHOVEN"
+  ],
+  "summary": "Great Musician, Industrial Era. Creates Great Works: Ode to Joy (Symphony #9), Symphony #3 (Eroica Symphony) Mvt. 1.",
+  "fields": {
+   "class": "Great Musician",
+   "era": "Industrial Era",
+   "action": "Creates Great Works: Ode to Joy (Symphony #9), Symphony #3 (Eroica Symphony) Mvt. 1.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Ode to Joy (Symphony #9)",
+    "Symphony #3 (Eroica Symphony) Mvt. 1"
+   ]
+  }
+ },
+ {
+  "id": "great_person:madhva_acharya",
+  "name": "Madhva Acharya",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_MADHVA_ACHARYA"
+  ],
+  "summary": "Great Prophet, Renaissance Era. Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+  "fields": {
+   "class": "Great Prophet",
+   "era": "Renaissance Era",
+   "action": "Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+   "action_requires": [
+    "owned tile"
+   ]
+  }
+ },
+ {
+  "id": "great_person:marco_polo",
+  "name": "Marco Polo",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_MARCO_POLO"
+  ],
+  "summary": "Great Merchant, Medieval Era. Grants a free Trader unit in this city, and increases Trade Route capacity by 1. Foreign Trade Routes to this city provide +2 Gold to both cities.",
+  "fields": {
+   "class": "Great Merchant",
+   "era": "Medieval Era",
+   "charges": 1,
+   "action": "Grants a free Trader unit in this city, and increases Trade Route capacity by 1. Foreign Trade Routes to this city provide +2 Gold to both cities.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Commercial Hub"
+   ]
+  }
+ },
+ {
+  "id": "great_person:marcus_licinius_crassus",
+  "name": "Marcus Licinius Crassus",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_MARCUS_LICINIUS_CRASSUS"
+  ],
+  "summary": "Great Merchant, Classical Era. Your nearest city annexes this tile into its territory. Gain 60 Gold.",
+  "fields": {
+   "class": "Great Merchant",
+   "era": "Classical Era",
+   "charges": 3,
+   "action": "Your nearest city annexes this tile into its territory. Gain 60 Gold.",
+   "action_requires": [
+    "unowned tile",
+    "adjacent owned tile"
+   ]
+  }
+ },
+ {
+  "id": "great_person:margaret_cavendish",
+  "name": "Margaret Cavendish",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_MARGARET_CAVENDISH"
+  ],
+  "summary": "Great Writer, Renaissance Era. Creates Great Works: The Blazing World, Observations upon Experimental Philosophy.",
+  "fields": {
+   "class": "Great Writer",
+   "era": "Renaissance Era",
+   "action": "Creates Great Works: The Blazing World, Observations upon Experimental Philosophy.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "The Blazing World",
+    "Observations upon Experimental Philosophy"
+   ]
+  }
+ },
+ {
+  "id": "great_person:margaret_mead",
+  "name": "Margaret Mead",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_MARGARET_MEAD"
+  ],
+  "summary": "Great Scientist, Atomic Era. Grants 1000 Science and Culture (on Standard speed).",
+  "fields": {
+   "class": "Great Scientist",
+   "era": "Atomic Era",
+   "charges": 1,
+   "action": "Grants 1000 Science and Culture (on Standard speed).",
+   "action_requires": [
+    "completed district type: Campus",
+    "non hostile territory"
+   ]
+  }
+ },
+ {
+  "id": "great_person:marie_anne_collot",
+  "name": "Marie-Anne Collot",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_MARIE_ANNE_COLLOT"
+  ],
+  "summary": "Great Artist, Atomic Era. Creates Great Works: Portrait of Pierre-Étienne Falconet, Portrait of Catherine II, Portrait of Marie Cathcart.",
+  "fields": {
+   "class": "Great Artist",
+   "era": "Atomic Era",
+   "action": "Creates Great Works: Portrait of Pierre-Étienne Falconet, Portrait of Catherine II, Portrait of Marie Cathcart.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Portrait of Pierre-Étienne Falconet",
+    "Portrait of Catherine II",
+    "Portrait of Marie Cathcart"
+   ]
+  }
+ },
+ {
+  "id": "great_person:marie_catherine_d_aulnoy",
+  "name": "Marie-Catherine d'Aulnoy",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_MARIE_CATHERINE_D_AULNOY"
+  ],
+  "summary": "Great Writer, Renaissance Era. Creates Great Works: Fair Goldilocks, The Dolphin.",
+  "fields": {
+   "class": "Great Writer",
+   "era": "Renaissance Era",
+   "action": "Creates Great Works: Fair Goldilocks, The Dolphin.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Fair Goldilocks",
+    "The Dolphin"
+   ]
+  }
+ },
+ {
+  "id": "great_person:marina_raskova",
+  "name": "Marina Raskova",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_MARINA_RASKOVA"
+  ],
+  "summary": "Great General, Modern Era. District in this tile gains +1 air unit slots.",
+  "fields": {
+   "class": "Great General",
+   "era": "Modern Era",
+   "charges": 1,
+   "action": "District in this tile gains +1 air unit slots.",
+   "passive": "+5 Combat Strength and +1 Movement to Modern and Atomic era land units within 2 tiles.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Aerodrome"
+   ]
+  }
+ },
+ {
+  "id": "great_person:mark_twain",
+  "name": "Mark Twain",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_MARK_TWAIN"
+  ],
+  "summary": "Great Writer, Modern Era. Creates Great Works: Adventures of Huckleberry Finn, The Adventures of Tom Sawyer.",
+  "fields": {
+   "class": "Great Writer",
+   "era": "Modern Era",
+   "action": "Creates Great Works: Adventures of Huckleberry Finn, The Adventures of Tom Sawyer.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Adventures of Huckleberry Finn",
+    "The Adventures of Tom Sawyer"
+   ]
+  }
+ },
+ {
+  "id": "great_person:martin_luther",
+  "name": "Martin Luther",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_MARTIN_LUTHER"
+  ],
+  "summary": "Great Prophet, Renaissance Era. Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+  "fields": {
+   "class": "Great Prophet",
+   "era": "Renaissance Era",
+   "action": "Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+   "action_requires": [
+    "owned tile"
+   ]
+  }
+ },
+ {
+  "id": "great_person:mary_cassatt",
+  "name": "Mary Cassatt",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_MARY_CASSATT"
+  ],
+  "summary": "Great Artist, Information Era. Creates Great Works: Lydia Leaning on Her Arms, The Child's Bath, The Cup of Tea.",
+  "fields": {
+   "class": "Great Artist",
+   "era": "Information Era",
+   "action": "Creates Great Works: Lydia Leaning on Her Arms, The Child's Bath, The Cup of Tea.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Lydia Leaning on Her Arms",
+    "The Child's Bath",
+    "The Cup of Tea"
+   ]
+  }
+ },
+ {
+  "id": "great_person:mary_katherine_goddard",
+  "name": "Mary Katherine Goddard",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_MARY_KATHERINE_GODDARD"
+  ],
+  "summary": "Great Merchant, Modern Era. +1 level of diplomatic visibility with all other civilizations.",
+  "fields": {
+   "class": "Great Merchant",
+   "era": "Modern Era",
+   "charges": 1,
+   "action": "+1 level of diplomatic visibility with all other civilizations.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Commercial Hub"
+   ]
+  }
+ },
+ {
+  "id": "great_person:mary_leakey",
+  "name": "Mary Leakey",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_MARY_LEAKEY"
+  ],
+  "summary": "Great Scientist, Atomic Era. Artifacts in all your cities generate 300% of their normal Tourism. Gain 350 Science for every Artifact in this city.",
+  "fields": {
+   "class": "Great Scientist",
+   "era": "Atomic Era",
+   "charges": 1,
+   "action": "Artifacts in all your cities generate 300% of their normal Tourism. Gain 350 Science for every Artifact in this city.",
+   "action_requires": [
+    "owned tile",
+    "city great work object type: Greatworkobject artifact",
+    "completed district type: Theater Square"
+   ]
+  }
+ },
+ {
+  "id": "great_person:mary_shelley",
+  "name": "Mary Shelley",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_MARY_SHELLEY"
+  ],
+  "summary": "Great Writer, Industrial Era. Creates Great Works: Frankenstein, The Last Man.",
+  "fields": {
+   "class": "Great Writer",
+   "era": "Industrial Era",
+   "action": "Creates Great Works: Frankenstein, The Last Man.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Frankenstein",
+    "The Last Man"
+   ]
+  }
+ },
+ {
+  "id": "great_person:masaru_ibuka",
+  "name": "Masaru Ibuka",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_MASARU_IBUKA"
+  ],
+  "summary": "Great Merchant, Information Era. Industrial Zone districts provide +10 Tourism.",
+  "fields": {
+   "class": "Great Merchant",
+   "era": "Information Era",
+   "charges": 1,
+   "action": "Industrial Zone districts provide +10 Tourism.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Industrial Zone"
+   ]
+  }
+ },
+ {
+  "id": "great_person:matthew_perry",
+  "name": "Matthew Perry",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_MATTHEW_PERRY"
+  ],
+  "summary": "Great Admiral, Modern Era. Grants enough Envoys to become Suzerain at this city-state. Then removes all other players' Envoys.",
+  "fields": {
+   "class": "Great Admiral",
+   "era": "Modern Era",
+   "charges": 1,
+   "action": "Grants enough Envoys to become Suzerain at this city-state. Then removes all other players' Envoys.",
+   "passive": "+5 Combat Strength and +1 Movement to Modern and Atomic era naval units within 2 tiles. This Great Person ignores closed borders.",
+   "action_requires": [
+    "city state territory"
+   ]
+  }
+ },
+ {
+  "id": "great_person:melitta_bentz",
+  "name": "Melitta Bentz",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_MELITTA_BENTZ"
+  ],
+  "summary": "Great Merchant, Atomic Era. +25% Tourism rate towards other civilizations you have a Trade Route to. Increases Trade Route capacity by 1.",
+  "fields": {
+   "class": "Great Merchant",
+   "era": "Atomic Era",
+   "charges": 1,
+   "action": "+25% Tourism rate towards other civilizations you have a Trade Route to. Increases Trade Route capacity by 1.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Commercial Hub"
+   ]
+  }
+ },
+ {
+  "id": "great_person:michelangelo",
+  "name": "Michelangelo",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_MICHELANGELO"
+  ],
+  "summary": "Great Artist, Renaissance Era. Creates Great Works: Sistine Chapel Ceiling, David, Pietà.",
+  "fields": {
+   "class": "Great Artist",
+   "era": "Renaissance Era",
+   "action": "Creates Great Works: Sistine Chapel Ceiling, David, Pietà.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Sistine Chapel Ceiling",
+    "David",
+    "Pietà"
+   ]
+  }
+ },
+ {
+  "id": "great_person:miguel_de_cervantes",
+  "name": "Miguel de Cervantes",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_MIGUEL_DE_CERVANTES"
+  ],
+  "summary": "Great Writer, Renaissance Era. Creates Great Works: Don Quixote, Novelas Ejemplares (Exemplary Novels).",
+  "fields": {
+   "class": "Great Writer",
+   "era": "Renaissance Era",
+   "action": "Creates Great Works: Don Quixote, Novelas Ejemplares (Exemplary Novels).",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Don Quixote",
+    "Novelas Ejemplares (Exemplary Novels)"
+   ]
+  }
+ },
+ {
+  "id": "great_person:mimar_sinan",
+  "name": "Mimar Sinan",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_MIMAR_SINAN"
+  ],
+  "summary": "Great Engineer, Renaissance Era. Culture Bomb adjacent tiles when completing an Industrial Zone in any city.",
+  "fields": {
+   "class": "Great Engineer",
+   "era": "Renaissance Era",
+   "charges": 1,
+   "action": "Culture Bomb adjacent tiles when completing an Industrial Zone in any city.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: City Center"
+   ]
+  }
+ },
+ {
+  "id": "great_person:murasaki_shikibu",
+  "name": "Murasaki Shikibu",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_MURASAKI_SHIKIBU"
+  ],
+  "summary": "Great Writer, Medieval Era. Creates Great Works: The Diary of Lady Murasaki, The Tale of Genji.",
+  "fields": {
+   "class": "Great Writer",
+   "era": "Medieval Era",
+   "action": "Creates Great Works: The Diary of Lady Murasaki, The Tale of Genji.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "The Diary of Lady Murasaki",
+    "The Tale of Genji"
+   ]
+  }
+ },
+ {
+  "id": "great_person:mykola_leontovych",
+  "name": "Mykola Leontovych",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_MYKOLA_LEONTOVYCH"
+  ],
+  "summary": "Great Musician, Information Era. Creates Great Works: Carol of the Bells, Prelude for Choir.",
+  "fields": {
+   "class": "Great Musician",
+   "era": "Information Era",
+   "action": "Creates Great Works: Carol of the Bells, Prelude for Choir.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Carol of the Bells",
+    "Prelude for Choir"
+   ]
+  }
+ },
+ {
+  "id": "great_person:napoleon_bonaparte",
+  "name": "Napoleon Bonaparte",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_NAPOLEON_BONAPARTE"
+  ],
+  "summary": "Great General, Industrial Era. Forms an Army out of a military land unit.",
+  "fields": {
+   "class": "Great General",
+   "era": "Industrial Era",
+   "charges": 1,
+   "action": "Forms an Army out of a military land unit.",
+   "passive": "+5 Combat Strength and +1 Movement to Industrial and Modern era land units within 2 tiles.",
+   "action_requires": [
+    "military unit domain: Domain land",
+    "unit military formation: Standard military formation"
+   ]
+  }
+ },
+ {
+  "id": "great_person:niccolo_machiavelli",
+  "name": "Niccolò Machiavelli",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_NICCOLO_MACHIAVELLI"
+  ],
+  "summary": "Great Writer, Renaissance Era. Creates Great Works: Discourses on Livy, The Prince.",
+  "fields": {
+   "class": "Great Writer",
+   "era": "Renaissance Era",
+   "action": "Creates Great Works: Discourses on Livy, The Prince.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Discourses on Livy",
+    "The Prince"
+   ]
+  }
+ },
+ {
+  "id": "great_person:nikola_tesla",
+  "name": "Nikola Tesla",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_NIKOLA_TESLA"
+  ],
+  "summary": "Great Engineer, Modern Era. This district's regional buildings reach 3 tiles farther. This district's regional buildings provide +2 Production.",
+  "fields": {
+   "class": "Great Engineer",
+   "era": "Modern Era",
+   "charges": 1,
+   "action": "This district's regional buildings reach 3 tiles farther. This district's regional buildings provide +2 Production.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Industrial Zone"
+   ]
+  }
+ },
+ {
+  "id": "great_person:o_no_yasumaro",
+  "name": "O no Yasumaro",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_O_NO_YASUMARO"
+  ],
+  "summary": "Great Prophet, Medieval Era. Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+  "fields": {
+   "class": "Great Prophet",
+   "era": "Medieval Era",
+   "action": "Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+   "action_requires": [
+    "owned tile"
+   ]
+  }
+ },
+ {
+  "id": "great_person:omar_khayyam",
+  "name": "Omar Khayyam",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_OMAR_KHAYYAM"
+  ],
+  "summary": "Great Scientist, Medieval Era. Triggers the Eureka moment for 2 random technologies and the Inspiration moment for 1 random civic from the Medieval or Renaissance era.",
+  "fields": {
+   "class": "Great Scientist",
+   "era": "Medieval Era",
+   "charges": 1,
+   "action": "Triggers the Eureka moment for 2 random technologies and the Inspiration moment for 1 random civic from the Medieval or Renaissance era.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Campus"
+   ]
+  }
+ },
+ {
+  "id": "great_person:ovid",
+  "name": "Ovid",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_OVID"
+  ],
+  "summary": "Great Writer, Classical Era. Creates Great Works: Metamorphoses, Heroides.",
+  "fields": {
+   "class": "Great Writer",
+   "era": "Classical Era",
+   "action": "Creates Great Works: Metamorphoses, Heroides.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Metamorphoses",
+    "Heroides"
+   ]
+  }
+ },
+ {
+  "id": "great_person:peter_ilyich_tchaikovsky",
+  "name": "Peter Ilyich Tchaikovsky",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_PETER_ILYICH_TCHAIKOVSKY"
+  ],
+  "summary": "Great Musician, Modern Era. Creates Great Works: Romeo and Juliet Fantasy Overture, Dance of the Little Swans.",
+  "fields": {
+   "class": "Great Musician",
+   "era": "Modern Era",
+   "action": "Creates Great Works: Romeo and Juliet Fantasy Overture, Dance of the Little Swans.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Romeo and Juliet Fantasy Overture",
+    "Dance of the Little Swans"
+   ]
+  }
+ },
+ {
+  "id": "great_person:piero_de_bardi",
+  "name": "Piero de' Bardi",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_PIERO_DE_BARDI"
+  ],
+  "summary": "Great Merchant, Medieval Era. Gain 200 Gold. Gain 1 Envoy.",
+  "fields": {
+   "class": "Great Merchant",
+   "era": "Medieval Era",
+   "charges": 1,
+   "action": "Gain 200 Gold. Gain 1 Envoy.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Commercial Hub"
+   ]
+  }
+ },
+ {
+  "id": "great_person:qiu_ying",
+  "name": "Qiu Ying",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_QIU_YING"
+  ],
+  "summary": "Great Artist, Industrial Era. Creates Great Works: Spring Morning in the Han Palace, Fishermen in Reclusion Among the Lotus Stream, Red Cliff.",
+  "fields": {
+   "class": "Great Artist",
+   "era": "Industrial Era",
+   "action": "Creates Great Works: Spring Morning in the Han Palace, Fishermen in Reclusion Among the Lotus Stream, Red Cliff.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Spring Morning in the Han Palace",
+    "Fishermen in Reclusion Among the Lotus Stream",
+    "Red Cliff"
+   ]
+  }
+ },
+ {
+  "id": "great_person:qu_yuan",
+  "name": "Qu Yuan",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_QU_YUAN"
+  ],
+  "summary": "Great Writer, Classical Era. Creates Great Works: Chu Ci (Songs of Chu), Lament for Ying.",
+  "fields": {
+   "class": "Great Writer",
+   "era": "Classical Era",
+   "action": "Creates Great Works: Chu Ci (Songs of Chu), Lament for Ying.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Chu Ci (Songs of Chu)",
+    "Lament for Ying"
+   ]
+  }
+ },
+ {
+  "id": "great_person:rabindranath_tagore",
+  "name": "Rabindranath Tagore",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_RABINDRANATH_TAGORE"
+  ],
+  "summary": "Great Writer, Atomic Era. Creates Great Works: The Home and the World, The Gardener.",
+  "fields": {
+   "class": "Great Writer",
+   "era": "Atomic Era",
+   "action": "Creates Great Works: The Home and the World, The Gardener.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "The Home and the World",
+    "The Gardener"
+   ]
+  }
+ },
+ {
+  "id": "great_person:raja_todar_mal",
+  "name": "Raja Todar Mal",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_RAJA_TODAR_MAL"
+  ],
+  "summary": "Great Merchant, Renaissance Era. Gain 1 Envoy. Your Trade Routes to your own cities gain +0.5 Gold for each specialty district at the destination.",
+  "fields": {
+   "class": "Great Merchant",
+   "era": "Renaissance Era",
+   "charges": 1,
+   "action": "Gain 1 Envoy. Your Trade Routes to your own cities gain +0.5 Gold for each specialty district at the destination.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Commercial Hub"
+   ]
+  }
+ },
+ {
+  "id": "great_person:rajendra_chola",
+  "name": "Rajendra Chola",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_RAJENDRA_CHOLA"
+  ],
+  "summary": "Great Admiral, Medieval Era. +3 Combat Strength for all naval units.",
+  "fields": {
+   "class": "Great Admiral",
+   "era": "Medieval Era",
+   "charges": 1,
+   "action": "+3 Combat Strength for all naval units.",
+   "passive": "+5 Combat Strength and +1 Movement to Medieval and Renaissance era naval units within 2 tiles."
+  }
+ },
+ {
+  "id": "great_person:rani_lakshmibai",
+  "name": "Rani Lakshmibai",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_RANI_LAKSHMIBAI"
+  ],
+  "summary": "Great General, Industrial Era. Instantly creates a Cavalry unit with 1 promotion level.",
+  "fields": {
+   "class": "Great General",
+   "era": "Industrial Era",
+   "charges": 1,
+   "action": "Instantly creates a Cavalry unit with 1 promotion level.",
+   "passive": "+5 Combat Strength and +1 Movement to Industrial and Modern era land units within 2 tiles.",
+   "action_requires": [
+    "no military unit"
+   ]
+  }
+ },
+ {
+  "id": "great_person:rembrandt_van_rijn",
+  "name": "Rembrandt van Rijn",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_REMBRANDT_VAN_RIJN"
+  ],
+  "summary": "Great Artist, Industrial Era. Creates Great Works: Andries de Graeff, Agatha Bas, Abraham and Isaac.",
+  "fields": {
+   "class": "Great Artist",
+   "era": "Industrial Era",
+   "action": "Creates Great Works: Andries de Graeff, Agatha Bas, Abraham and Isaac.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Andries de Graeff",
+    "Agatha Bas",
+    "Abraham and Isaac"
+   ]
+  }
+ },
+ {
+  "id": "great_person:robert_goddard",
+  "name": "Robert Goddard",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_ROBERT_GODDARD"
+  ],
+  "summary": "Great Engineer, Modern Era. +20% Production towards Space Race projects. Triggers the Eureka moment for the Rocketry technology.",
+  "fields": {
+   "class": "Great Engineer",
+   "era": "Modern Era",
+   "charges": 1,
+   "action": "+20% Production towards Space Race projects. Triggers the Eureka moment for the Rocketry technology.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Industrial Zone"
+   ]
+  }
+ },
+ {
+  "id": "great_person:rumi",
+  "name": "Rumi",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_RUMI"
+  ],
+  "summary": "Great Writer, Medieval Era. Creates Great Works: Divani Shamsi Tabriz, Masnavi.",
+  "fields": {
+   "class": "Great Writer",
+   "era": "Medieval Era",
+   "action": "Creates Great Works: Divani Shamsi Tabriz, Masnavi.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Divani Shamsi Tabriz",
+    "Masnavi"
+   ]
+  }
+ },
+ {
+  "id": "great_person:samori_ture",
+  "name": "Samori Touré",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_SAMORI_TURE"
+  ],
+  "summary": "Great General, Modern Era. Instantly creates a Spec Ops unit with 1 promotion level.",
+  "fields": {
+   "class": "Great General",
+   "era": "Modern Era",
+   "charges": 1,
+   "action": "Instantly creates a Spec Ops unit with 1 promotion level.",
+   "passive": "+5 Combat Strength and +1 Movement to Modern and Atomic era land units within 2 tiles.",
+   "action_requires": [
+    "no military unit"
+   ]
+  }
+ },
+ {
+  "id": "great_person:santa_cruz",
+  "name": "Santa Cruz",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_SANTA_CRUZ"
+  ],
+  "summary": "Great Admiral, Renaissance Era. Forms an Armada out of a military naval unit.",
+  "fields": {
+   "class": "Great Admiral",
+   "era": "Renaissance Era",
+   "charges": 1,
+   "action": "Forms an Armada out of a military naval unit.",
+   "passive": "+5 Combat Strength and +1 Movement to Renaissance and Industrial era naval units within 2 tiles.",
+   "action_requires": [
+    "military unit domain: Domain sea",
+    "unit military formation: Standard military formation"
+   ]
+  }
+ },
+ {
+  "id": "great_person:sarah_breedlove",
+  "name": "Sarah Breedlove",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_SARAH_BREEDLOVE"
+  ],
+  "summary": "Great Merchant, Modern Era. +25% Tourism rate towards other civilizations you have a Trade Route to.",
+  "fields": {
+   "class": "Great Merchant",
+   "era": "Modern Era",
+   "charges": 1,
+   "action": "+25% Tourism rate towards other civilizations you have a Trade Route to.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Commercial Hub"
+   ]
+  }
+ },
+ {
+  "id": "great_person:scott_joplin",
+  "name": "Scott Joplin",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_SCOTT_JOPLIN"
+  ],
+  "summary": "Great Musician, Modern Era. Creates Great Works: The Entertainer, Maple Leaf Rag, The Easy Winners.",
+  "fields": {
+   "class": "Great Musician",
+   "era": "Modern Era",
+   "action": "Creates Great Works: The Entertainer, Maple Leaf Rag, The Easy Winners.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "The Entertainer",
+    "Maple Leaf Rag",
+    "The Easy Winners"
+   ]
+  }
+ },
+ {
+  "id": "great_person:sergei_korolev",
+  "name": "Sergei Korolev",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_SERGEI_KOROLEV"
+  ],
+  "summary": "Great Engineer, Atomic Era. Grants 1500 Production towards Space Race project construction.",
+  "fields": {
+   "class": "Great Engineer",
+   "era": "Atomic Era",
+   "charges": 1,
+   "action": "Grants 1500 Production towards Space Race project construction.",
+   "action_requires": [
+    "owned tile",
+    "incomplete space race project",
+    "completed district type: Spaceport"
+   ]
+  }
+ },
+ {
+  "id": "great_person:sergey_gorshkov",
+  "name": "Sergei Gorshkov",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_SERGEY_GORSHKOV"
+  ],
+  "summary": "Great Admiral, Atomic Era. Grants 1 promotion level and +100% combat experience to a military naval unit.",
+  "fields": {
+   "class": "Great Admiral",
+   "era": "Atomic Era",
+   "charges": 1,
+   "action": "Grants 1 promotion level and +100% combat experience to a military naval unit.",
+   "passive": "+5 Combat Strength and +1 Movement to Atomic and Information era naval units within 2 tiles.",
+   "action_requires": [
+    "military unit domain: Domain sea",
+    "unit can gain experience"
+   ]
+  }
+ },
+ {
+  "id": "great_person:shah_jahan",
+  "name": "Shah Jahān",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_SHAH_JAHAN"
+  ],
+  "summary": "Great Engineer, Modern Era. Grants Production towards wonder construction, capped at half of your current treasury. Then reduces your Gold by twice the amount of purchased Production.",
+  "fields": {
+   "class": "Great Engineer",
+   "era": "Modern Era",
+   "charges": 1,
+   "action": "Grants Production towards wonder construction, capped at half of your current treasury. Then reduces your Gold by twice the amount of purchased Production.",
+   "action_requires": [
+    "owned tile",
+    "incomplete wonder"
+   ]
+  }
+ },
+ {
+  "id": "great_person:siddhartha_gautama",
+  "name": "Siddhartha Gautama",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_SIDDHARTHA_GAUTAMA"
+  ],
+  "summary": "Great Prophet, Classical Era. Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+  "fields": {
+   "class": "Great Prophet",
+   "era": "Classical Era",
+   "action": "Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+   "action_requires": [
+    "owned tile"
+   ]
+  }
+ },
+ {
+  "id": "great_person:simon_bolivar",
+  "name": "José de San Martín",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_SIMON_BOLIVAR"
+  ],
+  "summary": "Great General, Industrial Era. Grants +4 Loyalty per turn for this city.",
+  "fields": {
+   "class": "Great General",
+   "era": "Industrial Era",
+   "charges": 1,
+   "action": "Grants +4 Loyalty per turn for this city.",
+   "passive": "+5 Combat Strength and +1 Movement to Industrial and Modern era land units within 2 tiles.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: City Center"
+   ]
+  }
+ },
+ {
+  "id": "great_person:simon_peter",
+  "name": "Simon Peter",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_SIMON_PETER"
+  ],
+  "summary": "Great Prophet, Classical Era. Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+  "fields": {
+   "class": "Great Prophet",
+   "era": "Classical Era",
+   "action": "Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+   "action_requires": [
+    "owned tile"
+   ]
+  }
+ },
+ {
+  "id": "great_person:sofonisba_anguissola",
+  "name": "Sofonisba Anguissola",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_SOFONISBA_ANGUISSOLA"
+  ],
+  "summary": "Great Artist, Modern Era. Creates Great Works: Three Sisters Playing Chess, Philip II of Spain, A Monk.",
+  "fields": {
+   "class": "Great Artist",
+   "era": "Modern Era",
+   "action": "Creates Great Works: Three Sisters Playing Chess, Philip II of Spain, A Monk.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Three Sisters Playing Chess",
+    "Philip II of Spain",
+    "A Monk"
+   ]
+  }
+ },
+ {
+  "id": "great_person:songtsan_gampo",
+  "name": "Songtsan Gampo",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_SONGTSAN_GAMPO"
+  ],
+  "summary": "Great Prophet, Medieval Era. Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+  "fields": {
+   "class": "Great Prophet",
+   "era": "Medieval Era",
+   "action": "Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+   "action_requires": [
+    "owned tile"
+   ]
+  }
+ },
+ {
+  "id": "great_person:stamford_raffles",
+  "name": "Stamford Raffles",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_STAMFORD_RAFFLES"
+  ],
+  "summary": "Great Merchant, Modern Era. Absorbs this city-state into your empire. Grants you +10 Loyalty per turn in the city.",
+  "fields": {
+   "class": "Great Merchant",
+   "era": "Modern Era",
+   "charges": 1,
+   "action": "Absorbs this city-state into your empire. Grants you +10 Loyalty per turn in the city.",
+   "action_requires": [
+    "suzerain territory"
+   ]
+  }
+ },
+ {
+  "id": "great_person:stephanie_kwolek",
+  "name": "Stephanie Kwolek",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_STEPHANIE_KWOLEK"
+  ],
+  "summary": "Great Scientist, Information Era. +100% Production towards Space Race projects.",
+  "fields": {
+   "class": "Great Scientist",
+   "era": "Information Era",
+   "charges": 1,
+   "action": "+100% Production towards Space Race projects.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Spaceport"
+   ]
+  }
+ },
+ {
+  "id": "great_person:sudirman",
+  "name": "Sudirman",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_SUDIRMAN"
+  ],
+  "summary": "Great General, Atomic Era. Grants +6 Loyalty per turn for this city.",
+  "fields": {
+   "class": "Great General",
+   "era": "Atomic Era",
+   "charges": 1,
+   "action": "Grants +6 Loyalty per turn for this city.",
+   "passive": "+5 Combat Strength and +1 Movement to Atomic and Information era land units within 2 tiles.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: City Center"
+   ]
+  }
+ },
+ {
+  "id": "great_person:sun_tzu",
+  "name": "Sun Tzu",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_SUN_TZU"
+  ],
+  "summary": "Great General, Classical Era. Creates a Great Work: The Art of War.",
+  "fields": {
+   "class": "Great General",
+   "era": "Classical Era",
+   "action": "Creates a Great Work: The Art of War.",
+   "passive": "+5 Combat Strength and +1 Movement to Classical and Medieval era land units within 2 tiles.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "The Art of War"
+   ]
+  }
+ },
+ {
+  "id": "great_person:themistocles",
+  "name": "Themistocles",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_THEMISTOCLES"
+  ],
+  "summary": "Great Admiral, Classical Era. Instantly creates a Quadrireme unit. +20% Production towards units of the Naval Ranged promotion class.",
+  "fields": {
+   "class": "Great Admiral",
+   "era": "Classical Era",
+   "charges": 1,
+   "action": "Instantly creates a Quadrireme unit. +20% Production towards units of the Naval Ranged promotion class.",
+   "passive": "+5 Combat Strength and +1 Movement to Classical and Medieval era naval units within 2 tiles.",
+   "action_requires": [
+    "no military unit"
+   ]
+  }
+ },
+ {
+  "id": "great_person:thomas_aquinas",
+  "name": "Thomas Aquinas",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_THOMAS_AQUINAS"
+  ],
+  "summary": "Great Prophet, Renaissance Era. Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+  "fields": {
+   "class": "Great Prophet",
+   "era": "Renaissance Era",
+   "action": "Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+   "action_requires": [
+    "owned tile"
+   ]
+  }
+ },
+ {
+  "id": "great_person:timur",
+  "name": "Timur",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_TIMUR"
+  ],
+  "summary": "Great General, Medieval Era. Grants 1 promotion level and +25% combat experience to a military land unit.",
+  "fields": {
+   "class": "Great General",
+   "era": "Medieval Era",
+   "charges": 1,
+   "action": "Grants 1 promotion level and +25% combat experience to a military land unit.",
+   "passive": "+5 Combat Strength and +1 Movement to Medieval and Renaissance era land units within 2 tiles.",
+   "action_requires": [
+    "military unit domain: Domain land",
+    "unit can gain experience"
+   ]
+  }
+ },
+ {
+  "id": "great_person:titian",
+  "name": "Titian",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_TITIAN"
+  ],
+  "summary": "Great Artist, Industrial Era. Creates Great Works: Assunta, Salome with the Head of John the Baptist, Equestrian Portrait of Charles V.",
+  "fields": {
+   "class": "Great Artist",
+   "era": "Industrial Era",
+   "action": "Creates Great Works: Assunta, Salome with the Head of John the Baptist, Equestrian Portrait of Charles V.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Assunta",
+    "Salome with the Head of John the Baptist",
+    "Equestrian Portrait of Charles V"
+   ]
+  }
+ },
+ {
+  "id": "great_person:togo_heihachiro",
+  "name": "Togo Heihachiro",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_TOGO_HEIHACHIRO"
+  ],
+  "summary": "Great Admiral, Modern Era. Grants +6 Loyalty per turn for this city.",
+  "fields": {
+   "class": "Great Admiral",
+   "era": "Modern Era",
+   "charges": 1,
+   "action": "Grants +6 Loyalty per turn for this city.",
+   "passive": "+5 Combat Strength and +1 Movement to Modern and Atomic era naval units within 2 tiles.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Harbor"
+   ]
+  }
+ },
+ {
+  "id": "great_person:trung_trac",
+  "name": "Trung Trac",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_TRUNG_TRAC"
+  ],
+  "summary": "Great General, Classical Era. Permanently reduces your empire's War Weariness by 25%.",
+  "fields": {
+   "class": "Great General",
+   "era": "Classical Era",
+   "charges": 1,
+   "action": "Permanently reduces your empire's War Weariness by 25%.",
+   "passive": "+5 Combat Strength and +1 Movement to Classical and Medieval era land units within 2 tiles.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Encampment"
+   ]
+  }
+ },
+ {
+  "id": "great_person:tupac_amaru",
+  "name": "Tupac Amaru",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_TUPAC_AMARU"
+  ],
+  "summary": "Great General, Modern Era. Grants a Musketman in each of the target city's indefensible and undefended Districts.",
+  "fields": {
+   "class": "Great General",
+   "era": "Modern Era",
+   "charges": 1,
+   "action": "Grants a Musketman in each of the target city's indefensible and undefended Districts.",
+   "passive": "+5 Combat Strength and +1 Movement to Modern and Atomic era land units within 2 tiles.",
+   "action_requires": [
+    "enemy territory"
+   ]
+  }
+ },
+ {
+  "id": "great_person:valmiki",
+  "name": "Valmiki",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_VALMIKI"
+  ],
+  "summary": "Great Writer, Classical Era. Creates Great Works: The Ramayana, Yoga Vasistha.",
+  "fields": {
+   "class": "Great Writer",
+   "era": "Classical Era",
+   "action": "Creates Great Works: The Ramayana, Yoga Vasistha.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "The Ramayana",
+    "Yoga Vasistha"
+   ]
+  }
+ },
+ {
+  "id": "great_person:vijaya_wimalaratne",
+  "name": "Vijaya Wimalaratne",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_VIJAYA_WIMALARATNE"
+  ],
+  "summary": "Great General, Information Era. Grants 1 promotion level and +100% combat experience to a military land unit.",
+  "fields": {
+   "class": "Great General",
+   "era": "Information Era",
+   "charges": 1,
+   "action": "Grants 1 promotion level and +100% combat experience to a military land unit.",
+   "passive": "+5 Combat Strength and +1 Movement to Information era land units within 2 tiles.",
+   "action_requires": [
+    "military unit domain: Domain land",
+    "unit can gain experience"
+   ]
+  }
+ },
+ {
+  "id": "great_person:vincent_van_gogh",
+  "name": "Vincent van Gogh",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_VINCENT_VAN_GOGH"
+  ],
+  "summary": "Great Artist, Atomic Era. Creates Great Works: Starry Night, Café Terrace at Night, The Night Café.",
+  "fields": {
+   "class": "Great Artist",
+   "era": "Atomic Era",
+   "action": "Creates Great Works: Starry Night, Café Terrace at Night, The Night Café.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Starry Night",
+    "Café Terrace at Night",
+    "The Night Café"
+   ]
+  }
+ },
+ {
+  "id": "great_person:wassily_kandinsky",
+  "name": "Wassily Kandinsky",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_WASSILY_KANDINSKY"
+  ],
+  "summary": "Great Artist, Information Era. Creates Great Works: Composition 8, Blue Rider, Red Square.",
+  "fields": {
+   "class": "Great Artist",
+   "era": "Information Era",
+   "action": "Creates Great Works: Composition 8, Blue Rider, Red Square.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Composition 8",
+    "Blue Rider",
+    "Red Square"
+   ]
+  }
+ },
+ {
+  "id": "great_person:wernher_von_braun",
+  "name": "Wernher von Braun",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_WERNHER_VON_BRAUN"
+  ],
+  "summary": "Great Engineer, Information Era. +100% Production towards Space Race projects.",
+  "fields": {
+   "class": "Great Engineer",
+   "era": "Information Era",
+   "charges": 1,
+   "action": "+100% Production towards Space Race projects.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Spaceport"
+   ]
+  }
+ },
+ {
+  "id": "great_person:william_shakespeare",
+  "name": "William Shakespeare",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_WILLIAM_SHAKESPEARE"
+  ],
+  "summary": "Great Writer, Renaissance Era. Creates Great Works: Romeo and Juliet, Hamlet.",
+  "fields": {
+   "class": "Great Writer",
+   "era": "Renaissance Era",
+   "action": "Creates Great Works: Romeo and Juliet, Hamlet.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Romeo and Juliet",
+    "Hamlet"
+   ]
+  }
+ },
+ {
+  "id": "great_person:wolfgang_amadeus_mozart",
+  "name": "Wolfgang Amadeus Mozart",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_WOLFGANG_AMADEUS_MOZART"
+  ],
+  "summary": "Great Musician, Industrial Era. Creates Great Works: Eine Kleine Nachtmusik, Symphony #40, Mvt. 1.",
+  "fields": {
+   "class": "Great Musician",
+   "era": "Industrial Era",
+   "action": "Creates Great Works: Eine Kleine Nachtmusik, Symphony #40, Mvt. 1.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Eine Kleine Nachtmusik",
+    "Symphony #40, Mvt. 1"
+   ]
+  }
+ },
+ {
+  "id": "great_person:yatsuhashi_kengyo",
+  "name": "Yatsuhashi Kengyo",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_YATSUHASHI_KENGYO"
+  ],
+  "summary": "Great Musician, Industrial Era. Creates Great Works: Rokudan No Shirabe, Hachidan No Shirabe.",
+  "fields": {
+   "class": "Great Musician",
+   "era": "Industrial Era",
+   "action": "Creates Great Works: Rokudan No Shirabe, Hachidan No Shirabe.",
+   "action_requires": [
+    "owned tile"
+   ],
+   "great_works": [
+    "Rokudan No Shirabe",
+    "Hachidan No Shirabe"
+   ]
+  }
+ },
+ {
+  "id": "great_person:yi_sun_sin",
+  "name": "Yi Sun-sin",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_YI_SUN_SIN"
+  ],
+  "summary": "Great Admiral, Renaissance Era. Instantly creates an Ironclad unit with 1 promotion level. Grants 1 Coal per Turn",
+  "fields": {
+   "class": "Great Admiral",
+   "era": "Renaissance Era",
+   "charges": 1,
+   "action": "Instantly creates an Ironclad unit with 1 promotion level. Grants 1 Coal per Turn",
+   "passive": "+5 Combat Strength and +1 Movement to Renaissance and Industrial era naval units within 2 tiles.",
+   "action_requires": [
+    "no military unit"
+   ]
+  }
+ },
+ {
+  "id": "great_person:zhang_heng",
+  "name": "Zhang Heng",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_ZHANG_HENG"
+  ],
+  "summary": "Great Scientist, Classical Era. Triggers Eureka for Celestial Navigation, Mathematics, and Engineering. If they are already triggered, instead completes the tech.",
+  "fields": {
+   "class": "Great Scientist",
+   "era": "Classical Era",
+   "charges": 1,
+   "action": "Triggers Eureka for Celestial Navigation, Mathematics, and Engineering. If they are already triggered, instead completes the tech.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Campus"
+   ]
+  }
+ },
+ {
+  "id": "great_person:zhang_qian",
+  "name": "Zhang Qian",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_ZHANG_QIAN"
+  ],
+  "summary": "Great Merchant, Classical Era. Increases Trade Route capacity by 1. Foreign Trade Routes to this city provide +2 Gold to both cities.",
+  "fields": {
+   "class": "Great Merchant",
+   "era": "Classical Era",
+   "charges": 1,
+   "action": "Increases Trade Route capacity by 1. Foreign Trade Routes to this city provide +2 Gold to both cities.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Commercial Hub"
+   ]
+  }
+ },
+ {
+  "id": "great_person:zheng_he",
+  "name": "Zheng He",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_ZHENG_HE"
+  ],
+  "summary": "Great Admiral, Medieval Era. Grants a free Trader unit in this city, and increases Trade Route capacity by 1. Foreign Trade Routes to this city provide +2 Gold to both cities.",
+  "fields": {
+   "class": "Great Admiral",
+   "era": "Medieval Era",
+   "charges": 1,
+   "action": "Grants a free Trader unit in this city, and increases Trade Route capacity by 1. Foreign Trade Routes to this city provide +2 Gold to both cities.",
+   "passive": "+5 Combat Strength and +1 Movement to Medieval and Renaissance era naval units within 2 tiles.",
+   "action_requires": [
+    "owned tile",
+    "completed district type: Harbor"
+   ]
+  }
+ },
+ {
+  "id": "great_person:zhou_daguan",
+  "name": "Zhou Daguan",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_ZHOU_DAGUAN"
+  ],
+  "summary": "Great Merchant, Renaissance Era. Grants 3 Envoys at this city-state.",
+  "fields": {
+   "class": "Great Merchant",
+   "era": "Renaissance Era",
+   "charges": 1,
+   "action": "Grants 3 Envoys at this city-state.",
+   "passive": "This Great Person ignores closed borders.",
+   "action_requires": [
+    "city state territory",
+    "non hostile territory"
+   ]
+  }
+ },
+ {
+  "id": "great_person:zoroaster",
+  "name": "Zoroaster",
+  "aliases": [
+   "GREAT_PERSON_INDIVIDUAL_ZOROASTER"
+  ],
+  "summary": "Great Prophet, Classical Era. Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+  "fields": {
+   "class": "Great Prophet",
+   "era": "Classical Era",
+   "action": "Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress.",
+   "action_requires": [
+    "owned tile"
+   ]
+  }
+ }
+]

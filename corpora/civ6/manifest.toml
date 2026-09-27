@@ -1,0 +1,21 @@
+# Sid Meier's Civilization VI - Machine Executable Game Manifest
+# Used by the native Rust game-controller for hotkey lookups, screen signatures and macros.
+#
+# Provenance: "# verified" = confirmed on the user's PC; everything else is "# unverified".
+# Nothing here has been used in play yet: no hotkeys or screens are declared until they are
+# verified live (AGENTS.md §5, §8). Game data is in data/ (scripts/extract-civ6.py).
+
+[metadata]
+id = "civ6"
+name = "Sid Meier's Civilization VI"
+version = "1.0.12.68"   # verified 2026-09-26: Logs/Startup.log on mini-rig2 reports 1.0.12.68 (1023995)
+# The controller matches the foreground window title case-insensitively by substring, so this
+# prefix covers both builds the launcher offers ("... (DX11)" and "... (DX12)"). Unverified in play.
+process_title = "Sid Meier's Civilization VI"
+# Positions are measured in 3840x2160 space like the other corpora; mini-rig2 runs 2560x1440 and
+# selects a res/2560x1440.toml overlay through GAME_RESOLUTION once screens exist.
+native_resolution = [3840, 2160]
+downscaled_resolution = [1568, 882]
+
+[hotkeys]
+# None yet: add each key with a "# verified:" comment after it has been confirmed in game.

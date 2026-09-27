@@ -1,0 +1,268 @@
+[
+ {
+  "id": "resolution:arms_control",
+  "name": "Arms Control",
+  "aliases": [
+   "WC_RES_ARMS_CONTROL"
+  ],
+  "summary": "A: All players have their Weapons of Mass Destruction set equal to the target player's. B: The target player loses all of their Weapons of Mass Destruction.",
+  "fields": {
+   "target": "player",
+   "earliest_era": "Atomic Era",
+   "option_a": "All players have their Weapons of Mass Destruction set equal to the target player's.",
+   "option_b": "The target player loses all of their Weapons of Mass Destruction."
+  }
+ },
+ {
+  "id": "resolution:border_control",
+  "name": "Border Control Treaty",
+  "aliases": [
+   "WC_RES_BORDER_CONTROL"
+  ],
+  "summary": "A: New districts built by this player act as Culture bombs. B: This player's borders will not grow via Culture.",
+  "fields": {
+   "target": "player",
+   "latest_era": "Modern Era",
+   "option_a": "New districts built by this player act as Culture bombs.",
+   "option_b": "This player's borders will not grow via Culture."
+  }
+ },
+ {
+  "id": "resolution:deforestation_treaty",
+  "name": "Deforestation Treaty",
+  "aliases": [
+   "WC_RES_DEFORESTATION_TREATY"
+  ],
+  "summary": "A: Prohibits chopping or clearing Features of the chosen type. B: Clearing Features of the chosen type yields Gold equal to the Production and Food.",
+  "fields": {
+   "target": "feature",
+   "earliest_era": "Atomic Era",
+   "latest_era": "Information Era",
+   "option_a": "Prohibits chopping or clearing Features of the chosen type.",
+   "option_b": "Clearing Features of the chosen type yields Gold equal to the Production and Food."
+  }
+ },
+ {
+  "id": "resolution:diplovictory",
+  "name": "Diplomatic Victory",
+  "aliases": [
+   "WC_RES_DIPLOVICTORY"
+  ],
+  "summary": "A: Chosen Player gains 2 Diplomatic Victory points. B: Chosen Player loses 2 Diplomatic Victory points.",
+  "fields": {
+   "target": "player",
+   "earliest_era": "Modern Era",
+   "option_a": "Chosen Player gains 2 Diplomatic Victory points.",
+   "option_b": "Chosen Player loses 2 Diplomatic Victory points."
+  }
+ },
+ {
+  "id": "resolution:espionage_pact",
+  "name": "Espionage Pact",
+  "aliases": [
+   "WC_RES_ESPIONAGE_PACT"
+  ],
+  "summary": "A: Spies executing the chosen Operation function 2 levels higher. B: The chosen Operation is unavailable.",
+  "fields": {
+   "target": "unitoperation",
+   "earliest_era": "Industrial Era",
+   "latest_era": "Atomic Era",
+   "option_a": "Spies executing the chosen Operation function 2 levels higher.",
+   "option_b": "The chosen Operation is unavailable."
+  }
+ },
+ {
+  "id": "resolution:global_energy_treaty",
+  "name": "Global Energy Treaty",
+  "aliases": [
+   "WC_RES_GLOBAL_ENERGY_TREATY"
+  ],
+  "summary": "A: Ban the production of buildings of this type. B: 50% discount on the production of buildings of this type.",
+  "fields": {
+   "target": "building",
+   "earliest_era": "Modern Era",
+   "option_a": "Ban the production of buildings of this type.",
+   "option_b": "50% discount on the production of buildings of this type."
+  }
+ },
+ {
+  "id": "resolution:heritage_org",
+  "name": "Heritage Organization",
+  "aliases": [
+   "WC_RES_HERITAGE_ORG"
+  ],
+  "summary": "A: Tourism from Great Works of this type is doubled. B: No Tourism from Great Works of this type.",
+  "fields": {
+   "target": "greatworkobject",
+   "earliest_era": "Modern Era",
+   "option_a": "Tourism from Great Works of this type is doubled.",
+   "option_b": "No Tourism from Great Works of this type."
+  }
+ },
+ {
+  "id": "resolution:luxury",
+  "name": "Luxury Policy",
+  "aliases": [
+   "WC_RES_LUXURY"
+  ],
+  "summary": "A: Duplicates of the chosen Luxury resource grant Amenities. B: The chosen Luxury resource grants no Amenities.",
+  "fields": {
+   "target": "resource",
+   "option_a": "Duplicates of the chosen Luxury resource grant Amenities.",
+   "option_b": "The chosen Luxury resource grants no Amenities."
+  }
+ },
+ {
+  "id": "resolution:mercenary_companies",
+  "name": "Mercenary Companies",
+  "aliases": [
+   "WC_RES_MERCENARY_COMPANIES"
+  ],
+  "summary": "A: Producing, or purchasing military units using the chosen currency type, is +100% of the cost until the next World Congress. B: Producing, or purchasing military units using the chosen currency type, is -50% of the cost until the next World Congress.",
+  "fields": {
+   "target": "yield",
+   "option_a": "Producing, or purchasing military units using the chosen currency type, is +100% of the cost until the next World Congress.",
+   "option_b": "Producing, or purchasing military units using the chosen currency type, is -50% of the cost until the next World Congress."
+  }
+ },
+ {
+  "id": "resolution:migration_treaty",
+  "name": "Migration Treaty",
+  "aliases": [
+   "WC_RES_MIGRATION_TREATY"
+  ],
+  "summary": "A: +20% faster Citizen Population growth but -5 Loyalty per turn in this player's cities. B: +5 Loyalty per turn but -20% Citizen Population growth in this player's cities.",
+  "fields": {
+   "target": "player",
+   "earliest_era": "Industrial Era",
+   "option_a": "+20% faster Citizen Population growth but -5 Loyalty per turn in this player's cities.",
+   "option_b": "+5 Loyalty per turn but -20% Citizen Population growth in this player's cities."
+  }
+ },
+ {
+  "id": "resolution:military_advisory",
+  "name": "Military Advisory",
+  "aliases": [
+   "WC_RES_MILITARY_ADVISORY"
+  ],
+  "summary": "A: Units of the chosen promotion class gain +5 Combat Strength. B: Units of the chosen promotion class lose 5 Combat Strength.",
+  "fields": {
+   "target": "unitpromotionclass",
+   "latest_era": "Atomic Era",
+   "option_a": "Units of the chosen promotion class gain +5 Combat Strength.",
+   "option_b": "Units of the chosen promotion class lose 5 Combat Strength."
+  }
+ },
+ {
+  "id": "resolution:patronage",
+  "name": "Patronage",
+  "aliases": [
+   "WC_RES_PATRONAGE"
+  ],
+  "summary": "A: Earn double points towards Great People of this class. B: No points earned towards Great People of this class.",
+  "fields": {
+   "target": "greatpersonclass",
+   "latest_era": "Modern Era",
+   "option_a": "Earn double points towards Great People of this class.",
+   "option_b": "No points earned towards Great People of this class."
+  }
+ },
+ {
+  "id": "resolution:public_relations",
+  "name": "Public Relations",
+  "aliases": [
+   "WC_RES_PUBLIC_RELATIONS"
+  ],
+  "summary": "A: The chosen player generates 100% more Grievances, and other players generate 100% more Grievances toward this player. B: The chosen player generates 50% fewer Grievances, and other players generate 50% fewer Grievances toward this player.",
+  "fields": {
+   "target": "player",
+   "latest_era": "Atomic Era",
+   "option_a": "The chosen player generates 100% more Grievances, and other players generate 100% more Grievances toward this player.",
+   "option_b": "The chosen player generates 50% fewer Grievances, and other players generate 50% fewer Grievances toward this player."
+  }
+ },
+ {
+  "id": "resolution:public_works",
+  "name": "Public Works Program",
+  "aliases": [
+   "WC_RES_PUBLIC_WORKS"
+  ],
+  "summary": "A: +100% Production towards this Project. B: -50% Production towards this Project.",
+  "fields": {
+   "target": "project",
+   "earliest_era": "Atomic Era",
+   "latest_era": "Information Era",
+   "option_a": "+100% Production towards this Project.",
+   "option_b": "-50% Production towards this Project."
+  }
+ },
+ {
+  "id": "resolution:sovereignty",
+  "name": "Sovereignty",
+  "aliases": [
+   "WC_RES_SOVEREIGNTY"
+  ],
+  "summary": "A: +100% of the City-States' yield type when sending Trade Routes to a City-State of this type. B: City-States of this type do not provide their unique Suzerain bonus.",
+  "fields": {
+   "target": "minorcivbonus",
+   "latest_era": "Modern Era",
+   "option_a": "+100% of the City-States' yield type when sending Trade Routes to a City-State of this type.",
+   "option_b": "City-States of this type do not provide their unique Suzerain bonus."
+  }
+ },
+ {
+  "id": "resolution:trade_treaty",
+  "name": "Trade Policy",
+  "aliases": [
+   "WC_RES_TRADE_TREATY"
+  ],
+  "summary": "A: Trade Routes sent to the chosen player provide +4 Gold to the sender. The chosen player receives +1 Trade Route capacity. B: Cancels any international Trade Routes between other civilizations and the chosen player, and embargoes any new ones from starting.",
+  "fields": {
+   "target": "player",
+   "option_a": "Trade Routes sent to the chosen player provide +4 Gold to the sender. The chosen player receives +1 Trade Route capacity.",
+   "option_b": "Cancels any international Trade Routes between other civilizations and the chosen player, and embargoes any new ones from starting."
+  }
+ },
+ {
+  "id": "resolution:urban_development",
+  "name": "Urban Development Treaty",
+  "aliases": [
+   "WC_RES_URBAN_DEVELOPMENT"
+  ],
+  "summary": "A: +100% Production towards buildings in this district. B: No buildings can be created in this district.",
+  "fields": {
+   "target": "district",
+   "latest_era": "Modern Era",
+   "option_a": "+100% Production towards buildings in this district.",
+   "option_b": "No buildings can be created in this district."
+  }
+ },
+ {
+  "id": "resolution:world_ideology",
+  "name": "World Ideology",
+  "aliases": [
+   "WC_RES_WORLD_IDEOLOGY"
+  ],
+  "summary": "A: This Government type gains a Wildcard policy slot. B: This Government type loses a Wildcard policy slot.",
+  "fields": {
+   "target": "government",
+   "earliest_era": "Modern Era",
+   "option_a": "This Government type gains a Wildcard policy slot.",
+   "option_b": "This Government type loses a Wildcard policy slot."
+  }
+ },
+ {
+  "id": "resolution:world_religion",
+  "name": "World Religion",
+  "aliases": [
+   "WC_RES_WORLD_RELIGION"
+  ],
+  "summary": "A: +10 Strength (Combat and Religious) for all units of this Religion. B: All players may condemn units of the chosen Religion, and doing so grants 25 Diplomatic Favor.",
+  "fields": {
+   "target": "religion",
+   "latest_era": "Industrial Era",
+   "option_a": "+10 Strength (Combat and Religious) for all units of this Religion.",
+   "option_b": "All players may condemn units of the chosen Religion, and doing so grants 25 Diplomatic Favor."
+  }
+ }
+]

@@ -1,0 +1,1605 @@
+[
+ {
+  "id": "civic:capitalism",
+  "name": "Capitalism",
+  "aliases": [
+   "CIVIC_CAPITALISM"
+  ],
+  "summary": "Modern Era, cost 1580. Inspiration: Build 2 Stock Exchanges. (40%). Unlocks Shopping Mall (building), Laissez-Faire (policy), Market Economy (policy).",
+  "fields": {
+   "era": "Modern Era",
+   "cost": 1580,
+   "prerequisites": [
+    "Mass Media"
+   ],
+   "inspiration": "Build 2 Stock Exchanges. (40%)",
+   "unlocks": [
+    "Shopping Mall (building)",
+    "Laissez-Faire (policy)",
+    "Market Economy (policy)"
+   ]
+  }
+ },
+ {
+  "id": "civic:civil_engineering",
+  "name": "Civil Engineering",
+  "aliases": [
+   "CIVIC_CIVIL_ENGINEERING"
+  ],
+  "summary": "Industrial Era, cost 1010. Inspiration: Build 7 different specialty districts. (40%). Unlocks Statue of Liberty (wonder), Public Works (policy), Skyscrapers (policy).",
+  "fields": {
+   "era": "Industrial Era",
+   "cost": 1010,
+   "prerequisites": [
+    "Mercantilism"
+   ],
+   "leads_to": [
+    "Urbanization"
+   ],
+   "inspiration": "Build 7 different specialty districts. (40%)",
+   "unlocks": [
+    "Statue of Liberty (wonder)",
+    "Public Works (policy)",
+    "Skyscrapers (policy)"
+   ],
+   "effects": [
+    "+1 Governor Title"
+   ],
+   "obsoletes_units": [
+    "Battering Ram",
+    "Siege Tower"
+   ],
+   "description": "Can build Farms on Grassland Hills and Plains Hills."
+  }
+ },
+ {
+  "id": "civic:civil_service",
+  "name": "Civil Service",
+  "aliases": [
+   "CIVIC_CIVIL_SERVICE"
+  ],
+  "summary": "Medieval Era, cost 300. Inspiration: Grow a city to 10 population. (40%). Unlocks Meenakshi Temple (wonder), Retainers (policy), Civil Prestige (policy).",
+  "fields": {
+   "era": "Medieval Era",
+   "cost": 300,
+   "prerequisites": [
+    "Defensive Tactics",
+    "Recorded History"
+   ],
+   "leads_to": [
+    "Guilds",
+    "Divine Right"
+   ],
+   "inspiration": "Grow a city to 10 population. (40%)",
+   "unlocks": [
+    "Meenakshi Temple (wonder)",
+    "Retainers (policy)",
+    "Civil Prestige (policy)"
+   ]
+  }
+ },
+ {
+  "id": "civic:class_struggle",
+  "name": "Class Struggle",
+  "aliases": [
+   "CIVIC_CLASS_STRUGGLE"
+  ],
+  "summary": "Modern Era, cost 1640. Inspiration: Build 3 Factories. (40%). Unlocks Communism (government), Collectivization (policy), Defense of the Motherland (policy).",
+  "fields": {
+   "era": "Modern Era",
+   "cost": 1640,
+   "prerequisites": [
+    "Ideology"
+   ],
+   "inspiration": "Build 3 Factories. (40%)",
+   "unlocks": [
+    "Communism (government)",
+    "Collectivization (policy)",
+    "Defense of the Motherland (policy)"
+   ]
+  }
+ },
+ {
+  "id": "civic:code_of_laws",
+  "name": "Code of Laws",
+  "aliases": [
+   "CIVIC_CODE_OF_LAWS"
+  ],
+  "summary": "Ancient Era, cost 20. Unlocks Discipline (policy), Survey (policy), God King (policy), Urban Planning (policy).",
+  "fields": {
+   "era": "Ancient Era",
+   "cost": 20,
+   "leads_to": [
+    "Craftsmanship",
+    "Foreign Trade"
+   ],
+   "unlocks": [
+    "Discipline (policy)",
+    "Survey (policy)",
+    "God King (policy)",
+    "Urban Planning (policy)"
+   ]
+  }
+ },
+ {
+  "id": "civic:cold_war",
+  "name": "Cold War",
+  "aliases": [
+   "CIVIC_COLD_WAR"
+  ],
+  "summary": "Atomic Era, cost 2185. Inspiration: Research the Nuclear Fission technology. (40%). Unlocks Rock Band (unit), Cryptography (policy), International Waters (policy), Containment (policy), Second Strike Capability (policy).",
+  "fields": {
+   "era": "Atomic Era",
+   "cost": 2185,
+   "prerequisites": [
+    "Ideology"
+   ],
+   "leads_to": [
+    "Rapid Deployment",
+    "Space Race"
+   ],
+   "inspiration": "Research the Nuclear Fission technology. (40%)",
+   "unlocks": [
+    "Rock Band (unit)",
+    "Cryptography (policy)",
+    "International Waters (policy)",
+    "Containment (policy)",
+    "Second Strike Capability (policy)"
+   ],
+   "effects": [
+    "+1 Spy capacity"
+   ],
+   "description": "Grants the ability to construct an additional Spy."
+  }
+ },
+ {
+  "id": "civic:colonialism",
+  "name": "Colonialism",
+  "aliases": [
+   "CIVIC_COLONIALISM"
+  ],
+  "summary": "Industrial Era, cost 800. Inspiration: Research the Astronomy technology. (40%). Unlocks Ice Hockey Rink (improvement, unique: Canada), Native Conquest (policy), Colonial Taxes (policy), Raj (policy).",
+  "fields": {
+   "era": "Industrial Era",
+   "cost": 800,
+   "prerequisites": [
+    "Mercantilism"
+   ],
+   "leads_to": [
+    "Natural History"
+   ],
+   "inspiration": "Research the Astronomy technology. (40%)",
+   "unlocks": [
+    "Ice Hockey Rink (improvement, unique: Canada)",
+    "Native Conquest (policy)",
+    "Colonial Taxes (policy)",
+    "Raj (policy)"
+   ],
+   "effects": [
+    "+2 Envoy(s)"
+   ],
+   "description": "The Fishing Boats improvement receives +1 Production."
+  }
+ },
+ {
+  "id": "civic:conservation",
+  "name": "Conservation",
+  "aliases": [
+   "CIVIC_CONSERVATION"
+  ],
+  "summary": "Modern Era, cost 1540. Inspiration: Have a Neighborhood district with Breathtaking Appeal. (40%). Unlocks Naturalist (unit), Mountie (unit, unique: Canada), Sanctuary (building), Resource Management (policy).",
+  "fields": {
+   "era": "Modern Era",
+   "cost": 1540,
+   "prerequisites": [
+    "Natural History"
+   ],
+   "leads_to": [
+    "Cultural Heritage"
+   ],
+   "inspiration": "Have a Neighborhood district with Breathtaking Appeal. (40%)",
+   "unlocks": [
+    "Naturalist (unit)",
+    "Mountie (unit, unique: Canada)",
+    "Sanctuary (building)",
+    "Resource Management (policy)"
+   ],
+   "effects": [
+    "+3 Envoy(s)",
+    "adjust district tourism change(Amount 1) on player districts [if city has building (Ancient Walls); district type matches (City Center)]",
+    "adjust district tourism change(Amount 2) on player districts [if city has building (Medieval Walls); district type matches (City Center)]",
+    "adjust district tourism change(Amount 3) on player districts [if city has building (Renaissance Walls); district type matches (City Center)]",
+    "adjust district tourism change(Amount 3) on player districts [if city has building (Tsikhe); district type matches (City Center); player has golden age]",
+    "adjust district tourism change(Amount 1) on player districts [if city has building (Arena); district type matches (Entertainment Complex)]"
+   ],
+   "description": "Awards 3 Envoys. Allows the building of National Parks and the purchase of Naturalists with Faith. Allows Builders to plant Woods (second-growth). Woods in your territory that have never been removed (old-growth) gain +1 Appeal. Receive Tourism from Walls."
+  }
+ },
+ {
+  "id": "civic:corporate_libertarianism",
+  "name": "Venture Politics",
+  "aliases": [
+   "CIVIC_CORPORATE_LIBERTARIANISM"
+  ],
+  "summary": "Information Era, cost 3000. Inspiration: Build a Uranium Mine. (40%). Unlocks Corporate Libertarianism (government).",
+  "fields": {
+   "era": "Information Era",
+   "cost": 3000,
+   "prerequisites": [
+    "Globalization",
+    "Social Media"
+   ],
+   "inspiration": "Build a Uranium Mine. (40%)",
+   "unlocks": [
+    "Corporate Libertarianism (government)"
+   ]
+  }
+ },
+ {
+  "id": "civic:craftsmanship",
+  "name": "Craftsmanship",
+  "aliases": [
+   "CIVIC_CRAFTSMANSHIP"
+  ],
+  "summary": "Ancient Era, cost 40. Inspiration: Improve 3 tiles. (40%). Unlocks Sphinx (improvement, unique: Egypt), Chemamull (improvement, unique: Mapuche), Ilkum (policy), Agoge (policy).",
+  "fields": {
+   "era": "Ancient Era",
+   "cost": 40,
+   "prerequisites": [
+    "Code of Laws"
+   ],
+   "leads_to": [
+    "Military Tradition",
+    "State Workforce"
+   ],
+   "inspiration": "Improve 3 tiles. (40%)",
+   "unlocks": [
+    "Sphinx (improvement, unique: Egypt)",
+    "Chemamull (improvement, unique: Mapuche)",
+    "Ilkum (policy)",
+    "Agoge (policy)"
+   ]
+  }
+ },
+ {
+  "id": "civic:cultural_hegemony",
+  "name": "Cultural Hegemony",
+  "aliases": [
+   "CIVIC_CULTURAL_HEGEMONY"
+  ],
+  "summary": "Future Era, cost 3200. Unlocks Hallyu (policy), Non-State Actors (policy).",
+  "fields": {
+   "era": "Future Era",
+   "cost": 3200,
+   "unlocks": [
+    "Hallyu (policy)",
+    "Non-State Actors (policy)"
+   ]
+  }
+ },
+ {
+  "id": "civic:cultural_heritage",
+  "name": "Cultural Heritage",
+  "aliases": [
+   "CIVIC_CULTURAL_HERITAGE"
+  ],
+  "summary": "Atomic Era, cost 1955. Inspiration: Have a Themed Building. (40%). Unlocks Sydney Opera House (wonder), Heritage Tourism (policy).",
+  "fields": {
+   "era": "Atomic Era",
+   "cost": 1955,
+   "prerequisites": [
+    "Conservation"
+   ],
+   "leads_to": [
+    "Environmentalism"
+   ],
+   "inspiration": "Have a Themed Building. (40%)",
+   "unlocks": [
+    "Sydney Opera House (wonder)",
+    "Heritage Tourism (policy)"
+   ],
+   "effects": [
+    "+3 Envoy(s)",
+    "trigger game mechanic(MechanicName GenerateSeaAntiquities) on owner",
+    "adjust unit extract sea artifacts(Extract 1) on player units"
+   ]
+  }
+ },
+ {
+  "id": "civic:defensive_tactics",
+  "name": "Defensive Tactics",
+  "aliases": [
+   "CIVIC_DEFENSIVE_TACTICS"
+  ],
+  "summary": "Classical Era, cost 175. Inspiration: Be the target of a Declaration of War. (40%). Unlocks Mausoleum at Halicarnassus (wonder), Bastions (policy), Limes (policy).",
+  "fields": {
+   "era": "Classical Era",
+   "cost": 175,
+   "prerequisites": [
+    "Games and Recreation",
+    "Political Philosophy"
+   ],
+   "leads_to": [
+    "Naval Tradition",
+    "Feudalism",
+    "Civil Service"
+   ],
+   "inspiration": "Be the target of a Declaration of War. (40%)",
+   "unlocks": [
+    "Mausoleum at Halicarnassus (wonder)",
+    "Bastions (policy)",
+    "Limes (policy)"
+   ],
+   "effects": [
+    "+1 Governor Title"
+   ]
+  }
+ },
+ {
+  "id": "civic:digital_democracy",
+  "name": "Distributed Sovereignty",
+  "aliases": [
+   "CIVIC_DIGITAL_DEMOCRACY"
+  ],
+  "summary": "Information Era, cost 3000. Inspiration: Own a Rock Band. (40%). Unlocks Digital Democracy (government).",
+  "fields": {
+   "era": "Information Era",
+   "cost": 3000,
+   "prerequisites": [
+    "Globalization",
+    "Social Media"
+   ],
+   "inspiration": "Own a Rock Band. (40%)",
+   "unlocks": [
+    "Digital Democracy (government)"
+   ]
+  }
+ },
+ {
+  "id": "civic:diplomatic_service",
+  "name": "Diplomatic Service",
+  "aliases": [
+   "CIVIC_DIPLOMATIC_SERVICE"
+  ],
+  "summary": "Renaissance Era, cost 600. Inspiration: Have an alliance with another civilization. (40%). Unlocks Chancery (building), Machiavellianism (policy), Wisselbanken (policy).",
+  "fields": {
+   "era": "Renaissance Era",
+   "cost": 600,
+   "prerequisites": [
+    "Guilds"
+   ],
+   "leads_to": [
+    "The Enlightenment"
+   ],
+   "inspiration": "Have an alliance with another civilization. (40%)",
+   "unlocks": [
+    "Chancery (building)",
+    "Machiavellianism (policy)",
+    "Wisselbanken (policy)"
+   ],
+   "effects": [
+    "+1 Spy capacity"
+   ],
+   "description": "Grants the ability to construct a Spy."
+  }
+ },
+ {
+  "id": "civic:divine_right",
+  "name": "Divine Right",
+  "aliases": [
+   "CIVIC_DIVINE_RIGHT"
+  ],
+  "summary": "Medieval Era, cost 340. Inspiration: Build 2 Temples. (40%). Unlocks Tagma (unit, unique: Basil II (Byzantium)), Mont St. Michel (wonder), Kotoku-in (wonder), Monarchy (government), Chivalry (policy), Gothic Architecture (policy).",
+  "fields": {
+   "era": "Medieval Era",
+   "cost": 340,
+   "prerequisites": [
+    "Civil Service",
+    "Theology"
+   ],
+   "leads_to": [
+    "Reformed Church"
+   ],
+   "inspiration": "Build 2 Temples. (40%)",
+   "unlocks": [
+    "Tagma (unit, unique: Basil II (Byzantium))",
+    "Mont St. Michel (wonder)",
+    "Kotoku-in (wonder)",
+    "Monarchy (government)",
+    "Chivalry (policy)",
+    "Gothic Architecture (policy)"
+   ]
+  }
+ },
+ {
+  "id": "civic:drama_poetry",
+  "name": "Drama and Poetry",
+  "aliases": [
+   "CIVIC_DRAMA_POETRY"
+  ],
+  "summary": "Classical Era, cost 110. Inspiration: Build a wonder. (40%). Unlocks Amphitheater (building), Marae (building, unique: Māori), Theater Square (district), Acropolis (district, unique: Greece), Rock-Hewn Church (improvement, unique: Ethiopia), Literary Tradition (policy).",
+  "fields": {
+   "era": "Classical Era",
+   "cost": 110,
+   "prerequisites": [
+    "Early Empire"
+   ],
+   "leads_to": [
+    "Recorded History",
+    "Theology"
+   ],
+   "inspiration": "Build a wonder. (40%)",
+   "unlocks": [
+    "Amphitheater (building)",
+    "Marae (building, unique: Māori)",
+    "Theater Square (district)",
+    "Acropolis (district, unique: Greece)",
+    "Rock-Hewn Church (improvement, unique: Ethiopia)",
+    "Literary Tradition (policy)"
+   ]
+  }
+ },
+ {
+  "id": "civic:early_empire",
+  "name": "Early Empire",
+  "aliases": [
+   "CIVIC_EARLY_EMPIRE"
+  ],
+  "summary": "Ancient Era, cost 70. Inspiration: Grow your civilization to at least 6 population. (40%). Unlocks Pairidaeza (improvement, unique: Persia), Land Surveyors (policy), Colonization (policy), Limitanei (policy).",
+  "fields": {
+   "era": "Ancient Era",
+   "cost": 70,
+   "prerequisites": [
+    "Foreign Trade"
+   ],
+   "leads_to": [
+    "Political Philosophy",
+    "Drama and Poetry"
+   ],
+   "inspiration": "Grow your civilization to at least 6 population. (40%)",
+   "unlocks": [
+    "Pairidaeza (improvement, unique: Persia)",
+    "Land Surveyors (policy)",
+    "Colonization (policy)",
+    "Limitanei (policy)"
+   ],
+   "effects": [
+    "adjust player enforce borders(Enable 1) on owner",
+    "+1 Governor Title"
+   ],
+   "description": "Unlocks the abilities to enforce borders and grant Open Borders to other civilizations."
+  }
+ },
+ {
+  "id": "civic:environmentalism",
+  "name": "Environmentalism",
+  "aliases": [
+   "CIVIC_ENVIRONMENTALISM"
+  ],
+  "summary": "Information Era, cost 2880. Inspiration: Build 2 Solar Farms. (40%).",
+  "fields": {
+   "era": "Information Era",
+   "cost": 2880,
+   "prerequisites": [
+    "Cultural Heritage",
+    "Rapid Deployment"
+   ],
+   "leads_to": [
+    "Near Future Governance"
+   ],
+   "inspiration": "Build 2 Solar Farms. (40%)",
+   "effects": [
+    "+25% Tourism"
+   ],
+   "description": "+25% Tourism across your empire."
+  }
+ },
+ {
+  "id": "civic:exodus_imperative",
+  "name": "Exodus Imperative",
+  "aliases": [
+   "CIVIC_EXODUS_IMPERATIVE"
+  ],
+  "summary": "Future Era, cost 3200. Unlocks Aerospace Contractors (policy), Space Tourism (policy).",
+  "fields": {
+   "era": "Future Era",
+   "cost": 3200,
+   "unlocks": [
+    "Aerospace Contractors (policy)",
+    "Space Tourism (policy)"
+   ]
+  }
+ },
+ {
+  "id": "civic:exploration",
+  "name": "Exploration",
+  "aliases": [
+   "CIVIC_EXPLORATION"
+  ],
+  "summary": "Renaissance Era, cost 440. Inspiration: Build 2 Caravels. (40%). Unlocks Merchant Republic (government), Press Gangs (policy), Colonial Offices (policy).",
+  "fields": {
+   "era": "Renaissance Era",
+   "cost": 440,
+   "prerequisites": [
+    "Mercenaries",
+    "Medieval Faires"
+   ],
+   "inspiration": "Build 2 Caravels. (40%)",
+   "unlocks": [
+    "Merchant Republic (government)",
+    "Press Gangs (policy)",
+    "Colonial Offices (policy)"
+   ]
+  }
+ },
+ {
+  "id": "civic:feudalism",
+  "name": "Feudalism",
+  "aliases": [
+   "CIVIC_FEUDALISM"
+  ],
+  "summary": "Medieval Era, cost 300. Inspiration: Build 6 Farms. (40%). Unlocks Samurai (unit, unique: Japan), Feudal Contract (policy), Serfdom (policy).",
+  "fields": {
+   "era": "Medieval Era",
+   "cost": 300,
+   "prerequisites": [
+    "Defensive Tactics"
+   ],
+   "leads_to": [
+    "Mercenaries",
+    "Medieval Faires",
+    "Guilds"
+   ],
+   "inspiration": "Build 6 Farms. (40%)",
+   "unlocks": [
+    "Samurai (unit, unique: Japan)",
+    "Feudal Contract (policy)",
+    "Serfdom (policy)"
+   ],
+   "description": "Farm improvements now gain +1 Food from every 2 adjacent Farm improvements. Plantation improvements receive +1 Food."
+  }
+ },
+ {
+  "id": "civic:foreign_trade",
+  "name": "Foreign Trade",
+  "aliases": [
+   "CIVIC_FOREIGN_TRADE"
+  ],
+  "summary": "Ancient Era, cost 40. Inspiration: Discover a second continent. (40%). Unlocks Trader (unit), Qhapaq Ñan (improvement, unique: Pachacuti (Inca)), Caravansaries (policy), Maritime Industries (policy).",
+  "fields": {
+   "era": "Ancient Era",
+   "cost": 40,
+   "prerequisites": [
+    "Code of Laws"
+   ],
+   "leads_to": [
+    "Early Empire",
+    "Mysticism"
+   ],
+   "inspiration": "Discover a second continent. (40%)",
+   "unlocks": [
+    "Trader (unit)",
+    "Qhapaq Ñan (improvement, unique: Pachacuti (Inca))",
+    "Caravansaries (policy)",
+    "Maritime Industries (policy)"
+   ],
+   "effects": [
+    "+1 Trade Route capacity"
+   ],
+   "description": "Allows the creation of Trade Routes."
+  }
+ },
+ {
+  "id": "civic:future_civic",
+  "name": "Future Civic",
+  "aliases": [
+   "CIVIC_FUTURE_CIVIC"
+  ],
+  "summary": "Future Era, cost 3500.",
+  "fields": {
+   "era": "Future Era",
+   "cost": 3500,
+   "prerequisites": [
+    "Globalization",
+    "Social Media"
+   ],
+   "effects": [
+    "+1 Governor Title",
+    "+50 Diplomatic Favor"
+   ],
+   "description": "Can be completed multiple times, increasing your points towards the Score Victory. Also awards 1 Governor title and 50 Diplomatic Favor each time it is completed.",
+   "repeatable": true
+  }
+ },
+ {
+  "id": "civic:games_recreation",
+  "name": "Games and Recreation",
+  "aliases": [
+   "CIVIC_GAMES_RECREATION"
+  ],
+  "summary": "Classical Era, cost 110. Inspiration: Research the Construction technology. (40%). Unlocks Arena (building), Colosseum (wonder), Tlachtli (building, unique: Aztec), Entertainment Complex (district), Street Carnival (district, unique: Brazil), Hippodrome (district, unique: Byzantium)….",
+  "fields": {
+   "era": "Classical Era",
+   "cost": 110,
+   "prerequisites": [
+    "State Workforce"
+   ],
+   "leads_to": [
+    "Military Training",
+    "Defensive Tactics"
+   ],
+   "inspiration": "Research the Construction technology. (40%)",
+   "unlocks": [
+    "Arena (building)",
+    "Colosseum (wonder)",
+    "Tlachtli (building, unique: Aztec)",
+    "Entertainment Complex (district)",
+    "Street Carnival (district, unique: Brazil)",
+    "Hippodrome (district, unique: Byzantium)",
+    "City Park (improvement)",
+    "Insulae (policy)"
+   ]
+  }
+ },
+ {
+  "id": "civic:global_warming_mitigation",
+  "name": "Global Warming Mitigation",
+  "aliases": [
+   "CIVIC_GLOBAL_WARMING_MITIGATION"
+  ],
+  "summary": "Future Era, cost 3200. Unlocks Carbon Recapture (project).",
+  "fields": {
+   "era": "Future Era",
+   "cost": 3200,
+   "unlocks": [
+    "Carbon Recapture (project)"
+   ],
+   "effects": [
+    "+3 Envoy(s)",
+    "+1 Diplomatic Victory Point(s)"
+   ],
+   "description": "Awards 1 Diplomatic Victory point."
+  }
+ },
+ {
+  "id": "civic:globalization",
+  "name": "Globalization",
+  "aliases": [
+   "CIVIC_GLOBALIZATION"
+  ],
+  "summary": "Information Era, cost 2880. Inspiration: Build 2 Airports. (40%). Unlocks Strategic Air Force (policy), Ecommerce (policy), International Space Agency (policy).",
+  "fields": {
+   "era": "Information Era",
+   "cost": 2880,
+   "prerequisites": [
+    "Rapid Deployment",
+    "Space Race"
+   ],
+   "leads_to": [
+    "Future Civic",
+    "Venture Politics",
+    "Distributed Sovereignty",
+    "Optimization Imperative",
+    "Near Future Governance"
+   ],
+   "inspiration": "Build 2 Airports. (40%)",
+   "unlocks": [
+    "Strategic Air Force (policy)",
+    "Ecommerce (policy)",
+    "International Space Agency (policy)"
+   ],
+   "effects": [
+    "+1 Governor Title"
+   ],
+   "description": "+2 Gold to Plantations."
+  }
+ },
+ {
+  "id": "civic:guilds",
+  "name": "Guilds",
+  "aliases": [
+   "CIVIC_GUILDS"
+  ],
+  "summary": "Medieval Era, cost 420. Inspiration: Build 2 Markets. (40%). Unlocks Chichen Itza (wonder), Mbanza (district, unique: Kongo), Outback Station (improvement, unique: Australia), Polder (improvement, unique: Netherlands), Craftsmen (policy), Town Charters (policy)….",
+  "fields": {
+   "era": "Medieval Era",
+   "cost": 420,
+   "prerequisites": [
+    "Feudalism",
+    "Civil Service"
+   ],
+   "leads_to": [
+    "Humanism",
+    "Diplomatic Service",
+    "Reformed Church"
+   ],
+   "inspiration": "Build 2 Markets. (40%)",
+   "unlocks": [
+    "Chichen Itza (wonder)",
+    "Mbanza (district, unique: Kongo)",
+    "Outback Station (improvement, unique: Australia)",
+    "Polder (improvement, unique: Netherlands)",
+    "Craftsmen (policy)",
+    "Town Charters (policy)",
+    "Traveling Merchants (policy)"
+   ],
+   "effects": [
+    "+1 Governor Title"
+   ]
+  }
+ },
+ {
+  "id": "civic:humanism",
+  "name": "Humanism",
+  "aliases": [
+   "CIVIC_HUMANISM"
+  ],
+  "summary": "Renaissance Era, cost 600. Inspiration: Earn a Great Artist. (40%). Unlocks Art Museum (building), Archaeological Museum (building), Taj Mahal (wonder), Château (improvement, unique: France), Invention (policy), Frescoes (policy).",
+  "fields": {
+   "era": "Renaissance Era",
+   "cost": 600,
+   "prerequisites": [
+    "Medieval Faires",
+    "Guilds"
+   ],
+   "leads_to": [
+    "Mercantilism",
+    "The Enlightenment"
+   ],
+   "inspiration": "Earn a Great Artist. (40%)",
+   "unlocks": [
+    "Art Museum (building)",
+    "Archaeological Museum (building)",
+    "Taj Mahal (wonder)",
+    "Château (improvement, unique: France)",
+    "Invention (policy)",
+    "Frescoes (policy)"
+   ]
+  }
+ },
+ {
+  "id": "civic:ideology",
+  "name": "Ideology",
+  "aliases": [
+   "CIVIC_IDEOLOGY"
+  ],
+  "summary": "Modern Era, cost 1640. Unlocks Economic Union (policy), Lightning Warfare (policy), Gunboat Diplomacy (policy), Five-Year Plan (policy).",
+  "fields": {
+   "era": "Modern Era",
+   "cost": 1640,
+   "prerequisites": [
+    "Mass Media",
+    "Mobilization"
+   ],
+   "leads_to": [
+    "Nuclear Program",
+    "Suffrage",
+    "Totalitarianism",
+    "Class Struggle",
+    "Cold War",
+    "Professional Sports"
+   ],
+   "unlocks": [
+    "Economic Union (policy)",
+    "Lightning Warfare (policy)",
+    "Gunboat Diplomacy (policy)",
+    "Five-Year Plan (policy)"
+   ],
+   "effects": [
+    "+1 Spy capacity"
+   ],
+   "description": "Grants the ability to construct an additional Spy."
+  }
+ },
+ {
+  "id": "civic:information_warfare",
+  "name": "Information Warfare",
+  "aliases": [
+   "CIVIC_INFORMATION_WARFARE"
+  ],
+  "summary": "Future Era, cost 3200. Unlocks Integrated Attack Logistics (policy), Rabblerousing (policy).",
+  "fields": {
+   "era": "Future Era",
+   "cost": 3200,
+   "unlocks": [
+    "Integrated Attack Logistics (policy)",
+    "Rabblerousing (policy)"
+   ]
+  }
+ },
+ {
+  "id": "civic:mass_media",
+  "name": "Mass Media",
+  "aliases": [
+   "CIVIC_MASS_MEDIA"
+  ],
+  "summary": "Modern Era, cost 1540. Inspiration: Research Radio. (40%). Unlocks Broadway (wonder), Cristo Redentor (wonder), Propaganda (policy).",
+  "fields": {
+   "era": "Modern Era",
+   "cost": 1540,
+   "prerequisites": [
+    "Natural History",
+    "Urbanization"
+   ],
+   "leads_to": [
+    "Capitalism",
+    "Ideology"
+   ],
+   "inspiration": "Research Radio. (40%)",
+   "unlocks": [
+    "Broadway (wonder)",
+    "Cristo Redentor (wonder)",
+    "Propaganda (policy)"
+   ],
+   "effects": [
+    "+1 Governor Title"
+   ]
+  }
+ },
+ {
+  "id": "civic:medieval_faires",
+  "name": "Medieval Faires",
+  "aliases": [
+   "CIVIC_MEDIEVAL_FAIRES"
+  ],
+  "summary": "Medieval Era, cost 420. Inspiration: Maintain 4 Trade Routes. (40%). Unlocks Barbary Corsair (unit, unique: Ottomans), Angkor Wat (wonder), Merchant Confederation (policy), Aesthetics (policy), Medina Quarter (policy).",
+  "fields": {
+   "era": "Medieval Era",
+   "cost": 420,
+   "prerequisites": [
+    "Feudalism"
+   ],
+   "leads_to": [
+    "Exploration",
+    "Humanism"
+   ],
+   "inspiration": "Maintain 4 Trade Routes. (40%)",
+   "unlocks": [
+    "Barbary Corsair (unit, unique: Ottomans)",
+    "Angkor Wat (wonder)",
+    "Merchant Confederation (policy)",
+    "Aesthetics (policy)",
+    "Medina Quarter (policy)"
+   ],
+   "effects": [
+    "+1 Governor Title"
+   ]
+  }
+ },
+ {
+  "id": "civic:mercantilism",
+  "name": "Mercantilism",
+  "aliases": [
+   "CIVIC_MERCANTILISM"
+  ],
+  "summary": "Renaissance Era, cost 720. Inspiration: Earn a Great Merchant. (40%). Unlocks Privateer (unit), Sea Dog (unit, unique: England), Winged Hussar (unit, unique: Poland), Torre de Belém (wonder), Hacienda (improvement, unique: Gran Colombia), Logistics (policy)….",
+  "fields": {
+   "era": "Renaissance Era",
+   "cost": 720,
+   "prerequisites": [
+    "Humanism"
+   ],
+   "leads_to": [
+    "Colonialism",
+    "Civil Engineering"
+   ],
+   "inspiration": "Earn a Great Merchant. (40%)",
+   "unlocks": [
+    "Privateer (unit)",
+    "Sea Dog (unit, unique: England)",
+    "Winged Hussar (unit, unique: Poland)",
+    "Torre de Belém (wonder)",
+    "Hacienda (improvement, unique: Gran Colombia)",
+    "Logistics (policy)",
+    "Triangular Trade (policy)",
+    "Drill Manuals (policy)"
+   ],
+   "description": "Camp improvements receive +1 Production and +1 Food. Lumber Mills can be built on Rainforest."
+  }
+ },
+ {
+  "id": "civic:mercenaries",
+  "name": "Mercenaries",
+  "aliases": [
+   "CIVIC_MERCENARIES"
+  ],
+  "summary": "Medieval Era, cost 340. Inspiration: Have 8 land combat units in your military. (40%). Unlocks Jong (unit, unique: Indonesia), Professional Army (policy), Trade Confederation (policy), Retinues (policy).",
+  "fields": {
+   "era": "Medieval Era",
+   "cost": 340,
+   "prerequisites": [
+    "Military Training",
+    "Feudalism"
+   ],
+   "leads_to": [
+    "Exploration"
+   ],
+   "inspiration": "Have 8 land combat units in your military. (40%)",
+   "unlocks": [
+    "Jong (unit, unique: Indonesia)",
+    "Professional Army (policy)",
+    "Trade Confederation (policy)",
+    "Retinues (policy)"
+   ],
+   "effects": [
+    "+1 Envoy(s)"
+   ]
+  }
+ },
+ {
+  "id": "civic:military_tradition",
+  "name": "Military Tradition",
+  "aliases": [
+   "CIVIC_MILITARY_TRADITION"
+  ],
+  "summary": "Ancient Era, cost 50. Inspiration: Clear a Barbarian Outpost. (40%). Unlocks Maneuver (policy), Strategos (policy).",
+  "fields": {
+   "era": "Ancient Era",
+   "cost": 50,
+   "prerequisites": [
+    "Craftsmanship"
+   ],
+   "leads_to": [
+    "Military Training"
+   ],
+   "inspiration": "Clear a Barbarian Outpost. (40%)",
+   "unlocks": [
+    "Maneuver (policy)",
+    "Strategos (policy)"
+   ],
+   "effects": [
+    "grant combat adjacency(Enable 1) on owner"
+   ],
+   "description": "Grants flanking and support combat bonuses to all combat units."
+  }
+ },
+ {
+  "id": "civic:military_training",
+  "name": "Military Training",
+  "aliases": [
+   "CIVIC_MILITARY_TRAINING"
+  ],
+  "summary": "Classical Era, cost 120. Inspiration: Build an Encampment. (40%). Unlocks Statue of Zeus (wonder), Raid (policy), Veterancy (policy), Equestrian Orders (policy).",
+  "fields": {
+   "era": "Classical Era",
+   "cost": 120,
+   "prerequisites": [
+    "Military Tradition",
+    "Games and Recreation"
+   ],
+   "leads_to": [
+    "Mercenaries"
+   ],
+   "inspiration": "Build an Encampment. (40%)",
+   "unlocks": [
+    "Statue of Zeus (wonder)",
+    "Raid (policy)",
+    "Veterancy (policy)",
+    "Equestrian Orders (policy)"
+   ],
+   "effects": [
+    "+1 Envoy(s)"
+   ]
+  }
+ },
+ {
+  "id": "civic:mobilization",
+  "name": "Mobilization",
+  "aliases": [
+   "CIVIC_MOBILIZATION"
+  ],
+  "summary": "Modern Era, cost 1540. Inspiration: Have 3 Corps in your military. (40%). Unlocks Levée en Masse (policy).",
+  "fields": {
+   "era": "Modern Era",
+   "cost": 1540,
+   "prerequisites": [
+    "Urbanization",
+    "Scorched Earth"
+   ],
+   "leads_to": [
+    "Ideology"
+   ],
+   "inspiration": "Have 3 Corps in your military. (40%)",
+   "unlocks": [
+    "Levée en Masse (policy)"
+   ],
+   "effects": [
+    "+1 Governor Title"
+   ],
+   "description": "Allows forming three identical units into an Army or Armada. Allows one new Casus Belli that can be used to justify wars: War of Territorial Expansion."
+  }
+ },
+ {
+  "id": "civic:mysticism",
+  "name": "Mysticism",
+  "aliases": [
+   "CIVIC_MYSTICISM"
+  ],
+  "summary": "Ancient Era, cost 50. Inspiration: Found a pantheon. (40%). Unlocks Oracle (wonder), Grove (building), Preserve (district), Inspiration (policy), Revelation (policy).",
+  "fields": {
+   "era": "Ancient Era",
+   "cost": 50,
+   "prerequisites": [
+    "Foreign Trade"
+   ],
+   "leads_to": [
+    "Theology"
+   ],
+   "inspiration": "Found a pantheon. (40%)",
+   "unlocks": [
+    "Oracle (wonder)",
+    "Grove (building)",
+    "Preserve (district)",
+    "Inspiration (policy)",
+    "Revelation (policy)"
+   ],
+   "effects": [
+    "+1 Envoy(s)"
+   ]
+  }
+ },
+ {
+  "id": "civic:nationalism",
+  "name": "Nationalism",
+  "aliases": [
+   "CIVIC_NATIONALISM"
+  ],
+  "summary": "Industrial Era, cost 1010. Inspiration: Declare war using a casus belli. (40%). Unlocks Minas Geraes (unit, unique: Brazil), Open-Air Museum (improvement, unique: Sweden), Grande Armée (policy), National Identity (policy).",
+  "fields": {
+   "era": "Industrial Era",
+   "cost": 1010,
+   "prerequisites": [
+    "The Enlightenment"
+   ],
+   "leads_to": [
+    "Scorched Earth",
+    "Urbanization"
+   ],
+   "inspiration": "Declare war using a casus belli. (40%)",
+   "unlocks": [
+    "Minas Geraes (unit, unique: Brazil)",
+    "Open-Air Museum (improvement, unique: Sweden)",
+    "Grande Armée (policy)",
+    "National Identity (policy)"
+   ],
+   "effects": [
+    "+1 Spy capacity",
+    "+1 Governor Title"
+   ],
+   "description": "Grants the ability to construct an additional Spy. Allows forming two identical units into a Corps or Fleet. Allows one new Casus Belli that can be used to justify wars: Colonial War."
+  }
+ },
+ {
+  "id": "civic:natural_history",
+  "name": "Natural History",
+  "aliases": [
+   "CIVIC_NATURAL_HISTORY"
+  ],
+  "summary": "Industrial Era, cost 1050. Inspiration: Build an Archaeological Museum. (40%). Unlocks Archaeologist (unit), Zoo (building), Hermitage (wonder), Ferris Wheel (building), Aquarium (building), Thermal Bath (building, unique: Hungary)….",
+  "fields": {
+   "era": "Industrial Era",
+   "cost": 1050,
+   "prerequisites": [
+    "Colonialism"
+   ],
+   "leads_to": [
+    "Conservation",
+    "Mass Media"
+   ],
+   "inspiration": "Build an Archaeological Museum. (40%)",
+   "unlocks": [
+    "Archaeologist (unit)",
+    "Zoo (building)",
+    "Hermitage (wonder)",
+    "Ferris Wheel (building)",
+    "Aquarium (building)",
+    "Thermal Bath (building, unique: Hungary)",
+    "Water Park (district)",
+    "Copacabana (district, unique: Brazil)"
+   ],
+   "effects": [
+    "+2 Envoy(s)",
+    "trigger game mechanic(MechanicName GenerateLandAntiquities) on owner"
+   ]
+  }
+ },
+ {
+  "id": "civic:naval_tradition",
+  "name": "Naval Tradition",
+  "aliases": [
+   "CIVIC_NAVAL_TRADITION"
+  ],
+  "summary": "Medieval Era, cost 220. Inspiration: Kill a unit with a Quadrireme. (40%). Unlocks Naval Infrastructure (policy), Navigation (policy).",
+  "fields": {
+   "era": "Medieval Era",
+   "cost": 220,
+   "prerequisites": [
+    "Defensive Tactics"
+   ],
+   "inspiration": "Kill a unit with a Quadrireme. (40%)",
+   "unlocks": [
+    "Naval Infrastructure (policy)",
+    "Navigation (policy)"
+   ],
+   "effects": [
+    "+1 Envoy(s)"
+   ]
+  }
+ },
+ {
+  "id": "civic:near_future_governance",
+  "name": "Near Future Governance",
+  "aliases": [
+   "CIVIC_NEAR_FUTURE_GOVERNANCE"
+  ],
+  "summary": "Information Era, cost 3100. Inspiration: Adopt a government with 10 inherent policy slots. (90%).",
+  "fields": {
+   "era": "Information Era",
+   "cost": 3100,
+   "prerequisites": [
+    "Environmentalism",
+    "Globalization"
+   ],
+   "inspiration": "Adopt a government with 10 inherent policy slots. (90%)",
+   "effects": [
+    "+1 Governor Title",
+    "+3 Envoy(s)"
+   ]
+  }
+ },
+ {
+  "id": "civic:nuclear_program",
+  "name": "Nuclear Program",
+  "aliases": [
+   "CIVIC_NUCLEAR_PROGRAM"
+  ],
+  "summary": "Modern Era, cost 1715. Inspiration: Build a Research Lab. (40%). Unlocks Science Foundations (policy), Nuclear Espionage (policy).",
+  "fields": {
+   "era": "Modern Era",
+   "cost": 1715,
+   "prerequisites": [
+    "Ideology"
+   ],
+   "inspiration": "Build a Research Lab. (40%)",
+   "unlocks": [
+    "Science Foundations (policy)",
+    "Nuclear Espionage (policy)"
+   ]
+  }
+ },
+ {
+  "id": "civic:opera_ballet",
+  "name": "Opera and Ballet",
+  "aliases": [
+   "CIVIC_OPERA_BALLET"
+  ],
+  "summary": "Industrial Era, cost 800. Inspiration: Build an Art Museum. (40%). Unlocks Bolshoi Theatre (wonder), Grand Opera (policy), Symphonies (policy).",
+  "fields": {
+   "era": "Industrial Era",
+   "cost": 800,
+   "prerequisites": [
+    "The Enlightenment"
+   ],
+   "inspiration": "Build an Art Museum. (40%)",
+   "unlocks": [
+    "Bolshoi Theatre (wonder)",
+    "Grand Opera (policy)",
+    "Symphonies (policy)"
+   ],
+   "effects": [
+    "+2 Envoy(s)"
+   ]
+  }
+ },
+ {
+  "id": "civic:political_philosophy",
+  "name": "Political Philosophy",
+  "aliases": [
+   "CIVIC_POLITICAL_PHILOSOPHY"
+  ],
+  "summary": "Classical Era, cost 110. Inspiration: Meet 3 city-states. (40%). Unlocks Apadana (wonder), Autocracy (government), Oligarchy (government), Classical Republic (government), Charismatic Leader (policy), Diplomatic League (policy).",
+  "fields": {
+   "era": "Classical Era",
+   "cost": 110,
+   "prerequisites": [
+    "State Workforce",
+    "Early Empire"
+   ],
+   "leads_to": [
+    "Defensive Tactics",
+    "Recorded History"
+   ],
+   "inspiration": "Meet 3 city-states. (40%)",
+   "unlocks": [
+    "Apadana (wonder)",
+    "Autocracy (government)",
+    "Oligarchy (government)",
+    "Classical Republic (government)",
+    "Charismatic Leader (policy)",
+    "Diplomatic League (policy)"
+   ]
+  }
+ },
+ {
+  "id": "civic:professional_sports",
+  "name": "Professional Sports",
+  "aliases": [
+   "CIVIC_PROFESSIONAL_SPORTS"
+  ],
+  "summary": "Atomic Era, cost 2185. Inspiration: Build 2 Entertainment Complex districts. (40%). Unlocks Stadium (building), Estádio do Maracanã (wonder), Aquatics Center (building), Ski Resort (improvement), Sports Media (policy).",
+  "fields": {
+   "era": "Atomic Era",
+   "cost": 2185,
+   "prerequisites": [
+    "Ideology"
+   ],
+   "leads_to": [
+    "Social Media"
+   ],
+   "inspiration": "Build 2 Entertainment Complex districts. (40%)",
+   "unlocks": [
+    "Stadium (building)",
+    "Estádio do Maracanã (wonder)",
+    "Aquatics Center (building)",
+    "Ski Resort (improvement)",
+    "Sports Media (policy)"
+   ]
+  }
+ },
+ {
+  "id": "civic:rapid_deployment",
+  "name": "Rapid Deployment",
+  "aliases": [
+   "CIVIC_RAPID_DEPLOYMENT"
+  ],
+  "summary": "Atomic Era, cost 2415. Inspiration: Build an Aerodrome or Airstrip on a foreign continent. (40%). Unlocks Amundsen-Scott Research Station (wonder), Military First (policy), After Action Reports (policy).",
+  "fields": {
+   "era": "Atomic Era",
+   "cost": 2415,
+   "prerequisites": [
+    "Cold War"
+   ],
+   "leads_to": [
+    "Globalization",
+    "Environmentalism"
+   ],
+   "inspiration": "Build an Aerodrome or Airstrip on a foreign continent. (40%)",
+   "unlocks": [
+    "Amundsen-Scott Research Station (wonder)",
+    "Military First (policy)",
+    "After Action Reports (policy)"
+   ],
+   "description": "Allows for the transport of land units between Aerodrome districts that contain Airports."
+  }
+ },
+ {
+  "id": "civic:recorded_history",
+  "name": "Recorded History",
+  "aliases": [
+   "CIVIC_RECORDED_HISTORY"
+  ],
+  "summary": "Classical Era, cost 175. Inspiration: Build 2 Campus districts. (40%). Unlocks Great Library (wonder), Natural Philosophy (policy), Praetorium (policy).",
+  "fields": {
+   "era": "Classical Era",
+   "cost": 175,
+   "prerequisites": [
+    "Political Philosophy",
+    "Drama and Poetry"
+   ],
+   "leads_to": [
+    "Civil Service"
+   ],
+   "inspiration": "Build 2 Campus districts. (40%)",
+   "unlocks": [
+    "Great Library (wonder)",
+    "Natural Philosophy (policy)",
+    "Praetorium (policy)"
+   ],
+   "effects": [
+    "+1 Governor Title"
+   ]
+  }
+ },
+ {
+  "id": "civic:reformed_church",
+  "name": "Reformed Church",
+  "aliases": [
+   "CIVIC_REFORMED_CHURCH"
+  ],
+  "summary": "Renaissance Era, cost 440. Inspiration: Have 6 cities following your Religion. (40%). Unlocks St. Basil's Cathedral (wonder), Golf Course (improvement, unique: Scotland), Theocracy (government), Wars of Religion (policy), Religious Orders (policy), Simultaneum (policy).",
+  "fields": {
+   "era": "Renaissance Era",
+   "cost": 440,
+   "prerequisites": [
+    "Guilds",
+    "Divine Right"
+   ],
+   "inspiration": "Have 6 cities following your Religion. (40%)",
+   "unlocks": [
+    "St. Basil's Cathedral (wonder)",
+    "Golf Course (improvement, unique: Scotland)",
+    "Theocracy (government)",
+    "Wars of Religion (policy)",
+    "Religious Orders (policy)",
+    "Simultaneum (policy)"
+   ]
+  }
+ },
+ {
+  "id": "civic:scorched_earth",
+  "name": "Scorched Earth",
+  "aliases": [
+   "CIVIC_SCORCHED_EARTH"
+  ],
+  "summary": "Industrial Era, cost 1210. Inspiration: Build 2 Field Cannons. (40%). Unlocks Total War (policy), Expropriation (policy), Military Organization (policy).",
+  "fields": {
+   "era": "Industrial Era",
+   "cost": 1210,
+   "prerequisites": [
+    "Nationalism"
+   ],
+   "leads_to": [
+    "Mobilization"
+   ],
+   "inspiration": "Build 2 Field Cannons. (40%)",
+   "unlocks": [
+    "Total War (policy)",
+    "Expropriation (policy)",
+    "Military Organization (policy)"
+   ],
+   "effects": [
+    "+2 Envoy(s)"
+   ]
+  }
+ },
+ {
+  "id": "civic:smart_power_doctrine",
+  "name": "Smart Power Doctrine",
+  "aliases": [
+   "CIVIC_SMART_POWER_DOCTRINE"
+  ],
+  "summary": "Future Era, cost 3200. Unlocks Diplomatic Capital (policy), Global Coalition (policy).",
+  "fields": {
+   "era": "Future Era",
+   "cost": 3200,
+   "unlocks": [
+    "Diplomatic Capital (policy)",
+    "Global Coalition (policy)"
+   ]
+  }
+ },
+ {
+  "id": "civic:social_media",
+  "name": "Social Media",
+  "aliases": [
+   "CIVIC_SOCIAL_MEDIA"
+  ],
+  "summary": "Information Era, cost 2880. Inspiration: Research the Telecommunications technology. (40%). Unlocks Online Communities (policy), Collective Activism (policy), Communications Office (policy).",
+  "fields": {
+   "era": "Information Era",
+   "cost": 2880,
+   "prerequisites": [
+    "Space Race",
+    "Professional Sports"
+   ],
+   "leads_to": [
+    "Future Civic",
+    "Venture Politics",
+    "Distributed Sovereignty",
+    "Optimization Imperative"
+   ],
+   "inspiration": "Research the Telecommunications technology. (40%)",
+   "unlocks": [
+    "Online Communities (policy)",
+    "Collective Activism (policy)",
+    "Communications Office (policy)"
+   ],
+   "effects": [
+    "+1 Governor Title"
+   ]
+  }
+ },
+ {
+  "id": "civic:space_race",
+  "name": "Space Race",
+  "aliases": [
+   "CIVIC_SPACE_RACE"
+  ],
+  "summary": "Atomic Era, cost 2415. Inspiration: Build a Spaceport district. (40%). Unlocks Satellite Broadcasts (policy), Integrated Space Cell (policy), Music Censorship (policy).",
+  "fields": {
+   "era": "Atomic Era",
+   "cost": 2415,
+   "prerequisites": [
+    "Cold War"
+   ],
+   "leads_to": [
+    "Globalization",
+    "Social Media"
+   ],
+   "inspiration": "Build a Spaceport district. (40%)",
+   "unlocks": [
+    "Satellite Broadcasts (policy)",
+    "Integrated Space Cell (policy)",
+    "Music Censorship (policy)"
+   ]
+  }
+ },
+ {
+  "id": "civic:state_workforce",
+  "name": "State Workforce",
+  "aliases": [
+   "CIVIC_STATE_WORKFORCE"
+  ],
+  "summary": "Ancient Era, cost 70. Inspiration: Build any specialty district. (40%). Unlocks Government Plaza (district), Corvée (policy), Conscription (policy).",
+  "fields": {
+   "era": "Ancient Era",
+   "cost": 70,
+   "prerequisites": [
+    "Craftsmanship"
+   ],
+   "leads_to": [
+    "Games and Recreation",
+    "Political Philosophy"
+   ],
+   "inspiration": "Build any specialty district. (40%)",
+   "unlocks": [
+    "Government Plaza (district)",
+    "Corvée (policy)",
+    "Conscription (policy)"
+   ],
+   "effects": [
+    "+1 Governor Title"
+   ]
+  }
+ },
+ {
+  "id": "civic:suffrage",
+  "name": "Suffrage",
+  "aliases": [
+   "CIVIC_SUFFRAGE"
+  ],
+  "summary": "Modern Era, cost 1640. Inspiration: Build 4 Sewers. (40%). Unlocks Democracy (government), Their Finest Hour (policy), New Deal (policy).",
+  "fields": {
+   "era": "Modern Era",
+   "cost": 1640,
+   "prerequisites": [
+    "Ideology"
+   ],
+   "inspiration": "Build 4 Sewers. (40%)",
+   "unlocks": [
+    "Democracy (government)",
+    "Their Finest Hour (policy)",
+    "New Deal (policy)"
+   ]
+  }
+ },
+ {
+  "id": "civic:synthetic_technocracy",
+  "name": "Optimization Imperative",
+  "aliases": [
+   "CIVIC_SYNTHETIC_TECHNOCRACY"
+  ],
+  "summary": "Information Era, cost 3000. Inspiration: Research the Robotics technology. (40%). Unlocks Synthetic Technocracy (government).",
+  "fields": {
+   "era": "Information Era",
+   "cost": 3000,
+   "prerequisites": [
+    "Globalization",
+    "Social Media"
+   ],
+   "inspiration": "Research the Robotics technology. (40%)",
+   "unlocks": [
+    "Synthetic Technocracy (government)"
+   ]
+  }
+ },
+ {
+  "id": "civic:the_enlightenment",
+  "name": "The Enlightenment",
+  "aliases": [
+   "CIVIC_THE_ENLIGHTENMENT"
+  ],
+  "summary": "Renaissance Era, cost 720. Inspiration: Earn 3 Great People. (40%). Unlocks Rationalism (policy), Free Market (policy), Liberalism (policy).",
+  "fields": {
+   "era": "Renaissance Era",
+   "cost": 720,
+   "prerequisites": [
+    "Humanism",
+    "Diplomatic Service"
+   ],
+   "leads_to": [
+    "Nationalism",
+    "Opera and Ballet"
+   ],
+   "inspiration": "Earn 3 Great People. (40%)",
+   "unlocks": [
+    "Rationalism (policy)",
+    "Free Market (policy)",
+    "Liberalism (policy)"
+   ],
+   "effects": [
+    "adjust player religious tourism reduction(Modifier 50) on owner"
+   ],
+   "description": "Religious Tourism effects are halved versus your civilization."
+  }
+ },
+ {
+  "id": "civic:theology",
+  "name": "Theology",
+  "aliases": [
+   "CIVIC_THEOLOGY"
+  ],
+  "summary": "Classical Era, cost 120. Inspiration: Found a Religion. (40%). Unlocks Temple (building), Stave Church (building, unique: Norway), Madrasa (building, unique: Arabia), Mahabodhi Temple (wonder), Prasat (building, unique: Khmer), Scripture (policy).",
+  "fields": {
+   "era": "Classical Era",
+   "cost": 120,
+   "prerequisites": [
+    "Drama and Poetry",
+    "Mysticism"
+   ],
+   "leads_to": [
+    "Divine Right"
+   ],
+   "inspiration": "Found a Religion. (40%)",
+   "unlocks": [
+    "Temple (building)",
+    "Stave Church (building, unique: Norway)",
+    "Madrasa (building, unique: Arabia)",
+    "Mahabodhi Temple (wonder)",
+    "Prasat (building, unique: Khmer)",
+    "Scripture (policy)"
+   ],
+   "effects": [
+    "+1 Envoy(s)"
+   ]
+  }
+ },
+ {
+  "id": "civic:totalitarianism",
+  "name": "Totalitarianism",
+  "aliases": [
+   "CIVIC_TOTALITARIANISM"
+  ],
+  "summary": "Modern Era, cost 1640. Inspiration: Build 3 Military Academies. (40%). Unlocks Fascism (government), Third Alternative (policy), Martial Law (policy).",
+  "fields": {
+   "era": "Modern Era",
+   "cost": 1640,
+   "prerequisites": [
+    "Ideology"
+   ],
+   "inspiration": "Build 3 Military Academies. (40%)",
+   "unlocks": [
+    "Fascism (government)",
+    "Third Alternative (policy)",
+    "Martial Law (policy)"
+   ]
+  }
+ },
+ {
+  "id": "civic:urbanization",
+  "name": "Urbanization",
+  "aliases": [
+   "CIVIC_URBANIZATION"
+  ],
+  "summary": "Industrial Era, cost 1210. Inspiration: Grow a city to 15 population. (40%). Unlocks Neighborhood (district), Public Transport (policy), Military Research (policy), Force Modernization (policy).",
+  "fields": {
+   "era": "Industrial Era",
+   "cost": 1210,
+   "prerequisites": [
+    "Civil Engineering",
+    "Nationalism"
+   ],
+   "leads_to": [
+    "Mass Media",
+    "Mobilization"
+   ],
+   "inspiration": "Grow a city to 15 population. (40%)",
+   "unlocks": [
+    "Neighborhood (district)",
+    "Public Transport (policy)",
+    "Military Research (policy)",
+    "Force Modernization (policy)"
+   ]
+  }
+ }
+]

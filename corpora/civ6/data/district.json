@@ -1,0 +1,1180 @@
+[
+ {
+  "id": "district:acropolis",
+  "name": "Acropolis",
+  "aliases": [
+   "DISTRICT_ACROPOLIS"
+  ],
+  "summary": "Unique to Greece, replaces Theater Square. Base cost 27 (rises with game progress). Adjacency: +2 Culture per adjacent wonder or Entertainment Complex or Water Park or Pamukkale; +1 Culture per adjacent district or City Center or Government Plaza.",
+  "fields": {
+   "unique_to": "Greece",
+   "replaces": "Theater Square",
+   "cost": 27,
+   "cost_progression": "rises with techs and civics completed; cheaper while you have fewer of these districts than the average civilization",
+   "requires": [
+    "Drama and Poetry"
+   ],
+   "requires_population": "yes",
+   "adjacency": [
+    "+2 Culture per adjacent wonder or Entertainment Complex or Water Park or Pamukkale",
+    "+1 Culture per adjacent district or City Center or Government Plaza"
+   ],
+   "buildings": [
+    "Amphitheater",
+    "Art Museum",
+    "Archaeological Museum",
+    "Broadcast Center",
+    "Film Studio (unique: America)",
+    "Marae (unique: Māori)"
+   ],
+   "appeal": 1,
+   "great_person_points": [
+    "+1 Great Writer",
+    "+1 Great Artist",
+    "+1 Great Musician"
+   ],
+   "trade_route_yields": [
+    "Food: +1 domestic dest.",
+    "Culture: +1 international dest."
+   ],
+   "citizen_yields": "+2 Culture",
+   "one_per_city": true,
+   "effect": "A district unique to Greece for cultural sites. Replaces the Theater Square district and cheaper to build. Awards 1 Envoy when completed. +1 Culture bonus for each adjacent district and an additional +1 Culture bonus for adjacent City Center. +2 Culture bonus for each adjacent wonder, Entertainment Complex, and Water Park. Can only be built on Hills."
+  }
+ },
+ {
+  "id": "district:aerodrome",
+  "name": "Aerodrome",
+  "aliases": [
+   "DISTRICT_AERODROME"
+  ],
+  "summary": "Base cost 54 (rises with game progress).",
+  "fields": {
+   "cost": 54,
+   "cost_progression": "rises with techs and civics completed; cheaper while you have fewer of these districts than the average civilization",
+   "requires": [
+    "Flight"
+   ],
+   "requires_population": "yes",
+   "buildings": [
+    "Hangar",
+    "Airport"
+   ],
+   "appeal": -1,
+   "one_per_city": true,
+   "effect": "A district that allows you to build and store aircraft. Cannot be built on Hills."
+  }
+ },
+ {
+  "id": "district:aqueduct",
+  "name": "Aqueduct",
+  "aliases": [
+   "DISTRICT_AQUEDUCT"
+  ],
+  "summary": "Base cost 36 (rises with game progress).",
+  "fields": {
+   "cost": 36,
+   "cost_progression": "rises with game progress (techs and civics completed)",
+   "requires": [
+    "Engineering"
+   ],
+   "one_per_city": true,
+   "effect": "A district that provides this city with a source of fresh water from an adjacent River, Lake, Oasis, or Mountain. Cities that do not yet have existing fresh water receive up to 6 Housing. Cities that already have existing fresh water will instead get +2 Housing. If built adjacent to a Geothermal Fissure +1 Amenity. Prevents Food loss during Drought. Must be built adjacent to the City Center. Military Engineers can spend a charge to complete 20% of an Aqueduct's production."
+  }
+ },
+ {
+  "id": "district:bath",
+  "name": "Bath",
+  "aliases": [
+   "DISTRICT_BATH"
+  ],
+  "summary": "Unique to Rome, replaces Aqueduct. Base cost 18 (rises with game progress).",
+  "fields": {
+   "unique_to": "Rome",
+   "replaces": "Aqueduct",
+   "cost": 18,
+   "cost_progression": "rises with game progress (techs and civics completed)",
+   "requires": [
+    "Engineering"
+   ],
+   "housing": 2,
+   "amenities": 1,
+   "one_per_city": true,
+   "effect": "A district unique to Rome for city growth. Replaces the Aqueduct district and cheaper to build. It provides this city with a source of fresh water from an adjacent River, Lake, Oasis, or Mountain. Cities that do not yet have existing fresh water receive up to 6 Housing. Cities that already have existing fresh water will instead get +2 Housing. If built adjacent to a Geothermal Fissure +1 Amenity. In all cases the Bath provides an additional bonus of +2 Housing and +1 Amenity. Prevents Food loss during Drought. Must be built adjacent to the City Center. Military Engineers can spend a charge to complete 20% of a Bath's production."
+  }
+ },
+ {
+  "id": "district:campus",
+  "name": "Campus",
+  "aliases": [
+   "DISTRICT_CAMPUS"
+  ],
+  "summary": "Base cost 54 (rises with game progress). Adjacency: +1 Science per adjacent Mountain or Government Plaza; +1 Science per 2 adjacent Rainforest tiles; +1 Science per 2 adjacent districts….",
+  "fields": {
+   "cost": 54,
+   "cost_progression": "rises with techs and civics completed; cheaper while you have fewer of these districts than the average civilization",
+   "requires": [
+    "Writing"
+   ],
+   "requires_population": "yes",
+   "adjacency": [
+    "+1 Science per adjacent Mountain or Government Plaza",
+    "+1 Science per 2 adjacent Rainforest tiles",
+    "+1 Science per 2 adjacent districts",
+    "+2 Science per adjacent Great Barrier Reef or Geothermal Fissure or Reef or Pamukkale"
+   ],
+   "buildings": [
+    "Library",
+    "University",
+    "Madrasa (unique: Arabia)",
+    "Research Lab",
+    "Navigation School (unique: Portugal)"
+   ],
+   "great_person_points": [
+    "+1 Great Scientist"
+   ],
+   "trade_route_yields": [
+    "Food: +1 domestic dest.",
+    "Science: +1 international dest."
+   ],
+   "citizen_yields": "+2 Science",
+   "one_per_city": true,
+   "effect": "A district in your city for scientific endeavors."
+  }
+ },
+ {
+  "id": "district:canal",
+  "name": "Canal",
+  "aliases": [
+   "DISTRICT_CANAL"
+  ],
+  "summary": "Base cost 81 (rises with game progress).",
+  "fields": {
+   "cost": 81,
+   "cost_progression": "rises with game progress (techs and civics completed)",
+   "requires": [
+    "Steam Power"
+   ],
+   "appeal": 1,
+   "effect": "A district built on flat land to connect two bodies of water or a body of water to a City Center. Trade Routes traveling through it can multiply the Gold they get from districts at their destination. Canals may either go straight through the hex or bend by 60 degrees. However three-way Canal junctures are not allowed and Canals must have a full land tile on each side of the waterway they create. Military Engineers can spend a charge to complete 20% of a Canal's production."
+  }
+ },
+ {
+  "id": "district:city_center",
+  "name": "City Center",
+  "aliases": [
+   "DISTRICT_CITY_CENTER"
+  ],
+  "summary": "Base cost 54.",
+  "fields": {
+   "cost": 54,
+   "buildings": [
+    "Monument",
+    "Palace",
+    "Granary",
+    "Ancient Walls",
+    "Water Mill",
+    "Medieval Walls",
+    "Renaissance Walls",
+    "Sewer",
+    "Palgum (unique: Babylon)",
+    "Tsikhe (unique: Georgia)",
+    "Flood Barrier"
+   ],
+   "trade_route_yields": [
+    "Food: +1 domestic dest.",
+    "Production: +1 domestic dest.",
+    "Gold: +3 international dest."
+   ],
+   "one_per_city": true,
+   "effect": "This is the City Center."
+  }
+ },
+ {
+  "id": "district:commercial_hub",
+  "name": "Commercial Hub",
+  "aliases": [
+   "DISTRICT_COMMERCIAL_HUB"
+  ],
+  "summary": "Base cost 54 (rises with game progress). Adjacency: +2 Gold per adjacent River or Harbor or Royal Navy Dockyard or Pamukkale or Cothon; +1 Gold per 2 adjacent districts; +1 Gold per adjacent Government Plaza.",
+  "fields": {
+   "cost": 54,
+   "cost_progression": "rises with techs and civics completed; cheaper while you have fewer of these districts than the average civilization",
+   "requires": [
+    "Currency"
+   ],
+   "requires_population": "yes",
+   "adjacency": [
+    "+2 Gold per adjacent River or Harbor or Royal Navy Dockyard or Pamukkale or Cothon",
+    "+1 Gold per 2 adjacent districts",
+    "+1 Gold per adjacent Government Plaza"
+   ],
+   "buildings": [
+    "Market",
+    "Bank",
+    "Stock Exchange",
+    "Grand Bazaar (unique: Ottomans)",
+    "Sukiennice (unique: Poland)"
+   ],
+   "great_person_points": [
+    "+1 Great Merchant"
+   ],
+   "trade_route_yields": [
+    "Production: +1 domestic dest.",
+    "Gold: +3 international dest."
+   ],
+   "citizen_yields": "+4 Gold",
+   "one_per_city": true,
+   "effect": "A district in your city specializing in finance and trade."
+  }
+ },
+ {
+  "id": "district:cothon",
+  "name": "Cothon",
+  "aliases": [
+   "DISTRICT_COTHON"
+  ],
+  "summary": "Unique to Phoenicia, replaces Harbor. Base cost 27 (rises with game progress). Adjacency: +1 Gold per adjacent sea resource or Government Plaza; +1 Gold per 2 adjacent districts; +2 Gold per adjacent City Center.",
+  "fields": {
+   "unique_to": "Phoenicia",
+   "replaces": "Harbor",
+   "cost": 27,
+   "cost_progression": "rises with techs and civics completed; cheaper while you have fewer of these districts than the average civilization",
+   "requires": [
+    "Celestial Navigation"
+   ],
+   "requires_population": "yes",
+   "adjacency": [
+    "+1 Gold per adjacent sea resource or Government Plaza",
+    "+1 Gold per 2 adjacent districts",
+    "+2 Gold per adjacent City Center"
+   ],
+   "buildings": [
+    "Lighthouse",
+    "Shipyard",
+    "Seaport"
+   ],
+   "great_person_points": [
+    "+1 Great Admiral"
+   ],
+   "trade_route_yields": [
+    "Production: +1 domestic dest.",
+    "Gold: +3 international dest."
+   ],
+   "citizen_yields": "+2 Gold, +1 Food",
+   "one_per_city": true,
+   "coast": true,
+   "effect": "A district unique to Phoenicia for naval activity in your city. Replaces the Harbor district and cheaper to build. Must be built on Coast or Lake Terrain adjacent to land. +50% Production towards naval units and Settlers in this city. All wounded naval units in this city’s borders heal +100 HP each turn."
+  }
+ },
+ {
+  "id": "district:dam",
+  "name": "Dam",
+  "aliases": [
+   "DISTRICT_DAM"
+  ],
+  "summary": "Base cost 81 (rises with game progress).",
+  "fields": {
+   "cost": 81,
+   "cost_progression": "rises with game progress (techs and civics completed)",
+   "requires": [
+    "Buttress"
+   ],
+   "buildings": [
+    "Hydroelectric Dam"
+   ],
+   "housing": 3,
+   "amenities": 1,
+   "appeal": 1,
+   "one_per_river": true,
+   "effect": "A district built on a Floodplains tile to improve the comfort of living along this river. Prevents damage from flooding of this river (though yields from flooding drop by 50%). Prevents Food loss during Drought. Only one may be built along each river's floodplain (whichever player completes one first) and the river must traverse at least two sides of the Dam hex. Military Engineers can spend a charge to complete 20% of a Dam's production."
+  }
+ },
+ {
+  "id": "district:diplomatic_quarter",
+  "name": "Diplomatic Quarter",
+  "aliases": [
+   "DISTRICT_DIPLOMATIC_QUARTER"
+  ],
+  "summary": "Base cost 30 (rises with game progress).",
+  "fields": {
+   "cost": 30,
+   "cost_progression": "rises with techs and civics completed; cheaper while you have fewer of these districts than the average civilization",
+   "requires": [
+    "Mathematics"
+   ],
+   "requires_population": "yes",
+   "buildings": [
+    "Consulate",
+    "Chancery"
+   ],
+   "trade_route_yields": [
+    "Food: +1 domestic dest.",
+    "Production: +1 domestic dest.",
+    "Culture: +1 international dest."
+   ],
+   "one_per_city": true,
+   "effect": "Your civilization receives +1 Diplomatic Favor for each Delegation or Embassy from a foreign civilization through diplomacy. +1 Envoy if built next to the city center. Enemy Spies operate at 2 levels below normal targeting this district and adjacent districts. Only 1 can exist in your empire at a time."
+  }
+ },
+ {
+  "id": "district:encampment",
+  "name": "Encampment",
+  "aliases": [
+   "DISTRICT_ENCAMPMENT"
+  ],
+  "summary": "Base cost 54 (rises with game progress).",
+  "fields": {
+   "cost": 54,
+   "cost_progression": "rises with techs and civics completed; cheaper while you have fewer of these districts than the average civilization",
+   "requires": [
+    "Bronze Working"
+   ],
+   "requires_population": "yes",
+   "buildings": [
+    "Barracks",
+    "Stable",
+    "Armory",
+    "Military Academy",
+    "Ordu (unique: Mongolia)",
+    "Basilikoi Paides (unique: Macedon)"
+   ],
+   "appeal": -1,
+   "great_person_points": [
+    "+1 Great General"
+   ],
+   "trade_route_yields": [
+    "Production: +1 domestic dest., +1 international dest."
+   ],
+   "citizen_yields": "+2 Gold, +1 Production",
+   "one_per_city": true,
+   "no_adjacent_city_center": true,
+   "effect": "A district in your city for military facilities."
+  }
+ },
+ {
+  "id": "district:entertainment_complex",
+  "name": "Entertainment Complex",
+  "aliases": [
+   "DISTRICT_ENTERTAINMENT_COMPLEX"
+  ],
+  "summary": "Base cost 54 (rises with game progress).",
+  "fields": {
+   "cost": 54,
+   "cost_progression": "rises with techs and civics completed; cheaper while you have fewer of these districts than the average civilization",
+   "requires": [
+    "Games and Recreation"
+   ],
+   "requires_population": "yes",
+   "buildings": [
+    "Arena",
+    "Zoo",
+    "Stadium",
+    "Tlachtli (unique: Aztec)",
+    "Thermal Bath (unique: Hungary)"
+   ],
+   "amenities": 1,
+   "appeal": 1,
+   "trade_route_yields": [
+    "Food: +1 domestic dest., +1 international dest."
+   ],
+   "one_per_city": true,
+   "effect": "A district in your city dedicated to keeping your people happy by increasing Amenities. Cannot be built in a city with a Water Park."
+  }
+ },
+ {
+  "id": "district:government",
+  "name": "Government Plaza",
+  "aliases": [
+   "DISTRICT_GOVERNMENT"
+  ],
+  "summary": "Base cost 30 (rises with game progress).",
+  "fields": {
+   "cost": 30,
+   "cost_progression": "rises with techs and civics completed; cheaper while you have fewer of these districts than the average civilization",
+   "requires": [
+    "State Workforce"
+   ],
+   "requires_population": "yes",
+   "buildings": [
+    "Audience Chamber",
+    "Ancestral Hall",
+    "Warlord's Throne",
+    "Foreign Ministry",
+    "Intelligence Agency",
+    "Grand Master's Chapel",
+    "War Department",
+    "National History Museum",
+    "Royal Society",
+    "Queen's Bibliotheque (unique: Kristina (Sweden))"
+   ],
+   "trade_route_yields": [
+    "Gold: +2 international dest.",
+    "Food: +1 domestic dest.",
+    "Production: +1 domestic dest."
+   ],
+   "one_per_city": true,
+   "effect": "A district placed once in your empire to commemorate your government choices. Provides +8 Loyalty per turn to this city, and an increase of +1 to the adjacency bonuses being earned by any adjacent district. Awards +1 Governor Title."
+  }
+ },
+ {
+  "id": "district:hansa",
+  "name": "Hansa",
+  "aliases": [
+   "DISTRICT_HANSA"
+  ],
+  "summary": "Unique to Germany, replaces Industrial Zone. Base cost 27 (rises with game progress). Adjacency: +2 Production per adjacent Commercial Hub or Aqueduct or Canal or Dam; +1 Production per 2 adjacent districts; +1 Production per adjacent resource or Government Plaza.",
+  "fields": {
+   "unique_to": "Germany",
+   "replaces": "Industrial Zone",
+   "cost": 27,
+   "cost_progression": "rises with techs and civics completed; cheaper while you have fewer of these districts than the average civilization",
+   "requires": [
+    "Apprenticeship"
+   ],
+   "requires_population": "yes",
+   "adjacency": [
+    "+2 Production per adjacent Commercial Hub or Aqueduct or Canal or Dam",
+    "+1 Production per 2 adjacent districts",
+    "+1 Production per adjacent resource or Government Plaza"
+   ],
+   "buildings": [
+    "Workshop",
+    "Factory",
+    "Electronics Factory (unique: Japan)",
+    "Nuclear Power Plant",
+    "Coal Power Plant",
+    "Oil Power Plant"
+   ],
+   "appeal": -1,
+   "great_person_points": [
+    "+1 Great Engineer"
+   ],
+   "trade_route_yields": [
+    "Production: +1 domestic dest., +1 international dest."
+   ],
+   "citizen_yields": "+2 Production",
+   "one_per_city": true,
+   "effect": "A district unique to Germany for industrial activity. Replaces the Industrial Zone district and cheaper to build. + 2Production bonus for each adjacent Commercial Hub, Aqueduct, Canal, and Dam districts. +1 Production bonus for each adjacent resource. +1 Production bonus for every two adjacent district tiles."
+  }
+ },
+ {
+  "id": "district:harbor",
+  "name": "Harbor",
+  "aliases": [
+   "DISTRICT_HARBOR"
+  ],
+  "summary": "Base cost 54 (rises with game progress). Adjacency: +1 Gold per adjacent sea resource or Government Plaza; +1 Gold per 2 adjacent districts; +2 Gold per adjacent City Center.",
+  "fields": {
+   "cost": 54,
+   "cost_progression": "rises with techs and civics completed; cheaper while you have fewer of these districts than the average civilization",
+   "requires": [
+    "Celestial Navigation"
+   ],
+   "requires_population": "yes",
+   "adjacency": [
+    "+1 Gold per adjacent sea resource or Government Plaza",
+    "+1 Gold per 2 adjacent districts",
+    "+2 Gold per adjacent City Center"
+   ],
+   "buildings": [
+    "Lighthouse",
+    "Shipyard",
+    "Seaport"
+   ],
+   "great_person_points": [
+    "+1 Great Admiral"
+   ],
+   "trade_route_yields": [
+    "Production: +1 domestic dest.",
+    "Gold: +3 international dest."
+   ],
+   "citizen_yields": "+2 Gold, +1 Food",
+   "one_per_city": true,
+   "coast": true,
+   "effect": "A district for naval activity in your city. Also removes the Movement penalty for embarking and disembarking to and from this tile. Must be built on Coast or Lake Terrain adjacent to land. Cannot be built on Reef."
+  }
+ },
+ {
+  "id": "district:hippodrome",
+  "name": "Hippodrome",
+  "aliases": [
+   "DISTRICT_HIPPODROME"
+  ],
+  "summary": "Unique to Byzantium, replaces Entertainment Complex. Base cost 27 (rises with game progress).",
+  "fields": {
+   "unique_to": "Byzantium",
+   "replaces": "Entertainment Complex",
+   "cost": 27,
+   "cost_progression": "rises with techs and civics completed; cheaper while you have fewer of these districts than the average civilization",
+   "requires": [
+    "Games and Recreation"
+   ],
+   "requires_population": "yes",
+   "buildings": [
+    "Arena",
+    "Zoo",
+    "Stadium",
+    "Tlachtli (unique: Aztec)",
+    "Thermal Bath (unique: Hungary)"
+   ],
+   "amenities": 3,
+   "appeal": 1,
+   "trade_route_yields": [
+    "Food: +1 domestic dest., +1 international dest."
+   ],
+   "one_per_city": true,
+   "effect": "A district unique to Byzantium. Replaces the Entertainment Complex district, provides +3 Amenities, and is cheaper to build. When the Hippodrome and buildings in this district are constructed, receive a Heavy Cavalry unit. Units granted from this district do not have a resource maintenance cost. Cannot be built in a city with a Water Park."
+  }
+ },
+ {
+  "id": "district:holy_site",
+  "name": "Holy Site",
+  "aliases": [
+   "DISTRICT_HOLY_SITE"
+  ],
+  "summary": "Base cost 54 (rises with game progress). Adjacency: +2 Faith per adjacent natural wonder; +1 Faith per adjacent Mountain or Government Plaza or Pamukkale; +1 Faith per 2 adjacent Woods tiles….",
+  "fields": {
+   "cost": 54,
+   "cost_progression": "rises with techs and civics completed; cheaper while you have fewer of these districts than the average civilization",
+   "requires": [
+    "Astrology"
+   ],
+   "requires_population": "yes",
+   "adjacency": [
+    "+2 Faith per adjacent natural wonder",
+    "+1 Faith per adjacent Mountain or Government Plaza or Pamukkale",
+    "+1 Faith per 2 adjacent Woods tiles",
+    "+1 Faith per 2 adjacent districts"
+   ],
+   "buildings": [
+    "Shrine",
+    "Temple",
+    "Stave Church (unique: Norway)",
+    "Cathedral",
+    "Gurdwara",
+    "Meeting House",
+    "Mosque",
+    "Pagoda",
+    "Synagogue",
+    "Wat",
+    "Stupa",
+    "Dar-e Mehr",
+    "Prasat (unique: Khmer)"
+   ],
+   "appeal": 1,
+   "great_person_points": [
+    "+1 Great Prophet"
+   ],
+   "trade_route_yields": [
+    "Food: +1 domestic dest.",
+    "Faith: +1 international dest."
+   ],
+   "citizen_yields": "+2 Faith",
+   "one_per_city": true,
+   "effect": "A district in your city for religious worship."
+  }
+ },
+ {
+  "id": "district:ikanda",
+  "name": "Ikanda",
+  "aliases": [
+   "DISTRICT_IKANDA"
+  ],
+  "summary": "Unique to Zulu, replaces Encampment. Base cost 27 (rises with game progress).",
+  "fields": {
+   "unique_to": "Zulu",
+   "replaces": "Encampment",
+   "cost": 27,
+   "cost_progression": "rises with techs and civics completed; cheaper while you have fewer of these districts than the average civilization",
+   "requires": [
+    "Bronze Working"
+   ],
+   "requires_population": "yes",
+   "buildings": [
+    "Barracks",
+    "Stable",
+    "Armory",
+    "Military Academy",
+    "Ordu (unique: Mongolia)",
+    "Basilikoi Paides (unique: Macedon)"
+   ],
+   "housing": 1,
+   "appeal": -1,
+   "great_person_points": [
+    "+1 Great General"
+   ],
+   "trade_route_yields": [
+    "Production: +1 domestic dest., +1 international dest."
+   ],
+   "citizen_yields": "+2 Gold, +1 Production",
+   "one_per_city": true,
+   "no_adjacent_city_center": true,
+   "effect": "A district unique to Zulu which replaces the Encampment. Provides +1 Housing. Once the Civic or Technology prerequisite is met, Corps and Armies can be built outright. Buildings in the Ikanda receive +2 Gold and +1 Science. Faster Corps and Army creation."
+  }
+ },
+ {
+  "id": "district:industrial_zone",
+  "name": "Industrial Zone",
+  "aliases": [
+   "DISTRICT_INDUSTRIAL_ZONE"
+  ],
+  "summary": "Base cost 54 (rises with game progress). Adjacency: +1 Production per adjacent Quarry or Government Plaza or strategic resource; +1 Production per 2 adjacent districts; +1 Production per 2 adjacent Mine tiles….",
+  "fields": {
+   "cost": 54,
+   "cost_progression": "rises with techs and civics completed; cheaper while you have fewer of these districts than the average civilization",
+   "requires": [
+    "Apprenticeship"
+   ],
+   "requires_population": "yes",
+   "adjacency": [
+    "+1 Production per adjacent Quarry or Government Plaza or strategic resource",
+    "+1 Production per 2 adjacent districts",
+    "+1 Production per 2 adjacent Mine tiles",
+    "+1 Production per 2 adjacent Lumber Mill tiles",
+    "+2 Production per adjacent Aqueduct or Bath or Canal or Dam"
+   ],
+   "buildings": [
+    "Workshop",
+    "Factory",
+    "Electronics Factory (unique: Japan)",
+    "Nuclear Power Plant",
+    "Coal Power Plant",
+    "Oil Power Plant"
+   ],
+   "appeal": -1,
+   "great_person_points": [
+    "+1 Great Engineer"
+   ],
+   "trade_route_yields": [
+    "Production: +1 domestic dest., +1 international dest."
+   ],
+   "citizen_yields": "+2 Production",
+   "one_per_city": true,
+   "effect": "A district in your city for industrial activity."
+  }
+ },
+ {
+  "id": "district:lavra",
+  "name": "Lavra",
+  "aliases": [
+   "DISTRICT_LAVRA"
+  ],
+  "summary": "Unique to Russia, replaces Holy Site. Base cost 27 (rises with game progress). Adjacency: +2 Faith per adjacent natural wonder; +1 Faith per adjacent Mountain or Government Plaza or Pamukkale; +1 Faith per 2 adjacent Woods tiles….",
+  "fields": {
+   "unique_to": "Russia",
+   "replaces": "Holy Site",
+   "cost": 27,
+   "cost_progression": "rises with techs and civics completed; cheaper while you have fewer of these districts than the average civilization",
+   "requires": [
+    "Astrology"
+   ],
+   "requires_population": "yes",
+   "adjacency": [
+    "+2 Faith per adjacent natural wonder",
+    "+1 Faith per adjacent Mountain or Government Plaza or Pamukkale",
+    "+1 Faith per 2 adjacent Woods tiles",
+    "+1 Faith per 2 adjacent districts"
+   ],
+   "buildings": [
+    "Shrine",
+    "Temple",
+    "Stave Church (unique: Norway)",
+    "Cathedral",
+    "Gurdwara",
+    "Meeting House",
+    "Mosque",
+    "Pagoda",
+    "Synagogue",
+    "Wat",
+    "Stupa",
+    "Dar-e Mehr",
+    "Prasat (unique: Khmer)"
+   ],
+   "appeal": 1,
+   "great_person_points": [
+    "+2 Great Prophet"
+   ],
+   "trade_route_yields": [
+    "Food: +1 domestic dest.",
+    "Faith: +1 international dest."
+   ],
+   "citizen_yields": "+2 Faith",
+   "one_per_city": true,
+   "effect": "A district unique to Russia for religious activity. Replaces the Holy Site district and cheaper to build. Your city border grows by one tile each time a Great Person is expended in this city. The Lavra provides +1 Great Writer point per turn with a Shrine, +1 Great Artist point per turn with a Temple, and +1 Great Musician point per turn with a Worship building."
+  }
+ },
+ {
+  "id": "district:mbanza",
+  "name": "Mbanza",
+  "aliases": [
+   "DISTRICT_MBANZA"
+  ],
+  "summary": "Unique to Kongo, replaces Neighborhood. Base cost 27 (rises with game progress).",
+  "fields": {
+   "unique_to": "Kongo",
+   "replaces": "Neighborhood",
+   "cost": 27,
+   "cost_progression": "rises with game progress (techs and civics completed)",
+   "requires": [
+    "Guilds"
+   ],
+   "buildings": [
+    "Food Market",
+    "Shopping Mall"
+   ],
+   "housing": 5,
+   "effect": "A district unique to Kongo that can only be constructed in Rainforest or Woods. Replaces the Neighborhood district but is available earlier and cheaper to build. Provides +5 Housing, +2 Food, and +4 Gold, regardless of Appeal."
+  }
+ },
+ {
+  "id": "district:neighborhood",
+  "name": "Neighborhood",
+  "aliases": [
+   "DISTRICT_NEIGHBORHOOD"
+  ],
+  "summary": "Base cost 54 (rises with game progress).",
+  "fields": {
+   "cost": 54,
+   "cost_progression": "rises with game progress (techs and civics completed)",
+   "requires": [
+    "Urbanization"
+   ],
+   "buildings": [
+    "Food Market",
+    "Shopping Mall"
+   ],
+   "housing": 4,
+   "effect": "A district in your city that provides housing based on the Appeal of the tile: Breathtaking: +6 Housing. Charming: +5 Housing. Average: +4 Housing. Uninviting: +3 Housing. Disgusting: +2 Housing."
+  }
+ },
+ {
+  "id": "district:observatory",
+  "name": "Observatory",
+  "aliases": [
+   "DISTRICT_OBSERVATORY"
+  ],
+  "summary": "Unique to Maya, replaces Campus. Base cost 27 (rises with game progress). Adjacency: +1 Science per 2 adjacent districts; +2 Science per adjacent Plantation or Great Barrier Reef or Pamukkale; +1 Science per 2 adjacent Farm tiles….",
+  "fields": {
+   "unique_to": "Maya",
+   "replaces": "Campus",
+   "cost": 27,
+   "cost_progression": "rises with techs and civics completed; cheaper while you have fewer of these districts than the average civilization",
+   "requires": [
+    "Writing"
+   ],
+   "requires_population": "yes",
+   "adjacency": [
+    "+1 Science per 2 adjacent districts",
+    "+2 Science per adjacent Plantation or Great Barrier Reef or Pamukkale",
+    "+1 Science per 2 adjacent Farm tiles",
+    "+1 Science per adjacent Government Plaza"
+   ],
+   "buildings": [
+    "Library",
+    "University",
+    "Madrasa (unique: Arabia)",
+    "Research Lab",
+    "Navigation School (unique: Portugal)"
+   ],
+   "great_person_points": [
+    "+1 Great Scientist"
+   ],
+   "trade_route_yields": [
+    "Food: +1 domestic dest.",
+    "Science: +1 international dest."
+   ],
+   "citizen_yields": "+2 Science",
+   "one_per_city": true,
+   "effect": "A district unique to the Maya for scientific endeavors. Replaces the Campus district and cheaper to build. +2 Science bonus for adjacent Plantations. +1 Science bonus for every two adjacent Farm or district tiles."
+  }
+ },
+ {
+  "id": "district:oppidum",
+  "name": "Oppidum",
+  "aliases": [
+   "DISTRICT_OPPIDUM"
+  ],
+  "summary": "Unique to Gaul, replaces Industrial Zone. Base cost 27 (rises with game progress). Adjacency: +2 Production per adjacent Quarry or strategic resource; +1 Production per adjacent Government Plaza.",
+  "fields": {
+   "unique_to": "Gaul",
+   "replaces": "Industrial Zone",
+   "cost": 27,
+   "cost_progression": "rises with techs and civics completed; cheaper while you have fewer of these districts than the average civilization",
+   "requires": [
+    "Iron Working"
+   ],
+   "requires_population": "yes",
+   "adjacency": [
+    "+2 Production per adjacent Quarry or strategic resource",
+    "+1 Production per adjacent Government Plaza"
+   ],
+   "buildings": [
+    "Workshop",
+    "Factory",
+    "Electronics Factory (unique: Japan)",
+    "Nuclear Power Plant",
+    "Coal Power Plant",
+    "Oil Power Plant"
+   ],
+   "appeal": -1,
+   "great_person_points": [
+    "+1 Great Engineer"
+   ],
+   "trade_route_yields": [
+    "Production: +1 domestic dest., +1 international dest."
+   ],
+   "citizen_yields": "+2 Production",
+   "one_per_city": true,
+   "effect": "A district unique to Gaul that is cheaper and available earlier than the district it replaces, the Industrial Zone. The Oppidum district is defensible with a ranged attack. When the first Oppidum is constructed the Apprenticeship technology is unlocked. +2 Production adjacency bonus from Quarries and strategic resources."
+  }
+ },
+ {
+  "id": "district:preserve",
+  "name": "Preserve",
+  "aliases": [
+   "DISTRICT_PRESERVE"
+  ],
+  "summary": "Base cost 54 (rises with game progress).",
+  "fields": {
+   "cost": 54,
+   "cost_progression": "rises with game progress (techs and civics completed)",
+   "requires": [
+    "Mysticism"
+   ],
+   "requires_population": "yes",
+   "buildings": [
+    "Grove",
+    "Sanctuary"
+   ],
+   "housing": 1,
+   "appeal": 1,
+   "one_per_city": true,
+   "no_adjacent_city_center": true,
+   "effect": "Grants up to 3 Housing based on Appeal. Culture bombs adjacent neutral tiles, and increases their Appeal by 1."
+  }
+ },
+ {
+  "id": "district:royal_navy_dockyard",
+  "name": "Royal Navy Dockyard",
+  "aliases": [
+   "DISTRICT_ROYAL_NAVY_DOCKYARD"
+  ],
+  "summary": "Unique to England, replaces Harbor. Base cost 27 (rises with game progress). Adjacency: +1 Gold per adjacent sea resource or Government Plaza; +1 Gold per 2 adjacent districts; +2 Gold per adjacent City Center.",
+  "fields": {
+   "unique_to": "England",
+   "replaces": "Harbor",
+   "cost": 27,
+   "cost_progression": "rises with techs and civics completed; cheaper while you have fewer of these districts than the average civilization",
+   "requires": [
+    "Celestial Navigation"
+   ],
+   "requires_population": "yes",
+   "adjacency": [
+    "+1 Gold per adjacent sea resource or Government Plaza",
+    "+1 Gold per 2 adjacent districts",
+    "+2 Gold per adjacent City Center"
+   ],
+   "buildings": [
+    "Lighthouse",
+    "Shipyard",
+    "Seaport"
+   ],
+   "great_person_points": [
+    "+2 Great Admiral"
+   ],
+   "trade_route_yields": [
+    "Production: +1 domestic dest.",
+    "Gold: +3 international dest."
+   ],
+   "citizen_yields": "+2 Gold, +1 Food",
+   "one_per_city": true,
+   "coast": true,
+   "effect": "A district unique to England for naval activity in your city. Replaces the Harbor district. Also removes the Movement penalty for embarking and disembarking to and from this tile. Must be built on Coast or Lake Terrain adjacent to land. +1 Movement for all naval units built in Dockyard +2 Gold and +4 Loyalty per turn when built on a foreign continent. Cannot be built on Reef"
+  }
+ },
+ {
+  "id": "district:seowon",
+  "name": "Seowon",
+  "aliases": [
+   "DISTRICT_SEOWON"
+  ],
+  "summary": "Unique to Korea, replaces Campus. Base cost 27 (rises with game progress). Adjacency: +4 Science (self); -1 Science per adjacent district; +1 Science per adjacent Government Plaza.",
+  "fields": {
+   "unique_to": "Korea",
+   "replaces": "Campus",
+   "cost": 27,
+   "cost_progression": "rises with techs and civics completed; cheaper while you have fewer of these districts than the average civilization",
+   "requires": [
+    "Writing"
+   ],
+   "requires_population": "yes",
+   "adjacency": [
+    "+4 Science (self)",
+    "-1 Science per adjacent district",
+    "+1 Science per adjacent Government Plaza"
+   ],
+   "buildings": [
+    "Library",
+    "University",
+    "Madrasa (unique: Arabia)",
+    "Research Lab",
+    "Navigation School (unique: Portugal)"
+   ],
+   "great_person_points": [
+    "+1 Great Scientist"
+   ],
+   "trade_route_yields": [
+    "Food: +1 domestic dest.",
+    "Science: +1 international dest."
+   ],
+   "citizen_yields": "+2 Science",
+   "one_per_city": true,
+   "effect": "A district unique to Korea for scientific endeavors. Replaces the Campus district. +4 Science. -1 Science for every adjacent district tile. Must be built on Hills."
+  }
+ },
+ {
+  "id": "district:spaceport",
+  "name": "Spaceport",
+  "aliases": [
+   "DISTRICT_SPACEPORT"
+  ],
+  "summary": "Base cost 1800.",
+  "fields": {
+   "cost": 1800,
+   "requires": [
+    "Rocketry"
+   ],
+   "buildings": [
+    "Small Rocket",
+    "Medium Rocket",
+    "Large Rocket"
+   ],
+   "appeal": -1,
+   "one_per_city": true,
+   "effect": "A district that is required to construct the Science Victory projects. This includes Launch Earth Satellite, Launch Moon Landing, Launch Mars Colony, and Launch Exoplanet Expedition. Cannot be built on Hills."
+  }
+ },
+ {
+  "id": "district:street_carnival",
+  "name": "Street Carnival",
+  "aliases": [
+   "DISTRICT_STREET_CARNIVAL"
+  ],
+  "summary": "Unique to Brazil, replaces Entertainment Complex. Base cost 27 (rises with game progress).",
+  "fields": {
+   "unique_to": "Brazil",
+   "replaces": "Entertainment Complex",
+   "cost": 27,
+   "cost_progression": "rises with techs and civics completed; cheaper while you have fewer of these districts than the average civilization",
+   "requires": [
+    "Games and Recreation"
+   ],
+   "requires_population": "yes",
+   "buildings": [
+    "Arena",
+    "Zoo",
+    "Stadium",
+    "Tlachtli (unique: Aztec)",
+    "Thermal Bath (unique: Hungary)"
+   ],
+   "amenities": 2,
+   "appeal": 1,
+   "trade_route_yields": [
+    "Food: +1 domestic dest., +1 international dest."
+   ],
+   "one_per_city": true,
+   "effect": "A district unique to Brazil. Replaces the Entertainment Complex district, and provides +2 Amenities. Also unlocks the Carnival project, which grants an additional +1 Amenity when underway and a variety of Great People points once completed. Cannot be built in a city with a Copacabana."
+  }
+ },
+ {
+  "id": "district:suguba",
+  "name": "Suguba",
+  "aliases": [
+   "DISTRICT_SUGUBA"
+  ],
+  "summary": "Unique to Mali, replaces Commercial Hub. Base cost 27 (rises with game progress). Adjacency: +2 Gold per adjacent Pamukkale or River or Holy Site or Lavra; +1 Gold per 2 adjacent districts; +1 Gold per adjacent Government Plaza.",
+  "fields": {
+   "unique_to": "Mali",
+   "replaces": "Commercial Hub",
+   "cost": 27,
+   "cost_progression": "rises with techs and civics completed; cheaper while you have fewer of these districts than the average civilization",
+   "requires": [
+    "Currency"
+   ],
+   "requires_population": "yes",
+   "adjacency": [
+    "+2 Gold per adjacent Pamukkale or River or Holy Site or Lavra",
+    "+1 Gold per 2 adjacent districts",
+    "+1 Gold per adjacent Government Plaza"
+   ],
+   "buildings": [
+    "Market",
+    "Bank",
+    "Stock Exchange",
+    "Grand Bazaar (unique: Ottomans)",
+    "Sukiennice (unique: Poland)"
+   ],
+   "great_person_points": [
+    "+1 Great Merchant"
+   ],
+   "trade_route_yields": [
+    "Production: +1 domestic dest.",
+    "Gold: +3 international dest."
+   ],
+   "citizen_yields": "+4 Gold",
+   "one_per_city": true,
+   "effect": "A district unique to Mali specializing in finance and trade that replaces the Commercial Hub. Units, Buildings, and Districts are 20% cheaper to purchase with Gold and Faith in this City. +2 Gold bonus for each adjacent Holy Site. +2 Gold bonus from a tile containing a River edge. +1 Gold bonus for every two adjacent district tiles."
+  }
+ },
+ {
+  "id": "district:thanh",
+  "name": "Thành",
+  "aliases": [
+   "DISTRICT_THANH"
+  ],
+  "summary": "Unique to Vietnam, replaces Encampment. Base cost 27 (rises with game progress). Adjacency: +2 Culture per adjacent district.",
+  "fields": {
+   "unique_to": "Vietnam",
+   "replaces": "Encampment",
+   "cost": 27,
+   "cost_progression": "rises with techs and civics completed; cheaper while you have fewer of these districts than the average civilization",
+   "requires": [
+    "Bronze Working"
+   ],
+   "adjacency": [
+    "+2 Culture per adjacent district"
+   ],
+   "buildings": [
+    "Barracks",
+    "Stable",
+    "Armory",
+    "Military Academy",
+    "Ordu (unique: Mongolia)",
+    "Basilikoi Paides (unique: Macedon)"
+   ],
+   "appeal": -1,
+   "trade_route_yields": [
+    "Production: +1 domestic dest., +1 international dest."
+   ],
+   "citizen_yields": "+2 Gold, +1 Production",
+   "one_per_city": true,
+   "no_adjacent_city_center": true,
+   "effect": "A district unique to Vietnam which replaces the Encampment. +2 Culture for each adjacent district. After Flight is researched receive Tourism equal to the Culture output. This district does not require population, is cheaper to build, cannot be built adjacent to the city center, does not provide Great People points, and is not a specialty district."
+  }
+ },
+ {
+  "id": "district:theater",
+  "name": "Theater Square",
+  "aliases": [
+   "DISTRICT_THEATER"
+  ],
+  "summary": "Base cost 54 (rises with game progress). Adjacency: +2 Culture per adjacent wonder or Hippodrome or Entertainment Complex or Water Park or Street Carnival or Copacabana or Pamukkale; +1 Culture per 2 adjacent districts; +1 Culture per adjacent Government Plaza.",
+  "fields": {
+   "cost": 54,
+   "cost_progression": "rises with techs and civics completed; cheaper while you have fewer of these districts than the average civilization",
+   "requires": [
+    "Drama and Poetry"
+   ],
+   "requires_population": "yes",
+   "adjacency": [
+    "+2 Culture per adjacent wonder or Hippodrome or Entertainment Complex or Water Park or Street Carnival or Copacabana or Pamukkale",
+    "+1 Culture per 2 adjacent districts",
+    "+1 Culture per adjacent Government Plaza"
+   ],
+   "buildings": [
+    "Amphitheater",
+    "Art Museum",
+    "Archaeological Museum",
+    "Broadcast Center",
+    "Film Studio (unique: America)",
+    "Marae (unique: Māori)"
+   ],
+   "appeal": 1,
+   "great_person_points": [
+    "+1 Great Writer",
+    "+1 Great Artist",
+    "+1 Great Musician"
+   ],
+   "trade_route_yields": [
+    "Food: +1 domestic dest.",
+    "Culture: +1 international dest."
+   ],
+   "citizen_yields": "+2 Culture",
+   "one_per_city": true,
+   "effect": "A district in your city for cultural sites."
+  }
+ },
+ {
+  "id": "district:water_entertainment_complex",
+  "name": "Water Park",
+  "aliases": [
+   "DISTRICT_WATER_ENTERTAINMENT_COMPLEX"
+  ],
+  "summary": "Base cost 54 (rises with game progress).",
+  "fields": {
+   "cost": 54,
+   "cost_progression": "rises with techs and civics completed; cheaper while you have fewer of these districts than the average civilization",
+   "requires": [
+    "Natural History"
+   ],
+   "requires_population": "yes",
+   "buildings": [
+    "Ferris Wheel",
+    "Aquarium",
+    "Aquatics Center"
+   ],
+   "amenities": 1,
+   "appeal": 1,
+   "trade_route_yields": [
+    "Food: +1 domestic dest., +1 international dest."
+   ],
+   "one_per_city": true,
+   "coast": true,
+   "effect": "A district placed out on a coastal tile dedicated to keeping your people happy by increasing Amenities. Cannot be built in a city with an Entertainment Complex. Cannot be built on Reef."
+  }
+ },
+ {
+  "id": "district:water_street_carnival",
+  "name": "Copacabana",
+  "aliases": [
+   "DISTRICT_WATER_STREET_CARNIVAL"
+  ],
+  "summary": "Unique to Brazil, replaces Water Park. Base cost 27 (rises with game progress).",
+  "fields": {
+   "unique_to": "Brazil",
+   "replaces": "Water Park",
+   "cost": 27,
+   "cost_progression": "rises with techs and civics completed; cheaper while you have fewer of these districts than the average civilization",
+   "requires": [
+    "Natural History"
+   ],
+   "requires_population": "yes",
+   "buildings": [
+    "Ferris Wheel",
+    "Aquarium",
+    "Aquatics Center"
+   ],
+   "amenities": 2,
+   "appeal": 1,
+   "trade_route_yields": [
+    "Food: +1 domestic dest., +1 international dest."
+   ],
+   "one_per_city": true,
+   "coast": true,
+   "effect": "A district unique to Brazil. Replaces the Water Park district, and provides +2 Amenities. Also unlocks the Carnival project, which grants an additional +1 Amenity when underway and a variety of Great People points once completed. Cannot be built in a city with a Street Carnival. Cannot be built on Reef."
+  }
+ },
+ {
+  "id": "district:wonder",
+  "name": "Wonder",
+  "aliases": [
+   "DISTRICT_WONDER"
+  ],
+  "summary": "Base cost 0.",
+  "fields": {
+   "appeal": 1,
+   "one_per_city": true
+  }
+ }
+]

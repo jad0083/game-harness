@@ -1,0 +1,1992 @@
+[
+ {
+  "id": "building:airport",
+  "name": "Airport",
+  "aliases": [
+   "BUILDING_AIRPORT"
+  ],
+  "summary": "Aerodrome building, cost 480; +4 Production.",
+  "fields": {
+   "district": "Aerodrome",
+   "cost": 480,
+   "maintenance": 2,
+   "yields": "+4 Production",
+   "power_required": 1,
+   "requires": [
+    "Advanced Flight"
+   ],
+   "requires_buildings": [
+    "Hangar"
+   ],
+   "purchase": "gold",
+   "effect": "+50% combat experience for air units trained in this city. +1 air unit slot in Aerodrome district. Allows the ability to airlift land units between Aerodrome districts with Airports after the Rapid Deployment civic is unlocked."
+  }
+ },
+ {
+  "id": "building:amphitheater",
+  "name": "Amphitheater",
+  "aliases": [
+   "BUILDING_AMPHITHEATER"
+  ],
+  "summary": "Theater Square building, cost 150; +2 Culture.",
+  "fields": {
+   "district": "Theater Square",
+   "cost": 150,
+   "maintenance": 1,
+   "yields": "+2 Culture",
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great Writer"
+   ],
+   "great_work_slots": [
+    "2 writing"
+   ],
+   "requires": [
+    "Drama and Poetry"
+   ],
+   "purchase": "gold"
+  }
+ },
+ {
+  "id": "building:aquarium",
+  "name": "Aquarium",
+  "aliases": [
+   "BUILDING_AQUARIUM"
+  ],
+  "summary": "Water Park building, cost 360.",
+  "fields": {
+   "district": "Water Park",
+   "cost": 360,
+   "maintenance": 2,
+   "amenities": 1,
+   "requires": [
+    "Natural History"
+   ],
+   "requires_buildings": [
+    "Ferris Wheel"
+   ],
+   "purchase": "gold",
+   "effect": "Bonus Amenity extends to each city center within 9 tiles. This bonus applies once to a city, and multiple copies of this building within 9 tiles of a city center do not provide additional bonuses. +1 Science to each coastal resource, Shipwreck, and Reef tile in this city."
+  }
+ },
+ {
+  "id": "building:aquatics_center",
+  "name": "Aquatics Center",
+  "aliases": [
+   "BUILDING_AQUATICS_CENTER"
+  ],
+  "summary": "Water Park building, cost 480.",
+  "fields": {
+   "district": "Water Park",
+   "cost": 480,
+   "maintenance": 3,
+   "amenities": 1,
+   "power_required": 2,
+   "requires": [
+    "Professional Sports"
+   ],
+   "requires_buildings": [
+    "Aquarium"
+   ],
+   "purchase": "gold",
+   "effect": "Bonus Amenities extend to each city center within 9 tiles. This bonus applies once to a city, and multiple copies of this building within 9 tiles of a city center do not provide additional bonuses. +2 Tourism for each Wonder built in this city on or adjacent to a Coast tile."
+  }
+ },
+ {
+  "id": "building:arena",
+  "name": "Arena",
+  "aliases": [
+   "BUILDING_ARENA"
+  ],
+  "summary": "Entertainment Complex building, cost 150; +1 Culture.",
+  "fields": {
+   "district": "Entertainment Complex",
+   "cost": 150,
+   "maintenance": 1,
+   "yields": "+1 Culture",
+   "amenities": 2,
+   "requires": [
+    "Games and Recreation"
+   ],
+   "purchase": "gold",
+   "effect": "Provides 1 Tourism after advancing to the Conservation Civic."
+  }
+ },
+ {
+  "id": "building:armory",
+  "name": "Armory",
+  "aliases": [
+   "BUILDING_ARMORY"
+  ],
+  "summary": "Encampment building, cost 195; +3 Production.",
+  "fields": {
+   "district": "Encampment",
+   "cost": 195,
+   "maintenance": 2,
+   "yields": "+3 Production",
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great General"
+   ],
+   "requires": [
+    "Military Engineering"
+   ],
+   "requires_buildings": [
+    "Barracks",
+    "Stable"
+   ],
+   "purchase": "gold",
+   "effect": "+25% combat experience for all land units trained in this city. Strategic Resource Stockpiles increased +10 (on Standard Speed)."
+  }
+ },
+ {
+  "id": "building:bank",
+  "name": "Bank",
+  "aliases": [
+   "BUILDING_BANK"
+  ],
+  "summary": "Commercial Hub building, cost 290; +5 Gold.",
+  "fields": {
+   "district": "Commercial Hub",
+   "cost": 290,
+   "yields": "+5 Gold",
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great Merchant"
+   ],
+   "requires": [
+    "Banking"
+   ],
+   "requires_buildings": [
+    "Market"
+   ],
+   "purchase": "gold"
+  }
+ },
+ {
+  "id": "building:barracks",
+  "name": "Barracks",
+  "aliases": [
+   "BUILDING_BARRACKS"
+  ],
+  "summary": "Encampment building, cost 90; +1 Production.",
+  "fields": {
+   "district": "Encampment",
+   "cost": 90,
+   "maintenance": 1,
+   "yields": "+1 Production",
+   "housing": 1,
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great General"
+   ],
+   "requires": [
+    "Bronze Working"
+   ],
+   "exclusive_with": [
+    "Stable"
+   ],
+   "purchase": "gold",
+   "effect": "+25% combat experience for all melee and ranged land units trained in this city. Strategic Resource Stockpiles increased +10 (on Standard Speed). May not be built in an Encampment district that already has a Stable."
+  }
+ },
+ {
+  "id": "building:basilikoi_paides",
+  "name": "Basilikoi Paides",
+  "aliases": [
+   "BUILDING_BASILIKOI_PAIDES"
+  ],
+  "summary": "Unique to Macedon. Encampment building, cost 90; +1 Production.",
+  "fields": {
+   "unique_to": "Macedon",
+   "replaces": "Barracks",
+   "district": "Encampment",
+   "cost": 90,
+   "maintenance": 1,
+   "yields": "+1 Production",
+   "housing": 1,
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great General"
+   ],
+   "requires": [
+    "Bronze Working"
+   ],
+   "exclusive_with": [
+    "Stable"
+   ],
+   "purchase": "gold",
+   "effect": "A building unique to Macedon.+25% combat experience for all melee, ranged land units, and Hetairoi trained in this city. Gain Science equal to 25% of the unit's cost when a non civilian unit is created in this city. Strategic Resource Stockpiles increased +10 (on Standard Speed). May not be built in an Encampment district that already has a Stable."
+  }
+ },
+ {
+  "id": "building:broadcast_center",
+  "name": "Broadcast Center",
+  "aliases": [
+   "BUILDING_BROADCAST_CENTER"
+  ],
+  "summary": "Theater Square building, cost 440; +2 Culture.",
+  "fields": {
+   "district": "Theater Square",
+   "cost": 440,
+   "maintenance": 3,
+   "yields": "+2 Culture",
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great Artist",
+    "+2 Great Musician"
+   ],
+   "great_work_slots": [
+    "1 music"
+   ],
+   "power_required": 3,
+   "requires": [
+    "Radio"
+   ],
+   "requires_buildings": [
+    "Art Museum",
+    "Archaeological Museum"
+   ],
+   "purchase": "gold"
+  }
+ },
+ {
+  "id": "building:castle",
+  "name": "Medieval Walls",
+  "aliases": [
+   "BUILDING_CASTLE"
+  ],
+  "summary": "City Center building, cost 220.",
+  "fields": {
+   "district": "City Center",
+   "cost": 220,
+   "requires": [
+    "Castles"
+   ],
+   "requires_buildings": [
+    "Ancient Walls"
+   ],
+   "purchase": "none",
+   "effect": "Increases the strength of your outer defenses. Provides 2 Tourism after advancing to the Conservation Civic. This city is not affected by Battering Rams."
+  }
+ },
+ {
+  "id": "building:cathedral",
+  "name": "Cathedral",
+  "aliases": [
+   "BUILDING_CATHEDRAL"
+  ],
+  "summary": "Holy Site building, cost 190; +3 Faith.",
+  "fields": {
+   "district": "Holy Site",
+   "cost": 190,
+   "yields": "+3 Faith",
+   "citizen_slots": 1,
+   "great_work_slots": [
+    "1 cathedral"
+   ],
+   "requires_buildings": [
+    "Temple"
+   ],
+   "purchase": "faith"
+  }
+ },
+ {
+  "id": "building:chancery",
+  "name": "Chancery",
+  "aliases": [
+   "BUILDING_CHANCERY"
+  ],
+  "summary": "Diplomatic Quarter building, cost 290.",
+  "fields": {
+   "district": "Diplomatic Quarter",
+   "cost": 290,
+   "maintenance": 2,
+   "requires": [
+    "Diplomatic Service"
+   ],
+   "requires_buildings": [
+    "Consulate"
+   ],
+   "purchase": "gold",
+   "effect": "+3 Influence Points per turn. When this civilization captures or kills an enemy Spy, receive 50 Science for every level of the enemy Spy."
+  }
+ },
+ {
+  "id": "building:coal_power_plant",
+  "name": "Coal Power Plant",
+  "aliases": [
+   "BUILDING_COAL_POWER_PLANT"
+  ],
+  "summary": "Industrial Zone building, cost 300.",
+  "fields": {
+   "district": "Industrial Zone",
+   "cost": 300,
+   "maintenance": 3,
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great Engineer"
+   ],
+   "requires": [
+    "Industrialization"
+   ],
+   "requires_buildings": [
+    "Factory"
+   ],
+   "exclusive_with": [
+    "Oil Power Plant",
+    "Nuclear Power Plant"
+   ],
+   "purchase": "gold",
+   "effect": "Automatically converts any amount of Coal into Power for cities within 6 tiles that need it each turn, at the rate of: - 1 Coal 4 Power - Heavy CO2 into the atmosphere"
+  }
+ },
+ {
+  "id": "building:consulate",
+  "name": "Consulate",
+  "aliases": [
+   "BUILDING_CONSULATE"
+  ],
+  "summary": "Diplomatic Quarter building, cost 150.",
+  "fields": {
+   "district": "Diplomatic Quarter",
+   "cost": 150,
+   "maintenance": 1,
+   "requires": [
+    "Mathematics"
+   ],
+   "purchase": "gold",
+   "effect": "+2 Influence Points per turn. Enemy Spy's level is reduced by 1 when targeting this city or cities with Encampments."
+  }
+ },
+ {
+  "id": "building:dar_e_mehr",
+  "name": "Dar-e Mehr",
+  "aliases": [
+   "BUILDING_DAR_E_MEHR"
+  ],
+  "summary": "Holy Site building, cost 190; +3 Faith.",
+  "fields": {
+   "district": "Holy Site",
+   "cost": 190,
+   "yields": "+3 Faith",
+   "citizen_slots": 1,
+   "requires_buildings": [
+    "Temple"
+   ],
+   "purchase": "faith",
+   "effect": "+1 additional Faith for each era since constructed or last repaired. Cannot be pillaged by natural disasters."
+  }
+ },
+ {
+  "id": "building:electronics_factory",
+  "name": "Electronics Factory",
+  "aliases": [
+   "BUILDING_ELECTRONICS_FACTORY"
+  ],
+  "summary": "Unique to Japan. Industrial Zone building, cost 330; +3 Production.",
+  "fields": {
+   "unique_to": "Japan",
+   "replaces": "Factory",
+   "district": "Industrial Zone",
+   "cost": 330,
+   "maintenance": 2,
+   "yields": "+3 Production",
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great Engineer"
+   ],
+   "power_required": 2,
+   "requires": [
+    "Industrialization"
+   ],
+   "requires_buildings": [
+    "Workshop"
+   ],
+   "purchase": "gold",
+   "effect": "A building unique to Japan. Provides +4 Culture to this city after researching the Electricity technology. Its Production bonus is extended to all City Centers within 6 tiles that do not already have a bonus from this building type."
+  }
+ },
+ {
+  "id": "building:factory",
+  "name": "Factory",
+  "aliases": [
+   "BUILDING_FACTORY"
+  ],
+  "summary": "Industrial Zone building, cost 330; +3 Production.",
+  "fields": {
+   "district": "Industrial Zone",
+   "cost": 330,
+   "maintenance": 2,
+   "yields": "+3 Production",
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great Engineer"
+   ],
+   "power_required": 2,
+   "requires": [
+    "Industrialization"
+   ],
+   "requires_buildings": [
+    "Workshop"
+   ],
+   "purchase": "gold",
+   "effect": "Its Production bonus is extended to all City Centers within 6 tiles that do not already have a bonus from this building type."
+  }
+ },
+ {
+  "id": "building:ferris_wheel",
+  "name": "Ferris Wheel",
+  "aliases": [
+   "BUILDING_FERRIS_WHEEL"
+  ],
+  "summary": "Water Park building, cost 290; +3 Culture.",
+  "fields": {
+   "district": "Water Park",
+   "cost": 290,
+   "maintenance": 1,
+   "yields": "+3 Culture",
+   "amenities": 2,
+   "requires": [
+    "Natural History"
+   ],
+   "purchase": "gold",
+   "effect": "+2 Tourism."
+  }
+ },
+ {
+  "id": "building:film_studio",
+  "name": "Film Studio",
+  "aliases": [
+   "BUILDING_FILM_STUDIO"
+  ],
+  "summary": "Unique to America. Theater Square building, cost 440; +2 Culture.",
+  "fields": {
+   "unique_to": "America",
+   "replaces": "Broadcast Center",
+   "district": "Theater Square",
+   "cost": 440,
+   "maintenance": 3,
+   "yields": "+2 Culture",
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great Artist",
+    "+2 Great Musician"
+   ],
+   "great_work_slots": [
+    "1 music"
+   ],
+   "power_required": 3,
+   "requires": [
+    "Radio"
+   ],
+   "requires_buildings": [
+    "Art Museum",
+    "Archaeological Museum"
+   ],
+   "purchase": "gold",
+   "effect": "A building unique to America. +100% Tourism pressure from this city towards other civilizations when the game enters the Modern era."
+  }
+ },
+ {
+  "id": "building:flood_barrier",
+  "name": "Flood Barrier",
+  "aliases": [
+   "BUILDING_FLOOD_BARRIER"
+  ],
+  "summary": "City Center building, cost 80.",
+  "fields": {
+   "district": "City Center",
+   "cost": 80,
+   "maintenance": 1,
+   "requires": [
+    "Computers"
+   ],
+   "purchase": "none",
+   "effect": "Protects Coastal Lowland tiles in this city from flooding. Initial build cost and per turn maintenance are variable based on the number of Coastal Lowlands in this city and the current sea level. If constructed after some of a city's tiles have been flooded, those tiles can be repaired in full. Submerged tiles however are never recoverable. Must be built in a city with one or more Coastal Lowland tiles. Will not be pillaged if the city is captured."
+  }
+ },
+ {
+  "id": "building:food_market",
+  "name": "Food Market",
+  "aliases": [
+   "BUILDING_FOOD_MARKET"
+  ],
+  "summary": "Neighborhood building, cost 380; +4 Food.",
+  "fields": {
+   "district": "Neighborhood",
+   "cost": 380,
+   "maintenance": 1,
+   "yields": "+4 Food",
+   "power_required": 1,
+   "requires": [
+    "Replaceable Parts"
+   ],
+   "exclusive_with": [
+    "Shopping Mall"
+   ],
+   "purchase": "gold",
+   "effect": "Can only be built once in a city, even if the city has multiple Neighborhoods."
+  }
+ },
+ {
+  "id": "building:fossil_fuel_power_plant",
+  "name": "Oil Power Plant",
+  "aliases": [
+   "BUILDING_FOSSIL_FUEL_POWER_PLANT"
+  ],
+  "summary": "Industrial Zone building, cost 360; +3 Production.",
+  "fields": {
+   "district": "Industrial Zone",
+   "cost": 360,
+   "maintenance": 3,
+   "yields": "+3 Production",
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great Engineer"
+   ],
+   "requires": [
+    "Electricity"
+   ],
+   "requires_buildings": [
+    "Factory"
+   ],
+   "exclusive_with": [
+    "Coal Power Plant",
+    "Nuclear Power Plant"
+   ],
+   "purchase": "gold",
+   "effect": "Automatically converts any amount of Oil into Power for cities within 6 tiles that need it each turn, at the rate of: - 1 Oil 4 Power - Moderate CO2 into the atmosphere Its Production bonus is extended to all City Centers within 6 tiles that do not already have a bonus from a Power Plant building."
+  }
+ },
+ {
+  "id": "building:gov_citystates",
+  "name": "Foreign Ministry",
+  "aliases": [
+   "BUILDING_GOV_CITYSTATES"
+  ],
+  "summary": "Government Plaza building, cost 290.",
+  "fields": {
+   "district": "Government Plaza",
+   "cost": 290,
+   "maintenance": 2,
+   "requires_buildings": [
+    "Audience Chamber",
+    "Ancestral Hall",
+    "Warlord's Throne"
+   ],
+   "exclusive_with": [
+    "Intelligence Agency",
+    "Grand Master's Chapel",
+    "Queen's Bibliotheque"
+   ],
+   "purchase": "none",
+   "effect": "+3 Diplomatic Favor. Leveraging City States costs half Gold. City State units gain +4 Combat Strength if you are the City State's Suzerain (including Leveraged Units). Awards +1 Governor Title."
+  }
+ },
+ {
+  "id": "building:gov_conquest",
+  "name": "Warlord's Throne",
+  "aliases": [
+   "BUILDING_GOV_CONQUEST"
+  ],
+  "summary": "Government Plaza building, cost 150.",
+  "fields": {
+   "district": "Government Plaza",
+   "cost": 150,
+   "maintenance": 1,
+   "exclusive_with": [
+    "Audience Chamber",
+    "Ancestral Hall"
+   ],
+   "purchase": "none",
+   "effect": "Capturing an enemy City grants 20% bonus Production in all Cities for 5 turns. Awards +1 Governor Title."
+  }
+ },
+ {
+  "id": "building:gov_culture",
+  "name": "National History Museum",
+  "aliases": [
+   "BUILDING_GOV_CULTURE"
+  ],
+  "summary": "Government Plaza building, cost 440.",
+  "fields": {
+   "district": "Government Plaza",
+   "cost": 440,
+   "maintenance": 3,
+   "great_work_slots": [
+    "4 palace"
+   ],
+   "requires_buildings": [
+    "Foreign Ministry",
+    "Intelligence Agency",
+    "Grand Master's Chapel",
+    "Queen's Bibliotheque"
+   ],
+   "exclusive_with": [
+    "War Department",
+    "Royal Society"
+   ],
+   "purchase": "none",
+   "effect": "Provides 4 slots for any Great Work. Awards +1 Governor Title."
+  }
+ },
+ {
+  "id": "building:gov_faith",
+  "name": "Grand Master's Chapel",
+  "aliases": [
+   "BUILDING_GOV_FAITH"
+  ],
+  "summary": "Government Plaza building, cost 290; +5 Faith.",
+  "fields": {
+   "district": "Government Plaza",
+   "cost": 290,
+   "maintenance": 2,
+   "yields": "+5 Faith",
+   "requires_buildings": [
+    "Audience Chamber",
+    "Ancestral Hall",
+    "Warlord's Throne"
+   ],
+   "exclusive_with": [
+    "Foreign Ministry",
+    "Intelligence Agency",
+    "Queen's Bibliotheque"
+   ],
+   "purchase": "none",
+   "effect": "Grants the ability to buy land units with Faith. Pillaging Improvements and Districts provides bonus Faith. Awards +1 Governor Title."
+  }
+ },
+ {
+  "id": "building:gov_military",
+  "name": "War Department",
+  "aliases": [
+   "BUILDING_GOV_MILITARY"
+  ],
+  "summary": "Government Plaza building, cost 440.",
+  "fields": {
+   "district": "Government Plaza",
+   "cost": 440,
+   "maintenance": 3,
+   "requires_buildings": [
+    "Foreign Ministry",
+    "Intelligence Agency",
+    "Grand Master's Chapel",
+    "Queen's Bibliotheque"
+   ],
+   "exclusive_with": [
+    "National History Museum",
+    "Royal Society"
+   ],
+   "purchase": "none",
+   "effect": "All units heal up to 20 hit points when they eliminate a unit. Awards +1 Governor Title."
+  }
+ },
+ {
+  "id": "building:gov_science",
+  "name": "Royal Society",
+  "aliases": [
+   "BUILDING_GOV_SCIENCE"
+  ],
+  "summary": "Government Plaza building, cost 440.",
+  "fields": {
+   "district": "Government Plaza",
+   "cost": 440,
+   "maintenance": 3,
+   "requires_buildings": [
+    "Foreign Ministry",
+    "Intelligence Agency",
+    "Grand Master's Chapel",
+    "Queen's Bibliotheque"
+   ],
+   "exclusive_with": [
+    "War Department",
+    "National History Museum"
+   ],
+   "purchase": "none",
+   "effect": "Builders gain the ability to use all of their charges to provide bonus Production to a District Project. Once per city per turn. Awards +1 Governor Title."
+  }
+ },
+ {
+  "id": "building:gov_spies",
+  "name": "Intelligence Agency",
+  "aliases": [
+   "BUILDING_GOV_SPIES"
+  ],
+  "summary": "Government Plaza building, cost 290.",
+  "fields": {
+   "district": "Government Plaza",
+   "cost": 290,
+   "maintenance": 2,
+   "requires_buildings": [
+    "Audience Chamber",
+    "Ancestral Hall",
+    "Warlord's Throne"
+   ],
+   "exclusive_with": [
+    "Foreign Ministry",
+    "Grand Master's Chapel",
+    "Queen's Bibliotheque"
+   ],
+   "purchase": "none",
+   "effect": "+1 Spy and Spy capacity. All Spy Operations have a higher chance of success. Awards +1 Governor Title."
+  }
+ },
+ {
+  "id": "building:gov_tall",
+  "name": "Audience Chamber",
+  "aliases": [
+   "BUILDING_GOV_TALL"
+  ],
+  "summary": "Government Plaza building, cost 150.",
+  "fields": {
+   "district": "Government Plaza",
+   "cost": 150,
+   "maintenance": 1,
+   "exclusive_with": [
+    "Ancestral Hall",
+    "Warlord's Throne"
+   ],
+   "purchase": "none",
+   "effect": "+2 Amenities and +4 Housing in Cities with Governors -2 Loyalty in Cities without Governors. Awards +1 Governor Title."
+  }
+ },
+ {
+  "id": "building:gov_wide",
+  "name": "Ancestral Hall",
+  "aliases": [
+   "BUILDING_GOV_WIDE"
+  ],
+  "summary": "Government Plaza building, cost 150.",
+  "fields": {
+   "district": "Government Plaza",
+   "cost": 150,
+   "maintenance": 1,
+   "exclusive_with": [
+    "Audience Chamber",
+    "Warlord's Throne"
+   ],
+   "purchase": "none",
+   "effect": "50% increased Production toward Settlers in this City. New cities receive a free Builder. Awards +1 Governor Title."
+  }
+ },
+ {
+  "id": "building:granary",
+  "name": "Granary",
+  "aliases": [
+   "BUILDING_GRANARY"
+  ],
+  "summary": "City Center building, cost 65; +1 Food.",
+  "fields": {
+   "district": "City Center",
+   "cost": 65,
+   "yields": "+1 Food",
+   "housing": 2,
+   "requires": [
+    "Pottery"
+   ],
+   "purchase": "gold"
+  }
+ },
+ {
+  "id": "building:grand_bazaar",
+  "name": "Grand Bazaar",
+  "aliases": [
+   "BUILDING_GRAND_BAZAAR"
+  ],
+  "summary": "Unique to Ottomans. Commercial Hub building, cost 220; +5 Gold.",
+  "fields": {
+   "unique_to": "Ottomans",
+   "replaces": "Bank",
+   "district": "Commercial Hub",
+   "cost": 220,
+   "yields": "+5 Gold",
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great Merchant"
+   ],
+   "requires": [
+    "Banking"
+   ],
+   "requires_buildings": [
+    "Market"
+   ],
+   "purchase": "gold",
+   "effect": "A building unique to the Ottomans. Accumulate 1 extra Strategic resource for every different type of Strategic resource this city has improved. Receive 1 Amenity for every Luxury resource this city has improved."
+  }
+ },
+ {
+  "id": "building:grove",
+  "name": "Grove",
+  "aliases": [
+   "BUILDING_GROVE"
+  ],
+  "summary": "Preserve building, cost 150.",
+  "fields": {
+   "district": "Preserve",
+   "cost": 150,
+   "requires": [
+    "Mysticism"
+   ],
+   "purchase": "gold",
+   "effect": "Grants +1 Food and +1 Faith to adjacent unimproved Charming tiles. Increased to +2 Food, +2 Faith, +2 Culture for adjacent unimproved Breathtaking tiles."
+  }
+ },
+ {
+  "id": "building:gurdwara",
+  "name": "Gurdwara",
+  "aliases": [
+   "BUILDING_GURDWARA"
+  ],
+  "summary": "Holy Site building, cost 190; +3 Faith, +2 Food.",
+  "fields": {
+   "district": "Holy Site",
+   "cost": 190,
+   "yields": "+3 Faith, +2 Food",
+   "housing": 1,
+   "citizen_slots": 1,
+   "requires_buildings": [
+    "Temple"
+   ],
+   "purchase": "faith"
+  }
+ },
+ {
+  "id": "building:hangar",
+  "name": "Hangar",
+  "aliases": [
+   "BUILDING_HANGAR"
+  ],
+  "summary": "Aerodrome building, cost 380; +2 Production.",
+  "fields": {
+   "district": "Aerodrome",
+   "cost": 380,
+   "maintenance": 1,
+   "yields": "+2 Production",
+   "requires": [
+    "Flight"
+   ],
+   "purchase": "gold",
+   "effect": "+25% combat experience for air units trained in this city. +1 air unit slot in Aerodrome district."
+  }
+ },
+ {
+  "id": "building:hydroelectric_dam",
+  "name": "Hydroelectric Dam",
+  "aliases": [
+   "BUILDING_HYDROELECTRIC_DAM"
+  ],
+  "summary": "Dam building, cost 440.",
+  "fields": {
+   "district": "Dam",
+   "cost": 440,
+   "maintenance": 1,
+   "requires": [
+    "Electricity"
+   ],
+   "purchase": "gold",
+   "effect": "Provides the city +6 Power from renewable water sources."
+  }
+ },
+ {
+  "id": "building:large_rocket",
+  "name": "Large Rocket",
+  "aliases": [
+   "BUILDING_LARGE_ROCKET"
+  ],
+  "summary": "Spaceport building, cost 1.",
+  "fields": {
+   "district": "Spaceport",
+   "cost": 1,
+   "exclusive_with": [
+    "Small Rocket",
+    "Medium Rocket"
+   ],
+   "purchase": "none",
+   "internal_only": true
+  }
+ },
+ {
+  "id": "building:library",
+  "name": "Library",
+  "aliases": [
+   "BUILDING_LIBRARY"
+  ],
+  "summary": "Campus building, cost 90; +2 Science.",
+  "fields": {
+   "district": "Campus",
+   "cost": 90,
+   "maintenance": 1,
+   "yields": "+2 Science",
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great Scientist"
+   ],
+   "requires": [
+    "Writing"
+   ],
+   "purchase": "gold"
+  }
+ },
+ {
+  "id": "building:lighthouse",
+  "name": "Lighthouse",
+  "aliases": [
+   "BUILDING_LIGHTHOUSE"
+  ],
+  "summary": "Harbor building, cost 120.",
+  "fields": {
+   "district": "Harbor",
+   "cost": 120,
+   "housing": 1,
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great Admiral"
+   ],
+   "requires": [
+    "Celestial Navigation"
+   ],
+   "purchase": "gold",
+   "effect": "+25% combat experience for all naval units trained in this city. +1 Food on all Coast tiles for this city. +2 Housing if this city is adjacent to coast. +1 Trade Route capacity, if this city does not yet have a Market building."
+  }
+ },
+ {
+  "id": "building:madrasa",
+  "name": "Madrasa",
+  "aliases": [
+   "BUILDING_MADRASA"
+  ],
+  "summary": "Unique to Arabia. Campus building, cost 250; +5 Science.",
+  "fields": {
+   "unique_to": "Arabia",
+   "replaces": "University",
+   "district": "Campus",
+   "cost": 250,
+   "maintenance": 2,
+   "yields": "+5 Science",
+   "housing": 1,
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great Scientist"
+   ],
+   "requires": [
+    "Theology"
+   ],
+   "requires_buildings": [
+    "Library"
+   ],
+   "purchase": "gold",
+   "effect": "A building unique to Arabia. Bonus Faith equal to the adjacency bonus of the Campus district."
+  }
+ },
+ {
+  "id": "building:marae",
+  "name": "Marae",
+  "aliases": [
+   "BUILDING_MARAE"
+  ],
+  "summary": "Unique to Māori. Theater Square building, cost 150.",
+  "fields": {
+   "unique_to": "Māori",
+   "replaces": "Amphitheater",
+   "district": "Theater Square",
+   "cost": 150,
+   "citizen_slots": 1,
+   "requires": [
+    "Drama and Poetry"
+   ],
+   "purchase": "gold",
+   "effect": "A building unique to the Māori. +1 Culture and Faith to all of this city's tiles with a passable feature or natural wonder. After Flight is researched receive +1 Tourism to all of this city's tiles with a feature or natural wonder. Costs no maintenance. Has no Great Work slots."
+  }
+ },
+ {
+  "id": "building:market",
+  "name": "Market",
+  "aliases": [
+   "BUILDING_MARKET"
+  ],
+  "summary": "Commercial Hub building, cost 120; +2 Gold.",
+  "fields": {
+   "district": "Commercial Hub",
+   "cost": 120,
+   "yields": "+2 Gold",
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great Merchant"
+   ],
+   "requires": [
+    "Currency"
+   ],
+   "purchase": "gold",
+   "effect": "+1 Trade Route capacity, if this city does not yet have a Lighthouse building."
+  }
+ },
+ {
+  "id": "building:medium_rocket",
+  "name": "Medium Rocket",
+  "aliases": [
+   "BUILDING_MEDIUM_ROCKET"
+  ],
+  "summary": "Spaceport building, cost 1.",
+  "fields": {
+   "district": "Spaceport",
+   "cost": 1,
+   "exclusive_with": [
+    "Small Rocket",
+    "Large Rocket"
+   ],
+   "purchase": "none",
+   "internal_only": true
+  }
+ },
+ {
+  "id": "building:meeting_house",
+  "name": "Meeting House",
+  "aliases": [
+   "BUILDING_MEETING_HOUSE"
+  ],
+  "summary": "Holy Site building, cost 190; +3 Faith, +2 Production.",
+  "fields": {
+   "district": "Holy Site",
+   "cost": 190,
+   "yields": "+3 Faith, +2 Production",
+   "citizen_slots": 1,
+   "requires_buildings": [
+    "Temple"
+   ],
+   "purchase": "faith"
+  }
+ },
+ {
+  "id": "building:military_academy",
+  "name": "Military Academy",
+  "aliases": [
+   "BUILDING_MILITARY_ACADEMY"
+  ],
+  "summary": "Encampment building, cost 330; +4 Production.",
+  "fields": {
+   "district": "Encampment",
+   "cost": 330,
+   "maintenance": 2,
+   "yields": "+4 Production",
+   "housing": 1,
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great General"
+   ],
+   "requires": [
+    "Military Science"
+   ],
+   "requires_buildings": [
+    "Armory"
+   ],
+   "purchase": "gold",
+   "effect": "+25% combat experience for all land units trained in this city. Strategic Resource Stockpiles increased +10 (on Standard Speed). Allows Corps and Armies to be trained directly. Corps and Army training costs reduced 25%."
+  }
+ },
+ {
+  "id": "building:monument",
+  "name": "Monument",
+  "aliases": [
+   "BUILDING_MONUMENT"
+  ],
+  "summary": "City Center building, cost 60; +1 Culture.",
+  "fields": {
+   "district": "City Center",
+   "cost": 60,
+   "yields": "+1 Culture",
+   "purchase": "gold",
+   "effect": "Provides +1 Loyalty per turn in this city. If the city already has maximum Loyalty, also provides an additional +1 Culture."
+  }
+ },
+ {
+  "id": "building:mosque",
+  "name": "Mosque",
+  "aliases": [
+   "BUILDING_MOSQUE"
+  ],
+  "summary": "Holy Site building, cost 190; +3 Faith.",
+  "fields": {
+   "district": "Holy Site",
+   "cost": 190,
+   "yields": "+3 Faith",
+   "citizen_slots": 1,
+   "requires_buildings": [
+    "Temple"
+   ],
+   "purchase": "faith",
+   "effect": "Missionary and Apostles created here have +1 spread."
+  }
+ },
+ {
+  "id": "building:museum_art",
+  "name": "Art Museum",
+  "aliases": [
+   "BUILDING_MUSEUM_ART"
+  ],
+  "summary": "Theater Square building, cost 290; +2 Culture.",
+  "fields": {
+   "district": "Theater Square",
+   "cost": 290,
+   "maintenance": 2,
+   "yields": "+2 Culture",
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great Writer",
+    "+2 Great Artist"
+   ],
+   "great_work_slots": [
+    "3 art"
+   ],
+   "requires": [
+    "Humanism"
+   ],
+   "requires_buildings": [
+    "Amphitheater"
+   ],
+   "exclusive_with": [
+    "Archaeological Museum"
+   ],
+   "purchase": "gold",
+   "effect": "Holds Great Works of Art. May not be built in a Theater Square district that already has an Archaeological Museum."
+  }
+ },
+ {
+  "id": "building:museum_artifact",
+  "name": "Archaeological Museum",
+  "aliases": [
+   "BUILDING_MUSEUM_ARTIFACT"
+  ],
+  "summary": "Theater Square building, cost 290; +2 Culture.",
+  "fields": {
+   "district": "Theater Square",
+   "cost": 290,
+   "maintenance": 2,
+   "yields": "+2 Culture",
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great Writer",
+    "+2 Great Artist"
+   ],
+   "great_work_slots": [
+    "3 artifact"
+   ],
+   "requires": [
+    "Humanism"
+   ],
+   "requires_buildings": [
+    "Amphitheater"
+   ],
+   "exclusive_with": [
+    "Art Museum"
+   ],
+   "purchase": "gold",
+   "effect": "Holds Artifacts. May not be built in a Theater Square district that already has an Art Museum."
+  }
+ },
+ {
+  "id": "building:navigation_school",
+  "name": "Navigation School",
+  "aliases": [
+   "BUILDING_NAVIGATION_SCHOOL"
+  ],
+  "summary": "Unique to Portugal. Campus building, cost 250; +4 Science.",
+  "fields": {
+   "unique_to": "Portugal",
+   "replaces": "University",
+   "district": "Campus",
+   "cost": 250,
+   "maintenance": 2,
+   "yields": "+4 Science",
+   "housing": 1,
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great Admiral",
+    "+1 Great Scientist"
+   ],
+   "requires": [
+    "Education"
+   ],
+   "requires_buildings": [
+    "Library"
+   ],
+   "purchase": "gold",
+   "effect": "A building unique to Portugal. +25% Production towards naval units in this city. +1 SCi Ence Science for every two coast or lake tiles in this city. +1 Great Admiral and +1 Great Scientist point per turn."
+  }
+ },
+ {
+  "id": "building:ordu",
+  "name": "Ordu",
+  "aliases": [
+   "BUILDING_ORDU"
+  ],
+  "summary": "Unique to Mongolia. Encampment building, cost 120; +1 Production.",
+  "fields": {
+   "unique_to": "Mongolia",
+   "replaces": "Stable",
+   "district": "Encampment",
+   "cost": 120,
+   "maintenance": 1,
+   "yields": "+1 Production",
+   "housing": 1,
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great General"
+   ],
+   "requires": [
+    "Horseback Riding"
+   ],
+   "exclusive_with": [
+    "Barracks"
+   ],
+   "purchase": "gold",
+   "effect": "A building unique to Mongolia. Grants an ability that gives +1 Movement to Heavy and Light Cavalry trained in this city. +25% combat experience for all cavalry and siege class units trained in this city. Strategic Resource Stockpiles increased +10 (on Standard Speed). May not be built in an Encampment district that already has a Barracks."
+  }
+ },
+ {
+  "id": "building:pagoda",
+  "name": "Pagoda",
+  "aliases": [
+   "BUILDING_PAGODA"
+  ],
+  "summary": "Holy Site building, cost 190; +3 Faith.",
+  "fields": {
+   "district": "Holy Site",
+   "cost": 190,
+   "yields": "+3 Faith",
+   "citizen_slots": 1,
+   "requires_buildings": [
+    "Temple"
+   ],
+   "purchase": "faith",
+   "effect": "+1 Diplomatic Favor per turn."
+  }
+ },
+ {
+  "id": "building:palace",
+  "name": "Palace",
+  "aliases": [
+   "BUILDING_PALACE"
+  ],
+  "summary": "City Center building, cost 1; +1 Culture, +5 Gold, +2 Production, +2 Science.",
+  "fields": {
+   "district": "City Center",
+   "cost": 1,
+   "yields": "+1 Culture, +5 Gold, +2 Production, +2 Science",
+   "housing": 1,
+   "amenities": 2,
+   "great_work_slots": [
+    "1 palace"
+   ],
+   "purchase": "none"
+  }
+ },
+ {
+  "id": "building:palgum",
+  "name": "Palgum",
+  "aliases": [
+   "BUILDING_PALGUM"
+  ],
+  "summary": "Unique to Babylon. City Center building, cost 80; +2 Production.",
+  "fields": {
+   "unique_to": "Babylon",
+   "replaces": "Water Mill",
+   "district": "City Center",
+   "cost": 80,
+   "yields": "+2 Production",
+   "housing": 1,
+   "requires": [
+    "Irrigation"
+   ],
+   "purchase": "gold",
+   "effect": "A building unique to Babylon. +1 Housing and +2 Production. Freshwater tiles receive +1 Food. City must be adjacent to a River."
+  }
+ },
+ {
+  "id": "building:power_plant",
+  "name": "Nuclear Power Plant",
+  "aliases": [
+   "BUILDING_POWER_PLANT"
+  ],
+  "summary": "Industrial Zone building, cost 480; +4 Production, +3 Science.",
+  "fields": {
+   "district": "Industrial Zone",
+   "cost": 480,
+   "maintenance": 3,
+   "yields": "+4 Production, +3 Science",
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great Engineer"
+   ],
+   "requires": [
+    "Nuclear Fission"
+   ],
+   "requires_buildings": [
+    "Factory"
+   ],
+   "exclusive_with": [
+    "Coal Power Plant",
+    "Oil Power Plant"
+   ],
+   "purchase": "gold",
+   "effect": "Automatically converts any amount of Uranium into Power for cities within 6 tiles that need it each turn, at the rate of: - 1 Uranium 16 Power - Miniscule CO2 into the atmosphere Once built, as a Nuclear Power Plant ages, there is an increased chance for a Nuclear Accident to occur. Its Production and Science bonus is extended to all City Centers within 6 tiles that do not already have a bonus from a Power Plant building."
+  }
+ },
+ {
+  "id": "building:prasat",
+  "name": "Prasat",
+  "aliases": [
+   "BUILDING_PRASAT"
+  ],
+  "summary": "Unique to Khmer. Holy Site building, cost 120; +6 Faith.",
+  "fields": {
+   "unique_to": "Khmer",
+   "replaces": "Temple",
+   "district": "Holy Site",
+   "cost": 120,
+   "maintenance": 2,
+   "yields": "+6 Faith",
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great Prophet"
+   ],
+   "great_work_slots": [
+    "1 relic"
+   ],
+   "requires": [
+    "Theology"
+   ],
+   "requires_buildings": [
+    "Shrine"
+   ],
+   "purchase": "gold",
+   "effect": "+6 Faith. A building unique to Khmer. Replaces the Temple. Required to purchase Apostles and Inquisitors with Faith. +0.5 Culture for every Citizen population in this city. Once Flight is researched receive +10 Tourism if the city Citizen population is 10 or higher and +20 Tourism if the city Citizen population is 20 or higher."
+  }
+ },
+ {
+  "id": "building:queens_bibliotheque",
+  "name": "Queen's Bibliotheque",
+  "aliases": [
+   "BUILDING_QUEENS_BIBLIOTHEQUE"
+  ],
+  "summary": "Unique to Kristina (Sweden). Government Plaza building, cost 217.",
+  "fields": {
+   "unique_to": "Kristina (Sweden)",
+   "district": "Government Plaza",
+   "cost": 217,
+   "maintenance": 2,
+   "great_person_points": [
+    "+2 Great Artist",
+    "+2 Great Writer",
+    "+2 Great Musician"
+   ],
+   "great_work_slots": [
+    "2 writing",
+    "2 art",
+    "2 music"
+   ],
+   "requires_buildings": [
+    "Audience Chamber",
+    "Ancestral Hall",
+    "Warlord's Throne"
+   ],
+   "exclusive_with": [
+    "Foreign Ministry",
+    "Intelligence Agency",
+    "Grand Master's Chapel"
+   ],
+   "purchase": "none",
+   "effect": "A building unique to Sweden. This building provides 2 slots of Writing, Music, and any type of Great Work Landscape Art. Awards +1 Governor Title."
+  }
+ },
+ {
+  "id": "building:research_lab",
+  "name": "Research Lab",
+  "aliases": [
+   "BUILDING_RESEARCH_LAB"
+  ],
+  "summary": "Campus building, cost 440; +3 Science.",
+  "fields": {
+   "district": "Campus",
+   "cost": 440,
+   "maintenance": 3,
+   "yields": "+3 Science",
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great Scientist"
+   ],
+   "power_required": 3,
+   "requires": [
+    "Chemistry"
+   ],
+   "requires_buildings": [
+    "University"
+   ],
+   "purchase": "gold"
+  }
+ },
+ {
+  "id": "building:sanctuary",
+  "name": "Sanctuary",
+  "aliases": [
+   "BUILDING_SANCTUARY"
+  ],
+  "summary": "Preserve building, cost 440.",
+  "fields": {
+   "district": "Preserve",
+   "cost": 440,
+   "requires": [
+    "Conservation"
+   ],
+   "purchase": "gold",
+   "effect": "Grants +1 Science and +1 Gold to adjacent unimproved Charming tiles. Increased to +2 Science, +2 Gold, +2 Production for adjacent unimproved Breathtaking tiles."
+  }
+ },
+ {
+  "id": "building:seaport",
+  "name": "Seaport",
+  "aliases": [
+   "BUILDING_SEAPORT"
+  ],
+  "summary": "Harbor building, cost 440; +2 Gold, +2 Food.",
+  "fields": {
+   "district": "Harbor",
+   "cost": 440,
+   "yields": "+2 Gold, +2 Food",
+   "housing": 1,
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great Admiral"
+   ],
+   "requires": [
+    "Electricity"
+   ],
+   "requires_buildings": [
+    "Shipyard"
+   ],
+   "purchase": "gold",
+   "effect": "+25% combat experience for all naval units trained in this city. Allows Fleets and Armadas to be trained directly. Fleet and Armada training costs reduced 25%. +2 Gold on all Coast tiles for this city."
+  }
+ },
+ {
+  "id": "building:sewer",
+  "name": "Sewer",
+  "aliases": [
+   "BUILDING_SEWER"
+  ],
+  "summary": "City Center building, cost 200.",
+  "fields": {
+   "district": "City Center",
+   "cost": 200,
+   "maintenance": 2,
+   "housing": 2,
+   "requires": [
+    "Sanitation"
+   ],
+   "purchase": "gold"
+  }
+ },
+ {
+  "id": "building:shipyard",
+  "name": "Shipyard",
+  "aliases": [
+   "BUILDING_SHIPYARD"
+  ],
+  "summary": "Harbor building, cost 290; +1 Food.",
+  "fields": {
+   "district": "Harbor",
+   "cost": 290,
+   "maintenance": 1,
+   "yields": "+1 Food",
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great Admiral"
+   ],
+   "requires": [
+    "Mass Production"
+   ],
+   "requires_buildings": [
+    "Lighthouse"
+   ],
+   "purchase": "gold",
+   "effect": "+25% combat experience for all naval units trained in this city. Bonus Production equal to the adjacency bonus of the Harbor district. +1 Production on all unimproved Coast and Lake tiles for this city."
+  }
+ },
+ {
+  "id": "building:shopping_mall",
+  "name": "Shopping Mall",
+  "aliases": [
+   "BUILDING_SHOPPING_MALL"
+  ],
+  "summary": "Neighborhood building, cost 440; +2 Gold.",
+  "fields": {
+   "district": "Neighborhood",
+   "cost": 440,
+   "maintenance": 1,
+   "yields": "+2 Gold",
+   "amenities": 1,
+   "power_required": 1,
+   "requires": [
+    "Capitalism"
+   ],
+   "exclusive_with": [
+    "Food Market"
+   ],
+   "purchase": "gold",
+   "effect": "+4 Tourism. Can only be built once in a city, even if the city has multiple Neighborhoods."
+  }
+ },
+ {
+  "id": "building:shrine",
+  "name": "Shrine",
+  "aliases": [
+   "BUILDING_SHRINE"
+  ],
+  "summary": "Holy Site building, cost 70; +2 Faith.",
+  "fields": {
+   "district": "Holy Site",
+   "cost": 70,
+   "maintenance": 1,
+   "yields": "+2 Faith",
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great Prophet"
+   ],
+   "requires": [
+    "Astrology"
+   ],
+   "purchase": "gold",
+   "effect": "Allows the purchasing of Missionaries. Missionaries can only be purchased with Faith."
+  }
+ },
+ {
+  "id": "building:small_rocket",
+  "name": "Small Rocket",
+  "aliases": [
+   "BUILDING_SMALL_ROCKET"
+  ],
+  "summary": "Spaceport building, cost 1.",
+  "fields": {
+   "district": "Spaceport",
+   "cost": 1,
+   "exclusive_with": [
+    "Medium Rocket",
+    "Large Rocket"
+   ],
+   "purchase": "none",
+   "internal_only": true
+  }
+ },
+ {
+  "id": "building:stable",
+  "name": "Stable",
+  "aliases": [
+   "BUILDING_STABLE"
+  ],
+  "summary": "Encampment building, cost 120; +1 Production.",
+  "fields": {
+   "district": "Encampment",
+   "cost": 120,
+   "maintenance": 1,
+   "yields": "+1 Production",
+   "housing": 1,
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great General"
+   ],
+   "requires": [
+    "Horseback Riding"
+   ],
+   "exclusive_with": [
+    "Barracks"
+   ],
+   "purchase": "gold",
+   "effect": "+25% combat experience for all cavalry and siege class units trained in this city. Strategic Resource Stockpiles increased +10 (on Standard Speed). May not be built in an Encampment district that already has a Barracks."
+  }
+ },
+ {
+  "id": "building:stadium",
+  "name": "Stadium",
+  "aliases": [
+   "BUILDING_STADIUM"
+  ],
+  "summary": "Entertainment Complex building, cost 480.",
+  "fields": {
+   "district": "Entertainment Complex",
+   "cost": 480,
+   "maintenance": 3,
+   "amenities": 1,
+   "power_required": 2,
+   "requires": [
+    "Professional Sports"
+   ],
+   "requires_buildings": [
+    "Zoo"
+   ],
+   "purchase": "gold",
+   "effect": "Bonus Amenities extend to each city center within 6 tiles. This bonus applies once to a city, and multiple copies of this building within 6 tiles of a city center do not provide additional bonuses. +2 Tourism if the city Citizen population is 10 or higher and +5 Tourism if the city Citizen population is 20 or higher."
+  }
+ },
+ {
+  "id": "building:star_fort",
+  "name": "Renaissance Walls",
+  "aliases": [
+   "BUILDING_STAR_FORT"
+  ],
+  "summary": "City Center building, cost 300.",
+  "fields": {
+   "district": "City Center",
+   "cost": 300,
+   "requires": [
+    "Siege Tactics"
+   ],
+   "requires_buildings": [
+    "Medieval Walls"
+   ],
+   "purchase": "none",
+   "effect": "Raises the strength of your outer defenses to the highest possible level. Provides 3 Tourism after advancing to the Conservation Civic. This city is not affected by Siege Towers or Battering Rams."
+  }
+ },
+ {
+  "id": "building:stave_church",
+  "name": "Stave Church",
+  "aliases": [
+   "BUILDING_STAVE_CHURCH"
+  ],
+  "summary": "Unique to Norway. Holy Site building, cost 120; +4 Faith.",
+  "fields": {
+   "unique_to": "Norway",
+   "replaces": "Temple",
+   "district": "Holy Site",
+   "cost": 120,
+   "maintenance": 2,
+   "yields": "+4 Faith",
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great Prophet"
+   ],
+   "great_work_slots": [
+    "1 relic"
+   ],
+   "requires": [
+    "Theology"
+   ],
+   "requires_buildings": [
+    "Shrine"
+   ],
+   "purchase": "gold",
+   "effect": "A building unique to Norway. Required to purchase Apostles and Inquisitors with Faith. Holy Site districts get an additional standard adjacency bonus from Woods. +1 Production to each coastal resource tile in this city."
+  }
+ },
+ {
+  "id": "building:stock_exchange",
+  "name": "Stock Exchange",
+  "aliases": [
+   "BUILDING_STOCK_EXCHANGE"
+  ],
+  "summary": "Commercial Hub building, cost 330; +4 Gold.",
+  "fields": {
+   "district": "Commercial Hub",
+   "cost": 330,
+   "yields": "+4 Gold",
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great Merchant"
+   ],
+   "power_required": 3,
+   "requires": [
+    "Economics"
+   ],
+   "requires_buildings": [
+    "Bank"
+   ],
+   "purchase": "gold"
+  }
+ },
+ {
+  "id": "building:stupa",
+  "name": "Stupa",
+  "aliases": [
+   "BUILDING_STUPA"
+  ],
+  "summary": "Holy Site building, cost 190; +3 Faith.",
+  "fields": {
+   "district": "Holy Site",
+   "cost": 190,
+   "yields": "+3 Faith",
+   "amenities": 1,
+   "citizen_slots": 1,
+   "requires_buildings": [
+    "Temple"
+   ],
+   "purchase": "faith"
+  }
+ },
+ {
+  "id": "building:sukiennice",
+  "name": "Sukiennice",
+  "aliases": [
+   "BUILDING_SUKIENNICE"
+  ],
+  "summary": "Unique to Poland. Commercial Hub building, cost 120; +2 Gold.",
+  "fields": {
+   "unique_to": "Poland",
+   "replaces": "Market",
+   "district": "Commercial Hub",
+   "cost": 120,
+   "yields": "+2 Gold",
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great Merchant"
+   ],
+   "requires": [
+    "Currency"
+   ],
+   "purchase": "gold",
+   "effect": "A building unique to Poland. International Trade Routes from this city gain +2 Production; domestic Trade Routes gain +4 Gold. +1 Trade Route capacity, if this city does not yet have a Lighthouse building."
+  }
+ },
+ {
+  "id": "building:synagogue",
+  "name": "Synagogue",
+  "aliases": [
+   "BUILDING_SYNAGOGUE"
+  ],
+  "summary": "Holy Site building, cost 190; +5 Faith.",
+  "fields": {
+   "district": "Holy Site",
+   "cost": 190,
+   "yields": "+5 Faith",
+   "citizen_slots": 1,
+   "requires_buildings": [
+    "Temple"
+   ],
+   "purchase": "faith"
+  }
+ },
+ {
+  "id": "building:temple",
+  "name": "Temple",
+  "aliases": [
+   "BUILDING_TEMPLE"
+  ],
+  "summary": "Holy Site building, cost 120; +4 Faith.",
+  "fields": {
+   "district": "Holy Site",
+   "cost": 120,
+   "maintenance": 2,
+   "yields": "+4 Faith",
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great Prophet"
+   ],
+   "great_work_slots": [
+    "1 relic"
+   ],
+   "requires": [
+    "Theology"
+   ],
+   "requires_buildings": [
+    "Shrine"
+   ],
+   "purchase": "gold",
+   "effect": "Allows the purchasing of Apostles, Gurus, Inquisitors, and with the proper belief, Warrior Monks. These units can only be purchased with Faith."
+  }
+ },
+ {
+  "id": "building:thermal_bath",
+  "name": "Thermal Bath",
+  "aliases": [
+   "BUILDING_THERMAL_BATH"
+  ],
+  "summary": "Unique to Hungary. Entertainment Complex building, cost 360; +2 Production.",
+  "fields": {
+   "unique_to": "Hungary",
+   "replaces": "Zoo",
+   "district": "Entertainment Complex",
+   "cost": 360,
+   "maintenance": 2,
+   "yields": "+2 Production",
+   "amenities": 2,
+   "requires": [
+    "Natural History"
+   ],
+   "requires_buildings": [
+    "Arena"
+   ],
+   "purchase": "gold",
+   "effect": "A building unique to Hungary. +2 Amenities and +2 Production extends to each city center within 6 tiles. These bonuses apply once to a city, and multiple copies of this building within 6 tiles of a city center do not provide additional bonuses. This city receives +3 Tourism and +2 additional Amenities if there is at least one Geothermal Fissure in this city's borders."
+  }
+ },
+ {
+  "id": "building:tlachtli",
+  "name": "Tlachtli",
+  "aliases": [
+   "BUILDING_TLACHTLI"
+  ],
+  "summary": "Unique to Aztec. Entertainment Complex building, cost 135; +2 Faith, +2 Culture.",
+  "fields": {
+   "unique_to": "Aztec",
+   "replaces": "Arena",
+   "district": "Entertainment Complex",
+   "cost": 135,
+   "maintenance": 1,
+   "yields": "+2 Faith, +2 Culture",
+   "amenities": 2,
+   "great_person_points": [
+    "+1 Great General"
+   ],
+   "requires": [
+    "Games and Recreation"
+   ],
+   "purchase": "gold",
+   "effect": "A building unique to the Aztecs. Provides 2 Amenities, +2 Culture, +2 Faith, and a Great General Point. Provides +1 Tourism after advancing to the Conservation Civic."
+  }
+ },
+ {
+  "id": "building:tsikhe",
+  "name": "Tsikhe",
+  "aliases": [
+   "BUILDING_TSIKHE"
+  ],
+  "summary": "Unique to Georgia. City Center building, cost 260; +4 Faith.",
+  "fields": {
+   "unique_to": "Georgia",
+   "replaces": "Renaissance Walls",
+   "district": "City Center",
+   "cost": 260,
+   "yields": "+4 Faith",
+   "requires": [
+    "Siege Tactics"
+   ],
+   "requires_buildings": [
+    "Medieval Walls"
+   ],
+   "purchase": "none",
+   "effect": "A building unique to Georgia. Lower Production cost and higher outer defenses than Renaissance Walls. Provides +3 Tourism after advancing to the Conservation Civic. Provides +4 Faith. When in a Golden Age the Tourism and Faith are +100%."
+  }
+ },
+ {
+  "id": "building:university",
+  "name": "University",
+  "aliases": [
+   "BUILDING_UNIVERSITY"
+  ],
+  "summary": "Campus building, cost 250; +4 Science.",
+  "fields": {
+   "district": "Campus",
+   "cost": 250,
+   "maintenance": 2,
+   "yields": "+4 Science",
+   "housing": 1,
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great Scientist"
+   ],
+   "requires": [
+    "Education"
+   ],
+   "requires_buildings": [
+    "Library"
+   ],
+   "purchase": "gold"
+  }
+ },
+ {
+  "id": "building:walls",
+  "name": "Ancient Walls",
+  "aliases": [
+   "BUILDING_WALLS"
+  ],
+  "summary": "City Center building, cost 80.",
+  "fields": {
+   "district": "City Center",
+   "cost": 80,
+   "requires": [
+    "Masonry"
+   ],
+   "purchase": "none",
+   "effect": "Provides Walls around the City Center and Encampment district. Walls allow Ranged Strikes from the City Center and Encampment district, and must be defeated before a city can be assaulted. Provides 1 Tourism after advancing to the Conservation Civic."
+  }
+ },
+ {
+  "id": "building:wat",
+  "name": "Wat",
+  "aliases": [
+   "BUILDING_WAT"
+  ],
+  "summary": "Holy Site building, cost 190; +3 Faith, +2 Science.",
+  "fields": {
+   "district": "Holy Site",
+   "cost": 190,
+   "yields": "+3 Faith, +2 Science",
+   "citizen_slots": 1,
+   "requires_buildings": [
+    "Temple"
+   ],
+   "purchase": "faith"
+  }
+ },
+ {
+  "id": "building:water_mill",
+  "name": "Water Mill",
+  "aliases": [
+   "BUILDING_WATER_MILL"
+  ],
+  "summary": "City Center building, cost 80; +1 Food, +1 Production.",
+  "fields": {
+   "district": "City Center",
+   "cost": 80,
+   "yields": "+1 Food, +1 Production",
+   "requires": [
+    "Wheel"
+   ],
+   "purchase": "gold",
+   "effect": "Bonus resources improved by Farms gain +1 Food each. City must be adjacent to a River."
+  }
+ },
+ {
+  "id": "building:workshop",
+  "name": "Workshop",
+  "aliases": [
+   "BUILDING_WORKSHOP"
+  ],
+  "summary": "Industrial Zone building, cost 195; +3 Production.",
+  "fields": {
+   "district": "Industrial Zone",
+   "cost": 195,
+   "maintenance": 1,
+   "yields": "+3 Production",
+   "citizen_slots": 1,
+   "great_person_points": [
+    "+1 Great Engineer"
+   ],
+   "requires": [
+    "Apprenticeship"
+   ],
+   "purchase": "gold"
+  }
+ },
+ {
+  "id": "building:zoo",
+  "name": "Zoo",
+  "aliases": [
+   "BUILDING_ZOO"
+  ],
+  "summary": "Entertainment Complex building, cost 360.",
+  "fields": {
+   "district": "Entertainment Complex",
+   "cost": 360,
+   "maintenance": 2,
+   "amenities": 1,
+   "requires": [
+    "Natural History"
+   ],
+   "requires_buildings": [
+    "Arena"
+   ],
+   "purchase": "gold",
+   "effect": "Bonus Amenity extends to each city center within 6 tiles. This bonus applies once to a city, and multiple copies of this building within 6 tiles of a city center do not provide additional bonuses. +1 Science to each Rainforest and Marsh tile in this city."
+  }
+ }
+]

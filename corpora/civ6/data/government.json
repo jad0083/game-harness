@@ -1,0 +1,280 @@
+[
+ {
+  "id": "government:autocracy",
+  "name": "Autocracy",
+  "aliases": [
+   "GOVERNMENT_AUTOCRACY"
+  ],
+  "summary": "1 Military, 1 Economic, 1 Diplomatic, 1 Wildcard. +1 to all yields for each government building and palace in a city.",
+  "fields": {
+   "tier": "tier1",
+   "requires": [
+    "Political Philosophy"
+   ],
+   "slots": [
+    "1 Military",
+    "1 Economic",
+    "1 Diplomatic",
+    "1 Wildcard"
+   ],
+   "inherent_bonus": "+1 to all yields for each government building and palace in a city.",
+   "legacy_bonus": "+10% Production toward Wonders."
+  }
+ },
+ {
+  "id": "government:chiefdom",
+  "name": "Chiefdom",
+  "aliases": [
+   "GOVERNMENT_CHIEFDOM"
+  ],
+  "summary": "1 Military, 1 Economic. No Bonus.",
+  "fields": {
+   "slots": [
+    "1 Military",
+    "1 Economic"
+   ],
+   "inherent_bonus": "No Bonus.",
+   "legacy_bonus": "No Bonus."
+  }
+ },
+ {
+  "id": "government:classical_republic",
+  "name": "Classical Republic",
+  "aliases": [
+   "GOVERNMENT_CLASSICAL_REPUBLIC"
+  ],
+  "summary": "2 Economic, 1 Diplomatic, 1 Wildcard. All cities with a district receive +1 Housing and +1 Amenity.",
+  "fields": {
+   "tier": "tier1",
+   "requires": [
+    "Political Philosophy"
+   ],
+   "slots": [
+    "2 Economic",
+    "1 Diplomatic",
+    "1 Wildcard"
+   ],
+   "inherent_bonus": "All cities with a district receive +1 Housing and +1 Amenity.",
+   "legacy_bonus": "+15% Great Person points."
+  }
+ },
+ {
+  "id": "government:communism",
+  "name": "Communism",
+  "aliases": [
+   "GOVERNMENT_COMMUNISM"
+  ],
+  "summary": "3 Military, 3 Economic, 1 Diplomatic, 1 Wildcard. +0.6 Production per Citizen in cities with Governors.",
+  "fields": {
+   "tier": "tier3",
+   "requires": [
+    "Class Struggle"
+   ],
+   "slots": [
+    "3 Military",
+    "3 Economic",
+    "1 Diplomatic",
+    "1 Wildcard"
+   ],
+   "inherent_bonus": "+0.6 Production per Citizen in cities with Governors.",
+   "legacy_bonus": "+10% Science."
+  }
+ },
+ {
+  "id": "government:corporate_libertarianism",
+  "name": "Corporate Libertarianism",
+  "aliases": [
+   "GOVERNMENT_CORPORATE_LIBERTARIANISM"
+  ],
+  "summary": "3 Military, 1 Economic, 1 Diplomatic, 5 Wildcard. Commercial Hubs and Encampments provide cities with +10% Production, and accumulating resources with improvements provide +1 per turn.",
+  "fields": {
+   "tier": "tier4",
+   "requires": [
+    "Venture Politics"
+   ],
+   "slots": [
+    "3 Military",
+    "1 Economic",
+    "1 Diplomatic",
+    "5 Wildcard"
+   ],
+   "inherent_bonus": "Commercial Hubs and Encampments provide cities with +10% Production, and accumulating resources with improvements provide +1 per turn.",
+   "legacy_bonus": "-10% Science."
+  }
+ },
+ {
+  "id": "government:democracy",
+  "name": "Democracy",
+  "aliases": [
+   "GOVERNMENT_DEMOCRACY"
+  ],
+  "summary": "1 Military, 3 Economic, 2 Diplomatic, 2 Wildcard. Your Trade Routes to an Ally or Suzerain's city provide +4 Food and +4 Production for both cities. Alliance Points with all allies increase by an additional.25 per turn.",
+  "fields": {
+   "tier": "tier3",
+   "requires": [
+    "Suffrage"
+   ],
+   "slots": [
+    "1 Military",
+    "3 Economic",
+    "2 Diplomatic",
+    "2 Wildcard"
+   ],
+   "inherent_bonus": "Your Trade Routes to an Ally or Suzerain's city provide +4 Food and +4 Production for both cities. Alliance Points with all allies increase by an additional.25 per turn.",
+   "legacy_bonus": "15% Discount on Purchases with Gold."
+  }
+ },
+ {
+  "id": "government:digital_democracy",
+  "name": "Digital Democracy",
+  "aliases": [
+   "GOVERNMENT_DIGITAL_DEMOCRACY"
+  ],
+  "summary": "1 Military, 1 Economic, 3 Diplomatic, 5 Wildcard. +2 Amenities in all cities, and +2 Culture per Specialty District.",
+  "fields": {
+   "tier": "tier4",
+   "requires": [
+    "Distributed Sovereignty"
+   ],
+   "slots": [
+    "1 Military",
+    "1 Economic",
+    "3 Diplomatic",
+    "5 Wildcard"
+   ],
+   "inherent_bonus": "+2 Amenities in all cities, and +2 Culture per Specialty District.",
+   "legacy_bonus": "-3 Combat Strength for all units."
+  }
+ },
+ {
+  "id": "government:fascism",
+  "name": "Fascism",
+  "aliases": [
+   "GOVERNMENT_FASCISM"
+  ],
+  "summary": "4 Military, 1 Economic, 1 Diplomatic, 2 Wildcard. All units gain +5 Combat Strength. War Weariness reduced by 15%.",
+  "fields": {
+   "tier": "tier3",
+   "requires": [
+    "Totalitarianism"
+   ],
+   "slots": [
+    "4 Military",
+    "1 Economic",
+    "1 Diplomatic",
+    "2 Wildcard"
+   ],
+   "inherent_bonus": "All units gain +5 Combat Strength. War Weariness reduced by 15%.",
+   "legacy_bonus": "+50% Production toward Units."
+  }
+ },
+ {
+  "id": "government:merchant_republic",
+  "name": "Merchant Republic",
+  "aliases": [
+   "GOVERNMENT_MERCHANT_REPUBLIC"
+  ],
+  "summary": "1 Military, 2 Economic, 2 Diplomatic, 1 Wildcard. +10% Gold in all cities with an established Governor.",
+  "fields": {
+   "tier": "tier2",
+   "requires": [
+    "Exploration"
+   ],
+   "slots": [
+    "1 Military",
+    "2 Economic",
+    "2 Diplomatic",
+    "1 Wildcard"
+   ],
+   "inherent_bonus": "+10% Gold in all cities with an established Governor.",
+   "legacy_bonus": "+15% Production toward Districts."
+  }
+ },
+ {
+  "id": "government:monarchy",
+  "name": "Monarchy",
+  "aliases": [
+   "GOVERNMENT_MONARCHY"
+  ],
+  "summary": "2 Military, 1 Economic, 1 Diplomatic, 2 Wildcard. +1 Housing per level of Walls. +2 Diplomatic Favor for every Renaissance Wall.",
+  "fields": {
+   "tier": "tier2",
+   "requires": [
+    "Divine Right"
+   ],
+   "slots": [
+    "2 Military",
+    "1 Economic",
+    "1 Diplomatic",
+    "2 Wildcard"
+   ],
+   "inherent_bonus": "+1 Housing per level of Walls. +2 Diplomatic Favor for every Renaissance Wall.",
+   "legacy_bonus": "+50% Influence Points."
+  }
+ },
+ {
+  "id": "government:oligarchy",
+  "name": "Oligarchy",
+  "aliases": [
+   "GOVERNMENT_OLIGARCHY"
+  ],
+  "summary": "2 Military, 1 Economic, 1 Wildcard. All land melee, anti-cavalry, and naval melee class units gain +4 Combat Strength.",
+  "fields": {
+   "tier": "tier1",
+   "requires": [
+    "Political Philosophy"
+   ],
+   "slots": [
+    "2 Military",
+    "1 Economic",
+    "1 Wildcard"
+   ],
+   "inherent_bonus": "All land melee, anti-cavalry, and naval melee class units gain +4 Combat Strength.",
+   "legacy_bonus": "+20% Unit Experience."
+  }
+ },
+ {
+  "id": "government:synthetic_technocracy",
+  "name": "Synthetic Technocracy",
+  "aliases": [
+   "GOVERNMENT_SYNTHETIC_TECHNOCRACY"
+  ],
+  "summary": "1 Military, 3 Economic, 1 Diplomatic, 5 Wildcard. +3 Power in all cities, and +30% Production towards all city projects.",
+  "fields": {
+   "tier": "tier4",
+   "requires": [
+    "Optimization Imperative"
+   ],
+   "slots": [
+    "1 Military",
+    "3 Economic",
+    "1 Diplomatic",
+    "5 Wildcard"
+   ],
+   "inherent_bonus": "+3 Power in all cities, and +30% Production towards all city projects.",
+   "legacy_bonus": "-10% Tourism."
+  }
+ },
+ {
+  "id": "government:theocracy",
+  "name": "Theocracy",
+  "aliases": [
+   "GOVERNMENT_THEOCRACY"
+  ],
+  "summary": "2 Military, 2 Economic, 1 Diplomatic, 1 Wildcard. +5 Religious Strength in Theological Combat. +0.5 Faith per Citizen in cities with Governors.",
+  "fields": {
+   "tier": "tier2",
+   "requires": [
+    "Reformed Church"
+   ],
+   "slots": [
+    "2 Military",
+    "2 Economic",
+    "1 Diplomatic",
+    "1 Wildcard"
+   ],
+   "inherent_bonus": "+5 Religious Strength in Theological Combat. +0.5 Faith per Citizen in cities with Governors.",
+   "legacy_bonus": "15% Discount on Purchases with Faith."
+  }
+ }
+]

@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hand-written test fixture in the game's XML format (not a copy of game files). -->
+<GameData>
+	<Types>
+		<Row Type="TECH_POTTERY" Kind="KIND_TECH"/>
+		<Row Type="TECH_WRITING" Kind="KIND_TECH"/>
+		<Row Type="TECH_OLD_LORE" Kind="KIND_TECH"/>
+		<Row Type="TECH_IRON_WORKING" Kind="KIND_TECH"/>
+	</Types>
+	<LeaderNotes>
+		<Row Leader="LEADER_TRAJAN"/>
+	</LeaderNotes>
+	<Eras>
+		<Row EraType="ERA_ANCIENT" Name="LOC_ERA_ANCIENT_NAME" ChronologyIndex="1" GreatPersonBaseCost="30"/>
+		<Row EraType="ERA_CLASSICAL" Name="LOC_ERA_CLASSICAL_NAME" ChronologyIndex="2"/>
+	</Eras>
+	<Yields>
+		<Row YieldType="YIELD_SCIENCE" Name="LOC_YIELD_SCIENCE_NAME"/>
+	</Yields>
+	<Terrains>
+		<Row TerrainType="TERRAIN_GRASS_MOUNTAIN" Name="LOC_TERRAIN_GRASS_MOUNTAIN_NAME" Mountain="true" Impassable="true"/>
+		<Row TerrainType="TERRAIN_PLAINS_MOUNTAIN" Name="LOC_TERRAIN_PLAINS_MOUNTAIN_NAME" Mountain="true" Impassable="true"/>
+	</Terrains>
+	<Technologies>
+		<Row TechnologyType="TECH_POTTERY" Name="LOC_TECH_POTTERY_NAME" Cost="25" EraType="ERA_ANCIENT"/>
+		<Row TechnologyType="TECH_WRITING" Name="LOC_TECH_WRITING_NAME" Cost="50" EraType="ERA_ANCIENT"/>
+		<Row TechnologyType="TECH_OLD_LORE" Name="LOC_TECH_OLD_LORE_NAME" Cost="10" EraType="ERA_ANCIENT"/>
+		<Row TechnologyType="TECH_IRON_WORKING" Name="LOC_TECH_IRON_WORKING_NAME" Cost="80" EraType="ERA_ANCIENT"/>
+	</Technologies>
+	<TechnologyPrereqs>
+		<Row Technology="TECH_WRITING" PrereqTech="TECH_POTTERY"/>
+		<Row Technology="TECH_WRITING" PrereqTech="TECH_OLD_LORE"/>
+	</TechnologyPrereqs>
+	<Boosts>
+		<Row BoostID="1" TechnologyType="TECH_WRITING" Boost="40" TriggerDescription="LOC_BOOST_TRIGGER_WRITING"/>
+	</Boosts>
+	<Units>
+		<Row UnitType="UNIT_SWORDSMAN" Name="LOC_UNIT_SWORDSMAN_NAME" BaseMoves="2" Combat="35" Domain="DOMAIN_LAND" Cost="90"
+			PurchaseYield="YIELD_GOLD" PrereqTech="TECH_IRON_WORKING"/>
+		<Row UnitType="UNIT_ROMAN_LEGION" Name="LOC_UNIT_ROMAN_LEGION_NAME" BaseMoves="2" Combat="40" Domain="DOMAIN_LAND" Cost="110"
+			PurchaseYield="YIELD_GOLD" PrereqTech="TECH_IRON_WORKING" TraitType="TRAIT_CIVILIZATION_UNIT_ROMAN_LEGION"
+			Description="LOC_UNIT_ROMAN_LEGION_DESCRIPTION"/>
+		<Row UnitType="UNIT_GREAT_SCIENTIST" Name="LOC_UNIT_GREAT_SCIENTIST_NAME" BaseMoves="2" Domain="DOMAIN_LAND" Cost="1" CanTrain="false"/>
+	</Units>
+	<UnitReplaces>
+		<Row CivUniqueUnitType="UNIT_ROMAN_LEGION" ReplacesUnitType="UNIT_SWORDSMAN"/>
+	</UnitReplaces>
+	<Traits>
+		<Row TraitType="TRAIT_CIVILIZATION_UNIT_ROMAN_LEGION"/>
+		<Row TraitType="TRAIT_CIVILIZATION_ALL_ROADS_TO_ROME" Name="LOC_TRAIT_ALL_ROADS_NAME" Description="LOC_TRAIT_ALL_ROADS_DESCRIPTION"/>
+	</Traits>
+	<Civilizations>
+		<Row CivilizationType="CIVILIZATION_ROME" Name="LOC_CIVILIZATION_ROME_NAME" StartingCivilizationLevelType="CIVILIZATION_LEVEL_FULL_CIV"/>
+	</Civilizations>
+	<Leaders>
+		<Row LeaderType="LEADER_TRAJAN" Name="LOC_LEADER_TRAJAN_NAME" InheritFrom="LEADER_DEFAULT"/>
+	</Leaders>
+	<CivilizationLeaders>
+		<Row LeaderType="LEADER_TRAJAN" CivilizationType="CIVILIZATION_ROME"/>
+	</CivilizationLeaders>
+	<CivilizationTraits>
+		<Row CivilizationType="CIVILIZATION_ROME" TraitType="TRAIT_CIVILIZATION_UNIT_ROMAN_LEGION"/>
+		<Row CivilizationType="CIVILIZATION_ROME" TraitType="TRAIT_CIVILIZATION_ALL_ROADS_TO_ROME"/>
+	</CivilizationTraits>
+	<Districts>
+		<Row DistrictType="DISTRICT_CAMPUS" Name="LOC_DISTRICT_CAMPUS_NAME" PrereqTech="TECH_WRITING" Cost="54"
+			CostProgressionModel="COST_PROGRESSION_NUM_UNDER_AVG_PLUS_TECH" CostProgressionParam1="40"/>
+	</Districts>
+	<Adjacency_YieldChanges>
+		<Row ID="Mountains_Science1" Description="LOC_DISTRICT_MOUNTAINS_SCIENCE1" YieldType="YIELD_SCIENCE" YieldChange="1" AdjacentTerrain="TERRAIN_GRASS_MOUNTAIN"/>
+		<Row ID="Mountains_Science2" Description="LOC_DISTRICT_MOUNTAINS_SCIENCE2" YieldType="YIELD_SCIENCE" YieldChange="1" AdjacentTerrain="TERRAIN_PLAINS_MOUNTAIN"/>
+		<Row ID="District_Science" Description="LOC_DISTRICT_DISTRICT_SCIENCE" YieldType="YIELD_SCIENCE" YieldChange="1" TilesRequired="2" OtherDistrictAdjacent="true"/>
+	</Adjacency_YieldChanges>
+	<District_Adjacencies>
+		<Row DistrictType="DISTRICT_CAMPUS" YieldChangeId="Mountains_Science1"/>
+		<Row DistrictType="DISTRICT_CAMPUS" YieldChangeId="Mountains_Science2"/>
+		<Row DistrictType="DISTRICT_CAMPUS" YieldChangeId="District_Science"/>
+	</District_Adjacencies>
+	<GreatPersonClasses>
+		<Row GreatPersonClassType="GREAT_PERSON_CLASS_SCIENTIST" Name="LOC_GREAT_PERSON_CLASS_SCIENTIST_NAME" UnitType="UNIT_GREAT_SCIENTIST" DistrictType="DISTRICT_CAMPUS"/>
+	</GreatPersonClasses>
+	<DynamicModifiers>
+		<Row ModifierType="MODIFIER_PLAYER_CITIES_ADJUST_BUILDING_YIELD_CHANGE" CollectionType="COLLECTION_PLAYER_CITIES" EffectType="EFFECT_ADJUST_BUILDING_YIELD_CHANGE"/>
+		<Row ModifierType="MODIFIER_PLAYER_GRANT_RANDOM_TECHNOLOGY_BOOST" CollectionType="COLLECTION_OWNER" EffectType="EFFECT_GRANT_RANDOM_TECHNOLOGY_BOOST"/>
+		<Row ModifierType="MODIFIER_PLAYER_ADJUST_GOVERNOR_POINTS" CollectionType="COLLECTION_OWNER" EffectType="EFFECT_ADJUST_PLAYER_GOVERNOR_POINTS"/>
+	</DynamicModifiers>
+	<Modifiers>
+		<Row ModifierId="GP_LIBRARIES_SCIENCE" ModifierType="MODIFIER_PLAYER_CITIES_ADJUST_BUILDING_YIELD_CHANGE"/>
+		<Row ModifierId="GP_TWO_BOOSTS" ModifierType="MODIFIER_PLAYER_GRANT_RANDOM_TECHNOLOGY_BOOST"/>
+		<Row ModifierId="WRITING_GOVERNOR" ModifierType="MODIFIER_PLAYER_ADJUST_GOVERNOR_POINTS"/>
+	</Modifiers>
+	<ModifierArguments>
+		<Row ModifierId="GP_LIBRARIES_SCIENCE" Name="Amount" Value="1"/>
+		<Row ModifierId="GP_LIBRARIES_SCIENCE" Name="BuildingType" Value="BUILDING_LIBRARY"/>
+		<Row ModifierId="GP_TWO_BOOSTS" Name="Amount" Value="2"/>
+		<Row ModifierId="WRITING_GOVERNOR" Name="Delta" Value="1"/>
+	</ModifierArguments>
+	<ModifierStrings>
+		<Row ModifierId="GP_LIBRARIES_SCIENCE" Context="Summary" Text="LOC_GP_LIBRARIES_SCIENCE"/>
+		<Row ModifierId="GP_TWO_BOOSTS" Context="Summary" Text="LOC_GP_TWO_BOOSTS"/>
+	</ModifierStrings>
+	<TechnologyModifiers>
+		<Row TechnologyType="TECH_WRITING" ModifierId="WRITING_GOVERNOR"/>
+	</TechnologyModifiers>
+	<GreatPersonIndividuals>
+		<Row GreatPersonIndividualType="GREAT_PERSON_INDIVIDUAL_HYPATIA" Name="LOC_GP_HYPATIA_NAME" GreatPersonClassType="GREAT_PERSON_CLASS_SCIENTIST"
+			EraType="ERA_CLASSICAL" ActionCharges="1" ActionRequiresOwnedTile="true" ActionRequiresCompletedDistrictType="DISTRICT_CAMPUS"/>
+	</GreatPersonIndividuals>
+	<GreatPersonIndividualActionModifiers>
+		<Row GreatPersonIndividualType="GREAT_PERSON_INDIVIDUAL_HYPATIA" ModifierId="GP_LIBRARIES_SCIENCE"/>
+		<Row GreatPersonIndividualType="GREAT_PERSON_INDIVIDUAL_HYPATIA" ModifierId="GP_TWO_BOOSTS"/>
+	</GreatPersonIndividualActionModifiers>
+</GameData>

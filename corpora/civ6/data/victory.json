@@ -1,0 +1,92 @@
+[
+ {
+  "id": "victory:conquest",
+  "name": "Domination Victory",
+  "aliases": [
+   "VICTORY_CONQUEST"
+  ],
+  "summary": "Through military strength and prowess, you bring the world to its knees. This is the most basic victory to achieve.",
+  "fields": {
+   "how_to_win": "Through military strength and prowess, you bring the world to its knees. This is the most basic victory to achieve.",
+   "blurb": "Though its face may change throughout the ages, history is written from the hand of the victor. By your actions this day, you ensure our people are glorious tomorrow.",
+   "enabled_by_default": true
+  }
+ },
+ {
+  "id": "victory:culture",
+  "name": "Culture Victory",
+  "aliases": [
+   "VICTORY_CULTURE"
+  ],
+  "summary": "Your cultural greatness will attract all of the world's people to your empire. This is the most difficult victory to achieve.",
+  "fields": {
+   "how_to_win": "Your cultural greatness will attract all of the world's people to your empire. This is the most difficult victory to achieve.",
+   "blurb": "The worth of a culture is not measured by its accomplishments, but in how those accomplishments last, and how they are remembered. The beauty that you have inspired our people to create will ensure that our culture stands for all time.",
+   "enabled_by_default": true
+  }
+ },
+ {
+  "id": "victory:default",
+  "name": "Victory",
+  "aliases": [
+   "VICTORY_DEFAULT"
+  ],
+  "summary": "Everyone else has lost... Therefore you've won!",
+  "fields": {
+   "blurb": "Everyone else has lost... Therefore you've won!",
+   "enabled_by_default": true
+  }
+ },
+ {
+  "id": "victory:diplomatic",
+  "name": "Diplomatic Victory",
+  "aliases": [
+   "VICTORY_DIPLOMATIC"
+  ],
+  "summary": "To achieve a DIPLOMATIC victory, be the first to accumulate the target number of Diplomatic Points. Whenever you vote for the target and option combination that passes for a World Congress Resolution, you will earn one Diplomatic Point.",
+  "fields": {
+   "how_to_win": "To achieve a DIPLOMATIC victory, be the first to accumulate the target number of Diplomatic Points. Whenever you vote for the target and option combination that passes for a World Congress Resolution, you will earn one Diplomatic Point. You can earn additional points through the Diplomatic Victory Proposal in the World Congress, by generating the highest score in Aid Requests, or by completing the Seasteads Tech, the Global Warming Mitigation Civic, or the Statue of Liberty, Mahabodhi Temple, or Potala Palace Wonders.",
+   "blurb": "Your ancient and eternal commitment to a shared peace will be the foundation of the world of tomorrow.",
+   "enabled_by_default": true
+  }
+ },
+ {
+  "id": "victory:religious",
+  "name": "Religious Victory",
+  "aliases": [
+   "VICTORY_RELIGIOUS"
+  ],
+  "summary": "Spread your religion to the four corners of the Earth, bringing light to a dark World. You will have to master diplomatic relationships if you hope to convert the world to the one true religion.",
+  "fields": {
+   "how_to_win": "Spread your religion to the four corners of the Earth, bringing light to a dark World. You will have to master diplomatic relationships if you hope to convert the world to the one true religion.",
+   "blurb": "We have a basic need to believe in something greater than ourselves. We crave solace in the darkness, a light unto our path. Thanks to you, we’ve found meaning amid the Cosmos.",
+   "enabled_by_default": true
+  }
+ },
+ {
+  "id": "victory:score",
+  "name": "Score Victory",
+  "aliases": [
+   "VICTORY_SCORE"
+  ],
+  "summary": "While you were not able to achieve a grand victory, you'll take what you can get. This victory is triggered when time runs out, and there are no other victors.",
+  "fields": {
+   "how_to_win": "While you were not able to achieve a grand victory, you'll take what you can get. This victory is triggered when time runs out, and there are no other victors.",
+   "blurb": "From our humble beginnings ages ago have you forged a civilization that has withstood time itself. Though countless civilizations rise and fall around us, we do not just survive. We prosper.",
+   "enabled_by_default": true
+  }
+ },
+ {
+  "id": "victory:technology",
+  "name": "Science Victory",
+  "aliases": [
+   "VICTORY_TECHNOLOGY"
+  ],
+  "summary": "Be the first to complete the Exoplanet Expedition to another star system to win a Science victory. This victory is straight-forward, but can be difficult to achieve before time runs out.",
+  "fields": {
+   "how_to_win": "Be the first to complete the Exoplanet Expedition to another star system to win a Science victory. This victory is straight-forward, but can be difficult to achieve before time runs out.",
+   "blurb": "Much as our ancestors did ages ago, we thrust forward into the unknown. The first pioneers set forth on an uneasy course, and yet once again our people thrive.",
+   "enabled_by_default": true
+  }
+ }
+]

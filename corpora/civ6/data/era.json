@@ -1,0 +1,143 @@
+[
+ {
+  "id": "era:ancient",
+  "name": "Ancient Era",
+  "aliases": [
+   "ERA_ANCIENT"
+  ],
+  "summary": "Era 1.",
+  "fields": {
+   "order": 1,
+   "min_turns": 40,
+   "max_turns": 60,
+   "great_person_base_cost": 30,
+   "description": "From the first stirrings of life beneath water… to the great beasts of the Stone Age… to man taking his first upright steps, you have come far. Now begins your greatest quest: from this early cradle of civilization on towards the stars."
+  }
+ },
+ {
+  "id": "era:atomic",
+  "name": "Atomic Era",
+  "aliases": [
+   "ERA_ATOMIC"
+  ],
+  "summary": "Era 7.",
+  "fields": {
+   "order": 7,
+   "min_turns": 40,
+   "max_turns": 60,
+   "great_person_base_cost": 960,
+   "warmonger_points": 24,
+   "description": "New frontiers of discovery expand our understanding, from the tiny atom to the majesty of outer space. Mysteries long tolerated are closer than ever to revealing their deepest secrets, beyond what we can easily see. You will choose how to use this knowledge, and push back the greatest darkness we have yet faced."
+  }
+ },
+ {
+  "id": "era:classical",
+  "name": "Classical Era",
+  "aliases": [
+   "ERA_CLASSICAL"
+  ],
+  "summary": "Era 2.",
+  "fields": {
+   "order": 2,
+   "min_turns": 40,
+   "max_turns": 60,
+   "great_person_base_cost": 60,
+   "warmonger_points": 6,
+   "description": "From humble beginnings, you have shown remarkable growth. Leave your bronze for iron and rule with horse and sword. The sky above begins to reveal its secrets, a collection of heaven that uplifts our hearts and guides us to foreign shores."
+  }
+ },
+ {
+  "id": "era:future",
+  "name": "Future Era",
+  "aliases": [
+   "ERA_FUTURE"
+  ],
+  "summary": "Era 9.",
+  "fields": {
+   "order": 9,
+   "great_person_base_cost": 1320,
+   "warmonger_points": 24,
+   "description": "The world contains marvels beyond the dreams of ancient prophets, and terrors more fearsome than any apocalypse. Machines search for meaning and new matter weaves dream-like forms. Choices made long ago bear grave consequences in this age and demand resolute answers. Go now, and achieve your vision for the future of civilization."
+  }
+ },
+ {
+  "id": "era:industrial",
+  "name": "Industrial Era",
+  "aliases": [
+   "ERA_INDUSTRIAL"
+  ],
+  "summary": "Era 5.",
+  "fields": {
+   "order": 5,
+   "min_turns": 40,
+   "max_turns": 60,
+   "great_person_base_cost": 420,
+   "warmonger_points": 24,
+   "description": "The steady hum of machinery, the acrid smell of smoke, vision clouded by ash and soot – these are the signs of changing times. The lure of scientific and cultural advancement is the engine driving your realm forward. Now your challenge is to maintain the delicate balance between earth and man, between peace and war."
+  }
+ },
+ {
+  "id": "era:information",
+  "name": "Information Era",
+  "aliases": [
+   "ERA_INFORMATION"
+  ],
+  "summary": "Era 8.",
+  "fields": {
+   "order": 8,
+   "min_turns": 40,
+   "max_turns": 60,
+   "great_person_base_cost": 1320,
+   "warmonger_points": 24,
+   "description": "A world of information rests in the palm of your hand, and networks for instantaneous communication span the globe. Yet a unified vision of our future has never been built. We compete in technology, culture, and politics. We have deadly weapons that could destroy our planet. Lead us carefully, but boldly, and build a global community that can stand for years to come."
+  }
+ },
+ {
+  "id": "era:medieval",
+  "name": "Medieval Era",
+  "aliases": [
+   "ERA_MEDIEVAL"
+  ],
+  "summary": "Era 3.",
+  "fields": {
+   "order": 3,
+   "min_turns": 40,
+   "max_turns": 60,
+   "great_person_base_cost": 120,
+   "warmonger_points": 12,
+   "description": "You have built great cities of stone and seen early empires rise and fall. Soon you will stand under the towering pinnacles of castles alongside your gallant knights. That is where the story of your people will be written. Just as the young apprentice learns to carry a sword, so shall you grow to understand your place in this world."
+  }
+ },
+ {
+  "id": "era:modern",
+  "name": "Modern Era",
+  "aliases": [
+   "ERA_MODERN"
+  ],
+  "summary": "Era 6.",
+  "fields": {
+   "order": 6,
+   "min_turns": 40,
+   "max_turns": 60,
+   "great_person_base_cost": 660,
+   "warmonger_points": 24,
+   "description": "In the beginning, legends of flying men soared. And today, you are on the brink of transforming those legends into a reality. With flight and new forms of communication you can create a small and intimate world. But at what cost? Our competing ideas of how to govern and how to live threaten to bring conflict on a global scale. You must choose your own path through this rising din of ideological oratory."
+  }
+ },
+ {
+  "id": "era:renaissance",
+  "name": "Renaissance Era",
+  "aliases": [
+   "ERA_RENAISSANCE"
+  ],
+  "summary": "Era 4.",
+  "fields": {
+   "order": 4,
+   "min_turns": 40,
+   "max_turns": 60,
+   "great_person_base_cost": 240,
+   "warmonger_points": 18,
+   "description": "New powers call forth, from the barrel of muskets to flowers of fire in the sky. Even the quiet words on newly printed pages hold great changes within. The world, once so vast and mysterious, has grown smaller and more familiar. Yet, there are always questions to be answered, faiths to be tested, and national identities to be formed."
+  }
+ }
+]

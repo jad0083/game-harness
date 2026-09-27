@@ -1,0 +1,353 @@
+[
+ {
+  "id": "emergency:backstab",
+  "name": "Betrayal Emergency",
+  "aliases": [
+   "EMERGENCY_BACKSTAB"
+  ],
+  "summary": "[TargetName] has struck a treacherous blow, declaring war on [OldPlayerName], a long-time friend! It appears that none are safe from [TargetName]'s aggression.",
+  "fields": {
+   "trigger": "war declared",
+   "description": "[TargetName] has struck a treacherous blow, declaring war on [OldPlayerName], a long-time friend! It appears that none are safe from [TargetName]'s aggression.",
+   "goal": "The Members of the Emergency must capture specific cities from [TargetName].",
+   "duration": 60,
+   "hostile": true,
+   "buffs_while_active": [
+    "Target units have -3 Combat Strength when fighting Member units",
+    "N from Emergency",
+    "Member units gain +1 movement in the Target's territory.",
+    "All Trade Routes between Members grant +2 Production.",
+    "The Target gains +20 Loyalty per turn in the target city."
+   ],
+   "rewards": [
+    "success, members: Target units have -3 Combat Strength when fighting Member units",
+    "success, members: N from Emergency",
+    "failure, members: The Target will receive reduced War Weariness when at war with Members.",
+    "success, members: Members get 100 Diplomatic Favor",
+    "failure, members: The Target gets 200 Diplomatic Favor"
+   ]
+  }
+ },
+ {
+  "id": "emergency:capture_city_state",
+  "name": "City-State Emergency",
+  "aliases": [
+   "EMERGENCY_CAPTURE_CITY_STATE"
+  ],
+  "summary": "[TargetName] has captured [OldCityName]. The conquest of [OldCityName] is a matter of great concern.",
+  "fields": {
+   "trigger": "capture city state",
+   "description": "[TargetName] has captured [OldCityName]. The conquest of [OldCityName] is a matter of great concern.",
+   "goal": "The Members of the Emergency must liberate [CityName] from [TargetName].",
+   "duration": 30,
+   "hostile": true,
+   "buffs_while_active": [
+    "The Target gains +20 Loyalty per turn in the target city."
+   ],
+   "rewards": [
+    "success, members: Members gain +1 Gold per turn for each of their Envoys.",
+    "failure, members: Target Trade Routes to City-States grant +2 Gold per turn.",
+    "success, members: Members get 100 Diplomatic Favor",
+    "failure, members: The Target gets 200 Diplomatic Favor"
+   ]
+  }
+ },
+ {
+  "id": "emergency:climate_accords",
+  "name": "Climate Accords",
+  "aliases": [
+   "EMERGENCY_CLIMATE_ACCORDS"
+  ],
+  "summary": "We all must do our part to reduce mankind's carbon footprint. Those who do best will be thanked by the generations to come.",
+  "fields": {
+   "trigger": "world congress",
+   "description": "We all must do our part to reduce mankind's carbon footprint. Those who do best will be thanked by the generations to come.",
+   "goal": "The Members are competing to see who can get the highest score.",
+   "duration": 29,
+   "buffs_while_active": [
+    "Members have access to projects to Decommission Power Plants in their cities."
+   ],
+   "rewards": [
+    "success, first place: 2 Diplomatic Victory Points",
+    "success, top tier: 100 Diplomatic Favor",
+    "success, bottom tier: 50 Diplomatic Favor"
+   ]
+  }
+ },
+ {
+  "id": "emergency:military",
+  "name": "Military Emergency",
+  "aliases": [
+   "EMERGENCY_MILITARY"
+  ],
+  "summary": "[TargetName], though at the forefront of the world's civilizations, has captured [OldCityName]. [TargetName]'s runaway success is a matter of great concern.",
+  "fields": {
+   "trigger": "take city",
+   "description": "[TargetName], though at the forefront of the world's civilizations, has captured [OldCityName]. [TargetName]'s runaway success is a matter of great concern.",
+   "goal": "The Members of the Emergency must capture specific cities from [TargetName].",
+   "duration": 30,
+   "hostile": true,
+   "buffs_while_active": [
+    "Target units have -2 Combat Strength when fighting Member units.",
+    "N from Emergency",
+    "Member units gain +1 Movement in the Target's territory.",
+    "The Target gains +20 Loyalty per turn in the target city."
+   ],
+   "rewards": [
+    "success, members: Member units gain +5 healing in the Target's territory.",
+    "failure, members: Target gains +2 Combat Strength when attacking a Member unit with a City Strike.",
+    "success, members: Members get 100 Diplomatic Favor",
+    "failure, members: The Target gets 200 Diplomatic Favor"
+   ]
+  }
+ },
+ {
+  "id": "emergency:nobel_prize_literature",
+  "name": "Nobel Prize in Literature",
+  "aliases": [
+   "EMERGENCY_NOBEL_PRIZE_LITERATURE"
+  ],
+  "summary": "Sweden is awarding a Nobel Prize for Literature. Let's prove ourselves the most artful, and win this prestigious prize.",
+  "fields": {
+   "trigger": "world congress",
+   "description": "Sweden is awarding a Nobel Prize for Literature. Let's prove ourselves the most artful, and win this prestigious prize.",
+   "goal": "The Members are competing to see who can get the highest score.",
+   "duration": 29,
+   "rewards": [
+    "success, first place: Rock Bands are 20% cheaper to Purchase",
+    "success, first place: +50 Album Sales for Rock Bands",
+    "success, top tier: +75 Album Sales for Rock Bands",
+    "success, bottom tier: +25 Album Sales for Rock Bands"
+   ]
+  }
+ },
+ {
+  "id": "emergency:nobel_prize_peace",
+  "name": "Nobel Peace Prize",
+  "aliases": [
+   "EMERGENCY_NOBEL_PRIZE_PEACE"
+  ],
+  "summary": "Sweden is awarding a Nobel Prize for Peace. Let's prove ourselves the most peaceful, and win this prestigious prize.",
+  "fields": {
+   "trigger": "world congress",
+   "description": "Sweden is awarding a Nobel Prize for Peace. Let's prove ourselves the most peaceful, and win this prestigious prize.",
+   "goal": "The Members are competing to see who can get the highest score.",
+   "duration": 29,
+   "rewards": [
+    "success, first place: 1 Diplomatic Victory Point",
+    "success, first place: 1 Great Musician",
+    "success, first place: 1 Great Scientist",
+    "success, top tier: 1 Great Engineer",
+    "success, top tier: 1 Great Artist",
+    "success, bottom tier: 1 Great Artist"
+   ]
+  }
+ },
+ {
+  "id": "emergency:nobel_prize_physics",
+  "name": "Nobel Prize in Physics",
+  "aliases": [
+   "EMERGENCY_NOBEL_PRIZE_PHYSICS"
+  ],
+  "summary": "Sweden is awarding a Nobel Prize for Physics. Let's prove ourselves the most scientifically minded, and win this prestigious prize.",
+  "fields": {
+   "trigger": "world congress",
+   "description": "Sweden is awarding a Nobel Prize for Physics. Let's prove ourselves the most scientifically minded, and win this prestigious prize.",
+   "goal": "The Members are competing to see who can get the highest score.",
+   "duration": 29,
+   "rewards": [
+    "success, first place: 1 Technology Boost",
+    "success, first place: Increases the accumulation of resources in cities with a University by 1.",
+    "success, top tier: 1 Technology Boost",
+    "success, top tier: Increases the accumulation of resources in cities with a Research Lab by 1",
+    "success, bottom tier: 1 Technology Boost"
+   ]
+  }
+ },
+ {
+  "id": "emergency:nuclear",
+  "name": "Nuclear Emergency",
+  "aliases": [
+   "EMERGENCY_NUCLEAR"
+  ],
+  "summary": "[TargetName] has used the most powerful weapon in the world, and the nuclear genie is out of the bottle. Is our extinction at hand?",
+  "fields": {
+   "trigger": "nuke used",
+   "description": "[TargetName] has used the most powerful weapon in the world, and the nuclear genie is out of the bottle. Is our extinction at hand?",
+   "goal": "The Members of the Emergency must capture specific cities from [TargetName].",
+   "duration": 60,
+   "hostile": true,
+   "buffs_while_active": [
+    "Target units have -2 Combat Strength when fighting Member units",
+    "N from Emergency",
+    "Member units gain +1 movement in the Target's territory.",
+    "The Target gains +20 Loyalty per turn in the target city."
+   ],
+   "rewards": [
+    "success, members: Target units have -3 Combat Strength when fighting Member units",
+    "success, members: N from Emergency",
+    "failure, members: Member cities exert one less Loyalty pressure.",
+    "success, members: Members get 100 Diplomatic Favor",
+    "failure, members: The Target gets 200 Diplomatic Favor"
+   ]
+  }
+ },
+ {
+  "id": "emergency:religious",
+  "name": "Religious Emergency",
+  "aliases": [
+   "EMERGENCY_RELIGIOUS"
+  ],
+  "summary": "[TargetName] has converted [OldCityName], the Holy City of [OldReligion], to [NewReligion]. It appears that [TargetName] is unwilling to co-exist peacefully with the other great Religions of the world.",
+  "fields": {
+   "trigger": "convert city",
+   "description": "[TargetName] has converted [OldCityName], the Holy City of [OldReligion], to [NewReligion]. It appears that [TargetName] is unwilling to co-exist peacefully with the other great Religions of the world.",
+   "goal": "The Members of the Emergency must prevent [CityName] from following [TargetName]'s Religion for [HalfTurns] Turns.",
+   "duration": 30,
+   "hostile": true,
+   "rewards": [
+    "success, members: Each Member gains a Relic.",
+    "failure, members: The Target's Religion releases a burst of Pressure in all nearby cities.",
+    "success, members: Members get 100 Diplomatic Favor",
+    "failure, members: The Target gets 200 Diplomatic Favor"
+   ]
+  }
+ },
+ {
+  "id": "emergency:send_aid",
+  "name": "Aid Request",
+  "aliases": [
+   "EMERGENCY_SEND_AID"
+  ],
+  "summary": "[TargetName] was recently ravaged by a natural disaster. Our assistance in their recuperation will gain us prestige in the eyes of the World Congress.",
+  "fields": {
+   "trigger": "player loses pop to random event",
+   "description": "[TargetName] was recently ravaged by a natural disaster. Our assistance in their recuperation will gain us prestige in the eyes of the World Congress.",
+   "goal": "The Members are competing to see who can get the highest score.",
+   "duration": 30,
+   "buffs_while_active": [
+    "Members have access to the Send Aid Project."
+   ],
+   "rewards": [
+    "success, first place: 2 Diplomatic Victory Points",
+    "success, top tier: 100 Diplomatic Favor",
+    "success, bottom tier: 50 Diplomatic Favor"
+   ]
+  }
+ },
+ {
+  "id": "emergency:send_military_aid",
+  "name": "Military Aid Request",
+  "aliases": [
+   "EMERGENCY_SEND_MILITARY_AID"
+  ],
+  "summary": "[TargetName] is the target of an unjustified war by a power against whom they have many Grievances. Our assistance will help restore peace.",
+  "fields": {
+   "trigger": "war with grievances",
+   "description": "[TargetName] is the target of an unjustified war by a power against whom they have many Grievances. Our assistance will help restore peace.",
+   "goal": "The Members are competing to see who can get the highest score.",
+   "duration": 30,
+   "buffs_while_active": [
+    "Members have access to the Send Aid Project."
+   ],
+   "rewards": [
+    "success, first place: 2 Diplomatic Victory Points",
+    "success, top tier: 100 Diplomatic Favor",
+    "success, bottom tier: 50 Diplomatic Favor"
+   ]
+  }
+ },
+ {
+  "id": "emergency:settled_city",
+  "name": "City-State Emergency",
+  "aliases": [
+   "EMERGENCY_SETTLED_CITY"
+  ],
+  "summary": "[TargetName], though at the forefront of the world's civilizations, has captured [OldCityName]. [TargetName]'s runaway success is a matter of great concern.",
+  "fields": {
+   "description": "[TargetName], though at the forefront of the world's civilizations, has captured [OldCityName]. [TargetName]'s runaway success is a matter of great concern.",
+   "goal": "The Members of the Emergency must capture specific cities from [TargetName].",
+   "duration": 5,
+   "hostile": true,
+   "buffs_while_active": [
+    "Member units gain +1 Movement.",
+    "Target units gain +1 Movement."
+   ],
+   "rewards": [
+    "success, members: Members gain +1 Gold per turn.",
+    "failure, members: Target gains +1 Gold per turn."
+   ]
+  }
+ },
+ {
+  "id": "emergency:space_station",
+  "name": "International Space Station",
+  "aliases": [
+   "EMERGENCY_SPACE_STATION"
+  ],
+  "summary": "We must undertake a project to construct an international Space Station, combining the best efforts of all nations' science and engineering fields.",
+  "fields": {
+   "trigger": "world congress",
+   "description": "We must undertake a project to construct an international Space Station, combining the best efforts of all nations' science and engineering fields.",
+   "goal": "The Members are competing to see who can get the highest score.",
+   "duration": 29,
+   "buffs_while_active": [
+    "Members have access to the Train Astronauts Project."
+   ],
+   "rewards": [
+    "success, first place: 1 Diplomatic Victory Point",
+    "success, first place: +3 light years per turn for their exoplanet spaceship",
+    "success, top tier: 50 Diplomatic Favor",
+    "success, top tier: +40% Production towards space race projects",
+    "success, bottom tier: +20% Production towards space race projects"
+   ]
+  }
+ },
+ {
+  "id": "emergency:world_games",
+  "name": "World Games",
+  "aliases": [
+   "EMERGENCY_WORLD_GAMES"
+  ],
+  "summary": "Our best athletes will compete against the world's best. Which nation will take home the gold?",
+  "fields": {
+   "trigger": "world congress",
+   "description": "Our best athletes will compete against the world's best. Which nation will take home the gold?",
+   "goal": "The Members are competing to see who can get the highest score.",
+   "duration": 29,
+   "buffs_while_active": [
+    "Members have access to the Train Athletes Project."
+   ],
+   "rewards": [
+    "success, first place: 1 Diplomatic Victory Point",
+    "success, first place: 2 Tourism for each Campus",
+    "success, top tier: 50 Diplomatic Favor",
+    "success, top tier: 2 Tourism for each Stadium",
+    "success, top tier: 2 Tourism for each Aquatic Center",
+    "success, bottom tier: 1 Tourism for each Stadium",
+    "success, bottom tier: 1 Tourism for each Aquatic Center"
+   ]
+  }
+ },
+ {
+  "id": "emergency:worlds_fair",
+  "name": "World's Fair",
+  "aliases": [
+   "EMERGENCY_WORLDS_FAIR"
+  ],
+  "summary": "Our brilliant Great People lead the way. Which of us can show the greatest support for their native luminaries?",
+  "fields": {
+   "trigger": "world congress",
+   "description": "Our brilliant Great People lead the way. Which of us can show the greatest support for their native luminaries?",
+   "goal": "The Members are competing to see who can get the highest score.",
+   "duration": 29,
+   "rewards": [
+    "success, first place: 1 Diplomatic Victory Point",
+    "success, first place: 100 Great Person Points",
+    "success, top tier: 50 Diplomatic Favor",
+    "success, top tier: 2 Civic Boosts",
+    "success, bottom tier: 1 Civic Boost"
+   ]
+  }
+ }
+]

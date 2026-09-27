@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hand-written test fixture: scenarios are never loaded. -->
+<Mod id="00000000-0000-0000-0000-0000000000f0" version="1">
+	<InGameActions>
+		<UpdateDatabase id="FooScenarioGameplay">
+			<File>Data/Foo.xml</File>
+		</UpdateDatabase>
+	</InGameActions>
+</Mod>

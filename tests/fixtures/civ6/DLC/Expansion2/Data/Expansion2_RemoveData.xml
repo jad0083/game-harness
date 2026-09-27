@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hand-written test fixture. Priority 2: loads before Expansion2_Data.xml. Deleting the Types
+     row cascades to Technologies and TechnologyPrereqs. -->
+<GameData>
+	<Types>
+		<Delete Type="TECH_OLD_LORE"/>
+	</Types>
+	<Units>
+		<Update>
+			<Where UnitType="UNIT_ROMAN_LEGION"/>
+			<Set Cost="999"/>
+		</Update>
+	</Units>
+</GameData>

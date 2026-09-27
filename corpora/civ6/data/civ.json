@@ -1,0 +1,1251 @@
+[
+ {
+  "id": "civ:america",
+  "name": "America",
+  "aliases": [
+   "CIVILIZATION_AMERICA"
+  ],
+  "summary": "Founding Fathers. Uniques: Film Studio (building, replaces Broadcast Center), P-51 Mustang (unit, replaces Fighter)",
+  "fields": {
+   "ability": [
+    "Founding Fathers: All Diplomatic policy slots in the current government are converted to Wildcard slots. +1 Diplomatic Favor per turn for every Wildcard slot in their government."
+   ],
+   "uniques": [
+    "Film Studio (building, replaces Broadcast Center)",
+    "P-51 Mustang (unit, replaces Fighter)"
+   ],
+   "leaders": [
+    "Teddy Roosevelt (Bull Moose)",
+    "Abraham Lincoln",
+    "Teddy Roosevelt (Rough Rider)"
+   ],
+   "start_bias": [
+    "Grassland (Mountain) (tier 3)",
+    "Plains (Mountain) (tier 3)",
+    "Desert (Mountain) (tier 5)",
+    "Tundra (Mountain) (tier 5)"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "civ:arabia",
+  "name": "Arabia",
+  "aliases": [
+   "CIVILIZATION_ARABIA"
+  ],
+  "summary": "The Last Prophet. Uniques: Madrasa (building, replaces University), Mamluk (unit, replaces Knight)",
+  "fields": {
+   "ability": [
+    "The Last Prophet: Automatically receive the final Great Prophet when the next-to-last one is claimed (if you have not earned a Great Prophet already). +1 Science for each foreign city following Arabia's Religion."
+   ],
+   "uniques": [
+    "Madrasa (building, replaces University)",
+    "Mamluk (unit, replaces Knight)"
+   ],
+   "leaders": [
+    "Saladin (Vizier)",
+    "Saladin (Sultan)"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "civ:australia",
+  "name": "Australia",
+  "aliases": [
+   "CIVILIZATION_AUSTRALIA"
+  ],
+  "summary": "Land Down Under. Uniques: Outback Station (improvement), Digger (unit, replaces Infantry)",
+  "fields": {
+   "ability": [
+    "Land Down Under: +3 Housing in coastal cities. Pastures trigger a Culture Bomb. Yields from Campuses, Commercial Hubs, Holy Sites and Theater Squares are +1 in tiles with Charming Appeal, +3 in Breathtaking."
+   ],
+   "uniques": [
+    "Outback Station (improvement)",
+    "Digger (unit, replaces Infantry)"
+   ],
+   "leaders": [
+    "John Curtin"
+   ],
+   "start_bias": [
+    "Coast and Lake (tier 2)",
+    "Cattle (tier 5)",
+    "Horses (tier 5)",
+    "Sheep (tier 5)"
+   ],
+   "dlc": "Australia Civilization & Scenario Pack"
+  }
+ },
+ {
+  "id": "civ:aztec",
+  "name": "Aztec",
+  "aliases": [
+   "CIVILIZATION_AZTEC"
+  ],
+  "summary": "Legend of the Five Suns. Uniques: Tlachtli (building, replaces Arena), Eagle Warrior (unit, replaces Warrior)",
+  "fields": {
+   "ability": [
+    "Legend of the Five Suns: Spend Builder charges to complete 20% of the original district cost."
+   ],
+   "uniques": [
+    "Tlachtli (building, replaces Arena)",
+    "Eagle Warrior (unit, replaces Warrior)"
+   ],
+   "leaders": [
+    "Montezuma"
+   ],
+   "dlc": "Aztec Civilization Pack"
+  }
+ },
+ {
+  "id": "civ:babylon_stk",
+  "name": "Babylon",
+  "aliases": [
+   "CIVILIZATION_BABYLON_STK"
+  ],
+  "summary": "Enuma Anu Enlil. Uniques: Palgum (building, replaces Water Mill), Sabum Kibittum (unit)",
+  "fields": {
+   "ability": [
+    "Enuma Anu Enlil: Eurekas provide all of the Science for technologies. -50% Science per turn."
+   ],
+   "uniques": [
+    "Palgum (building, replaces Water Mill)",
+    "Sabum Kibittum (unit)"
+   ],
+   "leaders": [
+    "Hammurabi"
+   ],
+   "start_bias": [
+    "River (tier 3)"
+   ],
+   "dlc": "Babylon Pack"
+  }
+ },
+ {
+  "id": "civ:brazil",
+  "name": "Brazil",
+  "aliases": [
+   "CIVILIZATION_BRAZIL"
+  ],
+  "summary": "Amazon. Uniques: Street Carnival (district, replaces Entertainment Complex), Copacabana (district, replaces Water Park), Minas Geraes (unit, replaces Battleship)",
+  "fields": {
+   "ability": [
+    "Amazon: Rainforest tiles provide +1 adjacency bonus for Campus, Commercial Hub, Holy Site, and Theater Square districts, and grant +1 Appeal to adjacent tiles, instead of the usual -1."
+   ],
+   "uniques": [
+    "Street Carnival (district, replaces Entertainment Complex)",
+    "Copacabana (district, replaces Water Park)",
+    "Minas Geraes (unit, replaces Battleship)"
+   ],
+   "leaders": [
+    "Pedro II"
+   ],
+   "start_bias": [
+    "Rainforest (tier 2)"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "civ:byzantium",
+  "name": "Byzantium",
+  "aliases": [
+   "CIVILIZATION_BYZANTIUM"
+  ],
+  "summary": "Taxis. Uniques: Hippodrome (district, replaces Entertainment Complex), Dromon (unit, replaces Quadrireme)",
+  "fields": {
+   "ability": [
+    "Taxis: Units receive +3 Combat Strength or Religious Strength for each Holy City converted to Byzantium's Religion (including Byzantium's Holy City). Byzantium's Religion is spread to nearby cities when defeating a unit belonging to an enemy civilization or city-state. +1 Great Prophet point from cities with a Holy Site district."
+   ],
+   "uniques": [
+    "Hippodrome (district, replaces Entertainment Complex)",
+    "Dromon (unit, replaces Quadrireme)"
+   ],
+   "leaders": [
+    "Basil II",
+    "Theodora"
+   ],
+   "dlc": "Byzantium & Gaul Pack"
+  }
+ },
+ {
+  "id": "civ:canada",
+  "name": "Canada",
+  "aliases": [
+   "CIVILIZATION_CANADA"
+  ],
+  "summary": "Four Faces of Peace. Uniques: Ice Hockey Rink (improvement), Mountie (unit)",
+  "fields": {
+   "ability": [
+    "Four Faces of Peace: Cannot declare war on City-States or surprise wars. Surprise wars cannot be declared on Canada. For every 100 Tourism per turn earn 1 Diplomatic Favor per turn. Receive +100% Diplomatic Favor from successfully completing an Emergency or Scored Competition."
+   ],
+   "uniques": [
+    "Ice Hockey Rink (improvement)",
+    "Mountie (unit)"
+   ],
+   "leaders": [
+    "Wilfrid Laurier"
+   ],
+   "start_bias": [
+    "Tundra (tier 1)",
+    "Tundra (Hills) (tier 1)",
+    "Snow (tier 5)",
+    "Snow (Hills) (tier 5)"
+   ],
+   "dlc": "Gathering Storm"
+  }
+ },
+ {
+  "id": "civ:china",
+  "name": "China",
+  "aliases": [
+   "CIVILIZATION_CHINA"
+  ],
+  "summary": "Dynastic Cycle. Uniques: Great Wall (improvement), Crouching Tiger (unit)",
+  "fields": {
+   "ability": [
+    "Dynastic Cycle: Eurekas and Inspirations provide 50% of civics and technologies instead of 40%. When completing a wonder receive a random Eureka and Inspiration from the era of the wonder, if available."
+   ],
+   "uniques": [
+    "Great Wall (improvement)",
+    "Crouching Tiger (unit)"
+   ],
+   "leaders": [
+    "Qin (Mandate of Heaven)",
+    "Kublai Khan (China)",
+    "Yongle",
+    "Wu Zetian",
+    "Qin (Unifier)"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "civ:cree",
+  "name": "Cree",
+  "aliases": [
+   "CIVILIZATION_CREE"
+  ],
+  "summary": "Nîhithaw. Uniques: Mekewap (improvement), Okihtcitaw (unit, replaces Scout)",
+  "fields": {
+   "ability": [
+    "Nîhithaw: +1 Trade Route capacity and a free Trader with the Pottery technology. Unclaimed tiles within 3 tiles of a Cree city come under Cree control when a Trader first moves into them."
+   ],
+   "uniques": [
+    "Mekewap (improvement)",
+    "Okihtcitaw (unit, replaces Scout)"
+   ],
+   "leaders": [
+    "Poundmaker"
+   ],
+   "dlc": "Rise and Fall"
+  }
+ },
+ {
+  "id": "civ:egypt",
+  "name": "Egypt",
+  "aliases": [
+   "CIVILIZATION_EGYPT"
+  ],
+  "summary": "Iteru. Uniques: Sphinx (improvement), Maryannu Chariot Archer (unit)",
+  "fields": {
+   "ability": [
+    "Iteru: +15% Production towards districts and wonders if placed next to a River. Does not receive damage from Floods."
+   ],
+   "uniques": [
+    "Sphinx (improvement)",
+    "Maryannu Chariot Archer (unit)"
+   ],
+   "leaders": [
+    "Cleopatra (Egyptian)",
+    "Ramses II",
+    "Cleopatra (Ptolemaic)"
+   ],
+   "start_bias": [
+    "Desert Floodplains (tier 2)",
+    "Grassland Floodplains (tier 2)",
+    "Plains Floodplains (tier 2)",
+    "River (tier 5)"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "civ:england",
+  "name": "England",
+  "aliases": [
+   "CIVILIZATION_ENGLAND"
+  ],
+  "summary": "Workshop of the World. Uniques: Royal Navy Dockyard (district, replaces Harbor), Sea Dog (unit, replaces Privateer)",
+  "fields": {
+   "ability": [
+    "Workshop of the World: Iron and Coal Mines accumulate 2 more resources per turn. +100% Production towards Military Engineers. Military Engineers receive +2 charges. Buildings that provide additional yields when Powered receive +4 of that yield. +20% Production towards Industrial Zone buildings. Harbor buildings increase Strategic Resource Stockpiles by +10 (on Standard Speed)."
+   ],
+   "uniques": [
+    "Royal Navy Dockyard (district, replaces Harbor)",
+    "Sea Dog (unit, replaces Privateer)"
+   ],
+   "leaders": [
+    "Victoria (Age of Empire)",
+    "Eleanor of Aquitaine (England)",
+    "Victoria (Age of Steam)",
+    "Elizabeth I"
+   ],
+   "start_bias": [
+    "Coast and Lake (tier 3)",
+    "Coal (tier 5)",
+    "Iron (tier 5)"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "civ:ethiopia",
+  "name": "Ethiopia",
+  "aliases": [
+   "CIVILIZATION_ETHIOPIA"
+  ],
+  "summary": "Aksumite Legacy. Uniques: Rock-Hewn Church (improvement), Oromo Cavalry (unit, replaces Courser)",
+  "fields": {
+   "ability": [
+    "Aksumite Legacy: Ethiopia’s International Trade Routes grant +0.5 Faith per resource at the origin. Improved resources provide +1 Faith for each copy the city owns. Can purchase Archaeological Museums and Archaeologists with Faith."
+   ],
+   "uniques": [
+    "Rock-Hewn Church (improvement)",
+    "Oromo Cavalry (unit, replaces Courser)"
+   ],
+   "leaders": [
+    "Menelik II"
+   ],
+   "start_bias": [
+    "Desert (Hills) (tier 2)",
+    "Grassland (Hills) (tier 2)",
+    "Plains (Hills) (tier 2)",
+    "Tundra (Hills) (tier 2)"
+   ],
+   "dlc": "Ethiopia Pack"
+  }
+ },
+ {
+  "id": "civ:france",
+  "name": "France",
+  "aliases": [
+   "CIVILIZATION_FRANCE"
+  ],
+  "summary": "Grand Tour. Uniques: Château (improvement), Garde Impériale (unit, replaces Line Infantry)",
+  "fields": {
+   "ability": [
+    "Grand Tour: +20% Production toward Medieval, Renaissance, and Industrial era wonders. Tourism from wonders of any era is +100%."
+   ],
+   "uniques": [
+    "Château (improvement)",
+    "Garde Impériale (unit, replaces Line Infantry)"
+   ],
+   "leaders": [
+    "Catherine de Medici (Black Queen)",
+    "Catherine de Medici (Magnificence)",
+    "Eleanor of Aquitaine (France)"
+   ],
+   "start_bias": [
+    "River (tier 3)"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "civ:gaul",
+  "name": "Gaul",
+  "aliases": [
+   "CIVILIZATION_GAUL"
+  ],
+  "summary": "Hallstatt Culture. Uniques: Oppidum (district, replaces Industrial Zone), Gaesatae (unit, replaces Warrior)",
+  "fields": {
+   "ability": [
+    "Hallstatt Culture: Mines provide a minor adjacency bonus for all districts, a Culture Bomb of unowned territory, and receive +1 Culture. Specialty districts do not receive a minor adjacency for being adjacent to another district and these districts cannot be built adjacent to the City Center."
+   ],
+   "uniques": [
+    "Oppidum (district, replaces Industrial Zone)",
+    "Gaesatae (unit, replaces Warrior)"
+   ],
+   "leaders": [
+    "Ambiorix"
+   ],
+   "start_bias": [
+    "Copper (tier 2)",
+    "Diamonds (tier 2)",
+    "Iron (tier 2)",
+    "Jade (tier 2)",
+    "Mercury (tier 2)",
+    "Salt (tier 2)",
+    "Silver (tier 2)"
+   ],
+   "dlc": "Byzantium & Gaul Pack"
+  }
+ },
+ {
+  "id": "civ:georgia",
+  "name": "Georgia",
+  "aliases": [
+   "CIVILIZATION_GEORGIA"
+  ],
+  "summary": "Strength in Unity. Uniques: Tsikhe (building, replaces Renaissance Walls), Khevsur (unit, replaces Man-At-Arms)",
+  "fields": {
+   "ability": [
+    "Strength in Unity: When making Dedications at the beginning of a Golden Age or Heroic Age, receive the Normal Age bonus towards improving Era Score in addition to the other bonus. +50% Production towards defensive buildings."
+   ],
+   "uniques": [
+    "Tsikhe (building, replaces Renaissance Walls)",
+    "Khevsur (unit, replaces Man-At-Arms)"
+   ],
+   "leaders": [
+    "Tamar"
+   ],
+   "dlc": "Rise and Fall"
+  }
+ },
+ {
+  "id": "civ:germany",
+  "name": "Germany",
+  "aliases": [
+   "CIVILIZATION_GERMANY"
+  ],
+  "summary": "Free Imperial Cities. Uniques: Hansa (district, replaces Industrial Zone), U-Boat (unit, replaces Submarine)",
+  "fields": {
+   "ability": [
+    "Free Imperial Cities: Each city can build one more district than usual (exceeding the normal limit based on Citizen Population)."
+   ],
+   "uniques": [
+    "Hansa (district, replaces Industrial Zone)",
+    "U-Boat (unit, replaces Submarine)"
+   ],
+   "leaders": [
+    "Frederick Barbarossa",
+    "Ludwig II"
+   ],
+   "start_bias": [
+    "River (tier 5)"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "civ:gran_colombia",
+  "name": "Gran Colombia",
+  "aliases": [
+   "CIVILIZATION_GRAN_COLOMBIA"
+  ],
+  "summary": "Ejército Patriota. Uniques: Comandante General (unit), Hacienda (improvement), Llanero (unit, replaces Cavalry)",
+  "fields": {
+   "ability": [
+    "Ejército Patriota: +1 Movement to all units. Promoting a unit does not end that unit’s turn."
+   ],
+   "uniques": [
+    "Comandante General (unit)",
+    "Hacienda (improvement)",
+    "Llanero (unit, replaces Cavalry)"
+   ],
+   "leaders": [
+    "Simón Bolívar"
+   ],
+   "dlc": "Maya & Gran Colombia Pack"
+  }
+ },
+ {
+  "id": "civ:greece",
+  "name": "Greece",
+  "aliases": [
+   "CIVILIZATION_GREECE"
+  ],
+  "summary": "Plato's Republic. Uniques: Acropolis (district, replaces Theater Square), Hoplite (unit, replaces Spearman)",
+  "fields": {
+   "ability": [
+    "Plato's Republic: One extra Wildcard policy slot in any government."
+   ],
+   "uniques": [
+    "Acropolis (district, replaces Theater Square)",
+    "Hoplite (unit, replaces Spearman)"
+   ],
+   "leaders": [
+    "Gorgo",
+    "Pericles"
+   ],
+   "start_bias": [
+    "Desert (Hills) (tier 3)",
+    "Grassland (Hills) (tier 3)",
+    "Plains (Hills) (tier 3)",
+    "Tundra (Hills) (tier 3)"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "civ:hungary",
+  "name": "Hungary",
+  "aliases": [
+   "CIVILIZATION_HUNGARY"
+  ],
+  "summary": "Pearl of the Danube. Uniques: Thermal Bath (building, replaces Zoo), Huszár (unit, replaces Cavalry)",
+  "fields": {
+   "ability": [
+    "Pearl of the Danube: +50% Production to Districts and Buildings constructed across a river from a City Center."
+   ],
+   "uniques": [
+    "Thermal Bath (building, replaces Zoo)",
+    "Huszár (unit, replaces Cavalry)"
+   ],
+   "leaders": [
+    "Matthias Corvinus"
+   ],
+   "start_bias": [
+    "River (tier 3)",
+    "Geothermal Fissure (tier 5)"
+   ],
+   "dlc": "Gathering Storm"
+  }
+ },
+ {
+  "id": "civ:inca",
+  "name": "Inca",
+  "aliases": [
+   "CIVILIZATION_INCA"
+  ],
+  "summary": "Mit’a. Uniques: Terrace Farm (improvement), Warak’aq (unit, replaces Skirmisher)",
+  "fields": {
+   "ability": [
+    "Mit’a: Citizens may work Mountain tiles. Mountain tiles provide +2 Production and an additional +1 Production when the game reaches the Industrial Era. +1 Food to Mountain tiles for every adjacent Terrace Farm."
+   ],
+   "uniques": [
+    "Terrace Farm (improvement)",
+    "Warak’aq (unit, replaces Skirmisher)"
+   ],
+   "leaders": [
+    "Pachacuti"
+   ],
+   "start_bias": [
+    "Desert (Mountain) (tier 2)",
+    "Grassland (Mountain) (tier 2)",
+    "Plains (Mountain) (tier 2)",
+    "Snow (Mountain) (tier 5)",
+    "Tundra (Mountain) (tier 5)"
+   ],
+   "dlc": "Gathering Storm"
+  }
+ },
+ {
+  "id": "civ:india",
+  "name": "India",
+  "aliases": [
+   "CIVILIZATION_INDIA"
+  ],
+  "summary": "Dharma. Uniques: Stepwell (improvement), Varu (unit)",
+  "fields": {
+   "ability": [
+    "Dharma: Receives Follower Belief bonuses in a city from each Religion that has at least 1 Follower. Cities gain an Amenity for every Religion with at least 1 Follower. Missionaries have +2 spreads. +100% Religious pressure from your Trade Routes."
+   ],
+   "uniques": [
+    "Stepwell (improvement)",
+    "Varu (unit)"
+   ],
+   "leaders": [
+    "Gandhi",
+    "Chandragupta"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "civ:indonesia",
+  "name": "Indonesia",
+  "aliases": [
+   "CIVILIZATION_INDONESIA"
+  ],
+  "summary": "Great Nusantara. Uniques: Kampung (improvement), Jong (unit, replaces Frigate)",
+  "fields": {
+   "ability": [
+    "Great Nusantara: Coast and Lake tiles provide a minor adjacency bonus for Holy Site, Campus, Industrial Zone, and Theater Square districts. +1 Amenity from entertainment to each Entertainment Complex adjacent to a Coast or Lake tile."
+   ],
+   "uniques": [
+    "Kampung (improvement)",
+    "Jong (unit, replaces Frigate)"
+   ],
+   "leaders": [
+    "Gitarja"
+   ],
+   "start_bias": [
+    "Coast and Lake (tier 2)"
+   ],
+   "dlc": "Khmer and Indonesia Pack"
+  }
+ },
+ {
+  "id": "civ:japan",
+  "name": "Japan",
+  "aliases": [
+   "CIVILIZATION_JAPAN"
+  ],
+  "summary": "Meiji Restoration. Uniques: Electronics Factory (building, replaces Factory), Samurai (unit, replaces Man-At-Arms)",
+  "fields": {
+   "ability": [
+    "Meiji Restoration: All districts receive an additional standard adjacency bonus for being adjacent to another district."
+   ],
+   "uniques": [
+    "Electronics Factory (building, replaces Factory)",
+    "Samurai (unit, replaces Man-At-Arms)"
+   ],
+   "leaders": [
+    "Hojo Tokimune",
+    "Tokugawa"
+   ],
+   "start_bias": [
+    "Coast and Lake (tier 3)"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "civ:khmer",
+  "name": "Khmer",
+  "aliases": [
+   "CIVILIZATION_KHMER"
+  ],
+  "summary": "Grand Barays. Uniques: Prasat (building, replaces Temple), Domrey (unit, replaces Trebuchet)",
+  "fields": {
+   "ability": [
+    "Grand Barays: Cities with an Aqueduct receive +1 Amenity from entertainment and +1 Faith for every Citizen population. Farms provide +2 Food if adjacent to an Aqueduct and +1 Faith if adjacent to a Holy Site."
+   ],
+   "uniques": [
+    "Prasat (building, replaces Temple)",
+    "Domrey (unit, replaces Trebuchet)"
+   ],
+   "leaders": [
+    "Jayavarman VII"
+   ],
+   "start_bias": [
+    "River (tier 3)"
+   ],
+   "dlc": "Khmer and Indonesia Pack"
+  }
+ },
+ {
+  "id": "civ:kongo",
+  "name": "Kongo",
+  "aliases": [
+   "CIVILIZATION_KONGO"
+  ],
+  "summary": "Nkisi. Uniques: Mbanza (district, replaces Neighborhood), Ngao Mbeba (unit, replaces Swordsman)",
+  "fields": {
+   "ability": [
+    "Nkisi: +2 Food, +2 Production, +1 Faith, and +4 Gold from each Relic, Artifact, and Sculpture Great Work of Art in addition to the usual Culture. Receive 50% more Great Artist, Great Musician, and Great Merchant points. Palace has slots for 5 Great Works."
+   ],
+   "uniques": [
+    "Mbanza (district, replaces Neighborhood)",
+    "Ngao Mbeba (unit, replaces Swordsman)"
+   ],
+   "leaders": [
+    "Mvemba a Nzinga",
+    "Nzinga Mbande"
+   ],
+   "start_bias": [
+    "Rainforest (tier 2)",
+    "Woods (tier 2)"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "civ:korea",
+  "name": "Korea",
+  "aliases": [
+   "CIVILIZATION_KOREA"
+  ],
+  "summary": "Three Kingdoms. Uniques: Seowon (district, replaces Campus), Hwacha (unit, replaces Field Cannon)",
+  "fields": {
+   "ability": [
+    "Three Kingdoms: Mines receive +1 Science for every adjacent Seowon district. Farms receive +1 Food for every adjacent Seowon district."
+   ],
+   "uniques": [
+    "Seowon (district, replaces Campus)",
+    "Hwacha (unit, replaces Field Cannon)"
+   ],
+   "leaders": [
+    "Seondeok",
+    "Sejong"
+   ],
+   "start_bias": [
+    "Desert (Hills) (tier 3)",
+    "Grassland (Hills) (tier 3)",
+    "Plains (Hills) (tier 3)",
+    "Tundra (Hills) (tier 3)"
+   ],
+   "dlc": "Rise and Fall"
+  }
+ },
+ {
+  "id": "civ:macedon",
+  "name": "Macedon",
+  "aliases": [
+   "CIVILIZATION_MACEDON"
+  ],
+  "summary": "Hellenistic Fusion. Uniques: Basilikoi Paides (building, replaces Barracks), Hypaspist (unit, replaces Swordsman)",
+  "fields": {
+   "ability": [
+    "Hellenistic Fusion: Receive boosts upon city conquest: a Eureka for each Encampment or Campus in the conquered city and an Inspiration for each Holy Site or Theater Square."
+   ],
+   "uniques": [
+    "Basilikoi Paides (building, replaces Barracks)",
+    "Hypaspist (unit, replaces Swordsman)"
+   ],
+   "leaders": [
+    "Alexander"
+   ],
+   "dlc": "Persia and Macedon Pack"
+  }
+ },
+ {
+  "id": "civ:mali",
+  "name": "Mali",
+  "aliases": [
+   "CIVILIZATION_MALI"
+  ],
+  "summary": "Songs of the Jeli. Uniques: Suguba (district, replaces Commercial Hub), Mandekalu Cavalry (unit, replaces Knight)",
+  "fields": {
+   "ability": [
+    "Songs of the Jeli: City Centers gain +1 Faith and +1 Food for every adjacent Desert and Desert Hills tiles. Mines receive -1 Production and +4 Gold. May purchase Commercial Hub district buildings with Faith. -30% Production toward constructing buildings or training units."
+   ],
+   "uniques": [
+    "Suguba (district, replaces Commercial Hub)",
+    "Mandekalu Cavalry (unit, replaces Knight)"
+   ],
+   "leaders": [
+    "Mansa Musa",
+    "Sundiata Keita"
+   ],
+   "start_bias": [
+    "Desert (tier 1)",
+    "Desert (Hills) (tier 1)",
+    "Aluminum (tier 5)",
+    "Coal (tier 5)",
+    "Copper (tier 5)",
+    "Diamonds (tier 5)",
+    "Iron (tier 5)",
+    "Jade (tier 5)"
+   ],
+   "dlc": "Gathering Storm"
+  }
+ },
+ {
+  "id": "civ:maori",
+  "name": "Māori",
+  "aliases": [
+   "CIVILIZATION_MAORI"
+  ],
+  "summary": "Mana. Uniques: Marae (building, replaces Amphitheater), Pā (improvement), Toa (unit, replaces Swordsman)",
+  "fields": {
+   "ability": [
+    "Mana: Begin the game with the Sailing and Shipbuilding technologies unlocked and with the ability to enter Ocean tiles. Embarked units gain +2 Movement. Unimproved Woods and Rainforest are +1 Production. Additional +1 Production from Mercantilism and +2 Production from Conservation. Fishing Boats provide +1 Food and a Culture Bomb to adjacent tiles. Resources cannot be harvested. Great Writers cannot be earned."
+   ],
+   "uniques": [
+    "Marae (building, replaces Amphitheater)",
+    "Pā (improvement)",
+    "Toa (unit, replaces Swordsman)"
+   ],
+   "leaders": [
+    "Kupe"
+   ],
+   "dlc": "Gathering Storm"
+  }
+ },
+ {
+  "id": "civ:mapuche",
+  "name": "Mapuche",
+  "aliases": [
+   "CIVILIZATION_MAPUCHE"
+  ],
+  "summary": "Toqui. Uniques: Chemamull (improvement), Malón Raider (unit)",
+  "fields": {
+   "ability": [
+    "Toqui: Cities with an Established Governor provide +5% Culture, +5% Production, and +10% experience in combat towards all units trained in this city. These numbers are tripled in cities not founded by the Mapuche. All cities within 9 tiles of a city with your Governor gain +4 Loyalty per turn towards your civilization."
+   ],
+   "uniques": [
+    "Chemamull (improvement)",
+    "Malón Raider (unit)"
+   ],
+   "leaders": [
+    "Lautaro"
+   ],
+   "start_bias": [
+    "Desert (Mountain) (tier 3)",
+    "Grassland (Mountain) (tier 3)",
+    "Plains (Mountain) (tier 3)",
+    "Tundra (Mountain) (tier 3)"
+   ],
+   "dlc": "Rise and Fall"
+  }
+ },
+ {
+  "id": "civ:maya",
+  "name": "Maya",
+  "aliases": [
+   "CIVILIZATION_MAYA"
+  ],
+  "summary": "Mayab. Uniques: Observatory (district, replaces Campus), Hul'che (unit, replaces Archer)",
+  "fields": {
+   "ability": [
+    "Mayab: Settling adjacent to Fresh Water and Coast does not provide extra Housing, instead each Farm provides an additional +1 Housing, +1 Production for every adjacent Observatory, and +1 Gold. +1 Amenity for every Luxury adjacent to the City Center."
+   ],
+   "uniques": [
+    "Observatory (district, replaces Campus)",
+    "Hul'che (unit, replaces Archer)"
+   ],
+   "leaders": [
+    "Lady Six Sky"
+   ],
+   "start_bias": [
+    "Grassland (tier 1)",
+    "Grassland (Hills) (tier 1)",
+    "Plains (tier 1)",
+    "Plains (Hills) (tier 1)",
+    "Citrus (tier 2)",
+    "Cocoa (tier 2)",
+    "Coffee (tier 2)",
+    "Cotton (tier 2)"
+   ],
+   "dlc": "Maya & Gran Colombia Pack"
+  }
+ },
+ {
+  "id": "civ:mongolia",
+  "name": "Mongolia",
+  "aliases": [
+   "CIVILIZATION_MONGOLIA"
+  ],
+  "summary": "Örtöö. Uniques: Ordu (building, replaces Stable), Keshig (unit)",
+  "fields": {
+   "ability": [
+    "Örtöö: Starting a Trade Route immediately creates a Trading Post in the destination city. Receive an extra level of Vis Limited Diplomatic Visibility for possessing a Trading Post in any city of a civilization. All Mongolian units double the usual Combat Bonus for having a higher level of Vis Limited Diplomatic Visibility than their opponent."
+   ],
+   "uniques": [
+    "Ordu (building, replaces Stable)",
+    "Keshig (unit)"
+   ],
+   "leaders": [
+    "Genghis Khan",
+    "Kublai Khan (Mongolia)"
+   ],
+   "start_bias": [
+    "Horses (tier 2)"
+   ],
+   "dlc": "Rise and Fall"
+  }
+ },
+ {
+  "id": "civ:netherlands",
+  "name": "Netherlands",
+  "aliases": [
+   "CIVILIZATION_NETHERLANDS"
+  ],
+  "summary": "Grote Rivieren. Uniques: Polder (improvement), De Zeven Provinciën (unit, replaces Frigate)",
+  "fields": {
+   "ability": [
+    "Grote Rivieren: Major adjacency bonus for Campuses, Theater Squares, and Industrial Zones if next to a river. Culture Bomb adjacent tiles when completing a Harbor. +50% Production toward the Dam district and Flood Barrier building."
+   ],
+   "uniques": [
+    "Polder (improvement)",
+    "De Zeven Provinciën (unit, replaces Frigate)"
+   ],
+   "leaders": [
+    "Wilhelmina"
+   ],
+   "start_bias": [
+    "River (tier 2)",
+    "Coast and Lake (tier 4)"
+   ],
+   "dlc": "Rise and Fall"
+  }
+ },
+ {
+  "id": "civ:norway",
+  "name": "Norway",
+  "aliases": [
+   "CIVILIZATION_NORWAY"
+  ],
+  "summary": "Knarr. Uniques: Stave Church (building, replaces Temple), Berserker (unit, replaces Man-At-Arms)",
+  "fields": {
+   "ability": [
+    "Knarr: Units gain the ability to enter Ocean tiles after researching the Shipbuilding technology. Naval melee units heal in neutral territory. Units ignore additional Movement costs from embarking and disembarking."
+   ],
+   "uniques": [
+    "Stave Church (building, replaces Temple)",
+    "Berserker (unit, replaces Man-At-Arms)"
+   ],
+   "leaders": [
+    "Harald Hardrada (Konge)",
+    "Harald Hardrada (Varangian)"
+   ],
+   "start_bias": [
+    "Coast and Lake (tier 3)",
+    "Woods (tier 5)"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "civ:nubia",
+  "name": "Nubia",
+  "aliases": [
+   "CIVILIZATION_NUBIA"
+  ],
+  "summary": "Ta-Seti. Uniques: Nubian Pyramid (improvement), Pítati Archer (unit, replaces Archer)",
+  "fields": {
+   "ability": [
+    "Ta-Seti: +30% Production toward Ranged units. All Ranged units gain +50% combat experience. Mines over strategic resources provide +1 Production. Mines over bonus and luxury resources provide +2 Gold."
+   ],
+   "uniques": [
+    "Nubian Pyramid (improvement)",
+    "Pítati Archer (unit, replaces Archer)"
+   ],
+   "leaders": [
+    "Amanitore"
+   ],
+   "start_bias": [
+    "Desert (tier 2)",
+    "Desert (Hills) (tier 2)",
+    "Aluminum (tier 5)",
+    "Coal (tier 5)",
+    "Copper (tier 5)",
+    "Diamonds (tier 5)",
+    "Iron (tier 5)",
+    "Jade (tier 5)"
+   ],
+   "dlc": "Nubia Civilization & Scenario Pack"
+  }
+ },
+ {
+  "id": "civ:ottoman",
+  "name": "Ottomans",
+  "aliases": [
+   "CIVILIZATION_OTTOMAN"
+  ],
+  "summary": "Great Turkish Bombard. Uniques: Grand Bazaar (building, replaces Bank), Barbary Corsair (unit, replaces Privateer)",
+  "fields": {
+   "ability": [
+    "Great Turkish Bombard: +50% Production toward siege units. All siege units gain +5 Combat Strength against district defenses. Conquered cities do not lose Citizen Population. Cities not founded by the Ottomans gain +1 Amenity and +4 Loyalty per turn."
+   ],
+   "uniques": [
+    "Grand Bazaar (building, replaces Bank)",
+    "Barbary Corsair (unit, replaces Privateer)"
+   ],
+   "leaders": [
+    "Suleiman (Kanuni)",
+    "Suleiman (Muhteşem)"
+   ],
+   "start_bias": [
+    "Niter (tier 5)"
+   ],
+   "dlc": "Gathering Storm"
+  }
+ },
+ {
+  "id": "civ:persia",
+  "name": "Persia",
+  "aliases": [
+   "CIVILIZATION_PERSIA"
+  ],
+  "summary": "Satrapies. Uniques: Pairidaeza (improvement), Immortal (unit, replaces Swordsman)",
+  "fields": {
+   "ability": [
+    "Satrapies: +1 Trade Route capacity with Political Philosophy civic. Receive +2 Gold and +1 Culture for routes between your own cities. Roads built in your territory are one level more advanced than usual."
+   ],
+   "uniques": [
+    "Pairidaeza (improvement)",
+    "Immortal (unit, replaces Swordsman)"
+   ],
+   "leaders": [
+    "Nader Shah",
+    "Cyrus"
+   ],
+   "dlc": "Persia and Macedon Pack"
+  }
+ },
+ {
+  "id": "civ:phoenicia",
+  "name": "Phoenicia",
+  "aliases": [
+   "CIVILIZATION_PHOENICIA"
+  ],
+  "summary": "Mediterranean Colonies. Uniques: Cothon (district, replaces Harbor), Bireme (unit, replaces Galley)",
+  "fields": {
+   "ability": [
+    "Mediterranean Colonies: Begin the game with the Writing technology Eureka. Coastal cities founded by Phoenicia and located on the same continent as the Phoenician Capital are 100% Loyal. Settlers gain +2 Movement and +2 sight range while embarked. Settlers ignore additional Movement costs from embarking and disembarking."
+   ],
+   "uniques": [
+    "Cothon (district, replaces Harbor)",
+    "Bireme (unit, replaces Galley)"
+   ],
+   "leaders": [
+    "Dido"
+   ],
+   "start_bias": [
+    "Coast and Lake (tier 2)"
+   ],
+   "dlc": "Gathering Storm"
+  }
+ },
+ {
+  "id": "civ:poland",
+  "name": "Poland",
+  "aliases": [
+   "CIVILIZATION_POLAND"
+  ],
+  "summary": "Golden Liberty. Uniques: Sukiennice (building, replaces Market), Winged Hussar (unit, replaces Cuirassier)",
+  "fields": {
+   "ability": [
+    "Golden Liberty: Culture Bomb adjacent tiles when completing an Encampment or Fort inside friendly territory. One Military policy slot in the current government is converted to a Wildcard slot."
+   ],
+   "uniques": [
+    "Sukiennice (building, replaces Market)",
+    "Winged Hussar (unit, replaces Cuirassier)"
+   ],
+   "leaders": [
+    "Jadwiga"
+   ],
+   "dlc": "Poland Civilization & Scenario Pack"
+  }
+ },
+ {
+  "id": "civ:portugal",
+  "name": "Portugal",
+  "aliases": [
+   "CIVILIZATION_PORTUGAL"
+  ],
+  "summary": "Casa da Índia. Uniques: Navigation School (building, replaces University), Feitoria (improvement), Nau (unit, replaces Caravel)",
+  "fields": {
+   "ability": [
+    "Casa da Índia: International Trade Routes must originate from a coastal city and can only reach cities on the coast or with a Harbor, but receive +50% towards all yields. Trader units have +50% range over water, and can embark as soon as they are unlocked."
+   ],
+   "uniques": [
+    "Navigation School (building, replaces University)",
+    "Feitoria (improvement)",
+    "Nau (unit, replaces Caravel)"
+   ],
+   "leaders": [
+    "João III"
+   ],
+   "start_bias": [
+    "Coast and Lake (tier 1)"
+   ],
+   "dlc": "Portugal Pack"
+  }
+ },
+ {
+  "id": "civ:rome",
+  "name": "Rome",
+  "aliases": [
+   "CIVILIZATION_ROME"
+  ],
+  "summary": "All Roads Lead to Rome. Uniques: Bath (district, replaces Aqueduct), Legion (unit, replaces Swordsman)",
+  "fields": {
+   "ability": [
+    "All Roads Lead to Rome: All cities you found or conquer start with a Trading Post. If in Trade Route range of your Capital, they also start with a road to it. Your Trade Routes earn +1 Gold for passing through Trading Posts in your own cities."
+   ],
+   "uniques": [
+    "Bath (district, replaces Aqueduct)",
+    "Legion (unit, replaces Swordsman)"
+   ],
+   "leaders": [
+    "Trajan",
+    "Julius Caesar"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "civ:russia",
+  "name": "Russia",
+  "aliases": [
+   "CIVILIZATION_RUSSIA"
+  ],
+  "summary": "Mother Russia. Uniques: Lavra (district, replaces Holy Site), Cossack (unit, replaces Cavalry)",
+  "fields": {
+   "ability": [
+    "Mother Russia: Extra territory upon founding cities. +1 Faith and +1 Production from Tundra. Units do not receive damage from Blizzards. Civilizations that are at war with Russia receive +100% unit damage from Blizzards in Russian territory."
+   ],
+   "uniques": [
+    "Lavra (district, replaces Holy Site)",
+    "Cossack (unit, replaces Cavalry)"
+   ],
+   "leaders": [
+    "Peter"
+   ],
+   "start_bias": [
+    "Tundra (tier 2)",
+    "Tundra (Hills) (tier 2)"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "civ:scotland",
+  "name": "Scotland",
+  "aliases": [
+   "CIVILIZATION_SCOTLAND"
+  ],
+  "summary": "Scottish Enlightenment. Uniques: Golf Course (improvement), Highlander (unit, replaces Ranger)",
+  "fields": {
+   "ability": [
+    "Scottish Enlightenment: Happy cities receive an additional +5% Science and +5% Production. Happy cities generate +1 Great Scientist point per Campus and +1 Great Engineer point per Industrial Zone. Ecstatic cities double all these amounts."
+   ],
+   "uniques": [
+    "Golf Course (improvement)",
+    "Highlander (unit, replaces Ranger)"
+   ],
+   "leaders": [
+    "Robert the Bruce"
+   ],
+   "dlc": "Rise and Fall"
+  }
+ },
+ {
+  "id": "civ:scythia",
+  "name": "Scythia",
+  "aliases": [
+   "CIVILIZATION_SCYTHIA"
+  ],
+  "summary": "People of the Steppe. Uniques: Kurgan (improvement), Saka Horse Archer (unit)",
+  "fields": {
+   "ability": [
+    "People of the Steppe: Receive a second light cavalry unit or Saka Horse Archer each time you train a light cavalry unit or Saka Horse Archer."
+   ],
+   "uniques": [
+    "Kurgan (improvement)",
+    "Saka Horse Archer (unit)"
+   ],
+   "leaders": [
+    "Tomyris"
+   ],
+   "start_bias": [
+    "Horses (tier 2)",
+    "Grassland (tier 5)",
+    "Plains (tier 5)"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "civ:spain",
+  "name": "Spain",
+  "aliases": [
+   "CIVILIZATION_SPAIN"
+  ],
+  "summary": "Treasure Fleet. Uniques: Mission (improvement), Conquistador (unit, replaces Musketman)",
+  "fields": {
+   "ability": [
+    "Treasure Fleet: May form Fleets and Armadas with Mercantilism, instead of Nationalism and Mobilization. Trade Routes receive +3 Gold, +2 Faith, and +1 Production. Trade Routes between multiple continents receive triple these numbers. Cities not on your original Capital’s continent receive +25% Production towards districts and a builder when founded."
+   ],
+   "uniques": [
+    "Mission (improvement)",
+    "Conquistador (unit, replaces Musketman)"
+   ],
+   "leaders": [
+    "Philip II"
+   ],
+   "start_bias": [
+    "Geothermal Fissure (tier 3)"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "civ:sumeria",
+  "name": "Sumeria",
+  "aliases": [
+   "CIVILIZATION_SUMERIA"
+  ],
+  "summary": "Epic Quests. Uniques: Ziggurat (improvement), War-Cart (unit)",
+  "fields": {
+   "ability": [
+    "Epic Quests: When you capture a Barbarian Outpost, receive a Tribal Village reward in addition to the usual Gold. Pay half the usual cost to levy city-state units."
+   ],
+   "uniques": [
+    "Ziggurat (improvement)",
+    "War-Cart (unit)"
+   ],
+   "leaders": [
+    "Gilgamesh"
+   ],
+   "start_bias": [
+    "River (tier 3)"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "civ:sweden",
+  "name": "Sweden",
+  "aliases": [
+   "CIVILIZATION_SWEDEN"
+  ],
+  "summary": "Nobel Prize. Uniques: Open-Air Museum (improvement), Carolean (unit, replaces Pike and Shot)",
+  "fields": {
+   "ability": [
+    "Nobel Prize: Sweden gains 50 Diplomatic Favor when earning a Great Person (on Standard Speed). Sweden receives +1 Great Engineer point from Factories and +1 Great Scientist point from Universities. Having Sweden in the game adds three unique World Congress competitions starting in the Industrial Era."
+   ],
+   "uniques": [
+    "Open-Air Museum (improvement)",
+    "Carolean (unit, replaces Pike and Shot)"
+   ],
+   "leaders": [
+    "Kristina"
+   ],
+   "dlc": "Gathering Storm"
+  }
+ },
+ {
+  "id": "civ:vietnam",
+  "name": "Vietnam",
+  "aliases": [
+   "CIVILIZATION_VIETNAM"
+  ],
+  "summary": "Nine Dragon River Delta. Uniques: Thành (district, replaces Encampment), Voi Chiến (unit, replaces Crossbowman)",
+  "fields": {
+   "ability": [
+    "Nine Dragon River Delta: All land specialty districts can only be built on Rainforest, Marsh, or Woods. Receive the following yields for every building on these features: +1 Culture in Woods, +1 Science in Rainforest and +1 Production in Marsh. Woods can be planted with the Medieval Faires civic."
+   ],
+   "uniques": [
+    "Thành (district, replaces Encampment)",
+    "Voi Chiến (unit, replaces Crossbowman)"
+   ],
+   "leaders": [
+    "Bà Triệu"
+   ],
+   "start_bias": [
+    "Marsh (tier 1)",
+    "Rainforest (tier 1)",
+    "Woods (tier 1)"
+   ],
+   "dlc": "Vietnam & Kublai Khan Pack"
+  }
+ },
+ {
+  "id": "civ:zulu",
+  "name": "Zulu",
+  "aliases": [
+   "CIVILIZATION_ZULU"
+  ],
+  "summary": "Isibongo. Uniques: Ikanda (district, replaces Encampment), Impi (unit, replaces Pikeman)",
+  "fields": {
+   "ability": [
+    "Isibongo: Cities with a garrisoned unit get +3 Loyalty per turn, or +5 if it is a Corps or Army. Conquering a city with a unit will upgrade it into a Corps or Army, if the proper Civics are unlocked."
+   ],
+   "uniques": [
+    "Ikanda (district, replaces Encampment)",
+    "Impi (unit, replaces Pikeman)"
+   ],
+   "leaders": [
+    "Shaka"
+   ],
+   "dlc": "Rise and Fall"
+  }
+ }
+]

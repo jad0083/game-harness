@@ -1,0 +1,227 @@
+[
+ {
+  "id": "terrain:coast",
+  "name": "Coast and Lake",
+  "aliases": [
+   "TERRAIN_COAST"
+  ],
+  "summary": "+1 Food, +1 Gold.",
+  "fields": {
+   "yields": "+1 Food, +1 Gold",
+   "movement_cost": 1,
+   "appeal": 1,
+   "water": true
+  }
+ },
+ {
+  "id": "terrain:desert",
+  "name": "Desert",
+  "aliases": [
+   "TERRAIN_DESERT"
+  ],
+  "summary": "no yield.",
+  "fields": {
+   "movement_cost": 1
+  }
+ },
+ {
+  "id": "terrain:desert_hills",
+  "name": "Desert (Hills)",
+  "aliases": [
+   "TERRAIN_DESERT_HILLS"
+  ],
+  "summary": "+1 Production.",
+  "fields": {
+   "yields": "+1 Production",
+   "movement_cost": 2,
+   "defense": 3,
+   "hills": true
+  }
+ },
+ {
+  "id": "terrain:desert_mountain",
+  "name": "Desert (Mountain)",
+  "aliases": [
+   "TERRAIN_DESERT_MOUNTAIN"
+  ],
+  "summary": "no yield.",
+  "fields": {
+   "movement_cost": 1,
+   "appeal": 1,
+   "mountain": true,
+   "impassable": true
+  }
+ },
+ {
+  "id": "terrain:grass",
+  "name": "Grassland",
+  "aliases": [
+   "TERRAIN_GRASS"
+  ],
+  "summary": "+2 Food.",
+  "fields": {
+   "yields": "+2 Food",
+   "movement_cost": 1
+  }
+ },
+ {
+  "id": "terrain:grass_hills",
+  "name": "Grassland (Hills)",
+  "aliases": [
+   "TERRAIN_GRASS_HILLS"
+  ],
+  "summary": "+2 Food, +1 Production.",
+  "fields": {
+   "yields": "+2 Food, +1 Production",
+   "movement_cost": 2,
+   "defense": 3,
+   "hills": true
+  }
+ },
+ {
+  "id": "terrain:grass_mountain",
+  "name": "Grassland (Mountain)",
+  "aliases": [
+   "TERRAIN_GRASS_MOUNTAIN"
+  ],
+  "summary": "no yield.",
+  "fields": {
+   "movement_cost": 1,
+   "appeal": 1,
+   "mountain": true,
+   "impassable": true
+  }
+ },
+ {
+  "id": "terrain:ocean",
+  "name": "Ocean",
+  "aliases": [
+   "TERRAIN_OCEAN"
+  ],
+  "summary": "+1 Food.",
+  "fields": {
+   "yields": "+1 Food",
+   "movement_cost": 1,
+   "water": true
+  }
+ },
+ {
+  "id": "terrain:plains",
+  "name": "Plains",
+  "aliases": [
+   "TERRAIN_PLAINS"
+  ],
+  "summary": "+1 Food, +1 Production.",
+  "fields": {
+   "yields": "+1 Food, +1 Production",
+   "movement_cost": 1
+  }
+ },
+ {
+  "id": "terrain:plains_hills",
+  "name": "Plains (Hills)",
+  "aliases": [
+   "TERRAIN_PLAINS_HILLS"
+  ],
+  "summary": "+1 Food, +2 Production.",
+  "fields": {
+   "yields": "+1 Food, +2 Production",
+   "movement_cost": 2,
+   "defense": 3,
+   "hills": true
+  }
+ },
+ {
+  "id": "terrain:plains_mountain",
+  "name": "Plains (Mountain)",
+  "aliases": [
+   "TERRAIN_PLAINS_MOUNTAIN"
+  ],
+  "summary": "no yield.",
+  "fields": {
+   "movement_cost": 1,
+   "appeal": 1,
+   "mountain": true,
+   "impassable": true
+  }
+ },
+ {
+  "id": "terrain:snow",
+  "name": "Snow",
+  "aliases": [
+   "TERRAIN_SNOW"
+  ],
+  "summary": "no yield.",
+  "fields": {
+   "movement_cost": 1
+  }
+ },
+ {
+  "id": "terrain:snow_hills",
+  "name": "Snow (Hills)",
+  "aliases": [
+   "TERRAIN_SNOW_HILLS"
+  ],
+  "summary": "+1 Production.",
+  "fields": {
+   "yields": "+1 Production",
+   "movement_cost": 2,
+   "defense": 3,
+   "hills": true
+  }
+ },
+ {
+  "id": "terrain:snow_mountain",
+  "name": "Snow (Mountain)",
+  "aliases": [
+   "TERRAIN_SNOW_MOUNTAIN"
+  ],
+  "summary": "no yield.",
+  "fields": {
+   "movement_cost": 1,
+   "appeal": 1,
+   "mountain": true,
+   "impassable": true
+  }
+ },
+ {
+  "id": "terrain:tundra",
+  "name": "Tundra",
+  "aliases": [
+   "TERRAIN_TUNDRA"
+  ],
+  "summary": "+1 Food.",
+  "fields": {
+   "yields": "+1 Food",
+   "movement_cost": 1
+  }
+ },
+ {
+  "id": "terrain:tundra_hills",
+  "name": "Tundra (Hills)",
+  "aliases": [
+   "TERRAIN_TUNDRA_HILLS"
+  ],
+  "summary": "+1 Food, +1 Production.",
+  "fields": {
+   "yields": "+1 Food, +1 Production",
+   "movement_cost": 2,
+   "defense": 3,
+   "hills": true
+  }
+ },
+ {
+  "id": "terrain:tundra_mountain",
+  "name": "Tundra (Mountain)",
+  "aliases": [
+   "TERRAIN_TUNDRA_MOUNTAIN"
+  ],
+  "summary": "no yield.",
+  "fields": {
+   "movement_cost": 1,
+   "appeal": 1,
+   "mountain": true,
+   "impassable": true
+  }
+ }
+]
