@@ -210,7 +210,10 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   `corpora/civ6/popups.toml` removes that screen's statement handler on every load (the deal screen
   it opens goes with it), and the library registers its own `Events.DiplomacyStatement` handler in
   `InGame` (only there: the install chunk names its state; a reinstall removes the old handler
-  first). While autoplay runs it answers statements to our player from an explicit table: the five
+  first). The screen's handler is removed only while the library's is in place (the entry's
+  `requires = "dipl_handler"`, checked in `InGame` before each quieting); otherwise the controller
+  puts it back (`QUIET_HELD`), so a statement holds the turn for a human on screen instead of going
+  unanswered and unseen, and the briefing says the auto-reply is not installed. While autoplay runs it answers statements to our player from an explicit table: the five
   warnings (troops near the border, settling, spying, digging, converting) get the conciliatory
   promise ("My troops are merely passing by.", never the war or grievance choice), deals and demands
   are refused as the deal screen refuses them, proposals (friendship, delegation, embassy, open

@@ -1936,8 +1936,10 @@ def test_the_briefing_leaves_out_answers_older_than_ten_turns_but_never_a_waitin
 
 
 def test_the_briefing_warns_when_the_auto_reply_is_not_installed():
+    """The controller then leaves the leader screen's handler in place (popups.toml `requires`)."""
     line = _diplomacy_line({**FIXTURE, "diplomacy": _dipl(handler=False)})
     assert line is not None and "not installed" in line
+    assert "the leader screen is kept" in line and "until a human answers it on screen" in line
 
 
 def test_no_diplomacy_line_without_a_statement_or_from_an_older_library():

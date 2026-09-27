@@ -309,9 +309,30 @@ pub struct QuietPopup {
     pub state: String,
     pub event: String,
     pub handler: String,
+    /// A field of the library in `InGame` (`Harness.<requires>`) that must be set before the handler
+    /// is removed: the library's own handler that takes the popup's place (the leader screen's
+    /// statements). Without it the popup's handler is put back, so the popup still shows.
+    #[serde(default)]
+    pub requires: Option<String>,
 }
 
 impl QuietPopup {
+    /// Run in `InGame`: prints QUIET_READY when `Harness.<requires>` is set (None: nothing to check).
+    pub fn ready_code(&self) -> Option<String> {
+        self.requires.as_ref().map(|r| {
+            format!("if Harness and Harness.{r} then print(\"QUIET_READY\") else print(\"QUIET_NOT_READY\") end")
+        })
+    }
+
+    /// Puts the handler back (removed first, so it is never there twice); prints QUIET_HELD,
+    /// QUIET_ABSENT or QUIET_ERR with the reason.
+    pub fn restore_code(&self) -> String {
+        let (e, h) = (&self.event, &self.handler);
+        format!("if Events and Events.{e} and {h} then local ok, err = pcall(function() Events.{e}.Remove({h}) \
+                 Events.{e}.Add({h}) end) print(ok and \"QUIET_HELD\" or (\"QUIET_ERR \" .. tostring(err))) \
+                 else print(\"QUIET_ABSENT\") end")
+    }
+
     /// Removes the handler; prints QUIET, QUIET_ABSENT (the state has no such handler or event: a
     /// renamed handler) or QUIET_ERR with the reason. Removing it twice is harmless (checked live).
     pub fn code(&self) -> String {
@@ -338,7 +359,8 @@ fn lua_name(s: &str) -> bool {
 pub fn parse_popups(text: &str) -> Result<Vec<QuietPopup>> {
     let f: PopupsFile = toml::from_str(text)?;
     for p in &f.quiet {
-        for (field, v) in [("state", &p.state), ("event", &p.event), ("handler", &p.handler)] {
+        for (field, v) in [("state", &p.state), ("event", &p.event), ("handler", &p.handler)]
+            .into_iter().chain(p.requires.as_ref().map(|r| ("requires", r))) {
             if !lua_name(v) {
                 bail!("popups: {field} {v:?} is not a Lua name");
             }
@@ -465,21 +487,36 @@ fn quiet_outcome(lines: &[String]) -> String {
 }
 
 /// Whether a `quiet_popups` line needs no retry: removed, absent from a state that exists (a
-/// handler renamed by a patch shows up here, in the reply), or no such state in this ruleset (a game
-/// without Gathering Storm has no disaster popup).
+/// handler renamed by a patch shows up here, in the reply), no such state in this ruleset (a game
+/// without Gathering Storm has no disaster popup), or kept because what replaces it is missing (the
+/// library's field changes only with a reinstall, which clears `Harness.popups_quiet`).
 pub fn quiet_settled(line: &str) -> bool {
-    line.ends_with(" QUIET") || line.ends_with(" QUIET_ABSENT") || line.contains("no Lua state named")
+    line.ends_with(" QUIET") || line.ends_with(" QUIET_ABSENT") || line.ends_with(" QUIET_HELD")
+        || line.contains("no Lua state named")
 }
 
 /// Remove the handlers of the popups that would hold an autoplay turn, one tuner call each; one
-/// `<state>.<handler> <outcome>` per popup, where the outcome is QUIET, QUIET_ABSENT, QUIET_ERR …,
-/// or `failed: …` (a timeout or a missing state).
+/// `<state>.<handler> <outcome>` per popup, where the outcome is QUIET, QUIET_ABSENT, QUIET_HELD
+/// (its `requires` field is not set in InGame, so the handler was put back), QUIET_ERR …, or
+/// `failed: …` (a timeout or a missing state; a failed check sends nothing to the popup).
 pub async fn quiet_popups(client: &AgentClient, popups: &[QuietPopup]) -> Vec<String> {
     let mut out = Vec::with_capacity(popups.len());
     for p in popups {
-        let outcome = match client.tuner_lua(&p.state, &p.code(), Some(5_000)).await {
-            Ok(r) => quiet_outcome(&printed(&r)),
-            Err(e) => format!("failed: {}", e.to_string().chars().take(200).collect::<String>()),
+        let ready = match p.ready_code() {
+            None => Ok(true),
+            Some(check) => client.tuner_lua(STATE_UI, &check, Some(5_000)).await
+                .map(|r| printed(&r).iter().any(|l| l.trim() == "QUIET_READY"))
+                .map_err(|e| format!("checking Harness.{}: {e}", p.requires.as_deref().unwrap_or(""))),
+        };
+        let outcome = match ready {
+            Err(e) => format!("failed: {}", e.chars().take(200).collect::<String>()),
+            Ok(ready) => {
+                let code = if ready { p.code() } else { p.restore_code() };
+                match client.tuner_lua(&p.state, &code, Some(5_000)).await {
+                    Ok(r) => quiet_outcome(&printed(&r)),
+                    Err(e) => format!("failed: {}", e.to_string().chars().take(200).collect::<String>()),
+                }
+            }
         };
         out.push(format!("{}.{} {outcome}", p.state, p.handler));
     }
@@ -747,7 +784,8 @@ mod tests {
 
     #[test]
     fn quieting_a_popup_removes_its_handler_and_says_what_happened() {
-        let p = QuietPopup { state: "WonderBuiltPopup".into(), event: "WonderCompleted".into(), handler: "OnWonderCompleted".into() };
+        let p = QuietPopup { state: "WonderBuiltPopup".into(), event: "WonderCompleted".into(), handler: "OnWonderCompleted".into(),
+                             requires: None };
         assert_eq!(p.code(), concat!(
             "if Events and Events.WonderCompleted and OnWonderCompleted then ",
             "local ok, err = pcall(function() Events.WonderCompleted.Remove(OnWonderCompleted) end) ",
@@ -791,21 +829,87 @@ mod tests {
             assert!(parse_popups(&t).is_err(), "{bad:?} accepted");
         }
         assert!(parse_popups("[[quiet]]\nstate = \"S\"\nevent = \"E\"\n").is_err(), "a missing field is an error");
+        assert_eq!(parse_popups(ok).unwrap()[0].requires, None);
+        let req = format!("{ok}requires = \"dipl_handler\"\n");
+        assert_eq!(parse_popups(&req).unwrap()[0].requires.as_deref(), Some("dipl_handler"));
+        for bad in ["a.b", "x) os.exit(", ""] {
+            let t = format!("{ok}requires = {}\n", toml::Value::String(bad.into()));
+            assert!(parse_popups(&t).is_err(), "requires {bad:?} accepted");
+        }
     }
 
-    /// A tuner agent with the guards' semantics: the library is installed or not, the popups quiet
-    /// or not, and a guarded chunk runs its call only when both hold (or when the chunk sets
-    /// `Harness.popups_quiet` itself). Counts the chunks that ran a call containing `marker`.
-    async fn guarded_tuner(installed: bool, quiet: bool, marker: &'static str)
-        -> (String, std::sync::Arc<std::sync::atomic::AtomicUsize>) {
-        use std::sync::atomic::{AtomicUsize, Ordering};
+    #[test]
+    fn the_leader_screen_is_quieted_only_while_the_library_handler_is_in_place() {
+        // Without the library's own handler nobody answers an AI statement: the screen keeps its
+        // handler then (the statement holds the turn for a human instead of vanishing).
+        let lib = Library::load(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpora/civ6")).unwrap();
+        let view = lib.popups.iter().find(|p| p.state == "DiplomacyActionView").expect("the leader screen entry");
+        assert_eq!(view.requires.as_deref(), Some("dipl_handler"));
+        assert!(lib.source.contains("H.dipl_handler = on_statement"), "the field the controller checks");
+        assert!(lib.popups.iter().filter(|p| p.state != "DiplomacyActionView").all(|p| p.requires.is_none()));
+    }
+
+    #[test]
+    fn a_held_popup_gets_its_handler_back() {
+        let p = QuietPopup { state: "DiplomacyActionView".into(), event: "DiplomacyStatement".into(),
+                             handler: "OnDiplomacyStatement".into(), requires: Some("dipl_handler".into()) };
+        assert_eq!(p.ready_code().unwrap(),
+                   "if Harness and Harness.dipl_handler then print(\"QUIET_READY\") else print(\"QUIET_NOT_READY\") end");
+        assert_eq!(p.restore_code(), concat!(
+            "if Events and Events.DiplomacyStatement and OnDiplomacyStatement then ",
+            "local ok, err = pcall(function() Events.DiplomacyStatement.Remove(OnDiplomacyStatement) ",
+            "Events.DiplomacyStatement.Add(OnDiplomacyStatement) end) ",
+            "print(ok and \"QUIET_HELD\" or (\"QUIET_ERR \" .. tostring(err))) else print(\"QUIET_ABSENT\") end"));
+        assert!(quiet_settled("DiplomacyActionView.OnDiplomacyStatement QUIET_HELD"));
+        assert!(QuietPopup { requires: None, ..p }.ready_code().is_none());
+    }
+
+    #[tokio::test]
+    async fn quieting_checks_the_library_handler_before_the_leader_screen() {
+        let lib = Library::load(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpora/civ6")).unwrap();
+        for ready in [true, false] {
+            let (url, sent) = fake_tuner(move |_, code| Ok(vec![
+                if code.contains("QUIET_READY") { if ready { "QUIET_READY" } else { "QUIET_NOT_READY" } }
+                else if code.contains(".Add(") { "QUIET_HELD" } else { "QUIET" }.to_string()])).await;
+            let client = AgentClient::new(Some(&url), Some("t")).unwrap();
+            let out = quiet_popups(&client, &lib.popups).await;
+            let sent = sent.lock().unwrap().clone();
+            let checks: Vec<usize> = (0..sent.len()).filter(|&i| sent[i].1.contains("QUIET_READY")).collect();
+            assert_eq!(checks.len(), 1, "one check, for the one entry that requires it");
+            assert_eq!(sent[checks[0]].0, STATE_UI, "the library lives in InGame");
+            assert_eq!(sent[checks[0] + 1].0, "DiplomacyActionView", "checked right before the screen's call");
+            let view = &sent[checks[0] + 1].1;
+            assert_eq!(view.contains("Events.DiplomacyStatement.Add(OnDiplomacyStatement)"), !ready, "ready {ready}: {view}");
+            assert_eq!(view.contains("QUIET_HELD"), !ready);
+            let line = out.iter().find(|l| l.starts_with("DiplomacyActionView.")).unwrap();
+            assert_eq!(line, if ready { "DiplomacyActionView.OnDiplomacyStatement QUIET" }
+                             else { "DiplomacyActionView.OnDiplomacyStatement QUIET_HELD" });
+            assert!(out.iter().all(|l| quiet_settled(l)), "{out:?}");
+            assert_eq!(sent.iter().filter(|(_, c)| c.contains(".Add(")).count(), usize::from(!ready), "no other popup is restored");
+        }
+        // a check that gets no answer quiets nothing and restores nothing: retried on the next call
+        let (url, sent) = fake_tuner(|_, code| if code.contains("QUIET_READY") { Err("timed out".into()) }
+                                              else { Ok(vec!["QUIET".into()]) }).await;
+        let client = AgentClient::new(Some(&url), Some("t")).unwrap();
+        let out = quiet_popups(&client, &lib.popups).await;
+        assert!(sent.lock().unwrap().iter().all(|(s, _)| s != "DiplomacyActionView"));
+        let line = out.iter().find(|l| l.starts_with("DiplomacyActionView.")).unwrap();
+        assert!(line.contains("failed: checking Harness.dipl_handler") && !quiet_settled(line), "{line}");
+    }
+
+    /// Tuner calls a fake agent received: (state, code).
+    type Sent = std::sync::Arc<std::sync::Mutex<Vec<(String, String)>>>;
+
+    /// A fake agent whose `/tuner/lua` answers with `reply(state, code)`: the printed lines, or an
+    /// HTTP 400 with the error. Records every call it gets.
+    async fn fake_tuner<F>(reply: F) -> (String, Sent)
+    where F: Fn(&str, &str) -> Result<Vec<String>, String> + Send + Sync + 'static {
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let url = format!("http://{}", listener.local_addr().unwrap());
-        let runs = std::sync::Arc::new(AtomicUsize::new(0));
-        let counter = runs.clone();
+        let sent: Sent = Default::default();
+        let log = sent.clone();
         tokio::spawn(async move {
-            let (mut installed, mut quiet) = (installed, quiet);
             loop {
                 let (mut sock, _) = listener.accept().await.unwrap();
                 let mut req = Vec::new();
@@ -822,30 +926,54 @@ mod tests {
                         }
                     }
                 };
-                let code = serde_json::from_str::<serde_json::Value>(&body).unwrap()["code"].as_str().unwrap().to_string();
-                let out: Vec<String> = if code.starts_with("local HARNESS_VERSION") {
-                    installed = true;
-                    vec!["installed".into()]
-                } else if code.starts_with("if Events and Events.") {
-                    vec!["QUIET".into()]
-                } else if !installed {
-                    vec![MISSING.into()]
-                } else if code.contains("if Harness.popups_quiet then") && !quiet {
-                    vec![LOUD.into()]
-                } else {
-                    quiet = quiet || code.contains("Harness.popups_quiet = true");
-                    if code.contains(marker) {
-                        counter.fetch_add(1, Ordering::SeqCst);
-                    }
-                    vec![r#"{"ok":true,"action":"ranged_attack"}"#.into()]
+                let v = serde_json::from_str::<serde_json::Value>(&body).unwrap();
+                let (state, code) = (v["state"].as_str().unwrap_or("").to_string(), v["code"].as_str().unwrap().to_string());
+                log.lock().unwrap().push((state.clone(), code.clone()));
+                let (status, reply) = match reply(&state, &code) {
+                    Ok(out) => ("200 OK", serde_json::json!({"ok": true, "state": state, "result": "", "extra": [], "output": out})),
+                    Err(e) => ("400 Bad Request", serde_json::json!({"error": e})),
                 };
-                let reply = serde_json::json!({"ok": true, "state": "InGame", "result": "", "extra": [], "output": out}).to_string();
-                let head = format!("HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n",
+                let reply = reply.to_string();
+                let head = format!("HTTP/1.1 {status}\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n",
                                    reply.len());
                 sock.write_all(head.as_bytes()).await.unwrap();
                 sock.write_all(reply.as_bytes()).await.unwrap();
             }
         });
+        (url, sent)
+    }
+
+    /// A tuner agent with the guards' semantics: the library is installed or not, the popups quiet
+    /// or not, and a guarded chunk runs its call only when both hold (or when the chunk sets
+    /// `Harness.popups_quiet` itself). Counts the chunks that ran a call containing `marker`.
+    async fn guarded_tuner(installed: bool, quiet: bool, marker: &'static str)
+        -> (String, std::sync::Arc<std::sync::atomic::AtomicUsize>) {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let runs = std::sync::Arc::new(AtomicUsize::new(0));
+        let counter = runs.clone();
+        let state = std::sync::Mutex::new((installed, quiet));
+        let (url, _) = fake_tuner(move |_, code| {
+            let mut st = state.lock().unwrap();
+            let (installed, quiet) = &mut *st;
+            Ok(if code.starts_with("local HARNESS_VERSION") {
+                *installed = true;
+                vec!["installed".into()]
+            } else if code.contains("QUIET_READY") {
+                vec![if *installed { "QUIET_READY" } else { "QUIET_NOT_READY" }.into()]
+            } else if code.starts_with("if Events and Events.") {
+                vec!["QUIET".into()]
+            } else if !*installed {
+                vec![MISSING.into()]
+            } else if code.contains("if Harness.popups_quiet then") && !*quiet {
+                vec![LOUD.into()]
+            } else {
+                *quiet = *quiet || code.contains("Harness.popups_quiet = true");
+                if code.contains(marker) {
+                    counter.fetch_add(1, Ordering::SeqCst);
+                }
+                vec![r#"{"ok":true,"action":"ranged_attack"}"#.into()]
+            })
+        }).await;
         (url, runs)
     }
 

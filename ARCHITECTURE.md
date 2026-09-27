@@ -251,7 +251,9 @@ library runs without a call: the install chunk names its Lua state (`HARNESS_STA
 the library registers an `Events.DiplomacyStatement` handler that answers an AI leader's statement to
 us while autoplay runs, from an explicit table (never a choice that declares war or accepts a deal),
 since the game's leader screen would hold the engine until a human answers; `corpora/civ6/popups.toml`
-removes that screen's handler, and the snapshot's `diplomacy` log feeds `diplomacy_reply` events.
+removes that screen's handler only while the library's is registered (a `[[quiet]]` entry's `requires`
+names a `Harness` field the controller checks in `InGame` first; without it the popup's handler is put
+back), and the snapshot's `diplomacy` log feeds `diplomacy_reply` events.
 
 The loader rejects nameless records and duplicate ids at startup, so a bad extract fails the build rather than a game turn. The raw XML is not committed (Stardock's data); `data/_meta.json` records the game version and generator commit for reproducibility.
 

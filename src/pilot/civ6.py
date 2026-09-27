@@ -1441,8 +1441,8 @@ def diplomacy_text(s: dict, cid) -> str:
     if not isinstance(d, dict):
         return ""                                  # a library without the auto-reply
     if not d.get("handler"):
-        return ("Diplomacy: the auto-reply is not installed in this game, so an AI leader's statement would hold "
-                "the autoplay turn until a human answers.")
+        return ("Diplomacy: the auto-reply is not installed in this game, so the leader screen is kept: an AI "
+                "leader's statement holds the autoplay turn until a human answers it on screen.")
     now = s.get("turn") or 0
     log = [e for e in d.get("log") or [] if isinstance(e, dict)
            and (e.get("why") == "waiting" or (e.get("at") or e.get("turn") or 0) >= now - DIPLOMACY_RECENT)]
