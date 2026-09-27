@@ -482,6 +482,13 @@ def test_autoplay_plays_single_turns_while_in_danger_and_chunks_otherwise():
     assert autoplay_turns({"wars": [], "cities": [lone_scout]}, chunk=3, left=10) == 3
     beijing_t61 = {**lone_scout, "enemies_near": 2, "capture_adjacent": 2}
     assert autoplay_turns({"wars": [], "cities": [beijing_t61]}, chunk=3, left=10) == 1
+    # a garrisoned city one burst from falling is not "in danger" (one capturer, undamaged), but it is
+    # about to fall: single turns, so the hand-back checks it again every turn (amendment A1)
+    from pilot.civ6 import about_to_fall, in_danger
+    burst = {**lone_scout, "garrison": "UNIT_ARCHER", "enemies_near": 3, "capture_adjacent": 1, "incoming": 230}
+    assert about_to_fall(burst) and not in_danger(burst)
+    city_state_war = [{"civ": "CIVILIZATION_CAGUANA", "major": False}]
+    assert autoplay_turns({"wars": city_state_war, "cities": [burst]}, chunk=3, left=10) == 1
     from pilot.config import Settings
     assert Settings().autoplay_chunk == 3
 

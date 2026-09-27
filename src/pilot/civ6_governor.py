@@ -90,11 +90,13 @@ the human wants something done, tell them to use "Decide now" or a standing orde
 def autoplay_turns(snapshot: dict, *, chunk: int, left: int) -> int:
     """Turns for the next autoplay call: `chunk` in peace (longer calls let the AI finish its
     multi-turn plans; one-turn calls stalled a Settler and the pantheon live), a single turn at war
-    with a major or with a city in danger (`in_danger`; checks between every turn), never past the
-    decision point. Amendment A1 of docs/design/2026-09-27-civ6-levers-design.md: "threatened" (any
-    enemy within 3 tiles) held in 93% of city snapshots, so the chunk almost never ran."""
+    with a major or with a city in danger (`in_danger`) or about to fall (`about_to_fall`: one
+    capturer next to it and a burst that would take the garrison is not "in danger"), so the checks
+    run between every turn; never past the decision point. Amendment A1 of
+    docs/design/2026-09-27-civ6-levers-design.md: "threatened" (any enemy within 3 tiles) held in 93%
+    of city snapshots, so the chunk almost never ran."""
     war = any(w.get("major", True) for w in snapshot.get("wars") or [])
-    danger = war or any(in_danger(c) for c in snapshot.get("cities", []))
+    danger = war or any(in_danger(c) or about_to_fall(c) for c in snapshot.get("cities", []))
     return max(1, min(1 if danger else chunk, left))
 
 

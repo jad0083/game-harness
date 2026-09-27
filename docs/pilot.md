@@ -142,7 +142,7 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
 - **Buy-outs** (rulings 17-21): a city is *in danger* (not merely threatened) when it is under siege,
   its garrison is damaged, two enemies that can capture it stand next to it, or two enemies are
   near an empty city tile; only then does a purchase there get the threatened share, and one-turn
-  autoplay chunks follow it too (with war against a major). The gold reserve is `gold_reserve` plus
+  autoplay chunks follow it too (with war against a major and a city about to fall). The gold reserve is `gold_reserve` plus
   `gold_reserve_per_deficit` per gold of deficit; faith keeps the pantheon's live price until one is
   founded. Purchases are checked after the other orders, a defender for a city in danger first; while
   such a city has no unit on its tile, other purchases are refused, unless a defender for it was
