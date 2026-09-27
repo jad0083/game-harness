@@ -2,6 +2,7 @@
 
 ## Open
 
+- [x] One agent timeout (2274.09, 2026-09-26; the agent was busy serving ~1,070 Civ VI file reads) stopped the Stellaris governor until a human pressed Resume, and the game ran ungoverned for 8 in-game years: transient network failures (timeout, refused connection) now probe the agent every 30 s by pausing the game and carry on by themselves (`recovered` event); other failures still wait for the human
 - [ ] Dashboards (8780 viewer, 8790 live pilot) had no authentication on the LAN, and POSTs were open to CSRF / DNS rebinding (security review 2026-09-26, B1): fixed on the branch with an access key (cookie or `X-Pilot-Key`), JSON-only mutations and an Origin/Host check; tick when deployed
 - [ ] `/api/pc` returned the title of the PC's foreground window (could be a mail subject or browser tab; B1): now only online, version, games open and whether one is in front; tick when deployed
 - [ ] Pilot key denylist matched exact strings only, so `win+r`, `win+x`, `alt+tab` passed (B7): any combo with the Windows key and OS-level combos are refused; tick when deployed
