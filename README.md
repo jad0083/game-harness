@@ -69,15 +69,28 @@ Without MCP, everything works from the shell: `scripts/play/act.sh`, `ap.sh`, `h
 The remote Windows agent is a single, self-contained native Rust executable (`game-agent.exe`, ~1.4 MB) with **zero external dependencies** (no Python, no Visual C++ runtimes required).
 
 ### Option A: Automated Network Install (from Linux Controller)
-1. On the Linux controller, serve the agent installer and shared token:
+1. On the Linux controller, serve the agent installer and token:
    ```bash
-   ./scripts/serve-agent.sh
+   ./scripts/serve-agent.sh            # [port], default 8000
    ```
-2. On the Windows gaming PC, open PowerShell (standard user) and run the one-liner printed by the script:
+2. On the Windows gaming PC, open PowerShell (standard user) and run the one line the script prints.
+   Its shape (every run has a new path and the current hashes):
    ```powershell
-   $env:GA_SRC='http://192.168.1.76:8000'; irm "$env:GA_SRC/install.ps1" | iex
+   $env:GA_SRC='http://<controller-ip>:8000/<one-time path>'; $env:GA_SHA256='<exe sha256>'; $f="$env:TEMP\ga-install.ps1"; iwr "$env:GA_SRC/install.ps1" -UseBasicParsing -OutFile $f; if ((Get-FileHash $f).Hash -ne '<install.ps1 sha256>') { throw 'install.ps1 hash mismatch' }; iex (Get-Content -Raw -Encoding UTF8 $f)
    ```
    *This automatically registers a non-elevated Logon Task in `%LOCALAPPDATA%\GameAgent` and configures the local Windows Defender firewall rule for port 8765.*
+3. Stop the server (Ctrl-C) once the installer reports the agent version; it stops by itself after 15 minutes.
+
+#### Security
+- Install traffic is plain HTTP, so `serve-agent.sh` keeps it short and pinned: files sit under a random
+  one-time path (the server's `/` shows nothing), it binds only the controller's address and stops after
+  `GA_SERVE_SECS` (900 s), and the one-liner carries the SHA-256 of `install.ps1` (checked before it
+  runs) and of `game-agent.exe` (checked by the installer before the running agent is touched).
+- The agent refuses tokens shorter than 32 characters (agent ≥ 1.5.0).
+- The firewall rule admits only the controller (the host in `GA_SRC`, or `$env:GA_CONTROLLER`) and
+  only on **Private** networks; the installer warns if the PC's network is Public. On a domain network
+  set `$env:GA_FW_PROFILE='Domain,Private'` before the one-liner. Reinstalling replaces an older, looser rule.
+- The agent itself still speaks plain HTTP: the token and screenshots cross the LAN in clear text.
 
 ### Option B: Cross-Compiling on Linux
 You can recompile the Windows agent binary directly on the Linux controller:

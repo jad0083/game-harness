@@ -1,11 +1,14 @@
 # Installs or updates the game agent (native game-agent.exe) for the current Windows user.
 #
-# Remote bootstrap (files served by scripts/serve-agent.sh on the controller):
-#   $env:GA_SRC='http://<controller-ip>:8000'; irm "$env:GA_SRC/install.ps1" | iex
+# Remote bootstrap: run the one line printed by scripts/serve-agent.sh on the controller. It sets
+# GA_SRC (http://<controller-ip>:<port>/<one-time path>) and GA_SHA256 (of game-agent.exe), and
+# checks this script's own SHA-256 before running it.
 # Local: run from a folder containing game-agent.exe (and optionally agent_token.txt):
 #   powershell -ExecutionPolicy Bypass -File install.ps1
 #
 # What it does:
+#   0. Remote only: downloads game-agent.exe and verifies it against GA_SHA256 before anything
+#      else, so a bad download leaves the running agent untouched.
 #   1. Stops any running agent (a running exe is locked and cannot be overwritten).
 #   2. Copies game-agent.exe + agent_token.txt to %LOCALAPPDATA%\GameAgent and writes roots.json
 #      (game folders the agent may read: Stellaris/GalCiv4 documents and install dirs; and the only
@@ -25,6 +28,31 @@ $RuleName = "Game Agent (TCP $Port)"
 
 function Step($msg) { Write-Host "==> $msg" -ForegroundColor Cyan }
 
+# --- 0. Download and verify (before touching the running agent) ---------------
+$dlExe = $null
+$dlToken = $null
+if ($env:GA_SRC) {
+    Step "Downloading from $env:GA_SRC"
+    if ($env:GA_SHA256 -notmatch '^[0-9A-Fa-f]{64}$') {
+        throw 'GA_SHA256 (the SHA-256 of game-agent.exe, printed by serve-agent.sh) is missing or malformed; use the one-liner it prints.'
+    }
+    $dlExe = Join-Path $env:TEMP "game-agent-$PID.exe"
+    Invoke-WebRequest "$env:GA_SRC/game-agent.exe" -UseBasicParsing -OutFile $dlExe
+    $hash = (Get-FileHash -Algorithm SHA256 $dlExe).Hash
+    if ($hash -ne $env:GA_SHA256) {
+        Remove-Item -Force $dlExe
+        throw "game-agent.exe hash $hash does not match GA_SHA256 $($env:GA_SHA256); nothing was changed."
+    }
+    Write-Host "    game-agent.exe SHA-256 verified ($([math]::Round((Get-Item $dlExe).Length / 1KB)) KB)"
+    $dlToken = Join-Path $env:TEMP "game-agent-token-$PID.txt"
+    try {
+        Invoke-WebRequest "$env:GA_SRC/agent_token.txt" -UseBasicParsing -OutFile $dlToken
+    } catch { $dlToken = $null; Write-Host '    no token served; the agent will generate one' }
+    if ($dlToken -and (Get-Content $dlToken -Raw).Trim().Length -lt 32) {
+        throw 'The served token is shorter than 32 characters; the agent (>= 1.5.0) would refuse it.'
+    }
+}
+
 # --- 1. Stop the running agent ------------------------------------------------
 Step 'Stopping any running agent'
 if (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue) {
@@ -42,14 +70,10 @@ if (Get-Process -Name 'game-agent' -ErrorAction SilentlyContinue) {
 # --- 2. Files & binary --------------------------------------------------------
 Step "Installing agent to $Dest"
 New-Item -ItemType Directory -Force -Path $Dest | Out-Null
-$tmpExe = "$Exe.new"
-if ($env:GA_SRC) {
-    Invoke-WebRequest "$env:GA_SRC/game-agent.exe" -UseBasicParsing -OutFile $tmpExe
-    Move-Item -Force $tmpExe $Exe
-    Write-Host "    downloaded game-agent.exe ($([math]::Round((Get-Item $Exe).Length / 1KB)) KB)"
-    try {
-        Invoke-WebRequest "$env:GA_SRC/agent_token.txt" -UseBasicParsing -OutFile $TokenFile
-    } catch { Write-Host '    no token served; the agent will generate one' }
+if ($dlExe) {
+    Move-Item -Force $dlExe $Exe
+    Write-Host '    installed the verified game-agent.exe'
+    if ($dlToken) { Move-Item -Force $dlToken $TokenFile }
 } else {
     $here = if ($PSScriptRoot) { $PSScriptRoot } else { (Get-Location).Path }
     $localExe = Join-Path $here 'game-agent.exe'
