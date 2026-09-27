@@ -228,5 +228,25 @@ RECORD_LABELS = {"research": "Research", "civic": "Civics", "policies": "Policy 
                  "stand pin": "Last stand: hold in place"}
 
 
+# Stellaris action-record keys (docs/design/2026-09-27-stellaris-levers-design.md, ruling 2): "directive
+# <name>", "market buy|sell <resource>", "posture <name>", "crisis <step>", "tech"
+POSTURE_WORDS = {"naval_cap": "naval capacity", "research_focus": "research focus", "ship_upgrades": "ship upgrades",
+                 "war_crisis": "war crisis"}
+
+
 def record_label(key: str) -> str:
-    return RECORD_LABELS.get(key) or (key[:1].upper() + key[1:])
+    if key in RECORD_LABELS:
+        return RECORD_LABELS[key]
+    head, _, rest = key.partition(" ")
+    words = rest.replace("_", " ")
+    if head == "directive" and rest:
+        return f"Directive: {words[:1].upper()}{words[1:]}"
+    if head == "market" and rest:
+        return f"Market: {words}"
+    if head == "posture" and rest:
+        return f"Posture: {POSTURE_WORDS.get(rest, words)}"
+    if head == "crisis" and rest:
+        return f"War crisis: {words}"
+    if key == "tech":
+        return "Tech picks"
+    return key[:1].upper() + key[1:]

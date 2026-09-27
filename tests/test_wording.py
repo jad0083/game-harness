@@ -94,3 +94,13 @@ def test_an_orders_fate_has_a_symbol_and_words(apply_outcome, result, key, symbo
 def test_a_purchase_that_took_is_complete_at_once():
     assert fate("stuck", None, kind="purchase")["key"] == "held"
     assert fate("refused: over the 283 faith allowed", None)["why"] == "over the 283 faith allowed"
+
+
+def test_stellaris_action_record_keys_read_as_words():
+    """Stellaris levers ruling 2 keys in the Orders-tab component (dashboard ruling 23)."""
+    from pilot.wording import record_label
+    assert [record_label(k) for k in ("directive defend", "directive diplomacy_first", "market buy alloys",
+                                       "market sell consumer_goods", "posture naval_cap", "crisis defend", "tech")] == [
+        "Directive: Defend", "Directive: Diplomacy first", "Market: buy alloys", "Market: sell consumer goods",
+        "Posture: naval capacity", "War crisis: defend", "Tech picks"]
+    assert record_label("production replace") == "Production, replace the AI's choice"

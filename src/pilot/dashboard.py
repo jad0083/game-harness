@@ -398,11 +398,13 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
                        f" tokens_in, tokens_out, seconds, result, model_version, thinking,"
                        f" json_extract(trace,'$.off_frame') AS off_frame, json_extract(trace,'$.error') AS error,"
                        f" json_extract(trace,'$.orders') AS orders_json, json_extract(trace,'$.retried_for') AS retried_for,"
+                       f" json_extract(trace,'$.applied') AS applied,"
                        f" COALESCE(model, (SELECT model FROM runs WHERE runs.id=decisions.run_id)) AS model"
                        f" FROM decisions WHERE {where} AND (decision IS NULL OR decision != 'strategy_review') ORDER BY t", args)
         for r in rows:
             r["result"] = json.loads(r["result"]) if r["result"] else None
             r["retried_for"] = json.loads(r["retried_for"]) if r["retried_for"] else None
+            r["applied"] = json.loads(r["applied"]) if r["applied"] else None    # a directive's policy report
         order_rows, calls = await decision_context(rows)
         return web.json_response(await asyncio.to_thread(decorate, rows, order_rows, calls))
 
@@ -419,6 +421,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
         r["result"] = json.loads(r["result"]) if r["result"] else None
         r["orders_json"] = json.dumps((r["trace"] or {}).get("orders")) if (r["trace"] or {}).get("orders") else None
         r["error"] = (r["trace"] or {}).get("error")
+        r["applied"] = (r["trace"] or {}).get("applied")
         prev = await q("SELECT MAX(t) AS t FROM decisions WHERE run_id=? AND t < ?", (run, r["t"] or 0))
         order_rows, calls = await decision_context([r])
         calls = [e for e in calls if e["t"] > ((prev[0]["t"] if prev else None) or 0)]

@@ -384,6 +384,20 @@ running pilot (whose own dashboard is on `PILOT_PORT`, 8790, on 127.0.0.1). It r
   "Last 30 turns; weak at 50% or less"), every order newest first with its fate, filters by kind and
   by fate, "in force, 3 of 8 turns followed" for open ones, a "backfilled" tag on rows from older
   decisions, a click opening the decision it came from, and the last stands with their actions.
+- **Actions** (Stellaris; each part only when the pilot publishes its data, which the Stellaris
+  levers work adds): the war crisis ("War crisis since 2291.03: a colony occupied (Arnvoss), lost 2
+  systems. Step 2 of 4: defensive stance.", from `info.crisis`), the action record in the Orders
+  tab's shape with Stellaris keys ("Directive: Defend", "Market: buy alloys", "Tech picks",
+  "Posture: naval capacity"; `info.order_record` live, `/api/orders` once the pillars file has
+  `[orders]`; a market resource marked "Suspended until recalibrated"), the market per resource from
+  the newest metrics row's `market` ("Alloys: 14% above base; net +5 a month; order: buy 5 a month
+  (economy)"), then the strategy's actions lately. The crisis also shows in the bar ("War crisis",
+  which does not scroll away), in the governor line's facts, at the top of Strategy with the
+  defence pillar's "need boosted ×2 (crisis)", and as a band on the chart (metrics rows' `crisis`).
+  The Directive figure lists the directive's postures ("postures: naval capacity on"; one not
+  enabled is greyed and says so on hover or focus; `info.postures` or the metrics row's). A
+  directive's policy report (the trace's `applied`) reads "Applied; 1 policy locked (diplomatic
+  stance: at war)" in its row and in Reasoning.
 - **Game health** (Civ VI, on Now, only when something is off): popups quieted at this load, tuner
   timeouts in the last calls, the last turn's time; in the warning colour when a popup failed to
   quiet or a turn was held. The governor line's facts say whether the last stand is armed or off.

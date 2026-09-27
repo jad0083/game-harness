@@ -102,3 +102,27 @@ def test_outcome_scoring_labels_its_window_in_the_games_unit(tmp_path):
     assert tel.score("civ6/k") == 1
     res = tel.query("SELECT result FROM decisions")[0]["result"]
     assert '"unit": "turns"' in res and '"months": 12' in res and '"military": -120' in res
+
+
+def test_a_directives_policy_report_reaches_the_page(tmp_path):
+    """Stellaris levers ruling 3 / dashboard ruling 23: a directive's `applied` report (policies set,
+    locked with why, already in force) rides along with its decision, and is absent when the pilot
+    does not publish it."""
+    runs = tmp_path / "runs"
+    tel = Telemetry(runs / "telemetry.sqlite")
+    log = EventLog(runs, "20260927-120000", "m", telemetry=tel)
+    log.emit("run_start", game="stellaris", model="m")
+    log.set_campaign("stellaris", "gaea", "Blooms of Gaea")
+    applied = {"set": ["economic_policy"], "locked": [{"policy": "diplomatic_stance", "why": "at war"}], "in_force": []}
+    log.save_trace(1, {"episode": 1, "date": "2291.03.01", "decision": "defend", "outcome": "applied", "reason": "Hold.",
+                       "steps": [], "applied": applied})
+    log.save_trace(2, {"episode": 2, "date": "2292.03.01", "decision": "keep", "outcome": "kept", "reason": "Hold.", "steps": []})
+
+    async def go():
+        async with TestClient(TestServer(make_app(None, runs, tel, corpora=CORPORA))) as c:
+            rows = await (await c.get("/api/decisions?campaign=stellaris/gaea")).json()
+            assert rows[0]["applied"] == applied and rows[1]["applied"] is None
+            d = await (await c.get("/api/decision?run=20260927-120000&episode=1")).json()
+            assert d["applied"] == applied
+    asyncio.run(go())
+    log.close()
