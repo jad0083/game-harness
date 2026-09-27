@@ -106,6 +106,10 @@ $candidates = [ordered]@{
     stellaris_install = Find-SteamGame 'Stellaris'
     galciv4_docs      = Find-DocsFolder 'My Games\GalCiv4'
     galciv4_install   = Find-SteamGame 'Galactic Civilizations IV'
+    civ6_docs         = Find-DocsFolder "My Games\Sid Meier's Civilization VI"
+    civ6_install      = Find-SteamGame "Sid Meier's Civilization VI"
+    # AppOptions.txt, Cache (DebugGameplay.sqlite) and Logs
+    civ6_appdata      = Join-Path $env:LOCALAPPDATA "Firaxis Games\Sid Meier's Civilization VI"
 }
 $roots = [ordered]@{}
 foreach ($k in $candidates.Keys) {
@@ -115,7 +119,8 @@ foreach ($k in $candidates.Keys) {
     $note = if (Test-Path $v) { '' } else { '  (not created yet)' }
     Write-Host "    $k = $v$note"
 }
-# Writable: only the governor's Stellaris mod and the file that enables mods (dlc_load.json).
+# Writable: only the governor's Stellaris mod and the file that enables mods (dlc_load.json), and
+# Civ VI's AppOptions.txt (below).
 $writeRoots = [ordered]@{}
 if ($roots['stellaris_docs']) {
     $writeRoots['stellaris_mods'] = [ordered]@{
@@ -123,6 +128,14 @@ if ($roots['stellaris_docs']) {
         allow = @('mod/governor_bridge/', 'mod/governor_bridge.mod', 'dlc_load.json')
     }
     Write-Host "    writable: $($roots['stellaris_docs']) (mod/governor_bridge/, mod/governor_bridge.mod, dlc_load.json)"
+}
+# Civ VI: only AppOptions.txt (EnableTuner, CopyDatabasesToDisk).
+if ($roots['civ6_appdata']) {
+    $writeRoots['civ6_options'] = [ordered]@{
+        path  = $roots['civ6_appdata']
+        allow = @('AppOptions.txt')
+    }
+    Write-Host "    writable: $($roots['civ6_appdata']) (AppOptions.txt)"
 }
 # No BOM: Windows PowerShell 5.1's Set-Content -Encoding UTF8 would add one.
 [IO.File]::WriteAllText((Join-Path $Dest 'roots.json'), (@{ roots = $roots; write_roots = $writeRoots } | ConvertTo-Json -Depth 5), (New-Object Text.UTF8Encoding $false))
