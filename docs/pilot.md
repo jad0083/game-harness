@@ -101,7 +101,9 @@ reserve); stopping early is simply not starting the next turn. The tuner does no
 AI plays its turn, so unanswered status polls are expected; only the turn's deadline counts (10
 minutes, for long late-game turns). A turn that does not start (20 s) or end in time, or a game that
 gives no snapshot three times between turns, stops the run until the human presses Resume (an
-autoplay call whose reply was lost and that did not start is first sent again, twice). Orders,
+autoplay call whose reply was lost and that did not start is first sent again, twice, but only
+while `civ6 turn-ready` reads the game idle at the same turn for 20 s: autoplay reads inactive
+before its last turn ends, so a start that runs is waited for, never sent twice). Orders,
 snapshots and human requests only ever happen between turns. `PILOT_AUTOPLAY_CHUNK` lets the AI play
 several turns per call (urgent checks then run between chunks). Each autoplay call turns the
 tutorial advisor off for the session: its popups wait for a click and hold the turn forever.

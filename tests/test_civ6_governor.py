@@ -95,6 +95,21 @@ def run_until_attention(g: Civ6Governor, limit_s: float = 5.0) -> None:
     assert attention, "the governor should wait for the human"
 
 
+def run_briefly(g: Civ6Governor, max_decisions: int = 2, limit_s: float = 10.0) -> bool:
+    """Run the governor for `max_decisions`; stop it if it waits for the human (then True)."""
+    import threading
+    import time
+    t = threading.Thread(target=g.run, kwargs={"max_decisions": max_decisions}, daemon=True)
+    t.start()
+    end = time.time() + limit_s
+    while t.is_alive() and g.log.state.status != "needs_attention" and time.time() < end:
+        time.sleep(0.01)
+    attention = g.log.state.status == "needs_attention"
+    g.stop()
+    t.join(5)
+    return attention
+
+
 def traces(setup) -> list[dict]:
     s, _ = setup
     return [json.loads(p.read_text()) for p in sorted((s.runs_dir / "civ1" / "traces").glob("0*.json"))]
@@ -802,6 +817,65 @@ def test_a_start_that_never_runs_after_two_retries_waits_for_the_human(setup):
     g = governor(setup, game, orders_model([]))
     run_until_attention(g)
     assert [a[0] for a in game.actions].count("autoplay") == 3, "the first call and two retries"
+
+
+def test_a_lost_start_reply_read_as_not_started_is_never_sent_again_while_it_runs(setup):
+    """The first answered poll after a lost start reply can land where autoplay reads inactive before
+    its turn ends (seen live). A start is sent again only once turn-ready shows the game idle at the
+    same turn; here it shows the turn handed back, so nothing is sent again."""
+    game = FakeCiv6(FIXTURE, index=INDEX, lost_start_reply=True, blink=True)
+    g = governor(setup, game, orders_model([]))
+    g.status_poll_s, g.start_grace_s = 0.15, 0.05
+    g.run(max_decisions=2)
+    starts = [a for a in game.actions if a[0] == "autoplay"]
+    assert all(not active for _, _, active in starts), f"an autoplay start went out while autoplay ran: {starts}"
+    assert len(starts) == 3, "one start per turn: the lost one ran"
+    assert game.state["turn"] == FIXTURE["turn"] + 3
+    assert traces(setup)[1]["date"] == f"T{FIXTURE['turn'] + 3}"
+
+
+class _StillPlaying(FakeCiv6):
+    """A start whose reply was lost runs for `playing` more calls, during which autoplay-status reads
+    inactive at the old turn (as before its last turn ends, seen live) and turn-ready reads `why`;
+    then the turn is handed back."""
+
+    def __init__(self, *a, playing: int = 0, why: str = "not our turn", **kw):
+        super().__init__(*a, lost_start_reply=True, **kw)
+        self.playing, self.why = playing, why
+
+    def _still(self) -> bool:
+        if not (self.active and self.playing > 0):
+            return False
+        self.playing -= 1
+        if self.playing == 0:                      # the running start hands back
+            self.active, self.remaining = False, 0
+            self.state["turn"] += 1
+        return True
+
+    def autoplay_status(self) -> dict:
+        if self._still():
+            return {"ok": True, "active": False, "turns": 0, "turn": self.state["turn"] - (self.playing == 0)}
+        return super().autoplay_status()
+
+    def turn_ready(self) -> dict:
+        active = self.active
+        if self._still():
+            self.actions.append(("turn_ready", active))
+            return {"ok": True, "ready": False, "why": [self.why], "turn": self.state["turn"] - (self.playing == 0)}
+        return super().turn_ready()
+
+
+@pytest.mark.parametrize("why", ["not our turn", "turn already sent", "autoplay active",
+                                 "cannot check: turn already sent"])
+def test_a_lost_start_is_waited_for_while_turn_ready_says_the_game_plays(setup, why):
+    game = _StillPlaying(FIXTURE, index=INDEX, playing=12, why=why)
+    g = governor(setup, game, orders_model([]))
+    g.status_poll_s, g.start_grace_s = 0.01, 0.02
+    assert not run_briefly(g), "waited for the human"
+    starts = [a for a in game.actions if a[0] == "autoplay"]
+    assert all(not active for _, _, active in starts), starts
+    assert len(starts) == 3, starts
+    assert game.state["turn"] == FIXTURE["turn"] + 3
 
 
 # ---- buy-out rules (docs/design/2026-09-27-civ6-levers-design.md, rulings 17-21) -----------------

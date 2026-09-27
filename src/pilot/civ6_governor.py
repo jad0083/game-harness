@@ -137,6 +137,16 @@ def prices_seen(messages) -> dict[tuple[str, str, str], dict]:
     return out
 
 
+# turn-ready's reasons that mean the game may still be playing a turn (a start whose reply was lost
+# may be running): autoplay on, the turn over or sent, or one of those unreadable. A popup does not
+# stop autoplay (E11) and a busy engine settles; neither means a turn is being played.
+_PLAYING = ("autoplay active", "not our turn", "turn already sent")
+
+
+def playing_reasons(why) -> list[str]:
+    return [str(w) for w in why or [] if str(w) in _PLAYING or str(w).startswith("cannot check")]
+
+
 class Civ6Stuck(RuntimeError):
     """The game did not play or hand back a turn in time, or stopped answering between turns."""
 
@@ -382,7 +392,9 @@ class Civ6Governor(Governor):
         is silent then); only the deadline (per turn) counts. A lost reply to the autoplay call is not
         a failure: the polls tell whether it started; a refusal is. A start whose reply was lost and
         that never ran (the tuner timed out, seen live at T57, T99, T117 and T120; Resume then
-        started it at once) is sent again, `start_retries` times, before the run waits for the human."""
+        started it at once) is sent again, `start_retries` times, before the run waits for the human,
+        but only once turn-ready shows nothing running (`_after_lost_start`): an inactive status
+        reading may come from a start that runs (autoplay reads inactive before its last turn ends)."""
         for attempt in range(self.start_retries + 1):
             started = time.time()
             lost = False
@@ -400,8 +412,52 @@ class Civ6Governor(Governor):
             except _NotStarted as e:
                 if not lost or attempt == self.start_retries:
                     raise
-                self.log.emit("briefing_error", error=f"{e}; its reply was lost, so it is sent again "
-                                                      f"({attempt + 1} of {self.start_retries})"[:300])
+                state, seen = self._after_lost_start(turn)
+                if isinstance(state, int):
+                    self.log.emit("turn", turn=state, turns=state - turn, seconds=round(time.time() - started, 1),
+                                  note="read by turn-ready after a lost start reply")
+                    return
+                if state == "wait":
+                    self.log.emit("briefing_error", error=f"{e}; its reply was lost and turn-ready reads {seen}: it may "
+                                                          "be running, so it is waited for, not sent again"[:300])
+                    self._wait_turns(turn, n, started, float("inf"))
+                    return
+                self.log.emit("briefing_error", error=f"{e}; its reply was lost and turn-ready reads the game idle at "
+                                                      f"T{turn}, so it is sent again ({attempt + 1} of "
+                                                      f"{self.start_retries})"[:300])
+
+    def _after_lost_start(self, turn: int) -> tuple[str | int, str]:
+        """After a start whose reply was lost reads as not started: 'resend' only when turn-ready reads
+        the game idle at `turn` (autoplay off, our turn, not sent, engine idle; a popup does not count)
+        on every answered poll for `start_grace_s` (autoplay reads inactive before its last turn ends);
+        the later turn when it reads the turn handed back; else 'wait' (a start may be running: it is
+        never sent again). Returns it with what turn-ready last said."""
+        idle_since, seen = None, "nothing (no answer)"
+        deadline = time.time() + 3 * self.start_grace_s
+        while True:
+            try:
+                r = self.game.turn_ready()
+            except Exception as e:  # noqa: BLE001 - no answer: the AI may be playing
+                r, seen = None, f"no answer ({type(e).__name__})"
+            if r is not None:
+                why, now_turn = [str(w) for w in r.get("why") or []], r.get("turn")
+                seen = ", ".join(why) or "ready"
+                if playing_reasons(why) or not isinstance(now_turn, int):
+                    return "wait", seen
+                busy = [w for w in why if not w.startswith("on screen: ")]
+                if busy:
+                    idle_since = None                   # the engine is busy: not idle yet
+                elif now_turn != turn:
+                    return now_turn, seen
+                elif idle_since is None:
+                    idle_since = time.time()
+                elif time.time() - idle_since >= self.start_grace_s:
+                    return "resend", seen
+            else:
+                idle_since = None
+            if time.time() > deadline:
+                return "wait", seen
+            time.sleep(max(self.status_poll_s, self.start_grace_s / 5))
 
     def _wait_turns(self, turn: int, n: int, started: float, grace: float) -> None:
         seen_active, misses, deadline = False, 0, self.turn_deadline_s * n
