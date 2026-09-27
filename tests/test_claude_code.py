@@ -205,3 +205,29 @@ def test_pilot_check_reports_the_cli(monkeypatch, capsys):
     monkeypatch.setattr(claude_code, "find_claude", lambda: "/home/u/.local/bin/claude")
     assert check_claude_cli(uses) is True
     assert "/home/u/.local/bin/claude" in capsys.readouterr().out
+
+
+def test_the_catalog_offers_versioned_claude_models_next_to_the_aliases(monkeypatch):
+    from pilot.config import Settings
+    from pilot.models import provider_catalog
+    monkeypatch.setattr(claude_code, "find_claude", lambda: "/usr/bin/claude-test")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    listing = {"anthropic": ["anthropic:claude-opus-5-5", "anthropic:claude-opus-4-5-20251101"]}
+    cc = {p["id"]: p for p in provider_catalog(Settings(), list_models=lambda provider: listing.get(provider, []))}["claude-code"]
+    assert {"claude-code:opus", "claude-code:claude-opus-5-5", "claude-code:claude-opus-4-5-20251101"} <= set(cc["models"])
+    assert cc["error"] == ""
+
+
+def test_a_failed_version_listing_keeps_the_aliases_and_says_why(monkeypatch):
+    from pilot.config import Settings
+    from pilot.models import provider_catalog
+    monkeypatch.setattr(claude_code, "find_claude", lambda: "/usr/bin/claude-test")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+
+    def listing(provider):
+        if provider == "anthropic":
+            raise RuntimeError("listing down")
+        return []
+    cc = {p["id"]: p for p in provider_catalog(Settings(), list_models=listing)}["claude-code"]
+    assert "claude-code:opus" in cc["models"] and not any("claude-opus-5" in m for m in cc["models"])
+    assert "versions not listed" in cc["error"] and "listing down" in cc["error"]
