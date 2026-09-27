@@ -127,14 +127,14 @@
 - [x] Dashboard redesign: readout strip, warm ivory on deep space, amber accent, Bricolage Grotesque + Fraunces, hairline sections instead of cards; PC status chip, campaign titles, markdown in the model's text, show-all decisions
 - [x] Game speed and decision interval shown and changeable on the dashboard (live and for the next run)
 - [x] Dashboard follows the live campaign; no-store responses; transient model errors retried
-- [x] Strategy layer: seven pillar strategies set by a Strategist model role at reviews and events, framing each directive; tech picks and market orders; Strategy tab with edit and pin (spec docs/superpowers/specs/2026-09-26-strategy-layer-design.md; deployed aaef9d3 + 0ad01e7, 30-year live evaluation running)
+- [x] Strategy layer: seven pillar strategies set by a Strategist model role at reviews and events, framing each directive; tech picks and market orders; Strategy tab with edit and pin (spec docs/design/2026-09-26-strategy-layer-design.md; deployed aaef9d3 + 0ad01e7, 30-year live evaluation running)
 - [ ] War-readiness briefing (Theian postmortem): naval-capacity maximum, occupied planets, shipyards, fleets, production per planet, own vs. allies' battles; urgent triggers for military −50%, occupation, system lost
 - [ ] Directive read-back: check each directive's policies in the next save and report the ones that did not change; every directive sets all its policies
 - [ ] Two shipyards in different systems and alloys on two or more planets before any war (strategy rule and mod budget nudge)
 - [ ] Monthly fleet snapshot in telemetry to find what destroys ships in peacetime
 - [ ] Full decision prompts in traces (no 6,000-character cut)
 - [x] CI skips the Rust stages for commits with no Rust, Cargo or corpus files (`scripts/ci-needs-rust.sh`)
-- [x] Game pillars: each game defines its strategy pillars, metrics and actions in `corpora/<game>/pillars.toml`; the strategy layer, decisions, actions and dashboard use them as guardrails (spec docs/superpowers/specs/2026-09-26-game-pillars-design.md; deployed 2e9f24d on mini-rig2, two live reviews accepted with milestones and trait-based identity)
+- [x] Game pillars: each game defines its strategy pillars, metrics and actions in `corpora/<game>/pillars.toml`; the strategy layer, decisions, actions and dashboard use them as guardrails (spec docs/design/2026-09-26-game-pillars-design.md; deployed 2e9f24d on mini-rig2, two live reviews accepted with milestones and trait-based identity)
 - [ ] Civilization VI integration (after game pillars)
 
 ## Hosts

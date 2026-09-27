@@ -15,7 +15,7 @@ def needs_rust(*paths: str) -> bool:
 
 def test_python_docs_and_learned_files_skip_rust():
     assert not needs_rust("src/pilot/governor.py", "tests/test_governor.py", "plan.md", "issues.md",
-                          "docs/superpowers/plans/x.md", "games/stellaris-spike/journal.md",
+                          "docs/plans/x.md", "games/stellaris-spike/journal.md",
                           "corpora/stellaris/learned/strategy.md", "src/pilot/static/dashboard.html")
 
 

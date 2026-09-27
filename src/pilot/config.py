@@ -81,7 +81,7 @@ class Settings:
 
     @property
     def pillars_file(self) -> Path:
-        """The game's strategy pillars (docs/superpowers/specs/2026-09-26-game-pillars-design.md)."""
+        """The game's strategy pillars (docs/design/2026-09-26-game-pillars-design.md)."""
         return self.corpus_dir / "pillars.toml"
 
     @property

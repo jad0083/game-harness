@@ -1,14 +1,12 @@
 # Strategy Layer Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-
 **Goal:** Replace the governor's free-text plan and retrospective with versioned per-pillar strategies, set by a Strategist on its own model role, that frame every directive and carry two player actions (preferred tech picks, small market orders).
 
 **Architecture:** A pure-Python `pilot/strategy.py` holds the data model, validation, directive ranking and milestone status. The governor runs the Strategist (role `strategy`) at start, every N decisions, on events and on request, stores versions in telemetry (`strategies` table), puts a frame in every decision prompt and tags off-frame choices. Tech picks and market orders are MCP tools in the Rust controller (`stellaris_pick_tech`, `stellaris_market_sync`), whose selection logic is pure and unit-tested and whose screen positions live in the Stellaris manifest. The dashboard gets a Strategy tab with edit/pin/history.
 
 **Tech Stack:** Python 3.13, pydantic, pydantic-ai, aiohttp, SQLite; Rust (game-controller, jomini); vanilla JS dashboard.
 
-**Spec:** `docs/superpowers/specs/2026-09-26-strategy-layer-design.md`
+**Spec:** `docs/design/2026-09-26-strategy-layer-design.md`
 
 ## Global Constraints
 
@@ -134,7 +132,7 @@ Expected: FAIL (`ModuleNotFoundError: No module named 'pilot.strategy'`)
 - [ ] **Step 3: Implement `src/pilot/strategy.py`**
 
 ```python
-"""Pillar strategies: the governor's top-down frame (docs/superpowers/specs/2026-09-26-strategy-layer-design.md).
+"""Pillar strategies: the governor's top-down frame (docs/design/2026-09-26-strategy-layer-design.md).
 
 Pure data and rules; no model calls, no game input."""
 

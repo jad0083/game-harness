@@ -1,14 +1,12 @@
 # Game Pillars Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-
 **Goal:** Move the strategy layer's Stellaris-specific pillars, directive mapping, metrics, aliases and action limits into `corpora/<game>/pillars.toml`, and drive validation, the Strategist's schema and prompt, decisions, actions, human edits and the dashboard from that file.
 
 **Architecture:** A new pure module `src/pilot/pillars.py` loads and validates `corpora/<game>/pillars.toml` into a frozen `PillarSpec` (cached per corpus). `src/pilot/strategy.py` stays the stored data model but every rule takes the spec, and it generates the Strategist's output model (one named optional field per pillar, action fields only on declaring pillars) and prompt from it. The governor loads the spec per game (strategy layer off with one clear error when the file is missing or invalid), dispatches actions through a kind → game-method hook table, and the dashboard serves the spec with `/api/strategy` so the Strategy tab renders labels, ranking and edit fields from it.
 
 **Tech Stack:** Python 3.13 (`tomllib`, dataclasses), pydantic v2 (`create_model`, `model_validator`), pydantic-ai (`FunctionModel` in tests), aiohttp, SQLite telemetry, vanilla JS dashboard, Playwright (headless check only, not committed).
 
-**Spec:** `docs/superpowers/specs/2026-09-26-game-pillars-design.md`
+**Spec:** `docs/design/2026-09-26-game-pillars-design.md`
 
 ## Global Constraints
 
@@ -208,7 +206,7 @@ Expected: FAIL — `ModuleNotFoundError: No module named 'pilot.pillars'`.
 ```toml
 # Stellaris strategy pillars: what the Strategist may write and how it is checked, which directive
 # each pillar ranks, which metrics milestones may use, and the limits of the two player actions.
-# Loaded by src/pilot/pillars.py (docs/superpowers/specs/2026-09-26-game-pillars-design.md).
+# Loaded by src/pilot/pillars.py (docs/design/2026-09-26-game-pillars-design.md).
 # Unknown keys are an error; directives must exist in directives.toml. Pillar order = display
 # fallback; priorities come from the Strategist.
 
@@ -283,7 +281,7 @@ ids_from_corpus = "tech"       # data/tech.json
 
 ```python
 """Game pillars: each game's strategy guardrails, read from corpora/<game>/pillars.toml
-(docs/superpowers/specs/2026-09-26-game-pillars-design.md).
+(docs/design/2026-09-26-game-pillars-design.md).
 
 Pure data; no model calls, no game input. Unknown keys are an error (fail fast, naming the key)."""
 
@@ -811,10 +809,10 @@ Expected: FAIL — `ImportError: cannot import name 'apply_aliases' from 'pilot.
 - [ ] **Step 3: Rewrite `src/pilot/strategy.py`**
 
 ```python
-"""Pillar strategies: the governor's top-down frame (docs/superpowers/specs/2026-09-26-strategy-layer-design.md).
+"""Pillar strategies: the governor's top-down frame (docs/design/2026-09-26-strategy-layer-design.md).
 
 Game-agnostic: the pillars, directive mapping, metrics, aliases and action limits come from the
-game's `PillarSpec` (pillars.py; docs/superpowers/specs/2026-09-26-game-pillars-design.md).
+game's `PillarSpec` (pillars.py; docs/design/2026-09-26-game-pillars-design.md).
 Pure data and rules; no model calls, no game input."""
 
 from __future__ import annotations
@@ -1662,7 +1660,7 @@ Expected: FAIL — `PillarsError` raised from `Governor.__init__`; `KeyError: 'p
 ```python
     @property
     def pillars_file(self) -> Path:
-        """The game's strategy pillars (docs/superpowers/specs/2026-09-26-game-pillars-design.md)."""
+        """The game's strategy pillars (docs/design/2026-09-26-game-pillars-design.md)."""
         return self.corpus_dir / "pillars.toml"
 ```
 

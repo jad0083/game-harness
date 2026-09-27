@@ -1,5 +1,5 @@
 """Game pillars: each game's strategy guardrails, read from corpora/<game>/pillars.toml
-(docs/superpowers/specs/2026-09-26-game-pillars-design.md).
+(docs/design/2026-09-26-game-pillars-design.md).
 
 Pure data; no model calls, no game input. Unknown keys are an error (fail fast, naming the key)."""
 
@@ -63,7 +63,7 @@ class ActionLimits:
 @dataclass(frozen=True)
 class WeightsSpec:
     """How pillar weights are bounded and how milestone status turns weight into pressure
-    (docs/superpowers/specs/2026-09-26-weighted-pillars-design.md). The defaults leave weights free
+    (docs/design/2026-09-26-weighted-pillars-design.md). The defaults leave weights free
     and pressure equal to weight."""
     mode: str = "exclusive"          # exclusive: one standing directive; share: effort split across levers
     min: int = 0

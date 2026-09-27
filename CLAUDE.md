@@ -23,7 +23,7 @@ The operating guide for this repository is **[AGENTS.md](AGENTS.md)** — shared
 - MCP: `.mcp.json` registers the `game` server (`./target/release/game-controller mcp`); build it
   with `cargo build --release -p game-controller`.
 - Workflow: commit through `scripts/ci-commit.sh` (AGENTS.md §8); keep `plan.md`, `issues.md`,
-  README and ARCHITECTURE in sync; no AI attribution in commits or files.
+  README, ARCHITECTURE and docs/ in sync; no AI attribution in commits or files.
 
 ## Codeman Environment
 

@@ -630,7 +630,7 @@ def test_the_prompt_states_the_detail_rules():
     assert "Each stance cites at least one figure from the briefing" in text
 
 
-# ---- weighted pillars (docs/superpowers/specs/2026-09-26-weighted-pillars-design.md) ---------------
+# ---- weighted pillars (docs/design/2026-09-26-weighted-pillars-design.md) ---------------
 
 W = {"defence": 30, "economy": 22, "technology": 16, "expansion": 12, "diplomacy": 8, "government": 7, "society": 5}
 
