@@ -442,7 +442,8 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   `conditions`/`war_crisis` C1-C6, `crisis_step` the enter/exit state machine, `status_quo`,
   `crisis_alloys`; the governor's `_crisis_update` in `_observe`, the ladder in `_decide`
   (`_crisis_review` and `_crisis_boost_row` before the prompt, `_crisis_choice`, `_crisis_posture_step`, `_crisis_market` in
-  the market sync, `_crisis_finish`), `_need_boost` in `_pressures` ({} for Civ VI), `_set_pace`,
+  the market sync, `_crisis_finish`), `_need_boost` in `_pressures` ({} for Civ VI; `boost_pressures` applies it there and in the
+  dashboard's `/api/strategy` for the live campaign), `_set_pace`,
   `crisis` events (enter/exit/ladder/closed, and `state` from `_save_crisis_state` for changes between
   them) reloaded by `_load_crisis`; `Settings.war_crisis` from `PILOT_WAR_CRISIS`),
   `edit_pillar`/`unpin_pillar`/`request_review` under `_strategy_lock`. Telemetry: `strategies`

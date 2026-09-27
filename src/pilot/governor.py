@@ -37,7 +37,7 @@ from .config import Settings
 from .events import EventLog
 from .learning import Journal, LearnedStore, LearningRejected
 from .pillars import ACTION_KINDS, OrdersSpec, PillarsError, PillarSpec, load_pillars, load_postures
-from .stellaris_crisis import CRISIS_PACE, POSTURE_GAP_MONTHS, crisis_alloys, crisis_step, status_quo
+from .stellaris_crisis import CRISIS_PACE, POSTURE_GAP_MONTHS, boost_pressures, crisis_alloys, crisis_step, status_quo
 from .stellaris_market import buy_errors, idle_fill, keep_placed, price_note
 from .stellaris_planets import (
     colony_row,
@@ -2255,13 +2255,7 @@ class Governor:
                         press[name]["hint"] = hint
             else:
                 press = pressures(self.strategy, spec, lambda _n, _m: "")
-            for name, status in boost.items():      # a war crisis (ruling 13, step 2): need missed, no stall factor
-                if name in press:
-                    p, need = press[name], spec.weights.need.get(status, 1.0)
-                    p.pop("efficacy", None)
-                    p.pop("record", None)
-                    p.update(need=need, status="war crisis", pressure=round(p["weight"] * need, 1))
-            return press
+            return boost_pressures(press, spec, boost)   # a war crisis (ruling 13, step 2): need missed, no stall factor
         except Exception as e:  # noqa: BLE001 - advisory; the decision still runs on weights
             self.log.emit("briefing_error", error=f"pressure: {type(e).__name__}: {e}"[:200])
             return None

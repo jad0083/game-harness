@@ -4950,6 +4950,36 @@ def test_the_need_boost_raises_defence_in_the_frame_only_during_a_crisis(setup):
     assert press["economy"]["need"] == 1.0
 
 
+def test_the_dashboard_shows_the_pressure_the_governor_used_during_a_crisis(setup, tmp_path):
+    """Ruling 13 step 2 publishes the boost so the Strategy tab shows it: api_strategy applies it as
+    `_pressures` does, for the live governor's campaign only."""
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from pilot.dashboard import make_app
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(s.runs_dir, "rcr", s.model, telemetry=tel)
+    g = Governor(s, FakeStellaris([briefing("2256.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": _strategist([])})
+    log.emit("run_start", model=s.model, game=s.game)
+    log.set_campaign("stellaris", "c9", "Test")
+    g._review_strategy(briefing("2256.01.01"), "start of run")
+
+    async def pressure() -> dict:
+        async with TestClient(TestServer(make_app(g, s.runs_dir, tel))) as c:
+            return (await (await c.get(f"/api/strategy?campaign={log.campaign_id}")).json())["pressure"]
+    assert asyncio.run(pressure())["defence"]["status"] != "war crisis"
+    g._crisis = {"active": True, "since": "2256.02.01", "conditions": [["C1", "Arnvoss occupied"]], "quiet": 0,
+                 "entries": {}, "wars": [_WAR["id"]]}
+    g._publish_crisis()
+    shown, used = asyncio.run(pressure())["defence"], g._pressures()["defence"]
+    assert shown["status"] == used["status"] == "war crisis" and shown["need"] == used["need"] == 2.0
+    assert shown["pressure"] == used["pressure"] and "efficacy" not in shown
+
+
 def test_civ6_keeps_its_triggers_and_pressures():
     from pilot.civ6_governor import Civ6Governor
     assert "war going badly" in Governor.event_triggers and "war going badly" not in Civ6Governor.event_triggers

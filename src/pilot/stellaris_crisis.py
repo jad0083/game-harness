@@ -117,6 +117,20 @@ def crisis_step(state: dict | None, rows: list[dict], now: dict, prev: dict | No
     return s, None
 
 
+def boost_pressures(press: dict, spec, boost: dict[str, str]) -> dict:
+    """Ladder step 2 on a pressure table (strategy.pressures; `spec` its PillarSpec): each pillar of
+    `boost` ({pillar: need status}, the governor's `_need_boost`) gets that status's need, no stall
+    factor or record, and the status "war crisis". Changes `press` in place and returns it; the
+    governor's frame and the dashboard's Strategy tab both use it."""
+    for name, status in (boost or {}).items():
+        if name in press:
+            p, need = press[name], spec.weights.need.get(status, 1.0)
+            p.pop("efficacy", None)
+            p.pop("record", None)
+            p.update(need=need, status="war crisis", pressure=round(p["weight"] * need, 1))
+    return press
+
+
 def status_quo(now: dict, rows: list[dict], conds: list[tuple[str, str]]) -> list[tuple[str, str]]:
     """The wars to ask the human about (ruling 15), with the question: when a colony is occupied (C1) or
     systems fell (C2), or our war exhaustion is 0.6 or more and at least theirs, or their side can
