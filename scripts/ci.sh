@@ -41,4 +41,7 @@ stage "python: ruff + pytest"
 .venv/bin/ruff check .
 .venv/bin/pytest -q 2>&1 | tail -1
 
+stage "civ6 Lua library under LuaJIT (lupa from its own cache; pytest above skips it)"
+scripts/civ6-lua-check.sh 2>&1 | tail -1
+
 printf '\nCI OK\n'

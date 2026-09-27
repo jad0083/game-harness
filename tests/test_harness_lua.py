@@ -3,7 +3,8 @@ tests/fixtures/civ6_lua_mock.lua. It proves syntax and control flow of the snaps
 religion and blocker fields (docs/design/2026-09-27-civ6-levers-design.md, ruling 11) and of the
 last stand's calls (rulings 22-27); API names
 and results are checked live (games/civ6-kublai/journal.md). Skipped when lupa is not installed:
-`scripts/civ6-lua-check.sh` runs them with lupa from a cache folder of its own."""
+`scripts/civ6-lua-check.sh` runs them with lupa from a cache folder of its own, as a stage of
+`scripts/ci.sh`."""
 
 import json
 
