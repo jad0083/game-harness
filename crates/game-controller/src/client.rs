@@ -314,9 +314,32 @@ impl AgentClient {
         Ok(())
     }
 
-    /// Read a file (from `offset`, at most `max` bytes) inside one of the agent's roots.
-    /// Returns the bytes and the file's total size.
+    /// Read a file (from `offset`, at most `max` bytes; `None` = to the end) inside one of the
+    /// agent's roots. Returns the bytes and the file's total size. The agent caps one response
+    /// (16 MiB since 1.5.0), so larger reads are fetched in pages; the size of the first response
+    /// is the end, and a file that shrinks meanwhile (a save being rewritten) is an error.
     pub async fn files_read(&self, root: &str, path: &str, offset: u64, max: Option<u64>) -> Result<(Vec<u8>, u64)> {
+        let (mut out, size) = self.files_read_page(root, path, offset, max).await?;
+        let end = max.map_or(size, |m| offset.saturating_add(m).min(size));
+        loop {
+            let at = offset.saturating_add(out.len() as u64);
+            if at >= end {
+                break;
+            }
+            let (chunk, now) = self.files_read_page(root, path, at, Some(end - at)).await?;
+            if now < end {
+                anyhow::bail!("/files/read {root}:{path}: the file changed while reading ({size} -> {now} bytes)");
+            }
+            if chunk.is_empty() {
+                break;
+            }
+            out.extend_from_slice(&chunk);
+        }
+        Ok((out, size))
+    }
+
+    /// One /files/read request (the agent may return fewer bytes than asked).
+    async fn files_read_page(&self, root: &str, path: &str, offset: u64, max: Option<u64>) -> Result<(Vec<u8>, u64)> {
         let mut q = vec![("root", root.to_string()), ("path", path.to_string()), ("offset", offset.to_string())];
         if let Some(m) = max {
             q.push(("max", m.to_string()));
@@ -493,6 +516,67 @@ mod tests {
         let url = one_shot("200 OK", r#"{"ok":true,"focused":"Stellaris"}"#).await;
         let c = AgentClient::new(Some(&url), Some("t")).unwrap();
         assert_eq!(c.focus("Stell").await.unwrap(), "Stellaris");
+    }
+
+    /// A fake /files/read that returns at most `cap` bytes per response, like the agent's
+    /// MAX_READ, and reports `sizes[i]` as the file size of the i-th response (last one repeats).
+    async fn paging_agent(data: Vec<u8>, cap: usize, sizes: Vec<u64>) -> (String, std::sync::Arc<std::sync::atomic::AtomicUsize>) {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        let calls = std::sync::Arc::new(AtomicUsize::new(0));
+        let counter = calls.clone();
+        tokio::spawn(async move {
+            loop {
+                let (mut sock, _) = listener.accept().await.unwrap();
+                let mut buf = vec![0u8; 8192];
+                let n = sock.read(&mut buf).await.unwrap();
+                let req = String::from_utf8_lossy(&buf[..n]).to_string();
+                let line = req.lines().next().unwrap_or("").to_string();
+                let param = |k: &str| -> Option<u64> {
+                    let q = line.split_once('?')?.1.split(' ').next()?;
+                    q.split('&').find_map(|kv| kv.strip_prefix(&format!("{k}="))?.parse().ok())
+                };
+                let i = counter.fetch_add(1, Ordering::SeqCst);
+                let size = *sizes.get(i).or(sizes.last()).unwrap();
+                let off = param("offset").unwrap_or(0).min(data.len() as u64) as usize;
+                let max = param("max").unwrap_or(u64::MAX).min(cap as u64) as usize;
+                let body = &data[off..(off + max).min(data.len())];
+                let head = format!(
+                    "HTTP/1.1 200 OK\r\ncontent-type: application/octet-stream\r\nx-file-size: {size}\r\ncontent-length: {}\r\nconnection: close\r\n\r\n",
+                    body.len()
+                );
+                sock.write_all(head.as_bytes()).await.unwrap();
+                sock.write_all(body).await.unwrap();
+            }
+        });
+        (url, calls)
+    }
+
+    #[tokio::test]
+    async fn files_read_pages_past_the_agents_per_response_cap() {
+        let data: Vec<u8> = (0..25u8).collect();
+        let (url, calls) = paging_agent(data.clone(), 10, vec![25]).await;
+        let c = AgentClient::new(Some(&url), Some("t")).unwrap();
+        let (bytes, size) = c.files_read("r", "save.sav", 0, None).await.unwrap();
+        assert_eq!((bytes, size), (data.clone(), 25));
+        assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 3);
+        let (tail, _) = c.files_read("r", "save.sav", 18, None).await.unwrap();
+        assert_eq!(tail, data[18..]);
+        let (some, _) = c.files_read("r", "save.sav", 2, Some(15)).await.unwrap();
+        assert_eq!(some, data[2..17], "an explicit max is honoured across pages");
+        let (none, size) = c.files_read("r", "save.sav", 0, Some(0)).await.unwrap();
+        assert_eq!((none.len(), size), (0, 25), "max=0 asks only for the size");
+    }
+
+    #[tokio::test]
+    async fn files_read_fails_when_the_file_shrinks_between_pages() {
+        let data: Vec<u8> = (0..25u8).collect();
+        let (url, _) = paging_agent(data, 10, vec![25, 5]).await;
+        let c = AgentClient::new(Some(&url), Some("t")).unwrap();
+        let e = c.files_read("r", "save.sav", 0, None).await.unwrap_err().to_string();
+        assert!(e.contains("changed"), "{e}");
     }
 
     fn drag_json(opts: DragOptions) -> serde_json::Value {

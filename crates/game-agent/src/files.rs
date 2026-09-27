@@ -16,8 +16,9 @@ use std::io::{Read, Seek, SeekFrom};
 use std::path::{Component, Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
-/// Largest single read (bytes). Stellaris saves are typically a few MB; late-game ones tens of MB.
-pub const MAX_READ: u64 = 128 * 1024 * 1024;
+/// Largest single read (bytes). Stellaris saves are a few MB; a larger file is read in pages with
+/// `offset` (the response's `X-File-Size` tells the client how much is left).
+pub const MAX_READ: u64 = 16 * 1024 * 1024;
 /// Largest single write (bytes): mod scripts and small config files.
 pub const MAX_WRITE: usize = 4 * 1024 * 1024;
 
@@ -385,6 +386,20 @@ mod tests {
         let r = write_roots(d.path());
         assert!(r.write("w", "mod/bridge/new/deeper/x.txt", b"x").unwrap_err().contains("link"));
         assert!(!outside.path().join("new").exists(), "no directory may be created outside the root");
+    }
+
+    #[test]
+    fn a_single_read_is_capped() {
+        let d = tempdir::TempDirLite::new("cap");
+        let f = std::fs::File::create(d.path().join("big.bin")).unwrap();
+        f.set_len(MAX_READ + 10).unwrap();
+        let mut r = Roots::default();
+        r.roots.insert("g".into(), d.path().to_path_buf());
+        let (bytes, size) = r.read("g", "big.bin", 0, u64::MAX).unwrap();
+        assert_eq!((bytes.len() as u64, size), (MAX_READ, MAX_READ + 10));
+        let (rest, _) = r.read("g", "big.bin", MAX_READ, u64::MAX).unwrap();
+        assert_eq!(rest.len(), 10, "the rest is paged with offset");
+        const { assert!(MAX_READ <= 16 * 1024 * 1024, "one response stays small") };
     }
 
     #[test]

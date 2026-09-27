@@ -42,8 +42,18 @@ class Agent:
             return json.load(r)["entries"]
 
     def read(self, rel: str) -> bytes:
-        with self._get("/files/read", root=ROOT, path=rel) as r:
-            return r.read()
+        """The whole file, in pages: the agent caps one response (16 MiB since 1.5.0)."""
+        data, size = b"", None
+        while True:
+            with self._get("/files/read", root=ROOT, path=rel, offset=len(data)) as r:
+                now = int(r.headers.get("X-File-Size", "0"))
+                chunk = r.read()
+            size = now if size is None else size
+            if now != size:
+                raise RuntimeError(f"{rel}: the file changed while reading ({size} -> {now} bytes)")
+            data += chunk
+            if not chunk or len(data) >= size:
+                return data
 
 
 def fetch(agent: Agent, rel: str, out: Path, stats: dict) -> None:
