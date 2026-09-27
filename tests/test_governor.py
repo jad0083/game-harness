@@ -4708,11 +4708,14 @@ def test_a_colony_occupied_at_war_runs_the_ladder_in_order(setup):
     ep = [e for e in log.recent if e["kind"] == "episode"][1]
     assert ep["situation"] == "urgent: war going badly: Arnvoss occupied", ep["situation"]
     review = _index(log, lambda e: e["kind"] == "strategy_review" and e["trigger"].startswith("war going badly"))
+    boost = _index(log, lambda e: e["kind"] == "order_outcome" and e.get("key") == "crisis need boost")
     defend = _index(log, lambda e: e["kind"] == "order_followed" and e["action"]["key"] == "crisis defend")
     posture = _index(log, lambda e: e["kind"] == "order_outcome" and e.get("key") == "crisis posture war_crisis")
     market = _index(log, lambda e: e["kind"] == "order_followed" and e["action"]["key"] == "crisis market buy alloys")
     cadence = _index(log, lambda e: e["kind"] == "order_outcome" and e.get("key") == "crisis cadence")
-    assert review < defend < posture < market < cadence
+    assert review < boost < defend < posture < market < cadence
+    assert (_row_of(log, "crisis need boost")["result"], _row_of(log, "crisis need boost")["detail"]) == (
+        "done", "defence need missed (2.0), no stall factor, while the crisis lasts")
     assert ("directive", "defend") in game.actions, "the model's keep is overridden by defend"
     assert "not verified" in _row_of(log, "crisis posture war_crisis")["detail"]
     assert _row_of(log, "crisis posture war_crisis")["result"] == "no_op"
@@ -4723,6 +4726,16 @@ def test_a_colony_occupied_at_war_runs_the_ladder_in_order(setup):
     assert "war crisis: defend forced over keep" in log.state.last_decision
     question = [e for e in log.recent if e["kind"] == "question"]
     assert len(question) == 1 and question[0]["blocking"] is False and "status-quo" in question[0]["question"]
+
+
+def test_the_need_boost_row_says_why_nothing_was_boosted(setup, monkeypatch):
+    s, log = setup
+    game = FakeStellaris([_war_save("2256.01.01"), _war_save("2256.02.01", occupied=True)])
+    g = Governor(s, game, log, model=decisions("expand", "keep"), role_models={"strategy": _strategist([])})
+    monkeypatch.setattr(g, "_need_boost", dict)       # a strategy whose pillars rank no defend
+    g.run(max_decisions=2)
+    row = _row_of(log, "crisis need boost")
+    assert (row["result"], row["detail"]) == ("no_op", "no pillar ranks defend")
 
 
 def test_no_alloys_without_a_shipyard_in_a_system_we_control(setup):

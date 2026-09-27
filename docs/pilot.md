@@ -391,7 +391,8 @@ months; not while you paused the run. The urgent reason `war going badly: <condi
 ladder at that decision, in order:
 1. a strategy review before the decision (12-month cap);
 2. the pillar that ranks `defend` gets need *missed* (2.0) and no stall factor while the crisis lasts
-   (the frame shows "war crisis"; dashboard `crisis`);
+   (the frame shows "war crisis"; dashboard `crisis`; row `crisis need boost`, `no_op` when no pillar
+   ranks defend or there is no strategy);
 3. `defend` is applied if the decision would leave it or not take it (`crisis defend`; the model's
    other choices stand; your own override on the dashboard stands until the crisis ends);
 4. the `war_crisis` posture, only when it is enabled in `directives.toml` and the save shows the

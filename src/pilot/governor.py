@@ -1303,6 +1303,17 @@ class Governor:
         self._crisis_row("review", "done" if ran else "no_op", "strategy review ran" if ran
                          else "skipped: within 12 months of the last event review", b["date"])
 
+    def _crisis_boost_row(self, b: dict) -> None:
+        """Step 2's row: which pillar the need boost raises in the frame (`_need_boost`), or why none."""
+        boost = self._need_boost()
+        if boost and self.strategy is not None:
+            self._crisis_row("need boost", "done", f"{', '.join(boost)} need missed "
+                             f"({self.pillars.weights.need.get('missed', 2.0):.1f}), no stall factor, while the crisis lasts",
+                             b["date"])
+        else:
+            self._crisis_row("need boost", "no_op", "the strategy layer is off" if self.pillars is None
+                             else "no strategy yet" if self.strategy is None else "no pillar ranks defend", b["date"])
+
     def _crisis_choice(self, b: dict, current: str | None, chosen: str, ladder: str | None) -> tuple[str, str | None]:
         """Step 3: while a crisis is on, `defend` replaces a choice that would leave it or never take it
         (recorded as `crisis defend`). (the directive to apply, the model's choice it replaced or None)."""
@@ -1646,6 +1657,7 @@ class Governor:
         ladder = self._crisis_pending if self._ladder_allowed() else None     # "enter" / "exit" / None
         if ladder == "enter":
             self._crisis_review(b, reviewed_at_start)       # step 1, so the decision gets the new frame
+            self._crisis_boost_row(b)                        # step 2, applied in _pressures below
         press = self._pressures() if self.strategy and self.pillars else None
         prompt = [f"Decision point: {reason}.",
                   f"Current directive: {current or 'none'}{held}.",
