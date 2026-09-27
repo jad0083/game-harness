@@ -17,6 +17,7 @@ from dataclasses import dataclass, replace
 
 from pydantic_ai import Agent, RunContext, Tool
 from pydantic_ai.exceptions import UsageLimitExceeded
+from pydantic_ai.messages import ToolCallPart, ToolReturnPart
 from pydantic_ai.usage import UsageLimits
 
 from .civ6 import (
@@ -29,8 +30,12 @@ from .civ6 import (
     GameRefused,
     briefing_text,
     check_orders,
+    faith_reserve_now,
+    gold_reserve_now,
     held_outcome,
     idle_counts,
+    in_danger,
+    is_defender,
     metrics,
     order_base,
     order_key,
@@ -76,21 +81,50 @@ the human wants something done, tell them to use "Decide now" or a standing orde
 
 def autoplay_turns(snapshot: dict, *, chunk: int, left: int) -> int:
     """Turns for the next autoplay call: `chunk` in peace (longer calls let the AI finish its
-    multi-turn plans; one-turn calls stalled a Settler and the pantheon live), a single turn at war or
-    with a threatened or besieged city (checks between every turn), never past the decision point."""
-    danger = bool(snapshot.get("wars")) or any(c.get("threatened") or c.get("under_siege")
-                                                for c in snapshot.get("cities", []))
+    multi-turn plans; one-turn calls stalled a Settler and the pantheon live), a single turn at war
+    with a major or with a city in danger (`in_danger`; checks between every turn), never past the
+    decision point. Amendment A1 of docs/design/2026-09-27-civ6-levers-design.md: "threatened" (any
+    enemy within 3 tiles) held in 93% of city snapshots, so the chunk almost never ran."""
+    war = any(w.get("major", True) for w in snapshot.get("wars") or [])
+    danger = war or any(in_danger(c) for c in snapshot.get("cities", []))
     return max(1, min(1 if danger else chunk, left))
 
 
 EVENT_TRIGGERS_CIV6 = (*EVENT_TRIGGERS, "city lost", "city threatened", "new era", "race lost")
 
 
-def price(ctx: RunContext[GovDeps], city: str, item: str, currency: str = "gold") -> str:
+def price(ctx: RunContext[GovDeps], city: str, item: str, currency: str = "both") -> str:
     """The live price of a unit or building (corpus id, e.g. unit:warrior) in one of our cities, in
-    gold or faith, and whether the game allows buying it now."""
-    return json.dumps(ctx.deps.game.order({"kind": "price", "city": city, "id": item,
-                                           "currency": "faith" if currency == "faith" else "gold"}))
+    gold and in faith (or only `currency`), and whether the game allows buying it now."""
+    ask = lambda cur: ctx.deps.game.order({"kind": "price", "city": city, "id": item, "currency": cur})
+    if currency in ("gold", "faith"):
+        return json.dumps(ask(currency))
+    return json.dumps({cur: ask(cur) for cur in ("gold", "faith")})
+
+
+def prices_seen(messages) -> dict[tuple[str, str, str], dict]:
+    """The `price` tool's answers in a decision, by (city lowercased, corpus id, currency): a known
+    price over a purchase's cap is refused before sending (ruling 19)."""
+    calls, out = {}, {}
+    for m in messages:
+        for part in getattr(m, "parts", []):
+            if isinstance(part, ToolCallPart) and part.tool_name == "price":
+                calls[part.tool_call_id] = part.args_as_dict()
+            elif isinstance(part, ToolReturnPart) and part.tool_name == "price" and part.tool_call_id in calls:
+                args = calls[part.tool_call_id]
+                try:
+                    reply = json.loads(part.content) if isinstance(part.content, str) else part.content
+                except ValueError:
+                    continue
+                if not isinstance(reply, dict):
+                    continue
+                cur = args.get("currency") if args.get("currency") in ("gold", "faith") else None
+                answers = {cur: reply} if cur else {k: reply.get(k) for k in ("gold", "faith")}
+                for k, r in answers.items():
+                    if isinstance(r, dict) and r.get("ok") is not False and isinstance(r.get("cost"), (int, float)):
+                        out[(str(args.get("city", "")).strip().lower(), str(args.get("item", "")), k)] = {
+                            "cost": r["cost"], "allowed": bool(r.get("allowed"))}
+    return out
 
 
 class Civ6Stuck(RuntimeError):
@@ -176,12 +210,15 @@ class Civ6Governor(Governor):
 
     # ---- campaign, briefing ------------------------------------------------------------------------
 
-    def _gold_reserve(self) -> int:
-        a = self.pillars.actions.get("purchase") if self.pillars else None
-        return a.gold_reserve if a else 0
+    def _buy_limits(self):
+        return self.pillars.actions.get("purchase") if self.pillars else None
+
+    def _gold_reserve(self, b: dict) -> int:
+        """Today's gold reserve (ruling 18): it grows with a deficit."""
+        return gold_reserve_now(b, self._buy_limits())
 
     def _briefing(self, b: dict) -> str:
-        return briefing_text(b, self.index, self._gold_reserve())
+        return briefing_text(b, self.index, limits=self._buy_limits())
 
     def _set_campaign(self, b: dict) -> None:
         """Campaign = civ6/<leader>_<map seed> (ruling 7), or PILOT_CAMPAIGN."""
@@ -279,7 +316,7 @@ class Civ6Governor(Governor):
             self._track(b)
             self.log.state.game_date = b["date"]
             self.log.state.turns_advanced += b["turn"] - last["turn"]
-            urgent = urgent_changes(last, b, self._gold_reserve(), self._wonders)
+            urgent = urgent_changes(last, b, self._gold_reserve(b), self._wonders)
             urgent += self._newly_missed_milestones(last["date"], b["date"])
             if urgent:
                 return b, "urgent: " + "; ".join(urgent)
@@ -359,7 +396,7 @@ class Civ6Governor(Governor):
 
     # ---- a decision ----------------------------------------------------------------------------------
 
-    def _limits_text(self) -> str:
+    def _limits_text(self, b: dict) -> str:
         if not self.pillars:
             return ""
         acts = self.pillars.actions
@@ -367,10 +404,27 @@ class Civ6Governor(Governor):
         text = f"Orders per decision at most: {per}."
         buy = acts.get("purchase")
         if buy:
-            text += (f" Purchases keep {buy.gold_reserve} gold and {buy.faith_reserve} faith in reserve and cost at most "
-                     f"{buy.treasury_share:.0%} of the balance"
-                     + (f" ({buy.threatened_share:.0%} for a threatened city, down to the reserve)" if buy.threatened_share else "")
+            faith, why = faith_reserve_now(b, buy)
+            text += (f" Purchases keep {gold_reserve_now(b, buy)} gold"
+                     + (f" ({buy.gold_reserve} + {buy.gold_reserve_per_deficit:g} per gold of deficit per turn)"
+                        if buy.gold_reserve_per_deficit else "")
+                     + f" and {faith} faith" + (f" ({why.removeprefix('keeps ')})" if why and faith else "")
+                     + f" in reserve and cost at most {buy.treasury_share:.0%} of the balance"
+                     + (f" ({buy.threatened_share:.0%} for a city IN DANGER, down to the reserve)" if buy.threatened_share else "")
                      + ".")
+            rules = []
+            if buy.skip_turns_left:
+                rules.append(f"never what the city finishes within {buy.skip_turns_left} turns anyway (refused)")
+            if buy.defence_first:
+                rules.append("a city in danger with no unit on its tile gets a defender before any other purchase, and a "
+                             "production order for a defender there is bought instead when a listed price fits")
+            if buy.defender_classes:
+                rules.append("a defender bought with gold is bought with faith when the game allows it and the faith fits")
+            rules.append("one land unit per city tile (a second one is refused)")
+            if buy.defence_cooldown_turns:
+                rules.append(f"one defender purchase per city per {buy.defence_cooldown_turns} turns")
+            rules.append("a known price over the cap is refused before it is sent; walls cannot be bought")
+            text += " Purchase rules: " + "; ".join(rules) + "."
         return text
 
     # ---- the order record (docs/design/2026-09-27-civ6-levers-design.md, rulings 12-16) -------------
@@ -403,10 +457,22 @@ class Civ6Governor(Governor):
         self._order_rows.append(row)
         self.log.emit("order_outcome", **row)
 
+    def _defender_buys(self) -> dict[str, int]:
+        """The turn of each city's last defender purchase (lowercased name), from the record, so the
+        cooldown (ruling 19) holds across decisions and restarts."""
+        buy, out = self._buy_limits(), {}
+        for r in self._order_rows:
+            if r.get("order_kind") == "purchase" and r.get("result") == "completed" and isinstance(r.get("turn"), int) \
+                    and is_defender(r.get("id"), self.index, buy):
+                city = str(r.get("city") or "").lower()
+                out[city] = max(out.get(city, r["turn"]), r["turn"])
+        return out
+
     def _order_row(self, c: Checked, b: dict, situation: str | None) -> dict:
         """An order's row before its outcome: what, where, when ordered (`order_kind`, since an
-        event's own `kind` is order_outcome)."""
-        o = c.order
+        event's own `kind` is order_outcome). What was sent counts: a production order bought
+        instead is a purchase, a purchase switched to faith a faith purchase."""
+        o = c.wire or c.order
         oid = ", ".join(o.get("ids") or []) if o.get("kind") == "policies" else o.get("id")
         return {"order_kind": o.get("kind"), "key": record_key(o, situation),
                 "item_kind": "policy" if o.get("kind") == "policies" else self.index.kind_of.get(o.get("id") or ""),
@@ -497,11 +563,14 @@ class Civ6Governor(Governor):
         prompt = [f"Decision point: {reason}.",
                   (frame_text(self.strategy, self.pillars, self._milestones_text(), press) if self.pillars else "")
                   or "No strategy yet.",
-                  "Briefing (live snapshot):", self.last_briefing, self._limits_text()]
+                  "Briefing (live snapshot):", self.last_briefing, self._limits_text(b)]
         if self._report or held:
             prompt.append("What your last orders did:\n" + "\n".join(f"- {x}" for x in self._report + held))
         record = self._record_text()
         if record:
+            if (self._record().get("production replace") or {}).get("weak"):
+                record += ("\nThe AI replaced most production orders that replaced its own choice: buy what must exist "
+                           "now; queue only into empty queues.")
             prompt.append(ORDER_RECORD_HEADING + "\n" + record)
         if self.orders:
             prompt.append("STANDING ORDERS from the human (always follow these): "
@@ -565,7 +634,7 @@ class Civ6Governor(Governor):
                 d.orders.append(o)
                 filled.add(order_key(o.model_dump()))
 
-        outcomes, applied = self._apply(d, b, filled)
+        outcomes, applied = self._apply(d, b, filled, prices_seen(result.all_messages()))
         summary = "; ".join(f"{o['order']}: {o['outcome']}" for o in outcomes) or "no orders"
         decision = "orders" if d.orders else "keep"
         st.last_decision = f"{b['date']}: {summary} — {d.reason}"
@@ -585,14 +654,17 @@ class Civ6Governor(Governor):
             if self.s.retro_every and self._since_retro >= self.s.retro_every and self.pillars is not None:
                 self._review_strategy(self._after_orders or b, f"scheduled after {self.s.retro_every} decisions")
 
-    def _apply(self, d: Civ6Decision, b: dict, filled: set[str] = frozenset()) -> tuple[list[dict], int]:
+    def _apply(self, d: Civ6Decision, b: dict, filled: set[str] = frozenset(),
+               prices: dict | None = None) -> tuple[list[dict], int]:
         """Check, carry out and read back the decision's orders. Returns one outcome per order and how
         many took. Never raises: a failure is an outcome, reported at the next decision. Only a game
         refusal or a read-back that contradicts the order counts as "did not stick" (refused if
         repeated unchanged); an order whose effect cannot be told (no reply, no read-back) is
         "unknown". Orders that took are followed until they resolve (the order record); refused,
-        lost and bought ones get their row at once. `filled`: order keys the governor added."""
-        checked = check_orders(d.orders, b, self.pillars, self.index, self._failed_last)
+        lost and bought ones get their row at once. `filled`: order keys the governor added;
+        `prices`: the `price` tool's answers in this decision."""
+        checked = check_orders(d.orders, b, self.pillars, self.index, self._failed_last, prices=prices,
+                               defender_buys=self._defender_buys())
         results: list[tuple[Checked, str, bool]] = []      # (order, outcome, counts as did-not-stick)
         sent: list[tuple[Checked, dict]] = []
         for c in checked:
@@ -634,7 +706,8 @@ class Civ6Governor(Governor):
         outcomes = []
         for c, status, _ in results:
             by_governor = order_key(c.order) in filled
-            outcomes.append({"order": _describe(c.order) + (" (filled by the governor)" if by_governor else ""),
+            outcomes.append({"order": _describe(c.order) + (" (filled by the governor)" if by_governor else "")
+                             + (f" ({c.note})" if c.note else ""),
                              "outcome": status, "kind": c.order.get("kind"),
                              "id": c.order.get("id") or ", ".join(c.order.get("ids") or []),
                              "city": (c.wire or {}).get("city") or c.order.get("city") or "",
@@ -660,7 +733,7 @@ class Civ6Governor(Governor):
         the following of our older order of the same kind and city (superseded); one that took is
         followed from now on, except a purchase, which completed at once; refused and lost orders
         get their row now."""
-        o = c.order
+        o = c.wire or c.order
         situation = order_situation(b, c.expect["producing"], c.expect["city"]) if "producing" in c.expect else None
         row = self._order_row(c, b, situation)
         now = after or b

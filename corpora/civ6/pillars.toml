@@ -44,6 +44,9 @@ open_grace_turns = 3
 names = ["science", "culture", "faith_yield", "gold_yield", "production", "food", "gold", "faith",
          "cities", "pop", "techs_known", "civics_known", "military", "score", "era_score",
          "rank:score", "rank:military", "rank:techs", "rank:civics", "rank:cities"]
+# Balances are measured but never milestones: a milestone on stored gold or faith paid the Strategist
+# for hoarding (faith 38 -> 402 unspent, T41-T85); milestones use faith_yield and gold_yield.
+milestone_exclude = ["gold", "faith"]
 
 [pillars.science]
 label = "Science"
@@ -112,8 +115,16 @@ max_items = 4
 max_orders = 2
 ids_from_corpus = ["unit", "building"]
 full_ids = true
-gold_reserve = 60       # about 5 turns of early maintenance (strategy.md section 5)
+# Buy-out rules: docs/design/2026-09-27-civ6-levers-design.md, rulings 17-20.
+gold_reserve = 30               # gold kept back, plus...
+gold_reserve_per_deficit = 10   # ...10 per gold per turn of deficit (46 at -1.6 per turn)
 faith_reserve = 0
+pantheon_reserve = true         # until a pantheon is founded, faith keeps its live price (25 here)
+prophet_faith_reserve = 0       # off until the Great Prophet's faith price is read live
 treasury_share = 0.5    # one purchase takes at most half the balance...
-threatened_share = 1.0  # ...unless the city is threatened: then buy at once, down to the reserve
-note = "Buy only what saves several turns; never what finishes in 2 turns or less. Prices are read live."
+threatened_share = 1.0  # ...unless the city is in danger: then buy at once, down to the reserve
+skip_turns_left = 2     # never buy what the city finishes within 2 turns anyway
+defence_first = true    # a city in danger with no defender on its tile: its defender before anything else
+defender_classes = ["Melee", "Ranged", "Anti Cavalry", "Light Cavalry", "Heavy Cavalry"]
+defence_cooldown_turns = 5      # at most one defender purchase per city per 5 turns
+note = "Buy only what saves several turns; never what the city finishes within 2 turns anyway. Prices are read live, in gold and in faith: faith buys defenders at about half the gold price. Walls, castles and star forts cannot be bought: they come from production."

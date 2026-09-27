@@ -352,3 +352,43 @@ def test_a_file_without_an_orders_table_has_no_record(tmp_path):
 def test_bad_order_record_settings_are_rejected(tmp_path, table, where):
     with pytest.raises(PillarsError, match=re.escape(where)):
         load_pillars(civ_corpus(tmp_path, CIV_MINI + table + "\n"))
+
+
+def test_the_civ6_buy_out_rules_load():
+    spec = load_pillars(REPO / "corpora/civ6")
+    buy = spec.actions["purchase"]
+    assert (buy.gold_reserve, buy.gold_reserve_per_deficit, buy.faith_reserve) == (30, 10.0, 0)
+    assert (buy.pantheon_reserve, buy.prophet_faith_reserve, buy.skip_turns_left) == (True, 0, 2)
+    assert buy.defence_first and buy.defence_cooldown_turns == 5
+    assert buy.defender_classes == ("Melee", "Ranged", "Anti Cavalry", "Light Cavalry", "Heavy Cavalry")
+    assert spec.milestone_exclude == ("gold", "faith")
+    assert "walls" in buy.note.lower() and "cannot be bought" in buy.note
+    stellaris = load_pillars(REPO / "corpora/stellaris")
+    assert stellaris.milestone_exclude == () and "purchase" not in stellaris.actions
+
+
+@pytest.mark.parametrize("line, where", [
+    ("gold_reserve_per_deficit = -1", "actions.purchase.gold_reserve_per_deficit"),
+    ('pantheon_reserve = "yes"', "actions.purchase.pantheon_reserve"),
+    ("prophet_faith_reserve = 1.5", "actions.purchase.prophet_faith_reserve"),
+    ("skip_turns_left = -2", "actions.purchase.skip_turns_left"),
+    ("defence_first = 1", "actions.purchase.defence_first"),
+    ('defender_classes = "Melee"', "actions.purchase.defender_classes"),
+    ("defence_first = true", "actions.purchase.defender_classes"),       # needs the classes
+    ("defence_cooldown_turns = -5", "actions.purchase.defence_cooldown_turns"),
+    ("defence_now = true", "actions.purchase.defence_now"),
+])
+def test_bad_buy_out_rules_are_rejected(tmp_path, line, where):
+    text = CIV_MINI.replace("threatened_share = 0.9\n", f"threatened_share = 0.9\n{line}\n")
+    with pytest.raises(PillarsError, match=re.escape(where)):
+        load_pillars(civ_corpus(tmp_path, text))
+
+
+def test_milestone_exclude_names_known_metrics(tmp_path):
+    ok = CIV_MINI.replace('names = ["cities", "gold"]', 'names = ["cities", "gold"]\nmilestone_exclude = ["gold"]')
+    assert load_pillars(civ_corpus(tmp_path, ok)).milestone_exclude == ("gold",)
+    bad = CIV_MINI.replace('names = ["cities", "gold"]', 'names = ["cities", "gold"]\nmilestone_exclude = ["faith"]')
+    other = tmp_path / "other"          # a fresh file: loads are cached by path and modification time
+    other.mkdir()
+    with pytest.raises(PillarsError, match=re.escape("metrics.milestone_exclude")):
+        load_pillars(civ_corpus(other, bad))

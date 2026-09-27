@@ -28,7 +28,7 @@ PC in use.
 | `PILOT_MODEL`, `PILOT_MODELS` | default model; extra models offered in the dashboard |
 | `PILOT_GAME`, `PILOT_SPEED`, `PILOT_DECIDE_MONTHS`, `PILOT_POLL_S` | game, Stellaris speed, months between decisions, autosave poll |
 | `PILOT_DECIDE_TURNS` | Civilization VI: turns the game's AI plays between decisions (default 5; `--decide-turns`) |
-| `PILOT_AUTOPLAY_CHUNK` | Civilization VI: turns per autoplay call in peace (default 3, which keeps the AI's multi-turn plans); at war or with a threatened city it plays one turn at a time |
+| `PILOT_AUTOPLAY_CHUNK` | Civilization VI: turns per autoplay call in peace (default 3, which keeps the AI's multi-turn plans); at war with a major or with a city in danger it plays one turn at a time |
 | `PILOT_THINKING`, `PILOT_GOVERNOR_THINKING` | thinking level for GC4 episodes / Stellaris decisions (default `medium`) |
 | `PILOT_RETRO_EVERY` | strategy review every N decisions (default 5) |
 | `PILOT_PORT`, `PILOT_RUNS_DIR`, `PILOT_CAMPAIGN`, `PILOT_COMMIT`, `PILOT_JOURNAL` | live dashboard port, run folder, campaign id, commit learned knowledge, journal file |
@@ -113,8 +113,8 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   by its corpus id (`tech:pottery`, `unit:settler`).
 - **Orders** are structured, never Lua: `research`, `civic`, `policies`, `production`, `purchase`
   (see `corpora/civ6/pilot.md`). The governor checks each against the corpus, the snapshot (options,
-  the city's buildable items) and `pillars.toml` (orders per decision; purchases keep the gold reserve
-  and take at most the treasury share, or everything above the reserve for a threatened city); the
+  the city's buildable items) and `pillars.toml` (orders per decision; purchases keep the reserves and
+  take at most the treasury share, or everything above the reserve for a city in danger); the
   controller checks the ids again and encodes every argument as a Lua string literal. Wonders and new
   districts need a tile and are refused (placement is not supported yet). `price` (a tool) reads a
   live purchase price.
@@ -130,6 +130,18 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   fill or replace, purchase gold or faith) with its stick rate over the last 30 turns (`[orders]` in
   `pillars.toml`), flagged "does not stick here" at 50% or less; the dashboard gets
   `info.order_record`.
+- **Buy-outs** (rulings 17-21): a city is *in danger* (not merely threatened) when it is under siege,
+  its garrison is damaged, two enemies that can capture it stand next to it, or two enemies are
+  near an empty city tile; only then does a purchase there get the threatened share, and one-turn
+  autoplay chunks follow it too (with war against a major). The gold reserve is `gold_reserve` plus
+  `gold_reserve_per_deficit` per gold of deficit; faith keeps the pantheon's live price until one is
+  founded. Purchases are checked after the other orders, a defender for a city in danger first; while
+  such a city has no unit on its tile, other purchases are refused; a defender ordered with gold is
+  bought with faith when the snapshot's `defence_prices` (or a `price` answer) allow it and it fits;
+  a production order for a defender there is bought instead; a second land unit on a city tile, a
+  defender bought in the same city within 5 turns, what the city finishes within 2 turns anyway and a
+  known price over the cap are refused before sending. `gold` and `faith` balances cannot be
+  milestone metrics (`[metrics] milestone_exclude`).
 - **Blockers**: with no research or no civic in progress and no valid order for it, the governor asks
   the model once more; if the answer still has none, it orders the strategy's first preferred item
   the game offers (else the first offered) and reports it "filled by the governor".

@@ -190,7 +190,8 @@ def test_purchases_respect_the_reserve_and_the_treasury_share(setup):
     city = FIXTURE["cities"][0]
     rich = {**FIXTURE, "gold": 400}
     assert purchase_cap(rich, city, "gold", buy) == 200                     # half the treasury
-    assert purchase_cap(rich, {**city, "threatened": True}, "gold", buy) == 400 - buy.gold_reserve
+    assert purchase_cap(rich, {**city, "threatened": True}, "gold", buy) == 200, "merely threatened: half"
+    assert purchase_cap(rich, {**city, "under_siege": True}, "gold", buy) == 400 - buy.gold_reserve
     assert purchase_cap({**FIXTURE, "gold": buy.gold_reserve}, city, "gold", buy) == 0
 
     game = FakeCiv6({**FIXTURE, "gold": 400}, index=INDEX, prices={("Beijing", "unit:slinger"): 280})
@@ -203,7 +204,7 @@ def test_purchases_respect_the_reserve_and_the_treasury_share(setup):
 
 
 def test_a_purchase_at_the_reserve_never_reaches_the_game(setup):
-    game = FakeCiv6({**FIXTURE, "gold": 50}, index=INDEX)
+    game = FakeCiv6({**FIXTURE, "gold": 30}, index=INDEX)
     g = governor(setup, game, orders_model([{"kind": "purchase", "city": "Beijing", "id": "unit:warrior"}]))
     g.run(max_decisions=1)
     assert orders_sent(game) == []
@@ -463,15 +464,23 @@ def test_autoplay_chunks_play_several_turns_per_call(setup):
 
 def test_autoplay_plays_single_turns_while_in_danger_and_chunks_otherwise():
     """Ruling (live T27-T41): one-turn autoplay stalled the AI's plans (a Settler 7 turns, the
-    pantheon), so chunks of `autoplay_chunk` (default 3) run in peace, single turns at war or with a
-    threatened city."""
+    pantheon), so chunks of `autoplay_chunk` (default 3) run in peace, single turns at war with a
+    major or with a city in danger (amendment A1: `in_danger`, not "threatened", which held in 93% of
+    the Kublai campaign's city snapshots)."""
     from pilot.civ6_governor import autoplay_turns
     peace = {"wars": [], "cities": [{"threatened": False, "under_siege": False}]}
     assert autoplay_turns(peace, chunk=3, left=10) == 3
     assert autoplay_turns(peace, chunk=3, left=2) == 2
     assert autoplay_turns({**peace, "wars": [{"with": "Rome"}]}, chunk=3, left=10) == 1
-    assert autoplay_turns({"wars": [], "cities": [{"threatened": True}]}, chunk=3, left=10) == 1
+    assert autoplay_turns({**peace, "wars": [{"civ": "CIVILIZATION_AUSTRALIA", "major": True}]}, chunk=3, left=10) == 1
+    assert autoplay_turns({**peace, "wars": [{"civ": "CIVILIZATION_CAGUANA", "major": False}]}, chunk=3, left=10) == 3
+    assert autoplay_turns({"wars": [], "cities": [{"threatened": True, "enemies_near": 1}]}, chunk=3, left=10) == 3
     assert autoplay_turns({"wars": [], "cities": [{"under_siege": True}]}, chunk=3, left=10) == 1
+    lone_scout = {"threatened": True, "enemies_near": 1, "garrison": None, "capture_adjacent": 0,
+                  "defense": {"garrison_hp": 200, "garrison_max": 200, "walls_hp": 0, "walls_max": 0}}
+    assert autoplay_turns({"wars": [], "cities": [lone_scout]}, chunk=3, left=10) == 3
+    beijing_t61 = {**lone_scout, "enemies_near": 2, "capture_adjacent": 2}
+    assert autoplay_turns({"wars": [], "cities": [beijing_t61]}, chunk=3, left=10) == 1
     from pilot.config import Settings
     assert Settings().autoplay_chunk == 3
 
@@ -757,3 +766,216 @@ def test_a_start_that_never_runs_after_two_retries_waits_for_the_human(setup):
     g = governor(setup, game, orders_model([]))
     run_until_attention(g)
     assert [a[0] for a in game.actions].count("autoplay") == 3, "the first call and two retries"
+
+
+# ---- buy-out rules (docs/design/2026-09-27-civ6-levers-design.md, rulings 17-21) -----------------
+
+BUY = SPEC.actions["purchase"]
+WARRIOR = {"unit": "UNIT_WARRIOR", "gold": 160, "gold_allowed": True, "faith": 80, "faith_allowed": True}
+ARCHER = {"unit": "UNIT_ARCHER", "gold": 240, "gold_allowed": True, "faith": 120, "faith_allowed": True}
+
+
+def danger_city(**over) -> dict:
+    """Beijing at T61: two barbarians next to it that can take it, no unit on its tile, no walls."""
+    return _city0(**{"garrison": None, "capture_adjacent": 2, "enemies_near": 2, "threatened": True,
+                     "defense": {"garrison_hp": 200, "garrison_max": 200, "walls_hp": 0, "walls_max": 0},
+                     "defence_prices": [WARRIOR, ARCHER], **over})
+
+
+def buy(*orders: dict, city: dict | None = None, **snap_over) -> list:
+    s = {**FIXTURE, "gold": 400, "faith": 200, "cities": [city or danger_city()], **snap_over}
+    return check_orders([Civ6Order(**o) for o in orders], s, SPEC, INDEX)
+
+
+def test_danger_needs_more_than_an_enemy_nearby():
+    from pilot.civ6 import in_danger
+    lone = danger_city(capture_adjacent=0, enemies_near=1)
+    assert not in_danger(lone), "a lone scout 3 tiles away"
+    assert in_danger(danger_city()), "Beijing T61: 2 hostile melee next to it, no garrison"
+    assert not in_danger(danger_city(capture_adjacent=1, garrison="UNIT_ARCHER")), "garrisoned, one attacker"
+    assert in_danger(danger_city(capture_adjacent=0, enemies_near=3)), "Haarlem T51: 3 enemies, empty tile"
+    assert in_danger(danger_city(capture_adjacent=0, enemies_near=0, defense={"garrison_hp": 150, "garrison_max": 200,
+                                                                              "walls_hp": 0, "walls_max": 0}))
+    assert not in_danger(_city0(threatened=True, enemies_near=1)), "old snapshot: today's test"
+    assert in_danger(_city0(threatened=True, enemies_near=2)), "old snapshot: two enemies near"
+    rich = {**FIXTURE, "gold": 400}
+    assert purchase_cap(rich, lone, "gold", BUY) == 200
+    assert purchase_cap(rich, danger_city(), "gold", BUY) == 400 - 30
+
+
+def test_the_gold_reserve_grows_with_a_deficit():
+    from pilot.civ6 import gold_reserve_now
+    at = lambda g: gold_reserve_now({**FIXTURE, "yields": {**FIXTURE["yields"], "gold": g}}, BUY)
+    assert (at(1.4), at(-1.6), at(0), at(-0.6)) == (30, 46, 30, 36)
+    assert urgent_changes({**FIXTURE, "gold": 50}, {**FIXTURE, "gold": 40, "yields": {**FIXTURE["yields"], "gold": -1.6}},
+                          gold_reserve=at(-1.6)) == ["gold below the reserve: 40 < 46"]
+
+
+def test_what_the_city_finishes_anyway_is_not_bought():
+    for left, refused in ((1, True), (2, True), (3, False)):
+        out = buy({"kind": "purchase", "city": "Beijing", "id": "unit:archer"},
+                  city=danger_city(producing="UNIT_ARCHER", turns_left=left))
+        assert bool(out[0].error) == refused, left
+    out = buy({"kind": "purchase", "city": "Beijing", "id": "unit:archer"},
+              city=danger_city(producing="UNIT_SLINGER", turns_left=1))
+    assert out[0].error == "Beijing finishes unit:slinger in 1 turn anyway", "a defender of the same class"
+    out = buy({"kind": "purchase", "city": "Beijing", "id": "building:granary"})
+    assert out[0].error == "Beijing cannot build building:granary now"
+    out = buy({"kind": "purchase", "city": "Beijing", "id": "building:walls"})
+    assert out[0].error == "building:walls cannot be bought: walls come from production"
+
+
+def test_faith_keeps_the_pantheon_price_until_one_is_founded():
+    rel = {"pantheon": None, "can_create_pantheon": True, "pantheon_cost": 25, "religion": None}
+    out = buy({"kind": "purchase", "city": "Beijing", "id": "unit:warrior", "currency": "faith"},
+              faith=83, religion=rel)
+    assert out[0].wire is None, "refused before sending"
+    assert out[0].error == "unit:warrior costs 80 faith in Beijing, over the 58 allowed: keeps 25 faith for the pantheon"
+    ok = buy({"kind": "purchase", "city": "Beijing", "id": "unit:warrior", "currency": "faith"},
+             faith=83, religion={**rel, "pantheon": "BELIEF_INITIATION_RITES", "can_create_pantheon": False})
+    assert ok[0].wire["max_cost"] == 83
+    old = buy({"kind": "purchase", "city": "Beijing", "id": "unit:warrior", "currency": "faith"}, faith=83)
+    assert old[0].wire["max_cost"] == 83, "no religion block: the static reserve only"
+    text = briefing_text({**FIXTURE, "faith": 83, "religion": rel}, INDEX, limits=BUY)
+    assert "Pantheon: none (founding one costs 25 faith; purchases keeps 25 faith for the pantheon)" in text
+    assert "83 faith (reserve 25)" in text
+    assert "not in this snapshot (the pantheon reserve is off)" in briefing_text(FIXTURE, INDEX, limits=BUY)
+
+
+def test_a_defender_for_a_city_in_danger_comes_first():
+    out = buy({"kind": "purchase", "city": "Beijing", "id": "building:monument"},
+              {"kind": "purchase", "city": "Beijing", "id": "unit:archer"},
+              city=danger_city(defence_prices=[]))                         # prices unknown
+    monument, archer = out
+    assert archer.wire["max_cost"] == 400 - 30, "the Archer gets the cap of a city in danger"
+    assert monument.error.startswith("gold 400 (less 370 for earlier purchases, the defender for Beijing first)")
+    alone = buy({"kind": "purchase", "city": "Beijing", "id": "building:monument"})
+    assert alone[0].error == "Beijing is in danger with no defender on its tile: buy a defender there first"
+
+
+def test_a_gold_defender_is_bought_with_faith_when_the_game_allows_it():
+    out = buy({"kind": "purchase", "city": "Beijing", "id": "unit:warrior"})
+    assert out[0].wire["currency"] == "faith" and out[0].note == "bought with faith instead of gold: 80 faith rather than 160 gold"
+    no_faith = danger_city(defence_prices=[{**WARRIOR, "faith_allowed": False}])
+    out = buy({"kind": "purchase", "city": "Beijing", "id": "unit:warrior"}, city=no_faith)
+    assert out[0].wire["currency"] == "gold" and not out[0].note
+    poor = buy({"kind": "purchase", "city": "Beijing", "id": "unit:warrior"}, faith=50)
+    assert poor[0].wire["currency"] == "gold", "the faith does not cover it"
+    monument = buy({"kind": "purchase", "city": "Beijing", "id": "building:monument"},
+                   city=danger_city(garrison="UNIT_WARRIOR"))
+    assert monument[0].wire["currency"] == "gold", "other items keep the model's currency"
+
+
+def test_a_land_unit_on_the_city_tile_blocks_another():
+    out = buy({"kind": "purchase", "city": "Beijing", "id": "unit:archer"}, city=danger_city(garrison="UNIT_ARCHER"))
+    assert out[0].error == "Beijing already has unit:archer on its tile: the game refuses a second land unit there"
+    two = buy({"kind": "purchase", "city": "Beijing", "id": "unit:warrior"},
+              {"kind": "purchase", "city": "Beijing", "id": "unit:archer"})
+    assert two[0].wire and "second land unit" in two[1].error
+    settler = buy({"kind": "purchase", "city": "Beijing", "id": "unit:settler"}, city=_city0(garrison="UNIT_ARCHER"))
+    assert settler[0].wire, "a civilian shares the tile"
+
+
+def test_one_defender_purchase_per_city_per_five_turns():
+    s = {**FIXTURE, "gold": 400, "faith": 200, "cities": [danger_city()]}
+    order = [Civ6Order(kind="purchase", city="Beijing", id="unit:warrior")]
+    for last, refused in ((8, True), (7, False)):
+        out = check_orders(order, s, SPEC, INDEX, defender_buys={"beijing": last})
+        assert bool(out[0].error) == refused, last
+    assert "got a defender at T8: the next defender purchase there waits until T13" in \
+        check_orders(order, s, SPEC, INDEX, defender_buys={"beijing": 8})[0].error
+
+
+def test_a_defender_ordered_into_production_is_bought_in_a_city_in_danger():
+    out = buy({"kind": "production", "city": "Beijing", "id": "unit:warrior"})
+    assert out[0].wire == {"kind": "purchase", "city": "Beijing", "id": "unit:warrior", "currency": "faith",
+                           "max_cost": 200}
+    assert out[0].note == "bought instead of queued (in danger): 80 faith"
+    for city in (danger_city(garrison="UNIT_ARCHER"), danger_city(capture_adjacent=0, enemies_near=1),
+                 danger_city(producing="UNIT_SLINGER", turns_left=2), danger_city(defence_prices=[])):
+        kept = buy({"kind": "production", "city": "Beijing", "id": "unit:warrior"}, city=city)
+        assert kept[0].wire == {"kind": "production", "city": "Beijing", "id": "unit:warrior"}, city
+    settler = buy({"kind": "production", "city": "Beijing", "id": "unit:settler"})
+    assert settler[0].wire["kind"] == "production", "only defenders"
+
+
+def test_t83_replay_a_gold_warrior_is_bought_with_faith(setup):
+    """Live T83: after Australia declared war and Xi'an was damaged, the model bought a Warrior for 160
+    gold while holding 388 faith."""
+    xian = {**danger_city(), "name": "Xi'an", "capital": False, "capture_adjacent": 0, "enemies_near": 1,
+            "defense": {"garrison_hp": 150, "garrison_max": 200, "walls_hp": 0, "walls_max": 0}}
+    base = {**FIXTURE, "turn": 83, "gold": 280, "faith": 388, "cities": [FIXTURE["cities"][0], xian],
+            "religion": {"pantheon": "BELIEF_INITIATION_RITES", "can_create_pantheon": False, "pantheon_cost": 25}}
+    prices = {("Xi'an", "unit:warrior", "gold"): 160, ("Xi'an", "unit:warrior", "faith"): 80}
+    game = FakeCiv6(base, index=INDEX, prices=prices)
+    g = governor(setup, game, orders_model([{"kind": "purchase", "city": "Xi'an", "id": "unit:warrior"}]))
+    g.run(max_decisions=1)
+    assert orders_sent(game) == [{"kind": "purchase", "city": "Xi'an", "id": "unit:warrior", "currency": "faith",
+                                  "max_cost": 388}]
+    assert (game.state["gold"], game.state["faith"]) == (280, 308)
+    first = traces(setup)[0]["orders"][0]
+    assert first["outcome"] == "stuck" and "bought with faith instead of gold: 80 faith rather than 160 gold" in first["order"]
+    rows = [(e["key"], e["result"], e["id"]) for e in _events(setup) if e["kind"] == "order_outcome"]
+    assert rows == [("purchase faith", "completed", "unit:warrior")]
+
+
+def test_a_price_read_in_the_decision_refuses_a_purchase_over_the_cap(setup):
+    calls = {"n": 0}
+
+    def respond(messages, info):
+        if is_review(info):
+            return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name,
+                                                     {"change": False, "assessment": "n/a", "rules": []})])
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return ModelResponse(parts=[ToolCallPart("price", {"city": "Beijing", "item": "unit:slinger"})])
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"orders": [
+            {"kind": "purchase", "city": "Beijing", "id": "unit:slinger"}], "reason": "r"})])
+
+    game = FakeCiv6({**FIXTURE, "gold": 400}, index=INDEX, prices={("Beijing", "unit:slinger", "gold"): 280,
+                                                                   ("Beijing", "unit:slinger", "faith"): 140})
+    g = governor(setup, game, FunctionModel(respond))
+    g.run(max_decisions=1)
+    assert [a[1]["currency"] for a in game.actions if a[0] == "order"] == ["gold", "faith"], "price shows both"
+    assert all(a[1]["kind"] == "price" for a in game.actions if a[0] == "order"), "the purchase is never sent"
+    assert traces(setup)[0]["orders"][0]["outcome"] == ("refused: unit:slinger costs 280 gold in Beijing, over the "
+                                                        "200 allowed: one purchase takes at most 50% of the gold "
+                                                        "balance (100% for a city in danger)")
+
+
+def test_the_briefing_shows_a_city_in_danger_with_its_defence_and_prices():
+    text = briefing_text({**FIXTURE, "cities": [danger_city(incoming=33)]}, INDEX, limits=BUY)
+    assert ("IN DANGER: 2 enemy units within 3 tiles, 2 next to it that can take it; garrison 200/200, walls 0/0 "
+            "(no walls: this city cannot strike; walls come from production); one attack from each enemy in range: "
+            "about 33 damage; on its tile: no unit; defenders to buy: unit:warrior 160 gold / 80 faith, "
+            "unit:archer 240 gold / 120 faith") in text
+    assert "THREATENED: 1 enemy units" in briefing_text({**FIXTURE, "cities": [danger_city(capture_adjacent=0,
+                                                                                          enemies_near=1)]}, INDEX)
+
+
+def test_the_limits_text_names_the_purchase_rules(setup):
+    g = governor(setup, FakeCiv6(FIXTURE, index=INDEX), orders_model([]))
+    text = g._limits_text({**FIXTURE, "yields": {**FIXTURE["yields"], "gold": -1.6}})
+    assert "Purchases keep 46 gold (30 + 10 per gold of deficit per turn) and 0 faith in reserve" in text
+    assert "never what the city finishes within 2 turns anyway" in text and "walls cannot be bought" in text
+
+
+def test_a_weak_production_replace_record_adds_the_buy_guidance(setup):
+    seen: list[str] = []
+    game = FakeCiv6(FIXTURE, index=INDEX)
+    g = governor(setup, game, orders_model([], seen=seen))
+    g._order_rows = [{"key": "production replace", "result": r, "turn": 5 + i, "id": "unit:slinger",
+                      "by": "building:granary", "city": "Beijing", "date": f"T{5 + i}"}
+                     for i, r in enumerate(["overridden", "overridden", "overridden", "completed"])]
+    g.run(max_decisions=1)
+    assert "does not stick here" in seen[0]
+    assert "The AI replaced most production orders that replaced its own choice: buy what must exist now" in seen[0]
+
+
+def test_with_known_prices_a_defender_and_another_purchase_both_fit():
+    out = buy({"kind": "purchase", "city": "Beijing", "id": "building:monument"},
+              {"kind": "purchase", "city": "Beijing", "id": "unit:archer", "currency": "gold"},
+              city=danger_city(defence_prices=[{**ARCHER, "faith_allowed": False}]))
+    monument, archer = out
+    assert archer.wire["currency"] == "gold" and archer.wire["max_cost"] == 370
+    assert monument.wire["max_cost"] == 130, "400 less the Archer's known 240, above the reserve of 30"
