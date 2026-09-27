@@ -979,3 +979,62 @@ def test_with_known_prices_a_defender_and_another_purchase_both_fit():
     monument, archer = out
     assert archer.wire["currency"] == "gold" and archer.wire["max_cost"] == 370
     assert monument.wire["max_cost"] == 130, "400 less the Archer's known 240, above the reserve of 30"
+
+
+# ---- backfill of apply-time outcomes (ruling 13, check L4) -----------------------------------------
+
+LIVE_TRACE_ORDERS = [      # shapes from the Kublai campaign's traces (T43-T129), before the record
+    {"date": "T43", "orders": [{"order": "research tech:writing", "outcome": "stuck"}]},
+    {"date": "T51", "orders": [{"order": "research tech:writing", "outcome": "refused: tech:writing cannot be researched now"}]},
+    {"date": "T73", "orders": [{"order": "civic civic:drama_poetry", "outcome": "unknown: no reply (Error: Failed /tuner/lua)"}]},
+    {"date": "T83", "orders": [{"order": "purchase unit:warrior in Xi’an with gold", "outcome": "stuck"},
+                               {"order": "policies policy:agoge, policy:urban_planning", "outcome": "stuck"}]},
+    {"date": "T85", "orders": [{"order": "production district:holy_site in Beijing", "outcome": "unknown: not read back (no snapshot)"}]},
+    {"date": "T90", "orders": [{"order": "civic ", "outcome": "refused: unknown id ''"}]},
+    {"date": "T104", "orders": [{"order": "production unit:trader in Chengdu", "outcome": "Chengdu builds BUILDING_PYRAMIDS"},
+                                {"order": "purchase building:shrine in Beijing with faith", "outcome": "stuck"}]},
+    {"date": "T140", "orders": [{"order": "research tech:x", "outcome": "stuck", "kind": "research"}]},   # the record's own
+]
+
+
+def test_the_backfill_recovers_apply_time_outcomes_only():
+    from pilot.civ6 import backfill_rows
+    rows = backfill_rows(LIVE_TRACE_ORDERS)
+    got = [(r["date"], r["key"], r["id"], r["city"], r["result"]) for r in rows]
+    assert got == [("T51", "research", "tech:writing", "", "refused"),
+                   ("T73", "civic", "civic:drama_poetry", "", "lost"),
+                   ("T83", "purchase gold", "unit:warrior", "Xi’an", "completed"),
+                   ("T85", "production unknown", "district:holy_site", "Beijing", "unknown"),
+                   ("T90", "civic", "", "", "refused"),
+                   ("T104", "production unknown", "unit:trader", "Chengdu", "refused"),
+                   ("T104", "purchase faith", "building:shrine", "Beijing", "completed")]
+    assert all(r["backfilled"] and r["turn"] == int(r["date"][1:]) for r in rows)
+    rec = order_record(rows, 110, ORDERS)
+    assert rec["purchase gold"]["completed"] == 1 and rec["civic"]["excluded"]["refused"] == 1
+    assert "production unknown" in rec, "shown while its rows are in the window"
+    assert "research" not in rec, "refused at T51, outside the last 30 turns: nothing left to say"
+    assert order_record(rows, 60, ORDERS)["research"]["excluded"]["refused"] == 1
+
+
+def test_the_backfill_script_reads_only_until_asked_and_writes_once(tmp_path, capsys):
+    import importlib.util
+
+    from pilot.telemetry import Telemetry
+    db = tmp_path / "t.sqlite"
+    tel = Telemetry(db)
+    tel.record("r1", {"t": 1.0, "kind": "run_start", "game": "civ6", "model": "m"})
+    tel.record("r1", {"t": 1.0, "kind": "campaign", "game": "civ6", "name": "kublai"})
+    for i, d in enumerate(LIVE_TRACE_ORDERS):
+        tel.record("r1", {"t": 2.0 + i, "kind": "trace", "episode": i + 1, "date": d["date"], "decision": "orders"},
+                   {"orders": d["orders"], "decision": "orders"})
+    tel.close()
+    spec = importlib.util.spec_from_file_location("backfill", REPO / "scripts/civ6-backfill-orders.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    assert mod.main(["--db", str(db), "--campaign", "civ6/kublai"]) == 0
+    assert "7 rows from 8 decisions" in capsys.readouterr().out
+    assert Telemetry(db).campaign_events("civ6/kublai", "order_outcome") == [], "read-only by default"
+    assert mod.main(["--db", str(db), "--campaign", "civ6/kublai", "--write"]) == 0
+    rows = Telemetry(db).campaign_events("civ6/kublai", "order_outcome")
+    assert [r["result"] for r in rows] == ["refused", "lost", "completed", "unknown", "refused", "refused", "completed"]
+    assert mod.main(["--db", str(db), "--campaign", "civ6/kublai", "--write"]) == 1, "never twice"

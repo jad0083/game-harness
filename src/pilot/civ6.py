@@ -12,6 +12,7 @@ import copy
 import json
 import math
 import os
+import re
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -870,15 +871,63 @@ def order_record(rows: list[dict], now_turn: int, spec) -> dict[str, dict]:
         enough = n >= spec.min_samples_of(key)
         rate = (counts["completed"] + counts["held"]) / n if n else None
         last = next((r for r in reversed(recent) if r.get("result") == "overridden"), None)
+        excluded = {res: sum(1 for r in mine if r.get("result") == res and (r.get("turn") or 0) >= since)
+                    for res in EXCLUDED}
+        if not n and not any(excluded.values()):
+            continue                                        # nothing left to say about this key
         out[key] = {
             "judged": n, **counts, "min_samples": spec.min_samples_of(key),
             "rate": round(rate, 2) if enough and rate is not None else None,
             "weak": bool(enough and rate is not None and rate <= spec.weak_rate),
-            "excluded": {res: sum(1 for r in mine if r.get("result") == res and (r.get("turn") or 0) >= since)
-                         for res in EXCLUDED},
+            "excluded": excluded,
             "last_override": ({k: last.get(k) for k in ("id", "by", "city", "date")} if last else None),
         }
     return out
+
+
+_DESCRIBED = re.compile(r"^(?P<kind>research|civic|production|purchase) (?P<id>\S*)(?: in (?P<city>.+?))?"
+                        r"(?: with (?P<currency>gold|faith))?$")
+
+
+def backfill_rows(decisions: list[dict]) -> list[dict]:
+    """order_outcome rows recovered from decision traces written before the order record (ruling 13):
+    apply-time outcomes only. A purchase that took completed at once; refused, lost (no reply) and
+    unknown orders keep their outcome; any other order that took is skipped, since whether it held
+    or the AI replaced it exists only as prose. `decisions`: [{"date": "T43", "orders": trace
+    orders}] oldest first; traces whose orders carry `kind` (written by the record) are skipped.
+    Production rows get the situation "unknown" (the snapshot before the order is not kept)."""
+    rows = []
+    for d in decisions:
+        date = str(d.get("date") or "")
+        turn = int(date[1:]) if date[:1] == "T" and date[1:].isdigit() else None
+        for o in d.get("orders") or []:
+            if "kind" in o:
+                continue
+            text, outcome = str(o.get("order") or ""), str(o.get("outcome") or "")
+            if text.startswith("policies "):
+                kind, oid, city, currency = "policies", text.removeprefix("policies "), "", None
+            else:
+                m = _DESCRIBED.match(text)
+                if not m:
+                    continue
+                kind, oid, city, currency = m["kind"], m["id"], m["city"] or "", m["currency"]
+            if outcome == "stuck":
+                if kind != "purchase":
+                    continue
+                result = "completed"
+            elif outcome.startswith(f"{UNKNOWN}: no reply"):
+                result = "lost"
+            elif outcome.startswith(UNKNOWN):
+                result = "unknown"
+            else:
+                result = "refused"
+            situation = "unknown" if kind == "production" else None
+            order = {"kind": kind, "currency": currency or "gold"}
+            rows.append({"order_kind": kind, "key": record_key(order, situation), "item_kind": None, "id": oid,
+                         "city": city, "currency": currency if kind == "purchase" else None, "situation": situation,
+                         "ordered": date, "top3_hit": None, "result": result, "by": None, "turns": 0, "date": date,
+                         "turn": turn, "detail": outcome[:300], "backfilled": True})
+    return rows
 
 
 def idle_counts(seen: dict[int, list[str]], now_turn: int, window: int) -> dict[str, tuple[int, int]]:

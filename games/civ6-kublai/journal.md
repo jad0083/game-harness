@@ -156,3 +156,14 @@ re-installed its own library at its next call.
 - **Autoplay start timeouts**: the live run waited for a human four times (T57, T99, T117, T120),
   each time after the autoplay call timed out on the tuner and the polls read inactive; each Resume
   started it at once. The branch sends such a start again, twice, before waiting.
+- **Order record backfill (check L4, offline, read-only)**: `scripts/civ6-backfill-orders.py` over
+  `runs/telemetry.sqlite` (27 decisions of the live run, T43-T134; the scratch runs for T12-T41 are
+  not in it) recovers 15 apply-time outcomes: research refused 2 (tech:writing at T51, as E1 says;
+  an empty id at T117), civic refused 2 (an empty id at T90; civic:feudalism read back as "civic is
+  None" at T134), lost 1 (T73), unknown 1 (T85), policies refused 1 (T134: no free military or
+  wildcard slot), production refused 5 and unknown 1, and two purchases completed (a Warrior for 160
+  gold in Xi'an at T83, a Shrine for faith in Beijing at T104). All five production refusals are
+  Traders: the read-back found Chengdu still on the Pyramids (T104), Guangzhou on an Entertainment
+  Complex (T123), Beijing on a Settler (T129) and Chengdu on nothing (T134); T107 was the repeat
+  refused unchanged. For T43-T61 this matches E1 (the T51 refusal); the rest of E1 (the T35 purchase
+  and lost order) lies in the scratch runs.

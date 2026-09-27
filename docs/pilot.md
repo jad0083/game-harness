@@ -129,7 +129,9 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   decision prompt and the Strategist get one line per kind (research, civic, policies, production
   fill or replace, purchase gold or faith) with its stick rate over the last 30 turns (`[orders]` in
   `pillars.toml`), flagged "does not stick here" at 50% or less; the dashboard gets
-  `info.order_record`.
+  `info.order_record`. `scripts/civ6-backfill-orders.py` recovers the apply-time outcomes (refused,
+  lost, purchases) of traces written before the record: read-only by default, `--write` once when
+  deploying.
 - **Buy-outs** (rulings 17-21): a city is *in danger* (not merely threatened) when it is under siege,
   its garrison is damaged, two enemies that can capture it stand next to it, or two enemies are
   near an empty city tile; only then does a purchase there get the threatened share, and one-turn
