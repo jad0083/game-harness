@@ -67,16 +67,18 @@ class Rules:
 
 
 def _matches(rules: Rules, r: dict, q: dict) -> bool:
-    """Whether neighbouring plot `q` counts for adjacency rule `r` (every criterion the rule names)."""
+    """Whether neighbouring plot `q` counts for adjacency rule `r` (every criterion the rule names).
+    A wonder counts once built (`built` on the plot: district-plots lists our built wonders; a plot
+    shows its wonder while it is still being built)."""
     tests = []
     if r.get("OtherDistrictAdjacent"):
-        tests.append(bool(q.get("d")))
+        tests.append(bool(q.get("d")) and q.get("d") != "WONDER")       # a wonder's plot is no district here
     if r.get("AdjacentTerrain"):
         tests.append(full(q, "t") == r["AdjacentTerrain"])
     if r.get("AdjacentFeature"):
         tests.append(full(q, "f") == r["AdjacentFeature"])
     if r.get("AdjacentWonder"):
-        tests.append(bool(q.get("w")))
+        tests.append(bool(q.get("w")) and q.get("built", True))
     if r.get("AdjacentNaturalWonder"):
         tests.append(bool(q.get("nw")) or full(q, "f") in rules.natural_wonders)
     if r.get("AdjacentImprovement"):
@@ -180,33 +182,29 @@ def rate_candidates(city: dict, plots: dict[str, dict], rules: Rules, shares: di
     return rated
 
 
-def plausible_plots(city: dict, plots: dict[str, dict], rules: Rules, district: str, player: int) -> list[str]:
-    """Plots a district could have taken (an approximation of the game's check, for the baseline):
-    ours, within 3 tiles of the city (district-plots' `near`), no district, wonder, natural wonder or
-    mountain; land (water next to land for a coastal district); not next to a city centre where the
-    district forbids it."""
+def plausible_plots(city: dict, plots: dict[str, dict], rules: Rules, district: str) -> list[str]:
+    """Plots a placed district could have taken instead, for the baseline: the plots the game offers
+    this city for any district now (its candidates' lists: the city's own free plots), water for a
+    coastal district and land otherwise, not next to a city centre where the district forbids it.
+    A city with nothing left to place offers none, and its districts gain nothing."""
     flags = rules.districts.get(district) or rules.districts.get(rules.replaces.get(district, "")) or {}
+    offered = dict.fromkeys(str(i) for c in city.get("candidates") or [] for i in c.get("plots") or [])
     out = []
-    for idx in (str(i) for i in city.get("near") or []):
+    for idx in offered:
         p = plots.get(idx) or {}
-        if p.get("o") != player or p.get("d") or p.get("w") or p.get("nw") or p.get("mountain"):
+        if bool(p.get("water")) != bool(flags.get("Coast")) or p.get("d") or "adj" not in p:
             continue
         near = [plots.get(str(n)) or {} for n in p.get("adj") or []]
-        if flags.get("Coast"):
-            if not p.get("water") or not any(q and not q.get("water") for q in near):
-                continue
-        elif p.get("water"):
-            continue
         if flags.get("NoAdjacentCity") and any(q.get("d") == "CITY_CENTER" for q in near):
             continue
         out.append(idx)
     return out
 
 
-def rate_placed(city: dict, plots: dict[str, dict], rules: Rules, player: int) -> list[dict]:
+def rate_placed(city: dict, plots: dict[str, dict], rules: Rules) -> list[dict]:
     """The baseline: each district the AI placed that has adjacency rules, its adjacency where it
-    stands, and the best adjacency it could have had on a plausible plot (its own plot counted, and
-    its own district taken off the map while others are tried)."""
+    stands, and the best adjacency it could have had on a plausible plot now (its own plot counted,
+    and its own district taken off the map while others are tried)."""
     out = []
     by_xy = {(p.get("x"), p.get("y")): i for i, p in plots.items()}
     for d in city.get("placed") or []:
@@ -216,7 +214,7 @@ def rate_placed(city: dict, plots: dict[str, dict], rules: Rules, player: int) -
         ai = sum(adjacency(rules, d["type"], idx, plots).values())
         without = {**plots, idx: {**plots[idx], "d": None}}
         best, where = ai, idx
-        for q in plausible_plots(city, without, rules, d["type"], player):
+        for q in plausible_plots(city, without, rules, d["type"]):
             v = sum(adjacency(rules, d["type"], q, without).values())
             if v > best:
                 best, where = v, q
@@ -242,7 +240,10 @@ def go_verdict(placed: list[dict]) -> tuple[str, str]:
 def report(data: dict, rules: Rules, shares: dict[str, float], cid=lambda k: k) -> dict:
     """The whole stage-A read: candidates per city (best plots first), the AI's placements rated, and
     the go verdict. `data` is `district-plots`' reply; `cid` names type keys (a corpus index's `cid`)."""
-    plots, player = data.get("plots") or {}, data.get("player", 0)
+    plots = data.get("plots") or {}
+    if isinstance(data.get("built"), list):
+        built = set(data["built"])
+        plots = {i: {**p, "built": p.get("w") in built} if p.get("w") else p for i, p in plots.items()}
     cities, placed = [], []
     for c in data.get("cities") or []:
         cands = rate_candidates(c, plots, rules, shares)
@@ -251,7 +252,7 @@ def report(data: dict, rules: Rules, shares: dict[str, float], cid=lambda k: k) 
                       "penalty": round(r.penalty, 2)} for r in rows[:3]]
             for d, rows in cands.items() if rows},
             "errors": {cid(x["type"]): x["error"] for x in c.get("candidates") or [] if x.get("error")}})
-        placed += rate_placed(c, plots, rules, player)
+        placed += rate_placed(c, plots, rules)
     verdict, why = go_verdict(placed)
     return {"turn": data.get("turn"), "cities": cities,
             "placed": [{**p, "district": cid(p["district"])} for p in placed], "verdict": verdict, "why": why}
@@ -264,7 +265,7 @@ def report_text(r: dict) -> str:
     for c in r["cities"]:
         best = [f"{d} at {rows[0]['x']},{rows[0]['y']} ({adj(rows[0]['adjacency'])}; score {rows[0]['score']:g})"
                 for d, rows in c["candidates"].items()]
-        lines.append(f"- {c['name']}: " + ("; ".join(best) if best else "no district to place")
+        lines.append(f"- {c['name']}: " + ("; ".join(best) if best else "no district with adjacency rules to place")
                      + ("" if not c["errors"] else f" (no plots read: {', '.join(c['errors'])})"))
     for p in r["placed"]:
         lines.append(f"- AI placed {p['district']} in {p['city']} at {p['x']},{p['y']}: adjacency {p['ai']}, "

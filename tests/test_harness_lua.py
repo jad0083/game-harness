@@ -271,5 +271,6 @@ def test_district_plots_list_where_each_district_may_go_with_the_plot_facts():
     assert len(plots) >= 61, "3 tiles around the city and their neighbours"
     assert len(beijing["near"]) == 37 and int(idx(22, 21)) in beijing["near"]
     assert requests(rt) == [], "read-only"
+    assert r["built"] == ["PYRAMIDS"], "our built wonders"
     everyone = call(rt, out, "Harness.district_plots")
     assert [c["name"] for c in everyone["cities"]] == ["Beijing", "Xi'an"]

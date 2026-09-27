@@ -1242,7 +1242,17 @@ function H.district_plots(city_id)
                               placed = placed, candidates = cands }
     end
   end
-  return { turn = Game.GetCurrentGameTurn(), player = me, cities = cities, plots = plots }
+  -- a plot shows a wonder while it is still being built: only these count as built
+  local built = H.array()
+  pcall(function()
+    for _, c in Players[me]:GetCities():Members() do
+      local b = c:GetBuildings()
+      for row in GameInfo.Buildings() do
+        if row.IsWonder and b:HasBuilding(row.Index) then built[#built + 1] = (row.BuildingType:gsub('^BUILDING_', '')) end
+      end
+    end
+  end)
+  return { turn = Game.GetCurrentGameTurn(), player = me, cities = cities, plots = plots, built = built }
 end
 
 -- ---- autoplay ----------------------------------------------------------------------------------

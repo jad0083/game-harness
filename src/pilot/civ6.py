@@ -1226,10 +1226,15 @@ def ai_plan_text(s: dict, index: CorpusIndex, strategies: dict[str, dict] | None
     or stopped within the last `window` turns. The AI's scores are on their own scale, and how well
     they predict what it builds is measured by the order record (`top3_hit`)."""
     cid, now = index.cid, s.get("turn") or 0
+    # the era strategies (STRATEGY_<ERA>_CHANGES) keep "Following" once started: only the latest says anything
+    eras = [(st["since"] or 0, k) for k, st in (strategies or {}).items() if k.endswith("_CHANGES") and st["status"] == "Following"]
+    stale = {k for _, k in sorted(eras)[:-1]}
     cities = [f"{c.get('name')} → " + ", ".join(cid(r.get("type")) for r in c["recommend"])
               for c in s.get("cities") or [] if c.get("recommend")]
     shown = []
     for key, st in sorted((strategies or {}).items(), key=lambda kv: (not kv[0].startswith("VICTORY_"), kv[0])):
+        if key in stale:
+            continue
         if st["status"] == "Following":
             shown.append(f"{_strategy_name(key)} (since T{st['since']})" if st["since"] is not None else _strategy_name(key))
         elif st["status"] == "Stopped" and st["stopped"] is not None and now - st["stopped"] <= window:

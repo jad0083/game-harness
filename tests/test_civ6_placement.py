@@ -72,6 +72,13 @@ def test_adjacency_follows_the_games_rules():
     assert adjacency(RULES, "DISTRICT_INDUSTRIAL_ZONE", idx(5, 5), iron) == {"YIELD_PRODUCTION": 1}, "strategic class"
     assert adjacency(RULES, "DISTRICT_LAVRA", idx(5, 5), plots) == {"YIELD_FAITH": 3}, "a unique district's own rules"
     assert lost_value({"r": "WHEAT", "i": "FARM", "f": "FOREST"}) == 6 and lost_value({}) == 0
+    # a wonder stands on a DISTRICT_WONDER plot (seen live at T202): a wonder for the Theater once built,
+    # never a district
+    wonder = world(**{f"{around[0][0]},{around[0][1]}": {"d": "WONDER", "w": "PYRAMIDS", "built": True},
+                      f"{around[2][0]},{around[2][1]}": {"d": "WONDER", "w": "GREAT_BATH", "built": False},
+                      f"{around[1][0]},{around[1][1]}": {"d": "CITY_CENTER"}})
+    assert adjacency(RULES, "DISTRICT_THEATER", idx(5, 5), wonder) == {"YIELD_CULTURE": 2}, "the Great Bath is unfinished"
+    assert adjacency(RULES, "DISTRICT_CAMPUS", idx(5, 5), wonder) == {}
 
 
 def test_relative_shares_are_one_for_an_even_split():
@@ -118,14 +125,17 @@ def _placed_city(gains: list[int]) -> tuple[dict, dict]:
         for m in neighbours(*spot)[:gain]:
             over[f"{m[0]},{m[1]}"] = {"t": "GRASS_MOUNTAIN", "mountain": True}
     plots = world(**over)
-    near = [int(i) for i in plots]
-    return {"name": "Beijing", "x": 6, "y": 6, "near": near, "placed": placed, "candidates": []}, plots
+    free = [int(i) for i, p in plots.items() if not p.get("d")]
+    return {"name": "Beijing", "x": 6, "y": 6, "near": free, "placed": placed,
+            "candidates": [{"type": "DISTRICT_THEATER", "plots": free}]}, plots
 
 
 def test_the_ais_placements_are_the_baseline_for_the_go_criterion():
     city, plots = _placed_city([2, 2, 1, 2])
-    rated = rate_placed(city, plots, RULES, 0)
+    rated = rate_placed(city, plots, RULES)
     assert len(rated) == 4 and all(r["gain"] >= 1 for r in rated)
+    boxed_in = rate_placed({**city, "candidates": []}, plots, RULES)
+    assert all(r["gain"] == 0 for r in boxed_in), "a city with no free plot offers no better one"
     assert go_verdict(rated)[0] == "go"
     assert go_verdict(rated[:3])[0] == "wait", "fewer than 4 districts"
     flat = [{**r, "gain": 0} for r in rated]

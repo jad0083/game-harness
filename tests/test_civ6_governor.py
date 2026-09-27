@@ -1424,6 +1424,9 @@ def test_the_briefing_shows_the_ais_own_plan():
     assert text == ("The AI's own plan: Beijing → district:holy_site, district:campus, wonder:oracle; strategies: "
                     "religious victory (since T6), science victory (since T56, stopped T76).")
     assert "early exploration" not in text, "stopped more than 30 turns ago"
+    eras = rows + [[1, "STRATEGY_ANCIENT_CHANGES", "Following"], [81, "STRATEGY_CLASSICAL_CHANGES", "Following"]]
+    shown = ai_plan_text(s, INDEX, ai_strategy_states(eras))
+    assert "classical changes (since T81)" in shown and "ancient changes" not in shown, "only the latest era's"
     assert text in briefing_text(s, INDEX, strategies=ai_strategy_states(rows))
     assert ai_plan_text(FIXTURE, INDEX, {}) == "", "an old snapshot and no log: no line"
 
