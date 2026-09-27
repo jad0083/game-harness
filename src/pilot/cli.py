@@ -10,6 +10,9 @@
                                               # three words and a QR code (never the key)
     python -m pilot dashboard-devices [list | rename ID NAME | revoke ID | revoke-all [--except ID] |
                                        log [-n N] | unlock [--port P]]
+    python -m pilot dashboard-key --rotate [--keep all|none|ID,…] [--force]   # a new service key; carried-over
+                                              # devices are kept only if named
+    python -m pilot dashboard-token create --name N --scope read|control [--expires 90d] | list | revoke ID
     python -m pilot rebuild-telemetry         # recreate runs/telemetry.sqlite from the run logs
 """
 
@@ -256,6 +259,136 @@ def control(s: Settings, a) -> int:
         return 1
 
 
+def _interactive() -> bool:
+    return sys.stdin.isatty()
+
+
+def _when(t: float | None) -> str:
+    return time.strftime("%d %b %H:%M", time.localtime(t)) if t else "never"
+
+
+def live_pilots(s: Settings, key: str) -> list[tuple[str, int | None]]:
+    """(run id, info.auth_version or None) of each live pilot that answers on loopback."""
+    import urllib.error
+    import urllib.request
+
+    from .dashboard import LIVE_STATES, list_runs
+    out = []
+    for run in list_runs(s.runs_dir):
+        st = run.get("_status") or {}
+        port = (st.get("info") or {}).get("port")
+        if not port or st.get("status") not in LIVE_STATES:
+            continue
+        req = urllib.request.Request(f"http://127.0.0.1:{int(port)}/status", headers={"X-Pilot-Key": key})
+        try:
+            with urllib.request.urlopen(req, timeout=3) as r:
+                body = json.load(r)
+        except urllib.error.HTTPError:
+            out.append((run["id"], None))               # it refuses the key it should share: treat as old
+            continue
+        except (urllib.error.URLError, OSError, ValueError):
+            continue                                    # nothing answers there: not live
+        if body.get("run_id") == run["id"]:
+            out.append((run["id"], (body.get("info") or {}).get("auth_version")))
+    return out
+
+
+def dashboard_key_cmd(s: Settings, a) -> int:
+    """Rotate the service key: a new runs/dashboard.key (0600, atomic) that both new-code processes
+    read within 2 s; the carried-over devices (the old key cookie) are kept only if named, and the
+    carry-over ends. Other browsers and script tokens are untouched. The key is never printed."""
+    from .auth import KEY_ENV, KeySource
+    if not a.rotate:
+        print("Pass --rotate [--keep all|none|ID,...] to replace the dashboard's service key (it is never printed).")
+        return 2
+    keys = KeySource(s.runs_dir)
+    if keys.from_env:
+        print(f"The key comes from {KEY_ENV}: change that variable (in .env or the service files), then restart "
+              "both services (game-pilot-view.service and game-pilot.service).")
+        return 1
+    if not a.force:
+        old = [run for run, version in live_pilots(s, keys.get()) if not version or version < 1]
+        if old:
+            print(f"A live pilot from before the change is running ({', '.join(old)}): it reads the key only at "
+                  "startup; rotate after it restarts, or pass --force (its controls then fail until it restarts).")
+            return 1
+    store = auth_store(s)
+    legacy = [d for d in store.list_devices() if d["kind"] == "browser" and d["legacy"]]
+    if legacy:
+        print("Carried over from the old key cookie (kept only if you name them):")
+        for d in legacy:
+            print(f"  {d['id']}  {d['name']}, first from {d['created_ip'] or 'unknown'}, last used {_when(d['last_seen_at'])}"
+                  f"{' from ' + d['last_ip'] if d['last_ip'] else ''}")
+    keep = a.keep
+    if keep is None and legacy:
+        if not _interactive():
+            print("Say which to keep: --keep all, --keep none or --keep ID,ID (nothing changed).")
+            return 2
+        print("Keep which? (ids separated by commas, all, or none): ", end="", flush=True)
+        keep = sys.stdin.readline().strip()
+        if not keep:
+            print("No answer: nothing changed.")
+            return 2
+    ids = {d["id"] for d in legacy}
+    keep = (keep or "none").strip()
+    kept = ids if keep == "all" else set() if keep == "none" else {x.strip() for x in keep.split(",") if x.strip()}
+    if kept - ids:
+        print(f"Not carried-over devices: {', '.join(sorted(kept - ids))} (nothing changed).")
+        return 2
+    keys.rotate()
+    store.end_carry_over()
+    signed_out = 0
+    for d in legacy:
+        if d["id"] in kept:
+            store.audit("legacy_kept", None, d["id"], {"by": "cli"})
+        else:
+            signed_out += store.revoke(d["id"], "rotate_unkept", by="cli")
+    store.audit("key_rotated", None, None, {"by": "cli", "kept": len(kept), "signed_out": signed_out})
+    print(f"New service key written to {keys.path} (0600); both services read it within 2 s. The old key no "
+          f"longer works anywhere, and old key cookies and ?key= links stop at once. Carried-over devices: kept "
+          f"{len(kept)}, signed out {signed_out}. Scripts on the controller read the file again on their next call.")
+    return 0
+
+
+DURATION = {"m": 60, "h": 3600, "d": 86400}
+
+
+def dashboard_token(s: Settings, a) -> int:
+    """Script tokens for other machines: made only here (the browser cannot mint one), shown once,
+    read or control scope, sent as a header; listed and revocable in Devices too."""
+    import re
+    store = auth_store(s)
+    if a.action == "create":
+        secs = None
+        if a.expires and a.expires != "never":
+            m = re.fullmatch(r"(\d+)([mhd])", a.expires)
+            if not m:
+                print("--expires takes a number with m, h or d (e.g. 90d), or never.")
+                return 2
+            secs = int(m.group(1)) * DURATION[m.group(2)]
+        row, tok = store.create_device("script", name=a.name, scope=a.scope, created_via="cli", created_by="cli",
+                                       expires_at=time.time() + secs if secs else None)
+        print(f"Script token for {row['name']} ({'read only' if row['scope'] == 'read' else 'control'}; "
+              f"{'expires ' + _when(row['expires_at']) if row['expires_at'] else 'no expiry'}), shown once:")
+        print(f"  {tok}")
+        print("Send it as Authorization: Bearer <token> (or X-Pilot-Key) from any address; never as a cookie or in "
+              f"a URL. Revoke it in Devices or with: python -m pilot dashboard-token revoke {row['id']}")
+        return 0
+    if a.action == "revoke":
+        row = store.device(a.id)
+        ok = bool(row and row["kind"] == "script") and store.revoke(a.id, "revoked", by="cli")
+        print("Revoked; its next request is refused." if ok else f"No live script token {a.id}.")
+        return 0 if ok else 1
+    rows = [d for d in store.list_devices() if d["kind"] == "script"]
+    if not rows:
+        print("No script tokens. Make one: python -m pilot dashboard-token create --name NAME --scope read")
+    for d in rows:
+        print(f"{d['id']}  {d['name']:<24} {'read only' if d['scope'] == 'read' else 'control':<9} last used "
+              f"{_when(d['last_seen_at'])}{' from ' + d['last_ip'] if d['last_ip'] else ''}; "
+              f"{'expires ' + _when(d['expires_at']) if d['expires_at'] else 'no expiry'}")
+    return 0
+
+
 def dashboard_devices(s: Settings, a) -> int:
     """List, rename and sign out devices; read the sign-in log; lift the sign-in pauses."""
     import urllib.error
@@ -348,6 +481,19 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("-n", type=int, default=20)
     r = dev_sub.add_parser("unlock", help="lift the throttles on typed sign-in words (asks the viewer over loopback)")
     r.add_argument("--port", type=int, default=8780)
+    key_p = sub.add_parser("dashboard-key", help="rotate the dashboard's service key (never printed)")
+    key_p.add_argument("--rotate", action="store_true")
+    key_p.add_argument("--keep", help="carried-over devices to keep: all, none, or ID,ID")
+    key_p.add_argument("--force", action="store_true", help="rotate even while a pre-change live pilot runs")
+    tok_p = sub.add_parser("dashboard-token", help="script tokens for other machines")
+    tok_sub = tok_p.add_subparsers(dest="action")
+    r = tok_sub.add_parser("create")
+    r.add_argument("--name", required=True)
+    r.add_argument("--scope", required=True, choices=["read", "control"])
+    r.add_argument("--expires", default="never", help="e.g. 90d, 12h (default: never)")
+    tok_sub.add_parser("list")
+    r = tok_sub.add_parser("revoke")
+    r.add_argument("id")
     run_p = sub.choices["run"]
     run_p.add_argument("--port", type=int)
     run_p.add_argument("--turns", type=int, help="turns per autopilot call")
@@ -367,6 +513,10 @@ def main(argv: list[str] | None = None) -> int:
         return dashboard_link(s, a.port, qr=not a.no_qr, wait=a.wait)
     if a.cmd == "dashboard-devices":
         return dashboard_devices(s, a)
+    if a.cmd == "dashboard-key":
+        return dashboard_key_cmd(s, a)
+    if a.cmd == "dashboard-token":
+        return dashboard_token(s, a)
     if a.cmd == "rebuild-telemetry":
         return rebuild(s)
     # the dashboard's model choice beats the environment; command-line options beat both

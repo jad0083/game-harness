@@ -419,7 +419,11 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   the confirm view, `navigator.brave`, `replaceState`, the countdown). Typed words reserve a
   throttle slot before any await and refund it when they matched a code. `audit_sentences` turns
   the audit into the Devices panel's activity and `dashboard-devices log`; `cli.py` opens the store
-  directly for `dashboard-link` and `dashboard-devices` (the viewer may be down).
+  directly for `dashboard-link` and `dashboard-devices` (the viewer may be down). `dashboard-key
+  --rotate` checks the live pilots' `info.auth_version` over loopback (`cli.live_pilots`), rewrites
+  the key through `KeySource.rotate` (temp file, `os.replace`, 0600), ends the carry-over
+  (`end_carry_over`) and revokes the unkept legacy devices (`rotate_unkept`); `dashboard-token`
+  mints `pgt_` script devices (scope, optional expiry) that only the CLI can create.
 - Game pillars: `pillars.py` loads and validates `corpora/<game>/pillars.toml` into a read-only
   `PillarSpec` (pillars, metrics, aliases, row keys, action limits, min milestones, instructions),
   cached per file and mtime; unknown keys, directives missing from `directives.toml`, actions without

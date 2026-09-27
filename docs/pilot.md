@@ -338,7 +338,19 @@ The dashboard listens on the LAN, so every request needs a principal (design:
   The viewer forwards live controls to the pilot with it, plus `X-Pilot-Device` (the device id)
   and `X-Pilot-Device-Name` (its name, percent-encoded) for the browser behind the request.
 - **Scripts on other machines** use scoped tokens (`pgt_…`, `read` or `control`), sent as a header
-  only; they cannot manage devices or sign-ins.
+  only (`Authorization: Bearer` or `X-Pilot-Key`, from any address); `read` gets 403 `read_only` on
+  anything but GET, and no token can manage devices or sign-ins. They are made only on the
+  controller, shown once: `python -m pilot dashboard-token create --name "laptop watch" --scope read
+  [--expires 90d]`, `dashboard-token list`, `dashboard-token revoke ID` (or Revoke in Devices).
+- **Rotating the service key**: `python -m pilot dashboard-key --rotate --keep <ids>|all|none
+  [--force]` writes a new `runs/dashboard.key` (atomic, 0600) that both services read within 2 s,
+  so nobody is signed out and nothing restarts. It lists the devices carried over from the old key
+  cookie (name, first address, last use) and keeps only those named (`--keep`, or the answer at a
+  terminal; no default); the rest are signed out and the carry-over ends. It refuses while the key
+  comes from `PILOT_DASHBOARD_KEY` (change the variable and restart both services), and while a live
+  pilot from before this change runs (it reads the key only at startup) unless `--force`.
+  Suspected compromise: `dashboard-devices revoke-all`, `dashboard-key --rotate --keep none`, then
+  `dashboard-link` for yourself, and read `dashboard-devices log`.
 - **Carry-over**: for 72 hours after the first start of this code (or until the key is rotated), a
   browser holding the old `pilot_key` cookie keeps working, and its first page load turns it into
   a device ("carried over from the old link") and deletes the old cookie; an old `/?key=` link

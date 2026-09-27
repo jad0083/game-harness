@@ -569,12 +569,18 @@ class AuthStore:
         self._x("UPDATE devices SET cookie_sent_at=? WHERE id=?", (self.now(), ident))
 
     def revoke(self, ident: str, reason: str, by: str | None = None, ip: str | None = None) -> bool:
+        row = self.device(ident)
         cur = self._x("UPDATE devices SET revoked_at=?, revoked_by=?, revoke_reason=? WHERE id=? AND revoked_at IS NULL",
                       (self.now(), by, reason, ident))
         if cur.rowcount:
-            self.audit({"signed_out": "signed_out", "idle": "idle"}.get(reason, "revoked"), ip, ident,
-                       {"reason": reason, "by": by})
+            event = ("token_revoked" if row and row["kind"] == "script" else
+                     {"signed_out": "signed_out", "idle": "idle", "rotate_unkept": "legacy_revoked"}.get(reason, "revoked"))
+            self.audit(event, ip, ident, {"reason": reason, "by": by})
         return bool(cur.rowcount)
+
+    def end_carry_over(self) -> None:
+        """The old key cookie stops working at once (a rotation ends the 72-hour window)."""
+        self.set_meta("legacy_until", "0")
 
     def revoke_others(self, keep: str, by: str | None = None, ip: str | None = None) -> int:
         cur = self._x("UPDATE devices SET revoked_at=?, revoked_by=?, revoke_reason='revoke_others'"

@@ -163,6 +163,9 @@ work with both services down. None of them prints the service key.
 .venv/bin/python -m pilot dashboard-devices rename ID NAME | revoke ID | revoke-all [--except ID]
 .venv/bin/python -m pilot dashboard-devices log [-n 20]                      # the sign-in activity, as sentences
 .venv/bin/python -m pilot dashboard-devices unlock [--port 8780]             # lift the pauses on typed codes (asks the viewer over loopback)
+.venv/bin/python -m pilot dashboard-key --rotate [--keep all|none|ID,…] [--force]   # a new service key (never printed); carried-over devices kept only if named
+.venv/bin/python -m pilot dashboard-token create --name N --scope read|control [--expires 90d]   # prints pgt_… once
+.venv/bin/python -m pilot dashboard-token list | revoke ID
 .venv/bin/python -m pilot control pause|resume|stop|instruct|chat|… [--text T] [--index N] [--port 8780]
                                                    # one control as a script: JSON to the viewer over loopback with the key;
                                                    # prints the reply, exits non-zero on a refusal
