@@ -67,7 +67,13 @@ LOCKED_PAGE = """<!doctype html><meta charset="utf-8"><title>Game Pilot</title>
 <p>Open the link with the key once in this browser; it is remembered after that.
 The link is printed in the dashboard's service log when it starts, and on the controller by:</p>
 <pre>python -m pilot dashboard-link</pre>
-<p>Opened the link from another app and still see this? <a href="/">Open the dashboard</a>.</p>
+<form method="get" action="/" style="margin:1.5em 0">
+<label>Or paste the access key (the text after <code>?key=</code>):<br>
+<input name="key" type="password" autocomplete="current-password" required
+ style="font:inherit;width:100%;max-width:28em;padding:6px 8px;margin:6px 0"></label><br>
+<button type="submit" style="font:inherit;padding:6px 14px">Open the dashboard</button>
+</form>
+<p>Opened the link from another app and still see this? <a href="/">Reload the dashboard</a>.</p>
 """
 
 

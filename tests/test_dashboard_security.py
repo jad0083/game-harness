@@ -222,3 +222,8 @@ def test_run_id_accepts_real_ids(rid):
 @pytest.mark.parametrize("rid", ["..", ".", ".hidden", "a/b", "a\\b", "a..b", ""])
 def test_run_id_rejects_traversal(rid):
     assert not dashboard.RUN_ID.match(rid)
+
+
+def test_the_access_page_offers_a_box_for_the_key():
+    from pilot.dashboard import LOCKED_PAGE
+    assert '<form method="get" action="/"' in LOCKED_PAGE and 'name="key"' in LOCKED_PAGE
