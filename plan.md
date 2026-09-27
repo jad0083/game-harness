@@ -137,13 +137,13 @@
 - [ ] Full decision prompts in traces (no 6,000-character cut)
 - [x] CI skips the Rust stages for commits with no Rust, Cargo or corpus files (`scripts/ci-needs-rust.sh`)
 - [x] Game pillars: each game defines its strategy pillars, metrics and actions in `corpora/<game>/pillars.toml`; the strategy layer, decisions, actions and dashboard use them as guardrails (spec docs/design/2026-09-26-game-pillars-design.md; deployed 31e3481 on mini-rig2, two live reviews accepted with milestones and trait-based identity)
-- [ ] Civilization VI integration (after game pillars)
-- [ ] Civ VI tuner relay (agent 1.6.0 /tuner/*, controller civ6 states|lua)
+- [x] Civilization VI integration (after game pillars) — governor live on mini-rig2 since 2026-09-26 (China, Kublai Khan, from T41)
+- [x] Civ VI tuner relay (agent 1.6.0 /tuner/*, controller civ6 states|lua) — agent 1.6.1 live on mini-rig2
 - [x] Civ VI corpus: `scripts/extract-civ6.py` rebuilds the Gathering Storm + DLC rules database from the game's XML (modinfo criteria, load order, cascading deletes) → 1,783 records in 29 kinds; 16 docs (13 wiki pages, civ6-mcp playbook, CivBench appendix, links); first `strategy.md`; manifest with the window title; loads in the controller and CI
 - [ ] Civ VI corpus: compare the Gathering Storm build with a GS `DebugGameplay.sqlite` (`CopyDatabasesToDisk 1`, load a GS game; `--check-against`) and the DLC load order in `Logs/Modding.log`
-- [ ] Civ VI pillars.toml, hotkeys and screens once the game can be read (tuner relay or saves) and played
-- [ ] Civ VI governor (spec docs/design/2026-09-26-civ6-governor-design.md): `corpora/civ6/lua/harness.lua` (snapshot, orders, autoplay; checked live), controller `civ6 snapshot|order|autoplay|autoplay-stop|autoplay-status`, `corpora/civ6/pillars.toml` in share mode, `python -m pilot run --game civ6` (first live runs; not yet a service)
-- [ ] Civ VI governor as a service on mini-rig2 (drop-in `PILOT_GAME=civ6`) with the dashboard following the campaign
+- [x] Civ VI pillars.toml, hotkeys and screens once the game can be read (tuner relay or saves) and played — pillars.toml in share mode live; hotkeys/screens not needed while the governor plays through the tuner
+- [x] Civ VI governor (spec docs/design/2026-09-26-civ6-governor-design.md): `corpora/civ6/lua/harness.lua` (snapshot, orders, autoplay; checked live), controller `civ6 snapshot|order|autoplay|autoplay-stop|autoplay-status`, `corpora/civ6/pillars.toml` in share mode, `python -m pilot run --game civ6` (first live runs; not yet a service) — deployed 4f6a969, one-turn/3-turn autoplay, review fixes
+- [x] Civ VI governor as a service on mini-rig2 (drop-in `PILOT_GAME=civ6`) with the dashboard following the campaign — running via runs/pilot-settings.json game=civ6 (dashboard Start run offers Civ VI)
 - [ ] Civ VI district and wonder placement (a tile planner, design option 2), so production orders can name them
 - [ ] Civ VI MCP tools for snapshot, orders and autoplay
 - [x] Dashboard access key: `PILOT_DASHBOARD_KEY` or `runs/dashboard.key`, one link per browser (`python -m pilot dashboard-link`), JSON-only same-origin changes
