@@ -270,3 +270,14 @@ re-installed its own library at its next call.
   (`IsHidden` false → true). Resumed: T243 and T245 played; the AI made the new era's dedication.
 - State at T240: science +56, culture +34.9, gold 523 (+34.9), faith 378, a Crossbowman army;
   Jerusalem (city-state) and Jiaodong nearby.
+
+## 2026-09-27 — the campaign is lost (T525 → T683)
+
+- Two wars from about T530 took our 8 cities in about 55 turns: 8 at T525, 6 at T546, 3 at T568, 1 at T579,
+  0 by T683. We had been last in score since about T380, with military at a third of the median or less
+  (T525: 454 against a median of 1,106).
+- Gold and faith sat unspent through the collapse: gold 1,630 → 2,446 and faith 2,278 → 648 (T525-T568).
+- The governor did not notice the defeat and kept autoplaying until T763 with 0 cities; stopped by hand.
+  The game shows the World Congress (Arms Control targeted China).
+- A post-mortem (war timeline, treasury and buy rules, long-run strategy, harness reliability, diplomacy,
+  with every causal claim checked by two skeptics) is under way; its findings follow here.
