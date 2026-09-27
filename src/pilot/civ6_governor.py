@@ -686,15 +686,35 @@ class Civ6Governor(Governor):
                               "turns it on again.", b["date"])
 
     def _hand_back(self, turn: int) -> None:
-        """Ruling 25: once turn-ready shows the engine idle (a few polls at most; a popup does not
-        stop autoplay), one-turn autoplay: the AI plays the rest of turn T, ends it and hands back at
-        T+1."""
-        for i in range(self.stand_idle_polls):
-            if not self._not_ready():
-                break
-            if i + 1 < self.stand_idle_polls:
-                time.sleep(self.stand_idle_poll_s)
-        self._play_turns(turn, 1)
+        """Ruling 25: one-turn autoplay once turn-ready shows the game idle: the AI plays the rest of
+        turn T, ends it and hands back at T+1. A popup or a busy engine gets `stand_idle_polls` polls,
+        then autoplay starts anyway (a popup does not stop it, E11). Autoplay is never started while
+        turn-ready says a turn is playing (`playing_reasons`: autoplay on, the turn over or sent, or
+        unreadable) or does not answer: that waits under the turn deadline, as `_wait_turns` does.
+        When the game is on another turn, T is over: nothing is handed back (an autoplay start would
+        play the next turn too), and the loop reads the game afresh."""
+        deadline, polls, seen = time.time() + self.turn_deadline_s, 0, "nothing"
+        while True:
+            try:
+                r = self.game.turn_ready()
+            except Exception as e:  # noqa: BLE001 - no answer: the AI may be playing
+                r, seen = None, f"no answer ({type(e).__name__}: {e})"[:200]
+            if r is not None:
+                why = [str(w) for w in r.get("why") or []]
+                seen, now_turn = ", ".join(why) or "ready", r.get("turn")
+                if not playing_reasons(why):
+                    if isinstance(now_turn, int) and now_turn != turn:
+                        self.log.emit("journal", text=f"last stand at T{turn}: the game is already at T{now_turn}, "
+                                                      "so nothing is handed back")
+                        return
+                    polls += 1
+                    if not why or polls >= self.stand_idle_polls:
+                        self._play_turns(turn, 1)
+                        return
+            if time.time() > deadline:
+                raise Civ6Stuck(f"the hand-back after the last stand at T{turn} waited {self.turn_deadline_s:.0f} s "
+                                f"for the game: turn-ready says {seen}"[:400])
+            time.sleep(self.stand_idle_poll_s)
 
     def _check_pins(self, b: dict) -> None:
         """At the next snapshot: did the hand-back's AI move a pinned unit? The snapshot lists our units

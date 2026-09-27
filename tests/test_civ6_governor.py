@@ -14,6 +14,7 @@ from pilot.civ6 import (
     Civ6Order,
     CorpusIndex,
     FakeCiv6,
+    _stand_apply,
     briefing_text,
     check_orders,
     held_outcome,
@@ -1519,6 +1520,73 @@ def test_no_game_core_read_means_no_action(setup):
     stand = next(e for e in _events(setup) if e["kind"] == "last_stand")
     assert stand["stopped"] == "no GameCore read before the first action: nothing sent"
     assert [a for a in game.actions if a[0] == "autoplay"][1] == ("autoplay", 1, False)
+
+
+def recorded_snapshots(game: FakeCiv6) -> FakeCiv6:
+    """Record every snapshot in `game.actions` as ("snapshot", turn, active)."""
+    take = game.snapshot
+
+    def snapshot():
+        game.actions.append(("snapshot", game.state["turn"], game.active))
+        return take()
+    game.snapshot = snapshot
+    return game
+
+
+def test_a_turn_that_moved_on_during_the_stand_is_not_handed_back_again(setup):
+    """The stand stops on 'the turn changed': turn T is over, so there is nothing to hand back. An
+    autoplay start for T would play T+1 while the wait accepted its first reading: the loop takes a
+    fresh snapshot instead."""
+    def moved_on(ls, reply):
+        _stand_apply(ls, reply)
+        game.state["turn"] += 1                         # the turn ended during the stand (not by us)
+    game = recorded_snapshots(stand_game(stand=[SHOT], stand_effect=moved_on))
+    g = stand_governor(setup, game)
+    g.run(max_decisions=3)
+    assert never_while_autoplay_runs(game)
+    stand = next(e for e in _events(setup) if e["kind"] == "last_stand")
+    assert stand["stopped"] == "the turn changed"
+    calls = [a[0] if a[0] != "stand" else f"stand {a[2]}" for a in game.actions]
+    i = calls.index("stand ranged_attack")
+    assert calls[i:i + 4] == ["stand ranged_attack", "ls_state", "turn_ready", "snapshot"], calls[i:i + 6]
+    assert game.actions[i + 3][1] == T0 + 2, "the snapshot at the turn the game is on"
+
+
+class _Lingering(FakeCiv6):
+    """Turn-ready reads `why` for `lingering` more calls (autoplay still running from before the
+    stand, or the turn already sent); records whether autoplay was started meanwhile."""
+
+    def __init__(self, *a, why: str = "autoplay active", **kw):
+        super().__init__(*a, **kw)
+        self.lingering, self.why, self.started_while_lingering = 0, why, False
+
+    def turn_ready(self) -> dict:
+        if self.lingering > 0:
+            self.lingering -= 1
+            self.actions.append(("turn_ready", self.active))
+            return {"ok": True, "ready": False, "why": [self.why], "turn": self.state["turn"]}
+        return super().turn_ready()
+
+    def autoplay(self, turns: int) -> dict:
+        self.started_while_lingering |= self.lingering > 0
+        return super().autoplay(turns)
+
+
+@pytest.mark.parametrize("why", ["autoplay active", "turn already sent"])
+def test_the_hand_back_never_starts_autoplay_while_turn_ready_says_a_turn_is_playing(setup, why):
+    game = _Lingering(FIXTURE, index=INDEX, why=why, ls={"me": 0, "units": [dict(LS_ARCHER), dict(LS_BARB)]})
+
+    def falls_while_playing(state):
+        falls(state)
+        game.lingering = 9                              # 1 for the stand's check, 8 for the hand-back
+    game.events = {T0 + 1: falls_while_playing, T0 + 2: recovers}
+    g = stand_governor(setup, game)
+    g.run(max_decisions=3)
+    stand = next(e for e in _events(setup) if e["kind"] == "last_stand")
+    assert stand["stopped"] == f"not ready: {why}; nothing sent"
+    assert not game.started_while_lingering, "autoplay started while turn-ready said a turn is playing"
+    assert game.lingering == 0 and game.state["turn"] == T0 + 4, "decisions at T0, T0+1 (falling) and T0+4"
+    assert [a for a in game.actions if a[0] == "autoplay"][1] == ("autoplay", 1, False), "then the hand-back"
 
 
 def test_a_pinned_unit_the_hand_back_moved_is_noted(setup):

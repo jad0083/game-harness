@@ -186,7 +186,9 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   back in GameCore (`civ6 ls-state`): it `took`, `did_not_take` or is `unknown`; anything but
   `took`, a lost reply (never resent), a popup or a changed turn stops the stand at once. Units that
   acted and still have moves are pinned (`civ6 finish-moves`), then one-turn autoplay hands the turn
-  back: the AI plays the rest of it (no manual end turn). At most 8 actions and 90 s per stand, 3
+  back: the AI plays the rest of it (no manual end turn). That autoplay never starts while
+  `turn-ready` reads a turn playing (autoplay on, the turn over or sent) or does not answer, and a
+  game already on the next turn gets no hand-back (the loop reads it afresh). At most 8 actions and 90 s per stand, 3
   stands in a row per city (a stand stopped before its first step, e.g. by a popup, does not
   count); targets are barbarians or players at war with us whose attack would not
   change a war state, never civilians, and never a unit standing in a district that is not ours (a
