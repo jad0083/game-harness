@@ -1037,7 +1037,8 @@ local function best_retreat(me, o, c, enemies)
   for _, idx in ipairs(reach) do
     local p = Map.GetPlotByIndex(idx)
     local x, y = p:GetX(), p:GetY()
-    local free = not (x == o.x and y == o.y)
+    -- within reach of the stand (and of ls_state's read-back): LS_RADIUS of the city
+    local free = not (x == o.x and y == o.y) and Map.GetPlotDistance(x, y, c:GetX(), c:GetY()) <= LS_RADIUS
     for dy = -1, 1 do
       for dx = -1, 1 do
         if free and Map.GetPlotDistance(x, y, x + dx, y + dy) == 1 and #hostiles_at(me, x + dx, y + dy) > 0 then free = false end

@@ -274,3 +274,18 @@ def test_district_plots_list_where_each_district_may_go_with_the_plot_facts():
     assert r["built"] == ["PYRAMIDS"], "our built wonders"
     everyone = call(rt, out, "Harness.district_plots")
     assert [c["name"] for c in everyone["cities"]] == ["Beijing", "Xi'an"]
+
+
+def test_a_retreat_stays_within_reach_of_the_read_back():
+    """Review fix: a hurt unit 3 tiles out never retreats to a plot the GameCore read-back cannot see."""
+    rt, out = stand_world("UNITS = {}\n"
+                          "unit { id = 2, owner = BARB, utype = 'UNIT_WARRIOR', x = 24, y = 21 }\n"
+                          "unit { id = 11, owner = 0, utype = 'UNIT_WARRIOR', x = 25, y = 21, dmg = 70 }")
+    assert rt.eval("Map.GetPlotDistance(22, 21, 25, 21)") == 3
+    far = rt.eval("(function() local n = 0 for _, i in ipairs(UnitManager.GetReachableMovement(UNITS[2])) do "
+                  "local p = Map.GetPlotByIndex(i) if Map.GetPlotDistance(22, 21, p:GetX(), p:GetY()) > 3 then n = n + 1 end "
+                  "end return n end)()")
+    assert far >= 1, "some reachable plots lie 4 tiles out"
+    r = call(rt, out, "Harness.last_stand_step, 65536, {}, {}")
+    assert r == {"ok": True, "done": True, "reason": "nothing left to do"}, "every free plot within 3 is next to it"
+    assert requests(rt) == []

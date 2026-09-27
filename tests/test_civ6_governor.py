@@ -1488,6 +1488,19 @@ def test_an_override_records_whether_the_ai_took_its_own_top_three(setup):
     assert [(r["result"], r["by"], r["top3_hit"], r["top3"]) for r in rows] == [
         ("overridden", "building:granary", True, ["building:granary", "unit:settler", "unit:archer"])]
     assert "the AI's replacement was in the city's own top 3 builds (at order time) 1 of 1 times" in seen[1]
+    no_recs = order_row_top3(setup, [])
+    assert no_recs is None, "an empty recommendation list is unknown, not a miss"
     from pilot.civ6 import top3_hits
     assert top3_hits([*rows, {"result": "overridden", "top3_hit": False}, {"result": "completed", "top3_hit": None}]) \
         == (1, 2)
+
+
+
+def order_row_top3(setup, recs):
+    """The top 3 a production order's row keeps when the city's recommendations are `recs`."""
+    from pilot.civ6 import Checked
+    g = governor(setup, FakeCiv6(FIXTURE, index=INDEX), orders_model([]))
+    b = {**FIXTURE, "cities": [_city0(recommend=recs)]}
+    c = Checked(order={"kind": "production", "city": "Beijing", "id": "unit:slinger"},
+                wire={"kind": "production", "city": "Beijing", "id": "unit:slinger"})
+    return g._order_row(c, b, "replace")["top3"]

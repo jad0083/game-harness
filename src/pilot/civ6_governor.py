@@ -743,7 +743,7 @@ class Civ6Governor(Governor):
                 "currency": o.get("currency") if o.get("kind") == "purchase" else None, "situation": situation,
                 "ordered": b.get("date") or f"T{b.get('turn')}", "top3_hit": None,
                 # the city's own top 3 builds when ordered (ruling 29), for top3_hit
-                "top3": [self.index.cid(r.get("type")) for r in recs] if isinstance(recs, list) else None}
+                "top3": [self.index.cid(r.get("type")) for r in recs] if isinstance(recs, list) and recs else None}
 
     def _now_turn(self) -> int:
         return self._tracked_turn or max([r.get("turn") or 0 for r in self._order_rows] + [0])
