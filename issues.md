@@ -3,6 +3,7 @@
 ## Open
 
 - [ ] Dashboards (8780 viewer, 8790 live pilot) had no authentication on the LAN, and POSTs were open to CSRF / DNS rebinding (security review 2026-09-26, B1): fixed on the branch with an access key (cookie or `X-Pilot-Key`), JSON-only mutations and an Origin/Host check; tick when deployed
+- [ ] `/api/pc` returned the title of the PC's foreground window (could be a mail subject or browser tab; B1): now only online, version, games open and whether one is in front; tick when deployed
 - [ ] Pilot key denylist matched exact strings only, so `win+r`, `win+x`, `alt+tab` passed (B7): any combo with the Windows key and OS-level combos are refused; tick when deployed
 - [ ] Dashboard run-id pattern allowed `..` (B8, no impact found): ids may no longer contain dots or separators; tick when deployed
 - [x] Dashboard said "PC on, no game open" while Stellaris ran on mini-rig2 (2026-09-26): only game-pilot.service had the host drop-in (`GAME_AGENT_URL`, `GAME_RESOLUTION`), so the dashboard polled the main PC (.77); the same `host.conf` drop-in is now on game-pilot-view.service (`/api/pc` reports Stellaris on 1.4.0). A host switch must update both services until the host registry (plan.md) lands

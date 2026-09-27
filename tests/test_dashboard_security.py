@@ -167,18 +167,6 @@ def test_viewer_passes_the_key_to_the_live_pilot(tmp_path):
     log.close()
 
 
-# ---------- run ids ----------
-
-@pytest.mark.parametrize("rid", ["20260926-185855", "run1", "archive_2"])
-def test_run_id_accepts_real_ids(rid):
-    assert dashboard.RUN_ID.match(rid)
-
-
-@pytest.mark.parametrize("rid", ["..", ".", ".hidden", "a/b", "a\\b", "a..b", ""])
-def test_run_id_rejects_traversal(rid):
-    assert not dashboard.RUN_ID.match(rid)
-
-
 # ---------- /api/pc ----------
 
 class FakeResp(io.BytesIO):
@@ -198,6 +186,18 @@ def fake_agent(foreground: str, titles: list[str], calls: list):
     return urlopen
 
 
+def test_pc_status_does_not_expose_the_window_title(monkeypatch):
+    calls: list = []
+    monkeypatch.setenv("GAME_AGENT_TOKEN", "t")
+    monkeypatch.setattr("urllib.request.urlopen", fake_agent("Inbox - private mail", ["Stellaris", "Inbox - private mail"], calls))
+    st = dashboard.pc_status()
+    assert "Inbox" not in json.dumps(st)
+    assert st == {"online": True, "version": "1.4.0", "games": ["stellaris"], "game_in_front": False, "front_game": None}
+    monkeypatch.setattr("urllib.request.urlopen", fake_agent("Stellaris", ["Stellaris"], calls))
+    st = dashboard.pc_status()
+    assert st["game_in_front"] is True and st["front_game"] == "stellaris"
+
+
 def test_pc_status_uses_the_configured_agent_url(monkeypatch):
     from pilot.config import Settings
     calls: list = []
@@ -210,3 +210,15 @@ def test_pc_status_uses_the_configured_agent_url(monkeypatch):
     calls.clear()
     dashboard.pc_status()
     assert calls[0] == Settings().agent_url.rstrip("/") + "/health"
+
+
+# ---------- run ids ----------
+
+@pytest.mark.parametrize("rid", ["20260926-185855", "run1", "archive_2"])
+def test_run_id_accepts_real_ids(rid):
+    assert dashboard.RUN_ID.match(rid)
+
+
+@pytest.mark.parametrize("rid", ["..", ".", ".hidden", "a/b", "a\\b", "a..b", ""])
+def test_run_id_rejects_traversal(rid):
+    assert not dashboard.RUN_ID.match(rid)

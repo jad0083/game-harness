@@ -159,6 +159,8 @@ stream, the frame, `/control`, `/status` and everything else except the short "h
 - Changes (`POST /control`, `/api/settings`, `/api/run`) must be `application/json`, and when a
   browser sends an `Origin` it must be the dashboard's own host; anything else gets 403. This
   stops other web pages from driving the pilot through your browser.
+- `/api/pc` reports only whether the agent is online, its version, which known games are open and
+  whether one is in front, never window titles.
 
 ## Telemetry
 

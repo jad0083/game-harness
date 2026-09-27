@@ -20,7 +20,7 @@ Telemetry (runs/telemetry.sqlite, across runs and models):
     GET  /api/plans?campaign=<id>|run=<id>      campaign plan versions, newest first
     GET  /api/strategy?campaign=<id>            current pillar strategy, milestone status, version history, the game's pillars spec
     GET  /api/models                            models to offer, and the saved choice for the next run
-    GET  /api/pc                                gaming PC: agent reachable, version, window in front, games open
+    GET  /api/pc                                gaming PC: agent reachable, version, games open, game in front
     POST /api/settings  {"models": [{"model", "thinking"}, ...], "rotate"}   the model list (live too); older {"model", "thinking", "fallback"}
     POST /api/run  {"game", "speed", "months"}   start a pilot run (game-pilot.service); viewer only
 
@@ -202,9 +202,17 @@ class LiveProxy:
 GAME_WINDOWS = {"Stellaris": "stellaris", "Galactic Civilizations": "galciv4"}
 
 
+def game_of(title: str) -> str | None:
+    """The known game a window title belongs to, if any."""
+    for k, g in GAME_WINDOWS.items():
+        if (title == k if k == "Stellaris" else k in title):
+            return g
+    return None
+
+
 def pc_status() -> dict:
-    """Agent health and open game windows on the gaming PC (read-only calls)."""
-    import os
+    """Agent health and open game windows on the gaming PC (read-only calls). Window titles stay
+    here: the answer only says which known games are open and whether one is in front."""
     import urllib.request
 
     from .config import REPO, Settings
@@ -218,8 +226,10 @@ def pc_status() -> dict:
             titles = [w.get("title", "") for w in json.load(r).get("windows", [])]
     except Exception as e:  # noqa: BLE001 - offline is a normal answer here
         return {"online": False, "error": str(e)[:120]}
-    games = sorted({g for t in titles for k, g in GAME_WINDOWS.items() if (t == k if k == "Stellaris" else k in t)})
-    return {"online": True, "version": h.get("version"), "foreground": h.get("foreground", ""), "games": games}
+    games = sorted({g for g in map(game_of, titles) if g})
+    front = game_of(h.get("foreground") or "")
+    return {"online": True, "version": h.get("version"), "games": games, "game_in_front": front is not None,
+            "front_game": front}
 
 
 def list_runs(runs_dir: Path, live_id: str | None = None) -> list[dict]:
@@ -441,7 +451,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
     pc_cache: dict = {}
 
     async def api_pc(_):
-        """Is the gaming PC reachable, which agent version, what is in front, which game is open (cached 4 s)."""
+        """Is the gaming PC reachable, which agent version, which game is open or in front (cached 4 s)."""
         now = asyncio.get_running_loop().time()
         if pc_cache and now - pc_cache["t"] < 4:
             return web.json_response(pc_cache["data"])
