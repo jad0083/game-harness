@@ -98,6 +98,24 @@ def test_planet_crisis_fires_once_below_25_on_2_saves_in_a_row():
     assert low_stability(recovered, rows) == []
 
 
+def test_a_save_years_older_is_not_the_save_before():
+    """A restart gap (the governor last saw the campaign in 2250, now it is 2255) is no evidence that a
+    problem persisted: nothing was observed between (ruling 22's "2 saves in a row")."""
+    low = lambda d: save(d, colony(stability=20))
+    rows = [r for _, _, r in play([low("2249.12.01"), low("2250.01.01")])]
+    now = low("2255.01.01")
+    assert low_stability(now, rows) == [], "C6 needs the save before to be recent"
+    assert planet_urgent(now, rows) == [] and planet_issues(now, rows) == []
+    after = play([low("2249.12.01"), low("2250.01.01"), low("2255.01.01"), low("2255.02.01"), low("2255.03.01")])
+    assert [u for _, u, _ in after][2:] == [[], ["planet crisis: Arnvoss stability 20"], []], \
+        "the new run of saves fires once, at its own transition"
+    assert [len(f) for f, _, _ in after][2:] == [0, 0, 1] and after[4][0][0]["saves"] == 3
+    assert low_stability(low("2255.04.01"), [r for _, _, r in after]) == ["Arnvoss"]
+    missed = play([low("2250.01.01"), low("2250.04.01")])
+    assert missed[1][1] == ["planet crisis: Arnvoss stability 20"], "3 months apart: a poll missed saves"
+    assert play([low("2250.01.01"), low("2250.05.01")])[1][1] == [], "4 months apart: not in a row"
+
+
 def test_the_line_names_flagged_planets_only_with_a_cause_hint():
     bad = lambda d: save(d, colony(pops=1200, stability=18, amenities=-253, housing=-283, queued=()),
                          colony(2, "Balkenvoss"), minerals=-3.0)
@@ -142,7 +160,7 @@ def test_arnvoss_in_the_theia_2272_save_carries_the_development_fields():
 def test_the_saves_amenity_deficits_are_flagged(key, name, amenities):
     b = FIXTURE[key]
     y, m, d = b["date"].split(".")
-    earlier = {**b, "date": f"{int(y) - 1}.{m}.{d}"}
+    earlier = {**b, "date": f"{int(y) - (int(m) <= 2)}.{(int(m) - 3) % 12 + 1:02d}.{d}"}     # 2 months before
     assert planet_issues(b, []) == [], "one save alone is not a lasting problem"
     flagged = planet_issues(b, [{"date": earlier["date"], "colonies": colony_row(earlier, [])}])
     mine = next(f for f in flagged if f["name"] == name)

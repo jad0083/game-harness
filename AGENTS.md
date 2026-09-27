@@ -332,7 +332,7 @@ Rules:
   non-blocking status-quo question. Ends at peace or after 6 quiet saves held 6 months.
 - **Planet check** (read-only): a colony under stability 50, amenities under -100 (300+ pops), housing
   under 0 (1,000+ pops), 5% unemployed (not the capital), 20% fewer pops than its 12-month peak, or
-  occupied, for 2+ months, is named in the decision prompt's `Planet check:` line with a hint
+  occupied, for 2+ months (saves at most 3 months apart: a restart gap starts the count again), is named in the decision prompt's `Planet check:` line with a hint
   (nothing queued, minerals net < 0). `planet crisis` (under 25 on 2 saves in a row) and `planet
   losing pops` (1,000+ pops) are urgent once and start a review. No directive repairs grown colonies.
 - **Action record**: every directive, tech pick, market order and posture is followed in the

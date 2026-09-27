@@ -11,7 +11,8 @@ robots count):
 - `o` it is occupied.
 
 It is flagged when the problem persists across saves at least 2 months apart with no save between them
-without it. The governor keeps each save's problems in its metrics row (`colonies`: id -> [pops,
+without it, and none more than 3 months after the one before (a restart gap: nothing was observed
+between them, so the older save is not "the save before"). The governor keeps each save's problems in its metrics row (`colonies`: id -> [pops,
 free amenities, stability, codes]), so the check needs no state of its own and survives a restart.
 Urgent reasons fire once, at the transition: a colony below stability 25 on 2 saves in a row, and a
 planet of 1,000+ pops losing 20% in 12 months. No lever acts on planets in this version."""
@@ -27,6 +28,9 @@ HOUSING_LOW, HOUSING_POPS = 0.0, 1000
 UNEMPLOYED_SHARE = 0.05
 POPS_DROP, POPS_MONTHS, POPS_URGENT = 0.20, 12, 1000
 PERSIST_MONTHS = 2
+# saves further apart than this are not "in a row": nothing was observed between them (a restart
+# gap of years); 3 leaves room for a poll that missed a monthly save at the fastest speed
+NEXT_SAVE_MONTHS = 3
 RECORD_GAP_MONTHS = 12            # a pair of rows further apart says nothing about one directive
 # the go criterion's estimate for a later planet lever (ruling 22): job output lost to low stability,
 # 0.6% per point under 75 (a pre-4.0 coefficient, unverified in 4.5)
@@ -110,14 +114,20 @@ def colony_row(b: dict, rows: list[dict]) -> dict[str, list]:
     return out
 
 
+def _next_to(newer: dict, r: dict | None) -> dict | None:
+    """`r` when it is the save before `newer` (at most NEXT_SAVE_MONTHS earlier), else None."""
+    return r if r is not None and _months(newer["date"]) - _months(r["date"]) <= NEXT_SAVE_MONTHS else None
+
+
 def _run(b: dict, pid: str, code: str, older: list[dict]) -> tuple[int, int]:
-    """(saves in a row with `code` before `b`, the oldest one's month); older = rows before b, newest first."""
-    n, since = 0, _months(b["date"])
+    """(saves in a row with `code` before `b`, the oldest one's month); older = rows before b, newest first.
+    A gap of more than NEXT_SAVE_MONTHS between two saves ends the run."""
+    n, since, newer = 0, _months(b["date"]), b
     for r in older:
-        e = _entry(r, pid)
+        e = _entry(r, pid) if _next_to(newer, r) else None
         if e is None or code not in str(e[3]):
             break
-        n, since = n + 1, _months(r["date"])
+        n, since, newer = n + 1, _months(r["date"]), r
     return n, since
 
 
@@ -160,9 +170,10 @@ def planet_line(flagged: list[dict]) -> str:
 
 
 def low_stability(b: dict, rows: list[dict]) -> list[str]:
-    """Colonies below stability 25 on save `b` and on the save before it (war crisis C6)."""
+    """Colonies below stability 25 on save `b` and on the save before it (war crisis C6); a save more
+    than NEXT_SAVE_MONTHS older is not the save before."""
     older = _before(b, rows)
-    prev = older[0] if older else None
+    prev = _next_to(b, older[0] if older else None)
     out = []
     for p in b.get("planets") or []:
         e = _entry(prev, str(p.get("id"))) if prev else None
@@ -174,9 +185,12 @@ def low_stability(b: dict, rows: list[dict]) -> list[str]:
 def planet_urgent(b: dict, rows: list[dict]) -> list[str]:
     """Urgent reasons, each once at its transition: "planet crisis: <name> stability <n>" when a colony
     is below 25 for the second save in a row, and "planet losing pops: <name> -<p>% in 12 months" when a
-    planet of 1,000+ pops first shows a 20% loss."""
+    planet of 1,000+ pops first shows a 20% loss. A save more than NEXT_SAVE_MONTHS before the next one
+    is not the save before it (after a restart gap the transition fires again)."""
     older = _before(b, rows)
     prev, prev2 = (older + [None, None])[:2]
+    prev = _next_to(b, prev)
+    prev2 = _next_to(prev, prev2) if prev else None
     out = []
     for p in b.get("planets") or []:
         pid, name, codes = str(p.get("id")), p.get("name") or str(p.get("id")), _codes(b, p, rows)

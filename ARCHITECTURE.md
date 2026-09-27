@@ -435,7 +435,7 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   kept by `_follow`, the fill's line shown to the next decision; a buy that took but trades nothing in
   2 saves (`market.trades_net`) is recorded `took` by "not executing"), the planet check
   (`stellaris_planets.py`, pure: `colony_codes` per save, `colony_row` into each metrics row,
-  `planet_issues` (persisted 2 months), `planet_line`, `planet_urgent`, `planet_record`,
+  `planet_issues` (persisted 2 months; saves over 3 months apart are not in a row), `planet_line`, `planet_urgent`, `planet_record`,
   `stability_loss`; the governor's `_observe` builds the save's row once per date from the last 24
   months of rows (`_rows`, seeded from telemetry by `_load_rows`), the Stellaris-only trigger tuple
   `STELLARIS_TRIGGERS` on `Governor.event_triggers`), the war crisis (`stellaris_crisis.py`, pure:

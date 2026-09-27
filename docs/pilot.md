@@ -416,11 +416,12 @@ A colony has a problem when its stability is under 50, its free amenities under 
 its free housing under 0 on 1,000+ pops, 5% or more of its employable pops unemployed (not the
 capital), its pops 20% under their peak of the last 12 months, or it is occupied (pops count working
 robots). It is flagged once the problem persists across saves at least 2 months apart with none
-between them without it, and the decision prompt gets one line naming the flagged planets only, with
+between them without it and none more than 3 months after the one before (a save from before a
+restart gap is not "the save before": nothing was observed between), and the decision prompt gets one line naming the flagged planets only, with
 a cause hint: `Planet check: Arnvoss stability 18 (3 saves), amenities -253, housing -283; nothing
 queued here` (also "minerals net < 0"; on the dashboard as `planet_check`). Two urgent reasons fire
 once, at the transition, and start a review (12-month cap): `planet crisis: <name> stability <n>` (a
-colony under 25 on 2 saves in a row) and `planet losing pops: <name> -<p>% in 12 months` (1,000+
+colony under 25 on 2 saves in a row, at most 3 months apart; war crisis C6 reads the same) and `planet losing pops: <name> -<p>% in 12 months` (1,000+
 pops). Each metrics row keeps every colony's pops, amenities, stability and problems (`colonies`) and
 the estimate of job output lost to stability under 75 (`stability_loss`, percent; the go criterion of
 a later planet lever), so the check survives a restart. The Strategist gets the planet record: per
