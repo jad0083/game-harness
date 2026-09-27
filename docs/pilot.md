@@ -669,7 +669,9 @@ The dashboard listens on the LAN, so every request needs a principal (design:
   of the open codes off (their links and QR codes still work). A valid link is never throttled,
   signed-in browsers and scripts never are. `python -m pilot dashboard-devices unlock` lifts the
   pauses (so does a viewer restart). A code used a second time by another browser signs out the
-  browser it had signed in and tells every signed-in page ("A used sign-in code was tried again").
+  browser it had signed in and tells every signed-in page ("A used sign-in code was tried again");
+  the same browser submitting it again within 10 s from the same address (a double tap on the form)
+  is not a copy and changes nothing.
 - **Devices** (Settings > Devices, or ⋯ > Devices): this browser (rename, sign out), the other
   browsers with how and when they signed in and their last use and address (badges: new, carried
   over from the old link, used from two addresses) and **Sign out**, the script tokens with

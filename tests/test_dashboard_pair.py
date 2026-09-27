@@ -409,6 +409,46 @@ def test_the_no_script_form_takes_words_only_with_a_matching_origin(tmp_path, cl
     asyncio.run(go())
 
 
+def test_a_double_submit_of_the_form_is_already_not_a_copy(tmp_path, clock):
+    """Two submits of the no-script form from one browser (a double tap: the second leaves before the
+    first's cookie is stored) spend the code once; the second is `already`, nothing is signed out and
+    nobody is warned. The same address and browser seconds later, or another browser, is a copy."""
+    app, auth = viewer(tmp_path, clock)
+    g = auth.store.create_grant("cli", words=True)
+    h = {"User-Agent": UA_CHROME}
+
+    async def go():
+        form = {"words": words_of(g), "next": "/"}
+        async with client(app, headers=h) as a, client(app, headers=h) as b:
+            r1 = await a.post("/pair", data=form, headers=origin(a), allow_redirects=False)
+            clock.t += 1
+            r2 = await b.post("/pair", data=form, headers=origin(b), allow_redirects=False)
+            assert (r1.status, r2.status) == (303, 303)
+            assert "pilot_session=" in r1.headers["Set-Cookie"] and "pilot_session=" not in r2.headers.get("Set-Cookie", "")
+            assert (await a.get("/status")).status == 200
+            clock.t += A.RESUBMIT_S + 1
+            async with client(app, headers=h) as late:
+                r3 = await late.post("/pair", data=form, headers=origin(late), allow_redirects=False)
+                assert r3.status == 409
+    asyncio.run(go())
+    dev = auth.store.grant(g["id"])["device_id"]
+    assert auth.store.device(dev)["revoke_reason"] == "conflict"                  # only the late copy did that
+    events = [r["event"] for r in auth.store.audit_rows()]
+    assert events.count("grant_conflict") == 1 and events.count("signin") == 1
+
+
+def test_a_second_browser_seconds_later_is_still_a_copy(tmp_path, clock):
+    app, auth = viewer(tmp_path, clock)
+    g = auth.store.create_grant("cli", words=True)
+
+    async def go():
+        async with client(app, headers={"User-Agent": UA_CHROME}) as a, client(app, headers={"User-Agent": UA_WEBVIEW}) as b:
+            assert (await a.post("/pair", json={"words": words_of(g)}, headers=origin(a))).status == 200
+            assert (await b.post("/pair", json={"words": words_of(g)}, headers=origin(b))).status == 409
+    asyncio.run(go())
+    assert auth.store.device(auth.store.grant(g["id"])["device_id"])["revoke_reason"] == "conflict"
+
+
 def test_check_shows_cookie_blocked_when_the_cookie_did_not_stick(tmp_path, clock):
     app, _ = viewer(tmp_path, clock)
 

@@ -65,6 +65,7 @@ TWO_ADDRESSES_S = 600
 LEGACY_WINDOW_S = 72 * 3600
 GRANT_TTL_S = 600
 GRANT_KEEP_S = DAY                       # spent grants are kept this long (a second use is a conflict)
+RESUBMIT_S = 10                          # the same address and browser again this soon: a double submit
 NOTICE_S = DAY
 KEEPALIVE_S = 15.0
 AUDIT_KEEP_S, AUDIT_MAX_ROWS = 90 * DAY, 10_000
@@ -728,6 +729,9 @@ class AuthStore:
             if presenter and presenter == g["device_id"]:
                 return "already", {}
             dev = self.device(g["device_id"]) if g["device_id"] else None
+            if (g["state"] == "used" and dev and not dev["revoked_at"] and ip and ip == g["used_ip"]
+                    and ((user_agent or "")[:200] or None) == dev["user_agent"] and now - (g["used_at"] or 0) <= RESUBMIT_S):
+                return "already", {}        # a double submit before the first reply's cookie was stored
             if g["state"] == "used":
                 self._x("UPDATE grants SET state='conflict' WHERE id=?", (g["id"],))
                 if dev:
