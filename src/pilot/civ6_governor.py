@@ -22,6 +22,9 @@ from pydantic_ai.messages import ToolCallPart, ToolReturnPart
 from pydantic_ai.usage import UsageLimits
 
 from .civ6 import (
+    DIPLOMACY_RECORD,
+    DIPLOMACY_RECORD_HEADING,
+    DIPLOMACY_RECORD_KEYS,
     ORDER_ACTION,
     STAND_KEYS,
     UNKNOWN,
@@ -36,6 +39,10 @@ from .civ6 import (
     ai_strategy_states,
     briefing_text,
     check_orders,
+    diplomacy_answered,
+    diplomacy_key,
+    diplomacy_record_text,
+    diplomacy_reply_text,
     faith_reserve_now,
     gold_reserve_now,
     held_outcome,
@@ -204,6 +211,8 @@ class Civ6Governor(Governor):
         self._pinned: list[dict] = []             # units the last stand pinned, checked at the next snapshot
         self._ai_log_next = 0                     # where the next read of the AI's strategy log starts (ruling 29)
         self._ai_rows: list = []                  # our player's rows of that log: [turn, strategy, status]
+        self._dipl_seen: set[str] = set()         # diplomacy answers already reported (`diplomacy_key`)
+        self._dipl_rows: list[dict] = []          # the campaign's diplomacy_reply rows, oldest first (order record)
         log.state.info["directives"] = []
         log.state.info["decide_turns"] = settings.decide_every_turns
         log.state.info["controls"] = [c for c in log.state.info.get("controls", []) if c not in ("override", "set_speed")]
@@ -277,6 +286,41 @@ class Civ6Governor(Governor):
         self.log.set_campaign(self.s.game, name, f"{b.get('civ_name') or ''} — {b.get('leader_name') or ''}")
         self._load_campaign_state()
         self._load_order_record()
+        self._load_diplomacy_seen()
+
+    def _load_diplomacy_seen(self) -> None:
+        """The answers earlier runs of the campaign reported, so a restart does not report them again,
+        and they stay in the order record (a reload empties the library's own log)."""
+        tel, cid = self.log.telemetry, self.log.campaign_id
+        if tel is None or not cid:
+            return
+        try:
+            rows = tel.campaign_events(cid, "diplomacy_reply")
+            self._dipl_seen |= {r["key"] for r in rows if r.get("key")}
+            self._dipl_rows = rows
+        except Exception as e:  # noqa: BLE001 - advisory: at worst an answer is reported twice
+            self.log.emit("briefing_error", error=f"loading the diplomacy replies: {e}"[:200])
+        self._publish_record()
+
+    def _note_diplomacy(self, b: dict) -> None:
+        """One `diplomacy_reply` event per statement the library answered for us since the last
+        snapshot (issues.md T240, T342)."""
+        new = False
+        for e in diplomacy_answered(b):
+            key = diplomacy_key(e)
+            if key in self._dipl_seen:
+                continue
+            self._dipl_seen.add(key)
+            row = {"key": key, "date": f"T{e.get('at') or b.get('turn')}", "turn": e.get("turn"), "at": e.get("at"),
+                   "civ": self.index.cid(e.get("civ")) if e.get("civ") else None, "statement": e.get("kind"),
+                   "subtype": e.get("sub"), "reply": e.get("reply"), "why": e.get("why"),
+                   "text": diplomacy_reply_text(e), "late": bool(e.get("late")), "error": e.get("err"),
+                   "session": e.get("session"), "from": e.get("from")}
+            self.log.emit("diplomacy_reply", **row)
+            self._dipl_rows.append(row)
+            new = True
+        if new:
+            self._publish_record()
 
     def _load_order_record(self) -> None:
         """The campaign's order record from earlier runs (ruling 13): its order_outcome rows, the
@@ -313,6 +357,7 @@ class Civ6Governor(Governor):
                 if (b.get("autoplay") or {}).get("active"):
                     raise Civ6Stuck("autoplay is still running and did not stop")
                 self._set_campaign(b)
+                self._note_diplomacy(b)
                 self.last_briefing = self._briefing(b)
                 self.log.state.game_date = b["date"]
                 reviewed = self.strategy is None and self.pillars is not None
@@ -374,6 +419,7 @@ class Civ6Governor(Governor):
                                       "press Resume, or start a new run.")
                 return last, ""
             self.log.emit("metrics", **metrics(b))
+            self._note_diplomacy(b)
             self._track(b)
             self._check_pins(b)
             self.log.state.game_date = b["date"]
@@ -846,10 +892,15 @@ class Civ6Governor(Governor):
 
     def _publish_record(self) -> None:
         self.log.state.info["order_record"] = self._record()
+        self.log.state.info["diplomacy_record"] = [{k: r.get(k) for k in DIPLOMACY_RECORD_KEYS}
+                                                   for r in self._dipl_rows[-DIPLOMACY_RECORD:]]
 
     def _records_section(self) -> str:
-        """The Strategist sees the order record, not a directive record (ruling 15)."""
-        return ORDER_RECORD_HEADING + "\n" + (self._record_text() or "(no orders judged yet)")
+        """The Strategist sees the order record, not a directive record (ruling 15), with the diplomacy
+        the harness answered for us in this campaign (a promise is a commitment the strategy must see)."""
+        text = ORDER_RECORD_HEADING + "\n" + (self._record_text() or "(no orders judged yet)")
+        dipl = diplomacy_record_text(self._dipl_rows)
+        return text + ("\n" + DIPLOMACY_RECORD_HEADING + "\n" + dipl if dipl else "")
 
     def _held_report(self, b: dict) -> list[str]:
         """What happened to earlier orders since the last decision: completed, replaced by the AI

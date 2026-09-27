@@ -1385,6 +1385,92 @@ def _religion_text(s: dict, cid, limits) -> str:
     return text + "."
 
 
+# ---- the diplomacy auto-reply (issues.md T240, T342) --------------------------------------------
+# corpora/civ6/lua/harness.lua answers an AI leader's statement during autoplay from its own table and
+# logs the last 20 in the snapshot's `diplomacy` ({"handler": bool, "log": [...]}): each entry has
+# n, turn, from, civ, session, kind, sub, and once answered reply (POSITIVE, EXIT or REFUSE), why and
+# at (the turn answered); `late` when it waited for autoplay, `err` when the game's call failed
+# (`closed` when Goodbye then went through instead). why 'sweep' is the Goodbye the library sent when
+# autoplay started to a session its answer had left open (no follow-up closed it).
+
+DIPLOMACY_REPLIES = {"POSITIVE": "the conciliatory reply (a promise)", "EXIT": "Goodbye", "REFUSE": "refused"}
+DIPLOMACY_WHY = {"unknown": "an unknown statement", "guard": "the promise was not offered safely by the game's data"}
+DIPLOMACY_SHOWN = 6            # log entries in the briefing line...
+DIPLOMACY_RECENT = 10          # ...from the last this many turns (one still waiting is always shown)
+DIPLOMACY_RECORD = 8           # the campaign's last answers in the order record (Strategist, published)
+DIPLOMACY_RECORD_HEADING = (f"Diplomacy answered for us in this campaign (the harness's auto-reply during autoplay; "
+                            f"the last {DIPLOMACY_RECORD}):")
+DIPLOMACY_RECORD_KEYS = ("turn", "at", "civ", "from", "statement", "subtype", "reply", "why", "text")
+
+
+def diplomacy_key(e: dict) -> str:
+    """One answer's identity across snapshots and restarts (the library's counter restarts on a load)."""
+    return f"{e.get('turn')}:{e.get('from')}:{e.get('session')}:{e.get('n')}"
+
+
+def diplomacy_answered(s: dict) -> list[dict]:
+    """The snapshot's logged statements that were answered, oldest first."""
+    d = s.get("diplomacy")
+    log = d.get("log") if isinstance(d, dict) else None
+    return [e for e in log or [] if isinstance(e, dict) and e.get("reply")]
+
+
+def diplomacy_reply_text(e: dict) -> str:
+    """What was answered, or why nothing was: "Goodbye (at T14, when autoplay started)"."""
+    if not e.get("reply"):
+        return "closed before an answer" if e.get("why") == "gone" else "waiting for the next autoplay"
+    notes = [DIPLOMACY_WHY[e["why"]]] if e.get("why") in DIPLOMACY_WHY else []
+    if e.get("why") == "sweep":
+        notes = [f"the session our answer left open, closed at T{e.get('at')} when autoplay started"]
+    if e.get("late"):
+        notes.append(f"at T{e.get('at')}, when autoplay started")
+    if e.get("err"):
+        notes.append(f"failed: {e['err']}"[:120])
+    if e.get("closed"):
+        notes.append("Goodbye sent instead")
+    text = DIPLOMACY_REPLIES.get(e["reply"], str(e["reply"]))
+    return text + (f" ({'; '.join(notes)})" if notes else "")
+
+
+def _statement_words(kind, sub) -> str:
+    """`warning too many troops near me (positive follow-up)`."""
+    sub = str(sub or "NONE")
+    return str(kind or "unnamed statement").lower().replace("_", " ") \
+        + (f" ({sub.lower().replace('_', ' ')} follow-up)" if sub != "NONE" else "")
+
+
+def _statement_text(e: dict, cid) -> str:
+    who = cid(e.get("civ")) if e.get("civ") else "player " + str(e.get("from"))
+    return f"T{e.get('turn')} {who} {_statement_words(e.get('kind'), e.get('sub'))}"
+
+
+def diplomacy_record_text(rows: list[dict]) -> str:
+    """The order record's diplomacy lines from the campaign's `diplomacy_reply` events (oldest first):
+    the last DIPLOMACY_RECORD, one per answer, e.g. `- T13 civ:australia warning too many troops near
+    me: the conciliatory reply (a promise)`; "" when none."""
+    return "\n".join(f"- T{r.get('turn')} {r.get('civ') or 'player ' + str(r.get('from'))} "
+                     f"{_statement_words(r.get('statement'), r.get('subtype'))}: {r.get('text') or r.get('reply')}"
+                     for r in rows[-DIPLOMACY_RECORD:])
+
+
+def diplomacy_text(s: dict, cid) -> str:
+    """The briefing's diplomacy line: the last statements the library answered (or holds) for us."""
+    d = s.get("diplomacy")
+    if not isinstance(d, dict):
+        return ""                                  # a library without the auto-reply
+    if not d.get("handler"):
+        return ("Diplomacy: the auto-reply is not installed in this game, so the leader screen is kept: an AI "
+                "leader's statement holds the autoplay turn until a human answers it on screen.")
+    now = s.get("turn") or 0
+    log = [e for e in d.get("log") or [] if isinstance(e, dict)
+           and (e.get("why") == "waiting" or (e.get("at") or e.get("turn") or 0) >= now - DIPLOMACY_RECENT)]
+    if not log:
+        return ""
+    return ("Diplomacy answered for us while the AI played (never war, no deal accepted; a promise to a warning, "
+            "Goodbye to proposals): " + "; ".join(f"{_statement_text(e, cid)}: {diplomacy_reply_text(e)}"
+                                                  for e in log[-DIPLOMACY_SHOWN:]) + ".")
+
+
 def briefing_text(s: dict, index: CorpusIndex, gold_reserve: int = 0, limits=None,
                   strategies: dict[str, dict] | None = None) -> str:
     """The snapshot as a compact briefing; every item is named by its corpus id. With the purchase
@@ -1450,6 +1536,9 @@ def briefing_text(s: dict, index: CorpusIndex, gold_reserve: int = 0, limits=Non
         lines.append("Civilizations met: none yet.")
     wars = s.get("wars") or []
     lines.append("Wars: " + (", ".join(cid(w.get("civ")) for w in wars) if wars else "none") + ".")
+    diplomacy = diplomacy_text(s, cid)
+    if diplomacy:
+        lines.append(diplomacy)
     gp = s.get("great_people") or {}
     close = [f"{g.get('class', '').removeprefix('GREAT_PERSON_CLASS_').lower()} {g.get('ours')}/{g.get('cost')}"
              for g in gp.get("current") or [] if g.get("ours")]

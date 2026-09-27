@@ -5,7 +5,8 @@
 -- The world: player 0 (China) with Beijing at 22,21 (no garrison, no walls, a barbarian Spearman
 -- and Warrior adjacent, a peaceful Scout 3 tiles away) and Xi'an at 26,13 (an Archer on its tile,
 -- the City Center damaged). Tests change MOCK before calling the snapshot. The last stand's calls
--- (turn_ready, ls_state, last_stand_step, finish_moves) record what they request in REQUESTS.
+-- (turn_ready, ls_state, last_stand_step, finish_moves) record what they request in REQUESTS; the
+-- diplomacy auto-reply's calls land in DIPLO_CALLS (tests/fixtures/civ6_diplomacy_data.lua runs first).
 
 local function hash(s)
   local h = 0
@@ -306,8 +307,8 @@ end
 for i = 0, 62 do player(i, i < 8) end
 player(BARB, false)
 
-PlayerConfigurations = setmetatable({}, { __index = function()
-  return { GetCivilizationTypeName = function() return 'CIVILIZATION_CHINA' end,
+PlayerConfigurations = setmetatable({}, { __index = function(_, id)
+  return { GetCivilizationTypeName = function() return (MOCK.civs or {})[id] or 'CIVILIZATION_CHINA' end,
            GetLeaderTypeName = function() return 'LEADER_KUBLAI_KHAN_CHINA' end,
            GetCivilizationShortDescription = function() return 'LOC_CIV_CHINA' end,
            GetLeaderName = function() return 'LOC_LEADER_KUBLAI' end }
@@ -334,7 +335,10 @@ Game = {
 }
 
 AutoplayManager = { IsActive = function() return MOCK.autoplay end, GetTurns = function() return 0 end,
-                    GetReturnAsPlayer = function() return 0 end }
+                    GetReturnAsPlayer = function() return 0 end, SetReturnAsPlayer = function() end,
+                    SetObserveAsPlayer = function() end, SetTurns = function() end,
+                    SetActive = function(on) MOCK.autoplay = on end }
+UserConfiguration = { GetValue = function() return -1 end, SetValue = function() end }
 ContextPtr = { LookUpControl = function(_, path)
   if MOCK.popup and path == '/InGame/' .. MOCK.popup then return { IsHidden = function() return false end } end
   return nil
@@ -448,3 +452,64 @@ CombatManager = {
     return r
   end,
 }
+
+-- ---- diplomacy (the auto-reply) ------------------------------------------------------------------
+-- GameInfo.DiplomacyStatements and DiplomacySelections hold the game's rows (civ6_diplomacy_data.lua).
+-- statement(from, to, kind, sub, sid) opens the session and fires Events.DiplomacyStatement as the
+-- game does (kVariants with the SessionID and the type hashes GetKeyName names); every call on
+-- DiplomacyManager and DealManager lands in DIPLO_CALLS. MOCK.open: the open sessions;
+-- MOCK.dipl_fails: AddResponse and CloseSession raise (true), or only the calls it names ('response',
+-- 'close'); MOCK.keyname_fails: GetKeyName raises.
+
+local function rows_of(list, cols)
+  local rows = {}
+  for i, r in ipairs(list) do
+    local row = {}
+    for j, c in ipairs(cols) do if r[j] ~= '' then row[c] = r[j] end end
+    rows[i] = row
+  end
+  return setmetatable(rows, { __call = function() local i = 0 return function() i = i + 1 return rows[i] end end })
+end
+GameInfo.DiplomacyStatements = rows_of(DIPLO_STATEMENTS, { 'Type', 'Initiator', 'SubType', 'Selections' })
+GameInfo.DiplomacySelections = rows_of(DIPLO_SELECTIONS, { 'Type', 'Key', 'DiplomaticActionType' })
+
+MOCK.open = {}
+DIPLO_CALLS = {}
+local KEYNAME = {}
+local function key_hash(name)
+  if name == nil then return nil end
+  local h = hash(name)
+  KEYNAME[h] = name
+  return h
+end
+local function called(s)
+  local f = MOCK.dipl_fails
+  if f == true or (type(f) == 'string' and s:sub(1, #f) == f) then error('the session is gone') end
+  DIPLO_CALLS[#DIPLO_CALLS + 1] = s
+end
+DiplomacyManager = {
+  GetKeyName = function(h) if MOCK.keyname_fails then error('no such key') end return KEYNAME[h] end,
+  AddResponse = function(sid, p, r) called('response ' .. tostring(sid) .. ' ' .. tostring(p) .. ' ' .. tostring(r)) end,
+  CloseSession = function(sid) called('close ' .. tostring(sid)) MOCK.open[sid] = nil end,
+  IsSessionIDOpen = function(sid) return MOCK.open[sid] == true end,
+  FindOpenSessionID = function() return MOCK.find_session end,
+  AddStatement = function(sid, p, s) called('statement ' .. tostring(s)) end,
+  RequestSession = function(a, b, s) called('request ' .. tostring(s)) end,
+}
+DealManager = { SendWorkingDeal = function(action) called('deal ' .. tostring(action)) end }
+
+local function event()
+  local e = { fns = {} }
+  e.Add = function(f) e.fns[#e.fns + 1] = f end
+  e.Remove = function(f) for i = #e.fns, 1, -1 do if e.fns[i] == f then table.remove(e.fns, i) end end end
+  return e
+end
+Events = { DiplomacyStatement = event() }
+
+function statement(from, to, kind, sub, sid)
+  MOCK.open[sid] = true
+  local kv = { SessionID = sid, StatementType = key_hash(kind), StatementSubType = key_hash(sub or 'NONE'), FromPlayer = from }
+  local fns = {}
+  for i, f in ipairs(Events.DiplomacyStatement.fns) do fns[i] = f end
+  for _, f in ipairs(fns) do f(from, to, kv) end
+end

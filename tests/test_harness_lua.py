@@ -1,8 +1,8 @@
 """corpora/civ6/lua/harness.lua run outside the game: LuaJIT (lupa) with the stand-ins of
 tests/fixtures/civ6_lua_mock.lua. It proves syntax and control flow of the snapshot's defence,
 religion and blocker fields (docs/design/2026-09-27-civ6-levers-design.md, ruling 11) and of the
-last stand's calls (rulings 22-27); API names
-and results are checked live (games/civ6-kublai/journal.md). Skipped when lupa is not installed:
+last stand's calls (rulings 22-27) and of the diplomacy auto-reply; API names and results are checked
+live (games/civ6-kublai/journal.md). Skipped when lupa is not installed:
 `scripts/civ6-lua-check.sh` runs them with lupa from a cache folder of its own, as a stage of
 `scripts/ci.sh`."""
 
@@ -16,9 +16,16 @@ lupa = pytest.importorskip("lupa")
 
 HARNESS = (REPO / "corpora/civ6/lua/harness.lua").read_text(encoding="utf-8")
 MOCK = (REPO / "tests/fixtures/civ6_lua_mock.lua").read_text(encoding="utf-8")
+DIPLO_DATA = (REPO / "tests/fixtures/civ6_diplomacy_data.lua").read_text(encoding="utf-8")
 
 
-def runtime():
+def install(rt, version: str = "test", state: str = "InGame") -> None:
+    """The chunk the controller sends: the version and the Lua state it installs into, then the file."""
+    rt.execute(f'local HARNESS_VERSION = "{version}" local HARNESS_STATE = "{state}"\n' + HARNESS)
+
+
+def bare_runtime():
+    """The mock game with no library installed yet."""
     try:
         from lupa.lua51 import LuaRuntime  # the game's Lua is 5.1
     except ImportError:
@@ -26,8 +33,14 @@ def runtime():
     rt = LuaRuntime(unpack_returned_tuples=True)
     out: list[str] = []
     rt.globals().print = lambda *a: out.append(" ".join(str(x) for x in a))
+    rt.execute(DIPLO_DATA)
     rt.execute(MOCK)
-    rt.execute('local HARNESS_VERSION = "test"\n' + HARNESS)
+    return rt, out
+
+
+def runtime(state: str = "InGame"):
+    rt, out = bare_runtime()
+    install(rt, state=state)
     return rt, out
 
 
@@ -308,3 +321,311 @@ def test_a_retreat_stays_within_reach_of_the_read_back():
     r = call(rt, out, "Harness.last_stand_step, 65536, {}, {}")
     assert r == {"ok": True, "done": True, "reason": "nothing left to do"}, "every free plot within 3 is next to it"
     assert requests(rt) == []
+
+
+# ---- the diplomacy auto-reply (issues.md T240, T342) ----------------------------------------------
+# An AI leader's statement opens DiplomacyActionView, which locks the engine until a human answers.
+# popups.toml removes the view's handler; the library's own handler answers while autoplay runs.
+
+AUSTRALIA = 3
+
+
+def diplo_calls(rt) -> list[str]:
+    return list(rt.eval("DIPLO_CALLS").values())
+
+
+def diplo_log(rt, out) -> list[dict]:
+    s = snapshot(rt, out)
+    assert s["ok"] is True, s.get("error")
+    return s["diplomacy"]["log"]
+
+
+def game_rows(rt, table: str) -> list[dict]:
+    rows = rt.eval(f"(function() local out = {{}} for r in GameInfo.{table}() do out[#out + 1] = r end return out end)()")
+    return [dict(r.items()) for r in rows.values()]
+
+
+def autoplaying(extra: str = ""):
+    rt, out = runtime()
+    rt.execute("MOCK.autoplay = true; MOCK.civs = { [3] = 'CIVILIZATION_AUSTRALIA' }\n" + extra)
+    return rt, out
+
+
+def test_t240_the_troop_warning_gets_merely_passing_by_then_goodbye():
+    """T240: "the mustering of your forces along our borders" offers "My troops are merely passing
+    by." (POSITIVE) and "You were right to worry (Declare War)!" (NEGATIVE); "Thank you." follows."""
+    rt, out = autoplaying()
+    rt.execute("statement(3, 0, 'WARNING_TOO_MANY_TROOPS_NEAR_ME', 'NONE', 7)")
+    assert diplo_calls(rt) == ["response 7 0 POSITIVE"]
+    rt.execute("statement(3, 0, 'WARNING_TOO_MANY_TROOPS_NEAR_ME', 'POSITIVE', 7)")
+    assert diplo_calls(rt) == ["response 7 0 POSITIVE", "close 7"]
+    log = diplo_log(rt, out)
+    assert [(e["kind"], e["sub"], e["reply"], e["why"]) for e in log] == [
+        ("WARNING_TOO_MANY_TROOPS_NEAR_ME", "NONE", "POSITIVE", "table"),
+        ("WARNING_TOO_MANY_TROOPS_NEAR_ME", "POSITIVE", "EXIT", "follow-up")]
+    assert log[0] | {"n": 0} == {"n": 0, "turn": 61, "at": 61, "from": AUSTRALIA, "civ": "CIVILIZATION_AUSTRALIA",
+                                  "session": 7, "kind": "WARNING_TOO_MANY_TROOPS_NEAR_ME", "sub": "NONE",
+                                  "reply": "POSITIVE", "why": "table"}
+    assert log[1]["n"] == log[0]["n"] + 1
+
+
+def test_t342_a_statement_with_only_goodbye_is_closed():
+    """T342: an agenda warning ("Aspire to be a worthier example ...") offers only Goodbye."""
+    rt, out = autoplaying()
+    rt.execute("statement(3, 0, 'DIPLOMATIC_HIDDEN_AGENDA_WARNING', 'NONE', 9)")
+    assert diplo_calls(rt) == ["close 9"]
+    assert [(e["kind"], e["reply"], e["why"]) for e in diplo_log(rt, out)] == [
+        ("DIPLOMATIC_HIDDEN_AGENDA_WARNING", "EXIT", "table")]
+
+
+def test_every_statement_the_ai_starts_has_an_explicit_reply_and_none_declares_war():
+    """For every statement the AI can start (the game's data), the reply is one the game offers for it
+    (or a deal's refusal, or Goodbye) and never one that carries a diplomatic action: no war, no
+    permanent refusal, no statement or session of our own, no deal sent. The only positive answers
+    are the five promises; follow-ups (every other subtype) get Goodbye, the only choice they offer."""
+    rt, _ = runtime()
+    statements = [r for r in game_rows(rt, "DiplomacyStatements") if r.get("Initiator") == "AI"]
+    selections = game_rows(rt, "DiplomacySelections")
+    offered = {}
+    for r in selections:
+        offered.setdefault(r["Type"], {})[r["Key"]] = r.get("DiplomaticActionType")
+    kinds = sorted({r["Type"] for r in statements if r["SubType"] == "NONE"})
+    table = dict(rt.eval("Harness.DIPLOMACY").items())
+    assert sorted(table) == kinds, "an explicit reply for every statement the AI can start, and no other"
+    assert offered["WARNING_TOO_MANY_TROOPS_NEAR_ME_FROM_AI"]["CHOICE_NEGATIVE"] == "DIPLOACTION_DECLARE_SURPRISE_WAR"
+    positive = []
+    for n, r in enumerate(statements):
+        rt, _ = autoplaying()
+        sid = 100 + n
+        rt.execute(f"statement(3, 0, '{r['Type']}', '{r['SubType']}', {sid})")
+        calls = diplo_calls(rt)
+        assert len(calls) == 1, (r, calls)
+        verb, *rest = calls[0].split(" ")
+        assert verb in ("response", "close"), (r, calls)
+        sel = offered.get(r.get("Selections") or "", {})
+        if r["SubType"] != "NONE":
+            assert list(sel) == ["CHOICE_EXIT"] and calls == [f"close {sid}"], (r, calls)
+            continue
+        if verb == "close":
+            assert rest == [str(sid)]
+            continue
+        assert rest[:2] == [str(sid), "0"], "our player, explicitly"
+        key = "CHOICE_" + rest[2]
+        if not sel:                                  # a deal or demand: the deal view's refusal
+            assert r["Type"] in ("MAKE_DEAL", "MAKE_DEMAND") and rest[2] == "NEGATIVE", (r, calls)
+            continue
+        assert key in sel, (r, key)
+        assert sel[key] is None, f"{r['Type']}: {key} carries {sel[key]}"
+        assert rest[2] == "POSITIVE", (r, calls)
+        positive.append(r["Type"])
+    assert sorted(positive) == ["WARNING_DONT_SETTLE_NEAR_ME", "WARNING_STOP_CONVERTING_MY_CITIES",
+                                "WARNING_STOP_DIGGING_UP_ARTIFACTS", "WARNING_STOP_SPYING_ON_ME",
+                                "WARNING_TOO_MANY_TROOPS_NEAR_ME"]
+
+
+def test_proposals_get_goodbye_and_deals_are_refused():
+    """Friendship, delegations, embassies, open borders, alliances and peace are left with Goodbye (no
+    safe accept rule is proven); a deal or a demand is refused as the deal view refuses one."""
+    rt, out = autoplaying()
+    for sid, kind in enumerate(("DECLARE_FRIEND", "DIPLOMATIC_DELEGATION", "RESIDENT_EMBASSY", "OPEN_BORDERS",
+                                "MAKE_ALLIANCE", "RENEW_ALLIANCE", "MAKE_PEACE", "FIRST_MEET_NO_MANS_INFO_EXCHANGE"), 1):
+        rt.execute(f"statement(3, 0, '{kind}', 'NONE', {sid})")
+        assert diplo_calls(rt)[-1] == f"close {sid}", kind
+    rt.execute("DIPLO_CALLS = {} statement(3, 0, 'MAKE_DEAL', 'NONE', 20) statement(3, 0, 'MAKE_DEMAND', 'NONE', 21)")
+    assert diplo_calls(rt) == ["response 20 0 NEGATIVE", "response 21 0 NEGATIVE"]
+    assert [e["reply"] for e in diplo_log(rt, out)][-2:] == ["REFUSE", "REFUSE"]
+
+
+def test_a_second_statement_in_an_answered_session_gets_goodbye():
+    """An AI answering our refusal with another offer (or any follow-up whose subtype reads NONE)."""
+    rt, out = autoplaying()
+    rt.execute("statement(3, 0, 'MAKE_DEAL', 'NONE', 5) statement(3, 0, 'MAKE_DEAL', 'NONE', 5)")
+    assert diplo_calls(rt) == ["response 5 0 NEGATIVE", "close 5"]
+    assert diplo_log(rt, out)[-1]["why"] == "follow-up"
+
+
+def test_an_unknown_statement_kind_gets_goodbye_never_a_positive_answer():
+    rt, out = autoplaying()
+    rt.execute("statement(3, 0, 'PROPOSE_SOMETHING_NEW', 'NONE', 4)")
+    assert diplo_calls(rt) == ["close 4"]
+    assert [(e["kind"], e["reply"], e["why"]) for e in diplo_log(rt, out)] == [("PROPOSE_SOMETHING_NEW", "EXIT", "unknown")]
+
+
+def test_a_reply_the_game_does_not_offer_safely_falls_back_to_goodbye():
+    """The live data decides: a promise whose choice carries a diplomatic action (a patch or a mod), or
+    data that cannot be read, gets Goodbye instead."""
+    rt, out = autoplaying("for r in GameInfo.DiplomacySelections() do if r.Type == 'WARNING_STOP_SPYING_ON_ME_FROM_AI' "
+                          "and r.Key == 'CHOICE_POSITIVE' then r.DiplomaticActionType = 'DIPLOACTION_DECLARE_SURPRISE_WAR' end end")
+    rt.execute("statement(3, 0, 'WARNING_STOP_SPYING_ON_ME', 'NONE', 3)")
+    assert diplo_calls(rt) == ["close 3"]
+    assert diplo_log(rt, out)[-1]["why"] == "guard"
+    rt.execute("GameInfo.DiplomacySelections = nil statement(3, 0, 'WARNING_TOO_MANY_TROOPS_NEAR_ME', 'NONE', 8)")
+    assert diplo_calls(rt) == ["close 3", "close 8"], "fails closed"
+
+
+def test_statements_to_other_players_or_from_us_are_left_alone():
+    rt, out = autoplaying()
+    rt.execute("statement(3, 4, 'WARNING_TOO_MANY_TROOPS_NEAR_ME', 'NONE', 2) statement(0, 3, 'DENOUNCE', 'NONE', 6)")
+    assert diplo_calls(rt) == []
+    assert diplo_log(rt, out) == []
+
+
+def test_outside_autoplay_a_statement_waits_and_is_answered_when_autoplay_starts():
+    """The view no longer shows it, so it waits (listed in the snapshot) until our next autoplay."""
+    rt, out = runtime()
+    rt.execute("statement(3, 0, 'WARNING_TOO_MANY_TROOPS_NEAR_ME', 'NONE', 7) statement(3, 0, 'DENOUNCE', 'NONE', 8)")
+    assert diplo_calls(rt) == []
+    log = diplo_log(rt, out)
+    assert [(e["why"], "reply" in e) for e in log] == [("waiting", False), ("waiting", False)]
+    rt.execute("MOCK.open[8] = nil")                  # closed by the game meanwhile
+    r = call(rt, out, "Harness.autoplay, 1")
+    assert r["active"] is True
+    assert diplo_calls(rt) == ["response 7 0 POSITIVE"]
+    log = diplo_log(rt, out)
+    assert [(e.get("reply"), e["why"], e.get("late")) for e in log] == [
+        ("POSITIVE", "table", True), (None, "gone", None)]
+    rt.execute("statement(3, 0, 'WARNING_TOO_MANY_TROOPS_NEAR_ME', 'POSITIVE', 7)")
+    assert diplo_calls(rt)[-1] == "close 7"
+
+
+def test_an_answered_session_left_open_is_closed_when_autoplay_next_starts():
+    """No follow-up came (the session would stay open with no view to close it). That Goodbye is an
+    answer too: it is logged (why 'sweep') for the governor and the briefing."""
+    rt, out = autoplaying()
+    rt.execute("statement(3, 0, 'MAKE_DEAL', 'NONE', 5)")
+    call(rt, out, "Harness.autoplay, 1")
+    assert diplo_calls(rt) == ["response 5 0 NEGATIVE", "close 5"]
+    call(rt, out, "Harness.autoplay, 1")
+    assert diplo_calls(rt) == ["response 5 0 NEGATIVE", "close 5"], "closed once"
+    log = diplo_log(rt, out)
+    assert [(e["kind"], e["reply"], e["why"], e["session"]) for e in log] == [
+        ("MAKE_DEAL", "REFUSE", "table", 5), ("MAKE_DEAL", "EXIT", "sweep", 5)]
+    assert log[1] | {"n": 0} == {"n": 0, "turn": 61, "at": 61, "from": AUSTRALIA, "civ": "CIVILIZATION_AUSTRALIA",
+                                  "session": 5, "kind": "MAKE_DEAL", "sub": "NONE", "reply": "EXIT", "why": "sweep"}
+    assert log[1]["n"] == log[0]["n"] + 1
+
+
+def test_a_follow_up_that_comes_after_the_hand_back_is_answered_when_autoplay_starts():
+    """T240's "Thank you." arriving once autoplay has handed back: it waits, and the next start answers
+    it as a follow-up (Goodbye), not as a session closed before an answer."""
+    rt, out = autoplaying()
+    rt.execute("statement(3, 0, 'WARNING_TOO_MANY_TROOPS_NEAR_ME', 'NONE', 7)")
+    rt.execute("MOCK.autoplay = false statement(3, 0, 'WARNING_TOO_MANY_TROOPS_NEAR_ME', 'POSITIVE', 7)")
+    assert diplo_calls(rt) == ["response 7 0 POSITIVE"]
+    call(rt, out, "Harness.autoplay, 1")
+    assert diplo_calls(rt) == ["response 7 0 POSITIVE", "close 7"]
+    log = diplo_log(rt, out)
+    assert [(e["sub"], e.get("reply"), e["why"], e.get("late")) for e in log] == [
+        ("NONE", "POSITIVE", "table", None), ("POSITIVE", "EXIT", "follow-up", True)]
+
+
+def test_a_sweep_goodbye_that_fails_is_logged_once_and_retried():
+    rt, out = autoplaying()
+    rt.execute("statement(3, 0, 'MAKE_DEAL', 'NONE', 5) MOCK.dipl_fails = 'close'")
+    call(rt, out, "Harness.autoplay, 1")
+    call(rt, out, "Harness.autoplay, 1")
+    sweeps = [e for e in diplo_log(rt, out) if e["why"] == "sweep"]
+    assert len(sweeps) == 1 and "the session is gone" in sweeps[0]["err"]
+    rt.execute("MOCK.dipl_fails = false")
+    call(rt, out, "Harness.autoplay, 1")
+    assert diplo_calls(rt) == ["response 5 0 NEGATIVE", "close 5"]
+    sweeps = [e for e in diplo_log(rt, out) if e["why"] == "sweep"]
+    assert len(sweeps) == 1 and "err" not in sweeps[0], "the same entry, now without the error"
+
+
+def test_a_failing_game_call_is_recorded_and_never_raised():
+    rt, out = autoplaying("MOCK.dipl_fails = true")
+    rt.execute("statement(3, 0, 'DENOUNCE', 'NONE', 4)")
+    e = diplo_log(rt, out)[-1]
+    assert e["reply"] == "EXIT" and "the session is gone" in e["err"]
+
+
+def test_the_log_keeps_the_last_twenty():
+    rt, out = autoplaying()
+    rt.execute("for i = 1, 25 do statement(3, 0, 'DENOUNCE', 'NONE', i) end")
+    log = diplo_log(rt, out)
+    assert len(log) == 20 and log[-1]["session"] == 25 and log[0]["session"] == 6
+    assert log[-1]["n"] - log[0]["n"] == 19
+
+
+def test_a_reinstall_replaces_the_handler_and_keeps_the_log():
+    rt, out = autoplaying()
+    rt.execute("statement(3, 0, 'DENOUNCE', 'NONE', 1)")
+    install(rt, version="next")
+    assert rt.eval("#Events.DiplomacyStatement.fns") == 1, "the old handler is removed first"
+    rt.execute("statement(3, 0, 'DENOUNCE', 'NONE', 2)")
+    assert diplo_calls(rt) == ["close 1", "close 2"], "answered once"
+    assert [e["session"] for e in diplo_log(rt, out)] == [1, 2]
+    install(rt, version="next")
+    assert rt.eval("#Events.DiplomacyStatement.fns") == 1, "the same version is a no-op"
+
+
+def test_a_stale_handler_left_registered_does_nothing():
+    """Belt and braces: a handler of a replaced library that could not be removed stays silent."""
+    rt, _ = autoplaying()
+    rt.execute("OLD_FN = Events.DiplomacyStatement.fns[1]")
+    install(rt, version="next")
+    rt.execute("Events.DiplomacyStatement.Add(OLD_FN) statement(3, 0, 'DENOUNCE', 'NONE', 2)")
+    assert diplo_calls(rt) == ["close 2"]
+
+
+def test_the_handler_is_installed_in_ingame_only():
+    """GameCore gets the library too (research and civics): no second handler there."""
+    rt, out = runtime(state="GameCore")
+    assert rt.eval("#Events.DiplomacyStatement.fns") == 0
+    rt, out = runtime()
+    assert rt.eval("#Events.DiplomacyStatement.fns") == 1
+    assert snapshot(rt, out)["diplomacy"] == {"handler": True, "log": []}
+
+
+def test_a_failed_answer_falls_back_to_goodbye():
+    """AddResponse raising (a binding that rejects the session): Goodbye is sent at once instead, so
+    no session is left open behind the quieted leader screen."""
+    rt, out = autoplaying("MOCK.dipl_fails = 'response'")
+    rt.execute("statement(3, 0, 'WARNING_TOO_MANY_TROOPS_NEAR_ME', 'NONE', 7)")
+    assert diplo_calls(rt) == ["close 7"]
+    assert rt.eval("MOCK.open[7]") is None
+    e = diplo_log(rt, out)[-1]
+    assert (e["reply"], e["closed"]) == ("POSITIVE", True) and "the session is gone" in e["err"]
+    call(rt, out, "Harness.autoplay, 1")
+    assert diplo_calls(rt) == ["close 7"], "closed once"
+
+
+@pytest.mark.parametrize("kind", ["WARNING_TOO_MANY_TROOPS_NEAR_ME", "DENOUNCE"])
+def test_a_session_whose_answer_failed_is_closed_when_autoplay_next_starts(kind):
+    """Every call of the answer raised (the promise, its Goodbye fallback, or a plain Goodbye): the
+    session stays listed as open, and the next autoplay start closes it."""
+    rt, out = autoplaying("MOCK.dipl_fails = true")
+    rt.execute(f"statement(3, 0, '{kind}', 'NONE', 7)")
+    assert diplo_calls(rt) == [] and "the session is gone" in diplo_log(rt, out)[-1]["err"]
+    rt.execute("MOCK.dipl_fails = false")
+    call(rt, out, "Harness.autoplay, 1")
+    assert diplo_calls(rt) == ["close 7"]
+    assert rt.eval("MOCK.open[7]") is None
+
+
+def test_a_statement_that_cannot_be_read_is_still_logged_and_closed():
+    """A failure while reading the statement (GetKeyName raising) must not swallow it: it is logged
+    with the error and gets Goodbye like an unknown kind."""
+    rt, out = autoplaying("MOCK.keyname_fails = true")
+    rt.execute("statement(3, 0, 'WARNING_TOO_MANY_TROOPS_NEAR_ME', 'NONE', 7)")
+    assert diplo_calls(rt) == ["close 7"]
+    e = diplo_log(rt, out)[-1]
+    assert (e.get("kind"), e["session"], e["civ"], e["reply"], e["why"]) == (
+        None, 7, "CIVILIZATION_AUSTRALIA", "EXIT", "unknown")
+    assert "no such key" in e["err"]
+
+
+def test_an_install_without_the_state_header_is_replaced_by_the_next_version():
+    """A controller built before HARNESS_STATE sends the chunk without it: no handler. The rebuilt
+    controller's version covers the header (civ6.rs INSTALL_HEADER), so it installs again, and that
+    install registers the handler, which answers."""
+    rt, out = bare_runtime()
+    rt.execute('local HARNESS_VERSION = "text-only"\n' + HARNESS)
+    assert rt.eval("#Events.DiplomacyStatement.fns") == 0
+    assert snapshot(rt, out)["diplomacy"]["handler"] is False
+    install(rt, version="with-header")
+    assert rt.eval("#Events.DiplomacyStatement.fns") == 1
+    rt.execute("MOCK.autoplay = true statement(3, 0, 'WARNING_TOO_MANY_TROOPS_NEAR_ME', 'NONE', 7)")
+    assert diplo_calls(rt) == ["response 7 0 POSITIVE"]
+    assert snapshot(rt, out)["diplomacy"]["handler"] is True

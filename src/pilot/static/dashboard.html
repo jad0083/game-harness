@@ -1249,6 +1249,7 @@ function describe(ev) {
     case "pace": return ev.speed ? `game speed ${ev.speed}` : `a decision every ${ev.every_months} in-game months`;
     case "last_stand": return `last stand for ${ev.city} (${ev.date}): ${(ev.actions || []).map((a) => `${a.action} ${String(a.result).replace(/_/g, " ")}`).join(", ") || "no action"}; stopped: ${ev.stopped}`;
     case "last_stand_off": return `last stand off for this run: ${ev.reason}`;
+    case "diplomacy_reply": return `${ev.date}: ${ev.civ || "player " + ev.from} ${String(ev.statement || "statement").toLowerCase().replace(/_/g, " ")}${ev.subtype && ev.subtype !== "NONE" ? " (follow-up)" : ""} answered: ${ev.text}`;
     default: { const { t, kind, ...rest } = ev; return JSON.stringify(rest).slice(0, 200); }
   }
 }
