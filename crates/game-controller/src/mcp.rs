@@ -383,7 +383,7 @@ impl McpServer {
             }));
             tools.push(serde_json::json!({
                 "name": "stellaris_directive",
-                "description": "Apply one governor directive (see corpus strategy § Governor directives and directives.toml): sets the directive flag and its policies on the player's empire (which the game's AI plays under human_ai; see stellaris_take_control) and confirms the change in game.log. Policies are set only where a player could (can_set_policy: the 10-year policy lock, no stance change at war) and start the lock; the reply lists the policies set and those locked. Hold a directive about 12 in-game months unless something urgent happens. Refuses if Stellaris is not the foreground window.",
+                "description": "Apply one governor directive (see corpus strategy § Governor directives and directives.toml): sets the directive flag and its policies on the player's empire (which the game's AI plays under human_ai; see stellaris_take_control) and confirms the change in game.log. Policies are set only where a player could (can_set_policy: the 10-year policy lock, no stance change at war) and start the lock; an option already in force in the newest autosave is not set again. The reply lists the policies set, those already in force and those locked. Hold a directive about 12 in-game months unless something urgent happens. Refuses if Stellaris is not the foreground window.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {

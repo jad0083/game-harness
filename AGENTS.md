@@ -268,7 +268,9 @@ Rules:
 - Directive policies obey the player's rules: each is set only if `can_set_policy` allows it (the
   10-year lock, no stance change at war) and starts that lock (`cooldown = yes`). game.log gets
   `GOVERNOR_POLICY <policy> <option> <nonce>` for each policy set; the reply lists the policies set
-  and those locked. A locked policy is not a failure: the flag still changes.
+  and those locked. A locked policy is not a failure: the flag still changes. An option the newest
+  autosave already holds is not sent again (it could restart the lock) and is listed as already in
+  force.
 - **Postures** (`[posture.*]` in directives.toml; Governor Bridge v2): flags `governor_posture_<name>`
   that the mod reads to steer the AI's own spending (economic-plan focus, AI budgets; never resources
   or modifiers). `defend`/`prepare_war` switch `naval_cap` and `ship_upgrades`, `tech_rush`

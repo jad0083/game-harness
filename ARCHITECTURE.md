@@ -196,8 +196,10 @@ the other `governor_directive_*` flags; one per policy, `if = { limit = { can_se
 as no stance change at war, the option's `potential`) and starts the lock; and last the flag plus a
 scoped `log` of `GOVERNOR_APPLIED <name> <nonce>` (logged only with a real country scope; the
 nonce matters because game.log drops text repeated on the same in-game day). `apply_directive`
-returns an `Applied`: the lines, the policies whose marker appeared (`set`) and the others
-(`locked`); the MCP reply and the CLI print both lists. One line per policy keeps each line within
+first reads the newest autosave's policies and leaves out each option already in force
+(`console_lines_with_policies`: setting it again with `cooldown = yes` could restart its lock), then
+returns an `Applied`: the lines, the policies whose marker appeared (`set`), those left out
+(`in_force`) and the others (`locked`); the MCP reply and the CLI print the lists. One line per policy keeps each line within
 the 529 characters verified live. Every identifier must
 match `[a-z0-9_]+`, so a directive cannot inject other commands. `run_console` checks that
 Stellaris is the foreground window before every keystroke, and `apply_directive` polls `game.log`

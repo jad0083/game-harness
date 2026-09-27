@@ -22,7 +22,9 @@
 # philosophy change at war) and the option's `potential` (economic policy is not for gestalts), and
 # `cooldown = yes` starts the player's 10-year lock. Policies are therefore a slow lever, held 10
 # years once set; the flags (and the mod's budgets that read them) are the fast lever. A policy the
-# game did not set is reported as locked (no GOVERNOR_POLICY marker), not as a failure.
+# game did not set is reported as locked (no GOVERNOR_POLICY marker), not as a failure. An option
+# the newest autosave already holds is not sent (setting it again could restart its lock), and is
+# reported as already in force.
 #
 # Postures (levers design rulings 18-21): country flags governor_posture_<name> beside the directive,
 # read by the Governor Bridge mod v2 (corpora/stellaris/mod) to steer how the game's AI spends its

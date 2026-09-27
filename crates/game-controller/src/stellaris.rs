@@ -918,7 +918,19 @@ impl Directives {
     /// Postures bound to a directive get a line of their own: the directive's enabled postures are
     /// set and every other bound posture is cleared. A posture bound to no directive (the crisis
     /// posture) is left alone, and the directive-flag line never names a posture.
+    ///
+    /// Every policy is sent: `apply_directive` uses `console_lines_with_policies`, which leaves out
+    /// the options already in force.
     pub fn console_lines(&self, name: &str, nonce: &str) -> Result<Vec<String>> {
+        self.console_lines_with_policies(name, nonce, &BTreeMap::new())
+    }
+
+    /// `console_lines`, leaving out each policy whose option `in_force` (policy → option, from the
+    /// newest autosave) already holds: set again with `cooldown = yes`, it could restart that
+    /// policy's 10-year lock (whether it does is unverified, live check L3), e.g. `prepare_war`
+    /// re-setting the belligerent stance `defend` set, which would then hold `diplomacy_first`'s
+    /// cooperative stance.
+    pub fn console_lines_with_policies(&self, name: &str, nonce: &str, in_force: &BTreeMap<String, String>) -> Result<Vec<String>> {
         let Some(def) = self.directive.get(name) else {
             bail!("unknown directive {name:?}; known: {}", self.directive.keys().cloned().collect::<Vec<_>>().join(", "))
         };
@@ -945,6 +957,9 @@ impl Directives {
             lines.push(format!("effect {}", postures.join(" ")));
         }
         for (policy, option) in &def.policies {
+            if in_force.get(policy) == Some(option) {
+                continue;
+            }
             let mut limit = format!("can_set_policy = {{ policy = {policy} option = {option} }}");
             if let Some(c) = def.conditions.get(policy) {
                 limit += &format!(" {c}");
@@ -979,10 +994,26 @@ pub fn policy_markers(log: &str, nonce: &str) -> Vec<PolicyOption> {
         .collect()
 }
 
-/// A directive's policies split by whether the game reported setting them: `set` (a marker
-/// appeared) and `locked` (none did: `can_set_policy` or the option's `valid` said no).
-pub fn policy_outcome(def: &DirectiveDef, seen: &[PolicyOption]) -> (Vec<PolicyOption>, Vec<PolicyOption>) {
-    def.policies.iter().map(|(p, o)| (p.clone(), o.clone())).partition(|pair| seen.contains(pair))
+/// A directive's policies split three ways: `set` (the game reported it with a marker), `in_force`
+/// (the save already held that option, so it was not sent; see `console_lines_with_policies`) and
+/// `locked` (no marker: `can_set_policy` or the option's `valid` said no).
+pub fn policy_outcome(
+    def: &DirectiveDef,
+    seen: &[PolicyOption],
+    in_force: &BTreeMap<String, String>,
+) -> (Vec<PolicyOption>, Vec<PolicyOption>, Vec<PolicyOption>) {
+    let (mut set, mut already, mut locked) = (vec![], vec![], vec![]);
+    for (p, o) in &def.policies {
+        let pair = (p.clone(), o.clone());
+        if in_force.get(p) == Some(o) {
+            already.push(pair);
+        } else if seen.contains(&pair) {
+            set.push(pair);
+        } else {
+            locked.push(pair);
+        }
+    }
+    (set, already, locked)
 }
 
 /// What applying a directive did: the console lines sent and which policies the game set.
@@ -990,17 +1021,31 @@ pub fn policy_outcome(def: &DirectiveDef, seen: &[PolicyOption]) -> (Vec<PolicyO
 pub struct Applied {
     pub lines: Vec<String>,
     pub set: Vec<PolicyOption>,
+    /// Options the newest autosave already held: not sent, so their lock is not restarted.
+    pub in_force: Vec<PolicyOption>,
     pub locked: Vec<PolicyOption>,
+    /// Why the policies in force could not be read (every policy was then sent).
+    pub in_force_error: Option<String>,
 }
 
 impl Applied {
-    /// "Policies set: a=b. Policies locked (…): c=d." (`none` for an empty list).
+    /// "Policies set: a=b. [Already in force (…): e=f. ]Policies locked (…): c=d." (`none` for an
+    /// empty list; the in-force sentence only when one was left out).
     pub fn summary(&self) -> String {
         let list = |v: &[PolicyOption]| {
             if v.is_empty() { "none".to_string() } else { v.iter().map(|(p, o)| format!("{p}={o}")).collect::<Vec<_>>().join(", ") }
         };
+        let already = if self.in_force.is_empty() {
+            String::new()
+        } else {
+            format!("Already in force (not set again, so its 10-year lock is not restarted): {}. ", list(&self.in_force))
+        };
+        let unread = match &self.in_force_error {
+            Some(e) => format!(" The policies in force were not read ({e}), so every policy was sent."),
+            None => String::new(),
+        };
         format!(
-            "Policies set: {}. Policies locked (not set: the 10-year policy lock, a rule such as no stance change at war, or the option is not valid now): {}.",
+            "Policies set: {}. {already}Policies locked (not set: the 10-year policy lock, a rule such as no stance change at war, or the option is not valid now): {}.{unread}",
             list(&self.set), list(&self.locked)
         )
     }
@@ -1586,13 +1631,18 @@ pub async fn apply_directive(
     pause: Option<&PauseDetector>,
 ) -> Result<Applied> {
     let tag = nonce();
-    let lines = directives.console_lines(name, &tag)?;
+    // the options already in force (newest autosave) are not sent again: that could restart their lock
+    let (in_force, in_force_error) = match fetch_latest_save(client).await.and_then(|(_, bytes)| brief_save(&bytes)) {
+        Ok(b) => (b.policies, None),
+        Err(e) => (BTreeMap::new(), Some(format!("{e:#}").chars().take(200).collect::<String>())),
+    };
+    let lines = directives.console_lines_with_policies(name, &tag, &in_force)?;
     let (_, before) = client.files_read(DOCS_ROOT, "logs/game.log", 0, Some(0)).await?;
     send_paused(client, &lines, pause).await?;
     let marker = applied_marker(name, &tag);
     if let Some(log) = wait_for_log_text(client, before, &marker).await? {
-        let (set, locked) = policy_outcome(&directives.directive[name], &policy_markers(&log, &tag));
-        return Ok(Applied { lines, set, locked });
+        let (set, in_force, locked) = policy_outcome(&directives.directive[name], &policy_markers(&log, &tag), &in_force);
+        return Ok(Applied { lines, set, in_force, locked, in_force_error });
     }
     bail!("directive {name} sent but {marker:?} did not appear in game.log: the empire is probably in observer \
            mode or the console did not take the line; run `stellaris take-control`")
@@ -2951,14 +3001,39 @@ mod tests {
         let seen = policy_markers(log, "k3x9");
         assert_eq!(seen, vec![("economic_policy".to_string(), "economic_policy_military".to_string())], "an older apply's marker is not this one's");
         let d = directives();
-        let (set, locked) = policy_outcome(&d.directive["prepare_war"], &seen);
+        let (set, in_force, locked) = policy_outcome(&d.directive["prepare_war"], &seen, &BTreeMap::new());
         assert_eq!(set, vec![("economic_policy".to_string(), "economic_policy_military".to_string())]);
+        assert!(in_force.is_empty());
         assert_eq!(locked, vec![("diplomatic_stance".to_string(), "diplo_stance_belligerent".to_string())], "belligerent at war: no marker, so locked");
-        let applied = Applied { lines: vec![], set, locked };
+        let applied = Applied { lines: vec![], set, in_force, locked, in_force_error: None };
         assert_eq!(applied.summary(), "Policies set: economic_policy=economic_policy_military. Policies locked (not set: the 10-year policy lock, a rule such as no stance change at war, or the option is not valid now): diplomatic_stance=diplo_stance_belligerent.");
-        let (none, all_locked) = policy_outcome(&d.directive["tech_rush"], &[]);
+        let (none, _, all_locked) = policy_outcome(&d.directive["tech_rush"], &[], &BTreeMap::new());
         assert!(none.is_empty() && all_locked.len() == 1);
-        assert!(Applied { lines: vec![], set: none, locked: vec![] }.summary().starts_with("Policies set: none. Policies locked"), "a directive without policies reads none");
+        assert!(Applied { lines: vec![], set: none, in_force: vec![], locked: vec![], in_force_error: None }.summary().starts_with("Policies set: none. Policies locked"), "a directive without policies reads none");
+    }
+
+    #[test]
+    fn a_policy_option_already_in_force_is_not_set_again() {
+        // defend set belligerent; prepare_war setting it again with cooldown = yes could restart its
+        // 10-year lock and hold a later directive's stance (e.g. diplomacy_first's cooperative)
+        let d = directives();
+        let pair = |p: &str, o: &str| (p.to_string(), o.to_string());
+        let in_force = BTreeMap::from([pair("diplomatic_stance", "diplo_stance_belligerent"), pair("economic_policy", "economic_policy_balanced")]);
+        let lines = d.console_lines_with_policies("prepare_war", "n", &in_force).unwrap();
+        let all = lines.join("\n");
+        assert!(!all.contains("option = diplo_stance_belligerent"), "{all}");
+        assert_eq!(all.matches(" set_policy = {").count(), 1, "{all}");
+        assert!(all.contains("set_policy = { policy = economic_policy option = economic_policy_military cooldown = yes }"), "another option in force is changed as before: {all}");
+        assert!(lines.last().unwrap().contains(&applied_marker("prepare_war", "n")), "the flag and confirmation still come last");
+        // without a save read every policy is sent, as before
+        assert_eq!(d.console_lines("prepare_war", "n").unwrap().join("\n").matches(" set_policy = {").count(), 2);
+        // the outcome names it apart from the set and the locked ones
+        let (set, already, locked) = policy_outcome(&d.directive["prepare_war"], &[pair("economic_policy", "economic_policy_military")], &in_force);
+        assert_eq!((set.clone(), already.clone(), locked.clone()), (vec![pair("economic_policy", "economic_policy_military")], vec![pair("diplomatic_stance", "diplo_stance_belligerent")], vec![]));
+        let applied = Applied { lines, set, in_force: already, locked, in_force_error: None };
+        assert_eq!(applied.summary(), "Policies set: economic_policy=economic_policy_military. Already in force (not set again, so its 10-year lock is not restarted): diplomatic_stance=diplo_stance_belligerent. Policies locked (not set: the 10-year policy lock, a rule such as no stance change at war, or the option is not valid now): none.");
+        let unread = Applied { lines: vec![], set: vec![], in_force: vec![], locked: vec![], in_force_error: Some("no autosave".into()) };
+        assert!(unread.summary().ends_with(" The policies in force were not read (no autosave), so every policy was sent."), "{}", unread.summary());
     }
 
     #[test]
