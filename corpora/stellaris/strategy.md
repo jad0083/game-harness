@@ -227,7 +227,10 @@ What went wrong in the first long campaign, and the rule each lesson gives:
   advanced strategy doc, `get_doc("doc:advanced_strategy#0")` and the chunks after it (read from the
   4.5.1 game files).
 - **War stance**: `prepare_war` and `defend` set the belligerent stance (+10% naval capacity,
-  −10% war exhaustion); `expand` and `diplomacy_first` set their own stance again afterwards.
+  −10% war exhaustion) only when applied at peace, before the war: a diplomatic stance cannot change
+  during a war, so `defend` chosen once a war has begun changes only its flag and postures. Each
+  stance change starts a 10-year lock, so `expand` and `diplomacy_first` set their own stance again
+  only after it ends.
 
 - **Allies are made before a war, not during it** (4.5: an AI weighs its opinion of both sides,
   counting the war leaders twice, and its price rises with the war's size and its own other wars;

@@ -1469,6 +1469,19 @@ def test_strategy_instructions_forbid_trade_market_orders():
     assert "alloys and sr_* orders are not placed until their start amount is measured" in text
 
 
+def test_the_playbook_says_the_war_stance_is_set_only_at_peace():
+    """Levers ruling 20: diplomatic_stance has `allow = { is_at_war = no }` and can_set_policy
+    guards every set, so defend chosen during a war never sets belligerent; the playbook and the
+    directive notes must not promise its +10% naval capacity at war."""
+    text = (REPO / "corpora/stellaris/strategy.md").read_text(encoding="utf-8")
+    stance = text[text.index("- **War stance**"):].split("\n- ")[0].split("\n\n")[0]
+    assert "at peace" in stance and "10-year lock" in stance, stance
+    toml = (REPO / "corpora/stellaris/directives.toml").read_text(encoding="utf-8")
+    for name, nxt in (("defend", "[directive.diplomacy_first]"), ("prepare_war", "[directive.defend]")):
+        block = toml[toml.index(f"[directive.{name}]"):toml.index(nxt)]
+        assert "while we fight" not in block and "at peace" in block, block
+
+
 def test_strategy_instructions_allow_at_most_one_small_monthly_order():
     from pilot.strategy import strategist_instructions
     text = strategist_instructions(STELLARIS)
