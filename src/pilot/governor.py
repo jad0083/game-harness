@@ -549,6 +549,7 @@ class Governor:
         self._followed_date: str | None = None    # the save date the actions were last judged on
         self._now_date: str | None = None
         self._tech_noops = 0                      # "nothing to pick" replies since the last review
+        self._review_noops = 0                    # ...as of the review being written (and its retry)
         self._market_cal = market_calibration(settings.corpus_dir)   # [ui.market] hash (market suspension)
         self._since_retro = 0
         self._strategy_trace_n = 0                # negative episode ids for strategy review traces (see _review_strategy)
@@ -1834,7 +1835,9 @@ class Governor:
         self._review_retry = False
         self._tech_misses = {}
         self._settle_at_review(b)
-        noops, self._tech_noops = self._tech_noops, 0
+        if not retried:      # the corrective retry shows what the first prompt showed
+            self._review_noops, self._tech_noops = self._tech_noops, 0
+        noops = self._review_noops
         started = time.time()
         retry_errors: list[str] | None = None
         retry_rejected: str | None = None

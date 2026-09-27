@@ -4403,3 +4403,26 @@ def test_the_frame_says_expand_cannot_claim_here(setup, monkeypatch):
     assert EXPAND_BLOCKED in text.splitlines(), "a line of its own"
     monkeypatch.setattr(g, "_metrics_rows", lambda: _influence_rows(13, surveyed=2))
     assert "hint" not in g._pressures()["expansion"]
+
+
+def test_the_corrective_retry_of_a_review_keeps_the_tech_offers(setup):
+    from pilot.strategy import Pillar
+    s, log = setup
+    prompts: list[str] = []
+
+    def review(messages, info):
+        prompts.append("\n".join(str(getattr(p, "content", "")) for m in messages for p in getattr(m, "parts", [])))
+        body = {"change": len(prompts) == 1, "assessment": "x", "rules": []}      # the first: change without a strategy
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, body)])
+
+    class NothingToPick(FakeStellaris):
+        def pick_tech(self, prefer):
+            return "nothing to pick: no preferred tech offered in a field that is free to change"
+    g = Governor(s, NothingToPick([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": FunctionModel(review)})
+    g.strategy = _strategy_with(technology=Pillar(priority=3, stance="s", goals=["g"], prefer_techs=["tech_habitat_1"]))
+    offer = {"physics": {"current": ["tech_lasers_1", 1.0], "alternatives": ["tech_lasers_1", "tech_shields_1"]}}
+    for d in ("2200.02.01", "2200.03.01", "2200.04.01"):
+        g._carry_out_actions({**briefing(d), "research": offer})
+    g._review_strategy({**briefing("2200.05.01"), "research": offer}, "scheduled")
+    assert len(prompts) == 2 and all("offered now: physics: tech_lasers_1, tech_shields_1" in p for p in prompts)
