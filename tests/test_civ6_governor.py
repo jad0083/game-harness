@@ -1911,6 +1911,12 @@ def test_the_briefing_names_refusals_failures_and_sessions_closed_before_an_answ
     assert "civ:rome new thing: Goodbye (an unknown statement)" in line
 
 
+def test_the_briefing_says_goodbye_was_sent_after_a_failed_reply():
+    line = _diplomacy_line({**FIXTURE, "diplomacy": _dipl(
+        {**_T240[0], "err": "the session is gone", "closed": True})})
+    assert "the conciliatory reply (a promise) (failed: the session is gone; Goodbye sent instead)" in line
+
+
 def test_the_briefing_leaves_out_answers_older_than_ten_turns_but_never_a_waiting_one():
     old = {**_T240[0], "turn": 1, "at": 1}
     waiting = {**_WAITING, "turn": 1}

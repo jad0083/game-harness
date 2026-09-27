@@ -1389,7 +1389,8 @@ def _religion_text(s: dict, cid, limits) -> str:
 # corpora/civ6/lua/harness.lua answers an AI leader's statement during autoplay from its own table and
 # logs the last 20 in the snapshot's `diplomacy` ({"handler": bool, "log": [...]}): each entry has
 # n, turn, from, civ, session, kind, sub, and once answered reply (POSITIVE, EXIT or REFUSE), why and
-# at (the turn answered); `late` when it waited for autoplay, `err` when the game's call failed.
+# at (the turn answered); `late` when it waited for autoplay, `err` when the game's call failed
+# (`closed` when Goodbye then went through instead).
 
 DIPLOMACY_REPLIES = {"POSITIVE": "the conciliatory reply (a promise)", "EXIT": "Goodbye", "REFUSE": "refused"}
 DIPLOMACY_WHY = {"unknown": "an unknown statement", "guard": "the promise was not offered safely by the game's data"}
@@ -1418,6 +1419,8 @@ def diplomacy_reply_text(e: dict) -> str:
         notes.append(f"at T{e.get('at')}, when autoplay started")
     if e.get("err"):
         notes.append(f"failed: {e['err']}"[:120])
+    if e.get("closed"):
+        notes.append("Goodbye sent instead")
     text = DIPLOMACY_REPLIES.get(e["reply"], str(e["reply"]))
     return text + (f" ({'; '.join(notes)})" if notes else "")
 

@@ -535,3 +535,29 @@ def test_the_handler_is_installed_in_ingame_only():
     rt, out = runtime()
     assert rt.eval("#Events.DiplomacyStatement.fns") == 1
     assert snapshot(rt, out)["diplomacy"] == {"handler": True, "log": []}
+
+
+def test_a_failed_answer_falls_back_to_goodbye():
+    """AddResponse raising (a binding that rejects the session): Goodbye is sent at once instead, so
+    no session is left open behind the quieted leader screen."""
+    rt, out = autoplaying("MOCK.dipl_fails = 'response'")
+    rt.execute("statement(3, 0, 'WARNING_TOO_MANY_TROOPS_NEAR_ME', 'NONE', 7)")
+    assert diplo_calls(rt) == ["close 7"]
+    assert rt.eval("MOCK.open[7]") is None
+    e = diplo_log(rt, out)[-1]
+    assert (e["reply"], e["closed"]) == ("POSITIVE", True) and "the session is gone" in e["err"]
+    call(rt, out, "Harness.autoplay, 1")
+    assert diplo_calls(rt) == ["close 7"], "closed once"
+
+
+@pytest.mark.parametrize("kind", ["WARNING_TOO_MANY_TROOPS_NEAR_ME", "DENOUNCE"])
+def test_a_session_whose_answer_failed_is_closed_when_autoplay_next_starts(kind):
+    """Every call of the answer raised (the promise, its Goodbye fallback, or a plain Goodbye): the
+    session stays listed as open, and the next autoplay start closes it."""
+    rt, out = autoplaying("MOCK.dipl_fails = true")
+    rt.execute(f"statement(3, 0, '{kind}', 'NONE', 7)")
+    assert diplo_calls(rt) == [] and "the session is gone" in diplo_log(rt, out)[-1]["err"]
+    rt.execute("MOCK.dipl_fails = false")
+    call(rt, out, "Harness.autoplay, 1")
+    assert diplo_calls(rt) == ["close 7"]
+    assert rt.eval("MOCK.open[7]") is None

@@ -458,7 +458,8 @@ CombatManager = {
 -- statement(from, to, kind, sub, sid) opens the session and fires Events.DiplomacyStatement as the
 -- game does (kVariants with the SessionID and the type hashes GetKeyName names); every call on
 -- DiplomacyManager and DealManager lands in DIPLO_CALLS. MOCK.open: the open sessions;
--- MOCK.dipl_fails: AddResponse and CloseSession raise.
+-- MOCK.dipl_fails: AddResponse and CloseSession raise (true), or only the calls it names ('response',
+-- 'close').
 
 local function rows_of(list, cols)
   local rows = {}
@@ -482,7 +483,8 @@ local function key_hash(name)
   return h
 end
 local function called(s)
-  if MOCK.dipl_fails then error('the session is gone') end
+  local f = MOCK.dipl_fails
+  if f == true or (type(f) == 'string' and s:sub(1, #f) == f) then error('the session is gone') end
   DIPLO_CALLS[#DIPLO_CALLS + 1] = s
 end
 DiplomacyManager = {

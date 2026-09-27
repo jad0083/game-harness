@@ -1330,18 +1330,26 @@ local function reply_for(e)
   return r, 'table'
 end
 
+-- The session is listed as open before any call and leaves the list only once Goodbye went through,
+-- so whatever fails here, the next autoplay start closes it. A failed answer gets Goodbye at once
+-- (`closed` when that worked).
 local function respond(e)
   e.reply, e.why = reply_for(e)
   e.at = Game.GetCurrentGameTurn()
-  local ok, err = pcall(function()
-    if e.reply == 'EXIT' then
-      D.open[e.session] = nil
-      DiplomacyManager.CloseSession(e.session)
-    else
+  if e.session ~= nil then D.open[e.session] = e end
+  local function goodbye()
+    DiplomacyManager.CloseSession(e.session)
+    D.open[e.session] = nil
+  end
+  local ok, err
+  if e.reply == 'EXIT' then
+    ok, err = pcall(goodbye)
+  else
+    ok, err = pcall(function()
       DiplomacyManager.AddResponse(e.session, H.me(), e.reply == 'REFUSE' and 'NEGATIVE' or e.reply)
-      D.open[e.session] = e
-    end
-  end)
+    end)
+    if not ok and pcall(goodbye) then e.closed = true end
+  end
   if not ok then e.err = tostring(err) end
 end
 
