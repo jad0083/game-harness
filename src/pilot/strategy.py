@@ -6,6 +6,7 @@ Pure data and rules; no model calls, no game input."""
 
 from __future__ import annotations
 
+import itertools
 import json
 import re
 from collections.abc import Mapping
@@ -496,17 +497,51 @@ def strategist_instructions(spec: PillarSpec) -> str:
 
 # ---- pressure: weight x milestone need (weighted pillars spec) -------------------------------------
 
-def pressures(s: Strategy, spec: PillarSpec, status_of) -> dict[str, dict]:
+def directive_record(rows: list[dict], directive: str, metric: str,
+                     row_keys: Mapping[str, str] | None = None) -> dict | None:
+    """How `metric` grew per in-game year while `directive` was in force in this campaign versus the
+    rest of the time, from consecutive metrics rows (each step counts for the directive in force at its
+    start). Ranks count going down as growth. None without at least 6 months of each."""
+    held = [0.0, 0]
+    other = [0.0, 0]
+    for a, b in itertools.pairwise(rows):
+        va, vb = metric_value(a, metric, row_keys), metric_value(b, metric, row_keys)
+        if va is None or vb is None or not a.get("date") or not b.get("date"):
+            continue
+        months = _months(b["date"]) - _months(a["date"])
+        if months <= 0:
+            continue
+        delta = (va - vb) if metric.startswith("rank:") else (vb - va)
+        bucket = held if a.get("directive") == directive else other
+        bucket[0] += delta
+        bucket[1] += months
+    if held[1] < 6 or other[1] < 6:
+        return None
+    return {"held_years": round(held[1] / 12, 1), "held_rate": round(held[0] * 12 / held[1], 1),
+            "other_rate": round(other[0] * 12 / other[1], 1)}
+
+
+def pressures(s: Strategy, spec: PillarSpec, status_of, record_of=None) -> dict[str, dict]:
     """Per pillar: weight, need (the largest `[weights.need]` multiplier among its milestones' statuses,
     1.0 without milestones), the status that set it and pressure = weight x need. `status_of(name,
-    milestone)` gives a milestone's status (met / on_track / at_risk / missed)."""
-    table = spec.weights.need
+    milestone)` gives a milestone's status (met / on_track / at_risk / missed). With `record_of(name,
+    metric)` (a `directive_record` of the pillar's directive on its first milestone's metric), a
+    directive held `stall_years` or more that grew its metric no faster than the rest of the time
+    "does not work here": pressure x `stall_factor`, and the record is kept for the frame."""
+    table, w = spec.weights.need, spec.weights
     out = {}
     for name, pl in s.sorted_pillars():
         statuses = [status_of(name, m) for m in pl.milestones]
         worst = max(statuses, key=lambda st: table.get(st, 1.0), default="")
         need = table.get(worst, 1.0) if worst else 1.0
-        out[name] = {"weight": pl.weight, "need": need, "status": worst, "pressure": round(pl.weight * need, 1)}
+        row = {"weight": pl.weight, "need": need, "status": worst, "pressure": round(pl.weight * need, 1)}
+        if record_of is not None and w.stall_years > 0 and pl.milestones:
+            metric = pl.milestones[0].metric
+            rec = record_of(name, metric)
+            if rec and rec["held_years"] >= w.stall_years and rec["held_rate"] <= rec["other_rate"]:
+                row.update(efficacy=w.stall_factor, record={**rec, "metric": metric, "directive": spec.directive_of(name)},
+                           pressure=round(pl.weight * need * w.stall_factor, 1))
+        out[name] = row
     return out
 
 

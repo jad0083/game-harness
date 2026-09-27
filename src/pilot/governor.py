@@ -34,6 +34,7 @@ from .strategy import (
     Strategy,
     apply_aliases,
     directive_pressure,
+    directive_record,
     keep_pinned,
     market_briefing_errors,
     milestone_status,
@@ -292,7 +293,12 @@ def frame_text(strategy: Strategy | None, spec: PillarSpec, milestones: str, pre
     def why(pillar: str) -> str:
         p = press[pillar]
         status = p["status"] or ("no data" if strategy.pillars[pillar].milestones else "no milestones")
-        return f"{pillar} {p['weight']} x {status} {p['need']:g}"
+        text = f"{pillar} {p['weight']} x {status} {p['need']:g}"
+        if p.get("efficacy", 1.0) < 1.0:
+            r = p["record"]
+            text += (f" x not working here {p['efficacy']:g}: {r['metric']} {r['held_rate']:+g}/yr over "
+                     f"{r['held_years']:g} y held vs {r['other_rate']:+g}/yr otherwise")
+        return text
     if spec.weights.mode == "share":
         sh = shares(press)
         lines.append("Share of effort (weight x milestone need): " + ", ".join(f"{n} {sh[n]}%" for n in press))
@@ -1283,11 +1289,35 @@ class Governor:
             return None
         today = rows[-1]["date"]
         try:
-            return pressures(self.strategy, self.pillars,
-                             lambda _n, m: milestone_status(m, rows, today, self.pillars.row_keys))
+            spec = self.pillars
+            return pressures(self.strategy, spec, lambda _n, m: milestone_status(m, rows, today, spec.row_keys),
+                             record_of=lambda name, metric: (directive_record(rows, d, metric, spec.row_keys)
+                                                             if (d := spec.directive_of(name)) else None))
         except Exception as e:  # noqa: BLE001 - advisory; the decision still runs on weights
             self.log.emit("briefing_error", error=f"pressure: {type(e).__name__}: {e}"[:200])
             return None
+
+    def _directive_records_text(self) -> str:
+        """One line per directive: how its pillar's milestone metric grew while it was held versus the
+        rest of the campaign, marked when it does not work here (pillars.toml stall rule)."""
+        rows, spec = self._metrics_rows(), self.pillars
+        if not rows or self.strategy is None or spec is None:
+            return "(no data yet)"
+        w, out = spec.weights, []
+        for name, pl in self.strategy.sorted_pillars():
+            d = spec.directive_of(name)
+            if not d or not pl.milestones:
+                continue
+            metric = pl.milestones[0].metric
+            r = directive_record(rows, d, metric, spec.row_keys)
+            if r is None:
+                out.append(f"- {d} ({name}, {metric}): not held long enough to judge")
+                continue
+            verdict = (" — does not work here" if w.stall_years and r["held_years"] >= w.stall_years
+                       and r["held_rate"] <= r["other_rate"] else "")
+            out.append(f"- {d} ({name}, {metric}): {r['held_rate']:+g}/yr over {r['held_years']:g} y held vs "
+                       f"{r['other_rate']:+g}/yr otherwise{verdict}")
+        return "\n".join(out) or "(no data yet)"
 
     def _milestones_text(self) -> str:
         rows = self._metrics_rows()
@@ -1353,6 +1383,8 @@ class Governor:
             prompt = [f"Strategy review, trigger: {trigger}.", "Current strategy:\n" + current,
                       "Milestones (status computed from the recorded numbers):\n" + self._milestones_text(),
                       "Directive changes and what followed:\n" + self._past_outcomes_text(),
+                      "Directive record in this campaign (its pillar's first milestone metric, per in-game year):\n"
+                      + self._directive_records_text(),
                       "Latest briefing:\n" + (self.last_briefing or self.game.briefing_text())]
             sp_name, sp_traits = species_terms(b)
             if sp_name or sp_traits:

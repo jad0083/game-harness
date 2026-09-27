@@ -768,3 +768,47 @@ def test_a_weight_only_change_does_not_recheck_unchanged_market_orders():
     new = wstrat(economy=Pillar(weight=24, stance="energy 5", goals=["a", "b"], milestones=[_M], market=[sell]),
                  defence=Pillar(weight=28, stance="x 1", goals=["a", "b"], milestones=[_M_EARLY, _M]))
     assert validate(new, SPEC, previous=old, tech_ids=set(), idle=set(), income={"energy": 1.0}) == []
+
+
+# ---- directive record: a directive that does not move its pillar's metric loses pressure -----------
+
+def _rows(spec_rows):
+    """[(date, directive, techs_known)] -> metrics rows."""
+    return [{"date": d, "directive": dr, "techs_known": t} for d, dr, t in spec_rows]
+
+
+def test_directive_record_compares_held_and_other_growth():
+    from pilot.strategy import directive_record
+    rows = _rows([("2200.01.01", "defend", 10), ("2201.01.01", "tech_rush", 12), ("2202.01.01", "tech_rush", 12.5),
+                  ("2203.01.01", "tech_rush", 13), ("2204.01.01", "defend", 14)])
+    r = directive_record(rows, "tech_rush", "techs_known")
+    assert r == {"held_years": 3.0, "held_rate": 0.7, "other_rate": 2.0}   # 2201->2204: +2 in 3y (last step starts held)
+
+
+def test_rank_metrics_count_improvement_as_going_down():
+    from pilot.strategy import directive_record
+    rows = [{"date": "2200.01.01", "directive": "defend", "peers": {"military_power": {"rank": 8}}},
+            {"date": "2202.01.01", "directive": "expand", "peers": {"military_power": {"rank": 6}}},
+            {"date": "2204.01.01", "directive": "expand", "peers": {"military_power": {"rank": 6}}}]
+    r = directive_record(rows, "defend", "rank:military_power")
+    assert r["held_rate"] == 1.0 and r["other_rate"] == 0.0
+
+
+def test_a_directive_that_does_not_work_here_loses_pressure():
+    from pilot.strategy import pressures
+    s = wstrat(technology=Pillar(weight=16, stance="58 techs", goals=["a", "b"],
+                                 milestones=[Milestone(metric="techs_known", op=">=", target=80, by="2250.01.01")]))
+    stalled = {"held_years": 4.8, "held_rate": 0.6, "other_rate": 0.9}
+    p = pressures(s, SPEC, lambda n, m: "at_risk", record_of=lambda name, metric: stalled if name == "technology" else None)
+    assert p["technology"]["efficacy"] == 0.5 and p["technology"]["pressure"] == 12.0   # 16 x 1.5 x 0.5
+    assert p["technology"]["record"] == {**stalled, "metric": "techs_known", "directive": "tech_rush"}
+    assert "efficacy" not in p["defence"]
+
+
+def test_a_short_or_working_record_keeps_full_pressure():
+    from pilot.strategy import pressures
+    short = {"held_years": 1.0, "held_rate": 0.0, "other_rate": 0.9}
+    working = {"held_years": 3.0, "held_rate": 60.0, "other_rate": 16.0}
+    for rec in (short, working):
+        p = pressures(wstrat(), SPEC, lambda n, m: "at_risk", record_of=lambda name, metric, r=rec: r)
+        assert all(x.get("efficacy", 1.0) == 1.0 for x in p.values())

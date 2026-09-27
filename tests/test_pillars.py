@@ -216,3 +216,17 @@ def test_weights_default_when_the_table_is_absent(tmp_path):
 def test_bad_weights_are_rejected(tmp_path, table, where):
     with pytest.raises(PillarsError, match=re.escape(where)):
         load_pillars(corpus(tmp_path, MINI + f"\n[weights]\n{table}\n"))
+
+
+def test_the_stellaris_stall_rule():
+    w = load_pillars(REPO / "corpora/stellaris").weights
+    assert (w.stall_years, w.stall_factor) == (2.0, 0.5)
+
+
+@pytest.mark.parametrize("table, where", [
+    ("stall_years = -1", "weights.stall_years: must be a number >= 0"),
+    ("stall_factor = 1.5", "weights.stall_factor: must be a number in (0, 1]"),
+])
+def test_bad_stall_rules_are_rejected(tmp_path, table, where):
+    with pytest.raises(PillarsError, match=re.escape(where)):
+        load_pillars(corpus(tmp_path, MINI + f"\n[weights]\n{table}\n"))

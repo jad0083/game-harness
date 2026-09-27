@@ -23,7 +23,7 @@ _ACTION_KEYS = {
 _ACTION_REQUIRED = {"tech": ("max_items", "ids_from_corpus"),
                     "market": ("max_items", "resources_from_manifest", "amount_max")}
 _TOP_KEYS = {"strategy", "metrics", "pillars", "actions", "weights"}
-_WEIGHTS_KEYS = {"mode", "min", "max", "spread", "switch_margin", "need"}
+_WEIGHTS_KEYS = {"mode", "min", "max", "spread", "switch_margin", "need", "stall_years", "stall_factor"}
 NEED_STATUSES = ("met", "on_track", "at_risk", "missed")
 _STRATEGY_KEYS = {"min_milestones_top", "min_milestones_each", "min_milestones_first", "min_goals", "min_goals_top",
                   "stance_needs_figure", "metric_aliases", "instructions"}
@@ -71,6 +71,8 @@ class WeightsSpec:
     spread: float = 1.0              # heaviest >= spread x lightest
     switch_margin: float = 1.0       # keep the current directive while its pressure >= top / margin
     need: dict[str, float] = field(default_factory=lambda: dict.fromkeys(NEED_STATUSES, 1.0))
+    stall_years: float = 0.0         # a directive held this long without beating its metric's other growth...
+    stall_factor: float = 1.0        # ...has its pressure multiplied by this (0 years: rule off)
 
 
 @dataclass(frozen=True)
@@ -111,7 +113,8 @@ class PillarSpec:
         w = self.weights
         return {"game": self.game, "metrics": list(self.metrics), "min_milestones_top": self.min_milestones_top,
                 "weights": {"mode": w.mode, "min": w.min, "max": w.max, "spread": w.spread,
-                            "switch_margin": w.switch_margin, "need": dict(w.need)},
+                            "switch_margin": w.switch_margin, "need": dict(w.need),
+                            "stall_years": w.stall_years, "stall_factor": w.stall_factor},
                 "pillars": [{"id": p.id, "label": p.label, "description": p.description, "directive": p.directive,
                              "actions": list(p.actions)} for p in self.pillars.values()],
                 "actions": {k: {"field": a.field, "max_items": a.max_items, "resources": list(a.resources),
@@ -250,6 +253,12 @@ def _weights(path: Path, t, n: int) -> WeightsSpec:
         v = t.get(key, getattr(d, key))
         if not _num(v) or v < 1:
             raise _err(path, f"weights.{key}", "must be a number >= 1")
+    stall_years = t.get("stall_years", d.stall_years)
+    if not _num(stall_years) or stall_years < 0:
+        raise _err(path, "weights.stall_years", "must be a number >= 0")
+    stall_factor = t.get("stall_factor", d.stall_factor)
+    if not _num(stall_factor) or not 0 < stall_factor <= 1:
+        raise _err(path, "weights.stall_factor", "must be a number in (0, 1]")
     need_raw = t.get("need", {})
     if not isinstance(need_raw, dict):
         raise _err(path, "weights.need", "must be a table")
@@ -260,7 +269,8 @@ def _weights(path: Path, t, n: int) -> WeightsSpec:
             raise _err(path, f"weights.need.{k}", "must be a number >= 0")
         need[k] = float(v)
     return WeightsSpec(mode=mode, min=lo, max=hi, spread=float(t.get("spread", d.spread)),
-                       switch_margin=float(t.get("switch_margin", d.switch_margin)), need=need)
+                       switch_margin=float(t.get("switch_margin", d.switch_margin)), need=need,
+                       stall_years=float(stall_years), stall_factor=float(stall_factor))
 
 
 def _parse(path: Path, corpus: Path) -> PillarSpec:

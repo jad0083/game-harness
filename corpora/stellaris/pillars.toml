@@ -26,6 +26,10 @@ max = 50                # none dominates
 spread = 2              # heaviest >= 2 x lightest (no even spread)
 switch_margin = 1.25    # keep the current directive while its pressure >= top / 1.25
 need = { met = 0.3, on_track = 1.0, at_risk = 1.5, missed = 2.0 }
+# A directive held 2+ years in this campaign whose pillar's milestone metric grew no faster than while
+# it was not held "does not work here": its pressure is halved (e.g. tech_rush with Slow Learners).
+stall_years = 2.0
+stall_factor = 0.5
 
 [metrics]
 # the briefing's recorded measures; rank:<measure> is our standing among the empires, 1 = best
