@@ -360,12 +360,14 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   governor waits with the game meant to run, `_stalled` compares the time since the autosave date
   last moved with `_stall_limit()` = max(300 s, 10 x the median real seconds per in-game month over
   this run's last 24 months, measured in the wait only, so decision time is left out). Past it: a
-  screenshot, a `stall` event and one `set_paused(False)` (which closes the game menu first; a
-  `self_paused` event when the reply says the state changed). Still unchanged one limit later:
-  needs attention with the stall's screenshot path. A dashboard pause never reaches the check; a
-  pause made in the game's own UI looks like a stall (known limit). The clock is injected
-  (`_clock`, default `time.monotonic`) so tests drive it; `FakeStellaris(self_pause_after=n)` pauses
-  itself after n reads.
+  screenshot, a `stall` event and needs attention with the screenshot's path. It sends no input:
+  a resume could unpause another campaign the human loaded (it writes no autosave at first, so the
+  governed save still looks newest), and `McpGame.ensure_foreground` would focus any window whose
+  title contains "Stellaris" (the launcher, a browser tab) after a crash; nothing read-only proves
+  the governed game is in front. A dashboard pause never reaches the check; a pause made in the
+  game's own UI looks like a stall (known limit). The clock is injected (`_clock`, default
+  `time.monotonic`) so tests drive it; `FakeStellaris(self_pause_after=n)` pauses itself after n
+  reads.
 - `claude_code.py`: the `claude-code:<alias or model id>` provider (the catalog adds versioned ids from
   the Anthropic listing to the aliases, `models._claude_code_models`). `resolve_model` turns the model string into
   a pydantic-ai `FunctionModel` (where the governor and GC4 agents are built), so pools, fallback,

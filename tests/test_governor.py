@@ -3857,7 +3857,7 @@ def _kinds(log) -> list[str]:
     return [e["kind"] for e in log.recent]
 
 
-def test_a_date_that_stops_while_running_is_resumed_once_then_needs_attention(setup):
+def test_a_date_that_stops_while_running_needs_attention_and_sends_no_input(setup):
     s, log = setup
     game = FakeStellaris([briefing("2200.01.01")])          # the save never changes
     gov = Governor(s, game, log, model=decisions("keep"))
@@ -3868,28 +3868,95 @@ def test_a_date_that_stops_while_running_is_resumed_once_then_needs_attention(se
     kinds = _kinds(log)
     assert kinds.count("stall") == 1 and kinds.count("needs_attention") == 1
     assert kinds.index("stall") < kinds.index("needs_attention")
-    assert "self_paused" not in kinds, "the game was running: nothing paused it"
-    assert game.actions.count(("paused", False)) == 2, "the wait's own resume, then exactly one from the watchdog"
+    assert "self_paused" not in kinds
+    assert game.actions == [("paused", False)], "only the wait's own resume: the watchdog sends nothing"
     stall = next(e for e in log.recent if e["kind"] == "stall")
     assert stall["limit"] == 300 and stall["seconds"] == 300 and stall["date"] == "2200.01.01"
     reason = next(e for e in log.recent if e["kind"] == "needs_attention")["reason"]
-    assert "has not advanced for 600 s" in reason and "2200.01.01" in reason, reason
+    assert "has not advanced for 300 s" in reason and "2200.01.01" in reason and "Nothing was sent" in reason, reason
 
 
-def test_a_game_that_paused_itself_is_resumed_and_play_goes_on(setup):
+def test_a_game_that_paused_itself_waits_for_the_human(setup):
     s, log = setup
     s.decide_every_months = 3
     game = FakeStellaris([briefing(f"2200.{m:02d}.01") for m in range(1, 8)], self_pause_after=2)
     gov = Governor(s, game, log, model=decisions("keep"))
     gov._clock = _Clock(game, step=10)
     b, reason = gov._run_until_next_decision(briefing("2200.01.01"))
-    assert reason.startswith("scheduled") and b["date"] == "2200.04.01", (reason, b["date"])
-    kinds = _kinds(log)
-    assert kinds.count("stall") == 1 and kinds.count("self_paused") == 1 and "needs_attention" not in kinds
-    assert kinds.index("stall") < kinds.index("self_paused")
+    assert reason == "" and log.state.status == "needs_attention"
     stall = next(e for e in log.recent if e["kind"] == "stall")
     assert stall["date"] == "2200.02.01" and stall["seconds"] >= 300
-    assert not game.self_paused and game.paused, "resumed by the watchdog, paused again for the decision"
+    assert game.self_paused and game.actions == [("paused", False)], "the watchdog left the game as it was"
+    # the human checks the PC and presses Resume: the wait's own resume carries on
+    gov.resume()
+    b, reason = gov._run_until_next_decision(b)
+    assert reason.startswith("scheduled") and b["date"] == "2200.05.01", (reason, b["date"])
+    assert not game.self_paused
+
+
+def test_the_watchdog_never_unpauses_another_loaded_campaign(setup):
+    """Review fix: the human presses Esc and loads their own campaign ("Commonwealth of Man 3"),
+    which starts paused and writes no autosave yet, so the newest autosave stays the governed one and
+    its date holds. Nothing read-only proves which game is loaded, so the watchdog sends no input."""
+    s, log = setup
+    governed = {**briefing("2200.01.01"), "source": "save games/governed_1/autosave_2200.01.01.sav"}
+
+    class UserLoadsTheirGame(FakeStellaris):
+        def __init__(self, briefings):
+            super().__init__(briefings)
+            self.loaded, self.sent_to_other_game = "governed_1", []
+
+        def briefing(self):
+            if self.reads == 1:
+                self.loaded, self.paused = "commonwealth_of_man_3", True     # Load Game, starts paused
+            return super().briefing()
+
+        def set_paused(self, paused):
+            if self.loaded != "governed_1":
+                self.sent_to_other_game.append(("paused", paused))
+            return super().set_paused(paused)
+
+    game = UserLoadsTheirGame([governed])
+    gov = Governor(s, game, log, model=decisions("keep"))
+    gov._folder = "governed_1"
+    gov._clock = _Clock(game, step=60)
+    _, reason = gov._run_until_next_decision(governed)
+    assert reason == "" and log.state.status == "needs_attention"
+    assert game.sent_to_other_game == [], "never an input to the user's own game"
+    assert game.actions == [("paused", False)], "only the wait's own resume, before the load"
+
+
+def test_after_a_crash_the_watchdog_brings_no_window_forward(setup):
+    """Review fix: Stellaris crashed and a browser tab titled "Stellaris Wiki" is in front. The real
+    McpGame input path (ensure_foreground) would ask the agent to focus a window whose title contains
+    "Stellaris"; the watchdog must not take that path at all."""
+    import json
+
+    from pilot.game import McpGame, ToolResult
+    s, log = setup
+    calls: list[str] = []
+
+    class Crashed(McpGame):
+        def __init__(self):                              # no controller process: a stubbed agent
+            self.GAME_TITLE = "Stellaris"
+
+        def _http(self, method, path, body=None):
+            return json.dumps({"foreground": "Stellaris Wiki - Google Chrome"}).encode()
+
+        def call(self, tool, **args):
+            calls.append(tool)
+            if tool == "stellaris_briefing":
+                return ToolResult(json.dumps(briefing("2200.01.01")), None)
+            return ToolResult("Running (changed)." if tool == "stellaris_pause" else "ok", None)
+
+    game = Crashed()
+    gov = Governor(s, game, log, model=decisions("keep"))
+    gov._clock = _Clock(game, step=60)
+    _, reason = gov._run_until_next_decision(briefing("2200.01.01"))
+    assert reason == "" and log.state.status == "needs_attention"
+    after_first_poll = calls[calls.index("stellaris_briefing"):]
+    assert "focus" not in after_first_poll and "stellaris_pause" not in after_first_poll, after_first_poll
+    assert set(after_first_poll) <= {"stellaris_briefing", "screenshot"}, after_first_poll
 
 
 def test_the_watchdog_leaves_a_human_pause_alone(setup):

@@ -284,8 +284,10 @@ Rules:
   the save".
 - **Date-stall watchdog**: when the autosave date has not moved for max(300 s, 10 x the run's
   median real month) while the governor wants the game running, it takes a screenshot, logs `stall`
-  and resumes the game once (`self_paused` if it had paused itself); still stuck one limit later, it
-  flags needs attention. Pause from the dashboard, not the game's menu, when you want it to wait.
+  and flags needs attention. It sends no input and focuses no window: another loaded campaign (no
+  autosave yet), the launcher or a browser tab titled Stellaris cannot be told from the governed game
+  read-only, so only the human resumes. Pause from the dashboard, not the game's menu, when you want
+  it to wait.
 - Settings used: autosave Monthly (`settings.txt` `autosave=2`), tutorial off.
 - **Weighted pillars** (`[weights]` in pillars.toml): pillars carry weights (sum 100, 5..50, heaviest
   >= 2x lightest); each decision gets every directive's pressure (weight x milestone need) and a

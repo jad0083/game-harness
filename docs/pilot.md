@@ -98,10 +98,11 @@ governor stops acting and flags *needs attention* until you press Resume.
 
 If the autosave date stops moving while the game should be running (a popup that pauses the game,
 the launcher in front, a crash), the governor waits max(300 s, 10 x the median real time of a month
-in this run's last 24 months), then saves a screenshot, logs `stall` and resumes the game once
-(`self_paused` when the game had been paused). If the date still does not move within the same
-time again, it flags *needs attention* with the screenshot's path. A pause from the dashboard never
-triggers this; a pause made in the game's own menu does look like a stall.
+in this run's last 24 months), then saves a screenshot, logs `stall` and flags *needs attention*
+with the screenshot's path. It sends nothing to the game and focuses no window: it cannot tell the
+governed game from another campaign you loaded (which writes no autosave at first), the launcher
+or a browser tab titled Stellaris, so you check the PC and press Resume. A pause from the dashboard
+never triggers this; a pause made in the game's own menu does look like a stall.
 
 ## Civilization VI governor
 

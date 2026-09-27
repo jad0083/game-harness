@@ -420,7 +420,7 @@ class Governor:
     human_paused: bool = False       # paused from the dashboard: only the human's Resume ends it
     # date-stall watchdog (Stellaris; levers design ruling 23): the autosave date unchanged for
     # max(stall_floor_s, 10 x the median real seconds per month of this run's last stall_months)
-    # while running means a stall: resume once, then needs attention
+    # while running means a stall: a screenshot and needs attention, with no input to the game
     stall_floor_s: ClassVar[float] = 300.0
     stall_months: ClassVar[int] = 24
 
@@ -480,8 +480,6 @@ class Governor:
         self._clock: Callable[[], float] = time.monotonic   # the watchdog's wall clock (tests inject one)
         self._month_secs: deque[float] = deque(maxlen=self.stall_months)   # real seconds per in-game month
         self._date_seen_at = 0.0                  # clock when the autosave date last changed (or the wait began)
-        self._stall_resumed_at: float | None = None   # clock of the watchdog's one resume for this stall
-        self._stall_frame = ""                     # screenshot taken when the current stall was found
         self.orders: list[str] = []               # standing orders, saved per campaign
         # ("decide", msg) | ("override", name) | ("speed", speed) | ("review", trigger)
         self.requests: queue.Queue[tuple[str, str]] = queue.Queue()
@@ -1046,7 +1044,7 @@ class Governor:
         start = months(last["date"])          # the interval can change mid-wait (dashboard)
         self._status("playing")
         self.game.set_paused(False)
-        self._date_seen_at, self._stall_resumed_at = self._clock(), None
+        self._date_seen_at = self._clock()
         while True:
             if self.control.stopping:
                 return None, "stop"
@@ -1097,7 +1095,7 @@ class Governor:
         now = self._clock()
         if n > 0:
             self._month_secs.extend([(now - self._date_seen_at) / n] * min(n, self.stall_months))
-        self._date_seen_at, self._stall_resumed_at = now, None
+        self._date_seen_at = now
 
     def _stall_limit(self) -> float:
         """Seconds without a new date that count as a stall: 10 x the median real month of this run's
@@ -1108,29 +1106,22 @@ class Governor:
     def _stalled(self, date: str) -> bool:
         """The date-stall watchdog, run on every poll whose date did not move while the game should
         be running. A popup that autopauses, the launcher or a crash can hold the date for good, and
-        nothing else notices. After `_stall_limit()`: a screenshot, a `stall` event and one resume
-        (`self_paused` if the game had been paused; the resume closes the game menu first). Still
-        unchanged a limit later: needs attention, and True so the wait returns. A pause the human made
-        in the game itself looks the same (known limit); a dashboard pause never reaches here."""
+        nothing else notices. After `_stall_limit()`: a screenshot, a `stall` event and needs
+        attention, and True so the wait returns. It sends no input and brings no window forward: the
+        human may have loaded another campaign (it writes no autosave at first, so the governed save
+        still looks newest), or after a crash the only window titled Stellaris may be the launcher or
+        a browser tab, and nothing read-only proves the governed game is the one in front. So only the
+        human resumes (dashboard Resume). A dashboard pause never reaches here."""
         if self.human_paused or self.control.paused:
             return False
-        now, limit = self._clock(), self._stall_limit()
-        held = now - self._date_seen_at
-        if self._stall_resumed_at is None:
-            if held < limit:
-                return False
-            self._stall_frame = self._frame()
-            self.log.emit("stall", date=date, seconds=round(held), limit=round(limit), frame=self._stall_frame)
-            self._stall_resumed_at = now
-            reply = str(self.game.set_paused(False))
-            if "(changed)" in reply:
-                self.log.emit("self_paused", date=date, reply=reply[:200])
+        held, limit = self._clock() - self._date_seen_at, self._stall_limit()
+        if held < limit:
             return False
-        if now - self._stall_resumed_at < limit:
-            return False
-        self._needs_attention(f"the game date has not advanced for {round(held)} s (still {date}; resumed once after "
-                              f"{round(limit)} s without effect): a popup, the launcher or a crash may hold the game. "
-                              f"Screenshot at the stall: {self._stall_frame or 'none'}. Fix the game, then press Resume.")
+        frame = self._frame()
+        self.log.emit("stall", date=date, seconds=round(held), limit=round(limit), frame=frame)
+        self._needs_attention(f"the game date has not advanced for {round(held)} s (still {date}): a popup that paused "
+                              "the game, another game loaded, the launcher or a crash may hold it. Nothing was sent to "
+                              f"the game. Screenshot at the stall: {frame or 'none'}. Check the PC, then press Resume.")
         return True
 
     def _frame(self) -> str:
