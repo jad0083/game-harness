@@ -23,7 +23,8 @@ _ACTION_KEYS = {
 _ACTION_REQUIRED = {"tech": ("max_items", "ids_from_corpus"),
                     "market": ("max_items", "resources_from_manifest", "amount_max")}
 _TOP_KEYS = {"strategy", "metrics", "pillars", "actions"}
-_STRATEGY_KEYS = {"min_milestones_top", "metric_aliases", "instructions"}
+_STRATEGY_KEYS = {"min_milestones_top", "min_milestones_each", "min_milestones_first", "min_goals", "min_goals_top",
+                  "stance_needs_figure", "metric_aliases", "instructions"}
 _METRICS_KEYS = {"names", "row_keys"}
 _PILLAR_KEYS = {"label", "description", "directive", "actions"}
 _RESERVED_IDS = {"focus", "reason", "pillars"}      # fields of the Strategist's output model
@@ -66,6 +67,11 @@ class PillarSpec:
     row_keys: dict[str, str] = field(default_factory=dict)
     actions: dict[str, ActionLimits] = field(default_factory=dict)
     min_milestones_top: int = 0
+    min_milestones_each: int = 0      # every unpinned pillar
+    min_milestones_first: int = 0     # the priority-1 pillar, on distinct dates (checkpoint + end target)
+    min_goals: int = 0                # for each of the top `min_goals_top` pillars
+    min_goals_top: int = 0
+    stance_needs_figure: bool = False  # a stance cites a number from the briefing
     instructions: str = ""
 
     @property
@@ -258,9 +264,20 @@ def _parse(path: Path, corpus: Path) -> PillarSpec:
     top = strat.get("min_milestones_top", 0)
     if not _int(top) or not 0 <= top <= len(pillars):
         raise _err(path, "strategy.min_milestones_top", f"must be 0..{len(pillars)}")
+    detail = {}
+    for key, hi in (("min_milestones_each", 6), ("min_milestones_first", 6), ("min_goals", 3),
+                    ("min_goals_top", len(pillars))):
+        v = strat.get(key, 0)
+        if not _int(v) or not 0 <= v <= hi:
+            raise _err(path, f"strategy.{key}", f"must be 0..{hi}")
+        detail[key] = v
+    figure = strat.get("stance_needs_figure", False)
+    if not isinstance(figure, bool):
+        raise _err(path, "strategy.stance_needs_figure", "must be true or false")
     instructions = strat.get("instructions", "")
     if not isinstance(instructions, str):
         raise _err(path, "strategy.instructions", "must be text")
     return PillarSpec(game=corpus.name, pillars=types.MappingProxyType(pillars), metrics=tuple(names),
                       metric_aliases=types.MappingProxyType(aliases), row_keys=types.MappingProxyType(row_keys),
-                      actions=types.MappingProxyType(actions), min_milestones_top=top, instructions=instructions.strip())
+                      actions=types.MappingProxyType(actions), min_milestones_top=top, stance_needs_figure=figure,
+                      instructions=instructions.strip(), **detail)

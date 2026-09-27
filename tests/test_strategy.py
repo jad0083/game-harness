@@ -22,10 +22,12 @@ from pilot.strategy import (
 SPEC = load_pillars(REPO / "corpora/stellaris")
 PRIOS = {"defence": 1, "economy": 2, "technology": 3, "expansion": 4, "diplomacy": 5, "government": 6, "society": 7}
 _M = Milestone(metric="systems", op=">=", target=10, by="2250.01.01")
+_M_EARLY = Milestone(metric="systems", op=">=", target=8, by="2246.01.01")
 
 
 def strat(**over) -> Strategy:
-    pillars = {p: Pillar(priority=n, stance=f"{p} stance", goals=[f"{p} goal"], milestones=[_M]) for p, n in PRIOS.items()}
+    pillars = {p: Pillar(priority=n, stance=f"{p} stance at 42", goals=[f"{p} goal", f"{p} second goal"],
+                         milestones=[_M_EARLY, _M] if n == 1 else [_M]) for p, n in PRIOS.items()}
     pillars.update(over)
     return Strategy(pillars=pillars, focus="hold the line")
 
@@ -270,7 +272,7 @@ def test_too_many_milestones_are_rejected():
 # ---- final review fixes: split validation, one set of market rules, one order ----------------
 
 def _econ(*orders, pinned=False):
-    return Pillar(priority=2, stance="s", goals=["g"], market=list(orders), pinned=pinned, milestones=[_M],
+    return Pillar(priority=2, stance="energy +40", goals=["g", "g2"], market=list(orders), pinned=pinned, milestones=[_M],
                   edited_by="human" if pinned else "model")
 
 
@@ -279,7 +281,8 @@ def test_an_unchanged_pinned_pillar_that_no_longer_fits_the_briefing_does_not_bl
     pillars that changed versus the previous strategy and are not pinned."""
     sell = {"side": "sell", "resource": "energy", "amount": 10}
     old = strat(economy=_econ(sell, pinned=True))
-    new = strat(economy=_econ(sell, pinned=True), expansion=Pillar(priority=4, stance="new", goals=["g"]))
+    new = strat(economy=_econ(sell, pinned=True), expansion=Pillar(priority=4, stance="new: 3 systems", goals=["g"],
+                                                                     milestones=[_M]))
     # energy is no longer idle and income collapsed: the pinned order no longer fits today
     assert validate(new, SPEC, previous=old, tech_ids=set(), idle=set(), income={"energy": 1.0}) == []
 
@@ -374,12 +377,14 @@ def test_the_stellaris_pillars_file_limits_equal_the_controllers():
 
 # ---- game pillars: rules come from the spec ------------------------------------------------------
 
-def test_the_top_pillars_need_a_milestone():
-    s = strat(economy=Pillar(priority=2, stance="s", goals=["g"]))
-    errs = validate(s, SPEC, previous=None, tech_ids=set(), idle=set(), income={})
-    assert "economy: priority 2 is in the top 3 and needs at least one milestone" in errs
-    fine = strat(expansion=Pillar(priority=4, stance="s", goals=["g"]))
-    assert validate(fine, SPEC, previous=None, tech_ids=set(), idle=set(), income={}) == [], "priority 4 needs none"
+def test_the_legacy_top_milestone_rule_still_applies_where_a_game_sets_it():
+    import dataclasses
+    spec = dataclasses.replace(SPEC, min_milestones_top=3, min_milestones_each=0)
+    s = strat(economy=Pillar(priority=2, stance="energy 5", goals=["g", "h"]))
+    errs = validate(s, spec, previous=None, tech_ids=set(), idle=set(), income={})
+    assert errs == ["economy: priority 2 is in the top 3 and needs at least one milestone"]
+    fine = strat(expansion=Pillar(priority=4, stance="3 systems", goals=["g"]))
+    assert validate(fine, spec, previous=None, tech_ids=set(), idle=set(), income={}) == [], "priority 4 needs none"
 
 
 def test_a_pinned_top_pillar_without_milestones_is_not_rejected():
@@ -393,7 +398,8 @@ def test_human_edits_skip_the_milestone_rule():
 
 
 def test_action_fields_belong_to_the_pillars_that_declare_them():
-    s = strat(diplomacy=Pillar(priority=5, stance="s", goals=["g"], prefer_techs=["tech_habitat_1"]))
+    s = strat(diplomacy=Pillar(priority=5, stance="opinion 800", goals=["g"], prefer_techs=["tech_habitat_1"],
+                               milestones=[_M]))
     errs = validate(s, SPEC, previous=None, tech_ids={"tech_habitat_1"}, idle=set(), income={})
     assert errs == ["diplomacy: only the technology pillar may set prefer_techs"]
 
@@ -441,13 +447,16 @@ def test_a_claude_style_answer_converts_to_a_valid_strategy():
     from pilot.strategy import review_model, to_strategy
     ms = [{"metric": "rank:military", "op": "<=", "target": 3, "by": "2250.01.01"}]
     answer = {"change": True, "assessment": "a", "rules": [], "strategy": {
-        "defence": {"priority": 1, "stance": "hold", "goals": ["g"], "milestones": ms},
-        "economy": {"priority": 2, "stance": "grow", "goals": ["g"], "milestones": ms,
+        "defence": {"priority": 1, "stance": "Maggar 2.3x", "goals": ["g", "h"],
+                    "milestones": ms + [{**ms[0], "target": 5, "by": "2247.01.01"}]},
+        "economy": {"priority": 2, "stance": "energy -58.7", "goals": ["g", "h"], "milestones": ms,
                     "market": [{"side": "buy", "resource": "alloys", "amount": 5}]},
-        "technology": {"priority": 3, "stance": "research", "goals": ["g"], "milestones": ms,
+        "technology": {"priority": 3, "stance": "58 techs", "goals": ["g", "h"], "milestones": ms,
                        "prefer_techs": ["tech_habitat_1"]},
-        "expansion": {"priority": 4, "stance": "s"}, "diplomacy": {"priority": 5, "stance": "s"},
-        "government": {"priority": 6, "stance": "s"}, "society": {"priority": 7, "stance": "s"},
+        "expansion": {"priority": 4, "stance": "14 systems", "milestones": ms},
+        "diplomacy": {"priority": 5, "stance": "opinion 888", "milestones": ms},
+        "government": {"priority": 6, "stance": "stability 46", "milestones": ms},
+        "society": {"priority": 7, "stance": "12 pops", "milestones": ms},
         "focus": "hold the line"}}
     r = review_model(SPEC).model_validate(answer)
     s = to_strategy(r.strategy, SPEC)
@@ -490,7 +499,6 @@ def test_the_prompt_comes_from_the_spec():
         assert f"- {pid} ({p.label}): {p.description}" in text
     for m in SPEC.metrics:
         assert m in text
-    assert "Each of the 3 highest-priority pillars needs at least one milestone." in text
     assert "at most 1 small monthly order, amount 1-25" in text and "at most 20% of its monthly income" in text
     assert "Only technology: `prefer_techs` (tech ids to pick when offered; at most 6)." in text
     assert SPEC.actions["market"].note in text and SPEC.instructions in text
@@ -573,3 +581,50 @@ def test_the_prompt_shows_the_strategy_in_the_output_shape():
     assert not {"market", "prefer_techs"} & set(shown["diplomacy"])
     assert "pinned" not in text and "edited_by" not in text
     review_model(SPEC).model_validate({"change": True, "assessment": "a", "strategy": shown})
+
+
+# ---- strategy detail: every pillar measurable, the top ones concrete (pillars.toml [strategy]) ---
+
+def _ok(**over):
+    return validate(strat(**over), SPEC, previous=None, tech_ids=set(), idle=set(), income={})
+
+
+def test_every_pillar_needs_a_milestone():
+    errs = _ok(society=Pillar(priority=7, stance="Stability 46", goals=["g"]))
+    assert "society: needs at least 1 milestone" in errs
+
+
+def test_the_first_pillar_needs_a_checkpoint_and_an_end_target():
+    one = Pillar(priority=1, stance="Maggar 2.3x", goals=["a", "b"], milestones=[_M])
+    assert "defence: priority 1 needs at least 2 milestones on different dates" in _ok(defence=one)
+    same_day = one.model_copy(update={"milestones": [_M, _M]})
+    assert "defence: priority 1 needs at least 2 milestones on different dates" in _ok(defence=same_day)
+    early = _M.model_copy(update={"by": "2247.01.01"})
+    assert _ok(defence=one.model_copy(update={"milestones": [early, _M]})) == []
+
+
+def test_the_top_pillars_need_two_goals():
+    assert "economy: priority 2 is in the top 3 and needs at least 2 goals" in _ok(
+        economy=Pillar(priority=2, stance="Energy -58.7", goals=["one"], milestones=[_M]))
+    assert _ok(expansion=Pillar(priority=4, stance="14 systems", goals=["one"], milestones=[_M])) == [], "priority 4 may have one"
+
+
+def test_a_stance_must_cite_a_figure():
+    errs = _ok(government=Pillar(priority=6, stance="Keep things as they are.", goals=["g"], milestones=[_M]))
+    assert "government: the stance must cite at least one figure from the briefing" in errs
+
+
+def test_detail_rules_skip_pinned_pillars_and_human_edits():
+    bare = Pillar(priority=7, stance="vague", goals=[])
+    assert _ok(society=bare.model_copy(update={"pinned": True, "edited_by": "human"})) == []
+    assert validate(strat(society=bare), SPEC, previous=None, tech_ids=set(), idle=set(), income={},
+                    require_milestones=False) == []
+
+
+def test_the_prompt_states_the_detail_rules():
+    from pilot.strategy import strategist_instructions
+    text = strategist_instructions(SPEC)
+    assert "Every pillar needs at least 1 milestone" in text
+    assert "The priority-1 pillar needs at least 2 milestones: a checkpoint and a later end target." in text
+    assert "Each of the 3 highest-priority pillars needs at least 2 concrete goals" in text
+    assert "Each stance cites at least one figure from the briefing" in text

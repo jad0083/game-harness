@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import tomllib
 
@@ -55,7 +56,8 @@ def test_the_stellaris_file_reproduces_todays_pillars():
                         ("planets", "colonies"), (" pops ", "pops")):
         assert spec.alias(alias) == real
     assert spec.row_keys == {"colonies": "planets"}
-    assert spec.min_milestones_top == 3
+    assert (spec.min_milestones_top, spec.min_milestones_each, spec.min_milestones_first) == (0, 1, 2)
+    assert (spec.min_goals, spec.min_goals_top, spec.stance_needs_figure) == (2, 3, True)
     assert spec.owners("market") == ["economy"] and spec.owners("tech") == ["technology"]
     m, t = spec.actions["market"], spec.actions["tech"]
     assert (m.field, m.max_items, m.amount_min, m.amount_max, m.sell_income_share, m.sell_requires_idle) == \
@@ -174,3 +176,14 @@ def test_missing_directives_toml_gives_clear_error(tmp_path):
     # Don't copy directives.toml; let it be missing
     with pytest.raises(PillarsError, match=r"directives\.toml: missing"):
         load_pillars(d)
+
+
+@pytest.mark.parametrize("line, where", [
+    ("min_milestones_each = 7", "strategy.min_milestones_each: must be 0..6"),
+    ("min_goals = 4", "strategy.min_goals: must be 0..3"),
+    ("min_goals_top = 3", r"strategy.min_goals_top: must be 0..2"),
+    ('stance_needs_figure = "yes"', "strategy.stance_needs_figure: must be true or false"),
+])
+def test_detail_rules_are_checked(tmp_path, line, where):
+    with pytest.raises(PillarsError, match=re.escape(where)):
+        load_pillars(corpus(tmp_path, MINI.replace("min_milestones_top = 1", f"min_milestones_top = 1\n{line}")))
