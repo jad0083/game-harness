@@ -95,3 +95,33 @@ def test_installer_verifies_the_exe_before_stopping_the_running_agent():
 def test_installer_is_ascii():
     # Windows PowerShell 5.1 reads a BOM-less file as ANSI.
     assert INSTALL.isascii()
+
+
+def test_a_host_name_gets_its_own_token_file(tmp_path):
+    shared = "s" * 40
+    r = serve(tmp_path, "gaming-pc2", "8124", token=shared)
+    assert r.returncode == 0, r.stderr
+    own = tmp_path / ".agent_token.gaming-pc2"
+    assert len(own.read_text().strip()) >= 32 and own.read_text().strip() != shared
+    assert stat.S_IMODE(own.stat().st_mode) == 0o600
+    assert ".agent_token.gaming-pc2" in r.stdout, "says which token file is served"
+    assert "GAME_AGENT_TOKEN" in r.stdout, "says how the controller uses it"
+    assert ":8124/" in one_liner(r.stdout)
+    # the same host keeps its token on the next run
+    before = own.read_text()
+    assert serve(tmp_path, "gaming-pc2").returncode == 0
+    assert own.read_text() == before
+
+
+def test_without_a_host_name_the_shared_token_is_kept(tmp_path):
+    shared = "s" * 40
+    r = serve(tmp_path, token=shared)
+    assert r.returncode == 0, r.stderr
+    assert (tmp_path / ".agent_token").read_text().strip() == shared
+    assert not list(tmp_path.glob(".agent_token.*"))
+
+
+def test_per_host_token_files_are_gitignored():
+    for name in (".agent_token", ".agent_token.gaming-pc2", "agent_token.txt"):
+        r = subprocess.run(["git", "check-ignore", "-q", name], cwd=REPO, check=False)
+        assert r.returncode == 0, f"{name} must be gitignored"

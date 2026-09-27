@@ -2,7 +2,12 @@
 # Serve the Windows agent + installer (and the agent token) over HTTP so the Windows PC can install
 # or update with a single PowerShell line.
 #
-# Usage: scripts/serve-agent.sh [port]        (default port 8000)
+# Usage: scripts/serve-agent.sh [host] [port]   (default port 8000)
+#   host: a name for the PC (letters, digits, '-', '_'); it gets its own token in .agent_token.<host>
+#         (generated on first use). Without it the shared .agent_token is served.
+#
+# The controller reads GAME_AGENT_TOKEN, else .agent_token. For a PC with its own token:
+#   GAME_AGENT_URL=http://<pc>:8765 GAME_AGENT_TOKEN="$(cat .agent_token.<host>)" game-controller ...
 #
 # Plain HTTP on the LAN, so the exposure is kept short and the payload is pinned:
 #   - files are served under a random one-time path (/<32 hex>/...) printed only in the one-liner;
@@ -17,17 +22,20 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 PORT=8000
+HOST_NAME=""
 for a in "$@"; do
   if [[ $a =~ ^[0-9]{1,5}$ ]]; then
     PORT=$a
+  elif [[ $a =~ ^[A-Za-z0-9][A-Za-z0-9_-]{0,62}$ ]]; then
+    HOST_NAME=$a
   else
-    echo "usage: scripts/serve-agent.sh [port]" >&2
+    echo "usage: scripts/serve-agent.sh [host] [port]   (host: letters, digits, '-', '_')" >&2
     exit 2
   fi
 done
 SECS="${GA_SERVE_SECS:-900}"
 MIN_TOKEN=32
-TOKEN_FILE=.agent_token
+TOKEN_FILE=.agent_token${HOST_NAME:+.$HOST_NAME}
 
 if [[ ! -s $TOKEN_FILE ]]; then
   (umask 077 && openssl rand -base64 24 | tr '+/' '-_' | tr -d '=' > "$TOKEN_FILE")
@@ -69,6 +77,10 @@ EXE_SHA="$(sha256sum "$STAGE/$RID/game-agent.exe" | cut -d' ' -f1)"
 PS1_SHA="$(sha256sum "$STAGE/$RID/install.ps1" | cut -d' ' -f1)"
 
 echo
+echo "token served: $TOKEN_FILE"
+if [[ -n $HOST_NAME ]]; then
+  echo "  controller: GAME_AGENT_URL=http://<$HOST_NAME address>:8765 GAME_AGENT_TOKEN=\"\$(cat $TOKEN_FILE)\""
+fi
 echo "game-agent.exe SHA-256: $EXE_SHA"
 echo "install.ps1    SHA-256: $PS1_SHA"
 echo

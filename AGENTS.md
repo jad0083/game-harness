@@ -39,8 +39,11 @@ scripts/ci.sh                                                        # must prin
 ./target/release/game-controller health                             # agent reachable?
 ```
 
-The Windows agent is installed with `scripts/serve-agent.sh` + a PowerShell one-liner (see
-`README.md` → "Remote Windows Agent Setup"). Agent **1.2.0** adds configurable drag timing and
+The Windows agent is installed with `scripts/serve-agent.sh [host]` + the PowerShell one-liner it
+prints (see `README.md` → "Remote Windows Agent Setup" and its "Security" notes). The one-liner holds
+a one-time path and SHA-256 pins, so always copy the freshly printed one; stop the server once the
+installer reports the agent version. With a `host` name the PC gets its own token in
+`.agent_token.<host>`; use it through `GAME_AGENT_TOKEN` for that PC. Agent **1.2.0** adds configurable drag timing and
 read-only file access to game folders listed in `roots.json` (Stellaris and GalCiv4 documents
 and install dirs, detected by the installer): `GET /files/roots|list|read`.
 

@@ -71,8 +71,13 @@ The remote Windows agent is a single, self-contained native Rust executable (`ga
 ### Option A: Automated Network Install (from Linux Controller)
 1. On the Linux controller, serve the agent installer and token:
    ```bash
-   ./scripts/serve-agent.sh            # [port], default 8000
+   ./scripts/serve-agent.sh            # [host] [port], default port 8000
    ```
+   With a host name (`./scripts/serve-agent.sh gaming-pc2`) that PC gets its own token in
+   `.agent_token.<host>` (gitignored, generated on first use); without one the shared `.agent_token`
+   is served. The controller still reads `GAME_AGENT_TOKEN`, else `.agent_token`, so for a PC with its
+   own token set `GAME_AGENT_TOKEN="$(cat .agent_token.<host>)"` next to its `GAME_AGENT_URL` (e.g. in
+   the host's systemd drop-in).
 2. On the Windows gaming PC, open PowerShell (standard user) and run the one line the script prints.
    Its shape (every run has a new path and the current hashes):
    ```powershell
@@ -86,7 +91,8 @@ The remote Windows agent is a single, self-contained native Rust executable (`ga
   one-time path (the server's `/` shows nothing), it binds only the controller's address and stops after
   `GA_SERVE_SECS` (900 s), and the one-liner carries the SHA-256 of `install.ps1` (checked before it
   runs) and of `game-agent.exe` (checked by the installer before the running agent is touched).
-- The agent refuses tokens shorter than 32 characters (agent ≥ 1.5.0).
+- The agent refuses tokens shorter than 32 characters (agent ≥ 1.5.0). Give each PC its own token
+  (`serve-agent.sh <host>`), so a token sniffed from one PC does not open the others.
 - The firewall rule admits only the controller (the host in `GA_SRC`, or `$env:GA_CONTROLLER`) and
   only on **Private** networks; the installer warns if the PC's network is Public. On a domain network
   set `$env:GA_FW_PROFILE='Domain,Private'` before the one-liner. Reinstalling replaces an older, looser rule.
