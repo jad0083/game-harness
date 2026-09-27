@@ -324,3 +324,31 @@ def test_bad_civ6_limits_are_rejected(tmp_path, old, new, where):
     assert old in CIV_MINI
     with pytest.raises(PillarsError, match=re.escape(where)):
         load_pillars(civ_corpus(tmp_path, CIV_MINI.replace(old, new)))
+
+
+def test_the_civ6_order_record_settings_load_and_stellaris_has_none():
+    orders = load_pillars(REPO / "corpora/civ6").orders
+    assert (orders.window_turns, orders.min_resolved, orders.weak_rate, orders.open_cap_turns,
+            orders.open_grace_turns) == (30, 8, 0.5, 20, 3)
+    assert dict(orders.min_samples) == {"production": 4, "purchase": 4, "other": 3}
+    assert (orders.min_samples_of("production replace"), orders.min_samples_of("purchase faith"),
+            orders.min_samples_of("civic")) == (4, 4, 3)
+    assert load_pillars(REPO / "corpora/stellaris").orders is None, "the record stays off in Stellaris"
+
+
+def test_a_file_without_an_orders_table_has_no_record(tmp_path):
+    assert load_pillars(civ_corpus(tmp_path)).orders is None
+
+
+@pytest.mark.parametrize("table, where", [
+    ("[orders]\nwindow_turns = 0", "orders.window_turns"),
+    ("[orders]\nmin_resolved = 1.5", "orders.min_resolved"),
+    ("[orders]\nweak_rate = 1", "orders.weak_rate"),
+    ("[orders]\nopen_grace_turns = 30", "orders.open_grace_turns"),
+    ("[orders]\nmin_samples = { production = 0 }", "orders.min_samples.production"),
+    ("[orders]\nmin_samples = { tactics = 2 }", "orders.min_samples.tactics"),
+    ("[orders]\nhorizon = 3", "orders.horizon"),
+])
+def test_bad_order_record_settings_are_rejected(tmp_path, table, where):
+    with pytest.raises(PillarsError, match=re.escape(where)):
+        load_pillars(civ_corpus(tmp_path, CIV_MINI + table + "\n"))

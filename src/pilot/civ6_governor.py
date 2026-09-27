@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 import re
 import time
-from dataclasses import replace
+from dataclasses import dataclass, replace
 
 from pydantic_ai import Agent, RunContext, Tool
 from pydantic_ai.exceptions import UsageLimitExceeded
@@ -24,13 +24,22 @@ from .civ6 import (
     UNKNOWN,
     Checked,
     Civ6Decision,
+    Civ6Order,
     CorpusIndex,
     GameRefused,
     briefing_text,
     check_orders,
+    held_outcome,
+    idle_counts,
     metrics,
+    order_base,
     order_key,
+    order_record,
+    order_record_text,
+    order_situation,
+    order_window,
     read_back,
+    record_key,
     urgent_changes,
 )
 from .claude_code import resolve_model
@@ -46,6 +55,8 @@ from .governor import (
     served_model,
 )
 from .trace import serialize
+
+ORDER_RECORD_HEADING = "Order record in this campaign (held until done / replaced by the AI):"
 
 INSTRUCTIONS = """You are the governor of a Civilization VI civilization. The game's own AI plays it turn by
 turn (units, tiles, city management, district and wonder placement, diplomacy) during stretches of
@@ -86,12 +97,26 @@ class Civ6Stuck(RuntimeError):
     """The game did not play or hand back a turn in time, or stopped answering between turns."""
 
 
+class _NotStarted(Civ6Stuck):
+    """Autoplay still reads inactive after the start grace (and the turn has not moved)."""
+
+
+@dataclass
+class Tracked:
+    """An order that took, followed on every snapshot until it resolves (ruling 13)."""
+    c: Checked
+    row: dict            # the order_outcome row so far (what, where, when ordered)
+    base: dict           # `order_base`: turn, turns left, unit count once it took
+    window: int          # turns it is followed (`order_window`)
+
+
 class Civ6Governor(Governor):
     event_triggers = EVENT_TRIGGERS_CIV6
     status_poll_s = 1.0              # autoplay-status polls while the AI plays a turn (a tiny call)
     turn_deadline_s = 600.0          # one AI turn; late-game turns take minutes and polls go unanswered
     start_grace_s = 20.0             # autoplay must show as running (or the turn advance) by then
     snapshot_tries = 3               # snapshots between turns before the run waits for the human
+    start_retries = 2                # an autoplay start whose reply was lost and that did not run is sent again
 
     def __init__(self, settings, game, log, **kw):
         super().__init__(settings, game, log, **kw)
@@ -106,7 +131,11 @@ class Civ6Governor(Governor):
         self.__dict__.pop("_agents", None)
         self._failed_last: set[str] = set()      # order keys that did not take at the last decision
         self._report: list[str] = []             # what the last decision's orders did, for the next prompt
-        self._held: list[tuple[Checked, dict]] = []   # orders that took, checked again after autoplay
+        self._tracking: list[Tracked] = []       # orders that took and have not resolved yet (ruling 13)
+        self._resolved: list[tuple[dict, str]] = []   # (row, order text) resolved since the last decision
+        self._order_rows: list[dict] = []        # every order_outcome row of the campaign (ruling 14)
+        self._seen_idle: dict[int, list[str]] = {}   # turn -> kinds with nothing in progress (ruling 16)
+        self._tracked_turn: int | None = None
         self._after_orders: dict | None = None    # the snapshot read back after the last orders
         log.state.info["directives"] = []
         log.state.info["decide_turns"] = settings.decide_every_turns
@@ -161,6 +190,21 @@ class Civ6Governor(Governor):
         self._campaign_key = (b.get("leader"), b.get("map_seed"))
         self.log.set_campaign(self.s.game, name, f"{b.get('civ_name') or ''} — {b.get('leader_name') or ''}")
         self._load_campaign_state()
+        self._load_order_record()
+
+    def _load_order_record(self) -> None:
+        """The campaign's order record from earlier runs (ruling 13): its order_outcome rows, and which
+        turns had nothing in progress (metrics rows). Advisory: a failed read leaves it empty."""
+        tel, cid = self.log.telemetry, self.log.campaign_id
+        if tel is None or not cid:
+            return
+        try:
+            self._order_rows = tel.campaign_events(cid, "order_outcome")
+            self._seen_idle = {int(r["turn"]): list(r["idle"]) for r in tel.metrics_rows(cid)
+                               if isinstance(r.get("turn"), int) and isinstance(r.get("idle"), list)}
+        except Exception as e:  # noqa: BLE001 - the record is advisory
+            self.log.emit("briefing_error", error=f"loading the order record: {e}"[:200])
+        self._publish_record()
 
     def _trend(self, b: dict) -> str:
         return ""
@@ -232,6 +276,7 @@ class Civ6Governor(Governor):
                                       "press Resume, or start a new run.")
                 return last, ""
             self.log.emit("metrics", **metrics(b))
+            self._track(b)
             self.log.state.game_date = b["date"]
             self.log.state.turns_advanced += b["turn"] - last["turn"]
             urgent = urgent_changes(last, b, self._gold_reserve(), self._wonders)
@@ -246,14 +291,29 @@ class Civ6Governor(Governor):
         """Autoplay `n` turns (the chunk; 1 by default) and wait until the game hands them back (turn
         advanced by `n`, autoplay off). Status polls may go unanswered while the AI plays (the tuner
         is silent then); only the deadline (per turn) counts. A lost reply to the autoplay call is not
-        a failure: the polls tell whether it started; a refusal is."""
-        started = time.time()
-        try:
-            self.game.autoplay(n)
-        except GameRefused as e:
-            raise Civ6Stuck(f"autoplay did not start at T{turn}: {e}"[:400]) from e
-        except Exception as e:  # noqa: BLE001 - no reply: it may have started; the polls tell
-            self.log.emit("briefing_error", error=f"autoplay at T{turn}: {e}"[:200])
+        a failure: the polls tell whether it started; a refusal is. A start whose reply was lost and
+        that never ran (the tuner timed out, seen live at T57, T99, T117 and T120; Resume then
+        started it at once) is sent again, `start_retries` times, before the run waits for the human."""
+        for attempt in range(self.start_retries + 1):
+            started = time.time()
+            lost = False
+            try:
+                self.game.autoplay(n)
+            except GameRefused as e:
+                raise Civ6Stuck(f"autoplay did not start at T{turn}: {e}"[:400]) from e
+            except Exception as e:  # noqa: BLE001 - no reply: it may have started; the polls tell
+                lost = True
+                self.log.emit("briefing_error", error=f"autoplay at T{turn}: {e}"[:200])
+            try:
+                self._wait_turns(turn, n, started)
+                return
+            except _NotStarted as e:
+                if not lost or attempt == self.start_retries:
+                    raise
+                self.log.emit("briefing_error", error=f"{e}; its reply was lost, so it is sent again "
+                                                      f"({attempt + 1} of {self.start_retries})"[:300])
+
+    def _wait_turns(self, turn: int, n: int, started: float) -> None:
         seen_active, misses, deadline = False, 0, self.turn_deadline_s * n
         idle_since: tuple[float, int] | None = None
         while True:
@@ -269,7 +329,7 @@ class Civ6Governor(Governor):
                     return
                 seen_active = seen_active or bool(st.get("active")) or st.get("turn", turn) > turn
                 if not seen_active and elapsed > self.start_grace_s:
-                    raise Civ6Stuck(f"autoplay did not start at T{turn} (still inactive after {elapsed:.0f} s)")
+                    raise _NotStarted(f"autoplay did not start at T{turn} (still inactive after {elapsed:.0f} s)")
                 # Autoplay reads inactive (turns 0) before its last turn ends (seen live), so an early
                 # end counts only when the turn stays unchanged for the start grace.
                 if seen_active and not st.get("active"):
@@ -313,20 +373,110 @@ class Civ6Governor(Governor):
                      + ".")
         return text
 
+    # ---- the order record (docs/design/2026-09-27-civ6-levers-design.md, rulings 12-16) -------------
+
+    def _track(self, b: dict) -> None:
+        """Follow every open order on this snapshot (once per turn): resolved ones emit their row."""
+        turn = b.get("turn")
+        if not isinstance(turn, int) or turn == self._tracked_turn:
+            return
+        self._tracked_turn = turn
+        self._seen_idle[turn] = [k for k in ("research", "civic") if not b.get(k)]
+        still = []
+        for t in self._tracking:
+            result, by = held_outcome(t.c, t.base, b, t.window)
+            if result == "open":
+                still.append(t)
+            else:
+                self._resolve(t, result, by, b)
+        self._tracking = still
+        self._publish_record()
+
+    def _resolve(self, t: Tracked, result: str, by: str | None, b: dict, detail: str = "") -> None:
+        row = {**t.row, "result": result, "by": self.index.cid(by) if by else None,
+               "turns": (b.get("turn") or 0) - (t.base.get("turn") or 0), "date": b.get("date") or f"T{b.get('turn')}",
+               "turn": b.get("turn"), "detail": detail}
+        self._resolved.append((row, _describe(t.c.order)))
+        self._emit_row(row)
+
+    def _emit_row(self, row: dict) -> None:
+        self._order_rows.append(row)
+        self.log.emit("order_outcome", **row)
+
+    def _order_row(self, c: Checked, b: dict, situation: str | None) -> dict:
+        """An order's row before its outcome: what, where, when ordered (`order_kind`, since an
+        event's own `kind` is order_outcome)."""
+        o = c.order
+        oid = ", ".join(o.get("ids") or []) if o.get("kind") == "policies" else o.get("id")
+        return {"order_kind": o.get("kind"), "key": record_key(o, situation),
+                "item_kind": "policy" if o.get("kind") == "policies" else self.index.kind_of.get(o.get("id") or ""),
+                "id": oid, "city": (c.wire or {}).get("city") or o.get("city") or "",
+                "currency": o.get("currency") if o.get("kind") == "purchase" else None, "situation": situation,
+                "ordered": b.get("date") or f"T{b.get('turn')}", "top3_hit": None}
+
+    def _now_turn(self) -> int:
+        return self._tracked_turn or max([r.get("turn") or 0 for r in self._order_rows] + [0])
+
+    def _record(self) -> dict:
+        spec = self.pillars.orders if self.pillars else None
+        return order_record(self._order_rows, self._now_turn(), spec) if spec else {}
+
+    def _record_text(self) -> str:
+        spec = self.pillars.orders if self.pillars else None
+        if spec is None:
+            return ""
+        return order_record_text(self._record(), idle_counts(self._seen_idle, self._now_turn(), spec.window_turns),
+                                 spec.window_turns)
+
+    def _publish_record(self) -> None:
+        self.log.state.info["order_record"] = self._record()
+
+    def _records_section(self) -> str:
+        """The Strategist sees the order record, not a directive record (ruling 15)."""
+        return ORDER_RECORD_HEADING + "\n" + (self._record_text() or "(no orders judged yet)")
+
     def _held_report(self, b: dict) -> list[str]:
-        """Orders that took at the last decision, checked on today's snapshot after autoplay."""
+        """What happened to earlier orders since the last decision: completed, replaced by the AI
+        with X, or still in force."""
         out = []
-        for c, reply in self._held:
-            status = read_back(c, reply, b)
-            what = _describe(c.order)
-            if status == "stuck":
-                out.append(f"{what}: still in force at T{b['turn']}")
-            elif "research" in c.expect or "civic" in c.expect or "producing" in c.expect:
-                out.append(f"{what}: no longer current at T{b['turn']} ({status}; completed, or changed by the AI)")
-            elif "policies" in c.expect:
-                out.append(f"{what}: changed during autoplay ({status})")
-        self._held = []
+        for r, what in self._resolved:
+            fate = {"completed": f"completed by {r['date']}",
+                    "held": f"held through its window ({r['ordered']}-{r['date']})",
+                    "overridden": f"replaced by the AI with {r.get('by') or 'nothing'} by {r['date']}",
+                    "invalidated": f"no longer available at {r['date']}"
+                                   + (f" (the city builds {r['by']})" if r.get("by") else ""),
+                    "unknown": f"cannot be told at {r['date']}"
+                               + (f" (the city builds {r['by']}: completed and lost, or replaced)" if r.get("by") else ""),
+                    }.get(r["result"])
+            if fate:
+                out.append(f"{what}: {fate}")
+        for t in self._tracking:
+            out.append(f"{_describe(t.c.order)}: in force at T{b.get('turn')} "
+                       f"({(b.get('turn') or 0) - (t.base.get('turn') or 0)} of {t.window} turns followed)")
+        self._resolved = []
         return out
+
+    def _idle_without_order(self, b: dict, d: Civ6Decision) -> list[str]:
+        """Research or civic with nothing in progress (and something to choose) that the answer gives
+        no valid order for (ruling 16)."""
+        opts = b.get("options") or {}
+        valid = {c.order["kind"] for c in check_orders(d.orders, b, self.pillars, self.index, self._failed_last)
+                 if not c.error}
+        return [kind for kind, offered in (("research", "techs"), ("civic", "civics"))
+                if not b.get(kind) and opts.get(offered) and kind not in valid]
+
+    def _fill(self, b: dict, kind: str) -> Civ6Order | None:
+        """The governor's own choice for an idle research or civic: the first item of the strategy's
+        preferred list that the game offers, else the first item offered."""
+        offered = [self.index.cid(k) for k in (b.get("options") or {}).get("techs" if kind == "research" else "civics") or []]
+        field_ = "prefer_techs" if kind == "research" else "prefer_civics"
+        preferred = ([i for _, pl in self.strategy.sorted_pillars() for i in getattr(pl, field_, None) or []]
+                     if self.strategy else [])
+        for i in [*preferred, *offered]:
+            o = Civ6Order(kind=kind, id=i)
+            if i in offered and order_key(o.model_dump()) not in self._failed_last:
+                return o
+        return None
 
     def _decide(self, b: dict, reason: str, reviewed_at_start: bool = False) -> None:
         self._status("deciding")
@@ -339,6 +489,7 @@ class Civ6Governor(Governor):
                 self.log.telemetry.score(self.log.campaign_id)
             except Exception as e:  # noqa: BLE001 - advisory
                 self.log.emit("briefing_error", error=f"outcome scoring: {e}"[:200])
+        self._track(b)
         held = self._held_report(b)
         extra = self.human.take_all()
         press = self._pressures() if self.strategy and self.pillars else None
@@ -349,6 +500,9 @@ class Civ6Governor(Governor):
                   "Briefing (live snapshot):", self.last_briefing, self._limits_text()]
         if self._report or held:
             prompt.append("What your last orders did:\n" + "\n".join(f"- {x}" for x in self._report + held))
+        record = self._record_text()
+        if record:
+            prompt.append(ORDER_RECORD_HEADING + "\n" + record)
         if self.orders:
             prompt.append("STANDING ORDERS from the human (always follow these): "
                           + " | ".join(f"{i + 1}. {o}" for i, o in enumerate(self.orders)))
@@ -380,18 +534,47 @@ class Civ6Governor(Governor):
         st.tokens_in += usage.input_tokens or 0
         st.tokens_out += usage.output_tokens or 0
         st.requests += usage.requests or 0
+        tokens_in, tokens_out = usage.input_tokens or 0, usage.output_tokens or 0
 
-        outcomes, applied = self._apply(d, b)
+        idle = self._idle_without_order(b, d)
+        if idle:        # ruling 16: one corrective retry, as for the Strategist's validation
+            opts = b.get("options") or {}
+            ask_again = "; ".join(
+                f"nothing is being {'researched' if k == 'research' else 'progressed'} and your answer gives no valid "
+                f"{k} order (options: {', '.join(self.index.cid(x) for x in opts.get('techs' if k == 'research' else 'civics') or [])})"
+                for k in idle)
+            corrective = (f"Your answer was incomplete: {ask_again}. Return your whole decision again with "
+                          f"{' and '.join(f'a {k} order' for k in idle)} added; otherwise the governor fills it from "
+                          "the strategy's preferred list.")
+            try:
+                again, _ = self._call("decisions", lambda agent: agent.run_sync(
+                    corrective, deps=deps, message_history=result.all_messages(),
+                    usage_limits=UsageLimits(request_limit=self.s.governor_max_requests)))
+                u2 = again.usage
+                st.tokens_in += u2.input_tokens or 0
+                st.tokens_out += u2.output_tokens or 0
+                st.requests += u2.requests or 0
+                tokens_in, tokens_out = tokens_in + (u2.input_tokens or 0), tokens_out + (u2.output_tokens or 0)
+                result, d = again, again.output
+            except Exception as e:  # noqa: BLE001 - the governor fills the blocker below
+                self.log.emit("briefing_error", error=f"blocker retry: {type(e).__name__}: {e}"[:200])
+        filled: set[str] = set()
+        for kind in self._idle_without_order(b, d) if idle else []:
+            o = self._fill(b, kind)
+            if o is not None:
+                d.orders.append(o)
+                filled.add(order_key(o.model_dump()))
+
+        outcomes, applied = self._apply(d, b, filled)
         summary = "; ".join(f"{o['order']}: {o['outcome']}" for o in outcomes) or "no orders"
         decision = "orders" if d.orders else "keep"
         st.last_decision = f"{b['date']}: {summary} — {d.reason}"
         self.log.emit("episode", situation=reason, decision=f"{summary}: {d.reason}", date=b["date"],
                       resolved=all(o["outcome"] == "stuck" for o in outcomes), actions=applied,
-                      seconds=round(time.time() - started, 1),
-                      tokens_in=usage.input_tokens, tokens_out=usage.output_tokens)
+                      seconds=round(time.time() - started, 1), tokens_in=tokens_in, tokens_out=tokens_out)
         self.log.save_trace(n, {**base, "decision": decision, "reason": d.reason, "outcome": summary[:2000],
                                 "orders": outcomes, "serves": d.serves, "seconds": round(time.time() - started, 1),
-                                "tokens_in": usage.input_tokens, "tokens_out": usage.output_tokens,
+                                "tokens_in": tokens_in, "tokens_out": tokens_out, "retried_for": idle or None,
                                 "steps": serialize(result.all_messages())})
         self.store.add_episode(reason, f"{summary}: {d.reason}", "applied" if applied else "kept", b["date"])
         self.journal.note(f"{summary} — {d.reason}", b["date"])
@@ -402,12 +585,13 @@ class Civ6Governor(Governor):
             if self.s.retro_every and self._since_retro >= self.s.retro_every and self.pillars is not None:
                 self._review_strategy(self._after_orders or b, f"scheduled after {self.s.retro_every} decisions")
 
-    def _apply(self, d: Civ6Decision, b: dict) -> tuple[list[dict], int]:
+    def _apply(self, d: Civ6Decision, b: dict, filled: set[str] = frozenset()) -> tuple[list[dict], int]:
         """Check, carry out and read back the decision's orders. Returns one outcome per order and how
         many took. Never raises: a failure is an outcome, reported at the next decision. Only a game
         refusal or a read-back that contradicts the order counts as "did not stick" (refused if
         repeated unchanged); an order whose effect cannot be told (no reply, no read-back) is
-        "unknown"."""
+        "unknown". Orders that took are followed until they resolve (the order record); refused,
+        lost and bought ones get their row at once. `filled`: order keys the governor added."""
         checked = check_orders(d.orders, b, self.pillars, self.index, self._failed_last)
         results: list[tuple[Checked, str, bool]] = []      # (order, outcome, counts as did-not-stick)
         sent: list[tuple[Checked, dict]] = []
@@ -436,7 +620,6 @@ class Civ6Governor(Governor):
                 after = self.game.snapshot()
             except Exception as e:  # noqa: BLE001
                 self.log.emit("briefing_error", error=f"read-back: {e}"[:200])
-        self._held = []
         for c, reply in sent:
             if after is None:
                 results.append((c, f"{UNKNOWN}: not read back (no snapshot)", False))
@@ -445,12 +628,18 @@ class Civ6Governor(Governor):
             if reply.get("transport") and status != "stuck":
                 status = f"{UNKNOWN}: no reply ({reply.get('error')}); {status}"
             results.append((c, status, status != "stuck" and not status.startswith(UNKNOWN)))
-            if status == "stuck":
-                self._held.append((c, reply))
         position = {id(c): i for i, c in enumerate(checked)}
         results.sort(key=lambda r: position[id(r[0])])          # outcomes in the model's order
         self._failed_last = {order_key(c.order) for c, _, failed in results if failed}
-        outcomes = [{"order": _describe(c.order), "outcome": status} for c, status, _ in results]
+        outcomes = []
+        for c, status, _ in results:
+            by_governor = order_key(c.order) in filled
+            outcomes.append({"order": _describe(c.order) + (" (filled by the governor)" if by_governor else ""),
+                             "outcome": status, "kind": c.order.get("kind"),
+                             "id": c.order.get("id") or ", ".join(c.order.get("ids") or []),
+                             "city": (c.wire or {}).get("city") or c.order.get("city") or "",
+                             **({"by": "governor"} if by_governor else {})})
+            self._record_order(c, status, b, after)
         failed = {id(c) for c, _, f in results if f}
         self._report = []
         for (c, status, _), o in zip(results, outcomes, strict=True):
@@ -463,7 +652,42 @@ class Civ6Governor(Governor):
         for o in outcomes:
             self.log.emit("strategy_action", action="order", result=f"{o['order']}: {o['outcome']}"[:300])
         self._after_orders = after
+        self._publish_record()
         return outcomes, sum(1 for o in outcomes if o["outcome"] == "stuck")
+
+    def _record_order(self, c: Checked, status: str, b: dict, after: dict | None) -> None:
+        """The order record at apply time (ruling 13): an order that took (or may have: no reply) ends
+        the following of our older order of the same kind and city (superseded); one that took is
+        followed from now on, except a purchase, which completed at once; refused and lost orders
+        get their row now."""
+        o = c.order
+        situation = order_situation(b, c.expect["producing"], c.expect["city"]) if "producing" in c.expect else None
+        row = self._order_row(c, b, situation)
+        now = after or b
+        if status == "stuck" or status.startswith(UNKNOWN):
+            city = row["city"].lower()
+            same = [t for t in self._tracking if t.c.order.get("kind") == o.get("kind")
+                    and (t.row.get("city") or "").lower() == city]
+            for t in same:
+                self._resolve(t, "superseded", None, now, detail=f"replaced by our own order {_describe(o)}")
+            self._tracking = [t for t in self._tracking if t not in same]
+        if status == "stuck" and o.get("kind") != "purchase":
+            spec = self.pillars.orders if self.pillars and self.pillars.orders else None
+            base = order_base(c, after or b)
+            window = order_window(o["kind"], base.get("turns_left"), *((spec.open_cap_turns, spec.open_grace_turns)
+                                                                        if spec else ()))
+            self._tracking.append(Tracked(c, row, base, window))
+            return
+        if status == "stuck":
+            result, detail = "completed", ""
+        elif status.startswith(f"{UNKNOWN}: no reply"):
+            result, detail = "lost", status
+        elif status.startswith(UNKNOWN):
+            result, detail = "unknown", status
+        else:
+            result, detail = "refused", status
+        self._emit_row({**row, "result": result, "by": None, "turns": 0, "date": now.get("date") or f"T{now.get('turn')}",
+                        "turn": now.get("turn"), "detail": detail[:300]})
 
 
 def _describe(o: dict) -> str:

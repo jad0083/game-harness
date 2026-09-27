@@ -15,7 +15,8 @@ identity = "Build on our civilization and leader: fill `identity` with how their
 metric_aliases = { population = "pop", techs = "techs_known", civics = "civics_known", military_strength = "military", faith_per_turn = "faith_yield", gold_per_turn = "gold_yield", treasury = "gold", "rank:military_strength" = "rank:military", "rank:techs_known" = "rank:techs", "rank:civics_known" = "rank:civics" }
 instructions = """Everything must be achievable through orders: research and civic choices, policy cards, city production (units, buildings, projects; a district only once it is placed) and purchases with gold or faith. The game's AI moves units, places districts and wonders, founds cities with the settlers it has, and handles diplomacy, trade and World Congress.
 Milestone dates are turns written T<turn>, e.g. T60 (the snapshot shows the current turn). Expansion benchmarks (strategy.md): 2 cities by T40, 3 by T60, 4 by T80.
-While at war, the military stance names its exit condition (peace, a city retaken, or the enemy's strength below ours)."""
+While at war, the military stance names its exit condition (peace, a city retaken, or the enemy's strength below ours).
+Plan with the levers that stick: the order record shows which kinds of order held until done and which the AI replaced; where `production replace` does not stick, buy what must exist now and queue production only into empty queues."""
 
 [weights]
 mode = "share"          # each pillar's share of effort (weight x milestone need)
@@ -25,6 +26,17 @@ spread = 2              # heaviest >= 2 x lightest
 switch_margin = 1.0     # unused in share mode
 need = { met = 0.3, on_track = 1.0, at_risk = 1.5, missed = 2.0 }
 stall_years = 0         # no directives to judge
+
+# The order record (docs/design/2026-09-27-civ6-levers-design.md, rulings 12 and 14): every order is
+# followed until it completes, holds through its window, or the AI replaces it; the stick rate of a
+# kind = (completed + held) / (completed + held + replaced by the AI).
+[orders]
+window_turns = 30       # orders resolved in the last 30 turns (about 8 production orders in the Kublai campaign)...
+min_resolved = 8        # ...widened back until 8 are judged, or to the campaign start
+min_samples = { production = 4, purchase = 4, other = 3 }   # below this: counts only, no rate
+weak_rate = 0.5         # at or below: "does not stick here"
+open_cap_turns = 20     # an order is followed min(20, max(3, turns left + 3)) turns; policies 20
+open_grace_turns = 3
 
 [metrics]
 # the snapshot's measures (src/pilot/civ6.py metrics); rank:<measure> is our standing among the

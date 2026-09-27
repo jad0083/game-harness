@@ -130,14 +130,15 @@ class FakeCiv6:
     during the AI's turn processing), `start_fails` (autoplay answers ok: false), `never_starts`
     (autoplay answers ok but no turn is played), `stop_raises`, `readback_fails` (the snapshot after
     orders fails), `transport` (orders time out after they ran), `lost_start_reply` (the first
-    autoplay call times out but runs), `blink` (autoplay reads inactive once before its last turn
+    autoplay call times out but runs), `lost_start_not_run` (the first N autoplay calls time out
+    and do not run, as seen live at T57), `blink` (autoplay reads inactive once before its last turn
     ends, as seen live)."""
 
     def __init__(self, base: dict, events: dict | None = None, replies: dict | None = None,
                  prices: dict | None = None, sticks: bool = True, index: CorpusIndex | None = None, ai=None,
                  busy: bool = False, start_fails: bool = False, never_starts: bool = False,
                  stop_raises: bool = False, readback_fails: bool = False, transport: bool = False,
-                 lost_start_reply: bool = False, blink: bool = False):
+                 lost_start_reply: bool = False, blink: bool = False, lost_start_not_run: int = 0):
         self.state = copy.deepcopy(base)
         self.events = dict(events or {})
         self.replies = dict(replies or {})
@@ -148,6 +149,7 @@ class FakeCiv6:
         self.busy, self.start_fails, self.never_starts = busy, start_fails, never_starts
         self.stop_raises, self.readback_fails, self.transport = stop_raises, readback_fails, transport
         self.lost_start_reply = lost_start_reply
+        self.lost_start_not_run = lost_start_not_run
         self.blink, self._blinked = blink, False
         self.actions: list[tuple] = []
         self.active = False
@@ -217,6 +219,9 @@ class FakeCiv6:
         self.actions.append(("autoplay", turns, self.active))
         if self.start_fails:
             raise GameRefused("game-controller civ6 autoplay refused: AutoplayManager missing")
+        if self.lost_start_not_run > 0:
+            self.lost_start_not_run -= 1
+            raise TimeoutError("autoplay: no reply (and it did not run)")
         if self.lost_start_reply:
             self.lost_start_reply = False
             self.active, self.remaining = True, turns
@@ -265,6 +270,9 @@ def _apply_fake(s: dict, o: dict) -> None:
                 slot["policy"] = keys.pop(0)
     elif o["kind"] == "purchase":
         s["gold" if o.get("currency", "gold") == "gold" else "faith"] -= o.get("cost") or 0
+        if key and key.startswith("UNIT_"):
+            by_type = s.setdefault("units", {}).setdefault("by_type", {})
+            by_type[key] = by_type.get(key, 0) + 1
 
 
 # ---- the corpus: game type keys <-> corpus ids ---------------------------------------------------
@@ -496,6 +504,195 @@ def read_back(c: Checked, reply: dict, snapshot: dict) -> str:
     return "stuck"
 
 
+# ---- the order record (docs/design/2026-09-27-civ6-levers-design.md, rulings 12-16) --------------
+#
+# Acceptance is not the outcome: an order that took may still be replaced by the AI during autoplay.
+# Every order that took is followed on each snapshot until it resolves; its outcome row feeds the
+# stick rate per kind of order.
+
+JUDGED = ("completed", "held", "overridden")      # the outcomes a stick rate counts
+EXCLUDED = ("invalidated", "superseded", "refused", "lost", "unknown")
+RECORD_KEYS = ("research", "civic", "policies", "production fill", "production replace", "purchase gold",
+               "purchase faith")
+
+
+def order_situation(before: dict, key: str, city_name: str) -> str:
+    """A production order 'fill's the city's queue when it was empty, the AI's item had one turn or
+    less left, or it already built this item; otherwise it 'replace's the AI's choice."""
+    city = _city(before, city_name) or {}
+    now = city.get("producing")
+    if not now or now == key or (city.get("turns_left") is not None and city["turns_left"] <= 1):
+        return "fill"
+    return "replace"
+
+
+def record_key(order: dict, situation: str | None = None) -> str:
+    """The order record's key: research, civic, policies, production fill|replace, purchase gold|faith."""
+    kind = order.get("kind")
+    if kind == "production":
+        return f"production {situation or 'replace'}"
+    if kind == "purchase":
+        return f"purchase {order.get('currency') or 'gold'}"
+    return str(kind)
+
+
+def order_window(kind: str, turns_left, cap: int = 20, grace: int = 3) -> int:
+    """Turns an order is followed: its turns left plus `grace`, at least `grace`, at most `cap`
+    (policies: `cap`; they never complete)."""
+    if kind == "policies":
+        return cap
+    left = int(turns_left) if isinstance(turns_left, (int, float)) else 0
+    return min(cap, max(grace, left + grace))
+
+
+def order_base(c: Checked, after: dict) -> dict:
+    """What later snapshots are compared with: the turn, the item's turns left and, for a unit, how
+    many of its type we had once the order took."""
+    e = c.expect
+    base: dict = {"turn": after.get("turn")}
+    if "research" in e:
+        base["turns_left"] = (after.get("research") or {}).get("turns_left")
+    elif "civic" in e:
+        base["turns_left"] = (after.get("civic") or {}).get("turns_left")
+    elif "producing" in e:
+        city = _city(after, e["city"]) or {}
+        base["turns_left"] = city.get("turns_left")
+        base["count"] = ((after.get("units") or {}).get("by_type") or {}).get(e["producing"], 0)
+    return base
+
+
+def held_outcome(c: Checked, base: dict, now: dict, window: int) -> tuple[str, str | None]:
+    """Where a followed order stands in snapshot `now` (ruling 12): ('open', None) while undecided,
+    else ('completed' | 'held' | 'overridden' | 'invalidated' | 'unknown', the type key now in its
+    place or None).
+    - completed: a tech or civic left the options; a unit's count rose; a building or district
+      appeared in the city.
+    - held: still current when its window (`order_window`) ends.
+    - overridden: the AI switched while our item was still available (production: before our
+      item's turns had elapsed, else it may have completed and been lost: unknown).
+    - invalidated: the item is no longer available (Slinger after Archery; an obsolete policy).
+    - unknown: the snapshot cannot tell (no options, the city gone)."""
+    e = c.expect
+    elapsed = (now.get("turn") or 0) - (base.get("turn") or 0)
+    current = ("held", None) if elapsed >= window else ("open", None)
+    options = now.get("options")
+    for kind, fld, offered in (("research", "tech", "techs"), ("civic", "civic", "civics")):
+        if kind in e:
+            key, cur = e[kind], (now.get(kind) or {}).get(fld)
+            if cur == key:
+                return current
+            listed = (options or {}).get(offered)
+            if listed is None:
+                return "unknown", cur
+            return ("completed", None) if key not in listed else ("overridden", cur)
+    if "policies" in e:
+        slotted = {s.get("policy") for s in now.get("policy_slots") or []}
+        missing = [k for k in e["policies"] if k not in slotted]
+        if not missing:
+            return current
+        unlocked = (options or {}).get("policies")
+        if unlocked is not None and not any(k in unlocked for k in missing):
+            return "invalidated", None
+        instead = sorted(k for k in slotted if k and k not in e["policies"])
+        return "overridden", ", ".join(instead) or None
+    if "producing" in e:
+        key = e["producing"]
+        city = _city(now, e["city"])
+        if city is None:
+            return "unknown", None                          # lost or renamed
+        producing, can = city.get("producing"), city.get("can_build")
+        rose = ((now.get("units") or {}).get("by_type") or {}).get(key, 0) > (base.get("count") or 0)
+        if key.startswith("UNIT_") and rose and (producing != key or elapsed >= (base.get("turns_left") or 0)):
+            return "completed", None                        # (built, and the AI may have queued another)
+        if key.startswith("BUILDING_") and key in (city.get("buildings") or []):
+            return "completed", None
+        if key.startswith("DISTRICT_") and key in (city.get("districts") or []):     # no longer "(building)"
+            return "completed", None
+        if producing == key:
+            return current
+        if key.startswith("PROJECT_"):
+            return "overridden", producing                  # repeatable: held or overridden only
+        if key.startswith("BUILDING_") and city.get("buildings") is None and can is not None and key not in can:
+            return "completed", None                        # an older snapshot: built, so no longer offered
+        if can is not None and key not in can:
+            return "invalidated", producing
+        if elapsed < (base.get("turns_left") or 0):
+            return "overridden", producing
+        return "unknown", producing                         # switched after its turns: completed and lost, or replaced
+    return "unknown", None
+
+
+def _key_rank(key: str) -> tuple[int, str]:
+    return (RECORD_KEYS.index(key) if key in RECORD_KEYS else len(RECORD_KEYS), key)
+
+
+def order_record(rows: list[dict], now_turn: int, spec) -> dict[str, dict]:
+    """The stick rate per key (ruling 14) from order_outcome rows: judged orders (completed, held,
+    overridden) resolved in the last `spec.window_turns` turns, widened back until `min_resolved`
+    are judged (or to the first row). `rate` = (completed + held) / judged, None below the key's
+    minimum samples; `weak` when a rate is at or below `weak_rate`."""
+    out: dict[str, dict] = {}
+    for key in sorted({r.get("key") for r in rows if r.get("key")}, key=_key_rank):
+        mine = sorted((r for r in rows if r.get("key") == key), key=lambda r: r.get("turn") or 0)
+        judged = [r for r in mine if r.get("result") in JUDGED]
+        recent = [r for r in judged if (r.get("turn") or 0) >= now_turn - spec.window_turns]
+        if len(recent) < spec.min_resolved:
+            recent = judged[-spec.min_resolved:]
+        since = min((recent[0].get("turn") or 0) if recent else now_turn, now_turn - spec.window_turns)
+        counts = {res: sum(1 for r in recent if r.get("result") == res) for res in JUDGED}
+        n = len(recent)
+        enough = n >= spec.min_samples_of(key)
+        rate = (counts["completed"] + counts["held"]) / n if n else None
+        last = next((r for r in reversed(recent) if r.get("result") == "overridden"), None)
+        out[key] = {
+            "judged": n, **counts, "min_samples": spec.min_samples_of(key),
+            "rate": round(rate, 2) if enough and rate is not None else None,
+            "weak": bool(enough and rate is not None and rate <= spec.weak_rate),
+            "excluded": {res: sum(1 for r in mine if r.get("result") == res and (r.get("turn") or 0) >= since)
+                         for res in EXCLUDED},
+            "last_override": ({k: last.get(k) for k in ("id", "by", "city", "date")} if last else None),
+        }
+    return out
+
+
+def idle_counts(seen: dict[int, list[str]], now_turn: int, window: int) -> dict[str, tuple[int, int]]:
+    """Per kind (research, civic): at how many of the snapshots seen in the last `window` turns
+    nothing was in progress, of how many."""
+    turns = [t for t in seen if now_turn - window < t <= now_turn]
+    return {k: (sum(1 for t in turns if k in seen[t]), len(turns)) for k in ("research", "civic")}
+
+
+def order_record_text(rec: dict[str, dict], idle: dict[str, tuple[int, int]] | None = None,
+                      window: int = 30) -> str:
+    """One line per key for the decision prompt and the Strategist, e.g. `- production replace: 5
+    judged; 2 completed, 3 replaced by the AI (last: unit:slinger → unit:trader in Chengdu, T41);
+    held 40% — does not stick here`."""
+    lines = []
+    for key, r in rec.items():
+        parts = [f"{r['completed']} completed"] if r["completed"] else []
+        if r["held"]:
+            parts.append(f"{r['held']} held through their window")
+        if r["overridden"]:
+            last = r.get("last_override") or {}
+            where = f" in {last['city']}" if last.get("city") else ""
+            parts.append(f"{r['overridden']} replaced by the AI"
+                         + (f" (last: {last.get('id')} → {last.get('by') or 'nothing'}{where}, {last.get('date')})"
+                            if last else ""))
+        line = f"- {key}: {r['judged']} judged" + (f"; {', '.join(parts)}" if parts else "")
+        other = ", ".join(f"{n} {res}" for res, n in r["excluded"].items() if n)
+        if other:
+            line += f" (not judged: {other})"
+        if r["rate"] is not None:
+            line += f"; held {r['rate']:.0%}" + (" — does not stick here" if r["weak"] else "")
+        elif r["judged"]:
+            line += f" (a rate needs {r['min_samples']})"
+        lines.append(line)
+    for kind, (n, of) in (idle or {}).items():
+        if n:
+            lines.append(f"- {kind} idle at {n} of {of} snapshots in the last {window} turns")
+    return "\n".join(lines)
+
+
 # ---- measures, urgency, briefing -----------------------------------------------------------------
 
 RANKED = {"score": "score", "military": "military", "techs": "techs", "civics": "civics", "cities": "cities"}
@@ -523,6 +720,7 @@ def metrics(s: dict) -> dict:
             "pop": sum(c.get("pop") or 0 for c in cities), "techs_known": s.get("techs_known"),
             "civics_known": s.get("civics_known"), "military": s.get("military"), "score": s.get("score"),
             "era_score": s.get("era_score"), "era": s.get("era"), "wars": len(s.get("wars") or []),
+            "idle": [k for k in ("research", "civic") if not s.get(k)],      # nothing in progress (ruling 16)
             "peers": peers, "peer_count": len(majors),
             "neighbours": [{"name": m.get("civ"), "military": m.get("military"), "score": m.get("score"),
                             "cities": m.get("cities"), "at_war": m.get("at_war")} for m in majors]}

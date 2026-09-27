@@ -233,7 +233,10 @@ re-installed when missing) and calls one library function per command: `Harness.
 order templates and `AutoplayManager` stretches. Orders arrive as JSON naming corpus ids; the
 controller maps each id to the game's type key from `data/` and writes every argument as an escaped
 Lua string literal, so no model text is ever evaluated. The pilot (`src/pilot/civ6_governor.py`)
-drives these commands; see `docs/pilot.md`.
+drives these commands; see `docs/pilot.md`. It follows every order that took on each later
+snapshot until it completes, holds or is replaced by the AI (`held_outcome` in `src/pilot/civ6.py`)
+and emits an `order_outcome` event per resolved order; `Telemetry.campaign_events` reloads them, so
+the stick rate per kind of order spans every run of a campaign.
 
 The loader rejects nameless records and duplicate ids at startup, so a bad extract fails the build rather than a game turn. The raw XML is not committed (Stardock's data); `data/_meta.json` records the game version and generator commit for reproducibility.
 

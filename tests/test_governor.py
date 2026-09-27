@@ -2932,6 +2932,24 @@ def test_the_corrective_retry_shows_the_rejected_answer(setup):
     assert "Your rejected answer" in prompts[1] and "hold the line" in prompts[1]
 
 
+def test_the_stellaris_review_keeps_its_directive_record_heading(setup):
+    """Civ VI's order record comes through the `_records_section` hook; Stellaris's review text must
+    stay exactly as it was (docs/design/2026-09-27-civ6-levers-design.md, ruling 15)."""
+    s, log = setup
+    prompts = []
+
+    def review(messages, info):
+        prompts.append("\n".join(str(getattr(p, "content", "")) for m in messages for p in getattr(m, "parts", [])))
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name,
+                                                 {"change": False, "assessment": "x", "rules": []})])
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": FunctionModel(review)})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    assert ("\n\nDirective record in this campaign (its pillar's first milestone metric, per in-game year):\n"
+            "(no data yet)\n\nLatest briefing:\n") in prompts[0]
+    assert "Order record" not in prompts[0]
+
+
 def test_rank_and_measure_aliases_map_to_the_recorded_metrics():
     from pilot.strategy import Milestone, Pillar, Strategy, apply_aliases
     for alias, real in (("rank:military", "rank:military_power"), ("rank:economy", "rank:economy_power"),

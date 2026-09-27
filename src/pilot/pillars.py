@@ -30,7 +30,9 @@ _ACTION_KEYS = {
 _ACTION_REQUIRED = {**dict.fromkeys(ID_LIST_KINDS, ("max_items", "ids_from_corpus")),
                     "purchase": ("max_items", "ids_from_corpus", "gold_reserve", "treasury_share"),
                     "market": ("max_items", "resources_from_manifest", "amount_max")}
-_TOP_KEYS = {"strategy", "metrics", "pillars", "actions", "weights"}
+_TOP_KEYS = {"strategy", "metrics", "pillars", "actions", "weights", "orders"}
+_ORDERS_KEYS = {"window_turns", "min_resolved", "min_samples", "weak_rate", "open_cap_turns", "open_grace_turns"}
+ORDER_SAMPLE_GROUPS = ("production", "purchase", "other")
 _WEIGHTS_KEYS = {"mode", "min", "max", "spread", "switch_margin", "need", "stall_years", "stall_factor"}
 NEED_STATUSES = ("met", "on_track", "at_risk", "missed")
 _STRATEGY_KEYS = {"min_milestones_top", "min_milestones_each", "min_milestones_first", "min_goals", "min_goals_top",
@@ -96,6 +98,22 @@ class WeightsSpec:
 
 
 @dataclass(frozen=True)
+class OrdersSpec:
+    """How the order record judges whether a kind of order sticks (games with orders, e.g. Civ VI;
+    docs/design/2026-09-27-civ6-levers-design.md, rulings 12 and 14). Absent: the record is off."""
+    window_turns: int = 30           # the stick rate looks at orders resolved in the last N turns...
+    min_resolved: int = 8            # ...widened back until it holds this many judged orders of the key
+    min_samples: dict[str, int] = field(default_factory=lambda: {"production": 4, "purchase": 4, "other": 3})
+    weak_rate: float = 0.5           # a rate at or below this (with enough samples): "does not stick here"
+    open_cap_turns: int = 20         # an order is followed at most this long (policies: exactly this long)
+    open_grace_turns: int = 3        # ...and at least its turns left plus this
+
+    def min_samples_of(self, key: str) -> int:
+        group = key.split(" ", 1)[0]
+        return self.min_samples.get(group if group in ("production", "purchase") else "other", 1)
+
+
+@dataclass(frozen=True)
 class PillarSpec:
     game: str
     pillars: dict[str, PillarDef]
@@ -113,6 +131,7 @@ class PillarSpec:
     instructions: str = ""
     date_format: str = "calendar"      # milestone `by`: "calendar" YYYY.MM.DD or "turns" T<turn>
     identity: str = ""                 # the Strategist's `identity` instruction (default: our species)
+    orders: OrdersSpec | None = None   # the order record's settings ([orders]); None: no record
 
     @property
     def ids(self) -> tuple[str, ...]:
@@ -323,6 +342,34 @@ def _weights(path: Path, t, n: int) -> WeightsSpec:
                        stall_years=float(stall_years), stall_factor=float(stall_factor))
 
 
+def _orders(path: Path, t) -> OrdersSpec:
+    if not isinstance(t, dict):
+        raise _err(path, "orders", "must be a table")
+    _unknown(path, "orders", t, _ORDERS_KEYS)
+    d = OrdersSpec()
+    ints = {}
+    for key, lo in (("window_turns", 1), ("min_resolved", 1), ("open_cap_turns", 1), ("open_grace_turns", 0)):
+        v = t.get(key, getattr(d, key))
+        if not _int(v) or v < lo:
+            raise _err(path, f"orders.{key}", f"must be an integer >= {lo}")
+        ints[key] = v
+    if ints["open_grace_turns"] > ints["open_cap_turns"]:
+        raise _err(path, "orders.open_grace_turns", "must be at most open_cap_turns")
+    rate = t.get("weak_rate", d.weak_rate)
+    if not _num(rate) or not 0 < rate < 1:
+        raise _err(path, "orders.weak_rate", "must be a number in (0, 1)")
+    raw = t.get("min_samples", {})
+    if not isinstance(raw, dict):
+        raise _err(path, "orders.min_samples", "must be a table")
+    _unknown(path, "orders.min_samples", raw, set(ORDER_SAMPLE_GROUPS))
+    samples = dict(d.min_samples)
+    for k, v in raw.items():
+        if not _int(v) or v < 1:
+            raise _err(path, f"orders.min_samples.{k}", "must be an integer >= 1")
+        samples[k] = v
+    return OrdersSpec(min_samples=types.MappingProxyType(samples), weak_rate=float(rate), **ints)
+
+
 def _parse(path: Path, corpus: Path) -> PillarSpec:
     try:
         raw = tomllib.loads(path.read_text(encoding="utf-8"))
@@ -400,7 +447,8 @@ def _parse(path: Path, corpus: Path) -> PillarSpec:
     if date_format not in DATE_FORMATS:
         raise _err(path, "strategy.date_format", f"must be one of {', '.join(DATE_FORMATS)}")
     weights = _weights(path, raw.get("weights", {}), len(pillars))
-    return PillarSpec(game=corpus.name, weights=weights, pillars=types.MappingProxyType(pillars), metrics=tuple(names),
+    orders = _orders(path, raw["orders"]) if "orders" in raw else None
+    return PillarSpec(game=corpus.name, weights=weights, orders=orders, pillars=types.MappingProxyType(pillars), metrics=tuple(names),
                       metric_aliases=types.MappingProxyType(aliases), row_keys=types.MappingProxyType(row_keys),
                       actions=types.MappingProxyType(actions), min_milestones_top=top, stance_needs_figure=figure,
                       instructions=instructions.strip(), date_format=date_format,

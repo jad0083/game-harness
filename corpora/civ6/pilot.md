@@ -16,8 +16,12 @@
   met with score and military strength, wars and great person points.
 - The strategy frame: each pillar's share of effort (weight x milestone need), stances and
   milestones at risk.
-- What your last orders did: carried out, refused (with the reason), and whether they held while
-  the AI played.
+- What your last orders did: carried out, refused (with the reason), and since then completed,
+  replaced by the AI (with what), or still in force.
+- The order record in this campaign: per kind of order (research, civic, policies, production that
+  filled an empty queue or replaced the AI's choice, purchases with gold or faith) how many
+  completed or held and how many the AI replaced; a kind marked "does not stick here" is one the
+  AI keeps undoing, so use another lever for it.
 
 ## What you answer
 
@@ -36,6 +40,8 @@ Rules:
   districts need a tile, which is not supported yet: leave them to the AI.
 - The AI may change your choices while it plays; the next briefing says what held. An order that
   did not take is not repeated blindly: repeat it only with a reason.
+- Never leave research or civic idle: when nothing is in progress, give an order for it. If you do
+  not, you are asked once more, then the governor picks the strategy's first preferred item.
 - Purchases keep the gold reserve and take at most the treasury share per purchase; a threatened
   city may spend down to the reserve (buy a defender or walls at once). Never buy what finishes in
   2 turns or less; `price` gives the live price before you decide.

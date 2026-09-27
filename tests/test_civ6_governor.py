@@ -10,12 +10,17 @@ from pydantic_ai.messages import ModelResponse, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from pilot.civ6 import (
+    Checked,
     Civ6Order,
     CorpusIndex,
     FakeCiv6,
     briefing_text,
     check_orders,
+    held_outcome,
     metrics,
+    order_record,
+    order_record_text,
+    order_window,
     purchase_cap,
     urgent_changes,
 )
@@ -143,8 +148,7 @@ def test_changes_by_the_ai_during_autoplay_are_reported(setup):
     g = governor(setup, game, orders_model([{"kind": "production", "city": "Beijing", "id": "unit:settler"}], [],
                                            seen=seen))
     g.run(max_decisions=2)
-    assert "production unit:settler in Beijing: no longer current" in seen[1]
-    assert "Beijing builds UNIT_WARRIOR" in seen[1]
+    assert "production unit:settler in Beijing: replaced by the AI with unit:warrior by T13" in seen[1]
 
 
 def test_an_urgent_change_stops_autoplay(setup):
@@ -470,3 +474,286 @@ def test_autoplay_plays_single_turns_while_in_danger_and_chunks_otherwise():
     assert autoplay_turns({"wars": [], "cities": [{"under_siege": True}]}, chunk=3, left=10) == 1
     from pilot.config import Settings
     assert Settings().autoplay_chunk == 3
+
+
+# ---- the order record (docs/design/2026-09-27-civ6-levers-design.md, rulings 12-16) ---------------
+
+ORDERS = SPEC.orders
+
+
+def _city0(**over) -> dict:
+    return {**FIXTURE["cities"][0], **over}
+
+
+def snap(turn: int, **over) -> dict:
+    return {**FIXTURE, "turn": turn, "date": f"T{turn}", **over}
+
+
+def test_research_and_civics_complete_when_they_leave_the_options_and_are_overridden_while_offered():
+    c = Checked(order={"kind": "research"}, expect={"research": "TECH_POTTERY"})
+    base = {"turn": 12, "turns_left": 5}
+    opts = FIXTURE["options"]
+    assert held_outcome(c, base, snap(13, research={"tech": "TECH_POTTERY"}), 8) == ("open", None)
+    done = snap(14, research={"tech": "TECH_MINING"}, options={**opts, "techs": ["TECH_MINING"]})
+    assert held_outcome(c, base, done, 8) == ("completed", None)
+    assert held_outcome(c, base, snap(14, research={"tech": "TECH_MINING"}), 8) == ("overridden", "TECH_MINING")
+    assert held_outcome(c, base, snap(14, research={"tech": "TECH_MINING"}, options=None), 8) == ("unknown", "TECH_MINING")
+    civic = Checked(order={"kind": "civic"}, expect={"civic": "CIVIC_FOREIGN_TRADE"})
+    assert held_outcome(civic, base, snap(14, civic=None, options={**opts, "civics": ["CIVIC_CRAFTSMANSHIP"]}), 8) \
+        == ("completed", None)
+    assert held_outcome(civic, base, snap(14, civic={"civic": "CIVIC_CRAFTSMANSHIP"}), 8) \
+        == ("overridden", "CIVIC_CRAFTSMANSHIP")
+
+
+def test_units_complete_when_their_count_rises_and_are_overridden_when_the_ai_switches_early():
+    c = Checked(order={"kind": "production"}, expect={"city": "Beijing", "producing": "UNIT_SLINGER"})
+    base = {"turn": 27, "turns_left": 4, "count": 0}
+    building = snap(28, cities=[_city0(producing="UNIT_SLINGER", turns_left=3)])
+    assert held_outcome(c, base, building, 7) == ("open", None)
+    built = snap(31, cities=[_city0(producing="BUILDING_GRANARY")], units={"by_type": {"UNIT_SLINGER": 1}})
+    assert held_outcome(c, base, built, 7) == ("completed", None)
+    switched = snap(29, cities=[_city0(producing="BUILDING_GRANARY")])
+    assert held_outcome(c, base, switched, 7) == ("overridden", "BUILDING_GRANARY"), "live T27-31: Slinger → Granary"
+    late = snap(32, cities=[_city0(producing="BUILDING_GRANARY")])
+    assert held_outcome(c, base, late, 7) == ("unknown", "BUILDING_GRANARY"), "after its turns: built and lost?"
+    obsolete = snap(29, cities=[_city0(producing="UNIT_ARCHER", can_build=["UNIT_ARCHER", "UNIT_WARRIOR"])])
+    assert held_outcome(c, base, obsolete, 7) == ("invalidated", "UNIT_ARCHER"), "Slinger after Archery"
+    assert held_outcome(c, base, snap(29, cities=[]), 7) == ("unknown", None), "the city is gone"
+
+
+def test_buildings_complete_when_they_appear_and_orders_that_stay_current_are_held():
+    c = Checked(order={"kind": "production"}, expect={"city": "Beijing", "producing": "BUILDING_MONUMENT"})
+    base = {"turn": 12, "turns_left": 6, "count": 0}
+    assert held_outcome(c, base, snap(18, cities=[_city0(producing="UNIT_SETTLER", buildings=["BUILDING_MONUMENT"])]),
+                        9) == ("completed", None)
+    older = snap(18, cities=[_city0(producing="UNIT_SETTLER", can_build=["UNIT_SETTLER"])])      # no buildings field
+    assert held_outcome(c, base, older, 9) == ("completed", None)
+    current = snap(21, cities=[_city0(producing="BUILDING_MONUMENT", buildings=[])])
+    assert held_outcome(c, base, current, 9) == ("held", None), "still current when its window ends"
+    assert held_outcome(c, base, snap(20, cities=[_city0(producing="BUILDING_MONUMENT")]), 9) == ("open", None)
+    assert order_window("production", 6) == 9 and order_window("production", 40) == 20
+    assert order_window("research", None) == 3 and order_window("policies", 1) == 20
+
+
+def test_policies_changed_by_the_ai_are_overridden():
+    c = Checked(order={"kind": "policies"}, expect={"policies": ["POLICY_GOD_KING", "POLICY_DISCIPLINE"]})
+    base = {"turn": 27}
+    assert held_outcome(c, base, snap(30), 20) == ("open", None)
+    slots = [{"policy": "POLICY_SURVEY", "slot": 0}, {"policy": "POLICY_DISCIPLINE", "slot": 1}]
+    unslotted = {**FIXTURE["options"], "policies": ["POLICY_GOD_KING"]}      # unlocked again, not active
+    assert held_outcome(c, base, snap(30, policy_slots=slots, options=unslotted), 20) == ("overridden", "POLICY_SURVEY")
+    assert held_outcome(c, base, snap(47), 20) == ("held", None)
+    gone = snap(30, policy_slots=slots, options={**FIXTURE["options"], "policies": []})
+    assert held_outcome(c, base, gone, 20) == ("invalidated", None)
+
+
+def _rows(key: str, results: list[str], start: int = 10, step: int = 4) -> list[dict]:
+    return [{"key": key, "result": r, "turn": start + step * i, "id": "unit:slinger", "by": "building:granary",
+             "city": "Beijing", "date": f"T{start + step * i}"} for i, r in enumerate(results)]
+
+
+def test_the_stick_rate_needs_enough_judged_orders_and_flags_weak_kinds():
+    rows = _rows("production replace", ["completed", "overridden", "overridden", "completed", "overridden"]) \
+        + _rows("civic", ["completed", "completed"]) + _rows("research", ["refused"])
+    rec = order_record(rows, 30, ORDERS)
+    r = rec["production replace"]
+    assert (r["judged"], r["completed"], r["overridden"], r["rate"], r["weak"]) == (5, 2, 3, 0.4, True)
+    assert r["last_override"] == {"id": "unit:slinger", "by": "building:granary", "city": "Beijing", "date": "T26"}
+    assert rec["civic"]["rate"] is None and rec["civic"]["judged"] == 2, "below 3 samples: counts only"
+    assert rec["research"]["judged"] == 0 and rec["research"]["excluded"]["refused"] == 1
+    assert list(rec) == ["research", "civic", "production replace"], "a fixed order of keys"
+    text = order_record_text(rec, {"research": (0, 10), "civic": (3, 10)})
+    assert ("- production replace: 5 judged; 2 completed, 3 replaced by the AI (last: unit:slinger → building:granary "
+            "in Beijing, T26); held 40% — does not stick here") in text
+    assert "- civic: 2 judged; 2 completed (a rate needs 3)" in text
+    assert "- research: 0 judged (not judged: 1 refused)" in text
+    assert "- civic idle at 3 of 10 snapshots in the last 30 turns" in text and "research idle" not in text
+    assert not order_record(_rows("production fill", ["completed"] * 3 + ["overridden"]), 30, ORDERS)["production fill"]["weak"]
+
+
+def test_the_window_widens_back_until_it_holds_enough_orders():
+    old = _rows("production replace", ["overridden"] * 6, start=10, step=2)       # T10-T20
+    new = _rows("production replace", ["completed"] * 3, start=60, step=2)        # T60-T64
+    r = order_record(old + new, 70, ORDERS)["production replace"]
+    assert (r["judged"], r["completed"], r["overridden"]) == (8, 3, 5), "the last 8 judged, back to T14"
+    many = _rows("production replace", ["completed"] * 12, start=50, step=1)
+    assert order_record(old + many, 70, ORDERS)["production replace"]["judged"] == 12, "30 turns hold 12"
+
+
+def _replace_fixture() -> dict:
+    """Beijing builds a Warrior with 5 turns left: a production order there replaces the AI's choice."""
+    return {**FIXTURE, "cities": [_city0(producing="UNIT_WARRIOR", turns_left=5)]}
+
+
+def _events(setup) -> list[dict]:
+    s, _ = setup
+    return [json.loads(line) for line in (s.runs_dir / "civ1" / "events.jsonl").read_text().splitlines()]
+
+
+def test_an_order_the_ai_replaces_is_in_the_record_and_the_next_prompt(setup):
+    seen: list[str] = []
+
+    def ai(state):
+        state["cities"][0]["producing"] = "BUILDING_GRANARY"
+
+    game = FakeCiv6(_replace_fixture(), index=INDEX, ai=ai)
+    g = governor(setup, game, orders_model([{"kind": "production", "city": "Beijing", "id": "unit:slinger"}], [],
+                                           seen=seen))
+    g.run(max_decisions=2)
+    assert "production unit:slinger in Beijing: replaced by the AI with building:granary by T13" in seen[1]
+    assert "Order record in this campaign (held until done / replaced by the AI):" in seen[1]
+    assert "- production replace: 1 judged; 1 replaced by the AI (last: unit:slinger → building:granary in Beijing, T13)" \
+        in seen[1]
+    rows = [e for e in _events(setup) if e["kind"] == "order_outcome"]
+    assert [(r["key"], r["result"], r["by"], r["turns"], r["situation"]) for r in rows] == \
+        [("production replace", "overridden", "building:granary", 1, "replace")]
+    assert g.log.state.info["order_record"]["production replace"]["overridden"] == 1
+
+
+def test_a_tech_that_completes_is_reported_completed(setup):
+    seen: list[str] = []
+
+    def learn(state):
+        state["research"] = {"tech": "TECH_MINING", "turns_left": 3}
+        state["options"] = {**state["options"], "techs": [t for t in state["options"]["techs"] if t != "TECH_POTTERY"]}
+
+    game = FakeCiv6(FIXTURE, index=INDEX, events={FIXTURE["turn"] + 2: learn})
+    g = governor(setup, game, orders_model([{"kind": "research", "id": "tech:pottery"}], [], seen=seen))
+    g.run(max_decisions=2)
+    assert "research tech:pottery: completed by T14" in seen[1]
+    assert "- research: 1 judged; 1 completed (a rate needs 3)" in seen[1]
+
+
+def test_a_decision_without_orders_keeps_following_earlier_ones(setup):
+    seen: list[str] = []
+    s, _ = setup
+    s.decide_every_turns = 1
+
+    def switch(state):
+        state["cities"][0]["producing"] = "BUILDING_MONUMENT"
+
+    game = FakeCiv6(_replace_fixture(), index=INDEX, events={FIXTURE["turn"] + 2: switch})
+    g = governor(setup, game, orders_model([{"kind": "production", "city": "Beijing", "id": "unit:slinger"}], [], [],
+                                           seen=seen))
+    g.run(max_decisions=3)
+    assert "production unit:slinger in Beijing: in force at T13 (1 of 7 turns followed)" in seen[1]
+    assert "production unit:slinger in Beijing: replaced by the AI with building:monument by T14" in seen[2]
+
+
+def test_a_later_run_of_the_campaign_starts_with_its_record(setup, tmp_path):
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+
+    def ai(state):
+        state["cities"][0]["producing"] = "BUILDING_GRANARY"
+
+    first = Civ6Governor(s, FakeCiv6(_replace_fixture(), index=INDEX, ai=ai), EventLog(s.runs_dir, "r1", s.model, telemetry=tel),
+                         model=orders_model([{"kind": "production", "city": "Beijing", "id": "unit:slinger"}], []))
+    first.status_poll_s, first.start_grace_s = 0, 0.05
+    first.run(max_decisions=2)
+    seen: list[str] = []
+    second = Civ6Governor(s, FakeCiv6(_replace_fixture(), index=INDEX), EventLog(s.runs_dir, "r2", s.model, telemetry=tel),
+                          model=orders_model([], seen=seen))
+    second.status_poll_s, second.start_grace_s = 0, 0.05
+    second.run(max_decisions=1)
+    assert "- production replace: 1 judged; 1 replaced by the AI" in seen[0], "the record survives a restart"
+    assert second.log.state.info["order_record"]["production replace"]["judged"] == 1
+
+
+def test_the_civ6_strategist_sees_the_order_record(setup):
+    prompts: list[str] = []
+
+    def respond(messages, info):
+        text = "\n".join(str(getattr(p, "content", "")) for m in messages for p in getattr(m, "parts", []))
+        if is_review(info):
+            prompts.append(text)
+            return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name,
+                                                     {"change": False, "assessment": "n/a", "rules": []})])
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"orders": [], "reason": "r"})])
+
+    g = governor(setup, FakeCiv6(FIXTURE, index=INDEX), FunctionModel(respond))
+    g.run(max_decisions=1)
+    assert "Order record in this campaign (held until done / replaced by the AI):\n(no orders judged yet)" in prompts[0]
+    assert "Directive record" not in prompts[0]
+
+
+def test_trace_orders_carry_kind_id_and_city(setup):
+    game = FakeCiv6(FIXTURE, index=INDEX)
+    g = governor(setup, game, orders_model([{"kind": "production", "city": "beijing", "id": "unit:settler"},
+                                            {"kind": "research", "id": "tech:pottery"}]))
+    g.run(max_decisions=1)
+    orders = traces(setup)[0]["orders"]
+    assert [(o["kind"], o["id"], o["city"]) for o in orders] == [("production", "unit:settler", "Beijing"),
+                                                                 ("research", "tech:pottery", "")]
+
+
+def test_an_idle_civic_is_asked_again_then_filled_by_the_governor(setup):
+    from pilot.strategy import Pillar, Strategy
+    seen: list[str] = []
+    idle = {**FIXTURE, "civic": None}
+    game = FakeCiv6(idle, index=INDEX)
+    g = governor(setup, game, orders_model([], seen=seen))
+    weights = {"science": 25, "expansion": 20, "economy": 15, "culture": 12, "military": 12, "faith": 8, "diplomacy": 8}
+    g.strategy = Strategy(pillars={n: Pillar(weight=w, stance="s") for n, w in weights.items()}, focus="f")
+    g.strategy.pillars["culture"] = g.strategy.pillars["culture"].model_copy(
+        update={"prefer_civics": ["civic:code_of_laws", "civic:foreign_trade"]})
+    g.run(max_decisions=1)
+    assert len(seen) == 2 and "Your answer was incomplete: nothing is being progressed" in seen[1], "one retry"
+    assert orders_sent(game) == [{"kind": "civic", "id": "civic:foreign_trade"}], "the first preferred civic offered"
+    first = traces(setup)[0]
+    assert first["orders"][0]["order"] == "civic civic:foreign_trade (filled by the governor)"
+    assert first["orders"][0]["by"] == "governor" and first["retried_for"] == ["civic"]
+
+
+def test_an_idle_research_answered_on_the_retry_is_not_filled(setup):
+    seen: list[str] = []
+    game = FakeCiv6({**FIXTURE, "research": None}, index=INDEX)
+    g = governor(setup, game, orders_model([], [{"kind": "research", "id": "tech:sailing"}], seen=seen))
+    g.run(max_decisions=1)
+    assert orders_sent(game) == [{"kind": "research", "id": "tech:sailing"}]
+    assert "filled by the governor" not in traces(setup)[0]["orders"][0]["order"]
+
+
+def test_without_a_strategy_the_first_offered_item_fills_an_idle_research(setup):
+    game = FakeCiv6({**FIXTURE, "research": None}, index=INDEX)
+    g = governor(setup, game, orders_model([{"kind": "research", "id": "tech:warp_drive"}]))
+    g.run(max_decisions=1)
+    assert orders_sent(game) == [{"kind": "research", "id": "tech:pottery"}], "an invalid order does not count"
+
+
+def test_a_purchase_is_completed_at_once_and_refused_orders_get_a_row(setup):
+    game = FakeCiv6({**FIXTURE, "gold": 400}, index=INDEX, prices={("Beijing", "unit:warrior"): 160})
+    g = governor(setup, game, orders_model([{"kind": "purchase", "city": "Beijing", "id": "unit:warrior"},
+                                            {"kind": "research", "id": "tech:warp"}]))
+    g.run(max_decisions=1)
+    rows = [(e["key"], e["result"]) for e in _events(setup) if e["kind"] == "order_outcome"]
+    assert rows == [("purchase gold", "completed"), ("research", "refused")]
+    assert game.state["units"]["by_type"]["UNIT_WARRIOR"] == 2
+
+
+def test_our_own_later_order_supersedes_the_earlier_one(setup):
+    game = FakeCiv6(_replace_fixture(), index=INDEX)
+    g = governor(setup, game, orders_model([{"kind": "production", "city": "Beijing", "id": "unit:slinger"}],
+                                           [{"kind": "production", "city": "Beijing", "id": "unit:scout"}]))
+    g.run(max_decisions=2)
+    rows = [(e["id"], e["result"]) for e in _events(setup) if e["kind"] == "order_outcome"]
+    assert rows == [("unit:slinger", "superseded")]
+    assert [t.row["id"] for t in g._tracking] == ["unit:scout"]
+
+
+def test_a_timed_out_autoplay_start_is_sent_again(setup):
+    game = FakeCiv6(FIXTURE, index=INDEX, lost_start_not_run=2)
+    g = governor(setup, game, orders_model([]))
+    g.run(max_decisions=2)
+    assert [a[0] for a in game.actions].count("autoplay") >= 3
+    assert traces(setup)[1]["trigger"] == "scheduled (3 turns)"
+    events = (setup[0].runs_dir / "civ1" / "events.jsonl").read_text()
+    assert "sent again (1 of 2)" in events and "sent again (2 of 2)" in events and '"needs_attention"' not in events
+
+
+def test_a_start_that_never_runs_after_two_retries_waits_for_the_human(setup):
+    game = FakeCiv6(FIXTURE, index=INDEX, lost_start_not_run=3)
+    g = governor(setup, game, orders_model([]))
+    run_until_attention(g)
+    assert [a[0] for a in game.actions].count("autoplay") == 3, "the first call and two retries"

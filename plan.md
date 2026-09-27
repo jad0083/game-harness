@@ -146,6 +146,7 @@
 - [x] Civ VI governor as a service on mini-rig2 (drop-in `PILOT_GAME=civ6`) with the dashboard following the campaign — running via runs/pilot-settings.json game=civ6 (dashboard Start run offers Civ VI)
 - [ ] Civ VI district and wonder placement (a tile planner, design option 2), so production orders can name them
 - [ ] Civ VI MCP tools for snapshot, orders and autoplay
+- [ ] Civ VI order record: every order followed until it completes, holds or the AI replaces it; `order_outcome` events reloaded per campaign; stick rate per kind in the decision prompt and the Strategist (`[orders]` in pillars.toml); idle research/civic asked again, then filled by the governor; a timed-out autoplay start sent again twice (levers design, rulings 12-16)
 - [ ] Civ VI snapshot: city position, buildings, garrison, garrison and walls HP, and for a threatened city its enemies, defenders, capture threats, incoming damage, strike and defender prices; religion and every end-turn blocker (levers design docs/design/2026-09-27-civ6-levers-design.md, ruling 11; checked live read-only at T124-T129)
 - [x] Dashboard access key: `PILOT_DASHBOARD_KEY` or `runs/dashboard.key`, one link per browser (`python -m pilot dashboard-link`), JSON-only same-origin changes
 

@@ -99,7 +99,8 @@ city lost or threatened, a new era, a great person or wonder race lost, gold bel
 reserve); stopping early is simply not starting the next turn. The tuner does not answer while the
 AI plays its turn, so unanswered status polls are expected; only the turn's deadline counts (10
 minutes, for long late-game turns). A turn that does not start (20 s) or end in time, or a game that
-gives no snapshot three times between turns, stops the run until the human presses Resume. Orders,
+gives no snapshot three times between turns, stops the run until the human presses Resume (an
+autoplay call whose reply was lost and that did not start is first sent again, twice). Orders,
 snapshots and human requests only ever happen between turns. `PILOT_AUTOPLAY_CHUNK` lets the AI play
 several turns per call (urgent checks then run between chunks). Each autoplay call turns the
 tutorial advisor off for the session: its popups wait for a click and hold the turn forever.
@@ -118,8 +119,20 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   districts need a tile and are refused (placement is not supported yet). `price` (a tool) reads a
   live purchase price.
 - **Read-back**: a fresh snapshot right after the orders shows which took; one that did not is
-  reported to the next decision and refused if it is repeated unchanged. The next decision also
-  hears which orders the AI changed during autoplay.
+  reported to the next decision and refused if it is repeated unchanged.
+- **Order record** (spec `docs/design/2026-09-27-civ6-levers-design.md`, rulings 12-16): every order
+  that took is followed on each snapshot until it resolves: `completed` (a tech or civic left the
+  options, a unit's count rose, a building appeared), `held` (still current when its window of
+  turns left + 3, at most 20, ends), `overridden` (the AI switched while it was still available),
+  `invalidated`, `superseded` by our own later order, or `unknown`. Each resolved, refused or lost
+  order emits an `order_outcome` event (telemetry keeps it, so the record survives restarts). The
+  decision prompt and the Strategist get one line per kind (research, civic, policies, production
+  fill or replace, purchase gold or faith) with its stick rate over the last 30 turns (`[orders]` in
+  `pillars.toml`), flagged "does not stick here" at 50% or less; the dashboard gets
+  `info.order_record`.
+- **Blockers**: with no research or no civic in progress and no valid order for it, the governor asks
+  the model once more; if the answer still has none, it orders the strategy's first preferred item
+  the game offers (else the first offered) and reports it "filled by the governor".
 - **Strategy**: `corpora/civ6/pillars.toml` in share mode (science, culture, faith, economy,
   military, expansion, diplomacy) with milestones on turns (`T60`); reviews as for Stellaris.
 - **Campaign** `civ6/<leader>_<map seed>`; metrics rows per turn (`date` `T<turn>`), so telemetry,
