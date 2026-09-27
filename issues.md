@@ -49,6 +49,7 @@
 - [x] `main.rs:256` `x + w` can wrap in release, bypassing the bounds check (GDI then fails; no crash) — fixed in agent 1.4.0 (`region_ok` in i64, test). Deployed 2026-09-26 (1.4.0 on the PC, no console window at logon)
 - [x] Console-subsystem exe launched as an interactive logon task → console window on the game desktop at every logon — fixed in agent 1.4.0 (GUI subsystem, logs to agent.log). Deployed 2026-09-26 (1.4.0 on the PC, no console window at logon)
 - [x] Zero tests for the shipped agent binary — 24 agent tests now (batch/drag validation, files, keys, token, bounds); run by scripts/ci.sh
+- [ ] Security review 2026-09-26 (B4): an empty `--token` gave an empty token that matched an empty header — fixed in agent 1.5.0: every token source must hold >= 32 characters or the agent refuses to start (not yet deployed)
 
 ### Repo hygiene / docs
 - [x] `windows_agent/game-agent.exe` (1.4 MB) is tracked and re-committed on every rebuild — untracked and gitignored; scripts/serve-agent.sh builds it before serving

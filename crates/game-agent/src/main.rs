@@ -214,16 +214,43 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn get_or_create_token(cli_token: Option<String>) -> Result<String, Box<dyn std::error::Error>> {
-    if let Some(tok) = cli_token {
-        return Ok(tok.trim().to_string());
+/// Shortest token accepted (the agent generates 64 hex characters; serve-agent.sh 32).
+const MIN_TOKEN_LEN: usize = 32;
+
+/// The trimmed token, or an error naming its source when it is empty or shorter than
+/// `MIN_TOKEN_LEN`: a short token is guessable, and an empty one would match an empty header.
+fn checked_token(raw: &str, source: &str) -> Result<String, String> {
+    let tok = raw.trim();
+    if tok.chars().count() < MIN_TOKEN_LEN {
+        return Err(format!(
+            "the token from {source} is {} characters; at least {MIN_TOKEN_LEN} are required \
+             (delete it to let the agent generate one, or install a longer one)",
+            tok.chars().count()
+        ));
     }
-    if let Ok(tok) = std::env::var("GAME_AGENT_TOKEN") {
-        if !tok.trim().is_empty() {
-            return Ok(tok.trim().to_string());
+    Ok(tok.to_string())
+}
+
+/// The first token source present, in order: `--token`, `GAME_AGENT_TOKEN`, then the first
+/// existing token file. A source that is present must hold a valid token (no fallback past a
+/// bad one). `None` when there is no source at all.
+fn find_token(cli: Option<&str>, env: Option<&str>, paths: &[PathBuf]) -> Result<Option<String>, String> {
+    if let Some(tok) = cli {
+        return checked_token(tok, "--token").map(Some);
+    }
+    if let Some(tok) = env {
+        return checked_token(tok, "GAME_AGENT_TOKEN").map(Some);
+    }
+    for p in paths {
+        if p.exists() {
+            let content = std::fs::read_to_string(p).map_err(|e| format!("cannot read {p:?}: {e}"))?;
+            return checked_token(&content, &format!("{p:?}")).map(Some);
         }
     }
+    Ok(None)
+}
 
+fn get_or_create_token(cli_token: Option<String>) -> Result<String, Box<dyn std::error::Error>> {
     let mut paths = Vec::new();
     if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
         paths.push(PathBuf::from(local_app_data).join("GameAgent").join("agent_token.txt"));
@@ -231,18 +258,12 @@ fn get_or_create_token(cli_token: Option<String>) -> Result<String, Box<dyn std:
     paths.push(PathBuf::from("agent_token.txt"));
     paths.push(PathBuf::from(".agent_token"));
 
-    for p in &paths {
-        if p.exists() {
-            if let Ok(content) = std::fs::read_to_string(p) {
-                let trimmed = content.trim();
-                if !trimmed.is_empty() {
-                    return Ok(trimmed.to_string());
-                }
-            }
-        }
+    let env = std::env::var("GAME_AGENT_TOKEN").ok();
+    if let Some(tok) = find_token(cli_token.as_deref(), env.as_deref(), &paths)? {
+        return Ok(tok);
     }
 
-    // Generate random 24-byte token if none found
+    // No token anywhere: generate one and save it where the installer looks.
     let token = generate_random_token()?;
     if let Some(target) = paths.first() {
         if let Some(parent) = target.parent() {
@@ -923,6 +944,43 @@ mod tests {
         assert!(!token_matches("abc12", "abc123"));
         assert!(!token_matches("abc1234", "abc123"));
         assert!(!token_matches("", "abc123"));
+    }
+
+    #[test]
+    fn short_or_empty_tokens_are_refused_from_every_source() {
+        let ok = "a".repeat(MIN_TOKEN_LEN);
+        assert_eq!(checked_token(&format!(" {ok}\n"), "--token").unwrap(), ok);
+        for bad in ["", "   ", "\n", "short", &"a".repeat(MIN_TOKEN_LEN - 1)] {
+            for source in ["--token", "GAME_AGENT_TOKEN", "agent_token.txt"] {
+                let e = checked_token(bad, source).unwrap_err();
+                assert!(e.contains(source) && e.contains(&MIN_TOKEN_LEN.to_string()), "{e}");
+            }
+        }
+        // Whitespace padding does not count toward the length.
+        assert!(checked_token(&format!("{}   ", "a".repeat(MIN_TOKEN_LEN - 1)), "x").is_err());
+        assert!(generate_random_token().unwrap().len() >= MIN_TOKEN_LEN);
+    }
+
+    #[test]
+    fn token_sources_are_tried_in_order_and_a_bad_one_stops_startup() {
+        let dir = std::env::temp_dir().join(format!("agent-token-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let (good, file) = ("g".repeat(40), dir.join("agent_token.txt"));
+        let missing = dir.join("missing.txt");
+        std::fs::write(&file, format!("{good}\r\n")).unwrap();
+        let paths = vec![missing.clone(), file.clone()];
+        assert_eq!(find_token(None, None, &paths).unwrap().as_deref(), Some(good.as_str()));
+        let env = "e".repeat(32);
+        assert_eq!(find_token(None, Some(&env), &paths).unwrap(), Some(env.clone()));
+        assert_eq!(find_token(Some(&good), Some(&env), &paths).unwrap(), Some(good.clone()));
+        assert!(find_token(Some(""), Some(&env), &paths).is_err(), "empty --token");
+        assert!(find_token(None, Some(" "), &paths).is_err(), "empty env var");
+        std::fs::write(&file, "").unwrap();
+        assert!(find_token(None, None, &paths).is_err(), "empty token file");
+        std::fs::write(&file, "tooshort").unwrap();
+        assert!(find_token(None, None, &paths).unwrap_err().contains("agent_token.txt"));
+        assert_eq!(find_token(None, None, &[missing]).unwrap(), None, "no source: generate one");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
