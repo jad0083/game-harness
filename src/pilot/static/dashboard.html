@@ -954,6 +954,26 @@ function modelLabel(d) {
   return s;
 }
 
+// Short model name for the decisions list: the release that answered, how it was reached, and the
+// thinking level ("Sonnet 5 (Claude Code) · high"); empty for your own decisions.
+function shortModel(d) {
+  const chosen = d.model || "";
+  if (!chosen || chosen === "human") return "";
+  const [provider, id] = chosen.includes(":") ? chosen.split(/:(.*)/s) : ["", chosen];
+  const served = (d.model_version || "").replace(/^[\w-]+:/, "");   // older rows stored the provider string
+  let name = (served && provider === "claude-code" ? served : id)
+    .replace(/-\d{8}$/, "").replace(/-preview$/, "");
+  let m;
+  if ((m = name.match(/^gemini-([\d.]+)-(.+)$/))) {
+    name = `Gemini ${m[1]} ` + m[2].split("-").map((w) => w[0].toUpperCase() + w.slice(1)).join(" ");
+  } else if ((m = name.match(/^(?:claude-)?(opus|sonnet|haiku|fable)(?:-(\d+)(?:-(\d))?)?$/))) {
+    name = m[1][0].toUpperCase() + m[1].slice(1) + (m[2] ? ` ${m[2]}${m[3] ? "." + m[3] : ""}` : "");
+  }
+  if (provider === "claude-code") name += " (Claude Code)";
+  else if (provider === "anthropic") name += " (API)";
+  return d.thinking ? `${name} · ${d.thinking}` : name;
+}
+
 // ---------- neighbours ----------
 const NB_BAD = ["AT WAR", "rival", "hostile", "they rival us", "they closed borders"];
 const NB_GOOD = ["alliance", "friendly", "commercial pact", "research agreement", "defensive pact"];
@@ -1028,7 +1048,7 @@ function renderDecisions() {
     return `<li class="${sel ? "sel" : ""}"><button data-i="${i}">
       <span class="d-date">${esc(d.date || "–")}</span>
       <span class="d-meta"><span class="nw">${d.model === "human" ? "you" : fmt(d.tokens_in) + " tokens"}</span>${d.seconds ? `<br><span class="nw">${esc(d.seconds)} s</span>` : ""}</span>
-      <span class="d-main"><span class="d-head"><span class="dir${kept ? " kept" : ""}">${esc(label)}</span><span class="trigger">${esc(tidy(d.trigger || ""))}</span>${d.off_frame ? '<span class="tag bad">off-frame</span>' : ""}</span>
+      <span class="d-main"><span class="d-head"><span class="dir${kept ? " kept" : ""}">${esc(label)}</span><span class="trigger">${esc(tidy(d.trigger || ""))}</span>${shortModel(d) ? `<span class="tag model">${esc(shortModel(d))}</span>` : ""}${d.off_frame ? '<span class="tag bad">off-frame</span>' : ""}</span>
       <p class="reason">${esc(tidy(d.reason || ""))}</p>${afterText(d.result)}</span></button></li>`;
   }).join("") + (all.length > shown.length ? `<li class="more"><button class="btn" id="show-all">Show all ${all.length}</button></li>` : "");
   const more = $("show-all");
