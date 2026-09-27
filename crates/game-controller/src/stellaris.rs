@@ -28,7 +28,7 @@ pub struct Research {
     pub alternatives: Vec<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 pub struct Planet {
     pub id: u64,
     pub name: String,
@@ -39,7 +39,90 @@ pub struct Planet {
     pub free_housing: Option<f64>,
     pub free_amenities: Option<f64>,
     pub crime: Option<f64>,
+    /// The country's capital colony.
+    pub capital: bool,
+    /// Held by another country (the planet's `controller` is not its `owner`, us).
+    pub occupied: bool,
+    /// Who holds it while occupied.
+    pub occupier: Option<String>,
+    pub amenities_usage: Option<f64>,
+    pub total_housing: Option<f64>,
+    /// Pops that can work (`employable_pops`).
+    pub employable: Option<i64>,
+    /// Free job slots: max workforce minus workforce, over the colony's jobs.
+    pub jobs_open: Option<i64>,
+    /// Pops in the civilian (unemployed) stratum.
+    pub unemployed: Option<i64>,
+    /// "capital", "mining", … (`designation`, else `final_designation`, without `col_`).
+    pub designation: String,
+    /// District type (without `district_`) → summed level.
+    pub district_levels: BTreeMap<String, i64>,
+    /// Development items in the construction queue: district, building or zone keys.
+    pub queued: Vec<String>,
+    /// Last month's pop growth.
+    pub growth: Option<f64>,
 }
+
+/// A starbase with a shipyard module in one of our systems.
+#[derive(Debug, Serialize, Default, Clone, PartialEq)]
+pub struct Shipyard {
+    pub system: String,
+    /// The starbase is held by another country while the system still has a colony of ours.
+    pub occupied: bool,
+}
+
+/// Battles our own country fought (not allies'), dated within 12 months of the save.
+#[derive(Debug, Serialize, Default, Clone, PartialEq)]
+pub struct OwnBattles {
+    pub won: usize,
+    pub lost: usize,
+    /// Ships our side lost in those battles.
+    pub ships_lost: i64,
+    /// Invasions of our colonies (ground battles there that the other side started) over the whole
+    /// war: 4.5.1 saves date ground battles 0.01.01, so a rise between two saves is a new invasion.
+    pub ground_at_our_colonies: usize,
+}
+
+/// The save's `<side>_force_peace`: set on the side whose war exhaustion passed 100%, so the other
+/// side can force a status-quo peace on it (read from a 2393 save: the defender at 309%).
+#[derive(Debug, Serialize, Default, Clone, PartialEq)]
+pub struct ForcePeace {
+    /// A status quo can be forced on us.
+    pub ours: bool,
+    /// We can force one on them.
+    pub theirs: bool,
+    pub date: String,
+}
+
+/// The market we trade on, from the save's top-level `market` and our budget.
+#[derive(Debug, Serialize, Default, Clone, PartialEq)]
+pub struct MarketInfo {
+    /// "galactic" (formed, and our country has access) or "internal".
+    pub kind: String,
+    /// Price fluctuation in percent per resource (0 when absent).
+    pub fluct: BTreeMap<String, f64>,
+    /// Our cumulative bought and sold amounts per resource (the AI's own trades included).
+    pub bought: BTreeMap<String, f64>,
+    pub sold: BTreeMap<String, f64>,
+    /// Last month's monthly trades per resource: what our orders cost and delivered.
+    pub trades_net: BTreeMap<String, f64>,
+}
+
+/// Resources by index in the market's per-resource arrays: the definition order of
+/// common/strategic_resources/00_strategic_resources.txt (4.5.1; 26 definitions, matching the
+/// saves' 26-entry arrays and the `galactic_market_resources` flags). Indices past sr_dark_matter
+/// are not traded.
+const MARKET_INDEX: [&str; 17] = [
+    "energy", "minerals", "food", "physics_research", "society_research", "engineering_research", "influence",
+    "unity", "trade", "consumer_goods", "alloys", "volatile_motes", "exotic_gases", "rare_crystals",
+    "sr_living_metal", "sr_zro", "sr_dark_matter",
+];
+
+/// Resources traded on the market (monthly trades and bulk buys).
+const MARKET_RESOURCES: [&str; 11] = [
+    "energy", "minerals", "food", "consumer_goods", "alloys", "volatile_motes", "exotic_gases", "rare_crystals",
+    "sr_living_metal", "sr_zro", "sr_dark_matter",
+];
 
 #[derive(Debug, Serialize, Default)]
 pub struct War {
@@ -55,8 +138,11 @@ pub struct War {
     /// War exhaustion 0..1; at 1 the other side can force a status-quo peace.
     pub our_exhaustion: f64,
     pub their_exhaustion: f64,
+    /// Battles our side won and lost, allies' included.
     pub battles_won: usize,
     pub battles_lost: usize,
+    pub own_battles_12m: OwnBattles,
+    pub force_peace: Option<ForcePeace>,
 }
 
 /// Our value, the other regular empires' median and best, and our rank (1 = best) for one measure.
@@ -323,6 +409,13 @@ pub struct Briefing {
     pub used_naval_capacity: i64,
     /// Our active monthly market orders (`market.monthly_trades` for our country).
     pub market_orders: Vec<MarketOrderSpec>,
+    /// Policy → the date its option was last set (policies set at game start carry none).
+    pub policy_dates: BTreeMap<String, String>,
+    pub market: Option<MarketInfo>,
+    /// Starbases with a shipyard in our systems, in save order.
+    pub shipyards: Vec<Shipyard>,
+    /// Country variables named `governor_*` (exported by the Governor Bridge mod).
+    pub governor_vars: BTreeMap<String, f64>,
 }
 
 fn expansion(
@@ -1825,6 +1918,9 @@ pub fn brief_gamestate(gamestate: &[u8]) -> Result<Briefing> {
     if let Some(ap) = get(&c, "active_policies").and_then(|v| v.read_array().ok()) {
         for p in ap.values().filter_map(|x| x.read_object().ok()) {
             if let (Some(k), Some(v)) = (string(&p, "policy"), string(&p, "selected")) {
+                if let Some(d) = string(&p, "date") {
+                    b.policy_dates.insert(k.clone(), d);
+                }
                 b.policies.insert(k, v);
             }
         }
@@ -1833,6 +1929,14 @@ pub fn brief_gamestate(gamestate: &[u8]) -> Result<Briefing> {
         b.edicts = ed.values().filter_map(|x| x.read_object().ok()).filter_map(|e| string(&e, "edict")).collect();
     }
     b.flags = obj(&c, "flags").map(|f| f.fields().map(|(k, _, _)| k.read_string()).collect()).unwrap_or_default();
+    b.governor_vars = obj(&c, "variables")
+        .map(|v| {
+            v.fields()
+                .filter(|(k, _, _)| k.read_str().starts_with("governor_"))
+                .filter_map(|(k, _, x)| Some((k.read_string(), x.read_scalar().ok()?.to_f64().ok()?)))
+                .collect()
+        })
+        .unwrap_or_default();
 
     // 4.5: `owned_planets` holds colony ids; a colony's `carrier` points at its planet.
     let planets = obj(&root, "planets").and_then(|p| obj(&p, "planet"));
@@ -1852,14 +1956,24 @@ pub fn brief_gamestate(gamestate: &[u8]) -> Result<Briefing> {
     b.expansion = expansion(&root, &c, b.country, &origins, planets.as_ref());
     b.peers = peers(&countries, &id, &c, &origins);
     let colonies = obj(&root, "colony");
-    for cid in strings(get(&c, "owned_planets")) {
-        let Some(col) = colonies.as_ref().and_then(|cs| obj(cs, &cid)) else { continue };
+    let owned = strings(get(&c, "owned_planets"));
+    let capital = get(&c, "capital").and_then(|v| v.read_string().ok());
+    let mut refs = ColonyRefs::default();
+    for cid in &owned {
+        let Some(col) = colonies.as_ref().and_then(|cs| obj(cs, cid)) else { continue };
         let Some(carrier) = obj(&col, "carrier") else { continue };
         if string(&carrier, "type").as_deref() != Some("planet") {
             continue;
         }
         let Some(pid) = i64_(&carrier, "reference") else { continue };
         let Some(p) = planets.as_ref().and_then(|ps| obj(ps, &pid.to_string())) else { continue };
+        let i = b.planets.len();
+        refs.colonies.insert(cid.clone(), i);
+        for (key, map) in [("pop_jobs", &mut refs.jobs), ("pop_groups", &mut refs.groups), ("districts", &mut refs.districts)] {
+            map.extend(strings(get(&col, key)).into_iter().map(|x| (x, i)));
+        }
+        let controller = i64_(&p, "controller").map(|x| x as u64).filter(|x| *x != b.country);
+        let designation = string(&col, "designation").or_else(|| string(&col, "final_designation")).unwrap_or_default();
         b.planets.push(Planet {
             id: pid as u64,
             name: name_of(&p),
@@ -1870,13 +1984,28 @@ pub fn brief_gamestate(gamestate: &[u8]) -> Result<Briefing> {
             free_housing: f64_(&col, "free_housing"),
             free_amenities: f64_(&col, "free_amenities"),
             crime: f64_(&col, "crime"),
+            capital: capital.as_deref() == Some(cid.as_str()),
+            occupied: controller.is_some(),
+            occupier: controller.map(|x| obj(&countries, &x.to_string()).map(|o| name_of(&o)).unwrap_or_else(|| format!("country {x}"))),
+            amenities_usage: f64_(&col, "amenities_usage"),
+            total_housing: f64_(&col, "total_housing"),
+            employable: i64_(&col, "employable_pops"),
+            jobs_open: get(&col, "pop_jobs").map(|_| 0),
+            unemployed: get(&col, "pop_groups").map(|_| 0),
+            designation: designation.trim_start_matches("col_").to_string(),
+            district_levels: BTreeMap::new(),
+            queued: vec![],
+            growth: obj(&col, "last_month_growth_data").and_then(|g| obj(&g, "growth_and_size")).and_then(|g| f64_(&g, "growth")),
         });
     }
+    planet_development(&root, &mut b.planets, &refs);
+    b.shipyards = shipyards(&root, &c, &b.planets, &origins);
+    b.market = market_info(&root, &c, b.country);
 
     if let Some(wars) = obj(&root, "war") {
         for (_, _, w) in wars.fields() {
             let Ok(w) = w.read_object() else { continue };
-            if let Some(war) = war_of(&w, b.country, &countries) {
+            if let Some(war) = war_of(&w, b.country, &countries, &b.date, &owned) {
                 b.wars.push(war);
             }
         }
@@ -1926,8 +2055,203 @@ pub fn brief_gamestate(gamestate: &[u8]) -> Result<Briefing> {
     Ok(b)
 }
 
-/// One war we take part in, seen from our side.
-fn war_of(w: &Obj, us: u64, countries: &Obj) -> Option<War> {
+/// Where our colonies' jobs, pop groups and districts point, by id → index into `Briefing::planets`.
+#[derive(Default)]
+struct ColonyRefs {
+    colonies: std::collections::HashMap<String, usize>,
+    jobs: std::collections::HashMap<String, usize>,
+    groups: std::collections::HashMap<String, usize>,
+    districts: std::collections::HashMap<String, usize>,
+}
+
+/// Construction items that develop a planet (`buildable_<kind>`, whose `planet` is a colony id).
+const PLANET_BUILDABLES: [&str; 7] = [
+    "district", "planet_building", "planet_upgrade_building", "zone", "clear_deposit_blocker",
+    "planet_externally_owned_building", "decision",
+];
+
+/// Jobs open, unemployment, district levels and queued items of our colonies: one pass over each
+/// top-level block (they hold every empire's entries).
+fn planet_development(root: &Obj, planets: &mut [Planet], r: &ColonyRefs) {
+    if let Some(jobs) = obj(root, "pop_jobs") {
+        for (k, _, v) in jobs.fields() {
+            let (Some(&i), Ok(j)) = (r.jobs.get(k.read_str().as_ref()), v.read_object()) else { continue };
+            let (work, max) = (i64_(&j, "workforce").unwrap_or(0), i64_(&j, "max_workforce").unwrap_or(0));
+            if max > 0 {
+                *planets[i].jobs_open.get_or_insert(0) += (max - work.max(0)).max(0);
+            }
+        }
+    }
+    if let Some(groups) = obj(root, "pop_groups") {
+        for (k, _, v) in groups.fields() {
+            let (Some(&i), Ok(g)) = (r.groups.get(k.read_str().as_ref()), v.read_object()) else { continue };
+            // 4.5 puts pops without a job in the civilian stratum (slaves: slave_unemployment)
+            let category = obj(&g, "key").and_then(|k| string(&k, "category"));
+            if matches!(category.as_deref(), Some("civilian" | "slave_unemployment")) {
+                *planets[i].unemployed.get_or_insert(0) += f64_(&g, "size").unwrap_or(0.0).round() as i64;
+            }
+        }
+    }
+    if let Some(districts) = obj(root, "districts") {
+        for (k, _, v) in districts.fields() {
+            let (Some(&i), Ok(d)) = (r.districts.get(k.read_str().as_ref()), v.read_object()) else { continue };
+            let kind = string(&d, "type").unwrap_or_default();
+            *planets[i].district_levels.entry(kind.trim_start_matches("district_").to_string()).or_insert(0) += i64_(&d, "level").unwrap_or(0);
+        }
+    }
+    let items = obj(root, "construction").and_then(|c| obj(&c, "item_mgr")).and_then(|m| obj(&m, "items"));
+    for (_, _, v) in items.iter().flat_map(|i| i.fields()) {
+        let Ok(item) = v.read_object() else { continue };   // finished items read `id=none`
+        for kind in PLANET_BUILDABLES {
+            let Some(bd) = obj(&item, &format!("buildable_{kind}")) else { continue };
+            let colony = get(&bd, "planet").and_then(|x| x.read_string().ok()).unwrap_or_default();
+            if let Some(&i) = r.colonies.get(&colony) {
+                let what = ["district", "building", "zone", "decision"].iter().find_map(|k| string(&bd, k));
+                planets[i].queued.push(what.unwrap_or_else(|| kind.to_string()));
+            }
+            break;
+        }
+    }
+}
+
+/// Starbases with a shipyard module in our systems: held by our fleets, or held by another country
+/// in a system that still has a colony of ours (occupied).
+fn shipyards(root: &Obj, c: &Obj, planets: &[Planet], origins: &std::collections::HashMap<String, i64>) -> Vec<Shipyard> {
+    use std::collections::{HashMap, HashSet};
+    let Some(starbases) = obj(root, "starbase_mgr").and_then(|m| obj(&m, "starbases")) else { return vec![] };
+    let yards: Vec<(String, String)> = starbases
+        .fields()
+        .filter_map(|(k, _, v)| {
+            let s = v.read_object().ok()?;
+            let yard = obj(&s, "modules").is_some_and(|m| m.fields().any(|(_, _, x)| x.read_string().ok().as_deref() == Some("shipyard")));
+            yard.then(|| Some((k.read_string(), get(&s, "station")?.read_string().ok()?))).flatten()
+        })
+        .collect();
+    if yards.is_empty() {
+        return vec![];
+    }
+    let stations: HashSet<&str> = yards.iter().map(|(_, st)| st.as_str()).collect();
+    let mut fleet_of: HashMap<String, String> = HashMap::new();
+    for (k, _, v) in obj(root, "ships").iter().flat_map(|s| s.fields()) {
+        if stations.contains(k.read_str().as_ref()) {
+            if let Some(f) = v.read_object().ok().and_then(|s| get(&s, "fleet")).and_then(|f| f.read_string().ok()) {
+                fleet_of.insert(k.read_string(), f);
+            }
+        }
+    }
+    let ours: HashSet<String> = obj(c, "fleets_manager")
+        .and_then(|fm| get(&fm, "owned_fleets"))
+        .and_then(|v| v.read_array().ok())
+        .map(|a| a.values().filter_map(|x| x.read_object().ok()).filter_map(|x| i64_(&x, "fleet")).map(|i| i.to_string()).collect())
+        .unwrap_or_default();
+    let wanted: HashSet<&str> = yards.iter().map(|(sb, _)| sb.as_str()).collect();
+    let mut system_of: HashMap<String, (i64, String)> = HashMap::new();
+    for (k, _, v) in obj(root, "galactic_object").iter().flat_map(|g| g.fields()) {
+        let (Ok(id), Ok(g)) = (k.read_str().parse::<i64>(), v.read_object()) else { continue };
+        for sb in strings(get(&g, "starbases")) {
+            if wanted.contains(sb.as_str()) {
+                system_of.insert(sb, (id, name_of(&g)));
+            }
+        }
+    }
+    let colony_systems: HashSet<i64> = planets.iter().filter_map(|p| origins.get(&p.id.to_string()).copied()).collect();
+    yards
+        .into_iter()
+        .filter_map(|(sb, station)| {
+            let (sys, name) = system_of.get(&sb)?.clone();
+            if fleet_of.get(&station).is_some_and(|f| ours.contains(f)) {
+                Some(Shipyard { system: name, occupied: false })
+            } else {
+                colony_systems.contains(&sys).then_some(Shipyard { system: name, occupied: true })
+            }
+        })
+        .collect()
+}
+
+/// Numbers of a `{ 1 2.5 … }` list, in order (unreadable entries read 0 so indices stay aligned).
+fn numbers(v: Option<Val>) -> Vec<f64> {
+    v.and_then(|v| v.read_array().ok())
+        .map(|a| a.values().map(|x| x.read_scalar().ok().and_then(|s| s.to_f64().ok()).unwrap_or(0.0)).collect())
+        .unwrap_or_default()
+}
+
+/// Per-resource array (by MARKET_INDEX) → the market resources with a non-zero value.
+fn by_market_index(values: &[f64], decimals: i32) -> BTreeMap<String, f64> {
+    let scale = 10f64.powi(decimals);
+    values
+        .iter()
+        .zip(MARKET_INDEX)
+        .filter(|(v, r)| **v != 0.0 && MARKET_RESOURCES.contains(r))
+        .map(|(v, r)| (r.to_string(), (v * scale).round() / scale))
+        .collect()
+}
+
+/// The entry for country `us` in a `{ country=A <key>={…} country=B <key>={…} }` block.
+fn country_entry<'d, 't>(block: &Obj<'d, 't>, us: u64, key: &str) -> Option<Val<'d, 't>> {
+    let mut current = None;
+    for (k, _, v) in block.fields() {
+        match k.read_str().as_ref() {
+            "country" => current = v.read_scalar().ok().and_then(|s| s.to_u64().ok()),
+            x if x == key && current == Some(us) => return Some(v),
+            _ => {}
+        }
+    }
+    None
+}
+
+/// The market we trade on: galactic once it formed and our slot has access, else our internal one.
+fn market_info(root: &Obj, c: &Obj, us: u64) -> Option<MarketInfo> {
+    let m = obj(root, "market")?;
+    let slot = numbers(get(&m, "id")).iter().position(|x| *x == us as f64);
+    let access = numbers(get(&m, "galactic_market_access"));
+    let galactic = string(&m, "enabled").as_deref() == Some("yes") && slot.and_then(|i| access.get(i)) == Some(&1.0);
+    let fluct = if galactic {
+        by_market_index(&numbers(get(&m, "fluctuations")), 2)
+    } else {
+        obj(&m, "internal_market_fluctuations")
+            .and_then(|f| country_entry(&f, us, "resources"))
+            .and_then(|v| v.read_object().ok())
+            .map(|r| resources(&r).into_iter().filter(|(_, v)| *v != 0.0).map(|(k, v)| (k, (v * 100.0).round() / 100.0)).collect())
+            .unwrap_or_default()
+    };
+    let traded = |key: &str| -> BTreeMap<String, f64> {
+        obj(&m, key)
+            .and_then(|b| country_entry(&b, us, "amount"))
+            .map(|v| by_market_index(&numbers(Some(v)), 2))
+            .unwrap_or_default()
+    };
+    let trades_net = obj(c, "budget")
+        .and_then(|b| obj(&b, "last_month"))
+        .and_then(|b| obj(&b, "trade_balance"))
+        .and_then(|b| obj(&b, "monthly_trades"))
+        .map(|r| resources(&r))
+        .unwrap_or_default();
+    Some(MarketInfo {
+        kind: if galactic { "galactic" } else { "internal" }.into(),
+        fluct,
+        bought: traded("resources_bought"),
+        sold: traded("resources_sold"),
+        trades_net,
+    })
+}
+
+/// "2230.01.01" → (2230, 1, 1); `None` for anything else.
+fn ymd(date: &str) -> Option<(i64, i64, i64)> {
+    let mut it = date.trim().split('.').map(|x| x.parse::<i64>().ok());
+    Some((it.next()??, it.next()??, it.next()??))
+}
+
+/// Is `date` after `now` minus 12 months (and a real date: ground battles carry 0.01.01)?
+fn within_12_months(date: &str, now: &str) -> bool {
+    match (ymd(date), ymd(now)) {
+        (Some(d), Some((y, m, day))) => d.0 > 1 && d > (y - 1, m, day),
+        _ => false,
+    }
+}
+
+/// One war we take part in, seen from our side. `now` is the save date and `colonies` our colony
+/// ids (for ground battles at them).
+fn war_of(w: &Obj, us: u64, countries: &Obj, now: &str, colonies: &[String]) -> Option<War> {
     let side = |key: &str| -> Vec<u64> {
         get(w, key)
             .and_then(|v| v.read_array().ok())
@@ -1950,20 +2274,41 @@ fn war_of(w: &Obj, us: u64, countries: &Obj) -> Option<War> {
     let goal = |key: &str| obj(w, key).and_then(|g| string(&g, "type")).unwrap_or_default();
     let (att_goal, def_goal) = (goal("attacker_war_goal"), goal("defender_war_goal"));
     let (att_ex, def_ex) = (f64_(w, "attacker_war_exhaustion").unwrap_or(0.0), f64_(w, "defender_war_exhaustion").unwrap_or(0.0));
-    // each battle lists its attacker side and whether it won
+    // each battle lists its attacker side and whether it won; "our side" includes allies, "own"
+    // only battles that list our country (allies' wins once read as ours, e.g. "won 20-0")
     let (mut won, mut lost) = (0, 0);
+    let mut own = OwnBattles::default();
     if let Some(battles) = get(w, "battles").and_then(|v| v.read_array().ok()) {
         for bt in battles.values().filter_map(|x| x.read_object().ok()) {
             let ids = |k: &str| strings(get(&bt, k)).iter().filter_map(|x| x.parse::<u64>().ok()).collect::<Vec<_>>();
-            let we_attacked = ids("attackers").iter().any(|c| ours.contains(c));
-            let we_defended = ids("defenders").iter().any(|c| ours.contains(c));
+            let (atk, def) = (ids("attackers"), ids("defenders"));
+            let attacker_won = get(&bt, "attacker_victory").and_then(|v| v.read_string().ok()).as_deref() == Some("yes");
+            let ground = string(&bt, "type").as_deref() == Some("armies");
+            let we_attacked = atk.iter().any(|c| ours.contains(c));
+            // an invasion: the other side attacks one of our colonies (not our own retake)
+            if ground && !we_attacked && get(&bt, "colony").and_then(|v| v.read_string().ok()).is_some_and(|col| colonies.contains(&col)) {
+                own.ground_at_our_colonies += 1;
+            }
+            let we_defended = def.iter().any(|c| ours.contains(c));
             if !we_attacked && !we_defended {
                 continue;
             }
-            let attacker_won = get(&bt, "attacker_victory").and_then(|v| v.read_string().ok()).as_deref() == Some("yes");
             if attacker_won == we_attacked { won += 1 } else { lost += 1 }
+            let (in_atk, in_def) = (atk.contains(&us), def.contains(&us));
+            if (in_atk || in_def) && !ground && within_12_months(&string(&bt, "date").unwrap_or_default(), now) {
+                if attacker_won == in_atk { own.won += 1 } else { own.lost += 1 }
+                own.ships_lost += i64_(&bt, if in_atk { "attacker_losses" } else { "defender_losses" }).unwrap_or(0);
+            }
         }
     }
+    let (our_side, their_side) = if attacker { ("attacker", "defender") } else { ("defender", "attacker") };
+    let flag = |side: &str| string(w, &format!("{side}_force_peace")).as_deref() == Some("yes");
+    let (ours_fp, theirs_fp) = (flag(our_side), flag(their_side));
+    let force_peace = (ours_fp || theirs_fp).then(|| ForcePeace {
+        ours: ours_fp,
+        theirs: theirs_fp,
+        date: string(w, &format!("{}_force_peace_date", if ours_fp { our_side } else { their_side })).unwrap_or_default(),
+    });
     Some(War {
         name: format!("{} vs {}", names(&who(&attackers)), names(&who(&defenders))),
         attacker,
@@ -1976,6 +2321,8 @@ fn war_of(w: &Obj, us: u64, countries: &Obj) -> Option<War> {
         their_exhaustion: if attacker { def_ex } else { att_ex },
         battles_won: won,
         battles_lost: lost,
+        own_battles_12m: own,
+        force_peace,
     })
 }
 
@@ -1989,10 +2336,18 @@ impl Briefing {
             "Government: {} / {}; ethics: {}; civics: {}; origin: {}\n",
             self.government, self.authority, self.ethics.join(", "), self.civics.join(", "), self.origin
         );
+        // the Governor Bridge mod exports the maximum monthly; without it only the use is known
+        let naval = match self.governor_vars.get("governor_naval_cap") {
+            Some(cap) => {
+                let used = self.governor_vars.get("governor_naval_used").copied().unwrap_or(self.used_naval_capacity as f64);
+                format!(", naval capacity {used:.0}/{cap:.0} (from the mod)")
+            }
+            None => format!(" (naval capacity used {}; the maximum is not in the save, so never assume we are at it)", self.used_naval_capacity),
+        };
         s += &format!(
-            "Power: military {:.0}, economy {:.0}, tech {:.0}; victory rank {}. Systems owned {}, colonies {}, empire size {}, pops {}, fleet size {} (naval capacity used {}; the maximum is not in the save, so never assume we are at it), upgraded starbases {}/{}\n",
+            "Power: military {:.0}, economy {:.0}, tech {:.0}; victory rank {}. Systems owned {}, colonies {}, empire size {}, pops {}, fleet size {}{naval}, upgraded starbases {}/{}\n",
             self.military_power, self.economy_power, self.tech_power, self.victory_rank,
-            self.systems, self.planets.len(), self.empire_size, self.pops, self.fleet_size, self.used_naval_capacity,
+            self.systems, self.planets.len(), self.empire_size, self.pops, self.fleet_size,
             self.starbases.0, self.starbases.1
         );
         let id = &self.identity;
@@ -2040,6 +2395,20 @@ impl Briefing {
         if !idle.is_empty() {
             s += &format!("IDLE stockpiles (unused by the AI): {}\n", idle.join(", "));
         }
+        if let Some(m) = &self.market {
+            let mut fl: Vec<(&String, &f64)> = m.fluct.iter().filter(|(_, v)| v.abs() >= 5.0).collect();
+            fl.sort_by(|a, b| b.1.abs().partial_cmp(&a.1.abs()).unwrap_or(std::cmp::Ordering::Equal));
+            let prices: Vec<String> = fl.iter().take(6).map(|(k, v)| format!("{k} {v:+.0}%")).collect();
+            let signed = |v: f64| if (v - v.round()).abs() < 0.05 { format!("{v:+.0}") } else { format!("{v:+.1}") };
+            let trades: Vec<String> = m.trades_net.iter().map(|(k, v)| format!("{k} {}", signed(*v))).collect();
+            if !prices.is_empty() || !trades.is_empty() {
+                s += &format!("Market ({}; price vs base): {}", m.kind, if prices.is_empty() { "all near base".to_string() } else { prices.join(", ") });
+                if !trades.is_empty() {
+                    s += &format!("; our monthly trades last month: {}", trades.join(", "));
+                }
+                s += "\n";
+            }
+        }
         s += &format!("Research ({} techs known):\n", self.techs_known);
         for (f, r) in &self.research {
             let cur = r.current.as_ref().map(|(t, p)| format!("{t} ({p:.0} pts)")).unwrap_or_else(|| "NONE".into());
@@ -2056,8 +2425,9 @@ impl Briefing {
         s += "\nPlanets:\n";
         for p in &self.planets {
             let opt = |v: Option<f64>| v.map(num).unwrap_or_else(|| "-".into());
+            let held = p.occupier.as_ref().map(|o| format!("OCCUPIED by {o}; ")).unwrap_or_default();
             s += &format!(
-                "- {} ({} size {}): pops {}, stability {}, free housing {}, free amenities {}, crime {}\n",
+                "- {} ({} size {}): {held}pops {}, stability {}, free housing {}, free amenities {}, crime {}\n",
                 p.name, p.class, p.size,
                 p.pops.map(|x| x.to_string()).unwrap_or_else(|| "-".into()),
                 opt(p.stability), opt(p.free_housing), opt(p.free_amenities), opt(p.crime)
@@ -2133,13 +2503,25 @@ impl Briefing {
             for w in &self.wars {
                 let enemies = w.enemies.iter().map(|(n, m)| format!("{n} (military {m:.0})")).collect::<Vec<_>>().join(", ");
                 let goal = |g: &str| if g.is_empty() { "none".to_string() } else { g.trim_start_matches("wg_").replace('_', " ") };
+                let o = &w.own_battles_12m;
+                let ground = if o.ground_at_our_colonies > 0 { format!("; ground battles at our colonies {}", o.ground_at_our_colonies) } else { String::new() };
+                let forced = match &w.force_peace {
+                    Some(f) if f.ours => format!("; a status quo can be forced on us (since {})", f.date),
+                    Some(f) if f.theirs => format!("; we can force a status quo on them (since {})", f.date),
+                    _ => String::new(),
+                };
                 s += &format!(
-                    "War since {}: {} (we are {}) against {}; war goals: theirs {}, ours {}; war exhaustion ours {:.0}%, theirs {:.0}% (100% lets the other side force peace); battles won {}, lost {}\n",
+                    "War since {}: {} (we are {}) against {}; war goals: theirs {}, ours {}; war exhaustion ours {:.0}%, theirs {:.0}% (100% lets the other side force peace); battles won {}, lost {} (our side, allies included); ours in the last 12 months: won {}, lost {}, ships lost {}{ground}{forced}\n",
                     w.start, w.name, if w.attacker { "attacker" } else { "defender" }, enemies,
                     goal(&w.their_goal), goal(&w.our_goal), w.our_exhaustion * 100.0, w.their_exhaustion * 100.0,
-                    w.battles_won, w.battles_lost
+                    w.battles_won, w.battles_lost, o.won, o.lost, o.ships_lost
                 );
             }
+        }
+        // where new ships can come from: listed at war, or when one is occupied
+        if !self.wars.is_empty() || self.shipyards.iter().any(|y| y.occupied) {
+            let list: Vec<String> = self.shipyards.iter().map(|y| format!("{}{}", y.system, if y.occupied { " (OCCUPIED)" } else { "" })).collect();
+            s += &format!("Shipyards: {}\n", if list.is_empty() { "none in our systems".to_string() } else { list.join(", ") });
         }
         let gx = &self.galaxy;
         if let Some(f) = &gx.federation {
@@ -2792,6 +3174,216 @@ country={
         assert_eq!(trade_start(&ui, "consumer_goods").unwrap(), 5);
         assert_eq!(trade_start(&ui, "food").unwrap(), 10);
         assert!(trade_start(&ui, "alloys").is_err());
+    }
+
+    // A war going badly, in the shapes of 4.5.1 saves (2272.05 and 2393.11): our capital system's
+    // starbase taken by the enemy (its station fleet now in their fleets), our second colony occupied,
+    // own and allied battles, an undated ground battle, force peace on the enemy's side, the galactic
+    // market, the monthly trades' budget line and a mod-exported variable.
+    const LEVERS_GAMESTATE: &[u8] = br#"date="2230.01.01"
+player={ { name="x" country=0 } }
+country={
+    0={ name={ key="NAME_Us" } type="default" capital=10 used_naval_capacity=120
+        owned_planets={ 10 11 } controlled_planets={ 100 101 200 }
+        fleets_manager={ owned_fleets={ { fleet=5 } } }
+        variables={ governor_naval_cap=147 governor_naval_used=131 years_passed=30 }
+        active_policies={ { policy="diplomatic_stance" selected="diplo_stance_belligerent" date="2229.03.01" }
+                          { policy="economic_policy" selected="economic_policy_balanced" date="2229.04.01" }
+                          { policy="war_philosophy" selected="unrestricted_wars" } }
+        budget={ last_month={ balance={ x={ energy=20 } } trade_balance={ monthly_trades={ energy=-11 trade=8 } } } } }
+    3={ name={ key="NAME_Them" } type="default" military_power=5000 }
+    5={ name={ key="NAME_Friend" } type="default" military_power=900 }
+}
+planets={ planet={
+    100={ name={ key="NAME_Home" } planet_class="pc_continental" planet_size=16 coordinate={ origin=50 } owner=0 controller=0 colony=10 }
+    101={ name={ key="NAME_Outpost" } planet_class="pc_arid" planet_size=10 coordinate={ origin=51 } owner=0 controller=3 colony=11 }
+    200={ name={ key="NAME_Rock" } planet_class="pc_barren" planet_size=8 coordinate={ origin=50 } controller=0 }
+} }
+colony={
+    10={ pop_groups={ 7 8 } pop_jobs={ 1 2 3 } districts={ 20 21 } stability=62.5 amenities=900 amenities_usage=1200
+         free_amenities=-300 free_housing=-40 total_housing=1500 employable_pops=1300 num_sapient_pops=1330
+         final_designation="col_capital" designation="col_capital"
+         last_month_growth_data={ growth_and_size={ month_start_size=1320 growth=6 } }
+         carrier={ type=planet reference=100 } }
+    11={ pop_groups={ 9 } pop_jobs={ } districts={ } stability=18 num_sapient_pops=400 final_designation="col_mining"
+         carrier={ type=planet reference=101 } }
+}
+pop_jobs={
+    1={ type="miner" workforce=100 max_workforce=150 }
+    2={ type="civilian" workforce=-1 max_workforce=-1 }
+    3={ type="clerk" workforce=20 max_workforce=20 }
+    4={ type="farmer" workforce=0 max_workforce=500 }
+}
+pop_groups={
+    7={ key={ species=1 category="worker" } size=1200 planet=100 }
+    8={ key={ species=1 category="civilian" } size=100.4 planet=100 }
+    9={ key={ species=1 category="worker" } size=400 planet=101 }
+}
+districts={ 20={ type="district_city" level=2 } 21={ type="district_mining" level=1 } 22={ type="district_city" level=9 } }
+construction={ item_mgr={ items={
+    1={ queue=1 paying_country=0 buildable_district={ district="district_farming" planet=10 } }
+    2=none
+    3={ queue=2 paying_country=0 buildable_army={ army_type="defense_army" planet=10 } }
+    4={ queue=1 paying_country=0 buildable_planet_building={ building="building_research_lab_1" planet=10 zone=3 } }
+    5={ queue=9 paying_country=3 buildable_district={ district="district_city" planet=99 } }
+} } }
+starbase_mgr={ starbases={
+    0={ level="starbase_level_starport" modules={ 0=shipyard 1=solar_panel_network } station=30 }
+    1={ level="starbase_level_starport" modules={ 0=shipyard } station=31 }
+    2={ level="starbase_level_outpost" station=32 }
+    3={ level="starbase_level_starport" modules={ 0=shipyard } station=33 }
+} }
+ships={ 30={ fleet=6 } 31={ fleet=5 } 32={ fleet=5 } 33={ fleet=8 } }
+galactic_object={
+    50={ name={ key="NAME_Sol" } planet=100 planet=200 starbases={ 0 } }
+    51={ name={ key="NAME_Alpha" } planet=101 starbases={ 1 } }
+    52={ name={ key="NAME_Far" } starbases={ 3 } }
+}
+war={ 0={
+    name={ key="NAME_Bad_War" }
+    start_date="2228.01.01"
+    attackers={ { call_type=primary country=3 } }
+    defenders={ { call_type=primary country=0 } { call_type=alliance country=5 } }
+    battles={
+        { defenders={ 3 } attackers={ 0 } system=51 colony=4294967295 attacker_victory=yes date="2229.06.01" attacker_losses=1 defender_losses=4 type=ships }
+        { defenders={ 3 } attackers={ 5 } system=52 colony=4294967295 attacker_victory=yes date="2229.07.01" attacker_losses=0 defender_losses=9 type=ships }
+        { defenders={ 5 } attackers={ 3 } system=52 colony=4294967295 attacker_victory=no date="2229.07.02" attacker_losses=6 defender_losses=0 type=ships }
+        { defenders={ 0 5 } attackers={ 3 } system=50 colony=4294967295 attacker_victory=yes date="2229.08.01" attacker_losses=0 defender_losses=3 type=ships }
+        { defenders={ 0 } attackers={ 3 } system=50 colony=4294967295 attacker_victory=yes date="2228.06.01" attacker_losses=0 defender_losses=5 type=ships }
+        { defenders={ 0 } attackers={ 3 } system=4294967295 colony=11 attacker_victory=yes date="0.01.01" attacker_losses=2 defender_losses=8 type=armies }
+        { defenders={ 5 } attackers={ 3 } system=4294967295 colony=77 attacker_victory=yes date="0.01.01" attacker_losses=1 defender_losses=3 type=armies }
+        { defenders={ 3 } attackers={ 0 } system=4294967295 colony=11 attacker_victory=no date="0.01.01" attacker_losses=4 defender_losses=1 type=armies }
+    }
+    attacker_war_exhaustion=0.3 defender_war_exhaustion=1.2
+    defender_force_peace=yes defender_force_peace_date="2229.12.01"
+} }
+market={
+    fluctuations={ 0 -29.61786 0 0 0 0 0 0 0 37.86576 45.65437 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 }
+    galactic_market_resources={ 1 1 1 0 0 0 0 0 0 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 }
+    galactic_market_access={ 0 1 1 }
+    id={ 3 0 5 }
+    resources_bought={ country=3 amount={ 0 9 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 }
+                       country=0 amount={ 0 1000 0 0 0 0 0 0 0 1000 5450 0 0 100 50 50 0 0 0 0 0 0 0 0 0 0 } }
+    resources_sold={ country=0 amount={ 15317 0 1000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 } }
+    internal_market_fluctuations={ country=0 resources={ food=-3 } }
+    enabled=yes
+}
+"#;
+
+    #[test]
+    fn lever_fields_read_occupation_shipyards_and_the_market() {
+        let b = brief_gamestate(LEVERS_GAMESTATE).unwrap();
+        // policies: the option's date when the save has one (set during play), none from the start
+        assert_eq!(b.policy_dates.get("economic_policy").map(String::as_str), Some("2229.04.01"));
+        assert_eq!(b.policy_dates.get("diplomatic_stance").map(String::as_str), Some("2229.03.01"));
+        assert!(!b.policy_dates.contains_key("war_philosophy"));
+        // planets: occupation is owner ≠ controller; the capital is the country's `capital` colony
+        let home = b.planets.iter().find(|p| p.name == "Home").unwrap();
+        let outpost = b.planets.iter().find(|p| p.name == "Outpost").unwrap();
+        assert!(home.capital && !home.occupied && home.occupier.is_none());
+        assert!(!outpost.capital && outpost.occupied);
+        assert_eq!(outpost.occupier.as_deref(), Some("Them"));
+        // planet development: jobs, unemployment (civilians), districts, queue, growth
+        assert_eq!((home.amenities_usage, home.total_housing, home.employable), (Some(1200.0), Some(1500.0), Some(1300)));
+        assert_eq!(home.jobs_open, Some(50), "150 - 100 miners; civilian and filled clerk slots add none");
+        assert_eq!(home.unemployed, Some(100), "the civilian pop group");
+        assert_eq!(home.designation, "capital");
+        assert_eq!(home.district_levels, BTreeMap::from([("city".to_string(), 2), ("mining".to_string(), 1)]));
+        assert_eq!(home.queued, vec!["district_farming", "building_research_lab_1"], "armies and other colonies' items are not development");
+        assert_eq!(home.growth, Some(6.0));
+        assert_eq!(outpost.designation, "mining", "final_designation when no designation is set");
+        assert_eq!((outpost.jobs_open, outpost.unemployed), (Some(0), Some(0)));
+        assert!(outpost.queued.is_empty() && outpost.growth.is_none());
+        // shipyards: ours where our fleets hold the station; occupied where the enemy holds the
+        // starbase of a system with our colony; a stranger's yard elsewhere is not listed
+        assert_eq!(b.shipyards, vec![Shipyard { system: "Sol".into(), occupied: true }, Shipyard { system: "Alpha".into(), occupied: false }]);
+        // variables the mod exports
+        assert_eq!(b.governor_vars, BTreeMap::from([("governor_naval_cap".to_string(), 147.0), ("governor_naval_used".to_string(), 131.0)]));
+        // the galactic market (enabled, and our slot has access): prices by resource index
+        let m = b.market.as_ref().expect("a market block");
+        assert_eq!(m.kind, "galactic");
+        assert_eq!(m.fluct, BTreeMap::from([("minerals".to_string(), -29.62), ("consumer_goods".to_string(), 37.87), ("alloys".to_string(), 45.65)]));
+        assert_eq!(m.bought, BTreeMap::from([("minerals".to_string(), 1000.0), ("consumer_goods".to_string(), 1000.0), ("alloys".to_string(), 5450.0),
+            ("rare_crystals".to_string(), 100.0), ("sr_living_metal".to_string(), 50.0), ("sr_zro".to_string(), 50.0)]));
+        assert_eq!(m.sold, BTreeMap::from([("energy".to_string(), 15317.0), ("food".to_string(), 1000.0)]));
+        assert_eq!(m.trades_net, BTreeMap::from([("energy".to_string(), -11.0), ("trade".to_string(), 8.0)]));
+        assert_eq!(b.net.get("energy"), Some(&20.0), "net stays the balance without market trades");
+    }
+
+    #[test]
+    fn own_battles_count_only_battles_that_list_our_country() {
+        let b = brief_gamestate(LEVERS_GAMESTATE).unwrap();
+        let w = &b.wars[0];
+        // our side (allies included), as before: we won an attack and the ally an attack and a
+        // defence; we lost two defences, a ground defence and a retake, the ally a ground battle
+        assert_eq!((w.battles_won, w.battles_lost), (3, 5));
+        // ours, dated within 12 months of 2230.01.01: won 1 (lost 1 ship), lost 1 (lost 3 ships);
+        // the 2228.06 loss is older; the ally's battles are not ours
+        let o = &w.own_battles_12m;
+        assert_eq!((o.won, o.lost, o.ships_lost), (1, 1, 4));
+        // ground battles carry no date in 4.5.1 saves: every invasion of our colonies counts, not
+        // our own attempt to retake one (nor, in the 2393 save, our conquest of a colony now ours)
+        assert_eq!(o.ground_at_our_colonies, 1);
+        // force peace: set on the side whose exhaustion passed 100% (the 2393 save's enemy)
+        let fp = w.force_peace.as_ref().expect("force peace");
+        assert_eq!((fp.ours, fp.theirs, fp.date.as_str()), (true, false, "2229.12.01"), "we defend, and the defenders are exhausted");
+    }
+
+    #[test]
+    fn lever_lines_print_only_when_flagged() {
+        let t = brief_gamestate(LEVERS_GAMESTATE).unwrap().to_text();
+        assert!(t.contains("- Outpost (arid size 10): OCCUPIED by Them;"), "{t}");
+        assert!(t.contains("battles won 3, lost 5 (our side, allies included); ours in the last 12 months: won 1, lost 1, ships lost 4; ground battles at our colonies 1; a status quo can be forced on us (since 2229.12.01)"), "{t}");
+        assert!(t.contains("Shipyards: Sol (OCCUPIED), Alpha\n"), "{t}");
+        assert!(t.contains("naval capacity 131/147 (from the mod)"), "{t}");
+        assert!(!t.contains("the maximum is not in the save"), "{t}");
+        assert!(t.contains("Market (galactic; price vs base): alloys +46%, consumer_goods +38%, minerals -30%; our monthly trades last month: energy -11, trade +8\n"), "{t}");
+        // a quiet early save: no market, shipyard or occupation lines, and the naval note stays
+        let quiet = brief_save(SAVE).unwrap().to_text();
+        for absent in ["Market (", "Shipyards:", "OCCUPIED", "from the mod"] {
+            assert!(!quiet.contains(absent), "{absent}: {quiet}");
+        }
+        assert!(quiet.contains("the maximum is not in the save"));
+    }
+
+    #[test]
+    fn internal_market_and_missing_blocks_read_as_empty() {
+        let gs = br#"date="2236.06.01"
+player={ { name="x" country=0 } }
+country={ 0={ name={ key="NAME_Us" } type="default" } }
+market={ id={ 0 1 } internal_market_fluctuations={ country=1 resources={ alloys=73.9 } country=0 resources={ food=-3.77336 } } }
+"#;
+        let b = brief_gamestate(gs).unwrap();
+        let m = b.market.as_ref().unwrap();
+        assert_eq!(m.kind, "internal", "no galactic market formed yet");
+        assert_eq!(m.fluct, BTreeMap::from([("food".to_string(), -3.77)]));
+        assert!(m.bought.is_empty() && m.sold.is_empty() && m.trades_net.is_empty());
+        assert!(b.policy_dates.is_empty() && b.shipyards.is_empty() && b.governor_vars.is_empty());
+        let none = brief_gamestate(b"date=\"2200.01.01\"\nplayer={ { country=0 } }\ncountry={ 0={ type=\"default\" } }\n").unwrap();
+        assert!(none.market.is_none());
+    }
+
+    #[test]
+    fn lever_fields_from_the_real_autosaves() {
+        let b = brief_save(SAVE).unwrap();
+        let earth = b.planets.iter().find(|p| p.name == "Earth").unwrap();
+        assert!(earth.capital && !earth.occupied);
+        assert_eq!(earth.designation, "capital");
+        assert_eq!((earth.employable, earth.jobs_open), (Some(5327), Some(0)));
+        assert_eq!(earth.unemployed, Some(2027), "civilians at the start of 4.5");
+        assert_eq!(earth.district_levels, BTreeMap::from([("city".to_string(), 3), ("farming".to_string(), 4), ("generator".to_string(), 3), ("mining".to_string(), 2)]));
+        assert_eq!(earth.queued, vec!["clear_deposit_blocker"]);
+        assert_eq!(earth.growth, Some(3.0));
+        assert!(b.policy_dates.is_empty(), "start policies carry no date");
+        assert_eq!(b.market.as_ref().map(|m| m.kind.as_str()), Some("internal"));
+        assert!(b.market.as_ref().unwrap().fluct.is_empty());
+        assert_eq!(b.shipyards, vec![Shipyard { system: "Sol".into(), occupied: false }]);
+        assert!(b.governor_vars.is_empty());
+        let later = brief_save(include_bytes!("../tests/fixtures/stellaris_2212_03_01.sav")).unwrap();
+        let earth = later.planets.iter().find(|p| p.name == "Earth").unwrap();
+        assert_eq!(earth.queued, vec!["district_city"]);
+        assert_eq!(earth.district_levels.get("city"), Some(&6));
+        assert!(later.shipyards.iter().any(|s| s.system == "Sol" && !s.occupied), "{:?}", later.shipyards);
     }
 
     #[test]

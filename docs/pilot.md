@@ -74,8 +74,11 @@ thinks, so any speed is safe. `prepare_war` needs a human "yes" on the dashboard
 
 The briefing (about 2 KB) covers the empire, resources and deficits, power, research options,
 planets and colonisable worlds, our species and its traits, identity (civics, traditions,
-personality), wars with sides and exhaustion, and the nearest empires with strength ratios and
-opinion both ways. The prompt adds a 12-month trend line and what earlier directive changes led to.
+personality), wars with sides and exhaustion (battles of our side, then our own in the last 12
+months, invasions of our colonies, a status quo that can be forced), occupied colonies, shipyards at
+war, market prices against base with last month's trades, and the nearest empires with strength
+ratios and opinion both ways. The JSON form also carries policy dates, each colony's jobs,
+unemployment, districts and queue, and the mod's `governor_*` variables, for the governor's rules. The prompt adds a 12-month trend line and what earlier directive changes led to.
 
 If the game stops answering pause and resume (for example a text box holds the keyboard), the
 governor stops acting and flags *needs attention* until you press Resume.

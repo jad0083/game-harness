@@ -169,7 +169,15 @@ Reads a `.sav` (ZIP of `meta` + `gamestate`, Clausewitz text) with the `jomini` 
 a `Briefing` of the player country: stockpile (`standard_economy_module.resources`), monthly net
 (sum of `budget.last_month.balance`), research queues and options (`tech_status`), policies,
 flags, planets (in 4.5 `owned_planets` holds colony ids; `colony.carrier` points to the planet)
-and wars. `fetch_latest_save` lists `save games/*/` through the agent's `stellaris_docs` root and
+and wars. For the governor's levers it also reads policy dates (`active_policies[].date`), occupied
+colonies (planet `controller` ≠ owner), each colony's open jobs (`pop_jobs`), unemployment (the
+civilian pop groups), district levels and development queue (`construction.item_mgr`), shipyards
+(starbases with a `shipyard` module whose station fleet is ours, or held by another country in a
+system with our colony), the market (galactic once formed and our slot has access, else internal:
+fluctuations by resource index, our cumulative bought/sold, last month's `monthly_trades` budget
+line), `force_peace` per war, our own battles (only those listing our country, 12 months; ground
+battles are undated and counted as invasions over the war) and `governor_*` country variables;
+each top-level block is walked once. `fetch_latest_save` lists `save games/*/` through the agent's `stellaris_docs` root and
 downloads the newest `.sav`. Measured on a year-2200 medium galaxy: 1.26 MB fetched in 16 ms,
 20 MB parsed in 42 ms, briefing ≈ 2 KB. Tests run against a real autosave
 (`tests/fixtures/stellaris_2200_11_01.sav`).

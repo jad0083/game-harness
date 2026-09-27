@@ -75,11 +75,18 @@ Directives never grant resources, stats or anything the empire could not do itse
   `[FALLEN EMPIRE]` entries are far stronger but passive unless provoked: never a reason for
   `prepare_war`.
 - **War line**: who attacked whom, the enemy's military, both war goals, war exhaustion on both
-  sides (at 100% the other side can force a status-quo peace) and battles won/lost. Exhaustion
-  rising faster on our side means the war is being lost even if no planet has fallen yet.
+  sides (at 100% the other side can force a status-quo peace), battles won/lost by our side (allies
+  included), then our own battles in the last 12 months with ships lost, invasions of our colonies,
+  and whether a status quo can be forced on us or on them. Exhaustion rising faster on our side
+  means the war is being lost even if no planet has fallen yet; allies' victories are not ours.
+- **OCCUPIED** on a planet line means the enemy holds it; **Shipyards** (at war) lists where new
+  ships can be built, and an OCCUPIED shipyard builds nothing: alloys bought then pile up.
+- **Market** line: prices against base (a buy above +50% is dear) and what our monthly trades
+  moved last month.
 - **Change since …** (about 12 months): systems, pops, military against the others' median,
   tech power and the alloy stock. `ALLOYS PILING UP` means the AI is not turning alloys into
-  ships; the save has no naval-capacity maximum, so never assume the cap (the Theian campaign lost
+  ships; without the Governor Bridge mod the save has no naval-capacity maximum (with it the power
+  line reads `naval capacity used/max (from the mod)`), so never assume the cap (the Theian campaign lost
   nine years chasing a cap that did not exist, 51/115 used). Look for lost or occupied shipyards
   and ship losses first. `MILITARY FELL n%` means ships were lost or cannot be rebuilt: a loss,
   not a cap.
