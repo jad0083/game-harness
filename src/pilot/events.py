@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import contextvars
 import json
 import threading
 import time
@@ -11,6 +13,19 @@ from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+# Who asked for what is running now (a device named by the viewer, or "the controller"): events
+# emitted while a dashboard control runs carry it as `by` (and `by_id`).
+ACTOR: contextvars.ContextVar[tuple[str, str | None] | None] = contextvars.ContextVar("pilot_actor", default=None)
+
+
+@contextlib.contextmanager
+def acting(by: str, by_id: str | None = None):
+    token = ACTOR.set((by, by_id))
+    try:
+        yield
+    finally:
+        ACTOR.reset(token)
 
 
 @dataclass
@@ -64,6 +79,11 @@ class EventLog:
         return rel
 
     def emit(self, kind: str, _trace: dict | None = None, **data: Any) -> dict:
+        actor = ACTOR.get()
+        if actor and "by" not in data and not (kind == "chat" and data.get("role") == "model"):
+            data["by"] = actor[0]
+            if actor[1]:
+                data["by_id"] = actor[1]
         ev = {"t": round(time.time(), 3), "kind": kind, **data}
         with self._lock:
             self._file.write(json.dumps(ev, ensure_ascii=False, default=str) + "\n")

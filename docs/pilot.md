@@ -33,7 +33,10 @@ PC in use.
 | `PILOT_THINKING`, `PILOT_GOVERNOR_THINKING` | thinking level for GC4 episodes / Stellaris decisions (default `medium`) |
 | `PILOT_RETRO_EVERY` | strategy review every N decisions (default 5) |
 | `PILOT_PORT`, `PILOT_RUNS_DIR`, `PILOT_CAMPAIGN`, `PILOT_COMMIT`, `PILOT_JOURNAL` | live dashboard port, run folder, campaign id, commit learned knowledge, journal file |
-| `PILOT_DASHBOARD_KEY` | the dashboard's access key (default: generated once into `runs/dashboard.key`) |
+| `PILOT_DASHBOARD_KEY` | the dashboard's service key (default: generated once into `runs/dashboard.key`); a header from the controller only |
+| `PILOT_LIVE_HOST`, `PILOT_VIEW_HOST` | bind addresses of the live pilot's dashboard (default `127.0.0.1`) and of the viewer (default `0.0.0.0`; `view --host`) |
+| `PILOT_PUBLIC_URL`, `PILOT_DASHBOARD_HOSTS` | the viewer's canonical address for links and QR codes (page loads on other names are redirected there), and extra host names it answers to (comma list) |
+| `PILOT_AUTH_DB`, `PILOT_ADD_DEVICE`, `PILOT_KEY_SIGNIN` | the sign-in store (default `runs/auth.sqlite`); `cli` limits adding devices to the controller; `1` turns the recovery-key form on (default off) |
 
 ## Models
 
@@ -292,7 +295,7 @@ back.
 ## Dashboard
 
 `python -m pilot view` (port 8780) shows every recorded campaign and forwards the live controls of a
-running pilot (whose own dashboard is on `PILOT_PORT`, 8790). It refreshes itself: status every
+running pilot (whose own dashboard is on `PILOT_PORT`, 8790, on 127.0.0.1). It refreshes itself: status every
 3 s, the live event stream during a run, campaign data every 10 s otherwise.
 
 - **Readout**: in-game date, directive in force, standing, what the governor is doing, and the pace
@@ -384,8 +387,18 @@ The dashboard listens on the LAN, so every request needs a principal (design:
   tried again, a device used from two addresses within 10 minutes); `/api/auth/devices`,
   `/api/auth/grants`, `/api/auth/log` serve the panels (browsers only); `POST /api/auth/unlock`
   takes the service key from loopback. Sign-ins, failures, sign-outs, refusals and control actions
-  go to an audit table, one row per event, address and minute. The live pilot (8790) still takes
-  the key as before.
+  go to an audit table, one row per event, address and minute.
+- **The live pilot's own dashboard** (8790, `PILOT_PORT`) listens on 127.0.0.1 (`PILOT_LIVE_HOST`)
+  and answers only the service key as a header from loopback: no cookies, no sign-in routes, no
+  store. Browsers reach it through the viewer, which names the device behind each forwarded request;
+  the pilot records it as `by` on control, chat and instruction events ("Paused, from Pixel phone"
+  in Activity; a script on the controller is "the controller"). Its `/status` carries
+  `info.auth_version = 1`. Its event stream closes within a keepalive once the key changes.
+- **Scripts** on the controller: `python -m pilot control pause|resume|stop|instruct|chat|… [--text T]
+  [--index N] [--port 8780]` posts JSON to the viewer over loopback with the key (read on each call),
+  prints the reply and exits non-zero with the server's error on any refusal; or send the key
+  yourself with `curl -fsS -H "X-Pilot-Key: $(cat runs/dashboard.key)" …` (read it on every call,
+  so a rotation does not break a long loop).
 - `/api/pc` reports only whether the agent is online, its version, which known games are open and
   whether one is in front, never window titles.
 

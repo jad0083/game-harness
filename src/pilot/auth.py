@@ -36,7 +36,7 @@ from dataclasses import dataclass, field
 from http.cookies import SimpleCookie
 from pathlib import Path
 from typing import ClassVar
-from urllib.parse import quote, urlsplit
+from urllib.parse import quote, unquote, urlsplit
 
 from aiohttp import web
 
@@ -836,6 +836,28 @@ class Throttle:
 
 # ---------------------------------------------------------------- the guard
 
+def security_headers(response: web.StreamResponse) -> None:
+    """On every response: never cached, never framed, no sniffing, no Referer to other sites."""
+    h = response.headers
+    h.setdefault("Cache-Control", "no-store")
+    h.setdefault("X-Frame-Options", "DENY")
+    h.setdefault("Content-Security-Policy", "frame-ancestors 'none'")
+    h.setdefault("X-Content-Type-Options", "nosniff")
+    h.setdefault("Referrer-Policy", "same-origin")
+
+
+def cross_site(request: web.Request) -> web.Response | None:
+    """A change from another site: Origin null or foreign, or Sec-Fetch-Site other than same-origin/none."""
+    if request.method in SAFE_METHODS:
+        return None
+    o = request.headers.get("Origin")
+    if o is not None and (o == "null" or urlsplit(o).netloc.lower() != (request.host or "").lower()):
+        return json_error(403, "cross_site", "This change came from another site.", "Use the dashboard itself.")
+    sfs = request.headers.get("Sec-Fetch-Site")
+    if sfs and sfs not in ("same-origin", "none"):
+        return json_error(403, "cross_site", f"This change came from another site ({sfs}).", "Use the dashboard itself.")
+    return None
+
 @dataclass
 class Principal:
     kind: str                         # service | browser | script | legacy
@@ -929,15 +951,10 @@ class Auth:
         request.setdefault(COOKIES, []).append(("del", name, ""))
 
     async def on_prepare(self, request: web.Request, response: web.StreamResponse) -> None:
-        h = response.headers
-        h.setdefault("Cache-Control", "no-store")
-        h.setdefault("X-Frame-Options", "DENY")
-        h.setdefault("Content-Security-Policy", "frame-ancestors 'none'")
-        h.setdefault("X-Content-Type-Options", "nosniff")
-        h.setdefault("Referrer-Policy", "same-origin")
+        security_headers(response)
         # the hook runs after aiohttp has turned response.cookies into headers: add them as headers
         for op, name, value in request.get(COOKIES, []):
-            h.add("Set-Cookie", cookie_header(name, value, secure=request.secure, delete=op == "del"))
+            response.headers.add("Set-Cookie", cookie_header(name, value, secure=request.secure, delete=op == "del"))
 
     # -- the principal
     def _unauthorized(self, request: web.Request, error: str, row: dict | None = None) -> web.Response:
@@ -1049,14 +1066,8 @@ class Auth:
                 and (request.host or "").lower() != urlsplit(self.public_url).netloc.lower()):
             return web.Response(status=308, headers={"Location": self.public_url + request.path_qs})
         # 2. cross-site changes
-        if request.method not in SAFE_METHODS:
-            o = request.headers.get("Origin")
-            if o is not None and (o == "null" or urlsplit(o).netloc.lower() != (request.host or "").lower()):
-                return json_error(403, "cross_site", "This change came from another site.", "Use the dashboard itself.")
-            sfs = request.headers.get("Sec-Fetch-Site")
-            if sfs and sfs not in ("same-origin", "none"):
-                return json_error(403, "cross_site", f"This change came from another site ({sfs}).",
-                                  "Use the dashboard itself.")
+        if (refusal := cross_site(request)) is not None:
+            return refusal
         # 3. public routes
         if (request.method, request.path) in PUBLIC_PATHS or (self.key_signin and (request.method, request.path) == ("POST", "/pair/key")):
             return await handler(request)
@@ -1511,3 +1522,51 @@ class Auth:
             yield
             task.cancel()
         app.cleanup_ctx.append(hourly)
+
+
+# ---------------------------------------------------------------- the live pilot's guard
+
+AUTH_VERSION = 1                          # reported in the live pilot's /status as info.auth_version
+ACTOR_KEY = web.RequestKey("pilot_actor", tuple)
+
+
+class ServiceAuth:
+    """The live pilot's dashboard (ruling 36): only the service key, only as a header, only from
+    loopback, never through a proxy header; no cookies, no sign-in routes, no store. The viewer
+    forwards with K and names the device behind a request (X-Pilot-Device, X-Pilot-Device-Name),
+    which is believed only alongside K from loopback; a script on the controller is "the controller"."""
+
+    def __init__(self, keys: KeySource, keepalive_s: float = KEEPALIVE_S):
+        self.keys, self.keepalive_s = keys, keepalive_s
+
+    @web.middleware
+    async def middleware(self, request: web.Request, handler):
+        if not allowed_host(request.host or ""):
+            return web.Response(status=421, text="Unknown host name.")
+        if (refusal := cross_site(request)) is not None:
+            return refusal
+        given = request.headers.get(KEY_HEADER) or _bearer(request)
+        if not given:
+            return json_error(401, "sign_in_required", "The live pilot answers only the dashboard viewer and "
+                              "scripts on the controller.", "Open the dashboard on port 8780.")
+        if not self.keys.matches(given):
+            return json_error(401, "bad_token", *REASONS["bad_token"])
+        forwarded = "Forwarded" in request.headers or "X-Forwarded-For" in request.headers
+        if not is_loopback(request.remote) or forwarded:
+            return json_error(401, "service_key_loopback_only", *REASONS["service_key_loopback_only"])
+        if request.method not in SAFE_METHODS and request.content_type != "application/json":
+            return json_error(403, "json_only", "Requests that change something must be application/json.",
+                              "Send JSON with Content-Type: application/json.")
+        request[PRINCIPAL] = Principal("service", "service", "the controller", "control", "service",
+                                       recheck=lambda: self.keys.matches(given))
+        name = request.headers.get(DEVICE_NAME_HEADER)
+        by = clip_name(unquote(name), "the controller") if name else "the controller"
+        request[ACTOR_KEY] = (by, request.headers.get(DEVICE_HEADER) or None)
+        return await handler(request)
+
+    async def on_prepare(self, request: web.Request, response: web.StreamResponse) -> None:
+        security_headers(response)
+
+    def still_valid(self, request: web.Request) -> bool:
+        p: Principal | None = request.get(PRINCIPAL)
+        return bool(p) and p.recheck()

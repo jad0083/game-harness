@@ -1415,7 +1415,7 @@ function addMessage(ev) {
   const key = `${ev.t}|${ev.role}|${ev.text}`;
   if (seenChat.has(key)) return;          // history load and the live stream's replay overlap
   seenChat.add(key);
-  const who = ev.role === "human" ? "You" : "Model";
+  const who = ev.role === "human" ? (ev.by && ev.by !== "the controller" ? `You (${ev.by})` : "You") : "Model";
   $("thread").insertAdjacentHTML("beforeend", `<div class="msg ${ev.role}"><span class="who">${who}, ${new Date(ev.t * 1000).toLocaleTimeString()}</span><p>${ev.role === "model" ? md(ev.text) : esc(ev.text)}</p></div>`);
   if (ev.role === "model") flag("talk");
   const panel = $("tab-talk");
@@ -1446,7 +1446,8 @@ function describe(ev) {
     case "learn_rejected": return ev.reason;
     case "question": return ev.question;
     case "answer": return ev.answer;
-    case "instruction": return ev.text;
+    case "instruction": return ev.text + (ev.by && ev.by !== "the controller" ? ` (from ${ev.by})` : "");
+    case "control": return `${CONTROL_WORDS[ev.action] || human(ev.action)}${ev.by ? `, from ${ev.by}` : ""}`;
     case "journal": return ev.text;
     case "orders": return ev.orders.length ? "standing orders: " + ev.orders.join(" | ") : "standing orders cleared";
     case "campaign": return `campaign ${ev.game}/${ev.name}`;
@@ -1462,7 +1463,10 @@ function describe(ev) {
     default: { const { t, kind, ...rest } = ev; return JSON.stringify(rest).slice(0, 200); }
   }
 }
-const KCLASS = { model_retry: "bad", episode_error: "bad", needs_attention: "bad", learn_rejected: "bad", briefing_error: "bad", last_stand_off: "bad", learned: "learn", instruction: "human", orders: "human", answer: "human" };
+const CONTROL_WORDS = { pause: "Paused", resume: "Resumed", stop: "Stop requested", set_models: "Models changed",
+                        set_roles: "Models per role changed", set_fallback: "Fallback model changed",
+                        edit_pillar: "Pillar edited", unpin_pillar: "Pillar unpinned" };
+const KCLASS = { control: "human",  model_retry: "bad", episode_error: "bad", needs_attention: "bad", learn_rejected: "bad", briefing_error: "bad", last_stand_off: "bad", learned: "learn", instruction: "human", orders: "human", answer: "human" };
 function addFeed(ev) {
   if (QUIET.has(ev.kind)) return;
   $("feed").insertAdjacentHTML("afterbegin", `<li><span class="t">${new Date(ev.t * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span><span><span class="k ${KCLASS[ev.kind] || ""}">${esc(human(ev.kind))}</span>${esc(describe(ev))}</span></li>`);

@@ -347,7 +347,7 @@ A record whose name matches the query scores 100, above any prose chunk, so `dra
 pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-controller MCP ──► agent
    │ EventLog: runs/<id>/events.jsonl + traces/NNNN.json + latest.jpg
    │     └─ write-through ─► Telemetry: runs/telemetry.sqlite (campaigns, runs, events, decisions, metrics)
-   └ dashboard :8790 (live)          pilot view :8780 (always on) ──► forwards /status /events /control
+   └ dashboard 127.0.0.1:8790 (live)  pilot view :8780 (always on) ──► forwards /status /events /control
 ```
 - `trace.py` turns a model run's messages into steps (prompt, thinking, text, tool call, tool
   result, retry, answer, usage); images become placeholders, long texts are cut at 6,000 chars.
@@ -388,8 +388,12 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   governor falls back to the role's next model.
 - `dashboard.py` API: `/api/campaigns`, `/api/decisions`, `/api/decision`, `/api/metrics`,
   `/runs/*`; the viewer's `LiveProxy` finds the live run by the dashboard port recorded in its
-  `status.json` and checks that it answers with the same run id. The live pilot's own app still
-  uses `key_guard` (the key from `dashboard_key()` as cookie or `X-Pilot-Key`). `LiveProxy` sends
+  `status.json` and checks that it answers with the same run id. The live pilot's own app binds
+  `live_host` (127.0.0.1) and uses `auth.ServiceAuth`: K as a header from loopback only, no
+  cookies or sign-in routes, `info.auth_version`; `control()` runs each action inside
+  `events.acting(by, by_id)` (a contextvar the `EventLog` adds as `by` to the events emitted then,
+  from `X-Pilot-Device-Name`/`X-Pilot-Device`, else "the controller") and emits a `control` event
+  for actions that leave none of their own. `LiveProxy` sends
   K (read through `KeySource` on every call, re-read once after a 401) with `X-Pilot-Device` /
   `X-Pilot-Device-Name` from the request's principal; a 401 from the live pilot becomes a 502, never
   a browser sign-out; the forwarded `/events` re-checks the principal every keepalive and closes.

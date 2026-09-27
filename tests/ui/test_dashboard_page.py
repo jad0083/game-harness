@@ -99,3 +99,14 @@ def test_page_shows_the_carried_over_notice_once(browser, live_servers):
     w.page.wait_for_timeout(800)
     assert w.page.is_hidden("#notices")
     w.context.close()
+
+
+def test_pause_is_attributed_to_the_browser_in_activity(browser, live_servers):
+    w = open_context(browser, "desktop-light", live_servers, device="Pixel phone")
+    load(w)
+    page = w.page
+    page.click("#b-toggle")
+    page.click('.tabs button[data-tab="activity"]')
+    page.wait_for_function("document.getElementById('feed').textContent.includes('Paused, from Pixel phone')", timeout=5000)
+    assert live_servers["pilot"].calls == ["pause"]
+    w.context.close()

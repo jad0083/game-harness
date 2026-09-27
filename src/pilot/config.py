@@ -64,8 +64,11 @@ class Settings:
     journal: Path = REPO / "games/terran-2329/journal.md"
     runs_dir: Path = REPO / "runs"
     agent_url: str = field(default_factory=lambda: os.environ.get("GAME_AGENT_URL") or "http://127.0.0.1:8765")
-    dashboard_host: str = "0.0.0.0"
-    dashboard_port: int = 8790
+    dashboard_host: str = "0.0.0.0"        # the viewer's bind address (PILOT_VIEW_HOST, `view --host`)
+    dashboard_port: int = 8790             # the live pilot's own dashboard (PILOT_PORT)
+    # The live pilot's dashboard answers only the viewer and scripts on this machine (ruling 36 of the
+    # dashboard v2 design): loopback unless PILOT_LIVE_HOST says otherwise.
+    live_host: str = "127.0.0.1"
     commit_learnings: bool = True
     ask_human_timeout_s: float = 45.0
     # Stellaris governor: game speed while the AI plays (slowest | slow | normal | fast | fastest;
@@ -84,6 +87,10 @@ class Settings:
     # rulings 22-27): off until the live checklist passes; at most this many stands in a row per city
     last_stand: bool = False
     last_stand_max: int = 3
+
+    @property
+    def view_host(self) -> str:
+        return self.dashboard_host
 
     @property
     def corpus_dir(self) -> Path:
@@ -139,6 +146,8 @@ class Settings:
             s.fallback_model = None if fb.strip().lower() in ("", "none", "off") else fb.strip()
         s.image_detail = env.get("PILOT_IMAGE_DETAIL", s.image_detail)
         s.dashboard_port = int(env.get("PILOT_PORT", s.dashboard_port))
+        s.live_host = env.get("PILOT_LIVE_HOST", s.live_host).strip() or s.live_host
+        s.dashboard_host = env.get("PILOT_VIEW_HOST", s.dashboard_host).strip() or s.dashboard_host
         s.turns_per_autopilot = int(env.get("PILOT_TURNS", s.turns_per_autopilot))
         s.commit_learnings = env.get("PILOT_COMMIT", "1") not in ("0", "false", "no")
         s.game = env.get("PILOT_GAME", s.game)

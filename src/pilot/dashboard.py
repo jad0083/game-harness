@@ -37,20 +37,30 @@ dashboard still takes the key (`key_guard`) and is reached through the viewer.
 from __future__ import annotations
 
 import asyncio
-import hmac
 import json
 import logging
 import os
 import re
-import socket
 import threading
 from pathlib import Path
 from typing import TYPE_CHECKING
-from urllib.parse import urlsplit
 
 from aiohttp import ClientError, ClientSession, ClientTimeout, web
 
-from .auth import KEY_HEADER, RUNNER_KWARGS, Auth, KeySource, dashboard_key
+from .auth import (
+    ACTOR_KEY,
+    AUTH_KEY,
+    AUTH_VERSION,
+    KEEPALIVE_S,
+    KEY_HEADER,
+    RUNNER_KWARGS,
+    Auth,
+    KeySource,
+    ServiceAuth,
+    dashboard_key,  # noqa: F401 - re-exported: the key's home before auth.py
+    lan_address,
+)
+from .events import acting
 
 if TYPE_CHECKING:
     from .pillars import PillarSpec
@@ -61,85 +71,17 @@ log_ = logging.getLogger(__name__)
 
 RUN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")    # e.g. 20260926-185855; no dots or separators
 
-KEY_COOKIE = "pilot_key"
-KEY_COOKIE_MAX_AGE = 400 * 24 * 3600     # the longest cookie lifetime browsers accept
-SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
-LOCKED_PAGE = """<!doctype html><meta charset="utf-8"><title>Game Pilot</title>
-<body style="font:16px system-ui,sans-serif;max-width:40em;margin:3em auto;padding:0 16px">
-<h1 style="font-size:1.3em">This dashboard needs its access link</h1>
-<p>Open the link with the key once in this browser; it is remembered after that.
-The link is printed in the dashboard's service log when it starts, and on the controller by:</p>
-<pre>python -m pilot dashboard-link</pre>
-<form method="get" action="/" style="margin:1.5em 0">
-<label>Or paste the access key (the text after <code>?key=</code>):<br>
-<input name="key" type="password" autocomplete="current-password" required
- style="font:inherit;width:100%;max-width:28em;padding:6px 8px;margin:6px 0"></label><br>
-<button type="submit" style="font:inherit;padding:6px 14px">Open the dashboard</button>
-</form>
-<p>Opened the link from another app and still see this? <a href="/">Reload the dashboard</a>.</p>
-"""
-
-
 def link_host(host: str) -> str:
     """A host for links: this machine's LAN address when the dashboard listens on all interfaces."""
     if host not in ("", "0.0.0.0", "::"):
         return f"[{host}]" if ":" in host else host
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sk:
-            sk.connect(("192.0.2.1", 9))       # sends nothing; picks the outgoing interface
-            return sk.getsockname()[0]
-    except OSError:
-        return socket.gethostname()
+    return lan_address()
 
 
-def dashboard_link(host: str, port: int, key: str) -> str:
-    return f"http://{link_host(host)}:{port}/?key={key}"
-
-
-def key_guard(key: str):
-    """Middleware: the key on every request (GET / without it gets the locked page), JSON-only
-    mutations, and a browser's Origin must be this host (no cross-site or DNS-rebinding requests)."""
-    want = key.encode()
-
-    def valid(given: str | None) -> bool:
-        return bool(given) and hmac.compare_digest(given.encode(), want)
-
-    def locked() -> web.Response:
-        return web.Response(status=401, text=LOCKED_PAGE, content_type="text/html")
-
-    @web.middleware
-    async def guard(request, handler):
-        if request.method == "GET" and request.path == "/" and "key" in request.query:
-            if not valid(request.query["key"]):
-                return locked()
-            resp = web.Response(status=303, headers={"Location": "/"})
-            resp.set_cookie(KEY_COOKIE, key, max_age=KEY_COOKIE_MAX_AGE, path="/", httponly=True, samesite="Lax")  # Lax: a link opened from another app still carries it on GET; changes are JSON-only and same-origin
-            return resp
-        if not (valid(request.headers.get(KEY_HEADER)) or valid(request.cookies.get(KEY_COOKIE))):
-            if request.path == "/":
-                return locked()
-            return web.Response(status=401, text="dashboard key required: open the link from `python -m pilot dashboard-link`")
-        if request.method not in SAFE_METHODS:
-            if request.content_type != "application/json":
-                return web.Response(status=403, text="requests that change something must be application/json")
-            origin = request.headers.get("Origin")
-            if origin is not None and urlsplit(origin).netloc.lower() != (request.host or "").lower():
-                return web.Response(status=403, text="cross-origin request refused")
-        return await handler(request)
-
-    return guard
-
-
-@web.middleware
-async def no_store(request, handler):
-    """Live data and the page itself must never come from the browser cache."""
-    try:
-        resp = await handler(request)
-    except web.HTTPException as e:          # error responses are raised, not returned
-        e.headers.setdefault("Cache-Control", "no-store")
-        raise
-    resp.headers.setdefault("Cache-Control", "no-store")
-    return resp
+# control actions that already leave their own event (instruction, chat, orders): no extra `control` event
+OWN_EVENT = {"instruct", "chat", "answer", "order_add", "order_remove", "decide_now", "override", "review_strategy",
+             "set_speed", "set_months", "set_model"}
+ACTION_KEY = web.RequestKey("pilot_action", str)
 SERVICE = "game-pilot.service"      # deploy/game-pilot.service, started by the dashboard's Start run
 LIVE_STATES = {"starting", "playing", "deciding", "paused", "needs_attention"}
 
@@ -255,7 +197,7 @@ def list_runs(runs_dir: Path, live_id: str | None = None) -> list[dict]:
 
 
 def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path | None = None,
-             key: str | None = None, auth: Auth | None = None) -> web.Application:
+             key: str | None = None, auth: Auth | None = None, keepalive_s: float = KEEPALIVE_S) -> web.Application:
     """Dashboard for a live `pilot` (Pilot or Governor), or read-only over `runs_dir` when pilot is None.
     `corpora` is where each game's pillars file is read (default: the repo's corpora/). `key` fixes
     the service key (default: `PILOT_DASHBOARD_KEY` or runs/dashboard.key, re-read when it changes);
@@ -614,6 +556,10 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
                         web.post("/control", v_forward), *history, *api])
         return app
 
+    # the live pilot: the service key as a header from loopback only (the viewer, scripts on this machine)
+    service = ServiceAuth(KeySource(runs_dir, fixed=key), keepalive_s)
+    log.state.info["auth_version"] = AUTH_VERSION
+
     async def frame(_):
         p = log.dir / "latest.jpg"
         if not p.exists():
@@ -633,9 +579,11 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
                 await resp.write(f"data: {json.dumps(ev, default=str)}\n\n".encode())
             while True:
                 try:
-                    ev = await asyncio.wait_for(q.get(), timeout=15)
+                    ev = await asyncio.wait_for(q.get(), timeout=service.keepalive_s)
                     await resp.write(f"data: {json.dumps(ev, default=str)}\n\n".encode())
                 except TimeoutError:
+                    if not service.still_valid(request):
+                        break                          # the key changed: the stream ends
                     await resp.write(b": keepalive\n\n")
         except (ConnectionResetError, asyncio.CancelledError):
             pass
@@ -644,9 +592,19 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
         return resp
 
     async def control(request):
+        by, by_id = request.get(ACTOR_KEY) or ("the controller", None)
+        with acting(by, by_id):
+            reply = await control_as(request)
+            action = request.get(ACTION_KEY)
+            if action and action not in OWN_EVENT:
+                log.emit("control", action=action)     # pause, resume, stop, settings: "Paused, from Pixel phone"
+        return reply
+
+    async def control_as(request):
         from .models import save_prefs
         body = await request.json()
         action = body.get("action")
+        request[ACTION_KEY] = action
         if action == "pause":
             pilot.pause()
         elif action == "resume":
@@ -722,7 +680,9 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
                                           "decide_now|override|edit_pillar|unpin_pillar|review_strategy, with its text/index/directive/pillar/fields")
         return web.json_response({"ok": True, "status": log.state.status})
 
-    app = web.Application(middlewares=[no_store, key_guard(key or dashboard_key(runs_dir))])
+    app = web.Application(middlewares=[service.middleware])
+    app[AUTH_KEY] = service
+    app.on_response_prepare.append(service.on_prepare)
     app.add_routes([web.get("/", index), web.get("/status", status), web.get("/frame.jpg", frame),
                     web.get("/events", events), web.get("/events.json", events_json), web.post("/control", control),
                     *history, *api])

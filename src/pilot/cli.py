@@ -4,7 +4,8 @@
     python -m pilot run [--model M] [--port P] [--turns N] [--no-commit] [--episodes K]
     python -m pilot run --game stellaris [--speed fast|fastest|...] [--months N]
     python -m pilot run --game civ6 [--decide-turns N]  # the game's AI plays N turns between decisions
-    python -m pilot view [--port P]           # read-only dashboard over recorded runs
+    python -m pilot view [--port P] [--host H]   # the dashboard over recorded runs (and the live one)
+    python -m pilot control ACTION [--text T] [--index N] [--port P]   # pause|resume|stop|instruct|… as a script
     python -m pilot dashboard-link [--port P] [--no-qr] [--wait]   # sign a browser in: a one-time link,
                                               # three words and a QR code (never the key)
     python -m pilot dashboard-devices [list | rename ID NAME | revoke ID | revoke-all [--except ID] |
@@ -109,9 +110,9 @@ def run(s: Settings, episodes: int | None) -> int:
         log.state.info["models"] = available_models(s)
 
     threading.Thread(target=list_models, daemon=True, name="models").start()
-    serve_in_background(pilot, s.dashboard_host, s.dashboard_port)
-    print(f"pilot {run_id}: model {s.model}; dashboard http://{s.dashboard_host}:{s.dashboard_port}/ ; "
-          f"log {log.dir / 'events.jsonl'}", flush=True)
+    serve_in_background(pilot, s.live_host, s.dashboard_port)
+    print(f"pilot {run_id}: model {s.model}; live dashboard on {s.live_host}:{s.dashboard_port} (reached through "
+          f"the viewer); log {log.dir / 'events.jsonl'}", flush=True)
 
     done = threading.Event()
 
@@ -173,16 +174,17 @@ def rebuild(s: Settings) -> int:
     return 0
 
 
-def view(s: Settings, port: int) -> int:
+def view(s: Settings, port: int, host: str | None = None) -> int:
     from aiohttp import web
 
     from .auth import RUNNER_KWARGS
     from .dashboard import link_host, make_app
     from .telemetry import Telemetry
     app = make_app(None, s.runs_dir, Telemetry(s.telemetry_db))       # the key never reaches this line or the log
-    print(f"dashboard on http://{link_host(s.dashboard_host)}:{port}/ (to sign in a browser: "
+    host = host or s.view_host
+    print(f"dashboard on http://{link_host(host)}:{port}/ (to sign in a browser: "
           "python -m pilot dashboard-link)", flush=True)
-    web.run_app(app, host=s.dashboard_host, port=port, print=None, **RUNNER_KWARGS)
+    web.run_app(app, host=host, port=port, print=None, **RUNNER_KWARGS)
     return 0
 
 
@@ -223,6 +225,35 @@ def dashboard_link(s: Settings, port: int, qr: bool = True, wait: bool = False) 
                   else "The code was used twice; that sign-in was signed out.", flush=True)
             return 1
         time.sleep(WAIT_POLL_S)
+
+
+def control(s: Settings, a) -> int:
+    """One dashboard control from a script on the controller: JSON over loopback to the viewer with
+    the service key (read on each call, so a rotation never breaks a loop); the reply is printed, and
+    any refusal exits non-zero with the server's error (the old `curl -s` pattern hid a 401)."""
+    import urllib.error
+    import urllib.parse
+    import urllib.request
+
+    from .auth import DEVICE_NAME_HEADER, dashboard_key
+    body: dict = {"action": a.action}
+    if a.text is not None:
+        body["text"] = a.text
+    if a.index is not None:
+        body["index"] = a.index
+    req = urllib.request.Request(f"http://127.0.0.1:{a.port}/control", data=json.dumps(body).encode(), method="POST",
+                                 headers={"X-Pilot-Key": dashboard_key(s.runs_dir), "Content-Type": "application/json",
+                                          DEVICE_NAME_HEADER: urllib.parse.quote("the controller")})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            print(r.read().decode(errors="replace"))
+            return 0
+    except urllib.error.HTTPError as e:
+        print(f"refused: {e.code} {e.read().decode(errors='replace')[:500]}")
+        return 1
+    except (urllib.error.URLError, OSError) as e:
+        print(f"no dashboard viewer answers on 127.0.0.1:{a.port}: {e}")
+        return 1
 
 
 def dashboard_devices(s: Settings, a) -> int:
@@ -293,6 +324,12 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("rebuild-telemetry", help="recreate runs/telemetry.sqlite from the run logs")
     view_p = sub.add_parser("view", help="read-only dashboard over recorded runs")
     view_p.add_argument("--port", type=int, default=8780)
+    view_p.add_argument("--host", help="bind address (default PILOT_VIEW_HOST or 0.0.0.0)")
+    ctl_p = sub.add_parser("control", help="send one dashboard control (pause, resume, stop, instruct, ...)")
+    ctl_p.add_argument("action")
+    ctl_p.add_argument("--text")
+    ctl_p.add_argument("--index", type=int)
+    ctl_p.add_argument("--port", type=int, default=8780, help="the viewer's port")
     link_p = sub.add_parser("dashboard-link", help="sign a browser in: a one-time link, three words and a QR code")
     link_p.add_argument("--port", type=int, default=8780, help="the viewer's port")
     link_p.add_argument("--no-qr", action="store_true", help="no terminal QR code")
@@ -323,7 +360,9 @@ def main(argv: list[str] | None = None) -> int:
     a = ap.parse_args(argv)
     s = Settings.from_env()
     if a.cmd == "view":
-        return view(s, a.port)
+        return view(s, a.port, a.host)
+    if a.cmd == "control":
+        return control(s, a)
     if a.cmd == "dashboard-link":
         return dashboard_link(s, a.port, qr=not a.no_qr, wait=a.wait)
     if a.cmd == "dashboard-devices":
