@@ -371,9 +371,10 @@ impl Library {
         Ok(Self { path, source, version: format!("{h:016x}"), popups })
     }
 
-    /// The chunk that installs the library (a no-op when this version is already there).
-    pub fn install_code(&self) -> String {
-        format!("local HARNESS_VERSION = {}\n{}", lua_str(&self.version), self.source)
+    /// The chunk that installs the library into `state` (a no-op when this version is already
+    /// there). The library learns its state from it: the diplomacy handler is registered in InGame only.
+    pub fn install_code(&self, state: &str) -> String {
+        format!("local HARNESS_VERSION = {}\nlocal HARNESS_STATE = {}\n{}", lua_str(&self.version), lua_str(state), self.source)
     }
 
     /// `call` run only when this version is installed; otherwise it prints the missing marker.
@@ -429,7 +430,7 @@ pub async fn call_with(client: &AgentClient, lib: &Library, state: &str, call: &
         return parse_output(&lines);
     }
     if missing {
-        let installed = printed(&client.tuner_lua(state, &lib.install_code(), Some(15_000)).await?);
+        let installed = printed(&client.tuner_lua(state, &lib.install_code(state), Some(15_000)).await?);
         if installed.iter().any(|l| l.contains("ERR") || l.contains("rror")) {
             bail!("installing {} in {state} failed: {}", lib.path.display(), installed.join(" ").chars().take(600).collect::<String>());
         }
@@ -692,13 +693,16 @@ mod tests {
     fn library_install_is_versioned_and_guarded() {
         let lib = Library::load(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpora/civ6")).unwrap();
         assert_eq!(lib.version.len(), 16);
-        assert!(lib.install_code().starts_with(&format!("local HARNESS_VERSION = \"{}\"\n", lib.version)));
+        // the chunk names its Lua state: the diplomacy handler is registered in InGame only
+        assert!(lib.install_code(STATE_UI).starts_with(&format!("local HARNESS_VERSION = \"{}\"\nlocal HARNESS_STATE = \"InGame\"\n", lib.version)));
+        assert!(lib.install_code(STATE_CORE).contains("\nlocal HARNESS_STATE = \"GameCore\"\n"));
+        assert!(lib.source.contains("if HARNESS_STATE == 'InGame' then"), "the handler is installed in InGame only");
         assert!(lib.source.contains("if Harness and Harness.version == HARNESS_VERSION then"), "idempotent install guard");
         let g = lib.guarded("Harness.run(Harness.snapshot)");
         assert!(g.starts_with(&format!("if Harness and Harness.version == \"{}\" then Harness.run(Harness.snapshot) else print(\"HARNESS_MISSING\") end", lib.version)));
         assert!(lib.source.contains("MIT License"), "civ6-mcp attribution");
         // the agent refuses tuner code over 64 KiB (crates/game-agent/src/tuner.rs MAX_CODE)
-        assert!(lib.install_code().len() < 64 * 1024, "the install chunk is {} bytes", lib.install_code().len());
+        assert!(lib.install_code(STATE_UI).len() < 64 * 1024, "the install chunk is {} bytes", lib.install_code(STATE_UI).len());
     }
 
     #[test]
@@ -734,7 +738,9 @@ mod tests {
         let names: Vec<String> = lib.popups.iter().map(|p| format!("{}.{}.{}", p.state, p.event, p.handler)).collect();
         for want in ["WonderBuiltPopup.WonderCompleted.OnWonderCompleted", "NaturalWonderPopup.NaturalWonderRevealed.OnNaturalWonderRevealed",
                      "ProjectBuiltPopup.CityProjectCompletedNarrative.OnProjectComplete", "NaturalDisasterPopup.RandomEventStarted.OnRandomEventStarted",
-                     "NaturalDisasterPopup.RandomEventOccurred.OnRandomEventOccurred", "RockBandMoviePopup.PostTourismBomb.OnRockBandConcert"] {
+                     "NaturalDisasterPopup.RandomEventOccurred.OnRandomEventOccurred", "RockBandMoviePopup.PostTourismBomb.OnRockBandConcert",
+                     // an AI leader's statement: the view locks the engine until a human answers (T240, T342)
+                     "DiplomacyActionView.DiplomacyStatement.OnDiplomacyStatement"] {
             assert!(names.iter().any(|n| n == want), "{want} missing from popups.toml");
         }
     }
