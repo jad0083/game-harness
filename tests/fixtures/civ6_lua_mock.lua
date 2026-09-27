@@ -54,7 +54,13 @@ GameInfo = {
     { BuildingType = 'BUILDING_WALLS', IsWonder = false },
     { BuildingType = 'BUILDING_PYRAMIDS', IsWonder = true },
   }, 'BuildingType'),
-  Districts = tbl({ { DistrictType = 'DISTRICT_CITY_CENTER' }, { DistrictType = 'DISTRICT_HOLY_SITE' } }, 'DistrictType'),
+  Districts = tbl({ { DistrictType = 'DISTRICT_CITY_CENTER' }, { DistrictType = 'DISTRICT_HOLY_SITE' },
+                    { DistrictType = 'DISTRICT_CAMPUS' } }, 'DistrictType'),
+  Terrains = tbl({ { TerrainType = 'TERRAIN_GRASS' }, { TerrainType = 'TERRAIN_GRASS_HILLS' },
+                   { TerrainType = 'TERRAIN_GRASS_MOUNTAIN' }, { TerrainType = 'TERRAIN_COAST' } }, 'TerrainType'),
+  Features = tbl({ { FeatureType = 'FEATURE_JUNGLE' }, { FeatureType = 'FEATURE_FOREST' } }, 'FeatureType'),
+  Resources = tbl({ { ResourceType = 'RESOURCE_IRON' }, { ResourceType = 'RESOURCE_WHEAT' } }, 'ResourceType'),
+  Improvements = tbl({ { ImprovementType = 'IMPROVEMENT_MINE' } }, 'ImprovementType'),
   Projects = tbl({ { ProjectType = 'PROJECT_ENHANCE_DISTRICT_HOLY_SITE' } }, 'ProjectType'),
   Technologies = tbl({ { TechnologyType = 'TECH_POTTERY' }, { TechnologyType = 'TECH_WRITING' } }, 'TechnologyType'),
   Civics = tbl({ { CivicType = 'CIVIC_CODE_OF_LAWS' }, { CivicType = 'CIVIC_STATE_WORKFORCE' } }, 'CivicType'),
@@ -77,6 +83,8 @@ CityCommandTypes = { PURCHASE = 21, RANGE_ATTACK = 22, PARAM_UNIT_TYPE = 23, PAR
 UnitOperationTypes = { RANGE_ATTACK = 71, MOVE_TO = 72, PARAM_X = 27, PARAM_Y = 28, PARAM_MODIFIERS = 73 }
 UnitOperationResults = { PLOTS = 81, MODIFIERS = 82, MODIFIER_IS_TARGET = 83 }
 UnitOperationMoveModifiers = { NONE = 0, ATTACK = 16 }
+CityOperationTypes = { BUILD = 91, PARAM_DISTRICT_TYPE = 92 }
+CityOperationResults = { PLOTS = 93 }
 CityCommandResults = { PLOTS = 31, MODIFIERS = 32, MODIFIER_IS_TARGET = 33 }
 MilitaryFormationTypes = { STANDARD_MILITARY_FORMATION = 0 }
 CombatTypes = { MELEE = 41, RANGED = 42, BOMBARD = 43 }
@@ -129,12 +137,28 @@ function Map.GetUnitsAt(x, y)
 end
 function Map.GetMapSize() return 0 end
 local W = 40
-function Map.GetPlotByIndex(i)
-  local x, y = i % W, math.floor(i / W)
-  return { GetX = function() return x end, GetY = function() return y end, GetOwner = function() return 0 end,
-           IsHills = function() return MOCK.hills[x .. ',' .. y] or false end }
-end
+function Map.GetPlotByIndex(i) return Map.GetPlot(i % W, math.floor(i / W)) end
 function plot_index(x, y) return y * W + x end
+-- MOCK.map["x,y"] = { t = terrain key, f = feature key, r = resource key, i = improvement key, river = true }
+local function plot_at(x, y)
+  local m = (MOCK.map or {})[x .. ',' .. y] or {}
+  local function idx(tbl, key) return key and GameInfo[tbl][key].Index or -1 end
+  local city_here = (x == 22 and y == 21) or (x == 26 and y == 13)
+  return {
+    GetX = function() return x end, GetY = function() return y end, GetIndex = function() return plot_index(x, y) end,
+    GetOwner = function() return 0 end,
+    GetTerrainType = function() return idx('Terrains', m.t or 'TERRAIN_GRASS') end,
+    GetFeatureType = function() return idx('Features', m.f) end,
+    GetResourceType = function() return idx('Resources', m.r) end,
+    GetImprovementType = function() return idx('Improvements', m.i) end,
+    GetDistrictType = function() return city_here and GameInfo.Districts.DISTRICT_CITY_CENTER.Index or -1 end,
+    GetWonderType = function() return -1 end,
+    IsRiver = function() return m.river or false end, IsHills = function() return MOCK.hills[x .. ',' .. y] or false end,
+    IsMountain = function() return (m.t or ''):find('MOUNTAIN') ~= nil end, IsWater = function() return m.t == 'TERRAIN_COAST' end,
+    IsCoastalLand = function() return false end, IsNaturalWonder = function() return false end,
+  }
+end
+function Map.GetPlot(x, y) if x < 0 or y < 0 or x >= W then return nil end return plot_at(x, y) end
 PlayersVisibility = { [0] = { IsVisible = function(_, x, y) return not (MOCK.hidden and MOCK.hidden[x .. ',' .. y]) end } }
 
 -- ---- cities --------------------------------------------------------------------------------------
@@ -191,10 +215,13 @@ local function city(t)
         GetSize = function() return producing and 1 or 0 end,
         GetCurrentProductionTypeHash = function() return producing.Hash end,
         GetTurnsLeft = function() return 3 end,
-        HasBeenPlaced = function() return false end,
+        HasBeenPlaced = function(_, h) return h == GameInfo.Districts.DISTRICT_CITY_CENTER.Hash end,
         CanProduce = function(_, h)
-          for _, k in ipairs(t.can_build) do
-            local row = GameInfo.Units[k] or GameInfo.Buildings[k]
+          local all = {}
+          for _, k in ipairs(t.can_build) do all[#all + 1] = k end
+          for _, k in ipairs(t.can_place or {}) do all[#all + 1] = k end
+          for _, k in ipairs(all) do
+            local row = GameInfo.Units[k] or GameInfo.Buildings[k] or GameInfo.Districts[k]
             if row.Hash == h then return true end
           end
           return false
@@ -208,6 +235,8 @@ CITIES = {
   city { id = 65536, name = 'LOC_CITY_BEIJING', x = 22, y = 21, capital = true, producing = 'UNIT_WARRIOR',
          can_build = { 'UNIT_WARRIOR', 'UNIT_ARCHER', 'UNIT_SPEARMAN', 'UNIT_SETTLER', 'BUILDING_GRANARY' },
          recommend = { { 'UNIT_SETTLER', 100 }, { 'UNIT_ARCHER', 632.4 }, { 'DISTRICT_HOLY_SITE', 729 }, { 'BUILDING_GRANARY', 669 } },
+         -- a Campus can be placed (not in can_build: a district counts there only once placed)
+         can_place = { 'DISTRICT_CAMPUS' },
          buildings = { [GameInfo.Buildings.BUILDING_MONUMENT.Index] = true, [GameInfo.Buildings.BUILDING_PYRAMIDS.Index] = true } },
   city { id = 262147, name = 'LOC_CITY_XIAN', x = 26, y = 13, producing = 'BUILDING_GRANARY', garrison_damage = 40,
          can_build = { 'UNIT_WARRIOR', 'UNIT_ARCHER', 'BUILDING_GRANARY' }, buildings = {} },
@@ -342,6 +371,16 @@ CityManager = {
       mods[#mods + 1] = CityCommandResults.MODIFIER_IS_TARGET
     end
     return { [CityCommandResults.PLOTS] = plots, [CityCommandResults.MODIFIERS] = mods }
+  end,
+  -- where a district may go: MOCK.district_plots[district type] = { {x, y}, ... }
+  GetOperationTargets = function(c, op, params)
+    local out = {}
+    for row in GameInfo.Districts() do
+      if row.Hash == params[CityOperationTypes.PARAM_DISTRICT_TYPE] then
+        for _, p in ipairs((MOCK.district_plots or {})[row.DistrictType] or {}) do out[#out + 1] = plot_index(p[1], p[2]) end
+      end
+    end
+    return { [CityOperationResults.PLOTS] = out }
   end,
   RequestCommand = function(c, cmd, params)
     REQUESTS[#REQUESTS + 1] = 'city ' .. params[CityCommandTypes.PARAM_X] .. ',' .. params[CityCommandTypes.PARAM_Y]

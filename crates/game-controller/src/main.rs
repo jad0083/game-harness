@@ -219,6 +219,13 @@ enum Civ6Action {
     FinishMoves { unit: String },
     /// Read-only (InGame): our turn, the engine idle and nothing modal on screen
     TurnReady,
+    /// Read-only (InGame): per city the districts placed, the plots each district it could place may
+    /// use (the game's own check) and the facts of the plots around it, for a placement scorer
+    DistrictPlots {
+        /// One city (numeric ID); all cities when left out
+        #[arg(long)]
+        city: Option<String>,
+    },
     /// Read-only: one player's rows of the game's AI strategy log (Logs/AI_Victories.csv), one agent
     /// read from --offset (the previous reply's `next`)
     AiStrategies {
@@ -438,6 +445,15 @@ async fn main() -> Result<()> {
                 Civ6Action::FinishMoves { unit } => civ6::finish_moves_call(unit)?,
                 _ => (civ6::TURN_READY_CALL.0, civ6::TURN_READY_CALL.1.to_string()),
             };
+            let v = civ6::call(&client, &civ6::Library::load(&dir)?, state, &call).await?;
+            println!("{}", serde_json::to_string(&v)?);
+            if !civ6::reply_ok(&v) {
+                std::process::exit(2);
+            }
+        }
+        Commands::Civ6 { action: Civ6Action::DistrictPlots { city } } => {
+            let dir = cli.corpus.clone().unwrap_or_else(|| PathBuf::from("corpora/civ6"));
+            let (state, call) = civ6::district_plots_call(city.as_deref())?;
             let v = civ6::call(&client, &civ6::Library::load(&dir)?, state, &call).await?;
             println!("{}", serde_json::to_string(&v)?);
             if !civ6::reply_ok(&v) {
@@ -711,6 +727,9 @@ mod tests {
         assert!(matches!(civ6(&["ai-strategies", "--offset", "9723", "--player", "0"]).unwrap(),
                          Civ6Action::AiStrategies { offset: 9723, player: 0 }));
         assert!(matches!(civ6(&["ai-strategies"]).unwrap(), Civ6Action::AiStrategies { offset: 0, player: 0 }));
+        assert!(matches!(civ6(&["district-plots"]).unwrap(), Civ6Action::DistrictPlots { city: None }));
+        assert!(matches!(civ6(&["district-plots", "--city", "65536"]).unwrap(),
+                         Civ6Action::DistrictPlots { city: Some(c) } if c == "65536"));
         assert!(civ6(&["ls-state"]).is_err(), "a city ID is required");
         assert!(civ6(&["turn-ready", "extra"]).is_err());
     }

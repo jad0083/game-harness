@@ -158,6 +158,16 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   override records `top3_hit`: whether the AI's replacement was in it; the record shows how often
   it was. The scores are on their own scale; if `top3_hit` stays near chance after 10 overrides the
   line leaves the briefing (the design's test).
+- **District placement, stage A** (ruling 30; read-only, not part of the loop):
+  `scripts/civ6-placement.py` reads `game-controller civ6 district-plots` once (where each district a
+  city could place may go, by the game's own check, and the plot facts around it) and rates each plot:
+  adjacency from the game's rules (`corpora/civ6/data/_adjacency.json`) x the share of effort of the
+  district's pillar (relative to an even split; the campaign's latest strategy weights, or
+  `--shares`), minus the tile given up (resource 3, improvement 2, feature 1) and, where the plot is
+  the best plot of a district of a heavier pillar, what that district would lose. It rates the
+  districts the AI placed the same way against the plots they could have had, and prints stage B's
+  verdict: go when our best plot beats the AI's by at least +1 adjacency on average over at least 4
+  districts. No placement order exists yet.
 - **Last stand** (rulings 22-27, off unless `PILOT_LAST_STAND=1`): a city is *about to fall* when a
   unit that can capture it (melee or cavalry) stands next to it, no walls stand, and its garrison is
   at half its hit points or less, or one attack from each enemy in range would take the rest

@@ -1153,6 +1153,98 @@ function H.last_stand_step(city_id, damage, skip)
   return { done = true, reason = 'nothing left to do' }
 end
 
+-- ---- district placement, read-only (levers design, ruling 30, stage A) ---------------------------
+-- Per city: the districts placed, and for each district it could place the plots the game allows
+-- (GetOperationTargets with BUILD, as civ6-mcp map.py; unverified here); the plots within 3 tiles
+-- (`near`) and the facts of those and their neighbours. A scorer outside the game (src/pilot/
+-- civ6_placement.py) rates them; nothing is placed.
+-- Keys drop their prefix (TERRAIN_, FEATURE_, RESOURCE_, IMPROVEMENT_, DISTRICT_, BUILDING_).
+
+local function short(tbl, idx, col, prefix)
+  if idx == nil or idx < 0 then return nil end
+  local row = GameInfo[tbl][idx]
+  return row and (row[col]:gsub('^' .. prefix, '')) or nil
+end
+
+local function plot_facts(p)
+  local f = { x = p:GetX(), y = p:GetY() }
+  pcall(function() f.t = short('Terrains', p:GetTerrainType(), 'TerrainType', 'TERRAIN_') end)
+  pcall(function() f.f = short('Features', p:GetFeatureType(), 'FeatureType', 'FEATURE_') end)
+  pcall(function() f.r = short('Resources', p:GetResourceType(), 'ResourceType', 'RESOURCE_') end)
+  pcall(function() f.i = short('Improvements', p:GetImprovementType(), 'ImprovementType', 'IMPROVEMENT_') end)
+  pcall(function() f.d = short('Districts', p:GetDistrictType(), 'DistrictType', 'DISTRICT_') end)
+  pcall(function() f.w = short('Buildings', p:GetWonderType(), 'BuildingType', 'BUILDING_') end)
+  pcall(function() f.o = p:GetOwner() end)
+  for k, m in pairs({ river = 'IsRiver', hills = 'IsHills', mountain = 'IsMountain', water = 'IsWater',
+                      coast = 'IsCoastalLand', nw = 'IsNaturalWonder' }) do
+    pcall(function() if p[m](p) then f[k] = true end end)
+  end
+  return f
+end
+
+function H.district_plots(city_id)
+  local me = H.me()
+  local cities, plots = H.array(), {}
+  local function add(p, with_adj)
+    local key = tostring(p:GetIndex())
+    plots[key] = plots[key] or plot_facts(p)
+    if with_adj and plots[key].adj == nil then
+      local adj = H.array()
+      for dy = -1, 1 do
+        for dx = -1, 1 do
+          local q = Map.GetPlot(p:GetX() + dx, p:GetY() + dy)
+          if q and Map.GetPlotDistance(p:GetX(), p:GetY(), q:GetX(), q:GetY()) == 1 then
+            adj[#adj + 1] = q:GetIndex()
+            add(q, false)
+          end
+        end
+      end
+      plots[key].adj = adj
+    end
+  end
+  for _, c in Players[me]:GetCities():Members() do
+    if city_id == nil or c:GetID() == city_id then
+      local cx, cy, near = c:GetX(), c:GetY(), H.array()
+      for dy = -3, 3 do
+        for dx = -3, 3 do
+          local p = Map.GetPlot(cx + dx, cy + dy)
+          if p and Map.GetPlotDistance(cx, cy, p:GetX(), p:GetY()) <= 3 then
+            add(p, true)
+            near[#near + 1] = p:GetIndex()
+          end
+        end
+      end
+      local placed = H.array()
+      for _, d in c:GetDistricts():Members() do
+        local row = GameInfo.Districts[d:GetType()]
+        if row then
+          placed[#placed + 1] = { type = row.DistrictType, x = d:GetX(), y = d:GetY(), complete = d:IsComplete() }
+        end
+      end
+      local bq, cands = c:GetBuildQueue(), H.array()
+      for row in GameInfo.Districts() do
+        if row.DistrictType ~= 'DISTRICT_CITY_CENTER' and not bq:HasBeenPlaced(row.Hash) and bq:CanProduce(row.Hash, true) then
+          local e = { type = row.DistrictType, plots = H.array() }
+          local ok, err = pcall(function()
+            local params = {}
+            params[CityOperationTypes.PARAM_DISTRICT_TYPE] = row.Hash
+            local res = CityManager.GetOperationTargets(c, CityOperationTypes.BUILD, params)
+            for _, idx in ipairs((res or {})[CityOperationResults.PLOTS] or {}) do
+              e.plots[#e.plots + 1] = idx
+              add(Map.GetPlotByIndex(idx), true)
+            end
+          end)
+          if not ok then e.error = tostring(err) end
+          cands[#cands + 1] = e
+        end
+      end
+      cities[#cities + 1] = { id = c:GetID(), name = name_of(c:GetName()), x = cx, y = cy, near = near,
+                              placed = placed, candidates = cands }
+    end
+  end
+  return { turn = Game.GetCurrentGameTurn(), player = me, cities = cities, plots = plots }
+end
+
 -- ---- autoplay ----------------------------------------------------------------------------------
 
 -- The game's AI plays our civ for `turns` turns, then hands it back.

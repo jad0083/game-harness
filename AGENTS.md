@@ -328,6 +328,8 @@ Rules:
   unit and city actions: `civ6 last-stand-step`, `ls-state`, `finish-moves`, `turn-ready` (numeric
   IDs, never model orders). Its first live use follows the L6 checklist of
   `docs/design/2026-09-27-civ6-levers-design.md` on a throwaway save or in a maintenance window.
+- District placement is read-only for now (stage A): `civ6 district-plots` and
+  `scripts/civ6-placement.py` rate plots and the AI's placements; no placement order exists.
 - The AI's own plan is read-only: each city's top 3 builds in the snapshot (`recommend`) and our
   strategies from `Logs/AI_Victories.csv` (`civ6 ai-strategies --offset N`: one agent read per
   decision, never a bulk read).

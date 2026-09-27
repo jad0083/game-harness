@@ -246,6 +246,18 @@ pub fn last_stand_step_call(city: &str, damage: &str, skip: &str) -> Result<(&'s
     Ok((STATE_UI, format!("Harness.run(Harness.last_stand_step, {city}, {{{}}}, {{{}}})", dmg.join(", "), used.join(", "))))
 }
 
+// ---- district placement, read-only (docs/design/2026-09-27-civ6-levers-design.md, ruling 30) ----
+
+/// Read-only (InGame): per city (all, or the one given by numeric ID) the districts placed, where
+/// each district it could place may go, and the facts of the plots around it.
+pub fn district_plots_call(city: Option<&str>) -> Result<(&'static str, String)> {
+    let arg = match city {
+        Some(c) => numeric_id("city", c)?.to_string(),
+        None => "nil".into(),
+    };
+    Ok((STATE_UI, format!("Harness.run(Harness.district_plots, {arg})")))
+}
+
 // ---- the AI's intent (docs/design/2026-09-27-civ6-levers-design.md, ruling 29) -----------------
 
 /// The game's log of AI strategies: "Game Turn, Player, Strategy, Status" rows, appended whenever a
@@ -525,6 +537,14 @@ mod tests {
         assert!(err("[1, 2]", "").contains("JSON object"));
         assert!(err("{}", "tile:5").contains("city:<id> or unit:<id>"));
         assert!(err("{}", r#"unit:5"] = true}) os.exit() --"#).contains("numeric game ID"));
+    }
+
+    #[test]
+    fn district_plots_is_read_only_in_game_with_an_optional_numeric_city() {
+        assert_eq!(district_plots_call(None).unwrap(), (STATE_UI, "Harness.run(Harness.district_plots, nil)".to_string()));
+        assert_eq!(district_plots_call(Some("65536")).unwrap().1, "Harness.run(Harness.district_plots, 65536)");
+        assert!(district_plots_call(Some("Beijing")).is_err());
+        assert!(district_plots_call(Some("1) os.exit() --")).is_err());
     }
 
     #[test]

@@ -243,7 +243,10 @@ last-stand-step` requests one action in `InGame`, `civ6 ls-state` reads the resu
 one-turn autoplay hands the turn back; these commands take numeric IDs only and stay out of the
 model-facing `order` JSON. The briefing also carries the AI's own plan: each city's top 3 builds
 from the snapshot and our player's strategies from the game's `Logs/AI_Victories.csv`, which `civ6
-ai-strategies` reads through the agent's file API in one bounded read per decision.
+ai-strategies` reads through the agent's file API in one bounded read per decision. District
+placement is read-only so far: `civ6 district-plots` returns where each district may go (the game's
+own check) and the facts of the plots around each city, and `src/pilot/civ6_placement.py` scores
+them with the adjacency rules the extractor writes as data (`data/_adjacency.json`).
 
 The loader rejects nameless records and duplicate ids at startup, so a bad extract fails the build rather than a game turn. The raw XML is not committed (Stardock's data); `data/_meta.json` records the game version and generator commit for reproducibility.
 

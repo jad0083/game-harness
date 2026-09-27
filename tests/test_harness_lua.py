@@ -18,7 +18,10 @@ MOCK = (REPO / "tests/fixtures/civ6_lua_mock.lua").read_text(encoding="utf-8")
 
 
 def runtime():
-    from lupa import LuaRuntime
+    try:
+        from lupa.lua51 import LuaRuntime  # the game's Lua is 5.1
+    except ImportError:
+        from lupa import LuaRuntime
     rt = LuaRuntime(unpack_returned_tuples=True)
     out: list[str] = []
     rt.globals().print = lambda *a: out.append(" ".join(str(x) for x in a))
@@ -240,3 +243,33 @@ def test_each_city_lists_the_ais_top_three_builds():
     assert xian["recommend"] == []
     s = snapshot(*runtime(), "MOCK.no_city_ai = true")
     assert s["ok"] is True and "recommend" not in s["cities"][0]
+
+
+# ---- district placement, read-only (ruling 30, stage A) -------------------------------------------
+
+def test_district_plots_list_where_each_district_may_go_with_the_plot_facts():
+    rt, out = runtime()
+    rt.execute("MOCK.map = { ['22,20'] = { t = 'TERRAIN_GRASS_HILLS', f = 'FEATURE_FOREST' },"
+               " ['23,20'] = { t = 'TERRAIN_GRASS_MOUNTAIN' }, ['21,20'] = { r = 'RESOURCE_IRON', i = 'IMPROVEMENT_MINE' },"
+               " ['24,22'] = { river = true } }\n"
+               "MOCK.district_plots = { DISTRICT_CAMPUS = { {22, 20}, {24, 22} } }")
+    r = call(rt, out, "Harness.district_plots, 65536")
+    assert (r["turn"], r["player"], len(r["cities"])) == (61, 0, 1)
+    beijing = r["cities"][0]
+    assert (beijing["name"], beijing["x"], beijing["y"]) == ("Beijing", 22, 21)
+    assert beijing["placed"] == [{"type": "DISTRICT_CITY_CENTER", "x": 22, "y": 21, "complete": True}]
+    campus = next(c for c in beijing["candidates"] if c["type"] == "DISTRICT_CAMPUS")
+    idx = lambda x, y: str(y * 40 + x)      # the mock's plot index
+    assert campus["plots"] == [int(idx(22, 20)), int(idx(24, 22))]
+    plots = r["plots"]
+    hill = plots[idx(22, 20)]
+    assert (hill["t"], hill["f"]) == ("GRASS_HILLS", "FOREST")
+    assert len(hill["adj"]) == 6 and int(idx(23, 20)) in hill["adj"] and int(idx(22, 21)) in hill["adj"]
+    assert plots[idx(23, 20)]["t"] == "GRASS_MOUNTAIN" and plots[idx(23, 20)]["mountain"] is True
+    assert (plots[idx(21, 20)]["r"], plots[idx(21, 20)]["i"]) == ("IRON", "MINE")
+    assert plots[idx(22, 21)]["d"] == "CITY_CENTER" and plots[idx(24, 22)]["river"] is True
+    assert len(plots) >= 61, "3 tiles around the city and their neighbours"
+    assert len(beijing["near"]) == 37 and int(idx(22, 21)) in beijing["near"]
+    assert requests(rt) == [], "read-only"
+    everyone = call(rt, out, "Harness.district_plots")
+    assert [c["name"] for c in everyone["cities"]] == ["Beijing", "Xi'an"]
