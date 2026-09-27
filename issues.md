@@ -52,6 +52,7 @@
 - [ ] Security review 2026-09-26 (B4): an empty `--token` gave an empty token that matched an empty header — fixed in agent 1.5.0: every token source must hold >= 32 characters or the agent refuses to start (not yet deployed)
 - [ ] Security review 2026-09-26 (B5): `/files/write` ran `create_dir_all` before its containment check, so a linked allowed folder let it create directories outside the root; paths were not checked for Windows device names, trailing dots/spaces or UNC prefixes — fixed in agent 1.5.0: names are checked on read and write, and directories are created one level at a time after checking the level above is a real directory (not yet deployed)
 - [ ] Security review 2026-09-26 (B6): one `/files/read` response could hold 128 MB in memory — capped at 16 MiB in agent 1.5.0; the controller (`files_read`) and `scripts/fetch-stellaris-files.py` page larger files with `offset` and fail if the file shrinks meanwhile (Stellaris autosaves are ~1.5 MB; not yet deployed)
+- [ ] Security review 2026-09-26 (B3): the agent's firewall rule applied on every network profile (`-Profile Any`, whole local subnet), and a reinstall kept an existing rule — `install.ps1` now admits only the controller's address on Private networks, replaces an older rule, and warns when the PC's network is not Private (not yet deployed; a reinstall on each PC applies it)
 
 ### Repo hygiene / docs
 - [x] `windows_agent/game-agent.exe` (1.4 MB) is tracked and re-committed on every rebuild — untracked and gitignored; scripts/serve-agent.sh builds it before serving

@@ -114,7 +114,7 @@ The remote agent runs as a standalone compiled native Windows binary (`game-agen
 4. **Interactive Session Deployment**:
    Windows services running in Session 0 cannot capture or send input to the interactive desktop (Session 1+). Therefore, `install.ps1` registers a **Scheduled Task** running under the user's interactive logon credentials with standard user permissions.
 5. **Firewall Automation**:
-   A Windows Defender firewall rule is provisioned for TCP port 8765, restricted strictly to `LocalSubnet` for LAN security.
+   A Windows Defender firewall rule is provisioned for TCP port 8765, admitting only the controller (the host that served the installer, or `GA_CONTROLLER`; `LocalSubnet` for a local install) and only on Private networks (`GA_FW_PROFILE` overrides). A reinstall replaces an older, looser rule.
 
 ---
 
