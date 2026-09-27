@@ -330,7 +330,8 @@ order of the same side and resource already in the save, e.g. buy alloys 7 when 
 declared buys and the automatic ones; a buy that breaks one is skipped with the reason (an order of it
 in the save is then removed, as a sell that no longer fits):
 - price per unit = 100 / market amount x (1 + fluctuation) x 1.3 (the fee), the fluctuation from the
-  briefing's market block (0 without one);
+  briefing's market block (0 without one: the buy is not refused, and the sync's log line and the
+  next decision's market note say "price unknown");
 - the reserve: trade - 12 x (cost over the monthly trade income) must leave 2,500 (where the AI's own
   market spending starts); the spend cap: cost <= 0.25 x trade income + (trade - 2,500) / 24 (0.5 of
   the income for alloys in a war crisis: declared buys, the orders kept in place and the fill alike);

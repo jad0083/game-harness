@@ -38,7 +38,7 @@ from .events import EventLog
 from .learning import Journal, LearnedStore, LearningRejected
 from .pillars import ACTION_KINDS, OrdersSpec, PillarsError, PillarSpec, load_pillars, load_postures
 from .stellaris_crisis import CRISIS_PACE, POSTURE_GAP_MONTHS, crisis_alloys, crisis_step, status_quo
-from .stellaris_market import buy_errors, idle_fill, keep_placed
+from .stellaris_market import buy_errors, idle_fill, keep_placed, price_note
 from .stellaris_planets import (
     colony_row,
     low_stability,
@@ -1318,7 +1318,9 @@ class Governor:
                                        placed=self._placed("buy", "alloys", b.get("market_orders") or []))
         except Exception as e:  # noqa: BLE001 - a malformed save never stops play
             return f"buys no alloys ({type(e).__name__}: {e})"[:200]
-        return f"buys {order['amount']} alloys a month on the market" if order else f"buys no alloys ({why})"
+        if order is None:
+            return f"buys no alloys ({why})"
+        return f"buys {order['amount']} alloys a month on the market" + (" (price unknown)" if price_note(b) else "")
 
     def _crisis_row(self, step: str, result: str, detail: str, date: str) -> None:
         """A crisis step with nothing to follow, recorded at once: `done`, or `no_op` with why."""
@@ -1885,6 +1887,7 @@ class Governor:
         later = date != self._market_sync_date
         limits = self.pillars.actions["market"]
         idle, income = idle_resources(b), b.get("net") or {}
+        unknown = price_note(b)                           # no market block: every buy at the base price
         crisis = self._crisis_market(b, idle, later)      # war crisis step 5: it takes the first slot
         war = self._crisis_on()                           # ruling 9's crisis rules for every alloys buy
         desired = [crisis] if crisis else []
@@ -1902,7 +1905,8 @@ class Governor:
                 if later:  # a raise of an order in place that breaks a rule keeps that order at its amount
                     what = f"sell {o.resource}" if o.side == "sell" else f"buy {o.resource} {o.amount}"
                     self._log_action("market", ((f"kept buy {o.resource} {kept['amount']} ({o.amount} wanted)" if kept
-                                                 else f"skipped {what}") + f": {'; '.join(errs)}")[:300])
+                                                 else f"skipped {what}") + f": {'; '.join(errs)}"
+                                                + (f"; {unknown}" if unknown and o.side == "buy" else ""))[:300])
                 if kept:
                     desired.append(kept)
                 continue
@@ -1925,6 +1929,9 @@ class Governor:
         fill, self._market_note = self._idle_fill(b, desired, current, idle, limits, crisis=war)
         if fill:
             desired.append(fill)
+        unknown = unknown if any(o.get("side") == "buy" for o in desired) else ""
+        if unknown:      # not refused (ruling 9), but said: in the log and to the next decision
+            self._market_note = "; ".join(x for x in (self._market_note, unknown) if x)
         if self._market_note and later:
             self._log_action("market", self._market_note[:300])
         if self._same_orders(desired, current) or not later:
@@ -1938,7 +1945,7 @@ class Governor:
             for c in changes:       # failed, not did_not_take: an agent timeout never suspends a resource
                 self._resolve_action(market_action(c, date, self._market_cal), "failed", None, f"{e}", date)
             return
-        self._log_action("market", res)
+        self._log_action("market", res + (f" ({unknown})" if unknown else ""))
         refused = self._refused_orders(res)
         self._market_unmeasured |= {o["resource"] for o in refused}
         # what the controller left out is not waited for in the next save; the order it kept in its

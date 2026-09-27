@@ -6,7 +6,7 @@ import pytest
 
 from pilot.config import REPO
 from pilot.pillars import load_pillars
-from pilot.stellaris_market import buy_errors, idle_fill, naval_use, unit_price, volume_cap
+from pilot.stellaris_market import PRICE_UNKNOWN, buy_errors, idle_fill, naval_use, price_note, unit_price, volume_cap
 
 LIMITS = load_pillars(REPO / "corpora/stellaris").actions["market"]
 RULES = LIMITS.buy
@@ -32,6 +32,13 @@ def test_the_price_is_base_times_the_fluctuation_times_the_fee():
     assert unit_price("sr_zro", empire(), RULES)[0] == pytest.approx(20 * 1.3)
     assert unit_price("energy", {"date": "2250.01.01"}, RULES) == (pytest.approx(1.3), False), \
         "no market block: the fluctuation is taken as 0 and the price is unknown"
+
+
+def test_a_save_without_a_market_block_says_price_unknown():
+    assert price_note(empire()) == "" and price_note({"date": "2250.01.01"}) == PRICE_UNKNOWN
+    assert PRICE_UNKNOWN.startswith("price unknown")
+    bare = {"date": "2250.01.01", "stockpile": {"trade": 20000.0, "minerals": 300}, "net": {"trade": 100.0, "minerals": -20.0}}
+    assert buy_errors(buy("minerals", 10), bare, None, RULES, set()) == [], "not refused: checked at the base price"
 
 
 def test_the_reserve_keeps_2500_trade():

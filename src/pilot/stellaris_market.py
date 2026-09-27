@@ -2,7 +2,8 @@
 9-10). Pure: no game access; the numbers come from `[actions.market.buy]` in pillars.toml (BuyRules).
 
 - Price per unit = 100 / market_amount x (1 + fluctuation) x (1 + fee); the fluctuation comes from the
-  briefing's `market.fluct` (percent), taken as 0 without a market block ("price unknown").
+  briefing's `market.fluct` (percent), taken as 0 without a market block: the buy is not refused for
+  it, and the governor's lines say "price unknown" (`price_note`).
 - Reserve: trade - 12 x max(0, cost - trade income) >= trade_reserve (2,500, where the AI's own market
   spending starts). Spend cap: cost <= income_share x max(trade income, 0) + (trade - reserve) /
   surplus_months (income_share 0.5 for alloys in a war crisis).
@@ -39,6 +40,15 @@ def unit_price(res: str, b: dict, rules: BuyRules) -> tuple[float | None, bool]:
     if not amount:
         return None, False
     return 100.0 / amount * (1 + fluct(res, b) / 100.0) * (1 + rules.fee), _market(b) is not None
+
+
+PRICE_UNKNOWN = "price unknown (the save has no market block: buys are checked at the base price)"
+
+
+def price_note(b: dict) -> str:
+    """PRICE_UNKNOWN when save `b` has no market block (an older controller, a block that failed to
+    parse), so every fluctuation is taken as 0; "" otherwise."""
+    return "" if _market(b) is not None else PRICE_UNKNOWN
 
 
 def market_kind(b: dict) -> str:

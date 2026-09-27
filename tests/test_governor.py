@@ -4510,6 +4510,32 @@ def test_a_declared_buy_raising_an_order_in_place_above_plus_50_keeps_the_order_
     assert ("market_sync", [{"side": "buy", "resource": "consumer_goods", "amount": 25}]) in game.actions
 
 
+def test_buys_on_a_save_without_a_market_block_say_price_unknown(setup):
+    """Ruling 9: without the fluctuation the rule assumes 0 and the line says "price unknown"."""
+    from pilot.strategy import Pillar
+    s, log = setup
+    game = FakeStellaris([briefing("2250.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    order = {"side": "buy", "resource": "minerals", "amount": 10}
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[order]))
+    bare = _trading(briefing("2250.01.01"))                                # no `market` block (an older controller)
+    g._carry_out_actions(bare)
+    assert ("market_sync", [order]) in game.actions, "not refused"
+    assert any("price unknown" in r for r in _market_log(log)), _market_log(log)
+    assert "price unknown" in g._market_note
+    game.actions.clear()
+    g2 = Governor(s, game, log, model=decisions("keep"))
+    g2.strategy = g.strategy
+    g2._carry_out_actions(_market_briefing("2250.02.01", trade=10000))
+    assert ("market_sync", [order]) in game.actions and "price unknown" not in g2._market_note
+    fill = {**_trading(briefing("2250.03.01", net={"minerals": -20.0}), trade=20000.0)}
+    fill["stockpile"]["minerals"] = 300
+    g3 = Governor(s, FakeStellaris([fill]), log, model=decisions("keep"))
+    g3.strategy = _strategy_with()
+    g3._carry_out_actions(fill)
+    assert g3._market_note.startswith("trade idle: filled with buy minerals 24") and "price unknown" in g3._market_note
+
+
 def test_idle_trade_fills_the_empty_slot_with_deficit_cover_and_follows_it(setup):
     s, log = setup
     game = FakeStellaris([briefing("2250.01.01")])
