@@ -148,7 +148,9 @@ class GovDeps:
 
 
 def months(date: str) -> int:
-    """'2204.09.01' → months since year 0."""
+    """'2204.09.01' → months since year 0; 'T12' (a turn-based game) → 12."""
+    if date[:1] == "T" and date[1:].isdigit():
+        return int(date[1:])
     y, m, *_ = (int(x) for x in date.split("."))
     return y * 12 + m - 1
 
@@ -729,7 +731,7 @@ class Governor:
             b = self._last_b
             if s.pillars[name].market and b is None:
                 raise ValueError("no briefing yet: market orders can be edited after the first save is read")
-            errs = validate(s, spec, previous=None, tech_ids=self._tech_ids(), idle=idle_resources(b or {}),
+            errs = validate(s, spec, previous=None, tech_ids=self._tech_ids(), ids=self._action_ids(), idle=idle_resources(b or {}),
                             income=(b or {}).get("net", {}), briefing_checked={name}, require_milestones=False)
             if errs:
                 raise ValueError("; ".join(errs))
@@ -982,6 +984,10 @@ class Governor:
         self._folder = self._save_folder(b)
         name = self.s.campaign or self._folder or (b.get("name") or "unknown").replace(" ", "_").lower()
         self.log.set_campaign(self.s.game, name, b.get("name") or "")
+        self._load_campaign_state()
+
+    def _load_campaign_state(self) -> None:
+        """Standing orders, plan and strategy saved for the campaign just named."""
         f = self._orders_file()
         if f.exists():
             try:
@@ -1467,7 +1473,7 @@ class Governor:
                 errs = ["change=true but no strategy given"]
             elif r.change and r.strategy is not None:
                 new = keep_pinned(to_strategy(r.strategy, self.pillars), self.strategy)
-                errs = validate(new, self.pillars, previous=self.strategy, tech_ids=self._tech_ids(),
+                errs = validate(new, self.pillars, previous=self.strategy, tech_ids=self._tech_ids(), ids=self._action_ids(),
                                 idle=idle_resources(b), income=b.get("net", {}))
             else:
                 errs = []
@@ -1528,18 +1534,30 @@ class Governor:
         self.log.emit("strategy", date=date, trigger=trigger, model=model, reason=s.reason, strategy=dumped)
 
     def _tech_ids(self) -> set[str]:
-        """Ids for preferred techs, from `data/<ids_from_corpus>.json` of the corpus (the spec's tech
-        action); cached once a read succeeds (a failed read is logged and retried, never cached)."""
-        if getattr(self, "_techs", None) is not None:
-            return self._techs
-        tech = (self.pillars.actions.get("tech") if self.pillars else None)
-        if tech is None or not tech.ids_from_corpus:
-            return set()
-        path = self.s.corpus_dir / "data" / f"{tech.ids_from_corpus}.json"
-        try:
-            techs = {r["id"].split(":", 1)[1] for r in json.loads(path.read_text(encoding="utf-8"))}
-        except (OSError, ValueError, KeyError) as e:
-            self.log.emit("briefing_error", error=f"tech ids: {e}"[:200])
-            return set()
-        self._techs = techs
-        return techs
+        """Ids for preferred techs (the spec's tech action); see `_action_ids`."""
+        return self._action_ids().get("tech", set())
+
+    def _action_ids(self) -> dict[str, set[str]]:
+        """Known ids per id-list action kind, from `data/<ids_from_corpus>.json` of the corpus (bare ids,
+        or "<kind>:<id>" with `full_ids`); cached once every read succeeds (a failed read is logged and
+        retried, never cached)."""
+        if getattr(self, "_ids", None) is not None:
+            return self._ids
+        out: dict[str, set[str]] = {}
+        ok = True
+        for kind, a in (self.pillars.actions.items() if self.pillars else ()):
+            if not a.corpus_files:
+                continue
+            ids: set[str] = set()
+            for f in a.corpus_files:
+                path = self.s.corpus_dir / "data" / f"{f}.json"
+                try:
+                    recs = json.loads(path.read_text(encoding="utf-8"))
+                    ids |= {r["id"] if a.full_ids else r["id"].split(":", 1)[1] for r in recs}
+                except (OSError, ValueError, KeyError, IndexError) as e:
+                    self.log.emit("briefing_error", error=f"{kind} ids: {e}"[:200])
+                    ok = False
+            out[kind] = ids
+        if ok:
+            self._ids = out
+        return out

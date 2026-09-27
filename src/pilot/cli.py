@@ -3,6 +3,7 @@
     python -m pilot check                     # key, model, agent, corpus
     python -m pilot run [--model M] [--port P] [--turns N] [--no-commit] [--episodes K]
     python -m pilot run --game stellaris [--speed fast|fastest|...] [--months N]
+    python -m pilot run --game civ6 [--decide-turns N]  # the game's AI plays N turns between decisions
     python -m pilot view [--port P]           # read-only dashboard over recorded runs
     python -m pilot dashboard-link [--port P] # the dashboard link with its access key
     python -m pilot rebuild-telemetry         # recreate runs/telemetry.sqlite from the run logs
@@ -84,8 +85,15 @@ def run(s: Settings, episodes: int | None) -> int:
     run_id = time.strftime("%Y%m%d-%H%M%S")
     from .telemetry import Telemetry
     log = EventLog(s.runs_dir, run_id, s.model, telemetry=Telemetry(s.telemetry_db))
-    game = McpGame(s.controller_bin, s.corpus_dir, s.agent_url, REPO, title=s.window_title)
-    if s.game == "stellaris":
+    if s.game == "civ6":
+        from .civ6 import ControllerCiv6
+        game = ControllerCiv6(s.controller_bin, s.corpus_dir, s.agent_url, REPO)
+    else:
+        game = McpGame(s.controller_bin, s.corpus_dir, s.agent_url, REPO, title=s.window_title)
+    if s.game == "civ6":
+        from .civ6_governor import Civ6Governor
+        pilot = Civ6Governor(s, game, log)
+    elif s.game == "stellaris":
         from .governor import Governor
         pilot = Governor(s, game, log)
     else:
@@ -114,7 +122,7 @@ def run(s: Settings, episodes: int | None) -> int:
     signal.signal(signal.SIGTERM, on_signal)
     signal.signal(signal.SIGINT, on_signal)
     try:
-        if s.game == "stellaris":
+        if s.game in ("stellaris", "civ6"):
             pilot.run(max_decisions=episodes)
         else:
             pilot.run(max_episodes=episodes)
@@ -187,7 +195,7 @@ def main(argv: list[str] | None = None) -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
     for name in ("check", "run"):
         p = sub.add_parser(name)
-        p.add_argument("--game", choices=["galciv4", "stellaris"])
+        p.add_argument("--game", choices=["galciv4", "stellaris", "civ6"])
         p.add_argument("--model", help="pydantic-ai model string, e.g. google:gemini-3.8-flash")
         p.add_argument("--coords", choices=["auto", "norm1000", "pixels"])
         p.add_argument("--thinking", choices=["off", "low", "medium", "high"])
@@ -204,6 +212,7 @@ def main(argv: list[str] | None = None) -> int:
     run_p.add_argument("--speed", choices=["slowest", "slow", "normal", "fast", "faster", "fastest"],
                        help="Stellaris game speed while the AI plays ('faster' = fastest)")
     run_p.add_argument("--months", type=int, help="Stellaris: in-game months between scheduled decisions")
+    run_p.add_argument("--decide-turns", type=int, help="Civilization VI: turns the game's AI plays between decisions")
     a = ap.parse_args(argv)
     s = Settings.from_env()
     if a.cmd == "view":
@@ -245,6 +254,7 @@ def main(argv: list[str] | None = None) -> int:
     else:
         s.speed = prefs.get("speed", s.speed)
     s.decide_every_months = a.months or prefs.get("months") or s.decide_every_months
+    s.decide_every_turns = a.decide_turns or s.decide_every_turns
     return run(s, a.episodes)
 
 

@@ -22,7 +22,8 @@ def load_dotenv(path: Path = REPO / ".env") -> None:
 
 
 def default_journal(game: str) -> Path:
-    return {"stellaris": REPO / "games/stellaris/journal.md"}.get(game, REPO / "games/terran-2329/journal.md")
+    return {"stellaris": REPO / "games/stellaris/journal.md",
+            "civ6": REPO / "games/civ6/journal.md"}.get(game, REPO / "games/terran-2329/journal.md")
 
 
 @dataclass
@@ -74,6 +75,8 @@ class Settings:
     campaign: str = ""                 # campaign name for telemetry; default: save folder / journal dir
     decide_every_months: int = 12
     poll_s: float = 2.0
+    # Civilization VI governor: turns the game's AI plays between decisions (one autoplay stretch)
+    decide_every_turns: int = 5
 
     @property
     def corpus_dir(self) -> Path:
@@ -135,6 +138,7 @@ class Settings:
         s.speed = env.get("PILOT_SPEED", s.speed)
         s.decide_every_months = int(env.get("PILOT_DECIDE_MONTHS", s.decide_every_months))
         s.poll_s = float(env.get("PILOT_POLL_S", s.poll_s))
+        s.decide_every_turns = int(env.get("PILOT_DECIDE_TURNS", s.decide_every_turns))
         s.campaign = env.get("PILOT_CAMPAIGN", s.campaign)
         s.retro_every = int(env.get("PILOT_RETRO_EVERY", s.retro_every))
         if "PILOT_RUNS_DIR" in env:
