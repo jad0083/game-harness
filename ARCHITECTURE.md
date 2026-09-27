@@ -486,6 +486,12 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   40 calls, the last turn's time) and emits `popups_quieted` once per library install (the
   controller's reply field, kept by `ControllerCiv6` until read); `info.last_stand` (armed or off,
   its limit, the streak, why it turned off, the stand running) is always there.
+- Activity (rulings 18, 29): `/api/events?campaign=&after=&n=` gives a campaign's events across its
+  runs (backfill runs and the feed's quiet kinds left out), oldest first, each with the game date it
+  happened at (its own `date`, a `turn` event's turn, else the newest metrics date before it) and its
+  row id as the cursor for `after` (event times are rounded to the millisecond). The page's
+  `describe()` has a sentence for every kind the pilots emit (`tests/test_dashboard_activity.py`
+  scans `src/pilot` for `emit("…")`), groups repeats and filters by Problems, Orders, Model, You.
 - `view.py`: each game's dashboard view (`corpora/<game>/dashboard.toml`, validated into one JSON shape
   with defaults; a missing or broken file gives the default view and the error, so the page still
   renders) and `Names` (ids to names from the game's corpus records, `aliases[0]` being the type

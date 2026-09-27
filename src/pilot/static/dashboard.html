@@ -365,12 +365,21 @@
   .inline { display: flex; gap: 8px; }
   .inline input, .inline select { flex: 1; min-width: 0; padding: 7px 10px; border-radius: 6px; border: 1px solid var(--hair); background: var(--surface); }
 
-  /* ---- activity + frame ---- */
+  /* ---- activity (rulings 18, 29): one sentence per row, its game date over its wall time, the raw
+     event behind a disclosure; a problem leads with a warning mark and says so to screen readers ---- */
+  .feed-filters { margin: 0 0 10px; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
   .feed { list-style: none; margin: 0; padding: 0; }
-  .feed li { display: grid; grid-template-columns: 64px 1fr; gap: 8px; padding: 6px 0; border-top: 1px solid var(--grid); font-size: 13px; }
-  .feed .t { color: var(--muted); font-variant-numeric: tabular-nums; }
-  .feed .k { font-weight: 600; margin-right: 6px; }
-  .feed .k.bad { color: var(--bad); } .feed .k.learn { color: var(--good); } .feed .k.human { color: var(--sensor); }
+  .feed li.ev { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 10px; padding: 7px 0; border-top: 1px solid var(--grid); }
+  .feed li.ev:first-child { border-top: 0; }
+  .ev-when { display: grid; align-content: start; font-variant-numeric: tabular-nums; }
+  .ev-date { font-weight: 600; font-size: 13px; color: var(--ink); }
+  .ev-time { font-size: 12.5px; color: var(--muted); }
+  .ev-what { min-width: 0; }
+  .ev-text { margin: 0; font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
+  .ev-mark { font-style: normal; color: var(--bad); margin-right: 6px; font-size: 12px; }
+  .ev-raw { margin-top: 2px; }
+  .ev-raw summary { font-size: 12.5px; color: var(--muted); }
+  .ev-raw pre { max-height: 240px; }
   #noframe { padding: 4px 0; }
   .frame-img { width: 100%; display: block; border-radius: 4px; background: #000; aspect-ratio: 1568 / 882; object-fit: contain; }
   .levers-frame { margin-top: 18px; }
@@ -745,7 +754,9 @@
           <button class="btn primary" id="b-start-2">Start run</button></div>
       </div>
       <div class="tabpanel" id="tab-strategy" role="tabpanel" aria-labelledby="tb-strategy" hidden><div id="strategy"></div></div>
-      <div class="tabpanel" id="tab-activity" role="tabpanel" aria-labelledby="tb-activity" hidden><ul class="feed" id="feed"></ul>
+      <div class="tabpanel" id="tab-activity" role="tabpanel" aria-labelledby="tb-activity" hidden>
+        <div class="seg feed-filters" role="group" aria-label="Show in Activity" id="feed-filters"></div>
+        <ul class="feed" id="feed" aria-label="Activity, newest first"></ul>
         <div class="stats" id="stats"></div></div>
     </section>
   </div>
@@ -1199,7 +1210,7 @@ async function applySpec() {
 
 async function loadCampaignData() {
   await applySpec();
-  if (!S.campaign) { S.strategy = null; renderChart(); renderDecisions(); renderStrategy(null); return; }
+  if (!S.campaign) { S.strategy = null; renderChart(); renderDecisions(); renderStrategy(null); renderFeed(); return; }
   const cid = S.campaign, qs = "campaign=" + encodeURIComponent(cid);
   const [decisions, metrics, strategy, orders] = await Promise.all([api("/api/decisions?" + qs), api("/api/metrics?" + qs),
                                                             api("/api/strategy?" + qs).catch(() => null),
@@ -1230,6 +1241,7 @@ async function loadCampaignData() {
     selectDecision(newest, false);
   if (!S.live) await loadRuns();
   refreshFrame();
+  loadFeed();
 }
 
 // ---------- game screen ----------
@@ -1486,6 +1498,7 @@ function renderGovernor() {
   }
   renderTitle(state, date);
   tick();
+  if (!S.feedFilter && S.feedStop !== (state === "needs")) { S.feedStop = state === "needs"; renderFeedSoon(); }
 }
 const GOV = { key: "" };
 function renderCard(a, rec, at) {
@@ -1883,14 +1896,20 @@ $("dec-problems").addEventListener("click", () => {
   $("dec-problems").setAttribute("aria-pressed", String(S.problemsOnly));
   renderDecisions();
 });
-// One line for an error the server did not cut (an older record).
+// One line for an error the server did not cut (an older record, an event): wording.cause's table.
 function errorCause(err) {
-  const e = String(err || "");
-  if (/\b503\b|high demand|overloaded/i.test(e)) return "overloaded (503)";
-  if (/\b429\b|rate.?limit|quota/i.test(e)) return "rate limited (429)";
-  if (/credit balance/i.test(e)) return "billing: credit balance too low";
-  if (/timed? ?out|timeout/i.test(e)) return "no answer in time (timed out)";
-  return tidy(e.split("\n")[0]).slice(0, 160);
+  const e = String(err || ""), low = e.toLowerCase();
+  if (!e.trim()) return "no answer";
+  if (/credit balance/.test(low)) return "billing: credit balance too low";
+  if (/\b503\b|high demand|overloaded/.test(low)) return "overloaded (503)";
+  if (/\b429\b|rate.?limit|quota|resource_exhausted/.test(low)) return "rate limited (429)";
+  const timedOut = /timed? ?out|timeout|deadline exceeded/.test(low);
+  if (/\/tuner\//.test(low) || (/tuner/.test(low) && timedOut)) return timedOut ? "the game's tuner did not answer (timed out)" : "the game's tuner refused the call";
+  if (/connection refused/.test(low)) return "the PC's agent refused the connection (is it running?)";
+  const caused = /caused by/.test(low) ? [...e.matchAll(/^\s*\d+:\s*(.+?)\s*$/gm)].map((m) => m[1]) : [];
+  if (caused.length) return tidy(caused[caused.length - 1]).slice(0, 160);
+  if (timedOut) return "no answer in time (timed out)";
+  return tidy(e.split("\n")[0]).replace(/^(?:[\w.]+\.)?[A-Z]\w*(?:Error|Exception)\s*:\s*/, "").slice(0, 160);
 }
 
 async function selectDecision(d, byUser = true) {
@@ -2191,39 +2210,117 @@ function renderGameHealth() {
   if (!el.hidden) $("p-figures").hidden = false;
 }
 
-// ---------- activity ----------
+// ---------- activity (rulings 18, 29) ----------
+// Every kind reads as a sentence in the game's words; repeats in a row group ("Learned 3 rules",
+// "…, 4 times, T54–T57"); filters Problems, Orders, Model, You and All (Problems while a stop is
+// open); each row has its game date, its wall time and the raw event one disclosure away. A campaign
+// shows its own events (GET /api/events), the live one then from the stream. The order record's
+// events live in the Orders tab and chat in Talk.
 const QUIET = new Set(["metrics", "status", "trace", "chat", "plan", "order_outcome", "order_followed"]);
+const dur = (x) => { const s = Math.round(+x || 0); return s < 60 ? `${s} s` : s < 3600 ? `${Math.floor(s / 60)} min${s % 60 ? ` ${s % 60} s` : ""}` : `${Math.floor(s / 3600)} h ${Math.floor(s % 3600 / 60)} min`; };
+const clip = (x, n = 180) => { const t = String(x ?? ""); return t.length > n ? t.slice(0, n - 1) + "…" : t; };
+const byWho = (ev) => ev.by && ev.by !== "the controller" ? `, from ${ev.by}` : "";
+const modelName = (m) => shortModel({ model: m || "" }) || "the model";
+// "autoplay at T57: Error: …" -> "Autoplay at T57 failed: the game's tuner did not answer (timed out)"
+function failedStep(err, what = "failed") {
+  const e = String(err || ""), m = /^([a-z][\w .\-/]{1,40}?): (?=\S)/i.exec(e);
+  if (!m || /error|exception/i.test(m[1])) return sentence(errorCause(e));
+  if (/^(snapshot|briefing|ls-state)$/i.test(m[1])) return `Could not read the game: ${errorCause(e.slice(m[0].length))}`;
+  return `${sentence(m[1])} ${what}: ${errorCause(e.slice(m[0].length))}`;
+}
+// popups_quieted entries read "<state>.<handler> QUIET" when settled
+const popupsFailed = (ev) => (ev.entries || []).filter((e) => !/ QUIET(_ABSENT)?$/.test(e) && !/no Lua state named/.test(e)).map((e) => e.split(" ")[0]);
+const ACTION_WORDS = { tech: "Tech pick", market: "Market orders" };
 function describe(ev) {
   switch (ev.kind) {
-    case "episode": return `${ev.situation}: ${ev.decision}`;
-    case "autopilot": return `${ev.advanced} turn(s); stopped: ${ev.stop}`;
-    case "action": return ev.action + (ev.error ? " (error)" : "");
-    case "consult": return `looked up “${ev.situation}”`;
-    case "learned": return ev.message || ev.rule || "";
-    case "learn_rejected": return ev.reason;
-    case "question": return ev.question;
-    case "answer": return ev.answer;
-    case "instruction": return ev.text + (ev.by && ev.by !== "the controller" ? ` (from ${ev.by})` : "");
-    case "control": return `${CONTROL_WORDS[ev.action] || human(ev.action)}${ev.by ? `, from ${ev.by}` : ""}`;
-    case "journal": return ev.text;
-    case "orders": return ev.orders.length ? "standing orders: " + ev.orders.join(" | ") : "standing orders cleared";
-    case "campaign": return `campaign ${ev.game}/${ev.name}`;
-    case "commit": return ev.ok ? "committed what was learned" : "commit failed (CI)";
-    case "needs_attention": return ev.reason;
-    case "run_start": return `run started: ${ev.model}${ev.speed ? ", speed " + ev.speed : ""}`;
-    case "run_end": return "run ended";
-    case "model": return `now using ${ev.model} (${ev.thinking} thinking)`;
-    case "model_retry": return `${ev.error}; trying again in ${ev.delay} s`;
-    case "pace": return ev.speed ? `game speed ${ev.speed}` : `a decision every ${ev.every_months} in-game months`;
-    case "last_stand": return `last stand for ${ev.city} (${ev.date}): ${(ev.actions || []).map((a) => `${a.action} ${String(a.result).replace(/_/g, " ")}`).join(", ") || "no action"}; stopped: ${ev.stopped}`;
-    case "last_stand_off": return `last stand off for this run: ${ev.reason}`;
-    default: { const { t, kind, ...rest } = ev; return JSON.stringify(rest).slice(0, 200); }
+    case "turn": {
+      const from = ev.turns != null && ev.turn != null ? ev.turn - ev.turns : null;
+      return `Played ${from != null && from !== ev.turn ? `T${from} → ` : ""}T${ev.turn}${ev.seconds != null ? ` in ${dur(ev.seconds)}` : ""}${ev.note ? `; ${ev.note}` : ""}`;
+    }
+    case "pace": return (ev.speed ? `Game speed ${ev.speed}` : ev.decide_turns != null ? `Decides every ${plural(ev.decide_turns, "turn")}`
+                        : `Decides every ${plural(ev.every_months, "month")}`) + byWho(ev);
+    case "episode": return `Decision${ev.date ? ` at ${gdate(ev.date)}` : ""}: ${clip(tidy(ev.decision || ev.situation))}`;
+    case "strategy_action": return `${ACTION_WORDS[ev.action] || sentence(human(ev.action))}: ${clip(tidy(ev.result))}`;
+    case "strategy": return `New strategy${ev.date ? ` at ${gdate(ev.date)}` : ""}${ev.trigger ? ` (${tidy(ev.trigger)})` : ""}${ev.reason ? `: ${clip(tidy(ev.reason), 140)}` : ""}${byWho(ev)}`;
+    case "strategy_review": return ev.accepted ? `Strategy reviewed${ev.date ? ` at ${gdate(ev.date)}` : ""}: ${clip(tidy(ev.change || "weights kept"))}`
+                                               : `Strategy review changed nothing${ev.change ? `: ${clip(tidy(ev.change))}` : ""}`;
+    case "strategy_review_skipped": return /^within /.test(ev.reason || "")
+      ? `Review skipped: within ${S.spec.game.review_window || "12 months"} of the last${ev.next_after != null ? `; next after ${gmonth(ev.next_after)}` : ""}`
+      : `Review skipped: ${clip(tidy(ev.reason))}`;
+    case "strategy_rejected": return `Strategy review sent back: ${clip((ev.errors || []).slice(0, 2).map(tidy).join("; "))}`;
+    case "strategy_mismatch": return "The stored strategy does not fit the game's pillars; the next review writes a new one";
+    case "strategy_disabled": return `Strategy layer off: ${clip(tidy(ev.error))}`;
+    case "model_fallback": return `${modelName(ev.model)} ${errorCause(ev.error)}; used ${modelName(ev.fallback)}${ev.role && ev.role !== "decisions" ? ` (${human(ev.role)})` : ""}`;
+    case "model_retry": return `${sentence(errorCause(ev.error))}; trying again in ${ev.delay} s`;
+    case "model": return `Now using ${modelName(ev.model)}${ev.thinking ? ` (${ev.thinking} thinking)` : ""}${byWho(ev)}`;
+    case "models": return `Models changed${ev.by && ev.by !== "the controller" ? ` by ${ev.by}` : ""}: ${(ev.models || []).map((m) => modelName(m.model)).join(", ")}${ev.rotate ? ", taking turns" : ""}`;
+    case "roles": return `Models per role changed${ev.by && ev.by !== "the controller" ? ` by ${ev.by}` : ""}`;
+    case "briefing_error": return failedStep(ev.error);
+    case "episode_error": {
+      const e = String(ev.error || "");
+      if (e.startsWith("strategy review:")) return `Strategy review failed: ${errorCause(e.slice(16))}`;
+      const dm = /^directive (\w+): /.exec(e);
+      if (dm) return `Directive ${human(dm[1])} not applied: ${errorCause(e.slice(dm[0].length))}`;
+      return /^could not /.test(e) ? sentence(clip(tidy(e))) : `No decision: ${errorCause(e)}`;
+    }
+    case "recover_probe": return `Still not answering: ${errorCause(ev.error)}`;
+    case "recovered": return `Answering again; carried on by itself${ev.reason ? ` (${ev.reason})` : ""}`;
+    case "needs_attention": return `Needs you: ${clip(tidy(ev.reason), 200)}`;
+    case "stall": return `Game date stuck at ${gdate(ev.date)} for ${dur(ev.seconds)}; nothing was sent to the game`;
+    case "self_paused": return "The game had paused itself; resumed";
+    case "popups_quieted": {
+      const failed = popupsFailed(ev), n = (ev.entries || []).length;
+      return `Popups quieted ${n - failed.length} of ${n}${ev.turn != null ? ` at T${ev.turn}` : ""}${failed.length ? `; not: ${failed.join(", ")}` : ""}`;
+    }
+    case "last_stand": return `Last stand in ${ev.city} at ${gdate(ev.date || (ev.turn != null ? `T${ev.turn}` : ""))}: ${(ev.actions || []).map((a) => `${human(a.action)} ${human(a.result)}`).join(", ") || "no action"}; stopped: ${tidy(ev.stopped)}`;
+    case "last_stand_off": return `Last stand off for this run: ${tidy(ev.reason)}`;
+    case "last_stand_check": {
+      const n = {};
+      (ev.pins || []).forEach((p) => { n[p.result] = (n[p.result] || 0) + 1; });
+      const parts = [n.held ? `${plural(n.held, "pin")} held` : "", n.moved ? `${n.moved} moved` : "", n.unknown ? `${n.unknown} not seen` : ""].filter(Boolean);
+      return `Last stand check: ${parts.join(", ") || "no pins"}`;
+    }
+    case "capture": return `Captured the game screen${byWho(ev)}`;
+    case "run_start": return `Run started: ${GAME_NAMES[ev.game] || ev.game || "a game"}, ${modelName(ev.model)}${ev.speed ? `, speed ${ev.speed}` : ""}`;
+    case "run_end": return ev.forced ? `Run ended: ${tidy(ev.reason || "stopped by force")}` : "Run ended";
+    case "campaign": return `Campaign: ${ev.title || human(ev.name)} (${GAME_NAMES[ev.game] || ev.game})`;
+    case "control": return `${CONTROL_WORDS[ev.action] || sentence(human(ev.action))}${byWho(ev)}`;
+    case "instruction": return `Note for the next decision: “${clip(ev.text, 200)}”${byWho(ev)}`;
+    case "orders": return (ev.orders || []).length ? `Standing orders: ${ev.orders.join("; ")}` : "Standing orders cleared";
+    case "question": return `Question for you: ${ev.question}`;
+    case "answer": return `Answer: ${ev.answer}`;
+    case "journal": return sentence(clip(tidy(ev.text), 300));
+    case "consult": return `Looked up “${clip(ev.situation, 120)}”`;
+    case "learned": return `Learned: ${clip(ev.message || ev.rule, 200)}`;
+    case "learn_rejected": return `Rule not learned: ${clip(tidy(ev.reason))}`;
+    case "learned_disabled": return `Stopped using the learned screen ${human(ev.screen)}`;
+    case "commit": return ev.ok ? "Committed what was learned" : "Could not commit what was learned: CI did not pass";
+    case "action": return `${sentence(human(ev.action))}${ev.error ? " failed" : ""}`;
+    case "autopilot": return `${plural(ev.advanced || 0, "turn")} played; stopped: ${human(ev.stop)}`;
+    default: return `Unrecognised event: ${human(ev.kind)}`;
   }
 }
 const CONTROL_WORDS = { pause: "Paused", resume: "Resumed", stop: "Stop requested", set_models: "Models changed",
                         set_roles: "Models per role changed", set_fallback: "Fallback model changed",
                         edit_pillar: "Pillar edited", unpin_pillar: "Pillar unpinned" };
-const KCLASS = { control: "human",  model_retry: "bad", episode_error: "bad", needs_attention: "bad", learn_rejected: "bad", briefing_error: "bad", last_stand_off: "bad", learned: "learn", instruction: "human", orders: "human", answer: "human" };
+// Which filters an event belongs to (it may be in more than one).
+const PROBLEM_KINDS = new Set(["briefing_error", "episode_error", "needs_attention", "model_retry", "model_fallback", "recover_probe",
+                               "stall", "self_paused", "learn_rejected", "strategy_rejected", "strategy_mismatch", "strategy_disabled", "last_stand_off"]);
+const ORDER_KINDS = new Set(["episode", "strategy_action", "last_stand", "last_stand_check", "autopilot", "action", "turn", "popups_quieted", "capture"]);
+const MODEL_KINDS = new Set(["model", "models", "roles", "model_retry", "model_fallback", "episode_error", "consult", "learned", "learn_rejected",
+                             "learned_disabled", "strategy", "strategy_review", "strategy_review_skipped", "strategy_rejected", "journal", "question"]);
+function feedCats(ev) {
+  const c = new Set();
+  if (PROBLEM_KINDS.has(ev.kind) || (ev.kind === "commit" && !ev.ok) || (ev.kind === "action" && ev.error)
+      || (ev.kind === "turn" && ev.note) || (ev.kind === "popups_quieted" && popupsFailed(ev).length)) c.add("problems");
+  if (ORDER_KINDS.has(ev.kind)) c.add("orders");
+  if (MODEL_KINDS.has(ev.kind)) c.add("model");
+  if ((ev.by && ev.by !== "the controller") || ["control", "instruction", "answer", "orders"].includes(ev.kind)) c.add("you");
+  return c;
+}
+const FEED_FILTERS = [["problems", "Problems"], ["orders", "Orders"], ["model", "Model"], ["you", "You"], ["all", "All"]];
+const FEED_EMPTY = { problems: "No problems in this campaign's activity.", orders: "Nothing done in the game yet.",
+                     model: "No model activity yet.", you: "Nothing from you yet.", all: "Nothing has happened yet." };
 // the newest events the governor line reads: the last turn's time, who paused, an older pilot's stop
 function remember(ev) {
   if (["turn", "needs_attention", "capture"].includes(ev.kind)) S.last[ev.kind] = ev;
@@ -2233,13 +2330,76 @@ function remember(ev) {
   if (ev.kind === "control" && ev.action === "pause") S.last.pause = ev;
   if (ev.kind === "model_fallback" || ev.kind === "episode_error") { clearTimeout(S.healthT); S.healthT = setTimeout(loadHealth, 1500); }
 }
-function addFeed(ev) {
-  remember(ev);
+// The feed of the campaign on screen: its events oldest first (at most 600), each once.
+S.feed = []; S.feedCid = null; S.feedAfter = 0; S.feedKeys = new Set(); S.feedFilter = null;
+// the same event from the stream and from /api/events: its time, kind and own fields
+const feedKey = (ev) => JSON.stringify(Object.entries(ev).filter(([k]) => !["run_id", "date", "id"].includes(k)).sort(([a], [b]) => (a < b ? -1 : 1)));
+function addFeed(ev, fromStream = false) {
   if (QUIET.has(ev.kind)) return;
-  $("feed").insertAdjacentHTML("afterbegin", `<li><span class="t">${new Date(ev.t * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span><span><span class="k ${KCLASS[ev.kind] || ""}">${esc(human(ev.kind))}</span>${esc(describe(ev))}</span></li>`);
-  while ($("feed").children.length > 400) $("feed").lastChild.remove();
-  if (["needs_attention", "episode_error", "question"].includes(ev.kind)) flag("activity");
+  const k = feedKey(ev);
+  if (S.feedKeys.has(k)) return;
+  S.feedKeys.add(k);
+  // a live event has no date of its own: the game's date when it arrived
+  const date = ev.date || (ev.kind === "turn" && ev.turn != null ? `T${ev.turn}` : "") || (fromStream ? S.status.game_date : "") || "";
+  S.feed.push({ ...ev, date });
+  if (ev.id) S.feedAfter = Math.max(S.feedAfter, ev.id);
+  if (S.feed.length > 600) S.feed.splice(0, S.feed.length - 600);
+  if (fromStream && ["needs_attention", "episode_error", "question"].includes(ev.kind)) flag("activity");
+  renderFeedSoon();
 }
+// The chosen campaign's events: all at once when it changes, then only the new ones.
+async function loadFeed() {
+  const cid = S.campaign;
+  if (!cid) return;
+  if (S.feedCid !== cid) { S.feedCid = cid; S.feed = []; S.feedAfter = 0; S.feedKeys = new Set(); renderFeedSoon(); }
+  let evs;
+  try { evs = await api(`/api/events?campaign=${encodeURIComponent(cid)}${S.feedAfter ? `&after=${S.feedAfter}` : ""}`); }
+  catch {                        // no telemetry: the live run's recent events only
+    if (!(S.live && cid === (S.status.info || {}).campaign)) return;
+    try { evs = await api("/events.json?n=300"); } catch { return; }
+  }
+  if (S.feedCid !== cid) return;
+  evs.forEach((e) => addFeed(e));
+  renderFeedSoon();
+}
+const wallTime = (t) => {
+  const d = new Date(t * 1000), today = new Date().toDateString() === d.toDateString();
+  return today ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : d.toLocaleDateString([], { day: "numeric", month: "short" });
+};
+// consecutive events that say the same thing, numbers aside
+const groupKey = (ev) => ev.kind === "learned" ? "learned" : `${ev.kind}|${describe(ev).replace(/\d+(\.\d+)?/g, "#")}`;
+let feedT;
+function renderFeedSoon() { clearTimeout(feedT); feedT = setTimeout(renderFeed, 60); }
+function renderFeed() {
+  const filter = S.feedFilter || (govState() === "needs" ? "problems" : "all");
+  $("feed-filters").innerHTML = FEED_FILTERS.map(([k, l]) => `<button type="button" data-filter="${k}" aria-pressed="${k === filter}">${l}</button>`).join("");
+  const shown = [...S.feed].reverse().filter((ev) => filter === "all" || feedCats(ev).has(filter));
+  const groups = [];
+  for (const ev of shown) {
+    const g = groups[groups.length - 1], key = groupKey(ev);
+    if (g && g.key === key) g.evs.push(ev); else groups.push({ key, evs: [ev] });
+  }
+  const html = groups.slice(0, 200).map(({ evs }) => {
+    const ev = evs[0], n = evs.length, cats = feedCats(ev), problem = cats.has("problems");
+    const dates = [...new Set(evs.map((e) => gdate(e.date)).filter(Boolean))];
+    const range = dates.length > 1 ? `${dates[dates.length - 1]}–${dates[0]}` : "";
+    let text = describe(ev);
+    if (n > 1) text = ev.kind === "learned" ? `Learned ${n} rules` : `${text}, ${n} times${range ? `, ${range}` : ""}`;
+    const raw = evs.slice(0, 10).map(({ date, ...e }) => JSON.stringify(e, null, 1)).join("\n\n");
+    return `<li class="ev${problem ? " problem" : ""}">
+      <span class="ev-when"><b class="ev-date">${esc(gdate(ev.date))}</b><span class="ev-time">${esc(wallTime(ev.t))}</span></span>
+      <div class="ev-what"><p class="ev-text">${problem ? `<i class="ev-mark" aria-hidden="true">▲</i><span class="sr">Problem: </span>` : ""}<span class="ev-say">${esc(text)}</span></p>
+        <details class="ev-raw"><summary>Raw event${n > 1 ? `s (${Math.min(n, 10)})` : ""}</summary><pre>${esc(raw)}</pre></details></div></li>`;
+  }).join("");
+  $("feed").innerHTML = html || `<li class="empty">${esc(FEED_EMPTY[filter])}</li>`;
+  renderRecentProblems();
+}
+function renderRecentProblems() { /* the phone's Now (U7) */ }
+$("feed-filters").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-filter]"); if (!b) return;
+  S.feedFilter = b.dataset.filter;
+  renderFeed();
+});
 
 // ---------- live updates ----------
 // The page keeps itself current: status every 3 s (switching between live and history on its own),
@@ -2247,7 +2407,7 @@ function addFeed(ev) {
 let es = null, wasLive = null, liveRun = null, refreshTimer = null;
 const seenEv = new Set();
 function isNew(ev) {
-  const k = `${ev.t}|${ev.kind}|${ev.text || ev.decision || ev.action || ""}`;
+  const k = JSON.stringify(ev);
   if (seenEv.has(k)) return false;            // the stream replays recent events on reconnect
   seenEv.add(k);
   if (seenEv.size > 6000) seenEv.clear();
@@ -2266,7 +2426,8 @@ const refreshSoon = () => { clearTimeout(refreshTimer); refreshTimer = setTimeou
 function onEvent(ev) {
   S.lastOk = Date.now();
   if (!isNew(ev)) return;
-  addFeed(ev);
+  remember(ev);
+  if (S.campaign && S.campaign === (S.status.info || {}).campaign && S.feedCid === S.campaign) addFeed(ev, true);
   if (ev.kind === "chat") addMessage(ev);
   if (ev.kind === "trace" || ev.kind === "campaign" || ev.kind === "plan") refreshSoon();
   if (ev.kind === "strategy") refreshSoon();   // a new version (a review's, or a human edit's)
@@ -2296,7 +2457,7 @@ async function sync() {
     liveRun = run;
     S.pinned = false;
     setMode(((S.status.info || {}).controls || []).includes("chat") ? "chat" : "instruct");
-    try { (await api("/events.json?n=300")).forEach((e) => { if (isNew(e)) { addFeed(e); if (e.kind === "chat") addMessage(e); } }); } catch { /* older server */ }
+    try { (await api("/events.json?n=300")).forEach((e) => { if (isNew(e)) { remember(e); if (e.kind === "chat") addMessage(e); } }); } catch { /* older server */ }
     connect();
     await loadCampaigns(); await loadCampaignData();
     if (S.starting && Date.now() - S.starting.at < 600000) {
@@ -2309,13 +2470,6 @@ async function sync() {
     await loadCampaigns(); await loadCampaignData();
   }
   wasLive = S.live;
-}
-
-async function loadHistoryFeed() {
-  try {
-    const runs = (await api("/runs")).filter((r) => !r.backfill);
-    if (runs[0]) (await api(`/runs/${encodeURIComponent(runs[0].id)}/events`)).forEach((e) => { if (isNew(e)) addFeed(e); });
-  } catch { /* no runs */ }
 }
 
 // The PC chip tells the truth, including its own uncertainty (ruling 10): the host, the game in front
@@ -2767,13 +2921,12 @@ let resizeT; addEventListener("resize", () => { clearTimeout(resizeT); resizeT =
   setMode(((S.status.info || {}).controls || []).includes("chat") ? "chat" : "instruct");
   await loadCampaigns();
   await loadCampaignData();
-  if (!S.live) await loadHistoryFeed();
   await sync();
   setInterval(sync, 3000);
   setInterval(async () => {
     if (!S.ok || signedOut) return;
     if (S.live) connect();
-    else { await loadCampaigns(); await loadCampaignData(); await loadHistoryFeed(); }
+    else { await loadCampaigns(); await loadCampaignData(); }
   }, 10000);
   setInterval(freshness, 1000);
   setInterval(() => { if (!signedOut && S.live) loadHealth(); }, 60000);

@@ -23,6 +23,7 @@ Telemetry (runs/telemetry.sqlite, across runs and models):
     GET  /api/pc                                gaming PC: agent reachable, version, games open, game in front
     GET  /api/view?campaign=<id>|game=<game>    how the page speaks about the game (corpora/<game>/dashboard.toml)
     GET  /api/health?run=<id>                   model health: the last decision calls that fell back or failed
+    GET  /api/events?campaign=<id>&after=<id>&n= a campaign's events for Activity, each with the game date it happened at
     GET  /api/orders?campaign=<id>&kind=&fate=&limit=   Civ VI: the order record, every order with its fate, purchases, last stands
     POST /api/capture  {}                       the game screen now, stored as the run's frame (live run)
     POST /api/settings  {"models": [{"model", "thinking"}, ...], "rotate"}   the model list (live too); older {"model", "thinking", "fallback"}
@@ -497,6 +498,46 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
                     "stands": list(reversed(stands))[:3], "stand_checks": list(reversed(checks))[:3]}
         return web.json_response(await asyncio.to_thread(build))
 
+    async def api_events(request):
+        """Activity for one campaign (rulings 4, 18): its own events across its runs (backfill runs
+        left out), oldest first, the newest `n` (default 600) after the event `after` (each row's `id`;
+        times are rounded to the millisecond, so they cannot tell events apart), each with the game date
+        it happened at (its own date, a turn event's turn, else the newest metrics date before it). The
+        feed's quiet kinds (metrics, status, traces, chat, plans, the order record's rows) are left out;
+        they have their own views."""
+        cid = request.query.get("campaign", "")
+        if not cid:
+            raise web.HTTPBadRequest(text="campaign is required")
+        try:
+            after = int(request.query.get("after") or 0)
+            n = min(int(request.query.get("n") or 600), 2000)
+        except ValueError as e:
+            raise web.HTTPBadRequest(text="after and n must be numbers") from e
+        before = await q("SELECT json_extract(e.data, '$.date') AS date FROM events e JOIN runs r ON r.id = e.run_id"
+                         " WHERE r.campaign_id=? AND e.kind='metrics' AND e.rowid<=? AND e.run_id NOT LIKE '%-backfill'"
+                         " ORDER BY e.rowid DESC LIMIT 1", (cid, after)) if after else []
+        rows = await q("SELECT e.rowid AS id, e.run_id, e.t, e.kind, CASE WHEN e.kind='metrics' THEN json_object('date',"
+                       " json_extract(e.data, '$.date')) ELSE e.data END AS data FROM events e JOIN runs r ON r.id = e.run_id"
+                       " WHERE r.campaign_id=? AND e.rowid>? AND e.run_id NOT LIKE '%-backfill'"
+                       " AND e.kind NOT IN ('status', 'trace', 'chat', 'plan', 'order_outcome', 'order_followed')"
+                       " ORDER BY e.rowid", (cid, after))
+
+        def build() -> list[dict]:
+            date = before[0]["date"] if before else None
+            out = []
+            for r in rows:
+                try:
+                    data = json.loads(r["data"])
+                except ValueError:
+                    continue
+                if r["kind"] == "metrics":
+                    date = data.get("date") or date
+                    continue
+                own = data.get("date") or (f"T{data['turn']}" if r["kind"] == "turn" and isinstance(data.get("turn"), int) else None)
+                out.append({**data, "id": r["id"], "run_id": r["run_id"], "t": r["t"], "kind": r["kind"], "date": own or date})
+            return out[-n:]
+        return web.json_response(await asyncio.to_thread(build))
+
     async def api_plans(request):
         where, args = scope(request)
         rows = await q(f"SELECT run_id, t, date, source, text FROM plans WHERE {where} ORDER BY t DESC", args)
@@ -624,6 +665,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
 
     api = [web.get("/api/campaigns", api_campaigns), web.get("/api/decisions", api_decisions),
            web.get("/api/pc", api_pc), web.get("/api/view", api_view), web.get("/api/orders", api_orders),
+           web.get("/api/events", api_events),
            web.post("/api/run", api_run),
            web.get("/api/models", api_models), web.post("/api/settings", api_settings),
            web.get("/api/plans", api_plans), web.get("/api/strategy", api_strategy),

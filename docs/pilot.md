@@ -371,6 +371,15 @@ running pilot (whose own dashboard is on `PILOT_PORT`, 8790, on 127.0.0.1). It r
 - **Game health** (Civ VI, on Now, only when something is off): popups quieted at this load, tuner
   timeouts in the last calls, the last turn's time; in the warning colour when a popup failed to
   quiet or a turn was held. The governor line's facts say whether the last stand is armed or off.
+- **Activity**: every event as one sentence in the game's words ("Played T55 → T57 in 2 min 6 s",
+  "Gemini 3.8 Flash overloaded (503); used Gemini 3.1 Pro", "Popups quieted 5 of 6 at T50; not: …",
+  "Review skipped: within 12 turns of the last; next after T62"), newest first, each with its game
+  date over its wall time and the raw event behind *Raw event*; the same thing in a row groups
+  ("Autoplay at T57 failed: the game's tuner did not answer (timed out), 3 times, T55–T57",
+  "Learned 3 rules"). Filters: Problems, Orders, Model, You, All (Problems while the run needs you).
+  A kind the page does not know reads "Unrecognised event: …". The order record's rows are in
+  Orders, chat in Talk. A campaign shows its own events (`GET /api/events?campaign=&after=`), a past
+  one too, never the newest run's.
 - **Talk** (live): ask the model about its reasoning, leave a note for the next decision, decide
   now, standing orders, override a directive, answer confirmations.
 - **Strategy**: the focus, then where the effort goes as one stacked bar (share mode, Civ VI) or the
