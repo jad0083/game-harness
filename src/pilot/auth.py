@@ -511,10 +511,12 @@ class AuthStore:
         count, so a flood cannot push real events out of the table."""
         now = self.now()
         minute = int(now // 60) * 60
+        text = json.dumps(detail, default=str) if detail else None
         with self._lock:
+            # a control row counts repeats of the same action only (pause then resume are two rows)
             row = self.db.execute("SELECT id FROM auth_events WHERE event=? AND ip IS ? AND t>=? AND t<? "
-                                  "AND device_id IS ? ORDER BY id DESC LIMIT 1",
-                                  (event, ip, minute, minute + 60, device_id)).fetchone()
+                                  "AND device_id IS ? AND (? = 0 OR detail IS ?) ORDER BY id DESC LIMIT 1",
+                                  (event, ip, minute, minute + 60, device_id, int(event == "control"), text)).fetchone()
             if not row and event in NOISE_EVENTS and ip:
                 marks = ",".join("?" * len(NOISE_EVENTS))
                 recent = self.db.execute(f"SELECT COUNT(*) FROM auth_events WHERE ip=? AND t>? AND event IN ({marks})",
@@ -526,7 +528,7 @@ class AuthStore:
                 self.db.execute("UPDATE auth_events SET count=count+1 WHERE id=?", (row["id"],))
             else:
                 self.db.execute("INSERT INTO auth_events (t, event, ip, device_id, detail) VALUES (?,?,?,?,?)",
-                                (now, event, ip, device_id, json.dumps(detail, default=str) if detail else None))
+                                (now, event, ip, device_id, text))
 
     def audit_rows(self, n: int = 1000) -> list[dict]:
         return self._rows("SELECT * FROM auth_events ORDER BY t DESC, id DESC LIMIT ?", (n,))
@@ -830,6 +832,16 @@ EVENT_WORDS = {
     "token_revoked": "script token revoked", "key_rotated": "service key rotated",
     "legacy_kept": "carried-over device kept", "legacy_revoked": "carried-over device signed out",
     "unlock": "sign-in pauses lifted", "control": "control"}
+CONTROL_AUDIT = {"pause": "paused the run", "resume": "resumed the run", "stop": "stopped the run",
+                 "settings": "changed the model settings", "run": "started a run", "capture": "captured the game screen",
+                 "instruct": "left a note for the next decision", "chat": "talked to the governor",
+                 "answer": "answered the governor's question", "decide_now": "asked for a decision now",
+                 "override": "applied a directive", "set_models": "changed the models", "set_roles": "changed the models per role",
+                 "set_model": "changed the model", "set_fallback": "changed the fallback model",
+                 "set_speed": "changed the game speed", "set_months": "changed the decision pace",
+                 "order_add": "added a standing order", "order_remove": "removed a standing order",
+                 "edit_pillar": "edited a strategy pillar", "unpin_pillar": "unpinned a strategy pillar",
+                 "review_strategy": "asked for a strategy review"}
 BAD_EVENTS = {"signin_failed", "throttled", "words_switched_off", "grant_conflict", "service_key_refused_lan",
               "host_refused"}
 
@@ -853,7 +865,7 @@ def audit_sentences(store: AuthStore, n: int = 20) -> list[dict]:
         if e["event"] == "signin" and detail.get("how"):
             what = f"signed in ({detail['how'].replace('_', ' ')})"
         if e["event"] == "control" and detail.get("action"):
-            what = f"control: {detail['action']}"
+            what = CONTROL_AUDIT.get(detail["action"], f"control: {str(detail['action']).replace('_', ' ')}")
         if e["event"] == "revoked" and detail.get("by"):
             what = f"signed out by {name_of(store, detail['by']) or detail['by']}"
         who = name_of(store, e["device_id"])
@@ -1241,6 +1253,14 @@ class Auth:
     def still_valid(self, request: web.Request) -> bool:
         p: Principal | None = request.get(PRINCIPAL)
         return bool(p) and p.recheck()
+
+    def audit_control(self, request: web.Request, action: str) -> None:
+        """A `control` audit row (ruling 50): the action and the device behind it, so what a lost or
+        stolen session changed shows in the sign-in log."""
+        p: Principal | None = request.get(PRINCIPAL)
+        ident = p.id if p is not None and p.kind in ("browser", "script") else None
+        self.store.audit("control", request.remote, ident,
+                         {"action": str(action)[:40], "by": p.name if p is not None else None})
 
     # -- notices, devices, the audit in words
     def notices(self, me: Principal) -> list[dict]:

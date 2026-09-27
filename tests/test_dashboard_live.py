@@ -360,3 +360,52 @@ def test_a_browser_behind_the_viewer_is_named_on_the_live_pilot(tmp_path, clock)
     asyncio.run(go())
     assert events_of(log, "control")[0]["by"] == "Pixel phone"
     log.close()
+
+
+def test_what_a_device_changes_is_in_the_sign_in_log(tmp_path, clock, monkeypatch):
+    """Rulings 49.6 and 50: /control, /api/settings, /api/run and /api/capture through the viewer each
+    leave a `control` audit row naming the action and the device, so a revoked session's doings show
+    in dashboard-devices log and Recent sign-in activity; saved settings name who saved them."""
+    from pilot import dashboard
+    live, log = live_app(tmp_path)
+    runs = tmp_path / "runs"
+
+    class Proc:
+        returncode = 0
+
+        async def communicate(self):
+            return b"", b""
+
+    async def fake_exec(*a, **kw):
+        return Proc()
+
+    async def go():
+        server = TestServer(live)
+        await server.start_server()
+        log.state.info["port"] = server.port
+        log.state.status = "playing"
+        log.emit("status")
+        app, auth = viewer(tmp_path, clock)
+        dev, cookie = browser_cookie(auth, name="Pixel phone")
+        async with client(app, cookie) as c:
+            assert (await c.post("/control", json={"action": "pause"}, headers=origin(c))).status == 200
+            assert (await c.post("/control", json={"action": "resume"}, headers=origin(c))).status == 200
+            assert (await c.post("/api/settings", json={"rotate": True}, headers=origin(c))).status == 200
+            await c.post("/api/capture", json={}, headers=origin(c))
+        await server.close()
+        log.state.status = "stopped"
+        log.emit("status")
+        monkeypatch.setattr(dashboard.asyncio, "create_subprocess_exec", fake_exec)
+        app, auth = viewer(tmp_path, clock)                 # a fresh viewer: no live run cached
+        async with client(app, cookie) as c:
+            assert (await c.post("/api/run", json={"game": "civ6"}, headers=origin(c))).status == 200
+        return auth, dev
+    auth, dev = asyncio.run(go())
+    rows = [r for r in auth.store.audit_rows() if r["event"] == "control"]
+    actions = sorted(json.loads(r["detail"])["action"] for r in rows)
+    assert actions == ["capture", "pause", "resume", "run", "settings"]
+    assert all(r["device_id"] == dev and r["ip"] == "127.0.0.1" for r in rows)
+    text = " | ".join(e["text"] for e in A.audit_sentences(auth.store))
+    assert "Pixel phone" in text and "paused the run" in text.lower() and "started a run" in text.lower()
+    assert json.loads((runs / "pilot-settings.json").read_text())["changed_by"] == "Pixel phone"
+    log.close()

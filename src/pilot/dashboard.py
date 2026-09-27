@@ -59,6 +59,7 @@ from .auth import (
     AUTH_VERSION,
     KEEPALIVE_S,
     KEY_HEADER,
+    PRINCIPAL,
     RUNNER_KWARGS,
     Auth,
     KeySource,
@@ -75,6 +76,23 @@ if TYPE_CHECKING:
 
 STATIC = Path(__file__).parent / "static"
 log_ = logging.getLogger(__name__)
+
+
+def actor_name(request: web.Request) -> str | None:
+    """The device behind a request, as people read it: the viewer's principal, or the name the viewer
+    forwarded to the live pilot."""
+    actor = request.get(ACTOR_KEY)
+    if actor:
+        return actor[0]
+    p = request.get(PRINCIPAL)
+    return p.name if p is not None else None
+
+
+async def audit_control(request: web.Request, action: str) -> None:
+    """A `control` row in the viewer's sign-in audit (the live pilot keeps none)."""
+    auth = request.app.get(AUTH_KEY)
+    if isinstance(auth, Auth):
+        await asyncio.to_thread(auth.audit_control, request, action)
 _PAGE: dict = {}
 
 
@@ -649,9 +667,10 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
             prefs = save_prefs(runs_dir, model=body.get("model") or None, thinking=body.get("thinking") or None,
                                speed=body.get("speed") or None, months=int(months) if months not in (None, "") else None,
                                fallback=body.get("fallback") or None, models=body.get("models"),
-                               rotate=body.get("rotate"), roles=body.get("roles"))
+                               rotate=body.get("rotate"), roles=body.get("roles"), by=actor_name(request))
         except (ValueError, TypeError) as e:
             raise web.HTTPBadRequest(text=str(e)) from e
+        await audit_control(request, "settings")
         if pilot is not None and hasattr(pilot, "set_model") and body.get("model"):
             pilot.set_model(prefs["model"], prefs.get("thinking"))
         if pilot is not None and hasattr(pilot, "set_fallback") and body.get("fallback"):
@@ -671,7 +690,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
         try:
             months = body.get("months")
             save_prefs(runs_dir, game=body.get("game"), speed=body.get("speed"),
-                       months=int(months) if months not in (None, "") else None)
+                       months=int(months) if months not in (None, "") else None, by=actor_name(request))
         except (ValueError, TypeError) as e:
             raise web.HTTPBadRequest(text=str(e)) from e
         proxy_url = await live_url() if live_url else None
@@ -682,6 +701,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
         out, _ = await proc.communicate()
         if proc.returncode != 0:
             raise web.HTTPInternalServerError(text=f"could not start {SERVICE}: {out.decode(errors='replace')[:300]}")
+        await audit_control(request, "run")
         return web.json_response({"ok": True, "started": SERVICE, **load_prefs(runs_dir)})
 
     pc_cache: dict = {}
@@ -815,6 +835,14 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
                 raise web.HTTPBadGateway(text=f"live pilot unreachable: {e}") from e
             if code == 401:
                 return refused_key()
+            if request.method == "POST":         # what this device changed, in the sign-in log (ruling 50)
+                action = "capture" if request.path == "/api/capture" else "control"
+                if request.path == "/control":
+                    try:
+                        action = str(json.loads(body or b"{}").get("action") or "control")
+                    except (ValueError, AttributeError):
+                        pass
+                await audit_control(request, action)
             return web.Response(body=data, status=code, content_type=ctype)
 
         async def v_events(request):

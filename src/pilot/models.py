@@ -251,6 +251,8 @@ def save_prefs(runs_dir: Path, model: str | None = None, thinking: str | None = 
         if not isinstance(m, int) or not 1 <= m <= 120:
             raise ValueError("months must be a whole number from 1 to 120")
         prefs["months"] = m
+    if run.get("by"):                   # who saved them (the dashboard's device), for the record
+        prefs["changed_by"] = str(run["by"])[:60]
     runs_dir.mkdir(parents=True, exist_ok=True)
     (runs_dir / PREFS_FILE).write_text(json.dumps(prefs, indent=1), encoding="utf-8")
     return prefs

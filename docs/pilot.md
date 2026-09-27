@@ -677,7 +677,10 @@ The dashboard listens on the LAN, so every request needs a principal (design:
 - **Devices** (Settings > Devices, or ⋯ > Devices): this browser (rename, sign out), the other
   browsers with how and when they signed in and their last use and address (badges: new, carried
   over from the old link, used from two addresses) and **Sign out**, the script tokens with
-  **Revoke**, **Sign out all other devices**, and the recent sign-in activity. Other signed-in
+  **Revoke**, **Sign out all other devices**, and the recent sign-in activity, which also lists
+  what each device did through the viewer (paused, stopped or started a run, changed the settings,
+  captured the screen, talked to the governor), so a lost session's doings stay on record; the
+  saved settings name the device that saved them (`changed_by`). Other signed-in
   pages show a notice for 24 h after a new device signs in. From the controller:
   `python -m pilot dashboard-devices [list | rename ID NAME | revoke ID | revoke-all [--except ID] |
   log [-n N] | unlock]`.
