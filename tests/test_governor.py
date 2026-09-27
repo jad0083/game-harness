@@ -4008,3 +4008,63 @@ def test_the_stall_limit_is_ten_median_months_and_never_under_300_s(setup):
     gov._run_until_next_decision(briefing("2199.12.01"))
     stall = next(e for e in log.recent if e["kind"] == "stall")
     assert stall["limit"] == 1000 and stall["seconds"] == 1000 and stall["date"] == "2200.06.01"
+
+
+class _Outage(FakeStellaris):
+    """The agent does not answer on the reads numbered in `down` (1-based): the save read and any
+    input in that time raise URLError, as McpGame does when the PC sleeps or the network drops."""
+
+    def __init__(self, briefings, down):
+        super().__init__(briefings)
+        self.down, self.calls, self.tried_while_down = set(down), 0, []
+
+    def briefing(self):
+        self.calls += 1
+        if self.calls in self.down:
+            import urllib.error
+            raise urllib.error.URLError("[Errno 113] No route to host")
+        return super().briefing()
+
+    def set_paused(self, paused):
+        if self.calls in self.down:
+            import urllib.error
+            self.tried_while_down.append(("paused", paused))
+            raise urllib.error.URLError("[Errno 113] No route to host")
+        return super().set_paused(paused)
+
+
+def test_an_agent_outage_longer_than_the_stall_limit_recovers_without_a_human(setup):
+    """Re-review fix: the PC sleeps for 8 minutes (reads 2-9 fail), so the date cannot move, then
+    the agent answers again with the same date. Time without a reading is no stall: the outage
+    flags needs attention (the governor is blind), clears by itself once a save of the campaign
+    reads again, and the wait goes on to its scheduled decision with no human Resume."""
+    s, log = setup
+    s.decide_every_months = 3
+    game = _Outage([briefing("2200.01.01")] * 3 + [briefing(f"2200.{m:02d}.01") for m in (2, 3, 4)], down=range(2, 10))
+    gov = Governor(s, game, log, model=decisions("keep"))
+    gov._clock = _Clock(game, step=60)
+    b, reason = gov._run_until_next_decision(briefing("2200.01.01"))
+    assert reason.startswith("scheduled") and b["date"] == "2200.04.01", (reason, b["date"], _kinds(log))
+    kinds = _kinds(log)
+    assert "stall" not in kinds, "the outage time is left out of the held time"
+    assert kinds.count("needs_attention") == 1 and "recovered" in kinds
+    assert kinds.index("needs_attention") < kinds.index("recovered")
+    why = next(e for e in log.recent if e["kind"] == "needs_attention")["reason"]
+    assert "could not be read for 300 s" in why and "Nothing was sent" in why and "by itself" in why, why
+    assert log.state.status == "playing" and not gov.control.paused
+    assert game.tried_while_down == [], "no input while the agent was away"
+    assert game.actions == [("paused", False), ("paused", True)], "the wait's own resume and the decision's pause"
+
+
+def test_a_short_read_failure_does_not_restart_the_stall_timer(setup):
+    """A crash with a flaky agent: the date holds and one read fails. The failed read's minute is
+    left out, but the time observed before and after it counts, so the stall is still found."""
+    s, log = setup
+    game = _Outage([briefing("2200.01.01")], down={3})
+    gov = Governor(s, game, log, model=decisions("keep"))
+    gov._clock = _Clock(game, step=60)
+    _, reason = gov._run_until_next_decision(briefing("2200.01.01"))
+    assert reason == "" and log.state.status == "needs_attention"
+    stall = next(e for e in log.recent if e["kind"] == "stall")
+    assert stall["seconds"] == 300 and game.calls == 6, (stall, game.calls)
+    assert game.actions == [("paused", False)]

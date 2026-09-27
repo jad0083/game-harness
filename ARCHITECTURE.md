@@ -365,7 +365,12 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   governed save still looks newest), and `McpGame.ensure_foreground` would focus any window whose
   title contains "Stellaris" (the launcher, a browser tab) after a crash; nothing read-only proves
   the governed game is in front. A dashboard pause never reaches the check; a pause made in the
-  game's own UI looks like a stall (known limit). The clock is injected (`_clock`, default
+  game's own UI looks like a stall (known limit). A failed read never feeds the watchdog: its time
+  is left out of the held time (`unread_since`), so an agent outage or a sleeping PC is no stall,
+  and a crash with a flaky agent is still found. Reads failing for `_stall_limit()` in a row
+  (`_unread_too_long`) set needs attention and a `needs_attention` event without pausing the run
+  or sending input; the wait keeps reading, and the first save of the campaign that reads clears it
+  (`recovered`). The clock is injected (`_clock`, default
   `time.monotonic`) so tests drive it; `FakeStellaris(self_pause_after=n)` pauses itself after n
   reads.
 - `claude_code.py`: the `claude-code:<alias or model id>` provider (the catalog adds versioned ids from

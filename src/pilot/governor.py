@@ -1045,6 +1045,8 @@ class Governor:
         self._status("playing")
         self.game.set_paused(False)
         self._date_seen_at = self._clock()
+        unread_since: float | None = None      # clock of the first failed read in a row
+        blind = False                          # reads failed for a stall limit: flagged, clears by itself
         while True:
             if self.control.stopping:
                 return None, "stop"
@@ -1056,10 +1058,11 @@ class Governor:
             time.sleep(self.s.poll_s)
             try:
                 b = self.game.briefing()
-            except Exception as e:  # noqa: BLE001 - a save being rotated; try again next poll
+            except Exception as e:  # noqa: BLE001 - a save being rotated, or the agent away; try again next poll
                 self.log.emit("briefing_error", error=str(e)[:200])
-                if self._stalled(last["date"]):
-                    return last, ""
+                unread_since = self._clock() if unread_since is None else unread_since
+                if not blind:
+                    blind = self._unread_too_long(unread_since, e)
                 continue
             folder = self._save_folder(b)
             if folder and getattr(self, "_folder", None) and folder != self._folder:
@@ -1069,13 +1072,23 @@ class Governor:
                                       f"{self._folder!r}. Load that game again and press Resume, or stop this run "
                                       "and start a new one for the new game.")
                 return last, ""
+            if blind:
+                blind = False
+                if self.log.state.status == "needs_attention":
+                    self._status("playing")
+                self.log.emit("recovered", reason="the newest autosave of this campaign reads again")
             if b["date"] != last["date"]:
                 self._date_moved(months(b["date"]) - months(last["date"]))
                 self.log.emit("metrics", **metrics(b))
                 self.log.state.game_date = b["date"]
                 self.log.state.turns_advanced = months(b["date"]) - months(last["date"]) + self.log.state.turns_advanced
-            elif self._stalled(b["date"]):
-                return last, ""
+            else:
+                if unread_since is not None:
+                    # the time without a reading proves no stall (the PC may have slept): left out
+                    self._date_seen_at += self._clock() - unread_since
+                if self._stalled(b["date"]):
+                    return last, ""
+            unread_since = None
             urgent = urgent_changes(last, b)
             if b["date"] != last["date"]:
                 urgent += self._newly_missed_milestones(last["date"], b["date"])
@@ -1122,6 +1135,26 @@ class Governor:
         self._needs_attention(f"the game date has not advanced for {round(held)} s (still {date}): a popup that paused "
                               "the game, another game loaded, the launcher or a crash may hold it. Nothing was sent to "
                               f"the game. Screenshot at the stall: {frame or 'none'}. Check the PC, then press Resume.")
+        return True
+
+    def _unread_too_long(self, since: float, e: BaseException) -> bool:
+        """Reads of the newest autosave have failed since `since` (the agent away: the PC asleep, the
+        network down, the agent reinstalled; or a save that cannot be read). That time is no date
+        stall. After `_stall_limit()` of it: needs attention in the status and a `needs_attention`
+        event, and True. The run is not paused and nothing is sent to the game: the wait keeps
+        reading, which is the probe, and clears the flag by itself once a save of this campaign reads
+        again (a `recovered` event); only a stall seen after that waits for the human."""
+        if self.human_paused or self.control.paused:
+            return False
+        held, limit = self._clock() - since, self._stall_limit()
+        if held < limit:
+            return False
+        self.log.state.status = "needs_attention"
+        self.log.emit("needs_attention", reason=(
+            f"the newest autosave could not be read for {round(held)} s ({type(e).__name__}: {e})"[:300]
+            + ": the agent may be away (the PC asleep, the network down, the agent reinstalled) or the save "
+            "unreadable. Nothing was sent to the game, which runs on without the governor. The run carries "
+            "on by itself as soon as a save of this campaign reads again; Resume also works."))
         return True
 
     def _frame(self) -> str:

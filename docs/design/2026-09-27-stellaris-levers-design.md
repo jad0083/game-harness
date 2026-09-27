@@ -839,6 +839,15 @@ votes for the mod levers, and 2 of 2 for the other two findings.
       - So at the first `stall_s` the watchdog takes the screenshot, logs `stall` and calls
         `_needs_attention`, sending no input and focusing no window. A resume can return only behind
         such positive evidence.
+    - **Amended after the re-review (2026-09-27): read failures are not stalls.** With the watchdog run on
+      every failed read, an agent outage longer than `stall_s` (the PC asleep, the network down, the agent
+      reinstalled) waited for a human although the agent came back: main simply read again.
+      - Time from a failed read to the next good one is left out of the held time. A PC that slept shows
+        the same date on waking and is no stall; a crash with a flaky agent is still found, since the
+        observed time before and after the gap counts.
+      - Reads failing for `stall_s` in a row flag needs attention (status and event) without pausing the
+        run or sending input. The wait keeps reading, which is the read-only probe, and the first save of
+        the governed campaign that reads clears the flag (`recovered`).
 
 24. **Dismiss the declaration-of-war popup before any screen flow.**
     - **Decision.** A `[screens.war_declaration]` template (captured live, L6), dismissed:
@@ -1011,7 +1020,9 @@ Tests:
   - a held date while running → `needs_attention` at `stall_s`, with no input (ruling 23's amendment): also
     when another campaign was loaded mid-wait, and no focus after a crash;
   - a held date while `human_paused` → nothing;
-  - a date that moves resets the timer.
+  - a date that moves resets the timer;
+  - an agent outage longer than `stall_s`, then the same date → flagged, recovers by itself, no stall
+    (re-review amendment); one failed read in a held date does not restart the timer.
 
 **Live checks.** Run them only when Stellaris is next the running game. There is one Steam account, so Civ VI
 must be stopped first: pause the Civ VI governor from the dashboard, quit Civ VI, and start Stellaris

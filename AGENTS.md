@@ -287,7 +287,9 @@ Rules:
   and flags needs attention. It sends no input and focuses no window: another loaded campaign (no
   autosave yet), the launcher or a browser tab titled Stellaris cannot be told from the governed game
   read-only, so only the human resumes. Pause from the dashboard, not the game's menu, when you want
-  it to wait.
+  it to wait. Time in which the save cannot be read (the PC asleep, the agent away) is left out of
+  the held time; reads failing for that limit flag needs attention without pausing the run or
+  sending input, and the flag clears by itself once a save of the campaign reads again.
 - Settings used: autosave Monthly (`settings.txt` `autosave=2`), tutorial off.
 - **Weighted pillars** (`[weights]` in pillars.toml): pillars carry weights (sum 100, 5..50, heaviest
   >= 2x lightest); each decision gets every directive's pressure (weight x milestone need) and a

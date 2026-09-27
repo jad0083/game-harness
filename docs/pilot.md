@@ -102,7 +102,10 @@ in this run's last 24 months), then saves a screenshot, logs `stall` and flags *
 with the screenshot's path. It sends nothing to the game and focuses no window: it cannot tell the
 governed game from another campaign you loaded (which writes no autosave at first), the launcher
 or a browser tab titled Stellaris, so you check the PC and press Resume. A pause from the dashboard
-never triggers this; a pause made in the game's own menu does look like a stall.
+never triggers this; a pause made in the game's own menu does look like a stall. Time in which the
+save cannot be read (the PC asleep, the network down, the agent reinstalled) does not count: if
+reads fail for that long, the governor flags *needs attention* but sends nothing and keeps reading,
+and carries on by itself as soon as a save of the campaign reads again.
 
 ## Civilization VI governor
 
