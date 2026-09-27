@@ -1152,6 +1152,11 @@ def after_order(game: FakeCiv6, n: int = 1) -> list:
     return [a[0] if a[0] != "stand" else f"stand {a[2]}" for a in game.actions[idx + 1:]]
 
 
+def never_while_autoplay_runs(game: FakeCiv6) -> bool:
+    """(g) the invariant for every call the stand adds, as for orders: nothing while the AI plays."""
+    return all(not a[-1] for a in game.actions if a[0] in (*STAND_CALLS, "order"))
+
+
 def stand_rows(setup) -> list[tuple]:
     return [(e["key"], e["result"]) for e in _events(setup) if e["kind"] == "order_outcome" and e["key"].startswith("stand")]
 
@@ -1236,7 +1241,7 @@ def test_a_falling_city_gets_its_stand_between_the_urgent_decision_and_a_one_tur
     assert hand_back == ("autoplay", 1, False), "one turn: the AI plays the rest of the turn"
     turns = [e for e in _events(setup) if e["kind"] == "turn"]
     assert (turns[1]["turn"], turns[1]["turns"]) == (T0 + 2, 1), "the turn advanced by exactly one"
-    assert all(not a[-1] for a in game.actions if a[0] in (*STAND_CALLS, "order")), "(g) never while autoplay runs"
+    assert never_while_autoplay_runs(game), "(g)"
     assert stand_rows(setup) == [("stand ranged", "took"), ("stand pin", "took")]
     stand = next(e for e in _events(setup) if e["kind"] == "last_stand")
     assert stand["stopped"] == "done: nothing left to do" and stand["pins"] == [{"id": 5, "x": 22, "y": 22}]
@@ -1261,6 +1266,7 @@ def test_an_ignored_first_action_stops_the_stand_and_still_hands_back(setup):
     game = stand_game(stand=[SHOT, SHOT], stand_ignored=True)
     g = stand_governor(setup, game)
     g.run(max_decisions=3)
+    assert never_while_autoplay_runs(game)
     calls = [a[0] if a[0] != "stand" else f"stand {a[2]}" for a in game.actions]
     i = calls.index("stand ranged_attack")
     assert calls[i:i + 4] == ["stand ranged_attack", "ls_state", "turn_ready", "autoplay"], "stopped at once"
@@ -1275,6 +1281,7 @@ def test_two_ignored_first_actions_turn_the_stand_off_for_the_run(setup):
     game = stand_game(events={T0 + 1: falls}, stand=[SHOT] * 5, stand_ignored=True)
     g = stand_governor(setup, game, every=4)
     g.run(max_decisions=3)
+    assert never_while_autoplay_runs(game)
     assert [a[2] for a in game.actions if a[0] == "stand"] == ["ranged_attack", "ranged_attack"]
     off = [e for e in _events(setup) if e["kind"] == "last_stand_off"]
     assert len(off) == 1 and off[0]["reason"].startswith("the first action of 2 stands did not take")
@@ -1289,6 +1296,7 @@ def test_a_lost_reply_is_never_sent_again(setup):
     game = stand_game(stand=[SHOT, SHOT], stand_lost_reply=True)
     g = stand_governor(setup, game)
     g.run(max_decisions=3)
+    assert never_while_autoplay_runs(game)
     assert [a[2] for a in game.actions if a[0] == "stand"] == ["ranged_attack"]
     assert stand_rows(setup) == [("stand lost reply", "took")]
     stand = next(e for e in _events(setup) if e["kind"] == "last_stand")
@@ -1300,6 +1308,7 @@ def test_after_three_stands_in_a_row_the_ai_defends_alone(setup):
     game = stand_game(events={T0 + 1: falls})
     g = stand_governor(setup, game, every=5)
     g.run(max_decisions=3)
+    assert never_while_autoplay_runs(game)
     assert [a[2] for a in game.actions if a[0] == "stand"] == ["done"] * 3
     s, _ = setup
     journal = s.journal.read_text()
@@ -1315,6 +1324,7 @@ def test_the_action_cap_and_the_time_budget_stop_a_stand(setup):
                     ls={"me": 0, "units": [*archers, dict(LS_BARB)]}, stand=shots)
     g = stand_governor(setup, game)
     g.run(max_decisions=3)
+    assert never_while_autoplay_runs(game)
     assert sum(1 for a in game.actions if a[0] == "stand") == 8
     assert sum(1 for a in game.actions if a[0] == "finish_moves") == 8
     stand = next(e for e in _events(setup) if e["kind"] == "last_stand")
@@ -1338,6 +1348,7 @@ def test_a_popup_means_no_action_and_a_hand_back(setup):
     game = stand_game(stand=[SHOT], popup=True)
     g = stand_governor(setup, game)
     g.run(max_decisions=3)
+    assert never_while_autoplay_runs(game)
     calls = [a[0] for a in game.actions]
     assert "stand" not in calls and "ls_state" not in calls
     i = calls.index("turn_ready")
@@ -1350,6 +1361,7 @@ def test_no_game_core_read_means_no_action(setup):
     game = stand_game(stand=[SHOT], ls_fails=1)
     g = stand_governor(setup, game)
     g.run(max_decisions=3)
+    assert never_while_autoplay_runs(game)
     assert not any(a[0] == "stand" for a in game.actions)
     stand = next(e for e in _events(setup) if e["kind"] == "last_stand")
     assert stand["stopped"] == "no GameCore read before the first action: nothing sent"
@@ -1363,6 +1375,7 @@ def test_a_pinned_unit_the_hand_back_moved_is_noted(setup):
     game = stand_game(events={T0 + 1: falls, T0 + 2: moved}, stand=[SHOT])
     g = stand_governor(setup, game)
     g.run(max_decisions=3)
+    assert never_while_autoplay_runs(game)
     check = next(e for e in _events(setup) if e["kind"] == "last_stand_check")
     assert check["pins"][0]["result"] == "moved" and check["pins"][0]["now"] == {"x": 20, "y": 22}
     s, _ = setup
