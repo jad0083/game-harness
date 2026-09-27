@@ -1679,7 +1679,9 @@ function renderGovernor() {
     line = `Starting ${esc(g.short || "the run")}…`;
   } else if (state === "history") {
     const c = (S.camps || []).find((x) => x.id === S.campaign) || {}, lastDec = S.decisions[S.decisions.length - 1];
-    line = `Viewing a past campaign: last played ${esc(gdate(c.latest || lastMetricDate()) || "–")}${lastDec ? `, ${esc(new Date(lastDec.t * 1000).toLocaleDateString([], { day: "numeric", month: "short" }))}` : ""}.`;
+    // absent means hidden (ruling 3): a campaign with nothing recorded says so instead of a dash
+    const played = [gdate(c.latest || lastMetricDate()), lastDec ? new Date(lastDec.t * 1000).toLocaleDateString([], { day: "numeric", month: "short" }) : ""].filter(Boolean);
+    line = played.length ? `Viewing a past campaign: last played ${esc(played.join(", "))}.` : "Viewing a past campaign with nothing recorded yet.";
     if (S.live) {
       const lc = (S.camps || []).find((x) => x.id === info.campaign);
       facts.push(`Live now: <button type="button" class="linkish" data-live>${esc(GAME_NAMES[info.game] || info.game || "")} ${esc(gdate(S.status.game_date))}${lc ? `, ${esc(lc.title || human(lc.name))}` : ""}</button>.`);

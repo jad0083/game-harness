@@ -130,6 +130,26 @@ def test_a_past_campaign_says_so_and_links_to_the_live_one(browser, live_servers
     w.context.close()
 
 
+def test_an_empty_past_campaign_says_so_without_a_dash(browser, live_servers):
+    """Absent means hidden (ruling 3): a campaign with nothing recorded (a failed start) has no date to name."""
+    from pilot.events import EventLog
+    empty = EventLog(live_servers["runs"], "20260925-080000", "m", telemetry=live_servers["tel"])
+    empty.emit("run_start", game="galciv4", model="m")
+    empty.set_campaign("galciv4", "untitled", "")
+    empty.emit("run_end")
+    empty.close()
+    w = open_context(browser, "desktop-light", live_servers)
+    load(w)
+    page = w.page
+    page.click("#campaign")
+    page.click("#camp-empty summary")
+    page.click('#camp-dialog button[data-cid="galciv4/untitled"]')
+    page.wait_for_function("document.getElementById('gov').dataset.state === 'history'")
+    assert page.text_content("#gov-line") == "Viewing a past campaign with nothing recorded yet."
+    assert "–" not in page.text_content("#gov")
+    w.context.close()
+
+
 def test_stop_confirms_in_the_games_words(browser, live_servers):
     w = open_context(browser, "desktop-dark", live_servers)
     load(w)
