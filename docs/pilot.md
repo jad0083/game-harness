@@ -367,7 +367,7 @@ followed (`order_followed`).
 - A tech pick is **researched**, **held** (still researched at the next review or after 24 months)
   or **did not stick** (skipped until the next review); a "nothing to pick" reply is a **no-op**,
   counted apart. After 3 no-op syncs the next review lists what each field offers and asks that
-  `prefer_techs` name one of them.
+  `prefer_techs` name one of them (a review whose model call fails keeps the count for its retry).
 - A market order **did not take** (the next save differs), is **held**, **removed** (gone later
   without our sync) or **failed** (the sync raised, e.g. an agent timeout). Two *did not take* in a
   row for the same side and resource suspend it (the order the save holds, if any, is kept) until

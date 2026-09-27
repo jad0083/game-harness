@@ -580,8 +580,8 @@ class Governor:
         self._action_rows: list[dict] = []        # every order_outcome row of the campaign
         self._followed_date: str | None = None    # the save date the actions were last judged on
         self._now_date: str | None = None
-        self._tech_noops = 0                      # "nothing to pick" replies since the last review
-        self._review_noops = 0                    # ...as of the review being written (and its retry)
+        self._tech_noops = 0                      # "nothing to pick" replies since the last answered review
+        self._review_noops = 0                    # ...as of the review being written (and its corrective retry)
         self._market_cal = market_calibration(settings.corpus_dir)   # [ui.market] hash (market suspension)
         self._market_measured = market_measured(settings.corpus_dir)  # new trades with a measured start amount
         self._market_note = ""                    # the last sync's idle-trade line, for the next decision
@@ -2379,6 +2379,8 @@ class Governor:
         except Exception as e:  # noqa: BLE001 - a failed review never stops play or pauses the game; retried at the next decision
             self.review_requested = trigger
             self._review_retry = True
+            # the no-op tech syncs go back to the count, so the retry lists the offers (ruling 6)
+            self._tech_noops, self._review_noops = self._tech_noops + noops, 0
             self.log.emit("episode_error", error=f"strategy review: {type(e).__name__}: {e}"[:500])
             return
         if retry_errors is not None:

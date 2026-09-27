@@ -4435,6 +4435,33 @@ def test_the_corrective_retry_of_a_review_keeps_the_tech_offers(setup):
     assert len(prompts) == 2 and all("offered now: physics: tech_lasers_1, tech_shields_1" in p for p in prompts)
 
 
+def test_a_review_whose_model_call_fails_keeps_the_tech_offers_for_its_retry(setup):
+    from pilot.strategy import Pillar
+    s, log = setup
+    prompts: list[str] = []
+
+    def review(messages, info):
+        prompts.append("\n".join(str(getattr(p, "content", "")) for m in messages for p in getattr(m, "parts", [])))
+        if len(prompts) == 1:
+            raise RuntimeError("503 provider unavailable")
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"change": False, "assessment": "x", "rules": []})])
+
+    class NothingToPick(FakeStellaris):
+        def pick_tech(self, prefer):
+            return "nothing to pick: no preferred tech offered in a field that is free to change"
+    g = Governor(s, NothingToPick([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": FunctionModel(review)})
+    g.strategy = _strategy_with(technology=Pillar(priority=3, stance="s", goals=["g"], prefer_techs=["tech_habitat_1"]))
+    offer = {"physics": {"current": ["tech_lasers_1", 1.0], "alternatives": ["tech_lasers_1", "tech_shields_1"]}}
+    for d in ("2200.02.01", "2200.03.01", "2200.04.01"):
+        g._carry_out_actions({**briefing(d), "research": offer})
+    g._review_strategy({**briefing("2200.05.01"), "research": offer}, "scheduled")
+    assert g.review_requested == "scheduled" and g._review_retry, "the failed review waits for the next decision"
+    g._maybe_event_review({**briefing("2200.06.01"), "research": offer}, g.review_requested, retry=True)
+    assert len(prompts) == 2 and all("offered now: physics: tech_lasers_1, tech_shields_1" in p for p in prompts)
+    assert g._tech_noops == 0 and g.review_requested is None, "the review that answered took the count"
+
+
 # ---- market buy rules and the idle-trade fill (levers design rulings 9-10) --------------------------
 
 def _market_briefing(date: str, *, trade=20000.0, income=100.0, stock=None, net=None, fluct=None, trades=None,
