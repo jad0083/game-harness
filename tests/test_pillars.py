@@ -326,14 +326,21 @@ def test_bad_civ6_limits_are_rejected(tmp_path, old, new, where):
         load_pillars(civ_corpus(tmp_path, CIV_MINI.replace(old, new)))
 
 
-def test_the_civ6_order_record_settings_load_and_stellaris_has_none():
+def test_the_civ6_order_record_settings_load():
     orders = load_pillars(REPO / "corpora/civ6").orders
     assert (orders.window_turns, orders.min_resolved, orders.weak_rate, orders.open_cap_turns,
             orders.open_grace_turns) == (30, 8, 0.5, 20, 3)
     assert dict(orders.min_samples) == {"production": 4, "purchase": 4, "other": 3}
     assert (orders.min_samples_of("production replace"), orders.min_samples_of("purchase faith"),
             orders.min_samples_of("civic")) == (4, 4, 3)
-    assert load_pillars(REPO / "corpora/stellaris").orders is None, "the record stays off in Stellaris"
+
+
+def test_the_stellaris_action_record_counts_in_months():
+    """Levers design ruling 5: 10 in-game years, widened to 6 judged, followed 24 months at most."""
+    orders = load_pillars(REPO / "corpora/stellaris").orders
+    assert (orders.window_turns, orders.min_resolved, orders.weak_rate, orders.open_cap_turns,
+            orders.open_grace_turns) == (120, 6, 0.5, 24, 1)
+    assert all(orders.min_samples_of(k) == 3 for k in ("directive tech_rush", "tech", "market buy food", "posture x"))
 
 
 def test_a_file_without_an_orders_table_has_no_record(tmp_path):
@@ -399,4 +406,12 @@ def test_the_public_view_shows_every_buy_out_rule_and_the_record_settings():
     buy = pub["actions"]["purchase"]
     assert buy["defender_classes"][0] == "Melee" and buy["prophet_faith_reserve"] == 0 and buy["pantheon_reserve"]
     assert pub["orders"]["window_turns"] == 30 and pub["milestone_exclude"] == ["gold", "faith"]
-    assert load_pillars(REPO / "corpora/stellaris").public()["orders"] is None
+    assert load_pillars(REPO / "corpora/stellaris").public()["orders"]["open_cap_turns"] == 24
+
+
+def test_directive_policies_come_from_the_directives_file():
+    from pilot.pillars import load_directive_policies
+    got = load_directive_policies(REPO / "corpora/stellaris")
+    assert got["tech_rush"] == {"economic_policy": "economic_policy_civilian"}
+    assert got["defend"] == {"diplomatic_stance": "diplo_stance_belligerent"}
+    assert set(got) == {"expand", "consolidate_economy", "tech_rush", "prepare_war", "defend", "diplomacy_first"}

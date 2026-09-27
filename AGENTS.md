@@ -311,6 +311,12 @@ Rules:
   order of them to add is refused on its own until that is measured (removals and other adds still go,
   but an order of the same side and resource already placed stays at its amount); changes are computed from the last autosave, so call it at
   most once per autosave; trade is not a market resource).
+- **Action record**: every directive, tech pick, market order and posture is followed in the
+  autosaves until it resolves (`order_outcome` events: took, held, researched; overridden, failed,
+  did not take, did not stick, removed; not judged: superseded, locked, no-op), with a stick rate per
+  key over 10 in-game years (`[orders]` in pillars.toml, in months) in the decision prompt, the
+  Strategist's review and the dashboard. Advisory, except that a market order that did not take twice
+  in a row is suspended until `[ui.market]` is recalibrated; a review resets only the tech skip.
 - **Other screen sizes**: positions and templates are measured at 3840x2160. A host with another size
   sets `GAME_RESOLUTION` (e.g. `2560x1440`); the controller then merges `res/<W>x<H>.toml`. Its
   `[ui.*]` points come from `scripts/res-map.py corpora/stellaris <W>x<H> --write` (one UI scale per

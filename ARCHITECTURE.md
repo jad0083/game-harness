@@ -413,6 +413,12 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   negative episode, excluded wherever directive decisions are meant), `_maybe_event_review` (12-month
   cap; failure retries, no-strategy and dashboard requests bypass it), `frame_text` + off-frame
   tagging in `_decide`, `_carry_out_actions` (once per save date, verified in a later save),
+  the action record (`stellaris_record.py`, pure: an action dict per directive, tech pick, market
+  change and posture sent; `judge` on each new save in `_follow`, called from the wait loop after
+  the metrics row and before any decision or action on a save; `order_outcome` rows and
+  `order_followed` events reloaded by `_load_action_record` from `Telemetry.campaign_events`; the
+  rate via `record.order_record` with Stellaris's outcomes; a market suspension keyed to the hash of
+  `[ui.market]`, `market_calibration`),
   `edit_pillar`/`unpin_pillar`/`request_review` under `_strategy_lock`. Telemetry: `strategies`
   table, `latest_strategy`, `strategy_history`, `metrics_rows`; dashboard `/api/strategy`, control
   actions `edit_pillar`, `unpin_pillar`, `review_strategy`. Rust: `choose_tech_pick` (only the

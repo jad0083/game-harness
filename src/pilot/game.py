@@ -286,11 +286,24 @@ class FakeStellaris:
     repeats); directives, speed and pause changes are recorded."""
 
     def __init__(self, briefings: list[dict], advance_only_when_running: bool = False,
-                 self_pause_after: int | None = None):
+                 self_pause_after: int | None = None, *, reverts: dict[str, str] | None = None,
+                 locked: tuple[str, ...] = (), market_sticky: bool = True, pick_reply: str | None = None):
         self.briefings = list(briefings)
         self.actions: list[tuple] = []
         self.paused = True
         self.flags: list[str] = []
+        # a directive sets its policies (corpora/stellaris/directives.toml) as the controller does:
+        # `locked` ones are refused, and `reverts` {policy: option} is the AI's own change of one of
+        # them, shown from the second save dated after the directive
+        self.policies: dict[str, str] = {}
+        self.policy_dates: dict[str, str] = {}
+        self.reverts = dict(reverts or {})
+        self.locked = set(locked)
+        self._reverting: dict[str, tuple[str, set[str]]] = {}
+        # like the game: the next saves hold the synced market orders (False: the sync did not take)
+        self.market_sticky = market_sticky
+        self.market_orders: list[dict] | None = None
+        self.pick_reply = pick_reply          # pick_tech's reply ("{tech}" = prefer[0]); None: "ok"
         # like the real game: while paused, reading the save again returns the same save
         self.advance_only_when_running = advance_only_when_running
         # after this many reads the game pauses itself once (an event window that autopauses), so
@@ -311,8 +324,25 @@ class FakeStellaris:
         if self.self_pause_after is not None and self.reads == self.self_pause_after:
             self.paused = self.self_paused = True
         b = dict(b)
+        self._revert(str(b.get("date") or ""))
         b["flags"] = list(self.flags)
+        if self.policies:
+            b["policies"] = {**(b.get("policies") or {}), **self.policies}
+            b["policy_dates"] = {**(b.get("policy_dates") or {}), **self.policy_dates}
+        if self.market_orders is not None:
+            b["market_orders"] = [dict(o) for o in self.market_orders]
         return b
+
+    def _date(self) -> str:
+        return str((self._last or self.briefings[0]).get("date") or "")
+
+    def _revert(self, date: str) -> None:
+        for policy, (since, seen) in list(self._reverting.items()):
+            if date > since:
+                seen.add(date)
+            if len(seen) >= 2:
+                self.policies[policy], self.policy_dates[policy] = self.reverts[policy], date
+                del self._reverting[policy]
 
     def briefing(self) -> dict:
         return self._current()
@@ -335,9 +365,30 @@ class FakeStellaris:
         return "ok"
 
     def directive(self, name: str) -> str:
+        """Flags and policies as the controller sets them; replies in its words (stellaris.rs
+        Applied::summary): other flags stay, an option already in force is not set again."""
+        from .config import REPO
+        from .pillars import load_directive_policies
         self.actions.append(("directive", name))
-        self.flags = [f"governor_directive_{name}"]
-        return f"Directive {name} applied"
+        self.flags = [f for f in self.flags if not f.startswith("governor_directive_")] + [f"governor_directive_{name}"]
+        done: dict[str, dict[str, str]] = {"set": {}, "in_force": {}, "locked": {}}
+        for policy, option in load_directive_policies(REPO / "corpora/stellaris").get(name, {}).items():
+            if self.policies.get(policy) == option:
+                done["in_force"][policy] = option
+            elif policy in self.locked:
+                done["locked"][policy] = option
+            else:
+                done["set"][policy] = option
+                self.policies[policy], self.policy_dates[policy] = option, self._date()
+                if policy in self.reverts:
+                    self._reverting[policy] = (self._date(), set())
+        text = lambda d: ", ".join(f"{p}={o}" for p, o in d.items()) or "none"
+        already = (f"Already in force (not set again, so its 10-year lock is not restarted): {text(done['in_force'])}. "
+                   if done["in_force"] else "")
+        return (f"Directive {name} applied and confirmed in game.log. Policies set: {text(done['set'])}. {already}"
+                "Policies locked (not set: the 10-year policy lock, a rule such as no stance change at war, or the "
+                f"option is not valid now): {text(done['locked'])}.\nConsole lines:\n(fake)\nThe next monthly autosave "
+                f"will list governor_directive_{name} under Governor flags.")
 
     def log_tail(self, lines: int = 30) -> str:
         return ""
@@ -348,10 +399,12 @@ class FakeStellaris:
 
     def pick_tech(self, prefer: list[str]) -> str:
         self.actions.append(("pick_tech", list(prefer)))
-        return "ok"
+        return self.pick_reply.format(tech=prefer[0]) if self.pick_reply and prefer else "ok"
 
     def market_sync(self, orders: list[dict]) -> str:
         self.actions.append(("market_sync", list(orders)))
+        if self.market_sticky:
+            self.market_orders = [dict(o) for o in orders]
         return "ok"
 
     def screenshot(self) -> ToolResult:

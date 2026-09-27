@@ -243,6 +243,19 @@ def _directives(corpus: Path) -> set[str]:
         raise PillarsError(f"{f}: not valid TOML: {e}") from None
 
 
+def load_directive_policies(corpus: Path) -> dict[str, dict[str, str]]:
+    """Each directive's policies (policy -> option) from `<corpus>/directives.toml`: what the console
+    tries to set (levers design ruling 3; the game reports which it did)."""
+    f = Path(corpus) / "directives.toml"
+    try:
+        raw = tomllib.loads(f.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        raise PillarsError(f"{f}: missing") from None
+    except tomllib.TOMLDecodeError as e:
+        raise PillarsError(f"{f}: not valid TOML: {e}") from None
+    return {name: dict(d.get("policies") or {}) for name, d in (raw.get("directive") or {}).items()}
+
+
 def _manifest_keys(path: Path, corpus: Path, dotted, key: str) -> tuple[str, ...]:
     f = corpus / "manifest.toml"
     if not isinstance(dotted, str):

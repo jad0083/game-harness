@@ -285,6 +285,32 @@ refused order is not waited for in the next save, and later decisions skip it wi
 order of the same side and resource already in the save, e.g. buy alloys 7 when the strategy wants
 5, is kept at its amount rather than removed, while it passes the declared order's checks).
 
+**Action record** (Stellaris; spec `docs/design/2026-09-27-stellaris-levers-design.md`, rulings 2-6):
+sending is not the outcome, so every directive, tech pick, market order and posture is followed in
+the autosaves until it resolves, and each resolution is an `order_outcome` event (the Civ VI row
+shape; `turn` is the month), reloaded per campaign at the start of a run together with what is still
+followed (`order_followed`).
+- A directive **took** (flag in the next save, nothing set to follow), is **held** (every policy the
+  game reported set still reads back at the next directive or after 24 months), **failed** (no flag
+  in the next save, or the apply raised) or is **overridden** (a reported policy reads back another
+  option dated after our apply; the line names it, e.g. `economic_policy → economic_policy_balanced
+  on 2272.01.01`). Not judged: **superseded** (our next directive before a save) and **locked** (the
+  game set none of its policies: `can_set_policy` said no).
+- A tech pick is **researched**, **held** (still researched at the next review or after 24 months)
+  or **did not stick** (skipped until the next review); a "nothing to pick" reply is a **no-op**,
+  counted apart. After 3 no-op syncs the next review lists what each field offers and asks that
+  `prefer_techs` name one of them.
+- A market order **did not take** (the next save differs), is **held**, **removed** (gone later
+  without our sync) or **failed** (the sync raised, e.g. an agent timeout). Two *did not take* in a
+  row for the same side and resource suspend it (the order the save holds, if any, is kept) until
+  the `[ui.market]` positions change: each row carries a hash of them, so a recalibration commit
+  lifts it. A review no longer resets anything but the tech skip.
+- Stick rate per key = (took + held + researched) / judged, over the last 120 months widened back
+  to 6 judged, shown from 3 (`[orders]` in `corpora/stellaris/pillars.toml`, in months), flagged
+  "does not stick here" at 50% or less. It goes to the decision prompt ("Action record in this
+  campaign", after the past outcomes), to the Strategist (before the directive record) and to the
+  dashboard (`order_record`). It is advisory: no pressure factor.
+
 **Your edits.** *Edit* on a pillar changes it and pins it (a review never changes a pinned pillar);
 changing its weight rescales the other unpinned pillars so the total stays 100. *Unpin* hands it
 back.

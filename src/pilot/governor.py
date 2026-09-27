@@ -8,16 +8,20 @@ one standing directive. The game is paused while the model decides, so any game 
 
 from __future__ import annotations
 
+import hashlib
 import html
 import json
+import os
 import queue
 import re
 import statistics
 import threading
 import time
+import tomllib
 from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass, replace
+from pathlib import Path
 from typing import ClassVar, Literal, Protocol
 
 from pydantic import BaseModel, Field
@@ -31,7 +35,23 @@ from .claude_code import resolve_model
 from .config import Settings
 from .events import EventLog
 from .learning import Journal, LearnedStore, LearningRejected
-from .pillars import ACTION_KINDS, PillarsError, PillarSpec, load_pillars
+from .pillars import ACTION_KINDS, OrdersSpec, PillarsError, PillarSpec, load_pillars
+from .stellaris_record import (
+    NO_OP_PREFIX,
+    OPEN,
+    action_record,
+    action_record_text,
+    directive_action,
+    judge,
+    market_action,
+    market_suspended,
+    outcome_row,
+    parse_directive_reply,
+    posture_action,
+    review_outcome,
+    supersede,
+    tech_action,
+)
 from .strategy import (
     Strategy,
     apply_aliases,
@@ -72,6 +92,29 @@ TECH_PICK_RE = re.compile(r"^(?:picked|clicked) (\S+) in (\w+)")
 # removals and the other adds went ahead, except a current order of a refused side and resource,
 # which it kept at its amount ("kept (start amount not measured): buy alloys 7"; see _kept_for).
 MARKET_REFUSED_RE = re.compile(r"not added \(start amount not measured\): ([^;]+)")
+
+# The action record (docs/design/2026-09-27-stellaris-levers-design.md, rulings 2-6): heading of its
+# section in the decision prompt and the Strategist's review.
+ACTION_RECORD_HEADING = ("Action record in this campaign (each directive, tech pick, market order and posture followed in "
+                         "the saves until it resolves):")
+
+
+def market_calibration(corpus_dir: Path) -> str:
+    """A hash of the `[ui.market]` positions the controller clicks with (the manifest's table, and
+    `res/<W>x<H>.toml`'s under GAME_RESOLUTION): a market suspension holds only while it is the same
+    (ruling 6), so a recalibration commit lifts it."""
+    table: dict = {}
+    try:
+        table = dict(tomllib.loads((Path(corpus_dir) / "manifest.toml").read_text(encoding="utf-8"))
+                     .get("ui", {}).get("market") or {})
+        res = os.environ.get("GAME_RESOLUTION", "").strip()
+        over = Path(corpus_dir) / "res" / f"{res}.toml"
+        if res and over.exists():
+            table.update((tomllib.loads(over.read_text(encoding="utf-8")).get("ui") or {}).get("market") or {})
+    except (OSError, ValueError, AttributeError):
+        pass
+    return hashlib.sha256(json.dumps(table, sort_keys=True, default=str).encode()).hexdigest()[:12]
+
 
 # Action kind -> the game method that carries it out. A game whose object lacks the method has no
 # hook for that kind: a pillar declaring it is logged "not supported" once and skipped.
@@ -470,12 +513,17 @@ class Governor:
         self._review_retry: bool = False          # review_requested was set by a failed review call (bypasses the cap)
         self._decision_military: float | None = None   # military_power as of the last decision (military-fell baseline)
         self._tech_misses: dict[str, int] = {}    # tech id -> misses this review (>=1: not retried until the next)
-        self._pending_pick: str | None = None     # a tech picked last time, watched for whether it stuck
         self._tech_sync_date: str | None = None   # briefing date of the last pick_tech attempt (at most one per date)
         self._market_sync_date: str | None = None  # briefing date of the last market_sync attempt (ditto)
-        self._pending_market: list[dict] | None = None   # orders last synced, watched for whether they stuck
-        self._market_stuck: bool = False          # a sync did not stick: no retry until the next review
         self._market_unmeasured: set[str] = set()   # resources the controller refused to add (no measured start)
+        # the action record (levers design rulings 2-6): every directive, tech pick, market order and
+        # posture sent is followed on each new save until it resolves into an order_outcome row
+        self._actions: list[dict] = []            # sent, not resolved yet (stellaris_record action dicts)
+        self._action_rows: list[dict] = []        # every order_outcome row of the campaign
+        self._followed_date: str | None = None    # the save date the actions were last judged on
+        self._now_date: str | None = None
+        self._tech_noops = 0                      # "nothing to pick" replies since the last review
+        self._market_cal = market_calibration(settings.corpus_dir)   # [ui.market] hash (market suspension)
         self._since_retro = 0
         self._strategy_trace_n = 0                # negative episode ids for strategy review traces (see _review_strategy)
         self._clock: Callable[[], float] = time.monotonic   # the watchdog's wall clock (tests inject one)
@@ -984,13 +1032,16 @@ class Governor:
         self.log.state.episodes += 1
         n = self.log.state.episodes
         current = current_directive(b)
+        self._follow(b)
         try:
-            self.game.directive(directive)
+            reply = self.game.directive(directive)
             outcome = "applied"
             self.last_change = months(b["date"])
             self.log.state.info["directive"] = directive
+            self._directive_sent(directive, reply, b)
         except Exception as e:  # noqa: BLE001
             outcome = f"FAILED: {e}"[:200]
+            self._directive_failed(directive, e, b)
         reason = "Directive chosen by the human on the dashboard."
         self.log.state.last_decision = f"{b['date']}: {directive} ({outcome}) — human override"
         self.log.emit("episode", situation="human override", decision=f"{directive}: {reason}", date=b["date"],
@@ -1012,6 +1063,7 @@ class Governor:
         name = self.s.campaign or self._folder or (b.get("name") or "unknown").replace(" ", "_").lower()
         self.log.set_campaign(self.s.game, name, b.get("name") or "")
         self._load_campaign_state()
+        self._load_action_record()
 
     def _load_campaign_state(self) -> None:
         """Standing orders, plan and strategy saved for the campaign just named."""
@@ -1081,6 +1133,7 @@ class Governor:
             if b["date"] != last["date"]:
                 self._date_moved(months(b["date"]) - months(last["date"]))
                 self.log.emit("metrics", **metrics(b))
+                self._follow(b)
                 self.log.state.game_date = b["date"]
                 self.log.state.turns_advanced = months(b["date"]) - months(last["date"]) + self.log.state.turns_advanced
             else:
@@ -1186,6 +1239,7 @@ class Governor:
         self.log.state.episodes += 1
         self.log.state.game_date = b["date"]
         self.log.emit("metrics", **metrics(b))
+        self._follow(b)
         if self.log.telemetry is not None and self.log.campaign_id:
             try:
                 self.log.telemetry.score(self.log.campaign_id)
@@ -1218,6 +1272,9 @@ class Governor:
                               + self.log.telemetry.past_outcomes(self.log.campaign_id, limit=6))
             except Exception as e:  # noqa: BLE001
                 self.log.emit("briefing_error", error=f"past outcomes: {e}"[:200])
+        record = self._action_record_section()
+        if record:
+            prompt.append(record)
         if self.orders:
             prompt.append("STANDING ORDERS from the human (always follow these): "
                           + " | ".join(f"{i + 1}. {o}" for i, o in enumerate(self.orders)))
@@ -1271,13 +1328,15 @@ class Governor:
                     chosen, applied = "keep", f"not applied ({chosen} needs a human yes)"
             if chosen != "keep":
                 try:
-                    self.game.directive(chosen)
+                    reply = self.game.directive(chosen)
                     applied = "applied"
                     self.last_change = months(b["date"])
                     self.log.state.info["directive"] = chosen
+                    self._directive_sent(chosen, reply, b)
                 except Exception as e:  # noqa: BLE001
                     applied = f"FAILED: {e}"[:200]
                     self.log.emit("episode_error", error=f"directive {chosen}: {e}"[:300])
+                    self._directive_failed(chosen, e, b)
         st.last_decision = f"{b['date']}: {d.directive} ({applied}) — {d.reason}"
         self.log.emit("episode", situation=reason, decision=f"{d.directive}: {d.reason}", date=b["date"],
                       resolved=not applied.startswith("FAILED"), actions=int(applied == "applied"),
@@ -1311,7 +1370,9 @@ class Governor:
         through the game's hook for it (ACTION_METHODS); a kind without a hook is logged "not
         supported" once and skipped. Each tool acts at most once per briefing date (the result stays
         stale until the next autosave). Nothing here ever raises out of this call, pauses the game,
-        or undoes the decision already applied — any failure is logged as a strategy_action event."""
+        or undoes the decision already applied — any failure is logged as a strategy_action event.
+        What was sent before is judged on this save first (the action record, `_follow`)."""
+        self._follow(b)
         if not self.strategy or self.pillars is None:
             return
         hooks = action_hooks(self.game)
@@ -1337,46 +1398,38 @@ class Governor:
         return [x for name, pl in self.strategy.sorted_pillars() if name in owners for x in getattr(pl, fld)]
 
     def _carry_out_tech_actions(self, b: dict, pick_tech: Callable[[list[str]], str]) -> None:
+        """Pick the first preferred tech on offer (stellaris_pick_tech). A pick is followed until it is
+        researched, did not stick (then skipped until the next review) or is held; a "nothing to
+        pick" reply is a no-op, counted for the next review (ruling 6)."""
         date = b.get("date")
         limit = self.pillars.actions["tech"].max_items
         prefer = [t for t in dict.fromkeys(self._declared("tech")) if self._tech_misses.get(t, 0) < 1][:limit]
         fields = (b.get("research") or {}).values()
         researching = {((r or {}).get("current") or [None])[0] for r in fields}
-        offered = {t for r in fields for t in (r or {}).get("alternatives", [])}
-        pending = None
-        if self._pending_pick and date != self._tech_sync_date:   # judge a pick only on a later save
-            pending, self._pending_pick = self._pending_pick, None
-        if pending:
-            if pending in researching:
-                pass    # still being researched: stuck, nothing to verify yet
-            elif pending in offered:
-                # still offered but not picked up as current: the pick did not stick
-                self._tech_misses[pending] = self._tech_misses.get(pending, 0) + 1
-                self._log_action("tech", f"{pending} did not stick; skipped until the next review")
-                prefer = [t for t in prefer if t != pending]
-            else:
-                # neither current nor offered any more: researched to completion
-                self._log_action("tech", f"researched {pending}")
         if prefer and not researching & set(prefer) and date != self._tech_sync_date:
             self._tech_sync_date = date
             try:
                 res = pick_tech(prefer)
-                self._log_action("tech", res)
-                m = TECH_PICK_RE.match(res)
-                if m:
-                    self._pending_pick = m.group(1)
             except Exception as e:  # noqa: BLE001 - actions never stop play
                 self._log_action("tech", f"failed: {e}"[:300])
+                self._resolve_action(tech_action(", ".join(prefer), "", date), "failed", None, f"{e}", date)
+                return
+            self._log_action("tech", res)
+            m = TECH_PICK_RE.match(res)
+            if m and not any(a["kind"] == "tech" and a["id"] == m.group(1) for a in self._actions):
+                self._open_action(tech_action(m.group(1), m.group(2), date))
+            elif res.startswith(NO_OP_PREFIX):
+                self._tech_noops += 1
+                self._resolve_action(tech_action(", ".join(prefer), "", date), "no_op", None, res, date)
 
     def _carry_out_market_actions(self, b: dict, market_sync: Callable[[list[dict]], str]) -> None:
+        """Sync the declared monthly trades (stellaris_market_sync). Each side and resource the sync
+        changes is followed in the next saves (ruling 2); one that did not take twice in a row with
+        today's `[ui.market]` calibration is suspended until a recalibration (ruling 6), keeping any
+        order of it the save already holds, as for a resource whose start amount is not measured."""
         date = b.get("date")
         current = b.get("market_orders") or []
-        pending_market, later = self._pending_market, date != self._market_sync_date
-        if pending_market is not None and later:
-            self._pending_market = None
-            if not self._same_orders(current, pending_market):
-                self._log_action("market", f"market orders did not stick: wanted {pending_market}, save has {current}")
-                self._market_stuck = True
+        later = date != self._market_sync_date
         limits = self.pillars.actions["market"]
         idle, income = idle_resources(b), b.get("net") or {}
         desired = []
@@ -1386,32 +1439,58 @@ class Governor:
                 if later:
                     self._log_action("market", f"skipped sell {o.resource}: {'; '.join(errs)}"[:300])
                 continue
-            if o.resource in self._market_unmeasured and not any(self._same_orders([o.model_dump()], [c]) for c in current):
-                # the controller cannot add it yet; an order of that side and resource already in the
-                # save is kept at its amount (as the controller keeps it) while that amount passes the
-                # checks the declared order passed
+            blocked = ("start amount not measured (the controller refuses to add it)"
+                       if o.resource in self._market_unmeasured else self._market_suspension(o.side, o.resource))
+            if blocked and not any(self._same_orders([o.model_dump()], [c]) for c in current):
+                # an order of that side and resource already in the save is kept at its amount (as
+                # the controller keeps an unmeasured one) while that amount passes the checks the
+                # declared order passed
                 held = [h for h in self._kept_for([o.model_dump()], current)
                         if not market_briefing_errors(o.model_copy(update={"amount": h.get("amount")}), limits, idle, income)]
                 if later:
                     what = (", ".join(f"kept {h['side']} {h['resource']} {h['amount']}" for h in held)
                             + f" ({o.amount} wanted)" if held else f"skipped {o.side} {o.resource} {o.amount}")
-                    self._log_action("market", f"{what}: start amount not measured (the controller refuses to add it)")
+                    self._log_action("market", f"{what}: {blocked}")
                 desired += held
                 continue
             desired.append(o.model_dump())
-        if not self._market_stuck and not self._same_orders(desired, current) and later:
-            self._market_sync_date = date
-            try:
-                res = market_sync(desired)
-                self._log_action("market", res)
-                refused = self._refused_orders(res)
-                self._market_unmeasured |= {o["resource"] for o in refused}
-                # what the controller left out is not waited for in the next save; the order it kept
-                # in its place is
-                self._pending_market = [o for o in desired if not any(self._same_orders([o], [r]) for r in refused)] \
-                    + self._kept_for(refused, current)
-            except Exception as e:  # noqa: BLE001 - actions never stop play
-                self._log_action("market", f"failed: {e}"[:300])
+        if self._same_orders(desired, current) or not later:
+            return
+        self._market_sync_date = date
+        changes = self._market_changes(desired, current)
+        try:
+            res = market_sync(desired)
+        except Exception as e:  # noqa: BLE001 - actions never stop play
+            self._log_action("market", f"failed: {e}"[:300])
+            for c in changes:       # failed, not did_not_take: an agent timeout never suspends a resource
+                self._resolve_action(market_action(c, date, self._market_cal), "failed", None, f"{e}", date)
+            return
+        self._log_action("market", res)
+        refused = self._refused_orders(res)
+        self._market_unmeasured |= {o["resource"] for o in refused}
+        # what the controller left out is not waited for in the next save; the order it kept in its
+        # place is
+        wanted = [o for o in desired if not any(self._same_orders([o], [r]) for r in refused)] \
+            + self._kept_for(refused, current)
+        for c in self._market_changes(wanted, current):
+            for a in [a for a in self._actions if a["kind"] == "market"
+                      and (a["expect"]["side"], a["expect"]["resource"]) == (c["side"], c["resource"])]:
+                self._resolve_action(a, *self._superseded(a), date)
+            self._open_action(market_action(c, date, self._market_cal))
+
+    @staticmethod
+    def _market_changes(wanted: list[dict], current: list[dict]) -> list[dict]:
+        """Each side and resource whose amount a sync to `wanted` changes (amount 0: removed)."""
+        want = {(o.get("side"), o.get("resource")): int(o.get("amount") or 0) for o in wanted}
+        have = {(o.get("side"), o.get("resource")): int(o.get("amount") or 0) for o in current}
+        return [{"side": k[0], "resource": k[1], "amount": want.get(k, 0)}
+                for k in sorted(set(want) | set(have), key=str) if want.get(k, 0) != have.get(k, 0)]
+
+    def _market_suspension(self, side: str, resource: str) -> str | None:
+        if market_suspended(self._action_rows, side, resource, self._market_cal):
+            return ("suspended after 2 did not take in a row with this [ui.market] calibration; a recalibration "
+                    "lifts it")
+        return None
 
     @staticmethod
     def _kept_for(refused: list[dict], current: list[dict]) -> list[dict]:
@@ -1430,6 +1509,166 @@ class Governor:
             if len(words) == 3 and words[2].isdigit():
                 out.append({"side": words[0], "resource": words[1], "amount": int(words[2])})
         return out
+
+    # ---- the action record (docs/design/2026-09-27-stellaris-levers-design.md, rulings 2-6) --------
+
+    @property
+    def _pending_pick(self) -> str | None:
+        """The picked tech still followed (not yet researched, dropped or held)."""
+        return next((a["id"] for a in self._actions if a["kind"] == "tech"), None)
+
+    def _orders_spec(self) -> OrdersSpec:
+        """The record's settings (`[orders]` in pillars.toml, in months); defaults without one."""
+        return (self.pillars.orders if self.pillars is not None and self.pillars.orders is not None
+                else OrdersSpec())
+
+    def _now_month(self) -> int:
+        dates = [d for d in (self._now_date, self.log.state.game_date) if d and d[:1] != "T"]
+        return max([months(d) for d in dates] + [r.get("turn") or 0 for r in self._action_rows] + [0])
+
+    def _open_action(self, a: dict) -> None:
+        """Follow `a` from now on; the `order_followed` event lets a restart carry on following it."""
+        self._actions.append(a)
+        self.log.emit("order_followed", ref=a["ref"], action=a)
+
+    def _resolve_action(self, a: dict, result: str, by: str | None, detail: str, date: str) -> None:
+        """`a` resolved on the save of `date`: one order_outcome row (the Civ VI shape). Advisory: a
+        row that cannot be built (a malformed date) is logged and the action dropped."""
+        self._actions = [x for x in self._actions if x.get("ref") != a.get("ref")]
+        try:
+            row = outcome_row(a, result, by, detail, date)
+        except Exception as e:  # noqa: BLE001 - the record never stops play
+            self.log.emit("briefing_error", error=f"action record ({a.get('key')}): {type(e).__name__}: {e}"[:200])
+            return
+        self._action_rows.append(row)
+        self.log.emit("order_outcome", **row)
+        if a["kind"] == "tech" and result == "did_not_stick":
+            self._tech_misses[a["id"]] = self._tech_misses.get(a["id"], 0) + 1
+        self._publish_actions()
+
+    @staticmethod
+    def _superseded(a: dict) -> tuple[str, None, str]:
+        result, detail = supersede(a)
+        return result, None, detail
+
+    def _follow(self, b: dict) -> None:
+        """Judge every followed action on save `b`, once per save date (ruling 4): each one that
+        resolves writes its row; a tech or market resolution is also logged as a strategy_action.
+        Advisory: a malformed save is logged and never stops play."""
+        date = str(b.get("date") or "")
+        if not date or date == self._followed_date or date[:1] == "T":
+            return
+        self._followed_date = self._now_date = date
+        spec = self._orders_spec()
+        for a in list(self._actions):
+            state = a.get("state")
+            try:
+                result, by, detail = judge(a, b, spec.open_cap_turns, spec.open_grace_turns)
+            except Exception as e:  # noqa: BLE001 - the record is advisory
+                self.log.emit("briefing_error", error=f"action record ({a.get('key')}): {type(e).__name__}: {e}"[:200])
+                continue
+            if result == OPEN:
+                if a.get("state") != state:
+                    self.log.emit("order_followed", ref=a["ref"], action=a)   # seen in force: kept across restarts
+                continue
+            self._resolve_action(a, result, by, detail, date)
+            if a["kind"] == "tech":
+                self._log_action("tech", {"did_not_stick": f"{a['id']} did not stick; skipped until the next review",
+                                          "researched": f"researched {a['id']}"}.get(result, f"{a['id']} {result}"))
+            elif a["kind"] == "market":
+                self._log_action("market", f"market order {a['id']} {result.replace('_', ' ')}: {detail}"[:300])
+
+    def _directive_sent(self, name: str, reply, b: dict) -> None:
+        """A directive was applied on save `b`: the one before it (and the postures it set) resolve as
+        held or superseded, and this one is followed with the policies the game reported set and the
+        postures its console lines set (ruling 3)."""
+        try:
+            date = b["date"]
+            for a in [a for a in self._actions if a["kind"] == "directive" or a.get("from") == "directive"]:
+                self._resolve_action(a, *self._superseded(a), date)
+            info = parse_directive_reply(str(reply or ""))
+            self._open_action(directive_action(name, date, info))
+            for posture in info["postures"]:
+                self._open_action({**posture_action(posture, True, date), "from": "directive"})
+        except Exception as e:  # noqa: BLE001 - the record is advisory
+            self.log.emit("briefing_error", error=f"action record (directive {name}): {type(e).__name__}: {e}"[:200])
+
+    def _directive_failed(self, name: str, e: BaseException, b: dict) -> None:
+        self._resolve_action(directive_action(name, b["date"], {}), "failed", None, f"{type(e).__name__}: {e}", b["date"])
+
+    def _settle_at_review(self, b: dict) -> None:
+        """At a strategy review: judge on this save, then a picked tech still researched is held."""
+        if not self._actions:
+            return
+        self._follow(b)
+        for a in list(self._actions):
+            verdict = review_outcome(a)
+            if verdict:
+                self._resolve_action(a, verdict[0], None, verdict[1], str(b.get("date") or a.get("ordered") or ""))
+
+    def _load_action_record(self) -> None:
+        """The campaign's action record from earlier runs (ruling 4): its order_outcome rows and the
+        actions still followed (the newest `order_followed` event of each one without an outcome).
+        Advisory: a failed read keeps what is in memory."""
+        tel, cid = self.log.telemetry, self.log.campaign_id
+        if tel is not None and cid:
+            try:
+                rows = [r for r in tel.campaign_events(cid, "order_outcome") if r.get("key")]
+                done = {r.get("ref") for r in rows if r.get("ref")}
+                followed: dict[str, dict] = {}
+                for f in tel.campaign_events(cid, "order_followed"):
+                    if isinstance(f.get("action"), dict) and f.get("ref") and f["ref"] not in done:
+                        followed[f["ref"]] = f["action"]
+                self._action_rows, self._actions = rows, list(followed.values())
+            except Exception as e:  # noqa: BLE001 - the record is advisory
+                self.log.emit("briefing_error", error=f"loading the action record: {e}"[:200])
+        self._publish_actions()
+
+    def _publish_actions(self) -> None:
+        """The record for the dashboard, in the Civ VI order record's key and shape."""
+        self.log.state.info["order_record"] = action_record(self._action_rows, self._now_month(), self._orders_spec())
+
+    def _action_record_text(self) -> str:
+        """One line per key (stick rate), each market order suspended, and how often the preferred
+        techs met the offer (ruling 6); empty while nothing resolved."""
+        rows = self._action_rows
+        if not rows:
+            return ""
+        lines = [action_record_text(action_record(rows, self._now_month(), self._orders_spec()))]
+        markets = sorted({tuple(r["key"].split(" ")[1:3]) for r in rows if str(r.get("key", "")).startswith("market ")})
+        for side, res in (m for m in markets if len(m) == 2):
+            if self._market_suspension(side, res):
+                lines.append(f"- market {side} {res}: suspended after 2 did not take in a row with this [ui.market] "
+                             "calibration; a recalibration lifts it")
+        noops = sum(1 for r in rows if r.get("key") == "tech" and r.get("result") == "no_op")
+        if noops:
+            picks = sum(1 for r in rows if r.get("key") == "tech" and r.get("result") not in ("no_op", "failed")) \
+                + sum(1 for a in self._actions if a["kind"] == "tech")
+            lines.append(f"- tech picks: your preferred techs matched the offer {picks} times in {picks + noops} chances")
+        return "\n".join(x for x in lines if x)
+
+    def _action_record_section(self, b: dict | None = None, noops: int = 0) -> str:
+        """The record's prompt section, or "" when there is nothing in it (a Civ VI governor never
+        fills it). At a review after 3 or more no-op tech syncs (`noops`), it also lists what `b`
+        offers per field and asks prefer_techs to name one of them."""
+        try:
+            lines = [x for x in (self._action_record_text(), self._tech_advice(b, noops)) if x]
+        except Exception as e:  # noqa: BLE001 - the record is advisory
+            self.log.emit("briefing_error", error=f"action record: {type(e).__name__}: {e}"[:200])
+            return ""
+        return ACTION_RECORD_HEADING + "\n" + "\n".join(lines) if lines else ""
+
+    @staticmethod
+    def _tech_advice(b: dict | None, noops: int) -> str:
+        research = (b or {}).get("research")
+        if noops < 3 or not isinstance(research, dict):
+            return ""
+        offers = "; ".join(f"{fld}: {', '.join(r['alternatives'])}" for fld, r in sorted(research.items())
+                           if isinstance(r, dict) and r.get("alternatives"))
+        if not offers:
+            return ""
+        return (f"- tech picks: {noops} tech syncs since the last review found none of the preferred techs where it "
+                f"could pick; offered now: {offers}. Name at least one of them in prefer_techs.")
 
     def _maybe_event_review(self, b: dict, trigger: str, retry: bool = False) -> bool:
         """Run a strategy review for a big event, at most once per 12 in-game months. `retry`
@@ -1562,8 +1801,8 @@ class Governor:
         self.review_requested = None
         self._review_retry = False
         self._tech_misses = {}
-        self._market_stuck = False
-        self._pending_market = None
+        self._settle_at_review(b)
+        noops, self._tech_noops = self._tech_noops, 0
         started = time.time()
         retry_errors: list[str] | None = None
         retry_rejected: str | None = None
@@ -1575,6 +1814,7 @@ class Governor:
             prompt = [f"Strategy review, trigger: {trigger}.", "Current strategy:\n" + current,
                       "Milestones (status computed from the recorded numbers):\n" + self._milestones_text(),
                       "Directive changes and what followed:\n" + self._past_outcomes_text(),
+                      *[x for x in (self._action_record_section(b, noops),) if x],
                       self._records_section(),
                       "Latest briefing:\n" + (self.last_briefing or self.game.briefing_text())]
             sp_name, sp_traits = species_terms(b)
