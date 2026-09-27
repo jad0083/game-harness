@@ -1,11 +1,15 @@
 # Shared settings for the play helpers. Source it; do not run it.
 # Override with environment variables:
-#   GAME_AGENT_URL   agent base URL            (default http://192.168.1.77:8765)
+#   GAME_AGENT_URL   agent base URL            (default: GAME_AGENT_URL in <repo>/.env)
 #   GAME_AGENT_TOKEN agent bearer token        (default: contents of <repo>/.agent_token)
 #   GAME_PLAY_DIR    where frames are written  (default: <repo>/play, gitignored)
 #   GAME_TITLE       game window title substring (default "Galactic Civilizations")
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-export GAME_AGENT_URL="${GAME_AGENT_URL:-http://192.168.1.77:8765}"
+if [ -z "${GAME_AGENT_URL:-}" ] && [ -f "$ROOT/.env" ]; then
+  GAME_AGENT_URL="$(sed -n 's/^[[:space:]]*GAME_AGENT_URL[[:space:]]*=[[:space:]]*//p' "$ROOT/.env" | tail -1 | tr -d "\"'")"
+fi
+[ -n "${GAME_AGENT_URL:-}" ] || { echo "set GAME_AGENT_URL (environment or <repo>/.env), e.g. http://<pc-address>:8765" >&2; exit 2; }
+export GAME_AGENT_URL
 if [ -z "${GAME_AGENT_TOKEN:-}" ]; then
   [ -s "$ROOT/.agent_token" ] || { echo "no agent token: set GAME_AGENT_TOKEN or create $ROOT/.agent_token" >&2; exit 2; }
   export GAME_AGENT_TOKEN="$(tr -d '\n' < "$ROOT/.agent_token")"

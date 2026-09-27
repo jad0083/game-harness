@@ -7,7 +7,8 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
-pub const DEFAULT_URL: &str = "http://192.168.1.77:8765";
+/// Used only when neither GAME_AGENT_URL nor `.env` names the agent; set it for your PC.
+pub const DEFAULT_URL: &str = "http://127.0.0.1:8765";
 
 pub struct AgentClient {
     client: reqwest::Client,
@@ -98,6 +99,17 @@ struct BatchReq {
     actions: Vec<serde_json::Value>,
 }
 
+/// `KEY=VALUE` from a `.env` file (the repo's gitignored settings file), quotes stripped.
+pub fn env_file_value(path: &std::path::Path, key: &str) -> Option<String> {
+    let text = std::fs::read_to_string(path).ok()?;
+    text.lines().find_map(|line| {
+        let (k, v) = line.trim().split_once('=')?;
+        (k.trim() == key && !line.trim_start().starts_with('#'))
+            .then(|| v.trim().trim_matches('"').trim_matches('\'').to_string())
+            .filter(|v| !v.is_empty())
+    })
+}
+
 fn load_token(explicit: Option<&str>) -> Result<String> {
     if let Some(t) = explicit {
         if !t.trim().is_empty() {
@@ -130,7 +142,8 @@ impl AgentClient {
     pub fn new(base_url: Option<&str>, token: Option<&str>) -> Result<Self> {
         let url = base_url
             .map(|s| s.to_string())
-            .or_else(|| std::env::var("GAME_AGENT_URL").ok())
+            .or_else(|| std::env::var("GAME_AGENT_URL").ok().filter(|v| !v.trim().is_empty()))
+            .or_else(|| env_file_value(std::path::Path::new(".env"), "GAME_AGENT_URL"))
             .unwrap_or_else(|| DEFAULT_URL.to_string())
             .trim_end_matches('/')
             .to_string();
@@ -455,6 +468,19 @@ async fn json_ok(resp: reqwest::Response, what: &str) -> Result<serde_json::Valu
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn env_file_value_reads_a_key_and_skips_comments() {
+        let dir = std::env::temp_dir().join(format!("envfile-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let f = dir.join(".env");
+        std::fs::write(&f, "# GAME_AGENT_URL=http://commented\nOTHER=1\nGAME_AGENT_URL=\"http://pc:8765\"\nEMPTY=\n").unwrap();
+        assert_eq!(super::env_file_value(&f, "GAME_AGENT_URL").as_deref(), Some("http://pc:8765"));
+        assert_eq!(super::env_file_value(&f, "EMPTY"), None);
+        assert_eq!(super::env_file_value(&f, "MISSING"), None);
+        assert_eq!(super::env_file_value(&dir.join("nope"), "GAME_AGENT_URL"), None);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
     use super::*;
 
     /// Serve one canned HTTP response on a local port and return its URL.

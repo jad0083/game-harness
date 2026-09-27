@@ -1,6 +1,6 @@
 # Stellaris strategy pillars: what the Strategist may write and how it is checked, which directive
 # each pillar ranks, which metrics milestones may use, and the limits of the two player actions.
-# Loaded by src/pilot/pillars.py (docs/superpowers/specs/2026-09-26-game-pillars-design.md).
+# Loaded by src/pilot/pillars.py (docs/design/2026-09-26-game-pillars-design.md).
 # Unknown keys are an error; directives must exist in directives.toml. Pillar order = display
 # fallback; weights come from the Strategist.
 

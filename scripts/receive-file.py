@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Accept one-off file uploads from the Windows PC over the LAN (HTTP PUT).
 
-Usage: scripts/receive-file.py [--port 8001] [--dir incoming] [--allow 192.168.1.77]
+Usage: scripts/receive-file.py [--port 8001] [--dir incoming] [--allow <pc-address>]
 
 Prints the PowerShell line to run on the PC. Files land in --dir; the URL path must carry
 the random token printed at start so stray requests are rejected. Stop with Ctrl-C.

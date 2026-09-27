@@ -69,7 +69,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--out", type=Path, default=REPO / "incoming/stellaris")
     ap.add_argument("--dir", action="append", help="install-relative folder (repeatable); default: all needed")
-    ap.add_argument("--agent", default=os.environ.get("GAME_AGENT_URL", "http://192.168.1.77:8765"))
+    ap.add_argument("--agent", default=os.environ.get("GAME_AGENT_URL", "http://127.0.0.1:8765"))
     a = ap.parse_args(argv)
     token = os.environ.get("GAME_AGENT_TOKEN") or (REPO / ".agent_token").read_text().strip()
     agent = Agent(a.agent, token)

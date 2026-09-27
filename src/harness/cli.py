@@ -12,7 +12,7 @@ from .imaging import render
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="game-harness")
-    ap.add_argument("--url", help="agent base URL (default $GAME_AGENT_URL or http://192.168.1.77:8765)")
+    ap.add_argument("--url", help="agent base URL (default $GAME_AGENT_URL or http://127.0.0.1:8765)")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("health")
     sub.add_parser("windows")

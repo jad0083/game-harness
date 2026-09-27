@@ -1,7 +1,7 @@
-"""Pillar strategies: the governor's top-down frame (docs/superpowers/specs/2026-09-26-strategy-layer-design.md).
+"""Pillar strategies: the governor's top-down frame (docs/design/2026-09-26-strategy-layer-design.md).
 
 Game-agnostic: the pillars, directive mapping, metrics, aliases and action limits come from the
-game's `PillarSpec` (pillars.py; docs/superpowers/specs/2026-09-26-game-pillars-design.md).
+game's `PillarSpec` (pillars.py; docs/design/2026-09-26-game-pillars-design.md).
 Pure data and rules; no model calls, no game input."""
 
 from __future__ import annotations

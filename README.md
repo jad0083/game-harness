@@ -1,372 +1,113 @@
-# Game Harness: Ultra-Low-Latency Autonomous AI Controller
+# Game Harness
 
-An ultra-low-latency, 100% Rust-powered autonomous AI game harness that plays turn-based Windows strategy games (*Galactic Civilizations IV: Supernova*) running on a remote PC over a local network.
+Lets a language model play PC strategy games. A small agent on the Windows gaming PC exposes the
+screen, mouse, keyboard and game files over HTTP; a controller on a Linux machine drives it, and a
+pilot app puts any LLM (Gemini, Claude, GPT, local models) in charge, recording every decision on a
+dashboard where you can watch, question and steer it.
 
+Game knowledge lives in data files, not code: each game has a corpus of hotkeys, known screens,
+records generated from the game's own files, a playbook and, for grand strategy, a set of strategy
+pillars.
+
+## How it works
+
+```mermaid
+flowchart LR
+  subgraph Linux["Linux controller"]
+    P["Pilot app<br/>src/pilot (Python)"] --> C["game-controller<br/>(Rust: CLI, MCP server, autopilot)"]
+    P --> D["Dashboard + telemetry"]
+    K["corpora/&lt;game&gt;<br/>manifest, records, playbook, pillars"] --> C
+    K --> P
+  end
+  subgraph PC["Windows gaming PC"]
+    A["game-agent.exe<br/>(Rust HTTP API)"] --> G["The game"]
+  end
+  C -- "HTTP + bearer token<br/>screenshots, input, files" --> A
+  M["LLM providers<br/>or claude CLI"] <--> P
 ```
- Linux AI Controller (192.168.1.76)                  Windows 11 Gaming PC (192.168.1.77)
- ┌─────────────────────────────────────────┐         ┌─────────────────────────────────────────┐
- │ LLM Agent (Claude / Gemini / AGY)       │         │ Galactic Civilizations IV: Supernova    │
- │   └─ game-controller (Native Rust)      │         │   (Running borderless / windowed)       │
- │      • game corpus (manifest+data+docs)│         └─────────────────────────────────────────┘
- │      • autopilot (verified turn loop)   │                              ▲
- │      • stdio MCP server (19 tools, +8 Stellaris)      │  HTTP/TCP 8765               │ GDI / Win32 SendInput
- │      • frame diff + luminance check     │ ──────────────► ┌─────────────────────────────────────────┐
- │                                         │ ◄────────────── │ game-agent.exe (Native Rust)            │
- │                                         │  (JPEG / JSON)  │   • Axum 0.8 HTTP API (:8765)           │
- │                                         │  (~50ms net)    │   • GDI StretchBlt downscaling          │
- │                                         │                 │   • BGRA->RGB + JPEG encoding           │
- │                                         │                 │   • Per-Monitor V2 HiDPI Awareness      │
- └─────────────────────────────────────────┘                 └─────────────────────────────────────────┘
-```
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for system topology, the turn verification and known-screen system, coordinate scaling, and the corpus layout.
+The model plays each game the way that game allows:
 
-## For AI agents (Gemini, Claude, others)
-
-Start with **[AGENTS.md](AGENTS.md)** — the model-neutral operating guide: setup, the play loop,
-the decision procedure for every kind of blocker, known screens and how to add them, corpus
-lookups, recoveries, and how to record and commit what you learn.
-
-| Client | Context file | MCP config |
+| Game | How it is played | State |
 |---|---|---|
-| Gemini CLI | `GEMINI.md` (+ `AGENTS.md` via `.gemini/settings.json`) | `.gemini/settings.json` |
-| Claude Code | `CLAUDE.md` (imports `AGENTS.md`) | `.mcp.json` |
-| Any other | `AGENTS.md` | run `./target/release/game-controller mcp` (stdio) |
+| **Galactic Civilizations IV** | The controller ends turns itself (each one verified by the date changing) and clears known screens; the model decides only real choices (events, research, builds, policies, trades) from screenshots. | Played live |
+| **Stellaris** | The game's own AI plays the empire; the model is a **governor** that picks one standing directive (expand, consolidate economy, tech rush, defend, …) from the monthly autosave, within a strategy of weighted pillars and milestones, and places tech picks and market trades. | Played live |
+| **Civilization VI** | Planned: game state and orders through the game's Lua tuner. | Connectivity spike |
 
-Without MCP, everything works from the shell: `scripts/play/act.sh`, `ap.sh`, `hover.sh`,
-`capture-template.py` and the `game-controller` CLI. Frames are written to `play/` (gitignored).
+## Quick start
 
-## Status (2026-09-25)
-
-- Plays GC4 Supernova 4.1.1 as the Terran Alliance, Jan 2329 → Jul 2333 so far; five worlds
-  (Earth, Mars, Artemis, Agena II, Macrinus III). Game log: [`games/terran-2329/journal.md`](games/terran-2329/journal.md).
-- Every turn is verified by the HUD date changing; the autopilot clears 9 kinds of known screens
-  by itself and stops only for real decisions (events, research, builds, policies, trades).
-- **Stellaris** (4.5.1): the pilot app governs an empire over the native AI (`human_ai` +
-  console directives, decisions from the monthly autosave). Verified live at Fastest speed on a
-  throwaway game; see [`games/stellaris-spike/journal.md`](games/stellaris-spike/journal.md).
-- Agent 1.2.0 (configurable drag, read-only game folders) is deployed on the PC.
-- Open problems and history: [`issues.md`](issues.md); roadmap: [`plan.md`](plan.md).
-
----
-
-## Core Components
-
-| Component | Path / Binary | Architecture | Performance / Capabilities |
-|---|---|---|---|
-| **Windows Remote Agent** | [`crates/game-agent`](crates/game-agent) (built into `game-agent.exe` by `scripts/serve-agent.sh`) | Compiled native Rust (`x86_64-pc-windows-gnu`) | ~8ms screen capture & JPEG encode; native Win32 `SendInput`, `SetCursorPos`, and `mouse_event`; Per-Monitor V2 HiDPI aware. |
-| **Linux Native Controller** | [`crates/game-controller`](crates/game-controller) → `target/release/game-controller` (build with `cargo build --release`; `.mcp.json` points here) | Compiled native Rust (`x86_64-unknown-linux-gnu`) | ~1 ms agent round-trip; autopilot that verifies each turn by the HUD date changing and stops on dialogs or blockers; in-memory corpus (search <1 ms); stdio MCP server. |
-| **Game Corpus** | [`corpora/galciv4/`](corpora/galciv4/) | `manifest.toml` + `templates/*.png` + generated `data/*.json` + `docs/*.md` + `strategy.md` | 34 hotkeys, 17 screens (9 recognised by template), 3 macros; 130 techs, 528 improvements, 66 executive orders, 203 policies, 355 ship components, 167 starbase modules and 994 events generated from the game's own XML by `scripts/extract-galciv4.py`; 13 reference docs chunked into 168 searchable pieces. |
-| **Stellaris corpus** | [`corpora/stellaris/`](corpora/stellaris/) | `manifest.toml`, `directives.toml`, `templates/`, `docs/*.md`, `strategy.md`, `pilot.md` | 9,152 records generated from the game's own files by `scripts/extract-stellaris.py` (679 techs, 56 policies, 171 edicts, 498 buildings, 147 districts, 234 traditions, 49 ascension perks, 358 civics, 6,960 events with every option); 46 wiki reference docs; 6 governor directives; pause-state screen; verified console/speed keys. Save reader in `crates/game-controller/src/stellaris.rs`. |
-| **Pilot app** | [`src/pilot/`](src/pilot/) (`python -m pilot`) | Python 3.13, pydantic-ai (any provider: Gemini, OpenAI, Anthropic, Ollama; Claude via the Claude Code CLI) | Plays autonomously with an API key: GC4 blockers as vision episodes; Stellaris as a text-only governor. Live dashboard on :8790; run logs in `runs/`. |
-| **Play helpers** | [`scripts/play/`](scripts/play/) | Bash + Python | `act.sh` (one action + frame), `ap.sh` (autopilot), `hover.sh` (tooltips), `capture-template.py` (new known screens). |
-| **Legacy Python harness** | [`src/harness/`](src/harness/), `windows_agent/agent.py` | Python 3.12 | The first implementation; **not deployed**. Its tests still run in CI. |
-
----
-
-## Remote Windows Agent Setup & Deployment
-
-The remote Windows agent is a single, self-contained native Rust executable (`game-agent.exe`, ~1.4 MB) with **zero external dependencies** (no Python, no Visual C++ runtimes required).
-
-### Option A: Automated Network Install (from Linux Controller)
-1. On the Linux controller, serve the agent installer and shared token:
-   ```bash
-   ./scripts/serve-agent.sh
-   ```
-2. On the Windows gaming PC, open PowerShell (standard user) and run the one-liner printed by the script:
-   ```powershell
-   $env:GA_SRC='http://192.168.1.76:8000'; irm "$env:GA_SRC/install.ps1" | iex
-   ```
-   *This automatically registers a non-elevated Logon Task in `%LOCALAPPDATA%\GameAgent` and configures the local Windows Defender firewall rule for port 8765.*
-
-### Option B: Cross-Compiling on Linux
-You can recompile the Windows agent binary directly on the Linux controller:
-```bash
-cargo build --target x86_64-pc-windows-gnu --release --bin game-agent
-# scripts/serve-agent.sh runs this build itself and serves the result; the exe is not tracked in git
-```
-
----
-
-## Command-Line Interface (CLI)
-
-The compiled controller binary provides full programmatic access to all agent functions:
+Requirements: Linux with Rust (stable) and Python 3.13; a Windows 10/11 PC on the same network
+running the game in borderless or windowed mode.
 
 ```bash
-# 1. Health & Latency Check
-./target/release/game-controller health
-
-# 2. Live State, Window Rects, and Foreground Window
-./target/release/game-controller state
-
-# 3. Bring Game Window to Foreground
-./target/release/game-controller focus "Galactic Civilizations"
-
-# 4. Capture Downscaled Screenshot
-./target/release/game-controller screenshot -o current_screen.jpg
-
-# 5. Click in Last-Image Coordinate Space (Automatically Scaled to Screen)
-./target/release/game-controller click 580 490 --button left --count 1
-
-# 6. Drag in Last-Image Coordinate Space
-./target/release/game-controller drag 1510 140 640 310 --button left
-# Slower drag for UIs with a drag-threshold timer or hover-sensitive drop targets
-./target/release/game-controller drag 1510 140 640 310 --hold-ms 250 --steps 40 --step-ms 25 --dwell-ms 300 --wiggle
-
-# 7. Send Keyboard Combos
-./target/release/game-controller key "esc"
-./target/release/game-controller key "enter"
-
-# 8. One turn: runs the manifest's turn_pump macro, waits for the screen to settle, then
-#    reports advanced (date readout changed) / dialog (HUD dimmed) / did NOT advance.
-#    Refuses unless the game window is in the foreground (see `focus`).
-./target/release/game-controller turn
-
-# 9. Turn loop: stops at the first dialog or blocked turn and saves current_screen.jpg
-./target/release/game-controller autopilot --turns 25
-
-# 10. Query the game corpus (ids from `search`, bodies from `get`)
-./target/release/game-controller corpus                       # what is loaded
-./target/release/game-controller corpus search "draft colonists" --limit 5
-./target/release/game-controller corpus get "doc:executive_orders#1"
-./target/release/game-controller corpus tech "Colonial Policies"   # exact, alias, or closest name
-./target/release/game-controller corpus improvement "Manufacturing District"
-./target/release/game-controller corpus order "Draft Colonists"
-./target/release/game-controller corpus strategy
-
-# 11. Stellaris: briefing of the player's empire from an autosave
-./target/release/game-controller stellaris brief                      # newest autosave on the PC (agent >= 1.2)
-./target/release/game-controller stellaris brief path/to/autosave.sav # local file, offline
-./target/release/game-controller stellaris brief --json
-./target/release/game-controller stellaris take-control               # once per session: AI plays the empire (human_ai)
-./target/release/game-controller stellaris install-mod                # companion mod into the game's mod folder (agent >= 1.3)
-./target/release/game-controller stellaris bridge-check               # is it loaded?
-./target/release/game-controller stellaris directive expand --dry-run  # console lines only
-./target/release/game-controller stellaris directive expand            # apply (Stellaris must be foreground)
-./target/release/game-controller stellaris log -l 30                   # tail of logs/game.log
-./target/release/game-controller stellaris speed fastest               # slowest|slow|normal|fast|fastest
-./target/release/game-controller stellaris pause                       # / resume; state read from the screen, safe to repeat
-
-# 12. Launch Stdio MCP Server (Claude Code / Gemini / Antigravity)
-./target/release/game-controller mcp
+python3 -m venv .venv && .venv/bin/pip install -e '.[dev]' pillow
+cargo build --release -p game-controller
+scripts/ci.sh                                   # prints "CI OK"
 ```
 
----
-
-## Model Context Protocol (MCP) Server
-
-The controller is a stdio MCP server. Run it from the repo root so it finds `.agent_token` and
-`corpora/galciv4` (or set `GAME_AGENT_TOKEN` / pass `--corpus`).
-
-Claude Code — `.mcp.json` (in this repo):
-```json
-{ "mcpServers": { "game": { "command": "./target/release/game-controller", "args": ["mcp"],
-  "env": { "GAME_AGENT_URL": "http://192.168.1.77:8765" } } } }
-```
-
-Gemini CLI — `.gemini/settings.json` (in this repo):
-```json
-{ "contextFileName": ["GEMINI.md", "AGENTS.md"],
-  "mcpServers": { "game": { "command": "./target/release/game-controller", "args": ["mcp"], "cwd": ".",
-    "env": { "GAME_AGENT_URL": "http://192.168.1.77:8765" }, "timeout": 600000 } } }
-```
-
-### Available MCP Tools
-
-| Tool | Parameters | Description |
-|---|---|---|
-| `screenshot` | `{}` | Capture full frame from Windows agent with dynamic scaling metadata. |
-| `click` | `x, y, button, count, wait` | Click at `(x, y)` in last-image space (automatically scaled to physical screen). |
-| `drag` | `x1, y1, x2, y2, button, wait, hold_ms, steps, step_ms, dwell_ms, wiggle` | Drag from `(x1, y1)` to `(x2, y2)` with multi-step interpolation. Optional timing: `hold_ms` after press (default 30), `steps` (12, 2..120), `step_ms` (15, 5..200), `dwell_ms` at target before release (30, 0..3000), `wiggle` ±3 px at target (false). |
-| `key` | `combo, repeat` | Press key/combo; manifest aliases resolve (e.g. `end_turn` → `tab`, `explore` → `o`). |
-| `type_text` | `text` | Type literal string into focused UI element. |
-| `batch` | `actions: [...]` | Execute atomic multi-action sequence in a single network round-trip. |
-| `wait_settle` | `timeout, threshold` | Wait for on-screen animations or AI turns to stabilize. |
-| `diff` | `{}` | Compare current frame against previous capture and highlight changes. |
-| `autopilot_turns`| `turns` | Run the turn loop; each turn is verified by the date readout changing and known screens are cleared automatically. Stops with a screenshot at the first unknown dialog (HUD dimmed) or blocked turn (indicator unchanged). Refuses if the game is not the foreground window. |
-| `run_macro` | `name` | Execute a macro from `manifest.toml` (`turn_pump` = TAB, `auto_scout_cycle` = TAB then O). |
-| `corpus_search` | `query, limit` | Keyword search over records, playbook and reference docs; returns ids + one-line match snippets. |
-| `corpus_get` | `id` | One compact record (`tech:colonial_policies`) or one prose chunk (`doc:anomalies#0`, `strategy#2`). |
-| `corpus_tech` / `corpus_improvement` / `corpus_order` | `name` | Name lookup (exact, alias, or closest match) in the generated `data/*.json` records: cost, prerequisites, effects, unlocks, adjacency, requirements. |
-| `corpus_info` | `{}` | Loaded counts, hotkeys, macros, and screen names. |
-| `corpus_strategy` | `{}` | The complete strategic playbook (`strategy.md`). |
-| `game_state` | `{}` | Query live agent status, foreground window, and screen dimensions. |
-| `focus` | `title` | Bring target window to foreground by title substring. |
-| `stellaris_briefing` | `json` | *Stellaris corpus only.* Briefing from the newest monthly autosave (fetched via the agent's `/files`): date, government, stockpile and net per resource with deficits flagged, power, research and options, policies, planets, wars. About 2 KB of text. |
-| `stellaris_take_control` | `{}` | *Stellaris only.* Hand the empire to the game's AI: leave observer mode if needed, switch `human_ai` on (the console's reply is read on screen). Once per session. |
-| `stellaris_directive` | `name` | *Stellaris only.* Apply a governor directive from `corpora/stellaris/directives.toml`: clear other directive flags, set `governor_directive_<name>` and its policies; confirmed by a scoped `GOVERNOR_APPLIED <name> <nonce>` in game.log. Checks the game is foreground before every keystroke. |
-| `stellaris_speed` | `speed` | *Stellaris only.* Set the game speed: slowest, slow, normal, fast, fastest (`-` ×4 then `=` ×n; fastest ≈ 2.5 in-game months per second). |
-| `stellaris_pause` | `paused` | *Stellaris only.* Pause or resume; reads the state from the screen first (the yellow "Paused" label), so it is safe to repeat. |
-| `stellaris_log` | `lines` | *Stellaris only.* Tail of `logs/game.log`. |
-| `stellaris_pick_tech` | `prefer` | *Stellaris only.* Pick the first preferred tech (≤ 6 ids) offered in a field under 10% done: Technology → swap → option card (only the first 4 offered are clickable); unverified until the next autosave. |
-| `stellaris_market_sync` | `orders` | *Stellaris only.* Make the monthly market trades equal `orders` (≤ 2 of `{side, resource, amount 1..25}`, resources from the manifest); computed from the last autosave, so call at most once per autosave. |
-
----
-
-## Testing & CI
+Install the agent on the PC: `scripts/serve-agent.sh` builds it, creates a token in
+`.agent_token` and prints a PowerShell line to run on the PC. The agent runs as the logged-in user
+(a logon task, no admin rights except one firewall rule limited to the local subnet).
 
 ```bash
-scripts/ci.sh                                  # release build, cargo test, clippy -D warnings,
-                                               # Windows agent check, corpus load, ruff, pytest -> "CI OK"
-git add <paths> && scripts/ci-commit.sh "type(scope): message" "body"   # commits + pushes only if CI passes
-```
-Rust: 41 tests (controller: coordinate mapping, imaging incl. real-frame fixtures, corpus,
-autopilot classifier, known-screen loading, MCP schema; agent: batch and drag validation).
-Python: 55 tests (extractor fixtures, offline corpus CLI, legacy harness).
-
-## Pilot app (autonomous player with any LLM)
-
-```bash
-echo 'GEMINI_API_KEY=…' >> .env                 # or OPENAI_API_KEY / ANTHROPIC_API_KEY
+echo 'GAME_AGENT_URL=http://<pc-address>:8765' >> .env   # the PC's agent; .env is gitignored
+./target/release/game-controller health         # agent reachable?
+./target/release/game-controller screenshot -o frame.jpg
 .venv/bin/python -m pilot check --game stellaris
-.venv/bin/python -m pilot run --game galciv4                                   # vision episodes per blocker
-.venv/bin/python -m pilot run --game stellaris --months 12   # governor; --speed normal (default) … fastest
-.venv/bin/python -m pilot run --model openai:gpt-5 --game stellaris --episodes 3 --no-commit
-```
-Environment overrides: `PILOT_MODEL`, `PILOT_GAME`, `PILOT_SPEED`, `PILOT_DECIDE_MONTHS`,
-`PILOT_POLL_S`, `PILOT_RETRO_EVERY`, `PILOT_MODELS` (extra models for the dashboard's selector, e.g.
-`openai:gpt-5`), `PILOT_PORT`, `PILOT_COMMIT`, `PILOT_JOURNAL`, `PILOT_THINKING` (GC4 episodes) and
-`PILOT_GOVERNOR_THINKING` (Stellaris decisions), both default `medium` (at `low` Gemini often skips
-thinking and returns no thought summary), `PILOT_CAMPAIGN`,
-`PILOT_RUNS_DIR`.
-
-### Dashboard (LAN): `http://192.168.1.76:8780/`
-Always on (`deploy/game-pilot-view.service`, a systemd user service; linger is enabled). It keeps
-itself current without reloading: status every 3 s (switching between live and history when a
-run starts or ends), the live event stream during a run, campaign data every 10 s otherwise, and a
-"Live / Updated N s ago / Reconnecting…" indicator. It shows
-every recorded campaign and, while a pilot runs, forwards its live controls (the pilot's own
-dashboard is on :8790).
-- **Readout** (under the top bar): the in-game date, the directive in force, our standing in systems,
-  what the governor is doing, and the **pace**: game speed and how many in-game months pass between
-  decisions. Both can be changed there: during a run they apply at once (speed at the next poll, the
-  interval immediately); otherwise they are saved for the next run. The top bar also shows whether
-  the PC and its game are reachable.
-- **Empire over time**: standing against the other empires (ours, median, rank; falling-behind
-  highlighted) and the room to expand, then net income, stockpile, power (or a table) over in-game months, the directive
-  in force above the chart, and a mark for every decision (click to read it).
-- **Decisions**: date, directive, trigger, the model's reason, and what changed 12 months later.
-- **Reasoning**: the full trace of a decision: what the model was shown, its thinking (Gemini
-  thought summaries), every tool call with arguments and result, the answer, tokens and time.
-- **Talk** (live runs): *Ask* the model about its reasoning (never changes the game); *Note for next
-  decision*; *Decide now* (pauses and decides immediately); *Standing orders* (in every decision
-  until removed, saved per campaign); *Override* (apply a directive yourself, recorded as yours);
-  Yes/No when the model asks for confirmation (e.g. `prepare_war`).
-- **Strategy**: the campaign's pillar strategy — focus, directives by pressure, one card per pillar
-  (economy, expansion, technology, diplomacy, defence, government, society), heaviest first, with
-  its weight, pressure and share of all pressure (a bar), its stance, goals, milestones and their status (met, on track, at risk, missed), and actions
-  (preferred techs, a monthly market order). *Edit* changes a pillar and pins it (the Strategist
-  never changes a pinned pillar; the edit is checked like a model strategy and a rejection shows
-  its reason); *Unpin* hands it back; *Review strategy now* runs a review at once; *History* lists
-  the versions with their trigger. Off-frame decisions are tagged in the Decisions list and reviews
-  are marked on the chart.
-- **Activity**: the event feed.
-- **Top bar**: model and thinking pickers (Gemini models this key can use, plus `PILOT_MODELS`),
-  always shown. With no run active the choice is saved for the next `pilot run`
-  (`runs/pilot-settings.json`; command-line options still win); during a run it also switches the
-  running pilot from its next model call, and each decision records its model. With no run active,
-  **Start run** asks for the game, speed and decision interval and starts `game-pilot.service`;
-  pause/resume and stop appear during a run.
-
-### Telemetry (`runs/telemetry.sqlite`)
-Every event, decision (with its full trace) and monthly metric point, grouped by **campaign** (the
-Stellaris save folder, or the GC4 journal directory; `PILOT_CAMPAIGN` overrides). Each decision is
-scored against the empire 12 in-game months later, and the governor's `past_outcomes` tool shows
-those results before it decides. The JSONL logs in `runs/<id>/` stay the raw record:
-`python -m pilot rebuild-telemetry` recreates the database; `python -m pilot view` serves it.
-The database is local (gitignored); curated knowledge (`learned/`, strategy, journal) is committed.
-
-**Stellaris governor** (`src/pilot/governor.py`): pause → briefing from the newest autosave →
-the model returns one directive or `keep` → apply (flag + policies, console, game paused) →
-resume at `--speed` (default `normal`) → poll autosaves until `--months` have passed, a war starts or ends, a
-resource turns negative, or we newly fall below half the median in a measure → pause → decide again. The dashboard shows the neighbours with their strength against ours over time and shades war
-periods on the chart; each decision records the model release that answered (an alias such as
-`gemini-pro-latest` resolves) and the thinking level. It also carries our species (traits, climate preference), the other species in the empire, the empire's
-identity (AI personality, traditions, ascension perks), colonisable planets in our borders with how
-well they suit our species, which growth and naval-capacity techs we have, and idle stockpiles; each
-neighbour gets a `who:` line (ethics, government, civics, AI personality, species traits,
-traditions). Settings → Models sets models per role (Decisions, Strategy, Talk, GC4 blockers; a role
-without its own list uses the decision models). Any model failure moves on to the next model in the
-list; a model that just failed goes behind the others for 10 minutes. Each role's models are a list: each entry is a provider (Google, Anthropic,
-OpenAI; keys `GOOGLE_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` in `.env`), a model and a
-thinking level. The provider **Claude Code (subscription)** needs no API key. It offers the CLI's
-aliases (`claude-code:opus|sonnet|haiku|fable`, always the latest version) and, when `ANTHROPIC_API_KEY`
-is set, every versioned id from the Anthropic model listing (`claude-code:claude-opus-5-5`, older ones
-too; listing needs no credit). It runs the headless Claude Code CLI (`claude -p`, found on PATH or in
-`~/.local/bin`, logged in with the Claude subscription), so it is billed to the subscription and
-subject to its usage limits, never to an Anthropic API organization (the `ANTHROPIC_*` key variables
-are removed from its environment). Each call is single-shot and text-only: no tools (`consult`,
-`get_doc`) and no screenshots, and the thinking level becomes the CLI's `--effort`. It is best for
-the Strategy role, with a Google model after it in the list as the fallback (a usage limit or CLI
-error moves on to the next model); `python -m pilot check` reports whether `claude` is found. The first model decides and the others are tried in order when it stays
-overloaded after its retries, or, with "take turns", each decision starts at the next model; at start, a stale newest autosave (a new or
-just-loaded game) makes the governor play until a fresh one exists. The briefing names each war's sides, goals, war exhaustion and battles, lists the nearest
-empires against ours (strength ratios, opinion both ways, rival/pact flags), and the prompt adds
-a 12-month trend line (flags alloys piling up while military stays flat). The game is paused whenever the model thinks,
-so any speed is safe. `prepare_war` is applied only after a human "yes" on the dashboard.
-**Game pillars** (`corpora/<game>/pillars.toml`, `src/pilot/pillars.py`): each game defines its strategy
-pillars (label, description, the directive each ranks, the actions it may carry), the milestone metrics
-and their aliases, the action limits and game-specific Strategist notes. Everything below reads it: the
-Strategist's answer has one named field per pillar, validation, ranking, the frame, actions, edits and
-the Strategy tab follow it. A missing or invalid file turns the strategy layer off (decisions as before,
-one `strategy_disabled` event, the reason on the Strategy tab). Stellaris's file reproduces the seven
-pillars below; a new game adds its own file and action tools.
-
-**Strategy layer** (`src/pilot/strategy.py`, `governor.py`): a **Strategist** (model role
-`strategy`; give it a strong reasoning model) keeps one strategy per campaign: seven pillars with a
-weight (all sum to 100), a stance, goals, measurable milestones (`{metric, op, target, by}`, status computed
-from telemetry) and two actions — preferred techs (technology) and at most one small monthly market
-order (economy; sell only an idle resource, at most 25 and 20% of its income; trade is not a market
-resource). Each decision sees every directive's **pressure** = its pillar's weight x milestone need
-(met 0.3, on track 1, at risk 1.5, missed 2; `[weights]` in pillars.toml) and a suggestion: the top
-directive, or keep while the current one is within the switch margin; the model names what its choice
-serves (`serves`, shown in the trace). Editing a pillar's weight rescales the other unpinned pillars.
-Strategies stored with priorities convert to weights on load. It reviews at the start of a campaign without a strategy, every `PILOT_RETRO_EVERY`
-decisions (default 5; "no change" writes no version), on big events (war started or ended, crisis,
-colony lost, boxed in, military fell by half, a milestone turned missed, an off-frame decision; at
-most one per 12 in-game months) and on *Review strategy now*. Its output is validated (invalid →
-one corrective retry, then no change) and pinned pillars are kept. Each decision gets a **strategy
-frame** (ranking, focus, at-risk milestones) and picks within the top of the ranking; a pick outside
-it must cite an urgent line and is tagged off-frame. After each decision the governor carries out
-the actions through the game's screens (`stellaris_pick_tech`: Technology → swap → option card, only
-in a field under 10% done; `stellaris_market_sync`: Market → monthly trades), at most once per
-autosave, and checks them in a later save (a pick that did not stick is skipped until the next
-review; market orders that did not stick wait for the next review). Once a strategy exists the
-monthly trades in the save follow it, so trades placed by hand are removed. A review may also record
-up to 3 rules in `corpora/stellaris/learned/strategy.md` (read by later decisions). If the
-game stops responding to pause/resume (e.g. a text box has keyboard focus; the controller tries
-one Esc first), the governor stops acting and flags *needs attention* until you press Resume.
-Measured with Gemini 3.8 Flash: ~6.2k input / ~0.4k output tokens and ~2 s per decision.
-
-## Game corpus
-
-`corpora/<game>/` is the only place game knowledge lives; the controller is game-agnostic.
-
-```
-corpora/galciv4/
-  manifest.toml   hotkeys, known screens (template, ROI, action), macros — hand-verified
-  templates/      reference crops that identify known screens
-  strategy.md     playbook for the model, also chunked for search
-  data/           GENERATED records, one <kind>.json each (tech, improvement, order, policy,
-                  ship_component, starbase_module, event) — see data/README.md
-  docs/*.md       reference prose with Source:/License: headers, chunked at ~1500 chars
+.venv/bin/python -m pilot run --game stellaris --months 12
+.venv/bin/python -m pilot view                  # dashboard on port 8780
 ```
 
-Search returns ids and match snippets; `get` returns one record or chunk. Entity records are
-generated from the game's own definition files, not scraped from the wiki, so costs and
-prerequisites match the installed version. To regenerate after a game patch, copy
-`<install>\Data\Gameplay` and `<install>\Data\English\Text` from the PC (`scripts/receive-file.py`
-accepts a zip over the LAN) and run:
+Model keys go in `.env` (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`), or use the
+Claude Code CLI with a Claude subscription (no key). MCP clients (Claude Code, Gemini CLI) can use
+the controller directly: `.mcp.json`, `.gemini/settings.json`.
 
-```bash
-python3 scripts/extract-galciv4.py <folder-with-Gameplay-and-Text> --game-version 4.1.1
+## Documentation
+
+| Read | For |
+|---|---|
+| [AGENTS.md](AGENTS.md) | The operating guide for any model working here: play loop, decisions, recoveries, how to record what it learns |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Components, turn verification, known screens, coordinate scaling, agent API |
+| [docs/pilot.md](docs/pilot.md) | The pilot app: models, the Stellaris governor, the strategy layer, dashboard, telemetry |
+| [docs/cli.md](docs/cli.md) | Controller CLI and MCP tools |
+| [docs/corpus.md](docs/corpus.md) | Game corpora, generated records, other screen sizes |
+| [PLAYING.md](PLAYING.md) | Verified controls for Galactic Civilizations IV |
+| [plan.md](plan.md), [issues.md](issues.md) | Feature status and known issues |
+
+## Repository layout
+
+```
+crates/game-agent        Windows agent (HTTP API: screenshot, input, windows, files)
+crates/game-controller   Linux controller (CLI, MCP server, autopilot, corpus, Stellaris saves)
+src/pilot                Pilot app, governor, strategy layer, dashboard
+corpora/<game>           Everything game-specific
+scripts                  CI, agent installer server, extractors, play helpers
+windows_agent            Installer (install.ps1)
+deploy                   systemd user units
+games                    Game journals
+tests                    Python tests (Rust tests live in the crates)
 ```
 
-Current counts (4.1.1): 130 techs, 528 improvements, 66 executive orders, 203 policies, 355 ship
-components, 167 starbase modules, 994 events. Only tech/improvement/order have name-lookup
-commands; reach the other kinds with `corpus search` + `corpus get` (e.g. `event:precursor_probe`,
-whose `choices` field lists each button's exact outcome).
+`src/harness/` and `windows_agent/agent.py` are the first Python implementation, kept for its
+tests; they are not deployed.
 
-`data/_meta.json` records the game version, generator commit and counts. The wiki `docs/` can lag
-the game (the wiki lists Colonial Policies at 27 research; the game data says 24): when they
-disagree, the generated records win.
+## Security
+
+This is a tool for a home network, not the internet.
+
+- The agent can see the PC's screen and send it any input, so it requires a bearer token on every
+  request and its firewall rule admits only the local subnet. Keep `.agent_token` private (it is
+  gitignored) and do not forward port 8765.
+- The token travels in plain HTTP, and `serve-agent.sh` serves it during installation; run the
+  installer only on a trusted network and stop the server afterwards.
+- The agent reads only game folders listed in its `roots.json` and writes only allow-listed files
+  (a Stellaris mod folder, Civilization VI's options file).
+- The dashboard has no login and can start runs and steer the game: bind it to a trusted network.
+- API keys belong in `.env` (gitignored); never commit `runs/`, `play/` or `incoming/`.
+
+## Development
+
+`scripts/ci.sh` runs the Rust build, tests, clippy, the Windows agent build check, corpus loading,
+ruff and pytest. Commit with `scripts/ci-commit.sh "type(scope): summary" "body"`, which commits
+and pushes only when CI passes; Python-only changes skip the Rust stages. Conventions are in
+[AGENTS.md](AGENTS.md) §8–9.

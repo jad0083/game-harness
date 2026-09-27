@@ -9,7 +9,7 @@ An ultra-low-latency, 100% Rust-powered autonomous AI game harness designed to d
 The harness is split across two physical machines connected over a high-speed local network:
 
 ```
-Linux AI Controller (192.168.1.76)                  Windows 11 Gaming PC (192.168.1.77)
+Linux AI Controller                                 Windows 11 Gaming PC       
 ┌──────────────────────────────────────┐            ┌─────────────────────────────────────────┐
 │ LLM / Reasoning Agent                │            │ Galactic Civilizations IV: Supernova    │
 │  (Claude / Gemini / Antigravity)     │            │  (Running borderless / windowed)        │
