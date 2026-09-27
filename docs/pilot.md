@@ -333,7 +333,7 @@ in the save is then removed, as a sell that no longer fits):
   briefing's market block (0 without one);
 - the reserve: trade - 12 x (cost over the monthly trade income) must leave 2,500 (where the AI's own
   market spending starts); the spend cap: cost <= 0.25 x trade income + (trade - 2,500) / 24 (0.5 of
-  the income for alloys in a war crisis);
+  the income for alloys in a war crisis: declared buys, the orders kept in place and the fill alike);
 - the price guard: no new order above +50%; an order already placed stays up to +100%, but buying
   more of it than its amount in the save is a new order (above +50% the order in place stays at its
   amount, for a declared buy, the idle-trade fill and the crisis alloys alike);

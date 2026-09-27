@@ -169,12 +169,12 @@ def cover_candidates(b: dict, limits: ActionLimits) -> list[tuple[float, dict]]:
 
 def idle_fill(b: dict, prev: dict | None, limits: ActionLimits, idle: set[str], measured: set[str],
               blocked: Callable[[str, str], str | None] | None = None, *,
-              placed: Callable[[dict], float] = lambda _o: 0) -> tuple[dict | None, str]:
+              placed: Callable[[dict], float] = lambda _o: 0, crisis: bool = False) -> tuple[dict | None, str]:
     """The order that fills an empty slot while trade is IDLE: the first deficit-cover candidate that
     passes every buy rule, whose start amount is `measured`, and that `blocked(side, resource)` does
     not hold back (a suspension); a candidate raising the order in place (`placed(order)`: its amount)
-    past a rule keeps that order at its amount. (order, "" or why it was kept) or (None, why nothing
-    qualifies)."""
+    past a rule keeps that order at its amount; `crisis`: a war crisis is on (buy_errors). (order, "" or
+    why it was kept) or (None, why nothing qualifies)."""
     rules = limits.buy
     if rules is None:
         return None, "no buy rules"
@@ -193,7 +193,8 @@ def idle_fill(b: dict, prev: dict | None, limits: ActionLimits, idle: set[str], 
             why.append(f"{res}: {held}")
             continue
         have = placed(o)
-        got, errs = keep_placed(o, have, lambda x, have=have: buy_errors(x, b, prev, rules, idle, placed=have))
+        got, errs = keep_placed(o, have, lambda x, have=have: buy_errors(x, b, prev, rules, idle, placed=have,
+                                                                          crisis=crisis))
         if got is None:
             why.append(f"{res}: {'; '.join(errs)}")
             continue

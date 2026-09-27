@@ -1835,6 +1835,7 @@ class Governor:
         limits = self.pillars.actions["market"]
         idle, income = idle_resources(b), b.get("net") or {}
         crisis = self._crisis_market(b, idle, later)      # war crisis step 5: it takes the first slot
+        war = self._crisis_on()                           # ruling 9's crisis rules for every alloys buy
         desired = [crisis] if crisis else []
         for o in self._declared("market"):
             if crisis and len(desired) >= limits.max_items:
@@ -1845,7 +1846,7 @@ class Governor:
             errs = market_briefing_errors(o, limits, idle, income)
             kept, errs = (None, errs) if errs else keep_placed(
                 o.model_dump(), self._placed(o.side, o.resource, current) if o.side == "buy" else 0,
-                lambda x: self._buy_errors(x, b, current, idle))
+                lambda x: self._buy_errors(x, b, current, idle, crisis=war))
             if errs:     # a sell or buy that does not fit today's briefing (e.g. a pinned or older order)
                 if later:  # a raise of an order in place that breaks a rule keeps that order at its amount
                     what = f"sell {o.resource}" if o.side == "sell" else f"buy {o.resource} {o.amount}"
@@ -1862,7 +1863,7 @@ class Governor:
                 # declared order passed
                 held = [h for h in self._kept_for([o.model_dump()], current)
                         if not market_briefing_errors(o.model_copy(update={"amount": h.get("amount")}), limits, idle, income)
-                        and not self._buy_errors(h, b, current, idle)]
+                        and not self._buy_errors(h, b, current, idle, crisis=war)]
                 if later:
                     what = (", ".join(f"kept {h['side']} {h['resource']} {h['amount']}" for h in held)
                             + f" ({o.amount} wanted)" if held else f"skipped {o.side} {o.resource} {o.amount}")
@@ -1870,7 +1871,7 @@ class Governor:
                 desired += held
                 continue
             desired.append(o.model_dump())
-        fill, self._market_note = self._idle_fill(b, desired, current, idle, limits)
+        fill, self._market_note = self._idle_fill(b, desired, current, idle, limits, crisis=war)
         if fill:
             desired.append(fill)
         if self._market_note and later:
@@ -1922,7 +1923,7 @@ class Governor:
                    default=0)
 
     def _idle_fill(self, b: dict, desired: list[dict], current: list[dict], idle: set[str],
-                   limits) -> tuple[dict | None, str]:
+                   limits, *, crisis: bool = False) -> tuple[dict | None, str]:
         """The idle-trade fill (ruling 9): while the briefing flags trade IDLE and no declared order
         passed, the first deficit to cover that passes the buy rules, has a measured start amount and is
         not suspended. (order or None, the line for the next decision; "" when trade is not idle)."""
@@ -1932,7 +1933,7 @@ class Governor:
         placed = lambda o: self._placed(o["side"], o["resource"], current)
         try:
             order, why = idle_fill(b, self._prev_save, limits, idle, self._market_measured - self._market_unmeasured,
-                                   self._market_suspension, placed=placed)
+                                   self._market_suspension, placed=placed, crisis=crisis)
         except Exception as e:  # noqa: BLE001 - a malformed save never stops play
             return None, f"trade idle: the fill failed ({type(e).__name__}: {e})"
         if order is None:

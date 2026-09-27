@@ -4745,6 +4745,30 @@ def test_the_alloys_buy_waits_for_the_measured_start_amount(setup):
     assert row["result"] == "no_op" and "start amount not measured" in row["detail"]
 
 
+def test_declared_alloys_buys_during_a_crisis_get_the_crisis_rules(setup):
+    """Ruling 9: during a war crisis alloys have half the trade income to spend (not a quarter), also
+    when the crisis's own alloys step buys nothing (here: no shipyard we hold)."""
+    from pilot.strategy import Pillar
+    s, log = setup
+    game = FakeStellaris([briefing("2256.03.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    g._crisis = {"active": True, "since": "2256.02.01", "conditions": [["C1", "Arnvoss occupied"]], "quiet": 0,
+                 "entries": {}, "wars": [_WAR["id"]]}
+    at = lambda d, orders=(): {**_market_briefing(d, trade=2500, income=100, orders=list(orders)), "wars": [dict(_WAR)],
+                               "shipyards": [{"system": "Sol", "occupied": True}]}
+    alloys = lambda n: {"side": "buy", "resource": "alloys", "amount": n}
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[alloys(8)]))
+    g._carry_out_actions(at("2256.03.01"))      # 8 x 5.2 = 41.6 trade: over 0.25 x 100, within 0.5 x 100
+    assert ("market_sync", [alloys(8)]) in game.actions, _market_log(log)
+    # an order in the save kept for a refused add is checked with the crisis rules too
+    game.actions.clear()
+    g._market_unmeasured = {"alloys"}
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[alloys(9)]))
+    g._carry_out_actions(at("2256.04.01", [alloys(8)]))
+    assert not any(a[0] == "market_sync" for a in game.actions), "the alloys order in place is kept, not removed"
+    assert any(r.startswith("kept buy alloys 8 (9 wanted)") for r in _market_log(log)), _market_log(log)
+
+
 def _pace_model(holder: dict, at: int, months_: int):
     """Keeps the directive; on its `at`-th decision the human sets the pace to `months_`."""
     calls = {"n": 0}

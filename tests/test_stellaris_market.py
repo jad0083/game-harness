@@ -128,6 +128,13 @@ def test_alloys_and_sr_are_not_filled_until_their_start_amount_is_measured():
     assert idle_fill(b, None, LIMITS, {"trade"}, MEASURED | {"alloys"})[0] == buy("alloys", 25)
 
 
+def test_the_idle_trade_fill_in_a_war_crisis_gets_the_crisis_rules():
+    full = {"governor_vars": {"governor_naval_cap": 100, "governor_naval_used": 96}, "used_naval_capacity": 96}
+    b = empire(stock={"alloys": 300}, net={"alloys": -30.0}, **full)
+    assert idle_fill(b, None, LIMITS, {"trade"}, MEASURED | {"alloys"})[0] is None, "alloys wait for naval room"
+    assert idle_fill(b, None, LIMITS, {"trade"}, MEASURED | {"alloys"}, crisis=True)[0] == buy("alloys", 25)
+
+
 def test_a_suspended_resource_is_not_filled():
     b = empire(stock={"minerals": 300, "food": 300}, net={"minerals": -20.0, "food": -20.0})
     blocked = lambda side, res: "suspended" if res == "minerals" else None
