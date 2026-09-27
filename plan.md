@@ -94,6 +94,8 @@
 - [ ] GalCiv IV levers from the Civ VI and Stellaris lessons (2026-09-27): whether the game's own AI can play our faction (governor model instead of screen play), a record per action kind, rush-buys with credits, crisis response, AI steering through data mods, planet tile placement, and stall/hang recovery; research → design with rulings → build → review → deploy (live checks when GalCiv IV is the running game)
 
 ## Pilot app: observability and control
+- [ ] Dashboard v2 design pass with the learnings from three games (2026-09-27): information architecture per game, status and recovery when the governor stops, Civ VI and Stellaris lever views, phone and dark mode; research → design with rulings → build → review → deploy (after the Civ VI branch merges)
+- [ ] Dashboard sign-in without the clunky key cookie (2026-09-27): per-device sessions, adding a phone or another browser without a terminal, sign-out and revocation, no master key in URLs or cookies, automation keeps a header token
 - [x] Decision traces: prompt, Gemini thought summaries, tool calls and results, answer, tokens, time (`runs/<id>/traces/`)
 - [x] Telemetry per campaign in SQLite (`runs/telemetry.sqlite`), rebuildable from the JSONL logs; outcome scoring 12 months later; governor tool `past_outcomes`
 - [x] Dashboard: campaign charts with directive lane and decision marks, decision list with outcomes, reasoning reader, activity feed; dark/light, phone layout
