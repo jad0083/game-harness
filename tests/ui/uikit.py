@@ -119,9 +119,25 @@ def seed_runs(runs: Path) -> dict:
     _trace(log, 2, date="T55", trigger="urgent: city threatened: Chengdu (2 enemy units near)", outcome="error",
            error="ModelHTTPError: status_code: 503, model_name: gemini-3.8-flash, body: {'error': {'code': 503, "
                  "'message': 'This model is currently experiencing high demand.'}}")
+    log.emit("order_outcome", order_kind="research", key="research", id="tech:writing", city="", ordered="T52",
+             result="completed", by=None, turns=3, date="T55", turn=55)
+    log.emit("order_outcome", order_kind="purchase", key="purchase faith", id="building:gurdwara", city="Beijing",
+             currency="faith", ordered="T52", result="refused", by=None, turns=0, date="T52", turn=52,
+             detail="refused: 380 faith, over the 283 allowed")
+    log.emit("order_followed", ref="f1", row={"order_kind": "civic", "key": "civic", "id": "civic:foreign_trade", "city": "",
+                                              "ordered": "T52", "ref": "f1"},
+             order={"kind": "civic", "id": "civic:foreign_trade"}, wire=None, expect={}, base={"turn": 52}, window=8)
+    log.emit("last_stand", city="Chengdu", turn=54, date="T54", in_a_row=1, ran=True, stopped="done: nothing left to do",
+             actions=[{"action": "city_strike", "result": "took", "detail": "the target lost 28", "predicted": 28}], pins=[])
     info = log.state.info
     info.update(game="civ6", decide_turns=5, directives=[], controls=["instruct", "chat", "order_add", "order_remove",
-                                                                        "decide_now", "set_models", "set_months"])
+                                                                        "decide_now", "set_models", "set_months"],
+                reserves={"gold": 257, "gold_keep": 46, "gold_rule": "30 + 10 for each gold of deficit a turn (1.6 now)",
+                          "faith": 117, "faith_keep": 25, "faith_for": "for the pantheon", "in_danger": ["Chengdu"],
+                          "date": "T57"},
+                last_stand={"on": True, "max": 3, "in_a_row": 1, "off_reason": "", "active": None},
+                game_health={"popups": {"quieted": 5, "total": 6, "turn": 50, "failed": ["ProjectBuiltPopup.OnProjectComplete"]},
+                             "timeouts": 3, "calls": 40, "last_turn_s": 42.0, "held": False})
     log.state.game_date = "T57"
     log.state.status = "playing"
     return {"runs": runs, "tel": tel, "log": log, "pilot": FakePilot(log)}

@@ -213,6 +213,8 @@ class Civ6Governor(Governor):
         self._ai_rows: list = []                  # our player's rows of that log: [turn, strategy, status]
         log.state.info["directives"] = []
         log.state.info["decide_turns"] = settings.decide_every_turns
+        self._popups: dict | None = None          # the popups quieted at this load (the dashboard's game health)
+        self._publish_stand()
         log.state.info["controls"] = [c for c in log.state.info.get("controls", []) if c not in ("override", "set_speed")]
 
     # ---- agents -------------------------------------------------------------------------------------
@@ -568,6 +570,7 @@ class Civ6Governor(Governor):
         hand-back. Only a stand that reached the game (a step answered with an action or `done`, or
         lost) counts toward `last_stand_max`: one stopped before its first step ran nothing."""
         name = city["name"]
+        self._publish_stand({"city": name, "turn": b.get("turn"), "since": round(time.time(), 1)})
         self._status("last stand")
         report = {"city": name, "city_id": city.get("id"), "turn": b["turn"], "date": b["date"],
                   "in_a_row": self._stand_streak.get(name, 0), "ran": False, "actions": [], "pins": [], "stopped": ""}
@@ -578,6 +581,7 @@ class Civ6Governor(Governor):
         if report["ran"]:
             report["in_a_row"] = self._stand_streak[name] = self._stand_streak.get(name, 0) + 1
         self._stand_breaker(report, b)
+        self._publish_stand()
         self.log.emit("last_stand", **report)
         acts = "; ".join(f"{a['action']} {a['result'].replace('_', ' ')} ({a['detail']})" for a in report["actions"])
         counted = (f"stand {report['in_a_row']} in a row" if report["ran"]
@@ -778,10 +782,49 @@ class Civ6Governor(Governor):
             text += " Purchase rules: " + "; ".join(rules) + "."
         return text
 
+    # ---- what the dashboard reads (docs/design/2026-09-27-dashboard-v2-design.md, rulings 12, 21, 22) --
+
+    def _publish_stand(self, active: dict | None = None) -> None:
+        """The last stand's state, always: armed or off (and why it turned itself off), its limit, the
+        longest streak, and the stand running now."""
+        self.log.state.info["last_stand"] = {
+            "on": bool(self.s.last_stand), "max": self.s.last_stand_max,
+            "in_a_row": max(self._stand_streak.values(), default=0), "off_reason": self._stand_off, "active": active}
+
+    def _publish_game(self, b: dict) -> None:
+        """At each snapshot: the treasury against what purchases keep back (`info.reserves`), the
+        popups quieted at this load (`popups_quieted`, once per library install), and game health
+        (`info.game_health`: those popups, tuner timeouts in the last calls, the last turn's time)."""
+        info, buy = self.log.state.info, self._buy_limits()
+        if buy is not None:
+            net = (b.get("yields") or {}).get("gold")
+            deficit = max(0.0, -float(net)) if isinstance(net, (int, float)) else 0.0
+            faith_keep, why = faith_reserve_now(b, buy)
+            info["reserves"] = {
+                "gold": b.get("gold"), "gold_keep": gold_reserve_now(b, buy),
+                "gold_rule": (f"{buy.gold_reserve} + {buy.gold_reserve_per_deficit:g} for each gold of deficit a turn "
+                              f"({deficit:g} now)" if deficit and buy.gold_reserve_per_deficit else "no deficit"),
+                "faith": b.get("faith"), "faith_keep": faith_keep,
+                "faith_for": (why.split(" faith ", 1)[1] if " faith for " in why else ""),
+                "in_danger": [c.get("name") for c in b.get("cities") or [] if in_danger(c)],
+                "date": b.get("date") or f"T{b.get('turn')}"}
+        entries = getattr(self.game, "popups_quieted", None)
+        if entries:
+            self.game.popups_quieted = None
+            settled = lambda e: e.endswith((" QUIET", " QUIET_ABSENT")) or "no Lua state named" in e
+            self._popups = {"quieted": sum(1 for e in entries if settled(e)), "total": len(entries), "turn": b.get("turn"),
+                            "failed": [e.split(" ", 1)[0] for e in entries if not settled(e)]}
+            self.log.emit("popups_quieted", entries=list(entries), turn=b.get("turn"))
+        calls = list(getattr(self.game, "recent_calls", None) or [])
+        turn = next((e for e in reversed(self.log.recent) if e.get("kind") == "turn"), None)
+        info["game_health"] = {"popups": self._popups, "timeouts": sum(1 for c in calls if c), "calls": len(calls),
+                               "last_turn_s": (turn or {}).get("seconds"), "held": bool((turn or {}).get("note"))}
+
     # ---- the order record (docs/design/2026-09-27-civ6-levers-design.md, rulings 12-16) -------------
 
     def _track(self, b: dict) -> None:
         """Follow every open order on this snapshot (once per turn): resolved ones emit their row."""
+        self._publish_game(b)
         turn = b.get("turn")
         if not isinstance(turn, int) or turn == self._tracked_turn:
             return

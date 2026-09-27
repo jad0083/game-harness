@@ -14,6 +14,7 @@ import math
 import os
 import re
 import subprocess
+from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
 from statistics import median
@@ -60,11 +61,25 @@ class ControllerCiv6:
             self.env["GAME_AGENT_TOKEN"] = tok
         self.cwd = cwd
         self.timeout_s = timeout_s
+        # for the dashboard's game health: the last calls (True = the tuner or agent timed out) and the
+        # popups the controller quieted at the last library install (read once by the governor)
+        self.recent_calls: deque[bool] = deque(maxlen=40)
+        self.popups_quieted: list[str] | None = None
 
     def _run(self, *args: str) -> tuple[int, str, str]:
-        r = subprocess.run([*self.base, *args], cwd=self.cwd, env=self.env, capture_output=True, text=True,
-                           timeout=self.timeout_s, check=False)
+        try:
+            r = subprocess.run([*self.base, *args], cwd=self.cwd, env=self.env, capture_output=True, text=True,
+                               timeout=self.timeout_s, check=False)
+        except subprocess.TimeoutExpired:
+            self.recent_calls.append(True)
+            raise
+        self.recent_calls.append(r.returncode != 0 and "timed out" in (r.stderr + r.stdout).lower())
         return r.returncode, r.stdout.strip(), r.stderr.strip()
+
+    def _note(self, reply: dict) -> dict:
+        if isinstance(reply, dict) and isinstance(reply.get("popups_quieted"), list):
+            self.popups_quieted = [str(x) for x in reply["popups_quieted"]]
+        return reply
 
     def _json(self, *args: str) -> dict:
         code, out, err = self._run(*args)
@@ -75,7 +90,7 @@ class ControllerCiv6:
             raise RuntimeError(f"{what} failed (exit {code}): {(err or out)[:400]}") from None
         if code != 0 or reply.get("ok") is False:
             raise GameRefused(f"{what} refused: {reply.get('error') or (err or out)[:400]}")
-        return reply
+        return self._note(reply)
 
     def snapshot(self) -> dict:
         s = self._json("civ6", "snapshot")
@@ -90,7 +105,7 @@ class ControllerCiv6:
         or may not have run."""
         code, out, err = self._run("civ6", "order", json.dumps(order))
         try:
-            return json.loads(out.splitlines()[-1])
+            return self._note(json.loads(out.splitlines()[-1]))
         except (ValueError, IndexError):
             return {"ok": False, "transport": True, "error": (err or out or f"exit {code}")[:400]}
 

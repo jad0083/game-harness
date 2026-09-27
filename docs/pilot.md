@@ -353,9 +353,24 @@ running pilot (whose own dashboard is on `PILOT_PORT`, 8790, on 127.0.0.1). It r
   with their arguments as pairs, the answer; steps after the first two folded). A failed decision
   shows the cause and the chain of models tried, the raw error one disclosure away. The reader
   column is not a scroll box: the page scrolls. Picking another campaign clears it.
-- **Game screen**: the newest frame, fetched only when the run recorded one (governor games such as
-  Civ VI record none). The chart's x-axis counts turns for turn-based games; a view whose figures
-  the game does not record falls back to the table of the figures it does record.
+- The chart's x-axis counts turns for turn-based games; a view whose figures the game does not
+  record falls back to the table of the figures it does record.
+- **The reader tabs**: Reasoning · the game's levers tab · Strategy · Talk · Activity (the selected tab
+  is the one tab stop; arrow keys, Home and End move between them). The levers tab is Civ VI's
+  **Orders**, Stellaris's **Actions** (the strategy's tech picks and market syncs, and the screen)
+  and GalCiv's **Screen** (the latest frame and the blockers cleared lately; selected by default).
+  The game screen lives there and on the needs-you card, fetched only when the run recorded one.
+- **Orders** (Civ VI; `GET /api/orders?campaign=&kind=&fate=&limit=`): the buy-outs (gold and faith
+  against what purchases keep back and why, from the live `info.reserves`, cities in danger), a
+  persistent line when the last stand turned itself off, the order record per kind ("Production,
+  replace the AI's choice": the stick rate as a bar once enough orders were judged, else "2 held of
+  3, too few to judge", "Does not stick here", what was not judged in words, the last override;
+  "Last 30 turns; weak at 50% or less"), every order newest first with its fate, filters by kind and
+  by fate, "in force, 3 of 8 turns followed" for open ones, a "backfilled" tag on rows from older
+  decisions, a click opening the decision it came from, and the last stands with their actions.
+- **Game health** (Civ VI, on Now, only when something is off): popups quieted at this load, tuner
+  timeouts in the last calls, the last turn's time; in the warning colour when a popup failed to
+  quiet or a turn was held. The governor line's facts say whether the last stand is armed or off.
 - **Talk** (live): ask the model about its reasoning, leave a note for the next decision, decide
   now, standing orders, override a directive, answer confirmations.
 - **Strategy**: the focus, then where the effort goes as one stacked bar (share mode, Civ VI) or the

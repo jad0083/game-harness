@@ -476,6 +476,16 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   `order_outcome` row matches the decision's date, kind, id and city), `attempts` and `fallback`
   (the run's `model_retry` / `model_fallback` events since the previous decision) and
   `retried_for`. `telemetry.score` labels its window with the game's `unit` (turns or months).
+- The Civ VI Orders tab (rulings 12, 19-22): `/api/orders` computes the record with `civ6.order_record`
+  over the campaign's `order_outcome` rows (so it agrees with the live `info.order_record`), lists
+  every order with its fate (`wording.fate`), name, the decision it came from and, for an
+  `order_followed` still open, how far it was followed; backfill runs (`-backfill`,
+  `scripts/civ6-backfill-orders.py`) are flagged in `/runs` and left out of the feeds. The Civ VI
+  governor publishes at each snapshot `info.reserves` (gold and faith against what purchases keep
+  back), `info.game_health` (popups quieted at this load, tuner timeouts in `ControllerCiv6`'s last
+  40 calls, the last turn's time) and emits `popups_quieted` once per library install (the
+  controller's reply field, kept by `ControllerCiv6` until read); `info.last_stand` (armed or off,
+  its limit, the streak, why it turned off, the stand running) is always there.
 - `view.py`: each game's dashboard view (`corpora/<game>/dashboard.toml`, validated into one JSON shape
   with defaults; a missing or broken file gives the default view and the error, so the page still
   renders) and `Names` (ids to names from the game's corpus records, `aliases[0]` being the type

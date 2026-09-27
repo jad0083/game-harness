@@ -156,6 +156,8 @@ def fate(apply_outcome, result=None, *, kind: str = "", by: str = "", detail: st
         key, word = _RESULT[result]
         if result == "overridden" and by:
             why = f"the AI chose {by}"
+        elif result == "refused" and detail:
+            why = re.sub(r"^refused(?: by the game)?:\s*", "", str(detail))
         elif detail:
             why = cause(detail)
     elif out == "stuck":
@@ -215,3 +217,16 @@ def attempts(events: list[dict]) -> list[dict]:
         else:
             out.append({"model": model, "cause": why, "times": 1})
     return out
+
+
+# the order record's keys in words (ruling 19)
+RECORD_LABELS = {"research": "Research", "civic": "Civics", "policies": "Policy cards",
+                 "production fill": "Production, fill an empty queue", "production replace": "Production, replace the AI's choice",
+                 "production unknown": "Production (from older decisions)", "purchase gold": "Purchase with gold",
+                 "purchase faith": "Purchase with faith", "stand city_strike": "Last stand: city strike",
+                 "stand ranged": "Last stand: ranged attack", "stand retreat": "Last stand: retreat",
+                 "stand pin": "Last stand: hold in place"}
+
+
+def record_label(key: str) -> str:
+    return RECORD_LABELS.get(key) or (key[:1].upper() + key[1:])

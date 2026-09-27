@@ -23,6 +23,7 @@ Telemetry (runs/telemetry.sqlite, across runs and models):
     GET  /api/pc                                gaming PC: agent reachable, version, games open, game in front
     GET  /api/view?campaign=<id>|game=<game>    how the page speaks about the game (corpora/<game>/dashboard.toml)
     GET  /api/health?run=<id>                   model health: the last decision calls that fell back or failed
+    GET  /api/orders?campaign=<id>&kind=&fate=&limit=   Civ VI: the order record, every order with its fate, purchases, last stands
     POST /api/capture  {}                       the game screen now, stored as the run's frame (live run)
     POST /api/settings  {"models": [{"model", "thinking"}, ...], "rotate"}   the model list (live too); older {"model", "thinking", "fallback"}
     POST /api/run  {"game", "speed", "months"}   start a pilot run (game-pilot.service); viewer only
@@ -209,7 +210,8 @@ def list_runs(runs_dir: Path, live_id: str | None = None) -> list[dict]:
         out.append({"id": d.name, "live": d.name == live_id, "model": st.get("model", ""), "_status": st,
                     "game": (st.get("info") or {}).get("game", ""), "decisions": st.get("episodes", 0),
                     "date": st.get("game_date", ""), "status": st.get("status", ""),
-                    "frame": (d / "latest.jpg").exists()})
+                    "frame": (d / "latest.jpg").exists(),
+                    "backfill": d.name.endswith("-backfill")})      # scripts/civ6-backfill-orders.py; no run to show
     return out
 
 
@@ -431,6 +433,70 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
             or game_of_campaign(log.campaign_id or "" if log else "") or ((log.state.info or {}).get("game", "") if log else "")
         return web.json_response(await asyncio.to_thread(views.get, game))
 
+    async def api_orders(request):
+        """The Civ VI Orders tab (rulings 19-22): the order record per key (the governor's
+        `order_record` over the campaign's order_outcome rows, so it agrees with the live
+        `info.order_record`), every order newest first with its fate, name and the decision it came
+        from (backfilled rows tagged; open orders with how far they were followed), purchases, and
+        the last stands. Filters: kind (research, civic, policies, production, purchase, stand), fate
+        (held, replaced, refused, noreply, open), limit."""
+        from .civ6 import order_record
+        from .wording import fate, record_label
+        cid = request.query.get("campaign", "")
+        if not cid:
+            raise web.HTTPBadRequest(text="campaign is required")
+        tel_ = need_tel()
+        game = game_of_campaign(cid)
+        rows = await asyncio.to_thread(tel_.campaign_events, cid, "order_outcome")
+        followed = await asyncio.to_thread(tel_.campaign_events, cid, "order_followed")
+        stands = await asyncio.to_thread(tel_.campaign_events, cid, "last_stand")
+        checks = await asyncio.to_thread(tel_.campaign_events, cid, "last_stand_check")
+        mets = await asyncio.to_thread(tel_.metrics_rows, cid)
+        decs = await q("SELECT run_id, episode, date FROM decisions WHERE campaign_id=? AND"
+                       " (decision IS NULL OR decision != 'strategy_review') ORDER BY t", (cid,))
+        spec, _ = campaign_spec(cid)
+        orders_spec = getattr(spec, "orders", None)
+        now_turn = max([m.get("turn") for m in mets if isinstance(m.get("turn"), int)]
+                       + [r.get("turn") for r in rows if isinstance(r.get("turn"), int)] + [0])
+
+        def build() -> dict:
+            nm = lambda i: names.name(game, i)
+            rec = order_record(rows, now_turn, orders_spec) if orders_spec else {}
+            for k, r in rec.items():
+                r["label"] = record_label(k)
+                if r.get("last_override"):
+                    r["last_override"].update(name=nm(r["last_override"].get("id")), by_name=nm(r["last_override"].get("by")))
+            by_date = {d["date"]: {"run_id": d["run_id"], "episode": d["episode"]} for d in decs}
+            done = {r.get("ref") for r in rows if r.get("ref")}
+            items = []
+            for r in rows:
+                by = ", ".join(str(nm(b.strip())) for b in str(r.get("by") or "").split(",") if b.strip())
+                items.append({**r, "name": ", ".join(str(nm(i.strip())) for i in str(r.get("id") or "").split(",") if i.strip()),
+                              "fate": fate("stuck", r.get("result"), kind=r.get("order_kind") or "", by=by,
+                                           detail=r.get("detail") or "")})
+            for f in followed:
+                if not f.get("ref") or f["ref"] in done:
+                    continue
+                done.add(f["ref"])
+                row = dict(f.get("row") or {})
+                start = (f.get("base") or {}).get("turn") or 0
+                items.append({**row, "result": None, "date": row.get("ordered"), "turn": start,
+                              "name": str(nm(row.get("id"))), "fate": fate("stuck", None, kind=row.get("order_kind") or ""),
+                              "followed": {"turns": max(0, now_turn - start), "window": f.get("window")}})
+            for it in items:
+                it["decision"] = by_date.get(it.get("ordered"))
+            items = [it for _, it in sorted(enumerate(items), key=lambda p: ((p[1].get("turn") or 0), p[0]), reverse=True)]
+            kind, want = request.query.get("kind", ""), request.query.get("fate", "")
+            shown = [it for it in items if (not kind or it.get("order_kind") == kind or str(it.get("key", "")).startswith(kind))
+                     and (not want or it["fate"]["key"] == want)]
+            limit = int(request.query["limit"]) if request.query.get("limit", "").isdigit() else 200
+            return {"record": rec, "now_turn": now_turn,
+                    "spec": ({"window_turns": orders_spec.window_turns, "weak_rate": orders_spec.weak_rate,
+                              "min_samples": dict(orders_spec.min_samples)} if orders_spec else None),
+                    "log": shown[:limit], "purchases": [it for it in items if it.get("order_kind") == "purchase"][:20],
+                    "stands": list(reversed(stands))[:3], "stand_checks": list(reversed(checks))[:3]}
+        return web.json_response(await asyncio.to_thread(build))
+
     async def api_plans(request):
         where, args = scope(request)
         rows = await q(f"SELECT run_id, t, date, source, text FROM plans WHERE {where} ORDER BY t DESC", args)
@@ -557,7 +623,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
         return web.json_response(data)
 
     api = [web.get("/api/campaigns", api_campaigns), web.get("/api/decisions", api_decisions),
-           web.get("/api/pc", api_pc), web.get("/api/view", api_view),
+           web.get("/api/pc", api_pc), web.get("/api/view", api_view), web.get("/api/orders", api_orders),
            web.post("/api/run", api_run),
            web.get("/api/models", api_models), web.post("/api/settings", api_settings),
            web.get("/api/plans", api_plans), web.get("/api/strategy", api_strategy),

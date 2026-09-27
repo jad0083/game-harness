@@ -102,6 +102,7 @@
   .gov-facts, .gov-health, .gov-cost, .gov-retry { margin: 4px 0 0; font-size: 14px; color: var(--ink-2); max-width: 80ch; }
   .gov-facts .linkish { font-size: inherit; padding: 0; }
   .gov-health { color: var(--warn); font-weight: 600; }
+  .bad-text { color: var(--bad); font-weight: 600; }
   .gov-health::before { content: "▲ "; }
   .gov-card { margin-top: 10px; }
   .gov-cost { color: var(--ink); font-size: 15px; }
@@ -140,7 +141,7 @@
   @media (max-width: 1000px) {
     main { display: flex; flex-direction: column; align-items: stretch; }   /* each panel as wide as the screen, never its content */
     .col { display: contents; }
-    #p-figures { order: 0; } #p-chart { order: 1; } #p-nb { order: 2; } #p-dec { order: 3; } #p-tabs { order: 4; } #p-frame { order: 5; }
+    #p-figures { order: 0; } #p-chart { order: 1; } #p-nb { order: 2; } #p-dec { order: 3; } #p-tabs { order: 4; }
   }
 
   /* ---- chart ---- */
@@ -256,7 +257,9 @@
 
   /* ---- tabs ---- */
   #p-tabs { padding-top: 12px; }
-  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--hair); }
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--hair); overflow-x: auto; scrollbar-width: none; }
+  .tabs button { flex: none; }
+  @media (max-width: 600px) { .tabs button { padding: 8px 9px 10px; } }
   .tabs button { position: relative; border: 0; background: transparent; padding: 8px 12px 10px; cursor: pointer; color: var(--muted); font-weight: 500; margin-bottom: -1px; }
   .tabs button[aria-selected="true"] { color: var(--ink); font-weight: 700; border-bottom: 2px solid var(--accent); }
   .tabs .dot { position: absolute; top: 7px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--thought); }
@@ -369,7 +372,52 @@
   .feed .k { font-weight: 600; margin-right: 6px; }
   .feed .k.bad { color: var(--bad); } .feed .k.learn { color: var(--good); } .feed .k.human { color: var(--sensor); }
   #noframe { padding: 4px 0; }
-  .frame img { width: 100%; display: block; border-radius: 4px; background: #000; aspect-ratio: 1568 / 882; object-fit: contain; }
+  .frame-img { width: 100%; display: block; border-radius: 4px; background: #000; aspect-ratio: 1568 / 882; object-fit: contain; }
+  .levers-frame { margin-top: 18px; }
+  .levers-frame .btn { margin-top: 8px; }
+  /* ---- the Civ VI Orders tab (rulings 19-22) ---- */
+  .health-line { margin: 10px 0 0; font-size: 13.5px; color: var(--ink-2); }
+  .health-line.warn { color: var(--warn); font-weight: 600; }
+  .o-alarm { margin: 0 0 14px; padding: 8px 12px; border-left: 3px solid var(--bad); background: var(--alarm-bg); font-weight: 600; font-size: 14px; }
+  .o-block { margin: 0 0 18px; }
+  .o-block > h3 { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; margin: 0 0 8px; font-size: 14px; }
+  .o-block > h3 span { font-weight: 400; font-size: 12.5px; color: var(--muted); }
+  .reserve { display: grid; grid-template-columns: minmax(0, 1fr) 140px; gap: 4px 14px; align-items: center; margin: 0 0 8px; font-size: 14px; }
+  .reserve .rbar { position: relative; height: 10px; border-radius: 5px; background: var(--grid); overflow: hidden; }
+  .reserve .rbar i { position: absolute; top: 0; bottom: 0; left: 0; background: var(--ink-2); opacity: .55; }
+  .reserve .rbar b { position: absolute; top: 0; bottom: 0; background: var(--good); }
+  .danger { color: var(--bad); font-weight: 600; font-size: 13.5px; margin: 0; }
+  .rec { list-style: none; margin: 0; padding: 0; display: grid; }
+  .rec li { display: grid; grid-template-columns: minmax(140px, 1fr) minmax(0, 1.3fr); gap: 2px 14px; padding: 8px 0;
+            border-top: 1px solid var(--grid); font-size: 13.5px; align-items: baseline; }
+  .rec li:first-child { border-top: 0; }
+  .rec .rname { font-weight: 600; }
+  .rec .rrate { display: inline-flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
+  .rec .rrate .bar { width: 64px; height: 8px; border-radius: 4px; background: var(--grid); overflow: hidden; display: inline-block; }
+  .rec .rrate .bar i { display: block; height: 100%; background: var(--good); }
+  .rec .rrate.weak .bar i { background: var(--warn); }
+  .rec .rmore { grid-column: 2 / -1; color: var(--ink-2); font-size: 12.5px; }
+  .rec .rcounts { color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .rec .weakflag { color: var(--warn); font-weight: 600; }
+  .ofilters { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
+  .olog { list-style: none; margin: 0; padding: 0; }
+  .olog li button { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 2px 10px; width: 100%; text-align: left; background: none;
+                    border: 0; border-top: 1px solid var(--grid); padding: 7px 4px; cursor: pointer; font-size: 13.5px; color: var(--ink); align-items: baseline; }
+  .olog li:first-child button { border-top: 0; }
+  .olog li button:hover { background: var(--surface); }
+  .olog .odate { font-variant-numeric: tabular-nums; color: var(--ink-2); }
+  .olog .owhat { min-width: 0; overflow-wrap: anywhere; }
+  .olog .okind { color: var(--muted); margin-right: 6px; }
+  .olog .onote { grid-column: 2 / -1; color: var(--ink-2); font-size: 12.5px; }
+  .stand { font-size: 13.5px; margin: 0 0 10px; }
+  .stand ul { margin: 4px 0 0; padding-left: 18px; }
+  @media (max-width: 600px) {
+    .rec li { grid-template-columns: minmax(0, 1fr) auto; }
+    .rec .rcounts, .rec .rmore { grid-column: 1 / -1; }
+    .reserve { grid-template-columns: 1fr; }
+    .olog li button { grid-template-columns: 44px minmax(0, 1fr); }
+    .olog .fchip { grid-column: 2; justify-self: start; }
+  }
   .stats { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--ink-2); margin-top: 10px; font-variant-numeric: tabular-nums; }
   .stats b { color: var(--ink); }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
@@ -620,6 +668,7 @@
   <div class="col">
     <section class="panel" id="p-figures" aria-label="Figures" hidden>
       <div class="figures" id="figures"></div>
+      <p class="health-line" id="game-health" hidden></p>
     </section>
 
     <section class="panel" id="p-chart" aria-labelledby="h-chart">
@@ -645,26 +694,29 @@
       <div class="body"><ul class="decisions" id="decisions"></ul></div>
     </section>
 
-    <section class="panel frame" id="p-frame" aria-labelledby="h-frame">
-      <header><h2 id="h-frame">Game screen</h2><span class="sub">latest capture</span></header>
-      <div class="body">
-        <img id="frame" alt="Latest game screen" hidden>
-        <p class="empty" id="noframe">No screen captured yet.</p>
-        <div class="stats" id="stats"></div>
-      </div>
-    </section>
   </div>
 
   <div class="col right">
     <section class="panel" id="p-tabs">
-      <div class="tabs" role="tablist">
-        <button role="tab" aria-selected="true" data-tab="reasoning">Reasoning<span class="dot" hidden></span></button>
-        <button role="tab" aria-selected="false" data-tab="talk">Talk<span class="dot" hidden></span></button>
-        <button role="tab" aria-selected="false" data-tab="strategy">Strategy<span class="dot" hidden></span></button>
-        <button role="tab" aria-selected="false" data-tab="activity">Activity<span class="dot" hidden></span></button>
+      <!-- Reasoning · {Levers} · Strategy · Talk · Activity (ruling 1); arrow keys move between tabs -->
+      <div class="tabs" role="tablist" aria-label="Reader">
+        <button role="tab" id="tb-reasoning" aria-controls="tab-reasoning" aria-selected="true" tabindex="0" data-tab="reasoning">Reasoning<span class="dot" hidden></span></button>
+        <button role="tab" id="tb-levers" aria-controls="tab-levers" aria-selected="false" tabindex="-1" data-tab="levers" hidden><span class="tlabel">Orders</span><span class="dot" hidden></span></button>
+        <button role="tab" id="tb-strategy" aria-controls="tab-strategy" aria-selected="false" tabindex="-1" data-tab="strategy">Strategy<span class="dot" hidden></span></button>
+        <button role="tab" id="tb-talk" aria-controls="tab-talk" aria-selected="false" tabindex="-1" data-tab="talk">Talk<span class="dot" hidden></span></button>
+        <button role="tab" id="tb-activity" aria-controls="tab-activity" aria-selected="false" tabindex="-1" data-tab="activity">Activity<span class="dot" hidden></span></button>
       </div>
-      <div class="tabpanel" id="tab-reasoning" role="tabpanel"></div>
-      <div class="tabpanel" id="tab-talk" role="tabpanel" hidden>
+      <div class="tabpanel" id="tab-reasoning" role="tabpanel" aria-labelledby="tb-reasoning"></div>
+      <div class="tabpanel" id="tab-levers" role="tabpanel" aria-labelledby="tb-levers" hidden>
+        <div id="levers"></div>
+        <div class="levers-frame" id="levers-frame">
+          <h3 class="t-sub">Game screen</h3>
+          <img id="frame" class="frame-img" alt="Latest game screen" hidden>
+          <p class="empty" id="noframe">No screen captured yet.</p>
+          <button type="button" class="btn live-only" id="levers-capture" hidden>Capture the game screen</button>
+        </div>
+      </div>
+      <div class="tabpanel" id="tab-talk" role="tabpanel" aria-labelledby="tb-talk" hidden>
         <p class="hint" id="thread-empty">Nothing said yet. Ask the governor why it did something, or leave a note it will read at the next decision.</p>
         <div class="thread" id="thread"></div>
         <div id="talk-controls">
@@ -692,8 +744,9 @@
         <div id="talk-off" hidden><p class="hint">No run is active, so there is no model to talk to. Start a run and the model is available here: ask it questions, give it notes and standing orders, or override its decisions.</p>
           <button class="btn primary" id="b-start-2">Start run</button></div>
       </div>
-      <div class="tabpanel" id="tab-strategy" role="tabpanel" hidden><div id="strategy"></div></div>
-      <div class="tabpanel" id="tab-activity" role="tabpanel" hidden><ul class="feed" id="feed"></ul></div>
+      <div class="tabpanel" id="tab-strategy" role="tabpanel" aria-labelledby="tb-strategy" hidden><div id="strategy"></div></div>
+      <div class="tabpanel" id="tab-activity" role="tabpanel" aria-labelledby="tb-activity" hidden><ul class="feed" id="feed"></ul>
+        <div class="stats" id="stats"></div></div>
     </section>
   </div>
 </main>
@@ -1139,6 +1192,8 @@ async function applySpec() {
   S.spec = spec;
   S.chartView = "";
   setMode(S.mode);
+  renderLeversTab();
+  if (spec.game.levers === "screen") showTab("levers");        // GalCiv: the screen is what there is to read
   $("override-section").hidden = !S.spec.game.override || !((S.status.info || {}).controls || []).includes("override");
 }
 
@@ -1146,9 +1201,19 @@ async function loadCampaignData() {
   await applySpec();
   if (!S.campaign) { S.strategy = null; renderChart(); renderDecisions(); renderStrategy(null); return; }
   const cid = S.campaign, qs = "campaign=" + encodeURIComponent(cid);
-  const [decisions, metrics, strategy] = await Promise.all([api("/api/decisions?" + qs), api("/api/metrics?" + qs),
-                                                            api("/api/strategy?" + qs).catch(() => null)]);
+  const [decisions, metrics, strategy, orders] = await Promise.all([api("/api/decisions?" + qs), api("/api/metrics?" + qs),
+                                                            api("/api/strategy?" + qs).catch(() => null),
+                                                            S.spec.game.levers === "orders" ? api("/api/orders?" + qs).catch(() => null) : null]);
   if (cid !== S.campaign) return;          // another campaign was picked meanwhile: its own load renders it
+  S.orders = orders;
+  const liveHere = S.live && cid === (S.status.info || {}).campaign;
+  const newestRun = ([...decisions].reverse()[0] || {}).run_id;
+  if (!liveHere && newestRun && ["actions", "screen"].includes(S.spec.game.levers)) {   // this campaign's own, not the newest run's
+    try {
+      const evs = await api(`/runs/${encodeURIComponent(newestRun)}/events?kind=strategy_action,autopilot`);
+      S.actions = evs.filter((e) => e.kind === "strategy_action"); S.autopilot = evs.filter((e) => e.kind === "autopilot");
+    } catch { S.actions = []; S.autopilot = []; }
+  }
   S.decisions = decisions; S.metrics = metrics;
   S.strategy = strategy;
   const skey = JSON.stringify(strategy && strategy.current);
@@ -1157,7 +1222,7 @@ async function loadCampaignData() {
     S.strategyKey = skey;
   }
   renderStrategy(strategy);
-  renderChart(); renderDecisions(); renderGovernor();
+  renderChart(); renderDecisions(); renderGovernor(); renderLeversTab(); renderGameHealth();
   loadHealth();
   const newest = S.decisions[S.decisions.length - 1];
   // follow the newest decision unless the reader picked an older one
@@ -1186,6 +1251,7 @@ function refreshFrame() {
   frameUrl = url;
   if (url) $("frame").src = url;
   else { $("frame").removeAttribute("src"); $("frame").hidden = true; $("noframe").hidden = false; }
+  if (S.tab === "levers") renderLevers();
 }
 
 // ---------- chart ----------
@@ -1378,7 +1444,9 @@ function renderGovernor() {
     actions = `<button type="button" class="btn primary" data-answer="yes">Yes</button><button type="button" class="btn" data-answer="no">No</button>
       <span class="inline"><input id="answer-text" placeholder="Or answer in your own words" aria-label="Your answer"><button type="button" class="btn" data-answer="">Answer</button></span>`;
   } else if (state === "stand") {
-    line = `Last stand at ${esc(date)}.`;
+    const a = (info.last_stand || {}).active || {};
+    line = `Last stand${a.city ? ` in ${esc(a.city)}` : ""}, ${esc(date)}.`;
+    facts.push("Scripted strikes and retreats before the AI plays the turn; the turn is handed back after.");
   } else if (state === "starting") {
     line = `Starting ${esc(g.short || "the run")}…`;
   } else if (state === "history") {
@@ -1395,7 +1463,13 @@ function renderGovernor() {
     actions = S.ok ? `<button type="button" class="btn primary" data-act="start">Start run</button>` : "";
   }
   if (["playing", "paused", "history", "none"].includes(state)) { const a = answeredText(); if (a) facts.push(esc(a)); }
+  const ls = info.last_stand;
+  if (ls && ["playing", "paused", "deciding"].includes(state))       // armed or off, always said (ruling 22)
+    facts.push(ls.off_reason ? `<span class="bad-text">Last stand off for this run: ${esc(ls.off_reason)}.</span>`
+                             : ls.on ? `Last stand armed (at most ${ls.max} in a row).` : "Last stand: off.");
   if (!S.ok) { line = "The dashboard does not answer."; facts = ["Reconnecting…"]; }
+  renderGameHealth();
+  renderLeversTab();
   const gov = $("gov");
   gov.dataset.state = state;
   $("gov-line").innerHTML = line;
@@ -1979,16 +2053,143 @@ function addMessage(ev) {
 }
 
 // ---------- tabs ----------
-function showTab(name) {
+// Tabs (ruling 31): the selected one is the only tab stop; arrow keys, Home and End move between them.
+const TABS = ["reasoning", "levers", "strategy", "talk", "activity"];
+function showTab(name, focus = false) {
   document.querySelectorAll(".tabs button").forEach((b) => {
     const on = b.dataset.tab === name;
     b.setAttribute("aria-selected", String(on));
-    if (on) b.querySelector(".dot").hidden = true;
+    b.tabIndex = on ? 0 : -1;
+    if (on) { b.querySelector(".dot").hidden = true; if (focus) b.focus(); }
   });
-  ["reasoning", "talk", "strategy", "activity"].forEach((n) => ($("tab-" + n).hidden = n !== name));
+  TABS.forEach((n) => ($("tab-" + n).hidden = n !== name));
+  S.tab = name;
+  if (name === "levers") renderLevers();
 }
-function flag(name) { const b = document.querySelector(`.tabs [data-tab="${name}"]`); if (b.getAttribute("aria-selected") !== "true") b.querySelector(".dot").hidden = false; }
+function flag(name) { const b = document.querySelector(`.tabs [data-tab="${name}"]`); if (b && !b.hidden && b.getAttribute("aria-selected") !== "true") b.querySelector(".dot").hidden = false; }
 document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
+document.querySelector(".tabs").addEventListener("keydown", (e) => {
+  const tabs = [...document.querySelectorAll(".tabs button")].filter((b) => !b.hidden);
+  const i = tabs.indexOf(document.activeElement);
+  if (i < 0) return;
+  const to = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 }[e.key];
+  if (to === undefined) return;
+  e.preventDefault();
+  showTab(tabs[(to + tabs.length) % tabs.length].dataset.tab, true);
+});
+
+// ---------- the levers tab: Orders (Civ VI), Actions (Stellaris), Screen (GalCiv) (rulings 15, 19-22) ----------
+function renderLeversTab() {
+  const g = S.spec.game, b = $("tb-levers");
+  b.hidden = !g.levers;
+  b.querySelector(".tlabel").textContent = g.levers_label || "Levers";
+  if (b.hidden && S.tab === "levers") showTab("reasoning");
+  $("levers-capture").hidden = !(S.live && S.campaign === (S.status.info || {}).campaign);
+  if (S.tab === "levers") renderLevers();
+}
+const FATE_FILTERS = [["", "All"], ["held", "Held"], ["replaced", "Replaced"], ["refused", "Refused"], ["noreply", "No reply"], ["open", "Open"]];
+const KIND_FILTERS = [["", "All kinds"], ["research", "Research"], ["civic", "Civics"], ["policies", "Policies"], ["production", "Production"], ["purchase", "Purchases"], ["stand", "Last stands"]];
+const EXCLUDED_WORDS = { refused: "refused", lost: "lost", unknown: "no reply", invalidated: "no longer available", superseded: "replaced by our own order" };
+function renderLevers() {
+  const kind = S.spec.game.levers, box = $("levers");
+  $("levers-frame").hidden = kind === "orders" && !frameUrl;
+  if (kind === "orders") box.innerHTML = ordersHtml();
+  else if (kind === "screen") box.innerHTML = blockersHtml();
+  else if (kind === "actions") box.innerHTML = actionsHtml();
+  else box.innerHTML = "";
+}
+function ordersHtml() {
+  const o = S.orders, info = S.live && S.campaign === (S.status.info || {}).campaign ? (S.status.info || {}) : {};
+  let h = "";
+  const ls = info.last_stand;
+  if (ls && ls.off_reason) h += `<p class="o-alarm" role="note">Last stand off for this run: ${esc(ls.off_reason)}.</p>`;
+  const r = info.reserves;
+  if (r && r.gold != null) {         // buy-outs: the treasury against what purchases keep back (ruling 21)
+    const bar = (have, keep) => { const top = Math.max(have, keep, 1); return `<span class="rbar" role="img" aria-label="${fmt(Math.min(have, keep))} kept, ${fmt(Math.max(0, have - keep))} to spend"><i style="width:${(100 * Math.min(have, keep) / top).toFixed(1)}%"></i><b style="left:${(100 * Math.min(have, keep) / top).toFixed(1)}%;width:${(100 * Math.max(0, have - keep) / top).toFixed(1)}%"></b></span>`; };
+    h += `<section class="o-block"><h3>Buy-outs <span>at ${esc(gdate(r.date))}</span></h3>
+      <div class="reserve"><span>Gold <b>${fmt(r.gold)}</b>, keeps ${fmt(r.gold_keep)}${r.gold_rule && r.gold_rule !== "no deficit" ? ` (${esc(r.gold_rule)})` : ""}</span>${bar(r.gold, r.gold_keep)}</div>
+      ${r.faith != null ? `<div class="reserve"><span>Faith <b>${fmt(r.faith)}</b>, keeps ${fmt(r.faith_keep)}${r.faith_for ? ` ${esc(r.faith_for)}` : ""}</span>${bar(r.faith, r.faith_keep)}</div>` : ""}
+      ${(r.in_danger || []).length ? `<p class="danger">In danger: ${esc(r.in_danger.join(", "))}</p>` : ""}</section>`;
+  }
+  if (!o) return h + `<p class="empty">Loading the orders…</p>`;
+  const keys = Object.entries(o.record || {});
+  if (keys.length) {
+    const spec = o.spec || {};
+    h += `<section class="o-block"><h3>Order record <span>Last ${esc(spec.window_turns || 30)} turns; weak at ${Math.round(100 * (spec.weak_rate || 0.5))}% or less</span></h3><ul class="rec">` +
+      keys.map(([, x]) => {
+        const held = (x.completed || 0) + (x.held || 0) + (x.took || 0);
+        const rate = x.rate != null
+          ? `<span class="rrate${x.weak ? " weak" : ""}"><span class="bar" role="img" aria-label="${Math.round(100 * x.rate)}% stuck"><i style="width:${Math.round(100 * x.rate)}%"></i></span>${Math.round(100 * x.rate)}%</span>`
+          : `<span class="rcounts">${x.judged ? `${held} held of ${x.judged}, too few to judge` : "none judged yet"}</span>`;
+        const other = Object.entries(x.excluded || {}).filter(([, n]) => n).map(([k, n]) => `${n} ${EXCLUDED_WORDS[k] || k}`).join(", ");
+        const lo = x.last_override;
+        const more = [x.rate != null ? `${held} held of ${x.judged}` : "", x.weak ? `<span class="weakflag">Does not stick here</span>` : "",
+                      other ? esc(other) : "", lo ? `last: AI replaced ${esc(lo.name || lo.id)} with ${esc(lo.by_name || lo.by || "nothing")}${lo.city ? ` in ${esc(lo.city)}` : ""}, ${esc(gdate(lo.date))}` : ""].filter(Boolean);
+        return `<li><span class="rname">${esc(x.label)}</span>${rate}<span class="rmore">${more.join("; ")}</span></li>`;
+      }).join("") + `</ul></section>`;
+  }
+  const f = S.orderFilter || { kind: "", fate: "" };
+  const rows = (o.log || []).filter((x) => (!f.kind || x.order_kind === f.kind || String(x.key || "").startsWith(f.kind)) && (!f.fate || x.fate.key === f.fate));
+  h += `<section class="o-block"><h3>Every order <span>newest first</span></h3>
+    <div class="ofilters" role="group" aria-label="Kind">${KIND_FILTERS.map(([k, l]) => `<button type="button" class="btn small" data-okind="${k}" aria-pressed="${f.kind === k}">${l}</button>`).join("")}</div>
+    <div class="ofilters" role="group" aria-label="Fate">${FATE_FILTERS.map(([k, l]) => `<button type="button" class="btn small" data-ofate="${k}" aria-pressed="${f.fate === k}">${l}</button>`).join("")}</div>
+    <ul class="olog">${rows.slice(0, 80).map((x, i) => {
+      const note = x.followed ? `in force, ${x.followed.turns} of ${x.followed.window} turns followed` : "";
+      const tags = [x.backfilled ? `<span class="tag">backfilled</span>` : "", x.order_kind === "purchase" ? `<span class="tag">${esc(x.currency || "gold")}</span>` : ""].join("");
+      return `<li><button type="button" data-olog="${i}"${x.decision ? "" : " disabled"} title="${x.decision ? "Show the decision it came from" : ""}">
+        <span class="odate">${esc(gdate(x.date || x.ordered))}</span>
+        <span class="owhat"><span class="okind">${esc(human(x.order_kind || ""))}</span>${esc(x.name || x.id)}${x.city ? `, ${esc(x.city)}` : ""} ${tags}</span>
+        ${fateChip({ name: x.fate.word, city: "", fate: { ...x.fate, by: x.fate.by } })}
+        ${note || x.fate.why ? `<span class="onote">${esc(note || x.fate.why)}</span>` : ""}</button></li>`;
+    }).join("") || `<li class="empty">No orders ${f.kind || f.fate ? "of this kind" : "yet"}.</li>`}</ul></section>`;
+  S.orderRows = rows;
+  const stands = o.stands || [];
+  if (stands.length) {       // the last stands, and what the pins did (ruling 22)
+    h += `<section class="o-block"><h3>Last stands</h3>` + stands.map((x) => `<div class="stand"><b>${esc(x.city)}, ${esc(gdate(x.date))}</b>${x.incoming ? `: about ${fmt(x.incoming)} damage incoming` : ""}
+      <ul>${(x.actions || []).map((a) => `<li>${esc(sentence(human(a.action)))}${a.predicted != null ? `, predicted ${fmt(a.predicted)}` : ""}: ${esc(human(a.result || ""))}${a.detail ? ` (${esc(a.detail)})` : ""}</li>`).join("")}</ul>
+      <span class="hint">Stopped: ${esc(x.stopped || "")}</span></div>`).join("")
+      + (o.stand_checks || []).slice(0, 1).map((c) => `<p class="hint">Last check: ${esc((c.pins || []).map((p) => p.result || p.status || "").join(", "))}</p>`).join("") + `</section>`;
+  }
+  return h;
+}
+function blockersHtml() {          // GalCiv: what the autopilot cleared lately
+  const cleared = (S.autopilot || []).slice(-6).reverse();
+  return cleared.length ? `<section class="o-block"><h3>Blockers cleared lately</h3><ul class="olog">${cleared.map((e) => `<li><button type="button" disabled><span class="odate">${esc(hhmm(e.t))}</span><span class="owhat">${esc(tidy(String(e.text || e.stop || "").split("\n")[0]))}</span></button></li>`).join("")}</ul></section>` : "";
+}
+function actionsHtml() {           // Stellaris: the strategy's player actions (tech picks, market syncs)
+  const acts = (S.actions || []).slice(-8).reverse();
+  return acts.length ? `<section class="o-block"><h3>Actions lately</h3><ul class="olog">${acts.map((e) => `<li><button type="button" disabled><span class="odate">${esc(hhmm(e.t))}</span><span class="owhat"><span class="okind">${esc(human(e.action))}</span>${esc(tidy(e.result || ""))}</span></button></li>`).join("")}</ul></section>` : "";
+}
+$("levers").addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  if (b.dataset.okind !== undefined || b.dataset.ofate !== undefined) {
+    S.orderFilter = { ...(S.orderFilter || { kind: "", fate: "" }), ...(b.dataset.okind !== undefined ? { kind: b.dataset.okind } : { fate: b.dataset.ofate }) };
+    renderLevers();
+    return;
+  }
+  if (b.dataset.olog !== undefined) {
+    const x = (S.orderRows || [])[+b.dataset.olog], d = x && x.decision && S.decisions.find((y) => y.run_id === x.decision.run_id && y.episode === x.decision.episode);
+    if (d) selectDecision(d);
+  }
+});
+$("levers-capture").addEventListener("click", () => $("gov-capture").click());
+// Game health (ruling 12): one line, shown when something is off, --warn when a popup failed to quiet
+// or a turn was held.
+function renderGameHealth() {
+  const el = $("game-health"), live = S.live && S.campaign === (S.status.info || {}).campaign;
+  const h = live ? (S.status.info || {}).game_health : null;
+  if (!h) { el.hidden = true; return; }
+  const p = h.popups, failed = p && p.failed && p.failed.length;
+  const off = failed || h.timeouts > 0 || h.held || (h.last_turn_s || 0) > 180;
+  const parts = [p ? `Popups quieted ${p.quieted} of ${p.total} at ${gmonth(p.turn)}${failed ? ` (not: ${p.failed.join(", ")})` : ""}` : "",
+                 h.calls ? `tuner ${plural(h.timeouts, "timeout")} in the last ${h.calls} calls` : "",
+                 h.last_turn_s != null ? `last turn ${Math.round(h.last_turn_s)} s${h.held ? ", held" : ""}` : ""].filter(Boolean);
+  el.textContent = parts.join("; ") + ".";
+  el.className = "health-line" + (failed || h.held ? " warn" : "");
+  el.hidden = !off || !parts.length;
+  if (!el.hidden) $("p-figures").hidden = false;
+}
 
 // ---------- activity ----------
 const QUIET = new Set(["metrics", "status", "trace", "chat", "plan", "order_outcome", "order_followed"]);
@@ -2026,6 +2227,9 @@ const KCLASS = { control: "human",  model_retry: "bad", episode_error: "bad", ne
 // the newest events the governor line reads: the last turn's time, who paused, an older pilot's stop
 function remember(ev) {
   if (["turn", "needs_attention", "capture"].includes(ev.kind)) S.last[ev.kind] = ev;
+  if (ev.kind === "strategy_action") (S.actions = S.actions || []).push(ev);
+  if (ev.kind === "autopilot") (S.autopilot = S.autopilot || []).push(ev);
+  if (["order_outcome", "order_followed", "last_stand", "last_stand_off", "popups_quieted"].includes(ev.kind)) { if (S.tab === "levers") flag("levers"); ordersSoon(); }
   if (ev.kind === "control" && ev.action === "pause") S.last.pause = ev;
   if (ev.kind === "model_fallback" || ev.kind === "episode_error") { clearTimeout(S.healthT); S.healthT = setTimeout(loadHealth, 1500); }
 }
@@ -2048,6 +2252,15 @@ function isNew(ev) {
   seenEv.add(k);
   if (seenEv.size > 6000) seenEv.clear();
   return true;
+}
+let ordersT;
+function ordersSoon() {
+  clearTimeout(ordersT);
+  ordersT = setTimeout(async () => {
+    if (S.spec.game.levers !== "orders" || !S.campaign) return;
+    try { S.orders = await api("/api/orders?campaign=" + encodeURIComponent(S.campaign)); } catch { return; }
+    if (S.tab === "levers") renderLevers();
+  }, 1500);
 }
 const refreshSoon = () => { clearTimeout(refreshTimer); refreshTimer = setTimeout(async () => { await loadCampaigns(); await loadCampaignData(); }, 400); };
 function onEvent(ev) {
@@ -2100,7 +2313,7 @@ async function sync() {
 
 async function loadHistoryFeed() {
   try {
-    const runs = await api("/runs");
+    const runs = (await api("/runs")).filter((r) => !r.backfill);
     if (runs[0]) (await api(`/runs/${encodeURIComponent(runs[0].id)}/events`)).forEach((e) => { if (isNew(e)) addFeed(e); });
   } catch { /* no runs */ }
 }

@@ -357,7 +357,8 @@ Rules:
   controller removes those handlers before the first `InGame` call of each load runs (the library's
   `Harness.popups_quiet` flag; unsettled entries are retried on the next call, and the reply lists
   the outcomes in `popups_quieted`). A stall that still happens needs the screen: hover + click the
-  popup's X.
+  popup's X. The governor emits `popups_quieted` (once per load) and the dashboard's game-health
+  line on Now says when a popup failed to quiet, the tuner timed out, or a turn was held.
 - One-turn autoplay costs the AI its multi-turn plans (a Settler idle for 7 turns, no pantheon; a
   4-turn stretch settled and chose one at once): `PILOT_AUTOPLAY_CHUNK` sets turns per call.
 - Menus, when the screen must be used: the UI ignores a click without a preceding hover (move the

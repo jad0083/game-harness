@@ -37,7 +37,7 @@ def test_a_row_leads_with_the_reason_and_shows_fates(browser, live_servers):
     assert row.locator(".reason").text_content().startswith("Chengdu is under siege")
     assert "Fraunces" in row.locator(".reason").evaluate("e => getComputedStyle(e).fontFamily")   # the model's voice
     chips = row.locator(".chips .fchip").all_text_contents()
-    assert chips == ["⋯in force: Writing", "↺replaced by the AI: Chengdu: Slinger → Trader",
+    assert chips == ["✓completed: Writing", "↺replaced by the AI: Chengdu: Slinger → Trader",
                      "✕refused: Beijing: Gurdwara", "+2"]
     assert row.locator(".fchip.f-refused").get_attribute("title") == "refused: 380 faith, over the 283 allowed"
     after = row.locator(".after").text_content()
@@ -78,7 +78,7 @@ def test_problems_only_keeps_errors_and_refusals(browser, live_servers):
     page = w.page
     assert page.is_hidden('#decisions button[data-i="0"] .chips')           # a phone counts fates instead
     counts = page.text_content('#decisions button[data-i="0"] .fcounts')
-    assert "✓ 1" in counts and "↺ 1" in counts and "✕ 1" in counts
+    assert "✓ 2" in counts and "↺ 1" in counts and "✕ 1" in counts
     page.click("#dec-problems")
     assert page.get_attribute("#dec-problems", "aria-pressed") == "true"
     assert len(page.query_selector_all("#decisions li > button[data-i]")) == 2     # both have a problem
