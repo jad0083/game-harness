@@ -13,10 +13,13 @@
 #   2. Copies game-agent.exe + agent_token.txt to %LOCALAPPDATA%\GameAgent and writes roots.json
 #      (game folders the agent may read: Stellaris/GalCiv4 documents and install dirs; and the only
 #      files it may write: the governor's Stellaris mod and dlc_load.json, which enables mods).
-#   3. Adds (or tightens) an inbound firewall rule for TCP 8765 from the controller only (the host in
+#   3. Registers a logon task that runs the agent in your desktop session and starts it.
+#   4. Checks /health.
+#   5. Adds (or tightens) an inbound firewall rule for TCP 8765 from the controller only (the host in
 #      GA_SRC, or GA_CONTROLLER; LocalSubnet for a local install) on Private networks only
-#      (GA_FW_PROFILE='Domain,Private' on a domain network). One UAC prompt when the rule changes.
-#   4. Registers a logon task that runs the agent in your desktop session, starts it, and checks /health.
+#      (GA_FW_PROFILE='Domain,Private' on a domain network). One UAC prompt when the rule changes;
+#      it comes last, so a declined prompt leaves the new agent running behind the old rule, and an
+#      old rule is kept while the network toward the controller is not Private (with a warning).
 
 $ErrorActionPreference = 'Stop'
 $Port = if ($env:GA_PORT) { [int]$env:GA_PORT } else { 8765 }
@@ -53,6 +56,25 @@ if ($env:GA_SRC) {
     }
 }
 
+# --- 0b. Firewall settings (validated before anything changes) -----------------
+# Inbound TCP $Port only from the controller (the host serving this installer, or GA_CONTROLLER),
+# and only on Private networks; a local install without a controller falls back to LocalSubnet.
+$Remote = if ($env:GA_CONTROLLER) { $env:GA_CONTROLLER } elseif ($env:GA_SRC) { ([Uri]$env:GA_SRC).Host } else { 'LocalSubnet' }
+$ip = $null
+if ($Remote -ne 'LocalSubnet' -and -not [Net.IPAddress]::TryParse($Remote, [ref]$ip)) {
+    # A host name: the rule needs addresses.
+    $Remote = (@([Net.Dns]::GetHostAddresses($Remote) | Where-Object { $_.AddressFamily -eq 'InterNetwork' } |
+        ForEach-Object { $_.IPAddressToString }) -join ',')
+}
+# Both values are spliced into the elevated command below. Plain addresses only (no CIDR): the
+# rule reads a mask back in another notation, and the comparison below would never match.
+if ($Remote -notmatch '^(LocalSubnet|[0-9A-Fa-f:.]+(,[0-9A-Fa-f:.]+)*)$') {
+    throw "Cannot use '$Remote' as the controller address; set `$env:GA_CONTROLLER to its IP."
+}
+$FwProfile = if ($env:GA_FW_PROFILE) { $env:GA_FW_PROFILE } else { 'Private' }
+if ($FwProfile -notmatch '^(Private|Domain|Domain,Private|Private,Domain)$') {
+    throw "GA_FW_PROFILE must be Private, Domain or Domain,Private (got '$FwProfile')."
+}
 # --- 1. Stop the running agent ------------------------------------------------
 Step 'Stopping any running agent'
 if (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue) {
@@ -166,55 +188,7 @@ if ($roots['civ6_appdata']) {
 # No BOM: Windows PowerShell 5.1's Set-Content -Encoding UTF8 would add one.
 [IO.File]::WriteAllText((Join-Path $Dest 'roots.json'), (@{ roots = $roots; write_roots = $writeRoots } | ConvertTo-Json -Depth 5), (New-Object Text.UTF8Encoding $false))
 
-# --- 3. Firewall (needs admin when the rule is missing or differs) -------------
-# Inbound TCP $Port only from the controller (the host serving this installer, or GA_CONTROLLER),
-# and only on Private networks; a local install without a controller falls back to LocalSubnet.
-$Remote = if ($env:GA_CONTROLLER) { $env:GA_CONTROLLER } elseif ($env:GA_SRC) { ([Uri]$env:GA_SRC).Host } else { 'LocalSubnet' }
-$ip = $null
-if ($Remote -ne 'LocalSubnet' -and -not [Net.IPAddress]::TryParse($Remote, [ref]$ip)) {
-    # A host name: the rule needs addresses.
-    $Remote = (@([Net.Dns]::GetHostAddresses($Remote) | Where-Object { $_.AddressFamily -eq 'InterNetwork' } |
-        ForEach-Object { $_.IPAddressToString }) -join ',')
-}
-# Both values are spliced into the elevated command below. Plain addresses only (no CIDR): the
-# rule reads a mask back in another notation, and the comparison below would never match.
-if ($Remote -notmatch '^(LocalSubnet|[0-9A-Fa-f:.]+(,[0-9A-Fa-f:.]+)*)$') {
-    throw "Cannot use '$Remote' as the controller address; set `$env:GA_CONTROLLER to its IP."
-}
-$FwProfile = if ($env:GA_FW_PROFILE) { $env:GA_FW_PROFILE } else { 'Private' }
-if ($FwProfile -notmatch '^(Private|Domain|Domain,Private|Private,Domain)$') {
-    throw "GA_FW_PROFILE must be Private, Domain or Domain,Private (got '$FwProfile')."
-}
-Step "Allowing inbound TCP $Port from $Remote on $FwProfile networks"
-function Get-RuleState {
-    $rules = @(Get-NetFirewallRule -DisplayName $RuleName -ErrorAction SilentlyContinue)
-    if ($rules.Count -ne 1) { return "$($rules.Count) rules" }
-    $addr = @(($rules[0] | Get-NetFirewallAddressFilter).RemoteAddress) -join ','
-    $prof = ("$($rules[0].Profile)" -split ',\s*' | Sort-Object) -join ','
-    return "$prof|$addr|$($rules[0].Enabled)|$($rules[0].Action)"
-}
-$want = "$(($FwProfile -split ',' | Sort-Object) -join ',')|$Remote|True|Allow"
-$have = Get-RuleState
-if ($have -ne $want) {
-    Write-Host "    updating the rule (was: $have)"
-    # Replaces any older rule (e.g. Profile Any, LocalSubnet) with the tighter one.
-    $cmd = "Remove-NetFirewallRule -DisplayName '$RuleName' -ErrorAction SilentlyContinue; New-NetFirewallRule -DisplayName '$RuleName' -Direction Inbound -Protocol TCP -LocalPort $Port -RemoteAddress $Remote -Action Allow -Profile $FwProfile | Out-Null"
-    Start-Process powershell -Verb RunAs -Wait -WindowStyle Hidden -ArgumentList '-NoProfile', '-Command', $cmd
-    $have = Get-RuleState
-    if ($have -ne $want) {
-        throw "Firewall rule is '$have', expected '$want' (UAC declined?). Re-run and accept the prompt."
-    }
-} else { Write-Host '    rule already up to date' }
-# The rule applies only on those network categories: warn if the PC's network is another one.
-$other = @(Get-NetConnectionProfile -ErrorAction SilentlyContinue |
-    Where-Object { ($FwProfile -split ',') -notcontains ("$($_.NetworkCategory)" -replace 'Authenticated$', '') })
-foreach ($n in $other) {
-    Write-Warning ("Network '$($n.Name)' is $($n.NetworkCategory): the controller cannot reach the agent on it. " +
-        "If this is your home network, run as admin: Set-NetConnectionProfile -InterfaceIndex $($n.InterfaceIndex) -NetworkCategory Private " +
-        "(or reinstall with `$env:GA_FW_PROFILE='Domain,Private' on a domain network).")
-}
-
-# --- 4. Logon task -----------------------------------------------------------
+# --- 3. Logon task -----------------------------------------------------------
 # Runs non-elevated in the interactive session: services cannot see or drive the desktop.
 Step "Registering logon task '$TaskName'"
 $action = New-ScheduledTaskAction -Execute $Exe -Argument "--port $Port" -WorkingDirectory $Dest
@@ -232,7 +206,7 @@ try {
 }
 Start-ScheduledTask -TaskName $TaskName
 
-# --- 5. Verify ----------------------------------------------------------------
+# --- 4. Verify ----------------------------------------------------------------
 Step 'Checking /health'
 $health = $null
 $deadline = (Get-Date).AddSeconds(10)
@@ -249,6 +223,53 @@ if ($health) {
 } else {
     Write-Warning "Agent is not answering on port $Port. Its log (no console window since 1.4): $(Join-Path $Dest 'agent.log')"
 }
+
+# --- 5. Firewall (needs admin when the rule is missing or differs) -------------
+# Runs after the agent is back up: the UAC prompt cannot be answered remotely (secure desktop), so
+# an unanswered or declined prompt must not leave the agent stopped. On failure the old rule stays.
+Step "Allowing inbound TCP $Port from $Remote on $FwProfile networks"
+function Get-RuleState {
+    $rules = @(Get-NetFirewallRule -DisplayName $RuleName -ErrorAction SilentlyContinue)
+    if ($rules.Count -ne 1) { return "$($rules.Count) rules" }
+    $addr = @(($rules[0] | Get-NetFirewallAddressFilter).RemoteAddress) -join ','
+    $prof = ("$($rules[0].Profile)" -split ',\s*' | Sort-Object) -join ','
+    return "$prof|$addr|$($rules[0].Enabled)|$($rules[0].Action)"
+}
+# Networks the rule would not cover (category Public, or Domain without GA_FW_PROFILE); when the
+# controller's address is known, only the network that leads to it counts.
+$uncovered = @(Get-NetConnectionProfile -ErrorAction SilentlyContinue |
+    Where-Object { ($FwProfile -split ',') -notcontains ("$($_.NetworkCategory)" -replace 'Authenticated$', '') })
+if ($Remote -ne 'LocalSubnet') {
+    try {
+        $via = @(Find-NetRoute -RemoteIPAddress ($Remote -split ',')[0] -ErrorAction Stop)[0].InterfaceIndex
+        $uncovered = @($uncovered | Where-Object { $_.InterfaceIndex -eq $via })
+    } catch { Write-Host '    no route to the controller found; checking every network' }
+}
+foreach ($n in $uncovered) {
+    Write-Warning ("Network '$($n.Name)' is $($n.NetworkCategory), and the rule allows only $FwProfile networks. " +
+        "If this is your home network, run as admin: Set-NetConnectionProfile -InterfaceIndex $($n.InterfaceIndex) -NetworkCategory Private " +
+        "(on a domain network set `$env:GA_FW_PROFILE='Domain,Private'), then reinstall.")
+}
+$want = "$(($FwProfile -split ',' | Sort-Object) -join ',')|$Remote|True|Allow"
+$have = Get-RuleState
+if ($have -eq $want) {
+    Write-Host '    rule already up to date'
+} elseif ($uncovered.Count -gt 0 -and $have -ne '0 rules') {
+    # Tightening now would cut the controller off; keep the old rule until the network is fixed.
+    Write-Warning "Keeping the existing firewall rule ($have) so the controller can still connect."
+} else {
+    Write-Host "    updating the rule (was: $have)"
+    # Replaces any older rule (e.g. Profile Any, LocalSubnet) with the tighter one.
+    $cmd = "Remove-NetFirewallRule -DisplayName '$RuleName' -ErrorAction SilentlyContinue; New-NetFirewallRule -DisplayName '$RuleName' -Direction Inbound -Protocol TCP -LocalPort $Port -RemoteAddress $Remote -Action Allow -Profile $FwProfile | Out-Null"
+    try {
+        Start-Process powershell -Verb RunAs -Wait -WindowStyle Hidden -ArgumentList '-NoProfile', '-Command', $cmd
+    } catch { Write-Host "    elevation failed: $($_.Exception.Message.Trim())" }
+    $have = Get-RuleState
+    if ($have -ne $want) {
+        Write-Warning "Firewall rule is '$have', expected '$want' (UAC declined?). Re-run and accept the prompt."
+    }
+}
+
 Write-Host ''
 Write-Host 'Tips: run the game in Borderless/Windowed mode (exclusive fullscreen can capture black),'
 Write-Host '      and stay logged in with the screen unlocked while the agent plays.'
