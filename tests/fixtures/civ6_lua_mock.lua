@@ -55,7 +55,7 @@ GameInfo = {
     { BuildingType = 'BUILDING_PYRAMIDS', IsWonder = true },
   }, 'BuildingType'),
   Districts = tbl({ { DistrictType = 'DISTRICT_CITY_CENTER' }, { DistrictType = 'DISTRICT_HOLY_SITE' },
-                    { DistrictType = 'DISTRICT_CAMPUS' } }, 'DistrictType'),
+                    { DistrictType = 'DISTRICT_CAMPUS' }, { DistrictType = 'DISTRICT_ENCAMPMENT' } }, 'DistrictType'),
   Terrains = tbl({ { TerrainType = 'TERRAIN_GRASS' }, { TerrainType = 'TERRAIN_GRASS_HILLS' },
                    { TerrainType = 'TERRAIN_GRASS_MOUNTAIN' }, { TerrainType = 'TERRAIN_COAST' } }, 'TerrainType'),
   Features = tbl({ { FeatureType = 'FEATURE_JUNGLE' }, { FeatureType = 'FEATURE_FOREST' } }, 'FeatureType'),
@@ -140,18 +140,23 @@ local W = 40
 function Map.GetPlotByIndex(i) return Map.GetPlot(i % W, math.floor(i / W)) end
 function plot_index(x, y) return y * W + x end
 -- MOCK.map["x,y"] = { t = terrain key, f = feature key, r = resource key, i = improvement key, river = true }
+-- MOCK.districts["x,y"] = { d = district key, owner = player }: another player's district on that plot
 local function plot_at(x, y)
   local m = (MOCK.map or {})[x .. ',' .. y] or {}
+  local dm = (MOCK.districts or {})[x .. ',' .. y]
   local function idx(tbl, key) return key and GameInfo[tbl][key].Index or -1 end
   local city_here = (x == 22 and y == 21) or (x == 26 and y == 13)
   return {
     GetX = function() return x end, GetY = function() return y end, GetIndex = function() return plot_index(x, y) end,
-    GetOwner = function() return 0 end,
+    GetOwner = function() return dm and dm.owner or 0 end,
     GetTerrainType = function() return idx('Terrains', m.t or 'TERRAIN_GRASS') end,
     GetFeatureType = function() return idx('Features', m.f) end,
     GetResourceType = function() return idx('Resources', m.r) end,
     GetImprovementType = function() return idx('Improvements', m.i) end,
-    GetDistrictType = function() return city_here and GameInfo.Districts.DISTRICT_CITY_CENTER.Index or -1 end,
+    GetDistrictType = function()
+      if dm then return GameInfo.Districts[dm.d].Index end
+      return city_here and GameInfo.Districts.DISTRICT_CITY_CENTER.Index or -1
+    end,
     GetWonderType = function() return -1 end,
     IsRiver = function() return m.river or false end, IsHills = function() return MOCK.hills[x .. ',' .. y] or false end,
     IsMountain = function() return (m.t or ''):find('MOUNTAIN') ~= nil end, IsWater = function() return m.t == 'TERRAIN_COAST' end,

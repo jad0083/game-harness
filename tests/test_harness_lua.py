@@ -201,6 +201,24 @@ def test_only_hostile_units_are_targets_two_ways():
     assert requests(rt) == ["unit 20 RANGE_ATTACK 23,21"]
 
 
+def test_a_unit_in_another_players_district_is_never_a_target():
+    """Ruling 23 leaves attacks on cities and districts out: a City Center or an Encampment takes the
+    hit for the unit standing in it, so the read-back would show no damage on the unit. A plot with a
+    district that is not ours is never a target (a unit standing in our own district still is)."""
+    world = ("UNITS = {}; unit { id = 20, owner = 0, utype = 'UNIT_ARCHER', x = 22, y = 22, range = 2 }\n"
+             "unit { id = 5, owner = 4, utype = 'UNIT_WARRIOR', x = 23, y = 21 }\n"
+             "MOCK.wars[4] = true; MOCK.walls = 100; MOCK.strike = { {23, 21} }\n")
+    for district in ("DISTRICT_ENCAMPMENT", "DISTRICT_CITY_CENTER", "DISTRICT_CAMPUS"):
+        rt, out = stand_world(world + f"MOCK.districts = {{ ['23,21'] = {{ d = '{district}', owner = 4 }} }}")
+        r = call(rt, out, "Harness.last_stand_step, 65536, {}, {}")
+        assert r == {"ok": True, "done": True, "reason": "nothing left to do"}, district
+        assert requests(rt) == [], district
+    rt, out = stand_world(world + "MOCK.districts = { ['23,21'] = { d = 'DISTRICT_CAMPUS', owner = 0 } }")
+    assert call(rt, out, "Harness.last_stand_step, 65536, {}, {}")["action"] == "city_strike", "our own district"
+    rt, out = stand_world(world)
+    assert call(rt, out, "Harness.last_stand_step, 65536, {}, {}")["action"] == "city_strike"
+
+
 def test_hidden_plots_are_out_of_reach():
     rt, out = stand_world("MOCK.hidden = { ['23,21'] = true, ['23,22'] = true, ['24,21'] = true }")
     assert call(rt, out, "Harness.last_stand_step, 65536, {}, {}")["done"] is True

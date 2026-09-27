@@ -975,8 +975,20 @@ local function hostiles_at(me, x, y)
   return out
 end
 
+-- Whether a plot holds a district that is not ours. A City Center or an Encampment takes the hit
+-- for a unit standing in it, and ruling 23 leaves attacks on cities and districts out, so a unit
+-- there is a threat but never a target. Fails closed: a plot that cannot be read counts as one.
+local function foreign_district(me, x, y)
+  local ok, res = pcall(function()
+    local p = Map.GetPlot(x, y)
+    return p:GetDistrictType() ~= -1 and p:GetOwner() ~= me
+  end)
+  return (not ok) or res
+end
+
 -- Hostile military units on visible plots within LS_RADIUS (with authoritative HP when the
--- controller passes `damage`, keyed "<owner>:<id>"), and our military units there.
+-- controller passes `damage`, keyed "<owner>:<id>"), and our military units there. `at` holds the
+-- targets by plot: not those in another player's district (`foreign_district`).
 local function gather(me, c, damage)
   local cx, cy = c:GetX(), c:GetY()
   local enemies, at = {}, {}
@@ -990,10 +1002,11 @@ local function gather(me, c, damage)
           local u = h.u
           local dmg = damage[u:GetOwner() .. ':' .. u:GetID()] or u:GetDamage()
           local e = { u = u, id = u:GetID(), owner = u:GetOwner(), type = h.row.UnitType, kind = unit_kind(h.row),
-                      x = x, y = y, dist = dist, hp = u:GetMaxDamage() - dmg }
+                      x = x, y = y, dist = dist, hp = u:GetMaxDamage() - dmg,
+                      target = not foreign_district(me, x, y) }
           e.score = priority(e)
           enemies[#enemies + 1] = e
-          at[x .. ',' .. y] = e
+          if e.target then at[x .. ',' .. y] = e end
         end
       end
     end
@@ -1087,7 +1100,7 @@ function H.last_stand_step(city_id, damage, skip)
                                  CityCommandResults.MODIFIER_IS_TARGET)
     for _, e in ipairs(enemies) do
       local params = at_xy(CityCommandTypes, e.x, e.y)
-      if d and targets[e.x .. ',' .. e.y] and war_safe(d:GetComponentID(), e.x, e.y)
+      if d and e.target and targets[e.x .. ',' .. e.y] and war_safe(d:GetComponentID(), e.x, e.y)
           and CityManager.CanStartCommand(c, CityCommandTypes.RANGE_ATTACK, params) then
         local s = preview(d:GetComponentID(), e.u, CombatTypes.RANGED)
         CityManager.RequestCommand(c, CityCommandTypes.RANGE_ATTACK, params)
@@ -1105,7 +1118,7 @@ function H.last_stand_step(city_id, damage, skip)
       local ctype = (u:GetBombardCombat() > u:GetRangedCombat()) and CombatTypes.BOMBARD or CombatTypes.RANGED
       local seen = {}
       local function consider(e)
-        if e == nil or seen[e] then return end
+        if e == nil or not e.target or seen[e] then return end
         seen[e] = true
         local s = preview(u:GetComponentID(), e.u, ctype)
         local kill = kills(s, e)
