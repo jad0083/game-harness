@@ -82,6 +82,9 @@ pub struct LuaReply {
     pub state: String,
     pub result: String,
     pub extra: Vec<String>,
+    /// What the Lua printed, cleaned (`print()` is how the game returns output; `return` values
+    /// are not echoed).
+    pub output: Vec<String>,
 }
 
 /// One framed message.
@@ -115,22 +118,50 @@ pub fn take_frame(buf: &mut Vec<u8>, max: usize) -> Result<Option<(i32, String)>
 }
 
 /// State names from an LSQ reply, NUL-separated or (if that yields one entry) newline-separated.
+/// The game itself (seen live, 1.0.12.68) alternates index and name: each name is then placed at
+/// its game index, so a list position is always the index `CMD:` expects (gaps stay empty).
 pub fn parse_states(raw: &str) -> Vec<String> {
     let split = |sep: char| raw.split(sep).map(str::trim).filter(|s| !s.is_empty()).map(str::to_string).collect::<Vec<_>>();
-    let states = split('\0');
+    let mut states = split('\0');
     if states.len() <= 1 && raw.contains('\n') {
-        split('\n')
-    } else {
-        states
+        states = split('\n');
     }
+    let paired = states.len() >= 2 && states.len() % 2 == 0
+        && states.chunks(2).all(|p| p[0].parse::<usize>().is_ok() && p[1].parse::<usize>().is_err());
+    if !paired {
+        return states;
+    }
+    let pairs: Vec<(usize, String)> = states.chunks(2).map(|p| (p[0].parse().unwrap(), p[1].clone())).collect();
+    let len = pairs.iter().map(|(i, _)| i + 1).max().unwrap_or(0).min(4096);
+    let mut out = vec![String::new(); len];
+    for (i, name) in pairs {
+        if i < len {
+            out[i] = name;
+        }
+    }
+    out
+}
+
+/// Printed output as lines: each message loses the game's output marker (`O` + NUL) and its
+/// `<state name>: ` prefix; empty messages are dropped.
+pub fn output_lines(messages: &[String], state: &str) -> Vec<String> {
+    let prefix = format!("{state}: ");
+    messages
+        .iter()
+        .map(|m| {
+            let m = m.split_once('\0').map_or(m.as_str(), |(head, rest)| if head.len() <= 2 { rest } else { m.as_str() });
+            m.strip_prefix(&prefix).unwrap_or(m).to_string()
+        })
+        .filter(|m| !m.is_empty())
+        .collect()
 }
 
 /// The index of the chosen state: an index in range, an exact name (any case), or else the one
 /// name that starts with it (e.g. "GameCore" → "GameCore_Tuner" when no "GameCore" exists).
 pub fn resolve_state(states: &[String], sel: &StateSel) -> Result<usize, TunerError> {
-    let listed = || format!("available: {}", if states.is_empty() { "none".to_string() } else { states.join(", ") });
+    let listed = || { let named: Vec<String> = states.iter().enumerate().filter(|(_, s)| !s.is_empty()).map(|(i, s)| format!("{i}={s}")).collect(); format!("available: {}", if named.is_empty() { "none".to_string() } else { named.join(", ") }) };
     match sel {
-        StateSel::Index(i) if *i < states.len() => Ok(*i),
+        StateSel::Index(i) if *i < states.len() && !states[*i].is_empty() => Ok(*i),
         StateSel::Index(i) => Err(TunerError::BadRequest(format!("no Lua state with index {i} ({})", listed()))),
         StateSel::Name(name) => {
             let want = name.trim().to_lowercase();
@@ -357,7 +388,11 @@ impl Tuner {
             };
             let state = conn.states[index].clone();
             match conn.execute(index, code, timeout, &self.timings).await {
-                Ok((result, extra)) => return Ok(LuaReply { ok: true, state, result, extra }),
+                Ok((result, extra)) => {
+                    let all: Vec<String> = std::iter::once(result.clone()).chain(extra.iter().cloned()).collect();
+                    let output = output_lines(&all, &state);
+                    return Ok(LuaReply { ok: true, state, result, extra, output });
+                }
                 Err((e, replied)) => {
                     // After a timeout a late reply could be mistaken for the next command's.
                     *guard = None;
@@ -511,7 +546,8 @@ mod tests {
         });
         let t = Tuner::with_timings(port, fast());
         let r = t.lua(&StateSel::Name("ingame".into()), "print('hi') return 7", Duration::from_secs(2)).await.unwrap();
-        assert_eq!(r, LuaReply { ok: true, state: "InGame".into(), result: "7".into(), extra: vec!["hi".into(), "more".into()] });
+        assert_eq!(r, LuaReply { ok: true, state: "InGame".into(), result: "7".into(), extra: vec!["hi".into(), "more".into()],
+                                 output: vec!["7".into(), "hi".into(), "more".into()] });
     }
 
     #[tokio::test]
@@ -613,5 +649,33 @@ mod tests {
     #[test]
     fn port_defaults_to_4318() {
         assert_eq!(DEFAULT_PORT, 4318);
+    }
+}
+
+#[cfg(test)]
+mod live_format_tests {
+    use super::*;
+
+    /// The LSQ reply seen live (2026-09-26, Civ VI 1.0.12.68): index and name alternate.
+    const LSQ_LIVE: &str = "0\0Main State\x001\0DebugHotloadCache\x002\0WorldCongress\x003\0GameCore_Tuner\x004\0WorldInput";
+
+    #[test]
+    fn index_name_pairs_put_each_state_at_its_game_index() {
+        let s = parse_states(LSQ_LIVE);
+        assert_eq!(s, vec!["Main State", "DebugHotloadCache", "WorldCongress", "GameCore_Tuner", "WorldInput"]);
+        assert_eq!(resolve_state(&s, &StateSel::Name("GameCore".into())), Ok(3));
+    }
+
+    #[test]
+    fn pairs_with_gaps_keep_their_indexes() {
+        let s = parse_states("0\0Main State\x005\0InGame");
+        assert_eq!(resolve_state(&s, &StateSel::Name("InGame".into())), Ok(5));
+        assert!(resolve_state(&s, &StateSel::Index(3)).is_err(), "an index the game did not list");
+    }
+
+    #[test]
+    fn printed_output_loses_its_marker_and_state_prefix() {
+        let msgs = vec!["O\0GameCore_Tuner: 1".to_string(), "".to_string(), "O\0GameCore_Tuner: a: b".to_string(), "plain".to_string()];
+        assert_eq!(output_lines(&msgs, "GameCore_Tuner"), vec!["1", "a: b", "plain"]);
     }
 }

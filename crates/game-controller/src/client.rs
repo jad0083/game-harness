@@ -45,6 +45,9 @@ pub struct LuaReply {
     pub result: String,
     #[serde(default)]
     pub extra: Vec<String>,
+    /// Printed output, cleaned by the agent (>= 1.6.1); older agents leave it empty.
+    #[serde(default)]
+    pub output: Vec<String>,
 }
 
 /// A Lua state for `/tuner/lua`: all digits -> its index, otherwise its name.
@@ -615,7 +618,7 @@ mod tests {
         let url = one_shot("200 OK", r#"{"ok":true,"state":"GameCore","result":"42","extra":["hi"]}"#).await;
         let c = AgentClient::new(Some(&url), Some("t")).unwrap();
         let r = c.tuner_lua("GameCore", "print('hi') return 42", Some(1000)).await.unwrap();
-        assert_eq!(r, LuaReply { state: "GameCore".into(), result: "42".into(), extra: vec!["hi".into()] });
+        assert_eq!(r, LuaReply { state: "GameCore".into(), result: "42".into(), extra: vec!["hi".into()], output: vec![] });
     }
 
     #[tokio::test]
