@@ -185,7 +185,8 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   `took`, a lost reply (never resent), a popup or a changed turn stops the stand at once. Units that
   acted and still have moves are pinned (`civ6 finish-moves`), then one-turn autoplay hands the turn
   back: the AI plays the rest of it (no manual end turn). At most 8 actions and 90 s per stand, 3
-  stands in a row per city; targets are barbarians or players at war with us whose attack would not
+  stands in a row per city (a stand stopped before its first step, e.g. by a popup, does not
+  count); targets are barbarians or players at war with us whose attack would not
   change a war state, never civilians, and never a unit standing in a district that is not ours (a
   City Center or Encampment would take the hit). Each action is an `order_outcome` row (keys `stand
   city_strike`, `stand ranged`, `stand retreat`, `stand pin`) and each stand a `last_stand` event and

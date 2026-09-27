@@ -1378,6 +1378,23 @@ def test_after_three_stands_in_a_row_the_ai_defends_alone(setup):
     assert game.state["turn"] == T0 + 6, "T0+1..T0+3 with a stand, T0+4 and T0+5 without"
 
 
+def test_stands_that_never_reached_the_game_do_not_use_up_the_limit(setup):
+    """Ruling 22's cap bounds scripted stands: a stand stopped before its first step (a popup at the
+    hand-back, seen live at T207, or no GameCore read) ran nothing and does not count."""
+    game = stand_game(events={T0 + 1: falls}, popup=True)
+    game.events[T0 + 4] = lambda state: setattr(game, "popup", False)       # the popups are gone at T0+4
+    g = stand_governor(setup, game, every=5)
+    g.run(max_decisions=3)
+    assert never_while_autoplay_runs(game)
+    steps = [(a[1], a[2]) for a in game.actions if a[0] == "stand"]
+    assert steps == [(FIXTURE["cities"][0]["id"], "done")] * 2, "T0+4 and T0+5 still get their stands"
+    s, _ = setup
+    journal = s.journal.read_text()
+    assert "stands in a row (the limit)" not in journal
+    assert journal.count("(not counted toward the limit: nothing ran)") == 3
+    assert "Last stand for Beijing (stand 2 in a row)" in journal
+
+
 def test_the_action_cap_and_the_time_budget_stop_a_stand(setup):
     """(h) at most 8 actions per stand, and 90 s."""
     archers = [{**LS_ARCHER, "id": i} for i in range(5, 15)]

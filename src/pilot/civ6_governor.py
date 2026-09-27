@@ -500,20 +500,24 @@ class Civ6Governor(Governor):
     def _last_stand(self, b: dict, city: dict) -> None:
         """Scripted actions for a falling city (rulings 23-26), then the hand-back (ruling 25). Emits
         `last_stand` with the report and one `order_outcome` per action; never raises before the
-        hand-back."""
+        hand-back. Only a stand that reached the game (a step answered with an action or `done`, or
+        lost) counts toward `last_stand_max`: one stopped before its first step ran nothing."""
         name = city["name"]
-        self._stand_streak[name] = self._stand_streak.get(name, 0) + 1
         self._status("last stand")
         report = {"city": name, "city_id": city.get("id"), "turn": b["turn"], "date": b["date"],
-                  "in_a_row": self._stand_streak[name], "actions": [], "pins": [], "stopped": ""}
+                  "in_a_row": self._stand_streak.get(name, 0), "ran": False, "actions": [], "pins": [], "stopped": ""}
         try:
             report["stopped"] = self._stand_actions(b, city, report)
         except Exception as e:  # noqa: BLE001 - a stand never keeps the turn from being handed back
             report["stopped"] = f"error: {type(e).__name__}: {e}"[:300]
+        if report["ran"]:
+            report["in_a_row"] = self._stand_streak[name] = self._stand_streak.get(name, 0) + 1
         self._stand_breaker(report, b)
         self.log.emit("last_stand", **report)
         acts = "; ".join(f"{a['action']} {a['result'].replace('_', ' ')} ({a['detail']})" for a in report["actions"])
-        self.journal.note(f"Last stand for {name} (stand {report['in_a_row']} in a row): {acts or 'no action'}"
+        counted = (f"stand {report['in_a_row']} in a row" if report["ran"]
+                   else "not counted toward the limit: nothing ran")
+        self.journal.note(f"Last stand for {name} ({counted}): {acts or 'no action'}"
                           + (f"; {len(report['pins'])} unit(s) pinned" if report["pins"] else "")
                           + f"; stopped: {report['stopped']}.", b["date"])
         self._status("playing")
@@ -545,6 +549,7 @@ class Civ6Governor(Governor):
             lost = bool(reply.get("transport"))
             if not lost and reply.get("ok") is False:
                 return f"step refused: {reply.get('error')}"[:300]
+            report["ran"] = True                        # the game ran the step (or may have: a lost reply)
             if not lost and reply.get("done"):
                 stop = f"done: {reply.get('reason')}"
                 break
