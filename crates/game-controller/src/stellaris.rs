@@ -809,19 +809,56 @@ pub struct DirectiveDef {
     /// `set_policy` would otherwise apply an option the empire may not take.
     #[serde(default)]
     pub conditions: BTreeMap<String, String>,
+    /// Postures (`[posture.*]`) this directive switches on while it is current, if enabled.
+    #[serde(default)]
+    pub postures: Vec<String>,
+}
+
+/// A posture: a country flag `governor_posture_<name>` beside the directive, read by the
+/// Governor Bridge mod (v2) to steer the AI's own budgets and economic plans. It is set only once
+/// `enabled`, which a data commit does after the posture's live probe passes (levers ruling 21).
+#[derive(Debug, serde::Deserialize)]
+pub struct PostureDef {
+    pub description: String,
+    /// The mod version whose files read the flag.
+    pub mod_version: u32,
+    pub enabled: bool,
 }
 
 #[derive(Debug, serde::Deserialize)]
 pub struct Directives {
     pub directive: BTreeMap<String, DirectiveDef>,
+    #[serde(default)]
+    pub posture: BTreeMap<String, PostureDef>,
 }
+
+/// Version of the Governor Bridge files in `corpora/stellaris/mod` (descriptor.mod `0.<n>.0`).
+pub const MOD_VERSION: u32 = 2;
+
+/// Country flag the mod's monthly read channel is limited to; `take_control` sets it on the empire
+/// the governor plays, so no other country runs the event.
+pub const BRIDGE_PLAYER_FLAG: &str = "governor_bridge_player";
 
 impl Directives {
     /// Load `directives.toml` from a Stellaris corpus directory.
     pub fn load(corpus_dir: &std::path::Path) -> Result<Directives> {
         let path = corpus_dir.join("directives.toml");
         let text = std::fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
-        let d: Directives = toml::from_str(&text).with_context(|| format!("parsing {}", path.display()))?;
+        Directives::parse(&text).with_context(|| format!("parsing {}", path.display()))
+    }
+
+    /// Parse and check the text of a `directives.toml`.
+    pub fn parse(text: &str) -> Result<Directives> {
+        let d: Directives = toml::from_str(text)?;
+        for (name, p) in &d.posture {
+            check_ident(name)?;
+            if d.directive.contains_key(name) {
+                bail!("posture {name} has a directive's name");
+            }
+            if !(1..=MOD_VERSION).contains(&p.mod_version) {
+                bail!("posture {name}: mod_version {} is not a version of the mod here (1..={MOD_VERSION})", p.mod_version);
+            }
+        }
         for (name, def) in &d.directive {
             check_ident(name)?;
             for (k, v) in &def.policies {
@@ -834,8 +871,32 @@ impl Directives {
                 }
                 check_condition(c)?;
             }
+            for p in &def.postures {
+                if !d.posture.contains_key(p) {
+                    bail!("directive {name}: posture {p} is not in [posture.*]");
+                }
+            }
         }
         Ok(d)
+    }
+
+    /// Postures some directive switches; the others (the crisis posture) only `posture_lines` touches.
+    pub fn bound_postures(&self) -> std::collections::BTreeSet<String> {
+        self.directive.values().flat_map(|d| d.postures.iter().cloned()).collect()
+    }
+
+    /// Console line that sets (`on`) or clears posture `name` alone, confirmed by a scoped
+    /// `GOVERNOR_POSTURE <name> on|off <nonce>` log. Setting a disabled posture is refused;
+    /// clearing always works, so a flag left from an earlier setting can be removed.
+    pub fn posture_lines(&self, name: &str, on: bool, nonce: &str) -> Result<Vec<String>> {
+        let Some(def) = self.posture.get(name) else {
+            bail!("unknown posture {name:?}; known: {}", self.posture.keys().cloned().collect::<Vec<_>>().join(", "))
+        };
+        if on && !def.enabled {
+            bail!("posture {name} is disabled in directives.toml: a posture is enabled only after its live probe passes (levers ruling 21)");
+        }
+        let effect = if on { "set_country_flag" } else { "remove_country_flag" };
+        Ok(vec![format!("effect {effect} = governor_posture_{name} {}", scoped_log(&posture_marker(name, on, nonce)))])
     }
 
     /// Console lines that apply directive `name` to the player's empire (see directives.toml).
@@ -848,6 +909,10 @@ impl Directives {
     /// `valid` (`conditions`), with `cooldown = yes` starting the player's lock; a `GOVERNOR_POLICY`
     /// marker inside the branch reports it. One line per policy keeps every line within the length
     /// verified live; the flag and the confirmation come last, after every policy has run.
+    ///
+    /// Postures bound to a directive get a line of their own: the directive's enabled postures are
+    /// set and every other bound posture is cleared. A posture bound to no directive (the crisis
+    /// posture) is left alone, and the directive-flag line never names a posture.
     pub fn console_lines(&self, name: &str, nonce: &str) -> Result<Vec<String>> {
         let Some(def) = self.directive.get(name) else {
             bail!("unknown directive {name:?}; known: {}", self.directive.keys().cloned().collect::<Vec<_>>().join(", "))
@@ -861,6 +926,18 @@ impl Directives {
             .collect();
         if !others.is_empty() {
             lines.push(format!("effect {}", others.join(" ")));
+        }
+        // postures bound to directives: this one's enabled postures on, every other one off
+        let postures: Vec<String> = self
+            .bound_postures()
+            .into_iter()
+            .map(|p| {
+                let on = def.postures.contains(&p) && self.posture[&p].enabled;
+                format!("{} = governor_posture_{p}", if on { "set_country_flag" } else { "remove_country_flag" })
+            })
+            .collect();
+        if !postures.is_empty() {
+            lines.push(format!("effect {}", postures.join(" ")));
         }
         for (policy, option) in &def.policies {
             let mut limit = format!("can_set_policy = {{ policy = {policy} option = {option} }}");
@@ -922,6 +999,11 @@ impl Applied {
             list(&self.set), list(&self.locked)
         )
     }
+}
+
+/// Text written to game.log when a posture was set or cleared (see `posture_lines`).
+pub fn posture_marker(name: &str, on: bool, nonce: &str) -> String {
+    format!("GOVERNOR_POSTURE {name} {} {nonce}", if on { "on" } else { "off" })
 }
 
 /// Text written to game.log when a directive's effects ran (`nonce` keeps repeats visible).
@@ -1335,13 +1417,13 @@ pub async fn take_control(
     // a scoped log proves the console reaches a real country (not observer mode)
     let probe = format!("HARNESS_SCOPE_CHECK {}", nonce());
     let (_, before) = client.files_read(DOCS_ROOT, "logs/game.log", 0, Some(0)).await?;
-    pause.run_console(client, &[format!("effect {}", scoped_log(&probe))]).await?;
+    pause.run_console(client, &[scope_probe_line(&probe)]).await?;
     if !wait_for_log(client, before, &probe).await? {
         pause.run_console(client, &[format!("play {country}")]).await?;
         done.push(format!("left observer mode (play {country})"));
         let again = format!("HARNESS_SCOPE_CHECK {}", nonce());
         let (_, before) = client.files_read(DOCS_ROOT, "logs/game.log", 0, Some(0)).await?;
-        pause.run_console(client, &[format!("effect {}", scoped_log(&again))]).await?;
+        pause.run_console(client, &[scope_probe_line(&again)]).await?;
         if !wait_for_log(client, before, &again).await? {
             bail!("still no country scope after `play {country}`: is this the campaign of the newest autosave?");
         }
@@ -1349,11 +1431,21 @@ pub async fn take_control(
     reader.set(client, true).await?;
     done.push("human_ai is ON: the game's AI plays the empire".into());
     done.push(match bridge_loaded(client).await {
-        Ok(true) => "companion mod Governor Bridge is loaded: directives also steer the AI's budget".into(),
-        Ok(false) => "companion mod not loaded: directives set policies only (game-controller stellaris install-mod)".into(),
+        Ok(Some(2)) => "companion mod Governor Bridge v2 is loaded: directives also steer the AI's budget, and the save \
+                        gets the naval capacity each month".into(),
+        Ok(Some(v)) => format!("companion mod Governor Bridge v{v} is loaded: directives also steer the AI's budget \
+                                (v2 adds postures and the naval-capacity read: stellaris install-mod, then restart)"),
+        Ok(None) => "companion mod not loaded: directives set policies only (game-controller stellaris install-mod)".into(),
         Err(e) => format!("could not check the companion mod: {e}"),
     });
     Ok(done)
+}
+
+/// The scope check `take_control` sends: its log line appears only with a real country scope, and
+/// the same effect marks that country as the governed empire (`BRIDGE_PLAYER_FLAG`), which limits
+/// the mod's monthly read channel to it. In observer mode neither happens.
+pub fn scope_probe_line(probe: &str) -> String {
+    format!("effect set_country_flag = {BRIDGE_PLAYER_FLAG} {}", scoped_log(probe))
 }
 
 /// Path and modification time of the newest autosave.
@@ -1432,18 +1524,52 @@ pub async fn install_mod(client: &crate::client::AgentClient, corpus_dir: &std::
     Ok(written)
 }
 
-/// Whether the running game has the mod loaded: an effect using its trigger logs only if it exists.
-pub async fn bridge_loaded(client: &crate::client::AgentClient) -> Result<bool> {
-    let marker = format!("GOVERNOR_BRIDGE_OK {}", nonce());
+/// Console lines of the mod check: an effect using a trigger the game does not know fails as a
+/// whole, so each version's trigger has its own line. The v2 line runs first, so once the v1
+/// marker is in game.log the v2 marker would already be there too.
+pub fn bridge_check_lines(nonce: &str) -> Vec<String> {
+    [("governor_bridge_version_2", "GOVERNOR_BRIDGE_V2"), ("governor_bridge_present", "GOVERNOR_BRIDGE_OK")]
+        .iter()
+        .map(|(trigger, tag)| format!("effect if = {{ limit = {{ {trigger} = yes }} log = \"{tag} {nonce}\" }}"))
+        .collect()
+}
+
+/// The mod version a check's markers show in `log`: None (not loaded), 1 or 2.
+pub fn bridge_version_in_log(log: &str, nonce: &str) -> Option<u8> {
+    if !log.contains(&format!("GOVERNOR_BRIDGE_OK {nonce}")) {
+        return None;
+    }
+    Some(if log.contains(&format!("GOVERNOR_BRIDGE_V2 {nonce}")) { 2 } else { 1 })
+}
+
+/// Which Governor Bridge the running game has loaded: None, or its version (1, or 2 with postures
+/// and the naval-capacity read channel). An effect using its trigger logs only if it exists.
+pub async fn bridge_loaded(client: &crate::client::AgentClient) -> Result<Option<u8>> {
+    let tag = nonce();
     let (_, before) = client.files_read(DOCS_ROOT, "logs/game.log", 0, Some(0)).await?;
-    run_console(client, &[format!("effect if = {{ limit = {{ governor_bridge_present = yes }} log = \"{marker}\" }}")]).await?;
-    wait_for_log(client, before, &marker).await
+    run_console(client, &bridge_check_lines(&tag)).await?;
+    Ok(wait_for_log_text(client, before, &format!("GOVERNOR_BRIDGE_OK {tag}")).await?.and_then(|log| bridge_version_in_log(&log, &tag)))
 }
 
 /// Bytes of game.log after `offset` (and the new size), via the agent.
 pub async fn read_log_since(client: &crate::client::AgentClient, offset: u64) -> Result<(String, u64)> {
     let (bytes, size) = client.files_read(DOCS_ROOT, "logs/game.log", offset, None).await?;
     Ok((String::from_utf8_lossy(&bytes).into_owned(), size))
+}
+
+/// Send console `lines`, pausing first when a `pause` detector is given (at Fastest ~2 s of typing
+/// would be months of game time) and restoring the previous state afterwards.
+async fn send_paused(client: &crate::client::AgentClient, lines: &[String], pause: Option<&PauseDetector>) -> Result<()> {
+    let Some(p) = pause else {
+        return run_console(client, lines).await;
+    };
+    let was_paused = p.is_paused(client).await?;
+    p.set_paused(client, true).await?;
+    p.run_console(client, lines).await?;
+    if !was_paused {
+        p.set_paused(client, false).await?;
+    }
+    Ok(())
 }
 
 /// Apply a directive and confirm it from game.log. Returns the console lines sent and which
@@ -1457,28 +1583,34 @@ pub async fn apply_directive(
     let tag = nonce();
     let lines = directives.console_lines(name, &tag)?;
     let (_, before) = client.files_read(DOCS_ROOT, "logs/game.log", 0, Some(0)).await?;
-    // Pause first: at Fastest ~2 s of typing would be months of game time. Restore it afterwards.
-    let was_paused = match pause {
-        Some(p) => {
-            let was = p.is_paused(client).await?;
-            p.set_paused(client, true).await?;
-            Some(was)
-        }
-        None => None,
-    };
-    match pause {
-        Some(p) => p.run_console(client, &lines).await?,
-        None => run_console(client, &lines).await?,
-    }
-    if let (Some(p), Some(false)) = (pause, was_paused) {
-        p.set_paused(client, false).await?;
-    }
+    send_paused(client, &lines, pause).await?;
     let marker = applied_marker(name, &tag);
     if let Some(log) = wait_for_log_text(client, before, &marker).await? {
         let (set, locked) = policy_outcome(&directives.directive[name], &policy_markers(&log, &tag));
         return Ok(Applied { lines, set, locked });
     }
     bail!("directive {name} sent but {marker:?} did not appear in game.log: the empire is probably in observer \
+           mode or the console did not take the line; run `stellaris take-control`")
+}
+
+/// Set (`on`) or clear posture `name` on the player's empire and confirm it from game.log; returns
+/// the console lines sent. Like `apply_directive`, it pauses while typing and restores the state.
+pub async fn apply_posture(
+    client: &crate::client::AgentClient,
+    directives: &Directives,
+    name: &str,
+    on: bool,
+    pause: Option<&PauseDetector>,
+) -> Result<Vec<String>> {
+    let tag = nonce();
+    let lines = directives.posture_lines(name, on, &tag)?;
+    let (_, before) = client.files_read(DOCS_ROOT, "logs/game.log", 0, Some(0)).await?;
+    send_paused(client, &lines, pause).await?;
+    let marker = posture_marker(name, on, &tag);
+    if wait_for_log(client, before, &marker).await? {
+        return Ok(lines);
+    }
+    bail!("posture {name} sent but {marker:?} did not appear in game.log: the empire is probably in observer \
            mode or the console did not take the line; run `stellaris take-control`")
 }
 
@@ -2611,7 +2743,8 @@ impl Briefing {
         for (t, p, a) in &gx.situations {
             s += &format!("Situation: {t}, progress {p:.0}, approach {a}\n");
         }
-        let gov: Vec<&String> = self.flags.iter().filter(|f| f.starts_with("governor_")).collect();
+        // directive and posture flags; the governed-empire marker is plumbing for the mod
+        let gov: Vec<&String> = self.flags.iter().filter(|f| f.starts_with("governor_") && *f != BRIDGE_PLAYER_FLAG).collect();
         if !gov.is_empty() {
             s += &format!("Governor flags: {}\n", gov.iter().map(|x| x.as_str()).collect::<Vec<_>>().join(", "));
         }
@@ -2705,8 +2838,9 @@ mod tests {
     fn directive_console_lines_take_control_apply_and_hand_back() {
         let d = directives();
         let lines = d.console_lines("expand", "k3x9").unwrap();
-        // remove the other directives' flags, one line per policy, then flag + confirmation last
-        assert_eq!(lines.len(), 2 + d.directive["expand"].policies.len());
+        // remove the other directives' flags, the bound postures, one line per policy, then flag +
+        // confirmation last
+        assert_eq!(lines.len(), 3 + d.directive["expand"].policies.len());
         assert!(lines.iter().all(|l| l.starts_with("effect ") && !l.contains("play ") && !l.contains("observe")),
                 "no play/observe: the empire stays player-controlled under human_ai");
         assert!(lines[0].starts_with("effect remove_country_flag = governor_directive_"));
@@ -2780,6 +2914,128 @@ mod tests {
     }
 
     #[test]
+    fn postures_are_registered_disabled_and_bound_to_directives() {
+        let d = directives();
+        let names: Vec<&str> = d.posture.keys().map(|s| s.as_str()).collect();
+        assert_eq!(names, ["naval_cap", "research_focus", "ship_upgrades", "war_crisis"]);
+        for (name, p) in &d.posture {
+            assert!(!p.enabled, "{name}: every posture stays off until its live probe passes (levers ruling 21)");
+            assert_eq!(p.mod_version, 2, "{name}");
+            assert!(!p.description.trim().is_empty(), "{name}");
+        }
+        let bound = |n: &str| d.directive[n].postures.clone();
+        assert_eq!(bound("defend"), ["naval_cap", "ship_upgrades"]);
+        assert_eq!(bound("prepare_war"), ["naval_cap", "ship_upgrades"]);
+        assert_eq!(bound("tech_rush"), ["research_focus"]);
+        for n in ["expand", "consolidate_economy", "diplomacy_first"] {
+            assert!(bound(n).is_empty(), "{n}");
+        }
+        // the crisis posture belongs to no directive: only the crisis sets or clears it
+        assert!(!d.directive.values().any(|def| def.postures.iter().any(|p| p == "war_crisis")));
+        assert_eq!(d.bound_postures().into_iter().collect::<Vec<_>>(), ["naval_cap", "research_focus", "ship_upgrades"]);
+    }
+
+    #[test]
+    fn directive_lines_keep_directive_and_posture_flags_apart() {
+        let d = directives();
+        for name in d.directive.keys() {
+            let lines = d.console_lines(name, "n0nce").unwrap();
+            // the removal line lists directive flags only; the posture line posture flags only
+            let removal = lines.iter().find(|l| l.starts_with("effect remove_country_flag = governor_directive_")).unwrap();
+            assert!(!removal.contains("governor_posture_"), "{name}: the directive removal never clears a posture: {removal}");
+            let posture = lines.iter().find(|l| l.contains("governor_posture_")).unwrap_or_else(|| panic!("{name}: no posture line"));
+            assert!(!posture.contains("governor_directive_"), "{name}: {posture}");
+            // every posture is disabled: directive-bound ones are cleared, none is ever set
+            assert!(!posture.contains("set_country_flag"), "{name}: a disabled posture is never set: {posture}");
+            for p in ["naval_cap", "research_focus", "ship_upgrades"] {
+                assert!(posture.contains(&format!("remove_country_flag = governor_posture_{p}")), "{name}: {posture}");
+            }
+            assert!(!lines.join("\n").contains("war_crisis"), "{name}: a directive never touches the crisis posture");
+            assert!(lines.last().unwrap().contains(&applied_marker(name, "n0nce")), "{name}: the confirmation stays last");
+            assert!(lines.iter().all(|l| l.len() <= 529), "{name}");
+        }
+    }
+
+    #[test]
+    fn an_enabled_posture_is_set_with_its_directive_and_cleared_by_the_others() {
+        let mut d = directives();
+        d.posture.values_mut().for_each(|p| p.enabled = false);
+        d.posture.get_mut("naval_cap").unwrap().enabled = true;
+        let defend = d.console_lines("defend", "n").unwrap().join("\n");
+        assert!(defend.contains("set_country_flag = governor_posture_naval_cap"), "{defend}");
+        assert!(defend.contains("remove_country_flag = governor_posture_ship_upgrades"), "still disabled: {defend}");
+        assert!(defend.contains("remove_country_flag = governor_posture_research_focus"), "bound to tech_rush: {defend}");
+        let tech = d.console_lines("tech_rush", "n").unwrap().join("\n");
+        assert!(tech.contains("remove_country_flag = governor_posture_naval_cap") && !tech.contains("set_country_flag = governor_posture_"), "{tech}");
+    }
+
+    #[test]
+    fn posture_lines_touch_one_posture_flag_and_refuse_disabled_or_unknown_postures() {
+        let mut d = directives();
+        d.posture.values_mut().for_each(|p| p.enabled = false);
+        let off = d.posture_lines("war_crisis", false, "k3").unwrap();
+        assert_eq!(off, ["effect remove_country_flag = governor_posture_war_crisis if = { limit = { exists = capital_scope } log = \"GOVERNOR_POSTURE war_crisis off k3\" }"]);
+        let err = d.posture_lines("war_crisis", true, "k3").unwrap_err().to_string();
+        assert!(err.contains("war_crisis") && err.contains("disabled"), "{err}");
+        assert!(d.posture_lines("warp_drive", false, "k3").is_err());
+        assert!(d.posture_lines("defend", true, "k3").is_err(), "a directive is not a posture");
+        d.posture.get_mut("war_crisis").unwrap().enabled = true;
+        let on = d.posture_lines("war_crisis", true, "k3").unwrap();
+        assert_eq!(on, ["effect set_country_flag = governor_posture_war_crisis if = { limit = { exists = capital_scope } log = \"GOVERNOR_POSTURE war_crisis on k3\" }"]);
+        assert!(!on.join("").contains("governor_directive_"), "a posture never clears the directive");
+        assert_eq!(posture_marker("war_crisis", true, "k3"), "GOVERNOR_POSTURE war_crisis on k3");
+    }
+
+    #[test]
+    fn directives_file_refuses_unknown_or_malformed_postures() {
+        let base = "[directive.defend]\ndescription = \"d\"\n";
+        let ok = format!("{base}postures = [\"naval_cap\"]\n[posture.naval_cap]\ndescription = \"n\"\nmod_version = 2\nenabled = false\n");
+        let d = Directives::parse(&ok).unwrap();
+        assert_eq!(d.directive["defend"].postures, ["naval_cap"]);
+        let unknown = format!("{base}postures = [\"naval_cap\"]\n");
+        assert!(Directives::parse(&unknown).unwrap_err().to_string().contains("naval_cap"), "a bound posture must be registered");
+        let bad = "[directive.defend]\ndescription = \"d\"\n[posture.\"Naval Cap\"]\ndescription = \"n\"\nmod_version = 2\nenabled = false\n";
+        assert!(Directives::parse(bad).is_err(), "posture names are script identifiers");
+        let future = "[directive.defend]\ndescription = \"d\"\n[posture.x]\ndescription = \"n\"\nmod_version = 3\nenabled = false\n";
+        assert!(Directives::parse(future).unwrap_err().to_string().contains("mod_version"), "the mod files here must read the flag");
+        let clash = "[directive.defend]\ndescription = \"d\"\n[posture.defend]\ndescription = \"n\"\nmod_version = 2\nenabled = false\n";
+        assert!(Directives::parse(clash).is_err(), "a posture may not share a directive's name");
+        assert!(Directives::parse(base).unwrap().posture.is_empty(), "the registry is optional");
+    }
+
+    #[test]
+    fn governor_flags_line_lists_directive_and_posture_flags_only() {
+        let b = Briefing {
+            flags: vec!["governor_directive_defend".into(), BRIDGE_PLAYER_FLAG.into(), "governor_posture_naval_cap".into(), "other".into()],
+            ..Default::default()
+        };
+        assert!(b.to_text().contains("Governor flags: governor_directive_defend, governor_posture_naval_cap\n"), "{}", b.to_text());
+    }
+
+    #[test]
+    fn take_control_marks_the_governed_empire_for_the_mods_read_channel() {
+        // the mod's monthly event runs only for the country carrying this flag (levers ruling 19)
+        assert_eq!(scope_probe_line("HARNESS_SCOPE_CHECK x1"),
+                   "effect set_country_flag = governor_bridge_player if = { limit = { exists = capital_scope } log = \"HARNESS_SCOPE_CHECK x1\" }");
+    }
+
+    #[test]
+    fn bridge_check_tells_version_1_from_version_2() {
+        let lines = bridge_check_lines("q7");
+        // v2 first: an undefined trigger fails its whole effect, so each check is its own line, and
+        // the v1 marker (last) proves the v2 line already ran
+        assert_eq!(lines, [
+            "effect if = { limit = { governor_bridge_version_2 = yes } log = \"GOVERNOR_BRIDGE_V2 q7\" }",
+            "effect if = { limit = { governor_bridge_present = yes } log = \"GOVERNOR_BRIDGE_OK q7\" }",
+        ]);
+        let line = |m: &str| format!("[07:26:47][effect_impl.cpp:22191]: [2272.1.1] Log effect, file:  line: 1. {m}\n");
+        assert_eq!(bridge_version_in_log(&line("GOVERNOR_BRIDGE_OK q7"), "q7"), Some(1));
+        assert_eq!(bridge_version_in_log(&(line("GOVERNOR_BRIDGE_V2 q7") + &line("GOVERNOR_BRIDGE_OK q7")), "q7"), Some(2));
+        assert_eq!(bridge_version_in_log(&(line("GOVERNOR_BRIDGE_V2 old") + &line("GOVERNOR_BRIDGE_OK q7")), "q7"), Some(1), "another check's marker");
+        assert_eq!(bridge_version_in_log("", "q7"), None);
+    }
+
+    #[test]
     fn pause_detector_tells_paused_from_running_frames() {
         let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpora/stellaris");
         let corpus = crate::corpus::GameCorpus::load_from_dir(&dir).unwrap();
@@ -2848,52 +3104,225 @@ mod tests {
         assert!(enable_mod("[1,2]", "m").is_err());
     }
 
-    #[test]
-    fn mod_files_are_well_formed() {
-        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpora/stellaris/mod/governor_bridge");
-        let descriptor = std::fs::read_to_string(dir.join("descriptor.mod")).unwrap();
-        assert!(descriptor.contains("supported_version=\"v4.5.*\"") && !descriptor.contains("path="));
-        for f in ["common/ai_budget/zz_governor_bridge_budget.txt", "common/scripted_triggers/zz_governor_bridge_triggers.txt"] {
-            let text = std::fs::read_to_string(dir.join(f)).unwrap();
-            jomini::TextTape::from_slice(text.as_bytes()).unwrap_or_else(|e| panic!("{f}: {e}"));
-            let opens = text.matches('{').count();
-            assert_eq!(opens, text.matches('}').count(), "{f}: unbalanced braces");
-        }
-        let budget = std::fs::read_to_string(dir.join("common/ai_budget/zz_governor_bridge_budget.txt")).unwrap();
-        // every entry is gated on a directive flag that exists
-        let d = Directives::load(&dir.join("../..")).unwrap();
-        for flag in budget.split("has_country_flag = ").skip(1).map(|s| s.split_whitespace().next().unwrap()) {
-            let name = flag.strip_prefix("governor_directive_").expect(flag);
-            assert!(d.directive.contains_key(name), "{flag} is not a directive");
-        }
-        assert_eq!(budget.matches("potential = { has_country_flag = governor_directive_").count(), budget.matches(" = {\n\tresource =").count());
+    fn mod_dir() -> std::path::PathBuf {
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpora/stellaris/mod/governor_bridge")
+    }
 
-        // Each (resource, category) must be one a non-nomadic empire spends from in vanilla 4.5.1
-        // (common/ai_budget, read 2026-09-26); e.g. influence in `starbases` is nomad-only, and
-        // outposts take influence from `stations`.
-        const VANILLA: [(&str, &str); 11] = [
-            ("alloys", "ships"), ("alloys", "starbases"), ("alloys", "colonies"), ("alloys", "planets"),
-            ("alloys", "megastructures_habitat"), ("influence", "megastructures_habitat"),
-            ("influence", "stations"), ("influence", "claims"), ("influence", "edicts"),
-            ("minerals", "planets"), ("minerals", "stations"),
-        ];
-        let tape = jomini::TextTape::from_slice(budget.as_bytes()).unwrap();
-        let mut checked = 0;
-        for (key, _op, value) in tape.windows1252_reader().fields() {
-            checked += 1;
-            let entry = value.read_object().unwrap();
-            let (mut resource, mut category) = (String::new(), String::new());
-            for (k, _o, v) in entry.fields() {
-                match k.read_str().as_ref() {
-                    "resource" => resource = v.read_string().unwrap(),
-                    "category" => category = v.read_string().unwrap(),
-                    _ => {}
+    /// Every script file of the mod (relative path, text), descriptor.mod aside.
+    fn mod_files() -> Vec<(String, String)> {
+        let root = mod_dir();
+        let (mut out, mut stack) = (vec![], vec![root.clone()]);
+        while let Some(dir) = stack.pop() {
+            for e in std::fs::read_dir(&dir).unwrap() {
+                let p = e.unwrap().path();
+                if p.is_dir() {
+                    stack.push(p);
+                } else if p.file_name().unwrap() != "descriptor.mod" {
+                    let rel = p.strip_prefix(&root).unwrap().to_string_lossy().replace('\\', "/");
+                    out.push((rel, std::fs::read_to_string(&p).unwrap()));
                 }
             }
+        }
+        out.sort();
+        out
+    }
+
+    fn mod_file(rel: &str) -> String {
+        std::fs::read_to_string(mod_dir().join(rel)).unwrap()
+    }
+
+    /// Script text without `#` comments (comments may name effects the mod never uses).
+    fn uncommented(text: &str) -> String {
+        text.lines().map(|l| l.split('#').next().unwrap_or("")).collect::<Vec<_>>().join("\n")
+    }
+
+    /// Every value of `has_country_flag = <flag>` in a script text.
+    fn flags_read(text: &str) -> Vec<String> {
+        uncommented(text).split("has_country_flag = ").skip(1).map(|s| s.split_whitespace().next().unwrap().to_string()).collect()
+    }
+
+    fn keys<'d, 't>(o: &Obj<'d, 't>) -> Vec<String> {
+        o.fields().map(|(k, _, _)| k.read_str().into_owned()).collect()
+    }
+
+    #[test]
+    fn mod_files_are_well_formed() {
+        let descriptor = std::fs::read_to_string(mod_dir().join("descriptor.mod")).unwrap();
+        assert!(descriptor.contains("supported_version=\"v4.5.*\"") && !descriptor.contains("path="));
+        assert!(descriptor.contains(&format!("version=\"0.{MOD_VERSION}.0\"")), "v2: postures and the naval-capacity read channel");
+        let files = mod_files();
+        let names: Vec<&str> = files.iter().map(|(f, _)| f.as_str()).collect();
+        assert_eq!(names, [
+            "common/ai_budget/zz_governor_bridge_budget.txt",
+            "common/economic_plans/zz_governor_bridge_plans.txt",
+            "common/on_actions/zz_governor_bridge_on_actions.txt",
+            "common/scripted_triggers/zz_governor_bridge_triggers.txt",
+            "events/governor_bridge_events.txt",
+        ], "a new mod file needs its own checks in these tests");
+        for (f, text) in &files {
+            TextTape::from_slice(text.as_bytes()).unwrap_or_else(|e| panic!("{f}: {e}"));
+            assert_eq!(text.matches('{').count(), text.matches('}').count(), "{f}: unbalanced braces");
+        }
+        // presence and version checks for `stellaris bridge-check`
+        let text = mod_file("common/scripted_triggers/zz_governor_bridge_triggers.txt");
+        let tape = TextTape::from_slice(text.as_bytes()).unwrap();
+        let root = tape.utf8_reader();
+        assert_eq!(keys(&root), ["governor_bridge_present", "governor_bridge_version_2"]);
+        for (_, _, v) in root.fields() {
+            assert_eq!(string(&v.read_object().unwrap(), "always").as_deref(), Some("yes"));
+        }
+    }
+
+    #[test]
+    fn mod_budget_entries_read_registered_flags_in_vanilla_categories() {
+        let d = directives();
+        let budget = mod_file("common/ai_budget/zz_governor_bridge_budget.txt");
+        // Each (resource, category) must be one a non-nomadic empire spends from in vanilla 4.5.1
+        // (common/ai_budget, read 2026-09-26 and 2026-09-27); e.g. influence in `starbases` is
+        // nomad-only, and outposts take influence from `stations`.
+        const VANILLA: [(&str, &str); 13] = [
+            ("alloys", "ships"), ("alloys", "starbases"), ("alloys", "colonies"), ("alloys", "planets"),
+            ("alloys", "megastructures_habitat"), ("alloys", "ship_upgrades"), ("influence", "megastructures_habitat"),
+            ("influence", "stations"), ("influence", "claims"), ("influence", "edicts"),
+            ("minerals", "planets"), ("minerals", "stations"), ("minerals", "armies"),
+        ];
+        let tape = TextTape::from_slice(budget.as_bytes()).unwrap();
+        let mut checked = 0;
+        for (key, _op, value) in tape.utf8_reader().fields() {
+            checked += 1;
             let name = key.read_str();
+            assert!(name.starts_with("governor_"), "{name}: additive entries only, never a vanilla entry's name");
+            let entry = value.read_object().unwrap();
+            let (resource, category) = (string(&entry, "resource").unwrap(), string(&entry, "category").unwrap());
+            assert_eq!(string(&entry, "type").as_deref(), Some("expenditure"), "{name}");
             assert!(VANILLA.contains(&(resource.as_str(), category.as_str())), "{name}: {resource} in {category} is not spent by a non-nomadic empire");
+            // gated on exactly one governor flag, at the top of its potential
+            let potential = obj(&entry, "potential").unwrap_or_else(|| panic!("{name}: no potential"));
+            let gates: Vec<String> = potential.fields().filter(|(k, _, _)| k.read_str() == "has_country_flag")
+                .map(|(_, _, v)| v.read_string().unwrap()).collect();
+            assert_eq!(gates.len(), 1, "{name}: {gates:?}");
+            let gate = &gates[0];
+            let known = gate.strip_prefix("governor_directive_").is_some_and(|n| d.directive.contains_key(n))
+                || gate.strip_prefix("governor_posture_").is_some_and(|n| d.posture.contains_key(n));
+            assert!(known, "{name}: {gate} is neither a directive nor a registered posture");
         }
         assert_eq!(checked, budget.matches("\tresource =").count());
+        // the go levers of ruling 17 read their postures here
+        for posture in ["ship_upgrades", "war_crisis"] {
+            assert!(flags_read(&budget).contains(&format!("governor_posture_{posture}")), "{posture}");
+        }
+        assert!(!budget.contains("category = claims"), "influence to claims is deferred (ruling 17)");
+    }
+
+    #[test]
+    fn mod_economic_subplans_only_steer_construction() {
+        let d = directives();
+        let plans = mod_file("common/economic_plans/zz_governor_bridge_plans.txt");
+        let tape = TextTape::from_slice(plans.as_bytes()).unwrap();
+        let mut seen = vec![];
+        for (key, _op, value) in tape.utf8_reader().fields() {
+            let name = key.read_str().into_owned();
+            if name.starts_with('@') {
+                assert!(name.starts_with("@governor_"), "{name}: the mod's own constants only");
+                continue;
+            }
+            seen.push(name.clone());
+            let plan = value.read_object().unwrap();
+            // plans merge additively: another instance holding only subplans adds them (vanilla
+            // 00_example.txt); anything else would overwrite the vanilla plan's own fields
+            assert!(keys(&plan).iter().all(|k| k == "subplan"), "{name}: {:?}", keys(&plan));
+            let mut subplans = vec![];
+            for (_, _, sp) in plan.fields() {
+                let sp = sp.read_object().unwrap();
+                for k in keys(&sp) {
+                    assert!(["set_name", "optional", "potential", "focus", "naval_cap"].contains(&k.as_str()), "{name}: subplan key {k}");
+                }
+                assert_eq!(string(&sp, "optional").as_deref(), Some("yes"), "{name}: never holds a plan open");
+                let set_name = string(&sp, "set_name").unwrap();
+                assert!(set_name.starts_with("Governor "), "{name}: {set_name} could overwrite a vanilla subplan of that name");
+                let potential = obj(&sp, "potential").unwrap();
+                assert_eq!(keys(&potential), ["has_country_flag"], "{name}/{set_name}");
+                let flag = string(&potential, "has_country_flag").unwrap();
+                let posture = flag.strip_prefix("governor_posture_").unwrap_or_else(|| panic!("{name}/{set_name}: {flag}"));
+                assert!(d.posture.contains_key(posture), "{name}/{set_name}: {posture} is not registered");
+                if let Some(focus) = obj(&sp, "focus") {
+                    for r in keys(&focus) {
+                        assert!(["alloys", "physics_research", "society_research", "engineering_research"].contains(&r.as_str()), "{name}: focus {r}");
+                    }
+                }
+                subplans.push(posture.to_string());
+            }
+            assert_eq!(subplans, ["naval_cap", "research_focus"], "{name}");
+        }
+        assert_eq!(seen, ["basic_economy_plan", "intermediate_economy_plan", "advanced_economy_plan", "mature_economy_plan",
+                          "endgame_economy_plan", "beyond_endgame_economy_plan"], "all six vanilla plans (4.5.1)");
+    }
+
+    #[test]
+    fn mod_read_channel_only_exports_naval_capacity_for_the_governed_empire() {
+        let on_actions = mod_file("common/on_actions/zz_governor_bridge_on_actions.txt");
+        let tape = TextTape::from_slice(on_actions.as_bytes()).unwrap();
+        let root = tape.utf8_reader();
+        assert_eq!(keys(&root), ["on_monthly_pulse_country"], "no policy log (ruling 17: no value)");
+        let pulse = obj(&root, "on_monthly_pulse_country").unwrap();
+        assert_eq!(keys(&pulse), ["events"]);
+        assert_eq!(strings(get(&pulse, "events")), ["governor_bridge.1"]);
+
+        let events = mod_file("events/governor_bridge_events.txt");
+        let tape = TextTape::from_slice(events.as_bytes()).unwrap();
+        let root = tape.utf8_reader();
+        assert_eq!(keys(&root), ["namespace", "country_event"], "one event: no watchdog (ruling 17: out)");
+        assert_eq!(string(&root, "namespace").as_deref(), Some("governor_bridge"));
+        let ev = obj(&root, "country_event").unwrap();
+        assert_eq!(keys(&ev), ["id", "hide_window", "is_triggered_only", "trigger", "immediate"]);
+        assert_eq!(string(&ev, "id").as_deref(), Some("governor_bridge.1"));
+        assert_eq!(string(&ev, "hide_window").as_deref(), Some("yes"));
+        assert_eq!(string(&ev, "is_triggered_only").as_deref(), Some("yes"));
+        // the monthly pulse fires for every country; only ours carries this flag (take_control)
+        let trigger = obj(&ev, "trigger").unwrap();
+        assert_eq!(keys(&trigger), ["has_country_flag"]);
+        assert_eq!(string(&trigger, "has_country_flag").as_deref(), Some(BRIDGE_PLAYER_FLAG));
+        let immediate = obj(&ev, "immediate").unwrap();
+        let mut exported = vec![];
+        for (k, _, v) in immediate.fields() {
+            assert_eq!(k.read_str(), "export_trigger_value_to_variable", "the event only reads");
+            let e = v.read_object().unwrap();
+            assert_eq!(keys(&e), ["trigger", "variable"]);
+            exported.push((string(&e, "trigger").unwrap(), string(&e, "variable").unwrap()));
+        }
+        // the variables the briefing reads into governor_vars
+        assert_eq!(exported, [
+            ("max_naval_capacity".to_string(), "governor_naval_cap".to_string()),
+            ("used_naval_capacity_integer".to_string(), "governor_naval_used".to_string()),
+        ]);
+    }
+
+    #[test]
+    fn mod_never_grants_anything_and_reads_only_governor_flags() {
+        let d = directives();
+        let mut read = std::collections::BTreeSet::new();
+        for (f, text) in mod_files() {
+            let script = uncommented(&text);
+            // fairness (strategy.md section 9, levers ruling 14): the mod steers how the AI spends
+            // its own income and exports a number; it never adds, sets or overrides anything
+            for effect in ["add_resource", "add_modifier", "add_static_modifier", "create_", "set_policy", "add_edict",
+                           "activate_edict", "ai_weight", "give_technology", "add_tech_progress", "set_country_flag",
+                           "remove_country_flag", "set_variable", "change_variable", "add_claims", "declare_war",
+                           "ai_no_wars", "fire_on_action", "trigger_event"] {
+                assert!(!script.contains(effect), "{f}: {effect}");
+            }
+            for flag in flags_read(&text) {
+                let known = flag == BRIDGE_PLAYER_FLAG
+                    || flag.strip_prefix("governor_directive_").is_some_and(|n| d.directive.contains_key(n))
+                    || flag.strip_prefix("governor_posture_").is_some_and(|n| d.posture.contains_key(n));
+                assert!(known, "{f}: reads {flag}, which the harness never sets");
+                read.insert(flag);
+            }
+        }
+        // no dead posture: each registered one steers something once enabled
+        for p in d.posture.keys() {
+            assert!(read.contains(&format!("governor_posture_{p}")), "posture {p} is read by no mod file");
+        }
     }
 
     #[test]

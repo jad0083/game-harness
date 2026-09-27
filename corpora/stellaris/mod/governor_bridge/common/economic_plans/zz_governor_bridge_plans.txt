@@ -1,0 +1,134 @@
+# Governor Bridge v2: posture subplans added to every vanilla economic plan.
+# Economic plans merge additively (vanilla common/economic_plans/00_example.txt): another instance
+# of a plan holding only subplan entries adds them, and a subplan is identified by its set_name, so
+# each name here is the mod's own. Only focus and naval_cap are used: they steer construction and
+# never hold a plan open (00_example.txt: "pops, focus and naval_cap steer construction but never
+# hold a plan open"), so the tiers progress as in vanilla. A focus far above current income keeps the
+# push on for as long as the posture flag is set. Each subplan reads one posture flag
+# (directives.toml [posture.*]), set only once that posture is enabled after its live probe.
+# Vanilla's own naval-cap subplans are optional + scaling and start at 85% naval use; this one is
+# optional only, a flat target (unverified live: the probe measures it).
+
+@governor_naval_cap_target = 250
+@governor_alloys_focus = 500
+@governor_research_focus = 5000
+
+basic_economy_plan = {
+	subplan = {
+		optional = yes
+		set_name = "Governor Naval Cap"
+		potential = { has_country_flag = governor_posture_naval_cap }
+		naval_cap = @governor_naval_cap_target
+		focus = { alloys = @governor_alloys_focus }
+	}
+	subplan = {
+		optional = yes
+		set_name = "Governor Research Focus"
+		potential = { has_country_flag = governor_posture_research_focus }
+		focus = {
+			physics_research = @governor_research_focus
+			society_research = @governor_research_focus
+			engineering_research = @governor_research_focus
+		}
+	}
+}
+
+intermediate_economy_plan = {
+	subplan = {
+		optional = yes
+		set_name = "Governor Naval Cap"
+		potential = { has_country_flag = governor_posture_naval_cap }
+		naval_cap = @governor_naval_cap_target
+		focus = { alloys = @governor_alloys_focus }
+	}
+	subplan = {
+		optional = yes
+		set_name = "Governor Research Focus"
+		potential = { has_country_flag = governor_posture_research_focus }
+		focus = {
+			physics_research = @governor_research_focus
+			society_research = @governor_research_focus
+			engineering_research = @governor_research_focus
+		}
+	}
+}
+
+advanced_economy_plan = {
+	subplan = {
+		optional = yes
+		set_name = "Governor Naval Cap"
+		potential = { has_country_flag = governor_posture_naval_cap }
+		naval_cap = @governor_naval_cap_target
+		focus = { alloys = @governor_alloys_focus }
+	}
+	subplan = {
+		optional = yes
+		set_name = "Governor Research Focus"
+		potential = { has_country_flag = governor_posture_research_focus }
+		focus = {
+			physics_research = @governor_research_focus
+			society_research = @governor_research_focus
+			engineering_research = @governor_research_focus
+		}
+	}
+}
+
+mature_economy_plan = {
+	subplan = {
+		optional = yes
+		set_name = "Governor Naval Cap"
+		potential = { has_country_flag = governor_posture_naval_cap }
+		naval_cap = @governor_naval_cap_target
+		focus = { alloys = @governor_alloys_focus }
+	}
+	subplan = {
+		optional = yes
+		set_name = "Governor Research Focus"
+		potential = { has_country_flag = governor_posture_research_focus }
+		focus = {
+			physics_research = @governor_research_focus
+			society_research = @governor_research_focus
+			engineering_research = @governor_research_focus
+		}
+	}
+}
+
+endgame_economy_plan = {
+	subplan = {
+		optional = yes
+		set_name = "Governor Naval Cap"
+		potential = { has_country_flag = governor_posture_naval_cap }
+		naval_cap = @governor_naval_cap_target
+		focus = { alloys = @governor_alloys_focus }
+	}
+	subplan = {
+		optional = yes
+		set_name = "Governor Research Focus"
+		potential = { has_country_flag = governor_posture_research_focus }
+		focus = {
+			physics_research = @governor_research_focus
+			society_research = @governor_research_focus
+			engineering_research = @governor_research_focus
+		}
+	}
+}
+
+beyond_endgame_economy_plan = {
+	subplan = {
+		optional = yes
+		set_name = "Governor Naval Cap"
+		potential = { has_country_flag = governor_posture_naval_cap }
+		naval_cap = @governor_naval_cap_target
+		focus = { alloys = @governor_alloys_focus }
+	}
+	subplan = {
+		optional = yes
+		set_name = "Governor Research Focus"
+		potential = { has_country_flag = governor_posture_research_focus }
+		focus = {
+			physics_research = @governor_research_focus
+			society_research = @governor_research_focus
+			engineering_research = @governor_research_focus
+		}
+	}
+}

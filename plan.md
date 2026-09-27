@@ -94,6 +94,7 @@
 - [ ] Stellaris market: a new monthly trade starts from the resource's own amount (0.1 x its market amount; levers ruling 8); alloys and sr_* refused unsent until the live market check measures their fractional start
 - [ ] Stellaris briefing fields for the levers (ruling 1): policy dates, market block (kind, prices, bought/sold, last month's trades), occupied colonies, force peace, own battles apart from allies', invasions, shipyards, colony jobs/unemployment/districts/queue, `governor_*` variables
 - [ ] Stellaris directives obey the player's policy rules (`can_set_policy`, `cooldown = yes`) and report each policy set through a `GOVERNOR_POLICY` marker; the reply lists set and locked policies (levers rulings 3, 20)
+- [ ] Governor Bridge v2 (levers rulings 18-19): posture flags beside the directive (`naval_cap`, `ship_upgrades` under defend/prepare_war, `research_focus` under tech_rush, `war_crisis` for the crisis) steering economic-plan subplans and AI budgets, `stellaris posture` / MCP `stellaris_posture`, all disabled until each passes its live probe; the monthly naval-capacity export for the empire `take-control` marks; `bridge-check` reports v1 or v2
 
 ## Pilot app: observability and control
 - [x] Decision traces: prompt, Gemini thought summaries, tool calls and results, answer, tokens, time (`runs/<id>/traces/`)
@@ -105,7 +106,7 @@
 - [x] Directives set policies only under each option's `valid` trigger; `expand`/`diplomacy_first` also set proactive first contact — live check that the policies change in game — verified 2026-09-26 in a new Theian game: the save holds `first_contact_protocol = first_contact_proactive`
 - [x] Versioned Claude Code models in the catalog (aliases plus every id from the Anthropic listing; deployed d91768b)
 - [x] Model provider `claude-code:*` (Claude Code CLI, Claude subscription instead of an API key) for any role, Strategy first; falls back to the next model on a usage limit or CLI error
-- [ ] Economic-plan subplans gated on directive flags (naval capacity under `defend`/`prepare_war`, research under `tech_rush`, pops under `expand`, small strategic-resource targets when one runs out) — test against the game files, then measure over ~10 in-game years
+- [ ] Economic-plan subplans gated on directive flags (naval capacity under `defend`/`prepare_war`, research under `tech_rush`, pops under `expand`, small strategic-resource targets when one runs out) — test against the game files, then measure over ~10 in-game years. Naval capacity and research are Governor Bridge v2 postures on feat/stellaris-levers (disabled until their live probe)
 - [ ] Evaluate carrier doctrine under `prepare_war` (`fleet_doctrine = strike_wing_fleet_doctrine`, cruisers and hangars known): live test that the AI's refreshed designs raise fleet power
 - [ ] Evaluate isolationist stance for a boxed-in research phase (+10% unity, but −25% diplomatic weight; conflicts with federation play)
 - [x] Live test: player actions under `human_ai` persist — a research pick (swap button in the Technology screen, F4) and a monthly market order (Market → Add new monthly trade) both held 13 in-game months (2026-09-26)

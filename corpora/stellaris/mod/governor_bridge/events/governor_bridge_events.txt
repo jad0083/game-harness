@@ -1,0 +1,25 @@
+namespace = governor_bridge
+
+# Read channel: each month the governed empire's naval capacity (maximum and used) goes into country
+# variables, which the save keeps under country.variables and the briefing reads (governor_vars).
+# The save has no naval-capacity maximum otherwise. Hidden, fired only by on_monthly_pulse_country,
+# and only for the country `stellaris take-control` marked with governor_bridge_player. It reads two
+# numbers and changes nothing else.
+country_event = {
+	id = governor_bridge.1
+	hide_window = yes
+	is_triggered_only = yes
+	trigger = {
+		has_country_flag = governor_bridge_player
+	}
+	immediate = {
+		export_trigger_value_to_variable = {
+			trigger = max_naval_capacity
+			variable = governor_naval_cap
+		}
+		export_trigger_value_to_variable = {
+			trigger = used_naval_capacity_integer
+			variable = governor_naval_used
+		}
+	}
+}

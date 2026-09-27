@@ -242,10 +242,11 @@ C="./target/release/game-controller --corpus corpora/stellaris"
 $C stellaris brief                   # ~2 KB briefing from the newest autosave (read via the agent)
 $C stellaris take-control            # once per session: leave observer mode, human_ai ON (read on screen)
 $C stellaris install-mod             # upload the Governor Bridge mod and enable it (agent >= 1.3; restart the game)
-$C stellaris bridge-check            # is the mod loaded in the running game?
+$C stellaris bridge-check            # is the mod loaded in the running game, and which version (v1 or v2)?
 # The Paradox Launcher opens when mods are enabled: its playset "Governor Bridge" holds only this
 # mod (the user's "Initial playset" is theirs); pick it on the launcher's Home, then RESUME.
 $C stellaris directive expand        # flags + policies on the empire; confirmed in game.log
+$C stellaris posture war_crisis off  # set (on) or clear one Governor Bridge posture; --dry-run prints the line
 $C stellaris speed fastest           # slowest | slow | normal | fast | fastest
 $C stellaris pause                   # / resume — state read from the screen, safe to repeat
 $C stellaris log -l 30               # tail of logs/game.log
@@ -268,6 +269,14 @@ Rules:
   10-year lock, no stance change at war) and starts that lock (`cooldown = yes`). game.log gets
   `GOVERNOR_POLICY <policy> <option> <nonce>` for each policy set; the reply lists the policies set
   and those locked. A locked policy is not a failure: the flag still changes.
+- **Postures** (`[posture.*]` in directives.toml; Governor Bridge v2): flags `governor_posture_<name>`
+  that the mod reads to steer the AI's own spending (economic-plan focus, AI budgets; never resources
+  or modifiers). `defend`/`prepare_war` switch `naval_cap` and `ship_upgrades`, `tech_rush`
+  switches `research_focus`; `war_crisis` belongs to the war crisis only. **Every posture is
+  `enabled = false`** until its live probe passes (a fork-and-reload A/B from one autosave on a
+  throwaway game, 24 in-game months per arm); a disabled posture is never set, and enabling one is a
+  data commit. v2 also exports the naval capacity each month for the empire `take-control` marked
+  (`governor_bridge_player`), so the briefing shows "naval capacity used/max (from the mod)".
 - Settings used: autosave Monthly (`settings.txt` `autosave=2`), tutorial off.
 - **Weighted pillars** (`[weights]` in pillars.toml): pillars carry weights (sum 100, 5..50, heaviest
   >= 2x lightest); each decision gets every directive's pressure (weight x milestone need) and a

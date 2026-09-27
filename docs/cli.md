@@ -57,9 +57,11 @@ The compiled controller binary provides full programmatic access to all agent fu
 ./target/release/game-controller stellaris brief --json
 ./target/release/game-controller stellaris take-control               # once per session: AI plays the empire (human_ai)
 ./target/release/game-controller stellaris install-mod                # companion mod into the game's mod folder (agent >= 1.3)
-./target/release/game-controller stellaris bridge-check               # is it loaded?
+./target/release/game-controller stellaris bridge-check               # is it loaded, v1 or v2?
 ./target/release/game-controller stellaris directive expand --dry-run  # console lines only
 ./target/release/game-controller stellaris directive expand            # apply (Stellaris must be foreground)
+./target/release/game-controller stellaris posture war_crisis off --dry-run   # console line only
+./target/release/game-controller stellaris posture war_crisis off      # set (on) or clear one posture flag
 ./target/release/game-controller stellaris log -l 30                   # tail of logs/game.log
 ./target/release/game-controller stellaris speed fastest               # slowest|slow|normal|fast|fastest
 ./target/release/game-controller stellaris pause                       # / resume; state read from the screen, safe to repeat
@@ -127,7 +129,8 @@ Gemini CLI — `.gemini/settings.json` (in this repo):
 | `focus` | `title` | Bring target window to foreground by title substring. |
 | `stellaris_briefing` | `json` | *Stellaris corpus only.* Briefing from the newest monthly autosave (fetched via the agent's `/files`): date, government, stockpile and net per resource with deficits flagged, power, research and options, policies, planets (occupied ones flagged), wars (our side's and our own battles, invasions, force peace), shipyards at war, market prices. About 2 KB of text; `json` adds policy dates, per-colony jobs, unemployment, districts and queue, the market block and `governor_*` variables. |
 | `stellaris_take_control` | `{}` | *Stellaris only.* Hand the empire to the game's AI: leave observer mode if needed, switch `human_ai` on (the console's reply is read on screen). Once per session. |
-| `stellaris_directive` | `name` | *Stellaris only.* Apply a governor directive from `corpora/stellaris/directives.toml`: clear other directive flags, set `governor_directive_<name>` and its policies; confirmed by a scoped `GOVERNOR_APPLIED <name> <nonce>` in game.log. Each policy is set only if `can_set_policy` holds (the 10-year lock, no stance change at war) and the option is valid, with `cooldown = yes`; a `GOVERNOR_POLICY <policy> <option> <nonce>` marker reports it, and the reply lists the policies set and those locked. Checks the game is foreground before every keystroke. |
+| `stellaris_directive` | `name` | *Stellaris only.* Apply a governor directive from `corpora/stellaris/directives.toml`: clear other directive flags, clear the other directive-bound posture flags and set its own enabled ones, set `governor_directive_<name>` and its policies; confirmed by a scoped `GOVERNOR_APPLIED <name> <nonce>` in game.log. Each policy is set only if `can_set_policy` holds (the 10-year lock, no stance change at war) and the option is valid, with `cooldown = yes`; a `GOVERNOR_POLICY <policy> <option> <nonce>` marker reports it, and the reply lists the policies set and those locked. Checks the game is foreground before every keystroke. |
+| `stellaris_posture` | `name, on` | *Stellaris only.* Set or clear one Governor Bridge posture (`directives.toml` `[posture.*]`: naval_cap, research_focus, ship_upgrades, war_crisis): the flag `governor_posture_<name>`, which the mod v2 reads to steer the AI's own spending; confirmed by a scoped `GOVERNOR_POSTURE <name> on\|off <nonce>` in game.log. Only enabled postures can be set (all are disabled until their live probe passes); clearing always works. Directives switch the postures bound to them themselves. |
 | `stellaris_speed` | `speed` | *Stellaris only.* Set the game speed: slowest, slow, normal, fast, fastest (`-` ×4 then `=` ×n; fastest ≈ 2.5 in-game months per second). |
 | `stellaris_pause` | `paused` | *Stellaris only.* Pause or resume; reads the state from the screen first (the yellow "Paused" label), so it is safe to repeat. |
 | `stellaris_log` | `lines` | *Stellaris only.* Tail of `logs/game.log`. |

@@ -162,7 +162,7 @@ Each screen is handled at most once per attempt; at most 4 dismissals per turn. 
 - `detect_change_bbox` — crop of the changed region handed to the model with a `ModalEvent`.
 
 ### D. Stdio MCP Server (`mcp.rs`)
-Exposes 19 Model Context Protocol tools over JSON-RPC stdio: screen and input tools, autopilot, and the corpus tools (`corpus_search`, `corpus_get`, `corpus_tech`, `corpus_improvement`, `corpus_order`, `corpus_info`, `corpus_strategy`). Game-specific tools are listed only when their corpus is loaded: `stellaris_briefing`, `stellaris_directive`, `stellaris_speed`, `stellaris_pause` and `stellaris_log` with `corpora/stellaris`.
+Exposes 19 Model Context Protocol tools over JSON-RPC stdio: screen and input tools, autopilot, and the corpus tools (`corpus_search`, `corpus_get`, `corpus_tech`, `corpus_improvement`, `corpus_order`, `corpus_info`, `corpus_strategy`). Game-specific tools are listed only when their corpus is loaded: `stellaris_briefing`, `stellaris_directive`, `stellaris_posture`, `stellaris_take_control`, `stellaris_speed`, `stellaris_pause`, `stellaris_log`, `stellaris_pick_tech` and `stellaris_market_sync` with `corpora/stellaris`.
 
 ### E. Stellaris save reader (`stellaris.rs`)
 Reads a `.sav` (ZIP of `meta` + `gamestate`, Clausewitz text) with the `jomini` parser and builds
@@ -202,6 +202,28 @@ match `[a-z0-9_]+`, so a directive cannot inject other commands. `run_console` c
 Stellaris is the foreground window before every keystroke, and `apply_directive` polls `game.log`
 (written with a few seconds' delay) for up to 8 s. It pauses the game while typing and restores the
 previous state afterwards.
+
+Postures (`[posture.*]` in directives.toml; levers design rulings 18-21) are country flags
+`governor_posture_<name>` beside the directive, read by the Governor Bridge mod v2. A directive
+lists the postures it switches; its console trip gets one more line that sets its *enabled*
+postures and clears every other directive-bound posture, apart from the directive-flag line, so
+neither ever clears the other's flags. `war_crisis` is bound to no directive: `apply_posture`
+(`stellaris posture`, MCP `stellaris_posture`) sets or clears one posture alone, confirmed by
+`GOVERNOR_POSTURE <name> on|off <nonce>`. A disabled posture is never set (every one is disabled
+until its live probe passes). `Directives::parse` refuses a bound posture missing from the
+registry, a posture named like a directive, and a `mod_version` the repo's mod files do not have.
+
+The companion mod (`corpora/stellaris/mod/governor_bridge`, v2) holds only additive entries: AI
+budget entries gated on one directive or posture flag, in (resource, category) pairs a non-nomadic
+empire spends from in vanilla; subplans (focus and naval_cap only, optional, named `Governor …`)
+merged into the six vanilla economic plans; and the read channel, a hidden triggered-only
+`governor_bridge.1` on `on_monthly_pulse_country` that exports `max_naval_capacity` and
+`used_naval_capacity_integer` to `governor_naval_cap` / `governor_naval_used` for the country
+carrying `governor_bridge_player`, which `take_control` sets in its scope probe. Nothing in it
+adds resources, modifiers or policies; `stellaris.rs` tests parse every file and check each rule.
+`bridge_loaded` sends one console line per version trigger (`governor_bridge_version_2`, then
+`governor_bridge_present`), because an unknown trigger fails its whole effect, and returns the
+version it saw.
 
 Pause state comes from `[screens.paused]`: a colour signature (`color_range`,
 `color_min_fraction`; `imaging::color_fraction`) over the "Paused" label. That label pulses in

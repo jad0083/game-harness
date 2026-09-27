@@ -393,6 +393,18 @@ impl McpServer {
                 }
             }));
             tools.push(serde_json::json!({
+                "name": "stellaris_posture",
+                "description": "Set (on=true) or clear (on=false) one Governor Bridge posture on the player's empire: the country flag governor_posture_<name>, which the companion mod v2 reads to steer how the game's AI spends its own income (economic-plan focus, AI budgets). It never adds resources or modifiers. Directives already switch the postures bound to them; this tool serves the war crisis posture. Only postures enabled in directives.toml (after their live probe) can be set; clearing always works. Confirmed in game.log. Refuses if Stellaris is not the foreground window.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "name": { "type": "string", "enum": ["naval_cap", "research_focus", "ship_upgrades", "war_crisis"] },
+                        "on": { "type": "boolean" }
+                    },
+                    "required": ["name", "on"]
+                }
+            }));
+            tools.push(serde_json::json!({
                 "name": "stellaris_take_control",
                 "description": "Hand the player's empire to the game's own AI: leave observer mode if needed and switch human_ai on (observer mode leaves the AI half-active: no exploration or expansion). The state is read from the console's reply on screen; leaves the game paused. Call once at the start of a session.",
                 "inputSchema": { "type": "object", "properties": {} }
@@ -874,6 +886,21 @@ impl McpServer {
                 );
                 Ok(serde_json::json!({ "content": [{ "type": "text", "text": text }] }))
             }
+            "stellaris_posture" => {
+                let name = args.get("name").and_then(|v| v.as_str()).ok_or_else(|| anyhow::anyhow!("missing `name`"))?;
+                let on = args.get("on").and_then(|v| v.as_bool()).ok_or_else(|| anyhow::anyhow!("missing `on`"))?;
+                let dir = self.corpus.as_ref().map(|c| c.dir.clone()).ok_or_else(|| anyhow::anyhow!("no corpus loaded"))?;
+                let directives = crate::stellaris::Directives::load(&dir)?;
+                let pause = self.corpus.as_ref().map(|c| crate::stellaris::PauseDetector::from_manifest(&c.manifest)).transpose()?;
+                let lines = crate::stellaris::apply_posture(&self.client, &directives, name, on, pause.as_ref()).await?;
+                let text = format!(
+                    "Posture {name} {} and confirmed in game.log.\nConsole lines:\n{}\nThe next monthly autosave will {} governor_posture_{name} under Governor flags.",
+                    if on { "set" } else { "cleared" },
+                    lines.join("\n"),
+                    if on { "list" } else { "no longer list" }
+                );
+                Ok(serde_json::json!({ "content": [{ "type": "text", "text": text }] }))
+            }
             "stellaris_take_control" => {
                 let c = self.corpus.as_ref().ok_or_else(|| anyhow::anyhow!("no corpus loaded"))?;
                 let pause = crate::stellaris::PauseDetector::from_manifest(&c.manifest)?;
@@ -1096,6 +1123,20 @@ mod tests {
         assert_eq!(listed, defined);
         assert!(!has(Some("galciv4")));
         assert!(!has(None));
+    }
+
+    #[test]
+    fn posture_tool_lists_the_registry_and_needs_a_name_and_a_state() {
+        let tools = McpServer::list_tools(Some("stellaris"));
+        let tool = tools.iter().find(|t| t["name"] == "stellaris_posture").expect("stellaris_posture");
+        let listed: Vec<String> =
+            tool["inputSchema"]["properties"]["name"]["enum"].as_array().unwrap().iter().map(|v| v.as_str().unwrap().to_string()).collect();
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpora/stellaris");
+        let registry: Vec<String> = crate::stellaris::Directives::load(&dir).unwrap().posture.into_keys().collect();
+        assert_eq!(listed, registry, "the enum must match directives.toml [posture.*]");
+        assert_eq!(tool["inputSchema"]["properties"]["on"]["type"], "boolean");
+        assert_eq!(tool["inputSchema"]["required"], serde_json::json!(["name", "on"]));
+        assert!(!McpServer::list_tools(Some("galciv4")).iter().any(|t| t["name"] == "stellaris_posture"));
     }
 
     #[test]

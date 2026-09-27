@@ -3,3 +3,9 @@
 governor_bridge_present = {
 	always = yes
 }
+
+# Version 2 (postures and the naval-capacity read channel): `stellaris bridge-check` tells a game
+# still running the v1 files from one that loaded v2.
+governor_bridge_version_2 = {
+	always = yes
+}

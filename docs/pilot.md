@@ -67,7 +67,12 @@ consolidate_economy, tech_rush, prepare_war, defend, diplomacy_first), applied f
 flags and policies that the Governor Bridge mod turns into AI budget weights. Policies obey the
 player's rules (`can_set_policy`, the 10-year lock started by each change): a directive whose policy
 is still locked, or barred (no stance change at war), sets its flag only, and the reply lists the
-policies set and those locked.
+policies set and those locked. A directive can also switch **postures**, flags the mod v2 reads to
+steer the AI's own spending (naval capacity and ship refits under `defend`/`prepare_war`, research
+under `tech_rush`, and a war-crisis posture for defence armies and platforms); every posture stays
+disabled until its live probe passes, so for now none is set. The mod v2 also writes the naval
+capacity into each autosave for the governed empire, so the briefing shows used/max once it is
+installed.
 
 The loop: pause → briefing from the newest autosave → the model returns a directive or `keep` →
 apply → resume → poll autosaves until the decision interval has passed or something urgent

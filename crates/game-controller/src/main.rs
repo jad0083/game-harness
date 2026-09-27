@@ -162,8 +162,19 @@ enum StellarisAction {
     /// Upload the companion mod (corpora/stellaris/mod/governor_bridge) and enable it in
     /// dlc_load.json; the game loads it at its next start (agent >= 1.3.0)
     InstallMod,
-    /// Check through the console whether the running game has the companion mod loaded
+    /// Check through the console whether the running game has the companion mod loaded, and
+    /// which version (v2: postures and the naval-capacity read channel)
     BridgeCheck,
+    /// Set or clear a Governor Bridge posture flag (directives.toml [posture.*]); only enabled
+    /// postures can be set, clearing always works
+    Posture {
+        name: String,
+        #[arg(value_parser = ["on", "off"])]
+        state: String,
+        /// Print the console line without sending anything
+        #[arg(long)]
+        dry_run: bool,
+    },
     /// Pause the game (checked on screen; no-op if already paused)
     Pause,
     /// Resume the game (checked on screen; no-op if already running)
@@ -243,6 +254,7 @@ async fn main() -> Result<()> {
         Commands::Corpus { .. }
             | Commands::Stellaris { action: StellarisAction::Brief { file: Some(_), .. } }
             | Commands::Stellaris { action: StellarisAction::Directive { dry_run: true, .. } }
+            | Commands::Stellaris { action: StellarisAction::Posture { dry_run: true, .. } }
     );
     let token = cli.token.as_deref().or(if offline { Some("offline") } else { None });
     let client = Arc::new(AgentClient::new(cli.agent_url.as_deref(), token)?);
@@ -328,11 +340,33 @@ async fn main() -> Result<()> {
             }
             println!("Enabled in dlc_load.json. Restart the game to load it; then `stellaris bridge-check`.");
         }
-        Commands::Stellaris { action: StellarisAction::BridgeCheck } => {
-            let loaded = stellaris::bridge_loaded(&client).await?;
-            println!("{}", if loaded { "Governor Bridge is loaded" } else { "Governor Bridge is NOT loaded" });
-            if !loaded {
+        Commands::Stellaris { action: StellarisAction::BridgeCheck } => match stellaris::bridge_loaded(&client).await? {
+            Some(v) => println!("Governor Bridge v{v} is loaded{}", if v < 2 { " (v2 not loaded: install-mod, then restart the game)" } else { "" }),
+            None => {
+                println!("Governor Bridge is NOT loaded");
                 std::process::exit(1);
+            }
+        },
+        Commands::Stellaris { action: StellarisAction::Posture { name, state, dry_run } } => {
+            let dir = cli.corpus.clone().unwrap_or_else(|| PathBuf::from("corpora/stellaris"));
+            let directives = stellaris::Directives::load(&dir)?;
+            let on = state == "on";
+            if dry_run {
+                if let Some(p) = directives.posture.get(&name) {
+                    let state = if p.enabled { "enabled" } else { "disabled until its live probe passes" };
+                    println!("# {name}: {} (read by mod v{}; {state})", p.description, p.mod_version);
+                }
+                for l in directives.posture_lines(&name, on, "<nonce>")? {
+                    println!("{l}");
+                }
+            } else {
+                let manifest = corpus::GameCorpus::load_from_dir(&dir)?.manifest;
+                let pause = stellaris::PauseDetector::from_manifest(&manifest)?;
+                let lines = stellaris::apply_posture(&client, &directives, &name, on, Some(&pause)).await?;
+                println!("Posture {name} {state} (confirmed in game.log).");
+                for l in &lines {
+                    println!("  {l}");
+                }
             }
         }
         Commands::Stellaris { action: StellarisAction::Speed { name } } => {
