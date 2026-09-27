@@ -14,7 +14,9 @@
 -- queue's current item (GetCurrentProductionTypeHash), era score (Game.GetEras()) and military
 -- strength (GetStats():GetMilitaryStrength()) are ported from civ6-mcp
 -- (https://github.com/lmwilki/civ6-mcp), MIT License, Copyright (c) 2026 Liam Wilkinson.
--- Checked live on 1.0.12.68 (games/civ6-kublai/journal.md).
+-- Checked live on 1.0.12.68 (games/civ6-kublai/journal.md). The snapshot's defence, religion and
+-- blocker fields follow docs/design/2026-09-27-civ6-levers-design.md, ruling 11; each is left out
+-- when the game's API fails for it.
 
 if Harness and Harness.version == HARNESS_VERSION then
   return
@@ -29,6 +31,10 @@ local ARRAY = {}                      -- metatable marking a table as a JSON arr
 function H.array(t)
   return setmetatable(t or {}, ARRAY)
 end
+
+-- A field that is present with no value (a Lua table cannot hold nil): encoded as JSON null.
+local NULL = setmetatable({}, { __tostring = function() return 'null' end })
+H.null = NULL
 
 local ESC = { ['"'] = '\\"', ['\\'] = '\\\\', ['\b'] = '\\b', ['\f'] = '\\f', ['\n'] = '\\n', ['\r'] = '\\r', ['\t'] = '\\t' }
 
@@ -54,7 +60,7 @@ encode = function(v, depth)
   depth = depth or 0
   if depth > 20 then error('json: nested too deep') end
   local t = type(v)
-  if v == nil then return 'null' end
+  if v == nil or v == NULL then return 'null' end
   if t == 'boolean' then return v and 'true' or 'false' end
   if t == 'number' then
     if v ~= v or v == math.huge or v == -math.huge then return 'null' end
@@ -153,23 +159,75 @@ local function at_war_with(me, other)
   return ok and war or false
 end
 
--- Enemy military units (at war with us, or barbarians) within 3 tiles of the city, and whether
--- its City Center is under siege or damaged.
+-- The purchase command's parameters for a unit or building in a city and its live price, or why it
+-- cannot be bought.
+local function purchase_params(c, key, currency)
+  local tbl, row = item_row(key)
+  if row == nil then return nil, 'unknown item ' .. tostring(key) end
+  if tbl ~= 'Units' and tbl ~= 'Buildings' then return nil, key .. ' cannot be bought (units and buildings only)' end
+  local y = GameInfo.Yields[currency == 'faith' and 'YIELD_FAITH' or 'YIELD_GOLD']
+  local params = {}
+  params[CityCommandTypes[tbl == 'Units' and 'PARAM_UNIT_TYPE' or 'PARAM_BUILDING_TYPE']] = row.Hash
+  params[CityCommandTypes.PARAM_YIELD_TYPE] = y.Index
+  local formation = -1
+  if tbl == 'Units' then
+    formation = MilitaryFormationTypes.STANDARD_MILITARY_FORMATION
+    params[CityCommandTypes.PARAM_MILITARY_FORMATION_TYPE] = formation
+  end
+  local cost = c:GetGold():GetPurchaseCost(y.Index, row.Hash, formation)
+  return params, nil, cost
+end
+
+-- Whether the game allows a purchase now: the balance, a unit already on the city tile (stacking),
+-- and the faith rules are the game's own check.
+local function purchase_allowed(c, params)
+  return CityManager.CanStartCommand(c, CityCommandTypes.PURCHASE, false, params, false) and true or false
+end
+
+-- The city's City Center district: its garrison and walls, and its defence strength.
+local function center_of(c)
+  for _, d in c:GetDistricts():Members() do
+    local row = GameInfo.Districts[d:GetType()]
+    if row and row.DistrictType == 'DISTRICT_CITY_CENTER' then return d end
+  end
+  return nil
+end
+
+local function is_military(row)
+  return row ~= nil and row.FormationClass ~= 'FORMATION_CLASS_CIVILIAN' and row.FormationClass ~= 'FORMATION_CLASS_SUPPORT'
+end
+
+-- A unit's kind for defence: siege, cavalry (light or heavy), ranged, or melee. Melee includes
+-- anti-cavalry (the Spearman) and recon; melee and cavalry are the kinds that can capture a city.
+local CAVALRY = { PROMOTION_CLASS_LIGHT_CAVALRY = true, PROMOTION_CLASS_HEAVY_CAVALRY = true }
+local function unit_kind(row)
+  if row.PromotionClass == 'PROMOTION_CLASS_SIEGE' then return 'siege' end
+  if CAVALRY[row.PromotionClass] then return 'cavalry' end
+  if (row.RangedCombat or 0) > 0 or (row.Bombard or 0) > 0 then return 'ranged' end
+  return 'melee'
+end
+
+-- Land units that defend a city (pillars.toml [actions.purchase] defender_classes, as promotion classes).
+local DEFENDER = { PROMOTION_CLASS_MELEE = true, PROMOTION_CLASS_RANGED = true, PROMOTION_CLASS_ANTI_CAVALRY = true,
+                   PROMOTION_CLASS_LIGHT_CAVALRY = true, PROMOTION_CLASS_HEAVY_CAVALRY = true }
+
+-- Enemy military units (at war with us, or barbarians) within 3 tiles of the city, with their
+-- distance, and whether its City Center is under siege or damaged.
 local function threat(me, c)
-  local n = 0
+  local hostile = {}
   local cx, cy = c:GetX(), c:GetY()
   for dy = -3, 3 do
     for dx = -3, 3 do
       local x, y = cx + dx, cy + dy
-      if Map.GetPlotDistance(cx, cy, x, y) <= 3 then
+      local dist = Map.GetPlotDistance(cx, cy, x, y)
+      if dist <= 3 then
         local units = Map.GetUnitsAt(x, y)
         if units then
           for u in units:Units() do
             local owner = u:GetOwner()
             local row = GameInfo.Units[u:GetType()]
-            local military = row and row.FormationClass ~= 'FORMATION_CLASS_CIVILIAN' and row.FormationClass ~= 'FORMATION_CLASS_SUPPORT'
-            if owner ~= me and military and (Players[owner]:IsBarbarian() or at_war_with(me, owner)) then
-              n = n + 1
+            if owner ~= me and is_military(row) and (Players[owner]:IsBarbarian() or at_war_with(me, owner)) then
+              hostile[#hostile + 1] = { u = u, row = row, x = x, y = y, dist = dist }
             end
           end
         end
@@ -177,14 +235,158 @@ local function threat(me, c)
     end
   end
   local siege, damaged = false, false
-  for _, d in c:GetDistricts():Members() do
-    local row = GameInfo.Districts[d:GetType()]
-    if row and row.DistrictType == 'DISTRICT_CITY_CENTER' then
-      pcall(function() siege = d:IsUnderSiege() end)
-      pcall(function() damaged = (d:GetDamage(DefenseTypes.DISTRICT_GARRISON) or 0) > 0 end)
+  local d = center_of(c)
+  if d then
+    pcall(function() siege = d:IsUnderSiege() end)
+    pcall(function() damaged = (d:GetDamage(DefenseTypes.DISTRICT_GARRISON) or 0) > 0 end)
+  end
+  return hostile, siege, damaged
+end
+
+-- Our land combat unit on the city tile (its garrison), or null.
+local function garrison_of(me, c)
+  local units = Map.GetUnitsAt(c:GetX(), c:GetY())
+  if units then
+    for u in units:Units() do
+      local row = GameInfo.Units[u:GetType()]
+      if u:GetOwner() == me and row and row.FormationClass == 'FORMATION_CLASS_LAND_COMBAT' then return row.UnitType end
     end
   end
-  return n, siege, damaged
+  return NULL
+end
+
+local function defense_of(d)
+  local g_max = d:GetMaxDamage(DefenseTypes.DISTRICT_GARRISON) or 0
+  local w_max = d:GetMaxDamage(DefenseTypes.DISTRICT_OUTER) or 0
+  return { garrison_hp = g_max - (d:GetDamage(DefenseTypes.DISTRICT_GARRISON) or 0), garrison_max = g_max,
+           walls_hp = w_max - (d:GetDamage(DefenseTypes.DISTRICT_OUTER) or 0), walls_max = w_max }
+end
+
+-- Damage formula (GlobalParameters COMBAT_BASE_DAMAGE 24; e^(difference / 25)), the fallback when
+-- the game's own combat preview gives no answer.
+local BASE_DAMAGE, DAMAGE_PER_STRENGTH = 24, 0.04
+
+-- One attack of an enemy unit on the City Center: the game's combat preview (as UnitPanel.lua
+-- uses it), else the formula with the unit's strength against the district's defence strength.
+-- A preview of 0 is no answer (seen live at T129: an enemy Catapult 4 tiles from Xi'an previewed
+-- 0 damage; any real attack does some).
+local function attack_damage(e, kind, d, busy)
+  local ctype, strength = nil, e.u:GetCombat()
+  if kind == 'ranged' or kind == 'siege' then
+    ctype, strength = CombatTypes.RANGED, e.u:GetRangedCombat()
+    if e.u:GetBombardCombat() > strength then
+      ctype, strength = CombatTypes.BOMBARD or CombatTypes.RANGED, e.u:GetBombardCombat()
+    end
+  end
+  if not busy then
+    local ok, r = pcall(CombatManager.SimulateAttackVersus, e.u:GetComponentID(), d:GetComponentID(), ctype)
+    if ok and type(r) == 'table' then
+      local D = r[CombatResultParameters.DEFENDER]
+      local dmg = type(D) == 'table' and D[CombatResultParameters.DAMAGE_TO] or nil
+      if type(dmg) == 'number' and dmg > 0 then return dmg, 'simulated' end
+    end
+  end
+  local ok, def = pcall(function() return d:GetDefenseStrength() end)
+  if ok and type(def) == 'number' and strength > 0 then
+    return BASE_DAMAGE * math.exp(DAMAGE_PER_STRENGTH * (strength - def)), 'formula'
+  end
+  return nil, nil
+end
+
+local LIST_CAP = 8               -- enemies and defenders listed per threatened city
+
+local function by_distance(a, b)
+  if a.dist ~= b.dist then return a.dist < b.dist end
+  return a.hp < b.hp
+end
+
+local function capped(list)
+  table.sort(list, by_distance)
+  local out = H.array()
+  for i = 1, math.min(LIST_CAP, #list) do out[i] = list[i] end
+  return out
+end
+
+-- The two cheapest defenders the city can build, with their live gold and faith prices and whether
+-- the game allows each purchase now.
+local function defence_prices(c)
+  local bq = c:GetBuildQueue()
+  local out = {}
+  for row in GameInfo.Units() do
+    if DEFENDER[row.PromotionClass] and row.Domain == 'DOMAIN_LAND' and bq:CanProduce(row.Hash, true) then
+      local e = { unit = row.UnitType }
+      for _, currency in ipairs({ 'gold', 'faith' }) do
+        local params, _, cost = purchase_params(c, row.UnitType, currency)
+        if params then
+          e[currency] = cost
+          e[currency .. '_allowed'] = purchase_allowed(c, params)
+        end
+      end
+      out[#out + 1] = e
+    end
+  end
+  table.sort(out, function(a, b) return (a.gold or math.huge) < (b.gold or math.huge) end)
+  local top = H.array()
+  for i = 1, math.min(2, #out) do top[i] = out[i] end
+  return top
+end
+
+-- For a threatened city: the enemies near it, our units near it, what can capture it, the damage
+-- one attack from each enemy in range would do, whether it can strike, and what a defender costs.
+-- Each part is left out when the game's API fails for it.
+local function danger_detail(me, c, info, hostile)
+  local d = center_of(c)
+  local busy = false
+  pcall(function() busy = UI.IsGameCoreBusy() end)
+  pcall(function()
+    local enemies, capture, incoming, from = {}, 0, 0, nil
+    for _, e in ipairs(hostile) do
+      local kind = unit_kind(e.row)
+      local hp = e.u:GetMaxDamage() - e.u:GetDamage()
+      enemies[#enemies + 1] = { id = e.u:GetID(), owner = e.u:GetOwner(), type = e.row.UnitType, kind = kind,
+                                x = e.x, y = e.y, dist = e.dist, hp = hp }
+      if e.dist == 1 and (kind == 'melee' or kind == 'cavalry') then capture = capture + 1 end
+      local reach = 1
+      if kind == 'ranged' or kind == 'siege' then pcall(function() reach = e.u:GetRange() end) end
+      if d and e.dist >= 1 and e.dist <= reach then
+        local dmg, src = attack_damage(e, kind, d, busy)
+        if dmg then
+          incoming = incoming + dmg
+          from = (from == nil or from == src) and src or 'mixed'
+        end
+      end
+    end
+    info.enemies = capped(enemies)
+    info.capture_adjacent = capture
+    info.incoming = math.floor(incoming + 0.5)
+    info.incoming_from = from
+  end)
+  pcall(function()
+    local cx, cy = c:GetX(), c:GetY()
+    local ours = {}
+    for _, u in Players[me]:GetUnits():Members() do
+      local row = GameInfo.Units[u:GetType()]
+      if is_military(row) and u:GetX() >= 0 then
+        local dist = Map.GetPlotDistance(cx, cy, u:GetX(), u:GetY())
+        if dist <= 3 then
+          ours[#ours + 1] = { id = u:GetID(), type = row.UnitType, kind = unit_kind(row), x = u:GetX(), y = u:GetY(),
+                              dist = dist, hp = u:GetMaxDamage() - u:GetDamage(), moves = u:GetMovesRemaining(),
+                              attacks = u:GetAttacksRemaining(), range = u:GetRange() }
+        end
+      end
+    end
+    info.defenders = capped(ours)
+  end)
+  pcall(function()
+    local res = CityManager.GetCommandTargets(c, CityCommandTypes.RANGE_ATTACK)
+    local n = 0
+    for _, m in ipairs((res or {})[CityCommandResults.MODIFIERS] or {}) do
+      if m == CityCommandResults.MODIFIER_IS_TARGET then n = n + 1 end
+    end
+    info.can_strike = n > 0
+  end)
+  local ok, prices = pcall(defence_prices, c)
+  if ok then info.defence_prices = prices end
 end
 
 -- ---- snapshot ----------------------------------------------------------------------------------
@@ -198,7 +400,7 @@ local function city_info(me, c)
     producing = type_of_hash(bq:GetCurrentProductionTypeHash())
     turns = bq:GetTurnsLeft()
   end
-  local districts, wonders = H.array(), H.array()
+  local districts, wonders, buildings = H.array(), H.array(), H.array()
   for _, d in c:GetDistricts():Members() do
     local row = GameInfo.Districts[d:GetType()]
     if row and row.DistrictType ~= 'DISTRICT_CITY_CENTER' then
@@ -207,18 +409,29 @@ local function city_info(me, c)
   end
   local b = c:GetBuildings()
   for row in GameInfo.Buildings() do
-    if row.IsWonder and b:HasBuilding(row.Index) then wonders[#wonders + 1] = row.BuildingType end
+    if b:HasBuilding(row.Index) then
+      buildings[#buildings + 1] = row.BuildingType
+      if row.IsWonder then wonders[#wonders + 1] = row.BuildingType end
+    end
   end
-  local enemies, siege, damaged = threat(me, c)
+  local hostile, siege, damaged = threat(me, c)
   local loyalty = nil
   pcall(function() loyalty = math.floor(c:GetCulturalIdentity():GetLoyalty()) end)
-  return {
+  local info = {
     id = c:GetID(), name = name_of(c:GetName()), pop = c:GetPopulation(), capital = c:IsCapital(),
-    producing = producing, turns_left = turns, districts = districts, wonders = wonders,
+    x = c:GetX(), y = c:GetY(),
+    producing = producing, turns_left = turns, districts = districts, wonders = wonders, buildings = buildings,
     food = c:GetYield(YieldTypes.FOOD), production = c:GetYield(YieldTypes.PRODUCTION),
-    enemies_near = enemies, under_siege = siege, damaged = damaged,
-    threatened = enemies > 0 or siege or damaged, loyalty = loyalty,
+    enemies_near = #hostile, under_siege = siege, damaged = damaged,
+    threatened = #hostile > 0 or siege or damaged, loyalty = loyalty,
   }
+  pcall(function() info.garrison = garrison_of(me, c) end)
+  pcall(function()
+    local d = center_of(c)
+    if d then info.defense = defense_of(d) end
+  end)
+  if info.threatened then danger_detail(me, c, info, hostile) end
+  return info
 end
 
 local function majors(me)
@@ -271,6 +484,60 @@ local function blocker(me)
     if v == b then return k end
   end
   return tostring(b)
+end
+
+-- Every end-turn blocker, not only the first (the first is `blocker`).
+local function blockers_all(me)
+  local out = H.array()
+  for _, b in ipairs(NotificationManager.GetAllEndTurnBlocking(me) or {}) do
+    local name = tostring(b)
+    for k, v in pairs(EndTurnBlockingTypes) do
+      if v == b then name = k end
+    end
+    out[#out + 1] = name
+  end
+  return out
+end
+
+-- Pantheon, religion and the Great Prophet race (ReligionScreen.lua: GetPantheon,
+-- CanCreatePantheon, GetReligionTypeCreated, GetMinimumFaithNextPantheon; the religions a map
+-- allows are the Prophets it has, Map_GreatPersonClasses).
+local function religion_info(me)
+  local pr, gr = Players[me]:GetReligion(), Game.GetReligion()
+  local pan, rel = pr:GetPantheon(), pr:GetReligionTypeCreated()
+  local founded = 0
+  for _, r in ipairs(gr:GetReligions() or {}) do
+    local row = GameInfo.Religions[r.Religion]
+    if row and not row.Pantheon and gr:HasBeenFounded(r.Religion) then founded = founded + 1 end
+  end
+  local max = nil
+  local size = GameInfo.Maps[Map.GetMapSize()]
+  if size then
+    for row in GameInfo.Map_GreatPersonClasses() do
+      if row.MapSizeType == size.MapSizeType and row.GreatPersonClassType == 'GREAT_PERSON_CLASS_PROPHET' then
+        max = row.MaxWorldInstances
+      end
+    end
+  end
+  local points, cost = nil, nil
+  local prophet = GameInfo.GreatPersonClasses['GREAT_PERSON_CLASS_PROPHET']
+  if prophet then
+    pcall(function() points = math.floor(Players[me]:GetGreatPeoplePoints():GetPointsTotal(prophet.Index)) end)
+    pcall(function()
+      for _, e in ipairs(Game.GetGreatPeople():GetTimeline() or {}) do
+        -- the largest integer (seen live at T124, 4 of 4 religions founded): no Prophet is left
+        if e.Class == prophet.Index and e.Cost < 2147483647 then cost = e.Cost end
+      end
+    end)
+  end
+  local belief = pan ~= nil and pan >= 0 and GameInfo.Beliefs[pan] or nil
+  local religion = rel ~= nil and rel >= 0 and GameInfo.Religions[rel] or nil
+  return {
+    pantheon = belief and belief.BeliefType or NULL, can_create_pantheon = pr:CanCreatePantheon() and true or false,
+    pantheon_cost = gr:GetMinimumFaithNextPantheon(),
+    religion = religion and religion.ReligionType or NULL, religions_founded = founded, religions_max = max,
+    prophet_points = points, prophet_cost = cost,
+  }
 end
 
 local function great_people(me)
@@ -384,6 +651,8 @@ function H.snapshot()
   local gp_ok, gp = pcall(great_people, me)
   local opt_ok, opt = pcall(options, me, p)
   local we_ok, we = pcall(wonders_elsewhere, me)
+  local rel_ok, rel = pcall(religion_info, me)
+  local bl_ok, bl = pcall(blockers_all, me)
   return {
     turn = Game.GetCurrentGameTurn(), player = me,
     civ = cfg:GetCivilizationTypeName(), leader = cfg:GetLeaderTypeName(),
@@ -413,6 +682,8 @@ function H.snapshot()
     wonders_elsewhere = we_ok and we or nil,
     options = opt_ok and opt or nil,
     blocker = blocker(me),
+    blockers_all = bl_ok and bl or nil,
+    religion = rel_ok and rel or nil,
     autoplay = { active = AutoplayManager.IsActive(), turns = AutoplayManager.GetTurns() },
   }
 end
@@ -526,33 +797,16 @@ function H.set_production(city_ref, key)
   return { requested = key, city = name_of(c:GetName()), turns = bq:GetTurnsLeft(row.Hash) }
 end
 
-local function purchase_params(c, key, currency)
-  local tbl, row = item_row(key)
-  if row == nil then return nil, 'unknown item ' .. tostring(key) end
-  if tbl ~= 'Units' and tbl ~= 'Buildings' then return nil, key .. ' cannot be bought (units and buildings only)' end
-  local y = GameInfo.Yields[currency == 'faith' and 'YIELD_FAITH' or 'YIELD_GOLD']
-  local params = {}
-  params[CityCommandTypes[tbl == 'Units' and 'PARAM_UNIT_TYPE' or 'PARAM_BUILDING_TYPE']] = row.Hash
-  params[CityCommandTypes.PARAM_YIELD_TYPE] = y.Index
-  local formation = -1
-  if tbl == 'Units' then
-    formation = MilitaryFormationTypes.STANDARD_MILITARY_FORMATION
-    params[CityCommandTypes.PARAM_MILITARY_FORMATION_TYPE] = formation
-  end
-  local cost = c:GetGold():GetPurchaseCost(y.Index, row.Hash, formation)
-  return params, nil, cost
-end
-
 -- The live price of an item in a city, and whether the game allows the purchase now.
 function H.get_purchase_cost(city_ref, key, currency)
   local c = H.find_city(city_ref)
   if c == nil then return fail('no city of ours named ' .. tostring(city_ref)) end
   local params, err, cost = purchase_params(c, key, currency)
   if params == nil then return fail(err) end
-  local can = CityManager.CanStartCommand(c, CityCommandTypes.PURCHASE, false, params, false)
   local me = H.me()
   local balance = currency == 'faith' and Players[me]:GetReligion():GetFaithBalance() or Players[me]:GetTreasury():GetGoldBalance()
-  return { item = key, city = name_of(c:GetName()), currency = currency, cost = cost, balance = balance, allowed = can and true or false }
+  return { item = key, city = name_of(c:GetName()), currency = currency, cost = cost, balance = balance,
+           allowed = purchase_allowed(c, params) }
 end
 
 -- Buy an item at once. `max_cost` is the most the governor allows (its reserve and treasury
