@@ -138,6 +138,7 @@
 - [x] CI skips the Rust stages for commits with no Rust, Cargo or corpus files (`scripts/ci-needs-rust.sh`)
 - [x] Game pillars: each game defines its strategy pillars, metrics and actions in `corpora/<game>/pillars.toml`; the strategy layer, decisions, actions and dashboard use them as guardrails (spec docs/design/2026-09-26-game-pillars-design.md; deployed 2e9f24d on mini-rig2, two live reviews accepted with milestones and trait-based identity)
 - [ ] Civilization VI integration (after game pillars)
+- [ ] Civ VI tuner relay (agent 1.6.0 /tuner/*, controller civ6 states|lua)
 - [x] Dashboard access key: `PILOT_DASHBOARD_KEY` or `runs/dashboard.key`, one link per browser (`python -m pilot dashboard-link`), JSON-only same-origin changes
 
 ## Hosts

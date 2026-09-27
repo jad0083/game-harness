@@ -5,6 +5,7 @@
 mod backend;
 mod files;
 mod keys;
+mod tuner;
 
 use axum::{
     extract::{Query, Request, State},
@@ -47,6 +48,7 @@ struct Args {
 struct AppState {
     token: Arc<String>,
     roots: Arc<files::Roots>,
+    tuner: Arc<tuner::Tuner>,
 }
 
 #[derive(Deserialize)]
@@ -178,7 +180,9 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let state = AppState {
         token: Arc::new(token.clone()),
         roots: Arc::new(roots),
+        tuner: Arc::new(tuner::Tuner::new(tuner::port_from_env())),
     };
+    log(&format!("Civ VI tuner relay targets 127.0.0.1:{}", state.tuner.port()));
 
     let app = Router::new()
         .route("/health", get(health_handler))
@@ -196,6 +200,8 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         .route("/files/roots", get(files_roots_handler))
         .route("/files/list", get(files_list_handler))
         .route("/files/read", get(files_read_handler))
+        .route("/tuner/states", get(tuner_states_handler))
+        .route("/tuner/lua", post(tuner_lua_handler))
         .route(
             "/files/write",
             put(files_write_handler).layer(axum::extract::DefaultBodyLimit::max(files::MAX_WRITE + 1024)),
@@ -793,6 +799,42 @@ async fn files_read_handler(
     Ok((headers, bytes))
 }
 
+#[derive(Deserialize)]
+struct TunerLuaReq {
+    state: tuner::StateSel,
+    code: String,
+    timeout_ms: Option<u64>,
+}
+
+fn tuner_error(e: tuner::TunerError) -> (StatusCode, Json<serde_json::Value>) {
+    let status = match e {
+        tuner::TunerError::BadRequest(_) => StatusCode::BAD_REQUEST,
+        tuner::TunerError::Timeout(_) => StatusCode::GATEWAY_TIMEOUT,
+        _ => StatusCode::BAD_GATEWAY,
+    };
+    (status, Json(serde_json::json!({"ok": false, "error": e.message(), "kind": e.kind()})))
+}
+
+/// Timeout for one Lua request: default 5 s, at most 30 s.
+fn tuner_timeout(ms: Option<u64>) -> Duration {
+    Duration::from_millis(ms.unwrap_or(tuner::DEFAULT_TIMEOUT_MS).clamp(1, tuner::MAX_TIMEOUT_MS))
+}
+
+/// GET /tuner/states: the game identity and its Lua states (index = position).
+async fn tuner_states_handler(State(state): State<AppState>) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+    let (app, states) = state.tuner.states().await.map_err(tuner_error)?;
+    Ok(Json(serde_json::json!({"app": app, "states": states})))
+}
+
+/// POST /tuner/lua {"state": "GameCore" | 1, "code": "...", "timeout_ms": 5000}.
+async fn tuner_lua_handler(
+    State(state): State<AppState>,
+    Json(req): Json<TunerLuaReq>,
+) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+    let reply = state.tuner.lua(&req.state, &req.code, tuner_timeout(req.timeout_ms)).await.map_err(tuner_error)?;
+    Ok(Json(reply))
+}
+
 /// Game-agnostic visual settle detection.
 /// Polls low-res screen thumbnails (64x64) until pixel change between frames is near zero.
 async fn settle_handler(Query(params): Query<SettleParams>) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
@@ -938,6 +980,25 @@ mod tests {
     }
 
     #[test]
+    fn tuner_timeout_defaults_to_5s_and_is_capped_at_30s() {
+        assert_eq!(tuner_timeout(None), Duration::from_secs(5));
+        assert_eq!(tuner_timeout(Some(120_000)), Duration::from_secs(30));
+        assert_eq!(tuner_timeout(Some(0)), Duration::from_millis(1));
+    }
+
+    #[test]
+    fn tuner_errors_map_to_400_502_504() {
+        use tuner::TunerError::*;
+        assert_eq!(tuner_error(BadRequest("x".into())).0, StatusCode::BAD_REQUEST);
+        assert_eq!(tuner_error(Unavailable("x".into())).0, StatusCode::BAD_GATEWAY);
+        assert_eq!(tuner_error(Broken("x".into())).0, StatusCode::BAD_GATEWAY);
+        assert_eq!(tuner_error(Protocol("x".into())).0, StatusCode::BAD_GATEWAY);
+        let (status, body) = tuner_error(Timeout("slow".into()));
+        assert_eq!(status, StatusCode::GATEWAY_TIMEOUT);
+        assert_eq!(body.0, serde_json::json!({"ok": false, "error": "slow", "kind": "timeout"}));
+    }
+
+    #[test]
     fn token_compare_needs_the_exact_token() {
         assert!(token_matches("abc123", "abc123"));
         assert!(!token_matches("abc124", "abc123"));
@@ -948,7 +1009,7 @@ mod tests {
 
     #[test]
     fn reported_version_is_the_crate_version() {
-        assert_eq!(VERSION, "1.5.0");
+        assert_eq!(VERSION, "1.6.0");
     }
 
     #[test]

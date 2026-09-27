@@ -64,7 +64,15 @@ The compiled controller binary provides full programmatic access to all agent fu
 ./target/release/game-controller stellaris speed fastest               # slowest|slow|normal|fast|fastest
 ./target/release/game-controller stellaris pause                       # / resume; state read from the screen, safe to repeat
 
-# 12. Launch Stdio MCP Server (Claude Code / Gemini / Antigravity)
+# 12. Civilization VI: Lua through the agent's FireTuner relay (agent >= 1.6; game started with
+#     EnableTuner 1; one tuner client at a time, so close FireTuner)
+./target/release/game-controller civ6 states                           # game identity, then "index<TAB>state" lines
+./target/release/game-controller civ6 lua "return Game.GetCurrentGameTurn()"   # --state GameCore (default)
+./target/release/game-controller civ6 lua --state InGame --timeout-ms 10000 "print('hi')"
+#     prints the result (the game's first reply), then each printed line; errors (game not
+#     listening: HTTP 502, no reply in time: 504, unknown state: 400) exit non-zero
+
+# 13. Launch Stdio MCP Server (Claude Code / Gemini / Antigravity)
 ./target/release/game-controller mcp
 ```
 

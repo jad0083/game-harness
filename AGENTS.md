@@ -181,6 +181,10 @@ wiki prose in `docs/`. Never hand-edit `corpora/galciv4/data/`.
   16 MiB per `/files/read` (the controller pages larger files), and refuses Windows device names,
   names ending in a dot or space, UNC paths and `:` in file paths; its installer pins the exe by
   SHA-256 and limits the firewall rule to the controller on Private networks.
+- Agent **1.6** relays Lua to Civilization VI's FireTuner console (`EnableTuner 1`; the game listens
+  on 127.0.0.1:4318 only): `GET /tuner/states`, `POST /tuner/lua`; controller
+  `game-controller civ6 states` and `civ6 lua [--state GameCore] "<code>"`. One tuner client at a
+  time, so close FireTuner while it runs.
 - Full list: `issues.md`.
 
 ## 8. Recording what you learn (required)
@@ -214,7 +218,7 @@ screenshots, or the game's raw XML (`incoming/`).
   `imaging.rs` (ROI luminance, per-glyph date diff, template diff), `corpus.rs` (records, chunks,
   search), `mcp.rs` (tools), `client.rs` (agent HTTP), `main.rs` (CLI).
 - `crates/game-agent/src/`: `main.rs` (HTTP routes, batch/drag validation), `backend.rs` (Win32),
-  `keys.rs` (key names). Cross-build: `cargo build --target x86_64-pc-windows-gnu --release --bin game-agent`,
+  `keys.rs` (key names), `files.rs` (read roots), `tuner.rs` (Civ VI Lua relay). Cross-build: `cargo build --target x86_64-pc-windows-gnu --release --bin game-agent`,
   or just run `scripts/serve-agent.sh` (it builds, then serves the installer; the exe is not in git).
 - Keep game knowledge out of Rust: new screens, keys and thresholds go in the manifest.
 - Tests on real pixels live in `crates/game-controller/tests/fixtures/`; extractor tests in
