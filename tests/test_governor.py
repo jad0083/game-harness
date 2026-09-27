@@ -5051,6 +5051,36 @@ def test_a_restart_keeps_the_quiet_saves_counted(setup, tmp_path):
     assert eps[1] == "urgent: war crisis over: 6 quiet saves", eps
 
 
+def _occupied_then_quiet() -> list[dict]:
+    """At war from 2256.01, Arnvoss occupied 2256.02-05 (the entry at 2256.02), quiet from 2256.06."""
+    return [_theia(_war_save("2256.01.01"))] + \
+        [_theia(_war_save(f"2256.{m:02d}.01", occupied=True)) for m in range(2, 6)] + \
+        [_theia(_war_save(f"2256.{m:02d}.01")) for m in range(6, 13)]
+
+
+def _exits(log) -> list[str]:
+    return [e["date"] for e in log.recent if e["kind"] == "crisis" and e["event"] == "exit"]
+
+
+def test_a_restart_on_the_save_last_seen_does_not_count_it_twice(setup, tmp_path):
+    """Ruling 14 counts 6 distinct quiet saves. A run that stopped at 2256.08 (3 quiet saves) and a new run
+    whose start re-reads that same save exit at 2256.11, as a single run does, not at 2256.10."""
+    from pilot.telemetry import Telemetry
+    s, log = setup
+    Governor(s, FakeStellaris(_occupied_then_quiet()), log, model=decisions("expand", "keep")).run(max_decisions=5)
+    assert _exits(log) == ["2256.11.01"], "a single run"
+    tel = Telemetry(tmp_path / "t.sqlite")
+    saves = _occupied_then_quiet()
+    g = Governor(s, FakeStellaris(saves[:8]), EventLog(s.runs_dir, "run27", s.model, telemetry=tel),
+                 model=decisions("expand", "keep"))
+    g.run(max_decisions=4)
+    assert g._observed["date"] == "2256.08.01" and g._crisis["quiet"] == 3
+    log2 = EventLog(s.runs_dir, "run28", s.model, telemetry=tel)
+    g2 = Governor(s, FakeStellaris(saves[7:]), log2, model=decisions("keep"))
+    g2.run(max_decisions=2)
+    assert _exits(log2) == ["2256.11.01"], "the re-read 2256.08 is not a 4th quiet save"
+
+
 def test_a_restart_keeps_the_humans_override_during_a_crisis(setup, tmp_path):
     from pilot.telemetry import Telemetry
     s, _ = setup

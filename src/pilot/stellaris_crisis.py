@@ -11,8 +11,8 @@ count (allies' battles are in it, E7) or war exhaustion. At least one war on, an
   save's `battle_count` of the same war; a retaken colony's old invasion is not new);
 - C6 a colony under stability 25 on 2 saves in a row (the planet check).
 It enters on the transition, at most once per war per 12 months, and leaves when every war ended, or
-after 6 saves in a row with none of C1-C6 once held 6 months. The governor runs the ladder (review,
-defend, posture, crisis alloys, cadence 3, the status-quo question) while it is on."""
+after 6 saves in a row with none of C1-C6 once held 6 months, each save counted once. The governor runs
+the ladder (review, defend, posture, crisis alloys, cadence 3, the status-quo question) while it is on."""
 
 from __future__ import annotations
 
@@ -34,6 +34,10 @@ ALLOYS_WITHOUT_NAVAL = 1000    # naval use unknown: crisis alloys only under thi
 def _months(date: str) -> int:
     y, m, *_ = (int(x) for x in str(date).split("."))
     return y * 12 + m - 1
+
+
+def _day(date: str) -> tuple[int, ...]:
+    return tuple(int(x) for x in str(date).split("."))
 
 
 def _n(v) -> str:
@@ -91,10 +95,15 @@ def war_crisis(rows: list[dict], now: dict, prev: dict | None, low_stability=())
 def crisis_step(state: dict | None, rows: list[dict], now: dict, prev: dict | None,
                 low_stability=()) -> tuple[dict, str | None]:
     """The crisis state after save `now`: (state, "enter" | "exit: <why>" | None). `state` holds
-    active, since, conditions, quiet (saves in a row without any condition) and entries (war -> the
-    month of its last entry)."""
+    active, since, conditions, quiet (saves in a row without any condition), entries (war -> the
+    month of its last entry) and seen (the date of the last save counted). Each save counts once: a save
+    not newer than `seen` (a restart re-reads the save the last run saw, without the save before it; an
+    older save loaded) returns the state unchanged and no event."""
     s = {"active": False, "since": None, "conditions": [], "quiet": 0, "entries": {}, **(state or {})}
     s["entries"] = dict(s["entries"])
+    if s.get("seen") and _day(now["date"]) <= _day(s["seen"]):
+        return s, None
+    s["seen"] = now["date"]
     now_m, wars = _months(now["date"]), [_war_key(w) for w in now.get("wars") or []]
     conds = war_crisis(rows, now, prev, low_stability)
     if not s["active"]:

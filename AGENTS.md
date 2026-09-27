@@ -329,7 +329,8 @@ Rules:
   months). The ladder: review, defence need missed, `defend` applied, the `war_crisis` posture (skipped:
   not verified until enabled and the v2 export is in the save), alloys on the market slot (only with a
   shipyard we hold, naval room, a measured start amount: not before L2), decisions every 3 months, a
-  non-blocking status-quo question. Ends at peace or after 6 quiet saves held 6 months.
+  non-blocking status-quo question. Ends at peace or after 6 quiet saves held 6 months (each save
+  counted once, also the one a restarted run re-reads).
 - **Planet check** (read-only): a colony under stability 50, amenities under -100 (300+ pops), housing
   under 0 (1,000+ pops), 5% unemployed (not the capital), 20% fewer pops than its 12-month peak, or
   occupied, for 2+ months (saves at most 3 months apart: a restart gap starts the count again), is named in the decision prompt's `Planet check:` line with a hint

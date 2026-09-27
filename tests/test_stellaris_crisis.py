@@ -84,6 +84,22 @@ def test_the_crisis_enters_on_the_transition_and_leaves_after_6_quiet_saves_held
     assert not state["active"] and "6 quiet saves" in events[1][1]
 
 
+def test_a_save_already_counted_changes_nothing():
+    """Each save counts once (ruling 14's 6 quiet saves): a restart re-reads the save the last run saw,
+    without the save before it (prev None), and an older save may be loaded; neither changes the state."""
+    saves = [empire("2256.01.01", systems=27)] + [empire(f"2256.{m:02d}.01") for m in range(2, 5)]
+    state, _ = run(saves, YEAR)
+    assert state["active"] and state["quiet"] == 3 and state["seen"] == "2256.04.01"
+    assert crisis_step(state, YEAR, saves[-1], None) == (state, None), "the same save again"
+    assert crisis_step(state, YEAR, saves[1], None) == (state, None), "an older save"
+    lost = empire("2256.05.01", planets=8)                       # C4 against the save before
+    after, ev = crisis_step(state, YEAR, lost, saves[-1])
+    assert ev is None and after["quiet"] == 0 and codes(after["conditions"]) == ["C4"]
+    assert crisis_step(after, YEAR, lost, None) == (after, None), "without the save before, C4 is not quiet"
+    newer, _ = crisis_step(after, YEAR, empire("2256.06.01", planets=8), lost)
+    assert newer["quiet"] == 1 and newer["seen"] == "2256.06.01"
+
+
 def test_peace_ends_the_crisis_at_once():
     _, events = run([empire("2256.01.01", systems=27), empire("2256.02.01", systems=27, wars=())], YEAR)
     assert events == [("2256.01.01", "enter"), ("2256.02.01", "exit: every war ended")]

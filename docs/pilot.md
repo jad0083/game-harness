@@ -410,7 +410,9 @@ ladder at that decision, in order:
 
 Each step is an `order_outcome` row keyed `crisis <step>` (defend, posture and market judged as their
 kind; the others `done`, or `no_op` with why). It ends when every war has ended, or after 6 saves in a
-row with none of C1-C6 once held 6 months (`war crisis over: ...`, a review under the cap); `crisis`
+row with none of C1-C6 once held 6 months (`war crisis over: ...`, a review under the cap), each save
+counted once (a save not newer than the last one counted, such as the save a restarted run re-reads,
+changes nothing); `crisis`
 events keep its state across a restart (enter, exit, ladder and closed, and a `state` event whenever
 it changes between them: the quiet saves, the conditions, your override, the status-quo asks), and a run stopped between an entry or exit and its ladder
 leaves that ladder to the next run's first decision (so the posture is still cleared). Replayed on the campaigns' metrics rows it enters 5 times in
