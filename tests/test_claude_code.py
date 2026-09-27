@@ -79,7 +79,7 @@ def test_a_strategy_review_answer_parses_into_the_generated_output_type(cli, mon
     # usage from the CLI: input includes cache reads/writes (pydantic-ai convention)
     assert result.usage.input_tokens == 1500 and result.usage.output_tokens == 111
     answer = [m for m in result.all_messages() if isinstance(m, ModelResponse)][-1]
-    assert answer.model_name == "claude-code:opus"
+    assert answer.model_name == "claude-opus-4-1", "the release that answered, as for a Gemini alias"
     assert answer.provider_details["served_model"] == "claude-opus-4-1"
 
     call = fake.calls[0]

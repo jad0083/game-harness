@@ -128,6 +128,18 @@ def _short(text: str) -> str:
     return text if len(text) <= ERR_CHARS else text[:ERR_CHARS] + "..."
 
 
+class _ServedNameModel(FunctionModel):
+    """FunctionModel names every response after itself; this one names it after the release the CLI
+    reports (`served_model`), so an alias such as `opus` resolves in traces like a Gemini alias does."""
+
+    async def request(self, *args, **kwargs) -> ModelResponse:
+        response = await super().request(*args, **kwargs)
+        served = (response.provider_details or {}).get("served_model")
+        if served:
+            response.model_name = served
+        return response
+
+
 def model(alias: str) -> FunctionModel:
     """A pydantic-ai model that answers through `claude -p --model <alias>`."""
     if not ALIAS_RE.match(alias):
@@ -187,7 +199,7 @@ def model(alias: str) -> FunctionModel:
 
     # supports_thinking: pydantic-ai passes the thinking level on (as request parameters) for --effort
     profile = ModelProfile(supports_json_schema_output=True, supports_json_object_output=True, supports_thinking=True)
-    return FunctionModel(respond, model_name=f"{PREFIX}:{alias}", profile=profile)
+    return _ServedNameModel(respond, model_name=f"{PREFIX}:{alias}", profile=profile)
 
 
 def resolve_model(m):
