@@ -66,8 +66,16 @@
   .brand { font-weight: 700; font-size: 17px; letter-spacing: -0.02em; font-variation-settings: "opsz" 24; }
   .brand::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--accent);
                    margin-right: 9px; vertical-align: 1px; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
-  .campaign select { background: transparent; border: 1px solid var(--hair); border-radius: 6px; padding: 5px 8px; color: var(--ink); }
-  .campaign select { max-width: min(320px, 60vw); font-weight: 600; }
+  /* the campaign control (ruling 4): the campaign and its date, a dot when it is the live one */
+  .camp-btn { display: inline-flex; align-items: center; gap: 8px; min-width: 0; max-width: min(460px, 46vw); padding: 5px 10px;
+              border: 1px solid var(--hair); border-radius: 6px; background: transparent; cursor: pointer; font-weight: 600; }
+  .camp-btn:hover { border-color: var(--accent); }
+  .camp-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .camp-date { flex: none; margin-left: -5px; font-weight: 500; color: var(--ink-2); white-space: pre; font-variant-numeric: tabular-nums; }
+  .caret { flex: none; color: var(--ink-2); font-size: 13px; }
+  .camp-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--good);
+              box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 22%, transparent); }
+  .state-dot { display: none; width: 24px; justify-content: center; font-size: 13px; line-height: 1; color: var(--st, var(--muted)); }
   .pc, .fresh { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .pc { display: inline-flex; align-items: center; gap: 6px; }
   .pc::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
@@ -530,6 +538,84 @@
   .args-list { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 13px; color: var(--ink-2); margin-top: 2px; }
   .args-list b { font-weight: 500; color: var(--muted); }
 
+  /* ---- sheets: the campaign list; on a phone also Settings, Add a device and Reasoning (ruling 32) ---- */
+  dialog.sheet { padding: 0; width: min(560px, 94vw); }
+  dialog.camps { margin-top: 56px; max-height: calc(100vh - 80px); }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px;
+                border-bottom: 1px solid var(--hair); }
+  .sheet-head h2 { margin: 0; }
+  .camp-list { list-style: none; margin: 0; padding: 6px 8px; display: grid; gap: 2px; }
+  .camp-list button { display: grid; gap: 2px; width: 100%; min-height: 48px; padding: 9px 12px; border: 0; border-radius: 6px;
+                      background: none; text-align: left; cursor: pointer; }
+  .camp-list button:hover { background: var(--raised); }
+  .camp-list button[aria-current="true"] { background: var(--raised); box-shadow: inset 3px 0 0 var(--accent); }
+  .c-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 12px; }
+  .c-title { font-weight: 600; font-size: 15px; overflow-wrap: anywhere; }
+  .c-state { font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+  .c-state i { font-style: normal; margin-right: 5px; }
+  .c-state.live { color: var(--good); font-weight: 600; }
+  .c-state.paused, .c-state.needs { color: var(--warn); font-weight: 600; }
+  .c-meta { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  #camp-empty { margin: 4px 18px 16px; }
+  #camp-empty .camp-list { padding: 6px 0 0; }
+  /* the phone's Now: the newest decision first, the recent problems and all activity last */
+  #p-last, #p-problems, .reading-head, .bottom-nav { display: none; }
+  .recent { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 6px; }
+  .recent li { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 8px; font-size: 14px; overflow-wrap: anywhere; }
+  .recent b { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .recent .empty { display: block; padding: 0; }
+  @media (min-width: 701px) { .phone-only { display: none !important; } }
+  .menu-pc { margin: 4px 12px 8px; font-size: 13px; color: var(--ink-2); }
+
+  /* ---- the phone (ruling 32): its own layout, one destination at a time from the bottom nav ---- */
+  @media (max-width: 700px) {
+    body { padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
+    .bar { flex-wrap: nowrap; height: 52px; padding: 0 12px; gap: 8px; }
+    .brand-word, #pc, #fresh, #b-toggle, #b-settings { display: none; }
+    .brand::before { margin-right: 0; }
+    .camp-btn { flex: 1 1 auto; max-width: none; border-color: transparent; padding: 6px 4px; font-size: 15px; }
+    .state-dot { display: inline-flex; }
+    .bottom-nav { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); position: fixed; left: 0; right: 0; bottom: 0;
+                  z-index: 8; height: calc(56px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom);
+                  background: var(--surface); border-top: 1px solid var(--hair); }
+    .bottom-nav a { display: flex; align-items: center; justify-content: center; min-width: 0; padding: 0 2px; border-top: 2px solid transparent;
+                    color: var(--ink-2); font-size: 13.5px; font-weight: 500; text-decoration: none; }
+    .bottom-nav a[aria-current="page"] { color: var(--ink); font-weight: 700; border-top-color: var(--accent); }
+    .bottom-nav a:focus-visible { outline-offset: -3px; }
+    #p-tabs .tabs { display: none; }
+    #p-last, #p-problems { display: block; }
+    #p-last { order: 0; } #p-figures { order: 1; } #p-chart { order: 2; } #p-nb { order: 3; } #p-problems { order: 4; }
+    #p-dec { order: 5; } #p-tabs { order: 6; padding-top: 0; }
+    body:not([data-view="now"]) :is(#p-last, #p-figures, #p-chart, #p-nb, #p-problems) { display: none; }
+    body:not([data-view="decisions"]) #p-dec { display: none; }
+    body:not([data-reading]):is([data-view="decisions"], [data-view="now"]:not([data-activity])) #p-tabs { display: none; }
+    body:not([data-view="now"]):not([data-gov="needs"]):not([data-gov="question"]):not([data-gov="stand"]) .gov { display: none; }
+    body:not([data-view="now"]) .gov :is(.gov-card, .gov-facts, .gov-health, .gov-age) { display: none; }   /* off Now: the line only */
+    body:not([data-view="now"]):not([data-gov="question"]) .gov .gov-actions { display: none; }
+    .camp-dot { display: none; }                      /* the state dot says it */
+    #p-last .decisions button { padding-left: 0; padding-right: 0; }
+    /* Reasoning as a full-screen sheet */
+    body[data-reading] { overflow: hidden; }
+    body[data-reading] #p-tabs { display: block; }
+    body[data-reading] #tab-reasoning { position: fixed; inset: 0; z-index: 30; overflow-y: auto; overscroll-behavior: contain;
+                                        background: var(--plane); padding: 0 16px calc(24px + env(safe-area-inset-bottom)); }
+    body[data-reading] .reading-head { display: flex; position: sticky; top: 0; z-index: 1; align-items: center; gap: 12px; height: 52px;
+                                       margin: 0 -16px 12px; padding: 0 12px; background: var(--plane); border-bottom: 1px solid var(--hair); touch-action: pan-x; }
+    .reading-title { font-weight: 600; }
+    dialog.sheet, dialog.settings, dialog.add { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0;
+                                                border: 0; border-radius: 0; overflow-y: auto; }
+    dialog.settings, dialog.add { padding: 16px 16px calc(20px + env(safe-area-inset-bottom)); }
+    .toast { bottom: calc(68px + env(safe-area-inset-bottom)); }
+    /* text never below 13 px on a phone */
+    .fig-label, .fig-sub, .legend, .tag, .fchip, .d-who, .d-urgent, .after, .t-meta, .t-when, .usage, .hint, .ev-time, .ev-raw summary,
+    .seg button, .rec .rmore, .olog .onote, .nb th, .nb-note, table.data, .stats, details summary, .args-list, .add-meta,
+    .p-weight, .ms-list li, .pillar .actions, .effort-label, .rescale, .gov-age, .review-result, .msg .who, .s-summary-label,
+    .btn.small, .fcounts, .reason.sys, .dmeta, .devlog, .pool li .note, .roles button, .tip, .health-line, .fresh,
+    .o-block > h3 span, .rec .rcounts, .olog .okind, .stand, .danger, .ms-metric { font-size: 13px; }
+    svg.chart text { font-size: 13px; }
+    code, pre { font-size: 13px; }
+  }
+
   /* Windows high contrast and other forced colours: edges and chips keep their outline */
   @media (forced-colors: active) {
     .tag, .btn, .toast, .banner, .decisions li.sel button, .tabs button[aria-selected="true"] { border: 1px solid CanvasText; }
@@ -548,20 +634,26 @@
 </head>
 <body>
 <!-- The bar carries identity, place and exits, nothing else (ruling 5); the governor line under it
-     says whether the run needs you (ruling 6). -->
+     says whether the run needs you (ruling 6). On a phone it is the brand dot, the campaign with its
+     date, a state dot and ⋯, which then also holds Pause and Settings. -->
 <div class="bar">
-  <span class="brand">Game Pilot</span>
-  <label class="campaign"><span class="sr">Campaign</span><select id="campaign"></select></label>
+  <span class="brand"><span class="brand-word">Game Pilot</span></span>
+  <button type="button" class="camp-btn" id="campaign" data-cid="" aria-haspopup="dialog" aria-controls="camp-dialog">
+    <i class="camp-dot" id="camp-dot" aria-hidden="true" hidden></i><span class="camp-name" id="camp-name">Campaigns</span><span class="camp-date" id="camp-date"></span><span class="caret" aria-hidden="true">▾</span></button>
   <span class="pc" id="pc" title="The gaming PC and what is open on it"></span>
   <span class="fresh" id="fresh" aria-live="polite"></span>
   <span class="spacer"></span>
+  <span class="state-dot" id="state-dot" role="img" aria-label=""></span>
   <button class="btn live-only" id="b-toggle" hidden>Pause</button>
   <button class="btn" id="b-settings" aria-haspopup="dialog" title="Models, game pace and devices">Settings</button>
   <div class="more">
     <button class="btn icon" id="b-more" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="more-menu" title="More: stop or start a run, devices, sign out" aria-label="More">⋯</button>
     <div class="menu" id="more-menu" role="menu" hidden>
+      <p class="menu-pc phone-only" id="menu-pc"></p>
+      <button type="button" role="menuitem" data-act="toggle" class="phone-only live-only" id="m-toggle" hidden>Pause</button>
       <button type="button" role="menuitem" data-act="stop" class="danger live-only" id="b-stop" hidden>Stop the run…</button>
       <button type="button" role="menuitem" data-act="start" id="b-start" hidden>Start run</button>
+      <button type="button" role="menuitem" data-act="settings" class="phone-only">Settings</button>
       <button type="button" role="menuitem" data-act="add">Add a device</button>
       <button type="button" role="menuitem" data-act="devices">Devices</button>
       <button type="button" role="menuitem" data-act="signout" class="danger">Sign out</button>
@@ -571,6 +663,13 @@
 <div class="toast" id="toast" role="status" hidden></div>
 <div class="banner locked" id="locked" role="alert" hidden><p id="locked-text"></p><a class="btn primary" id="locked-link" href="/pair">Sign in again</a></div>
 <div class="banner notices" id="notices" role="status" hidden></div>
+<!-- The campaign list (ruling 4): one row per campaign with its game, state, last date, decisions and
+     runs; empty ones folded away. A full-screen sheet on a phone. -->
+<dialog id="camp-dialog" class="camps sheet" aria-labelledby="camp-title">
+  <div class="sheet-head"><h2 id="camp-title">Campaigns</h2><button type="button" class="btn" id="camp-close">Close</button></div>
+  <ul class="camp-list" id="camp-list"></ul>
+  <details id="camp-empty" hidden><summary id="camp-empty-sum">Show empty campaigns</summary><ul class="camp-list" id="camp-empty-list"></ul></details>
+</dialog>
 <dialog id="start-dialog" aria-labelledby="start-title">
   <form method="dialog" id="start-form">
     <h2 id="start-title">Start a pilot run</h2>
@@ -675,6 +774,12 @@
 
 <main>
   <div class="col">
+    <!-- the phone's Now leads with the newest decision; tapping it opens Reasoning (ruling 12) -->
+    <section class="panel" id="p-last" aria-labelledby="h-last" hidden>
+      <header><h2 id="h-last">Last decision</h2></header>
+      <ul class="decisions" id="last-decision"></ul>
+    </section>
+
     <section class="panel" id="p-figures" aria-label="Figures" hidden>
       <div class="figures" id="figures"></div>
       <p class="health-line" id="game-health" hidden></p>
@@ -697,6 +802,13 @@
       <div class="body" id="nb"></div>
     </section>
 
+    <!-- the phone's Now ends with the last problems, and all activity under them (ruling 1) -->
+    <section class="panel" id="p-problems" aria-labelledby="h-problems">
+      <header><h2 id="h-problems">Recent problems</h2></header>
+      <ul class="recent" id="recent-problems"></ul>
+      <button type="button" class="btn" id="all-activity" aria-expanded="false" aria-controls="tab-activity">All activity</button>
+    </section>
+
     <section class="panel" id="p-dec" aria-labelledby="h-dec" data-collapsible>
       <header><h2 id="h-dec">Decisions</h2><span class="sub" id="dec-sub"></span>
         <button type="button" class="btn small" id="dec-problems" aria-pressed="false" title="Errors, refused orders and failed directives">Problems only</button></header>
@@ -715,7 +827,11 @@
         <button role="tab" id="tb-talk" aria-controls="tab-talk" aria-selected="false" tabindex="-1" data-tab="talk">Talk<span class="dot" hidden></span></button>
         <button role="tab" id="tb-activity" aria-controls="tab-activity" aria-selected="false" tabindex="-1" data-tab="activity">Activity<span class="dot" hidden></span></button>
       </div>
-      <div class="tabpanel" id="tab-reasoning" role="tabpanel" aria-labelledby="tb-reasoning"></div>
+      <div class="tabpanel" id="tab-reasoning" role="tabpanel" aria-labelledby="tb-reasoning">
+        <!-- a full-screen sheet on a phone: back button, swipe down or the browser's back to close -->
+        <div class="reading-head" id="reading-head"><button type="button" class="btn" id="reading-back">‹ Back</button><span class="reading-title">Reasoning</span></div>
+        <div id="reasoning"></div>
+      </div>
       <div class="tabpanel" id="tab-levers" role="tabpanel" aria-labelledby="tb-levers" hidden>
         <div id="levers"></div>
         <div class="levers-frame" id="levers-frame">
@@ -761,6 +877,15 @@
     </section>
   </div>
 </main>
+<!-- The phone's destinations (ruling 1): a nav of links, not tabs; the current one is the tab stop and
+     the arrow keys move between them. -->
+<nav class="bottom-nav" id="bottom-nav" aria-label="Sections">
+  <a href="#now" data-view="now" aria-current="page">Now</a>
+  <a href="#decisions" data-view="decisions" tabindex="-1">Decisions</a>
+  <a href="#levers" data-view="levers" id="nv-levers" tabindex="-1" hidden>Orders</a>
+  <a href="#strategy" data-view="strategy" tabindex="-1">Strategy</a>
+  <a href="#talk" data-view="talk" tabindex="-1">Talk</a>
+</nav>
 
 <script>
 const $ = (id) => document.getElementById(id);
@@ -888,7 +1013,8 @@ async function loadStatus() {
   renderPace();
   renderGovernor();
   const paused = ["paused", "needs_attention"].includes(st);
-  $("b-toggle").textContent = paused ? "Resume" : "Pause";
+  $("b-toggle").textContent = $("m-toggle").textContent = paused ? "Resume" : "Pause";
+  renderCampaignButton();
   const controls = info.controls || [];
   $("talk-controls").hidden = !S.live;
   $("talk-off").hidden = S.live;
@@ -913,21 +1039,77 @@ async function loadCampaigns() {
   try { camps = await api("/api/campaigns"); } catch { /* no telemetry yet */ }
   S.camps = camps;
   const live = (S.status.info || {}).campaign;
-  const sel = $("campaign");
-  sel.innerHTML = camps.map((c) => `<option value="${esc(c.id)}">${esc(c.title || human(c.name))}${c.id === live ? " (live)" : ""}, ${esc(plural(c.decisions, "decision"))}</option>`).join("")
-    || `<option value="">No campaigns recorded yet</option>`;
   // Follow the live run's campaign unless the reader picked another one during this run.
   const prev = S.campaign;
   const keep = S.campaign && camps.some((c) => c.id === S.campaign);
   S.campaign = live && !S.pinned ? live : (keep ? S.campaign : (live || camps[0]?.id || null));
   if (S.campaign !== prev) clearReasoning();
-  if (S.campaign) sel.value = S.campaign;
+  renderCampaignButton();
+  if ($("camp-dialog").open) renderCampaignList();
 }
+
+// ---------- the campaign control and list (ruling 4) ----------
+const phone = () => matchMedia("(max-width: 700px)").matches;
+const campTitle = (c) => c ? (c.title || human(c.name)) : "";
+const liveCampaign = () => (S.live && (S.status.info || {}).campaign) || null;
+// live, paused, needs you (the live run's own state) or stopped
+function campState(c) {
+  if (c.id === liveCampaign()) return { paused: ["paused", "paused"], needs_attention: ["needs", "needs you"] }[S.status.status] || ["live", "live"];
+  return ["stopped", "stopped"];
+}
+function renderCampaignButton() {
+  const c = (S.camps || []).find((x) => x.id === S.campaign), live = !!c && c.id === liveCampaign();
+  const title = c ? campTitle(c) : (S.camps || []).length ? "Pick a campaign" : "No campaigns yet";
+  const date = c ? gdate(live ? S.status.game_date || c.latest : c.latest) : "";
+  $("campaign").dataset.cid = S.campaign || "";
+  $("camp-name").textContent = phone() ? title.split(",")[0] : title;
+  $("camp-date").textContent = date ? (phone() ? ` ${date}` : ` · ${date}`) : "";
+  $("camp-dot").hidden = !live;
+  $("campaign").setAttribute("aria-label", `Campaign: ${title}${date ? `, ${date}` : ""}${live ? ", live" : ""}. Choose another campaign`);
+}
+function campRow(c) {
+  const [cls, word] = campState(c), live = c.id === liveCampaign();
+  const date = gdate(live ? S.status.game_date || c.latest : c.latest);
+  const mark = { live: "●", paused: "❚❚", needs: "▲", stopped: "○" }[cls];
+  const counts = [plural(c.decisions || 0, "decision"), plural(c.runs || 0, "run")].join(", ");
+  return `<li><button type="button" data-cid="${esc(c.id)}" aria-current="${c.id === S.campaign}">
+    <span class="c-head"><span class="c-title">${esc(campTitle(c))}</span><span class="c-state ${cls}"><i aria-hidden="true">${mark}</i>${esc(word)}</span></span>
+    <span class="c-meta">${esc(GAME_NAMES[c.game] || c.game)}${date ? `, ${live ? "now at" : "last played"} ${esc(date)}` : ""}; ${esc(counts)}</span></button></li>`;
+}
+function renderCampaignList() {
+  const all = S.camps || [], live = all.filter((c) => c.id === liveCampaign()), rest = all.filter((c) => c.id !== liveCampaign());
+  const shown = [...live, ...rest.filter((c) => !c.empty || c.id === S.campaign)], empty = rest.filter((c) => c.empty && c.id !== S.campaign);
+  $("camp-list").innerHTML = shown.map(campRow).join("") || `<li class="empty">No campaigns recorded yet. Start a run and its campaign appears here.</li>`;
+  $("camp-empty-list").innerHTML = empty.map(campRow).join("");
+  $("camp-empty").hidden = !empty.length;
+  $("camp-empty-sum").textContent = `Show empty campaigns (${empty.length})`;
+}
+function openCampaigns() {
+  renderCampaignList();
+  $("camp-dialog").showModal();
+  const cur = $("camp-dialog").querySelector('button[aria-current="true"]');
+  if (cur) cur.focus();
+}
+async function pickCampaign(cid) {
+  if (!cid) return;
+  S.campaign = cid; clearReasoning();
+  S.pinned = cid !== (S.status.info || {}).campaign;     // a deliberate look at another campaign
+  renderCampaignButton();
+  await loadCampaignData();
+  renderGovernor();
+}
+$("campaign").addEventListener("click", openCampaigns);
+$("camp-close").addEventListener("click", () => $("camp-dialog").close());
+$("camp-dialog").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-cid]");
+  if (b) { $("camp-dialog").close(); pickCampaign(b.dataset.cid); return; }
+  if (e.target === $("camp-dialog")) $("camp-dialog").close();        // a click on the backdrop
+});
 
 // A different campaign never keeps the previous one's decision in the reader.
 function clearReasoning() {
   S.sel = null; S.plansKey = undefined; S.showAll = false;
-  $("tab-reasoning").innerHTML = `<p class="empty">Pick a decision to read how it was made.</p>`;
+  $("reasoning").innerHTML = `<p class="empty">Pick a decision to read how it was made.</p>`;
 }
 
 // ---------- strategy ----------
@@ -1484,6 +1666,12 @@ function renderGovernor() {
   renderLeversTab();
   const gov = $("gov");
   gov.dataset.state = state;
+  document.body.dataset.gov = state;
+  const dot = { playing: ["●", "The AI is playing", "var(--good)"], deciding: ["◆", "Deciding", "var(--thought)"],
+                needs: ["▲", "Needs you", "var(--warn)"], question: ["▲", "Question for you", "var(--warn)"],
+                paused: ["❚❚", "Paused", "var(--warn)"], stand: ["▲", "Last stand", "var(--bad)"], starting: ["◌", "Starting", "var(--muted)"],
+                history: ["○", "Viewing a past campaign", "var(--muted)"], none: ["○", "No run is playing", "var(--muted)"] }[state] || ["○", "", "var(--muted)"];
+  $("state-dot").textContent = dot[0]; $("state-dot").setAttribute("aria-label", dot[1]); $("state-dot").style.setProperty("--st", dot[2]);
   $("gov-line").innerHTML = line;
   $("gov-age").innerHTML = age;
   $("gov-facts").innerHTML = facts.join(" ");
@@ -1556,7 +1744,7 @@ $("gov").addEventListener("click", async (e) => {
   const b = e.target.closest("button");
   if (!b) return;
   if (b.dataset.pace !== undefined) { openSettings("game"); return; }
-  if (b.dataset.live !== undefined) { S.pinned = false; S.campaign = (S.status.info || {}).campaign; $("campaign").value = S.campaign; clearReasoning(); await loadCampaignData(); renderGovernor(); return; }
+  if (b.dataset.live !== undefined) { await pickCampaign((S.status.info || {}).campaign); return; }
   if (b.dataset.act === "resume") { control({ action: "resume" }); return; }
   if (b.dataset.act === "start") { openStart(); return; }
   if (b.dataset.answer !== undefined) {
@@ -1867,29 +2055,39 @@ function renderDecisions() {
   const urgent = S.decisions.filter((d) => (d.trigger_label || {}).urgent).length;
   $("dec-sub").textContent = S.decisions.length ? `${plural(S.decisions.length, "decision")}${urgent ? `, ${urgent} urgent` : ""}, newest first` : "";
   $("dec-problems").hidden = !S.decisions.some(isProblem);
+  renderLast();
   if (!S.decisions.length) { ul.innerHTML = `<li class="empty">No decisions yet.</li>`; return; }
   const all = [...S.decisions].reverse().filter((d) => !S.problemsOnly || isProblem(d)), shown = S.showAll ? all : all.slice(0, 8);
-  ul.innerHTML = shown.map((d) => {
-    const i = S.decisions.indexOf(d), trig = d.trigger_label || { text: tidy(d.trigger || ""), urgent: false };
-    const failed = d.outcome === "error";
-    const sel = S.sel && S.sel.run_id === d.run_id && S.sel.episode === d.episode;
-    const orders = d.orders || [], dir = directiveLabel(d);
-    const reason = failed ? `No decision: ${d.cause || errorCause(d.error)}` : tidy(d.reason || "");
-    return `<li class="${sel ? "sel" : ""}${failed ? " failed" : ""}"><button data-i="${i}">
-      <span class="d-when"><span class="d-date">${esc(gdate(d.date) || "–")}</span>${trig.urgent ? `<span class="d-urgent">urgent</span>` : ""}</span>
-      <span class="d-main">
-        <span class="d-head"><span class="d-trigger">${esc(trig.text)}</span><span class="d-who">${esc(whoAndTime(d))}</span></span>
-        ${dir && !failed ? `<span class="dir">${esc(dir)}</span>` : ""}
-        <span class="reason${failed ? " sys" : ""}">${esc(reason)}</span>
-        ${orders.length ? `<span class="chips">${orders.slice(0, 3).map(fateChip).join("")}${orders.length > 3 ? `<span class="fchip more">+${orders.length - 3}</span>` : ""}</span>
-        <span class="fcounts">${fateCounts(orders)}</span>` : ""}
-        ${outcomeLine(d.result)}${d.off_frame ? '<span class="tag bad">off the strategy</span>' : ""}
-      </span></button></li>`;
-  }).join("") + (all.length > shown.length ? `<li class="more"><button class="btn" id="show-all">Show all ${all.length}</button></li>` : "")
+  ul.innerHTML = shown.map(decisionRow).join("") + (all.length > shown.length ? `<li class="more"><button class="btn" id="show-all">Show all ${all.length}</button></li>` : "")
     + (!all.length ? `<li class="empty">No problems in this campaign's decisions.</li>` : "");
   const more = $("show-all");
   if (more) more.addEventListener("click", () => { S.showAll = true; renderDecisions(); });
   ul.querySelectorAll("button[data-i]").forEach((b) => b.addEventListener("click", () => selectDecision(S.decisions[+b.dataset.i])));
+}
+function decisionRow(d) {
+  const i = S.decisions.indexOf(d), trig = d.trigger_label || { text: tidy(d.trigger || ""), urgent: false };
+  const failed = d.outcome === "error";
+  const sel = S.sel && S.sel.run_id === d.run_id && S.sel.episode === d.episode;
+  const orders = d.orders || [], dir = directiveLabel(d);
+  const reason = failed ? `No decision: ${d.cause || errorCause(d.error)}` : tidy(d.reason || "");
+  return `<li class="${sel ? "sel" : ""}${failed ? " failed" : ""}"><button data-i="${i}" data-key="${esc(d.run_id)}|${d.episode}">
+    <span class="d-when"><span class="d-date">${esc(gdate(d.date) || "–")}</span>${trig.urgent ? `<span class="d-urgent">urgent</span>` : ""}</span>
+    <span class="d-main">
+      <span class="d-head"><span class="d-trigger">${esc(trig.text)}</span><span class="d-who">${esc(whoAndTime(d))}</span></span>
+      ${dir && !failed ? `<span class="dir">${esc(dir)}</span>` : ""}
+      <span class="reason${failed ? " sys" : ""}">${esc(reason)}</span>
+      ${orders.length ? `<span class="chips">${orders.slice(0, 3).map(fateChip).join("")}${orders.length > 3 ? `<span class="fchip more">+${orders.length - 3}</span>` : ""}</span>
+      <span class="fcounts">${fateCounts(orders)}</span>` : ""}
+      ${outcomeLine(d.result)}${d.off_frame ? '<span class="tag bad">off the strategy</span>' : ""}
+    </span></button></li>`;
+}
+// The phone's Now leads with the newest decision (ruling 12); tapping it opens Reasoning.
+function renderLast() {
+  const d = S.decisions[S.decisions.length - 1];
+  $("p-last").hidden = !d;
+  $("last-decision").innerHTML = d ? decisionRow(d).replace(/^<li class="sel/, '<li class="').replace(/data-i=/, 'data-last="1" data-i=') : "";
+  const b = $("last-decision").querySelector("button");
+  if (b) b.addEventListener("click", () => selectDecision(d));
 }
 $("dec-problems").addEventListener("click", () => {
   S.problemsOnly = !S.problemsOnly;
@@ -1918,8 +2116,8 @@ async function selectDecision(d, byUser = true) {
   const newest = S.decisions[S.decisions.length - 1];
   S.follow = !!newest && newest.run_id === d.run_id && newest.episode === d.episode;
   renderDecisions(); renderChart();
-  if (byUser) showTab("reasoning"); else flag("reasoning");
-  const box = $("tab-reasoning");
+  if (byUser) openReading(`${d.run_id}|${d.episode}`); else flag("reasoning");
+  const box = $("reasoning");
   box.innerHTML = `<p class="empty">Loading…</p>`;
   const still = () => S.sel && S.sel.run_id === d.run_id && S.sel.episode === d.episode;
   try { const tr = await api(`/api/decision?run=${encodeURIComponent(d.run_id)}&episode=${d.episode}`); if (still()) renderTrace(tr); }
@@ -1982,7 +2180,7 @@ function renderTrace(d) {
   // each step after the first two is folded, so a long trace does not make the page endless
   h += parts.slice(0, 2).join("") + (parts.length > 2 ? `<details class="more-steps"><summary>${plural(parts.length - 2, "more step")}</summary><div class="steps">${parts.slice(2).join("")}</div></details>` : "");
   if (!steps.some((x) => x.type === "thinking") && d.model !== "human" && !err) h += `<p class="hint">${esc(thinkingHint(d.model))}</p>`;
-  $("tab-reasoning").innerHTML = h + `</div>`;
+  $("reasoning").innerHTML = h + `</div>`;
 }
 
 // A tool call's arguments as labelled pairs in the system's voice (the raw JSON is in the disclosure).
@@ -2097,11 +2295,98 @@ document.querySelector(".tabs").addEventListener("keydown", (e) => {
   showTab(tabs[(to + tabs.length) % tabs.length].dataset.tab, true);
 });
 
+// ---------- the phone's destinations (rulings 1, 13, 31, 32) ----------
+// Now · Decisions · {Levers} · Strategy · Talk from the bottom nav; Activity at the end of Now ("All
+// activity"); Reasoning as a full-screen sheet from a decision, closed by its back button, a swipe
+// down on its head, Escape or the browser's back. On a desktop the same state is harmless: the CSS
+// for it applies at phone width only.
+S.view = "now"; S.reading = false; S.activityOpen = false;
+function applyView() {
+  const b = document.body;
+  b.dataset.view = S.view;
+  b.toggleAttribute("data-reading", S.reading);
+  b.toggleAttribute("data-activity", S.activityOpen);
+  document.querySelectorAll("#bottom-nav a").forEach((a) => {
+    const on = a.dataset.view === S.view;
+    if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+    a.tabIndex = on ? 0 : -1;
+  });
+  $("all-activity").textContent = S.activityOpen ? "Hide activity" : "All activity";
+  $("all-activity").setAttribute("aria-expanded", String(S.activityOpen));
+  if (!phone()) return;
+  if (S.reading) showTab("reasoning");
+  else if (["levers", "strategy", "talk"].includes(S.view)) showTab(S.view);
+  else if (S.view === "now" && S.activityOpen) showTab("activity");
+}
+function setView(view, focus = false) {
+  if (S.reading) { S.reading = false; S.readingOpener = null; }
+  S.view = view;
+  applyView();
+  scrollTo({ top: 0 });
+  if (focus) document.querySelector(`#bottom-nav a[data-view="${view}"]`)?.focus();
+}
+$("bottom-nav").addEventListener("click", (e) => {
+  const a = e.target.closest("a[data-view]"); if (!a) return;
+  e.preventDefault();
+  setView(a.dataset.view);
+});
+$("bottom-nav").addEventListener("keydown", (e) => {
+  const links = [...document.querySelectorAll("#bottom-nav a")].filter((a) => !a.hidden), i = links.indexOf(document.activeElement);
+  if (i < 0) return;
+  const to = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: links.length - 1 }[e.key];
+  if (to === undefined) return;
+  e.preventDefault();
+  setView(links[(to + links.length) % links.length].dataset.view, true);
+});
+$("all-activity").addEventListener("click", () => {
+  S.activityOpen = !S.activityOpen;
+  applyView();
+  if (S.activityOpen) $("p-tabs").scrollIntoView({ block: "start" });
+});
+function openReading(key = "") {
+  if (!phone()) { showTab("reasoning"); return; }
+  if (!S.reading) {
+    S.readingOpener = key;
+    S.reading = true;
+    try { history.pushState({ reading: true }, ""); } catch { /* sandboxed */ }
+  }
+  applyView();
+  $("tab-reasoning").scrollTop = 0;
+  $("reading-back").focus({ preventScroll: true });
+}
+function closeReading(fromHistory = false) {
+  if (!S.reading) return;
+  if (!fromHistory && history.state && history.state.reading) { history.back(); return; }   // popstate closes it
+  S.reading = false;
+  applyView();
+  // focus returns to the row that opened it (rows re-render, so find it by its decision)
+  const key = S.readingOpener; S.readingOpener = null;
+  const row = key && [...document.querySelectorAll(`[data-key="${CSS.escape(key)}"]`)].find((x) => x.offsetParent);
+  if (row) row.focus();
+}
+$("reading-back").addEventListener("click", () => closeReading());
+addEventListener("popstate", () => { if (S.reading) closeReading(true); });
+addEventListener("keydown", (e) => { if (e.key === "Escape" && S.reading && !document.querySelector("dialog[open]")) closeReading(); });
+{
+  let y0 = null;
+  $("reading-head").addEventListener("touchstart", (e) => { y0 = e.touches[0].clientY; }, { passive: true });
+  $("reading-head").addEventListener("touchend", (e) => {
+    if (y0 != null && e.changedTouches[0].clientY - y0 > 60) closeReading();
+    y0 = null;
+  });
+}
+matchMedia("(max-width: 700px)").addEventListener("change", () => {
+  if (!phone() && S.reading) { S.reading = false; history.state && history.state.reading && history.back(); }
+  applyView(); renderCampaignButton();
+});
+
 // ---------- the levers tab: Orders (Civ VI), Actions (Stellaris), Screen (GalCiv) (rulings 15, 19-22) ----------
 function renderLeversTab() {
   const g = S.spec.game, b = $("tb-levers");
   b.hidden = !g.levers;
-  b.querySelector(".tlabel").textContent = g.levers_label || "Levers";
+  b.querySelector(".tlabel").textContent = $("nv-levers").textContent = g.levers_label || "Levers";
+  $("nv-levers").hidden = !g.levers;
+  if (!g.levers && S.view === "levers") setView("now");
   if (b.hidden && S.tab === "levers") showTab("reasoning");
   $("levers-capture").hidden = !(S.live && S.campaign === (S.status.info || {}).campaign);
   if (S.tab === "levers") renderLevers();
@@ -2394,7 +2679,17 @@ function renderFeed() {
   $("feed").innerHTML = html || `<li class="empty">${esc(FEED_EMPTY[filter])}</li>`;
   renderRecentProblems();
 }
-function renderRecentProblems() { /* the phone's Now (U7) */ }
+// The phone's Now ends with the last 5 problems as sentences, then "All activity" (ruling 12).
+function renderRecentProblems() {
+  const groups = [];
+  for (const ev of [...S.feed].reverse()) {
+    if (!feedCats(ev).has("problems")) continue;
+    const g = groups[groups.length - 1], key = groupKey(ev);
+    if (g && g.key === key) g.evs.push(ev); else if (groups.length < 5) groups.push({ key, evs: [ev] }); else break;
+  }
+  $("recent-problems").innerHTML = groups.map(({ evs }) => `<li><b>${esc(gdate(evs[0].date) || wallTime(evs[0].t))}</b><span>${esc(describe(evs[0]))}${evs.length > 1 ? `, ${evs.length} times` : ""}</span></li>`).join("")
+    || `<li class="empty">No problems lately.</li>`;
+}
 $("feed-filters").addEventListener("click", (e) => {
   const b = e.target.closest("button[data-filter]"); if (!b) return;
   S.feedFilter = b.dataset.filter;
@@ -2484,13 +2779,13 @@ async function loadPc() {
     const word = { offline: "offline", timeout: recentTurn ? "busy" : "not answering", refused: "refuses our token",
                    unknown: "status unknown" }[p.state] || "not answering";
     el.className = "pc " + (word === "busy" ? "busy" : "off");
-    el.textContent = `${host} ${word}`;
+    el.textContent = $("menu-pc").textContent = `${host} ${word}`;
     el.title = p.error ? `The gaming PC's agent: ${p.error}` : "The gaming PC and what is open on it";
     return;
   }
   const open = (p.games || []).map((g) => GAME_NAMES[g] || g);
   el.className = "pc on";
-  el.textContent = [host, p.front_game ? `${GAME_NAMES[p.front_game] || p.front_game} in front` : open.length ? `${open.join(", ")} open` : "no game open",
+  el.textContent = $("menu-pc").textContent = [host, p.front_game ? `${GAME_NAMES[p.front_game] || p.front_game} in front` : open.length ? `${open.join(", ")} open` : "no game open",
                     p.version ? `agent ${p.version}` : ""].filter(Boolean).join(" · ");
   el.title = "The gaming PC and what is open on it";
 }
@@ -2510,11 +2805,6 @@ $("chart-views").addEventListener("click", (e) => {
   const b = e.target.closest("button[data-view]"); if (!b) return;
   S.chartView = b.dataset.view;
   renderChart();
-});
-$("campaign").addEventListener("change", async (e) => {
-  S.campaign = e.target.value; clearReasoning();
-  S.pinned = S.campaign !== (S.status.info || {}).campaign;     // a deliberate look at another campaign
-  await loadCampaignData();
 });
 $("b-toggle").addEventListener("click", () => control({ action: $("b-toggle").textContent === "Pause" ? "pause" : "resume" }));
 
@@ -2686,11 +2976,11 @@ function closeMenu(focus) {
 $("b-more").addEventListener("click", () => {
   const open = $("more-menu").hidden;
   $("more-menu").hidden = !open; $("b-more").setAttribute("aria-expanded", String(open));
-  if (open) $("more-menu").querySelector("button").focus();
+  if (open) [...$("more-menu").querySelectorAll("button")].find((b) => b.offsetParent)?.focus();
 });
 document.addEventListener("click", (e) => { if (!e.target.closest(".more")) closeMenu(false); });
 $("more-menu").addEventListener("keydown", (e) => {
-  const items = [...$("more-menu").querySelectorAll("button")], i = items.indexOf(document.activeElement);
+  const items = [...$("more-menu").querySelectorAll("button")].filter((b) => b.offsetParent), i = items.indexOf(document.activeElement);
   if (e.key === "Escape") { e.preventDefault(); closeMenu(true); }
   else if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); items[(i + (e.key === "ArrowDown" ? 1 : items.length - 1)) % items.length].focus(); }
 });
@@ -2702,6 +2992,8 @@ $("more-menu").addEventListener("click", (e) => {
   else if (b.dataset.act === "signout") signOutHere();
   else if (b.dataset.act === "stop") openStop();
   else if (b.dataset.act === "start") openStart();
+  else if (b.dataset.act === "toggle") $("b-toggle").click();
+  else if (b.dataset.act === "settings") openSettings();
 });
 async function signOutHere() {
   if (!confirm("Sign out this browser? To sign in again you need a code from another signed-in browser, or python -m pilot dashboard-link on the controller.")) return;
@@ -2916,6 +3208,7 @@ let resizeT; addEventListener("resize", () => { clearTimeout(resizeT); resizeT =
   // a signed-in browser that opened a sign-in link lands here with the unspent code: drop it
   if (location.hash.startsWith("#c=")) history.replaceState(null, "", location.pathname + location.search);
   clearReasoning();
+  applyView();
   await loadCatalog();
   await loadStatus();
   setMode(((S.status.info || {}).controls || []).includes("chat") ? "chat" : "instruct");

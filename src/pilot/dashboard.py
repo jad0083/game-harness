@@ -13,7 +13,7 @@ Recorded runs (live or finished; also served by `python -m pilot view` without a
     GET  /runs/<id>/frame.jpg           the run's latest frame
 
 Telemetry (runs/telemetry.sqlite, across runs and models):
-    GET  /api/campaigns                         campaigns with decision/run counts and latest date
+    GET  /api/campaigns                         campaigns: decision and run counts, latest date, empty, state (live/paused/needs_you/stopped)
     GET  /api/decisions?campaign=<id>|run=<id>  decisions (summary + outcome 12 months later)
     GET  /api/decision?run=<id>&episode=<n>     one decision with its full trace
     GET  /api/metrics?campaign=<id>|run=<id>    metric points over in-game time
@@ -102,6 +102,7 @@ class LiveProxy:
         self.runs_dir = runs_dir
         self.keys = keys if isinstance(keys, KeySource) else KeySource(fixed=keys)
         self._url: str | None = None
+        self.run: dict | None = None       # the live run (list_runs row, with its status.json) once found
         self._checked = 0.0
         self._session: ClientSession | None = None
 
@@ -125,7 +126,7 @@ class LiveProxy:
         raise AssertionError("unreachable")
 
     def forget(self) -> None:
-        self._url, self._checked = None, 0.0
+        self._url, self.run, self._checked = None, None, 0.0
 
     async def close(self) -> None:
         if self._session:
@@ -135,7 +136,7 @@ class LiveProxy:
         now = asyncio.get_running_loop().time()
         if now - self._checked < 5:
             return self._url
-        self._checked, self._url = now, None
+        self._checked, self._url, self.run = now, None, None
         for run in list_runs(self.runs_dir):
             st = run.get("_status") or {}
             port = (st.get("info") or {}).get("port")
@@ -145,7 +146,7 @@ class LiveProxy:
             try:
                 code, _, body = await self.request("GET", url + "/status", timeout=ClientTimeout(total=2))
                 if code == 200 and json.loads(body).get("run_id") == run["id"]:
-                    self._url = url
+                    self._url, self.run = url, run
                     break
             except (OSError, TimeoutError, ClientError, ValueError):
                 continue
@@ -267,6 +268,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
     tel = telemetry or (log.telemetry if log else None)
     corpora = corpora or (REPO / "corpora")
     live_url = None                  # set for the viewer: finds a live run to refuse a second start
+    live_run = None                  # set for the viewer: (campaign, status) of the live run, if any
     views, names = Views(corpora), Names(corpora)
 
     def game_of_campaign(cid: str) -> str:
@@ -321,8 +323,18 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
             " (SELECT COUNT(*) FROM decisions d WHERE d.campaign_id=c.id AND (d.decision IS NULL OR d.decision != 'strategy_review')) AS decisions,"
             " (SELECT m.date FROM metrics m WHERE m.campaign_id=c.id AND m.month IS NOT NULL"
             "  ORDER BY m.month DESC, m.t DESC LIMIT 1) AS latest,"      # in game order: MAX(date) put "T99" after "T310"
-            " (SELECT GROUP_CONCAT(DISTINCT r.model) FROM runs r WHERE r.campaign_id=c.id) AS models"
+            " (SELECT GROUP_CONCAT(DISTINCT r.model) FROM runs r WHERE r.campaign_id=c.id) AS models,"
+            " (SELECT COUNT(*) FROM metrics m WHERE m.campaign_id=c.id) AS metrics"
             " FROM campaigns c ORDER BY c.created DESC")
+        # the campaign list (ruling 4): empty campaigns fold away; the live one says its state
+        if log is not None:
+            live_cid, live_status = log.campaign_id, log.state.status
+        else:
+            live_cid, live_status = await live_run() if live_run else (None, None)
+        for r in rows:
+            r["empty"] = not r["decisions"] and not r["metrics"]
+            r["state"] = ({"paused": "paused", "needs_attention": "needs_you"}.get(live_status or "", "live")
+                          if live_cid and r["id"] == live_cid and live_status in LIVE_STATES else "stopped")
         return web.json_response(rows)
 
     def decorate(rows: list[dict], order_rows: list[dict], calls: list[dict]) -> list[dict]:
@@ -741,6 +753,12 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
         auth = auth or Auth.from_env(runs_dir, key=key)
         proxy = LiveProxy(runs_dir, auth.keys)
         live_url = proxy.url
+
+        async def live_run() -> tuple[str | None, str | None]:
+            if not await proxy.url() or not proxy.run:
+                return None, None
+            st = proxy.run.get("_status") or {}
+            return (st.get("info") or {}).get("campaign"), st.get("status")
 
         def refused_key() -> web.Response:
             # the live pilot's 401 is about the service key, never this browser's sign-in

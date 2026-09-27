@@ -5,14 +5,14 @@ and the reader tabs' keyboard."""
 from __future__ import annotations
 
 import pytest
-from uikit import CONTEXTS, contrast_failures, open_context
+from uikit import CONTEXTS, contrast_failures, open_context, pick_campaign, show
 
 pytestmark = pytest.mark.ui
 
 
 def load(w):
     w.page.goto(w.base + "/", wait_until="domcontentloaded")
-    w.page.wait_for_selector("#decisions li button", timeout=15000)
+    w.page.wait_for_selector("#decisions li button", state="attached", timeout=15000)
     w.page.wait_for_timeout(600)
 
 
@@ -29,7 +29,7 @@ def test_the_reader_tabs_follow_the_game_and_take_arrow_keys(browser, live_serve
     assert page.evaluate("document.activeElement.id") == "tb-levers" and page.is_visible("#tab-levers")
     page.keyboard.press("End")
     assert page.evaluate("document.activeElement.id") == "tb-activity" and page.is_visible("#stats")
-    page.select_option("#campaign", "stellaris/theia")
+    pick_campaign(page, "stellaris/theia")
     page.wait_for_function("document.querySelector('#tb-levers .tlabel').textContent === 'Actions'")
     w.context.close()
 
@@ -39,7 +39,7 @@ def test_the_orders_tab_shows_buy_outs_record_and_every_order(browser, live_serv
     w = open_context(browser, name, live_servers)
     load(w)
     page = w.page
-    page.click("#tb-levers")
+    show(page, "levers")
     page.wait_for_selector("#levers .rec li")
     text = page.text_content("#levers")
     assert "Gold 257, keeps 46 (30 + 10 for each gold of deficit a turn (1.6 now))" in text
@@ -61,7 +61,7 @@ def test_filters_narrow_the_log_and_a_row_opens_its_decision(browser, live_serve
     w = open_context(browser, "desktop-dark", live_servers)
     load(w)
     page = w.page
-    page.click("#tb-levers")
+    show(page, "levers")
     page.wait_for_selector("#levers .olog li")
     page.click('#levers [data-ofate="refused"]')
     rows = page.eval_on_selector_all("#levers .olog li", "ls => ls.map(l => l.textContent.replace(/\\s+/g, ' ').trim())")

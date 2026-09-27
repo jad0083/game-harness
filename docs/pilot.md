@@ -305,7 +305,10 @@ running pilot (whose own dashboard is on `PILOT_PORT`, 8790, on 127.0.0.1). It r
   does not publish is hidden, never shown as "–". Game ids read as names (`CIVILIZATION_GERMANY` →
   Germany, `unit:trader` → Trader) from the corpus, with prefix-strip and title-case as the fallback.
 - **The bar** carries the brand, the campaign, the PC chip, Pause/Resume (live), Settings and ⋯
-  (Stop the run…, Start run, Add a device, Devices, Sign out). Stop always confirms in the game's
+  (Stop the run…, Start run, Add a device, Devices, Sign out). The campaign is a button ("Kublai
+  Khan, China · T57", a dot when it is the live one) that opens the campaign list: each campaign's
+  game, state (live, paused, needs you, stopped), last date, decisions and runs, the live one first
+  and empty ones (no decision, no figures: a failed start) under *Show empty campaigns*. Stop always confirms in the game's
   words ("The AI finishes this turn and the game stays at T310"). The PC chip names the host, the
   game in front and the agent's version, and says "busy" (no answer in 3 s just after a turn),
   "not answering", "offline" (connection refused) or "refuses our token".
@@ -371,6 +374,15 @@ running pilot (whose own dashboard is on `PILOT_PORT`, 8790, on 127.0.0.1). It r
 - **Game health** (Civ VI, on Now, only when something is off): popups quieted at this load, tuner
   timeouts in the last calls, the last turn's time; in the warning colour when a popup failed to
   quiet or a turn was held. The governor line's facts say whether the last stand is armed or off.
+- **On a phone** (700 px and narrower) the page is its own layout: a 52 px bar with the brand dot,
+  the campaign and its date, a state dot and ⋯ (which then also holds Pause/Resume, Settings and the
+  PC chip); a bottom nav Now · Decisions · the levers tab · Strategy · Talk (the current one is the
+  tab stop, arrow keys move); Now leads with the governor line and the last decision, then the
+  figures, the chart and the rivals, and ends with the last 5 problems and *All activity*. Off Now
+  the governor line shows only when the run needs you (its sentence, not the card). A decision opens
+  Reasoning as a full-screen sheet (Back, a swipe down on its head, Escape or the browser's back
+  close it, and focus returns to the row); the campaign list, Settings and Add a device are
+  full-screen sheets too. Nothing scrolls sideways and no text is under 13 px.
 - **Activity**: every event as one sentence in the game's words ("Played T55 → T57 in 2 min 6 s",
   "Gemini 3.8 Flash overloaded (503); used Gemini 3.1 Pro", "Popups quieted 5 of 6 at T50; not: …",
   "Review skipped: within 12 turns of the last; next after T62"), newest first, each with its game

@@ -5,7 +5,7 @@ Problems first while a stop is open; a past campaign shows its own events."""
 from __future__ import annotations
 
 import pytest
-from uikit import open_context
+from uikit import open_context, pick_campaign, show
 
 pytestmark = pytest.mark.ui
 
@@ -14,10 +14,10 @@ TUNER = "autoplay at T57: Error: Failed /tuner/lua\n\nCaused by:\n    0: operati
 
 def load(w, tab=True):
     w.page.goto(w.base + "/", wait_until="domcontentloaded")
-    w.page.wait_for_selector("#decisions li button", timeout=15000)
+    w.page.wait_for_selector("#decisions li button", state="attached", timeout=15000)
     w.page.wait_for_timeout(800)
     if tab:
-        w.page.click('.tabs button[data-tab="activity"]')
+        show(w.page, "activity")
         w.page.wait_for_selector("#feed li.ev", timeout=5000)
 
 
@@ -92,7 +92,7 @@ def test_a_past_campaign_shows_its_own_events(browser, live_servers):
     w = open_context(browser, "desktop-light", live_servers)
     load(w)
     page = w.page
-    page.select_option("#campaign", "stellaris/theia")
+    pick_campaign(page, "stellaris/theia")
     page.wait_for_function("document.getElementById('feed').textContent.includes('Run started: Stellaris')", timeout=5000)
     feed = page.text_content("#feed")
     assert "Run ended" in feed and "Civ VI" not in feed and "Chengdu" not in feed

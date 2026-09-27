@@ -4,14 +4,14 @@
 from __future__ import annotations
 
 import pytest
-from uikit import CONTEXTS, contrast_failures, open_context
+from uikit import CONTEXTS, contrast_failures, open_context, pick_campaign
 
 pytestmark = pytest.mark.ui
 
 
 def load(w):
     w.page.goto(w.base + "/", wait_until="domcontentloaded")
-    w.page.wait_for_selector("#decisions li button", timeout=15000)
+    w.page.wait_for_selector("#decisions li button", state="attached", timeout=15000)
     w.page.wait_for_timeout(800)
 
 
@@ -119,14 +119,14 @@ def test_a_past_campaign_says_so_and_links_to_the_live_one(browser, live_servers
     w = open_context(browser, "desktop-light", live_servers)
     load(w)
     page = w.page
-    page.select_option("#campaign", "stellaris/theia")
+    pick_campaign(page, "stellaris/theia")
     page.wait_for_function("document.getElementById('gov').dataset.state === 'history'")
     assert page.text_content("#gov-line").startswith("Viewing a past campaign: last played 2288.06")
     assert "Live now: Civ VI T57, Kublai Khan, China." in page.text_content("#gov-facts")
     assert page.title() == "Game Pilot"
     page.click("#gov-facts [data-live]")
     page.wait_for_function("document.getElementById('gov').dataset.state === 'playing'")
-    assert page.input_value("#campaign") == "civ6/kublai"
+    assert page.get_attribute("#campaign", "data-cid") == "civ6/kublai"
     w.context.close()
 
 

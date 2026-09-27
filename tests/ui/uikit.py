@@ -301,6 +301,30 @@ def open_context(browser, name: str, servers: dict, *, signed_in: bool = True, d
     return w
 
 
+def show(page, where: str) -> None:
+    """Bring a destination on screen: a reader tab on a desktop; on a phone its bottom-nav view (ruling
+    1: Activity is at the end of Now, under "All activity")."""
+    if page.is_visible("#bottom-nav"):
+        if where == "activity":
+            page.click('#bottom-nav a[data-view="now"]')
+            if page.get_attribute("#all-activity", "aria-expanded") != "true":
+                page.click("#all-activity")
+        else:
+            page.click(f'#bottom-nav a[data-view="{where}"]')
+    else:
+        page.click(f'.tabs button[data-tab="{where}"]')
+    page.wait_for_timeout(200)
+
+
+def pick_campaign(page, cid: str) -> None:
+    """Switch the page to another campaign through the campaign list (ruling 4)."""
+    page.click("#campaign")
+    page.wait_for_selector("#camp-dialog[open]")
+    page.click(f'#camp-dialog button[data-cid="{cid}"]')
+    page.wait_for_function(f"document.getElementById('campaign').dataset.cid === {cid!r}")
+    page.wait_for_timeout(300)
+
+
 def sign_in(ctx, base: str, auth, name: str = "Chrome on Windows") -> str:
     """Give the context a session cookie as a sign-in would; returns the device id."""
     row, cred = auth.store.create_device("browser", name=name, created_via="cli", created_by="cli", ip="127.0.0.1")

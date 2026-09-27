@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import pytest
-from uikit import UI_KEY, open_context
+from uikit import UI_KEY, open_context, pick_campaign, show
 
 pytestmark = pytest.mark.ui
 
 
 def load(w):
     w.page.goto(w.base + "/", wait_until="domcontentloaded")
-    w.page.wait_for_selector("#decisions li button", timeout=15000)
+    w.page.wait_for_selector("#decisions li button", state="attached", timeout=15000)
     w.page.wait_for_timeout(1200)
 
 
@@ -37,8 +37,10 @@ def test_civ6_readout_speaks_turns(browser, live_servers):
     assert "(every 5 turns)" in page.text_content("#gov-facts")
     assert "Directive" not in page.text_content("#figures")                 # Civ VI has none
     assert "Civ VI" in page.text_content("#pc")
-    camp = page.eval_on_selector("#campaign", "s => [...s.options].map(o => o.textContent)")
-    assert camp == ["Kublai Khan, China (live), 2 decisions", "Theian Union, 1 decision"]
+    page.click("#campaign")
+    camp = page.eval_on_selector_all("#camp-list .c-title", "ts => ts.map(t => t.textContent)")
+    assert camp == ["Kublai Khan, China", "Theian Union"]
+    assert "2 decisions" in page.text_content("#camp-list") and "1 decision," in page.text_content("#camp-list")
     w.context.close()
 
 
@@ -59,11 +61,11 @@ def test_switching_campaign_clears_reasoning(browser, live_servers):
     load(w)
     page = w.page
     page.wait_for_selector("#tab-reasoning .t-decision, #tab-reasoning .t-error")
-    page.select_option("#campaign", "stellaris/theia")
+    pick_campaign(page, "stellaris/theia")
     page.wait_for_timeout(300)
-    assert page.text_content("#tab-reasoning").strip() in ("Pick a decision to read how it was made.", "Loading…") \
-        or "Room to grow" in page.text_content("#tab-reasoning")
-    assert "Chengdu" not in page.text_content("#tab-reasoning")
+    assert page.text_content("#reasoning").strip() in ("Pick a decision to read how it was made.", "Loading…") \
+        or "Room to grow" in page.text_content("#reasoning")
+    assert "Chengdu" not in page.text_content("#reasoning")
     assert w.errors == []
     w.context.close()
 
@@ -95,7 +97,7 @@ def test_page_shows_the_carried_over_notice_once(browser, live_servers):
     assert "own sign-in" in w.page.text_content("#notices")
     w.page.click("#notices [data-dismiss]")
     w.page.reload()
-    w.page.wait_for_selector("#decisions li button")
+    w.page.wait_for_selector("#decisions li button", state="attached")
     w.page.wait_for_timeout(800)
     assert w.page.is_hidden("#notices")
     w.context.close()
@@ -106,7 +108,7 @@ def test_pause_is_attributed_to_the_browser_in_activity(browser, live_servers):
     load(w)
     page = w.page
     page.click("#b-toggle")
-    page.click('.tabs button[data-tab="activity"]')
+    show(page, "activity")
     page.wait_for_function("document.getElementById('feed').textContent.includes('Paused, from Pixel phone')", timeout=5000)
     assert live_servers["pilot"].calls == ["pause"]
     w.context.close()

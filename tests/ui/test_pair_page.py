@@ -83,7 +83,7 @@ def test_in_app_browser_is_warned_and_keeps_the_code(browser, live_servers):
 def open_add_sheet(w):
     page = w.page
     page.goto(w.base + "/")
-    page.wait_for_selector("#decisions li button")
+    page.wait_for_selector("#decisions li button", state="attached")
     page.click("#b-more")
     page.click('#more-menu [data-act="add"]')
     page.wait_for_selector("#add-dialog[open]")
@@ -101,7 +101,7 @@ def test_second_browser_signs_in_by_link(browser, live_servers, tmp_path):
     b.page.goto(link.replace("http://" + link.split("/")[2], b.base))
     b.page.wait_for_selector("#v-confirm:not([hidden])")
     b.page.click("#confirm-go")
-    b.page.wait_for_selector("#decisions li button")
+    b.page.wait_for_selector("#decisions li button", state="attached")
     assert "#c=" not in b.page.url
     page.wait_for_function("document.getElementById('add-status').textContent.startsWith('Signed in:')", timeout=6000)
     assert "Chrome on Android" in page.text_content("#add-status")
@@ -118,7 +118,7 @@ def test_second_browser_signs_in_by_typed_prefixes(browser, live_servers):
     b.page.goto(b.base + "/#tab=strategy")
     b.page.fill("#words", " ".join(x[:3].upper() for x in words))
     b.page.click("#submit")
-    b.page.wait_for_selector("#decisions li button")
+    b.page.wait_for_selector("#decisions li button", state="attached")
     assert b.page.url.endswith("/#tab=strategy")
     a.context.close()
     b.context.close()
@@ -167,7 +167,7 @@ def test_devices_tab_lists_this_browser_and_signs_another_out(browser, live_serv
     a = open_context(browser, "desktop-light", live_servers, device="Chrome on Windows")
     page = a.page
     page.goto(a.base + "/")
-    page.wait_for_selector("#decisions li button")
+    page.wait_for_selector("#decisions li button", state="attached")
     page.click("#b-more")
     page.click('#more-menu [data-act="devices"]')
     page.wait_for_selector('[data-spanel="devices"]:not([hidden]) #dev-list')

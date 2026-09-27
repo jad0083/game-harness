@@ -4,14 +4,14 @@ rivals with readable names, the Strategy tab's share and exclusive modes, Settin
 from __future__ import annotations
 
 import pytest
-from uikit import contrast_failures, open_context
+from uikit import contrast_failures, open_context, pick_campaign, show
 
 pytestmark = pytest.mark.ui
 
 
 def load(w):
     w.page.goto(w.base + "/", wait_until="domcontentloaded")
-    w.page.wait_for_selector("#decisions li button", timeout=15000)
+    w.page.wait_for_selector("#decisions li button", state="attached", timeout=15000)
     w.page.wait_for_selector("#figures .fig", timeout=5000)
 
 
@@ -49,7 +49,7 @@ def test_civ6_strategy_speaks_of_effort_not_pressure(browser, live_servers):
     w = open_context(browser, "desktop-dark", live_servers)
     load(w)
     page = w.page
-    page.click('.tabs [data-tab="strategy"]')
+    show(page, "strategy")
     page.wait_for_selector("#strategy .pillar")
     text = page.text_content("#strategy")
     assert "Where the effort goes" in text and "30% of effort" in text
@@ -66,7 +66,7 @@ def test_stellaris_history_speaks_months_and_directives(browser, live_servers):
     w = open_context(browser, "desktop-dark", live_servers)
     load(w)
     page = w.page
-    page.select_option("#campaign", "stellaris/theia")
+    pick_campaign(page, "stellaris/theia")
     page.wait_for_function("document.getElementById('h-chart').textContent === 'Empire over time'")
     page.wait_for_selector("#figures .fig")
     figs = figures(page)

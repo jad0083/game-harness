@@ -486,6 +486,13 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   40 calls, the last turn's time) and emits `popups_quieted` once per library install (the
   controller's reply field, kept by `ControllerCiv6` until read); `info.last_stand` (armed or off,
   its limit, the streak, why it turned off, the stand running) is always there.
+- The phone layout and the campaign list (rulings 1, 4, 13, 32): one DOM for every width; at 700 px
+  and narrower `body[data-view]` (now, decisions, levers, strategy, talk), `[data-reading]` (the
+  Reasoning sheet, a history entry so the browser's back closes it) and `[data-activity]` pick what
+  shows, the bottom nav sets them, and `[data-gov]` keeps the governor line on other views while the
+  run needs you. `/api/campaigns` adds `empty` (no decision and no metrics row) and `state` (live,
+  paused, needs_you or stopped: the live pilot's own campaign and status, or for the viewer the run
+  `LiveProxy` found).
 - Activity (rulings 18, 29): `/api/events?campaign=&after=&n=` gives a campaign's events across its
   runs (backfill runs and the feed's quiet kinds left out), oldest first, each with the game date it
   happened at (its own `date`, a `turn` event's turn, else the newest metrics date before it) and its

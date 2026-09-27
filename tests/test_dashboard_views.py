@@ -72,6 +72,47 @@ def test_campaign_latest_date_is_the_latest_in_game_order(tmp_path):
     asyncio.run(go())
 
 
+def test_campaigns_say_their_runs_whether_they_are_empty_and_which_is_live(tmp_path):
+    """The campaign list (ruling 4): runs and decisions per campaign, `empty` for one with neither a
+    decision nor a metrics row (a failed start), and `state` live, paused, needs_you or stopped from the
+    live pilot's own run."""
+    runs = tmp_path / "runs"
+    tel = Telemetry(runs / "telemetry.sqlite")
+    empty = EventLog(runs, "20260925-080000", "m", telemetry=tel)
+    empty.emit("run_start", game="galciv4", model="m")
+    empty.set_campaign("galciv4", "untitled", "")
+    empty.emit("run_end")
+    empty.close()
+    old = EventLog(runs, "20260926-080000", "m", telemetry=tel)
+    old.emit("run_start", game="civ6", model="m")
+    old.set_campaign("civ6", "kublai", "Kublai Khan, China")
+    old.emit("metrics", date="T50", turn=50, score=1)
+    old.emit("run_end")
+    old.close()
+    live = EventLog(runs, "20260927-080000", "m", telemetry=tel)
+    live.emit("run_start", game="civ6", model="m")
+    live.set_campaign("civ6", "kublai", "Kublai Khan, China")
+    live.state.status = "needs_attention"
+
+    async def go():
+        async with TestClient(TestServer(make_app(FakeLive(live), runs, tel))) as c:
+            rows = {r["id"]: r for r in await (await c.get("/api/campaigns")).json()}
+        assert rows["galciv4/untitled"]["empty"] is True and rows["galciv4/untitled"]["runs"] == 1
+        assert rows["galciv4/untitled"]["state"] == "stopped"
+        assert rows["civ6/kublai"]["empty"] is False and rows["civ6/kublai"]["runs"] == 2
+        assert rows["civ6/kublai"]["state"] == "needs_you"
+        async with TestClient(TestServer(make_app(None, runs, tel))) as c:       # a viewer with no live pilot
+            rows = {r["id"]: r for r in await (await c.get("/api/campaigns")).json()}
+        assert rows["civ6/kublai"]["state"] == "stopped"
+    asyncio.run(go())
+    live.close()
+
+
+class FakeLive:
+    def __init__(self, log):
+        self.log = log
+
+
 def test_runs_say_whether_they_have_a_frame(tmp_path):
     """The page asks for a run's frame only when one exists (a 404 every 10 s for governor games)."""
     runs = tmp_path / "runs"

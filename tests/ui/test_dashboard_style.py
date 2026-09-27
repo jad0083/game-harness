@@ -4,14 +4,14 @@ colours), and a refused change is said in the page, never in a blocking alert().
 from __future__ import annotations
 
 import pytest
-from uikit import CONTEXTS, contrast_failures, open_context
+from uikit import CONTEXTS, contrast_failures, open_context, show
 
 pytestmark = pytest.mark.ui
 
 
 def load(w):
     w.page.goto(w.base + "/", wait_until="domcontentloaded")
-    w.page.wait_for_selector("#decisions li button", timeout=15000)
+    w.page.wait_for_selector("#decisions li button", state="attached", timeout=15000)
     w.page.wait_for_timeout(1200)
 
 
@@ -21,8 +21,8 @@ def test_page_text_passes_contrast(browser, live_servers, name, tmp_path):
     load(w)
     w.page.screenshot(path=str(tmp_path / f"page-{name}.png"), full_page=True)
     assert contrast_failures(w.page) == []
-    w.page.click('.tabs [data-tab="strategy"]')
-    w.page.click('.tabs [data-tab="activity"]')
+    show(w.page, "strategy")
+    show(w.page, "activity")
     assert contrast_failures(w.page) == []
     w.context.close()
 

@@ -4,14 +4,14 @@ fates are symbols with words, errors read "No decision:" with their cause, Probl
 from __future__ import annotations
 
 import pytest
-from uikit import contrast_failures, open_context
+from uikit import contrast_failures, open_context, show
 
 pytestmark = pytest.mark.ui
 
 
 def load(w):
     w.page.goto(w.base + "/", wait_until="domcontentloaded")
-    w.page.wait_for_selector("#decisions li button", timeout=15000)
+    w.page.wait_for_selector("#decisions li button", state="attached", timeout=15000)
     w.page.wait_for_timeout(600)
 
 
@@ -76,6 +76,7 @@ def test_problems_only_keeps_errors_and_refusals(browser, live_servers):
     w = open_context(browser, "phone-light", live_servers)
     load(w)
     page = w.page
+    show(page, "decisions")
     assert page.is_hidden('#decisions button[data-i="0"] .chips')           # a phone counts fates instead
     counts = page.text_content('#decisions button[data-i="0"] .fcounts')
     assert "✓ 2" in counts and "↺ 1" in counts and "✕ 1" in counts
