@@ -1863,3 +1863,114 @@ def test_a_start_that_fails_for_another_reason_still_waits_for_the_human(setup, 
     assert g.log.state.status == "needs_attention" and not any(e["kind"] == "recovered" for e in g.log.recent)
     g.control.stopping = True
     t.join(5)
+
+
+# ---- the diplomacy auto-reply (issues.md T240, T342) ----------------------------------------------
+# The library answers an AI leader's statement during autoplay and logs it in the snapshot's
+# `diplomacy` (the last 20); the governor turns each new answer into one `diplomacy_reply` event and
+# the briefing says what was answered for us.
+
+def _dipl(*entries, handler: bool = True) -> dict:
+    return {"handler": handler, "log": [dict(e) for e in entries]}
+
+
+_T240 = ({"n": 1, "turn": 13, "at": 13, "from": 3, "civ": "CIVILIZATION_AUSTRALIA", "session": 7,
+          "kind": "WARNING_TOO_MANY_TROOPS_NEAR_ME", "sub": "NONE", "reply": "POSITIVE", "why": "table"},
+         {"n": 2, "turn": 13, "at": 13, "from": 3, "civ": "CIVILIZATION_AUSTRALIA", "session": 7,
+          "kind": "WARNING_TOO_MANY_TROOPS_NEAR_ME", "sub": "POSITIVE", "reply": "EXIT", "why": "follow-up"})
+_WAITING = {"n": 3, "turn": 13, "from": 3, "civ": "CIVILIZATION_AUSTRALIA", "session": 9, "kind": "MAKE_PEACE",
+            "sub": "NONE", "why": "waiting"}
+
+
+def _diplomacy_line(s: dict) -> str | None:
+    return next((line for line in briefing_text(s, INDEX).splitlines() if line.startswith("Diplomacy")), None)
+
+
+def test_the_briefing_says_what_was_answered_for_us():
+    line = _diplomacy_line({**FIXTURE, "diplomacy": _dipl(*_T240, _WAITING)})
+    assert line is not None
+    assert "never war" in line and "no deal accepted" in line
+    assert "T13 civ:australia warning too many troops near me: the conciliatory reply (a promise)" in line
+    assert "T13 civ:australia warning too many troops near me (positive follow-up): Goodbye" in line
+    assert "T13 civ:australia make peace: waiting for the next autoplay" in line
+
+
+def test_the_briefing_names_refusals_failures_and_sessions_closed_before_an_answer():
+    line = _diplomacy_line({**FIXTURE, "diplomacy": _dipl(
+        {"n": 1, "turn": 13, "at": 13, "from": 4, "civ": "CIVILIZATION_ROME", "session": 1, "kind": "MAKE_DEAL",
+         "sub": "NONE", "reply": "REFUSE", "why": "table"},
+        {"n": 2, "turn": 13, "at": 14, "from": 4, "civ": "CIVILIZATION_ROME", "session": 2, "kind": "DENOUNCE",
+         "sub": "NONE", "reply": "EXIT", "why": "table", "late": True, "err": "the session is gone"},
+        {"n": 3, "turn": 13, "from": 4, "civ": "CIVILIZATION_ROME", "session": 3, "kind": "OPEN_BORDERS", "sub": "NONE",
+         "why": "gone"},
+        {"n": 4, "turn": 14, "at": 14, "from": 4, "civ": "CIVILIZATION_ROME", "session": 4, "kind": "NEW_THING",
+         "sub": "NONE", "reply": "EXIT", "why": "unknown"})})
+    assert "civ:rome make deal: refused" in line
+    assert "civ:rome denounce: Goodbye (at T14, when autoplay started; failed: the session is gone)" in line
+    assert "civ:rome open borders: closed before an answer" in line
+    assert "civ:rome new thing: Goodbye (an unknown statement)" in line
+
+
+def test_the_briefing_leaves_out_answers_older_than_ten_turns_but_never_a_waiting_one():
+    old = {**_T240[0], "turn": 1, "at": 1}
+    waiting = {**_WAITING, "turn": 1}
+    assert _diplomacy_line({**FIXTURE, "diplomacy": _dipl(old)}) is None, "T1 at T12: over ten turns ago"
+    assert "T2 civ:australia" in _diplomacy_line({**FIXTURE, "diplomacy": _dipl({**old, "turn": 2, "at": 2})})
+    line = _diplomacy_line({**FIXTURE, "diplomacy": _dipl(old, waiting)})
+    assert "T1 civ:australia make peace: waiting" in line and "troops" not in line
+
+
+def test_the_briefing_warns_when_the_auto_reply_is_not_installed():
+    line = _diplomacy_line({**FIXTURE, "diplomacy": _dipl(handler=False)})
+    assert line is not None and "not installed" in line
+
+
+def test_no_diplomacy_line_without_a_statement_or_from_an_older_library():
+    assert _diplomacy_line({**FIXTURE, "diplomacy": _dipl()}) is None
+    assert _diplomacy_line(FIXTURE) is None
+
+
+def _replies(setup) -> list[dict]:
+    return [e for e in _events(setup) if e["kind"] == "diplomacy_reply"]
+
+
+def test_each_answer_is_one_diplomacy_reply_event_and_in_the_next_prompt(setup):
+    seen: list[str] = []
+
+    def statements(state):
+        state["diplomacy"] = _dipl(*_T240, _WAITING)
+
+    def answered_late(state):          # autoplay started: the waiting peace offer got Goodbye
+        state["diplomacy"]["log"][2].update(reply="EXIT", why="table", at=14, late=True)
+
+    game = FakeCiv6(FIXTURE, index=INDEX, events={FIXTURE["turn"] + 1: statements, FIXTURE["turn"] + 2: answered_late})
+    g = governor(setup, game, orders_model([], seen=seen))
+    g.run(max_decisions=2)
+    replies = _replies(setup)
+    assert [(e["statement"], e["subtype"], e["reply"], e["why"]) for e in replies] == [
+        ("WARNING_TOO_MANY_TROOPS_NEAR_ME", "NONE", "POSITIVE", "table"),
+        ("WARNING_TOO_MANY_TROOPS_NEAR_ME", "POSITIVE", "EXIT", "follow-up"),
+        ("MAKE_PEACE", "NONE", "EXIT", "table")], "once each, and the waiting one once answered"
+    first = replies[0]
+    assert (first["civ"], first["from"], first["turn"], first["at"], first["date"], first["session"]) == (
+        "civ:australia", 3, 13, 13, "T13", 7)
+    assert first["text"] == "the conciliatory reply (a promise)"
+    assert replies[2]["late"] is True and replies[2]["date"] == "T14"
+    assert "T13 civ:australia warning too many troops near me: the conciliatory reply" in seen[1]
+
+
+def test_a_restarted_run_does_not_report_the_same_answers_again(setup, tmp_path):
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    base = {**FIXTURE, "diplomacy": _dipl(*_T240)}
+    first = Civ6Governor(s, FakeCiv6(base, index=INDEX), EventLog(s.runs_dir, "r1", s.model, telemetry=tel),
+                         model=orders_model([]))
+    first.status_poll_s, first.start_grace_s = 0, 0.05
+    first.run(max_decisions=1)
+    second = Civ6Governor(s, FakeCiv6(base, index=INDEX), EventLog(s.runs_dir, "r2", s.model, telemetry=tel),
+                          model=orders_model([]))
+    second.status_poll_s, second.start_grace_s = 0, 0.05
+    second.run(max_decisions=1)
+    rows = tel.campaign_events(first.log.campaign_id, "diplomacy_reply")
+    assert [(r["session"], r["subtype"]) for r in rows] == [(7, "NONE"), (7, "POSITIVE")]
