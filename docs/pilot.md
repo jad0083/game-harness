@@ -219,8 +219,9 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   choice. Every later statement of a session (the AI's "Thank you.") and any unknown kind get
   Goodbye; a promise is sent only when the game's own data offers it for that statement without a
   diplomatic action. A statement outside autoplay waits (the screen no longer shows it) and is
-  answered when autoplay next starts, which also closes sessions answered earlier that no follow-up
-  closed. A reply the game refuses gets Goodbye at once; a session whose Goodbye failed stays listed
+  answered when autoplay next starts (a follow-up that came after the hand-back gets Goodbye then),
+  which also closes sessions answered earlier that no follow-up closed and logs that Goodbye (why
+  `sweep`). A reply the game refuses gets Goodbye at once; a session whose Goodbye failed stays listed
   and is closed at the next autoplay start. The snapshot's `diplomacy` lists the last 20 (turn, from, statement, subtype, reply, why);
   the governor emits one `diplomacy_reply` event per new answer (telemetry keeps them, so a restart
   does not report them again), the briefing gets a "Diplomacy answered for us" line (or says the

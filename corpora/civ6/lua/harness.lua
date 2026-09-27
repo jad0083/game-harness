@@ -1308,6 +1308,15 @@ end
 local D = OLD and OLD.dipl or { n = 0, log = {}, wait = {}, open = {} }
 H.dipl = D
 
+-- Numbers an entry and logs it (the last 20 stay).
+local function add_log(e)
+  D.n = D.n + 1
+  e.n = D.n
+  table.insert(D.log, e)
+  if #D.log > 20 then table.remove(D.log, 1) end
+  return e
+end
+
 local function offered(kind, reply)
   local set
   for r in GameInfo.DiplomacyStatements() do
@@ -1359,10 +1368,7 @@ local function on_statement(from, to, kv)
     local me = H.me()
     if to ~= me or from == me then return end
     -- logged before it is read, so a failed read still shows (with `err`) and gets Goodbye (unknown kind)
-    D.n = D.n + 1
-    local e = { n = D.n, turn = Game.GetCurrentGameTurn(), from = from, session = kv.SessionID }
-    table.insert(D.log, e)
-    if #D.log > 20 then table.remove(D.log, 1) end
+    local e = add_log({ turn = Game.GetCurrentGameTurn(), from = from, session = kv.SessionID })
     local ok, err = pcall(function()
       e.session = e.session or DiplomacyManager.FindOpenSessionID(me, from)
       e.kind = DiplomacyManager.GetKeyName(kv.StatementType)
@@ -1379,12 +1385,16 @@ local function on_statement(from, to, kv)
   end)
 end
 
--- When autoplay starts: close answered sessions no follow-up closed, then answer those waiting.
+-- The sweep's log entry for each answered session it closes: one per session, even when retried.
+local swept = setmetatable({}, { __mode = 'k' })
+
+-- When autoplay starts: answer the statements that waited (a follow-up of an answered session, such
+-- as a "Thank you." that came after the hand-back, gets Goodbye as one), then close the sessions
+-- answered before this start that no follow-up closed. That Goodbye is logged too (why 'sweep'); a
+-- failed one keeps its session listed and is tried again at the next start.
 local function dipl_sweep()
-  for sid in pairs(D.open) do
-    D.open[sid] = nil
-    if DiplomacyManager.IsSessionIDOpen(sid) then DiplomacyManager.CloseSession(sid) end
-  end
+  local before = {}
+  for sid, e in pairs(D.open) do before[sid] = e end
   for sid, e in pairs(D.wait) do
     D.wait[sid] = nil
     if DiplomacyManager.IsSessionIDOpen(sid) then
@@ -1392,6 +1402,21 @@ local function dipl_sweep()
       respond(e)
     else
       e.why = 'gone'
+    end
+  end
+  for sid, e in pairs(before) do
+    if D.open[sid] == e then
+      if DiplomacyManager.IsSessionIDOpen(sid) then
+        local s = swept[e] or add_log({ turn = e.turn, from = e.from, civ = e.civ, session = sid, kind = e.kind,
+                                        sub = e.sub, reply = 'EXIT', why = 'sweep' })
+        swept[e] = s
+        s.at = Game.GetCurrentGameTurn()
+        local ok, err = pcall(DiplomacyManager.CloseSession, sid)
+        s.err = (not ok) and tostring(err) or nil
+        if ok then D.open[sid] = nil end
+      else
+        D.open[sid] = nil
+      end
     end
   end
 end

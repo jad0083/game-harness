@@ -1917,6 +1917,15 @@ def test_the_briefing_says_goodbye_was_sent_after_a_failed_reply():
     assert "the conciliatory reply (a promise) (failed: the session is gone; Goodbye sent instead)" in line
 
 
+def test_the_briefing_names_the_goodbye_sent_when_autoplay_started():
+    """The library closes a session our answer left open (no follow-up came) when autoplay next starts."""
+    line = _diplomacy_line({**FIXTURE, "diplomacy": _dipl(
+        {"n": 5, "turn": 13, "at": 14, "from": 4, "civ": "CIVILIZATION_ROME", "session": 1, "kind": "MAKE_DEAL",
+         "sub": "NONE", "reply": "EXIT", "why": "sweep"})})
+    assert "T13 civ:rome make deal: Goodbye (the session our answer left open, closed at T14 when autoplay started)" \
+        in line
+
+
 def test_the_briefing_leaves_out_answers_older_than_ten_turns_but_never_a_waiting_one():
     old = {**_T240[0], "turn": 1, "at": 1}
     waiting = {**_WAITING, "turn": 1}

@@ -1390,7 +1390,8 @@ def _religion_text(s: dict, cid, limits) -> str:
 # logs the last 20 in the snapshot's `diplomacy` ({"handler": bool, "log": [...]}): each entry has
 # n, turn, from, civ, session, kind, sub, and once answered reply (POSITIVE, EXIT or REFUSE), why and
 # at (the turn answered); `late` when it waited for autoplay, `err` when the game's call failed
-# (`closed` when Goodbye then went through instead).
+# (`closed` when Goodbye then went through instead). why 'sweep' is the Goodbye the library sent when
+# autoplay started to a session its answer had left open (no follow-up closed it).
 
 DIPLOMACY_REPLIES = {"POSITIVE": "the conciliatory reply (a promise)", "EXIT": "Goodbye", "REFUSE": "refused"}
 DIPLOMACY_WHY = {"unknown": "an unknown statement", "guard": "the promise was not offered safely by the game's data"}
@@ -1415,6 +1416,8 @@ def diplomacy_reply_text(e: dict) -> str:
     if not e.get("reply"):
         return "closed before an answer" if e.get("why") == "gone" else "waiting for the next autoplay"
     notes = [DIPLOMACY_WHY[e["why"]]] if e.get("why") in DIPLOMACY_WHY else []
+    if e.get("why") == "sweep":
+        notes = [f"the session our answer left open, closed at T{e.get('at')} when autoplay started"]
     if e.get("late"):
         notes.append(f"at T{e.get('at')}, when autoplay started")
     if e.get("err"):

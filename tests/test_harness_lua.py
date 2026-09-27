@@ -483,13 +483,48 @@ def test_outside_autoplay_a_statement_waits_and_is_answered_when_autoplay_starts
 
 
 def test_an_answered_session_left_open_is_closed_when_autoplay_next_starts():
-    """No follow-up came (the session would stay open with no view to close it)."""
+    """No follow-up came (the session would stay open with no view to close it). That Goodbye is an
+    answer too: it is logged (why 'sweep') for the governor and the briefing."""
     rt, out = autoplaying()
     rt.execute("statement(3, 0, 'MAKE_DEAL', 'NONE', 5)")
     call(rt, out, "Harness.autoplay, 1")
     assert diplo_calls(rt) == ["response 5 0 NEGATIVE", "close 5"]
     call(rt, out, "Harness.autoplay, 1")
     assert diplo_calls(rt) == ["response 5 0 NEGATIVE", "close 5"], "closed once"
+    log = diplo_log(rt, out)
+    assert [(e["kind"], e["reply"], e["why"], e["session"]) for e in log] == [
+        ("MAKE_DEAL", "REFUSE", "table", 5), ("MAKE_DEAL", "EXIT", "sweep", 5)]
+    assert log[1] | {"n": 0} == {"n": 0, "turn": 61, "at": 61, "from": AUSTRALIA, "civ": "CIVILIZATION_AUSTRALIA",
+                                  "session": 5, "kind": "MAKE_DEAL", "sub": "NONE", "reply": "EXIT", "why": "sweep"}
+    assert log[1]["n"] == log[0]["n"] + 1
+
+
+def test_a_follow_up_that_comes_after_the_hand_back_is_answered_when_autoplay_starts():
+    """T240's "Thank you." arriving once autoplay has handed back: it waits, and the next start answers
+    it as a follow-up (Goodbye), not as a session closed before an answer."""
+    rt, out = autoplaying()
+    rt.execute("statement(3, 0, 'WARNING_TOO_MANY_TROOPS_NEAR_ME', 'NONE', 7)")
+    rt.execute("MOCK.autoplay = false statement(3, 0, 'WARNING_TOO_MANY_TROOPS_NEAR_ME', 'POSITIVE', 7)")
+    assert diplo_calls(rt) == ["response 7 0 POSITIVE"]
+    call(rt, out, "Harness.autoplay, 1")
+    assert diplo_calls(rt) == ["response 7 0 POSITIVE", "close 7"]
+    log = diplo_log(rt, out)
+    assert [(e["sub"], e.get("reply"), e["why"], e.get("late")) for e in log] == [
+        ("NONE", "POSITIVE", "table", None), ("POSITIVE", "EXIT", "follow-up", True)]
+
+
+def test_a_sweep_goodbye_that_fails_is_logged_once_and_retried():
+    rt, out = autoplaying()
+    rt.execute("statement(3, 0, 'MAKE_DEAL', 'NONE', 5) MOCK.dipl_fails = 'close'")
+    call(rt, out, "Harness.autoplay, 1")
+    call(rt, out, "Harness.autoplay, 1")
+    sweeps = [e for e in diplo_log(rt, out) if e["why"] == "sweep"]
+    assert len(sweeps) == 1 and "the session is gone" in sweeps[0]["err"]
+    rt.execute("MOCK.dipl_fails = false")
+    call(rt, out, "Harness.autoplay, 1")
+    assert diplo_calls(rt) == ["response 5 0 NEGATIVE", "close 5"]
+    sweeps = [e for e in diplo_log(rt, out) if e["why"] == "sweep"]
+    assert len(sweeps) == 1 and "err" not in sweeps[0], "the same entry, now without the error"
 
 
 def test_a_failing_game_call_is_recorded_and_never_raised():
