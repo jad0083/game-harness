@@ -3451,3 +3451,54 @@ def test_a_mid_run_mismatch_requests_a_review_that_bypasses_the_cap(setup, tmp_p
     assert g._review_retry is True, "the cap-bypass flag is set"
     assert g._maybe_event_review(briefing("2200.02.01"), g.review_requested, retry=g._review_retry)
     assert calls == ["strategist"] and set(g.strategy.pillars) == set(STELLARIS.ids)
+
+
+def test_a_main_shape_strategy_without_milestones_upgrades_cleanly(setup, tmp_path):
+    """Upgrade path: main stored strategies with every action field on every pillar, identity, and
+    no milestones. It loads; change=false keeps it; change=true needs milestones on the new
+    version's top pillars only."""
+    from pilot.strategy import Strategy
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    seed = EventLog(s.runs_dir, "seed", s.model, telemetry=tel)
+    seed.emit("run_start", game="stellaris", model=s.model)
+    seed.set_campaign("stellaris", "emp_u", "Empire U")
+    old = {p: {"priority": n, "stance": f"{p} old", "goals": ["g"], "milestones": [], "prefer_techs": [], "market": [],
+               "pinned": False, "edited_by": "model"} for p, n in PRIOS.items()}
+    seed.emit("strategy", date="2199.01.01", trigger="start of run", model="main", reason="seed",
+              strategy={"pillars": old, "focus": "old focus", "reason": "seed", "identity": "industrious"})
+
+    new_prios = {"economy": 1, "expansion": 2, "society": 3, "defence": 4, "technology": 5, "diplomacy": 6, "government": 7}
+    answers = []
+
+    def respond(messages, info):
+        change, body = answers.pop(0)
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {
+            "change": change, "assessment": "a", "rules": [], "strategy": body})])
+
+    log = EventLog(s.runs_dir, "up", s.model, telemetry=tel)
+    log.emit("run_start", game="stellaris", model=s.model)
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": FunctionModel(respond)})
+    g._set_campaign({**briefing("2200.01.01"), "source": "save games/emp_u/x.sav"})
+    assert g.strategy is not None and g.strategy.focus == "old focus", "the main-shape strategy loads"
+    assert g.review_requested is None and not any(e["kind"] == "strategy_mismatch" for e in log.recent)
+    loaded = g.strategy
+
+    answers.append((False, None))
+    g._review_strategy(briefing("2200.01.01"), "scheduled")
+    assert g.strategy is loaded, "change=false keeps it although its top pillars have no milestones"
+
+    missing = _pillars_body(new_prios)
+    missing["society"]["milestones"] = []                # a new top-3 pillar without a milestone
+    answers.extend([(True, {**missing, "focus": "new"}), (True, {**missing, "focus": "new"})])
+    g._review_strategy(briefing("2200.02.01"), "scheduled")
+    assert g.strategy is loaded
+    rejected = [e for e in log.recent if e["kind"] == "strategy_rejected"]
+    assert rejected and rejected[-1]["errors"] == ["society: priority 3 is in the top 3 and needs at least one milestone"]
+
+    answers.append((True, {**_pillars_body(new_prios), "focus": "new"}))   # milestones on the new top 3 only
+    g._review_strategy(briefing("2200.03.01"), "scheduled")
+    assert isinstance(g.strategy, Strategy) and g.strategy.focus == "new"
+    assert [n for n, pl in g.strategy.sorted_pillars() if pl.milestones] == ["economy", "expansion", "society"]
