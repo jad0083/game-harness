@@ -47,7 +47,7 @@ Communication occurs over HTTP/1.1 with persistent TCP connection pooling and Be
 | `/settle` | `GET` | `timeout=8.0&threshold=0.02` | Poll frame differences until animations/turns stabilize | Dynamic |
 | `/files/roots` | `GET` | None | Named read-only roots from `roots.json` (written by the installer: Stellaris / GalCiv4 documents and install folders) and whether they exist | ms |
 | `/files/list` | `GET` | `root=stellaris_docs&path=save games` | Directory listing: name, is_dir, size, modified (Unix s) | ms |
-| `/files/read` | `GET` | `root=…&path=logs/game.log&offset=N&max=M` | File bytes from `offset` (≤128 MB), headers `X-File-Size`, `X-Offset` — follow a growing log by re-reading from the last size. Relative paths only; `..`, absolute paths, drive syntax and symlinks leaving the root are refused. No write/delete/execute. Agent ≥ 1.2.0 | size-bound |
+| `/files/read` | `GET` | `root=…&path=logs/game.log&offset=N&max=M` | File bytes from `offset` (≤16 MiB per response since 1.5.0; the controller pages larger files), headers `X-File-Size`, `X-Offset` — follow a growing log by re-reading from the last size. Relative paths only; `..`, absolute paths, drive/stream/UNC syntax, Windows device names, names ending in a dot or space, and symlinks leaving the root are refused. No write/delete/execute. Agent ≥ 1.2.0 | size-bound |
 
 ---
 
@@ -114,7 +114,7 @@ The remote agent runs as a standalone compiled native Windows binary (`game-agen
 4. **Interactive Session Deployment**:
    Windows services running in Session 0 cannot capture or send input to the interactive desktop (Session 1+). Therefore, `install.ps1` registers a **Scheduled Task** running under the user's interactive logon credentials with standard user permissions.
 5. **Firewall Automation**:
-   A Windows Defender firewall rule is provisioned for TCP port 8765, restricted strictly to `LocalSubnet` for LAN security.
+   A Windows Defender firewall rule is provisioned for TCP port 8765, admitting only the controller (the host that served the installer, or `GA_CONTROLLER`; `LocalSubnet` for a local install) and only on Private networks (`GA_FW_PROFILE` overrides). A reinstall replaces an older, looser rule.
 
 ---
 

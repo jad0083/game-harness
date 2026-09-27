@@ -45,9 +45,11 @@ cargo build --release -p game-controller
 scripts/ci.sh                                   # prints "CI OK"
 ```
 
-Install the agent on the PC: `scripts/serve-agent.sh` builds it, creates a token in
-`.agent_token` and prints a PowerShell line to run on the PC. The agent runs as the logged-in user
-(a logon task, no admin rights except one firewall rule limited to the local subnet).
+Install the agent on the PC: `scripts/serve-agent.sh [host]` builds it and prints a one-line
+PowerShell command to run on the PC. With a host name the PC gets its own token
+(`.agent_token.<host>`; set it as `GAME_AGENT_TOKEN` for that PC), otherwise the shared `.agent_token`
+is used. The agent runs as the logged-in user (a logon task); only the firewall rule needs admin once.
+Stop the server when the installer reports the agent version (it stops itself after 15 minutes).
 
 ```bash
 echo 'GAME_AGENT_URL=http://<pc-address>:8765' >> .env   # the PC's agent; .env is gitignored
@@ -95,11 +97,13 @@ tests; they are not deployed.
 
 This is a tool for a home network, not the internet.
 
-- The agent can see the PC's screen and send it any input, so it requires a bearer token on every
-  request and its firewall rule admits only the local subnet. Keep `.agent_token` private (it is
-  gitignored) and do not forward port 8765.
-- The token travels in plain HTTP, and `serve-agent.sh` serves it during installation; run the
-  installer only on a trusted network and stop the server afterwards.
+- The agent can see the PC's screen and send it any input, so it requires a bearer token (at least
+  32 characters) on every request, and its firewall rule admits only the controller, on Private
+  networks. Keep the `.agent_token*` files private (gitignored), give each PC its own token, and do
+  not forward port 8765.
+- Agent traffic, including the token, is plain HTTP. The installer server keeps its exposure short:
+  files sit under a random one-time path, it binds only the controller's address and stops after 15
+  minutes, and the one-liner pins the SHA-256 of `install.ps1` and of `game-agent.exe`.
 - The agent reads only game folders listed in its `roots.json` and writes only allow-listed files
   (a Stellaris mod folder, Civilization VI's options file).
 - The dashboard can start runs and steer the game, so every request needs its access key. Open

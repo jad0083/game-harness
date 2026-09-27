@@ -12,14 +12,14 @@ Everything below was verified in live play on 2026-09-25 unless marked **unverif
 
 | Piece | Where | What it does |
 |---|---|---|
-| Windows agent | `crates/game-agent` → `game-agent.exe` (built by `scripts/serve-agent.sh`), running on each gaming PC on port **8765** (`GAME_AGENT_URL`, set in `.env`) | HTTP API: screenshots, mouse, keyboard, window focus. Bearer-token auth. |
-| Linux controller | `crates/game-controller` → `target/release/game-controller`, on this Linux machine | CLI + MCP server + verified-turn autopilot + game corpus. |
+| Windows agent | `crates/game-agent` → `game-agent.exe` (built by `scripts/serve-agent.sh`), running on the gaming PC **192.168.1.77:8765** | HTTP API: screenshots, mouse, keyboard, window focus. Bearer-token auth. |
+| Linux controller | `crates/game-controller` → `target/release/game-controller`, on this machine **192.168.1.76** | CLI + MCP server + verified-turn autopilot + game corpus. |
 | Game corpus | `corpora/galciv4/` | Everything game-specific: hotkeys, known screens, macros, generated game data, strategy, reference docs. The Rust code is game-agnostic. |
 | Play helpers | `scripts/play/` | Shell wrappers for the act → look → decide loop (`act.sh`, `ap.sh`, `hover.sh`, `capture-template.py`). |
 | Game journal | `games/terran-2329/journal.md` | What happened in the current game and why. Read it before resuming play. |
 | Stellaris | `corpora/stellaris/`, `crates/game-controller/src/stellaris.rs`, `src/pilot/governor.py` | Governor over the native AI: autosave briefing, console directives, speed and pause. See §10. |
-| Pilot app | `src/pilot/` (`python -m pilot`) | Autonomous player with any LLM ([docs/pilot.md](docs/pilot.md)). |
-| Dashboard | port 8780 on the controller (`deploy/game-pilot-view.service`) | Decision traces (thinking, tool calls), campaign charts, and talking to / directing the live model. Telemetry in `runs/telemetry.sqlite`. |
+| Pilot app | `src/pilot/` (`python -m pilot`) | Autonomous player with any LLM API key (README → "Pilot app"). |
+| Dashboard | `http://192.168.1.76:8780/` (`deploy/game-pilot-view.service`) | Decision traces (thinking, tool calls), campaign charts, and talking to / directing the live model. Telemetry in `runs/telemetry.sqlite`. |
 
 Hard facts:
 - Screen 3840×2160 (DPI-aware agent). All screenshots and all coordinates you pass are in
@@ -39,14 +39,17 @@ scripts/ci.sh                                                        # must prin
 ./target/release/game-controller health                             # agent reachable?
 ```
 
-The Windows agent is installed with `scripts/serve-agent.sh` + a PowerShell one-liner (see
-`README.md` → "Quick start"). Agent **1.2.0** adds configurable drag timing and
+The Windows agent is installed with `scripts/serve-agent.sh [host]` + the PowerShell one-liner it
+prints (see `README.md` → "Quick start" and "Security"). The one-liner holds
+a one-time path and SHA-256 pins, so always copy the freshly printed one; stop the server once the
+installer reports the agent version. With a `host` name the PC gets its own token in
+`.agent_token.<host>`; use it through `GAME_AGENT_TOKEN` for that PC. Agent **1.2.0** adds configurable drag timing and
 read-only file access to game folders listed in `roots.json` (Stellaris and GalCiv4 documents
 and install dirs, detected by the installer): `GET /files/roots|list|read`.
 
 ### Connecting your model's tools (MCP)
 The controller is a stdio MCP server: `./target/release/game-controller mcp` (19 tools, listed in
-`docs/cli.md`). Pre-made configs:
+`README.md`). Pre-made configs:
 - **Gemini CLI**: `.gemini/settings.json` (this repo). Start `gemini` in the repo root.
 - **Claude Code**: `.mcp.json` (this repo).
 - Anything else: run the command above with `GAME_AGENT_URL` and `GAME_AGENT_TOKEN` in the env.
@@ -174,6 +177,10 @@ wiki prose in `docs/`. Never hand-edit `corpora/galciv4/data/`.
 - Agent **1.4** adds `win`, `num0`–`num9`, `add`/`subtract` (numpad +/-), and `plus`/`+`; older agents
   lack them (focus windows by title instead of `win+r`). It runs without a console window and
   logs to `%LOCALAPPDATA%\GameAgent\agent.log`.
+- Agent **1.5** refuses to start with a token under 32 characters (see agent.log), returns at most
+  16 MiB per `/files/read` (the controller pages larger files), and refuses Windows device names,
+  names ending in a dot or space, UNC paths and `:` in file paths; its installer pins the exe by
+  SHA-256 and limits the firewall rule to the controller on Private networks.
 - Full list: `issues.md`.
 
 ## 8. Recording what you learn (required)
@@ -188,7 +195,7 @@ The user is hands-off. Every solved problem goes into the repo, CI-checked, comm
 | What happened in the game | `games/terran-2329/journal.md` (dated by in-game month) |
 | A bug or limitation | `issues.md` (`- [ ]` open; `- [x]` only when fixed **and** deployed) |
 | A feature planned / done | `plan.md` (same checkbox rules) |
-| Code behaviour changes | `README.md`, `ARCHITECTURE.md`, `docs/*.md` |
+| Code behaviour changes | `README.md`, `ARCHITECTURE.md` |
 
 Commit through the CI gate — it runs `scripts/ci.sh` and commits only if everything passes:
 ```bash
