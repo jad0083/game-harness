@@ -24,8 +24,11 @@ YIELD_PILLAR = {"YIELD_SCIENCE": "science", "YIELD_CULTURE": "culture", "YIELD_F
 LOST_TILE = {"resource": 3, "improvement": 2, "feature": 1}
 # stage B goes ahead when our best plot beats the AI's by this much adjacency on average...
 GO_MIN_GAIN = 1.0
-# ...over at least this many districts the AI placed
+# ...over at least this many districts the AI placed that can be rated:
 GO_MIN_DISTRICTS = 4
+# a district whose city offers fewer plausible other plots than this cannot show whether the AI placed
+# it well (Haarlem at T202 had 1: its Campus and Theater read as gain 0 because the city is full)
+RATE_MIN_ALTERNATIVES = 3
 PREFIX = {"t": "TERRAIN_", "f": "FEATURE_", "r": "RESOURCE_", "i": "IMPROVEMENT_", "d": "DISTRICT_", "w": "BUILDING_"}
 
 
@@ -186,7 +189,7 @@ def plausible_plots(city: dict, plots: dict[str, dict], rules: Rules, district: 
     """Plots a placed district could have taken instead, for the baseline: the plots the game offers
     this city for any district now (its candidates' lists: the city's own free plots), water for a
     coastal district and land otherwise, not next to a city centre where the district forbids it.
-    A city with nothing left to place offers none, and its districts gain nothing."""
+    A city with nothing left to place offers none (`rate_placed` then leaves its districts out)."""
     flags = rules.districts.get(district) or rules.districts.get(rules.replaces.get(district, "")) or {}
     offered = dict.fromkeys(str(i) for c in city.get("candidates") or [] for i in c.get("plots") or [])
     out = []
@@ -204,7 +207,9 @@ def plausible_plots(city: dict, plots: dict[str, dict], rules: Rules, district: 
 def rate_placed(city: dict, plots: dict[str, dict], rules: Rules) -> list[dict]:
     """The baseline: each district the AI placed that has adjacency rules, its adjacency where it
     stands, and the best adjacency it could have had on a plausible plot now (its own plot counted,
-    and its own district taken off the map while others are tried)."""
+    and its own district taken off the map while others are tried). `alternatives` counts those
+    plots; with fewer than RATE_MIN_ALTERNATIVES the district is not `rateable`: its gain of 0 would
+    say the city is full, not that the AI placed it well."""
     out = []
     by_xy = {(p.get("x"), p.get("y")): i for i, p in plots.items()}
     for d in city.get("placed") or []:
@@ -214,26 +219,32 @@ def rate_placed(city: dict, plots: dict[str, dict], rules: Rules) -> list[dict]:
         ai = sum(adjacency(rules, d["type"], idx, plots).values())
         without = {**plots, idx: {**plots[idx], "d": None}}
         best, where = ai, idx
-        for q in plausible_plots(city, without, rules, d["type"]):
+        others = plausible_plots(city, without, rules, d["type"])
+        for q in others:
             v = sum(adjacency(rules, d["type"], q, without).values())
             if v > best:
                 best, where = v, q
         out.append({"city": city.get("name"), "district": d["type"], "x": d.get("x"), "y": d.get("y"), "ai": ai,
                     "best": best, "best_at": [plots[where].get("x"), plots[where].get("y")], "gain": best - ai,
+                    "alternatives": len(others), "rateable": len(others) >= RATE_MIN_ALTERNATIVES,
                     "complete": d.get("complete")})
     return out
 
 
 def go_verdict(placed: list[dict]) -> tuple[str, str]:
-    """Stage B's go criterion: over at least GO_MIN_DISTRICTS districts the AI placed, our best plot
-    beats the AI's by at least GO_MIN_GAIN adjacency on average."""
-    n = len(placed)
+    """Stage B's go criterion: over at least GO_MIN_DISTRICTS rateable districts the AI placed, our
+    best plot beats the AI's by at least GO_MIN_GAIN adjacency on average. Districts with fewer than
+    RATE_MIN_ALTERNATIVES other plots to compare with are left out (and named)."""
+    rated = [p for p in placed if p.get("rateable", True)]
+    n, left = len(rated), len(placed) - len(rated)
+    out = (f"; {left} left out with fewer than {RATE_MIN_ALTERNATIVES} other plots to compare with"
+           if left else "")
     if n < GO_MIN_DISTRICTS:
-        return "wait", f"{n} district(s) the AI placed can be rated; the criterion needs {GO_MIN_DISTRICTS}"
-    mean = sum(p["gain"] for p in placed) / n
+        return "wait", f"{n} district(s) the AI placed can be rated{out}; the criterion needs {GO_MIN_DISTRICTS}"
+    mean = sum(p["gain"] for p in rated) / n
     if mean >= GO_MIN_GAIN:
-        return "go", f"our best plot beats the AI's by {mean:+.2f} adjacency on average over {n} districts"
-    return "no-go", (f"our best plot beats the AI's by only {mean:+.2f} adjacency on average over {n} districts: "
+        return "go", f"our best plot beats the AI's by {mean:+.2f} adjacency on average over {n} districts{out}"
+    return "no-go", (f"our best plot beats the AI's by only {mean:+.2f} adjacency on average over {n} districts{out}: "
                      "the AI already places well; option 2 stops at stage A")
 
 
@@ -268,7 +279,11 @@ def report_text(r: dict) -> str:
         lines.append(f"- {c['name']}: " + ("; ".join(best) if best else "no district with adjacency rules to place")
                      + ("" if not c["errors"] else f" (no plots read: {', '.join(c['errors'])})"))
     for p in r["placed"]:
-        lines.append(f"- AI placed {p['district']} in {p['city']} at {p['x']},{p['y']}: adjacency {p['ai']}, "
-                     f"best plausible {p['best']} at {p['best_at'][0]},{p['best_at'][1]} (gain {p['gain']:+d})")
+        where = f"- AI placed {p['district']} in {p['city']} at {p['x']},{p['y']}: adjacency {p['ai']}, "
+        if not p.get("rateable", True):
+            n = p.get("alternatives", 0)
+            lines.append(where + f"not rateable: {n} other plot{'' if n == 1 else 's'} to compare with")
+            continue
+        lines.append(where + f"best plausible {p['best']} at {p['best_at'][0]},{p['best_at'][1]} (gain {p['gain']:+d})")
     lines.append(f"Verdict: {r['verdict']} — {r['why']}.")
     return "\n".join(lines)

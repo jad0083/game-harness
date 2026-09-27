@@ -230,10 +230,16 @@ re-installed its own library at its next call.
   AI's seven specialty districts against the free plots each city is offered now: Beijing Holy Site
   0 (+2 at 23,20), Beijing Campus 3 (best), Chengdu Theater 0 (+2 at 24,17, next to the Pyramids),
   Haarlem Campus 2 and Theater 1 (best of what is left), Jiaodong Campus 3 (best), Taiyuan Holy
-  Site 0 (+1 at 26,17): a mean gain of **+0.71, so no-go** for stage B under the design's criterion
-  (+1 over at least 4 districts). Counting the two unfinished wonders gave +1.14 (go), so the margin
-  is thin. Caveats: alternatives are today's free plots, not those free when the AI placed; rules
-  that need a tech or civic are left out; resources are read without our visibility check.
+  Site 0 (+1 at 26,17): a mean gain of +0.71 over all seven, first read as no-go for stage B under
+  the design's criterion (+1 over at least 4 districts). **Corrected at review: go.** Haarlem's two
+  districts had one other plot each to compare with (the Aqueduct's, 4-13 for the others), so their
+  gain of 0 measured a full city, not the AI's choice. With districts that have fewer than 3 other
+  plots left out as not rateable, five are rated at **+1.00: go**, exactly the criterion (re-run
+  offline from the saved reply, `tests/fixtures/civ6_district_plots_t202.json`; no new query).
+  Counting the two unfinished wonders also gave go (+1.14), so the margin is thin either way. Stage
+  B still needs a throwaway save first (ruling 30). Caveats: alternatives are today's free plots,
+  not those free when the AI placed; rules that need a tech or civic are left out; resources are
+  read without our visibility check.
 - **`turn_ready` at T207** (read-only): every check answered (no "cannot check"), and it reported
   not ready, "on screen: HistoricMoments", while the governor was deciding between turns. The
   game's `HistoricMoments.lua` (Expansion 2) hides that context at start and shows it as a queued

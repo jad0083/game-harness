@@ -133,14 +133,50 @@ def _placed_city(gains: list[int]) -> tuple[dict, dict]:
 def test_the_ais_placements_are_the_baseline_for_the_go_criterion():
     city, plots = _placed_city([2, 2, 1, 2])
     rated = rate_placed(city, plots, RULES)
-    assert len(rated) == 4 and all(r["gain"] >= 1 for r in rated)
+    assert len(rated) == 4 and all(r["gain"] >= 1 and r["rateable"] for r in rated)
     boxed_in = rate_placed({**city, "candidates": []}, plots, RULES)
-    assert all(r["gain"] == 0 for r in boxed_in), "a city with no free plot offers no better one"
+    assert all(r["gain"] == 0 and r["alternatives"] == 0 and not r["rateable"] for r in boxed_in), \
+        "a city with no free plot cannot show whether the AI placed well"
     assert go_verdict(rated)[0] == "go"
     assert go_verdict(rated[:3])[0] == "wait", "fewer than 4 districts"
     flat = [{**r, "gain": 0} for r in rated]
     verdict, why = go_verdict(flat)
     assert verdict == "no-go" and "the AI already places well" in why
+
+
+def test_a_district_with_almost_no_other_plot_is_left_out_of_the_criterion():
+    """Haarlem at T202: its Campus and Theater had one free plot to compare with (the Aqueduct's), so
+    their gain of 0 says the city is full, not that the AI placed them well. A district whose city
+    offers fewer than 3 plausible other plots is not rateable and stays out of the mean and the
+    count of 4."""
+    city, plots = _placed_city([2, 2, 1, 2])
+    rated = rate_placed(city, plots, RULES)
+    free = [int(i) for i, p in plots.items() if not p.get("d")]
+    full = rate_placed({**city, "name": "Haarlem", "candidates": [{"type": "DISTRICT_THEATER", "plots": free[:2]}]},
+                       plots, RULES)
+    assert [r["alternatives"] for r in full] == [2] * 4 and not any(r["rateable"] for r in full)
+    verdict, why = go_verdict(rated + full)
+    assert verdict == "go" and "over 4 districts" in why and "4 left out" in why, why
+    assert go_verdict(rated[:3] + full)[0] == "wait", "only 3 rateable"
+    r = report({"turn": 1, "cities": [{**city, "name": "Haarlem", "candidates": [{"type": "DISTRICT_THEATER",
+                                                                                   "plots": free[:1]}]}],
+                "plots": plots}, RULES, {})
+    assert "not rateable: 1 other plot to compare with" in report_text(r)
+
+
+def test_the_t202_live_reply_rates_five_districts_and_goes():
+    """The live read at T202 (games/civ6-kublai/journal.md, check L3): seven specialty districts the AI
+    placed; Haarlem's two have one other plot each, so five are rated, at +1.00 on average: go (the
+    earlier no-go at +0.71 counted Haarlem's two as gain 0)."""
+    data = json.loads((REPO / "tests/fixtures/civ6_district_plots_t202.json").read_text(encoding="utf-8"))
+    r = report(data, RULES, {"science": 30, "military": 25, "economy": 15, "culture": 10, "faith": 10,
+                             "expansion": 5, "diplomacy": 5})
+    rows = {(p["city"], p["district"]): (p["ai"], p["best"], p["alternatives"], p["rateable"]) for p in r["placed"]}
+    assert rows[("Haarlem", "DISTRICT_CAMPUS")] == (2, 2, 1, False)
+    assert rows[("Haarlem", "DISTRICT_THEATER")] == (1, 1, 1, False)
+    assert rows[("Taiyuan", "DISTRICT_HOLY_SITE")] == (0, 1, 4, True)
+    assert sum(1 for v in rows.values() if v[3]) == 5
+    assert r["verdict"] == "go" and "+1.00" in r["why"] and "over 5 districts" in r["why"], r["why"]
 
 
 def test_the_report_names_items_by_corpus_id_and_prints_the_verdict():

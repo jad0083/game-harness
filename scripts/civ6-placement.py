@@ -8,7 +8,8 @@
 Rates where each district the cities could place may go (adjacency from the game's rules x the share
 of effort of its pillar - the tile given up - plots a heavier pillar's district wants) and rates the
 districts the AI placed the same way; prints the go / no-go of stage B (our best plot beats the AI's
-by at least +1 adjacency on average over at least 4 districts). Shares come from --shares, else the
+by at least +1 adjacency on average over at least 4 districts that have at least 3 other plots to
+compare with). Shares come from --shares, else the
 campaign's latest strategy weights (runs/telemetry.sqlite, opened read-only), else an even split.
 Nothing is sent to the game but the one read-only query; nothing is placed."""
 

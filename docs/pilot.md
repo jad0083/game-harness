@@ -174,8 +174,9 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   for adjacency once built (the reply lists our built wonders; a plot shows its wonder while it is
   still being built) and is never a district. It rates the districts the AI placed the same way
   against the free plots the game offers that city now, and prints stage B's verdict: go when our
-  best plot beats the AI's by at least +1 adjacency on average over at least 4 districts. No
-  placement order exists yet.
+  best plot beats the AI's by at least +1 adjacency on average over at least 4 districts. A district
+  whose city offers fewer than 3 other plots to compare with is not rateable and left out (its gain
+  of 0 would measure a full city). No placement order exists yet.
 - **Last stand** (rulings 22-27, off unless `PILOT_LAST_STAND=1`): a city is *about to fall* when a
   unit that can capture it (melee or cavalry) stands next to it, no walls stand, and its garrison is
   at half its hit points or less, or one attack from each enemy in range would take the rest
