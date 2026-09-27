@@ -589,6 +589,8 @@
     .brand::before { margin-right: 0; }
     .camp-btn { flex: 1 1 auto; max-width: none; border-color: transparent; padding: 6px 4px; font-size: 15px; }
     .state-dot { display: inline-flex; }
+    .bar-crisis .crisis-words { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }  /* the mark only; the words stay for screen readers */
+    .bar-crisis::before { font-size: 13px; }
     .bottom-nav { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); position: fixed; left: 0; right: 0; bottom: 0;
                   z-index: 8; height: calc(56px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom);
                   background: var(--surface); border-top: 1px solid var(--hair); }
@@ -656,7 +658,7 @@
     <i class="camp-dot" id="camp-dot" aria-hidden="true" hidden></i><span class="camp-name" id="camp-name">Campaigns</span><span class="camp-date" id="camp-date"></span><span class="caret" aria-hidden="true">▾</span></button>
   <span class="pc" id="pc" title="The gaming PC and what is open on it"></span>
   <span class="fresh" id="fresh" aria-live="polite"></span>
-  <span class="bar-crisis" id="bar-crisis" hidden>War crisis</span>
+  <span class="bar-crisis" id="bar-crisis" hidden><span class="crisis-words">War crisis</span></span>
   <span class="spacer"></span>
   <span class="state-dot" id="state-dot" role="img" aria-label=""></span>
   <button class="btn live-only" id="b-toggle" hidden>Pause</button>

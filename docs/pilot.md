@@ -392,7 +392,7 @@ running pilot (whose own dashboard is on `PILOT_PORT`, 8790, on 127.0.0.1). It r
   `[orders]`; a market resource marked "Suspended until recalibrated"), the market per resource from
   the newest metrics row's `market` ("Alloys: 14% above base; net +5 a month; order: buy 5 a month
   (economy)"), then the strategy's actions lately. The crisis also shows in the bar ("War crisis",
-  which does not scroll away), in the governor line's facts, at the top of Strategy with the
+  which does not scroll away; on a phone the ▲ alone, so the campaign keeps its name), in the governor line's facts, at the top of Strategy with the
   defence pillar's "need boosted ×2 (crisis)", and as a band on the chart (metrics rows' `crisis`).
   The Directive figure lists the directive's postures ("postures: naval capacity on"; one not
   enabled is greyed and says so on hover or focus; `info.postures` or the metrics row's). A

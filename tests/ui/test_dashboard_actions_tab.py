@@ -95,3 +95,14 @@ def test_nothing_renders_without_the_data(browser, live_servers):
     assert page.query_selector_all("#chartwrap rect.crisis") == []
     assert w.errors == []
     w.context.close()
+
+
+@pytest.mark.parametrize("scenario", ["stellaris"])
+def test_on_a_phone_the_crisis_mark_leaves_the_campaign_its_name(browser, live_servers):
+    w = open_context(browser, "phone-light", live_servers)
+    load(w)
+    page = w.page
+    assert page.is_visible("#bar-crisis") and page.text_content("#bar-crisis").strip() == "War crisis"
+    assert page.eval_on_selector("#camp-name", "e => e.scrollWidth <= e.clientWidth"), page.text_content("#camp-name")
+    assert page.evaluate("document.documentElement.scrollWidth <= document.documentElement.clientWidth")
+    w.context.close()
