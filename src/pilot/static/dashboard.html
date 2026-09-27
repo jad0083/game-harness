@@ -176,6 +176,13 @@
   svg.chart .lane-label { fill: var(--ink-2); font-size: 12px; }
   svg.chart .lane-label.current { fill: var(--ink); font-weight: 600; }
   svg.chart .dmark { cursor: pointer; }
+  svg.chart .dfull { visibility: hidden; }
+  svg.chart .dmark:hover .dfull, svg.chart .dmark.sel .dfull, svg.chart .dmark.cur .dfull { visibility: visible; }
+  svg.chart .dmark.cur .dfull { stroke: var(--accent); stroke-width: 2; stroke-dasharray: 3 3; }
+  svg.chart .end-label { fill: var(--ink-2); }
+  .chartwrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
+  .legend i.stand { width: 0; height: 0; border-radius: 0; background: none; border-left: 6px solid transparent; border-right: 6px solid transparent;
+                    border-bottom: 10px solid var(--bad); }
   .tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--hair); border-radius: 6px;
          padding: 8px 10px; font-size: 12.5px; min-width: 150px; box-shadow: 0 6px 20px rgba(4, 8, 20, .35); }
   .tip b { display: block; margin-bottom: 4px; }
@@ -794,6 +801,7 @@
       <div class="body">
         <div class="legend" id="legend"></div>
         <div class="chartwrap" id="chartwrap"></div>
+        <p class="sr" id="chart-now" aria-live="polite"></p>
       </div>
     </section>
 
@@ -1781,6 +1789,12 @@ function renderChartViews() {
   $("chart-views").innerHTML = views.map(([id, lbl]) => `<button type="button" data-view="${esc(id)}" aria-pressed="${id === S.chartView}">${esc(lbl)}</button>`).join("");
 }
 
+// The chart (rulings 12, 31, 33): the view's series, each named at its line end (labels pushed apart
+// so they never overlap); x ticks in the game's unit; wars as bands; the directive lane (Stellaris)
+// and the strategy reviews' own lane above the plot; decisions as short ticks under the axis (urgent
+// taller, a failed one in --bad), full height only for the selected, hovered or current one; last
+// stands as --bad marks on the axis. The whole chart is one tab stop: arrow keys, Home and End move
+// between decisions (said in #chart-now), Enter or Space opens one.
 function renderChart() {
   const wrap = $("chartwrap");
   const ms = S.metrics.filter((m) => m.month != null);
@@ -1792,6 +1806,8 @@ function renderChart() {
   $("chart-sub").textContent = ms.length ? `${gdate(ms[0].date)} to ${gdate(ms[ms.length - 1].date)}` : "";
   // absent means hidden: a game that records no figures (GalCiv) has no chart panel
   $("p-chart").hidden = !ms.length && !S.spec.chart.length;
+  S.chartMarks = [];
+  chartKeys(false);
   if (!ms.length) {
     $("legend").innerHTML = "";
     wrap.innerHTML = `<p class="empty">No game figures recorded in this campaign yet.</p>`;
@@ -1801,8 +1817,6 @@ function renderChart() {
   if (!cv) return renderTable(ms);
   const series = cv.series.map((k) => [k, mlabel(k)]);
   $("legend").innerHTML = series.map(([, lbl], i) => `<span><i style="background:${color(i)}"></i>${esc(lbl)}</span>`).join("");
-  const direct = series.length <= 4;          // few lines: each is also named at its end
-  const W = Math.max(wrap.clientWidth, 320), H = 280, L = 48, R = direct ? 92 : 14, T = 30, B = 44;
   const x0 = ms[0].month, x1 = Math.max(ms[ms.length - 1].month, x0 + 1);
   let lo = Infinity, hi = -Infinity;
   for (const m of ms) for (const [k] of series) { const v = metricValue(m, k); if (Number.isFinite(v)) { lo = Math.min(lo, v); hi = Math.max(hi, v); } }
@@ -1811,6 +1825,17 @@ function renderChart() {
     wrap.insertAdjacentHTML("afterbegin", `<p class="empty">This campaign records no ${esc(cv.label.toLowerCase())} figures; these are the ones it records.</p>`);
     return;
   }
+  // lanes above the plot: the directive in force (Stellaris), then the strategy reviews
+  const spans = directiveSpans();
+  const reviews = ((S.strategy && S.strategy.history) || []).filter((r) => monthOf(r.date) != null && monthOf(r.date) >= x0 - 1 && monthOf(r.date) <= x1);
+  let top = 4;
+  const laneY = spans.length ? top : null;
+  if (spans.length) top += 22;
+  const reviewY = reviews.length ? top + 2 : null;
+  if (reviews.length) top += 16;
+  const small = phone();
+  const W = Math.max(wrap.clientWidth, 300), H = (small ? 250 : 290) + top, L = 44, R = small ? 84 : 104, T = top + 8, B = 50;
+  const X = (mo) => L + (mo - x0) / (x1 - x0) * (W - L - R);
   let ticks;
   if (cv.invert) {                // ranks: 1 (best) at the top, whole places only
     lo = 1; hi = Math.max(hi, 2);
@@ -1821,8 +1846,8 @@ function renderChart() {
     ticks = niceTicks(lo, hi);
   }
   const y0 = ticks[0], y1 = ticks[ticks.length - 1];
-  const X = (mo) => L + (mo - x0) / (x1 - x0) * (W - L - R);
   const Y = cv.invert ? (v) => T + (v - y0) / (y1 - y0 || 1) * (H - T - B) : (v) => T + (1 - (v - y0) / (y1 - y0 || 1)) * (H - T - B);
+  const base = H - B;
   let svg = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(cv.label)} over in-game time">`;
   // wars: shaded spans behind the lines (from the recorded rows)
   const wars = [];
@@ -1831,64 +1856,77 @@ function renderChart() {
   }
   for (const w of wars) {
     const a = X(w.from), b = Math.max(X(w.to + 1), a + 2);
-    svg += `<rect x="${a}" y="${T}" width="${Math.min(b, W - R) - a}" height="${H - T - B}" fill="var(--bad)" fill-opacity="0.09"><title>At war</title></rect>`;
+    svg += `<rect x="${a}" y="${T}" width="${Math.min(b, W - R) - a}" height="${base - T}" fill="var(--bad)" fill-opacity="0.09"><title>At war</title></rect>`;
   }
   if (wars.length) $("legend").innerHTML += `<span><i class="war"></i>at war</span>`;
-  // directive lane (top)
-  const spans = directiveSpans();
+  // the directive lane
   spans.forEach((sp, i) => {
     const a = Math.max(X(Math.max(sp.from, x0)), L), b = i + 1 < spans.length ? X(spans[i + 1].from) : W - R;
     if (b <= L) return;
-    svg += `<rect x="${a}" y="4" width="${Math.max(b - a - 2, 1)}" height="18" rx="4" fill="var(--raised)" stroke="var(--hair)"/>`;
-    if (b - a > 60) svg += `<text class="lane-label${i === spans.length - 1 ? " current" : ""}" x="${a + 8}" y="17">${esc(human(sp.name))}</text>`;
+    svg += `<rect class="lane" x="${a}" y="${laneY}" width="${Math.max(b - a - 2, 1)}" height="18" rx="4" fill="var(--raised)" stroke="var(--hair)"/>`;
+    if (b - a > 60) svg += `<text class="lane-label${i === spans.length - 1 ? " current" : ""}" x="${a + 8}" y="${laneY + 13}">${esc(human(sp.name))}</text>`;
   });
+  // the strategy reviews' own lane
+  reviews.forEach((r) => {
+    const x = X(Math.min(Math.max(monthOf(r.date), x0), x1));
+    svg += `<g class="rmark"><title>Strategy review, ${esc(gdate(r.date))}: ${esc(tidy(r.trigger || ""))}</title>
+      <rect x="${x - 4}" y="${reviewY}" width="8" height="8" fill="var(--thought)" stroke="var(--surface)" stroke-width="1" transform="rotate(45 ${x} ${reviewY + 4})"/></g>`;
+  });
+  if (reviews.length) $("legend").innerHTML += `<span><i class="review"></i>strategy review</span>`;
   // grid + y ticks
   for (const t of ticks) svg += `<line x1="${L}" x2="${W - R}" y1="${Y(t)}" y2="${Y(t)}" stroke="${t === 0 ? "var(--axis)" : "var(--grid)"}" stroke-width="1"/><text x="${L - 8}" y="${Y(t) + 4}" text-anchor="end">${cv.invert ? "#" + t : fmt(t)}</text>`;
+  svg += `<line x1="${L}" x2="${W - R}" y1="${base}" y2="${base}" stroke="var(--axis)" stroke-width="1"/>`;
   // x ticks in the game's unit: turns ("T250") or years
+  const lab = base + 32;
   if (S.spec.game.time_unit === "turn" || String(ms[0].date).startsWith("T")) {
-    const step = [1, 2, 5, 10, 25, 50, 100, 250].find((k) => (x1 - x0) / k <= 6) || 500;
-    for (let t = Math.ceil(x0 / step) * step; t <= x1; t += step) svg += `<text x="${X(t)}" y="${H - B + 18}" text-anchor="middle">T${t}</text>`;
+    const step = [1, 2, 5, 10, 25, 50, 100, 250].find((k) => (x1 - x0) / k <= (small ? 4 : 6)) || 500;
+    for (let t = Math.ceil(x0 / step) * step; t <= x1; t += step) svg += `<text class="xtick" x="${X(t)}" y="${lab}" text-anchor="middle">T${t}</text>`;
   } else {
-    const yrs = Math.max(1, Math.ceil((x1 - x0) / 12 / 6));
-    for (let mo = Math.ceil(x0 / 12) * 12; mo <= x1; mo += 12 * yrs) svg += `<text x="${X(mo)}" y="${H - B + 18}" text-anchor="middle">${Math.floor(mo / 12)}</text>`;
+    const yrs = Math.max(1, Math.ceil((x1 - x0) / 12 / (small ? 4 : 6)));
+    for (let mo = Math.ceil(x0 / 12) * 12; mo <= x1; mo += 12 * yrs) svg += `<text class="xtick" x="${X(mo)}" y="${lab}" text-anchor="middle">${Math.floor(mo / 12)}</text>`;
   }
-  // lines, each named at its end when there are few
+  // lines, each named at its end; the names pushed apart so none overlaps another
+  const ends = [];
   series.forEach(([k, lbl], i) => {
     const pts = ms.map((m) => [X(m.month), metricValue(m, k)]).filter(([, v]) => Number.isFinite(v)).map(([x, v]) => `${x.toFixed(1)},${Y(v).toFixed(1)}`);
     if (pts.length) svg += `<polyline points="${pts.join(" ")}" fill="none" stroke="${color(i)}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
-    if (direct) {
-      const last = [...ms].reverse().find((m) => Number.isFinite(metricValue(m, k)));
-      if (last) svg += `<text x="${W - R + 8}" y="${Y(metricValue(last, k)) + 4}" style="fill:var(--ink-2)">${esc(lbl)}</text>`;
-    }
+    const last = [...ms].reverse().find((m) => Number.isFinite(metricValue(m, k)));
+    if (last) ends.push({ lbl, y: Y(metricValue(last, k)) + 4 });
   });
-  // decision marks (bottom)
+  ends.sort((a, b) => a.y - b.y);
+  for (let i = 1; i < ends.length; i++) ends[i].y = Math.max(ends[i].y, ends[i - 1].y + 13);
+  const over = ends.length ? ends[ends.length - 1].y - (base + 4) : 0;       // pushed past the axis: shift all up
+  if (over > 0) ends.forEach((e) => { e.y -= over; });
+  for (let i = ends.length - 2; i >= 0; i--) ends[i].y = Math.min(ends[i].y, ends[i + 1].y - 13);
+  const order = series.map(([, lbl]) => ends.find((e) => e.lbl === lbl)).filter(Boolean);
+  for (const e of order) svg += `<text class="end-label" x="${W - R + 8}" y="${e.y.toFixed(1)}">${esc(clip(e.lbl, small ? 11 : 16))}</text>`;
+  // last stands (Civ VI): --bad marks on the axis
+  const stands = ((S.orders && S.orders.stands) || []).filter((x) => monthOf(x.date) != null && monthOf(x.date) >= x0 && monthOf(x.date) <= x1);
+  stands.forEach((x) => {
+    const sx = X(monthOf(x.date));
+    svg += `<g class="lsmark"><title>Last stand in ${esc(x.city)}, ${esc(gdate(x.date))}</title>
+      <path d="M${sx - 6} ${base} L${sx} ${base - 10} L${sx + 6} ${base} Z" fill="var(--bad)"/></g>`;
+  });
+  if (stands.length) $("legend").innerHTML += `<span><i class="stand"></i>last stand</span>`;
+  // decisions: short ticks under the axis; the full-height line shows for the selected, hovered or current one
   S.decisions.forEach((d, idx) => {
     if (d.month == null || d.month < x0 - 1) return;
-    const x = X(Math.min(Math.max(d.month, x0), x1)), changed = d.outcome === "applied";
+    const x = X(Math.min(Math.max(d.month, x0), x1)), failed = d.outcome === "error", urgent = (d.trigger_label || {}).urgent;
     const sel = S.sel && S.sel.run_id === d.run_id && S.sel.episode === d.episode;
-    svg += `<g class="dmark" data-i="${idx}" tabindex="0" role="button" aria-label="Decision ${esc(gdate(d.date))}: ${esc(human(d.decision))}">
-      <title>${esc(gdate(d.date))}: ${esc(human(d.decision === "keep" ? "kept " + (d.current || "") : d.decision))}</title>
-      <line x1="${x}" x2="${x}" y1="${T}" y2="${H - B + 2}" stroke="${sel ? "var(--accent)" : "var(--axis)"}" stroke-width="1" stroke-opacity="${changed || sel ? 1 : 0.5}"/>
-      <circle cx="${x}" cy="${H - 12}" r="${changed ? 6 : 4.5}" fill="${changed ? "var(--accent)" : "var(--surface)"}" stroke="var(--accent)" stroke-width="2"/>
-      <rect x="${x - 10}" y="${H - 24}" width="20" height="24" fill="transparent"/></g>`;
+    const stroke = failed ? "var(--bad)" : d.outcome === "applied" ? "var(--accent)" : "var(--ink-2)";
+    S.chartMarks.push(idx);
+    svg += `<g class="dmark${sel ? " sel" : ""}" data-i="${idx}">
+      <title>${esc(gdate(d.date))}${urgent ? ", urgent" : ""}: ${esc(failed ? "no decision" : directiveLabel(d) || clip(tidy(d.reason || human(d.decision)), 90))}</title>
+      <line class="dfull" x1="${x}" x2="${x}" y1="${T}" y2="${base}" stroke="${sel ? "var(--accent)" : "var(--ink-2)"}" stroke-width="1"/>
+      <line class="dtick" x1="${x}" x2="${x}" y1="${base + 3}" y2="${base + 3 + (urgent ? 14 : 8)}" stroke="${stroke}" stroke-width="${urgent || failed ? 3 : 2}" stroke-linecap="round"/>
+      <rect class="dhit" x="${x - 8}" y="${base}" width="16" height="24" fill="transparent"/></g>`;
   });
-  // strategy review marks: a thin diamond on the directive lane at each version's date
-  const reviews = (S.strategy && S.strategy.history) || [];
-  const shown = reviews.filter((r) => monthOf(r.date) != null && monthOf(r.date) >= x0 - 1 && monthOf(r.date) <= x1);
-  shown.forEach((r) => {
-    const mo = Math.min(Math.max(monthOf(r.date), x0), x1), x = X(mo);
-    svg += `<g class="dmark rmark"><title>Strategy review: ${esc(tidy(r.trigger || ""))}</title>
-      <rect x="${x - 4}" y="9" width="8" height="8" fill="var(--thought)" stroke="var(--surface)" stroke-width="1" transform="rotate(45 ${x} 13)"/></g>`;
-  });
-  if (shown.length) $("legend").innerHTML += `<span><i class="review"></i>strategy review</span>`;
-  svg += `<line id="xhair" x1="0" x2="0" y1="${T}" y2="${H - B}" stroke="var(--ink-2)" stroke-width="1" visibility="hidden"/>`;
-  svg += `<g id="hdots"></g><rect id="hit" x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="transparent"/></svg><div class="tip" id="tip" hidden></div>`;
+  svg += `<line id="xhair" x1="0" x2="0" y1="${T}" y2="${base}" stroke="var(--ink-2)" stroke-width="1" visibility="hidden"/>`;
+  svg += `<g id="hdots"></g><rect id="hit" x="${L}" y="${T}" width="${W - L - R}" height="${base - T}" fill="transparent"/></svg><div class="tip" id="tip" hidden></div>`;
   wrap.innerHTML = svg;
-  wrap.querySelectorAll(".dmark[data-i]").forEach((g) => {
-    const pick = () => selectDecision(S.decisions[+g.dataset.i]);
-    g.addEventListener("click", pick);
-    g.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
-  });
+  chartKeys(S.chartMarks.length > 0);
+  if (S.chartCur != null) markCurrent(S.chartCur, false);
+  wrap.querySelectorAll(".dmark[data-i]").forEach((g) => g.addEventListener("click", () => selectDecision(S.decisions[+g.dataset.i])));
   const hit = wrap.querySelector("#hit"), tip = $("tip"), xh = wrap.querySelector("#xhair"), dots = wrap.querySelector("#hdots");
   hit.addEventListener("pointermove", (e) => {
     const box = hit.ownerSVGElement.getBoundingClientRect(), scale = W / box.width;
@@ -1905,6 +1943,42 @@ function renderChart() {
   });
   hit.addEventListener("pointerleave", () => { tip.hidden = true; xh.setAttribute("visibility", "hidden"); dots.innerHTML = ""; });
 }
+// The chart as one tab stop: focusable only while it shows decision marks.
+function chartKeys(on) {
+  const wrap = $("chartwrap");
+  if (on) { wrap.tabIndex = 0; wrap.setAttribute("role", "group"); wrap.setAttribute("aria-label", "Decisions on the chart: arrow keys move between them, Enter opens one"); }
+  else { wrap.removeAttribute("tabindex"); wrap.removeAttribute("role"); wrap.removeAttribute("aria-label"); }
+}
+function markCurrent(pos, say = true) {
+  const marks = S.chartMarks || [];
+  if (!marks.length) return;
+  const p = Math.max(0, Math.min(marks.length - 1, pos));
+  S.chartCur = p;
+  const idx = marks[p], d = S.decisions[idx];
+  $("chartwrap").querySelectorAll(".dmark").forEach((g) => g.classList.toggle("cur", +g.dataset.i === idx));
+  if (say && d) $("chart-now").textContent = `${gdate(d.date)}${(d.trigger_label || {}).urgent ? ", urgent" : ""}: ${d.outcome === "error" ? "no decision" : directiveLabel(d) || clip(tidy(d.reason || human(d.decision)), 120)}`;
+}
+$("chartwrap").addEventListener("focus", () => {
+  const marks = S.chartMarks || [];
+  if (!marks.length) return;
+  if (S.chartCur == null) {
+    const sel = S.sel && marks.findIndex((i) => S.decisions[i].run_id === S.sel.run_id && S.decisions[i].episode === S.sel.episode);
+    markCurrent(sel != null && sel >= 0 ? sel : marks.length - 1);
+  } else markCurrent(S.chartCur);
+});
+$("chartwrap").addEventListener("blur", () => $("chartwrap").querySelectorAll(".dmark.cur").forEach((g) => g.classList.remove("cur")));
+$("chartwrap").addEventListener("keydown", (e) => {
+  const marks = S.chartMarks || [];
+  if (!marks.length || e.target !== $("chartwrap")) return;
+  const cur = S.chartCur ?? marks.length - 1;
+  const to = { ArrowRight: cur + 1, ArrowDown: cur + 1, ArrowLeft: cur - 1, ArrowUp: cur - 1, Home: 0, End: marks.length - 1 }[e.key];
+  if (to !== undefined) { e.preventDefault(); markCurrent(to); return; }
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    const d = S.decisions[marks[cur]];
+    if (d) selectDecision(d).then(() => { if (!phone()) $("chartwrap").focus({ preventScroll: true }); });
+  }
+});
 
 // The model as chosen, the release that answered (aliases resolve), and the thinking level.
 function modelLabel(d) {

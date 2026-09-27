@@ -335,8 +335,13 @@ running pilot (whose own dashboard is on `PILOT_PORT`, 8790, on 127.0.0.1). It r
   rivals ("#4 of 4, median 42, behind the median", in the warning colour with those words) or what
   purchases keep back. Stellaris leads with the directive in force and the standing.
 - **Over time**: the view's chart views (Civ VI: yields, balances, rank with 1 at the top; Stellaris:
-  net income, stockpile, power) plus a table of every recorded figure, with war periods, the
-  directive lane and a mark per decision. The rivals table (Civilizations met, Neighbours) has the
+  net income, stockpile, power) plus a table of every recorded figure (it scrolls in its own box).
+  Every line is named at its end; x ticks count turns or years; war periods are bands. Above the
+  plot: the directive lane (Stellaris) and the strategy reviews' own lane. Each decision is a short
+  tick under the axis (urgent ones taller, a failed one red), drawn full height only when it is the
+  one selected, hovered or current; last stands are red marks on the axis. The chart is one tab
+  stop: the arrow keys, Home and End move between decisions (a screen reader hears each), Enter or
+  Space opens one in Reasoning. The rivals table (Civilizations met, Neighbours) has the
   view's columns; a column no rival has a value for is left out.
 - **Decisions**: each row leads with the model's reason (two lines, in the model's serif), under
   the date, the trigger as a category in words ("City threatened: Chengdu", "Great Scientist race

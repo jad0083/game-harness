@@ -486,6 +486,11 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   40 calls, the last turn's time) and emits `popups_quieted` once per library install (the
   controller's reply field, kept by `ControllerCiv6` until read); `info.last_stand` (armed or off,
   its limit, the streak, why it turned off, the stand running) is always there.
+- The chart (ruling 12): `renderChart` lays out the lanes above the plot (directive, reviews), the
+  plot, the axis with decision ticks and last-stand marks (`/api/orders` `stands`), and the end labels
+  (sorted by height and pushed 13 px apart). `#chartwrap` is the single tab stop (`role="group"`,
+  only while it shows marks); `S.chartMarks` and `S.chartCur` keep the current mark across
+  re-renders and `#chart-now` says it.
 - The phone layout and the campaign list (rulings 1, 4, 13, 32): one DOM for every width; at 700 px
   and narrower `body[data-view]` (now, decisions, levers, strategy, talk), `[data-reading]` (the
   Reasoning sheet, a history entry so the browser's back closes it) and `[data-activity]` pick what
