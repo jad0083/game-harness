@@ -167,3 +167,52 @@ re-installed its own library at its next call.
   Complex (T123), Beijing on a Settler (T129) and Chengdu on nothing (T134); T107 was the repeat
   refused unchanged. For T43-T61 this matches E1 (the T51 refusal); the rest of E1 (the T35 purchase
   and lost order) lies in the scratch runs.
+
+## 2026-09-27 — the AI's own plan and district placement checked live, read-only (T202-T207)
+
+Levers design, checks L2 and L3 (rulings 29 and 30, stage A). The live governor (from `main`) kept
+playing; each batch of queries started 2 s after it began deciding (the game idle between turns).
+Five tuner queries (the design's budget of 10, with the five above): at T202 an install of the
+branch's library in InGame, the snapshot and `district-plots`; at T207 a second install and one
+guarded call printing `turn_ready` and the built wonders. One agent file read of
+`Logs/AI_Victories.csv`. No order, autoplay or state-changing Lua was sent; the live governor
+re-installed its own library at its next call.
+
+- **L2, the AI's top 3 per city (T202)**: every city has `recommend` (the snapshot is 10.3 KB with
+  six cities). Beijing: Industrial Zone 2966, Kotoku-in 1898, Theater 1421; Chengdu: Industrial
+  Zone 2139, Campus 1868, Holy Site 1814; Haarlem: Aqueduct 1247, Forbidden City 696, Museum
+  (artifact) 606; Jiaodong: Campus 4833 (the district it is building), Industrial Zone 1586,
+  Aqueduct 1515; Guangzhou: Entertainment Complex 2618 (being built), Industrial Zone 2309, Campus
+  1490; Taiyuan: Holy Site 2516 (being built), Theater 1227, Campus 1201. Scores now run 600-4800
+  (about 700 at T73). Most top items are districts not yet placed, which production orders cannot
+  name.
+- **L2, the AI's strategy log**: one read of 13,127 bytes (T1-T202), 21 rows for player 0. The
+  briefing line at T202: "The AI's own plan: Beijing → district:industrial_zone, wonder:kotoku_in,
+  district:theater; … Taiyuan → district:holy_site, district:theater, district:campus; strategies:
+  religious victory (since T6), darkage (since T177), naval (since T115), rapid expansion (since
+  T167, stopped T177), renaissance changes (since T192)." Science victory followed T11-T36, T56-T76
+  and T136-T156. Rapid expansion started at T167 and stopped at T177: 10 turns, a counter-example to
+  vote 2's "every repeat change is 20 or more turns apart" (T1-T77); the option 4 probe should not
+  rely on a fixed 20-turn lock for every strategy. The era strategies keep "Following" once started,
+  so the briefing now shows only the latest.
+- **L3, district plots (T202)**: `district-plots` answered 27 KB in 0.4 s: 216 plots, each city's 37
+  plots within 3 tiles, and `GetOperationTargets(BUILD)` lists for 9-10 districts per city (Beijing
+  13 plots for most, Taiyuan 4, Haarlem none except one plot for an Aqueduct). A wonder stands on a
+  `DISTRICT_WONDER` plot, and the plot names its wonder while it is still being built (Mahabodhi
+  Temple in Beijing, Great Bath in Chengdu): the scorer now counts a wonder only once built (the
+  reply's `built` list, read live at T207: Pyramids) and never as a district.
+- **L3, scored** with the campaign's T171 weights (science 30, military 25, economy 15, culture 10,
+  faith 10, expansion 5, diplomacy 5): best plots such as Taiyuan's Harbor at 28,18 (+4 gold),
+  Jiaodong's Commercial Hub at 21,26 (+4 gold) and Guangzhou's Theater at 20,19 (+3 culture). The
+  AI's seven specialty districts against the free plots each city is offered now: Beijing Holy Site
+  0 (+2 at 23,20), Beijing Campus 3 (best), Chengdu Theater 0 (+2 at 24,17, next to the Pyramids),
+  Haarlem Campus 2 and Theater 1 (best of what is left), Jiaodong Campus 3 (best), Taiyuan Holy
+  Site 0 (+1 at 26,17): a mean gain of **+0.71, so no-go** for stage B under the design's criterion
+  (+1 over at least 4 districts). Counting the two unfinished wonders gave +1.14 (go), so the margin
+  is thin. Caveats: alternatives are today's free plots, not those free when the AI placed; rules
+  that need a tech or civic are left out; resources are read without our visibility check.
+- **`turn_ready` at T207** (read-only): every check answered (no "cannot check"), and it reported
+  not ready, "on screen: HistoricMoments", while the governor was deciding between turns. Either a
+  Historic Moments screen was up at the hand-back or that context reads as shown when it is not; the
+  stand fails closed on it (no action, only the hand-back). To settle before the L6 checklist
+  (issues.md).
