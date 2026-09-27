@@ -3296,8 +3296,11 @@ async function loadDevices() {
       <span class="dmeta">${d.scope === "read" ? "read only" : "control"} · last used ${ago(d.last_seen_at)}${d.last_ip ? ", " + esc(d.last_ip) : ""}</span>
       <span class="dact"><button type="button" class="btn" data-signout="${esc(d.id)}" data-name="${esc(d.name)}">Revoke</button></span></li>`).join("")
     : `<li class="hint">No script tokens. Make one on the computer that runs Game Pilot: python -m pilot dashboard-token create --name NAME --scope read</li>`;
+  // a browser can sign in again with a code; a script token cannot: it needs a new one from the CLI
+  const ask = { "dev-list": (n) => `Sign out ${n}? Its next request is refused; it can sign in again with a new code.`,
+                "dev-scripts": (n) => `Revoke ${n}? Scripts using it get 401 at once; make a new token with python -m pilot dashboard-token create.` };
   document.querySelectorAll("#dev-list [data-signout], #dev-scripts [data-signout]").forEach((b) => b.addEventListener("click", async () => {
-    if (!confirm(`Sign out ${b.dataset.name}? Its next request is refused; it can sign in again with a new code.`)) return;
+    if (!confirm(ask[b.closest("ul").id](b.dataset.name))) return;
     const r = await postJson("/api/auth/devices", { action: "revoke", id: b.dataset.signout });
     if (r.ok) loadDevices();
   }));

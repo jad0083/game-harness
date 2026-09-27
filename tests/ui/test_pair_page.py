@@ -182,6 +182,27 @@ def test_devices_tab_lists_this_browser_and_signs_another_out(browser, live_serv
     a.context.close()
 
 
+def test_revoking_a_script_token_asks_in_its_own_words(browser, live_servers):
+    """A script token cannot sign in with a code: its confirm says Revoke and names the CLI command."""
+    auth = live_servers["auth"]
+    tok, _ = auth.store.create_device("script", name="laptop watch", scope="read", created_via="cli", created_by="cli")
+    a = open_context(browser, "desktop-light", live_servers, device="Chrome on Windows")
+    page = a.page
+    page.goto(a.base + "/")
+    page.wait_for_selector("#decisions li button", state="attached")
+    page.click("#b-more")
+    page.click('#more-menu [data-act="devices"]')
+    page.wait_for_selector(f'#dev-scripts [data-signout="{tok["id"]}"]')
+    said = []
+    page.once("dialog", lambda d: (said.append(d.message), d.accept()))
+    page.click(f'#dev-scripts [data-signout="{tok["id"]}"]')
+    page.wait_for_function(f"() => !document.querySelector('#dev-scripts [data-signout=\"{tok['id']}\"]')")
+    assert said and said[0].startswith("Revoke laptop watch?") and "401" in said[0]
+    assert "dashboard-token create" in said[0] and "sign in again" not in said[0] and "Sign out" not in said[0]
+    assert auth.store.device(tok["id"])["revoked_at"]
+    a.context.close()
+
+
 @pytest.mark.parametrize("name", ["phone-light", "desktop-dark"])
 def test_a_bad_link_says_the_link_does_not_work(browser, live_servers, name):
     """A mistyped or cut-off link is answered about the link, not about typed words."""

@@ -2,6 +2,7 @@
 
 ## Open
 
+- [ ] Dashboard v2 review (2026-09-27): Revoke on a script token asked "Sign out laptop-watch? ... it can sign in again with a new code", but a script token cannot sign in with a code. Fixed on branch feat/dashboard-v2: its own confirm ("Revoke laptop-watch? Scripts using it get 401 at once; make a new token with python -m pilot dashboard-token create.")
 - [ ] Dashboard v2 review (2026-09-27): sign-in copy still said "the controller" and "cli" ("added from the controller", "signed out from the controller", "Signed in (cli)", the sign-out confirm), words the redesign set out to remove, and the log line "Signed out by Chrome on Android, Firefox on Linux" read as two devices signed out. Fixed on branch feat/dashboard-v2: "the computer that runs Game Pilot", sign-in ways in words, and log sentences that name the device first
 - [ ] Dashboard v2 review (2026-09-27): a fresh sign-in link pasted into the tab that had just said "This code has expired" (or into a plain /pair tab) did nothing: only the fragment changed, the page read it once at load, and the error stayed with no button. Fixed on branch feat/dashboard-v2: signin.js takes the new code on hashchange
 - [ ] Dashboard v2 review (2026-09-27): a mistyped or cut-off sign-in link, and a wrong recovery key, were answered with the typed-words error ("Those words don't match a current code") although no words were typed. Fixed on branch feat/dashboard-v2: the link and the recovery key each get their own sentence
