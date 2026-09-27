@@ -648,7 +648,9 @@ function weightLine(pl, p, total) {
   if (!p) return `<div class="p-weight"><span>Weight <b>${esc(pl.weight)}</b></span></div>`;
   const st = MS_STATUS[p.status] || ["", "", (pl.milestones || []).length ? "no data" : "no milestones"];
   const share = total ? Math.round(100 * p.pressure / total) : 0;
-  return `<div class="p-weight"><span>Weight <b>${esc(pl.weight)}</b> × <span class="p-need ${st[0]}">${esc(st[2])} ${esc(p.need)}</span> = pressure <b>${esc(fmt(p.pressure))}</b></span>
+  const r = p.record, stall = p.efficacy && p.efficacy < 1 && r
+    ? ` × <span class="p-need bad" title="${esc(`${human(r.metric)} ${r.held_rate >= 0 ? "+" : ""}${r.held_rate}/yr over ${r.held_years} years with ${human(r.directive || "its directive")} vs ${r.other_rate >= 0 ? "+" : ""}${r.other_rate}/yr otherwise`)}">not working here ${esc(p.efficacy)}</span>` : "";
+  return `<div class="p-weight"><span>Weight <b>${esc(pl.weight)}</b> × <span class="p-need ${st[0]}">${esc(st[2])} ${esc(p.need)}</span>${stall} = pressure <b>${esc(fmt(p.pressure))}</b></span>
     <span class="p-share"><span class="p-bar" role="img" aria-label="${share}% of all pressure"><i style="width:${share}%"></i></span>${share}% of all pressure</span></div>`;
 }
 

@@ -56,7 +56,15 @@ or missed one pushes in proportion to its weight. Balance comes without a new re
     rejected with the reason.
 11. **Dashboard.** Each pillar shows `weight 30 · pressure 45` and a thin bar of its share of the
     total pressure; the edit form has a weight field. `/api/strategy` adds `pressure` per pillar.
-12. **Out of scope** (plan.md): a directive-efficacy table fed back to the Strategist, event boosts to
+13. **Directive record** (added after 11.7 in-game years of live data, 2263–2274). Pressure had no
+    feedback: `tech_rush` held about 5 years while techs grew +0.5–0.7/yr against +0.9/yr otherwise,
+    yet its at-risk milestone kept suggesting it. `directive_record` compares, over the campaign's
+    metrics rows, how the pillar's first milestone metric grew per year while the pillar's directive
+    was in force versus the rest of the time (ranks count going down as growth). A directive held at
+    least `stall_years` (Stellaris 2) that grew its metric no faster "does not work here": pressure ×
+    `stall_factor` (0.5, moderate because game phases differ). The frame shows the record beside the
+    pressure; the Strategist's prompt lists every directive's record.
+12. **Out of scope** (plan.md): event boosts to
     need (war → defence), share-mode consumers in GalCiv IV / Civ VI.
 
 ## Errors

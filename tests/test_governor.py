@@ -3659,3 +3659,25 @@ def test_a_weight_edit_during_a_review_keeps_the_weights_summing_to_100(setup, m
     ws = {n: pl.weight for n, pl in g.strategy.pillars.items()}
     assert ws["society"] == 20 and sum(ws.values()) == 100
     assert sorted(pl.priority for pl in g.strategy.pillars.values()) == list(range(1, 8))
+
+
+def test_the_frame_explains_a_directive_that_does_not_work_here():
+    from pilot.governor import frame_text
+    press = _press(technology="at_risk")
+    press["technology"].update(efficacy=0.5, pressure=12.0,
+                               record={"metric": "techs_known", "held_years": 4.8, "held_rate": 0.6, "other_rate": 0.9})
+    text = frame_text(_strategy_with(), STELLARIS, "(none)", press, current="tech_rush")
+    assert "tech_rush 12 (technology 16 x at_risk 1.5 x not working here 0.5: techs_known +0.6/yr over 4.8 y held " \
+           "vs +0.9/yr otherwise)" in text
+
+
+def test_the_strategist_sees_each_directives_record(setup, monkeypatch):
+    s, log = setup
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": _strategist([])})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    rows = [{"date": f"22{y:02d}.01.01", "directive": "tech_rush" if y < 3 else "defend",
+             "systems": 10 + 3 * max(0, y - 3)} for y in range(6)]      # flat under tech_rush, +3/yr under defend
+    monkeypatch.setattr(g, "_metrics_rows", lambda: rows)
+    text = g._directive_records_text()
+    assert "- tech_rush (technology, systems): +0/yr over 3 y held vs +3/yr otherwise — does not work here" in text
+    assert "- defend (defence, systems): +3/yr over 2 y held vs +0/yr otherwise\n" in text + "\n"

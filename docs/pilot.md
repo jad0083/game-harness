@@ -98,7 +98,10 @@ Each pillar has:
 **Pressure drives decisions.** Before each decision the governor computes every pillar's pressure
 = weight × milestone need (met 0.3, on track 1, at risk 1.5, missed 2; a pillar without milestones
 1) and shows the directives by pressure with a suggestion: the top one, or keep while the current
-directive's pressure is within the switch margin (1.25) of the top. The model may choose
+directive's pressure is within the switch margin (1.25) of the top. A directive held at least 2
+years in the campaign whose pillar's milestone metric grew no faster than when it was not held
+"does not work here" and has its pressure halved; the frame shows its record, and the Strategist
+sees every directive's record when it sets weights. The model may choose
 otherwise when the briefing gives a reason, says why, and names the milestone its choice
 `serves`. A choice outside the top two is tagged off-frame and asks for a review. Games with many
 levers at once (GalCiv IV, Civ VI) can use `mode = "share"`, which shows each pillar's share of

@@ -86,7 +86,7 @@
 - [ ] Screen templates: pause/date and event popups
 - [x] Strategy detail rules (pillars.toml `[strategy]`): a milestone on every pillar, checkpoint + end target on priority 1, two goals on the top 3, a briefing figure in each stance, so every model writes at the same detail (deployed 4decee2)
 - [x] Weighted pillars: weights (sum 100) instead of priorities; each decision sees directive pressure = weight × milestone need with a suggestion and switch margin (share mode defined for many-lever games); decisions name what they serve; dashboard shows weight × need = pressure (spec 2026-09-26-weighted-pillars-design.md; deployed d2823c3, live: Opus wrote weights, decision followed the suggestion)
-- [ ] Directive efficacy per metric (what each directive moved in 12 months) fed back to the Strategist
+- [ ] Directive efficacy: a directive that does not move its pillar's metric (held 2+ years, no faster than otherwise) loses half its pressure; its record goes to the frame and the Strategist (spec ruling 13)
 - [ ] Event boosts to milestone need (war → defence) and share-mode consumers for GalCiv IV / Civ VI
 
 ## Pilot app: observability and control

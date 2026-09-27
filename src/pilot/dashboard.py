@@ -352,7 +352,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
     async def api_strategy(request):
         """The current pillar strategy, its milestones' status, version history and the game's
         pillars spec (labels, directives, actions) for a campaign."""
-        from .strategy import Strategy, milestone_status, pressures
+        from .strategy import Strategy, directive_record, milestone_status, pressures
         cid = request.query.get("campaign") or (log.campaign_id if log else "")
         cur = await asyncio.to_thread(tel.latest_strategy, cid) if tel is not None and cid else None
         spec, error = campaign_spec(cid, stored=cur is not None) if cid else (None, "")
@@ -376,7 +376,9 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
                     for m in pl.milestones:
                         ms.append({"pillar": name, **m.model_dump(),
                                   "status": milestone_status(m, rows, today, spec.row_keys)})
-                press = pressures(s, spec, lambda _n, m: milestone_status(m, rows, today, spec.row_keys) if rows else "")
+                press = pressures(s, spec, lambda _n, m: milestone_status(m, rows, today, spec.row_keys) if rows else "",
+                                  record_of=lambda name, metric: (directive_record(rows, d, metric, spec.row_keys)
+                                                                  if (d := spec.directive_of(name)) and rows else None))
             if s is not None:   # weights as the governor sees them (a ranked strategy converts on load)
                 cur = {**s.model_dump(), "reason": cur.get("reason", "")}
         return web.json_response({"current": cur, "milestones": ms, "history": hist, "spec": public, "error": error,
