@@ -1387,8 +1387,10 @@ class Governor:
         if not self._crisis_on() or not self._ladder_allowed() or "market" not in self.pillars.actions:
             return None
         try:
+            placed = any((o.get("side"), o.get("resource")) == ("buy", "alloys") for o in b.get("market_orders") or [])
             order, why = crisis_alloys(b, self._prev_save, self.pillars.actions["market"], idle,
-                                       self._market_measured - self._market_unmeasured, self._market_suspension)
+                                       self._market_measured - self._market_unmeasured, self._market_suspension,
+                                       placed=placed)
         except Exception as e:  # noqa: BLE001 - a malformed save never stops play
             order, why = None, f"{type(e).__name__}: {e}"
         if order is None:
@@ -1425,6 +1427,8 @@ class Governor:
             self._crisis_status_quo(b)
         if ladder == "enter":
             self.log.emit("crisis", event="ladder", date=date, state=dict(self._crisis))
+        elif ladder == "exit":
+            self.log.emit("crisis", event="closed", date=date, state=dict(self._crisis))
         self._crisis_pending = None
         self._publish_crisis()
 
@@ -1452,17 +1456,21 @@ class Governor:
 
     def _load_crisis(self) -> None:
         """The campaign's war crisis from earlier runs (the newest `crisis` event's state): an active one
-        carries on at the crisis pace, and each war keeps its 12-month entry limit. Advisory."""
+        carries on at the crisis pace, and each war keeps its 12-month entry limit. A run that stopped
+        after an entry or an exit, before its ladder ran (`ladder` / `closed` not yet written), leaves
+        that ladder to the next decision. Advisory."""
         self._crisis, self._crisis_pending, self._observed_b = None, None, None
         tel, cid = self.log.telemetry, self.log.campaign_id
         if tel is not None and cid:
             try:
                 events = tel.campaign_events(cid, "crisis")
-                st = next((e["state"] for e in reversed(events) if isinstance(e.get("state"), dict)), None)
-                self._crisis = dict(st) if st else None
+                last = next((e for e in reversed(events) if isinstance(e.get("state"), dict)), None)
+                if last:
+                    self._crisis = dict(last["state"])
+                    self._crisis_pending = last.get("event") if last.get("event") in ("enter", "exit") else None
             except Exception as e:  # noqa: BLE001 - advisory
                 self.log.emit("briefing_error", error=f"loading the war crisis: {e}"[:200])
-        if self._crisis_on():
+        if self._crisis_on() and self._crisis_pending != "enter":     # the entry's ladder sets the pace
             prior = self.s.decide_every_months
             self._crisis.update(pace_prior=prior, pace_human=False)
             if prior > CRISIS_PACE:

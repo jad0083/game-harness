@@ -4730,7 +4730,7 @@ def test_six_quiet_saves_end_the_crisis_and_restore_the_cadence(setup):
     assert eps[1].startswith("urgent: war going badly") and eps[2].startswith("scheduled (3 months)")
     assert eps[3] == "urgent: war crisis over: 6 quiet saves", eps
     assert g.s.decide_every_months == 12 and log.state.info["crisis"] is None
-    assert [e["event"] for e in log.recent if e["kind"] == "crisis"] == ["enter", "ladder", "exit"]
+    assert [e["event"] for e in log.recent if e["kind"] == "crisis"] == ["enter", "ladder", "exit", "closed"]
 
 
 def test_the_humans_cadence_during_a_crisis_is_kept_at_its_end(setup):
@@ -4851,3 +4851,40 @@ def test_a_restarted_governor_carries_on_the_crisis_and_its_entry_limit(setup, t
     g2.run(max_decisions=1)
     assert g2._crisis_on() and g2.s.decide_every_months == 3 and log2.state.info["crisis"]["active"]
     assert not any(e["kind"] == "crisis" and e["event"] == "enter" for e in log2.recent), "no second entry"
+
+
+def _crisis_left_by_a_run(s, tel, event: str, state: dict) -> None:
+    """An earlier run of the campaign that stopped right after the crisis's `event`, before its ladder."""
+    log = EventLog(s.runs_dir, f"run_{event}", s.model, telemetry=tel)
+    log.emit("run_start", model=s.model, game="stellaris")
+    log.set_campaign("stellaris", "theia_1", "")
+    log.emit("crisis", event=event, date="2256.08.01", state=state)
+
+
+def test_a_restart_before_the_exit_ladder_still_clears_the_posture(setup, tmp_path):
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    _crisis_left_by_a_run(s, tel, "exit", {"active": False, "since": "2256.02.01", "conditions": [], "quiet": 6,
+                                           "entries": {}, "posture_on": True, "posture_month": months("2256.02.01"),
+                                           "pace_prior": 12})
+    game = FakeStellaris([{**_war_save("2256.09.01", wars=False), "source": "save games/theia_1/autosave.sav"}])
+    game.flags = ["governor_posture_war_crisis"]
+    g = Governor(s, game, EventLog(s.runs_dir, "run_after", s.model, telemetry=tel), model=decisions("keep"))
+    g.run(max_decisions=1)
+    assert ("posture", "war_crisis", False) in game.actions and g.s.decide_every_months == 12
+
+
+def test_a_restart_before_the_entry_ladder_runs_it_then(setup, tmp_path):
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    _crisis_left_by_a_run(s, tel, "enter", {"active": True, "since": "2256.08.01", "conditions": [["C1", "Arnvoss occupied"]],
+                                            "quiet": 0, "entries": {_WAR["id"]: months("2256.08.01")}, "wars": [_WAR["id"]]})
+    game = FakeStellaris([{**_war_save("2256.08.01", occupied=True), "source": "save games/theia_1/autosave.sav"}])
+    log = EventLog(s.runs_dir, "run_after", s.model, telemetry=tel)
+    g = Governor(s, game, log, model=decisions("keep"))
+    g.run(max_decisions=1)
+    assert ("directive", "defend") in game.actions and g.s.decide_every_months == 3
+    assert g._crisis["pace_prior"] == 12, "the earlier pace, not the crisis's own"
+    assert any(e["kind"] == "crisis" and e["event"] == "ladder" for e in log.recent)

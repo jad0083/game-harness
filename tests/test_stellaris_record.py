@@ -201,3 +201,13 @@ def test_market_actions_can_carry_the_crisis_key_and_count_toward_the_suspension
     rows = [outcome_row(market_action(order, d, "cal1", key="crisis market buy alloys"), "did_not_take", None, "",
                         d2) for d, d2 in (("2250.01.01", "2250.02.01"), ("2250.03.01", "2250.04.01"))]
     assert market_suspended(rows, "buy", "alloys", "cal1"), "the click arithmetic is the same for crisis orders"
+
+
+def test_the_same_save_judged_again_after_a_restart_is_not_a_second_dry_save():
+    order = {"side": "buy", "resource": "minerals", "amount": 10}
+    a = market_action(order, "2250.01.01", "cal1")
+    s = lambda d: {"date": d, "market_orders": [order], "market": {"kind": "galactic", "trades_net": {}}}
+    judge(a, s("2250.02.01"), CAP, GRACE)
+    assert judge(a, s("2250.03.01"), CAP, GRACE)[0] == "open"
+    assert judge(a, s("2250.03.01"), CAP, GRACE)[0] == "open", "a restart reads the save it was judged on again"
+    assert judge(a, s("2250.04.01"), CAP, GRACE)[:2] == ("took", "not executing")

@@ -150,3 +150,10 @@ def test_crisis_alloys_are_bought_only_through_every_gate():
     assert crisis_alloys(at_war(stockpile={"trade": 2400.0, "alloys": 300.0}), None, LIMITS, set(), MEASURED)[0] is None
     pricey = at_war(market={"kind": "galactic", "fluct": {"alloys": 120}, "bought": {}, "sold": {}, "trades_net": {}})
     assert "100%" in crisis_alloys(pricey, None, LIMITS, set(), MEASURED)[1]
+
+
+def test_crisis_alloys_already_placed_are_kept_up_to_plus_100():
+    """Like any buy in place (ruling 9's price guard): a crisis order is dropped only above +100%."""
+    dear = at_war(market={"kind": "galactic", "fluct": {"alloys": 70}, "bought": {}, "sold": {}, "trades_net": {}})
+    assert crisis_alloys(dear, None, LIMITS, set(), MEASURED)[0] is None, "no new order above +50%"
+    assert crisis_alloys(dear, None, LIMITS, set(), MEASURED, placed=True)[0] is not None

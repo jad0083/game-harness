@@ -205,8 +205,9 @@ def _judge_trading(a: dict, b: dict, date: str) -> tuple[str, str | None, str]:
     e = a["expect"]
     market = b.get("market")
     trades = market.get("trades_net") if isinstance(market, dict) else None
-    if e["side"] != "buy" or not e["amount"] or not isinstance(trades, dict):
-        return OPEN, None, ""
+    if e["side"] != "buy" or not e["amount"] or not isinstance(trades, dict) or a.get("traded_on") == date:
+        return OPEN, None, ""       # the same save again (a restart reads it anew) is not a second save
+    a["traded_on"] = date
     got = float(trades.get(e["resource"]) or 0.0)
     if got > 0:
         a["dry"] = 0
