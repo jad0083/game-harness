@@ -9,9 +9,10 @@ backfilled.
     scripts/civ6-backfill-orders.py                       # read-only: rows and counts per key
     scripts/civ6-backfill-orders.py --write               # add them as order_outcome events of a new run
 
---write adds rows to the telemetry database (a new run named backfill-<time>, in the campaign); it
-refuses when the campaign already has backfilled rows. Run it once, with the governor stopped or
-paused, when deploying the order record."""
+--write adds the rows as a new run named backfill-<time>, in the campaign: its log
+runs/backfill-<time>/events.jsonl (the raw record, so `python -m pilot rebuild-telemetry` recreates
+them) and the telemetry database. It refuses when the campaign already has backfilled rows. Run it
+once, with the governor stopped or paused, when deploying the order record."""
 
 from __future__ import annotations
 
@@ -54,6 +55,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--db", type=Path, default=ROOT / "runs" / "telemetry.sqlite")
     ap.add_argument("--campaign", default=CAMPAIGN)
     ap.add_argument("--write", action="store_true", help="add the rows as order_outcome events of a new run")
+    ap.add_argument("--runs-dir", type=Path, default=None,
+                    help="where the new run's events.jsonl goes (default: the database's folder, runs/)")
     args = ap.parse_args(argv)
     found = decisions(args.db, args.campaign)
     if found and "already" in found[0]:
@@ -67,17 +70,22 @@ def main(argv: list[str] | None = None) -> int:
     print(f"{len(rows)} rows from {len(found)} decisions:", ", ".join(f"{k} {res} {n}" for (k, res), n in sorted(counts.items())))
     if not args.write or not rows:
         return 0
-    tel = Telemetry(args.db)
     run = f"backfill-{time.strftime('%Y%m%d-%H%M%S')}"
     game, name = args.campaign.split("/", 1)
     now = time.time()
-    tel.record(run, {"t": now, "kind": "run_start", "game": game, "model": "backfill"})
-    tel.record(run, {"t": now, "kind": "campaign", "game": game, "name": name})
-    for r in rows:
-        tel.record(run, {"t": times.get(r["date"]) or now, "kind": "order_outcome", **r})
-    tel.record(run, {"t": now, "kind": "run_end", "decisions": 0})
+    events = [{"t": now, "kind": "run_start", "game": game, "model": "backfill"},
+              {"t": now, "kind": "campaign", "game": game, "name": name},
+              *({"t": times.get(r["date"]) or now, "kind": "order_outcome", **r} for r in rows),
+              {"t": now, "kind": "run_end", "decisions": 0}]
+    # the run log first: it is the raw record the database is rebuilt from (telemetry.py)
+    log = (args.runs_dir or args.db.parent) / run / "events.jsonl"
+    log.parent.mkdir(parents=True, exist_ok=False)
+    log.write_text("".join(json.dumps(ev, ensure_ascii=False, default=str) + "\n" for ev in events), encoding="utf-8")
+    tel = Telemetry(args.db)
+    for ev in events:
+        tel.record(run, ev)
     tel.close()
-    print(f"written as run {run}")
+    print(f"written as run {run} ({log})")
     return 0
 
 

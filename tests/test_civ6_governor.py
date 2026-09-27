@@ -1176,6 +1176,14 @@ def test_the_backfill_script_reads_only_until_asked_and_writes_once(tmp_path, ca
     rows = Telemetry(db).campaign_events("civ6/kublai", "order_outcome")
     assert [r["result"] for r in rows] == ["refused", "lost", "completed", "unknown", "refused", "refused", "completed"]
     assert mod.main(["--db", str(db), "--campaign", "civ6/kublai", "--write"]) == 1, "never twice"
+    # the JSONL logs are the raw record: `pilot rebuild-telemetry` recreates the database from them alone,
+    # so the backfilled rows must be in a run log of their own (next to the database by default)
+    rebuilt = Telemetry(db)
+    rebuilt.rebuild(tmp_path)
+    again = rebuilt.campaign_events("civ6/kublai", "order_outcome")
+    assert [(r["result"], r["date"]) for r in again] == [(r["result"], r["date"]) for r in rows], "kept by a rebuild"
+    rebuilt.close()
+    assert mod.main(["--db", str(db), "--campaign", "civ6/kublai", "--write"]) == 1, "still never twice"
 
 
 # ---- review fixes ------------------------------------------------------------------------------
