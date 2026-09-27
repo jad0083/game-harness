@@ -145,6 +145,33 @@ def test_the_stability_loss_estimate():
     assert stability_loss(save("2250.01.01")) is None
 
 
+# the learned rules that credited consolidate_economy with repairing colony amenity deficits (E10: it
+# moved them +5 to +14 a planet-year and cleared 2 of 63-70 year-long intervals), by a phrase of each
+FALSE_CONSOLIDATE_RULES = (
+    "effectively repairs severe amenity deficits and low stability",                      # 2235.05 (f126552)
+    "successfully and rapidly resolves extreme planetary amenities deficits",             # 2218.04 (f126552)
+    "requires shifting the directive to 'consolidate_economy' to force the AI",           # 2226.08
+    "is an effective way to resolve severe amenities and stability deficits",             # 2240.05
+    "switching to the 'consolidate_economy' directive can rapidly improve stability",     # 2274.11
+    "necessitate a temporary shift to 'consolidate_economy'",                             # 2206.09
+    "efficiently resolves extreme planetary housing and amenities deficits",              # 2211.09
+    "a 12-month consolidate_economy window is the only lever",                            # 2339.06
+    "is the clearest sign to return to `consolidate_economy` at once",                    # 2383.05
+    "can take several years to repair extreme amenities deficits",                        # 2394.01
+    "slowly reduces extreme amenities deficits on habitats",                              # 2430.02
+    "necessitate 'consolidate_economy' to force the AI to build holistic infrastructure",  # 2436.05
+    "When a consolidate_economy spell has fixed the problem it was chosen for (Berykinium",  # review 2215.05
+    "requires prioritizing the consolidate_economy directive",                            # review 2247.02
+)
+
+
+def test_the_learned_rules_no_longer_credit_consolidate_economy_with_amenity_repairs():
+    """Ruling 22's rule correction, over every such rule in the learned file (not only :29 and :191)."""
+    text = (REPO / "corpora/stellaris/learned/strategy.md").read_text(encoding="utf-8")
+    assert [r for r in FALSE_CONSOLIDATE_RULES if r in text] == []
+    assert text.count("corrected 2026-09-27 (levers design ruling 22, E10)") == len(FALSE_CONSOLIDATE_RULES)
+
+
 # ---- the local saves (read-only; trimmed planet blocks in tests/fixtures/stellaris_planets.json) -------
 
 def test_arnvoss_in_the_theia_2272_save_carries_the_development_fields():
