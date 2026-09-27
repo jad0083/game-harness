@@ -9,8 +9,9 @@ backfilled.
     scripts/civ6-backfill-orders.py                       # read-only: rows and counts per key
     scripts/civ6-backfill-orders.py --write               # add them as order_outcome events of a new run
 
---write adds the rows as a new run named backfill-<time>, in the campaign: its log
-runs/backfill-<time>/events.jsonl (the raw record, so `python -m pilot rebuild-telemetry` recreates
+--write adds the rows as a new run named <time>-backfill, in the campaign, where <time> is the
+earliest backfilled decision's (so the run sorts among the real runs by time): its log
+runs/<time>-backfill/events.jsonl (the raw record, so `python -m pilot rebuild-telemetry` recreates
 them) and the telemetry database. It refuses when the campaign already has backfilled rows. Run it
 once, with the governor stopped or paused, when deploying the order record."""
 
@@ -70,9 +71,12 @@ def main(argv: list[str] | None = None) -> int:
     print(f"{len(rows)} rows from {len(found)} decisions:", ", ".join(f"{k} {res} {n}" for (k, res), n in sorted(counts.items())))
     if not args.write or not rows:
         return 0
-    run = f"backfill-{time.strftime('%Y%m%d-%H%M%S')}"
     game, name = args.campaign.split("/", 1)
     now = time.time()
+    # named like a real run (its start time, %Y%m%d-%H%M%S) at the earliest backfilled decision, so it
+    # sorts among the runs by time and never ahead of a later real run (the dashboard lists newest first)
+    first = min(times.get(r["date"]) or now for r in rows)
+    run = f"{time.strftime('%Y%m%d-%H%M%S', time.localtime(first))}-backfill"
     events = [{"t": now, "kind": "run_start", "game": game, "model": "backfill"},
               {"t": now, "kind": "campaign", "game": game, "name": name},
               *({"t": times.get(r["date"]) or now, "kind": "order_outcome", **r} for r in rows),

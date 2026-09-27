@@ -4,6 +4,7 @@ purchases keep the reserve."""
 
 import json
 import shutil
+import time
 
 import pytest
 from pydantic_ai.messages import ModelResponse, ToolCallPart
@@ -1184,6 +1185,16 @@ def test_the_backfill_script_reads_only_until_asked_and_writes_once(tmp_path, ca
     assert [(r["result"], r["date"]) for r in again] == [(r["result"], r["date"]) for r in rows], "kept by a rebuild"
     rebuilt.close()
     assert mod.main(["--db", str(db), "--campaign", "civ6/kublai", "--write"]) == 1, "still never twice"
+    # run folders are named by their start time and the dashboard shows the newest first (its idle
+    # feed shows runs[0]): the backfill run sorts at its earliest decision, behind every later real run
+    from pilot.dashboard import RUN_ID, list_runs
+    real = tmp_path / "20260927-080000"
+    real.mkdir()
+    (real / "events.jsonl").write_text("", encoding="utf-8")
+    listed = [r["id"] for r in list_runs(tmp_path)]
+    assert len(listed) == 2 and listed[0] == "20260927-080000", listed
+    assert listed[1] == time.strftime("%Y%m%d-%H%M%S", time.localtime(2.0 + 1)) + "-backfill", "its first row: T51"
+    assert RUN_ID.match(listed[1])
 
 
 # ---- review fixes ------------------------------------------------------------------------------

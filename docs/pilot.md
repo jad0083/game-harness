@@ -140,8 +140,8 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   city already builds changes nothing and stays out of the record); the dashboard gets
   `info.order_record`. `scripts/civ6-backfill-orders.py` recovers the apply-time outcomes (refused,
   lost, purchases) of traces written before the record: read-only by default, `--write` once when
-  deploying (a run of its own, `runs/backfill-<time>/events.jsonl` and the database, so
-  `rebuild-telemetry` keeps the rows).
+  deploying (a run of its own, `runs/<time>-backfill/events.jsonl` named by the earliest backfilled
+  decision so it sorts among the runs by time, and the database, so `rebuild-telemetry` keeps the rows).
 - **Buy-outs** (rulings 17-21): a city is *in danger* (not merely threatened) when it is under siege,
   its garrison is damaged, two enemies that can capture it stand next to it, or two enemies are
   near an empty city tile; only then does a purchase there get the threatened share, and one-turn
