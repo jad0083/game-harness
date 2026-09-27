@@ -65,11 +65,16 @@ CREATE INDEX IF NOT EXISTS strategies_campaign ON strategies(campaign_id, t);
 """
 
 # Numbers compared N months after a decision (from the governor's metrics events).
-SCORED = ("systems", "planets", "pops", "techs_known", "military_power", "economy_power", "tech_power")
+SCORED = ("systems", "planets", "pops", "techs_known", "military_power", "economy_power", "tech_power",
+          # Civilization VI rows (one step = one turn)
+          "cities", "pop", "science", "culture", "military", "score", "era_score", "civics_known")
 
 
 def month_index(date: str | None) -> int | None:
-    """'2204.09.01' → months since year 0; None for dates in other formats (e.g. GC4 'Jul 2333')."""
+    """'2204.09.01' → months since year 0; 'T12' (a turn-based game's date) → 12; None for dates in
+    other formats (e.g. GC4 'Jul 2333')."""
+    if date and date[0] == "T" and date[1:].isdigit():
+        return int(date[1:])
     try:
         y, m, *_ = (int(x) for x in (date or "").split("."))
         return y * 12 + m - 1
@@ -200,7 +205,7 @@ class Telemetry:
             end = next((x for mo, x in run if d["month"] + after_months <= mo <= d["month"] + after_months + 3), None)
             if not start or not end:
                 continue
-            delta = {k: round((end.get(k) or 0) - (start.get(k) or 0), 2) for k in SCORED}
+            delta = {k: round((end.get(k) or 0) - (start.get(k) or 0), 2) for k in SCORED if k in start or k in end}
             delta["months"] = after_months
             delta["deficits_after"] = sorted(r for r, v in (end.get("net") or {}).items() if v < 0)
             self._exec("UPDATE decisions SET result=? WHERE run_id=? AND episode=?",

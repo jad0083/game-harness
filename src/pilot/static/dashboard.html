@@ -662,6 +662,10 @@ function pillarCard(name, pl, ms, byId, p = null, total = 0) {
   const actions = [];
   if (acts.includes("tech") && (pl.prefer_techs || []).length) actions.push(`Prefers: ${esc(pl.prefer_techs.join(", "))}`);
   if (acts.includes("market")) (pl.market || []).forEach((o) => actions.push(`Market: ${esc(o.side)} ${esc(o.resource)} ${fmt(o.amount)}/month`));
+  for (const [kind, field, label] of [["civic", "prefer_civics", "Civics"], ["policy", "prefer_policies", "Policies"],
+                                      ["production", "prefer_production", "Builds"], ["purchase", "prefer_purchases", "Buys"]]) {
+    if (acts.includes(kind) && (pl[field] || []).length) actions.push(`${label}: ${esc(pl[field].join(", "))}`);
+  }
   return `<article class="pillar" data-pillar="${esc(name)}">
     <div class="p-head"><h3 title="${esc(def.description || "")}">${esc(pillarLabel(byId, name))}</h3><span class="p-num">${pl.weight ? "rank" : "priority"} ${esc(pl.priority)}</span>
       ${pl.pinned ? `<span class="tag" title="Pinned by a human edit: a review will never change it">pinned</span>` : ""}</div>

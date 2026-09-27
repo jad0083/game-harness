@@ -14,19 +14,28 @@ from pathlib import Path
 from pydantic import BaseModel
 
 # The action kinds the harness can validate and carry out, and the Pillar field each one fills.
-ACTION_KINDS: types.MappingProxyType[str, str] = types.MappingProxyType({"tech": "prefer_techs", "market": "market"})
+# tech/civic/policy/production/purchase are "id lists": corpus ids the Strategist prefers (and, in
+# games with orders such as Civ VI, the kinds of order a decision may give, `max_orders` per decision).
+ACTION_KINDS: types.MappingProxyType[str, str] = types.MappingProxyType({
+    "tech": "prefer_techs", "market": "market", "civic": "prefer_civics", "policy": "prefer_policies",
+    "production": "prefer_production", "purchase": "prefer_purchases"})
+ID_LIST_KINDS = ("tech", "civic", "policy", "production", "purchase")
+_ID_LIST_KEYS = {"field", "max_items", "max_orders", "ids_from_corpus", "full_ids", "note"}
 _ACTION_KEYS = {
-    "tech": {"field", "max_items", "ids_from_corpus", "note"},
+    **dict.fromkeys(ID_LIST_KINDS, _ID_LIST_KEYS),
+    "purchase": _ID_LIST_KEYS | {"gold_reserve", "faith_reserve", "treasury_share", "threatened_share"},
     "market": {"field", "max_items", "resources_from_manifest", "amount_min", "amount_max",
                "sell_income_share", "sell_requires_idle", "note"},
 }
-_ACTION_REQUIRED = {"tech": ("max_items", "ids_from_corpus"),
+_ACTION_REQUIRED = {**dict.fromkeys(ID_LIST_KINDS, ("max_items", "ids_from_corpus")),
+                    "purchase": ("max_items", "ids_from_corpus", "gold_reserve", "treasury_share"),
                     "market": ("max_items", "resources_from_manifest", "amount_max")}
 _TOP_KEYS = {"strategy", "metrics", "pillars", "actions", "weights"}
 _WEIGHTS_KEYS = {"mode", "min", "max", "spread", "switch_margin", "need", "stall_years", "stall_factor"}
 NEED_STATUSES = ("met", "on_track", "at_risk", "missed")
 _STRATEGY_KEYS = {"min_milestones_top", "min_milestones_each", "min_milestones_first", "min_goals", "min_goals_top",
-                  "stance_needs_figure", "metric_aliases", "instructions"}
+                  "stance_needs_figure", "metric_aliases", "instructions", "date_format", "identity"}
+DATE_FORMATS = ("calendar", "turns")     # milestone dates: YYYY.MM.DD, or T<turn> (turn-based games)
 _METRICS_KEYS = {"names", "row_keys"}
 _PILLAR_KEYS = {"label", "description", "directive", "actions"}
 _RESERVED_IDS = {"focus", "reason", "pillars"}      # fields of the Strategist's output model
@@ -51,13 +60,24 @@ class ActionLimits:
     kind: str
     field: str
     max_items: int
-    ids_from_corpus: str | None = None
+    ids_from_corpus: str | tuple[str, ...] | None = None   # data/<name>.json file(s) the ids come from
     resources: tuple[str, ...] = ()
     amount_min: int = 1
     amount_max: int | None = None
     sell_income_share: float | None = None
     sell_requires_idle: bool = False
     note: str = ""
+    max_orders: int = 1                  # orders of this kind per decision (games with orders)
+    full_ids: bool = False               # ids keep their "<kind>:" prefix ("tech:pottery"), as orders name them
+    gold_reserve: int = 0                # purchase: gold kept back
+    faith_reserve: int = 0               # purchase: faith kept back
+    treasury_share: float | None = None  # purchase: at most this share of the balance per purchase
+    threatened_share: float | None = None  # ... or this share for a threatened city ("buy at once")
+
+    @property
+    def corpus_files(self) -> tuple[str, ...]:
+        f = self.ids_from_corpus
+        return () if f is None else (f,) if isinstance(f, str) else tuple(f)
 
 
 @dataclass(frozen=True)
@@ -91,6 +111,8 @@ class PillarSpec:
     stance_needs_figure: bool = False  # a stance cites a number from the briefing
     weights: WeightsSpec = field(default_factory=WeightsSpec)
     instructions: str = ""
+    date_format: str = "calendar"      # milestone `by`: "calendar" YYYY.MM.DD or "turns" T<turn>
+    identity: str = ""                 # the Strategist's `identity` instruction (default: our species)
 
     @property
     def ids(self) -> tuple[str, ...]:
@@ -117,8 +139,11 @@ class PillarSpec:
                             "stall_years": w.stall_years, "stall_factor": w.stall_factor},
                 "pillars": [{"id": p.id, "label": p.label, "description": p.description, "directive": p.directive,
                              "actions": list(p.actions)} for p in self.pillars.values()],
+                "date_format": self.date_format,
                 "actions": {k: {"field": a.field, "max_items": a.max_items, "resources": list(a.resources),
-                                "amount_min": a.amount_min, "amount_max": a.amount_max}
+                                "amount_min": a.amount_min, "amount_max": a.amount_max, "max_orders": a.max_orders,
+                                "gold_reserve": a.gold_reserve, "faith_reserve": a.faith_reserve,
+                                "treasury_share": a.treasury_share, "threatened_share": a.threatened_share}
                             for k, a in self.actions.items()}}
 
 
@@ -221,14 +246,39 @@ def _action(path: Path, corpus: Path, kind: str, t) -> ActionLimits:
     if not isinstance(idle, bool):
         raise _err(path, f"{where}.sell_requires_idle", "must be true or false")
     ids = t.get("ids_from_corpus")
-    if ids is not None and (not isinstance(ids, str) or not _ID.match(ids)):
+    if isinstance(ids, list):
+        if not ids or not all(isinstance(i, str) and _ID.match(i) for i in ids):
+            raise _err(path, f"{where}.ids_from_corpus", "must name data/<name>.json files")
+        ids = tuple(ids)
+    elif ids is not None and (not isinstance(ids, str) or not _ID.match(ids)):
         raise _err(path, f"{where}.ids_from_corpus", "must name a data/<name>.json file")
     note = t.get("note", "")
     if not isinstance(note, str):
         raise _err(path, f"{where}.note", "must be text")
+    orders = t.get("max_orders", 1)
+    if not _int(orders) or orders < 1:
+        raise _err(path, f"{where}.max_orders", "must be an integer >= 1")
+    full = t.get("full_ids", False)
+    if not isinstance(full, bool):
+        raise _err(path, f"{where}.full_ids", "must be true or false")
+    reserves = {}
+    for key in ("gold_reserve", "faith_reserve"):
+        v = t.get(key, 0)
+        if not _int(v) or v < 0:
+            raise _err(path, f"{where}.{key}", "must be an integer >= 0")
+        reserves[key] = v
+    shares = {}
+    for key in ("treasury_share", "threatened_share"):
+        v = t.get(key)
+        if v is not None and not (_num(v) and 0 < v <= 1):
+            raise _err(path, f"{where}.{key}", "must be a number in (0, 1]")
+        shares[key] = None if v is None else float(v)
+    if shares["threatened_share"] is not None and shares["threatened_share"] < (shares["treasury_share"] or 0):
+        raise _err(path, f"{where}.threatened_share", "must be at least treasury_share")
     return ActionLimits(kind=kind, field=fld, max_items=t["max_items"], ids_from_corpus=ids, resources=resources,
                         amount_min=lo, amount_max=hi, sell_income_share=None if share is None else float(share),
-                        sell_requires_idle=idle, note=note.strip())
+                        sell_requires_idle=idle, note=note.strip(), max_orders=orders, full_ids=full,
+                        **reserves, **shares)
 
 
 def _num(v) -> bool:
@@ -295,8 +345,10 @@ def _parse(path: Path, corpus: Path) -> PillarSpec:
         if k not in names:
             raise _err(path, f"metrics.row_keys.{k}", "not a metric in metrics.names")
     actions = {kind: _action(path, corpus, kind, t) for kind, t in _table(path, raw, "actions").items()}
-    directives = _directives(corpus)
     pillars_raw = _table(path, raw, "pillars")
+    # a game whose pillars rank no directive (share mode, e.g. Civ VI) needs no directives.toml
+    ranks = isinstance(pillars_raw, dict) and any(isinstance(t, dict) and "directive" in t for t in pillars_raw.values())
+    directives = _directives(corpus) if ranks else set()
     if not pillars_raw:
         raise _err(path, "pillars", "at least one pillar is required")
     pillars: dict[str, PillarDef] = {}
@@ -341,8 +393,15 @@ def _parse(path: Path, corpus: Path) -> PillarSpec:
     instructions = strat.get("instructions", "")
     if not isinstance(instructions, str):
         raise _err(path, "strategy.instructions", "must be text")
+    identity = strat.get("identity", "")
+    if not isinstance(identity, str):
+        raise _err(path, "strategy.identity", "must be text")
+    date_format = strat.get("date_format", "calendar")
+    if date_format not in DATE_FORMATS:
+        raise _err(path, "strategy.date_format", f"must be one of {', '.join(DATE_FORMATS)}")
     weights = _weights(path, raw.get("weights", {}), len(pillars))
     return PillarSpec(game=corpus.name, weights=weights, pillars=types.MappingProxyType(pillars), metrics=tuple(names),
                       metric_aliases=types.MappingProxyType(aliases), row_keys=types.MappingProxyType(row_keys),
                       actions=types.MappingProxyType(actions), min_milestones_top=top, stance_needs_figure=figure,
-                      instructions=instructions.strip(), **detail)
+                      instructions=instructions.strip(), date_format=date_format,
+                      identity=identity.strip(), **detail)

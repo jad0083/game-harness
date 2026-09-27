@@ -1,0 +1,107 @@
+# Civilization VI strategy pillars (docs/design/2026-09-26-civ6-governor-design.md, ruling 5).
+# Loaded by src/pilot/pillars.py. Share mode: many levers act at once (research, civics, policies,
+# production, purchases), so the frame shows each pillar's share of effort instead of ranking one
+# directive; no pillar ranks a directive (there is no directives.toml for this game).
+# The game's AI plays through AutoplayManager; decisions give structured orders between stretches.
+
+[strategy]
+min_milestones_each = 1         # every pillar is measurable
+min_milestones_first = 2        # the heaviest pillar: a checkpoint and an end target, on different turns
+min_goals = 2                   # ... for each of the top 3 pillars
+min_goals_top = 3
+stance_needs_figure = true      # each stance quotes a number from the snapshot
+date_format = "turns"           # milestone dates are turns: T60
+identity = "Build on our civilization and leader: fill `identity` with how their abilities and unique units, buildings and districts (the snapshot names the civ and leader; `consult` has their records) shape this strategy and which pillars each one affects, and weigh a neighbour's agenda when dealing with or fighting it."
+metric_aliases = { population = "pop", techs = "techs_known", civics = "civics_known", military_strength = "military", faith_per_turn = "faith_yield", gold_per_turn = "gold_yield", treasury = "gold", "rank:military_strength" = "rank:military", "rank:techs_known" = "rank:techs", "rank:civics_known" = "rank:civics" }
+instructions = """Everything must be achievable through orders: research and civic choices, policy cards, city production (units, buildings, projects; a district only once it is placed) and purchases with gold or faith. The game's AI moves units, places districts and wonders, founds cities with the settlers it has, and handles diplomacy, trade and World Congress.
+Milestone dates are turns written T<turn>, e.g. T60 (the snapshot shows the current turn). Expansion benchmarks (strategy.md): 2 cities by T40, 3 by T60, 4 by T80.
+While at war, the military stance names its exit condition (peace, a city retaken, or the enemy's strength below ours)."""
+
+[weights]
+mode = "share"          # each pillar's share of effort (weight x milestone need)
+min = 5
+max = 40
+spread = 2              # heaviest >= 2 x lightest
+switch_margin = 1.0     # unused in share mode
+need = { met = 0.3, on_track = 1.0, at_risk = 1.5, missed = 2.0 }
+stall_years = 0         # no directives to judge
+
+[metrics]
+# the snapshot's measures (src/pilot/civ6.py metrics); rank:<measure> is our standing among the
+# majors we have met, 1 = best
+names = ["science", "culture", "faith_yield", "gold_yield", "production", "food", "gold", "faith",
+         "cities", "pop", "techs_known", "civics_known", "military", "score", "era_score",
+         "rank:score", "rank:military", "rank:techs", "rank:civics", "rank:cities"]
+
+[pillars.science]
+label = "Science"
+description = "Science per turn, Campuses and which techs to research."
+actions = ["tech"]
+
+[pillars.culture]
+label = "Culture"
+description = "Culture per turn, civics, policy cards and governments."
+actions = ["civic", "policy"]
+
+[pillars.faith]
+label = "Faith"
+description = "Faith, a pantheon and religion, and what faith buys."
+actions = ["purchase"]
+
+[pillars.economy]
+label = "Economy"
+description = "Gold, production, trade and buying at the right time."
+actions = ["production", "purchase"]
+
+[pillars.military]
+label = "Military"
+description = "Defence of every city, army strength against the neighbours, wars."
+actions = ["production", "purchase"]
+
+[pillars.expansion]
+label = "Expansion"
+description = "Settlers, new cities, population and builders."
+actions = ["production"]
+
+[pillars.diplomacy]
+label = "Diplomacy"
+description = "Delegations, friendships, alliances, city-states and favor."
+
+# Corpus ids (full, e.g. tech:pottery) the Strategist may prefer; a decision gives at most
+# `max_orders` orders of each kind (the controller checks every id against data/ again).
+[actions.tech]
+max_items = 4
+max_orders = 1
+ids_from_corpus = "tech"
+full_ids = true
+
+[actions.civic]
+max_items = 4
+max_orders = 1
+ids_from_corpus = "civic"
+full_ids = true
+
+[actions.policy]
+max_items = 6
+max_orders = 1          # one policies order (the whole set to slot)
+ids_from_corpus = "policy"
+full_ids = true
+note = "Policy cards can be changed for free only in the turn a civic completes; otherwise the game asks for gold and the order is refused."
+
+[actions.production]
+max_items = 6
+max_orders = 4          # one per city, up to 4 cities per decision
+ids_from_corpus = ["unit", "building", "district", "project"]
+full_ids = true
+note = "Production takes units, buildings and projects; a district only once placed, never a wonder (placement is not supported yet)."
+
+[actions.purchase]
+max_items = 4
+max_orders = 2
+ids_from_corpus = ["unit", "building"]
+full_ids = true
+gold_reserve = 60       # about 5 turns of early maintenance (strategy.md section 5)
+faith_reserve = 0
+treasury_share = 0.5    # one purchase takes at most half the balance...
+threatened_share = 1.0  # ...unless the city is threatened: then buy at once, down to the reserve
+note = "Buy only what saves several turns; never what finishes in 2 turns or less. Prices are read live."
