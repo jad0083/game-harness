@@ -249,6 +249,16 @@ re-installed its own library at its next call.
   checklist must measure how often a popup is up at the hand-back and whether closing it first is
   acceptable (issues.md).
 
+## 2026-09-27 — review fixes on the levers branch (T291)
+
+- One read-only tuner query for the review fixes: a raw `InGame` read of the plot district type and
+  owner around Beijing, sent 2 s after the live governor began its T291 decision (right after a
+  3-turn autoplay stretch), timed out after 20 s; the governor carried on and its own calls
+  answered. What it was to confirm (`Plot:GetDistrictType()` and `Plot:GetOwner()` in `InGame`, used
+  by the last stand's new district filter) is already in the T202 `district-plots` reply, which
+  lists both for every plot, so no second query was sent. The stage-A verdict was re-run offline
+  from that reply (go, see the T202-T207 entry).
+
 ## 2026-09-27 — a leader scene holds the turn (T240)
 
 - Autoplay did not start at T240 after six earlier transient "did not start" stops that a resume
