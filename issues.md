@@ -2,6 +2,7 @@
 
 ## Open
 
+- [ ] Dashboard v2 review (2026-09-27): a fresh sign-in link pasted into the tab that had just said "This code has expired" (or into a plain /pair tab) did nothing: only the fragment changed, the page read it once at load, and the error stayed with no button. Fixed on branch feat/dashboard-v2: signin.js takes the new code on hashchange
 - [ ] Dashboard v2 review (2026-09-27): a mistyped or cut-off sign-in link, and a wrong recovery key, were answered with the typed-words error ("Those words don't match a current code") although no words were typed. Fixed on branch feat/dashboard-v2: the link and the recovery key each get their own sentence
 - [ ] Dashboard v2 review (2026-09-27): nothing wrote the `control` audit rows of ruling 50, and /api/settings and /api/run recorded no device, so after a stolen session was signed out the sign-in log could not show what it had paused, started or changed. Fixed on branch feat/dashboard-v2: the viewer writes a `control` row (action, device, address) for /control, /api/settings, /api/run and /api/capture, and saved settings name who saved them
 - [ ] Dashboard v2 review (2026-09-27): a browser that signed in at /pair while still holding the old key cookie kept that cookie (the key itself), and after its session was signed out the old cookie let it back in and minted a new carried-over device within the 72 hours. Fixed on branch feat/dashboard-v2: the old cookie is deleted whenever a session cookie comes with it and at every sign-in, and an invalid session is never replaced by it

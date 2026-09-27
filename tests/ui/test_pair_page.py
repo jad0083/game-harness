@@ -195,3 +195,35 @@ def test_a_bad_link_says_the_link_does_not_work(browser, live_servers, name):
     assert text.startswith("This link doesn't work") and "words don't match" not in text
     assert page.is_visible("#type-instead") and no_overflow(page)
     w.context.close()
+
+
+@pytest.mark.parametrize("name", ["phone-dark", "desktop-light"])
+def test_a_fresh_link_pasted_into_the_same_tab_works(browser, live_servers, name):
+    """The natural retry after "This code has expired": paste the new link into the same tab. Only the
+    fragment changes, so the page is not reloaded; the confirm view must take the new code, with its
+    Sign in button back and the old error gone. The same from a plain /pair tab."""
+    auth = live_servers["auth"]
+    old = auth.store.create_grant("cli", words=True)
+    auth.store._x("UPDATE grants SET expires_at=0 WHERE id=?", (old["id"],))
+    fresh = auth.store.create_grant("cli", words=True)
+    w = open_context(browser, name, live_servers, signed_in=False)
+    page = w.page
+    page.goto(f"{w.base}/pair#c={old['link']}")
+    page.wait_for_selector("#v-confirm:not([hidden])")
+    page.click("#confirm-go")
+    page.wait_for_selector("#confirm-error:not([hidden])")
+    assert "expired" in page.text_content("#confirm-error") and page.is_hidden("#confirm-go")
+    page.goto(f"{w.base}/pair#c={fresh['link']}")            # pasted: a fragment-only navigation
+    page.wait_for_selector("#confirm-go:not([hidden])")
+    assert page.is_hidden("#confirm-error") and page.is_enabled("#confirm-go")
+    page.click("#confirm-go")
+    page.wait_for_url(w.base + "/", timeout=5000)
+    assert auth.store.grant(fresh["id"])["state"] == "used"
+    other = auth.store.create_grant("cli", words=True)
+    w2 = open_context(browser, name, live_servers, signed_in=False)
+    w2.page.goto(f"{w2.base}/pair")
+    w2.page.goto(f"{w2.base}/pair#c={other['link']}")
+    w2.page.wait_for_selector("#v-confirm:not([hidden])")
+    assert w2.page.is_hidden("#v-signin")
+    w.context.close()
+    w2.context.close()

@@ -4,12 +4,15 @@
 //    (POST /pair, JSON). Afterwards, and on any error, history.replaceState drops it from the address bar.
 //  - Brave looks like Chrome in its user agent; navigator.brave tells them apart for the device name.
 //  - The fragment of the page the browser came from (e.g. #tab=strategy) is carried through `next`.
+//  - A new link pasted into this tab changes only the fragment (no reload): the confirm view takes the
+//    new code, with its button back and the last error gone.
 (() => {
   "use strict";
   const $ = (id) => document.getElementById(id);
   const client = navigator.brave ? "Brave" : "";
   const hash = location.hash || "";
-  const code = hash.startsWith("#c=") ? hash.slice(3) : "";
+  const codeOf = (h) => (h.startsWith("#c=") ? h.slice(3) : "");
+  let code = codeOf(hash);
   const next = $("next");
   $("client").value = client;
   if (hash && !code) next.value = next.value.split("#")[0] + hash;
@@ -48,13 +51,23 @@
     });
   }
 
-  if (!code) return;
-  $("v-signin").hidden = true;
-  $("v-confirm").hidden = false;
   const go = $("confirm-go"), err = $("confirm-error");
   const fail = (msg) => { err.textContent = msg; err.hidden = false; go.disabled = false; go.textContent = "Sign in"; };
+  const confirmView = () => {
+    $("v-signin").hidden = true;
+    $("v-confirm").hidden = false;
+    err.hidden = true; err.textContent = "";
+    go.hidden = false; go.disabled = false; go.textContent = "Sign in";
+    if (addr) addr.value = location.href;
+  };
+  window.addEventListener("hashchange", () => {
+    const c = codeOf(location.hash || "");
+    if (c) { code = c; confirmView(); }
+  });
+  if (code) confirmView();
   $("confirm-form").addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (!code) return;
     go.disabled = true; go.textContent = "Signing in…";
     let r, j = {};
     try {
