@@ -287,6 +287,16 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   thread), `order_add`/`order_remove` (standing orders in every prompt, saved in
   `runs/orders/<campaign>.json`), `decide_now` and `override` (queued requests the loop handles
   with the game paused), `instruct` (one-time note, also answers questions).
+- `claude_code.py`: the `claude-code:<alias>` provider. `resolve_model` turns the model string into
+  a pydantic-ai `FunctionModel` (where the governor and GC4 agents are built), so pools, fallback,
+  cool-down and traces treat it like any model. Each request renders the messages as text (images
+  become placeholders, tool results inline), then runs `claude -p` once: output tool schema as
+  `--json-schema` (plain text for Talk), `--tools ""`, no settings/MCP/session, thinking level as
+  `--effort`, `model_timeout_s` as the timeout, in an empty temp dir, with the `ANTHROPIC_*` key
+  variables removed so the subscription pays. The JSON result's `structured_output` becomes the
+  output tool call and its `usage` the request usage; a non-zero exit, `is_error`, missing
+  structured output, bad JSON or a timeout raises `ClaudeCodeError` (never retried there), and the
+  governor falls back to the role's next model.
 - `dashboard.py` API: `/api/campaigns`, `/api/decisions`, `/api/decision`, `/api/metrics`,
   `/runs/*`; the viewer's `LiveProxy` finds the live run by the dashboard port recorded in its
   `status.json` and checks that it answers with the same run id.

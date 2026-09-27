@@ -40,6 +40,7 @@ def run_with_retry(fn, delays: tuple[float, ...], on_retry=None):
     return None  # unreachable
 
 from . import coords
+from .claude_code import resolve_model
 from .config import Settings
 from .events import EventLog
 from .game import Game, ToolResult
@@ -308,7 +309,7 @@ def build_agent(s: Settings, game_briefing: str, model=None) -> Agent[Deps, Epis
     instructions = GENERIC_INSTRUCTIONS.format(coord_rule=coords.describe(s.coord_space)) + "\n\n" + game_briefing
     tools = [Tool(f) for f in (look, click, drag, key, hover, consult, get_record, note,
                                remember_rule, remember_control, learn_screen, ask_human)]
-    return Agent(model or s.model, deps_type=Deps, output_type=EpisodeResult, instructions=instructions,
+    return Agent(resolve_model(model or s.model), deps_type=Deps, output_type=EpisodeResult, instructions=instructions,
                  tools=tools, model_settings=model_settings(s), retries=2,
                  capabilities=[ProcessHistory(trim_images(s.images_in_context))])
 

@@ -41,6 +41,10 @@ PROVIDERS = [
     {"id": "google", "label": "Google", "key_env": "GOOGLE_API_KEY", "alt_env": "GEMINI_API_KEY"},
     {"id": "anthropic", "label": "Anthropic", "key_env": "ANTHROPIC_API_KEY"},
     {"id": "openai", "label": "OpenAI", "key_env": "OPENAI_API_KEY"},
+    # No API key: the headless Claude Code CLI on this machine, billed to the Claude subscription
+    # (its usage limits apply). Text only, single-shot: best for the Strategy role.
+    {"id": "claude-code", "label": "Claude Code (subscription)", "key_env": None,
+     "hint": "claude CLI not found: install Claude Code on the pilot machine and log in (claude, then /login)."},
 ]
 
 
@@ -51,6 +55,9 @@ def provider_models(provider: str) -> list[str]:
     if provider == "anthropic":
         import anthropic
         return sorted(f"anthropic:{m.id}" for m in anthropic.Anthropic().models.list(limit=100))
+    if provider == "claude-code":
+        from .claude_code import MODELS, PREFIX
+        return [f"{PREFIX}:{m}" for m in MODELS]
     if provider == "openai":
         import openai
         keep = ("gpt-", "o1", "o3", "o4", "o5")
@@ -60,21 +67,26 @@ def provider_models(provider: str) -> list[str]:
 
 
 def provider_catalog(s: Settings, list_models=provider_models) -> list[dict]:
-    """Every provider with whether its API key is set and, if so, its models (plus PILOT_MODELS extras)."""
+    """Every provider with whether it is set up (API key; for claude-code, the CLI) and, if so, its
+    models (plus PILOT_MODELS extras)."""
+    from . import claude_code
     extras = [m.strip() for m in os.environ.get("PILOT_MODELS", "").split(",") if valid_model(m.strip())]
     out = []
     for p in PROVIDERS:
-        configured = bool(os.environ.get(p["key_env"]) or (p.get("alt_env") and os.environ.get(p["alt_env"])))
+        if p["id"] == "claude-code":
+            configured = claude_code.find_claude() is not None
+        else:
+            configured = bool(os.environ.get(p["key_env"]) or (p.get("alt_env") and os.environ.get(p["alt_env"])))
         models: list[str] = []
         error = ""
         if configured:
             try:
-                models = list(list_models(p["id"]))
+                models = list(provider_models(p["id"]) if p["id"] == "claude-code" else list_models(p["id"]))
             except Exception as e:  # noqa: BLE001 - a listing failure must not hide the provider
                 error = f"{type(e).__name__}: {e}"[:200]
         models += [m for m in extras if m.startswith(p["id"] + ":") and m not in models]
         out.append({"id": p["id"], "label": p["label"], "key_env": p["key_env"], "configured": configured,
-                    "models": sorted(set(models)), "error": error})
+                    "models": sorted(set(models)), "error": error, "hint": "" if configured else p.get("hint", "")})
     return out
 
 

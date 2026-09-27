@@ -20,6 +20,25 @@ import time
 from .config import REPO, Settings
 
 
+def uses_claude_code(s: Settings) -> bool:
+    """Whether any configured model (main, pool, fallback or a role) is a claude-code:* model."""
+    names = [s.model, s.fallback_model or ""] + [m["model"] for m in s.pool()]
+    names += [m["model"] for cfg in (s.roles or {}).values() for m in (cfg or {}).get("models", [])]
+    return any(n.startswith("claude-code:") for n in names)
+
+
+def check_claude_cli(s: Settings) -> bool:
+    """Report the claude CLI (the claude-code provider); missing is an error only when a model uses it."""
+    from .claude_code import find_claude
+    exe, needed = find_claude(), uses_claude_code(s)
+    if exe:
+        print(f"  ✓ claude CLI {exe} (claude-code:* models use the Claude subscription)")
+        return True
+    print(f"  {'✗' if needed else '-'} claude CLI not found on PATH or in ~/.local/bin"
+          f"{' but a claude-code:* model is configured' if needed else ' (only needed for claude-code:* models)'}")
+    return not needed
+
+
 def check(s: Settings) -> int:
     ok = True
     print(f"model: {s.model}  (coords: {s.coord_space}, thinking: {s.thinking}, images kept: {s.images_in_context})")
@@ -39,6 +58,7 @@ def check(s: Settings) -> int:
                 ok &= name in names
             except Exception as e:  # noqa: BLE001
                 print(f"  ✗ API check failed: {e}"); ok = False
+    ok &= check_claude_cli(s)
     try:
         import urllib.request
         token = os.environ.get("GAME_AGENT_TOKEN") or (REPO / ".agent_token").read_text().strip()

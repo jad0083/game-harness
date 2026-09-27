@@ -3481,3 +3481,33 @@ def test_a_main_shape_strategy_without_milestones_upgrades_cleanly(setup, tmp_pa
     g._review_strategy(briefing("2200.03.01"), "scheduled")
     assert isinstance(g.strategy, Strategy) and g.strategy.focus == "new"
     assert [n for n, pl in g.strategy.sorted_pillars() if pl.milestones] == ["economy", "expansion", "society"]
+
+
+def test_a_failing_claude_code_strategist_falls_back_to_the_next_model(setup, monkeypatch):
+    """Strategy role [claude-code:opus, google:...]: when the CLI fails (usage limit), the review
+    moves on to the Google model, like any other provider failure."""
+    import subprocess
+    from dataclasses import replace
+
+    from pilot import claude_code, governor
+
+    s, log = setup
+    s2 = replace(s, roles={"strategy": {"models": [{"model": "claude-code:opus", "thinking": "high"},
+                                                     {"model": "google:gemini-test", "thinking": "high"}], "rotate": False}},
+                 retry_delays=())
+    s2.__class__ = s.__class__
+    calls: list[str] = []
+    monkeypatch.setattr(claude_code, "find_claude", lambda: "/usr/bin/claude-test")
+    monkeypatch.setattr(claude_code.subprocess, "run", lambda cmd, **kw: (calls.append("cli"), subprocess.CompletedProcess(
+        cmd, 1, '{"type":"result","is_error":true,"result":"Claude AI usage limit reached"}', ""))[1])
+    real = governor.resolve_model
+    monkeypatch.setattr(governor, "resolve_model",
+                        lambda m: _strategist(calls) if isinstance(m, str) and m.startswith("google:") else real(m))
+    game = FakeStellaris([briefing("2200.01.01")])
+    g = Governor(s2, game, log, model=_recording("decide", calls))
+    g.run(max_decisions=1)
+    assert calls[:2] == ["cli", "strategist"], calls
+    fb = [e for e in log.recent if e["kind"] == "model_fallback"]
+    assert fb and fb[0]["model"] == "claude-code:opus" and fb[0]["fallback"] == "google:gemini-test"
+    assert "usage limit" in fb[0]["error"]
+    assert g.strategy is not None
