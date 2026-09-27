@@ -12,8 +12,10 @@ import html
 import json
 import queue
 import re
+import statistics
 import threading
 import time
+from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from typing import ClassVar, Literal, Protocol
@@ -412,6 +414,11 @@ something done, tell them to use "Decide now", a standing order, or an override 
 class Governor:
     event_triggers: ClassVar[tuple[str, ...]] = EVENT_TRIGGERS    # urgent reasons that start a strategy review
     human_paused: bool = False       # paused from the dashboard: only the human's Resume ends it
+    # date-stall watchdog (Stellaris; levers design ruling 23): the autosave date unchanged for
+    # max(stall_floor_s, 10 x the median real seconds per month of this run's last stall_months)
+    # while running means a stall: resume once, then needs attention
+    stall_floor_s: ClassVar[float] = 300.0
+    stall_months: ClassVar[int] = 24
 
     def __init__(self, settings: Settings, game: StellarisGame, log: EventLog, model=None, fallback=None,
                  role_models: dict | None = None):
@@ -465,6 +472,11 @@ class Governor:
         self._market_stuck: bool = False          # a sync did not stick: no retry until the next review
         self._since_retro = 0
         self._strategy_trace_n = 0                # negative episode ids for strategy review traces (see _review_strategy)
+        self._clock: Callable[[], float] = time.monotonic   # the watchdog's wall clock (tests inject one)
+        self._month_secs: deque[float] = deque(maxlen=self.stall_months)   # real seconds per in-game month
+        self._date_seen_at = 0.0                  # clock when the autosave date last changed (or the wait began)
+        self._stall_resumed_at: float | None = None   # clock of the watchdog's one resume for this stall
+        self._stall_frame = ""                     # screenshot taken when the current stall was found
         self.orders: list[str] = []               # standing orders, saved per campaign
         # ("decide", msg) | ("override", name) | ("speed", speed) | ("review", trigger)
         self.requests: queue.Queue[tuple[str, str]] = queue.Queue()
@@ -1023,6 +1035,7 @@ class Governor:
         start = months(last["date"])          # the interval can change mid-wait (dashboard)
         self._status("playing")
         self.game.set_paused(False)
+        self._date_seen_at, self._stall_resumed_at = self._clock(), None
         while True:
             if self.control.stopping:
                 return None, "stop"
@@ -1036,6 +1049,8 @@ class Governor:
                 b = self.game.briefing()
             except Exception as e:  # noqa: BLE001 - a save being rotated; try again next poll
                 self.log.emit("briefing_error", error=str(e)[:200])
+                if self._stalled(last["date"]):
+                    return last, ""
                 continue
             folder = self._save_folder(b)
             if folder and getattr(self, "_folder", None) and folder != self._folder:
@@ -1046,9 +1061,12 @@ class Governor:
                                       "and start a new one for the new game.")
                 return last, ""
             if b["date"] != last["date"]:
+                self._date_moved(months(b["date"]) - months(last["date"]))
                 self.log.emit("metrics", **metrics(b))
                 self.log.state.game_date = b["date"]
                 self.log.state.turns_advanced = months(b["date"]) - months(last["date"]) + self.log.state.turns_advanced
+            elif self._stalled(b["date"]):
+                return last, ""
             urgent = urgent_changes(last, b)
             if b["date"] != last["date"]:
                 urgent += self._newly_missed_milestones(last["date"], b["date"])
@@ -1062,6 +1080,55 @@ class Governor:
                 self.game.set_paused(True)
                 return b, f"scheduled ({self.s.decide_every_months} months)"
             last = b
+
+    def _date_moved(self, n: int) -> None:
+        """The autosave date moved `n` months: record the real time per month, restart the stall timer."""
+        now = self._clock()
+        if n > 0:
+            self._month_secs.extend([(now - self._date_seen_at) / n] * min(n, self.stall_months))
+        self._date_seen_at, self._stall_resumed_at = now, None
+
+    def _stall_limit(self) -> float:
+        """Seconds without a new date that count as a stall: 10 x the median real month of this run's
+        last `stall_months`, at least `stall_floor_s` (above every month seen live, 247 s max)."""
+        median = statistics.median(self._month_secs) if self._month_secs else 0.0
+        return max(self.stall_floor_s, 10 * median)
+
+    def _stalled(self, date: str) -> bool:
+        """The date-stall watchdog, run on every poll whose date did not move while the game should
+        be running. A popup that autopauses, the launcher or a crash can hold the date for good, and
+        nothing else notices. After `_stall_limit()`: a screenshot, a `stall` event and one resume
+        (`self_paused` if the game had been paused; the resume closes the game menu first). Still
+        unchanged a limit later: needs attention, and True so the wait returns. A pause the human made
+        in the game itself looks the same (known limit); a dashboard pause never reaches here."""
+        if self.human_paused or self.control.paused:
+            return False
+        now, limit = self._clock(), self._stall_limit()
+        held = now - self._date_seen_at
+        if self._stall_resumed_at is None:
+            if held < limit:
+                return False
+            self._stall_frame = self._frame()
+            self.log.emit("stall", date=date, seconds=round(held), limit=round(limit), frame=self._stall_frame)
+            self._stall_resumed_at = now
+            reply = str(self.game.set_paused(False))
+            if "(changed)" in reply:
+                self.log.emit("self_paused", date=date, reply=reply[:200])
+            return False
+        if now - self._stall_resumed_at < limit:
+            return False
+        self._needs_attention(f"the game date has not advanced for {round(held)} s (still {date}; resumed once after "
+                              f"{round(limit)} s without effect): a popup, the launcher or a crash may hold the game. "
+                              f"Screenshot at the stall: {self._stall_frame or 'none'}. Fix the game, then press Resume.")
+        return True
+
+    def _frame(self) -> str:
+        """A screenshot saved with the run ('' if none could be taken)."""
+        try:
+            return self.log.frame(getattr(self.game.screenshot(), "image", None))
+        except Exception as e:  # noqa: BLE001 - the frame is only evidence
+            self.log.emit("briefing_error", error=f"screenshot: {e}"[:200])
+            return ""
 
     def _trend(self, b: dict) -> str:
         """Compare with this campaign's metrics from about 12 months ago (telemetry)."""

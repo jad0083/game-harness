@@ -336,6 +336,16 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   thread), `order_add`/`order_remove` (standing orders in every prompt, saved in
   `runs/orders/<campaign>.json`), `decide_now` and `override` (queued requests the loop handles
   with the game paused), `instruct` (one-time note, also answers questions).
+- `governor.py` date-stall watchdog (Stellaris; `Civ6Governor` has its own wait loop): while the
+  governor waits with the game meant to run, `_stalled` compares the time since the autosave date
+  last moved with `_stall_limit()` = max(300 s, 10 x the median real seconds per in-game month over
+  this run's last 24 months, measured in the wait only, so decision time is left out). Past it: a
+  screenshot, a `stall` event and one `set_paused(False)` (which closes the game menu first; a
+  `self_paused` event when the reply says the state changed). Still unchanged one limit later:
+  needs attention with the stall's screenshot path. A dashboard pause never reaches the check; a
+  pause made in the game's own UI looks like a stall (known limit). The clock is injected
+  (`_clock`, default `time.monotonic`) so tests drive it; `FakeStellaris(self_pause_after=n)` pauses
+  itself after n reads.
 - `claude_code.py`: the `claude-code:<alias or model id>` provider (the catalog adds versioned ids from
   the Anthropic listing to the aliases, `models._claude_code_models`). `resolve_model` turns the model string into
   a pydantic-ai `FunctionModel` (where the governor and GC4 agents are built), so pools, fallback,

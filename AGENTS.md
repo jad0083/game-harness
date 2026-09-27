@@ -277,6 +277,10 @@ Rules:
   throwaway game, 24 in-game months per arm); a disabled posture is never set, and enabling one is a
   data commit. v2 also exports the naval capacity each month for the empire `take-control` marked
   (`governor_bridge_player`), so the briefing shows "naval capacity used/max (from the mod)".
+- **Date-stall watchdog**: when the autosave date has not moved for max(300 s, 10 x the run's
+  median real month) while the governor wants the game running, it takes a screenshot, logs `stall`
+  and resumes the game once (`self_paused` if it had paused itself); still stuck one limit later, it
+  flags needs attention. Pause from the dashboard, not the game's menu, when you want it to wait.
 - Settings used: autosave Monthly (`settings.txt` `autosave=2`), tutorial off.
 - **Weighted pillars** (`[weights]` in pillars.toml): pillars carry weights (sum 100, 5..50, heaviest
   >= 2x lightest); each decision gets every directive's pressure (weight x milestone need) and a

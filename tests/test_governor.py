@@ -3732,3 +3732,112 @@ def test_a_non_transient_failure_still_waits_for_the_human(setup, monkeypatch):
     assert log.state.status == "needs_attention" and not any(e["kind"] == "recovered" for e in log.recent)
     g.control.stopping = True
     t.join(5)
+
+
+# -- date-stall watchdog (levers design ruling 23) -------------------------------------------------
+
+class _Clock:
+    """A wall clock that moves `step` seconds each time the game's save is read (one poll), so a
+    test drives the watchdog's timing without sleeping."""
+
+    def __init__(self, game, step: float):
+        self.t, self.step = 1000.0, step
+        read = game.briefing
+
+        def briefing():
+            self.t += self.step
+            return read()
+        game.briefing = briefing
+
+    def __call__(self) -> float:
+        return self.t
+
+
+def _kinds(log) -> list[str]:
+    return [e["kind"] for e in log.recent]
+
+
+def test_a_date_that_stops_while_running_is_resumed_once_then_needs_attention(setup):
+    s, log = setup
+    game = FakeStellaris([briefing("2200.01.01")])          # the save never changes
+    gov = Governor(s, game, log, model=decisions("keep"))
+    gov._clock = _Clock(game, step=60)
+    b, reason = gov._run_until_next_decision(briefing("2200.01.01"))
+    assert (b["date"], reason) == ("2200.01.01", "") and gov.control.paused
+    assert log.state.status == "needs_attention"
+    kinds = _kinds(log)
+    assert kinds.count("stall") == 1 and kinds.count("needs_attention") == 1
+    assert kinds.index("stall") < kinds.index("needs_attention")
+    assert "self_paused" not in kinds, "the game was running: nothing paused it"
+    assert game.actions.count(("paused", False)) == 2, "the wait's own resume, then exactly one from the watchdog"
+    stall = next(e for e in log.recent if e["kind"] == "stall")
+    assert stall["limit"] == 300 and stall["seconds"] == 300 and stall["date"] == "2200.01.01"
+    reason = next(e for e in log.recent if e["kind"] == "needs_attention")["reason"]
+    assert "has not advanced for 600 s" in reason and "2200.01.01" in reason, reason
+
+
+def test_a_game_that_paused_itself_is_resumed_and_play_goes_on(setup):
+    s, log = setup
+    s.decide_every_months = 3
+    game = FakeStellaris([briefing(f"2200.{m:02d}.01") for m in range(1, 8)], self_pause_after=2)
+    gov = Governor(s, game, log, model=decisions("keep"))
+    gov._clock = _Clock(game, step=10)
+    b, reason = gov._run_until_next_decision(briefing("2200.01.01"))
+    assert reason.startswith("scheduled") and b["date"] == "2200.04.01", (reason, b["date"])
+    kinds = _kinds(log)
+    assert kinds.count("stall") == 1 and kinds.count("self_paused") == 1 and "needs_attention" not in kinds
+    assert kinds.index("stall") < kinds.index("self_paused")
+    stall = next(e for e in log.recent if e["kind"] == "stall")
+    assert stall["date"] == "2200.02.01" and stall["seconds"] >= 300
+    assert not game.self_paused and game.paused, "resumed by the watchdog, paused again for the decision"
+
+
+def test_the_watchdog_leaves_a_human_pause_alone(setup):
+    s, log = setup
+
+    class PausedMidWait(FakeStellaris):
+        def briefing(self):
+            gov.pause()                                  # the human presses Pause on the dashboard
+            return super().briefing()
+
+    game = PausedMidWait([briefing("2200.01.01")])
+    gov = Governor(s, game, log, model=decisions("keep"))
+    gov._clock = _Clock(game, step=10_000)               # every poll looks like a stall
+    _, reason = gov._run_until_next_decision(briefing("2200.01.01"))
+    assert reason == "" and gov.human_paused
+    assert "stall" not in _kinds(log) and "needs_attention" not in _kinds(log)
+    assert game.actions.count(("paused", False)) == 1, "only the wait's own resume"
+
+
+def test_a_moving_date_never_counts_as_a_stall(setup):
+    s, log = setup
+    game = FakeStellaris([briefing(f"22{y:02d}.{m:02d}.01") for y in range(2) for m in range(1, 13)])
+    gov = Governor(s, game, log, model=decisions("keep"))
+    gov._clock = _Clock(game, step=290)                  # slow months, 12 of them take 58 minutes
+    b, reason = gov._run_until_next_decision(briefing("2200.01.01"))
+    assert reason.startswith("scheduled") and b["date"] == "2201.01.01"
+    assert "stall" not in _kinds(log)
+    # each new date restarts the timer: every month is measured from the previous one (the first
+    # poll still read the old save, so the first month took two polls)
+    assert list(gov._month_secs) == [580.0] + [290.0] * 11
+
+
+def test_the_stall_limit_is_ten_median_months_and_never_under_300_s(setup):
+    s, log = setup
+    gov = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+    assert gov._stall_limit() == 300, "no months measured yet"
+    gov._month_secs.extend([2.0] * 24)
+    assert gov._stall_limit() == 300, "fastest speed: the floor holds"
+    gov._month_secs.extend([60.0] * 24)
+    assert gov._stall_limit() == 600, "only this run's last 24 months count"
+    gov._month_secs.extend([40.0] * 13)
+    assert gov._stall_limit() == 400
+
+    # measured from the run: six 100 s months, then the date holds
+    s.decide_every_months = 12
+    game = FakeStellaris([briefing(f"2200.{m:02d}.01") for m in range(1, 7)])
+    gov = Governor(s, game, log, model=decisions("keep"))
+    gov._clock = _Clock(game, step=100)
+    gov._run_until_next_decision(briefing("2199.12.01"))
+    stall = next(e for e in log.recent if e["kind"] == "stall")
+    assert stall["limit"] == 1000 and stall["seconds"] == 1000 and stall["date"] == "2200.06.01"

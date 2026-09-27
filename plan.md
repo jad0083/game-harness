@@ -95,6 +95,7 @@
 - [ ] Stellaris briefing fields for the levers (ruling 1): policy dates, market block (kind, prices, bought/sold, last month's trades), occupied colonies, force peace, own battles apart from allies', invasions, shipyards, colony jobs/unemployment/districts/queue, `governor_*` variables
 - [ ] Stellaris directives obey the player's policy rules (`can_set_policy`, `cooldown = yes`) and report each policy set through a `GOVERNOR_POLICY` marker; the reply lists set and locked policies (levers rulings 3, 20)
 - [ ] Governor Bridge v2 (levers rulings 18-19): posture flags beside the directive (`naval_cap`, `ship_upgrades` under defend/prepare_war, `research_focus` under tech_rush, `war_crisis` for the crisis) steering economic-plan subplans and AI budgets, `stellaris posture` / MCP `stellaris_posture`, all disabled until each passes its live probe; the monthly naval-capacity export for the empire `take-control` marks; `bridge-check` reports v1 or v2
+- [ ] Stellaris date-stall watchdog (levers ruling 23): the autosave date unchanged for max(300 s, 10 x the run's median real month) while running → screenshot, `stall` event, one resume (`self_paused` if the game had paused itself), then needs attention; live check L6 (an event popup that autopauses)
 
 ## Pilot app: observability and control
 - [x] Decision traces: prompt, Gemini thought summaries, tool calls and results, answer, tokens, time (`runs/<id>/traces/`)
