@@ -3681,3 +3681,54 @@ def test_the_strategist_sees_each_directives_record(setup, monkeypatch):
     text = g._directive_records_text()
     assert "- tech_rush (technology, systems): +0/yr over 3 y held vs +3/yr otherwise — does not work here" in text
     assert "- defend (defence, systems): +3/yr over 2 y held vs +0/yr otherwise\n" in text + "\n"
+
+
+# ---- transient agent failures recover on their own (issue: 8 ungoverned years after one timeout) -----
+
+def _flaky_pause(game, log, exc, *, first_failure=3, while_attention=2):
+    """game.set_paused raises `exc` on call number `first_failure`, then `while_attention` more times
+    while the governor waits in needs_attention, then works again."""
+    real, n = game.set_paused, {"calls": 0, "attention": while_attention, "first": True}
+
+    def set_paused(p):
+        n["calls"] += 1
+        if n["first"] and n["calls"] >= first_failure:
+            n["first"] = False
+            raise exc
+        if log.state.status == "needs_attention" and n["attention"]:
+            n["attention"] -= 1
+            raise exc
+        return real(p)
+    return set_paused, n
+
+
+def test_a_transient_agent_timeout_recovers_without_a_human(setup, monkeypatch):
+    import urllib.error
+    s, log = setup
+    game = FakeStellaris([briefing("2200.01.01"), briefing("2201.01.01"), briefing("2202.01.01"), briefing("2203.01.01")])
+    g = Governor(s, game, log, model=decisions("defend", "keep"))
+    g.recover_every_s = 0
+    flaky, n = _flaky_pause(game, log, urllib.error.URLError("timed out"))
+    monkeypatch.setattr(game, "set_paused", flaky)
+    g.run(max_decisions=2)
+    kinds = [e["kind"] for e in log.recent]
+    assert "needs_attention" in kinds and "recovered" in kinds, kinds
+    assert kinds.index("recovered") > kinds.index("needs_attention")
+    assert n["attention"] == 0, "it kept probing until the agent answered"
+    assert log.state.episodes >= 2, "the governor went on deciding after the agent answered again"
+
+
+def test_a_non_transient_failure_still_waits_for_the_human(setup, monkeypatch):
+    import threading
+    s, log = setup
+    game = FakeStellaris([briefing("2200.01.01"), briefing("2201.01.01"), briefing("2202.01.01")])
+    g = Governor(s, game, log, model=decisions("defend"))
+    g.recover_every_s = 0
+    flaky, _ = _flaky_pause(game, log, RuntimeError("Stellaris is not in the foreground"), while_attention=0)
+    monkeypatch.setattr(game, "set_paused", flaky)
+    t = threading.Thread(target=g.run, kwargs={"max_decisions": 3}, daemon=True)
+    t.start()
+    t.join(3)
+    assert log.state.status == "needs_attention" and not any(e["kind"] == "recovered" for e in log.recent)
+    g.control.stopping = True
+    t.join(5)

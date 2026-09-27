@@ -788,8 +788,22 @@ class Governor:
                 else f"model request timed out after {self.s.model_timeout_s:.0f} s ({type(e).__name__})")
         self.log.emit("model_retry", error=what, delay=delay, attempt=attempt)
 
-    def _needs_attention(self, why: str) -> None:
-        """Stop acting and wait for the human (dashboard Resume) instead of crashing the run."""
+    recover_every_s: float = 30.0     # how often a transient failure probes the agent again
+
+    @staticmethod
+    def _transient(e: BaseException) -> bool:
+        """A network hiccup (agent timed out or refused the connection), not a game-screen problem."""
+        import socket
+        import urllib.error
+        return isinstance(e, (urllib.error.URLError, TimeoutError, ConnectionError, socket.timeout)) \
+            or "timed out" in str(e).lower()
+
+    def _needs_attention(self, why: str, *, auto_recover: bool = False) -> None:
+        """Stop acting and wait for the human (dashboard Resume) instead of crashing the run. With
+        `auto_recover` (a transient network failure) the wait also probes the agent every
+        `recover_every_s` by pausing the game, and carries on by itself once that works."""
+        self._auto_recover = auto_recover
+        self._next_probe = time.time() + self.recover_every_s
         self.control.paused = True
         self.log.state.status = "needs_attention"
         try:
@@ -799,6 +813,24 @@ class Governor:
         except Exception:  # noqa: BLE001, S110 - the frame is only a convenience here
             pass
         self.log.emit("needs_attention", reason=why[:500])
+
+    def _probe_recovered(self) -> bool:
+        """While waiting after a transient failure: try to pause the game; if the agent answers, the
+        game is paused and the governor carries on (a `recovered` event)."""
+        if not getattr(self, "_auto_recover", False) or self.log.state.status != "needs_attention" \
+                or time.time() < self._next_probe:
+            return False
+        self._next_probe = time.time() + self.recover_every_s
+        try:
+            self.game.set_paused(True)
+        except Exception as e:  # noqa: BLE001 - still unreachable: keep waiting
+            self.log.emit("recover_probe", error=f"{type(e).__name__}: {e}"[:200])
+            return False
+        self._auto_recover = False
+        self.control.paused = False
+        self._status("playing")
+        self.log.emit("recovered", reason="the agent answers again")
+        return True
 
     def run(self, max_decisions: int | None = None) -> None:
         self.log.state.info.update(game=self.s.game, speed=self.s.speed, every_months=self.s.decide_every_months)
@@ -814,7 +846,9 @@ class Governor:
                         if self.log.state.status != "needs_attention":
                             self.game.set_paused(True)
                         while self.control.paused and not self.control.stopping and self.requests.empty():
-                            time.sleep(0.5)
+                            if self._probe_recovered():
+                                break
+                            time.sleep(0.5 if self.recover_every_s else 0.01)
                         if not self.requests.empty():
                             req = self.requests.get_nowait()      # consumed even if it fails below
                             b = self._handle_request(req, self.game.briefing())
@@ -840,8 +874,11 @@ class Governor:
                         if self._reviews_run == reviews_before and (still_pending or event) and self.pillars is not None:
                             self._maybe_event_review(b, self.review_requested or reason, retry=self._review_retry)
                 except Exception as e:  # noqa: BLE001 - any game-control failure (agent down, focus lost, a panel open)
+                    transient = self._transient(e)
                     self._needs_attention(f"game control failed: {type(e).__name__}: {e}. "
-                                          "Fix the game screen or the agent, then press Resume.")
+                                          + ("Retrying by itself while the agent does not answer; Resume also works."
+                                             if transient else "Fix the game screen or the agent, then press Resume."),
+                                          auto_recover=transient)
                     time.sleep(1.0)           # back off: never retry in a tight loop
         finally:
             try:
