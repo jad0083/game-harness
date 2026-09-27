@@ -592,6 +592,50 @@ def test_old_cookie_alone_on_the_api_works_and_makes_no_device(tmp_path, clock):
     assert auth.store.list_devices() == []
 
 
+def _deletes(r, name) -> bool:
+    return any(x.startswith(f"{name}=") and "Max-Age=0" in x for x in r.headers.getall("Set-Cookie", []))
+
+
+@pytest.mark.parametrize("how", ["revoked", "conflict", "garbage"])
+def test_the_old_cookie_never_outlives_a_sign_in(tmp_path, clock, how):
+    """A browser that signed in at /pair while it still held the old key cookie loses that cookie on
+    its next request; and once its session is signed out, the old cookie does not bring it back in
+    (no legacy principal, no new carried-over device) even inside the 72 hours."""
+    app, auth = viewer(tmp_path, clock)
+    dev, cookie = browser_cookie(auth)
+    if how == "garbage":
+        cookie = "s1.0123456789." + "x" * 43
+
+    async def go():
+        async with client(app) as c:
+            c.session.cookie_jar.update_cookies({A.LEGACY_COOKIE: KEY, A.SESSION_COOKIE: cookie})
+            if how != "garbage":
+                r = await c.get("/status")
+                assert r.status == 200 and _deletes(r, A.LEGACY_COOKIE)
+                c.session.cookie_jar.update_cookies({A.LEGACY_COOKIE: KEY})       # as if it had kept it
+                auth.store.revoke(dev, how, by="cli")
+            r = await c.get("/", headers={"Accept": "text/html"}, allow_redirects=False)
+            assert r.status == 303 and r.headers["Location"].startswith("/pair?")
+            assert "pilot_session=s1." not in r.headers.get("Set-Cookie", "") and _deletes(r, A.LEGACY_COOKIE)
+            c.session.cookie_jar.update_cookies({A.LEGACY_COOKIE: KEY})
+            r = await c.get("/status")
+            assert r.status == 401 and (await r.json())["error"] == ("sign_in_required" if how == "garbage" else how)
+    asyncio.run(go())
+    assert [d["id"] for d in auth.store.list_devices()] == ([dev] if how == "garbage" else [])
+
+
+def test_signing_in_deletes_the_old_cookie(tmp_path, clock):
+    app, auth = viewer(tmp_path, clock)
+    g = auth.store.create_grant("cli", words=True)
+
+    async def go():
+        async with client(app) as c:
+            c.session.cookie_jar.update_cookies({A.LEGACY_COOKIE: KEY})
+            r = await c.post("/pair", json={"words": g["words"]}, headers=origin(c))
+            assert r.status == 200 and _deletes(r, A.LEGACY_COOKIE)
+    asyncio.run(go())
+
+
 def test_old_link_inside_the_window_becomes_a_one_tap_sign_in(tmp_path, clock):
     app, auth = viewer(tmp_path, clock)
 

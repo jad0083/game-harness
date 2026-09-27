@@ -1112,23 +1112,25 @@ class Auth:
                 self.throttle.fail(bucket_of(ip))
             return None, json_error(401, "bad_token", *REASONS["bad_token"])
         cookie = request.cookies.get(SESSION_COOKIE)
-        failed: tuple[str, dict | None] | None = None
+        old = request.cookies.get(LEGACY_COOKIE)
         if cookie:
+            # a browser with a session of its own never needs the old key cookie again, and once that
+            # session is signed out the old cookie must not bring it back: deleted, never a fallback
+            if old is not None:
+                self.drop_cookie(request, LEGACY_COOKIE)
             row, why = self.store.check("browser", cookie)
             if not why:
                 return Principal("browser", row["id"], row["name"], "control", "cookie", row,
                                  recheck=lambda: not self.store.check("browser", cookie)[1]), None
-            failed = (why, row)
-        old = request.cookies.get(LEGACY_COOKIE)
+            return None, self._unauthorized(request, why, row)
         if old is not None:
             if self.legacy_open() and self.keys.matches(old):
                 return Principal("legacy", "legacy", "a browser with the old link", "control", "legacy_cookie",
                                  recheck=lambda: self.legacy_open() and self.keys.matches(old)), None
             self.drop_cookie(request, LEGACY_COOKIE)       # the window closed or K changed: deleted wherever seen
-            if failed is None and self._wants_page(request):
+            if self._wants_page(request):
                 return None, see_other(f"/pair?next={quote(safe_next(request.path_qs), safe='')}&reason=old_link")
-        why, row = failed or ("sign_in_required", None)
-        return None, self._unauthorized(request, why, row)
+        return None, self._unauthorized(request, "sign_in_required", None)
 
     async def _old_key_link(self, request: web.Request) -> web.StreamResponse:
         """GET /?key=: inside the window a right K becomes a one-time grant (the confirm view of
@@ -1391,6 +1393,8 @@ class Auth:
 
     def _signed_in(self, request: web.Request, cred: str, nxt: str, form: bool) -> web.Response:
         self.set_session(request, cred)
+        if LEGACY_COOKIE in request.cookies:              # its own sign-in replaces the old key cookie
+            self.drop_cookie(request, LEGACY_COOKIE)
         check = "/pair?check=1&next=" + quote(nxt, safe="")
         return see_other(check) if form else web.json_response({"ok": True, "next": check})
 

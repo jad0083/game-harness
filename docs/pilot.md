@@ -634,8 +634,10 @@ The dashboard listens on the LAN, so every request needs a principal (design:
 - **Carry-over**: for 72 hours after the first start of this code (or until the key is rotated), a
   browser holding the old `pilot_key` cookie keeps working, and its first page load turns it into
   a device ("carried over from the old link") and deletes the old cookie; an old `/?key=` link
-  becomes a one-time sign-in link. Afterwards the old cookie is deleted wherever it is seen and
-  `?key=` values are never read. The window's deadline is also kept next to the key
+  becomes a one-time sign-in link. A browser that has a session of its own (signed in at `/pair`
+  while still holding the old cookie) loses the old cookie on its next request, and once that
+  session is signed out the old cookie never lets it back in. Afterwards the old cookie is deleted
+  wherever it is seen and `?key=` values are never read. The window's deadline is also kept next to the key
   (`runs/dashboard.carryover`, 0600), so a new sign-in store (a corrupt one moved aside, a deleted
   file, another `PILOT_AUTH_DB`) neither reopens nor extends it; a store recreated after corruption
   with no such record keeps it shut.
