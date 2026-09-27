@@ -78,8 +78,10 @@ pub struct OwnBattles {
     pub lost: usize,
     /// Ships our side lost in those battles.
     pub ships_lost: i64,
-    /// Invasions of our colonies (ground battles there that the other side started) over the whole
-    /// war: 4.5.1 saves date ground battles 0.01.01, so a rise between two saves is a new invasion.
+    /// Invasions of our colonies over the whole war: ground battles at a colony we own now in which
+    /// our own country defended (not an ally's colony we took later, not our retakes). 4.5.1 saves
+    /// date ground battles 0.01.01, so a rise between two saves is a new invasion; a fall means an
+    /// invaded colony was lost, itself a crisis sign, and can hide a new invasion in that interval.
     pub ground_at_our_colonies: usize,
 }
 
@@ -2479,8 +2481,9 @@ fn war_of(w: &Obj, us: u64, countries: &Obj, now: &str, colonies: &[String]) -> 
             let attacker_won = get(&bt, "attacker_victory").and_then(|v| v.read_string().ok()).as_deref() == Some("yes");
             let ground = string(&bt, "type").as_deref() == Some("armies");
             let we_attacked = atk.iter().any(|c| ours.contains(c));
-            // an invasion: the other side attacks one of our colonies (not our own retake)
-            if ground && !we_attacked && get(&bt, "colony").and_then(|v| v.read_string().ok()).is_some_and(|col| colonies.contains(&col)) {
+            // an invasion of one of our colonies: our own country defended it (a ground battle lists
+            // the colony's holder then, so an ally's colony we hold now is not ours, nor is our retake)
+            if ground && def.contains(&us) && get(&bt, "colony").and_then(|v| v.read_string().ok()).is_some_and(|col| colonies.contains(&col)) {
                 own.ground_at_our_colonies += 1;
             }
             let we_defended = def.iter().any(|c| ours.contains(c));
@@ -3789,6 +3792,7 @@ war={ 0={
         { defenders={ 0 } attackers={ 3 } system=4294967295 colony=11 attacker_victory=yes date="0.01.01" attacker_losses=2 defender_losses=8 type=armies }
         { defenders={ 5 } attackers={ 3 } system=4294967295 colony=77 attacker_victory=yes date="0.01.01" attacker_losses=1 defender_losses=3 type=armies }
         { defenders={ 3 } attackers={ 0 } system=4294967295 colony=11 attacker_victory=no date="0.01.01" attacker_losses=4 defender_losses=1 type=armies }
+        { defenders={ 5 } attackers={ 3 } system=4294967295 colony=11 attacker_victory=yes date="0.01.01" attacker_losses=1 defender_losses=2 type=armies }
     }
     attacker_war_exhaustion=0.3 defender_war_exhaustion=1.2
     defender_force_peace=yes defender_force_peace_date="2229.12.01"
@@ -3851,14 +3855,15 @@ market={
         let b = brief_gamestate(LEVERS_GAMESTATE).unwrap();
         let w = &b.wars[0];
         // our side (allies included), as before: we won an attack and the ally an attack and a
-        // defence; we lost two defences, a ground defence and a retake, the ally a ground battle
-        assert_eq!((w.battles_won, w.battles_lost), (3, 5));
+        // defence; we lost two defences, a ground defence and a retake, the ally two ground battles
+        assert_eq!((w.battles_won, w.battles_lost), (3, 6));
         // ours, dated within 12 months of 2230.01.01: won 1 (lost 1 ship), lost 1 (lost 3 ships);
         // the 2228.06 loss is older; the ally's battles are not ours
         let o = &w.own_battles_12m;
         assert_eq!((o.won, o.lost, o.ships_lost), (1, 1, 4));
         // ground battles carry no date in 4.5.1 saves: every invasion of our colonies counts, not
-        // our own attempt to retake one (nor, in the 2393 save, our conquest of a colony now ours)
+        // our own attempt to retake one, nor an invasion of a colony our ally held then and we hold
+        // now (the 2393 save: colony 41, taken from an ally, later ours): we must be the defender
         assert_eq!(o.ground_at_our_colonies, 1);
         // force peace: set on the side whose exhaustion passed 100% (the 2393 save's enemy)
         let fp = w.force_peace.as_ref().expect("force peace");
@@ -3869,7 +3874,7 @@ market={
     fn lever_lines_print_only_when_flagged() {
         let t = brief_gamestate(LEVERS_GAMESTATE).unwrap().to_text();
         assert!(t.contains("- Outpost (arid size 10): OCCUPIED by Them;"), "{t}");
-        assert!(t.contains("battles won 3, lost 5 (our side, allies included); ours in the last 12 months: won 1, lost 1, ships lost 4; ground battles at our colonies 1; a status quo can be forced on us (since 2229.12.01)"), "{t}");
+        assert!(t.contains("battles won 3, lost 6 (our side, allies included); ours in the last 12 months: won 1, lost 1, ships lost 4; ground battles at our colonies 1; a status quo can be forced on us (since 2229.12.01)"), "{t}");
         assert!(t.contains("Shipyards: Sol (OCCUPIED), Alpha\n"), "{t}");
         assert!(t.contains("naval capacity 131/147 (from the mod)"), "{t}");
         assert!(!t.contains("the maximum is not in the save"), "{t}");
