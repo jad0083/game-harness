@@ -2,10 +2,9 @@
   "mcpServers": {
     "game": {
       "command": "./target/release/game-controller",
-      "args": ["mcp"],
-      "env": {
-        "GAME_AGENT_URL": "http://192.168.1.77:8765"
-      }
+      "args": [
+        "mcp"
+      ]
     }
   }
 }

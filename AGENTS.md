@@ -12,14 +12,14 @@ Everything below was verified in live play on 2026-09-25 unless marked **unverif
 
 | Piece | Where | What it does |
 |---|---|---|
-| Windows agent | `crates/game-agent` → `game-agent.exe` (built by `scripts/serve-agent.sh`), running on the gaming PC **192.168.1.77:8765** | HTTP API: screenshots, mouse, keyboard, window focus. Bearer-token auth. |
-| Linux controller | `crates/game-controller` → `target/release/game-controller`, on this machine **192.168.1.76** | CLI + MCP server + verified-turn autopilot + game corpus. |
+| Windows agent | `crates/game-agent` → `game-agent.exe` (built by `scripts/serve-agent.sh`), running on each gaming PC on port **8765** (`GAME_AGENT_URL`, set in `.env`) | HTTP API: screenshots, mouse, keyboard, window focus. Bearer-token auth. |
+| Linux controller | `crates/game-controller` → `target/release/game-controller`, on this Linux machine | CLI + MCP server + verified-turn autopilot + game corpus. |
 | Game corpus | `corpora/galciv4/` | Everything game-specific: hotkeys, known screens, macros, generated game data, strategy, reference docs. The Rust code is game-agnostic. |
 | Play helpers | `scripts/play/` | Shell wrappers for the act → look → decide loop (`act.sh`, `ap.sh`, `hover.sh`, `capture-template.py`). |
 | Game journal | `games/terran-2329/journal.md` | What happened in the current game and why. Read it before resuming play. |
 | Stellaris | `corpora/stellaris/`, `crates/game-controller/src/stellaris.rs`, `src/pilot/governor.py` | Governor over the native AI: autosave briefing, console directives, speed and pause. See §10. |
 | Pilot app | `src/pilot/` (`python -m pilot`) | Autonomous player with any LLM ([docs/pilot.md](docs/pilot.md)). |
-| Dashboard | `http://192.168.1.76:8780/` (`deploy/game-pilot-view.service`) | Decision traces (thinking, tool calls), campaign charts, and talking to / directing the live model. Telemetry in `runs/telemetry.sqlite`. |
+| Dashboard | port 8780 on the controller (`deploy/game-pilot-view.service`) | Decision traces (thinking, tool calls), campaign charts, and talking to / directing the live model. Telemetry in `runs/telemetry.sqlite`. |
 
 Hard facts:
 - Screen 3840×2160 (DPI-aware agent). All screenshots and all coordinates you pass are in

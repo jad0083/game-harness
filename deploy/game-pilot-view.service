@@ -1,3 +1,4 @@
+# Install with scripts/install-services.sh (fills in @REPO@ with this checkout).
 # Always-on dashboard over recorded pilot runs, on the LAN (http://<this machine>:8780/).
 # Forwards live controls to a running pilot (its own dashboard on 8790). Install:
 #   cp deploy/game-pilot-view.service ~/.config/systemd/user/ && systemctl --user daemon-reload
@@ -8,9 +9,9 @@ After=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory=/mnt/codeman-cases/game-harness
+WorkingDirectory=@REPO@
 Environment=PYDANTIC_AI_NO_BANNER=1
-ExecStart=/mnt/codeman-cases/game-harness/.venv/bin/python -m pilot view --port 8780
+ExecStart=@REPO@/.venv/bin/python -m pilot view --port 8780
 Restart=on-failure
 RestartSec=5
 

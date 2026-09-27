@@ -7,7 +7,7 @@ Standard library only: screen capture uses GDI via ctypes, input uses
 SendInput, and PNG encoding is done with zlib. No pip installs required.
 
 Usage:
-    python agent.py [--host 0.0.0.0] [--port 8765] [--allow 192.168.1.10]
+    python agent.py [--host 0.0.0.0] [--port 8765] [--allow <controller-address>]
 
 The token is read from agent_token.txt next to this file (created with a
 random value on first run if missing). Clients send it as

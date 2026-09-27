@@ -15,8 +15,9 @@ echo 'GEMINI_API_KEY=…' >> .env                  # or OPENAI_API_KEY / ANTHROP
 ```
 
 As services: `deploy/game-pilot.service` (the pilot) and `deploy/game-pilot-view.service` (the
-dashboard, always on), both systemd user units. A per-host drop-in sets `GAME_AGENT_URL` and
-`GAME_RESOLUTION` for the PC in use.
+dashboard, always on), both systemd user units installed by `scripts/install-services.sh`. A drop-in
+(`systemctl --user edit game-pilot.service`) sets `GAME_AGENT_URL` and `GAME_RESOLUTION` for the
+PC in use.
 
 | Variable | Meaning |
 |---|---|

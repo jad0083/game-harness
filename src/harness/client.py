@@ -8,7 +8,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-DEFAULT_URL = "http://192.168.1.77:8765"
+DEFAULT_URL = "http://127.0.0.1:8765"
 TOKEN_FILE = Path(__file__).resolve().parents[2] / ".agent_token"
 
 

@@ -50,7 +50,7 @@ Install the agent on the PC: `scripts/serve-agent.sh` builds it, creates a token
 (a logon task, no admin rights except one firewall rule limited to the local subnet).
 
 ```bash
-export GAME_AGENT_URL=http://<pc-address>:8765
+echo 'GAME_AGENT_URL=http://<pc-address>:8765' >> .env   # the PC's agent; .env is gitignored
 ./target/release/game-controller health         # agent reachable?
 ./target/release/game-controller screenshot -o frame.jpg
 .venv/bin/python -m pilot check --game stellaris

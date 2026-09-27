@@ -5,7 +5,7 @@
 - [x] One-line Windows installer (Python check, subnet-only firewall rule, logon task)
 - [x] Linux MCP server with image-space coordinates, zoom, grid overlay, action→screenshot
 - [x] CLI for manual smoke tests
-- [x] Install agent on 192.168.1.77 and verify screenshot + click end-to-end
+- [x] Install agent on the gaming PC and verify screenshot + click end-to-end
 - [x] Confirm GC4 capture works (not black) and mouse/keyboard input registers in-game
 
 ## Rust rewrite (2026-09-25 afternoon)
@@ -111,7 +111,7 @@
 - [x] Neighbours panel (strength ratios against ours, opinion, relation tags, military trend) and war spans shaded on the chart (2026-09-26)
 - [x] Each decision records the model release that answered (aliases resolve) and the thinking level; shown with the decision
 - [x] Talk to and direct the live model: ask (read-only chat), note for next decision, decide now, standing orders, override, Yes/No
-- [x] Always-on LAN dashboard `http://192.168.1.76:8780/` (systemd user service, forwards live controls); `deploy/game-pilot.service` for the pilot itself
+- [x] Always-on LAN dashboard (port 8780) (systemd user service, forwards live controls); `deploy/game-pilot.service` for the pilot itself
 - [x] Dashboard updates itself: live/history switching, event stream with de-duplication, periodic refresh, freshness indicator, reader follows the newest decision
 - [x] Default model Gemini 3.8 Flash with `medium` thinking for GC4 episodes and Stellaris decisions (thought summaries in traces)
 - [x] Peer benchmarks in the Stellaris briefing (ours vs median/best of the other regular empires, rank, FALLING BEHIND line), urgent trigger when newly behind, standing line on the dashboard
@@ -138,7 +138,7 @@
 - [ ] Civilization VI integration (after game pillars)
 
 ## Hosts
-- [x] Second game host mini-rig2 (192.168.1.159, 2560x1440): agent 1.4.0 installed and reachable with the shared token (2026-09-26)
+- [x] Second game host mini-rig2 (2560x1440): agent 1.4.0 installed and reachable with the shared token (2026-09-26)
 - [ ] Host registry (`hosts.toml`: name, agent URL, screen) and one governor service per host (own dashboard port, `GAME_AGENT_URL`); dashboard lists live runs of every host
 - [ ] Installer detects Civilization VI folders (documents, saves, logs, install) for the agent's read roots; update both hosts
 - [x] Screen positions per resolution: `res/<W>x<H>.toml` overlays selected by `GAME_RESOLUTION`; Stellaris 2560x1440 screens measured live on mini-rig2 (a8c53a9, 110e638)

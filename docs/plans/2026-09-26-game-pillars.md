@@ -2542,7 +2542,7 @@ git push
 
 - [ ] **Step 4: Deploy**
 
-Check first (the PC is the user's desktop): the dashboard at `http://192.168.1.76:8780/` shows the Theian campaign as the live one and Stellaris in the foreground (`./target/release/game-controller health`). Then:
+Check first (the PC is the user's desktop): the dashboard at dashboard (port 8780) shows the Theian campaign as the live one and Stellaris in the foreground (`./target/release/game-controller health`). Then:
 
 ```bash
 systemctl --user restart game-pilot-view.service

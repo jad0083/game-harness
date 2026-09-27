@@ -62,7 +62,7 @@ class Settings:
     game: str = "galciv4"
     journal: Path = REPO / "games/terran-2329/journal.md"
     runs_dir: Path = REPO / "runs"
-    agent_url: str = field(default_factory=lambda: os.environ.get("GAME_AGENT_URL", "http://192.168.1.77:8765"))
+    agent_url: str = field(default_factory=lambda: os.environ.get("GAME_AGENT_URL") or "http://127.0.0.1:8765")
     dashboard_host: str = "0.0.0.0"
     dashboard_port: int = 8790
     commit_learnings: bool = True
