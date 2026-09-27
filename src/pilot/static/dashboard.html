@@ -239,6 +239,7 @@
   .p-share { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); }
   .p-bar { width: 120px; height: 6px; border-radius: 3px; background: var(--grid); overflow: hidden; }
   .p-bar i { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
+  .t-serves { margin: -6px 0 12px; font-size: 13.5px; color: var(--ink-2); }
   .p-form .weight-row { display: flex; align-items: center; gap: 10px; }
   .p-form .weight-row input { width: 5.5em; flex: none; }
   .pillar .stance { margin: 6px 0 0; font-family: var(--serif); font-size: 15.5px; line-height: 1.5; max-width: 60ch; }
@@ -625,7 +626,7 @@ function milestoneRow(m) {
 function weightLine(pl, p, total) {
   if (!pl.weight) return "";
   if (!p) return `<div class="p-weight"><span>Weight <b>${esc(pl.weight)}</b></span></div>`;
-  const st = MS_STATUS[p.status] || ["", "", "no milestones"];
+  const st = MS_STATUS[p.status] || ["", "", (pl.milestones || []).length ? "no data" : "no milestones"];
   const share = total ? Math.round(100 * p.pressure / total) : 0;
   return `<div class="p-weight"><span>Weight <b>${esc(pl.weight)}</b> × <span class="p-need ${st[0]}">${esc(st[2])} ${esc(p.need)}</span> = pressure <b>${esc(fmt(p.pressure))}</b></span>
     <span class="p-share"><span class="p-bar" role="img" aria-label="${share}% of all pressure"><i style="width:${share}%"></i></span>${share}% of all pressure</span></div>`;
@@ -673,7 +674,7 @@ function openEditForm(name, pillar, byId, spec) {
   const limits = (spec && spec.actions) || {};
   const slot = art.querySelector(".p-form-slot");
   slot.innerHTML = `<form class="p-form">
-    ${pillar.weight ? `<label>Weight<span class="weight-row"><input name="weight" type="number" min="1" max="100" value="${esc(pillar.weight)}" data-was="${esc(pillar.weight)}"><span>The other unpinned pillars rescale so the total stays 100.</span></span></label>` : ""}
+    ${pillar.weight ? `<label>Weight<span class="weight-row"><input name="weight" type="number" min="${esc((spec && spec.weights && spec.weights.min) || 1)}" max="${esc((spec && spec.weights && spec.weights.max) || 100)}" value="${esc(pillar.weight)}" data-was="${esc(pillar.weight)}"><span>The other unpinned pillars rescale so the total stays 100.</span></span></label>` : ""}
     <label>Stance<textarea name="stance">${esc(pillar.stance || "")}</textarea></label>
     <label>Goals (one per line, up to 3)<textarea name="goals">${esc((pillar.goals || []).join("\n"))}</textarea></label>
     ${acts.includes("tech") ? `<label>Prefer techs (comma list, up to ${esc((limits.tech || {}).max_items || "")})<input name="prefer_techs" value="${esc((pillar.prefer_techs || []).join(", "))}"></label>` : ""}
@@ -1105,6 +1106,7 @@ function renderTrace(d) {
   let h = `<div class="t-when">${esc(d.date)}, ${esc(tidy(d.trigger || ""))}</div>
     <div class="t-decision">${kept ? "Kept " + esc(human(d.current || "no directive")) : esc(human(d.decision))}</div>
     <p class="t-reason">${md(tidy(d.reason || ""))}</p>
+    ${t.serves ? `<p class="t-serves">Works toward: ${esc(t.serves)}</p>` : ""}
     <div class="t-meta"><span>${esc(d.model === "human" ? "Your decision" : modelLabel(d))}</span><span>${esc(d.outcome || "")}</span>
     ${d.tokens_in ? `<span>${fmt(d.tokens_in)} tokens in, ${fmt(d.tokens_out)} out</span>` : ""}${d.seconds ? `<span>${esc(d.seconds)} s</span>` : ""}</div>`;
   if (d.result) h += afterText(d.result).replace('class="after"', 'class="after" style="margin:-4px 0 14px"');

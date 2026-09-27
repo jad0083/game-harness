@@ -3628,3 +3628,34 @@ def test_api_strategy_serves_weights_and_pressure_for_a_ranked_strategy(setup, t
                   "government": 10, "society": 7}
     assert body["pressure"]["economy"] == {"weight": 19, "need": 0.3, "status": "met", "pressure": 5.7}, "systems 3 >= 2"
     assert body["pressure"]["defence"]["pressure"] == 21.0
+
+
+def test_the_frame_without_metrics_says_no_data_for_pillars_with_milestones():
+    from pilot.governor import frame_text
+    from pilot.strategy import Milestone, Pillar
+    m = Milestone(metric="systems", op=">=", target=3, by="2250.01.01")
+    text = frame_text(_strategy_with(defence=Pillar(priority=1, stance="d", milestones=[m])), STELLARIS, "(none)", None)
+    assert "(defence 21 x no data 1)" in text
+
+
+def test_a_weight_edit_during_a_review_keeps_the_weights_summing_to_100(setup, monkeypatch):
+    """The human pins a new weight after the Strategist's answer was validated but before it is
+    committed (the journal note in between); the accepted review keeps the pin and rescales the rest
+    instead of saving weights that no longer sum to 100."""
+    s, log = setup
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": _strategist([])})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    real_note, edited = g.journal.note, {"done": False}
+
+    def note(text, date):
+        if text.startswith("Strategy review") and not edited["done"]:
+            edited["done"] = True
+            g.edit_pillar("society", {"weight": 20})
+        return real_note(text, date)
+    monkeypatch.setattr(g.journal, "note", note)
+    g._review_strategy(briefing("2200.02.01"), "requested from the dashboard")
+    assert edited["done"]
+    assert [e["accepted"] for e in log.recent if e["kind"] == "strategy_review"][-1] is True
+    ws = {n: pl.weight for n, pl in g.strategy.pillars.items()}
+    assert ws["society"] == 20 and sum(ws.values()) == 100
+    assert sorted(pl.priority for pl in g.strategy.pillars.values()) == list(range(1, 8))

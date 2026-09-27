@@ -291,7 +291,8 @@ def frame_text(strategy: Strategy | None, spec: PillarSpec, milestones: str, pre
 
     def why(pillar: str) -> str:
         p = press[pillar]
-        return f"{pillar} {p['weight']} x {p['status'] or 'no milestones'} {p['need']:g}"
+        status = p["status"] or ("no data" if strategy.pillars[pillar].milestones else "no milestones")
+        return f"{pillar} {p['weight']} x {status} {p['need']:g}"
     if spec.weights.mode == "share":
         sh = shares(press)
         lines.append("Share of effort (weight x milestone need): " + ", ".join(f"{n} {sh[n]}%" for n in press))

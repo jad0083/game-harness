@@ -730,3 +730,41 @@ def test_shares_split_the_pressure():
     from pilot.strategy import shares
     assert shares({"a": {"pressure": 30.0}, "b": {"pressure": 10.0}}) == {"a": 75, "b": 25}
     assert shares({"a": {"pressure": 0.0}}) == {"a": 0}
+
+
+# ---- review fixes: pinned weights, zero weights, weight-only changes -------------------------------
+
+def test_keep_pinned_restores_a_pinned_weight_and_rescales_the_rest():
+    from pilot.strategy import keep_pinned
+    prev = wstrat(society=Pillar(weight=5, stance="3 pops", milestones=[_M], pinned=True, edited_by="human"))
+    answer = {**{n: pl.model_copy() for n, pl in wstrat().pillars.items()}}
+    answer["society"] = answer["society"].model_copy(update={"weight": 25})
+    answer["defence"] = answer["defence"].model_copy(update={"weight": 10})
+    new = keep_pinned(Strategy(pillars=answer, focus="f"), prev)
+    assert new.pillars["society"].weight == 5 and sum(pl.weight for pl in new.pillars.values()) == 100
+    assert sorted(pl.priority for pl in new.pillars.values()) == list(range(1, 8)), "ranks recomputed"
+    errs = validate(new, SPEC, previous=prev, tech_ids=set(), idle=set(), income={})
+    assert not [e for e in errs if "weight" in e or "pinned" in e], errs
+
+
+def test_a_strategist_answer_with_zero_weights_is_rejected_not_converted():
+    from pilot.strategy import review_model, to_strategy
+    pillars = {p: {"weight": 0, "stance": f"{p} 1", "goals": ["a", "b"], "milestones": [_M.model_dump()]} for p in W}
+    r = review_model(SPEC).model_validate({"change": True, "assessment": "a", "strategy": {**pillars, "focus": "f"}})
+    s = to_strategy(r.strategy, SPEC)
+    assert all(pl.weight == 0 for pl in s.pillars.values())
+    assert "weights must sum to 100 (got 0)" in validate(s, SPEC, previous=None, tech_ids=set(), idle=set(), income={})
+
+
+def test_stored_json_with_ranks_only_still_converts():
+    s = Strategy.model_validate({"focus": "f", "pillars": {p: {"priority": n, "stance": "x"} for p, n in PRIOS.items()}})
+    assert s.pillars["defence"].weight == 21 and sum(pl.weight for pl in s.pillars.values()) == 100
+
+
+def test_a_weight_only_change_does_not_recheck_unchanged_market_orders():
+    sell = {"side": "sell", "resource": "energy", "amount": 10}
+    old = wstrat(economy=Pillar(weight=22, stance="energy 5", goals=["a", "b"], milestones=[_M], market=[sell]),
+                 defence=Pillar(weight=30, stance="x 1", goals=["a", "b"], milestones=[_M_EARLY, _M]))
+    new = wstrat(economy=Pillar(weight=24, stance="energy 5", goals=["a", "b"], milestones=[_M], market=[sell]),
+                 defence=Pillar(weight=28, stance="x 1", goals=["a", "b"], milestones=[_M_EARLY, _M]))
+    assert validate(new, SPEC, previous=old, tech_ids=set(), idle=set(), income={"energy": 1.0}) == []

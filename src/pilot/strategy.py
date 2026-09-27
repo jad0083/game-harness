@@ -76,7 +76,9 @@ class Strategy(BaseModel):
         pillar's `priority` is set to its rank by weight. Works on copies: the pillars passed in may be
         shared with other strategies."""
         self.pillars = {n: pl.model_copy() for n, pl in self.pillars.items()}
-        if self.pillars and not any(pl.weight for pl in self.pillars.values()):
+        ranked_only = all("weight" not in pl.model_fields_set for pl in self.pillars.values()) and \
+            any("priority" in pl.model_fields_set for pl in self.pillars.values())
+        if self.pillars and ranked_only:     # stored before weights; an answer with weights 0 is not converted
             by_rank = sorted(self.pillars.items(), key=lambda kv: (kv[1].priority, kv[0]))
             for (_, pl), w in zip(by_rank, default_weights(len(by_rank), LEGACY_MIN_WEIGHT), strict=True):
                 pl.weight = w
@@ -92,6 +94,14 @@ class Strategy(BaseModel):
 LEGACY_MIN_WEIGHT = 5
 
 
+def _apportion(raw: dict, total: int) -> dict:
+    """Round `raw` shares to integers summing to `total` (largest remainder)."""
+    out = {k: int(v) for k, v in raw.items()}
+    for k in sorted(raw, key=lambda k: raw[k] - out[k], reverse=True)[:total - sum(out.values())]:
+        out[k] += 1
+    return out
+
+
 def default_weights(n: int, lo: int) -> list[int]:
     """Weights for ranks 1..n: `lo` each plus the rest in proportion to n+1-rank, rounded by largest
     remainder so they sum to 100 (7 pillars, lo 5: 21/19/17/14/12/10/7)."""
@@ -99,11 +109,8 @@ def default_weights(n: int, lo: int) -> list[int]:
         return []
     lo = min(lo, 100 // n)
     total = n * (n + 1) / 2
-    raw = [lo + (100 - n * lo) * (n + 1 - r) / total for r in range(1, n + 1)]
-    out = [int(x) for x in raw]
-    for i in sorted(range(n), key=lambda i: raw[i] - out[i], reverse=True)[:100 - sum(out)]:
-        out[i] += 1
-    return out
+    shares = _apportion({r: lo + (100 - n * lo) * (n + 1 - r) / total for r in range(1, n + 1)}, 100)
+    return [shares[r] for r in range(1, n + 1)]
 
 
 def ranking(s: Strategy, spec: PillarSpec) -> list[str]:
@@ -144,8 +151,9 @@ def market_briefing_errors(o: MarketOrder, limits: ActionLimits, idle: set[str],
     return errs
 
 
-def _content(pl: Pillar) -> dict:
-    return pl.model_dump(exclude={"pinned", "edited_by"})
+def _content(pl: Pillar, *, ignore_weight: bool = False) -> dict:
+    """What a pillar says (the derived rank never counts; the weight optionally)."""
+    return pl.model_dump(exclude={"pinned", "edited_by", "priority"} | ({"weight"} if ignore_weight else set()))
 
 
 def _briefing_checked(s: Strategy, previous: Strategy | None) -> set[str]:
@@ -155,7 +163,7 @@ def _briefing_checked(s: Strategy, previous: Strategy | None) -> set[str]:
     out = set()
     for name, pl in s.pillars.items():
         old = previous.pillars.get(name)
-        if old is None or (not old.pinned and _content(pl) != _content(old)):
+        if old is None or (not old.pinned and _content(pl, ignore_weight=True) != _content(old, ignore_weight=True)):
             out.add(name)
     return out
 
@@ -260,9 +268,9 @@ def validate(s: Strategy, spec: PillarSpec, *, previous: Strategy | None, tech_i
                 errs.extend(_action_errors(name, kind, items, spec.actions[kind], tech_ids, idle, income,
                                            name in checked))
     if require_milestones and spec.min_milestones_top:
-        for name, pl in s.sorted_pillars()[:spec.min_milestones_top]:
+        for rank, (name, pl) in enumerate(s.sorted_pillars()[:spec.min_milestones_top], 1):
             if not pl.pinned and not pl.milestones:
-                errs.append(f"{name}: priority {pl.priority} is in the top {spec.min_milestones_top} "
+                errs.append(f"{name}: priority {rank} is in the top {spec.min_milestones_top} "
                             "and needs at least one milestone")
     if require_milestones:
         errs.extend(_detail_errors(s, spec))
@@ -294,10 +302,15 @@ def keep_pinned(new: Strategy, previous: Strategy | None) -> Strategy:
     if previous is None:
         return new
     pillars = dict(new.pillars)
+    restored = False
     for name, pl in previous.pillars.items():
         if pl.pinned:
             pillars[name] = pl.model_copy(deep=True)
-    return new.model_copy(update={"pillars": pillars})
+            restored = True
+    if not restored:
+        return new
+    # the pins keep their weights: the unpinned pillars share the rest; rebuilt so ranks follow
+    return Strategy(**{**new.model_dump(exclude={"pillars"}), "pillars": rebalance(pillars, None)})
 
 
 def metric_value(row: dict, metric: str, row_keys: Mapping[str, str] | None = None) -> float | None:
@@ -521,8 +534,8 @@ def shares(press: dict[str, dict]) -> dict[str, int]:
     return {name: round(100 * p["pressure"] / total) if total else 0 for name, p in press.items()}
 
 
-def rebalance(pillars: dict[str, Pillar], edited: str) -> dict[str, Pillar]:
-    """`pillars` after a human set `edited`'s weight: the other unpinned pillars are rescaled in
+def rebalance(pillars: dict[str, Pillar], edited: str | None) -> dict[str, Pillar]:
+    """`pillars` with the unpinned ones (other than `edited`, a weight the human just set) rescaled in
     proportion (largest remainder) so all weights sum to 100 again; pinned ones keep theirs. Bounds
     are left to `validate`."""
     fixed = sum(pl.weight for n, pl in pillars.items() if n == edited or pl.pinned)
@@ -530,8 +543,5 @@ def rebalance(pillars: dict[str, Pillar], edited: str) -> dict[str, Pillar]:
     target, have = 100 - fixed, sum(pillars[n].weight for n in free)
     if not free or have <= 0 or target < 0:
         return pillars
-    raw = {n: pillars[n].weight * target / have for n in free}
-    new = {n: int(v) for n, v in raw.items()}
-    for n in sorted(free, key=lambda n: raw[n] - new[n], reverse=True)[:target - sum(new.values())]:
-        new[n] += 1
+    new = _apportion({n: pillars[n].weight * target / have for n in free}, target)
     return {n: pl.model_copy(update={"weight": new[n]}) if n in new else pl for n, pl in pillars.items()}
