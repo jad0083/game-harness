@@ -429,6 +429,7 @@ mod tests {
         for k in ["science", "culture", "faith", "gold", "food", "production"] {
             assert!(v["yields"][k].is_number(), "yields.{k}");
         }
+        assert!(v["options"]["techs"].is_array() && v["cities"][0]["can_build"].is_array());
         for k in ["era", "era_score", "government", "research", "civic", "military", "score", "map_seed", "autoplay"] {
             assert!(v.get(k).is_some(), "{k}");
         }

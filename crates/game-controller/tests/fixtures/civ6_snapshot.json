@@ -6,6 +6,14 @@
  "blocker": "ENDTURN_BLOCKING_UNITS",
  "cities": [
   {
+   "can_build": [
+    "UNIT_SETTLER",
+    "UNIT_BUILDER",
+    "UNIT_SCOUT",
+    "UNIT_WARRIOR",
+    "UNIT_SLINGER",
+    "BUILDING_MONUMENT"
+   ],
    "capital": true,
    "damaged": false,
    "districts": [],
@@ -16,9 +24,9 @@
    "name": "Beijing",
    "pop": 2,
    "producing": "UNIT_BUILDER",
-   "production": 5,
+   "production": 6,
    "threatened": false,
-   "turns_left": 4,
+   "turns_left": 1,
    "under_siege": false,
    "wonders": []
   }
@@ -26,16 +34,16 @@
  "civ": "CIVILIZATION_CHINA",
  "civ_name": "China",
  "civic": {
-  "civic": "CIVIC_CODE_OF_LAWS",
-  "turns_left": 2
+  "civic": "CIVIC_CRAFTSMANSHIP",
+  "turns_left": 15
  },
- "civics_known": 0,
+ "civics_known": 1,
  "dark_age_threshold": 11,
  "era": "ERA_ANCIENT",
  "era_index": 0,
  "era_score": 2,
- "faith": 8,
- "gold": 50,
+ "faith": 13,
+ "gold": 66,
  "golden_age_threshold": 25,
  "government": "GOVERNMENT_CHIEFDOM",
  "great_people": {
@@ -93,31 +101,50 @@
  "leader_name": "Kublai Khan (China)",
  "majors": [],
  "map_seed": "702403662",
- "military": 24,
+ "military": 19,
  "ok": true,
+ "options": {
+  "civics": [
+   "CIVIC_CRAFTSMANSHIP",
+   "CIVIC_FOREIGN_TRADE"
+  ],
+  "policies": [
+   "POLICY_SURVEY"
+  ],
+  "techs": [
+   "TECH_POTTERY",
+   "TECH_ANIMAL_HUSBANDRY",
+   "TECH_MINING",
+   "TECH_SAILING",
+   "TECH_ASTROLOGY"
+  ]
+ },
  "player": 0,
- "policies_unlock_cost": 0,
+ "policies_unlock_cost": 105,
  "policy_slots": [
   {
+   "policy": "POLICY_DISCIPLINE",
    "slot": 0,
    "type": "military"
   },
   {
+   "policy": "POLICY_GOD_KING",
    "slot": 1,
    "type": "economic"
   },
   {
+   "policy": "POLICY_URBAN_PLANNING",
    "slot": 2,
    "type": "economic"
   }
  ],
  "research": {
   "tech": "TECH_MINING",
-  "turns_left": 6
+  "turns_left": 3
  },
- "score": 10,
+ "score": 13,
  "techs_known": 0,
- "turn": 9,
+ "turn": 12,
  "units": {
   "by_class": {
    "land_combat": 1
@@ -130,10 +157,10 @@
  "wars": [],
  "yields": {
   "culture": 2.598,
-  "faith": 1,
+  "faith": 2,
   "food": 6,
-  "gold": 5,
-  "production": 5,
+  "gold": 6,
+  "production": 6,
   "science": 3
  }
 }

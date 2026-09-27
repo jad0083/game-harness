@@ -271,6 +271,41 @@ local function great_people(me)
   return { current = current, past = past, recruited = #list }
 end
 
+-- What orders can name now: techs and civics we can start, unlocked policies not slotted, and per
+-- city what it can produce (units, buildings and projects; districts only once placed).
+local function options(me, p)
+  local techs, civics, policies = H.array(), H.array(), H.array()
+  local t, cu = p:GetTechs(), p:GetCulture()
+  for row in GameInfo.Technologies() do
+    if not t:HasTech(row.Index) and t:CanResearch(row.Index) then techs[#techs + 1] = row.TechnologyType end
+  end
+  for row in GameInfo.Civics() do
+    if not cu:HasCivic(row.Index) and cu:CanProgress(row.Index) then civics[#civics + 1] = row.CivicType end
+  end
+  for row in GameInfo.Policies() do
+    if cu:IsPolicyUnlocked(row.Index) and not cu:IsPolicyObsolete(row.Index) and not cu:IsPolicyActive(row.Index) then
+      policies[#policies + 1] = row.PolicyType
+    end
+  end
+  return { techs = techs, civics = civics, policies = policies }
+end
+
+local function can_build(c)
+  local bq = c:GetBuildQueue()
+  local out = H.array()
+  for _, tbl in ipairs({ 'Units', 'Buildings', 'Projects', 'Districts' }) do
+    for row in GameInfo[tbl]() do
+      local ok = true
+      if tbl == 'Buildings' and row.IsWonder then ok = false end
+      if tbl == 'Districts' and not bq:HasBeenPlaced(row.Hash) then ok = false end
+      if ok and bq:CanProduce(row.Hash, true) then
+        out[#out + 1] = row.UnitType or row.BuildingType or row.ProjectType or row.DistrictType
+      end
+    end
+  end
+  return out
+end
+
 function H.snapshot()
   local me = H.me()
   local p = Players[me]
@@ -282,6 +317,8 @@ function H.snapshot()
   local cities, food, production = H.array(), 0, 0
   for _, c in p:GetCities():Members() do
     local info = city_info(me, c)
+    local ok, list = pcall(can_build, c)
+    info.can_build = ok and list or nil
     cities[#cities + 1] = info
     food = food + info.food
     production = production + info.production
@@ -322,6 +359,7 @@ function H.snapshot()
 
   local seed = MapConfiguration.GetValue('RANDOM_SEED')
   local gp_ok, gp = pcall(great_people, me)
+  local opt_ok, opt = pcall(options, me, p)
   return {
     turn = Game.GetCurrentGameTurn(), player = me,
     civ = cfg:GetCivilizationTypeName(), leader = cfg:GetLeaderTypeName(),
@@ -348,6 +386,7 @@ function H.snapshot()
     units = { total = total, by_class = by_class, by_type = by_type },
     majors = known, wars = wars,
     great_people = gp_ok and gp or nil,
+    options = opt_ok and opt or nil,
     blocker = blocker(me),
     autoplay = { active = AutoplayManager.IsActive(), turns = AutoplayManager.GetTurns() },
   }
