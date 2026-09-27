@@ -66,6 +66,21 @@ def provider_models(provider: str) -> list[str]:
     return []
 
 
+def _claude_code_models(list_models) -> tuple[list[str], str]:
+    """The CLI's aliases (always the latest version) plus every versioned Claude id, taken from the
+    Anthropic model listing when an API key is set (listing needs no credit). A failed listing keeps
+    the aliases and reports why."""
+    from .claude_code import PREFIX
+    models = provider_models("claude-code")
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        return models, ""
+    try:
+        ids = [m.split(":", 1)[1] for m in list_models("anthropic") if m.startswith("anthropic:")]
+    except Exception as e:  # noqa: BLE001 - the aliases still work without the listing
+        return models, f"versions not listed ({type(e).__name__}: {e})"[:200]
+    return models + [f"{PREFIX}:{i}" for i in ids], ""
+
+
 def provider_catalog(s: Settings, list_models=provider_models) -> list[dict]:
     """Every provider with whether it is set up (API key; for claude-code, the CLI) and, if so, its
     models (plus PILOT_MODELS extras)."""
@@ -79,9 +94,11 @@ def provider_catalog(s: Settings, list_models=provider_models) -> list[dict]:
             configured = bool(os.environ.get(p["key_env"]) or (p.get("alt_env") and os.environ.get(p["alt_env"])))
         models: list[str] = []
         error = ""
-        if configured:
+        if configured and p["id"] == "claude-code":
+            models, error = _claude_code_models(list_models)
+        elif configured:
             try:
-                models = list(provider_models(p["id"]) if p["id"] == "claude-code" else list_models(p["id"]))
+                models = list(list_models(p["id"]))
             except Exception as e:  # noqa: BLE001 - a listing failure must not hide the provider
                 error = f"{type(e).__name__}: {e}"[:200]
         models += [m for m in extras if m.startswith(p["id"] + ":") and m not in models]

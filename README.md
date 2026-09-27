@@ -289,8 +289,10 @@ traditions). Settings → Models sets models per role (Decisions, Strategy, Talk
 without its own list uses the decision models). Any model failure moves on to the next model in the
 list; a model that just failed goes behind the others for 10 minutes. Each role's models are a list: each entry is a provider (Google, Anthropic,
 OpenAI; keys `GOOGLE_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` in `.env`), a model and a
-thinking level. The provider **Claude Code (subscription)** (`claude-code:opus|sonnet|haiku|fable`)
-needs no API key: it runs the headless Claude Code CLI (`claude -p`, found on PATH or in
+thinking level. The provider **Claude Code (subscription)** needs no API key. It offers the CLI's
+aliases (`claude-code:opus|sonnet|haiku|fable`, always the latest version) and, when `ANTHROPIC_API_KEY`
+is set, every versioned id from the Anthropic model listing (`claude-code:claude-opus-5-5`, older ones
+too; listing needs no credit). It runs the headless Claude Code CLI (`claude -p`, found on PATH or in
 `~/.local/bin`, logged in with the Claude subscription), so it is billed to the subscription and
 subject to its usage limits, never to an Anthropic API organization (the `ANTHROPIC_*` key variables
 are removed from its environment). Each call is single-shot and text-only: no tools (`consult`,

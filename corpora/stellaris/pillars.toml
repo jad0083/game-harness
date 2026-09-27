@@ -5,7 +5,12 @@
 # fallback; priorities come from the Strategist.
 
 [strategy]
-min_milestones_top = 3          # each of the 3 highest-priority pillars needs >= 1 milestone
+# detail a Strategist's answer must have (pinned pillars and human edits are exempt)
+min_milestones_each = 1         # every pillar is measurable
+min_milestones_first = 2        # priority 1: a checkpoint and an end target, on different dates
+min_goals = 2                   # ... for each of the top 3 pillars
+min_goals_top = 3
+stance_needs_figure = true      # each stance quotes a number from the briefing
 # spellings models use for the recorded measures (seen live: "rank:military" on 2452.03)
 metric_aliases = { military = "military_power", economy = "economy_power", tech = "tech_power", planets = "colonies", techs = "techs_known", "rank:military" = "rank:military_power", "rank:economy" = "rank:economy_power", "rank:tech" = "rank:tech_power", "rank:planets" = "rank:colonies" }
 instructions = """Everything must be achievable through directives, tech picks or market orders: the game's AI builds, designs ships and moves fleets.

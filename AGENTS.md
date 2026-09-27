@@ -250,6 +250,10 @@ Rules:
 - Directives are only those in `corpora/stellaris/directives.toml` (identifiers `[a-z0-9_]`); a
   new directive needs policy options that exist in the game's `common/policies`.
 - Settings used: autosave Monthly (`settings.txt` `autosave=2`), tutorial off.
+- **Strategy detail** (`[strategy]` in pillars.toml): every pillar needs a milestone, priority 1 two
+  on different dates (a checkpoint and an end target), the top 3 two goals, and each stance a figure from
+  the briefing; a Strategist answer that misses one is sent back once with its errors. Pinned pillars
+  and human edits are exempt.
 - **Game pillars**: `corpora/stellaris/pillars.toml` defines the strategy's pillars, metrics, aliases
   and action limits (edit it, not Python, to change them; `tests/test_pillars.py` checks it). A broken
   file turns the strategy layer off with the reason on the Strategy tab.

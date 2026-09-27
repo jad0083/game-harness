@@ -287,7 +287,8 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   thread), `order_add`/`order_remove` (standing orders in every prompt, saved in
   `runs/orders/<campaign>.json`), `decide_now` and `override` (queued requests the loop handles
   with the game paused), `instruct` (one-time note, also answers questions).
-- `claude_code.py`: the `claude-code:<alias>` provider. `resolve_model` turns the model string into
+- `claude_code.py`: the `claude-code:<alias or model id>` provider (the catalog adds versioned ids from
+  the Anthropic listing to the aliases, `models._claude_code_models`). `resolve_model` turns the model string into
   a pydantic-ai `FunctionModel` (where the governor and GC4 agents are built), so pools, fallback,
   cool-down and traces treat it like any model. Each request renders the messages as text (images
   become placeholders, tool results inline), then runs `claude -p` once: output tool schema as

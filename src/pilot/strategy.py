@@ -148,6 +148,27 @@ def _action_errors(name: str, kind: str, items: list, a: ActionLimits, tech_ids:
     return errs
 
 
+def _detail_errors(s: Strategy, spec: PillarSpec) -> list[str]:
+    """The spec's detail rules for a Strategist's answer: milestones on every pillar and a checkpoint
+    plus an end target on the first, concrete goals on the top pillars, figures in each stance.
+    Pinned pillars are the human's and exempt."""
+    errs: list[str] = []
+    for rank, (name, pl) in enumerate(s.sorted_pillars(), 1):
+        if pl.pinned:
+            continue
+        if spec.min_milestones_each and len(pl.milestones) < spec.min_milestones_each:
+            errs.append(f"{name}: needs at least {spec.min_milestones_each} milestone"
+                        f"{'' if spec.min_milestones_each == 1 else 's'}")
+        if rank == 1 and spec.min_milestones_first and len({m.by for m in pl.milestones}) < spec.min_milestones_first:
+            errs.append(f"{name}: priority 1 needs at least {spec.min_milestones_first} milestones on different dates")
+        if rank <= spec.min_goals_top and len(pl.goals) < spec.min_goals:
+            errs.append(f"{name}: priority {pl.priority} is in the top {spec.min_goals_top} and needs at least "
+                        f"{spec.min_goals} goals")
+        if spec.stance_needs_figure and not re.search(r"\d", pl.stance):
+            errs.append(f"{name}: the stance must cite at least one figure from the briefing")
+    return errs
+
+
 def validate(s: Strategy, spec: PillarSpec, *, previous: Strategy | None, tech_ids: set[str], idle: set[str],
              income: dict[str, float], briefing_checked: set[str] | None = None,
              require_milestones: bool = True) -> list[str]:
@@ -201,6 +222,8 @@ def validate(s: Strategy, spec: PillarSpec, *, previous: Strategy | None, tech_i
             if not pl.pinned and not pl.milestones:
                 errs.append(f"{name}: priority {pl.priority} is in the top {spec.min_milestones_top} "
                             "and needs at least one milestone")
+    if require_milestones:
+        errs.extend(_detail_errors(s, spec))
     if previous is not None:
         for name, pl in previous.pillars.items():
             if pl.pinned and name in s.pillars and _content(s.pillars[name]) != _content(pl):
@@ -372,6 +395,18 @@ def strategist_instructions(spec: PillarSpec) -> str:
                  "in-game date YYYY.MM.DD.")
     if spec.min_milestones_top:
         lines.append(f"Each of the {spec.min_milestones_top} highest-priority pillars needs at least one milestone.")
+    if spec.min_milestones_each:
+        lines.append(f"Every pillar needs at least {spec.min_milestones_each} milestone"
+                     f"{'' if spec.min_milestones_each == 1 else 's'}, so each one can be measured.")
+    if spec.min_milestones_first:
+        lines.append(f"The priority-1 pillar needs at least {spec.min_milestones_first} milestones: a checkpoint "
+                     "and a later end target.")
+    if spec.min_goals:
+        lines.append(f"Each of the {spec.min_goals_top} highest-priority pillars needs at least {spec.min_goals} "
+                     "concrete goals (what to reach and where, not 'wait' or 'maintain').")
+    if spec.stance_needs_figure:
+        lines.append("Each stance cites at least one figure from the briefing (a stock, a monthly net, a ratio "
+                     "or a count), so it is checkable.")
     for kind, a in spec.actions.items():
         owners = spec.owners(kind)
         if not owners:

@@ -13,10 +13,15 @@ from pilot.pillars import load_pillars
 STELLARIS = load_pillars(REPO / "corpora/stellaris")
 
 
+_MS = {"metric": "systems", "op": ">=", "target": 10, "by": "2230.01.01"}
+_MS_EARLY = {"metric": "systems", "op": ">=", "target": 8, "by": "2226.01.01"}
+
+
 def _pillars_body(prios: dict[str, int], stance: str = "{p} by model") -> dict:
-    """Strategist answer pillars; each top-3 pillar carries a milestone (pillars.toml min_milestones_top)."""
-    return {p: {"priority": n, "stance": stance.format(p=p), "goals": ["g"],
-                "milestones": [{"metric": "systems", "op": ">=", "target": 10, "by": "2230.01.01"}] if n <= 3 else []}
+    """Strategist answer pillars meeting pillars.toml's detail rules: a milestone on every pillar (two
+    dates on priority 1), two goals, and a figure in each stance."""
+    return {p: {"priority": n, "stance": stance.format(p=p) + " (12)", "goals": ["g", "g2"],
+                "milestones": [_MS_EARLY, _MS] if n == 1 else [_MS]}
             for p, n in prios.items()}
 
 
@@ -3289,7 +3294,7 @@ def test_dashboard_strategy_tab_reads_the_spec_not_a_copied_map():
 # ---- final review fixes -------------------------------------------------------------------------
 
 def _main_shape_strategy(**over):
-    """A strategy as main stores it (every action field on every pillar, identity), top 3 with milestones."""
+    """A strategy as main stores it (every action field on every pillar, identity), with milestones."""
     from pilot.strategy import Strategy
     body = _pillars_body(PRIOS)
     for p in body.values():
@@ -3312,7 +3317,8 @@ def _echo_strategist(prompts: list[str], *, spoil_first: bool = False):
             shown["defence"]["milestones"] = []          # rejected: a top-3 pillar without a milestone
         elif spoil_first:
             shown = json.loads(text.split("Your rejected answer:\n", 1)[1].split("\n\n", 1)[0])
-            shown["defence"]["milestones"] = [{"metric": "systems", "op": ">=", "target": 12, "by": "2231.01.01"}]
+            shown["defence"]["milestones"] = [{"metric": "systems", "op": ">=", "target": 12, "by": "2231.01.01"},
+                                              {"metric": "systems", "op": ">=", "target": 14, "by": "2233.01.01"}]
         body = {"change": True, "assessment": "echo", "rules": [], "strategy": shown}
         return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, body)])
     return FunctionModel(respond)
@@ -3470,17 +3476,17 @@ def test_a_main_shape_strategy_without_milestones_upgrades_cleanly(setup, tmp_pa
     assert g.strategy is loaded, "change=false keeps it although its top pillars have no milestones"
 
     missing = _pillars_body(new_prios)
-    missing["society"]["milestones"] = []                # a new top-3 pillar without a milestone
+    missing["society"]["milestones"] = []                # a pillar without a milestone
     answers.extend([(True, {**missing, "focus": "new"}), (True, {**missing, "focus": "new"})])
     g._review_strategy(briefing("2200.02.01"), "scheduled")
     assert g.strategy is loaded
     rejected = [e for e in log.recent if e["kind"] == "strategy_rejected"]
-    assert rejected and rejected[-1]["errors"] == ["society: priority 3 is in the top 3 and needs at least one milestone"]
+    assert rejected and rejected[-1]["errors"] == ["society: needs at least 1 milestone"]
 
-    answers.append((True, {**_pillars_body(new_prios), "focus": "new"}))   # milestones on the new top 3 only
+    answers.append((True, {**_pillars_body(new_prios), "focus": "new"}))   # milestones on every pillar
     g._review_strategy(briefing("2200.03.01"), "scheduled")
     assert isinstance(g.strategy, Strategy) and g.strategy.focus == "new"
-    assert [n for n, pl in g.strategy.sorted_pillars() if pl.milestones] == ["economy", "expansion", "society"]
+    assert all(pl.milestones for _, pl in g.strategy.sorted_pillars())
 
 
 def test_a_failing_claude_code_strategist_falls_back_to_the_next_model(setup, monkeypatch):
