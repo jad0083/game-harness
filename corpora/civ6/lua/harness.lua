@@ -1,8 +1,9 @@
 -- Harness: the controller's helper library for Civilization VI, run in the game's InGame Lua
 -- state through the FireTuner relay (docs/design/2026-09-26-civ6-governor-design.md, ruling 2).
 --
--- The controller prepends `local HARNESS_VERSION = "<hash of this file>"` and `local HARNESS_STATE =
--- "<Lua state>"` and sends the whole file; a second install of the same version is a no-op. Every
+-- The controller prepends `local HARNESS_VERSION = "<hash of this file and of these two lines' form>"`
+-- and `local HARNESS_STATE = "<Lua state>"` and sends the whole file; a second install of the same
+-- version is a no-op (a chunk of another form, such as one without HARNESS_STATE, has another). Every
 -- public function prints exactly one JSON line ({"ok": true, ...} or {"ok": false, "error": "..."}),
 -- since the tuner returns output only through print(). The controller calls functions with
 -- arguments it encodes itself (JSON-style string literals of corpus type keys, numbers); nothing

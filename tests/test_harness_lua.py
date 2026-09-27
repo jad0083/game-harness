@@ -24,7 +24,8 @@ def install(rt, version: str = "test", state: str = "InGame") -> None:
     rt.execute(f'local HARNESS_VERSION = "{version}" local HARNESS_STATE = "{state}"\n' + HARNESS)
 
 
-def runtime(state: str = "InGame"):
+def bare_runtime():
+    """The mock game with no library installed yet."""
     try:
         from lupa.lua51 import LuaRuntime  # the game's Lua is 5.1
     except ImportError:
@@ -34,6 +35,11 @@ def runtime(state: str = "InGame"):
     rt.globals().print = lambda *a: out.append(" ".join(str(x) for x in a))
     rt.execute(DIPLO_DATA)
     rt.execute(MOCK)
+    return rt, out
+
+
+def runtime(state: str = "InGame"):
+    rt, out = bare_runtime()
     install(rt, state=state)
     return rt, out
 
@@ -608,3 +614,18 @@ def test_a_statement_that_cannot_be_read_is_still_logged_and_closed():
     assert (e.get("kind"), e["session"], e["civ"], e["reply"], e["why"]) == (
         None, 7, "CIVILIZATION_AUSTRALIA", "EXIT", "unknown")
     assert "no such key" in e["err"]
+
+
+def test_an_install_without_the_state_header_is_replaced_by_the_next_version():
+    """A controller built before HARNESS_STATE sends the chunk without it: no handler. The rebuilt
+    controller's version covers the header (civ6.rs INSTALL_HEADER), so it installs again, and that
+    install registers the handler, which answers."""
+    rt, out = bare_runtime()
+    rt.execute('local HARNESS_VERSION = "text-only"\n' + HARNESS)
+    assert rt.eval("#Events.DiplomacyStatement.fns") == 0
+    assert snapshot(rt, out)["diplomacy"]["handler"] is False
+    install(rt, version="with-header")
+    assert rt.eval("#Events.DiplomacyStatement.fns") == 1
+    rt.execute("MOCK.autoplay = true statement(3, 0, 'WARNING_TOO_MANY_TROOPS_NEAR_ME', 'NONE', 7)")
+    assert diplo_calls(rt) == ["response 7 0 POSITIVE"]
+    assert snapshot(rt, out)["diplomacy"]["handler"] is True

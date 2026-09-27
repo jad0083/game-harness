@@ -209,8 +209,9 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   the engine until a human answers, so the autoplay turn never ends and the tuner goes silent.
   `corpora/civ6/popups.toml` removes that screen's statement handler on every load (the deal screen
   it opens goes with it), and the library registers its own `Events.DiplomacyStatement` handler in
-  `InGame` (only there: the install chunk names its state; a reinstall removes the old handler
-  first). The screen's handler is removed only while the library's is in place (the entry's
+  `InGame` (only there: the install chunk names its state, and the library's version covers the
+  chunk's header, so an install by a controller built before it is replaced; a reinstall removes the
+  old handler first). The screen's handler is removed only while the library's is in place (the entry's
   `requires = "dipl_handler"`, checked in `InGame` before each quieting); otherwise the controller
   puts it back (`QUIET_HELD`), so a statement holds the turn for a human on screen instead of going
   unanswered and unseen, and the briefing says the auto-reply is not installed. While autoplay runs it answers statements to our player from an explicit table: the five

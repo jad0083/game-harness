@@ -369,8 +369,13 @@ pub fn parse_popups(text: &str) -> Result<Vec<QuietPopup>> {
     Ok(f.quiet)
 }
 
-/// The library file and its version (FNV-1a of the text: any edit re-installs it), with the popups
-/// to quiet after installing it into `InGame`.
+/// What the install chunk puts before the library (`{version}` and `{state}` become Lua strings).
+/// The version hashes it with the file, so a chunk of another form (a controller built before
+/// HARNESS_STATE sent none, and its install registered no diplomacy handler) is installed again.
+pub const INSTALL_HEADER: &str = "local HARNESS_VERSION = {version}\nlocal HARNESS_STATE = {state}\n";
+
+/// The library file and its version (FNV-1a of the install header's template and the text: any edit
+/// of either re-installs it), with the popups to quiet after installing it into `InGame`.
 pub struct Library {
     pub path: PathBuf,
     pub source: String,
@@ -383,7 +388,7 @@ impl Library {
         let path = corpus.join("lua").join("harness.lua");
         let source = std::fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
         let mut h: u64 = 0xcbf29ce484222325;
-        for b in source.bytes() {
+        for b in INSTALL_HEADER.bytes().chain(source.bytes()) {
             h ^= b as u64;
             h = h.wrapping_mul(0x100000001b3);
         }
@@ -396,7 +401,7 @@ impl Library {
     /// The chunk that installs the library into `state` (a no-op when this version is already
     /// there). The library learns its state from it: the diplomacy handler is registered in InGame only.
     pub fn install_code(&self, state: &str) -> String {
-        format!("local HARNESS_VERSION = {}\nlocal HARNESS_STATE = {}\n{}", lua_str(&self.version), lua_str(state), self.source)
+        INSTALL_HEADER.replace("{version}", &lua_str(&self.version)).replace("{state}", &lua_str(state)) + &self.source
     }
 
     /// `call` run only when this version is installed; otherwise it prints the missing marker.
@@ -740,6 +745,22 @@ mod tests {
         assert!(lib.source.contains("MIT License"), "civ6-mcp attribution");
         // the agent refuses tuner code over 64 KiB (crates/game-agent/src/tuner.rs MAX_CODE)
         assert!(lib.install_code(STATE_UI).len() < 64 * 1024, "the install chunk is {} bytes", lib.install_code(STATE_UI).len());
+    }
+
+    #[test]
+    fn the_version_covers_the_install_header() {
+        // A controller built before HARNESS_STATE sent the same file without it (no diplomacy handler)
+        // under the version of the text alone; the rebuilt controller must find that install MISSING.
+        fn fnv(b: &[u8]) -> String {
+            format!("{:016x}", b.iter().fold(0xcbf29ce484222325u64, |h, &c| (h ^ c as u64).wrapping_mul(0x100000001b3)))
+        }
+        let lib = Library::load(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpora/civ6")).unwrap();
+        assert_ne!(lib.version, fnv(lib.source.as_bytes()), "an install by the older controller would be kept");
+        let chunk = lib.install_code(STATE_UI);
+        let header = &chunk[..chunk.len() - lib.source.len()];
+        assert_eq!(header.replace(&lib.version, "").replace(STATE_UI, ""), "local HARNESS_VERSION = \"\"\nlocal HARNESS_STATE = \"\"\n");
+        // the header's template is hashed with the text, so changing either installs the library again
+        assert_eq!(lib.version, fnv(format!("{INSTALL_HEADER}{}", lib.source).as_bytes()));
     }
 
     #[test]
