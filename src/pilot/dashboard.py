@@ -24,9 +24,14 @@ Telemetry (runs/telemetry.sqlite, across runs and models):
     POST /api/settings  {"models": [{"model", "thinking"}, ...], "rotate"}   the model list (live too); older {"model", "thinking", "fallback"}
     POST /api/run  {"game", "speed", "months"}   start a pilot run (game-pilot.service); viewer only
 
-Access: every request needs the dashboard key (`dashboard_key`) as the `pilot_key` cookie or the
-X-Pilot-Key header; GET /?key=<key> sets the cookie. POSTs must be JSON, and a browser's Origin must
-match the Host. Without the key, GET / answers with a short note on how to get the link.
+Sign-in (auth.py; docs/design/2026-09-27-dashboard-v2-design.md rulings 34-52), viewer:
+    GET  /api/auth/me                   who is asking: {via, device, notices, add_device}
+    GET  /api/auth/devices              signed-in browsers and script tokens (a browser session only)
+    POST /api/auth/devices  {"action": "signout"|"revoke"|"revoke_others"|"rename", "id", "name"}
+Every other request needs a principal: a browser's `pilot_session` cookie, a script's `pgt_` token
+as a header, or the service key (`dashboard_key`) as `X-Pilot-Key` / `Authorization: Bearer` from
+loopback only. Changes must be JSON; a cookie needs a matching Origin. The live pilot's own
+dashboard still takes the key (`key_guard`) and is reached through the viewer.
 """
 
 from __future__ import annotations
@@ -37,7 +42,6 @@ import json
 import logging
 import os
 import re
-import secrets
 import socket
 import threading
 from pathlib import Path
@@ -45,6 +49,8 @@ from typing import TYPE_CHECKING
 from urllib.parse import urlsplit
 
 from aiohttp import ClientError, ClientSession, ClientTimeout, web
+
+from .auth import KEY_HEADER, RUNNER_KWARGS, Auth, KeySource, dashboard_key
 
 if TYPE_CHECKING:
     from .pillars import PillarSpec
@@ -55,10 +61,7 @@ log_ = logging.getLogger(__name__)
 
 RUN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")    # e.g. 20260926-185855; no dots or separators
 
-KEY_ENV = "PILOT_DASHBOARD_KEY"
-KEY_FILE = "dashboard.key"
 KEY_COOKIE = "pilot_key"
-KEY_HEADER = "X-Pilot-Key"
 KEY_COOKIE_MAX_AGE = 400 * 24 * 3600     # the longest cookie lifetime browsers accept
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 LOCKED_PAGE = """<!doctype html><meta charset="utf-8"><title>Game Pilot</title>
@@ -75,27 +78,6 @@ The link is printed in the dashboard's service log when it starts, and on the co
 </form>
 <p>Opened the link from another app and still see this? <a href="/">Reload the dashboard</a>.</p>
 """
-
-
-def dashboard_key(runs_dir: Path) -> str:
-    """The dashboard's access key: $PILOT_DASHBOARD_KEY, else runs/dashboard.key (created once, mode
-    0600). The live pilot and the viewer read the same file, so the viewer's forwarded calls pass."""
-    env = os.environ.get(KEY_ENV, "").strip()
-    if env:
-        return env
-    path = Path(runs_dir) / KEY_FILE
-    path.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-    except FileExistsError:
-        key = path.read_text().strip()
-        if not key:
-            raise RuntimeError(f"{path} is empty: delete it to make a new dashboard key") from None
-        return key
-    key = secrets.token_urlsafe(32)
-    with os.fdopen(fd, "w") as f:
-        f.write(key + "\n")
-    return key
 
 
 def link_host(host: str) -> str:
@@ -163,11 +145,13 @@ LIVE_STATES = {"starting", "playing", "deciding", "paused", "needs_attention"}
 
 
 class LiveProxy:
-    """Finds the live pilot run (newest run whose status.json names a dashboard port that answers)."""
+    """Finds the live pilot run (newest run whose status.json names a dashboard port that answers)
+    and talks to it with the service key over loopback. K is read on every call; after a 401 it is
+    re-read once (a rotation) and the call retried."""
 
-    def __init__(self, runs_dir: Path, key: str):
+    def __init__(self, runs_dir: Path, keys: KeySource | str):
         self.runs_dir = runs_dir
-        self.headers = {KEY_HEADER: key}     # the live pilot's dashboard wants the same key
+        self.keys = keys if isinstance(keys, KeySource) else KeySource(fixed=keys)
         self._url: str | None = None
         self._checked = 0.0
         self._session: ClientSession | None = None
@@ -176,6 +160,20 @@ class LiveProxy:
         if self._session is None or self._session.closed:
             self._session = ClientSession()
         return self._session
+
+    @property
+    def headers(self) -> dict[str, str]:
+        return {KEY_HEADER: self.keys.get()}
+
+    async def request(self, method: str, url: str, extra: dict | None = None, **kw):
+        """(status, content type, body) from the live pilot, retried once with a re-read key after a 401."""
+        for attempt in (0, 1):
+            async with self.session().request(method, url, headers={**(extra or {}), **self.headers}, **kw) as r:
+                if r.status == 401 and attempt == 0:
+                    self.keys.reload()
+                    continue
+                return r.status, r.content_type, await r.read()
+        raise AssertionError("unreachable")
 
     def forget(self) -> None:
         self._url, self._checked = None, 0.0
@@ -196,10 +194,10 @@ class LiveProxy:
                 continue
             url = f"http://127.0.0.1:{int(port)}"
             try:
-                async with self.session().get(url + "/status", headers=self.headers, timeout=ClientTimeout(total=2)) as r:
-                    if r.status == 200 and (await r.json()).get("run_id") == run["id"]:
-                        self._url = url
-                        break
+                code, _, body = await self.request("GET", url + "/status", timeout=ClientTimeout(total=2))
+                if code == 200 and json.loads(body).get("run_id") == run["id"]:
+                    self._url = url
+                    break
             except (OSError, TimeoutError, ClientError, ValueError):
                 continue
         return self._url
@@ -257,14 +255,14 @@ def list_runs(runs_dir: Path, live_id: str | None = None) -> list[dict]:
 
 
 def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path | None = None,
-             key: str | None = None) -> web.Application:
+             key: str | None = None, auth: Auth | None = None) -> web.Application:
     """Dashboard for a live `pilot` (Pilot or Governor), or read-only over `runs_dir` when pilot is None.
-    `corpora` is where each game's pillars file is read (default: the repo's corpora/). `key` is
-    the access key (default: `dashboard_key(runs_dir)`)."""
+    `corpora` is where each game's pillars file is read (default: the repo's corpora/). `key` fixes
+    the service key (default: `PILOT_DASHBOARD_KEY` or runs/dashboard.key, re-read when it changes);
+    `auth` is the viewer's sign-in state (default: `Auth.from_env`)."""
     from .config import REPO
     log = pilot.log if pilot else None
     runs_dir = runs_dir or (log.dir.parent if log else Path("runs"))
-    key = key or dashboard_key(runs_dir)
     tel = telemetry or (log.telemetry if log else None)
     corpora = corpora or (REPO / "corpora")
     live_url = None                  # set for the viewer: finds a live run to refuse a second start
@@ -534,17 +532,27 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
 
     if not log:
         # Always-on viewer: forward live endpoints to a running pilot's own dashboard, if any.
-        proxy = LiveProxy(runs_dir, key)
+        auth = auth or Auth.from_env(runs_dir, key=key)
+        proxy = LiveProxy(runs_dir, auth.keys)
         live_url = proxy.url
+
+        def refused_key() -> web.Response:
+            # the live pilot's 401 is about the service key, never this browser's sign-in
+            return web.json_response({"error": "live_pilot_refused_key", "reason": "The live pilot refused the "
+                                      "dashboard's service key.", "fix": "Restart game-pilot.service after a key "
+                                      "rotation."}, status=502)
 
         async def v_status(request):
             url = await proxy.url()
             if url:
                 try:
-                    async with proxy.session().get(url + "/status", headers=proxy.headers, timeout=ClientTimeout(total=3)) as r:
-                        return web.json_response(await r.json())
-                except (OSError, TimeoutError, ClientError):
-                    proxy.forget()
+                    code, _, body = await proxy.request("GET", url + "/status", auth.device_headers(request),
+                                                        timeout=ClientTimeout(total=3))
+                    if code == 200:
+                        return web.json_response(json.loads(body))
+                except (OSError, TimeoutError, ClientError, ValueError):
+                    pass
+                proxy.forget()
             return await status(request)
 
         async def v_forward(request):
@@ -553,31 +561,53 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
                 raise web.HTTPServiceUnavailable(text="no live pilot run")
             body = await request.read() if request.method == "POST" else None
             try:
-                async with proxy.session().request(request.method, url + request.path_qs, data=body,
-                                                   headers={"Content-Type": request.content_type, **proxy.headers},
-                                                   timeout=ClientTimeout(total=30)) as r:
-                    return web.Response(body=await r.read(), status=r.status,
-                                        content_type=r.content_type, headers={"Cache-Control": "no-store"})
+                code, ctype, data = await proxy.request(
+                    request.method, url + request.path_qs, {"Content-Type": request.content_type,
+                                                            **auth.device_headers(request)},
+                    data=body, timeout=ClientTimeout(total=30))
             except (OSError, TimeoutError, ClientError) as e:
                 proxy.forget()
                 raise web.HTTPBadGateway(text=f"live pilot unreachable: {e}") from e
+            if code == 401:
+                return refused_key()
+            return web.Response(body=data, status=code, content_type=ctype)
 
         async def v_events(request):
+            """The live pilot's event stream, closed within one keepalive once this request's
+            principal is no longer valid (signed out, revoked, the old cookie's window closed)."""
             url = await proxy.url()
             if not url:
                 raise web.HTTPServiceUnavailable(text="no live pilot run")
             resp = web.StreamResponse(headers={"Content-Type": "text/event-stream", "Cache-Control": "no-cache"})
             await resp.prepare(request)
+            loop = asyncio.get_running_loop()
+            pending: asyncio.Future | None = None
             try:
-                async with proxy.session().get(url + "/events", headers=proxy.headers,
+                async with proxy.session().get(url + "/events", headers={**auth.device_headers(request), **proxy.headers},
                                               timeout=ClientTimeout(total=None, sock_read=60)) as r:
-                    async for chunk in r.content.iter_any():
-                        await resp.write(chunk)
-            except (OSError, TimeoutError, ClientError, ConnectionResetError, asyncio.CancelledError):
+                    if r.status != 200:
+                        return resp
+                    chunks = r.content.iter_any().__aiter__()
+                    check_at = loop.time() + auth.keepalive_s
+                    while True:
+                        pending = pending or asyncio.ensure_future(chunks.__anext__())
+                        done, _ = await asyncio.wait({pending}, timeout=max(0.0, check_at - loop.time()))
+                        if done:
+                            chunk, pending = pending.result(), None
+                            await resp.write(chunk)
+                        if loop.time() >= check_at:
+                            if not auth.still_valid(request):
+                                break                         # signed out or revoked: the stream ends
+                            check_at = loop.time() + auth.keepalive_s
+            except (OSError, TimeoutError, ClientError, ConnectionResetError, StopAsyncIteration, asyncio.CancelledError):
                 pass
+            finally:
+                if pending is not None:
+                    pending.cancel()
             return resp
 
-        app = web.Application(middlewares=[no_store, key_guard(key)])
+        app = web.Application(middlewares=[auth.middleware])
+        auth.install(app)
         app.on_cleanup.append(lambda _: proxy.close())
         app.add_routes([web.get("/", index), web.get("/status", v_status), web.get("/events", v_events),
                         web.get("/events.json", v_forward), web.get("/frame.jpg", v_forward),
@@ -692,7 +722,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
                                           "decide_now|override|edit_pillar|unpin_pillar|review_strategy, with its text/index/directive/pillar/fields")
         return web.json_response({"ok": True, "status": log.state.status})
 
-    app = web.Application(middlewares=[no_store, key_guard(key)])
+    app = web.Application(middlewares=[no_store, key_guard(key or dashboard_key(runs_dir))])
     app.add_routes([web.get("/", index), web.get("/status", status), web.get("/frame.jpg", frame),
                     web.get("/events", events), web.get("/events.json", events_json), web.post("/control", control),
                     *history, *api])
@@ -704,7 +734,7 @@ def serve_in_background(pilot, host: str, port: int, runs_dir: Path | None = Non
     def run() -> None:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        runner = web.AppRunner(make_app(pilot, runs_dir, telemetry))
+        runner = web.AppRunner(make_app(pilot, runs_dir, telemetry), **RUNNER_KWARGS)
         loop.run_until_complete(runner.setup())
         loop.run_until_complete(web.TCPSite(runner, host, port).start())
         loop.run_forever()

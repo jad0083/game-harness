@@ -316,24 +316,44 @@ running pilot (whose own dashboard is on `PILOT_PORT`, 8790). It refreshes itsel
   now*, and the version history.
 - **Settings**: models per role; with no run active, *Start run* starts `game-pilot.service`.
 
-### Access key
+### Signing in
 
-The dashboard listens on the LAN, so every request needs its access key: the API, the event
-stream, the frame, `/control`, `/status` and everything else except the short "how to get in" page.
+The dashboard listens on the LAN, so every request needs a principal (design:
+`docs/design/2026-09-27-dashboard-v2-design.md`, rulings 34-52; code: `src/pilot/auth.py`):
 
-- **Getting in**: open the link once per browser. It is printed in the viewer's log when it starts
-  (`journalctl --user -u game-pilot-view`) and by `python -m pilot dashboard-link [--port 8780]`:
-  `http://<controller>:8780/?key=<key>`. The page stores the key in an HttpOnly, SameSite=Lax
-  cookie (`pilot_key`) and redirects to `/`, so the key leaves the address bar; bookmark the link
-  itself. Scripts send the key as the `X-Pilot-Key` header instead.
-- **Where it lives**: `PILOT_DASHBOARD_KEY` if set, else `runs/dashboard.key` (created on first
-  start, mode 0600; `runs/` is gitignored). The live pilot (8790) and the viewer (8780) read the
-  same key, and the viewer passes it on when it forwards live controls.
-- **Rotating**: delete `runs/dashboard.key` (or change `PILOT_DASHBOARD_KEY`) and restart both
-  services; old links and cookies stop working, and the page says how to get the new link.
-- Changes (`POST /control`, `/api/settings`, `/api/run`) must be `application/json`, and when a
-  browser sends an `Origin` it must be the dashboard's own host; anything else gets 403. This
-  stops other web pages from driving the pilot through your browser.
+- **Browsers** each hold their own session: an HttpOnly, SameSite=Lax cookie `pilot_session`
+  (400 days, re-sent at most weekly while the browser is used), a random token whose hash is kept
+  in `runs/auth.sqlite` (`PILOT_AUTH_DB`; mode 0600). Each is a named device that can be signed out
+  on its own; a browser unused for 180 days is signed out. A page whose browser was signed out
+  says so ("This browser was signed out from Pixel phone at 14:02"), stops polling and its event
+  stream, and links to sign in again; an open event stream closes within 15 s of a sign-out.
+- **The service key** (`PILOT_DASHBOARD_KEY`, else `runs/dashboard.key`, 0600) works only as the
+  `X-Pilot-Key` or `Authorization: Bearer` header from the controller itself (127.0.0.1 / ::1),
+  never through `Forwarded` / `X-Forwarded-For`, never as a cookie or in a URL, and it is no
+  longer printed at startup. From another address it gets 401 `service_key_loopback_only` and an
+  audit row. Scripts on the controller keep using it; processes re-read the file when it changes.
+  The viewer forwards live controls to the pilot with it, plus `X-Pilot-Device` (the device id)
+  and `X-Pilot-Device-Name` (its name, percent-encoded) for the browser behind the request.
+- **Scripts on other machines** use scoped tokens (`pgt_…`, `read` or `control`), sent as a header
+  only; they cannot manage devices or sign-ins.
+- **Carry-over**: for 72 hours after the first start of this code (or until the key is rotated), a
+  browser holding the old `pilot_key` cookie keeps working, and its first page load turns it into
+  a device ("carried over from the old link") and deletes the old cookie; an old `/?key=` link
+  becomes a one-time sign-in link. Afterwards the old cookie is deleted wherever it is seen and
+  `?key=` values are never read.
+- **Host names**: the `Host` must be an IP literal, `localhost`, this machine's host name (also
+  `.local` and its FQDN), a name in `PILOT_DASHBOARD_HOSTS` (comma list) or the host of
+  `PILOT_PUBLIC_URL`; anything else gets 421 (no DNS rebinding). With `PILOT_PUBLIC_URL` set, page
+  loads on another host are redirected there (308).
+- Changes (`POST`) must be `application/json`; a browser's change must carry an `Origin` equal to
+  the dashboard's host (`Origin: null`, another site or `Sec-Fetch-Site: cross-site` get 403),
+  so other web pages cannot drive the pilot through your browser. Every response is `no-store`,
+  cannot be framed and carries `nosniff` and a `Referrer-Policy`. API 401s are JSON
+  (`error`, `reason`, `fix`, `by`, `at`) with `WWW-Authenticate`; page loads go to `/pair`.
+- `GET /api/auth/me` names the principal and returns notices (carried over, a device used from two
+  addresses within 10 minutes); `GET/POST /api/auth/devices` list, rename, revoke, sign out the
+  others or this browser. Sign-ins, sign-outs, refusals and control actions go to an audit table,
+  one row per event, address and minute. The live pilot (8790) still takes the key as before.
 - `/api/pc` reports only whether the agent is online, its version, which known games are open and
   whether one is in front, never window titles.
 

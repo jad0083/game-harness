@@ -95,8 +95,11 @@
   .banner { margin: 12px 24px 0; padding: 12px 14px; border-left: 3px solid var(--accent); background: var(--surface);
             display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
   .banner p { margin: 0; flex: 1 1 320px; font-family: var(--serif); font-size: 17px; }
-  .banner.locked { border-left-color: var(--bad); }
-  .banner.locked code { font-size: 14px; }
+  .banner.locked { border-left-color: var(--bad); background: color-mix(in srgb, var(--bad) 8%, var(--surface)); }
+  .banner.locked p, .banner.notices p { font-family: var(--sans); font-size: 15px; }
+  .banner.notices { border-left-color: var(--warn); display: grid; gap: 8px; }
+  .banner.notices .notice { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+  .banner.notices .notice p { flex: 1 1 280px; }
 
   /* ---- layout: sections with hairlines, no card kit ---- */
   main { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(360px, 1fr); gap: 0 32px; padding: 4px 24px 32px; align-items: start; }
@@ -373,7 +376,8 @@
   <button class="btn danger live-only" id="b-stop" hidden>Stop</button>
 </div>
 <div class="toast" id="toast" role="status" hidden></div>
-<div class="banner locked" id="locked" role="alert" hidden><p id="locked-text"></p></div>
+<div class="banner locked" id="locked" role="alert" hidden><p id="locked-text"></p><a class="btn primary" id="locked-link" href="/pair">Sign in again</a></div>
+<div class="banner notices" id="notices" role="status" hidden></div>
 <dialog id="start-dialog" aria-labelledby="start-title">
   <form method="dialog" id="start-form">
     <h2 id="start-title">Start a pilot run</h2>
@@ -531,23 +535,67 @@ const turnBased = () => ["civ6", "galciv4"].includes(gameNow());
 const tidy = (s) => String(s ?? "").replace(/-?\d+\.\d{3,}/g, (m) => (+m).toFixed(1));
 // the model writes light markdown: bold and italic only, applied after escaping
 const md = (s) => esc(s).replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>").replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, "$1<em>$2</em>");
-// Every request needs the dashboard key, a cookie set by opening the dashboard link once. A 401 means
-// this browser has no key (or an old one after a rotation); a 403 means a change was refused.
+// Each browser signs in once and holds its own session. A 401 means this browser is signed out
+// (from another device, idle, or never signed in): the page says so, stops polling and the event
+// stream, and links to the sign-in page. A 403 is a refused change, shown as a toast.
 const baseFetch = window.fetch.bind(window);
-let lockedBy = 0;
-function showLocked(status) {
-  lockedBy = status;
-  $("locked-text").innerHTML = status === 401
-    ? "This browser has no valid dashboard key. Open the dashboard link again: it is in the dashboard's service log, or run <code>python -m pilot dashboard-link</code> on the controller."
-    : "The dashboard refused a change from this page (403: not JSON, or from another site). Reload the page and try again.";
+let signedOut = null;
+const hhmm = (t) => new Date(t * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+const SIGNED_OUT = {
+  revoked: (j) => `This browser was signed out${j.by ? ` from ${j.by}` : ""}${j.at ? ` at ${hhmm(j.at)}` : ""}.`,
+  idle: () => "This browser was signed out after 180 days without use.",
+  conflict: () => "This browser was signed out: its sign-in code was used again by another browser.",
+};
+function showSignedOut(j) {
+  if (signedOut) return;
+  signedOut = j || {};
+  disconnect();
+  const error = signedOut.error || "sign_in_required";
+  $("locked-text").textContent = (SIGNED_OUT[error] || (() => "This browser is not signed in."))(signedOut);
+  $("locked-link").href = `/pair?reason=${encodeURIComponent(error)}&next=${encodeURIComponent(location.pathname + location.search + location.hash)}`;
   $("locked").hidden = false;
 }
 window.fetch = async (...args) => {
+  if (signedOut) throw new Error("signed out");
   const r = await baseFetch(...args);
-  if (r.status === 401 || r.status === 403) showLocked(r.status);
-  else if (r.ok && lockedBy === 401) { lockedBy = 0; $("locked").hidden = true; }
+  if (r.status === 401 || r.status === 403) {
+    let j = {};
+    try { j = await r.clone().json(); } catch { /* not JSON */ }
+    if (r.status === 401) showSignedOut(j);
+    else toast(`Refused: ${j.reason || "the dashboard refused this change"}`);
+  }
   return r;
 };
+// After the event stream drops, one check whether this browser is still signed in.
+let meChecked = 0;
+async function checkSignedIn() {
+  if (signedOut || Date.now() - meChecked < 5000) return;
+  meChecked = Date.now();
+  try { await fetch("/api/auth/me"); } catch { /* offline: the stream retries */ }
+}
+// Notices about this browser and the others (carried over, used from two addresses): each is
+// shown until dismissed; "carried over" only once. Remembered per browser (localStorage).
+const seenNotices = (() => { try { return new Set(JSON.parse(localStorage.getItem("notices:seen") || "[]")); } catch { return new Set(); } })();
+function rememberNotice(id) {
+  seenNotices.add(id);
+  try { localStorage.setItem("notices:seen", JSON.stringify([...seenNotices].slice(-200))); } catch { /* private window */ }
+}
+async function loadNotices() {
+  if (signedOut) return;
+  let me;
+  try { const r = await fetch("/api/auth/me"); if (!r.ok) return; me = await r.json(); } catch { return; }
+  S.me = me;
+  const show = (me.notices || []).filter((n) => !seenNotices.has(n.id));
+  const box = $("notices");
+  box.innerHTML = show.map((n) => `<div class="notice" data-id="${esc(n.id)}"><p>${esc(n.text)}</p><button class="btn" type="button">Dismiss</button></div>`).join("");
+  box.hidden = !show.length;
+  show.filter((n) => n.kind === "carried_over").forEach((n) => rememberNotice(n.id));
+  box.querySelectorAll(".notice button").forEach((b) => b.addEventListener("click", () => {
+    const n = b.closest(".notice");
+    rememberNotice(n.dataset.id); n.remove();
+    box.hidden = !box.children.length;
+  }));
+}
 const api = async (u) => { const r = await fetch(u); if (!r.ok) throw new Error(`${u}: ${r.status}`); return r.json(); };
 
 const S = { live: false, status: {}, campaign: null, decisions: [], metrics: [], view: "net", sel: null, mode: "chat", strategy: null, reviewPending: false };
@@ -1380,11 +1428,12 @@ function connect() {
   es = new EventSource("/events");                // reconnects by itself after a drop
   es.onmessage = (m) => onEvent(JSON.parse(m.data));
   es.onopen = () => { S.lastOk = Date.now(); S.streamOk = true; };
-  es.onerror = () => { S.streamOk = false; };
+  es.onerror = () => { S.streamOk = false; checkSignedIn(); };
 }
 function disconnect() { if (es) es.close(); es = null; }
 
 async function sync() {
+  if (signedOut) return;
   await loadStatus();
   if (!S.ok) return;
   const run = S.status.run_id || null;
@@ -1639,13 +1688,15 @@ let resizeT; addEventListener("resize", () => { clearTimeout(resizeT); resizeT =
   await sync();
   setInterval(sync, 3000);
   setInterval(async () => {
-    if (!S.ok) return;
+    if (!S.ok || signedOut) return;
     if (S.live) connect();
     else { await loadCampaigns(); await loadCampaignData(); await loadHistoryFeed(); }
   }, 10000);
   setInterval(freshness, 1000);
+  await loadNotices();
+  setInterval(loadNotices, 60000);
   await loadPc();
-  setInterval(loadPc, 10000);
+  setInterval(() => { if (!signedOut) loadPc(); }, 10000);
 })();
 </script>
 </body>

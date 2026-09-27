@@ -105,17 +105,21 @@ class Watched:
                 if "/events" not in r.url else None)     # the stream is cut when the page closes
 
 
-def open_context(browser, name: str, base: str, *, signed_in: bool = True, **extra):
-    """A fresh browser context (one of CONTEXTS) with fonts stubbed (no request leaves the box) and,
-    when signed_in, the credential a signed-in browser holds."""
+def open_context(browser, name: str, servers: dict, *, signed_in: bool = True, device: str = "Chrome on Windows",
+                 **extra) -> Watched:
+    """A fresh browser context (one of CONTEXTS) on the fixture viewer, with fonts stubbed (no
+    request leaves the box) and, when signed_in, its own device session from the viewer's store."""
     ctx = browser.new_context(**{**CONTEXTS[name], **extra})
     ctx.route("https://fonts.googleapis.com/**", lambda r: r.fulfill(status=200, content_type="text/css", body=""))
     ctx.route("https://fonts.gstatic.com/**", lambda r: r.fulfill(status=200, body=b""))
-    if signed_in:
-        sign_in(ctx, base)
-    page = ctx.new_page()
-    return Watched(ctx, page)
+    w = Watched(ctx, ctx.new_page())
+    w.base = servers["viewer"].url
+    w.device = sign_in(ctx, w.base, servers["auth"], device) if signed_in else None
+    return w
 
 
-def sign_in(ctx, base: str) -> None:
-    ctx.add_cookies([{"name": "pilot_key", "value": UI_KEY, "url": base}])
+def sign_in(ctx, base: str, auth, name: str = "Chrome on Windows") -> str:
+    """Give the context a session cookie as a sign-in would; returns the device id."""
+    row, cred = auth.store.create_device("browser", name=name, created_via="cli", created_by="cli", ip="127.0.0.1")
+    ctx.add_cookies([{"name": "pilot_session", "value": cred, "url": base, "httpOnly": True, "sameSite": "Lax"}])
+    return row["id"]

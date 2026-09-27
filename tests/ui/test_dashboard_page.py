@@ -3,22 +3,21 @@
 from __future__ import annotations
 
 import pytest
-from uikit import open_context
+from uikit import UI_KEY, open_context
 
 pytestmark = pytest.mark.ui
 
 
-def load(w, base):
-    w.page.goto(base + "/", wait_until="domcontentloaded")
+def load(w):
+    w.page.goto(w.base + "/", wait_until="domcontentloaded")
     w.page.wait_for_selector("#decisions li button", timeout=15000)
     w.page.wait_for_timeout(1200)
 
 
 @pytest.mark.parametrize("name", ["desktop-dark", "phone-light"])
 def test_civ6_live_page_has_no_console_errors(browser, live_servers, name, tmp_path):
-    base = live_servers["viewer"].url
-    w = open_context(browser, name, base)
-    load(w, base)
+    w = open_context(browser, name, live_servers)
+    load(w)
     log = live_servers["log"]
     live_servers["live"].call(log.emit, "metrics", date="T58", score=99, military=600, science=26.0)   # live chart update
     live_servers["live"].call(log.emit, "action", action="order")      # used to trigger a frame fetch
@@ -32,9 +31,8 @@ def test_civ6_live_page_has_no_console_errors(browser, live_servers, name, tmp_p
 
 
 def test_civ6_readout_speaks_turns(browser, live_servers):
-    base = live_servers["viewer"].url
-    w = open_context(browser, "desktop-light", base)
-    load(w, base)
+    w = open_context(browser, "desktop-light", live_servers)
+    load(w)
     page = w.page
     assert page.text_content("#ro-pace-sub") == "a decision every 5 turns"
     assert page.is_hidden("#ro-directive") and page.is_hidden("#ro-standing")   # Civ VI has neither
@@ -45,9 +43,8 @@ def test_civ6_readout_speaks_turns(browser, live_servers):
 
 
 def test_error_decision_reads_as_no_decision(browser, live_servers):
-    base = live_servers["viewer"].url
-    w = open_context(browser, "desktop-light", base)
-    load(w, base)
+    w = open_context(browser, "desktop-light", live_servers)
+    load(w)
     page = w.page
     page.click('#decisions button[data-i="1"]')
     page.wait_for_selector("#tab-reasoning .t-error")
@@ -58,9 +55,8 @@ def test_error_decision_reads_as_no_decision(browser, live_servers):
 
 
 def test_switching_campaign_clears_reasoning(browser, live_servers):
-    base = live_servers["viewer"].url
-    w = open_context(browser, "desktop-light", base)
-    load(w, base)
+    w = open_context(browser, "desktop-light", live_servers)
+    load(w)
     page = w.page
     page.wait_for_selector("#tab-reasoning .t-decision, #tab-reasoning .t-error")
     page.select_option("#campaign", "stellaris/theia")
@@ -69,4 +65,37 @@ def test_switching_campaign_clears_reasoning(browser, live_servers):
         or "Room to grow" in page.text_content("#tab-reasoning")
     assert "Chengdu" not in page.text_content("#tab-reasoning")
     assert w.errors == []
+    w.context.close()
+
+
+def test_a_revoked_browser_sees_the_signed_out_banner_and_stops(browser, live_servers):
+    w = open_context(browser, "desktop-light", live_servers, device="Brave on Windows")
+    load(w)
+    page = w.page
+    live_servers["auth"].store.revoke(w.device, "revoked", by="cli")
+    page.wait_for_selector("#locked:not([hidden])", timeout=5000)
+    text = page.text_content("#locked")
+    assert "signed out" in text and "the controller" in text
+    href = page.get_attribute("#locked a", "href")
+    assert href.startswith("/pair?reason=revoked&next=")
+    page.wait_for_timeout(300)
+    before = len(w.requests)
+    page.wait_for_timeout(3500)                    # longer than the 3 s status poll
+    assert len(w.requests) == before, w.requests[before:]
+    assert w.errors == [] or all("401" in e for e in w.errors)
+    w.context.close()
+
+
+def test_page_shows_the_carried_over_notice_once(browser, live_servers):
+    """A browser whose old key cookie became a device is told once, and never again."""
+    w = open_context(browser, "desktop-light", live_servers, signed_in=False)
+    w.context.add_cookies([{"name": "pilot_key", "value": UI_KEY, "url": w.base}])
+    load(w)
+    w.page.wait_for_selector("#notices:not([hidden])", timeout=5000)
+    assert "own sign-in" in w.page.text_content("#notices")
+    w.page.click("#notices button")
+    w.page.reload()
+    w.page.wait_for_selector("#decisions li button")
+    w.page.wait_for_timeout(800)
+    assert w.page.is_hidden("#notices")
     w.context.close()

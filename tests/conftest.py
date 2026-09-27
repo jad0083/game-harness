@@ -30,6 +30,14 @@ DASHBOARD_TEST_KEY = "test-dashboard-key"
 
 
 @pytest.fixture(autouse=True)
+def _auth_db(tmp_path, monkeypatch):
+    """Every dashboard's sign-in store lives in the test's temp dir (never runs/auth.sqlite)."""
+    monkeypatch.setenv("PILOT_AUTH_DB", str(tmp_path / "auth-store" / "auth.sqlite"))
+    for var in ("PILOT_PUBLIC_URL", "PILOT_DASHBOARD_HOSTS", "PILOT_KEY_SIGNIN", "PILOT_ADD_DEVICE"):
+        monkeypatch.delenv(var, raising=False)
+
+
+@pytest.fixture(autouse=True)
 def _dashboard_key(monkeypatch):
     """Dashboards in tests use a fixed access key (never runs/dashboard.key), and aiohttp test
     clients send it unless a test passes its own `headers` (the security tests pass `{}`)."""

@@ -17,6 +17,7 @@ except ImportError:          # pragma: no cover - the shared .venv has it; a fre
 
 from uikit import UI_KEY, FakePilot, Served
 
+from pilot.auth import Auth
 from pilot.events import EventLog
 from pilot.telemetry import Telemetry
 
@@ -110,8 +111,9 @@ def live_servers(ui_runs):
     live = Served(make_app(ui_runs["pilot"], key=UI_KEY))
     log.state.info["port"] = live.port
     log.emit("status", status="playing")
-    viewer = Served(make_app(None, ui_runs["runs"], ui_runs["tel"], key=UI_KEY))
-    yield {**ui_runs, "live": live, "viewer": viewer}
+    auth = Auth.from_env(ui_runs["runs"], key=UI_KEY, keepalive_s=0.2)
+    viewer = Served(make_app(None, ui_runs["runs"], ui_runs["tel"], key=UI_KEY, auth=auth))
+    yield {**ui_runs, "live": live, "viewer": viewer, "auth": auth}
     viewer.stop()
     live.stop()
 

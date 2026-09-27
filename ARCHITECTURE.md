@@ -388,10 +388,23 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   governor falls back to the role's next model.
 - `dashboard.py` API: `/api/campaigns`, `/api/decisions`, `/api/decision`, `/api/metrics`,
   `/runs/*`; the viewer's `LiveProxy` finds the live run by the dashboard port recorded in its
-  `status.json` and checks that it answers with the same run id. `key_guard` middleware: every
-  request needs the key from `dashboard_key()` (`PILOT_DASHBOARD_KEY` or `runs/dashboard.key`) as
-  the `pilot_key` cookie (set by `/?key=`) or `X-Pilot-Key`; mutations must be JSON with a
-  matching Origin. `LiveProxy` sends the same key header to the live pilot.
+  `status.json` and checks that it answers with the same run id. The live pilot's own app still
+  uses `key_guard` (the key from `dashboard_key()` as cookie or `X-Pilot-Key`). `LiveProxy` sends
+  K (read through `KeySource` on every call, re-read once after a 401) with `X-Pilot-Device` /
+  `X-Pilot-Device-Name` from the request's principal; a 401 from the live pilot becomes a 502, never
+  a browser sign-out; the forwarded `/events` re-checks the principal every keepalive and closes.
+- `auth.py` (the viewer's sign-in): `KeySource` (K from env, a fixed key or `runs/dashboard.key`,
+  re-stat at most every 2 s, re-read on mtime/inode/size or after a refusal), `AuthStore`
+  (`runs/auth.sqlite`, 0600 before SQLite opens it, WAL, busy_timeout; `devices` for browsers and
+  scripts with only `sha256(secret)`, `grants`, `auth_events` aggregated per event/IP/minute,
+  `meta` with the carry-over window; a corrupt file is moved aside; housekeeping at start and
+  hourly), `Throttle` (in memory, per IPv4 address or IPv6 /64 and overall, reserve-before-await),
+  and `Auth.middleware`, the request pipeline of ruling 49: host allowlist (421) and canonical host
+  (308), cross-site refusals, public routes, the principal (header: K from loopback or a `pgt_`
+  token; else the `pilot_session` cookie; else the old `pilot_key` cookie inside the window), JSON
+  and Origin rules for changes, scopes. Cookies and security headers are written in
+  `on_response_prepare` (as headers: aiohttp has already serialised `response.cookies` there), so
+  they reach files, streams and raised errors. Runners use `RUNNER_KWARGS` (no access log).
 - Game pillars: `pillars.py` loads and validates `corpora/<game>/pillars.toml` into a read-only
   `PillarSpec` (pillars, metrics, aliases, row keys, action limits, min milestones, instructions),
   cached per file and mtime; unknown keys, directives missing from `directives.toml`, actions without

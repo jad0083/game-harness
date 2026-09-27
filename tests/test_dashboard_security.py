@@ -77,10 +77,8 @@ def test_everything_but_the_page_needs_the_key(tmp_path):
                 assert r.status == 401, path
             r = await c.get("/api/campaigns", headers={"X-Pilot-Key": "wrong"})
             assert r.status == 401
-            page = await c.get("/")
-            assert page.status == 401
-            text = await page.text()
-            assert "dashboard-link" in text and "<script" not in text
+            page = await c.get("/", allow_redirects=False)                 # the page sends a browser to sign in
+            assert page.status == 303 and page.headers["Location"].startswith("/pair?")
     asyncio.run(go())
 
 
@@ -93,19 +91,17 @@ def test_key_header_opens_the_api(tmp_path):
     asyncio.run(go())
 
 
-def test_key_link_sets_a_strict_cookie_and_redirects(tmp_path):
+def test_a_valid_key_link_in_the_window_redirects_to_sign_in_without_a_cookie(tmp_path):
+    """The old link no longer sets a cookie holding the key: inside the 72-hour carry-over it becomes
+    a one-time sign-in link (the key never reaches the address bar or a cookie again)."""
     async def go():
         async with TestClient(TestServer(viewer(tmp_path)), headers=NO_KEY) as c:
             r = await c.get(f"/?key={KEY}", allow_redirects=False)
-            assert r.status in (302, 303) and r.headers["Location"] == "/"
-            cookie = r.headers["Set-Cookie"]
-            assert "pilot_key=" in cookie and "HttpOnly" in cookie and "SameSite=Lax" in cookie
-            assert (await c.get("/runs")).status == 200           # the cookie jar now carries the key
-            page = await c.get("/")
-            assert page.status == 200 and "<script" in await page.text()
-        async with TestClient(TestServer(viewer(tmp_path)), headers=NO_KEY) as c:
+            assert r.status == 303 and r.headers["Location"].startswith("/pair#c=")
+            assert "Set-Cookie" not in r.headers and KEY not in r.headers["Location"]
+            assert (await c.get("/runs")).status == 401
             r = await c.get("/?key=wrong", allow_redirects=False)
-            assert r.status == 401 and "Set-Cookie" not in r.headers
+            assert r.status == 303 and "Set-Cookie" not in r.headers
     asyncio.run(go())
 
 

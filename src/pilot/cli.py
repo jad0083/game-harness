@@ -172,13 +172,13 @@ def rebuild(s: Settings) -> int:
 def view(s: Settings, port: int) -> int:
     from aiohttp import web
 
-    from .dashboard import dashboard_key, dashboard_link, make_app
-    key = dashboard_key(s.runs_dir)
-    print(f"viewer on {s.dashboard_host}:{port} over {s.runs_dir}; open (once per browser): "
-          f"{dashboard_link(s.dashboard_host, port, key)}", flush=True)
+    from .auth import RUNNER_KWARGS
+    from .dashboard import link_host, make_app
     from .telemetry import Telemetry
-    web.run_app(make_app(None, s.runs_dir, Telemetry(s.telemetry_db), key=key), host=s.dashboard_host, port=port,
-                print=None)
+    app = make_app(None, s.runs_dir, Telemetry(s.telemetry_db))       # the key never reaches this line or the log
+    print(f"dashboard on http://{link_host(s.dashboard_host)}:{port}/ (to sign in a browser: "
+          "python -m pilot dashboard-link)", flush=True)
+    web.run_app(app, host=s.dashboard_host, port=port, print=None, **RUNNER_KWARGS)
     return 0
 
 
