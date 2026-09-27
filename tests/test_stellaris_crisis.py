@@ -156,4 +156,12 @@ def test_crisis_alloys_already_placed_are_kept_up_to_plus_100():
     """Like any buy in place (ruling 9's price guard): a crisis order is dropped only above +100%."""
     dear = at_war(market={"kind": "galactic", "fluct": {"alloys": 70}, "bought": {}, "sold": {}, "trades_net": {}})
     assert crisis_alloys(dear, None, LIMITS, set(), MEASURED)[0] is None, "no new order above +50%"
-    assert crisis_alloys(dear, None, LIMITS, set(), MEASURED, placed=True)[0] is not None
+    assert crisis_alloys(dear, None, LIMITS, set(), MEASURED, placed=25)[0] == {"side": "buy", "resource": "alloys", "amount": 25}
+
+
+def test_crisis_alloys_in_place_are_not_raised_above_plus_50():
+    """A larger order is a new buy: above +50% the order in place stays at its amount (ruling 9)."""
+    dear = at_war(market={"kind": "galactic", "fluct": {"alloys": 80}, "bought": {}, "sold": {}, "trades_net": {}})
+    assert crisis_alloys(dear, None, LIMITS, set(), MEASURED, placed=1)[0] == {"side": "buy", "resource": "alloys", "amount": 1}
+    cheap = at_war(market={"kind": "galactic", "fluct": {"alloys": 30}, "bought": {}, "sold": {}, "trades_net": {}})
+    assert crisis_alloys(cheap, None, LIMITS, set(), MEASURED, placed=1)[0]["amount"] == 25, "at +30% it may grow"

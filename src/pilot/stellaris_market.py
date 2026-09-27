@@ -7,7 +7,8 @@
   spending starts). Spend cap: cost <= income_share x max(trade income, 0) + (trade - reserve) /
   surplus_months (income_share 0.5 for alloys in a war crisis).
 - Price guard: no new order above skip_above_pct; an order already in the save is dropped above
-  never_above_pct. Volume: at most `volume[kind]` base amounts a month (1 internal, 6 galactic).
+  never_above_pct, and buying more of it than its amount there is a new order (above skip_above_pct
+  the order in place stays at its amount: `keep_placed`). Volume: at most `volume[kind]` base amounts a month (1 internal, 6 galactic).
 - Never what the AI buys anyway: a deficit with under ai_cover_months of stock, a resource the AI
   bought since the last save, an IDLE one, alloys at naval_full of naval capacity outside a crisis.
 - Idle-trade fill: while trade is IDLE and no declared order passed, the first deficit with
@@ -84,10 +85,10 @@ def ai_bought(res: str, b: dict, prev: dict | None) -> float:
 
 
 def buy_errors(order: dict, b: dict, prev: dict | None, rules: BuyRules, idle: set[str], *,
-               placed: bool = False, crisis: bool = False) -> list[str]:
+               placed: float = 0, crisis: bool = False) -> list[str]:
     """Why buy `order` breaks the rules on save `b` (`prev`: the save before it; `idle`: resources the
-    briefing flags IDLE; `placed`: the save already holds an order of this side and resource;
-    `crisis`: a war crisis is on). Empty: allowed. Sells are not checked here."""
+    briefing flags IDLE; `placed`: the amount of this side and resource the save already holds, 0 for
+    none; `crisis`: a war crisis is on). Empty: allowed. Sells are not checked here."""
     if order.get("side") != "buy":
         return []
     res, amount = order.get("resource"), int(order.get("amount") or 0)
@@ -98,8 +99,9 @@ def buy_errors(order: dict, b: dict, prev: dict | None, rules: BuyRules, idle: s
     pct = fluct(res, b)
     if pct > rules.never_above_pct:
         errs.append(f"price {pct:+.0f}% over base: never bought above +{rules.never_above_pct:.0f}%")
-    elif pct > rules.skip_above_pct and not placed:
-        errs.append(f"price {pct:+.0f}% over base: no new order above +{rules.skip_above_pct:.0f}%")
+    elif pct > rules.skip_above_pct and amount > placed:      # up to the amount in place it is no new buy
+        errs.append(f"price {pct:+.0f}% over base: no new order above +{rules.skip_above_pct:.0f}%" if not placed
+                    else f"price {pct:+.0f}% over base: no raise above +{rules.skip_above_pct:.0f}% ({_n(placed)} in place)")
     cap = volume_cap(res, b, rules)
     if amount > cap:
         errs.append(f"{amount} is over the volume cap of {cap} a month on the {market_kind(b)} market")
@@ -129,6 +131,21 @@ def buy_errors(order: dict, b: dict, prev: dict | None, rules: BuyRules, idle: s
     return errs
 
 
+def keep_placed(order: dict, placed: float, errors: Callable[[dict], list[str]]) -> tuple[dict | None, list[str]]:
+    """(`order`, []) when `errors` finds nothing wrong with it. When it raises an order the save holds
+    (`placed`, a smaller amount) and breaks a rule that the amount in place does not, (that order at
+    its amount, the raise's errors): the raise is refused and the order in place is not removed. Else
+    (None, its errors)."""
+    errs = errors(order)
+    if not errs:
+        return order, []
+    if 0 < placed < int(order.get("amount") or 0):
+        kept = {**order, "amount": int(placed)}
+        if not errors(kept):
+            return kept, errs
+    return None, errs
+
+
 def cover_candidates(b: dict, limits: ActionLimits) -> list[tuple[float, dict]]:
     """Deficits with ai_cover_months..cover_months of stock left (strategic_cover_months for the
     strategic resources), most urgent first: (months of cover, buy 1.2 x the deficit, capped by the
@@ -152,10 +169,12 @@ def cover_candidates(b: dict, limits: ActionLimits) -> list[tuple[float, dict]]:
 
 def idle_fill(b: dict, prev: dict | None, limits: ActionLimits, idle: set[str], measured: set[str],
               blocked: Callable[[str, str], str | None] | None = None, *,
-              placed: Callable[[dict], bool] = lambda _o: False) -> tuple[dict | None, str]:
+              placed: Callable[[dict], float] = lambda _o: 0) -> tuple[dict | None, str]:
     """The order that fills an empty slot while trade is IDLE: the first deficit-cover candidate that
     passes every buy rule, whose start amount is `measured`, and that `blocked(side, resource)` does
-    not hold back (a suspension). (order, "") or (None, why nothing qualifies)."""
+    not hold back (a suspension); a candidate raising the order in place (`placed(order)`: its amount)
+    past a rule keeps that order at its amount. (order, "" or why it was kept) or (None, why nothing
+    qualifies)."""
     rules = limits.buy
     if rules is None:
         return None, "no buy rules"
@@ -173,9 +192,10 @@ def idle_fill(b: dict, prev: dict | None, limits: ActionLimits, idle: set[str], 
         if held:
             why.append(f"{res}: {held}")
             continue
-        errs = buy_errors(o, b, prev, rules, idle, placed=placed(o))
-        if errs:
+        have = placed(o)
+        got, errs = keep_placed(o, have, lambda x, have=have: buy_errors(x, b, prev, rules, idle, placed=have))
+        if got is None:
             why.append(f"{res}: {'; '.join(errs)}")
             continue
-        return o, ""
+        return got, (f"kept at the {got['amount']} in place, not {o['amount']}: {'; '.join(errs)}" if errs else "")
     return None, " | ".join(why)

@@ -316,7 +316,7 @@ Rules:
   most once per autosave; trade is not a market resource).
 - **Market buy rules** (`[actions.market.buy]` in pillars.toml): every buy, declared or automatic,
   keeps 2,500 trade after a year of its cost over the trade income, costs at most a quarter of that
-  income plus the surplus over two years, is not placed above +50% price (not kept above +100%), stays
+  income plus the surplus over two years, is not placed or raised above +50% price (an order in place is kept at its amount up to +100%), stays
   within one base amount a month (six on the galactic market), and is never a resource the AI buys
   itself (under 6 months of cover, or bought since the last save), an IDLE one, or alloys at 95% of
   naval capacity. While trade is IDLE and no declared order passes, the slot is filled with deficit

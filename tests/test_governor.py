@@ -4494,6 +4494,22 @@ def test_a_declared_buy_that_breaks_a_buy_rule_is_skipped_and_one_in_place_is_ke
     assert ("market_sync", []) in game.actions
 
 
+def test_a_declared_buy_raising_an_order_in_place_above_plus_50_keeps_the_order_in_place(setup):
+    from pilot.strategy import Pillar
+    s, log = setup
+    game = FakeStellaris([briefing("2250.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"],
+                                               market=[{"side": "buy", "resource": "consumer_goods", "amount": 25}]))
+    placed = {"side": "buy", "resource": "consumer_goods", "amount": 5}
+    g._carry_out_actions(_market_briefing("2250.01.01", fluct={"consumer_goods": 80}, orders=[placed]))
+    assert not any(a[0] == "market_sync" for a in game.actions), "not raised fivefold at +80%, and not removed"
+    assert any("kept buy consumer_goods 5 (25 wanted)" in r and "no raise above +50%" in r for r in _market_log(log)), \
+        _market_log(log)
+    g._carry_out_actions(_market_briefing("2250.02.01", fluct={"consumer_goods": 20}, orders=[placed]))
+    assert ("market_sync", [{"side": "buy", "resource": "consumer_goods", "amount": 25}]) in game.actions
+
+
 def test_idle_trade_fills_the_empty_slot_with_deficit_cover_and_follows_it(setup):
     s, log = setup
     game = FakeStellaris([briefing("2250.01.01")])

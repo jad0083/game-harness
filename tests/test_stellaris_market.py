@@ -57,9 +57,22 @@ def test_the_price_guard_skips_above_50_and_never_buys_above_100():
     at = lambda pct: empire(fluct={"minerals": pct})
     assert buy_errors(buy("minerals", 10), at(49), None, RULES, set()) == []
     assert any("+51%" in e and "50%" in e for e in buy_errors(buy("minerals", 10), at(51), None, RULES, set()))
-    assert buy_errors(buy("minerals", 10), at(80), None, RULES, set(), placed=True) == [], \
+    assert buy_errors(buy("minerals", 10), at(80), None, RULES, set(), placed=10) == [], \
         "an order already placed is kept while the price stays at +100% or less"
-    assert any("100%" in e for e in buy_errors(buy("minerals", 10), at(101), None, RULES, set(), placed=True))
+    assert any("100%" in e for e in buy_errors(buy("minerals", 10), at(101), None, RULES, set(), placed=10))
+
+
+def test_the_price_guard_counts_a_raise_as_a_new_order():
+    """The +100% allowance covers the amount already in the save; buying more above +50% is a new order."""
+    at80 = empire(fluct={"minerals": 80})
+    errs = buy_errors(buy("minerals", 25), at80, None, RULES, set(), placed=5)
+    assert any("no raise above +50%" in e and "5 in place" in e for e in errs), errs
+    assert buy_errors(buy("minerals", 25), at80, None, RULES, set(), placed=25) == []
+    assert buy_errors(buy("minerals", 5), at80, None, RULES, set(), placed=25) == [], "a smaller order is no new buy"
+    b = empire(stock={"minerals": 300}, net={"minerals": -20.0}, fluct={"minerals": 80})
+    assert idle_fill(b, None, LIMITS, {"trade"}, MEASURED, placed=lambda o: 10)[0] == buy("minerals", 10), \
+        "the fill in place stays at its amount rather than growing to 24 at +80%"
+    assert idle_fill(b, None, LIMITS, {"trade"}, MEASURED, placed=lambda o: 0)[0] is None
 
 
 def test_the_volume_cap_is_one_base_amount_internal_and_six_galactic():

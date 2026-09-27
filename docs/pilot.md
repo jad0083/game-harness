@@ -334,7 +334,9 @@ in the save is then removed, as a sell that no longer fits):
 - the reserve: trade - 12 x (cost over the monthly trade income) must leave 2,500 (where the AI's own
   market spending starts); the spend cap: cost <= 0.25 x trade income + (trade - 2,500) / 24 (0.5 of
   the income for alloys in a war crisis);
-- the price guard: no new order above +50%; an order already placed stays up to +100%;
+- the price guard: no new order above +50%; an order already placed stays up to +100%, but buying
+  more of it than its amount in the save is a new order (above +50% the order in place stays at its
+  amount, for a declared buy, the idle-trade fill and the crisis alloys alike);
 - the volume: at most one base amount a month on the internal market, six on the galactic one
   (alloys 25 or 150, consumer goods 50 or 300, motes, gases and crystals 10 or 60);
 - never what the AI buys anyway: a deficit with under 6 months of stock (the AI buys there itself),

@@ -37,7 +37,7 @@ from .events import EventLog
 from .learning import Journal, LearnedStore, LearningRejected
 from .pillars import ACTION_KINDS, OrdersSpec, PillarsError, PillarSpec, load_pillars, load_postures
 from .stellaris_crisis import CRISIS_PACE, POSTURE_GAP_MONTHS, crisis_alloys, crisis_step, status_quo
-from .stellaris_market import buy_errors, idle_fill
+from .stellaris_market import buy_errors, idle_fill, keep_placed
 from .stellaris_planets import (
     colony_row,
     low_stability,
@@ -1387,12 +1387,13 @@ class Governor:
         if not self._crisis_on() or not self._ladder_allowed() or "market" not in self.pillars.actions:
             return None
         try:
-            placed = any((o.get("side"), o.get("resource")) == ("buy", "alloys") for o in b.get("market_orders") or [])
             order, why = crisis_alloys(b, self._prev_save, self.pillars.actions["market"], idle,
                                        self._market_measured - self._market_unmeasured, self._market_suspension,
-                                       placed=placed)
+                                       placed=self._placed("buy", "alloys", b.get("market_orders") or []))
         except Exception as e:  # noqa: BLE001 - a malformed save never stops play
             order, why = None, f"{type(e).__name__}: {e}"
+        if order is not None and why and later:
+            self._log_action("market", f"war crisis: buy alloys {why}"[:300])
         if order is None:
             if later:
                 self._log_action("market", f"war crisis: no alloys bought ({why})"[:300])
@@ -1841,11 +1842,17 @@ class Governor:
                     self._log_action("market", f"skipped {o.side} {o.resource} {o.amount}: the war crisis alloys "
                                                "order takes the slot")
                 continue
-            errs = market_briefing_errors(o, limits, idle, income) + self._buy_errors(o.model_dump(), b, current, idle)
+            errs = market_briefing_errors(o, limits, idle, income)
+            kept, errs = (None, errs) if errs else keep_placed(
+                o.model_dump(), self._placed(o.side, o.resource, current) if o.side == "buy" else 0,
+                lambda x: self._buy_errors(x, b, current, idle))
             if errs:     # a sell or buy that does not fit today's briefing (e.g. a pinned or older order)
-                if later:
+                if later:  # a raise of an order in place that breaks a rule keeps that order at its amount
                     what = f"sell {o.resource}" if o.side == "sell" else f"buy {o.resource} {o.amount}"
-                    self._log_action("market", f"skipped {what}: {'; '.join(errs)}"[:300])
+                    self._log_action("market", ((f"kept buy {o.resource} {kept['amount']} ({o.amount} wanted)" if kept
+                                                 else f"skipped {what}") + f": {'; '.join(errs)}")[:300])
+                if kept:
+                    desired.append(kept)
                 continue
             blocked = ("start amount not measured (the controller refuses to add it)"
                        if o.resource in self._market_unmeasured else self._market_suspension(o.side, o.resource))
@@ -1898,15 +1905,21 @@ class Governor:
 
     def _buy_errors(self, o: dict, b: dict, current: list[dict], idle: set[str], *, crisis: bool = False) -> list[str]:
         """Why buy `o` breaks the buy rules on save `b` (ruling 9); [] for a sell or without rules. An
-        order of that resource already in the save is kept up to the "never" price."""
+        order of that resource already in the save is kept up to the "never" price, up to its amount."""
         rules = self.pillars.actions["market"].buy if self.pillars and "market" in self.pillars.actions else None
         if rules is None or o.get("side") != "buy":
             return []
-        placed = any((c.get("side"), c.get("resource")) == ("buy", o.get("resource")) for c in current)
         try:
-            return buy_errors(o, b, self._prev_save, rules, idle, placed=placed, crisis=crisis)
+            return buy_errors(o, b, self._prev_save, rules, idle, placed=self._placed("buy", o.get("resource"), current),
+                              crisis=crisis)
         except Exception as e:  # noqa: BLE001 - a malformed save never stops play; the buy waits
             return [f"buy rules: {type(e).__name__}: {e}"]
+
+    @staticmethod
+    def _placed(side: str, resource: str | None, current: list[dict]) -> int:
+        """The amount of `side` `resource` the save's market orders hold (0: none)."""
+        return max((int(c.get("amount") or 0) for c in current if (c.get("side"), c.get("resource")) == (side, resource)),
+                   default=0)
 
     def _idle_fill(self, b: dict, desired: list[dict], current: list[dict], idle: set[str],
                    limits) -> tuple[dict | None, str]:
@@ -1916,7 +1929,7 @@ class Governor:
         rules = limits.buy
         if desired or rules is None or not rules.idle_fill or "trade" not in idle:
             return None, ""
-        placed = lambda o: any((c.get("side"), c.get("resource")) == (o["side"], o["resource"]) for c in current)
+        placed = lambda o: self._placed(o["side"], o["resource"], current)
         try:
             order, why = idle_fill(b, self._prev_save, limits, idle, self._market_measured - self._market_unmeasured,
                                    self._market_suspension, placed=placed)
@@ -1924,7 +1937,7 @@ class Governor:
             return None, f"trade idle: the fill failed ({type(e).__name__}: {e})"
         if order is None:
             return None, f"trade idle: nothing qualifies to buy ({why})"
-        return order, f"trade idle: filled with buy {order['resource']} {order['amount']} (deficit cover)"
+        return order, f"trade idle: filled with buy {order['resource']} {order['amount']} (deficit cover{'; ' + why if why else ''})"
 
     @staticmethod
     def _market_changes(wanted: list[dict], current: list[dict]) -> list[dict]:

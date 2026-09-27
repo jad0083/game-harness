@@ -17,7 +17,7 @@ defend, posture, crisis alloys, cadence 3, the status-quo question) while it is 
 from __future__ import annotations
 
 from .pillars import ActionLimits
-from .stellaris_market import buy_errors, naval_use, unit_price, volume_cap
+from .stellaris_market import buy_errors, keep_placed, naval_use, unit_price, volume_cap
 
 RECENT_MONTHS = 12
 SYSTEMS_LOST = 2
@@ -141,12 +141,14 @@ def status_quo(now: dict, rows: list[dict], conds: list[tuple[str, str]]) -> lis
 
 
 def crisis_alloys(b: dict, prev: dict | None, limits: ActionLimits, idle: set[str], measured: set[str],
-                  blocked=None, *, placed: bool = False) -> tuple[dict | None, str]:
+                  blocked=None, *, placed: float = 0) -> tuple[dict | None, str]:
     """The war crisis market step (ruling 13, step 5): buy alloys when a shipyard sits in a system we
     control, naval use is known under 95% (or unknown with under 1,000 alloys in stock), alloys are not
     IDLE, their start amount is measured and every buy rule passes at the crisis cap. The amount is the
-    most the crisis cap and the reserve allow, at most the volume cap and amount_max; an order already
-    `placed` keeps the price guard's +100% limit, as any buy in place. (order, "") or (None, why not)."""
+    most the crisis cap and the reserve allow, at most the volume cap and amount_max; the order already
+    in the save (`placed`: its amount) keeps the price guard's +100% limit, as any buy in place, and
+    stays at its amount when a larger one breaks a rule (above +50%: no raise). (order, "" or why it was
+    kept at its amount) or (None, why not)."""
     rules = limits.buy
     if rules is None or "alloys" not in limits.resources:
         return None, "no alloys buy rules"
@@ -172,7 +174,7 @@ def crisis_alloys(b: dict, prev: dict | None, limits: ActionLimits, idle: set[st
     amount = min(int(budget // price) if price and budget > 0 else 0, volume_cap("alloys", b, rules),
                  limits.amount_max or 10 ** 6)
     order = {"side": "buy", "resource": "alloys", "amount": max(amount, limits.amount_min)}
-    errs = buy_errors(order, b, prev, rules, idle, placed=placed, crisis=True)
-    if amount < limits.amount_min or errs:
+    got, errs = keep_placed(order, placed, lambda o: buy_errors(o, b, prev, rules, idle, placed=placed, crisis=True))
+    if got is None or (got is order and amount < limits.amount_min):
         return None, "; ".join(errs) or "the reserve leaves nothing to spend"
-    return order, ""
+    return got, (f"kept at the {got['amount']} in place, not {order['amount']}: {'; '.join(errs)}" if errs else "")

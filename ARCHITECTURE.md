@@ -429,8 +429,8 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   `order_followed` events reloaded by `_load_action_record` from `Telemetry.campaign_events`; the
   rate via `record.order_record` with Stellaris's outcomes; a market suspension keyed to the hash of
   `[ui.market]`, `market_calibration`), the market buy rules (`stellaris_market.py`, pure:
-  `unit_price`, `buy_errors` (reserve, spend cap, price guard, volume, the AI's own buys, IDLE, naval
-  room), `idle_fill` (deficit cover while trade is IDLE); numbers in `BuyRules`, `[actions.market.buy]`;
+  `unit_price`, `buy_errors` (reserve, spend cap, price guard up to the amount in place, volume, the
+  AI's own buys, IDLE, naval room), `keep_placed` (a refused raise keeps the order in place), `idle_fill` (deficit cover while trade is IDLE); numbers in `BuyRules`, `[actions.market.buy]`;
   the governor's `_buy_errors`/`_idle_fill` in `_carry_out_market_actions`, the save before the newest
   kept by `_follow`, the fill's line shown to the next decision; a buy that took but trades nothing in
   2 saves (`market.trades_net`) is recorded `took` by "not executing"), the planet check
