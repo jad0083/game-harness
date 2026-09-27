@@ -23,7 +23,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-const VERSION: &str = "1.4.0";
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 const DEFAULT_PORT: u16 = 8765;
 
 #[derive(Parser, Debug)]
@@ -944,6 +944,11 @@ mod tests {
         assert!(!token_matches("abc12", "abc123"));
         assert!(!token_matches("abc1234", "abc123"));
         assert!(!token_matches("", "abc123"));
+    }
+
+    #[test]
+    fn reported_version_is_the_crate_version() {
+        assert_eq!(VERSION, "1.5.0");
     }
 
     #[test]

@@ -177,6 +177,10 @@ wiki prose in `docs/`. Never hand-edit `corpora/galciv4/data/`.
 - Agent **1.4** adds `win`, `num0`–`num9`, `add`/`subtract` (numpad +/-), and `plus`/`+`; older agents
   lack them (focus windows by title instead of `win+r`). It runs without a console window and
   logs to `%LOCALAPPDATA%\GameAgent\agent.log`.
+- Agent **1.5** refuses to start with a token under 32 characters (see agent.log), returns at most
+  16 MiB per `/files/read` (the controller pages larger files), and refuses Windows device names,
+  names ending in a dot or space, UNC paths and `:` in file paths; its installer pins the exe by
+  SHA-256 and limits the firewall rule to the controller on Private networks.
 - Full list: `issues.md`.
 
 ## 8. Recording what you learn (required)
