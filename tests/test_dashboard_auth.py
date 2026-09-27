@@ -818,3 +818,46 @@ def test_a_recreated_store_without_a_record_of_the_window_keeps_it_shut(tmp_path
         p.unlink()
     a2 = A.Auth.from_env(runs, key=KEY, clock=clock)
     assert a2.store.recreated and not a2.legacy_open()
+
+
+def test_the_conflict_notice_lasts_24_hours_whatever_the_network_logs(tmp_path, clock):
+    """Anyone on the LAN adds audit rows without signing in (bad Host names, wrong words); 100 minutes
+    of that must not push ruling 42's warning out of /api/auth/me before its 24 hours are up."""
+    app, auth = viewer(tmp_path, clock)
+    _, cookie = browser_cookie(auth)
+    auth.store.audit("grant_conflict", "192.168.1.203", None, {"grant": "g1", "device": "Brave on Windows"})
+    for _ in range(100):
+        clock.t += 60
+        auth.store.audit("host_refused", "192.168.1.9", detail={"host": "evil.example"})
+        auth.store.audit("signin_failed", "192.168.1.9", detail={"how": "words"})
+
+    async def go():
+        async with client(app, cookie) as c:
+            first = (await (await c.get("/api/auth/me")).json())["notices"]
+            clock.t += A.NOTICE_S
+            return first, (await (await c.get("/api/auth/me")).json())["notices"]
+    first, later = asyncio.run(go())
+    assert any(n["kind"] == "conflict" and "192.168.1.203" in n["text"] for n in first)
+    assert not any(n["kind"] == "conflict" for n in later)
+
+
+def test_one_address_cannot_flood_the_audit(tmp_path, clock, monkeypatch):
+    """Failures from one address add at most a few rows an hour (later ones only raise a count), and
+    when the table is over its limit the network's noise goes before real events."""
+    store = A.AuthStore(tmp_path / "auth.sqlite", clock=clock)
+    store.audit("signin", "192.168.1.77", "abcdef0123", {"how": "link"})
+    for _ in range(120):                                     # two hours, two noise rows a minute
+        clock.t += 60
+        store.audit("host_refused", "192.168.1.9")
+        store.audit("signin_failed", "192.168.1.9")
+    rows = [r for r in store.audit_rows(10_000) if r["ip"] == "192.168.1.9"]
+    assert len(rows) <= 2 * A.AUDIT_PER_IP_HOUR + 2
+    assert sum(r["count"] for r in rows) == 240                # nothing lost from the counts
+    monkeypatch.setattr(A, "AUDIT_MAX_ROWS", 10)
+    for i in range(40):                                      # many addresses, one row each
+        store.audit("host_refused", f"192.168.2.{i}")
+    store.audit("grant_conflict", "192.168.1.203", None, {"grant": "g1"})
+    store.housekeeping()
+    left = store.audit_rows(10_000)
+    assert len(left) <= 10
+    assert {"signin", "grant_conflict"} <= {r["event"] for r in left}

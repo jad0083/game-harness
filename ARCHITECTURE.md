@@ -408,7 +408,8 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
 - `auth.py` (the viewer's sign-in): `KeySource` (K from env, a fixed key or `runs/dashboard.key`,
   re-stat at most every 2 s, re-read on mtime/inode/size or after a refusal), `AuthStore`
   (`runs/auth.sqlite`, 0600 before SQLite opens it, WAL, busy_timeout; `devices` for browsers and
-  scripts with only `sha256(secret)`, `grants`, `auth_events` aggregated per event/IP/minute,
+  scripts with only `sha256(secret)`, `grants`, `auth_events` aggregated per event/IP/minute
+  (an address's network-caused failures add at most 10 rows an hour, and are pruned first past 10,000),
   `meta` with the carry-over window, which `runs/dashboard.carryover` keeps too so a new store
   neither reopens nor extends it; a corrupt file is moved aside; housekeeping at start and
   hourly), `Throttle` (in memory, per IPv4 address or IPv6 /64 and overall, reserve-before-await),

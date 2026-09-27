@@ -68,6 +68,8 @@ GRANT_KEEP_S = DAY                       # spent grants are kept this long (a se
 NOTICE_S = DAY
 KEEPALIVE_S = 15.0
 AUDIT_KEEP_S, AUDIT_MAX_ROWS = 90 * DAY, 10_000
+AUDIT_PER_IP_HOUR = 10                   # rows one address's failures may add in an hour; later ones only count
+NOISE_EVENTS = ("host_refused", "signin_failed", "throttled", "service_key_refused_lan")   # anyone on the LAN adds these
 NAME_MAX = 60
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 # public routes (POST /pair/key is answered only when PILOT_KEY_SIGNIN is on; otherwise it is a 404)
@@ -503,12 +505,22 @@ class AuthStore:
 
     # -- audit: one row per (event, ip, minute), with a count; never a secret
     def audit(self, event: str, ip: str | None = None, device_id: str | None = None, detail: dict | None = None) -> None:
+        """One row per (event, ip, minute), with a count. Failures anyone on the network can cause add at
+        most AUDIT_PER_IP_HOUR rows per address an hour; after that they only raise the newest row's
+        count, so a flood cannot push real events out of the table."""
         now = self.now()
         minute = int(now // 60) * 60
         with self._lock:
             row = self.db.execute("SELECT id FROM auth_events WHERE event=? AND ip IS ? AND t>=? AND t<? "
                                   "AND device_id IS ? ORDER BY id DESC LIMIT 1",
                                   (event, ip, minute, minute + 60, device_id)).fetchone()
+            if not row and event in NOISE_EVENTS and ip:
+                marks = ",".join("?" * len(NOISE_EVENTS))
+                recent = self.db.execute(f"SELECT COUNT(*) FROM auth_events WHERE ip=? AND t>? AND event IN ({marks})",
+                                         (ip, now - 3600, *NOISE_EVENTS)).fetchone()[0]
+                if recent >= AUDIT_PER_IP_HOUR:
+                    row = self.db.execute("SELECT id FROM auth_events WHERE event=? AND ip=? ORDER BY id DESC LIMIT 1",
+                                          (event, ip)).fetchone()
             if row:
                 self.db.execute("UPDATE auth_events SET count=count+1 WHERE id=?", (row["id"],))
             else:
@@ -517,6 +529,9 @@ class AuthStore:
 
     def audit_rows(self, n: int = 1000) -> list[dict]:
         return self._rows("SELECT * FROM auth_events ORDER BY t DESC, id DESC LIMIT ?", (n,))
+
+    def audit_since(self, event: str, t: float) -> list[dict]:
+        return self._rows("SELECT * FROM auth_events WHERE event=? AND t>? ORDER BY t DESC, id DESC", (event, t))
 
     # -- devices (browsers and scripts)
     def create_device(self, kind: str, *, name: str, created_via: str, created_by: str | None = None,
@@ -790,6 +805,11 @@ class AuthStore:
             self.db.execute("DELETE FROM devices WHERE revoke_reason='idle' AND revoked_at < ?", (now - PRUNE_S,))
             self.db.execute("DELETE FROM grants WHERE created_at < ?", (now - GRANT_KEEP_S,))
             self.db.execute("DELETE FROM auth_events WHERE t < ?", (now - AUDIT_KEEP_S,))
+            over = self.db.execute("SELECT COUNT(*) FROM auth_events").fetchone()[0] - AUDIT_MAX_ROWS
+            if over > 0:                    # the network's noise goes first, oldest first
+                marks = ",".join("?" * len(NOISE_EVENTS))
+                self.db.execute(f"DELETE FROM auth_events WHERE id IN (SELECT id FROM auth_events WHERE event IN ({marks})"
+                                " ORDER BY t, id LIMIT ?)", (*NOISE_EVENTS, over))
             self.db.execute("DELETE FROM auth_events WHERE id NOT IN (SELECT id FROM auth_events ORDER BY t DESC"
                             " LIMIT ?)", (AUDIT_MAX_ROWS,))
 
@@ -1238,13 +1258,12 @@ class Auth:
                             "at": d["last_seen_at"],
                             "text": f"{d['name']} was used from two addresses ({d['prev_ip']} and {d['last_ip']}) "
                                     "within 10 minutes. Review devices."})
-        for e in self.store.audit_rows(200):
-            if e["event"] == "grant_conflict" and now - e["t"] < NOTICE_S:
-                detail = json.loads(e["detail"] or "{}")
-                out.append({"kind": "conflict", "id": f"conflict:{e['id']}", "at": e["t"],
-                            "text": f"A used sign-in code was tried again from {e['ip'] or 'an unknown address'}. "
-                                    f"The browser it had signed in ({detail.get('device') or 'unknown'}) was signed out. "
-                                    "Review devices."})
+        for e in self.store.audit_since("grant_conflict", now - NOTICE_S):   # 24 h, however much else was logged
+            detail = json.loads(e["detail"] or "{}")
+            out.append({"kind": "conflict", "id": f"conflict:{e['id']}", "at": e["t"],
+                        "text": f"A used sign-in code was tried again from {e['ip'] or 'an unknown address'}. "
+                                f"The browser it had signed in ({detail.get('device') or 'unknown'}) was signed out. "
+                                "Review devices."})
         return out
 
     def device_view(self, d: dict, me: str, now: float) -> dict:
