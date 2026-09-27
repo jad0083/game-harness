@@ -304,9 +304,9 @@ async fn main() -> Result<()> {
             } else {
                 let manifest = corpus::GameCorpus::load_from_dir(&dir)?.manifest;
                 let pause = stellaris::PauseDetector::from_manifest(&manifest)?;
-                let lines = stellaris::apply_directive(&client, &directives, &name, Some(&pause)).await?;
-                println!("Applied directive {name} (confirmed in game.log):");
-                for l in lines {
+                let applied = stellaris::apply_directive(&client, &directives, &name, Some(&pause)).await?;
+                println!("Applied directive {name} (confirmed in game.log). {}", applied.summary());
+                for l in &applied.lines {
                     println!("  {l}");
                 }
             }

@@ -842,6 +842,12 @@ impl Directives {
     /// The empire must be player-controlled with `human_ai` on (see `take_control`); the
     /// confirmation line is logged only when the effect has a real country scope, so a directive
     /// sent in observer mode fails loudly instead of silently doing nothing.
+    ///
+    /// Each policy is set as a player could: only if `can_set_policy` holds (the 10-year lock, the
+    /// group's `allow` such as no stance change at war, the option's `potential`) and the option's
+    /// `valid` (`conditions`), with `cooldown = yes` starting the player's lock; a `GOVERNOR_POLICY`
+    /// marker inside the branch reports it. One line per policy keeps every line within the length
+    /// verified live; the flag and the confirmation come last, after every policy has run.
     pub fn console_lines(&self, name: &str, nonce: &str) -> Result<Vec<String>> {
         let Some(def) = self.directive.get(name) else {
             bail!("unknown directive {name:?}; known: {}", self.directive.keys().cloned().collect::<Vec<_>>().join(", "))
@@ -856,17 +862,65 @@ impl Directives {
         if !others.is_empty() {
             lines.push(format!("effect {}", others.join(" ")));
         }
-        let mut apply = format!("effect set_country_flag = governor_directive_{name}");
         for (policy, option) in &def.policies {
-            let set = format!("set_policy = {{ policy = {policy} option = {option} cooldown = no }}");
-            match def.conditions.get(policy) {
-                Some(c) => apply += &format!(" if = {{ limit = {{ {c} }} {set} }}"),
-                None => apply += &format!(" {set}"),
+            let mut limit = format!("can_set_policy = {{ policy = {policy} option = {option} }}");
+            if let Some(c) = def.conditions.get(policy) {
+                limit += &format!(" {c}");
             }
+            lines.push(format!(
+                "effect if = {{ limit = {{ {limit} }} set_policy = {{ policy = {policy} option = {option} cooldown = yes }} log = \"{}\" }}",
+                policy_marker(policy, option, nonce)
+            ));
         }
-        apply += &format!(" {}", scoped_log(&applied_marker(name, nonce)));
-        lines.push(apply);
+        lines.push(format!("effect set_country_flag = governor_directive_{name} {}", scoped_log(&applied_marker(name, nonce))));
         Ok(lines)
+    }
+}
+
+/// A (policy, option) pair, e.g. ("economic_policy", "economic_policy_civilian").
+pub type PolicyOption = (String, String);
+
+/// Text written to game.log when a directive set `policy` to `option` (see `console_lines`).
+pub fn policy_marker(policy: &str, option: &str, nonce: &str) -> String {
+    format!("GOVERNOR_POLICY {policy} {option} {nonce}")
+}
+
+/// The (policy, option) pairs whose `GOVERNOR_POLICY` marker with this `nonce` is in `log`.
+pub fn policy_markers(log: &str, nonce: &str) -> Vec<PolicyOption> {
+    const TAG: &str = "GOVERNOR_POLICY ";
+    log.lines()
+        .filter_map(|l| {
+            let mut it = l[l.find(TAG)? + TAG.len()..].split_whitespace();
+            let (policy, option, n) = (it.next()?, it.next()?, it.next()?);
+            (n == nonce).then(|| (policy.to_string(), option.to_string()))
+        })
+        .collect()
+}
+
+/// A directive's policies split by whether the game reported setting them: `set` (a marker
+/// appeared) and `locked` (none did: `can_set_policy` or the option's `valid` said no).
+pub fn policy_outcome(def: &DirectiveDef, seen: &[PolicyOption]) -> (Vec<PolicyOption>, Vec<PolicyOption>) {
+    def.policies.iter().map(|(p, o)| (p.clone(), o.clone())).partition(|pair| seen.contains(pair))
+}
+
+/// What applying a directive did: the console lines sent and which policies the game set.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Applied {
+    pub lines: Vec<String>,
+    pub set: Vec<PolicyOption>,
+    pub locked: Vec<PolicyOption>,
+}
+
+impl Applied {
+    /// "Policies set: a=b. Policies locked (…): c=d." (`none` for an empty list).
+    pub fn summary(&self) -> String {
+        let list = |v: &[PolicyOption]| {
+            if v.is_empty() { "none".to_string() } else { v.iter().map(|(p, o)| format!("{p}={o}")).collect::<Vec<_>>().join(", ") }
+        };
+        format!(
+            "Policies set: {}. Policies locked (not set: the 10-year policy lock, a rule such as no stance change at war, or the option is not valid now): {}.",
+            list(&self.set), list(&self.locked)
+        )
     }
 }
 
@@ -888,13 +942,19 @@ pub fn nonce() -> String {
 
 /// Poll game.log (written with a few seconds' delay) for `marker` after byte `offset`.
 async fn wait_for_log(client: &crate::client::AgentClient, offset: u64, marker: &str) -> Result<bool> {
+    Ok(wait_for_log_text(client, offset, marker).await?.is_some())
+}
+
+/// Like `wait_for_log`, returning the log text after `offset` once it holds `marker`.
+async fn wait_for_log_text(client: &crate::client::AgentClient, offset: u64, marker: &str) -> Result<Option<String>> {
     for _ in 0..16 {
         tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-        if read_log_since(client, offset).await?.0.contains(marker) {
-            return Ok(true);
+        let (text, _) = read_log_since(client, offset).await?;
+        if text.contains(marker) {
+            return Ok(Some(text));
         }
     }
-    Ok(false)
+    Ok(None)
 }
 
 /// A `log` effect that runs only with a real country scope (verified 2026-09-25: logged while
@@ -1386,13 +1446,14 @@ pub async fn read_log_since(client: &crate::client::AgentClient, offset: u64) ->
     Ok((String::from_utf8_lossy(&bytes).into_owned(), size))
 }
 
-/// Apply a directive and confirm it from game.log. Returns the console lines sent.
+/// Apply a directive and confirm it from game.log. Returns the console lines sent and which
+/// policies the game set (their markers precede the confirmation, which runs last).
 pub async fn apply_directive(
     client: &crate::client::AgentClient,
     directives: &Directives,
     name: &str,
     pause: Option<&PauseDetector>,
-) -> Result<Vec<String>> {
+) -> Result<Applied> {
     let tag = nonce();
     let lines = directives.console_lines(name, &tag)?;
     let (_, before) = client.files_read(DOCS_ROOT, "logs/game.log", 0, Some(0)).await?;
@@ -1413,8 +1474,9 @@ pub async fn apply_directive(
         p.set_paused(client, false).await?;
     }
     let marker = applied_marker(name, &tag);
-    if wait_for_log(client, before, &marker).await? {
-        return Ok(lines);
+    if let Some(log) = wait_for_log_text(client, before, &marker).await? {
+        let (set, locked) = policy_outcome(&directives.directive[name], &policy_markers(&log, &tag));
+        return Ok(Applied { lines, set, locked });
     }
     bail!("directive {name} sent but {marker:?} did not appear in game.log: the empire is probably in observer \
            mode or the console did not take the line; run `stellaris take-control`")
@@ -2643,25 +2705,70 @@ mod tests {
     fn directive_console_lines_take_control_apply_and_hand_back() {
         let d = directives();
         let lines = d.console_lines("expand", "k3x9").unwrap();
-        assert_eq!(lines.len(), 2, "no play/observe: the empire stays player-controlled under human_ai");
+        // remove the other directives' flags, one line per policy, then flag + confirmation last
+        assert_eq!(lines.len(), 2 + d.directive["expand"].policies.len());
+        assert!(lines.iter().all(|l| l.starts_with("effect ") && !l.contains("play ") && !l.contains("observe")),
+                "no play/observe: the empire stays player-controlled under human_ai");
         assert!(lines[0].starts_with("effect remove_country_flag = governor_directive_"));
         assert!(!lines[0].contains("governor_directive_expand "));
-        let apply = &lines[1];
-        assert!(apply.contains("set_country_flag = governor_directive_expand"));
-        // each policy is set only when the game would allow it (the option's `valid` block)
-        assert!(apply.contains("if = { limit = { is_homicidal = no } set_policy = { policy = diplomatic_stance option = diplo_stance_expansionist cooldown = no } }"), "{apply}");
-        assert!(apply.contains("if = { limit = { is_homicidal = no is_xenophobe = no NOT = { has_origin = origin_payback } } set_policy = { policy = first_contact_protocol option = first_contact_proactive cooldown = no } }"), "{apply}");
-        assert!(apply.ends_with("if = { limit = { exists = capital_scope } log = \"GOVERNOR_APPLIED expand k3x9\" }"));
-        for name in d.directive.keys() {
-            let ls = d.console_lines(name, "k3x9").unwrap();
-            assert!(ls.iter().all(|l| l.len() < 1000), "{name}: agent /type limit");
-        }
+        let last = lines.last().unwrap();
+        assert_eq!(last, "effect set_country_flag = governor_directive_expand if = { limit = { exists = capital_scope } log = \"GOVERNOR_APPLIED expand k3x9\" }");
+        // each policy is set only where a player could set it (can_set_policy: the lock, the group's
+        // `allow`, the option's `potential`) and under the option's `valid`, with the player's lock
+        assert!(lines.contains(&"effect if = { limit = { can_set_policy = { policy = diplomatic_stance option = diplo_stance_expansionist } is_homicidal = no } set_policy = { policy = diplomatic_stance option = diplo_stance_expansionist cooldown = yes } log = \"GOVERNOR_POLICY diplomatic_stance diplo_stance_expansionist k3x9\" }".to_string()), "{lines:#?}");
+        assert!(lines.contains(&"effect if = { limit = { can_set_policy = { policy = first_contact_protocol option = first_contact_proactive } is_homicidal = no is_xenophobe = no NOT = { has_origin = origin_payback } } set_policy = { policy = first_contact_protocol option = first_contact_proactive cooldown = yes } log = \"GOVERNOR_POLICY first_contact_protocol first_contact_proactive k3x9\" }".to_string()), "{lines:#?}");
         assert!(d.console_lines("nuke_everyone", "x").is_err());
         assert!(check_condition("is_xenophobe = no NOT = { has_origin = origin_payback }").is_ok());
         assert!(check_condition("is_xenophobe = no } add_resource = { energy = 1").is_err(), "unbalanced braces");
         assert!(check_condition("is_xenophobe = no\"").is_err(), "quotes could end the console line's strings");
         let (a, b) = (nonce(), { std::thread::sleep(std::time::Duration::from_millis(2)); nonce() });
         assert!(a != b && a.chars().all(|c| c.is_ascii_alphanumeric()), "{a} {b}");
+    }
+
+    #[test]
+    fn every_directive_obeys_can_set_policy_and_the_lock_and_marks_each_branch() {
+        let d = directives();
+        for (name, def) in &d.directive {
+            let lines = d.console_lines(name, "muihgsm7").unwrap();
+            // one branch per policy: the guard, the set with the 10-year lock, and its own marker
+            for (policy, option) in &def.policies {
+                let line = lines.iter().find(|l| l.contains(&format!(" set_policy = {{ policy = {policy} option = {option} ")))
+                    .unwrap_or_else(|| panic!("{name}: no line sets {policy}"));
+                assert!(line.starts_with(&format!("effect if = {{ limit = {{ can_set_policy = {{ policy = {policy} option = {option} }}")), "{line}");
+                if let Some(c) = def.conditions.get(policy) {
+                    assert!(line.contains(&format!("}} {c} }} set_policy")), "the option's valid stays in the limit: {line}");
+                }
+                assert!(line.ends_with(&format!("set_policy = {{ policy = {policy} option = {option} cooldown = yes }} log = \"GOVERNOR_POLICY {policy} {option} muihgsm7\" }}")),
+                        "the marker is inside the branch, after the set: {line}");
+            }
+            let all = lines.join("\n");
+            assert!(!all.contains("cooldown = no"), "{name}: never skip the player's lock");
+            assert_eq!(all.matches(" set_policy = {").count(), def.policies.len(), "{name}");
+            assert_eq!(all.matches("can_set_policy = {").count(), def.policies.len(), "{name}");
+            assert_eq!(all.matches("GOVERNOR_POLICY ").count(), def.policies.len(), "{name}");
+            assert!(lines.last().unwrap().contains(&applied_marker(name, "muihgsm7")), "{name}: the confirmation comes last");
+            // no longer than the 529-character line verified live (diplomacy_first, 2026-09-26)
+            assert!(lines.iter().all(|l| l.len() <= 529), "{name}: {:?}", lines.iter().map(|l| l.len()).collect::<Vec<_>>());
+        }
+    }
+
+    #[test]
+    fn policy_markers_split_set_from_locked() {
+        // game.log lines as the game writes them (2026-09-26 log: "[time][effect_impl.cpp]: [date] Log effect …")
+        let log = "[07:26:47][effect_impl.cpp:22191]: [2272.1.1] Log effect, file:  line: 1. GOVERNOR_POLICY economic_policy economic_policy_military k3x9\n\
+                   [07:26:47][effect_impl.cpp:22191]: [2272.1.1] Log effect, file:  line: 1. GOVERNOR_POLICY diplomatic_stance diplo_stance_belligerent oldnonce\n\
+                   [07:26:48][effect_impl.cpp:22191]: [2272.1.1] Log effect, file:  line: 1. GOVERNOR_APPLIED prepare_war k3x9\n";
+        let seen = policy_markers(log, "k3x9");
+        assert_eq!(seen, vec![("economic_policy".to_string(), "economic_policy_military".to_string())], "an older apply's marker is not this one's");
+        let d = directives();
+        let (set, locked) = policy_outcome(&d.directive["prepare_war"], &seen);
+        assert_eq!(set, vec![("economic_policy".to_string(), "economic_policy_military".to_string())]);
+        assert_eq!(locked, vec![("diplomatic_stance".to_string(), "diplo_stance_belligerent".to_string())], "belligerent at war: no marker, so locked");
+        let applied = Applied { lines: vec![], set, locked };
+        assert_eq!(applied.summary(), "Policies set: economic_policy=economic_policy_military. Policies locked (not set: the 10-year policy lock, a rule such as no stance change at war, or the option is not valid now): diplomatic_stance=diplo_stance_belligerent.");
+        let (none, all_locked) = policy_outcome(&d.directive["tech_rush"], &[]);
+        assert!(none.is_empty() && all_locked.len() == 1);
+        assert!(Applied { lines: vec![], set: none, locked: vec![] }.summary().starts_with("Policies set: none. Policies locked"), "a directive without policies reads none");
     }
 
     #[test]

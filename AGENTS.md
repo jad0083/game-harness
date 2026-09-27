@@ -264,6 +264,10 @@ Rules:
   pause|resume` recognises it (`[screens.game_menu]`) and closes it first.
 - Directives are only those in `corpora/stellaris/directives.toml` (identifiers `[a-z0-9_]`); a
   new directive needs policy options that exist in the game's `common/policies`.
+- Directive policies obey the player's rules: each is set only if `can_set_policy` allows it (the
+  10-year lock, no stance change at war) and starts that lock (`cooldown = yes`). game.log gets
+  `GOVERNOR_POLICY <policy> <option> <nonce>` for each policy set; the reply lists the policies set
+  and those locked. A locked policy is not a failure: the flag still changes.
 - Settings used: autosave Monthly (`settings.txt` `autosave=2`), tutorial off.
 - **Weighted pillars** (`[weights]` in pillars.toml): pillars carry weights (sum 100, 5..50, heaviest
   >= 2x lightest); each decision gets every directive's pressure (weight x milestone need) and a

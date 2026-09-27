@@ -2,7 +2,10 @@
 # `game-controller stellaris directive <name>` / MCP `stellaris_directive`, with the game paused:
 #
 #   effect remove_country_flag = governor_directive_<other> …
-#   effect set_country_flag = governor_directive_<name> set_policy = {…} …
+#   effect if = { limit = { can_set_policy = { policy = <p> option = <o> } <conditions.p> }
+#                 set_policy = { policy = <p> option = <o> cooldown = yes }
+#                 log = "GOVERNOR_POLICY <p> <o> <nonce>" }                       (one line per policy)
+#   effect set_country_flag = governor_directive_<name>
 #          if = { limit = { exists = capital_scope } log = "GOVERNOR_APPLIED <name> <nonce>" }
 #
 # The game's AI plays the empire under `human_ai` (see `stellaris take-control`); the player stays
@@ -13,8 +16,12 @@
 # Only policy options that exist in the game's common/policies (4.5.1, read 2026-09-25) are used.
 # Each policy is set only under its option's `valid` trigger (`conditions`, copied from
 # common/policies 4.5.1), because a console set_policy would not check it.
-# A directive never adds resources or modifiers. `set_policy … cooldown = no` skips the normal
-# 10-year lock, so directives should still change rarely (hold each ~12 months).
+# A directive never adds resources or modifiers, and it sets policies only as a player could:
+# `can_set_policy` checks the 10-year lock, the group's `allow` (no diplomatic stance or war
+# philosophy change at war) and the option's `potential` (economic policy is not for gestalts), and
+# `cooldown = yes` starts the player's 10-year lock. Policies are therefore a slow lever, held 10
+# years once set; the flags (and the mod's budgets that read them) are the fast lever. A policy the
+# game did not set is reported as locked (no GOVERNOR_POLICY marker), not as a failure.
 
 [directive.expand]
 description = "Grow: outposts, colonies, exploration. Pick in the opening or while unclaimed habitable systems are near and no deficits."

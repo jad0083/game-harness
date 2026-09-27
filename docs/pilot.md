@@ -64,7 +64,10 @@ as the fallback.
 `src/pilot/governor.py`. The empire is played by the game's own AI (`human_ai`); the governor only
 chooses one standing **directive** (`corpora/stellaris/directives.toml`: expand,
 consolidate_economy, tech_rush, prepare_war, defend, diplomacy_first), applied from the console as
-flags and policies that the Governor Bridge mod turns into AI budget weights.
+flags and policies that the Governor Bridge mod turns into AI budget weights. Policies obey the
+player's rules (`can_set_policy`, the 10-year lock started by each change): a directive whose policy
+is still locked, or barred (no stance change at war), sets its flag only, and the reply lists the
+policies set and those locked.
 
 The loop: pause → briefing from the newest autosave → the model returns a directive or `keep` →
 apply → resume → poll autosaves until the decision interval has passed or something urgent
@@ -78,7 +81,8 @@ personality), wars with sides and exhaustion (battles of our side, then our own 
 months, invasions of our colonies, a status quo that can be forced), occupied colonies, shipyards at
 war, market prices against base with last month's trades, and the nearest empires with strength
 ratios and opinion both ways. The JSON form also carries policy dates, each colony's jobs,
-unemployment, districts and queue, and the mod's `governor_*` variables, for the governor's rules. The prompt adds a 12-month trend line and what earlier directive changes led to.
+unemployment, districts and queue, and the mod's `governor_*` variables, for the governor's rules.
+The prompt adds a 12-month trend line and what earlier directive changes led to.
 
 If the game stops answering pause and resume (for example a text box holds the keyboard), the
 governor stops acting and flags *needs attention* until you press Resume.

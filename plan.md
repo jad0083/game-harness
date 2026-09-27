@@ -93,6 +93,7 @@
 - [ ] Stellaris levers from the Civ VI lessons (2026-09-27): a record per action kind, buy-out rules (market), crisis response when a war goes badly, deeper mod-steered AI (Governor Bridge), and a planet-development check; research → design with rulings → build → review → deploy (live checks when Stellaris is the running game)
 - [ ] Stellaris market: a new monthly trade starts from the resource's own amount (0.1 x its market amount; levers ruling 8); alloys and sr_* refused unsent until the live market check measures their fractional start
 - [ ] Stellaris briefing fields for the levers (ruling 1): policy dates, market block (kind, prices, bought/sold, last month's trades), occupied colonies, force peace, own battles apart from allies', invasions, shipyards, colony jobs/unemployment/districts/queue, `governor_*` variables
+- [ ] Stellaris directives obey the player's policy rules (`can_set_policy`, `cooldown = yes`) and report each policy set through a `GOVERNOR_POLICY` marker; the reply lists set and locked policies (levers rulings 3, 20)
 
 ## Pilot app: observability and control
 - [x] Decision traces: prompt, Gemini thought summaries, tool calls and results, answer, tokens, time (`runs/<id>/traces/`)

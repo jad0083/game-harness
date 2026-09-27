@@ -188,10 +188,16 @@ never explores or expands). `take_control` leaves observer mode if a scoped prob
 (`HumanAiReader`: `help` fills the console so the reply is on the bottom line; the closer of the
 ON/OFF templates wins, because the semi-transparent console shifts absolute distances).
 
-Directives (`corpora/stellaris/directives.toml`) become two console lines: one `effect` clearing
-the other `governor_directive_*` flags, one setting this directive's flag and policies plus a
+Directives (`corpora/stellaris/directives.toml`) become console lines: one `effect` clearing
+the other `governor_directive_*` flags; one per policy, `if = { limit = { can_set_policy = {…}
+<the option's valid> } set_policy = { … cooldown = yes } log = "GOVERNOR_POLICY <policy> <option>
+<nonce>" }`, so a policy is set only as a player could (the 10-year lock, the group's `allow` such
+as no stance change at war, the option's `potential`) and starts the lock; and last the flag plus a
 scoped `log` of `GOVERNOR_APPLIED <name> <nonce>` (logged only with a real country scope; the
-nonce matters because game.log drops text repeated on the same in-game day). Every identifier must
+nonce matters because game.log drops text repeated on the same in-game day). `apply_directive`
+returns an `Applied`: the lines, the policies whose marker appeared (`set`) and the others
+(`locked`); the MCP reply and the CLI print both lists. One line per policy keeps each line within
+the 529 characters verified live. Every identifier must
 match `[a-z0-9_]+`, so a directive cannot inject other commands. `run_console` checks that
 Stellaris is the foreground window before every keystroke, and `apply_directive` polls `game.log`
 (written with a few seconds' delay) for up to 8 s. It pauses the game while typing and restores the

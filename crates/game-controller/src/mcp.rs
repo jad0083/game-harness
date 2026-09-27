@@ -383,7 +383,7 @@ impl McpServer {
             }));
             tools.push(serde_json::json!({
                 "name": "stellaris_directive",
-                "description": "Apply one governor directive (see corpus strategy § Governor directives and directives.toml): sets the directive flag and its policies on the player's empire (which the game's AI plays under human_ai; see stellaris_take_control) and confirms the change in game.log. Hold a directive about 12 in-game months unless something urgent happens. Refuses if Stellaris is not the foreground window.",
+                "description": "Apply one governor directive (see corpus strategy § Governor directives and directives.toml): sets the directive flag and its policies on the player's empire (which the game's AI plays under human_ai; see stellaris_take_control) and confirms the change in game.log. Policies are set only where a player could (can_set_policy: the 10-year policy lock, no stance change at war) and start the lock; the reply lists the policies set and those locked. Hold a directive about 12 in-game months unless something urgent happens. Refuses if Stellaris is not the foreground window.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -866,10 +866,11 @@ impl McpServer {
                 let dir = self.corpus.as_ref().map(|c| c.dir.clone()).ok_or_else(|| anyhow::anyhow!("no corpus loaded"))?;
                 let directives = crate::stellaris::Directives::load(&dir)?;
                 let pause = self.corpus.as_ref().map(|c| crate::stellaris::PauseDetector::from_manifest(&c.manifest)).transpose()?;
-                let lines = crate::stellaris::apply_directive(&self.client, &directives, name, pause.as_ref()).await?;
+                let applied = crate::stellaris::apply_directive(&self.client, &directives, name, pause.as_ref()).await?;
                 let text = format!(
-                    "Directive {name} applied and confirmed in game.log. Console lines:\n{}\nThe next monthly autosave will list governor_directive_{name} under Governor flags.",
-                    lines.join("\n")
+                    "Directive {name} applied and confirmed in game.log. {}\nConsole lines:\n{}\nThe next monthly autosave will list governor_directive_{name} under Governor flags.",
+                    applied.summary(),
+                    applied.lines.join("\n")
                 );
                 Ok(serde_json::json!({ "content": [{ "type": "text", "text": text }] }))
             }
