@@ -121,6 +121,9 @@ fn load_token(explicit: Option<&str>) -> Result<String> {
             return Ok(t.trim().to_string());
         }
     }
+    if let Some(t) = env_file_value(std::path::Path::new(".env"), "GAME_AGENT_TOKEN") {
+        return Ok(t);
+    }
     let candidates = [
         PathBuf::from(".agent_token"),
         PathBuf::from("agent_token.txt"),
@@ -135,7 +138,7 @@ fn load_token(explicit: Option<&str>) -> Result<String> {
             }
         }
     }
-    anyhow::bail!("No agent token found: set GAME_AGENT_TOKEN or write to .agent_token")
+    anyhow::bail!("No agent token found: set GAME_AGENT_TOKEN (environment or .env) or write to .agent_token")
 }
 
 impl AgentClient {
