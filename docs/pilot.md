@@ -151,7 +151,7 @@ stream, the frame, `/control`, `/status` and everything else except the short "h
 
 - **Getting in**: open the link once per browser. It is printed in the viewer's log when it starts
   (`journalctl --user -u game-pilot-view`) and by `python -m pilot dashboard-link [--port 8780]`:
-  `http://<controller>:8780/?key=<key>`. The page stores the key in an HttpOnly, SameSite=Strict
+  `http://<controller>:8780/?key=<key>`. The page stores the key in an HttpOnly, SameSite=Lax
   cookie (`pilot_key`) and redirects to `/`, so the key leaves the address bar; bookmark the link
   itself. Scripts send the key as the `X-Pilot-Key` header instead.
 - **Where it lives**: `PILOT_DASHBOARD_KEY` if set, else `runs/dashboard.key` (created on first

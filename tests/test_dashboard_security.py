@@ -99,7 +99,7 @@ def test_key_link_sets_a_strict_cookie_and_redirects(tmp_path):
             r = await c.get(f"/?key={KEY}", allow_redirects=False)
             assert r.status in (302, 303) and r.headers["Location"] == "/"
             cookie = r.headers["Set-Cookie"]
-            assert "pilot_key=" in cookie and "HttpOnly" in cookie and "SameSite=Strict" in cookie
+            assert "pilot_key=" in cookie and "HttpOnly" in cookie and "SameSite=Lax" in cookie
             assert (await c.get("/runs")).status == 200           # the cookie jar now carries the key
             page = await c.get("/")
             assert page.status == 200 and "<script" in await page.text()

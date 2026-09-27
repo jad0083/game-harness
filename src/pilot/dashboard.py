@@ -125,7 +125,7 @@ def key_guard(key: str):
             if not valid(request.query["key"]):
                 return locked()
             resp = web.Response(status=303, headers={"Location": "/"})
-            resp.set_cookie(KEY_COOKIE, key, max_age=KEY_COOKIE_MAX_AGE, path="/", httponly=True, samesite="Strict")
+            resp.set_cookie(KEY_COOKIE, key, max_age=KEY_COOKIE_MAX_AGE, path="/", httponly=True, samesite="Lax")  # Lax: a link opened from another app still carries it on GET; changes are JSON-only and same-origin
             return resp
         if not (valid(request.headers.get(KEY_HEADER)) or valid(request.cookies.get(KEY_COOKIE))):
             if request.path == "/":
