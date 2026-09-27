@@ -465,11 +465,16 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   each failed decision's `error`. Browser tests: `tests/ui/` (Playwright's Chromium, marker `ui`,
   fixture servers on 127.0.0.1 over a temp `runs/`); `scripts/ci-ui-gate.sh` refuses a commit that
   stages a page or `auth.py` while they were skipped.
-- Design (keep it consistent): deep-space plane with warm ivory ink, dark first; one amber accent
-  reserved for attention (falling behind, needs you, the live pulse, focus) and teal for sensors and
-  tool calls; Bricolage Grotesque for the interface and Fraunces for the model's own words (reasons,
-  thinking, plan, chat), so the two voices are told apart by type; sections separated by hairlines
-  with an amber rule at each heading (no uniform cards); the readout strip (in-game date at display
-  size, directive, standing, governor state) is the one loud element. No capitalised eyebrow labels,
-  middle dots or arrow glyphs.
+- Design (keep it consistent; docs/design/2026-09-27-dashboard-v2-design.md): deep-space plane with
+  warm ivory ink; dark is the identity, light a reading mode whose text tokens are darkened to pass
+  WCAG AA on plane, surface and raised (ruling 33; `tests/ui/test_dashboard_style.py` measures the
+  computed colours of every visible text in four contexts, `tests/test_dashboard_static.py` the
+  tokens). Amber is selection, focus and brand, never a state; teal is data read from the game and
+  links; violet is the model at work; states are `--good`/`--warn`/`--bad`, always with a word or a
+  shape. Voice: Bricolage Grotesque is the system (states, labels, figures, buttons, errors),
+  Fraunces only the model's own words (reasons, thinking, stances, Talk replies, the strategy
+  summary; the static test holds the list), mono only raw machine text behind a disclosure. A refused
+  action is a toast in the page (errors keep a red edge longer), and inside a dialog each field says
+  "Saved" or why not next to itself; no `alert()`. Sections are separated by hairlines with an amber
+  rule at each heading (no uniform cards). No capitalised eyebrow labels or arrow glyphs.
 

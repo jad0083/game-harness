@@ -5,10 +5,12 @@ from __future__ import annotations
 
 import asyncio
 import threading
+from pathlib import Path
 
 from aiohttp import web
 
 from pilot.events import EventLog
+from pilot.telemetry import Telemetry
 
 UI_KEY = "ui-test-dashboard-key-0123456789abcdef"
 PHONE_UA = ("Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -21,6 +23,58 @@ CONTEXTS = {
     "phone-dark": {"viewport": {"width": 390, "height": 844}, "device_scale_factor": 2, "is_mobile": True,
                        "has_touch": True, "color_scheme": "dark", "user_agent": PHONE_UA},
 }
+
+
+PC_CIV6 = {"online": True, "version": "1.6.1", "games": ["civ6"], "game_in_front": True, "front_game": "civ6"}
+MODELS = ["google:gemini-3.8-flash", "google:gemini-3.1-pro-preview"]
+CIV6_METRICS = [{"date": f"T{t}", "turn": t, "score": 40 + t, "military": 300 + 5 * t, "science": 20.5 + t / 10,
+                 "culture": 12.0 + t / 20, "gold": 200 + t, "faith": 60 + t, "cities": 5 + t // 20,
+                 "techs_known": 20 + t // 3, "civics_known": 18 + t // 4, "pop": 30 + t // 2}
+                for t in range(50, 58)]
+
+
+def _trace(log: EventLog, n: int, **fields) -> None:
+    log.state.episodes = n
+    log.save_trace(n, {"episode": n, "model": "google:gemini-3.1-pro-preview", "thinking_level": "medium",
+                       "game": fields.get("game", "civ6"), "current": None, "seconds": 63.0,
+                       "tokens_in": 41000, "tokens_out": 1200,
+                       "steps": [{"type": "prompt", "text": "briefing"}], **fields})
+
+
+def seed_runs(runs: Path) -> dict:
+    """runs/ with a finished Stellaris campaign and a live Civ VI run (its EventLog, playing at T57).
+    Used by the browser tests' fixtures and by scratch scripts that serve the same data."""
+    tel = Telemetry(runs / "telemetry.sqlite")
+    old = EventLog(runs, "20260926-090000", "google:gemini-3.8-flash", telemetry=tel)
+    old.emit("run_start", game="stellaris", model="google:gemini-3.8-flash", speed="fast")
+    old.set_campaign("stellaris", "theia", "Theian Union")
+    for i, mo in enumerate(range(1, 7)):
+        old.emit("metrics", date=f"2288.{mo:02d}.01", systems=20 + i, planets=8, pops=90 + i,
+                 net={"energy": 40 + i, "minerals": 30, "food": 10, "alloys": 12, "influence": 2, "unity": 8},
+                 stockpile={"energy": 900, "minerals": 800, "food": 500, "alloys": 300, "influence": 100, "unity": 400},
+                 military_power=5000 + 100 * i, economy_power=3000, tech_power=2000)
+    _trace(old, 1, game="stellaris", date="2288.03.01", trigger="scheduled", decision="expand",
+           reason="Room to grow toward the core.", outcome="applied", current="diplomacy_first")
+    old.state.status = "stopped"
+    old.emit("run_end")
+    old.close()
+
+    log = EventLog(runs, "20260927-100000", "google:gemini-3.8-flash", telemetry=tel)
+    log.emit("run_start", game="civ6", model="google:gemini-3.8-flash")
+    log.set_campaign("civ6", "kublai", "Kublai Khan, China")
+    for m in CIV6_METRICS:
+        log.emit("metrics", **m)
+    _trace(log, 1, date="T52", trigger="scheduled", decision="orders", outcome="research tech:writing: stuck",
+           reason="Chengdu is under siege; buy a slinger with faith and keep science on Writing.")
+    _trace(log, 2, date="T55", trigger="city threatened (Chengdu)", outcome="error",
+           error="ModelHTTPError: status_code: 503, model_name: gemini-3.8-flash, body: {'error': {'code': 503, "
+                 "'message': 'This model is currently experiencing high demand.'}}")
+    info = log.state.info
+    info.update(game="civ6", decide_turns=5, directives=[], controls=["instruct", "chat", "order_add", "order_remove",
+                                                                        "decide_now", "set_models", "set_months"])
+    log.state.game_date = "T57"
+    log.state.status = "playing"
+    return {"runs": runs, "tel": tel, "log": log, "pilot": FakePilot(log)}
 
 
 class Served:
@@ -123,3 +177,59 @@ def sign_in(ctx, base: str, auth, name: str = "Chrome on Windows") -> str:
     row, cred = auth.store.create_device("browser", name=name, created_via="cli", created_by="cli", ip="127.0.0.1")
     ctx.add_cookies([{"name": "pilot_session", "value": cred, "url": base, "httpOnly": True, "sameSite": "Lax"}])
     return row["id"]
+
+
+# Contrast of every visible piece of text against what is behind it (WCAG 2 formula): colours are
+# read from computed styles, backgrounds composited up the ancestors. Disabled controls are exempt.
+CONTRAST_JS = r"""
+(root) => {
+  const parse = (c) => {
+    let m = /^rgba?\(([^)]*)\)$/.exec(c);
+    if (m) { const p = m[1].split(/[\s,\/]+/).filter(Boolean).map(Number); return [p[0], p[1], p[2], p.length > 3 ? p[3] : 1]; }
+    m = /^color\(srgb ([^)]*)\)$/.exec(c);
+    if (m) { const p = m[1].split(/[\s\/]+/).filter(Boolean).map(Number); return [p[0] * 255, p[1] * 255, p[2] * 255, p.length > 3 ? p[3] : 1]; }
+    return null;
+  };
+  const over = (top, under) => { const a = top[3]; return [0, 1, 2].map((i) => top[i] * a + under[i] * (1 - a)).concat(1); };
+  const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+                       return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+  const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  const bgOf = (el) => {
+    const chain = [];
+    for (let e = el; e && e.nodeType === 1; e = e.parentElement) chain.push(getComputedStyle(e).backgroundColor);
+    let bg = [255, 255, 255, 1];
+    for (const c of chain.reverse()) { const p = parse(c); if (p && p[3] > 0) bg = over(p, bg); }
+    return bg;
+  };
+  const out = [], seen = new Set();
+  const all = (root || document).querySelectorAll("body *");
+  for (const el of all) {
+    if (el.closest("[disabled], [aria-disabled='true'], .sr, script, style, option, title")) continue;
+    const svgText = el instanceof SVGTextElement;
+    const own = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+    if (!own) continue;
+    if (!el.getClientRects().length) continue;
+    const cs = getComputedStyle(el);
+    if (cs.visibility === "hidden" || +cs.opacity === 0) continue;
+    const fg = parse(svgText ? cs.fill : cs.color);
+    if (!fg) { out.push(`unparsed colour ${svgText ? cs.fill : cs.color} on ${el.tagName}`); continue; }
+    if (fg[3] === 0) continue;
+    const bg = bgOf(el);
+    const r = ratio(over(fg, bg), bg);
+    const size = parseFloat(cs.fontSize), bold = parseInt(cs.fontWeight, 10) >= 700;
+    const need = size >= 24 || (size >= 18.66 && bold) ? 3 : 4.5;
+    if (r + 1e-6 < need) {
+      const text = el.textContent.trim().replace(/\s+/g, " ").slice(0, 40);
+      const key = `${el.className && el.className.baseVal !== undefined ? el.className.baseVal : el.className}|${cs.color}|${text}`;
+      if (!seen.has(key)) { seen.add(key); out.push(`${r.toFixed(2)} < ${need}: <${el.tagName.toLowerCase()} class="${el.getAttribute("class") || ""}"> "${text}" (${svgText ? cs.fill : cs.color} on rgb(${bg.slice(0, 3).map(Math.round)}), ${size}px)`); }
+    }
+  }
+  return out;
+}
+"""
+
+
+def contrast_failures(page, root: str | None = None) -> list[str]:
+    """Text on the page (or inside the element matching `root`) below WCAG AA contrast."""
+    handle = page.query_selector(root) if root else None
+    return page.evaluate(CONTRAST_JS, handle)

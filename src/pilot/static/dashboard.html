@@ -8,14 +8,24 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400&display=swap" rel="stylesheet">
 <style>
-  /* Tokens: deep-space plane, warm ivory ink, one amber accent. Dark first (the room it is watched in). */
+  /* Tokens: deep-space plane, warm ivory ink, one amber accent. Dark is the identity (the room it is
+     watched in); light is a reading mode whose text tokens are darkened to pass WCAG AA on plane,
+     surface and raised. Amber is selection, focus and brand, never a state; teal is data read from
+     the game and links; violet is the model at work. States are --good / --warn / --bad, always with
+     a word or a shape beside the colour. */
   :root {
     color-scheme: light;
     --plane: #ece9e1; --surface: #f8f7f3; --raised: #e6e2d8; --hair: #d4cfc3;
-    --ink: #1b1d29; --ink-2: #4a4d5c; --muted: #7b7e8c;
-    --accent: #a9741b; --accent-ink: #fffaf0; --sensor: #1f8f86; --thought: #6b52c9;
-    --good: #1f7f46; --warn: #b5651d; --bad: #b8362f; --grid: #ddd9cf; --axis: #bfb9ab;
+    --ink: #1b1d29; --ink-2: #4a4d5c; --muted: #5f6271;
+    --accent: #8a5a10; --accent-ink: #fffaf0; --sensor: #156f68; --thought: #5b43b8;
+    --good: #1a6e3c; --warn: #9a4f12; --bad: #a82e28; --grid: #ddd9cf; --axis: #bfb9ab;
     --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300;
+    /* the page's one filled block (needs you) and the alarm (a last stand, a failure) */
+    --attn-bg: color-mix(in srgb, var(--warn) 12%, var(--surface));
+    --alarm-bg: color-mix(in srgb, var(--bad) 12%, var(--surface));
+    /* Voice: sans is the system (states, labels, figures, buttons, errors); serif is the model
+       talking and nothing else (reasons, thinking, stances, Talk replies, the strategy summary);
+       mono is raw machine text, always behind a disclosure. */
     --sans: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
     --serif: "Fraunces", "Iowan Old Style", Georgia, serif;
     --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -85,18 +95,17 @@
   .readout { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 40px; padding: 18px 24px 14px;
              border-bottom: 1px solid var(--hair); }
   .ro-label { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 2px; }
-  .ro-date b { display: block; font-family: var(--serif); font-weight: 400; font-size: 46px; line-height: 1; letter-spacing: -0.01em;
-               font-variation-settings: "opsz" 72, "SOFT" 30; color: var(--ink); }
+  .ro-date b { display: block; font-weight: 600; font-size: 30px; line-height: 1.1; letter-spacing: -0.01em;
+               font-variant-numeric: tabular-nums; font-variation-settings: "opsz" 36; color: var(--ink); }
   .ro-item b { display: block; font-size: 19px; font-weight: 600; line-height: 1.25; font-variation-settings: "opsz" 24; }
   .ro-item b.attn { color: var(--accent); }
   .ro-item .ro-sub { display: block; font-size: 13px; color: var(--ink-2); }
-  @media (max-width: 700px) { .readout { gap: 8px 24px; padding: 14px 16px 12px; } .ro-date b { font-size: 36px; } }
+  @media (max-width: 700px) { .readout { gap: 8px 24px; padding: 14px 16px 12px; } .ro-date b { font-size: 24px; } }
 
   .banner { margin: 12px 24px 0; padding: 12px 14px; border-left: 3px solid var(--accent); background: var(--surface);
             display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-  .banner p { margin: 0; flex: 1 1 320px; font-family: var(--serif); font-size: 17px; }
+  .banner p { margin: 0; flex: 1 1 320px; font-size: 15px; }
   .banner.locked { border-left-color: var(--bad); background: color-mix(in srgb, var(--bad) 8%, var(--surface)); }
-  .banner.locked p, .banner.notices p { font-family: var(--sans); font-size: 15px; }
   .banner.notices { border-left-color: var(--warn); display: grid; gap: 8px; }
   .banner.notices .notice { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
   .banner.notices .notice p { flex: 1 1 280px; }
@@ -387,8 +396,20 @@
   dialog input[type=number] { width: 90px; }
   dialog .row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
   .toast { position: fixed; right: 16px; bottom: 16px; z-index: 10; background: var(--surface); border: 1px solid var(--hair);
-           border-left: 3px solid var(--accent); border-radius: 6px; padding: 10px 14px; font-size: 13.5px; max-width: min(420px, 90vw);
-           box-shadow: 0 6px 24px rgba(4, 8, 20, .4); }
+           border-left: 3px solid var(--good); border-radius: 6px; padding: 10px 14px; font-size: 13.5px; max-width: min(420px, 90vw);
+           box-shadow: 0 6px 24px rgba(4, 8, 20, .4); overflow-wrap: anywhere; }
+  .toast.bad { border-left-color: var(--bad); background: var(--alarm-bg); }
+  .saved { font-size: 12.5px; color: var(--good); font-weight: 600; }
+  .saved.bad { color: var(--bad); font-weight: 500; }
+  .saved:empty { display: none; }
+  .args-list { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 13px; color: var(--ink-2); margin-top: 2px; }
+  .args-list b { font-weight: 500; color: var(--muted); }
+
+  /* Windows high contrast and other forced colours: edges and chips keep their outline */
+  @media (forced-colors: active) {
+    .tag, .btn, .toast, .banner, .decisions li.sel button, .tabs button[aria-selected="true"] { border: 1px solid CanvasText; }
+    .pill::before, .pc::before, .brand::before { forced-color-adjust: none; }
+  }
 
   /* narrow screens: last, so it wins over the base rules above */
   @media (max-width: 600px) {
@@ -471,15 +492,15 @@
         <label class="check"><input type="checkbox" id="rotate"> Take turns between these models</label>
         <p class="hint" id="pool-hint"></p>
         <ol class="pool" id="pool" aria-label="Models in order"></ol>
-        <div><button type="button" class="btn" id="pool-add">Add model</button></div>
+        <div><button type="button" class="btn" id="pool-add">Add model</button> <span class="saved" id="pool-saved" role="status"></span></div>
       </div>
     </div>
     <fieldset data-spanel="game" role="tabpanel" hidden>
       <legend>Pace</legend>
       <label>Game speed while the AI plays <select id="pace-speed">
         <option value="slowest">slowest</option><option value="slow">slow</option><option value="normal">normal</option><option value="fast">fast</option><option value="fastest">fastest</option>
-      </select></label>
-      <label>Decide every <span class="inline-num"><input id="pace-months" type="number" min="1" max="120"> <span id="pace-unit">in-game months</span></span></label>
+      </select> <span class="saved" id="pace-speed-saved" role="status"></span></label>
+      <label>Decide every <span class="inline-num"><input id="pace-months" type="number" min="1" max="120"> <span id="pace-unit">in-game months</span> <span class="saved" id="pace-months-saved" role="status"></span></span></label>
     </fieldset>
     <div data-spanel="devices" role="tabpanel" hidden>
       <div id="dev-this"></div>
@@ -636,7 +657,7 @@ window.fetch = async (...args) => {
     let j = {};
     try { j = await r.clone().json(); } catch { /* not JSON */ }
     if (r.status === 401) showSignedOut(j);
-    else toast(`Refused: ${j.reason || "the dashboard refused this change"}`);
+    else toast(`Refused: ${j.reason || "the dashboard refused this change"}`, "bad");
   }
   return r;
 };
@@ -771,7 +792,7 @@ function wireReviewButton() {
     S.reviewPending = true;
     btn.disabled = true; btn.textContent = "Review requested…";
     const r = await fetch("/control", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "review_strategy" }) });
-    if (!r.ok) { S.reviewPending = false; toast(`Could not request a review: ${await r.text()}`); renderStrategy(S.strategy); }
+    if (!r.ok) { S.reviewPending = false; toast(`Could not request a review: ${await whyRefused(r)}`, "bad"); renderStrategy(S.strategy); }
   });
 }
 
@@ -1355,14 +1376,21 @@ function renderTrace(d) {
     else if (s.type === "text") h += `<div class="step text"><p>${md(s.text)}</p></div>`;
     else if (s.type === "tool_call") {
       const res = steps.slice(i + 1).find((x) => x.type === "tool_result" && x.tool === s.tool);
-      h += `<div class="step call"><span class="call-name">${esc(human(s.tool))}</span> <code class="args">${esc(JSON.stringify(s.args))}</code>
-        ${res ? `<details><summary>Result</summary><pre>${esc(res.text)}</pre></details>` : ""}</div>`;
+      h += `<div class="step call"><span class="call-name">${esc(human(s.tool))}</span>${argsList(s.args)}
+        <details><summary>${res ? "Call and result as returned" : "Call as sent"}</summary><pre>${esc(JSON.stringify(s.args))}${res ? "\n\n" + esc(res.text) : ""}</pre></details></div>`;
     } else if (s.type === "retry") h += `<div class="step retry">Retried ${esc(s.tool)}: ${esc(s.text)}</div>`;
     else if (s.type === "output") h += `<details class="step"><summary>Answer as returned</summary><pre>${esc(JSON.stringify(s.args, null, 1))}</pre></details>`;
     else if (s.type === "usage") { call++; h += `<div class="usage">Model call ${call}: ${fmt(s.in)} tokens in, ${fmt(s.out)} out</div>`; }
   }
   if (!steps.some((s) => s.type === "thinking") && d.model !== "human") h += `<p class="hint">${esc(thinkingHint(d.model))}</p>`;
   $("tab-reasoning").innerHTML = h + `</div>`;
+}
+
+// A tool call's arguments as labelled pairs in the system's voice (the raw JSON is in the disclosure).
+function argsList(a) {
+  if (!a || typeof a !== "object") return "";
+  const pairs = Object.entries(a).filter(([, v]) => v !== null && v !== "" && v !== undefined);
+  return pairs.length ? `<div class="args-list">${pairs.map(([k, v]) => `<span><b>${esc(human(k))}</b> ${esc(typeof v === "string" ? v : JSON.stringify(v))}</span>`).join("")}</div>` : "";
 }
 
 // Why a decision may carry no thinking: each provider exposes it differently.
@@ -1388,10 +1416,30 @@ function setMode(m) {
 }
 document.querySelectorAll("#modes button").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
 
+// What each control did, said the same way as its button ("Resume" -> "Resumed").
+const ACTION_DONE = { pause: "Paused", resume: "Resumed", stop: "Stopping: the run ends after this step",
+                      instruct: "Note saved for the next decision", decide_now: "Deciding now",
+                      order_add: "Standing order added", order_remove: "Standing order removed",
+                      override: "Directive applied", answer: "Answer sent", unpin_pillar: "Pillar unpinned" };
+// The reason a reply gives: the JSON {reason} of the viewer and auth, or the pilot's plain text.
+async function whyRefused(r) {
+  const text = await r.text().catch(() => "");
+  try { const j = JSON.parse(text); return j.reason || j.error || text; } catch { return text || `status ${r.status}`; }
+}
+// A control action on the live run. A refusal is said in a toast, never in a blocking dialog; 401
+// and 403 are already handled by the fetch wrapper (signed-out banner, "Refused" toast).
 async function control(body) {
-  const r = await fetch("/control", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  if (!r.ok) alert(await r.text());
+  let r;
+  try { r = await fetch("/control", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); }
+  catch (e) { if (!signedOut) toast(`Not sent: the dashboard did not answer (${e.message}).`, "bad"); return false; }
+  if (!r.ok) {
+    if (r.status !== 401 && r.status !== 403) toast(`Not done: ${await whyRefused(r)}`, "bad");
+    loadStatus();
+    return false;
+  }
+  if (ACTION_DONE[body.action]) toast(ACTION_DONE[body.action]);
   loadStatus();
+  return true;
 }
 $("send").addEventListener("click", () => {
   const text = $("msg").value.trim();
@@ -1569,9 +1617,16 @@ $("campaign").addEventListener("change", async (e) => {
 $("b-toggle").addEventListener("click", () => control({ action: $("b-toggle").textContent === "Pause" ? "pause" : "resume" }));
 
 let toastT;
-function toast(msg) {
-  const t = $("toast"); t.textContent = msg; t.hidden = false;
-  clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), 5000);
+function toast(msg, kind = "") {
+  const t = $("toast"); t.textContent = msg; t.className = "toast" + (kind ? " " + kind : ""); t.hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), kind === "bad" ? 9000 : 5000);
+}
+// Inside a dialog a toast sits under the backdrop: a field says "Saved" (or why not) next to itself.
+const savedT = {};
+function saved(id, msg = "Saved", kind = "") {
+  const el = $(id); if (!el) return;
+  el.textContent = msg; el.className = "saved" + (kind ? " " + kind : "");
+  clearTimeout(savedT[id]); if (!kind) savedT[id] = setTimeout(() => { el.textContent = ""; }, 4000);
 }
 // Pickers are always shown: during a live run they show (and switch) the running model; otherwise
 // they show the saved choice for the next run.
@@ -1628,7 +1683,7 @@ async function savePool() {
   }
   const body = { models: S.pools.decisions, rotate: !!S.rotates.decisions, roles };
   const r = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  if (!r.ok) { toast(`Could not save: ${await r.text()}`); return; }
+  if (!r.ok) { saved("pool-saved", `Not saved: ${await whyRefused(r)}`, "bad"); return; }
   let live = false;
   if (S.live) {
     const post = (b) => fetch("/control", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) });
@@ -1637,7 +1692,7 @@ async function savePool() {
   }
   const label = (((S.catalog || {}).role_meta || []).find((x) => x.id === S.edit) || { label: "Models" }).label;
   const pool = poolFor(S.edit), own = S.edit === "decisions" || S.pools[S.edit];
-  toast(`${label}: ${!own ? "same models as Decisions" : S.rotates[S.edit] ? `taking turns between ${pool.length} models` : `${shortName(pool[0].model)} first${pool.length > 1 ? `, then ${pool.length - 1} more` : ""}`}${live ? "; applied now and saved." : "; saved for the next run."}`);
+  saved("pool-saved", `Saved. ${label}: ${!own ? "same models as Decisions" : S.rotates[S.edit] ? `taking turns between ${pool.length} models` : `${shortName(pool[0].model)} first${pool.length > 1 ? `, then ${pool.length - 1} more` : ""}`}${live ? "; applied now." : "; for the next run."}`);
   await loadCatalog();
 }
 $("pool").addEventListener("change", (e) => {
@@ -1879,7 +1934,8 @@ for (const sec of document.querySelectorAll("[data-collapsible]")) {
 
 async function setPace(kind) {
   const speed = $("pace-speed").value, months = +$("pace-months").value;
-  if (kind === "months" && !(months >= 1 && months <= 120)) { toast(`${turnBased() ? "Turns" : "Months"} must be a whole number from 1 to 120.`); return; }
+  const mark = kind === "speed" ? "pace-speed-saved" : "pace-months-saved";
+  if (kind === "months" && !(months >= 1 && months <= 120)) { saved(mark, `Not saved: ${turnBased() ? "turns" : "months"} must be a whole number from 1 to 120.`, "bad"); return; }
   let r;
   if (S.live) {
     const body = kind === "speed" ? { action: "set_speed", speed } : { action: "set_months", months };
@@ -1888,8 +1944,8 @@ async function setPace(kind) {
     r = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" },
                                        body: JSON.stringify(kind === "speed" ? { speed } : { months }) });
   }
-  if (!r.ok) { toast(`Could not change: ${await r.text()}`); return; }
-  toast(kind === "speed" ? `Game speed ${speed}${S.live ? "" : " for the next run"}.` : `A decision every ${plural(months, turnBased() ? "turn" : "in-game month")}${S.live ? ", from now" : " for the next run"}.`);
+  if (!r.ok) { saved(mark, `Not saved: ${await whyRefused(r)}`, "bad"); return; }
+  saved(mark, S.live ? "Saved, applied now" : "Saved for the next run");
   await loadCatalog(); loadStatus();
 }
 $("pace-speed").addEventListener("change", () => setPace("speed"));
@@ -1914,7 +1970,7 @@ $("start-dialog").addEventListener("close", async () => {
   const body = { game: $("start-game").value, speed: $("start-speed").value, months: +$("start-months").value };
   const r = await fetch("/api/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   toast(r.ok ? `Starting a ${GAME_NAMES[body.game] || body.game} run. The page switches to it in a few seconds.`
-             : `Could not start: ${await r.text()}`);
+             : `Could not start: ${await whyRefused(r)}`, r.ok ? "" : "bad");
   await loadCatalog();
 });
 $("b-stop").addEventListener("click", () => { if (confirm("Stop the pilot? The game is paused when it stops.")) control({ action: "stop" }); });

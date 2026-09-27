@@ -318,6 +318,10 @@ running pilot (whose own dashboard is on `PILOT_PORT`, 8790, on 127.0.0.1). It r
   of all pressure, stance, goals, milestones with status, actions), Edit / Unpin, *Review strategy
   now*, and the version history.
 - **Settings**: models per role; with no run active, *Start run* starts `game-pilot.service`.
+  Changes save at once, and each field says "Saved" (or why not) next to itself.
+- A refused action (the live pilot answers 400, a change the dashboard refuses) is said in a toast
+  with the server's reason; the page never blocks on a dialog box. Light mode's text colours pass
+  WCAG AA; dark mode is the identity and unchanged.
 
 ### Signing in
 
