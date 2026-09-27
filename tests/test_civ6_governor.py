@@ -1991,3 +1991,50 @@ def test_a_restarted_run_does_not_report_the_same_answers_again(setup, tmp_path)
     second.run(max_decisions=1)
     rows = tel.campaign_events(first.log.campaign_id, "diplomacy_reply")
     assert [(r["session"], r["subtype"]) for r in rows] == [(7, "NONE"), (7, "POSITIVE")]
+
+
+_T240_RECORD = ("Diplomacy answered for us in this campaign (the harness's auto-reply during autoplay; the last 8):\n"
+                "- T13 civ:australia warning too many troops near me: the conciliatory reply (a promise)\n"
+                "- T13 civ:australia warning too many troops near me (positive follow-up): Goodbye")
+
+
+def test_the_order_record_carries_the_diplomacy_answered_for_us(setup):
+    """A promise made for us (T240: "my troops are merely passing by") is a commitment a strategy review
+    must see: the Strategist's order record and the published record list the campaign's answers."""
+    prompts: list[str] = []
+
+    def respond(messages, info):
+        text = "\n".join(str(getattr(p, "content", "")) for m in messages for p in getattr(m, "parts", []))
+        if is_review(info):
+            prompts.append(text)
+            return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name,
+                                                     {"change": False, "assessment": "n/a", "rules": []})])
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"orders": [], "reason": "r"})])
+
+    g = governor(setup, FakeCiv6({**FIXTURE, "diplomacy": _dipl(*_T240)}, index=INDEX), FunctionModel(respond))
+    g.run(max_decisions=1)
+    assert "Order record in this campaign (held until done / replaced by the AI):\n(no orders judged yet)\n" \
+        + _T240_RECORD in prompts[0]
+    assert [(r["turn"], r["civ"], r["statement"], r["subtype"], r["reply"], r["text"])
+            for r in g.log.state.info["diplomacy_record"]] == [
+        (13, "civ:australia", "WARNING_TOO_MANY_TROOPS_NEAR_ME", "NONE", "POSITIVE", "the conciliatory reply (a promise)"),
+        (13, "civ:australia", "WARNING_TOO_MANY_TROOPS_NEAR_ME", "POSITIVE", "EXIT", "Goodbye")]
+    quiet = governor(setup, FakeCiv6(FIXTURE, index=INDEX), orders_model([]))
+    assert "Diplomacy answered" not in quiet._records_section(), "no section without an answer"
+
+
+def test_a_restarted_run_keeps_the_diplomacy_in_its_order_record(setup, tmp_path):
+    """After a reload the library's log is empty; the record comes from telemetry, like order outcomes."""
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    first = Civ6Governor(s, FakeCiv6({**FIXTURE, "diplomacy": _dipl(*_T240)}, index=INDEX),
+                         EventLog(s.runs_dir, "r1", s.model, telemetry=tel), model=orders_model([]))
+    first.status_poll_s, first.start_grace_s = 0, 0.05
+    first.run(max_decisions=1)
+    second = Civ6Governor(s, FakeCiv6({**FIXTURE, "diplomacy": _dipl()}, index=INDEX),
+                          EventLog(s.runs_dir, "r2", s.model, telemetry=tel), model=orders_model([]))
+    second.status_poll_s, second.start_grace_s = 0, 0.05
+    second.run(max_decisions=1)
+    assert _T240_RECORD in second._records_section()
+    assert [r["subtype"] for r in second.log.state.info["diplomacy_record"]] == ["NONE", "POSITIVE"]

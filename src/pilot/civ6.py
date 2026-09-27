@@ -1397,6 +1397,10 @@ DIPLOMACY_REPLIES = {"POSITIVE": "the conciliatory reply (a promise)", "EXIT": "
 DIPLOMACY_WHY = {"unknown": "an unknown statement", "guard": "the promise was not offered safely by the game's data"}
 DIPLOMACY_SHOWN = 6            # log entries in the briefing line...
 DIPLOMACY_RECENT = 10          # ...from the last this many turns (one still waiting is always shown)
+DIPLOMACY_RECORD = 8           # the campaign's last answers in the order record (Strategist, published)
+DIPLOMACY_RECORD_HEADING = (f"Diplomacy answered for us in this campaign (the harness's auto-reply during autoplay; "
+                            f"the last {DIPLOMACY_RECORD}):")
+DIPLOMACY_RECORD_KEYS = ("turn", "at", "civ", "from", "statement", "subtype", "reply", "why", "text")
 
 
 def diplomacy_key(e: dict) -> str:
@@ -1428,11 +1432,25 @@ def diplomacy_reply_text(e: dict) -> str:
     return text + (f" ({'; '.join(notes)})" if notes else "")
 
 
+def _statement_words(kind, sub) -> str:
+    """`warning too many troops near me (positive follow-up)`."""
+    sub = str(sub or "NONE")
+    return str(kind or "unnamed statement").lower().replace("_", " ") \
+        + (f" ({sub.lower().replace('_', ' ')} follow-up)" if sub != "NONE" else "")
+
+
 def _statement_text(e: dict, cid) -> str:
-    kind = str(e.get("kind") or "unnamed statement").lower().replace("_", " ")
-    sub = str(e.get("sub") or "NONE")
-    follow = f" ({sub.lower().replace('_', ' ')} follow-up)" if sub != "NONE" else ""
-    return f"T{e.get('turn')} {cid(e.get('civ')) if e.get('civ') else 'player ' + str(e.get('from'))} {kind}{follow}"
+    who = cid(e.get("civ")) if e.get("civ") else "player " + str(e.get("from"))
+    return f"T{e.get('turn')} {who} {_statement_words(e.get('kind'), e.get('sub'))}"
+
+
+def diplomacy_record_text(rows: list[dict]) -> str:
+    """The order record's diplomacy lines from the campaign's `diplomacy_reply` events (oldest first):
+    the last DIPLOMACY_RECORD, one per answer, e.g. `- T13 civ:australia warning too many troops near
+    me: the conciliatory reply (a promise)`; "" when none."""
+    return "\n".join(f"- T{r.get('turn')} {r.get('civ') or 'player ' + str(r.get('from'))} "
+                     f"{_statement_words(r.get('statement'), r.get('subtype'))}: {r.get('text') or r.get('reply')}"
+                     for r in rows[-DIPLOMACY_RECORD:])
 
 
 def diplomacy_text(s: dict, cid) -> str:

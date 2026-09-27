@@ -334,11 +334,12 @@ Rules:
   handler back and a statement waits for a human on screen, as before). That handler answers while
   autoplay runs, from its explicit table: the conciliatory promise to a warning, Goodbye to
   proposals, first meetings and everything else, a refusal to deals and demands; never a choice that
-  declares war or accepts a deal. A statement outside autoplay waits until autoplay next
-  starts. The snapshot's `diplomacy` lists the last 20 answers; the governor emits `diplomacy_reply`
-  and adds a briefing line. Until the next load a human sees no AI statement on screen. A controller
-  built before `requires` refuses that popups.toml (unknown field), so build the binary with the
-  corpus change (pause the governor across the merge and the build).
+  declares war or accepts a deal. A statement outside autoplay waits until autoplay next starts.
+  The snapshot's `diplomacy` lists the last 20 answers; the governor emits `diplomacy_reply` and adds
+  a briefing line and the order record's diplomacy section. Until the next load a human sees no AI
+  statement on screen. A controller built before `requires` refuses that popups.toml (unknown
+  field), so build the binary with the corpus change (pause the governor across the merge and the
+  build).
 - One-turn autoplay costs the AI its multi-turn plans (a Settler idle for 7 turns, no pantheon; a
   4-turn stretch settled and chose one at once): `PILOT_AUTOPLAY_CHUNK` sets turns per call.
 - Menus, when the screen must be used: the UI ignores a click without a preceding hover (move the

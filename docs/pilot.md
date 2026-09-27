@@ -229,7 +229,9 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   and is closed at the next autoplay start. The snapshot's `diplomacy` lists the last 20 (turn, from, statement, subtype, reply, why);
   the governor emits one `diplomacy_reply` event per new answer (telemetry keeps them, so a restart
   does not report them again), the briefing gets a "Diplomacy answered for us" line (or says the
-  handler is missing), and the dashboard's activity feed shows each answer. Until the game is loaded
+  handler is missing), the order record the Strategist reviews lists the campaign's last 8 answers
+  (published as `diplomacy_record` beside `order_record`, reloaded from telemetry after a restart),
+  and the dashboard's activity feed shows each answer. Until the game is loaded
   again, a human at the PC sees no AI statement and cannot use the leader screen's conversations.
 - **Strategy**: `corpora/civ6/pillars.toml` in share mode (science, culture, faith, economy,
   military, expansion, diplomacy) with milestones on turns (`T60`); reviews as for Stellaris.
