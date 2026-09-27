@@ -13,7 +13,7 @@ Recorded runs (live or finished; also served by `python -m pilot view` without a
     GET  /runs/<id>/frame.jpg           the run's latest frame
 
 Telemetry (runs/telemetry.sqlite, across runs and models):
-    GET  /api/campaigns                         campaigns: decision and run counts, latest date, empty, state (live/paused/needs_you/stopped)
+    GET  /api/campaigns                         campaigns: decision and run counts, latest date, last run's end (last_t), empty, state
     GET  /api/decisions?campaign=<id>|run=<id>  decisions (summary + outcome 12 months later)
     GET  /api/decision?run=<id>&episode=<n>     one decision with its full trace
     GET  /api/metrics?campaign=<id>|run=<id>    metric points over in-game time
@@ -355,7 +355,8 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
             " (SELECT m.date FROM metrics m WHERE m.campaign_id=c.id AND m.month IS NOT NULL"
             "  ORDER BY m.month DESC, m.t DESC LIMIT 1) AS latest,"      # in game order: MAX(date) put "T99" after "T310"
             " (SELECT GROUP_CONCAT(DISTINCT r.model) FROM runs r WHERE r.campaign_id=c.id) AS models,"
-            " (SELECT COUNT(*) FROM metrics m WHERE m.campaign_id=c.id) AS metrics"
+            " (SELECT COUNT(*) FROM metrics m WHERE m.campaign_id=c.id) AS metrics,"
+            " (SELECT MAX(COALESCE(r.ended, r.started)) FROM runs r WHERE r.campaign_id=c.id) AS last_t"
             " FROM campaigns c ORDER BY c.created DESC")
         # the campaign list (ruling 4): empty campaigns fold away; the live one says its state
         if log is not None:

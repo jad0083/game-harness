@@ -217,7 +217,8 @@ def _jpeg() -> bytes:
 def seed_scenario(runs: Path, scenario: str = "playing") -> dict:
     """seed_runs, then the live Civ VI run in one of the governor line's states: playing, needs (autoplay
     did not start at T57, 6 h 52 min ago), deciding (the fallback model's second call), paused, question;
-    or a live Stellaris run with the levers' data (stellaris)."""
+    or a live Stellaris run with the levers' data (stellaris); or no run live, the newest campaign an
+    empty GalCiv one from a failed start (norun)."""
     import time
     out = seed_runs(runs)
     log, st = out["log"], out["log"].state
@@ -248,6 +249,15 @@ def seed_scenario(runs: Path, scenario: str = "playing") -> dict:
             log.emit("control", action="pause")
     elif scenario == "stellaris":
         return _seed_stellaris(runs, out)
+    elif scenario == "norun":              # the pilot stopped; then a failed start left an empty GalCiv campaign
+        st.status = "stopped"
+        log.emit("run_end")
+        failed = EventLog(runs, "20260927-130000", "google:gemini-3.8-flash", telemetry=out["tel"])
+        failed.emit("run_start", game="galciv4", model="google:gemini-3.8-flash")
+        failed.set_campaign("galciv4", "terran", "Terran Alliance")
+        failed.state.status = "stopped"
+        failed.emit("run_end")
+        failed.close()
     elif scenario == "question":
         st.pending_question = "Apply 'prepare_war'? The Tzynn border fleets outnumber ours."
         st.question_deadline, st.default_if_silent = now + 45, "no"

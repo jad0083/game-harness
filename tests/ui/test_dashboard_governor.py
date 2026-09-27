@@ -177,3 +177,28 @@ def test_an_older_pilot_without_attention_still_shows_the_card(browser, live_ser
     assert page.eval_on_selector_all("#gov-steps li", "ls => ls.length") == 2
     assert w.errors == []
     w.context.close()
+
+
+@pytest.mark.parametrize("scenario", ["norun"])
+@pytest.mark.parametrize("name", ["desktop-dark", "phone-light"])
+def test_with_no_run_live_the_page_says_so_and_offers_start(browser, live_servers, name):
+    """Ruling 6's "none" state: after the pilot stopped (and a failed start left an empty GalCiv
+    campaign, now the newest), the hero says no run is playing, names the last one played, offers
+    Start run, and the page shows that campaign, not the empty one (ruling 4 folds empty ones)."""
+    w = open_context(browser, name, live_servers)
+    load(w)
+    page = w.page
+    page.wait_for_function("() => document.getElementById('gov').dataset.state === 'none'", timeout=5000)
+    assert page.text_content("#gov-line") == "No run is playing."
+    facts = page.text_content("#gov-facts")
+    assert facts.startswith("Last: Civ VI, Kublai Khan, China, T57, stopped ") and "Viewing" not in facts
+    assert page.is_visible('#gov-actions [data-act="start"]')
+    assert page.get_attribute("#campaign", "data-cid") == "civ6/kublai"
+    page.click("#campaign")
+    assert "Terran Alliance" not in page.text_content("#camp-list")
+    assert "Show empty campaigns (1)" in page.text_content("#camp-empty-sum")
+    page.click("#camp-close")
+    pick_campaign(page, "stellaris/theia")                            # a deliberate look at the past
+    page.wait_for_function("() => document.getElementById('gov').dataset.state === 'history'")
+    assert w.errors == []
+    w.context.close()

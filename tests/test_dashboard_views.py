@@ -101,6 +101,8 @@ def test_campaigns_say_their_runs_whether_they_are_empty_and_which_is_live(tmp_p
         assert rows["galciv4/untitled"]["state"] == "stopped"
         assert rows["civ6/kublai"]["empty"] is False and rows["civ6/kublai"]["runs"] == 2
         assert rows["civ6/kublai"]["state"] == "needs_you"
+        # when each was last played (its newest run's end, else start): the page's "No run is playing. Last: ..."
+        assert rows["civ6/kublai"]["last_t"] >= rows["galciv4/untitled"]["last_t"] > 0
         async with TestClient(TestServer(make_app(None, runs, tel))) as c:       # a viewer with no live pilot
             rows = {r["id"]: r for r in await (await c.get("/api/campaigns")).json()}
         assert rows["civ6/kublai"]["state"] == "stopped"

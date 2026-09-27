@@ -473,7 +473,10 @@ running pilot (whose own dashboard is on `PILOT_PORT`, 8790, on 127.0.0.1). It r
   12 s." with the model, its call number and the model it fell back from, and "Retrying in 0:12";
   "Paused from Pixel phone at T310, 4 min ago." with Resume; "Question for you: …" with Yes, No, an
   answer box and "No answer in 0:31 means: no."; "Viewing a past campaign …" with a link to the live
-  one; "No run is playing." with Start run. The pace in the facts opens Settings > Game. A second
+  one (only when you picked a past campaign); "No run is playing. Last: Civ VI, Kublai Khan, China,
+  T310, stopped 09:24." with Start run whenever nothing is live, the page then showing the campaign
+  played last that recorded anything (an empty one from a failed start stays folded). The pace in
+  the facts opens Settings > Game. A second
   line appears when more than 1 of the last 5 decisions in the hour fell back or failed ("Gemini
   3.8 Flash is overloaded: 3 of the last 5 calls fell back to 3.1 Pro."; `GET /api/health?run=`),
   and Settings > Models marks a model whose calls fail on billing or a refused key, with *Remove

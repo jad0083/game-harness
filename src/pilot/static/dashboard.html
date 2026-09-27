@@ -1060,7 +1060,8 @@ async function loadCampaigns() {
   // Follow the live run's campaign unless the reader picked another one during this run.
   const prev = S.campaign;
   const keep = S.campaign && camps.some((c) => c.id === S.campaign);
-  S.campaign = live && !S.pinned ? live : (keep ? S.campaign : (live || camps[0]?.id || null));
+  // with nothing live, the last campaign played that recorded something; never an empty one (ruling 4)
+  S.campaign = live && !S.pinned ? live : (keep ? S.campaign : (live || lastPlayed()?.id || camps[0]?.id || null));
   if (S.campaign !== prev) clearReasoning();
   renderCampaignButton();
   if ($("camp-dialog").open) renderCampaignList();
@@ -1071,6 +1072,9 @@ const phone = () => matchMedia("(max-width: 700px)").matches;
 const campTitle = (c) => c ? (c.title || human(c.name)) : "";
 const liveCampaign = () => (S.live && (S.status.info || {}).campaign) || null;
 // live, paused, needs you (the live run's own state) or stopped
+// the campaign played last that recorded anything (a failed start leaves an empty one, created later)
+const lastPlayed = () => [...(S.camps || [])].filter((c) => !c.empty)
+  .sort((a, b) => (b.last_t || b.created || 0) - (a.last_t || a.created || 0))[0];
 function campState(c) {
   if (c.id === liveCampaign()) return { paused: ["paused", "paused"], needs_attention: ["needs", "needs you"] }[S.status.status] || ["live", "live"];
   return ["stopped", "stopped"];
@@ -1616,7 +1620,7 @@ function answeredText() {
 function govState() {
   const st = S.status.status || "viewer", info = S.status.info || {};
   if (S.live && S.campaign && info.campaign && S.campaign !== info.campaign) return "history";
-  if (!S.live) return S.campaign ? "history" : "none";
+  if (!S.live) return S.pinned && S.campaign ? "history" : "none";     // history only when the reader chose it
   if (S.status.pending_question) return "question";
   return { playing: "playing", deciding: "deciding", paused: "paused", needs_attention: "needs", "last stand": "stand",
            starting: "starting", stopped: "none" }[st] || "playing";
@@ -1689,9 +1693,10 @@ function renderGovernor() {
       facts.push(`Live now: <button type="button" class="linkish" data-live>${esc(GAME_NAMES[info.game] || info.game || "")} ${esc(gdate(S.status.game_date))}${lc ? `, ${esc(lc.title || human(lc.name))}` : ""}</button>.`);
     }
   } else {
-    const c = (S.camps || [])[0];
+    const c = lastPlayed();
     line = "No run is playing.";
-    if (c) facts.push(`Last: ${esc(GAME_NAMES[c.game] || c.game)}, ${esc(c.title || human(c.name))}${c.latest ? `, ${esc(gdate(c.latest))}` : ""}.`);
+    const when = (t) => new Date(t * 1000).toDateString() === new Date().toDateString() ? hhmm(t) : onDate(t);
+    if (c) facts.push(`Last: ${esc(GAME_NAMES[c.game] || c.game)}, ${esc(c.title || human(c.name))}${c.latest ? `, ${esc(gdate(c.latest))}` : ""}${c.last_t ? `, stopped ${esc(when(c.last_t))}` : ""}.`);
     actions = S.ok ? `<button type="button" class="btn primary" data-act="start">Start run</button>` : "";
   }
   if (["playing", "paused", "history", "none"].includes(state)) { const a = answeredText(); if (a) facts.push(esc(a)); }
