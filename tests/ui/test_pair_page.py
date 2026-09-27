@@ -180,3 +180,18 @@ def test_devices_tab_lists_this_browser_and_signs_another_out(browser, live_serv
     assert auth.store.device(other["id"])["revoked_at"]
     assert expected_only(a.errors) == []
     a.context.close()
+
+
+@pytest.mark.parametrize("name", ["phone-light", "desktop-dark"])
+def test_a_bad_link_says_the_link_does_not_work(browser, live_servers, name):
+    """A mistyped or cut-off link is answered about the link, not about typed words."""
+    w = open_context(browser, name, live_servers, signed_in=False)
+    page = w.page
+    page.goto(f"{w.base}/pair#c=0123456789.{'x' * 43}")
+    page.wait_for_selector("#v-confirm:not([hidden])")
+    page.click("#confirm-go")
+    page.wait_for_selector("#confirm-error:not([hidden])")
+    text = page.text_content("#confirm-error")
+    assert text.startswith("This link doesn't work") and "words don't match" not in text
+    assert page.is_visible("#type-instead") and no_overflow(page)
+    w.context.close()

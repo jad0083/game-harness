@@ -1336,6 +1336,10 @@ class Auth:
         "conflict": ("err", ("This browser was signed out: its sign-in code was used again by another browser. "
                              "Make a new code on a browser that is signed in.")),
         "wrong": ("err", "Those words don't match a current code. Codes last 10 minutes and work once."),
+        "bad_link": ("err", ("This link doesn't work: it may be incomplete, used or expired. Make a new code on a "
+                             "browser that is signed in.")),
+        "bad_key": ("err", ("That is not the current recovery key. A rotation changes it, so a password manager may "
+                            "hold an old one.")),
         "words_off": ("err", ("Typed words were switched off after 5 wrong tries on your network. "
                               "Use the link or QR code instead.")),
         "expired": ("err", "This code has expired. Make a new one on the other device."),
@@ -1473,6 +1477,7 @@ class Auth:
             if status == "wrong":
                 self.throttle.fail(bucket)
                 await asyncio.to_thread(self.store.audit, "signin_failed", ip, None, {"how": "link"})
+                return self._refused(request, form, 401, "wrong_code", "bad_link", nxt)
         elif typed is not None:
             words = canonical_words(str(typed))
             if words is None:
@@ -1530,7 +1535,7 @@ class Auth:
             return self.render(request, 429, "too_many", nxt, wait=max(1, int(wait + 0.999)))
         if not self.keys.matches(body.get("key", "")):
             await asyncio.to_thread(self.store.audit, "signin_failed", request.remote, None, {"how": "recovery_key"})
-            return self.render(request, 401, "wrong", nxt)
+            return self.render(request, 401, "bad_key", nxt)
         self.throttle.refund(bucket)
         ua = request.headers.get("User-Agent", "")
         _, cred = await asyncio.to_thread(self.store.create_device, "browser", name=device_name(ua),

@@ -378,7 +378,9 @@ def test_a_wrong_link_token_counts_and_is_refused(tmp_path, clock):
         async with client(app) as c:
             bad = g["id"] + "." + "x" * 43
             r = await c.post("/pair", json={"link": bad}, headers=origin(c))
-            assert r.status == 401 and (await r.json())["error"] == "wrong_code"
+            j = await r.json()
+            assert r.status == 401 and j["error"] == "wrong_code"
+            assert j["reason"].startswith("This link doesn't work") and "words" not in j["reason"]   # no words were typed
             r = await c.post("/pair", json={"link": "garbage"}, headers=origin(c))
             assert r.status == 401
     asyncio.run(go())
@@ -569,6 +571,8 @@ def test_recovery_key_form_when_switched_on(tmp_path, clock, monkeypatch):
             r = await c.post("/pair/key", data={"username": "pilot", "key": "wrong", "next": "/"}, headers=origin(c),
                              allow_redirects=False)
             assert r.status == 401
+            text = await r.text()
+            assert "not the current recovery key" in text and "words don" not in text
             assert (await c.post("/pair/key", data={"key": KEY}, allow_redirects=False)).status == 403   # no Origin
             r = await c.post("/pair/key", data={"username": "pilot", "key": KEY, "next": "/"}, headers=origin(c),
                              allow_redirects=False)
