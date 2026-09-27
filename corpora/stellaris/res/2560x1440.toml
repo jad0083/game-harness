@@ -59,7 +59,7 @@ sell = [891, 285]
 resources = { energy = [827, 314], minerals = [849, 314], food = [870, 314], consumer_goods = [891, 314], alloys = [827, 335], volatile_motes = [849, 335], exotic_gases = [870, 335], rare_crystals = [891, 335], sr_living_metal = [827, 357], sr_zro = [849, 357], sr_dark_matter = [870, 357] }
 minus = [827, 377]
 plus = [869, 377]
-new_trade_amount = 10
+new_trade_amount = { energy = 10, minerals = 10, food = 10, consumer_goods = 5, volatile_motes = 1, exotic_gases = 1, rare_crystals = 1 }
 confirm = [879, 453]
 remove = [788, 453]
 order_row_first = [456, 217]

@@ -162,14 +162,25 @@ Each screen is handled at most once per attempt; at most 4 dismissals per turn. 
 - `detect_change_bbox` — crop of the changed region handed to the model with a `ModalEvent`.
 
 ### D. Stdio MCP Server (`mcp.rs`)
-Exposes 19 Model Context Protocol tools over JSON-RPC stdio: screen and input tools, autopilot, and the corpus tools (`corpus_search`, `corpus_get`, `corpus_tech`, `corpus_improvement`, `corpus_order`, `corpus_info`, `corpus_strategy`). Game-specific tools are listed only when their corpus is loaded: `stellaris_briefing`, `stellaris_directive`, `stellaris_speed`, `stellaris_pause` and `stellaris_log` with `corpora/stellaris`.
+Exposes 19 Model Context Protocol tools over JSON-RPC stdio: screen and input tools, autopilot, and the corpus tools (`corpus_search`, `corpus_get`, `corpus_tech`, `corpus_improvement`, `corpus_order`, `corpus_info`, `corpus_strategy`). Game-specific tools are listed only when their corpus is loaded: `stellaris_briefing`, `stellaris_directive`, `stellaris_posture`, `stellaris_take_control`, `stellaris_speed`, `stellaris_pause`, `stellaris_log`, `stellaris_pick_tech` and `stellaris_market_sync` with `corpora/stellaris`.
 
 ### E. Stellaris save reader (`stellaris.rs`)
 Reads a `.sav` (ZIP of `meta` + `gamestate`, Clausewitz text) with the `jomini` parser and builds
 a `Briefing` of the player country: stockpile (`standard_economy_module.resources`), monthly net
 (sum of `budget.last_month.balance`), research queues and options (`tech_status`), policies,
 flags, planets (in 4.5 `owned_planets` holds colony ids; `colony.carrier` points to the planet)
-and wars. `fetch_latest_save` lists `save games/*/` through the agent's `stellaris_docs` root and
+and wars. For the governor's levers it also reads policy dates (`active_policies[].date`), occupied
+colonies (planet `controller` ≠ owner), each colony's open jobs (`pop_jobs`), unemployment (the
+civilian pop groups), district levels and development queue (`construction.item_mgr`), shipyards
+(starbases with a `shipyard` module whose station fleet is ours, or held by another country in a
+system with our colony), the market (galactic once formed and our slot has access, else internal:
+fluctuations by resource index, our cumulative bought/sold, last month's `monthly_trades` budget
+line), `force_peace` per war, our own battles (only those listing our country, 12 months; ground
+battles are undated and counted as invasions over the war, only where our own country defended a
+colony we own, not an ally's colony we took later; each war's `id` and `battle_count` and the
+invasions' indices in its append-only battle list identify them across saves, since the bare count
+also rises when we retake a colony we lost) and `governor_*` country variables;
+each top-level block is walked once. `fetch_latest_save` lists `save games/*/` through the agent's `stellaris_docs` root and
 downloads the newest `.sav`. Measured on a year-2200 medium galaxy: 1.26 MB fetched in 16 ms,
 20 MB parsed in 42 ms, briefing ≈ 2 KB. Tests run against a real autosave
 (`tests/fixtures/stellaris_2200_11_01.sav`).
@@ -180,14 +191,48 @@ never explores or expands). `take_control` leaves observer mode if a scoped prob
 (`HumanAiReader`: `help` fills the console so the reply is on the bottom line; the closer of the
 ON/OFF templates wins, because the semi-transparent console shifts absolute distances).
 
-Directives (`corpora/stellaris/directives.toml`) become two console lines: one `effect` clearing
-the other `governor_directive_*` flags, one setting this directive's flag and policies plus a
+Directives (`corpora/stellaris/directives.toml`) become console lines: one `effect` clearing
+the other `governor_directive_*` flags; one per policy, `if = { limit = { can_set_policy = {…}
+<the option's valid> } set_policy = { … cooldown = yes } log = "GOVERNOR_POLICY <policy> <option>
+<nonce>" }`, so a policy is set only as a player could (the 10-year lock, the group's `allow` such
+as no stance change at war, the option's `potential`) and starts the lock; and last the flag plus a
 scoped `log` of `GOVERNOR_APPLIED <name> <nonce>` (logged only with a real country scope; the
-nonce matters because game.log drops text repeated on the same in-game day). Every identifier must
+nonce matters because game.log drops text repeated on the same in-game day). `apply_directive`
+first reads the newest autosave's policies and leaves out each option already in force
+(`console_lines_with_policies`: setting it again with `cooldown = yes` could restart its lock), then
+returns an `Applied`: the lines, the policies whose marker appeared (`set`), those left out
+(`in_force`) and the others (`locked`); the MCP reply and the CLI print the lists. One line per policy keeps each line within
+the 529 characters verified live. Every identifier must
 match `[a-z0-9_]+`, so a directive cannot inject other commands. `run_console` checks that
 Stellaris is the foreground window before every keystroke, and `apply_directive` polls `game.log`
 (written with a few seconds' delay) for up to 8 s. It pauses the game while typing and restores the
 previous state afterwards.
+
+Postures (`[posture.*]` in directives.toml; levers design rulings 18-21) are country flags
+`governor_posture_<name>` beside the directive, read by the Governor Bridge mod v2. A directive
+lists the postures it switches; its console trip gets one more line that sets its *enabled*
+postures and clears every other directive-bound posture, apart from the directive-flag line, so
+neither ever clears the other's flags. `war_crisis` is bound to no directive: `apply_posture`
+(`stellaris posture`, MCP `stellaris_posture`) sets or clears one posture alone, confirmed by
+`GOVERNOR_POSTURE <name> on|off <nonce>`. A disabled posture is never set (every one is disabled
+until its live probe passes). `Directives::parse` refuses a bound posture missing from the
+registry, a posture named like a directive, and a `mod_version` the repo's mod files do not have.
+
+The companion mod (`corpora/stellaris/mod/governor_bridge`, v2) holds only additive entries: AI
+budget entries gated on one directive or posture flag, in (resource, category) pairs a non-nomadic
+empire spends from in vanilla; subplans (focus and naval_cap only, optional, named `Governor …`)
+merged into the six vanilla economic plans; and the read channel, a hidden triggered-only
+`governor_bridge.1` on `on_monthly_pulse_country` that exports `max_naval_capacity` and
+`used_naval_capacity_integer` to `governor_naval_cap` / `governor_naval_used` for the country
+carrying `governor_bridge_player`, which `take_control` sets in its scope probe. Country variables
+outlive the mod (a restart with another playset keeps the last export), so the briefing counts the
+export as current only while `governor_naval_used` agrees with the save's `used_naval_capacity`
+(within max(2, 2%)); otherwise `governor_vars_stale` is set and the text keeps "the maximum is not
+in the save". The use printed is always the save's own. Nothing in it
+adds resources, modifiers or policies; `stellaris.rs` tests parse every file and check each rule.
+`bridge_loaded` sends one console line per version trigger (`governor_bridge_version_2`, then
+`governor_bridge_present`), because an unknown trigger fails its whole effect, and returns the
+version it saw.
 
 Pause state comes from `[screens.paused]`: a colour signature (`color_range`,
 `color_min_fraction`; `imaging::color_fraction`) over the "Paused" label. That label pulses in
@@ -313,6 +358,23 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   thread), `order_add`/`order_remove` (standing orders in every prompt, saved in
   `runs/orders/<campaign>.json`), `decide_now` and `override` (queued requests the loop handles
   with the game paused), `instruct` (one-time note, also answers questions).
+- `governor.py` date-stall watchdog (Stellaris; `Civ6Governor` has its own wait loop): while the
+  governor waits with the game meant to run, `_stalled` compares the time since the autosave date
+  last moved with `_stall_limit()` = max(300 s, 10 x the median real seconds per in-game month over
+  this run's last 24 months, measured in the wait only, so decision time is left out). Past it: a
+  screenshot, a `stall` event and needs attention with the screenshot's path. It sends no input:
+  a resume could unpause another campaign the human loaded (it writes no autosave at first, so the
+  governed save still looks newest), and `McpGame.ensure_foreground` would focus any window whose
+  title contains "Stellaris" (the launcher, a browser tab) after a crash; nothing read-only proves
+  the governed game is in front. A dashboard pause never reaches the check; a pause made in the
+  game's own UI looks like a stall (known limit). A failed read never feeds the watchdog: its time
+  is left out of the held time (`unread_since`), so an agent outage or a sleeping PC is no stall,
+  and a crash with a flaky agent is still found. Reads failing for `_stall_limit()` in a row
+  (`_unread_too_long`) set needs attention and a `needs_attention` event without pausing the run
+  or sending input; the wait keeps reading, and the first save of the campaign that reads clears it
+  (`recovered`). The clock is injected (`_clock`, default
+  `time.monotonic`) so tests drive it; `FakeStellaris(self_pause_after=n)` pauses itself after n
+  reads.
 - `claude_code.py`: the `claude-code:<alias or model id>` provider (the catalog adds versioned ids from
   the Anthropic listing to the aliases, `models._claude_code_models`). `resolve_model` turns the model string into
   a pydantic-ai `FunctionModel` (where the governor and GC4 agents are built), so pools, fallback,
@@ -354,7 +416,12 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   table, `latest_strategy`, `strategy_history`, `metrics_rows`; dashboard `/api/strategy`, control
   actions `edit_pillar`, `unpin_pillar`, `review_strategy`. Rust: `choose_tech_pick` (only the
   alternatives listed before the current tech, first 4 visible), `market_diff`, `amount_clicks`
-  (a new trade starts at 10), `pick_tech`/`sync_market` (paused, foreground-checked, screen always
+  (from the resource's own start amount, `trade_start`: 0.1 x its market amount; `market_plan` refuses
+  each alloys or sr_* add until measured, and the rest of the sync still goes, except the current
+  order of the refused side and resource, which is kept at its amount (`kept`); a missing or
+  non-table `new_trade_amount`, a manifest fault, fails the whole sync instead; the governor reads the
+  reply's "not added" list back and skips those resources, keeping an order of the same side and
+  resource that the save holds while it passes the declared order's checks), `pick_tech`/`sync_market` (paused, foreground-checked, screen always
   closed), positions in `corpora/stellaris/manifest.toml` `[ui.tech]`/`[ui.market]` (calibrated live
   on 4.5.1). The old free-text plan (`plan` events, `/api/plans`) remains readable history only.
 - `static/dashboard.html`: one file, no build step; SVG charts (palette validated for both themes;

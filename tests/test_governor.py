@@ -1462,8 +1462,24 @@ def test_strategy_instructions_cover_the_defence_naval_cap_ruling():
 
 def test_strategy_instructions_forbid_trade_market_orders():
     from pilot.strategy import strategist_instructions
-    assert ("Market orders cannot use trade; sell only idle energy, minerals, food, consumer goods "
-            "or alloys (strategic resources can only be bought).") in strategist_instructions(STELLARIS)
+    text = strategist_instructions(STELLARIS)
+    assert ("Market orders cannot use trade; sell only idle energy, minerals, food or consumer goods "
+            "(strategic resources can only be bought);") in text
+    # alloys and sr_* have no measured start amount yet: the controller refuses to add them
+    assert "alloys and sr_* orders are not placed until their start amount is measured" in text
+
+
+def test_the_playbook_says_the_war_stance_is_set_only_at_peace():
+    """Levers ruling 20: diplomatic_stance has `allow = { is_at_war = no }` and can_set_policy
+    guards every set, so defend chosen during a war never sets belligerent; the playbook and the
+    directive notes must not promise its +10% naval capacity at war."""
+    text = (REPO / "corpora/stellaris/strategy.md").read_text(encoding="utf-8")
+    stance = text[text.index("- **War stance**"):].split("\n- ")[0].split("\n\n")[0]
+    assert "at peace" in stance and "10-year lock" in stance, stance
+    toml = (REPO / "corpora/stellaris/directives.toml").read_text(encoding="utf-8")
+    for name, nxt in (("defend", "[directive.diplomacy_first]"), ("prepare_war", "[directive.defend]")):
+        block = toml[toml.index(f"[directive.{name}]"):toml.index(nxt)]
+        assert "while we fight" not in block and "at peace" in block, block
 
 
 def test_strategy_instructions_allow_at_most_one_small_monthly_order():
@@ -2634,6 +2650,103 @@ def test_sells_that_no_longer_fit_are_dropped_before_market_sync(setup):
     assert skipped and "not idle" in skipped[0]["result"]
 
 
+def test_an_unmeasured_market_order_is_left_out_and_the_rest_of_the_sync_still_goes(setup):
+    """Review fix: the controller refuses an add with no measured start amount (alloys, sr_*) per
+    order and still removes stale orders; the governor keeps the refused order out of what it
+    waits to see in the save (no false "did not stick") and stops sending it, with a skipped log."""
+    from pilot.strategy import Pillar
+    s, log = setup
+    alloys, cg, food = ({"side": "buy", "resource": r, "amount": 5} for r in ("alloys", "consumer_goods", "food"))
+
+    class Controller(FakeStellaris):
+        def market_sync(self, orders):
+            self.actions.append(("market_sync", list(orders)))
+            if orders == [alloys]:
+                return ("added none; removed buy consumer_goods 5; not added (start amount not measured): "
+                        "buy alloys 5; the next autosave confirms it")
+            return "added buy food 5; removed none; the next autosave confirms it"
+
+    game = Controller([briefing("2200.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[alloys]))
+    g._carry_out_actions({**briefing("2200.01.01"), "market_orders": [cg]})    # a stale order from before
+    assert game.actions.count(("market_sync", [alloys])) == 1
+
+    def market_log():
+        return [e["result"] for e in log.recent if e["kind"] == "strategy_action" and e.get("action") == "market"]
+
+    # the next save holds no order: the controller did what it said, so nothing failed to stick
+    g._carry_out_actions({**briefing("2200.02.01"), "market_orders": []})
+    assert not any("did not stick" in r for r in market_log()), market_log()
+    assert not g._market_stuck
+    assert sum(1 for a in game.actions if a[0] == "market_sync") == 1, "the refused order is not sent again"
+    assert any("skipped buy alloys 5" in r and "start amount not measured" in r for r in market_log()), market_log()
+
+    # an alloys order already in the save stays: keeping it adds nothing
+    g._carry_out_actions({**briefing("2200.03.01"), "market_orders": [alloys]})
+    assert sum(1 for a in game.actions if a[0] == "market_sync") == 1
+
+    # other resources still sync
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[food]))
+    g._carry_out_actions({**briefing("2200.04.01"), "market_orders": []})
+    assert ("market_sync", [food]) in game.actions
+    # the reply this test fakes is the controller's own wording (stellaris.rs MarketPlan::reply)
+    rs = (REPO / "crates/game-controller/src/stellaris.rs").read_text(encoding="utf-8")
+    assert '"; not added (start amount not measured): {}"' in rs
+
+
+def test_an_unmeasured_order_at_another_amount_keeps_the_one_in_the_save(setup):
+    """Re-review fix: the save buys alloys 7 and the strategy wants 5. The controller refuses the add
+    and keeps the 7 (it no longer removes it, which left the empire buying none); the governor
+    expects the 7 in the next save and from then on keeps it in what it asks for, matching the
+    unmeasured resource on side and resource, not on the amount."""
+    from pilot.strategy import Pillar
+    s, log = setup
+    alloys5, alloys7 = ({"side": "buy", "resource": "alloys", "amount": a} for a in (5, 7))
+
+    class Controller(FakeStellaris):
+        def market_sync(self, orders):
+            self.actions.append(("market_sync", list(orders)))
+            return ("nothing sent; not added (start amount not measured): buy alloys 5; "
+                    "kept (start amount not measured): buy alloys 7")
+
+    game = Controller([briefing("2200.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[alloys5]))
+    g._carry_out_actions({**briefing("2200.01.01"), "market_orders": [alloys7]})
+    assert game.actions.count(("market_sync", [alloys5])) == 1
+
+    def market_log():
+        return [e["result"] for e in log.recent if e["kind"] == "strategy_action" and e.get("action") == "market"]
+
+    # the next save still buys 7: that is what the controller said, so nothing failed to stick, and
+    # the kept order is asked for as it is (no sync that would remove it)
+    for month in ("2200.02.01", "2200.03.01"):
+        g._carry_out_actions({**briefing(month), "market_orders": [alloys7]})
+    assert not any("did not stick" in r for r in market_log()), market_log()
+    assert not g._market_stuck
+    assert sum(1 for a in game.actions if a[0] == "market_sync") == 1, game.actions
+    assert any("kept buy alloys 7" in r and "start amount not measured" in r for r in market_log()), market_log()
+    # the reply this test fakes is the controller's own wording (stellaris.rs MarketPlan::reply)
+    rs = (REPO / "crates/game-controller/src/stellaris.rs").read_text(encoding="utf-8")
+    assert '"; kept (start amount not measured): {}"' in rs
+
+
+def test_a_kept_sell_must_still_fit_todays_briefing(setup):
+    """A save's order is kept for an unmeasured resource only while it passes the checks the declared
+    order passed: a sell of 50 alloys over the 20% income cap (20) is removed, not kept."""
+    from pilot.strategy import Pillar
+    s, log = setup
+    game = FakeStellaris([briefing("2200.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"],
+                                               market=[{"side": "sell", "resource": "alloys", "amount": 10}]))
+    g._market_unmeasured = {"alloys"}
+    idle_alloys = {**briefing("2200.01.01", net={"alloys": 100.0}), "stockpile": {"alloys": 20000}}
+    g._carry_out_actions({**idle_alloys, "market_orders": [{"side": "sell", "resource": "alloys", "amount": 50}]})
+    assert ("market_sync", []) in game.actions, game.actions
+
+
 def test_sells_that_still_fit_are_synced(setup):
     from pilot.strategy import Pillar
     s, log = setup
@@ -3771,3 +3884,239 @@ def test_a_start_that_times_out_recovers_without_a_human(setup, monkeypatch):
     kinds = [e["kind"] for e in log.recent]
     assert "needs_attention" in kinds and "recovered" in kinds, kinds
     assert log.state.episodes >= 1, "the start was tried again by itself"
+
+
+# -- date-stall watchdog (levers design ruling 23) -------------------------------------------------
+
+class _Clock:
+    """A wall clock that moves `step` seconds each time the game's save is read (one poll), so a
+    test drives the watchdog's timing without sleeping."""
+
+    def __init__(self, game, step: float):
+        self.t, self.step = 1000.0, step
+        read = game.briefing
+
+        def briefing():
+            self.t += self.step
+            return read()
+        game.briefing = briefing
+
+    def __call__(self) -> float:
+        return self.t
+
+
+def _kinds(log) -> list[str]:
+    return [e["kind"] for e in log.recent]
+
+
+def test_a_date_that_stops_while_running_needs_attention_and_sends_no_input(setup):
+    s, log = setup
+    game = FakeStellaris([briefing("2200.01.01")])          # the save never changes
+    gov = Governor(s, game, log, model=decisions("keep"))
+    gov._clock = _Clock(game, step=60)
+    b, reason = gov._run_until_next_decision(briefing("2200.01.01"))
+    assert (b["date"], reason) == ("2200.01.01", "") and gov.control.paused
+    assert log.state.status == "needs_attention"
+    kinds = _kinds(log)
+    assert kinds.count("stall") == 1 and kinds.count("needs_attention") == 1
+    assert kinds.index("stall") < kinds.index("needs_attention")
+    assert "self_paused" not in kinds
+    assert game.actions == [("paused", False)], "only the wait's own resume: the watchdog sends nothing"
+    stall = next(e for e in log.recent if e["kind"] == "stall")
+    assert stall["limit"] == 300 and stall["seconds"] == 300 and stall["date"] == "2200.01.01"
+    reason = next(e for e in log.recent if e["kind"] == "needs_attention")["reason"]
+    assert "has not advanced for 300 s" in reason and "2200.01.01" in reason and "Nothing was sent" in reason, reason
+
+
+def test_a_game_that_paused_itself_waits_for_the_human(setup):
+    s, log = setup
+    s.decide_every_months = 3
+    game = FakeStellaris([briefing(f"2200.{m:02d}.01") for m in range(1, 8)], self_pause_after=2)
+    gov = Governor(s, game, log, model=decisions("keep"))
+    gov._clock = _Clock(game, step=10)
+    b, reason = gov._run_until_next_decision(briefing("2200.01.01"))
+    assert reason == "" and log.state.status == "needs_attention"
+    stall = next(e for e in log.recent if e["kind"] == "stall")
+    assert stall["date"] == "2200.02.01" and stall["seconds"] >= 300
+    assert game.self_paused and game.actions == [("paused", False)], "the watchdog left the game as it was"
+    # the human checks the PC and presses Resume: the wait's own resume carries on
+    gov.resume()
+    b, reason = gov._run_until_next_decision(b)
+    assert reason.startswith("scheduled") and b["date"] == "2200.05.01", (reason, b["date"])
+    assert not game.self_paused
+
+
+def test_the_watchdog_never_unpauses_another_loaded_campaign(setup):
+    """Review fix: the human presses Esc and loads their own campaign ("Commonwealth of Man 3"),
+    which starts paused and writes no autosave yet, so the newest autosave stays the governed one and
+    its date holds. Nothing read-only proves which game is loaded, so the watchdog sends no input."""
+    s, log = setup
+    governed = {**briefing("2200.01.01"), "source": "save games/governed_1/autosave_2200.01.01.sav"}
+
+    class UserLoadsTheirGame(FakeStellaris):
+        def __init__(self, briefings):
+            super().__init__(briefings)
+            self.loaded, self.sent_to_other_game = "governed_1", []
+
+        def briefing(self):
+            if self.reads == 1:
+                self.loaded, self.paused = "commonwealth_of_man_3", True     # Load Game, starts paused
+            return super().briefing()
+
+        def set_paused(self, paused):
+            if self.loaded != "governed_1":
+                self.sent_to_other_game.append(("paused", paused))
+            return super().set_paused(paused)
+
+    game = UserLoadsTheirGame([governed])
+    gov = Governor(s, game, log, model=decisions("keep"))
+    gov._folder = "governed_1"
+    gov._clock = _Clock(game, step=60)
+    _, reason = gov._run_until_next_decision(governed)
+    assert reason == "" and log.state.status == "needs_attention"
+    assert game.sent_to_other_game == [], "never an input to the user's own game"
+    assert game.actions == [("paused", False)], "only the wait's own resume, before the load"
+
+
+def test_after_a_crash_the_watchdog_brings_no_window_forward(setup):
+    """Review fix: Stellaris crashed and a browser tab titled "Stellaris Wiki" is in front. The real
+    McpGame input path (ensure_foreground) would ask the agent to focus a window whose title contains
+    "Stellaris"; the watchdog must not take that path at all."""
+    import json
+
+    from pilot.game import McpGame, ToolResult
+    s, log = setup
+    calls: list[str] = []
+
+    class Crashed(McpGame):
+        def __init__(self):                              # no controller process: a stubbed agent
+            self.GAME_TITLE = "Stellaris"
+
+        def _http(self, method, path, body=None):
+            return json.dumps({"foreground": "Stellaris Wiki - Google Chrome"}).encode()
+
+        def call(self, tool, **args):
+            calls.append(tool)
+            if tool == "stellaris_briefing":
+                return ToolResult(json.dumps(briefing("2200.01.01")), None)
+            return ToolResult("Running (changed)." if tool == "stellaris_pause" else "ok", None)
+
+    game = Crashed()
+    gov = Governor(s, game, log, model=decisions("keep"))
+    gov._clock = _Clock(game, step=60)
+    _, reason = gov._run_until_next_decision(briefing("2200.01.01"))
+    assert reason == "" and log.state.status == "needs_attention"
+    after_first_poll = calls[calls.index("stellaris_briefing"):]
+    assert "focus" not in after_first_poll and "stellaris_pause" not in after_first_poll, after_first_poll
+    assert set(after_first_poll) <= {"stellaris_briefing", "screenshot"}, after_first_poll
+
+
+def test_the_watchdog_leaves_a_human_pause_alone(setup):
+    s, log = setup
+
+    class PausedMidWait(FakeStellaris):
+        def briefing(self):
+            gov.pause()                                  # the human presses Pause on the dashboard
+            return super().briefing()
+
+    game = PausedMidWait([briefing("2200.01.01")])
+    gov = Governor(s, game, log, model=decisions("keep"))
+    gov._clock = _Clock(game, step=10_000)               # every poll looks like a stall
+    _, reason = gov._run_until_next_decision(briefing("2200.01.01"))
+    assert reason == "" and gov.human_paused
+    assert "stall" not in _kinds(log) and "needs_attention" not in _kinds(log)
+    assert game.actions.count(("paused", False)) == 1, "only the wait's own resume"
+
+
+def test_a_moving_date_never_counts_as_a_stall(setup):
+    s, log = setup
+    game = FakeStellaris([briefing(f"22{y:02d}.{m:02d}.01") for y in range(2) for m in range(1, 13)])
+    gov = Governor(s, game, log, model=decisions("keep"))
+    gov._clock = _Clock(game, step=290)                  # slow months, 12 of them take 58 minutes
+    b, reason = gov._run_until_next_decision(briefing("2200.01.01"))
+    assert reason.startswith("scheduled") and b["date"] == "2201.01.01"
+    assert "stall" not in _kinds(log)
+    # each new date restarts the timer: every month is measured from the previous one (the first
+    # poll still read the old save, so the first month took two polls)
+    assert list(gov._month_secs) == [580.0] + [290.0] * 11
+
+
+def test_the_stall_limit_is_ten_median_months_and_never_under_300_s(setup):
+    s, log = setup
+    gov = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+    assert gov._stall_limit() == 300, "no months measured yet"
+    gov._month_secs.extend([2.0] * 24)
+    assert gov._stall_limit() == 300, "fastest speed: the floor holds"
+    gov._month_secs.extend([60.0] * 24)
+    assert gov._stall_limit() == 600, "only this run's last 24 months count"
+    gov._month_secs.extend([40.0] * 13)
+    assert gov._stall_limit() == 400
+
+    # measured from the run: six 100 s months, then the date holds
+    s.decide_every_months = 12
+    game = FakeStellaris([briefing(f"2200.{m:02d}.01") for m in range(1, 7)])
+    gov = Governor(s, game, log, model=decisions("keep"))
+    gov._clock = _Clock(game, step=100)
+    gov._run_until_next_decision(briefing("2199.12.01"))
+    stall = next(e for e in log.recent if e["kind"] == "stall")
+    assert stall["limit"] == 1000 and stall["seconds"] == 1000 and stall["date"] == "2200.06.01"
+
+
+class _Outage(FakeStellaris):
+    """The agent does not answer on the reads numbered in `down` (1-based): the save read and any
+    input in that time raise URLError, as McpGame does when the PC sleeps or the network drops."""
+
+    def __init__(self, briefings, down):
+        super().__init__(briefings)
+        self.down, self.calls, self.tried_while_down = set(down), 0, []
+
+    def briefing(self):
+        self.calls += 1
+        if self.calls in self.down:
+            import urllib.error
+            raise urllib.error.URLError("[Errno 113] No route to host")
+        return super().briefing()
+
+    def set_paused(self, paused):
+        if self.calls in self.down:
+            import urllib.error
+            self.tried_while_down.append(("paused", paused))
+            raise urllib.error.URLError("[Errno 113] No route to host")
+        return super().set_paused(paused)
+
+
+def test_an_agent_outage_longer_than_the_stall_limit_recovers_without_a_human(setup):
+    """Re-review fix: the PC sleeps for 8 minutes (reads 2-9 fail), so the date cannot move, then
+    the agent answers again with the same date. Time without a reading is no stall: the outage
+    flags needs attention (the governor is blind), clears by itself once a save of the campaign
+    reads again, and the wait goes on to its scheduled decision with no human Resume."""
+    s, log = setup
+    s.decide_every_months = 3
+    game = _Outage([briefing("2200.01.01")] * 3 + [briefing(f"2200.{m:02d}.01") for m in (2, 3, 4)], down=range(2, 10))
+    gov = Governor(s, game, log, model=decisions("keep"))
+    gov._clock = _Clock(game, step=60)
+    b, reason = gov._run_until_next_decision(briefing("2200.01.01"))
+    assert reason.startswith("scheduled") and b["date"] == "2200.04.01", (reason, b["date"], _kinds(log))
+    kinds = _kinds(log)
+    assert "stall" not in kinds, "the outage time is left out of the held time"
+    assert kinds.count("needs_attention") == 1 and "recovered" in kinds
+    assert kinds.index("needs_attention") < kinds.index("recovered")
+    why = next(e for e in log.recent if e["kind"] == "needs_attention")["reason"]
+    assert "could not be read for 300 s" in why and "Nothing was sent" in why and "by itself" in why, why
+    assert log.state.status == "playing" and not gov.control.paused
+    assert game.tried_while_down == [], "no input while the agent was away"
+    assert game.actions == [("paused", False), ("paused", True)], "the wait's own resume and the decision's pause"
+
+
+def test_a_short_read_failure_does_not_restart_the_stall_timer(setup):
+    """A crash with a flaky agent: the date holds and one read fails. The failed read's minute is
+    left out, but the time observed before and after it counts, so the stall is still found."""
+    s, log = setup
+    game = _Outage([briefing("2200.01.01")], down={3})
+    gov = Governor(s, game, log, model=decisions("keep"))
+    gov._clock = _Clock(game, step=60)
+    _, reason = gov._run_until_next_decision(briefing("2200.01.01"))
+    assert reason == "" and log.state.status == "needs_attention"
+    stall = next(e for e in log.recent if e["kind"] == "stall")
+    assert stall["seconds"] == 300 and game.calls == 6, (stall, game.calls)
+    assert game.actions == [("paused", False)]

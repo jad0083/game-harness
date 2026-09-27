@@ -12,8 +12,10 @@ import html
 import json
 import queue
 import re
+import statistics
 import threading
 import time
+from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from typing import ClassVar, Literal, Protocol
@@ -65,6 +67,11 @@ EVENT_TRIGGERS = ("new war", "war ended", "crisis", "colony lost", "boxed in", "
 # <id> in <field> (option n); unverified until the next autosave …"); a reply that matches neither
 # form (e.g. "nothing to pick: …") leaves no tech to watch.
 TECH_PICK_RE = re.compile(r"^(?:picked|clicked) (\S+) in (\w+)")
+# stellaris_market_sync names each add it refused for want of a measured start amount (alloys and
+# sr_* until live check L2) as "not added (start amount not measured): buy alloys 5, sell sr_zro 1";
+# removals and the other adds went ahead, except a current order of a refused side and resource,
+# which it kept at its amount ("kept (start amount not measured): buy alloys 7"; see _kept_for).
+MARKET_REFUSED_RE = re.compile(r"not added \(start amount not measured\): ([^;]+)")
 
 # Action kind -> the game method that carries it out. A game whose object lacks the method has no
 # hook for that kind: a pillar declaring it is logged "not supported" once and skipped.
@@ -412,6 +419,11 @@ something done, tell them to use "Decide now", a standing order, or an override 
 class Governor:
     event_triggers: ClassVar[tuple[str, ...]] = EVENT_TRIGGERS    # urgent reasons that start a strategy review
     human_paused: bool = False       # paused from the dashboard: only the human's Resume ends it
+    # date-stall watchdog (Stellaris; levers design ruling 23): the autosave date unchanged for
+    # max(stall_floor_s, 10 x the median real seconds per month of this run's last stall_months)
+    # while running means a stall: a screenshot and needs attention, with no input to the game
+    stall_floor_s: ClassVar[float] = 300.0
+    stall_months: ClassVar[int] = 24
 
     def __init__(self, settings: Settings, game: StellarisGame, log: EventLog, model=None, fallback=None,
                  role_models: dict | None = None):
@@ -463,8 +475,12 @@ class Governor:
         self._market_sync_date: str | None = None  # briefing date of the last market_sync attempt (ditto)
         self._pending_market: list[dict] | None = None   # orders last synced, watched for whether they stuck
         self._market_stuck: bool = False          # a sync did not stick: no retry until the next review
+        self._market_unmeasured: set[str] = set()   # resources the controller refused to add (no measured start)
         self._since_retro = 0
         self._strategy_trace_n = 0                # negative episode ids for strategy review traces (see _review_strategy)
+        self._clock: Callable[[], float] = time.monotonic   # the watchdog's wall clock (tests inject one)
+        self._month_secs: deque[float] = deque(maxlen=self.stall_months)   # real seconds per in-game month
+        self._date_seen_at = 0.0                  # clock when the autosave date last changed (or the wait began)
         self.orders: list[str] = []               # standing orders, saved per campaign
         # ("decide", msg) | ("override", name) | ("speed", speed) | ("review", trigger)
         self.requests: queue.Queue[tuple[str, str]] = queue.Queue()
@@ -1029,6 +1045,9 @@ class Governor:
         start = months(last["date"])          # the interval can change mid-wait (dashboard)
         self._status("playing")
         self.game.set_paused(False)
+        self._date_seen_at = self._clock()
+        unread_since: float | None = None      # clock of the first failed read in a row
+        blind = False                          # reads failed for a stall limit: flagged, clears by itself
         while True:
             if self.control.stopping:
                 return None, "stop"
@@ -1040,8 +1059,11 @@ class Governor:
             time.sleep(self.s.poll_s)
             try:
                 b = self.game.briefing()
-            except Exception as e:  # noqa: BLE001 - a save being rotated; try again next poll
+            except Exception as e:  # noqa: BLE001 - a save being rotated, or the agent away; try again next poll
                 self.log.emit("briefing_error", error=str(e)[:200])
+                unread_since = self._clock() if unread_since is None else unread_since
+                if not blind:
+                    blind = self._unread_too_long(unread_since, e)
                 continue
             folder = self._save_folder(b)
             if folder and getattr(self, "_folder", None) and folder != self._folder:
@@ -1051,10 +1073,23 @@ class Governor:
                                       f"{self._folder!r}. Load that game again and press Resume, or stop this run "
                                       "and start a new one for the new game.")
                 return last, ""
+            if blind:
+                blind = False
+                if self.log.state.status == "needs_attention":
+                    self._status("playing")
+                self.log.emit("recovered", reason="the newest autosave of this campaign reads again")
             if b["date"] != last["date"]:
+                self._date_moved(months(b["date"]) - months(last["date"]))
                 self.log.emit("metrics", **metrics(b))
                 self.log.state.game_date = b["date"]
                 self.log.state.turns_advanced = months(b["date"]) - months(last["date"]) + self.log.state.turns_advanced
+            else:
+                if unread_since is not None:
+                    # the time without a reading proves no stall (the PC may have slept): left out
+                    self._date_seen_at += self._clock() - unread_since
+                if self._stalled(b["date"]):
+                    return last, ""
+            unread_since = None
             urgent = urgent_changes(last, b)
             if b["date"] != last["date"]:
                 urgent += self._newly_missed_milestones(last["date"], b["date"])
@@ -1068,6 +1103,68 @@ class Governor:
                 self.game.set_paused(True)
                 return b, f"scheduled ({self.s.decide_every_months} months)"
             last = b
+
+    def _date_moved(self, n: int) -> None:
+        """The autosave date moved `n` months: record the real time per month, restart the stall timer."""
+        now = self._clock()
+        if n > 0:
+            self._month_secs.extend([(now - self._date_seen_at) / n] * min(n, self.stall_months))
+        self._date_seen_at = now
+
+    def _stall_limit(self) -> float:
+        """Seconds without a new date that count as a stall: 10 x the median real month of this run's
+        last `stall_months`, at least `stall_floor_s` (above every month seen live, 247 s max)."""
+        median = statistics.median(self._month_secs) if self._month_secs else 0.0
+        return max(self.stall_floor_s, 10 * median)
+
+    def _stalled(self, date: str) -> bool:
+        """The date-stall watchdog, run on every poll whose date did not move while the game should
+        be running. A popup that autopauses, the launcher or a crash can hold the date for good, and
+        nothing else notices. After `_stall_limit()`: a screenshot, a `stall` event and needs
+        attention, and True so the wait returns. It sends no input and brings no window forward: the
+        human may have loaded another campaign (it writes no autosave at first, so the governed save
+        still looks newest), or after a crash the only window titled Stellaris may be the launcher or
+        a browser tab, and nothing read-only proves the governed game is the one in front. So only the
+        human resumes (dashboard Resume). A dashboard pause never reaches here."""
+        if self.human_paused or self.control.paused:
+            return False
+        held, limit = self._clock() - self._date_seen_at, self._stall_limit()
+        if held < limit:
+            return False
+        frame = self._frame()
+        self.log.emit("stall", date=date, seconds=round(held), limit=round(limit), frame=frame)
+        self._needs_attention(f"the game date has not advanced for {round(held)} s (still {date}): a popup that paused "
+                              "the game, another game loaded, the launcher or a crash may hold it. Nothing was sent to "
+                              f"the game. Screenshot at the stall: {frame or 'none'}. Check the PC, then press Resume.")
+        return True
+
+    def _unread_too_long(self, since: float, e: BaseException) -> bool:
+        """Reads of the newest autosave have failed since `since` (the agent away: the PC asleep, the
+        network down, the agent reinstalled; or a save that cannot be read). That time is no date
+        stall. After `_stall_limit()` of it: needs attention in the status and a `needs_attention`
+        event, and True. The run is not paused and nothing is sent to the game: the wait keeps
+        reading, which is the probe, and clears the flag by itself once a save of this campaign reads
+        again (a `recovered` event); only a stall seen after that waits for the human."""
+        if self.human_paused or self.control.paused:
+            return False
+        held, limit = self._clock() - since, self._stall_limit()
+        if held < limit:
+            return False
+        self.log.state.status = "needs_attention"
+        self.log.emit("needs_attention", reason=(
+            f"the newest autosave could not be read for {round(held)} s ({type(e).__name__}: {e})"[:300]
+            + ": the agent may be away (the PC asleep, the network down, the agent reinstalled) or the save "
+            "unreadable. Nothing was sent to the game, which runs on without the governor. The run carries "
+            "on by itself as soon as a save of this campaign reads again; Resume also works."))
+        return True
+
+    def _frame(self) -> str:
+        """A screenshot saved with the run ('' if none could be taken)."""
+        try:
+            return self.log.frame(getattr(self.game.screenshot(), "image", None))
+        except Exception as e:  # noqa: BLE001 - the frame is only evidence
+            self.log.emit("briefing_error", error=f"screenshot: {e}"[:200])
+            return ""
 
     def _trend(self, b: dict) -> str:
         """Compare with this campaign's metrics from about 12 months ago (telemetry)."""
@@ -1289,15 +1386,50 @@ class Governor:
                 if later:
                     self._log_action("market", f"skipped sell {o.resource}: {'; '.join(errs)}"[:300])
                 continue
+            if o.resource in self._market_unmeasured and not any(self._same_orders([o.model_dump()], [c]) for c in current):
+                # the controller cannot add it yet; an order of that side and resource already in the
+                # save is kept at its amount (as the controller keeps it) while that amount passes the
+                # checks the declared order passed
+                held = [h for h in self._kept_for([o.model_dump()], current)
+                        if not market_briefing_errors(o.model_copy(update={"amount": h.get("amount")}), limits, idle, income)]
+                if later:
+                    what = (", ".join(f"kept {h['side']} {h['resource']} {h['amount']}" for h in held)
+                            + f" ({o.amount} wanted)" if held else f"skipped {o.side} {o.resource} {o.amount}")
+                    self._log_action("market", f"{what}: start amount not measured (the controller refuses to add it)")
+                desired += held
+                continue
             desired.append(o.model_dump())
         if not self._market_stuck and not self._same_orders(desired, current) and later:
             self._market_sync_date = date
             try:
                 res = market_sync(desired)
                 self._log_action("market", res)
-                self._pending_market = desired
+                refused = self._refused_orders(res)
+                self._market_unmeasured |= {o["resource"] for o in refused}
+                # what the controller left out is not waited for in the next save; the order it kept
+                # in its place is
+                self._pending_market = [o for o in desired if not any(self._same_orders([o], [r]) for r in refused)] \
+                    + self._kept_for(refused, current)
             except Exception as e:  # noqa: BLE001 - actions never stop play
                 self._log_action("market", f"failed: {e}"[:300])
+
+    @staticmethod
+    def _kept_for(refused: list[dict], current: list[dict]) -> list[dict]:
+        """The save's orders the controller keeps for refused adds: same side and resource, any amount
+        (stellaris.rs market_plan)."""
+        return [c for c in current if any((c.get("side"), c.get("resource")) == (r.get("side"), r.get("resource"))
+                                          for r in refused)]
+
+    @staticmethod
+    def _refused_orders(reply: str) -> list[dict]:
+        """The orders a market_sync reply says it did not add (MARKET_REFUSED_RE)."""
+        m = MARKET_REFUSED_RE.search(reply or "")
+        out = []
+        for part in (m.group(1).split(",") if m else []):
+            words = part.split()
+            if len(words) == 3 and words[2].isdigit():
+                out.append({"side": words[0], "resource": words[1], "amount": int(words[2])})
+        return out
 
     def _maybe_event_review(self, b: dict, trigger: str, retry: bool = False) -> bool:
         """Run a strategy review for a big event, at most once per 12 in-game months. `retry`

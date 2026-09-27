@@ -94,3 +94,58 @@ governor_tech_rush_minerals_planets = {
 	potential = { has_country_flag = governor_directive_tech_rush }
 	weight = { weight = 0.2 }
 }
+
+# --- postures (mod v2) ------------------------------------------------------------------------
+# Flags beside the directive (governor_posture_<name>, directives.toml [posture.*]); the harness
+# sets one only after its live probe passes.
+
+# ship_upgrades: at full naval capacity only refits raise fleet power. Vanilla funds upgrades only at
+# peace (01_alloys_budget.txt alloys_expenditure_ship_upgrades: is_at_war = no); this entry funds
+# them while the fleet is at 95% of capacity or more, also at war. Same fleet test as vanilla.
+governor_posture_ship_upgrades_alloys = {
+	resource = alloys
+	type = expenditure
+	category = ship_upgrades
+	potential = {
+		has_country_flag = governor_posture_ship_upgrades
+		used_naval_capacity_percent >= 0.95
+		any_owned_fleet = {
+			controller = { is_same_value = root }
+			can_be_upgraded = yes
+		}
+	}
+	weight = {
+		weight = 0.3
+		# biological ships refit mostly with food, as in vanilla's entry
+		modifier = {
+			factor = 0.33
+			country_uses_bio_ships = yes
+		}
+	}
+}
+
+# war_crisis: set by the harness only while a war goes badly (systems or colonies lost, occupation,
+# military halved), cleared when it ends. Vanilla funds armies with minerals at 0.1 and no war
+# factor (00_minerals_budget.txt minerals_expenditure_armies, same exclusions here); defence
+# platforms need 95% naval use, where vanilla already doubles its starbase share.
+governor_posture_war_crisis_minerals_armies = {
+	resource = minerals
+	type = expenditure
+	category = armies
+	potential = {
+		has_country_flag = governor_posture_war_crisis
+		country_uses_bio_ships = no
+		is_nomadic = no
+	}
+	weight = { weight = 0.2 }
+}
+governor_posture_war_crisis_alloys_starbases = {
+	resource = alloys
+	type = expenditure
+	category = starbases
+	potential = {
+		has_country_flag = governor_posture_war_crisis
+		used_naval_capacity_percent >= 0.95
+	}
+	weight = { weight = 0.4 }
+}

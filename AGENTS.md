@@ -242,10 +242,11 @@ C="./target/release/game-controller --corpus corpora/stellaris"
 $C stellaris brief                   # ~2 KB briefing from the newest autosave (read via the agent)
 $C stellaris take-control            # once per session: leave observer mode, human_ai ON (read on screen)
 $C stellaris install-mod             # upload the Governor Bridge mod and enable it (agent >= 1.3; restart the game)
-$C stellaris bridge-check            # is the mod loaded in the running game?
+$C stellaris bridge-check            # is the mod loaded in the running game, and which version (v1 or v2)?
 # The Paradox Launcher opens when mods are enabled: its playset "Governor Bridge" holds only this
 # mod (the user's "Initial playset" is theirs); pick it on the launcher's Home, then RESUME.
 $C stellaris directive expand        # flags + policies on the empire; confirmed in game.log
+$C stellaris posture war_crisis off  # set (on) or clear one Governor Bridge posture; --dry-run prints the line
 $C stellaris speed fastest           # slowest | slow | normal | fast | fastest
 $C stellaris pause                   # / resume — state read from the screen, safe to repeat
 $C stellaris log -l 30               # tail of logs/game.log
@@ -264,6 +265,31 @@ Rules:
   pause|resume` recognises it (`[screens.game_menu]`) and closes it first.
 - Directives are only those in `corpora/stellaris/directives.toml` (identifiers `[a-z0-9_]`); a
   new directive needs policy options that exist in the game's `common/policies`.
+- Directive policies obey the player's rules: each is set only if `can_set_policy` allows it (the
+  10-year lock, no stance change at war) and starts that lock (`cooldown = yes`). game.log gets
+  `GOVERNOR_POLICY <policy> <option> <nonce>` for each policy set; the reply lists the policies set
+  and those locked. A locked policy is not a failure: the flag still changes. An option the newest
+  autosave already holds is not sent again (it could restart the lock) and is listed as already in
+  force.
+- **Postures** (`[posture.*]` in directives.toml; Governor Bridge v2): flags `governor_posture_<name>`
+  that the mod reads to steer the AI's own spending (economic-plan focus, AI budgets; never resources
+  or modifiers). `defend`/`prepare_war` switch `naval_cap` and `ship_upgrades`, `tech_rush`
+  switches `research_focus`; `war_crisis` belongs to the war crisis only. **Every posture is
+  `enabled = false`** until its live probe passes (a fork-and-reload A/B from one autosave on a
+  throwaway game, 24 in-game months per arm); a disabled posture is never set, and enabling one is a
+  data commit. v2 also exports the naval capacity each month for the empire `take-control` marked
+  (`governor_bridge_player`), so the briefing shows "naval capacity used/max (from the mod)" while
+  the export agrees with the save's own use (within max(2, 2%)); variables outlive the mod, so an
+  export that disagrees is flagged `governor_vars_stale` and the line keeps "the maximum is not in
+  the save".
+- **Date-stall watchdog**: when the autosave date has not moved for max(300 s, 10 x the run's
+  median real month) while the governor wants the game running, it takes a screenshot, logs `stall`
+  and flags needs attention. It sends no input and focuses no window: another loaded campaign (no
+  autosave yet), the launcher or a browser tab titled Stellaris cannot be told from the governed game
+  read-only, so only the human resumes. Pause from the dashboard, not the game's menu, when you want
+  it to wait. Time in which the save cannot be read (the PC asleep, the agent away) is left out of
+  the held time; reads failing for that limit flag needs attention without pausing the run or
+  sending input, and the flag clears by itself once a save of the campaign reads again.
 - Settings used: autosave Monthly (`settings.txt` `autosave=2`), tutorial off.
 - **Weighted pillars** (`[weights]` in pillars.toml): pillars carry weights (sum 100, 5..50, heaviest
   >= 2x lightest); each decision gets every directive's pressure (weight x milestone need) and a
@@ -280,8 +306,11 @@ Rules:
   `[ui.tech]`/`[ui.market]` of the manifest, calibrated on 4.5.1): `stellaris_pick_tech` (clicking a
   field's swap button drops its current research at once, so it only swaps a field under 10% done;
   only the first 4 offered techs are clickable) and `stellaris_market_sync` (a new monthly trade
-  starts at 10; changes are computed from the last autosave, so call it at most once per autosave;
-  trade is not a market resource).
+  starts at 0.1 x the resource's market amount: 10 energy, minerals, food; 5 consumer goods; 1 motes,
+  gases, crystals (`new_trade_amount` in `[ui.market]`); alloys and sr_* start at a fraction, so an
+  order of them to add is refused on its own until that is measured (removals and other adds still go,
+  but an order of the same side and resource already placed stays at its amount); changes are computed from the last autosave, so call it at
+  most once per autosave; trade is not a market resource).
 - **Other screen sizes**: positions and templates are measured at 3840x2160. A host with another size
   sets `GAME_RESOLUTION` (e.g. `2560x1440`); the controller then merges `res/<W>x<H>.toml`. Its
   `[ui.*]` points come from `scripts/res-map.py corpora/stellaris <W>x<H> --write` (one UI scale per

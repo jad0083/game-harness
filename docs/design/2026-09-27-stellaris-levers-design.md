@@ -276,7 +276,7 @@ votes for the mod levers, and 2 of 2 for the other two findings.
      |---|---|---|
      | 3 | `policy_dates` (policy → date) | `active_policies[].date` (seen in the 2272 save) |
      | 9-10 | `market = {kind: galactic\|internal, fluct: {res: pct}, bought: {res}, sold: {res}, trades_net: {res}}` | top-level `market` (`fluctuations`, `resources_bought`/`resources_sold` for our country, `internal_market_fluctuations`); `budget.last_month.trade_balance.monthly_trades` |
-     | 12-16 | `planets[].occupied`; `wars[].force_peace` (ours, theirs, date); `wars[].own_battles_12m {won, lost, ships_lost, ground_at_our_colonies}`; `shipyards[] {system, occupied}` | planet `owner` ≠ `controller`; war `*_force_peace*`; battles filtered to those listing **our** country (not our side); `starbase_mgr` with a `shipyard` module |
+     | 12-16 | `planets[].occupied`; `wars[].force_peace` (ours, theirs, date); `wars[].own_battles_12m {won, lost, ships_lost, ground_at_our_colonies, invasions}`, `wars[].{id, battle_count}`; `shipyards[] {system, occupied}` | planet `owner` ≠ `controller`; war `*_force_peace*`; battles filtered to those listing **our** country (not our side); `starbase_mgr` with a `shipyard` module |
      | 19 | `governor_vars` (e.g. `governor_naval_cap`, `governor_naval_used`) | `country.variables` |
      | 22 | `planets[].{amenities_usage, total_housing, employable, jobs_open, unemployed, designation, district_levels, queued, growth}` | colony block, `pop_jobs`, `districts`, `construction.item_mgr` |
 
@@ -515,7 +515,10 @@ votes for the mod levers, and 2 of 2 for the other two findings.
       - **C2** systems ≤ (max over the last 12 months) − 2;
       - **C3** military ≤ 0.5 × (max over the last 12 months), which includes 0;
       - **C4** a colony was lost (the existing trigger, at war);
-      - **C5** a ground battle at one of our colonies in the last save (an invasion);
+      - **C5** a ground battle at one of our colonies in the last save (an invasion): an index in
+        `own_battles_12m.invasions` at or past the previous save's `battle_count` for the same war `id`,
+        never a rise of `ground_at_our_colonies` (amended after the re-review: a colony we lose and
+        retake counts its old invasion again);
       - **C6** a colony below stability 25 on 2 saves in a row (ruling 22).
 
       Never entry on its own:
@@ -827,11 +830,32 @@ votes for the mod levers, and 2 of 2 for the other two findings.
         the 10 × median term makes unlikely.
       - A resume while the human paused in-game is prevented only by `human_paused`. A pause made in the
         game UI, not the dashboard, is indistinguishable (**known limit**; the journal notes it).
+    - **Amended after the branch review (2026-09-27): no resume.** Steps 2-3 are dropped.
+      - A campaign the human loads writes no autosave at first, so the governed save still looks newest
+        and the save-folder guard cannot fire: a resume would unpause the human's own game or close
+        their menu.
+      - After a crash, `McpGame.ensure_foreground` asks the agent to focus a window whose title contains
+        "Stellaris" (a browser tab, an Explorer window), and the Paradox Launcher is titled exactly
+        "Stellaris".
+      - Nothing read-only proves the governed game is in front. `continue_game.json` or a game.log line
+        written on each load might, once L6 shows when they are written.
+      - So at the first `stall_s` the watchdog takes the screenshot, logs `stall` and calls
+        `_needs_attention`, sending no input and focusing no window. A resume can return only behind
+        such positive evidence.
+    - **Amended after the re-review (2026-09-27): read failures are not stalls.** With the watchdog run on
+      every failed read, an agent outage longer than `stall_s` (the PC asleep, the network down, the agent
+      reinstalled) waited for a human although the agent came back: main simply read again.
+      - Time from a failed read to the next good one is left out of the held time. A PC that slept shows
+        the same date on waking and is no stall; a crash with a flaky agent is still found, since the
+        observed time before and after the gap counts.
+      - Reads failing for `stall_s` in a row flag needs attention (status and event) without pausing the
+        run or sending input. The wait keeps reading, which is the read-only probe, and the first save of
+        the governed campaign that reads clears the flag (`recovered`).
 
 24. **Dismiss the declaration-of-war popup before any screen flow.**
     - **Decision.** A `[screens.war_declaration]` template (captured live, L6), dismissed:
       - before the market and tech screen flows;
-      - by the watchdog's resume step.
+      - ~~by the watchdog's resume step~~ (the resume was dropped, ruling 23's amendment).
 
       It closes issues.md:35.
     - **Why.** The popup stays open under `human_ai` and covers the map, where the market and tech flows
@@ -996,9 +1020,12 @@ Tests:
     - the a2272 controller ≠ owner planet is not ours.
   - Governor: the urgent reason fires once at the transition.
 - **Watchdog (23).** With an injected clock:
-  - a held date while running → one resume, then `needs_attention` after a second `stall_s`;
+  - a held date while running → `needs_attention` at `stall_s`, with no input (ruling 23's amendment): also
+    when another campaign was loaded mid-wait, and no focus after a crash;
   - a held date while `human_paused` → nothing;
-  - a date that moves resets the timer.
+  - a date that moves resets the timer;
+  - an agent outage longer than `stall_s`, then the same date → flagged, recovers by itself, no stall
+    (re-review amendment); one failed read in a held date does not restart the timer.
 
 **Live checks.** Run them only when Stellaris is next the running game. There is one Steam account, so Civ VI
 must be stopped first: pause the Civ VI governor from the dashboard, quit Civ VI, and start Stellaris
@@ -1025,12 +1052,18 @@ dashboard during state-changing checks.
     `take-control`, `bridge-check` v2.
   - error.log is clean.
   - `governor_naval_cap` is in the next autosave and matches the fleet manager's naval capacity.
+  - `governor_naval_used` equals that autosave's own `used_naval_capacity`, i.e. the export runs before
+    the save is written. The briefing treats the export as current only within max(2, 2%) of the save's
+    use (variables outlive the mod); if the export lags a month, a changing fleet reads stale and the
+    event needs a month stamp.
 - **L5, posture probes (G2-G4).** The fork-and-reload A/B for `naval_cap`, `research_focus`, `ship_upgrades`
   and `war_crisis`, 24 months per arm, then the isolation check.
 - **L6, stall and popups.**
   - Fire a player-scoped event from the console under `human_ai`: does the game autopause, and does the AI
     answer?
-  - Let the watchdog act at `stall_s` = 60 s for this check.
+  - Let the watchdog flag the stall at `stall_s` = 60 s for this check.
+  - Whether `continue_game.json` or a game.log line records each load: the evidence a watchdog resume
+    would need (ruling 23's amendment).
   - Capture the declaration-of-war popup for ruling 24's template.
 - **L7, crisis ladder.**
   - On the throwaway, provoke a war with the console (a war command on an AI empire).

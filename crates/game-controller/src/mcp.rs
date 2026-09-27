@@ -383,13 +383,25 @@ impl McpServer {
             }));
             tools.push(serde_json::json!({
                 "name": "stellaris_directive",
-                "description": "Apply one governor directive (see corpus strategy § Governor directives and directives.toml): sets the directive flag and its policies on the player's empire (which the game's AI plays under human_ai; see stellaris_take_control) and confirms the change in game.log. Hold a directive about 12 in-game months unless something urgent happens. Refuses if Stellaris is not the foreground window.",
+                "description": "Apply one governor directive (see corpus strategy § Governor directives and directives.toml): sets the directive flag and its policies on the player's empire (which the game's AI plays under human_ai; see stellaris_take_control) and confirms the change in game.log. Policies are set only where a player could (can_set_policy: the 10-year policy lock, no stance change at war) and start the lock; an option already in force in the newest autosave is not set again. The reply lists the policies set, those already in force and those locked. Hold a directive about 12 in-game months unless something urgent happens. Refuses if Stellaris is not the foreground window.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "name": { "type": "string", "enum": ["expand", "consolidate_economy", "tech_rush", "prepare_war", "defend", "diplomacy_first"] }
                     },
                     "required": ["name"]
+                }
+            }));
+            tools.push(serde_json::json!({
+                "name": "stellaris_posture",
+                "description": "Set (on=true) or clear (on=false) one Governor Bridge posture on the player's empire: the country flag governor_posture_<name>, which the companion mod v2 reads to steer how the game's AI spends its own income (economic-plan focus, AI budgets). It never adds resources or modifiers. Directives already switch the postures bound to them; this tool serves the war crisis posture. Only postures enabled in directives.toml (after their live probe) can be set; clearing always works. Confirmed in game.log. Refuses if Stellaris is not the foreground window.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "name": { "type": "string", "enum": ["naval_cap", "research_focus", "ship_upgrades", "war_crisis"] },
+                        "on": { "type": "boolean" }
+                    },
+                    "required": ["name", "on"]
                 }
             }));
             tools.push(serde_json::json!({
@@ -441,7 +453,7 @@ impl McpServer {
             }));
             tools.push(serde_json::json!({
                 "name": "stellaris_market_sync",
-                "description": "Make the empire's monthly Market trades match `orders` (at most 2): removes any current order not listed and adds any listed order that is missing, through the Market screen's Add/Remove dialogs. Never leaves the Market open, even on error. Refuses if Stellaris is not the foreground window. Changes are computed from the last autosave; call at most once per autosave.",
+                "description": "Make the empire's monthly Market trades match `orders` (at most 2): removes any current order not listed and adds any listed order that is missing, through the Market screen's Add/Remove dialogs. A new trade starts at the resource's own amount (10 energy, minerals, food; 5 consumer goods; 1 motes, gases, crystals); an order of alloys or sr_* to add is refused on its own until their fractional start is measured (the reply lists it after \"not added (start amount not measured):\"; removals and other adds still go, but a current order of the same side and resource stays at its amount, listed after \"kept (start amount not measured):\"). Never leaves the Market open, even on error. Refuses if Stellaris is not the foreground window. Changes are computed from the last autosave; call at most once per autosave.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -866,10 +878,26 @@ impl McpServer {
                 let dir = self.corpus.as_ref().map(|c| c.dir.clone()).ok_or_else(|| anyhow::anyhow!("no corpus loaded"))?;
                 let directives = crate::stellaris::Directives::load(&dir)?;
                 let pause = self.corpus.as_ref().map(|c| crate::stellaris::PauseDetector::from_manifest(&c.manifest)).transpose()?;
-                let lines = crate::stellaris::apply_directive(&self.client, &directives, name, pause.as_ref()).await?;
+                let applied = crate::stellaris::apply_directive(&self.client, &directives, name, pause.as_ref()).await?;
                 let text = format!(
-                    "Directive {name} applied and confirmed in game.log. Console lines:\n{}\nThe next monthly autosave will list governor_directive_{name} under Governor flags.",
-                    lines.join("\n")
+                    "Directive {name} applied and confirmed in game.log. {}\nConsole lines:\n{}\nThe next monthly autosave will list governor_directive_{name} under Governor flags.",
+                    applied.summary(),
+                    applied.lines.join("\n")
+                );
+                Ok(serde_json::json!({ "content": [{ "type": "text", "text": text }] }))
+            }
+            "stellaris_posture" => {
+                let name = args.get("name").and_then(|v| v.as_str()).ok_or_else(|| anyhow::anyhow!("missing `name`"))?;
+                let on = args.get("on").and_then(|v| v.as_bool()).ok_or_else(|| anyhow::anyhow!("missing `on`"))?;
+                let dir = self.corpus.as_ref().map(|c| c.dir.clone()).ok_or_else(|| anyhow::anyhow!("no corpus loaded"))?;
+                let directives = crate::stellaris::Directives::load(&dir)?;
+                let pause = self.corpus.as_ref().map(|c| crate::stellaris::PauseDetector::from_manifest(&c.manifest)).transpose()?;
+                let lines = crate::stellaris::apply_posture(&self.client, &directives, name, on, pause.as_ref()).await?;
+                let text = format!(
+                    "Posture {name} {} and confirmed in game.log.\nConsole lines:\n{}\nThe next monthly autosave will {} governor_posture_{name} under Governor flags.",
+                    if on { "set" } else { "cleared" },
+                    lines.join("\n"),
+                    if on { "list" } else { "no longer list" }
                 );
                 Ok(serde_json::json!({ "content": [{ "type": "text", "text": text }] }))
             }
@@ -1098,11 +1126,26 @@ mod tests {
     }
 
     #[test]
+    fn posture_tool_lists_the_registry_and_needs_a_name_and_a_state() {
+        let tools = McpServer::list_tools(Some("stellaris"));
+        let tool = tools.iter().find(|t| t["name"] == "stellaris_posture").expect("stellaris_posture");
+        let listed: Vec<String> =
+            tool["inputSchema"]["properties"]["name"]["enum"].as_array().unwrap().iter().map(|v| v.as_str().unwrap().to_string()).collect();
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpora/stellaris");
+        let registry: Vec<String> = crate::stellaris::Directives::load(&dir).unwrap().posture.into_keys().collect();
+        assert_eq!(listed, registry, "the enum must match directives.toml [posture.*]");
+        assert_eq!(tool["inputSchema"]["properties"]["on"]["type"], "boolean");
+        assert_eq!(tool["inputSchema"]["required"], serde_json::json!(["name", "on"]));
+        assert!(!McpServer::list_tools(Some("galciv4")).iter().any(|t| t["name"] == "stellaris_posture"));
+    }
+
+    #[test]
     fn market_sync_description_warns_against_repeated_calls_on_one_autosave() {
         let tools = McpServer::list_tools(Some("stellaris"));
         let tool = tools.iter().find(|t| t["name"] == "stellaris_market_sync").unwrap();
         let desc = tool["description"].as_str().unwrap();
         assert!(desc.contains("Changes are computed from the last autosave; call at most once per autosave."), "{desc}");
+        assert!(desc.contains("refused on its own") && desc.contains("removals and other adds still go"), "{desc}");
     }
 
     #[test]

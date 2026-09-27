@@ -65,7 +65,18 @@ as the fallback.
 `src/pilot/governor.py`. The empire is played by the game's own AI (`human_ai`); the governor only
 chooses one standing **directive** (`corpora/stellaris/directives.toml`: expand,
 consolidate_economy, tech_rush, prepare_war, defend, diplomacy_first), applied from the console as
-flags and policies that the Governor Bridge mod turns into AI budget weights.
+flags and policies that the Governor Bridge mod turns into AI budget weights. Policies obey the
+player's rules (`can_set_policy`, the 10-year lock started by each change): a directive whose policy
+is still locked, or barred (no stance change at war), sets its flag only, and the reply lists the
+policies set and those locked; an option already in force in the newest autosave is not set again,
+so switching between directives that share it (defend and prepare_war, expand and diplomacy_first)
+does not restart its lock. A directive can also switch **postures**, flags the mod v2 reads to
+steer the AI's own spending (naval capacity and ship refits under `defend`/`prepare_war`, research
+under `tech_rush`, and a war-crisis posture for defence armies and platforms); every posture stays
+disabled until its live probe passes, so for now none is set. The mod v2 also writes the naval
+capacity into each autosave for the governed empire, so the briefing shows used/max once it is
+installed, and only while that export agrees with the save's own use: a campaign later loaded
+without the mod keeps the last export, which the briefing calls stale (`governor_vars_stale`).
 
 The loop: pause → briefing from the newest autosave → the model returns a directive or `keep` →
 apply → resume → poll autosaves until the decision interval has passed or something urgent
@@ -75,11 +86,29 @@ thinks, so any speed is safe. `prepare_war` needs a human "yes" on the dashboard
 
 The briefing (about 2 KB) covers the empire, resources and deficits, power, research options,
 planets and colonisable worlds, our species and its traits, identity (civics, traditions,
-personality), wars with sides and exhaustion, and the nearest empires with strength ratios and
-opinion both ways. The prompt adds a 12-month trend line and what earlier directive changes led to.
+personality), wars with sides and exhaustion (battles of our side, then our own in the last 12
+months, invasions of our colonies, a status quo that can be forced), occupied colonies, shipyards at
+war, market prices against base with last month's trades, and the nearest empires with strength
+ratios and opinion both ways. The JSON form also carries policy dates, each colony's jobs,
+unemployment, districts and queue, each war's id and battle count with the invasions' places in
+its battle list (a colony we lose and retake counts its old invasion again, so only a place past
+the previous save's count is a new invasion), and the mod's `governor_*` variables, for the
+governor's rules.
+The prompt adds a 12-month trend line and what earlier directive changes led to.
 
 If the game stops answering pause and resume (for example a text box holds the keyboard), the
 governor stops acting and flags *needs attention* until you press Resume.
+
+If the autosave date stops moving while the game should be running (a popup that pauses the game,
+the launcher in front, a crash), the governor waits max(300 s, 10 x the median real time of a month
+in this run's last 24 months), then saves a screenshot, logs `stall` and flags *needs attention*
+with the screenshot's path. It sends nothing to the game and focuses no window: it cannot tell the
+governed game from another campaign you loaded (which writes no autosave at first), the launcher
+or a browser tab titled Stellaris, so you check the PC and press Resume. A pause from the dashboard
+never triggers this; a pause made in the game's own menu does look like a stall. Time in which the
+save cannot be read (the PC asleep, the network down, the agent reinstalled) does not count: if
+reads fail for that long, the governor flags *needs attention* but sends nothing and keeps reading,
+and carries on by itself as soon as a save of the campaign reads again.
 
 ## Civilization VI governor
 
@@ -250,7 +279,11 @@ species traits the strategy builds on. A review may add up to 3 rules to
 **Actions** are carried out through the game's screens after a decision, at most once per
 autosave, and checked in a later save: `stellaris_pick_tech` (only in a research field under 10%
 done) and `stellaris_market_sync` (monthly trades follow the strategy; hand-placed trades are
-removed once a strategy exists).
+removed once a strategy exists; an alloys or sr_* order to add is refused on its own until their
+fractional start amount is measured live: the rest of the sync, removals included, still goes, the
+refused order is not waited for in the next save, and later decisions skip it with that reason; an
+order of the same side and resource already in the save, e.g. buy alloys 7 when the strategy wants
+5, is kept at its amount rather than removed, while it passes the declared order's checks).
 
 **Your edits.** *Edit* on a pillar changes it and pins it (a review never changes a pinned pillar);
 changing its weight rescales the other unpinned pillars so the total stays 100. *Unpin* hands it

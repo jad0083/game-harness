@@ -1,0 +1,9 @@
+# Governor Bridge v2: the monthly read channel (governor_bridge.1, events/governor_bridge_events.txt).
+# on_actions of the same name merge with vanilla's (wiki Modding: "NO/MERGE", like economic plans in
+# the vanilla 00_example.txt), so vanilla's own monthly events still fire. Unverified live until the
+# first autosave after loading carries governor_naval_cap.
+on_monthly_pulse_country = {
+	events = {
+		governor_bridge.1
+	}
+}

@@ -38,7 +38,7 @@ records the game version, generator commit and counts.
 
 9,152 records from the game's files (`scripts/extract-stellaris.py`): techs, policies, edicts,
 buildings, districts, traditions, ascension perks, civics and events with every option; 46 wiki
-reference docs; the governor directives and the Governor Bridge mod (`corpora/stellaris/mod/`).
+reference docs; the governor directives and postures (`directives.toml`) and the Governor Bridge mod (`corpora/stellaris/mod/`, v2: AI budgets and economic-plan subplans gated on directive and posture flags, and the monthly naval-capacity export).
 Autosaves are read by `crates/game-controller/src/stellaris.rs`.
 
 ## Civilization VI

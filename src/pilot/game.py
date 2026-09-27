@@ -285,17 +285,32 @@ class FakeStellaris:
     """Scripted Stellaris for tests: each `briefing()` call returns the next briefing (the last one
     repeats); directives, speed and pause changes are recorded."""
 
-    def __init__(self, briefings: list[dict], advance_only_when_running: bool = False):
+    def __init__(self, briefings: list[dict], advance_only_when_running: bool = False,
+                 self_pause_after: int | None = None):
         self.briefings = list(briefings)
         self.actions: list[tuple] = []
         self.paused = True
         self.flags: list[str] = []
         # like the real game: while paused, reading the save again returns the same save
         self.advance_only_when_running = advance_only_when_running
+        # after this many reads the game pauses itself once (an event window that autopauses), so
+        # the save holds until something resumes it
+        self.self_pause_after = self_pause_after
+        self.self_paused = False
+        self.reads = 0
+        self._last: dict | None = None
 
     def _current(self) -> dict:
-        hold = len(self.briefings) == 1 or (self.advance_only_when_running and self.paused)
-        b = dict(self.briefings[0] if hold else self.briefings.pop(0))
+        self.reads += 1
+        if self.self_paused and self._last is not None:
+            b = dict(self._last)
+        else:
+            hold = len(self.briefings) == 1 or (self.advance_only_when_running and self.paused)
+            b = dict(self.briefings[0] if hold else self.briefings.pop(0))
+            self._last = b
+        if self.self_pause_after is not None and self.reads == self.self_pause_after:
+            self.paused = self.self_paused = True
+        b = dict(b)
         b["flags"] = list(self.flags)
         return b
 
@@ -307,9 +322,13 @@ class FakeStellaris:
         return f"# {b['date']} — test empire\nGovernor flags: {', '.join(self.flags) or 'none'}\n"
 
     def set_paused(self, paused: bool) -> str:
+        """Replies like the controller's `stellaris_pause`: whether the state changed."""
         self.actions.append(("paused", paused))
+        changed = self.paused != paused
         self.paused = paused
-        return "ok"
+        if not paused:
+            self.self_paused = False
+        return f"{'Paused' if paused else 'Running'} ({'changed' if changed else 'already'})."
 
     def set_speed(self, speed: str) -> str:
         self.actions.append(("speed", speed))

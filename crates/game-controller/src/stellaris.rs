@@ -28,7 +28,7 @@ pub struct Research {
     pub alternatives: Vec<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 pub struct Planet {
     pub id: u64,
     pub name: String,
@@ -39,10 +39,102 @@ pub struct Planet {
     pub free_housing: Option<f64>,
     pub free_amenities: Option<f64>,
     pub crime: Option<f64>,
+    /// The country's capital colony.
+    pub capital: bool,
+    /// Held by another country (the planet's `controller` is not its `owner`, us).
+    pub occupied: bool,
+    /// Who holds it while occupied.
+    pub occupier: Option<String>,
+    pub amenities_usage: Option<f64>,
+    pub total_housing: Option<f64>,
+    /// Pops that can work (`employable_pops`).
+    pub employable: Option<i64>,
+    /// Free job slots: max workforce minus workforce, over the colony's jobs.
+    pub jobs_open: Option<i64>,
+    /// Pops in the civilian (unemployed) stratum.
+    pub unemployed: Option<i64>,
+    /// "capital", "mining", … (`designation`, else `final_designation`, without `col_`).
+    pub designation: String,
+    /// District type (without `district_`) → summed level.
+    pub district_levels: BTreeMap<String, i64>,
+    /// Development items in the construction queue: district, building or zone keys.
+    pub queued: Vec<String>,
+    /// Last month's pop growth.
+    pub growth: Option<f64>,
 }
+
+/// A starbase with a shipyard module in one of our systems.
+#[derive(Debug, Serialize, Default, Clone, PartialEq)]
+pub struct Shipyard {
+    pub system: String,
+    /// The starbase is held by another country while the system still has a colony of ours.
+    pub occupied: bool,
+}
+
+/// Battles our own country fought (not allies'), dated within 12 months of the save.
+#[derive(Debug, Serialize, Default, Clone, PartialEq)]
+pub struct OwnBattles {
+    pub won: usize,
+    pub lost: usize,
+    /// Ships our side lost in those battles.
+    pub ships_lost: i64,
+    /// Invasions of our colonies over the whole war: ground battles at a colony we own now in which
+    /// our own country defended (not an ally's colony we took later, not our retakes); the length
+    /// of `invasions`. Not a signal between saves: a colony we lose and retake counts its old
+    /// invasion again, so the count also rises on our own retake.
+    pub ground_at_our_colonies: usize,
+    /// Those invasions' indices in the war's battle list. 4.5.1 saves date ground battles 0.01.01,
+    /// but the list is append-only and chronological (the 2393 save: 233 battles from the war's first
+    /// months on), so an index identifies a battle across saves of one war (`War::id`). A new
+    /// invasion since an earlier save is an index at or past that save's `War::battle_count`.
+    pub invasions: Vec<usize>,
+}
+
+/// The save's `<side>_force_peace`: set on the side whose war exhaustion passed 100%, so the other
+/// side can force a status-quo peace on it (read from a 2393 save: the defender at 309%).
+#[derive(Debug, Serialize, Default, Clone, PartialEq)]
+pub struct ForcePeace {
+    /// A status quo can be forced on us.
+    pub ours: bool,
+    /// We can force one on them.
+    pub theirs: bool,
+    pub date: String,
+}
+
+/// The market we trade on, from the save's top-level `market` and our budget.
+#[derive(Debug, Serialize, Default, Clone, PartialEq)]
+pub struct MarketInfo {
+    /// "galactic" (formed, and our country has access) or "internal".
+    pub kind: String,
+    /// Price fluctuation in percent per resource (0 when absent).
+    pub fluct: BTreeMap<String, f64>,
+    /// Our cumulative bought and sold amounts per resource (the AI's own trades included).
+    pub bought: BTreeMap<String, f64>,
+    pub sold: BTreeMap<String, f64>,
+    /// Last month's monthly trades per resource: what our orders cost and delivered.
+    pub trades_net: BTreeMap<String, f64>,
+}
+
+/// Resources by index in the market's per-resource arrays: the definition order of
+/// common/strategic_resources/00_strategic_resources.txt (4.5.1; 26 definitions, matching the
+/// saves' 26-entry arrays and the `galactic_market_resources` flags). Indices past sr_dark_matter
+/// are not traded.
+const MARKET_INDEX: [&str; 17] = [
+    "energy", "minerals", "food", "physics_research", "society_research", "engineering_research", "influence",
+    "unity", "trade", "consumer_goods", "alloys", "volatile_motes", "exotic_gases", "rare_crystals",
+    "sr_living_metal", "sr_zro", "sr_dark_matter",
+];
+
+/// Resources traded on the market (monthly trades and bulk buys).
+const MARKET_RESOURCES: [&str; 11] = [
+    "energy", "minerals", "food", "consumer_goods", "alloys", "volatile_motes", "exotic_gases", "rare_crystals",
+    "sr_living_metal", "sr_zro", "sr_dark_matter",
+];
 
 #[derive(Debug, Serialize, Default)]
 pub struct War {
+    /// The war's key in the save's `war` block: pairs a war across saves.
+    pub id: String,
     pub name: String,
     pub attacker: bool,
     pub start: String,
@@ -55,8 +147,13 @@ pub struct War {
     /// War exhaustion 0..1; at 1 the other side can force a status-quo peace.
     pub our_exhaustion: f64,
     pub their_exhaustion: f64,
+    /// Battles our side won and lost, allies' included.
     pub battles_won: usize,
     pub battles_lost: usize,
+    /// Battles in the war's list so far, both sides and allies (see `OwnBattles::invasions`).
+    pub battle_count: usize,
+    pub own_battles_12m: OwnBattles,
+    pub force_peace: Option<ForcePeace>,
 }
 
 /// Our value, the other regular empires' median and best, and our rank (1 = best) for one measure.
@@ -323,6 +420,16 @@ pub struct Briefing {
     pub used_naval_capacity: i64,
     /// Our active monthly market orders (`market.monthly_trades` for our country).
     pub market_orders: Vec<MarketOrderSpec>,
+    /// Policy → the date its option was last set (policies set at game start carry none).
+    pub policy_dates: BTreeMap<String, String>,
+    pub market: Option<MarketInfo>,
+    /// Starbases with a shipyard in our systems, in save order.
+    pub shipyards: Vec<Shipyard>,
+    /// Country variables named `governor_*` (exported by the Governor Bridge mod).
+    pub governor_vars: BTreeMap<String, f64>,
+    /// The mod's export is not current (see `naval_export_fresh`): variables stay in the save after
+    /// the mod stops running, so `governor_vars` then holds the last export, not today's values.
+    pub governor_vars_stale: bool,
 }
 
 fn expansion(
@@ -716,19 +823,56 @@ pub struct DirectiveDef {
     /// `set_policy` would otherwise apply an option the empire may not take.
     #[serde(default)]
     pub conditions: BTreeMap<String, String>,
+    /// Postures (`[posture.*]`) this directive switches on while it is current, if enabled.
+    #[serde(default)]
+    pub postures: Vec<String>,
+}
+
+/// A posture: a country flag `governor_posture_<name>` beside the directive, read by the
+/// Governor Bridge mod (v2) to steer the AI's own budgets and economic plans. It is set only once
+/// `enabled`, which a data commit does after the posture's live probe passes (levers ruling 21).
+#[derive(Debug, serde::Deserialize)]
+pub struct PostureDef {
+    pub description: String,
+    /// The mod version whose files read the flag.
+    pub mod_version: u32,
+    pub enabled: bool,
 }
 
 #[derive(Debug, serde::Deserialize)]
 pub struct Directives {
     pub directive: BTreeMap<String, DirectiveDef>,
+    #[serde(default)]
+    pub posture: BTreeMap<String, PostureDef>,
 }
+
+/// Version of the Governor Bridge files in `corpora/stellaris/mod` (descriptor.mod `0.<n>.0`).
+pub const MOD_VERSION: u32 = 2;
+
+/// Country flag the mod's monthly read channel is limited to; `take_control` sets it on the empire
+/// the governor plays, so no other country runs the event.
+pub const BRIDGE_PLAYER_FLAG: &str = "governor_bridge_player";
 
 impl Directives {
     /// Load `directives.toml` from a Stellaris corpus directory.
     pub fn load(corpus_dir: &std::path::Path) -> Result<Directives> {
         let path = corpus_dir.join("directives.toml");
         let text = std::fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
-        let d: Directives = toml::from_str(&text).with_context(|| format!("parsing {}", path.display()))?;
+        Directives::parse(&text).with_context(|| format!("parsing {}", path.display()))
+    }
+
+    /// Parse and check the text of a `directives.toml`.
+    pub fn parse(text: &str) -> Result<Directives> {
+        let d: Directives = toml::from_str(text)?;
+        for (name, p) in &d.posture {
+            check_ident(name)?;
+            if d.directive.contains_key(name) {
+                bail!("posture {name} has a directive's name");
+            }
+            if !(1..=MOD_VERSION).contains(&p.mod_version) {
+                bail!("posture {name}: mod_version {} is not a version of the mod here (1..={MOD_VERSION})", p.mod_version);
+            }
+        }
         for (name, def) in &d.directive {
             check_ident(name)?;
             for (k, v) in &def.policies {
@@ -741,15 +885,61 @@ impl Directives {
                 }
                 check_condition(c)?;
             }
+            for p in &def.postures {
+                if !d.posture.contains_key(p) {
+                    bail!("directive {name}: posture {p} is not in [posture.*]");
+                }
+            }
         }
         Ok(d)
+    }
+
+    /// Postures some directive switches; the others (the crisis posture) only `posture_lines` touches.
+    pub fn bound_postures(&self) -> std::collections::BTreeSet<String> {
+        self.directive.values().flat_map(|d| d.postures.iter().cloned()).collect()
+    }
+
+    /// Console line that sets (`on`) or clears posture `name` alone, confirmed by a scoped
+    /// `GOVERNOR_POSTURE <name> on|off <nonce>` log. Setting a disabled posture is refused;
+    /// clearing always works, so a flag left from an earlier setting can be removed.
+    pub fn posture_lines(&self, name: &str, on: bool, nonce: &str) -> Result<Vec<String>> {
+        let Some(def) = self.posture.get(name) else {
+            bail!("unknown posture {name:?}; known: {}", self.posture.keys().cloned().collect::<Vec<_>>().join(", "))
+        };
+        if on && !def.enabled {
+            bail!("posture {name} is disabled in directives.toml: a posture is enabled only after its live probe passes (levers ruling 21)");
+        }
+        let effect = if on { "set_country_flag" } else { "remove_country_flag" };
+        Ok(vec![format!("effect {effect} = governor_posture_{name} {}", scoped_log(&posture_marker(name, on, nonce)))])
     }
 
     /// Console lines that apply directive `name` to the player's empire (see directives.toml).
     /// The empire must be player-controlled with `human_ai` on (see `take_control`); the
     /// confirmation line is logged only when the effect has a real country scope, so a directive
     /// sent in observer mode fails loudly instead of silently doing nothing.
+    ///
+    /// Each policy is set as a player could: only if `can_set_policy` holds (the 10-year lock, the
+    /// group's `allow` such as no stance change at war, the option's `potential`) and the option's
+    /// `valid` (`conditions`), with `cooldown = yes` starting the player's lock; a `GOVERNOR_POLICY`
+    /// marker inside the branch reports it. One line per policy keeps every line within the length
+    /// verified live; the flag and the confirmation come last, after every policy has run.
+    ///
+    /// Postures bound to a directive get a line of their own: the directive's enabled postures are
+    /// set and every other bound posture is cleared. A posture bound to no directive (the crisis
+    /// posture) is left alone, and the directive-flag line never names a posture.
+    ///
+    /// Every policy is sent: `apply_directive` uses `console_lines_with_policies`, which leaves out
+    /// the options already in force.
     pub fn console_lines(&self, name: &str, nonce: &str) -> Result<Vec<String>> {
+        self.console_lines_with_policies(name, nonce, &BTreeMap::new())
+    }
+
+    /// `console_lines`, leaving out each policy whose option `in_force` (policy → option, from the
+    /// newest autosave) already holds: set again with `cooldown = yes`, it could restart that
+    /// policy's 10-year lock (whether it does is unverified, live check L3), e.g. `prepare_war`
+    /// re-setting the belligerent stance `defend` set, which would then hold `diplomacy_first`'s
+    /// cooperative stance.
+    pub fn console_lines_with_policies(&self, name: &str, nonce: &str, in_force: &BTreeMap<String, String>) -> Result<Vec<String>> {
         let Some(def) = self.directive.get(name) else {
             bail!("unknown directive {name:?}; known: {}", self.directive.keys().cloned().collect::<Vec<_>>().join(", "))
         };
@@ -763,18 +953,116 @@ impl Directives {
         if !others.is_empty() {
             lines.push(format!("effect {}", others.join(" ")));
         }
-        let mut apply = format!("effect set_country_flag = governor_directive_{name}");
-        for (policy, option) in &def.policies {
-            let set = format!("set_policy = {{ policy = {policy} option = {option} cooldown = no }}");
-            match def.conditions.get(policy) {
-                Some(c) => apply += &format!(" if = {{ limit = {{ {c} }} {set} }}"),
-                None => apply += &format!(" {set}"),
-            }
+        // postures bound to directives: this one's enabled postures on, every other one off
+        let postures: Vec<String> = self
+            .bound_postures()
+            .into_iter()
+            .map(|p| {
+                let on = def.postures.contains(&p) && self.posture[&p].enabled;
+                format!("{} = governor_posture_{p}", if on { "set_country_flag" } else { "remove_country_flag" })
+            })
+            .collect();
+        if !postures.is_empty() {
+            lines.push(format!("effect {}", postures.join(" ")));
         }
-        apply += &format!(" {}", scoped_log(&applied_marker(name, nonce)));
-        lines.push(apply);
+        for (policy, option) in &def.policies {
+            if in_force.get(policy) == Some(option) {
+                continue;
+            }
+            let mut limit = format!("can_set_policy = {{ policy = {policy} option = {option} }}");
+            if let Some(c) = def.conditions.get(policy) {
+                limit += &format!(" {c}");
+            }
+            lines.push(format!(
+                "effect if = {{ limit = {{ {limit} }} set_policy = {{ policy = {policy} option = {option} cooldown = yes }} log = \"{}\" }}",
+                policy_marker(policy, option, nonce)
+            ));
+        }
+        lines.push(format!("effect set_country_flag = governor_directive_{name} {}", scoped_log(&applied_marker(name, nonce))));
         Ok(lines)
     }
+}
+
+/// A (policy, option) pair, e.g. ("economic_policy", "economic_policy_civilian").
+pub type PolicyOption = (String, String);
+
+/// Text written to game.log when a directive set `policy` to `option` (see `console_lines`).
+pub fn policy_marker(policy: &str, option: &str, nonce: &str) -> String {
+    format!("GOVERNOR_POLICY {policy} {option} {nonce}")
+}
+
+/// The (policy, option) pairs whose `GOVERNOR_POLICY` marker with this `nonce` is in `log`.
+pub fn policy_markers(log: &str, nonce: &str) -> Vec<PolicyOption> {
+    const TAG: &str = "GOVERNOR_POLICY ";
+    log.lines()
+        .filter_map(|l| {
+            let mut it = l[l.find(TAG)? + TAG.len()..].split_whitespace();
+            let (policy, option, n) = (it.next()?, it.next()?, it.next()?);
+            (n == nonce).then(|| (policy.to_string(), option.to_string()))
+        })
+        .collect()
+}
+
+/// A directive's policies split three ways: `set` (the game reported it with a marker), `in_force`
+/// (the save already held that option, so it was not sent; see `console_lines_with_policies`) and
+/// `locked` (no marker: `can_set_policy` or the option's `valid` said no).
+pub fn policy_outcome(
+    def: &DirectiveDef,
+    seen: &[PolicyOption],
+    in_force: &BTreeMap<String, String>,
+) -> (Vec<PolicyOption>, Vec<PolicyOption>, Vec<PolicyOption>) {
+    let (mut set, mut already, mut locked) = (vec![], vec![], vec![]);
+    for (p, o) in &def.policies {
+        let pair = (p.clone(), o.clone());
+        if in_force.get(p) == Some(o) {
+            already.push(pair);
+        } else if seen.contains(&pair) {
+            set.push(pair);
+        } else {
+            locked.push(pair);
+        }
+    }
+    (set, already, locked)
+}
+
+/// What applying a directive did: the console lines sent and which policies the game set.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Applied {
+    pub lines: Vec<String>,
+    pub set: Vec<PolicyOption>,
+    /// Options the newest autosave already held: not sent, so their lock is not restarted.
+    pub in_force: Vec<PolicyOption>,
+    pub locked: Vec<PolicyOption>,
+    /// Why the policies in force could not be read (every policy was then sent).
+    pub in_force_error: Option<String>,
+}
+
+impl Applied {
+    /// "Policies set: a=b. [Already in force (…): e=f. ]Policies locked (…): c=d." (`none` for an
+    /// empty list; the in-force sentence only when one was left out).
+    pub fn summary(&self) -> String {
+        let list = |v: &[PolicyOption]| {
+            if v.is_empty() { "none".to_string() } else { v.iter().map(|(p, o)| format!("{p}={o}")).collect::<Vec<_>>().join(", ") }
+        };
+        let already = if self.in_force.is_empty() {
+            String::new()
+        } else {
+            format!("Already in force (not set again, so its 10-year lock is not restarted): {}. ", list(&self.in_force))
+        };
+        let unread = match &self.in_force_error {
+            Some(e) => format!(" The policies in force were not read ({e}), so every policy was sent."),
+            None => String::new(),
+        };
+        format!(
+            "Policies set: {}. {already}Policies locked (not set: the 10-year policy lock, a rule such as no stance change at war, or the option is not valid now): {}.{unread}",
+            list(&self.set), list(&self.locked)
+        )
+    }
+}
+
+/// Text written to game.log when a posture was set or cleared (see `posture_lines`).
+pub fn posture_marker(name: &str, on: bool, nonce: &str) -> String {
+    format!("GOVERNOR_POSTURE {name} {} {nonce}", if on { "on" } else { "off" })
 }
 
 /// Text written to game.log when a directive's effects ran (`nonce` keeps repeats visible).
@@ -795,13 +1083,19 @@ pub fn nonce() -> String {
 
 /// Poll game.log (written with a few seconds' delay) for `marker` after byte `offset`.
 async fn wait_for_log(client: &crate::client::AgentClient, offset: u64, marker: &str) -> Result<bool> {
+    Ok(wait_for_log_text(client, offset, marker).await?.is_some())
+}
+
+/// Like `wait_for_log`, returning the log text after `offset` once it holds `marker`.
+async fn wait_for_log_text(client: &crate::client::AgentClient, offset: u64, marker: &str) -> Result<Option<String>> {
     for _ in 0..16 {
         tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-        if read_log_since(client, offset).await?.0.contains(marker) {
-            return Ok(true);
+        let (text, _) = read_log_since(client, offset).await?;
+        if text.contains(marker) {
+            return Ok(Some(text));
         }
     }
-    Ok(false)
+    Ok(None)
 }
 
 /// A `log` effect that runs only with a real country scope (verified 2026-09-25: logged while
@@ -1182,13 +1476,13 @@ pub async fn take_control(
     // a scoped log proves the console reaches a real country (not observer mode)
     let probe = format!("HARNESS_SCOPE_CHECK {}", nonce());
     let (_, before) = client.files_read(DOCS_ROOT, "logs/game.log", 0, Some(0)).await?;
-    pause.run_console(client, &[format!("effect {}", scoped_log(&probe))]).await?;
+    pause.run_console(client, &[scope_probe_line(&probe)]).await?;
     if !wait_for_log(client, before, &probe).await? {
         pause.run_console(client, &[format!("play {country}")]).await?;
         done.push(format!("left observer mode (play {country})"));
         let again = format!("HARNESS_SCOPE_CHECK {}", nonce());
         let (_, before) = client.files_read(DOCS_ROOT, "logs/game.log", 0, Some(0)).await?;
-        pause.run_console(client, &[format!("effect {}", scoped_log(&again))]).await?;
+        pause.run_console(client, &[scope_probe_line(&again)]).await?;
         if !wait_for_log(client, before, &again).await? {
             bail!("still no country scope after `play {country}`: is this the campaign of the newest autosave?");
         }
@@ -1196,11 +1490,21 @@ pub async fn take_control(
     reader.set(client, true).await?;
     done.push("human_ai is ON: the game's AI plays the empire".into());
     done.push(match bridge_loaded(client).await {
-        Ok(true) => "companion mod Governor Bridge is loaded: directives also steer the AI's budget".into(),
-        Ok(false) => "companion mod not loaded: directives set policies only (game-controller stellaris install-mod)".into(),
+        Ok(Some(2)) => "companion mod Governor Bridge v2 is loaded: directives also steer the AI's budget, and the save \
+                        gets the naval capacity each month".into(),
+        Ok(Some(v)) => format!("companion mod Governor Bridge v{v} is loaded: directives also steer the AI's budget \
+                                (v2 adds postures and the naval-capacity read: stellaris install-mod, then restart)"),
+        Ok(None) => "companion mod not loaded: directives set policies only (game-controller stellaris install-mod)".into(),
         Err(e) => format!("could not check the companion mod: {e}"),
     });
     Ok(done)
+}
+
+/// The scope check `take_control` sends: its log line appears only with a real country scope, and
+/// the same effect marks that country as the governed empire (`BRIDGE_PLAYER_FLAG`), which limits
+/// the mod's monthly read channel to it. In observer mode neither happens.
+pub fn scope_probe_line(probe: &str) -> String {
+    format!("effect set_country_flag = {BRIDGE_PLAYER_FLAG} {}", scoped_log(probe))
 }
 
 /// Path and modification time of the newest autosave.
@@ -1279,12 +1583,31 @@ pub async fn install_mod(client: &crate::client::AgentClient, corpus_dir: &std::
     Ok(written)
 }
 
-/// Whether the running game has the mod loaded: an effect using its trigger logs only if it exists.
-pub async fn bridge_loaded(client: &crate::client::AgentClient) -> Result<bool> {
-    let marker = format!("GOVERNOR_BRIDGE_OK {}", nonce());
+/// Console lines of the mod check: an effect using a trigger the game does not know fails as a
+/// whole, so each version's trigger has its own line. The v2 line runs first, so once the v1
+/// marker is in game.log the v2 marker would already be there too.
+pub fn bridge_check_lines(nonce: &str) -> Vec<String> {
+    [("governor_bridge_version_2", "GOVERNOR_BRIDGE_V2"), ("governor_bridge_present", "GOVERNOR_BRIDGE_OK")]
+        .iter()
+        .map(|(trigger, tag)| format!("effect if = {{ limit = {{ {trigger} = yes }} log = \"{tag} {nonce}\" }}"))
+        .collect()
+}
+
+/// The mod version a check's markers show in `log`: None (not loaded), 1 or 2.
+pub fn bridge_version_in_log(log: &str, nonce: &str) -> Option<u8> {
+    if !log.contains(&format!("GOVERNOR_BRIDGE_OK {nonce}")) {
+        return None;
+    }
+    Some(if log.contains(&format!("GOVERNOR_BRIDGE_V2 {nonce}")) { 2 } else { 1 })
+}
+
+/// Which Governor Bridge the running game has loaded: None, or its version (1, or 2 with postures
+/// and the naval-capacity read channel). An effect using its trigger logs only if it exists.
+pub async fn bridge_loaded(client: &crate::client::AgentClient) -> Result<Option<u8>> {
+    let tag = nonce();
     let (_, before) = client.files_read(DOCS_ROOT, "logs/game.log", 0, Some(0)).await?;
-    run_console(client, &[format!("effect if = {{ limit = {{ governor_bridge_present = yes }} log = \"{marker}\" }}")]).await?;
-    wait_for_log(client, before, &marker).await
+    run_console(client, &bridge_check_lines(&tag)).await?;
+    Ok(wait_for_log_text(client, before, &format!("GOVERNOR_BRIDGE_OK {tag}")).await?.and_then(|log| bridge_version_in_log(&log, &tag)))
 }
 
 /// Bytes of game.log after `offset` (and the new size), via the agent.
@@ -1293,37 +1616,65 @@ pub async fn read_log_since(client: &crate::client::AgentClient, offset: u64) ->
     Ok((String::from_utf8_lossy(&bytes).into_owned(), size))
 }
 
-/// Apply a directive and confirm it from game.log. Returns the console lines sent.
+/// Send console `lines`, pausing first when a `pause` detector is given (at Fastest ~2 s of typing
+/// would be months of game time) and restoring the previous state afterwards.
+async fn send_paused(client: &crate::client::AgentClient, lines: &[String], pause: Option<&PauseDetector>) -> Result<()> {
+    let Some(p) = pause else {
+        return run_console(client, lines).await;
+    };
+    let was_paused = p.is_paused(client).await?;
+    p.set_paused(client, true).await?;
+    p.run_console(client, lines).await?;
+    if !was_paused {
+        p.set_paused(client, false).await?;
+    }
+    Ok(())
+}
+
+/// Apply a directive and confirm it from game.log. Returns the console lines sent and which
+/// policies the game set (their markers precede the confirmation, which runs last).
 pub async fn apply_directive(
     client: &crate::client::AgentClient,
     directives: &Directives,
     name: &str,
     pause: Option<&PauseDetector>,
+) -> Result<Applied> {
+    let tag = nonce();
+    // the options already in force (newest autosave) are not sent again: that could restart their lock
+    let (in_force, in_force_error) = match fetch_latest_save(client).await.and_then(|(_, bytes)| brief_save(&bytes)) {
+        Ok(b) => (b.policies, None),
+        Err(e) => (BTreeMap::new(), Some(format!("{e:#}").chars().take(200).collect::<String>())),
+    };
+    let lines = directives.console_lines_with_policies(name, &tag, &in_force)?;
+    let (_, before) = client.files_read(DOCS_ROOT, "logs/game.log", 0, Some(0)).await?;
+    send_paused(client, &lines, pause).await?;
+    let marker = applied_marker(name, &tag);
+    if let Some(log) = wait_for_log_text(client, before, &marker).await? {
+        let (set, in_force, locked) = policy_outcome(&directives.directive[name], &policy_markers(&log, &tag), &in_force);
+        return Ok(Applied { lines, set, in_force, locked, in_force_error });
+    }
+    bail!("directive {name} sent but {marker:?} did not appear in game.log: the empire is probably in observer \
+           mode or the console did not take the line; run `stellaris take-control`")
+}
+
+/// Set (`on`) or clear posture `name` on the player's empire and confirm it from game.log; returns
+/// the console lines sent. Like `apply_directive`, it pauses while typing and restores the state.
+pub async fn apply_posture(
+    client: &crate::client::AgentClient,
+    directives: &Directives,
+    name: &str,
+    on: bool,
+    pause: Option<&PauseDetector>,
 ) -> Result<Vec<String>> {
     let tag = nonce();
-    let lines = directives.console_lines(name, &tag)?;
+    let lines = directives.posture_lines(name, on, &tag)?;
     let (_, before) = client.files_read(DOCS_ROOT, "logs/game.log", 0, Some(0)).await?;
-    // Pause first: at Fastest ~2 s of typing would be months of game time. Restore it afterwards.
-    let was_paused = match pause {
-        Some(p) => {
-            let was = p.is_paused(client).await?;
-            p.set_paused(client, true).await?;
-            Some(was)
-        }
-        None => None,
-    };
-    match pause {
-        Some(p) => p.run_console(client, &lines).await?,
-        None => run_console(client, &lines).await?,
-    }
-    if let (Some(p), Some(false)) = (pause, was_paused) {
-        p.set_paused(client, false).await?;
-    }
-    let marker = applied_marker(name, &tag);
+    send_paused(client, &lines, pause).await?;
+    let marker = posture_marker(name, on, &tag);
     if wait_for_log(client, before, &marker).await? {
         return Ok(lines);
     }
-    bail!("directive {name} sent but {marker:?} did not appear in game.log: the empire is probably in observer \
+    bail!("posture {name} sent but {marker:?} did not appear in game.log: the empire is probably in observer \
            mode or the console did not take the line; run `stellaris take-control`")
 }
 
@@ -1603,14 +1954,96 @@ fn removal_rows(order_row_first_y: i32, pitch: i32, idxs: &[usize]) -> Result<Ve
         .collect()
 }
 
-/// Which button to click, and how many times, to move a new monthly trade's amount from `start`
-/// (the dialog's default, `ui.market.new_trade_amount`) to `target`.
-fn amount_clicks(start: i64, target: i64) -> (&'static str, u32) {
-    match target - start {
+/// The amount a new monthly trade of `resource` starts at in the "Add new monthly trade" dialog
+/// (`ui.market.new_trade_amount.<resource>`): 0.1 x the resource's `market_amount`, so 10 for
+/// energy, 5 for consumer goods, 1 for rare crystals. A resource missing from the table (alloys and
+/// sr_*, whose start is a fraction) is refused: no click count can be computed for it yet.
+fn trade_start(ui: &toml::Table, resource: &str) -> Result<i64> {
+    measured_start(trade_starts(ui)?, resource)
+}
+
+/// The `ui.market.new_trade_amount` table itself. Missing or not a table is a manifest fault (a
+/// `res/<W>x<H>.toml` overlay with `new_trade_amount = 10` undoes it), which fails the whole sync
+/// rather than reading as "not measured" for every resource.
+fn trade_starts(ui: &toml::Table) -> Result<&toml::Table> {
+    ui.get("market")
+        .and_then(|m| m.get("new_trade_amount"))
+        .context("manifest has no ui.market.new_trade_amount")?
+        .as_table()
+        .context("ui.market.new_trade_amount must be a per-resource table: a new trade's start amount differs by resource")
+}
+
+/// `resource`'s start amount from the table, or the "start amount not measured" refusal.
+fn measured_start(starts: &toml::Table, resource: &str) -> Result<i64> {
+    match starts.get(resource).and_then(|v| v.as_integer()) {
+        Some(n) if n > 0 => Ok(n),
+        _ => bail!(
+            "start amount not measured for {resource}: a new monthly trade of it starts at 0.1 x its market amount, \
+             and how the dialog shows and steps that start is not measured yet (ui.market.new_trade_amount)"
+        ),
+    }
+}
+
+/// Which button to click, and how many times, to move a new monthly trade of `resource` from its
+/// start amount (`trade_start`) to `target`.
+fn amount_clicks(ui: &toml::Table, resource: &str, target: i64) -> Result<(&'static str, u32)> {
+    Ok(match target - trade_start(ui, resource)? {
         0 => ("none", 0),
         d if d > 0 => ("plus", d as u32),
         d => ("minus", (-d) as u32),
+    })
+}
+
+/// What one sync does: the orders to add and remove, and the adds refused for want of a measured
+/// start amount (alloys and sr_*). A refusal is per order: removals and the other adds still go,
+/// except a current order of the refused side and resource, which is `kept` at its amount (buying
+/// 7 alloys when the strategy wants 5 is closer than buying none).
+#[derive(Debug, Default, PartialEq)]
+struct MarketPlan {
+    add: Vec<MarketOrderSpec>,
+    remove: Vec<MarketOrderSpec>,
+    refused: Vec<MarketOrderSpec>,
+    kept: Vec<MarketOrderSpec>,
+}
+
+impl MarketPlan {
+    fn sends_anything(&self) -> bool {
+        !self.add.is_empty() || !self.remove.is_empty()
     }
+
+    /// The tool's reply. "not added (start amount not measured): …" lists each refused order as
+    /// `side resource amount`; the governor reads that list back (governor.py MARKET_REFUSED_RE).
+    /// "kept (start amount not measured): …" lists the current orders left in place for them.
+    fn reply(&self) -> String {
+        let mut refused = if self.refused.is_empty() {
+            String::new()
+        } else {
+            format!("; not added (start amount not measured): {}", describe_orders(&self.refused))
+        };
+        if !self.kept.is_empty() {
+            refused += &format!("; kept (start amount not measured): {}", describe_orders(&self.kept));
+        }
+        if self.sends_anything() {
+            format!("added {}; removed {}{refused}; the next autosave confirms it", describe_orders(&self.add), describe_orders(&self.remove))
+        } else {
+            format!("nothing sent{refused}")
+        }
+    }
+}
+
+/// `market_diff`, with each add that has no measured start amount moved to `refused` and the current
+/// order of its side and resource moved from `remove` to `kept`. A sync that adds anything needs the
+/// start-amount table: a broken one is an error for the whole sync.
+fn market_plan(ui: &toml::Table, current: &[MarketOrderSpec], desired: &[MarketOrderSpec]) -> Result<MarketPlan> {
+    let (add, remove) = market_diff(current, desired);
+    if add.is_empty() {
+        return Ok(MarketPlan { add, remove, ..Default::default() });
+    }
+    let starts = trade_starts(ui)?;
+    let (add, refused): (Vec<_>, Vec<_>) = add.into_iter().partition(|o| measured_start(starts, &o.resource).is_ok());
+    // a refused add leaves the current order of its side and resource in place, at its amount
+    let (kept, remove) = remove.into_iter().partition(|c| refused.iter().any(|r| r.side == c.side && r.resource == c.resource));
+    Ok(MarketPlan { add, remove, refused, kept })
 }
 
 /// Screen steps for `remove` and `add`, run after the Market dialog is open (`ui.market`). Kept
@@ -1646,11 +2079,6 @@ async fn apply_market_changes(
         let plus_pt = ui_point(ui, "market", "plus")?;
         let minus_pt = ui_point(ui, "market", "minus")?;
         let confirm_pt = ui_point(ui, "market", "confirm")?;
-        let new_trade_amount = ui
-            .get("market")
-            .and_then(|m| m.get("new_trade_amount"))
-            .and_then(|v| v.as_integer())
-            .context("manifest has no ui.market.new_trade_amount")?;
         let resources = ui.get("market").and_then(|m| m.get("resources")).and_then(|r| r.as_table()).context("manifest ui.market has no resources table")?;
         for order in add {
             click_ui_point(client, add_pt).await?;
@@ -1666,8 +2094,8 @@ async fn apply_market_changes(
             click_ui_point(client, (rx, ry)).await?;
             tokio::time::sleep(std::time::Duration::from_millis(300)).await;
 
-            // A new trade dialog starts at `new_trade_amount` (verified live 2387.07: 10), not 0.
-            let (button, clicks) = amount_clicks(new_trade_amount, order.amount);
+            // A new trade dialog starts at the resource's own start amount, not 0 (see `trade_start`).
+            let (button, clicks) = amount_clicks(ui, &order.resource, order.amount)?;
             let button_pt = match button {
                 "plus" => plus_pt,
                 "minus" => minus_pt,
@@ -1699,10 +2127,16 @@ pub async fn sync_market(
     current: &[MarketOrderSpec],
     desired: &[MarketOrderSpec],
 ) -> Result<String> {
-    let (add, remove) = market_diff(current, desired);
-    if add.is_empty() && remove.is_empty() {
+    let plan = market_plan(ui, current, desired)?;
+    if !plan.sends_anything() && plan.refused.is_empty() {
         return Ok("orders already match".into());
     }
+    // decided before the game is paused or the Market opened: an add with no measured start amount
+    // is left out and named in the reply, and the removals and other adds still go
+    if !plan.sends_anything() {
+        return Ok(plan.reply());
+    }
+    let MarketPlan { add, remove, .. } = &plan;
     pause.set_paused(client, true).await?;
     pause.close_menu(client).await?;
 
@@ -1710,7 +2144,7 @@ pub async fn sync_market(
     click_ui_point(client, open_click).await?;
     tokio::time::sleep(std::time::Duration::from_millis(600)).await;
 
-    let result = apply_market_changes(client, ui, current, &remove, &add).await;
+    let result = apply_market_changes(client, ui, current, remove, add).await;
 
     // Always try to close the Market, even on error, so a failure never leaves it open over the map.
     let close_key = ui.get("market").and_then(|m| m.get("close_key")).and_then(|v| v.as_str()).unwrap_or("esc").to_string();
@@ -1718,7 +2152,7 @@ pub async fn sync_market(
     let _ = client.key(&close_key, 1).await;
 
     result?;
-    Ok(format!("added {}; removed {}; the next autosave confirms it", describe_orders(&add), describe_orders(&remove)))
+    Ok(plan.reply())
 }
 
 /// Build a briefing from the unzipped `gamestate` text.
@@ -1802,6 +2236,9 @@ pub fn brief_gamestate(gamestate: &[u8]) -> Result<Briefing> {
     if let Some(ap) = get(&c, "active_policies").and_then(|v| v.read_array().ok()) {
         for p in ap.values().filter_map(|x| x.read_object().ok()) {
             if let (Some(k), Some(v)) = (string(&p, "policy"), string(&p, "selected")) {
+                if let Some(d) = string(&p, "date") {
+                    b.policy_dates.insert(k.clone(), d);
+                }
                 b.policies.insert(k, v);
             }
         }
@@ -1810,6 +2247,14 @@ pub fn brief_gamestate(gamestate: &[u8]) -> Result<Briefing> {
         b.edicts = ed.values().filter_map(|x| x.read_object().ok()).filter_map(|e| string(&e, "edict")).collect();
     }
     b.flags = obj(&c, "flags").map(|f| f.fields().map(|(k, _, _)| k.read_string()).collect()).unwrap_or_default();
+    b.governor_vars = obj(&c, "variables")
+        .map(|v| {
+            v.fields()
+                .filter(|(k, _, _)| k.read_str().starts_with("governor_"))
+                .filter_map(|(k, _, x)| Some((k.read_string(), x.read_scalar().ok()?.to_f64().ok()?)))
+                .collect()
+        })
+        .unwrap_or_default();
 
     // 4.5: `owned_planets` holds colony ids; a colony's `carrier` points at its planet.
     let planets = obj(&root, "planets").and_then(|p| obj(&p, "planet"));
@@ -1829,14 +2274,24 @@ pub fn brief_gamestate(gamestate: &[u8]) -> Result<Briefing> {
     b.expansion = expansion(&root, &c, b.country, &origins, planets.as_ref());
     b.peers = peers(&countries, &id, &c, &origins);
     let colonies = obj(&root, "colony");
-    for cid in strings(get(&c, "owned_planets")) {
-        let Some(col) = colonies.as_ref().and_then(|cs| obj(cs, &cid)) else { continue };
+    let owned = strings(get(&c, "owned_planets"));
+    let capital = get(&c, "capital").and_then(|v| v.read_string().ok());
+    let mut refs = ColonyRefs::default();
+    for cid in &owned {
+        let Some(col) = colonies.as_ref().and_then(|cs| obj(cs, cid)) else { continue };
         let Some(carrier) = obj(&col, "carrier") else { continue };
         if string(&carrier, "type").as_deref() != Some("planet") {
             continue;
         }
         let Some(pid) = i64_(&carrier, "reference") else { continue };
         let Some(p) = planets.as_ref().and_then(|ps| obj(ps, &pid.to_string())) else { continue };
+        let i = b.planets.len();
+        refs.colonies.insert(cid.clone(), i);
+        for (key, map) in [("pop_jobs", &mut refs.jobs), ("pop_groups", &mut refs.groups), ("districts", &mut refs.districts)] {
+            map.extend(strings(get(&col, key)).into_iter().map(|x| (x, i)));
+        }
+        let controller = i64_(&p, "controller").map(|x| x as u64).filter(|x| *x != b.country);
+        let designation = string(&col, "designation").or_else(|| string(&col, "final_designation")).unwrap_or_default();
         b.planets.push(Planet {
             id: pid as u64,
             name: name_of(&p),
@@ -1847,13 +2302,29 @@ pub fn brief_gamestate(gamestate: &[u8]) -> Result<Briefing> {
             free_housing: f64_(&col, "free_housing"),
             free_amenities: f64_(&col, "free_amenities"),
             crime: f64_(&col, "crime"),
+            capital: capital.as_deref() == Some(cid.as_str()),
+            occupied: controller.is_some(),
+            occupier: controller.map(|x| obj(&countries, &x.to_string()).map(|o| name_of(&o)).unwrap_or_else(|| format!("country {x}"))),
+            amenities_usage: f64_(&col, "amenities_usage"),
+            total_housing: f64_(&col, "total_housing"),
+            employable: i64_(&col, "employable_pops"),
+            jobs_open: get(&col, "pop_jobs").map(|_| 0),
+            unemployed: get(&col, "pop_groups").map(|_| 0),
+            designation: designation.trim_start_matches("col_").to_string(),
+            district_levels: BTreeMap::new(),
+            queued: vec![],
+            growth: obj(&col, "last_month_growth_data").and_then(|g| obj(&g, "growth_and_size")).and_then(|g| f64_(&g, "growth")),
         });
     }
+    planet_development(&root, &mut b.planets, &refs);
+    b.shipyards = shipyards(&root, &c, &b.planets, &origins);
+    b.market = market_info(&root, &c, b.country);
 
     if let Some(wars) = obj(&root, "war") {
-        for (_, _, w) in wars.fields() {
+        for (key, _, w) in wars.fields() {
             let Ok(w) = w.read_object() else { continue };
-            if let Some(war) = war_of(&w, b.country, &countries) {
+            if let Some(mut war) = war_of(&w, b.country, &countries, &b.date, &owned) {
+                war.id = key.read_str().into_owned();
                 b.wars.push(war);
             }
         }
@@ -1875,6 +2346,7 @@ pub fn brief_gamestate(gamestate: &[u8]) -> Result<Briefing> {
         .unwrap_or_default();
     b.key_techs_known = KEY_TECHS.iter().filter(|(t, _)| known.contains(*t)).map(|(t, _)| t.to_string()).collect();
     b.used_naval_capacity = i64_(&c, "used_naval_capacity").unwrap_or(0);
+    b.governor_vars_stale = !b.governor_vars.is_empty() && !naval_export_fresh(&b.governor_vars, b.used_naval_capacity);
     let pref = b.identity.species.as_ref().and_then(|sp| preferred_class(&sp.traits));
     if let Some(ps) = planets.as_ref() {
         for pid in strings(get(&c, "controlled_planets")) {
@@ -1903,8 +2375,217 @@ pub fn brief_gamestate(gamestate: &[u8]) -> Result<Briefing> {
     Ok(b)
 }
 
-/// One war we take part in, seen from our side.
-fn war_of(w: &Obj, us: u64, countries: &Obj) -> Option<War> {
+/// Where our colonies' jobs, pop groups and districts point, by id → index into `Briefing::planets`.
+#[derive(Default)]
+struct ColonyRefs {
+    colonies: std::collections::HashMap<String, usize>,
+    jobs: std::collections::HashMap<String, usize>,
+    groups: std::collections::HashMap<String, usize>,
+    districts: std::collections::HashMap<String, usize>,
+}
+
+/// Construction items that develop a planet (`buildable_<kind>`, whose `planet` is a colony id).
+const PLANET_BUILDABLES: [&str; 7] = [
+    "district", "planet_building", "planet_upgrade_building", "zone", "clear_deposit_blocker",
+    "planet_externally_owned_building", "decision",
+];
+
+/// Jobs open, unemployment, district levels and queued items of our colonies: one pass over each
+/// top-level block (they hold every empire's entries).
+fn planet_development(root: &Obj, planets: &mut [Planet], r: &ColonyRefs) {
+    if let Some(jobs) = obj(root, "pop_jobs") {
+        for (k, _, v) in jobs.fields() {
+            let (Some(&i), Ok(j)) = (r.jobs.get(k.read_str().as_ref()), v.read_object()) else { continue };
+            let (work, max) = (i64_(&j, "workforce").unwrap_or(0), i64_(&j, "max_workforce").unwrap_or(0));
+            if max > 0 {
+                *planets[i].jobs_open.get_or_insert(0) += (max - work.max(0)).max(0);
+            }
+        }
+    }
+    if let Some(groups) = obj(root, "pop_groups") {
+        for (k, _, v) in groups.fields() {
+            let (Some(&i), Ok(g)) = (r.groups.get(k.read_str().as_ref()), v.read_object()) else { continue };
+            // 4.5 puts pops without a job in the civilian stratum (slaves: slave_unemployment)
+            let category = obj(&g, "key").and_then(|k| string(&k, "category"));
+            if matches!(category.as_deref(), Some("civilian" | "slave_unemployment")) {
+                *planets[i].unemployed.get_or_insert(0) += f64_(&g, "size").unwrap_or(0.0).round() as i64;
+            }
+        }
+    }
+    if let Some(districts) = obj(root, "districts") {
+        for (k, _, v) in districts.fields() {
+            let (Some(&i), Ok(d)) = (r.districts.get(k.read_str().as_ref()), v.read_object()) else { continue };
+            let kind = string(&d, "type").unwrap_or_default();
+            *planets[i].district_levels.entry(kind.trim_start_matches("district_").to_string()).or_insert(0) += i64_(&d, "level").unwrap_or(0);
+        }
+    }
+    let items = obj(root, "construction").and_then(|c| obj(&c, "item_mgr")).and_then(|m| obj(&m, "items"));
+    for (_, _, v) in items.iter().flat_map(|i| i.fields()) {
+        let Ok(item) = v.read_object() else { continue };   // finished items read `id=none`
+        for kind in PLANET_BUILDABLES {
+            let Some(bd) = obj(&item, &format!("buildable_{kind}")) else { continue };
+            let colony = get(&bd, "planet").and_then(|x| x.read_string().ok()).unwrap_or_default();
+            if let Some(&i) = r.colonies.get(&colony) {
+                let what = ["district", "building", "zone", "decision"].iter().find_map(|k| string(&bd, k));
+                planets[i].queued.push(what.unwrap_or_else(|| kind.to_string()));
+            }
+            break;
+        }
+    }
+}
+
+/// Starbases with a shipyard module in our systems: held by our fleets, or held by another country
+/// in a system that still has a colony of ours (occupied).
+fn shipyards(root: &Obj, c: &Obj, planets: &[Planet], origins: &std::collections::HashMap<String, i64>) -> Vec<Shipyard> {
+    use std::collections::{HashMap, HashSet};
+    let Some(starbases) = obj(root, "starbase_mgr").and_then(|m| obj(&m, "starbases")) else { return vec![] };
+    let yards: Vec<(String, String)> = starbases
+        .fields()
+        .filter_map(|(k, _, v)| {
+            let s = v.read_object().ok()?;
+            let yard = obj(&s, "modules").is_some_and(|m| m.fields().any(|(_, _, x)| x.read_string().ok().as_deref() == Some("shipyard")));
+            yard.then(|| Some((k.read_string(), get(&s, "station")?.read_string().ok()?))).flatten()
+        })
+        .collect();
+    if yards.is_empty() {
+        return vec![];
+    }
+    let stations: HashSet<&str> = yards.iter().map(|(_, st)| st.as_str()).collect();
+    let mut fleet_of: HashMap<String, String> = HashMap::new();
+    for (k, _, v) in obj(root, "ships").iter().flat_map(|s| s.fields()) {
+        if stations.contains(k.read_str().as_ref()) {
+            if let Some(f) = v.read_object().ok().and_then(|s| get(&s, "fleet")).and_then(|f| f.read_string().ok()) {
+                fleet_of.insert(k.read_string(), f);
+            }
+        }
+    }
+    let ours: HashSet<String> = obj(c, "fleets_manager")
+        .and_then(|fm| get(&fm, "owned_fleets"))
+        .and_then(|v| v.read_array().ok())
+        .map(|a| a.values().filter_map(|x| x.read_object().ok()).filter_map(|x| i64_(&x, "fleet")).map(|i| i.to_string()).collect())
+        .unwrap_or_default();
+    let wanted: HashSet<&str> = yards.iter().map(|(sb, _)| sb.as_str()).collect();
+    let mut system_of: HashMap<String, (i64, String)> = HashMap::new();
+    for (k, _, v) in obj(root, "galactic_object").iter().flat_map(|g| g.fields()) {
+        let (Ok(id), Ok(g)) = (k.read_str().parse::<i64>(), v.read_object()) else { continue };
+        for sb in strings(get(&g, "starbases")) {
+            if wanted.contains(sb.as_str()) {
+                system_of.insert(sb, (id, name_of(&g)));
+            }
+        }
+    }
+    let colony_systems: HashSet<i64> = planets.iter().filter_map(|p| origins.get(&p.id.to_string()).copied()).collect();
+    yards
+        .into_iter()
+        .filter_map(|(sb, station)| {
+            let (sys, name) = system_of.get(&sb)?.clone();
+            if fleet_of.get(&station).is_some_and(|f| ours.contains(f)) {
+                Some(Shipyard { system: name, occupied: false })
+            } else {
+                colony_systems.contains(&sys).then_some(Shipyard { system: name, occupied: true })
+            }
+        })
+        .collect()
+}
+
+/// Numbers of a `{ 1 2.5 … }` list, in order (unreadable entries read 0 so indices stay aligned).
+fn numbers(v: Option<Val>) -> Vec<f64> {
+    v.and_then(|v| v.read_array().ok())
+        .map(|a| a.values().map(|x| x.read_scalar().ok().and_then(|s| s.to_f64().ok()).unwrap_or(0.0)).collect())
+        .unwrap_or_default()
+}
+
+/// Per-resource array (by MARKET_INDEX) → the market resources with a non-zero value.
+fn by_market_index(values: &[f64], decimals: i32) -> BTreeMap<String, f64> {
+    let scale = 10f64.powi(decimals);
+    values
+        .iter()
+        .zip(MARKET_INDEX)
+        .filter(|(v, r)| **v != 0.0 && MARKET_RESOURCES.contains(r))
+        .map(|(v, r)| (r.to_string(), (v * scale).round() / scale))
+        .collect()
+}
+
+/// The entry for country `us` in a `{ country=A <key>={…} country=B <key>={…} }` block.
+fn country_entry<'d, 't>(block: &Obj<'d, 't>, us: u64, key: &str) -> Option<Val<'d, 't>> {
+    let mut current = None;
+    for (k, _, v) in block.fields() {
+        match k.read_str().as_ref() {
+            "country" => current = v.read_scalar().ok().and_then(|s| s.to_u64().ok()),
+            x if x == key && current == Some(us) => return Some(v),
+            _ => {}
+        }
+    }
+    None
+}
+
+/// The market we trade on: galactic once it formed and our slot has access, else our internal one.
+fn market_info(root: &Obj, c: &Obj, us: u64) -> Option<MarketInfo> {
+    let m = obj(root, "market")?;
+    let slot = numbers(get(&m, "id")).iter().position(|x| *x == us as f64);
+    let access = numbers(get(&m, "galactic_market_access"));
+    let galactic = string(&m, "enabled").as_deref() == Some("yes") && slot.and_then(|i| access.get(i)) == Some(&1.0);
+    let fluct = if galactic {
+        by_market_index(&numbers(get(&m, "fluctuations")), 2)
+    } else {
+        obj(&m, "internal_market_fluctuations")
+            .and_then(|f| country_entry(&f, us, "resources"))
+            .and_then(|v| v.read_object().ok())
+            .map(|r| resources(&r).into_iter().filter(|(_, v)| *v != 0.0).map(|(k, v)| (k, (v * 100.0).round() / 100.0)).collect())
+            .unwrap_or_default()
+    };
+    let traded = |key: &str| -> BTreeMap<String, f64> {
+        obj(&m, key)
+            .and_then(|b| country_entry(&b, us, "amount"))
+            .map(|v| by_market_index(&numbers(Some(v)), 2))
+            .unwrap_or_default()
+    };
+    let trades_net = obj(c, "budget")
+        .and_then(|b| obj(&b, "last_month"))
+        .and_then(|b| obj(&b, "trade_balance"))
+        .and_then(|b| obj(&b, "monthly_trades"))
+        .map(|r| resources(&r))
+        .unwrap_or_default();
+    Some(MarketInfo {
+        kind: if galactic { "galactic" } else { "internal" }.into(),
+        fluct,
+        bought: traded("resources_bought"),
+        sold: traded("resources_sold"),
+        trades_net,
+    })
+}
+
+/// Is the Governor Bridge's naval-capacity export current? Country variables stay in the save after
+/// the mod stops running (a restart with another playset, a disabled mod), so a lone export proves
+/// nothing. The export is taken as current only while its `governor_naval_used` agrees with the
+/// save's own `used_naval_capacity`, within max(2, 2%) for a ship finished the same day after the
+/// export. A cap without its use cannot be checked and is not current. The check cannot tell a stale
+/// export while the fleet's use has not changed since; the AI builds up to its cap, so that holds
+/// only for short spells.
+fn naval_export_fresh(vars: &BTreeMap<String, f64>, used: i64) -> bool {
+    match (vars.get("governor_naval_cap"), vars.get("governor_naval_used")) {
+        (Some(_), Some(&exported)) => (exported - used as f64).abs() <= (0.02 * used as f64).max(2.0),
+        _ => false,
+    }
+}
+
+/// "2230.01.01" → (2230, 1, 1); `None` for anything else.
+fn ymd(date: &str) -> Option<(i64, i64, i64)> {
+    let mut it = date.trim().split('.').map(|x| x.parse::<i64>().ok());
+    Some((it.next()??, it.next()??, it.next()??))
+}
+
+/// Is `date` after `now` minus 12 months (and a real date: ground battles carry 0.01.01)?
+fn within_12_months(date: &str, now: &str) -> bool {
+    match (ymd(date), ymd(now)) {
+        (Some(d), Some((y, m, day))) => d.0 > 1 && d > (y - 1, m, day),
+        _ => false,
+    }
+}
+
+/// One war we take part in, seen from our side. `now` is the save date and `colonies` our colony
+/// ids (for ground battles at them).
+fn war_of(w: &Obj, us: u64, countries: &Obj, now: &str, colonies: &[String]) -> Option<War> {
     let side = |key: &str| -> Vec<u64> {
         get(w, key)
             .and_then(|v| v.read_array().ok())
@@ -1927,21 +2608,47 @@ fn war_of(w: &Obj, us: u64, countries: &Obj) -> Option<War> {
     let goal = |key: &str| obj(w, key).and_then(|g| string(&g, "type")).unwrap_or_default();
     let (att_goal, def_goal) = (goal("attacker_war_goal"), goal("defender_war_goal"));
     let (att_ex, def_ex) = (f64_(w, "attacker_war_exhaustion").unwrap_or(0.0), f64_(w, "defender_war_exhaustion").unwrap_or(0.0));
-    // each battle lists its attacker side and whether it won
+    // each battle lists its attacker side and whether it won; "our side" includes allies, "own"
+    // only battles that list our country (allies' wins once read as ours, e.g. "won 20-0")
     let (mut won, mut lost) = (0, 0);
+    let mut own = OwnBattles::default();
+    let mut battle_count = 0;
     if let Some(battles) = get(w, "battles").and_then(|v| v.read_array().ok()) {
-        for bt in battles.values().filter_map(|x| x.read_object().ok()) {
+        for (index, bt) in battles.values().filter_map(|x| x.read_object().ok()).enumerate() {
+            battle_count = index + 1;
             let ids = |k: &str| strings(get(&bt, k)).iter().filter_map(|x| x.parse::<u64>().ok()).collect::<Vec<_>>();
-            let we_attacked = ids("attackers").iter().any(|c| ours.contains(c));
-            let we_defended = ids("defenders").iter().any(|c| ours.contains(c));
+            let (atk, def) = (ids("attackers"), ids("defenders"));
+            let attacker_won = get(&bt, "attacker_victory").and_then(|v| v.read_string().ok()).as_deref() == Some("yes");
+            let ground = string(&bt, "type").as_deref() == Some("armies");
+            let we_attacked = atk.iter().any(|c| ours.contains(c));
+            // an invasion of one of our colonies: our own country defended it (a ground battle lists
+            // the colony's holder then, so an ally's colony we hold now is not ours, nor is our retake)
+            if ground && def.contains(&us) && get(&bt, "colony").and_then(|v| v.read_string().ok()).is_some_and(|col| colonies.contains(&col)) {
+                own.invasions.push(index);
+            }
+            let we_defended = def.iter().any(|c| ours.contains(c));
             if !we_attacked && !we_defended {
                 continue;
             }
-            let attacker_won = get(&bt, "attacker_victory").and_then(|v| v.read_string().ok()).as_deref() == Some("yes");
             if attacker_won == we_attacked { won += 1 } else { lost += 1 }
+            let (in_atk, in_def) = (atk.contains(&us), def.contains(&us));
+            if (in_atk || in_def) && !ground && within_12_months(&string(&bt, "date").unwrap_or_default(), now) {
+                if attacker_won == in_atk { own.won += 1 } else { own.lost += 1 }
+                own.ships_lost += i64_(&bt, if in_atk { "attacker_losses" } else { "defender_losses" }).unwrap_or(0);
+            }
         }
     }
+    own.ground_at_our_colonies = own.invasions.len();
+    let (our_side, their_side) = if attacker { ("attacker", "defender") } else { ("defender", "attacker") };
+    let flag = |side: &str| string(w, &format!("{side}_force_peace")).as_deref() == Some("yes");
+    let (ours_fp, theirs_fp) = (flag(our_side), flag(their_side));
+    let force_peace = (ours_fp || theirs_fp).then(|| ForcePeace {
+        ours: ours_fp,
+        theirs: theirs_fp,
+        date: string(w, &format!("{}_force_peace_date", if ours_fp { our_side } else { their_side })).unwrap_or_default(),
+    });
     Some(War {
+        id: String::new(),
         name: format!("{} vs {}", names(&who(&attackers)), names(&who(&defenders))),
         attacker,
         start: string(w, "start_date").unwrap_or_default(),
@@ -1953,6 +2660,9 @@ fn war_of(w: &Obj, us: u64, countries: &Obj) -> Option<War> {
         their_exhaustion: if attacker { def_ex } else { att_ex },
         battles_won: won,
         battles_lost: lost,
+        battle_count,
+        own_battles_12m: own,
+        force_peace,
     })
 }
 
@@ -1966,10 +2676,20 @@ impl Briefing {
             "Government: {} / {}; ethics: {}; civics: {}; origin: {}\n",
             self.government, self.authority, self.ethics.join(", "), self.civics.join(", "), self.origin
         );
+        // the Governor Bridge mod exports the maximum monthly; without it, or when its export is
+        // stale, only the use is known. The use printed is always the save's own.
+        let naval = match self.governor_vars.get("governor_naval_cap").filter(|_| !self.governor_vars_stale) {
+            Some(cap) => format!(", naval capacity {}/{cap:.0} (from the mod)", self.used_naval_capacity),
+            None => format!(
+                " (naval capacity used {}; the maximum is not in the save, so never assume we are at it{})",
+                self.used_naval_capacity,
+                if self.governor_vars_stale { "; the Governor Bridge export is stale, not today's" } else { "" }
+            ),
+        };
         s += &format!(
-            "Power: military {:.0}, economy {:.0}, tech {:.0}; victory rank {}. Systems owned {}, colonies {}, empire size {}, pops {}, fleet size {} (naval capacity used {}; the maximum is not in the save, so never assume we are at it), upgraded starbases {}/{}\n",
+            "Power: military {:.0}, economy {:.0}, tech {:.0}; victory rank {}. Systems owned {}, colonies {}, empire size {}, pops {}, fleet size {}{naval}, upgraded starbases {}/{}\n",
             self.military_power, self.economy_power, self.tech_power, self.victory_rank,
-            self.systems, self.planets.len(), self.empire_size, self.pops, self.fleet_size, self.used_naval_capacity,
+            self.systems, self.planets.len(), self.empire_size, self.pops, self.fleet_size,
             self.starbases.0, self.starbases.1
         );
         let id = &self.identity;
@@ -2017,6 +2737,20 @@ impl Briefing {
         if !idle.is_empty() {
             s += &format!("IDLE stockpiles (unused by the AI): {}\n", idle.join(", "));
         }
+        if let Some(m) = &self.market {
+            let mut fl: Vec<(&String, &f64)> = m.fluct.iter().filter(|(_, v)| v.abs() >= 5.0).collect();
+            fl.sort_by(|a, b| b.1.abs().partial_cmp(&a.1.abs()).unwrap_or(std::cmp::Ordering::Equal));
+            let prices: Vec<String> = fl.iter().take(6).map(|(k, v)| format!("{k} {v:+.0}%")).collect();
+            let signed = |v: f64| if (v - v.round()).abs() < 0.05 { format!("{v:+.0}") } else { format!("{v:+.1}") };
+            let trades: Vec<String> = m.trades_net.iter().map(|(k, v)| format!("{k} {}", signed(*v))).collect();
+            if !prices.is_empty() || !trades.is_empty() {
+                s += &format!("Market ({}; price vs base): {}", m.kind, if prices.is_empty() { "all near base".to_string() } else { prices.join(", ") });
+                if !trades.is_empty() {
+                    s += &format!("; our monthly trades last month: {}", trades.join(", "));
+                }
+                s += "\n";
+            }
+        }
         s += &format!("Research ({} techs known):\n", self.techs_known);
         for (f, r) in &self.research {
             let cur = r.current.as_ref().map(|(t, p)| format!("{t} ({p:.0} pts)")).unwrap_or_else(|| "NONE".into());
@@ -2033,8 +2767,9 @@ impl Briefing {
         s += "\nPlanets:\n";
         for p in &self.planets {
             let opt = |v: Option<f64>| v.map(num).unwrap_or_else(|| "-".into());
+            let held = p.occupier.as_ref().map(|o| format!("OCCUPIED by {o}; ")).unwrap_or_default();
             s += &format!(
-                "- {} ({} size {}): pops {}, stability {}, free housing {}, free amenities {}, crime {}\n",
+                "- {} ({} size {}): {held}pops {}, stability {}, free housing {}, free amenities {}, crime {}\n",
                 p.name, p.class, p.size,
                 p.pops.map(|x| x.to_string()).unwrap_or_else(|| "-".into()),
                 opt(p.stability), opt(p.free_housing), opt(p.free_amenities), opt(p.crime)
@@ -2110,13 +2845,25 @@ impl Briefing {
             for w in &self.wars {
                 let enemies = w.enemies.iter().map(|(n, m)| format!("{n} (military {m:.0})")).collect::<Vec<_>>().join(", ");
                 let goal = |g: &str| if g.is_empty() { "none".to_string() } else { g.trim_start_matches("wg_").replace('_', " ") };
+                let o = &w.own_battles_12m;
+                let ground = if o.ground_at_our_colonies > 0 { format!("; ground battles at our colonies {}", o.ground_at_our_colonies) } else { String::new() };
+                let forced = match &w.force_peace {
+                    Some(f) if f.ours => format!("; a status quo can be forced on us (since {})", f.date),
+                    Some(f) if f.theirs => format!("; we can force a status quo on them (since {})", f.date),
+                    _ => String::new(),
+                };
                 s += &format!(
-                    "War since {}: {} (we are {}) against {}; war goals: theirs {}, ours {}; war exhaustion ours {:.0}%, theirs {:.0}% (100% lets the other side force peace); battles won {}, lost {}\n",
+                    "War since {}: {} (we are {}) against {}; war goals: theirs {}, ours {}; war exhaustion ours {:.0}%, theirs {:.0}% (100% lets the other side force peace); battles won {}, lost {} (our side, allies included); ours in the last 12 months: won {}, lost {}, ships lost {}{ground}{forced}\n",
                     w.start, w.name, if w.attacker { "attacker" } else { "defender" }, enemies,
                     goal(&w.their_goal), goal(&w.our_goal), w.our_exhaustion * 100.0, w.their_exhaustion * 100.0,
-                    w.battles_won, w.battles_lost
+                    w.battles_won, w.battles_lost, o.won, o.lost, o.ships_lost
                 );
             }
+        }
+        // where new ships can come from: listed at war, or when one is occupied
+        if !self.wars.is_empty() || self.shipyards.iter().any(|y| y.occupied) {
+            let list: Vec<String> = self.shipyards.iter().map(|y| format!("{}{}", y.system, if y.occupied { " (OCCUPIED)" } else { "" })).collect();
+            s += &format!("Shipyards: {}\n", if list.is_empty() { "none in our systems".to_string() } else { list.join(", ") });
         }
         let gx = &self.galaxy;
         if let Some(f) = &gx.federation {
@@ -2144,7 +2891,8 @@ impl Briefing {
         for (t, p, a) in &gx.situations {
             s += &format!("Situation: {t}, progress {p:.0}, approach {a}\n");
         }
-        let gov: Vec<&String> = self.flags.iter().filter(|f| f.starts_with("governor_")).collect();
+        // directive and posture flags; the governed-empire marker is plumbing for the mod
+        let gov: Vec<&String> = self.flags.iter().filter(|f| f.starts_with("governor_") && *f != BRIDGE_PLAYER_FLAG).collect();
         if !gov.is_empty() {
             s += &format!("Governor flags: {}\n", gov.iter().map(|x| x.as_str()).collect::<Vec<_>>().join(", "));
         }
@@ -2238,19 +2986,19 @@ mod tests {
     fn directive_console_lines_take_control_apply_and_hand_back() {
         let d = directives();
         let lines = d.console_lines("expand", "k3x9").unwrap();
-        assert_eq!(lines.len(), 2, "no play/observe: the empire stays player-controlled under human_ai");
+        // remove the other directives' flags, the bound postures, one line per policy, then flag +
+        // confirmation last
+        assert_eq!(lines.len(), 3 + d.directive["expand"].policies.len());
+        assert!(lines.iter().all(|l| l.starts_with("effect ") && !l.contains("play ") && !l.contains("observe")),
+                "no play/observe: the empire stays player-controlled under human_ai");
         assert!(lines[0].starts_with("effect remove_country_flag = governor_directive_"));
         assert!(!lines[0].contains("governor_directive_expand "));
-        let apply = &lines[1];
-        assert!(apply.contains("set_country_flag = governor_directive_expand"));
-        // each policy is set only when the game would allow it (the option's `valid` block)
-        assert!(apply.contains("if = { limit = { is_homicidal = no } set_policy = { policy = diplomatic_stance option = diplo_stance_expansionist cooldown = no } }"), "{apply}");
-        assert!(apply.contains("if = { limit = { is_homicidal = no is_xenophobe = no NOT = { has_origin = origin_payback } } set_policy = { policy = first_contact_protocol option = first_contact_proactive cooldown = no } }"), "{apply}");
-        assert!(apply.ends_with("if = { limit = { exists = capital_scope } log = \"GOVERNOR_APPLIED expand k3x9\" }"));
-        for name in d.directive.keys() {
-            let ls = d.console_lines(name, "k3x9").unwrap();
-            assert!(ls.iter().all(|l| l.len() < 1000), "{name}: agent /type limit");
-        }
+        let last = lines.last().unwrap();
+        assert_eq!(last, "effect set_country_flag = governor_directive_expand if = { limit = { exists = capital_scope } log = \"GOVERNOR_APPLIED expand k3x9\" }");
+        // each policy is set only where a player could set it (can_set_policy: the lock, the group's
+        // `allow`, the option's `potential`) and under the option's `valid`, with the player's lock
+        assert!(lines.contains(&"effect if = { limit = { can_set_policy = { policy = diplomatic_stance option = diplo_stance_expansionist } is_homicidal = no } set_policy = { policy = diplomatic_stance option = diplo_stance_expansionist cooldown = yes } log = \"GOVERNOR_POLICY diplomatic_stance diplo_stance_expansionist k3x9\" }".to_string()), "{lines:#?}");
+        assert!(lines.contains(&"effect if = { limit = { can_set_policy = { policy = first_contact_protocol option = first_contact_proactive } is_homicidal = no is_xenophobe = no NOT = { has_origin = origin_payback } } set_policy = { policy = first_contact_protocol option = first_contact_proactive cooldown = yes } log = \"GOVERNOR_POLICY first_contact_protocol first_contact_proactive k3x9\" }".to_string()), "{lines:#?}");
         assert!(d.console_lines("nuke_everyone", "x").is_err());
         assert!(check_condition("is_xenophobe = no NOT = { has_origin = origin_payback }").is_ok());
         assert!(check_condition("is_xenophobe = no } add_resource = { energy = 1").is_err(), "unbalanced braces");
@@ -2260,11 +3008,204 @@ mod tests {
     }
 
     #[test]
+    fn every_directive_obeys_can_set_policy_and_the_lock_and_marks_each_branch() {
+        let d = directives();
+        for (name, def) in &d.directive {
+            let lines = d.console_lines(name, "muihgsm7").unwrap();
+            // one branch per policy: the guard, the set with the 10-year lock, and its own marker
+            for (policy, option) in &def.policies {
+                let line = lines.iter().find(|l| l.contains(&format!(" set_policy = {{ policy = {policy} option = {option} ")))
+                    .unwrap_or_else(|| panic!("{name}: no line sets {policy}"));
+                assert!(line.starts_with(&format!("effect if = {{ limit = {{ can_set_policy = {{ policy = {policy} option = {option} }}")), "{line}");
+                if let Some(c) = def.conditions.get(policy) {
+                    assert!(line.contains(&format!("}} {c} }} set_policy")), "the option's valid stays in the limit: {line}");
+                }
+                assert!(line.ends_with(&format!("set_policy = {{ policy = {policy} option = {option} cooldown = yes }} log = \"GOVERNOR_POLICY {policy} {option} muihgsm7\" }}")),
+                        "the marker is inside the branch, after the set: {line}");
+            }
+            let all = lines.join("\n");
+            assert!(!all.contains("cooldown = no"), "{name}: never skip the player's lock");
+            assert_eq!(all.matches(" set_policy = {").count(), def.policies.len(), "{name}");
+            assert_eq!(all.matches("can_set_policy = {").count(), def.policies.len(), "{name}");
+            assert_eq!(all.matches("GOVERNOR_POLICY ").count(), def.policies.len(), "{name}");
+            assert!(lines.last().unwrap().contains(&applied_marker(name, "muihgsm7")), "{name}: the confirmation comes last");
+            // no longer than the 529-character line verified live (diplomacy_first, 2026-09-26)
+            assert!(lines.iter().all(|l| l.len() <= 529), "{name}: {:?}", lines.iter().map(|l| l.len()).collect::<Vec<_>>());
+        }
+    }
+
+    #[test]
+    fn policy_markers_split_set_from_locked() {
+        // game.log lines as the game writes them (2026-09-26 log: "[time][effect_impl.cpp]: [date] Log effect …")
+        let log = "[07:26:47][effect_impl.cpp:22191]: [2272.1.1] Log effect, file:  line: 1. GOVERNOR_POLICY economic_policy economic_policy_military k3x9\n\
+                   [07:26:47][effect_impl.cpp:22191]: [2272.1.1] Log effect, file:  line: 1. GOVERNOR_POLICY diplomatic_stance diplo_stance_belligerent oldnonce\n\
+                   [07:26:48][effect_impl.cpp:22191]: [2272.1.1] Log effect, file:  line: 1. GOVERNOR_APPLIED prepare_war k3x9\n";
+        let seen = policy_markers(log, "k3x9");
+        assert_eq!(seen, vec![("economic_policy".to_string(), "economic_policy_military".to_string())], "an older apply's marker is not this one's");
+        let d = directives();
+        let (set, in_force, locked) = policy_outcome(&d.directive["prepare_war"], &seen, &BTreeMap::new());
+        assert_eq!(set, vec![("economic_policy".to_string(), "economic_policy_military".to_string())]);
+        assert!(in_force.is_empty());
+        assert_eq!(locked, vec![("diplomatic_stance".to_string(), "diplo_stance_belligerent".to_string())], "belligerent at war: no marker, so locked");
+        let applied = Applied { lines: vec![], set, in_force, locked, in_force_error: None };
+        assert_eq!(applied.summary(), "Policies set: economic_policy=economic_policy_military. Policies locked (not set: the 10-year policy lock, a rule such as no stance change at war, or the option is not valid now): diplomatic_stance=diplo_stance_belligerent.");
+        let (none, _, all_locked) = policy_outcome(&d.directive["tech_rush"], &[], &BTreeMap::new());
+        assert!(none.is_empty() && all_locked.len() == 1);
+        assert!(Applied { lines: vec![], set: none, in_force: vec![], locked: vec![], in_force_error: None }.summary().starts_with("Policies set: none. Policies locked"), "a directive without policies reads none");
+    }
+
+    #[test]
+    fn a_policy_option_already_in_force_is_not_set_again() {
+        // defend set belligerent; prepare_war setting it again with cooldown = yes could restart its
+        // 10-year lock and hold a later directive's stance (e.g. diplomacy_first's cooperative)
+        let d = directives();
+        let pair = |p: &str, o: &str| (p.to_string(), o.to_string());
+        let in_force = BTreeMap::from([pair("diplomatic_stance", "diplo_stance_belligerent"), pair("economic_policy", "economic_policy_balanced")]);
+        let lines = d.console_lines_with_policies("prepare_war", "n", &in_force).unwrap();
+        let all = lines.join("\n");
+        assert!(!all.contains("option = diplo_stance_belligerent"), "{all}");
+        assert_eq!(all.matches(" set_policy = {").count(), 1, "{all}");
+        assert!(all.contains("set_policy = { policy = economic_policy option = economic_policy_military cooldown = yes }"), "another option in force is changed as before: {all}");
+        assert!(lines.last().unwrap().contains(&applied_marker("prepare_war", "n")), "the flag and confirmation still come last");
+        // without a save read every policy is sent, as before
+        assert_eq!(d.console_lines("prepare_war", "n").unwrap().join("\n").matches(" set_policy = {").count(), 2);
+        // the outcome names it apart from the set and the locked ones
+        let (set, already, locked) = policy_outcome(&d.directive["prepare_war"], &[pair("economic_policy", "economic_policy_military")], &in_force);
+        assert_eq!((set.clone(), already.clone(), locked.clone()), (vec![pair("economic_policy", "economic_policy_military")], vec![pair("diplomatic_stance", "diplo_stance_belligerent")], vec![]));
+        let applied = Applied { lines, set, in_force: already, locked, in_force_error: None };
+        assert_eq!(applied.summary(), "Policies set: economic_policy=economic_policy_military. Already in force (not set again, so its 10-year lock is not restarted): diplomatic_stance=diplo_stance_belligerent. Policies locked (not set: the 10-year policy lock, a rule such as no stance change at war, or the option is not valid now): none.");
+        let unread = Applied { lines: vec![], set: vec![], in_force: vec![], locked: vec![], in_force_error: Some("no autosave".into()) };
+        assert!(unread.summary().ends_with(" The policies in force were not read (no autosave), so every policy was sent."), "{}", unread.summary());
+    }
+
+    #[test]
     fn directive_identifiers_are_whitelisted() {
         assert!(check_ident("diplo_stance_expansionist").is_ok());
         for bad in ["", "a b", "x\"", "x}", "Play", "x;observe", "a=b"] {
             assert!(check_ident(bad).is_err(), "{bad:?}");
         }
+    }
+
+    #[test]
+    fn postures_are_registered_disabled_and_bound_to_directives() {
+        let d = directives();
+        let names: Vec<&str> = d.posture.keys().map(|s| s.as_str()).collect();
+        assert_eq!(names, ["naval_cap", "research_focus", "ship_upgrades", "war_crisis"]);
+        for (name, p) in &d.posture {
+            assert!(!p.enabled, "{name}: every posture stays off until its live probe passes (levers ruling 21)");
+            assert_eq!(p.mod_version, 2, "{name}");
+            assert!(!p.description.trim().is_empty(), "{name}");
+        }
+        let bound = |n: &str| d.directive[n].postures.clone();
+        assert_eq!(bound("defend"), ["naval_cap", "ship_upgrades"]);
+        assert_eq!(bound("prepare_war"), ["naval_cap", "ship_upgrades"]);
+        assert_eq!(bound("tech_rush"), ["research_focus"]);
+        for n in ["expand", "consolidate_economy", "diplomacy_first"] {
+            assert!(bound(n).is_empty(), "{n}");
+        }
+        // the crisis posture belongs to no directive: only the crisis sets or clears it
+        assert!(!d.directive.values().any(|def| def.postures.iter().any(|p| p == "war_crisis")));
+        assert_eq!(d.bound_postures().into_iter().collect::<Vec<_>>(), ["naval_cap", "research_focus", "ship_upgrades"]);
+    }
+
+    #[test]
+    fn directive_lines_keep_directive_and_posture_flags_apart() {
+        let d = directives();
+        for name in d.directive.keys() {
+            let lines = d.console_lines(name, "n0nce").unwrap();
+            // the removal line lists directive flags only; the posture line posture flags only
+            let removal = lines.iter().find(|l| l.starts_with("effect remove_country_flag = governor_directive_")).unwrap();
+            assert!(!removal.contains("governor_posture_"), "{name}: the directive removal never clears a posture: {removal}");
+            let posture = lines.iter().find(|l| l.contains("governor_posture_")).unwrap_or_else(|| panic!("{name}: no posture line"));
+            assert!(!posture.contains("governor_directive_"), "{name}: {posture}");
+            // every posture is disabled: directive-bound ones are cleared, none is ever set
+            assert!(!posture.contains("set_country_flag"), "{name}: a disabled posture is never set: {posture}");
+            for p in ["naval_cap", "research_focus", "ship_upgrades"] {
+                assert!(posture.contains(&format!("remove_country_flag = governor_posture_{p}")), "{name}: {posture}");
+            }
+            assert!(!lines.join("\n").contains("war_crisis"), "{name}: a directive never touches the crisis posture");
+            assert!(lines.last().unwrap().contains(&applied_marker(name, "n0nce")), "{name}: the confirmation stays last");
+            assert!(lines.iter().all(|l| l.len() <= 529), "{name}");
+        }
+    }
+
+    #[test]
+    fn an_enabled_posture_is_set_with_its_directive_and_cleared_by_the_others() {
+        let mut d = directives();
+        d.posture.values_mut().for_each(|p| p.enabled = false);
+        d.posture.get_mut("naval_cap").unwrap().enabled = true;
+        let defend = d.console_lines("defend", "n").unwrap().join("\n");
+        assert!(defend.contains("set_country_flag = governor_posture_naval_cap"), "{defend}");
+        assert!(defend.contains("remove_country_flag = governor_posture_ship_upgrades"), "still disabled: {defend}");
+        assert!(defend.contains("remove_country_flag = governor_posture_research_focus"), "bound to tech_rush: {defend}");
+        let tech = d.console_lines("tech_rush", "n").unwrap().join("\n");
+        assert!(tech.contains("remove_country_flag = governor_posture_naval_cap") && !tech.contains("set_country_flag = governor_posture_"), "{tech}");
+    }
+
+    #[test]
+    fn posture_lines_touch_one_posture_flag_and_refuse_disabled_or_unknown_postures() {
+        let mut d = directives();
+        d.posture.values_mut().for_each(|p| p.enabled = false);
+        let off = d.posture_lines("war_crisis", false, "k3").unwrap();
+        assert_eq!(off, ["effect remove_country_flag = governor_posture_war_crisis if = { limit = { exists = capital_scope } log = \"GOVERNOR_POSTURE war_crisis off k3\" }"]);
+        let err = d.posture_lines("war_crisis", true, "k3").unwrap_err().to_string();
+        assert!(err.contains("war_crisis") && err.contains("disabled"), "{err}");
+        assert!(d.posture_lines("warp_drive", false, "k3").is_err());
+        assert!(d.posture_lines("defend", true, "k3").is_err(), "a directive is not a posture");
+        d.posture.get_mut("war_crisis").unwrap().enabled = true;
+        let on = d.posture_lines("war_crisis", true, "k3").unwrap();
+        assert_eq!(on, ["effect set_country_flag = governor_posture_war_crisis if = { limit = { exists = capital_scope } log = \"GOVERNOR_POSTURE war_crisis on k3\" }"]);
+        assert!(!on.join("").contains("governor_directive_"), "a posture never clears the directive");
+        assert_eq!(posture_marker("war_crisis", true, "k3"), "GOVERNOR_POSTURE war_crisis on k3");
+    }
+
+    #[test]
+    fn directives_file_refuses_unknown_or_malformed_postures() {
+        let base = "[directive.defend]\ndescription = \"d\"\n";
+        let ok = format!("{base}postures = [\"naval_cap\"]\n[posture.naval_cap]\ndescription = \"n\"\nmod_version = 2\nenabled = false\n");
+        let d = Directives::parse(&ok).unwrap();
+        assert_eq!(d.directive["defend"].postures, ["naval_cap"]);
+        let unknown = format!("{base}postures = [\"naval_cap\"]\n");
+        assert!(Directives::parse(&unknown).unwrap_err().to_string().contains("naval_cap"), "a bound posture must be registered");
+        let bad = "[directive.defend]\ndescription = \"d\"\n[posture.\"Naval Cap\"]\ndescription = \"n\"\nmod_version = 2\nenabled = false\n";
+        assert!(Directives::parse(bad).is_err(), "posture names are script identifiers");
+        let future = "[directive.defend]\ndescription = \"d\"\n[posture.x]\ndescription = \"n\"\nmod_version = 3\nenabled = false\n";
+        assert!(Directives::parse(future).unwrap_err().to_string().contains("mod_version"), "the mod files here must read the flag");
+        let clash = "[directive.defend]\ndescription = \"d\"\n[posture.defend]\ndescription = \"n\"\nmod_version = 2\nenabled = false\n";
+        assert!(Directives::parse(clash).is_err(), "a posture may not share a directive's name");
+        assert!(Directives::parse(base).unwrap().posture.is_empty(), "the registry is optional");
+    }
+
+    #[test]
+    fn governor_flags_line_lists_directive_and_posture_flags_only() {
+        let b = Briefing {
+            flags: vec!["governor_directive_defend".into(), BRIDGE_PLAYER_FLAG.into(), "governor_posture_naval_cap".into(), "other".into()],
+            ..Default::default()
+        };
+        assert!(b.to_text().contains("Governor flags: governor_directive_defend, governor_posture_naval_cap\n"), "{}", b.to_text());
+    }
+
+    #[test]
+    fn take_control_marks_the_governed_empire_for_the_mods_read_channel() {
+        // the mod's monthly event runs only for the country carrying this flag (levers ruling 19)
+        assert_eq!(scope_probe_line("HARNESS_SCOPE_CHECK x1"),
+                   "effect set_country_flag = governor_bridge_player if = { limit = { exists = capital_scope } log = \"HARNESS_SCOPE_CHECK x1\" }");
+    }
+
+    #[test]
+    fn bridge_check_tells_version_1_from_version_2() {
+        let lines = bridge_check_lines("q7");
+        // v2 first: an undefined trigger fails its whole effect, so each check is its own line, and
+        // the v1 marker (last) proves the v2 line already ran
+        assert_eq!(lines, [
+            "effect if = { limit = { governor_bridge_version_2 = yes } log = \"GOVERNOR_BRIDGE_V2 q7\" }",
+            "effect if = { limit = { governor_bridge_present = yes } log = \"GOVERNOR_BRIDGE_OK q7\" }",
+        ]);
+        let line = |m: &str| format!("[07:26:47][effect_impl.cpp:22191]: [2272.1.1] Log effect, file:  line: 1. {m}\n");
+        assert_eq!(bridge_version_in_log(&line("GOVERNOR_BRIDGE_OK q7"), "q7"), Some(1));
+        assert_eq!(bridge_version_in_log(&(line("GOVERNOR_BRIDGE_V2 q7") + &line("GOVERNOR_BRIDGE_OK q7")), "q7"), Some(2));
+        assert_eq!(bridge_version_in_log(&(line("GOVERNOR_BRIDGE_V2 old") + &line("GOVERNOR_BRIDGE_OK q7")), "q7"), Some(1), "another check's marker");
+        assert_eq!(bridge_version_in_log("", "q7"), None);
     }
 
     #[test]
@@ -2336,52 +3277,225 @@ mod tests {
         assert!(enable_mod("[1,2]", "m").is_err());
     }
 
-    #[test]
-    fn mod_files_are_well_formed() {
-        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpora/stellaris/mod/governor_bridge");
-        let descriptor = std::fs::read_to_string(dir.join("descriptor.mod")).unwrap();
-        assert!(descriptor.contains("supported_version=\"v4.5.*\"") && !descriptor.contains("path="));
-        for f in ["common/ai_budget/zz_governor_bridge_budget.txt", "common/scripted_triggers/zz_governor_bridge_triggers.txt"] {
-            let text = std::fs::read_to_string(dir.join(f)).unwrap();
-            jomini::TextTape::from_slice(text.as_bytes()).unwrap_or_else(|e| panic!("{f}: {e}"));
-            let opens = text.matches('{').count();
-            assert_eq!(opens, text.matches('}').count(), "{f}: unbalanced braces");
-        }
-        let budget = std::fs::read_to_string(dir.join("common/ai_budget/zz_governor_bridge_budget.txt")).unwrap();
-        // every entry is gated on a directive flag that exists
-        let d = Directives::load(&dir.join("../..")).unwrap();
-        for flag in budget.split("has_country_flag = ").skip(1).map(|s| s.split_whitespace().next().unwrap()) {
-            let name = flag.strip_prefix("governor_directive_").expect(flag);
-            assert!(d.directive.contains_key(name), "{flag} is not a directive");
-        }
-        assert_eq!(budget.matches("potential = { has_country_flag = governor_directive_").count(), budget.matches(" = {\n\tresource =").count());
+    fn mod_dir() -> std::path::PathBuf {
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpora/stellaris/mod/governor_bridge")
+    }
 
-        // Each (resource, category) must be one a non-nomadic empire spends from in vanilla 4.5.1
-        // (common/ai_budget, read 2026-09-26); e.g. influence in `starbases` is nomad-only, and
-        // outposts take influence from `stations`.
-        const VANILLA: [(&str, &str); 11] = [
-            ("alloys", "ships"), ("alloys", "starbases"), ("alloys", "colonies"), ("alloys", "planets"),
-            ("alloys", "megastructures_habitat"), ("influence", "megastructures_habitat"),
-            ("influence", "stations"), ("influence", "claims"), ("influence", "edicts"),
-            ("minerals", "planets"), ("minerals", "stations"),
-        ];
-        let tape = jomini::TextTape::from_slice(budget.as_bytes()).unwrap();
-        let mut checked = 0;
-        for (key, _op, value) in tape.windows1252_reader().fields() {
-            checked += 1;
-            let entry = value.read_object().unwrap();
-            let (mut resource, mut category) = (String::new(), String::new());
-            for (k, _o, v) in entry.fields() {
-                match k.read_str().as_ref() {
-                    "resource" => resource = v.read_string().unwrap(),
-                    "category" => category = v.read_string().unwrap(),
-                    _ => {}
+    /// Every script file of the mod (relative path, text), descriptor.mod aside.
+    fn mod_files() -> Vec<(String, String)> {
+        let root = mod_dir();
+        let (mut out, mut stack) = (vec![], vec![root.clone()]);
+        while let Some(dir) = stack.pop() {
+            for e in std::fs::read_dir(&dir).unwrap() {
+                let p = e.unwrap().path();
+                if p.is_dir() {
+                    stack.push(p);
+                } else if p.file_name().unwrap() != "descriptor.mod" {
+                    let rel = p.strip_prefix(&root).unwrap().to_string_lossy().replace('\\', "/");
+                    out.push((rel, std::fs::read_to_string(&p).unwrap()));
                 }
             }
+        }
+        out.sort();
+        out
+    }
+
+    fn mod_file(rel: &str) -> String {
+        std::fs::read_to_string(mod_dir().join(rel)).unwrap()
+    }
+
+    /// Script text without `#` comments (comments may name effects the mod never uses).
+    fn uncommented(text: &str) -> String {
+        text.lines().map(|l| l.split('#').next().unwrap_or("")).collect::<Vec<_>>().join("\n")
+    }
+
+    /// Every value of `has_country_flag = <flag>` in a script text.
+    fn flags_read(text: &str) -> Vec<String> {
+        uncommented(text).split("has_country_flag = ").skip(1).map(|s| s.split_whitespace().next().unwrap().to_string()).collect()
+    }
+
+    fn keys<'d, 't>(o: &Obj<'d, 't>) -> Vec<String> {
+        o.fields().map(|(k, _, _)| k.read_str().into_owned()).collect()
+    }
+
+    #[test]
+    fn mod_files_are_well_formed() {
+        let descriptor = std::fs::read_to_string(mod_dir().join("descriptor.mod")).unwrap();
+        assert!(descriptor.contains("supported_version=\"v4.5.*\"") && !descriptor.contains("path="));
+        assert!(descriptor.contains(&format!("version=\"0.{MOD_VERSION}.0\"")), "v2: postures and the naval-capacity read channel");
+        let files = mod_files();
+        let names: Vec<&str> = files.iter().map(|(f, _)| f.as_str()).collect();
+        assert_eq!(names, [
+            "common/ai_budget/zz_governor_bridge_budget.txt",
+            "common/economic_plans/zz_governor_bridge_plans.txt",
+            "common/on_actions/zz_governor_bridge_on_actions.txt",
+            "common/scripted_triggers/zz_governor_bridge_triggers.txt",
+            "events/governor_bridge_events.txt",
+        ], "a new mod file needs its own checks in these tests");
+        for (f, text) in &files {
+            TextTape::from_slice(text.as_bytes()).unwrap_or_else(|e| panic!("{f}: {e}"));
+            assert_eq!(text.matches('{').count(), text.matches('}').count(), "{f}: unbalanced braces");
+        }
+        // presence and version checks for `stellaris bridge-check`
+        let text = mod_file("common/scripted_triggers/zz_governor_bridge_triggers.txt");
+        let tape = TextTape::from_slice(text.as_bytes()).unwrap();
+        let root = tape.utf8_reader();
+        assert_eq!(keys(&root), ["governor_bridge_present", "governor_bridge_version_2"]);
+        for (_, _, v) in root.fields() {
+            assert_eq!(string(&v.read_object().unwrap(), "always").as_deref(), Some("yes"));
+        }
+    }
+
+    #[test]
+    fn mod_budget_entries_read_registered_flags_in_vanilla_categories() {
+        let d = directives();
+        let budget = mod_file("common/ai_budget/zz_governor_bridge_budget.txt");
+        // Each (resource, category) must be one a non-nomadic empire spends from in vanilla 4.5.1
+        // (common/ai_budget, read 2026-09-26 and 2026-09-27); e.g. influence in `starbases` is
+        // nomad-only, and outposts take influence from `stations`.
+        const VANILLA: [(&str, &str); 13] = [
+            ("alloys", "ships"), ("alloys", "starbases"), ("alloys", "colonies"), ("alloys", "planets"),
+            ("alloys", "megastructures_habitat"), ("alloys", "ship_upgrades"), ("influence", "megastructures_habitat"),
+            ("influence", "stations"), ("influence", "claims"), ("influence", "edicts"),
+            ("minerals", "planets"), ("minerals", "stations"), ("minerals", "armies"),
+        ];
+        let tape = TextTape::from_slice(budget.as_bytes()).unwrap();
+        let mut checked = 0;
+        for (key, _op, value) in tape.utf8_reader().fields() {
+            checked += 1;
             let name = key.read_str();
+            assert!(name.starts_with("governor_"), "{name}: additive entries only, never a vanilla entry's name");
+            let entry = value.read_object().unwrap();
+            let (resource, category) = (string(&entry, "resource").unwrap(), string(&entry, "category").unwrap());
+            assert_eq!(string(&entry, "type").as_deref(), Some("expenditure"), "{name}");
             assert!(VANILLA.contains(&(resource.as_str(), category.as_str())), "{name}: {resource} in {category} is not spent by a non-nomadic empire");
+            // gated on exactly one governor flag, at the top of its potential
+            let potential = obj(&entry, "potential").unwrap_or_else(|| panic!("{name}: no potential"));
+            let gates: Vec<String> = potential.fields().filter(|(k, _, _)| k.read_str() == "has_country_flag")
+                .map(|(_, _, v)| v.read_string().unwrap()).collect();
+            assert_eq!(gates.len(), 1, "{name}: {gates:?}");
+            let gate = &gates[0];
+            let known = gate.strip_prefix("governor_directive_").is_some_and(|n| d.directive.contains_key(n))
+                || gate.strip_prefix("governor_posture_").is_some_and(|n| d.posture.contains_key(n));
+            assert!(known, "{name}: {gate} is neither a directive nor a registered posture");
         }
         assert_eq!(checked, budget.matches("\tresource =").count());
+        // the go levers of ruling 17 read their postures here
+        for posture in ["ship_upgrades", "war_crisis"] {
+            assert!(flags_read(&budget).contains(&format!("governor_posture_{posture}")), "{posture}");
+        }
+        assert!(!budget.contains("category = claims"), "influence to claims is deferred (ruling 17)");
+    }
+
+    #[test]
+    fn mod_economic_subplans_only_steer_construction() {
+        let d = directives();
+        let plans = mod_file("common/economic_plans/zz_governor_bridge_plans.txt");
+        let tape = TextTape::from_slice(plans.as_bytes()).unwrap();
+        let mut seen = vec![];
+        for (key, _op, value) in tape.utf8_reader().fields() {
+            let name = key.read_str().into_owned();
+            if name.starts_with('@') {
+                assert!(name.starts_with("@governor_"), "{name}: the mod's own constants only");
+                continue;
+            }
+            seen.push(name.clone());
+            let plan = value.read_object().unwrap();
+            // plans merge additively: another instance holding only subplans adds them (vanilla
+            // 00_example.txt); anything else would overwrite the vanilla plan's own fields
+            assert!(keys(&plan).iter().all(|k| k == "subplan"), "{name}: {:?}", keys(&plan));
+            let mut subplans = vec![];
+            for (_, _, sp) in plan.fields() {
+                let sp = sp.read_object().unwrap();
+                for k in keys(&sp) {
+                    assert!(["set_name", "optional", "potential", "focus", "naval_cap"].contains(&k.as_str()), "{name}: subplan key {k}");
+                }
+                assert_eq!(string(&sp, "optional").as_deref(), Some("yes"), "{name}: never holds a plan open");
+                let set_name = string(&sp, "set_name").unwrap();
+                assert!(set_name.starts_with("Governor "), "{name}: {set_name} could overwrite a vanilla subplan of that name");
+                let potential = obj(&sp, "potential").unwrap();
+                assert_eq!(keys(&potential), ["has_country_flag"], "{name}/{set_name}");
+                let flag = string(&potential, "has_country_flag").unwrap();
+                let posture = flag.strip_prefix("governor_posture_").unwrap_or_else(|| panic!("{name}/{set_name}: {flag}"));
+                assert!(d.posture.contains_key(posture), "{name}/{set_name}: {posture} is not registered");
+                if let Some(focus) = obj(&sp, "focus") {
+                    for r in keys(&focus) {
+                        assert!(["alloys", "physics_research", "society_research", "engineering_research"].contains(&r.as_str()), "{name}: focus {r}");
+                    }
+                }
+                subplans.push(posture.to_string());
+            }
+            assert_eq!(subplans, ["naval_cap", "research_focus"], "{name}");
+        }
+        assert_eq!(seen, ["basic_economy_plan", "intermediate_economy_plan", "advanced_economy_plan", "mature_economy_plan",
+                          "endgame_economy_plan", "beyond_endgame_economy_plan"], "all six vanilla plans (4.5.1)");
+    }
+
+    #[test]
+    fn mod_read_channel_only_exports_naval_capacity_for_the_governed_empire() {
+        let on_actions = mod_file("common/on_actions/zz_governor_bridge_on_actions.txt");
+        let tape = TextTape::from_slice(on_actions.as_bytes()).unwrap();
+        let root = tape.utf8_reader();
+        assert_eq!(keys(&root), ["on_monthly_pulse_country"], "no policy log (ruling 17: no value)");
+        let pulse = obj(&root, "on_monthly_pulse_country").unwrap();
+        assert_eq!(keys(&pulse), ["events"]);
+        assert_eq!(strings(get(&pulse, "events")), ["governor_bridge.1"]);
+
+        let events = mod_file("events/governor_bridge_events.txt");
+        let tape = TextTape::from_slice(events.as_bytes()).unwrap();
+        let root = tape.utf8_reader();
+        assert_eq!(keys(&root), ["namespace", "country_event"], "one event: no watchdog (ruling 17: out)");
+        assert_eq!(string(&root, "namespace").as_deref(), Some("governor_bridge"));
+        let ev = obj(&root, "country_event").unwrap();
+        assert_eq!(keys(&ev), ["id", "hide_window", "is_triggered_only", "trigger", "immediate"]);
+        assert_eq!(string(&ev, "id").as_deref(), Some("governor_bridge.1"));
+        assert_eq!(string(&ev, "hide_window").as_deref(), Some("yes"));
+        assert_eq!(string(&ev, "is_triggered_only").as_deref(), Some("yes"));
+        // the monthly pulse fires for every country; only ours carries this flag (take_control)
+        let trigger = obj(&ev, "trigger").unwrap();
+        assert_eq!(keys(&trigger), ["has_country_flag"]);
+        assert_eq!(string(&trigger, "has_country_flag").as_deref(), Some(BRIDGE_PLAYER_FLAG));
+        let immediate = obj(&ev, "immediate").unwrap();
+        let mut exported = vec![];
+        for (k, _, v) in immediate.fields() {
+            assert_eq!(k.read_str(), "export_trigger_value_to_variable", "the event only reads");
+            let e = v.read_object().unwrap();
+            assert_eq!(keys(&e), ["trigger", "variable"]);
+            exported.push((string(&e, "trigger").unwrap(), string(&e, "variable").unwrap()));
+        }
+        // the variables the briefing reads into governor_vars
+        assert_eq!(exported, [
+            ("max_naval_capacity".to_string(), "governor_naval_cap".to_string()),
+            ("used_naval_capacity_integer".to_string(), "governor_naval_used".to_string()),
+        ]);
+    }
+
+    #[test]
+    fn mod_never_grants_anything_and_reads_only_governor_flags() {
+        let d = directives();
+        let mut read = std::collections::BTreeSet::new();
+        for (f, text) in mod_files() {
+            let script = uncommented(&text);
+            // fairness (strategy.md section 9, levers ruling 14): the mod steers how the AI spends
+            // its own income and exports a number; it never adds, sets or overrides anything
+            for effect in ["add_resource", "add_modifier", "add_static_modifier", "create_", "set_policy", "add_edict",
+                           "activate_edict", "ai_weight", "give_technology", "add_tech_progress", "set_country_flag",
+                           "remove_country_flag", "set_variable", "change_variable", "add_claims", "declare_war",
+                           "ai_no_wars", "fire_on_action", "trigger_event"] {
+                assert!(!script.contains(effect), "{f}: {effect}");
+            }
+            for flag in flags_read(&text) {
+                let known = flag == BRIDGE_PLAYER_FLAG
+                    || flag.strip_prefix("governor_directive_").is_some_and(|n| d.directive.contains_key(n))
+                    || flag.strip_prefix("governor_posture_").is_some_and(|n| d.posture.contains_key(n));
+                assert!(known, "{f}: reads {flag}, which the harness never sets");
+                read.insert(flag);
+            }
+        }
+        // no dead posture: each registered one steers something once enabled
+        for p in d.posture.keys() {
+            assert!(read.contains(&format!("governor_posture_{p}")), "posture {p} is read by no mod file");
+        }
     }
 
     #[test]
@@ -2704,18 +3818,400 @@ country={
         assert_eq!(removal_rows(181, 14, &[1, 0]).unwrap(), vec![195, 181]);
     }
 
-    #[test]
-    fn amount_clicks_computes_the_button_and_count_from_the_dialogs_default() {
-        // A new monthly trade starts at the manifest's ui.market.new_trade_amount (verified live
-        // 2387.07): a lower amount needs minus clicks, a higher one plus clicks, no change none.
+    fn stellaris_manifest(resolution: Option<&str>) -> crate::corpus::GameManifest {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpora/stellaris/manifest.toml");
-        let manifest: toml::Table = std::fs::read_to_string(path).unwrap().parse().unwrap();
-        let start = manifest["ui"]["market"]["new_trade_amount"].as_integer().unwrap();
-        assert!((2..25).contains(&start), "the dialog default is inside the 1..=25 order range: {start}");
-        assert_eq!(amount_clicks(start, start - 1), ("minus", 1));
-        assert_eq!(amount_clicks(start, 1), ("minus", (start - 1) as u32));
-        assert_eq!(amount_clicks(start, 25), ("plus", (25 - start) as u32));
-        assert_eq!(amount_clicks(start, start), ("none", 0));
+        crate::corpus::GameManifest::load_for_resolution(path, resolution).expect("stellaris manifest loads")
+    }
+
+    fn order(side: &str, resource: &str, amount: i64) -> MarketOrderSpec {
+        MarketOrderSpec { side: side.into(), resource: resource.into(), amount }
+    }
+
+    #[test]
+    fn amount_clicks_start_from_each_resources_own_start_amount() {
+        // A new monthly trade starts at 0.1 x the resource's market_amount (defines
+        // MARKET_MONTHLY_TRADE_FRACTION; common/strategic_resources 4.5.1), not at 10 for all.
+        let ui = stellaris_manifest(None).ui;
+        for (res, start) in [("energy", 10), ("minerals", 10), ("food", 10), ("consumer_goods", 5),
+                             ("volatile_motes", 1), ("exotic_gases", 1), ("rare_crystals", 1)] {
+            assert_eq!(trade_start(&ui, res).unwrap(), start, "{res}");
+            assert_eq!(amount_clicks(&ui, res, start).unwrap(), ("none", 0), "{res}");
+        }
+        assert_eq!(amount_clicks(&ui, "energy", 9).unwrap(), ("minus", 1));
+        assert_eq!(amount_clicks(&ui, "energy", 25).unwrap(), ("plus", 15));
+        assert_eq!(amount_clicks(&ui, "consumer_goods", 1).unwrap(), ("minus", 4));
+        assert_eq!(amount_clicks(&ui, "consumer_goods", 12).unwrap(), ("plus", 7));
+        // run 20260926-152042: "buy rare_crystals 15" was read back as 6, i.e. the real start of 1
+        // plus the 5 clicks computed from an assumed start of 10; from a start of 1 it is 14 clicks
+        assert_eq!(amount_clicks(&ui, "rare_crystals", 15).unwrap(), ("plus", 14));
+        assert_eq!(1 + (15 - 10), 6, "the old arithmetic reproduces the failed read-back");
+    }
+
+    #[test]
+    fn fractional_start_amounts_are_refused_before_the_market_opens() {
+        // alloys start at 2.5 and sr_* at 0.5: how the dialog shows and steps a fraction is not
+        // measured yet (live check L2), so no click count can be computed for them
+        let ui = stellaris_manifest(None).ui;
+        for res in ["alloys", "sr_living_metal", "sr_zro", "sr_dark_matter"] {
+            let err = amount_clicks(&ui, res, 5).unwrap_err().to_string();
+            assert!(err.contains("start amount not measured") && err.contains(res), "{err}");
+        }
+        let plan = market_plan(&ui, &[], &[order("buy", "food", 5), order("sell", "energy", 20)]).unwrap();
+        assert_eq!((plan.add.len(), plan.remove.len(), plan.refused.len()), (2, 0, 0));
+        // keeping an alloys order that already exists adds nothing, so it needs no start amount
+        let plan = market_plan(&ui, &[order("buy", "alloys", 5)], &[order("buy", "alloys", 5), order("buy", "food", 5)]).unwrap();
+        assert_eq!((plan.add, plan.remove, plan.refused), (vec![order("buy", "food", 5)], vec![], vec![]));
+        // every market resource is either measured or refused by name, never guessed
+        let market = ui["market"].as_table().unwrap();
+        let starts = market["new_trade_amount"].as_table().unwrap();
+        let resources = market["resources"].as_table().unwrap();
+        assert!(starts.keys().all(|k| resources.contains_key(k)), "{starts:?}");
+        let mut unmeasured: Vec<&str> = resources.keys().filter(|k| !starts.contains_key(*k)).map(String::as_str).collect();
+        unmeasured.sort_unstable();
+        assert_eq!(unmeasured, ["alloys", "sr_dark_matter", "sr_living_metal", "sr_zro"]);
+        // the old single start (10 for everything) is refused rather than applied to every resource
+        let old: toml::Table = toml::from_str("[market]\nnew_trade_amount = 10\n").unwrap();
+        assert!(trade_start(&old, "energy").unwrap_err().to_string().contains("per-resource"));
+    }
+
+    #[test]
+    fn an_unmeasured_add_is_refused_alone_and_the_rest_of_the_sync_goes_ahead() {
+        let ui = stellaris_manifest(None).ui;
+        // a stale order from an earlier sync must still go when the new strategy wants alloys
+        let plan = market_plan(&ui, &[order("buy", "consumer_goods", 5)], &[order("buy", "alloys", 5)]).unwrap();
+        assert_eq!(plan.remove, vec![order("buy", "consumer_goods", 5)]);
+        assert!(plan.add.is_empty());
+        assert_eq!(plan.refused, vec![order("buy", "alloys", 5)]);
+        // measured adds and removals go ahead beside a refused one; an alloys order at a wrong
+        // amount can still be removed
+        let plan = market_plan(&ui, &[order("buy", "alloys", 7)], &[order("sell", "energy", 20), order("sell", "alloys", 10), order("buy", "sr_zro", 1)]).unwrap();
+        assert_eq!(plan.add, vec![order("sell", "energy", 20)]);
+        assert_eq!(plan.remove, vec![order("buy", "alloys", 7)]);
+        assert_eq!(plan.refused, vec![order("sell", "alloys", 10), order("buy", "sr_zro", 1)]);
+        // the reply names what was left out, in a form the governor reads back
+        assert_eq!(plan.reply(), "added sell energy 20; removed buy alloys 7; not added (start amount not measured): sell alloys 10, buy sr_zro 1; the next autosave confirms it");
+        let only = market_plan(&ui, &[], &[order("buy", "alloys", 5)]).unwrap();
+        assert!(!only.sends_anything());
+        assert_eq!(only.reply(), "nothing sent; not added (start amount not measured): buy alloys 5");
+        let none = market_plan(&ui, &[order("buy", "food", 5)], &[]).unwrap();
+        assert!(none.sends_anything() && none.refused.is_empty());
+        assert_eq!(none.reply(), "added none; removed buy food 5; the next autosave confirms it");
+        // the save buys alloys 7 and the strategy wants 5: the add is refused, so the 7 stays until
+        // the start amount is measured (removing it would leave the empire buying none)
+        let plan = market_plan(&ui, &[order("buy", "alloys", 7), order("buy", "food", 5)], &[order("buy", "alloys", 5)]).unwrap();
+        assert!(plan.add.is_empty());
+        assert_eq!(plan.remove, vec![order("buy", "food", 5)]);
+        assert_eq!(plan.refused, vec![order("buy", "alloys", 5)]);
+        assert_eq!(plan.kept, vec![order("buy", "alloys", 7)]);
+        assert_eq!(plan.reply(), "added none; removed buy food 5; not added (start amount not measured): buy alloys 5; \
+                                  kept (start amount not measured): buy alloys 7; the next autosave confirms it");
+        let only = market_plan(&ui, &[order("buy", "alloys", 7)], &[order("buy", "alloys", 5)]).unwrap();
+        assert!(!only.sends_anything());
+        assert_eq!(only.reply(), "nothing sent; not added (start amount not measured): buy alloys 5; kept (start amount not measured): buy alloys 7");
+    }
+
+    #[test]
+    fn a_broken_start_amount_table_fails_the_whole_sync_and_refuses_no_order() {
+        // a res/<W>x<H>.toml overlay that sets `new_trade_amount = 10` undoes the table: that is a
+        // manifest fault, not "start amount not measured" for every resource (the governor would skip
+        // each of them for the rest of the run, naming the wrong cause)
+        let broken: toml::Table = toml::from_str("[market]\nnew_trade_amount = 10\n").unwrap();
+        let err = market_plan(&broken, &[order("buy", "food", 5)], &[order("sell", "energy", 20), order("buy", "alloys", 5)])
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("per-resource table") && !err.contains("not measured"), "{err}");
+        let missing: toml::Table = toml::from_str("[market]\nclose_key = \"esc\"\n").unwrap();
+        let err = market_plan(&missing, &[], &[order("sell", "energy", 20)]).unwrap_err().to_string();
+        assert!(err.contains("no ui.market.new_trade_amount"), "{err}");
+        // a sync that adds nothing never reads the table
+        let plan = market_plan(&broken, &[order("buy", "food", 5)], &[]).unwrap();
+        assert_eq!((plan.add, plan.remove, plan.refused), (vec![], vec![order("buy", "food", 5)], vec![]));
+    }
+
+    #[test]
+    fn the_1440p_overlay_keeps_the_per_resource_start_amounts() {
+        // res/2560x1440.toml replaces [ui.market] keys one by one: an integer there would undo the table
+        let ui = stellaris_manifest(Some("2560x1440")).ui;
+        assert_eq!(trade_start(&ui, "rare_crystals").unwrap(), 1);
+        assert_eq!(trade_start(&ui, "consumer_goods").unwrap(), 5);
+        assert_eq!(trade_start(&ui, "food").unwrap(), 10);
+        assert!(trade_start(&ui, "alloys").is_err());
+    }
+
+    // A war going badly, in the shapes of 4.5.1 saves (2272.05 and 2393.11): our capital system's
+    // starbase taken by the enemy (its station fleet now in their fleets), our second colony occupied,
+    // own and allied battles, an undated ground battle, force peace on the enemy's side, the galactic
+    // market, the monthly trades' budget line and a mod-exported variable.
+    const LEVERS_GAMESTATE: &[u8] = br#"date="2230.01.01"
+player={ { name="x" country=0 } }
+country={
+    0={ name={ key="NAME_Us" } type="default" capital=10 used_naval_capacity=120
+        owned_planets={ 10 11 } controlled_planets={ 100 101 200 }
+        fleets_manager={ owned_fleets={ { fleet=5 } } }
+        variables={ governor_naval_cap=147 governor_naval_used=131 years_passed=30 }
+        active_policies={ { policy="diplomatic_stance" selected="diplo_stance_belligerent" date="2229.03.01" }
+                          { policy="economic_policy" selected="economic_policy_balanced" date="2229.04.01" }
+                          { policy="war_philosophy" selected="unrestricted_wars" } }
+        budget={ last_month={ balance={ x={ energy=20 } } trade_balance={ monthly_trades={ energy=-11 trade=8 } } } } }
+    3={ name={ key="NAME_Them" } type="default" military_power=5000 }
+    5={ name={ key="NAME_Friend" } type="default" military_power=900 }
+}
+planets={ planet={
+    100={ name={ key="NAME_Home" } planet_class="pc_continental" planet_size=16 coordinate={ origin=50 } owner=0 controller=0 colony=10 }
+    101={ name={ key="NAME_Outpost" } planet_class="pc_arid" planet_size=10 coordinate={ origin=51 } owner=0 controller=3 colony=11 }
+    200={ name={ key="NAME_Rock" } planet_class="pc_barren" planet_size=8 coordinate={ origin=50 } controller=0 }
+} }
+colony={
+    10={ pop_groups={ 7 8 } pop_jobs={ 1 2 3 } districts={ 20 21 } stability=62.5 amenities=900 amenities_usage=1200
+         free_amenities=-300 free_housing=-40 total_housing=1500 employable_pops=1300 num_sapient_pops=1330
+         final_designation="col_capital" designation="col_capital"
+         last_month_growth_data={ growth_and_size={ month_start_size=1320 growth=6 } }
+         carrier={ type=planet reference=100 } }
+    11={ pop_groups={ 9 } pop_jobs={ } districts={ } stability=18 num_sapient_pops=400 final_designation="col_mining"
+         carrier={ type=planet reference=101 } }
+}
+pop_jobs={
+    1={ type="miner" workforce=100 max_workforce=150 }
+    2={ type="civilian" workforce=-1 max_workforce=-1 }
+    3={ type="clerk" workforce=20 max_workforce=20 }
+    4={ type="farmer" workforce=0 max_workforce=500 }
+}
+pop_groups={
+    7={ key={ species=1 category="worker" } size=1200 planet=100 }
+    8={ key={ species=1 category="civilian" } size=100.4 planet=100 }
+    9={ key={ species=1 category="worker" } size=400 planet=101 }
+}
+districts={ 20={ type="district_city" level=2 } 21={ type="district_mining" level=1 } 22={ type="district_city" level=9 } }
+construction={ item_mgr={ items={
+    1={ queue=1 paying_country=0 buildable_district={ district="district_farming" planet=10 } }
+    2=none
+    3={ queue=2 paying_country=0 buildable_army={ army_type="defense_army" planet=10 } }
+    4={ queue=1 paying_country=0 buildable_planet_building={ building="building_research_lab_1" planet=10 zone=3 } }
+    5={ queue=9 paying_country=3 buildable_district={ district="district_city" planet=99 } }
+} } }
+starbase_mgr={ starbases={
+    0={ level="starbase_level_starport" modules={ 0=shipyard 1=solar_panel_network } station=30 }
+    1={ level="starbase_level_starport" modules={ 0=shipyard } station=31 }
+    2={ level="starbase_level_outpost" station=32 }
+    3={ level="starbase_level_starport" modules={ 0=shipyard } station=33 }
+} }
+ships={ 30={ fleet=6 } 31={ fleet=5 } 32={ fleet=5 } 33={ fleet=8 } }
+galactic_object={
+    50={ name={ key="NAME_Sol" } planet=100 planet=200 starbases={ 0 } }
+    51={ name={ key="NAME_Alpha" } planet=101 starbases={ 1 } }
+    52={ name={ key="NAME_Far" } starbases={ 3 } }
+}
+war={ 0={
+    name={ key="NAME_Bad_War" }
+    start_date="2228.01.01"
+    attackers={ { call_type=primary country=3 } }
+    defenders={ { call_type=primary country=0 } { call_type=alliance country=5 } }
+    battles={
+        { defenders={ 3 } attackers={ 0 } system=51 colony=4294967295 attacker_victory=yes date="2229.06.01" attacker_losses=1 defender_losses=4 type=ships }
+        { defenders={ 3 } attackers={ 5 } system=52 colony=4294967295 attacker_victory=yes date="2229.07.01" attacker_losses=0 defender_losses=9 type=ships }
+        { defenders={ 5 } attackers={ 3 } system=52 colony=4294967295 attacker_victory=no date="2229.07.02" attacker_losses=6 defender_losses=0 type=ships }
+        { defenders={ 0 5 } attackers={ 3 } system=50 colony=4294967295 attacker_victory=yes date="2229.08.01" attacker_losses=0 defender_losses=3 type=ships }
+        { defenders={ 0 } attackers={ 3 } system=50 colony=4294967295 attacker_victory=yes date="2228.06.01" attacker_losses=0 defender_losses=5 type=ships }
+        { defenders={ 0 } attackers={ 3 } system=4294967295 colony=11 attacker_victory=yes date="0.01.01" attacker_losses=2 defender_losses=8 type=armies }
+        { defenders={ 5 } attackers={ 3 } system=4294967295 colony=77 attacker_victory=yes date="0.01.01" attacker_losses=1 defender_losses=3 type=armies }
+        { defenders={ 3 } attackers={ 0 } system=4294967295 colony=11 attacker_victory=no date="0.01.01" attacker_losses=4 defender_losses=1 type=armies }
+        { defenders={ 5 } attackers={ 3 } system=4294967295 colony=11 attacker_victory=yes date="0.01.01" attacker_losses=1 defender_losses=2 type=armies }
+    }
+    attacker_war_exhaustion=0.3 defender_war_exhaustion=1.2
+    defender_force_peace=yes defender_force_peace_date="2229.12.01"
+} }
+market={
+    fluctuations={ 0 -29.61786 0 0 0 0 0 0 0 37.86576 45.65437 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 }
+    galactic_market_resources={ 1 1 1 0 0 0 0 0 0 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 }
+    galactic_market_access={ 0 1 1 }
+    id={ 3 0 5 }
+    resources_bought={ country=3 amount={ 0 9 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 }
+                       country=0 amount={ 0 1000 0 0 0 0 0 0 0 1000 5450 0 0 100 50 50 0 0 0 0 0 0 0 0 0 0 } }
+    resources_sold={ country=0 amount={ 15317 0 1000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 } }
+    internal_market_fluctuations={ country=0 resources={ food=-3 } }
+    enabled=yes
+}
+"#;
+
+    #[test]
+    fn lever_fields_read_occupation_shipyards_and_the_market() {
+        let b = brief_gamestate(LEVERS_GAMESTATE).unwrap();
+        // policies: the option's date when the save has one (set during play), none from the start
+        assert_eq!(b.policy_dates.get("economic_policy").map(String::as_str), Some("2229.04.01"));
+        assert_eq!(b.policy_dates.get("diplomatic_stance").map(String::as_str), Some("2229.03.01"));
+        assert!(!b.policy_dates.contains_key("war_philosophy"));
+        // planets: occupation is owner ≠ controller; the capital is the country's `capital` colony
+        let home = b.planets.iter().find(|p| p.name == "Home").unwrap();
+        let outpost = b.planets.iter().find(|p| p.name == "Outpost").unwrap();
+        assert!(home.capital && !home.occupied && home.occupier.is_none());
+        assert!(!outpost.capital && outpost.occupied);
+        assert_eq!(outpost.occupier.as_deref(), Some("Them"));
+        // planet development: jobs, unemployment (civilians), districts, queue, growth
+        assert_eq!((home.amenities_usage, home.total_housing, home.employable), (Some(1200.0), Some(1500.0), Some(1300)));
+        assert_eq!(home.jobs_open, Some(50), "150 - 100 miners; civilian and filled clerk slots add none");
+        assert_eq!(home.unemployed, Some(100), "the civilian pop group");
+        assert_eq!(home.designation, "capital");
+        assert_eq!(home.district_levels, BTreeMap::from([("city".to_string(), 2), ("mining".to_string(), 1)]));
+        assert_eq!(home.queued, vec!["district_farming", "building_research_lab_1"], "armies and other colonies' items are not development");
+        assert_eq!(home.growth, Some(6.0));
+        assert_eq!(outpost.designation, "mining", "final_designation when no designation is set");
+        assert_eq!((outpost.jobs_open, outpost.unemployed), (Some(0), Some(0)));
+        assert!(outpost.queued.is_empty() && outpost.growth.is_none());
+        // shipyards: ours where our fleets hold the station; occupied where the enemy holds the
+        // starbase of a system with our colony; a stranger's yard elsewhere is not listed
+        assert_eq!(b.shipyards, vec![Shipyard { system: "Sol".into(), occupied: true }, Shipyard { system: "Alpha".into(), occupied: false }]);
+        // variables the mod exports
+        assert_eq!(b.governor_vars, BTreeMap::from([("governor_naval_cap".to_string(), 147.0), ("governor_naval_used".to_string(), 131.0)]));
+        // the galactic market (enabled, and our slot has access): prices by resource index
+        let m = b.market.as_ref().expect("a market block");
+        assert_eq!(m.kind, "galactic");
+        assert_eq!(m.fluct, BTreeMap::from([("minerals".to_string(), -29.62), ("consumer_goods".to_string(), 37.87), ("alloys".to_string(), 45.65)]));
+        assert_eq!(m.bought, BTreeMap::from([("minerals".to_string(), 1000.0), ("consumer_goods".to_string(), 1000.0), ("alloys".to_string(), 5450.0),
+            ("rare_crystals".to_string(), 100.0), ("sr_living_metal".to_string(), 50.0), ("sr_zro".to_string(), 50.0)]));
+        assert_eq!(m.sold, BTreeMap::from([("energy".to_string(), 15317.0), ("food".to_string(), 1000.0)]));
+        assert_eq!(m.trades_net, BTreeMap::from([("energy".to_string(), -11.0), ("trade".to_string(), 8.0)]));
+        assert_eq!(b.net.get("energy"), Some(&20.0), "net stays the balance without market trades");
+    }
+
+    #[test]
+    fn own_battles_count_only_battles_that_list_our_country() {
+        let b = brief_gamestate(LEVERS_GAMESTATE).unwrap();
+        let w = &b.wars[0];
+        // our side (allies included), as before: we won an attack and the ally an attack and a
+        // defence; we lost two defences, a ground defence and a retake, the ally two ground battles
+        assert_eq!((w.battles_won, w.battles_lost), (3, 6));
+        // ours, dated within 12 months of 2230.01.01: won 1 (lost 1 ship), lost 1 (lost 3 ships);
+        // the 2228.06 loss is older; the ally's battles are not ours
+        let o = &w.own_battles_12m;
+        assert_eq!((o.won, o.lost, o.ships_lost), (1, 1, 4));
+        // ground battles carry no date in 4.5.1 saves: every invasion of our colonies counts, not
+        // our own attempt to retake one, nor an invasion of a colony our ally held then and we hold
+        // now (the 2393 save: colony 41, taken from an ally, later ours): we must be the defender
+        assert_eq!(o.ground_at_our_colonies, 1);
+        // force peace: set on the side whose exhaustion passed 100% (the 2393 save's enemy)
+        let fp = w.force_peace.as_ref().expect("force peace");
+        assert_eq!((fp.ours, fp.theirs, fp.date.as_str()), (true, false, "2229.12.01"), "we defend, and the defenders are exhausted");
+    }
+
+    #[test]
+    fn a_retaken_colony_brings_back_no_new_invasion() {
+        // a total war: colony 11 is invaded (A), passes to the enemy (B), and we take it back (C).
+        // The bare count goes 1, 0, 1, so "a rise is a new invasion" would fire on our own retake;
+        // the identities (indices in the war's append-only battle list) show nothing new in C, and
+        // a real invasion after it (D) is the only index at or past the previous save's battle count
+        let a = LEVERS_GAMESTATE.to_vec();
+        let text = |b: &[u8]| String::from_utf8(b.to_vec()).unwrap();
+        let b = text(&a).replace("owned_planets={ 10 11 }", "owned_planets={ 10 }");
+        let add_battle = |gs: &str, battle: &str| gs.replace("\n    }\n    attacker_war_exhaustion", &format!("\n        {battle}\n    }}\n    attacker_war_exhaustion"));
+        let c = add_battle(&text(&a), "{ defenders={ 3 } attackers={ 0 } system=4294967295 colony=11 attacker_victory=yes date=\"0.01.01\" attacker_losses=1 defender_losses=5 type=armies }");
+        let d = add_battle(&c, "{ defenders={ 0 } attackers={ 3 } system=4294967295 colony=10 attacker_victory=no date=\"0.01.01\" attacker_losses=9 defender_losses=2 type=armies }");
+        let war = |gs: &[u8]| brief_gamestate(gs).unwrap().wars.remove(0);
+        let (wa, wb, wc, wd) = (war(&a), war(b.as_bytes()), war(c.as_bytes()), war(d.as_bytes()));
+        assert_eq!(wa.id, "0");
+        assert_eq!((wa.battle_count, wa.own_battles_12m.invasions.clone()), (9, vec![5]));
+        assert_eq!((wb.battle_count, wb.own_battles_12m.invasions.clone()), (9, vec![]), "colony 11 is not ours in B");
+        assert_eq!((wc.battle_count, wc.own_battles_12m.invasions.clone()), (10, vec![5]), "the retake lists us as attacker");
+        assert_eq!((wd.battle_count, wd.own_battles_12m.invasions.clone()), (11, vec![5, 10]));
+        let counts: Vec<usize> = [&wa, &wb, &wc, &wd].iter().map(|w| w.own_battles_12m.ground_at_our_colonies).collect();
+        assert_eq!(counts, [1, 0, 1, 2], "the bare count rises on the retake (C) as on the invasion (D)");
+        let new_since = |prev: &War, now: &War| now.own_battles_12m.invasions.iter().copied().filter(|&i| i >= prev.battle_count).collect::<Vec<_>>();
+        assert_eq!(new_since(&wb, &wc), Vec::<usize>::new(), "no new invasion when we retake the colony");
+        assert_eq!(new_since(&wc, &wd), vec![10]);
+    }
+
+    #[test]
+    fn lever_lines_print_only_when_flagged() {
+        let t = brief_gamestate(LEVERS_GAMESTATE).unwrap().to_text();
+        assert!(t.contains("- Outpost (arid size 10): OCCUPIED by Them;"), "{t}");
+        assert!(t.contains("battles won 3, lost 6 (our side, allies included); ours in the last 12 months: won 1, lost 1, ships lost 4; ground battles at our colonies 1; a status quo can be forced on us (since 2229.12.01)"), "{t}");
+        assert!(t.contains("Shipyards: Sol (OCCUPIED), Alpha\n"), "{t}");
+        // the mod's export disagrees with the save's own use (131 vs 120): stale, so not shown as live
+        assert!(t.contains("naval capacity used 120; the maximum is not in the save"), "{t}");
+        assert!(t.contains("the Governor Bridge export is stale"), "{t}");
+        assert!(!t.contains("from the mod") && !t.contains("/147"), "{t}");
+        assert!(t.contains("Market (galactic; price vs base): alloys +46%, consumer_goods +38%, minerals -30%; our monthly trades last month: energy -11, trade +8\n"), "{t}");
+        // a quiet early save: no market, shipyard or occupation lines, and the naval note stays
+        let quiet = brief_save(SAVE).unwrap().to_text();
+        for absent in ["Market (", "Shipyards:", "OCCUPIED", "from the mod"] {
+            assert!(!quiet.contains(absent), "{absent}: {quiet}");
+        }
+        assert!(quiet.contains("the maximum is not in the save"));
+    }
+
+    #[test]
+    fn mod_naval_capacity_is_live_only_while_it_agrees_with_the_saves_own_use() {
+        // country variables outlive the mod: a campaign loaded without it keeps the last export
+        // forever, so the export counts only while its `used` matches the save's used_naval_capacity
+        let with_used = |used: &str| {
+            let gs = String::from_utf8(LEVERS_GAMESTATE.to_vec()).unwrap().replace("used_naval_capacity=120", &format!("used_naval_capacity={used}"));
+            brief_gamestate(gs.as_bytes()).unwrap()
+        };
+        let fresh = with_used("131");
+        assert!(!fresh.governor_vars_stale);
+        assert!(fresh.to_text().contains("naval capacity 131/147 (from the mod)"), "{}", fresh.to_text());
+        assert!(!fresh.to_text().contains("the maximum is not in the save"));
+        // a ship finished the same day after the export: the use printed is always the save's own
+        let same_day = with_used("132");
+        assert!(!same_day.governor_vars_stale);
+        assert!(same_day.to_text().contains("naval capacity 132/147 (from the mod)"), "{}", same_day.to_text());
+        // the mod stopped long ago: the save's use moved on and the export is not the maximum now
+        for used in ["250", "120"] {
+            let stale = with_used(used);
+            let t = stale.to_text();
+            assert!(stale.governor_vars_stale, "{used}");
+            assert!(t.contains(&format!("naval capacity used {used}; the maximum is not in the save, so never assume we are at it")), "{t}");
+            assert!(t.contains("the Governor Bridge export is stale") && !t.contains("from the mod"), "{t}");
+        }
+        // the JSON keeps the raw variables and says they are stale
+        let v = serde_json::to_value(with_used("250")).unwrap();
+        assert_eq!(v["governor_vars_stale"], serde_json::json!(true));
+        assert_eq!(v["governor_vars"]["governor_naval_cap"], serde_json::json!(147.0));
+        // a cap without its use cannot be checked, so it is not shown either
+        let gs = String::from_utf8(LEVERS_GAMESTATE.to_vec()).unwrap().replace(" governor_naval_used=131", "");
+        let b = brief_gamestate(gs.as_bytes()).unwrap();
+        assert!(b.governor_vars_stale && !b.to_text().contains("from the mod"));
+        // no mod variables at all: nothing to be stale
+        assert!(!brief_save(SAVE).unwrap().governor_vars_stale);
+    }
+
+    #[test]
+    fn internal_market_and_missing_blocks_read_as_empty() {
+        let gs = br#"date="2236.06.01"
+player={ { name="x" country=0 } }
+country={ 0={ name={ key="NAME_Us" } type="default" } }
+market={ id={ 0 1 } internal_market_fluctuations={ country=1 resources={ alloys=73.9 } country=0 resources={ food=-3.77336 } } }
+"#;
+        let b = brief_gamestate(gs).unwrap();
+        let m = b.market.as_ref().unwrap();
+        assert_eq!(m.kind, "internal", "no galactic market formed yet");
+        assert_eq!(m.fluct, BTreeMap::from([("food".to_string(), -3.77)]));
+        assert!(m.bought.is_empty() && m.sold.is_empty() && m.trades_net.is_empty());
+        assert!(b.policy_dates.is_empty() && b.shipyards.is_empty() && b.governor_vars.is_empty());
+        let none = brief_gamestate(b"date=\"2200.01.01\"\nplayer={ { country=0 } }\ncountry={ 0={ type=\"default\" } }\n").unwrap();
+        assert!(none.market.is_none());
+    }
+
+    #[test]
+    fn lever_fields_from_the_real_autosaves() {
+        let b = brief_save(SAVE).unwrap();
+        let earth = b.planets.iter().find(|p| p.name == "Earth").unwrap();
+        assert!(earth.capital && !earth.occupied);
+        assert_eq!(earth.designation, "capital");
+        assert_eq!((earth.employable, earth.jobs_open), (Some(5327), Some(0)));
+        assert_eq!(earth.unemployed, Some(2027), "civilians at the start of 4.5");
+        assert_eq!(earth.district_levels, BTreeMap::from([("city".to_string(), 3), ("farming".to_string(), 4), ("generator".to_string(), 3), ("mining".to_string(), 2)]));
+        assert_eq!(earth.queued, vec!["clear_deposit_blocker"]);
+        assert_eq!(earth.growth, Some(3.0));
+        assert!(b.policy_dates.is_empty(), "start policies carry no date");
+        assert_eq!(b.market.as_ref().map(|m| m.kind.as_str()), Some("internal"));
+        assert!(b.market.as_ref().unwrap().fluct.is_empty());
+        assert_eq!(b.shipyards, vec![Shipyard { system: "Sol".into(), occupied: false }]);
+        assert!(b.governor_vars.is_empty());
+        let later = brief_save(include_bytes!("../tests/fixtures/stellaris_2212_03_01.sav")).unwrap();
+        let earth = later.planets.iter().find(|p| p.name == "Earth").unwrap();
+        assert_eq!(earth.queued, vec!["district_city"]);
+        assert_eq!(earth.district_levels.get("city"), Some(&6));
+        assert!(later.shipyards.iter().any(|s| s.system == "Sol" && !s.occupied), "{:?}", later.shipyards);
     }
 
     #[test]

@@ -93,7 +93,7 @@ def main(argv: list[str] | None = None) -> int:
     out = Path(a.corpus) / "res" / f"{a.resolution}.toml"
     old = out.read_text(encoding="utf-8") if out.exists() else ""
     # keep everything before the first [ui.*] table (the measured screens), replace the rest
-    head = re.split(r"(?m)^(?:# \[ui\.\*\] below.*\n)?\[ui\.", old, maxsplit=1)[0].rstrip() + "\n\n"
+    head = re.split(r"(?m)^(?:# \[ui\.\*\] below.*\n\s*)?\[ui\.", old, maxsplit=1)[0].rstrip() + "\n\n"
     out.write_text(head + text, encoding="utf-8")
     print(f"wrote {out}")
     return 0

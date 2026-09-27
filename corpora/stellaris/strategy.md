@@ -161,8 +161,10 @@ is not used**: there the AI researches and builds warships but never explores or
 game paused: `effect` lines that set the `governor_directive_<name>` flag and the directive's
 policies, confirmed by a scoped log line in game.log. Verified: `set_policy` (kept by the AI for
 20 months) and `set_country_flag`. Untested: edicts, economy plans. Policy changes lock that policy
-for 10 years in normal play [doc:policies]; the console's `cooldown = no` skips the lock, so change
-policies rarely anyway. A later companion mod could add `ai_weight` modifiers that read the
+for 10 years in normal play [doc:policies], and directives obey that lock: a policy is set only if
+`can_set_policy` allows it (not while locked, and no stance change at war) and each change starts a
+new 10-year lock. Policies are the slow lever; the directive's flag (AI budgets through the mod) is
+the fast one, so a switch whose policy is locked still changes the flag. A later companion mod could add `ai_weight` modifiers that read the
 directive flag [doc:ai_modding]. A directive **never** adds resources, modifiers or anything the
 empire could not do itself.
 
@@ -225,7 +227,10 @@ What went wrong in the first long campaign, and the rule each lesson gives:
   advanced strategy doc, `get_doc("doc:advanced_strategy#0")` and the chunks after it (read from the
   4.5.1 game files).
 - **War stance**: `prepare_war` and `defend` set the belligerent stance (+10% naval capacity,
-  −10% war exhaustion); `expand` and `diplomacy_first` set their own stance again afterwards.
+  −10% war exhaustion) only when applied at peace, before the war: a diplomatic stance cannot change
+  during a war, so `defend` chosen once a war has begun changes only its flag and postures. Each
+  stance change starts a 10-year lock, so `expand` and `diplomacy_first` set their own stance again
+  only after it ends.
 
 - **Allies are made before a war, not during it** (4.5: an AI weighs its opinion of both sides,
   counting the war leaders twice, and its price rises with the war's size and its own other wars;
