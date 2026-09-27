@@ -1,0 +1,2175 @@
+[
+ {
+  "id": "policy:aesthetics",
+  "name": "Aesthetics",
+  "aliases": [
+   "POLICY_AESTHETICS"
+  ],
+  "summary": "Economic card. +100% Theater Square district adjacency bonuses.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Medieval Faires"
+   ],
+   "obsoleted_by": [
+    "Sports Media"
+   ],
+   "effect": "+100% Theater Square district adjacency bonuses."
+  }
+ },
+ {
+  "id": "policy:after_action_reports",
+  "name": "After Action Reports",
+  "aliases": [
+   "POLICY_AFTER_ACTION_REPORTS"
+  ],
+  "summary": "Military card. All units gain +25% combat experience.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Rapid Deployment"
+   ],
+   "effect": "All units gain +25% combat experience."
+  }
+ },
+ {
+  "id": "policy:agoge",
+  "name": "Agoge",
+  "aliases": [
+   "POLICY_AGOGE"
+  ],
+  "summary": "Military card. +50% Production toward Ancient and Classical era melee, anti-cavalry, and ranged units.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Craftsmanship"
+   ],
+   "obsoleted_by": [
+    "Feudal Contract"
+   ],
+   "effect": "+50% Production toward Ancient and Classical era melee, anti-cavalry, and ranged units."
+  }
+ },
+ {
+  "id": "policy:automated_workforce",
+  "name": "Automated Workforce",
+  "aliases": [
+   "POLICY_AUTOMATED_WORKFORCE"
+  ],
+  "summary": "Wildcard card. Your cities get +20% Production towards city projects. BUT: -1 Amenity and -5 Loyalty per turn in your cities.",
+  "fields": {
+   "slot": "Wildcard",
+   "age": "Dark Age only",
+   "effect": "Your cities get +20% Production towards city projects. BUT: -1 Amenity and -5 Loyalty per turn in your cities."
+  }
+ },
+ {
+  "id": "policy:bastions",
+  "name": "Bastions",
+  "aliases": [
+   "POLICY_BASTIONS"
+  ],
+  "summary": "Military card. +6 City Defense Strength. +5 City Ranged Strength.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Defensive Tactics"
+   ],
+   "obsoleted_by": [
+    "Public Works"
+   ],
+   "effect": "+6 City Defense Strength. +5 City Ranged Strength."
+  }
+ },
+ {
+  "id": "policy:caravansaries",
+  "name": "Caravansaries",
+  "aliases": [
+   "POLICY_CARAVANSARIES"
+  ],
+  "summary": "Economic card. +2 Gold from all Trade Routes.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Foreign Trade"
+   ],
+   "obsoleted_by": [
+    "Triangular Trade"
+   ],
+   "effect": "+2 Gold from all Trade Routes."
+  }
+ },
+ {
+  "id": "policy:charismatic_leader",
+  "name": "Charismatic Leader",
+  "aliases": [
+   "POLICY_CHARISMATIC_LEADER"
+  ],
+  "summary": "Diplomatic card. +2 Influence points per turn toward earning city-state Envoys.",
+  "fields": {
+   "slot": "Diplomatic",
+   "requires": [
+    "Political Philosophy"
+   ],
+   "obsoleted_by": [
+    "Gunboat Diplomacy"
+   ],
+   "effect": "+2 Influence points per turn toward earning city-state Envoys."
+  }
+ },
+ {
+  "id": "policy:chivalry",
+  "name": "Chivalry",
+  "aliases": [
+   "POLICY_CHIVALRY"
+  ],
+  "summary": "Military card. +50% Production toward Industrial era and earlier heavy and light cavalry units.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Divine Right"
+   ],
+   "obsoleted_by": [
+    "Lightning Warfare"
+   ],
+   "effect": "+50% Production toward Industrial era and earlier heavy and light cavalry units."
+  }
+ },
+ {
+  "id": "policy:civil_prestige",
+  "name": "Civil Prestige",
+  "aliases": [
+   "POLICY_CIVIL_PRESTIGE"
+  ],
+  "summary": "Economic card. Established Governors with at least 2 Promotions provide +1 Amenity and +2 Housing.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Civil Service"
+   ],
+   "effect": "Established Governors with at least 2 Promotions provide +1 Amenity and +2 Housing."
+  }
+ },
+ {
+  "id": "policy:collective_activism",
+  "name": "Collective Activism",
+  "aliases": [
+   "POLICY_COLLECTIVE_ACTIVISM"
+  ],
+  "summary": "Diplomatic card. +5% Culture per city-state you are the Suzerain of.",
+  "fields": {
+   "slot": "Diplomatic",
+   "requires": [
+    "Social Media"
+   ],
+   "effect": "+5% Culture per city-state you are the Suzerain of."
+  }
+ },
+ {
+  "id": "policy:collectivism",
+  "name": "Collectivism",
+  "aliases": [
+   "POLICY_COLLECTIVISM"
+  ],
+  "summary": "Wildcard card. Farms +1 Food. All cities +2 Housing. +100% Industrial Zone adjacency bonuses. BUT: Great People Points earned 50% slower.",
+  "fields": {
+   "slot": "Wildcard",
+   "age": "Dark Age only",
+   "effect": "Farms +1 Food. All cities +2 Housing. +100% Industrial Zone adjacency bonuses. BUT: Great People Points earned 50% slower."
+  }
+ },
+ {
+  "id": "policy:collectivization",
+  "name": "Collectivization",
+  "aliases": [
+   "POLICY_COLLECTIVIZATION"
+  ],
+  "summary": "Economic card. +2 Production and +4 Food from domestic Trade Routes.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Class Struggle"
+   ],
+   "effect": "+2 Production and +4 Food from domestic Trade Routes."
+  }
+ },
+ {
+  "id": "policy:colonial_offices",
+  "name": "Colonial Offices",
+  "aliases": [
+   "POLICY_COLONIAL_OFFICES"
+  ],
+  "summary": "Diplomatic card. +15% faster growth and 3 Loyalty per turn for cities not on your original Capital's continent.",
+  "fields": {
+   "slot": "Diplomatic",
+   "requires": [
+    "Exploration"
+   ],
+   "effect": "+15% faster growth and 3 Loyalty per turn for cities not on your original Capital's continent."
+  }
+ },
+ {
+  "id": "policy:colonial_taxes",
+  "name": "Colonial Taxes",
+  "aliases": [
+   "POLICY_COLONIAL_TAXES"
+  ],
+  "summary": "Diplomatic card. +25% Gold and +10% Production in cities not on your original Capital's continent.",
+  "fields": {
+   "slot": "Diplomatic",
+   "requires": [
+    "Colonialism"
+   ],
+   "effect": "+25% Gold and +10% Production in cities not on your original Capital's continent."
+  }
+ },
+ {
+  "id": "policy:colonization",
+  "name": "Colonization",
+  "aliases": [
+   "POLICY_COLONIZATION"
+  ],
+  "summary": "Economic card. +50% Production toward Settlers.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Early Empire"
+   ],
+   "obsoleted_by": [
+    "Expropriation"
+   ],
+   "effect": "+50% Production toward Settlers."
+  }
+ },
+ {
+  "id": "policy:communications_office",
+  "name": "Communications Office",
+  "aliases": [
+   "POLICY_COMMUNICATIONS_OFFICE"
+  ],
+  "summary": "Diplomatic card. Governors provide +1 Loyalty per turn to their city, per Promotion the Governor has.",
+  "fields": {
+   "slot": "Diplomatic",
+   "requires": [
+    "Social Media"
+   ],
+   "effect": "Governors provide +1 Loyalty per turn to their city, per Promotion the Governor has."
+  }
+ },
+ {
+  "id": "policy:conscription",
+  "name": "Conscription",
+  "aliases": [
+   "POLICY_CONSCRIPTION"
+  ],
+  "summary": "Military card. Unit maintenance reduced by 1 Gold per turn, per unit.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "State Workforce"
+   ],
+   "obsoleted_by": [
+    "Levée en Masse"
+   ],
+   "effect": "Unit maintenance reduced by 1 Gold per turn, per unit."
+  }
+ },
+ {
+  "id": "policy:containment",
+  "name": "Containment",
+  "aliases": [
+   "POLICY_CONTAINMENT"
+  ],
+  "summary": "Diplomatic card. Each Envoy you send to a city-state counts as two, if its Suzerain has a different government than you.",
+  "fields": {
+   "slot": "Diplomatic",
+   "requires": [
+    "Cold War"
+   ],
+   "effect": "Each Envoy you send to a city-state counts as two, if its Suzerain has a different government than you."
+  }
+ },
+ {
+  "id": "policy:corvee",
+  "name": "Corvée",
+  "aliases": [
+   "POLICY_CORVEE"
+  ],
+  "summary": "Economic card. +15% Production toward Ancient and Classical wonders.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "State Workforce"
+   ],
+   "obsoleted_by": [
+    "Gothic Architecture",
+    "Skyscrapers"
+   ],
+   "effect": "+15% Production toward Ancient and Classical wonders."
+  }
+ },
+ {
+  "id": "policy:craftsmen",
+  "name": "Craftsmen",
+  "aliases": [
+   "POLICY_CRAFTSMEN"
+  ],
+  "summary": "Military card. 100% Industrial Zone adjacency bonuses.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Guilds"
+   ],
+   "obsoleted_by": [
+    "Five-Year Plan"
+   ],
+   "effect": "100% Industrial Zone adjacency bonuses."
+  }
+ },
+ {
+  "id": "policy:cryptography",
+  "name": "Cryptography",
+  "aliases": [
+   "POLICY_CRYPTOGRAPHY"
+  ],
+  "summary": "Diplomatic card. Enemy Spy level reduced by 2 in your lands. Your Spy level is increased by 1 for offensive operations.",
+  "fields": {
+   "slot": "Diplomatic",
+   "requires": [
+    "Cold War"
+   ],
+   "effect": "Enemy Spy level reduced by 2 in your lands. Your Spy level is increased by 1 for offensive operations."
+  }
+ },
+ {
+  "id": "policy:cyber_warfare",
+  "name": "Cyber Warfare",
+  "aliases": [
+   "POLICY_CYBER_WARFARE"
+  ],
+  "summary": "Wildcard card. +10 Combat Strength against units from the Information and Future Eras. BUT: Grievances against you do not decay.",
+  "fields": {
+   "slot": "Wildcard",
+   "age": "Dark Age only",
+   "effect": "+10 Combat Strength against units from the Information and Future Eras. BUT: Grievances against you do not decay."
+  }
+ },
+ {
+  "id": "policy:defense_of_motherland",
+  "name": "Defense of the Motherland",
+  "aliases": [
+   "POLICY_DEFENSE_OF_MOTHERLAND"
+  ],
+  "summary": "Wildcard card. No war weariness from combat in your territory. +100% Production for Modern, Atomic, and Information era support units.",
+  "fields": {
+   "slot": "Wildcard",
+   "requires": [
+    "Class Struggle"
+   ],
+   "effect": "No war weariness from combat in your territory. +100% Production for Modern, Atomic, and Information era support units."
+  }
+ },
+ {
+  "id": "policy:diplomatic_league",
+  "name": "Diplomatic League",
+  "aliases": [
+   "POLICY_DIPLOMATIC_LEAGUE"
+  ],
+  "summary": "Diplomatic card. The first Envoy you send to each city-state counts as two Envoys.",
+  "fields": {
+   "slot": "Diplomatic",
+   "requires": [
+    "Political Philosophy"
+   ],
+   "effect": "The first Envoy you send to each city-state counts as two Envoys."
+  }
+ },
+ {
+  "id": "policy:discipline",
+  "name": "Discipline",
+  "aliases": [
+   "POLICY_DISCIPLINE"
+  ],
+  "summary": "Military card. +5 Unit Combat Strength when fighting Barbarians.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Code of Laws"
+   ],
+   "obsoleted_by": [
+    "Native Conquest"
+   ],
+   "effect": "+5 Unit Combat Strength when fighting Barbarians."
+  }
+ },
+ {
+  "id": "policy:disinformation_campaign",
+  "name": "Disinformation Campaign",
+  "aliases": [
+   "POLICY_DISINFORMATION_CAMPAIGN"
+  ],
+  "summary": "Wildcard card. +3 Diplomatic Favor per turn for each Broadcast Center. BUT: -10% Science and Culture in all cities.",
+  "fields": {
+   "slot": "Wildcard",
+   "age": "Dark Age only",
+   "effect": "+3 Diplomatic Favor per turn for each Broadcast Center. BUT: -10% Science and Culture in all cities."
+  }
+ },
+ {
+  "id": "policy:drill_manuals",
+  "name": "Drill Manuals",
+  "aliases": [
+   "POLICY_DRILL_MANUALS"
+  ],
+  "summary": "Military card. All improved Niter and Coal resources yield 1 additional resource per turn.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Mercantilism"
+   ],
+   "effect": "All improved Niter and Coal resources yield 1 additional resource per turn."
+  }
+ },
+ {
+  "id": "policy:ecommerce",
+  "name": "Ecommerce",
+  "aliases": [
+   "POLICY_ECOMMERCE"
+  ],
+  "summary": "Economic card. +2 Production and +5 Gold from all Trade Routes.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Globalization"
+   ],
+   "effect": "+2 Production and +5 Gold from all Trade Routes."
+  }
+ },
+ {
+  "id": "policy:economic_union",
+  "name": "Economic Union",
+  "aliases": [
+   "POLICY_ECONOMIC_UNION"
+  ],
+  "summary": "Economic card. +100% Commercial Hub and Harbor district adjacency bonuses.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Ideology"
+   ],
+   "effect": "+100% Commercial Hub and Harbor district adjacency bonuses."
+  }
+ },
+ {
+  "id": "policy:elite_forces",
+  "name": "Elite Forces",
+  "aliases": [
+   "POLICY_ELITE_FORCES"
+  ],
+  "summary": "Wildcard card. +100% combat experience for all units. BUT: +2 Gold to maintain each combat and spy unit.",
+  "fields": {
+   "slot": "Wildcard",
+   "age": "Dark Age only",
+   "effect": "+100% combat experience for all units. BUT: +2 Gold to maintain each combat and spy unit."
+  }
+ },
+ {
+  "id": "policy:equestrian_orders",
+  "name": "Equestrian Orders",
+  "aliases": [
+   "POLICY_EQUESTRIAN_ORDERS"
+  ],
+  "summary": "Military card. All improved Horses and Iron resources yield 1 additional resource per turn.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Military Training"
+   ],
+   "effect": "All improved Horses and Iron resources yield 1 additional resource per turn."
+  }
+ },
+ {
+  "id": "policy:expropriation",
+  "name": "Expropriation",
+  "aliases": [
+   "POLICY_EXPROPRIATION"
+  ],
+  "summary": "Economic card. +50% Production toward Settlers. Plot purchase cost reduced by 20%.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Scorched Earth"
+   ],
+   "effect": "+50% Production toward Settlers. Plot purchase cost reduced by 20%."
+  }
+ },
+ {
+  "id": "policy:feudal_contract",
+  "name": "Feudal Contract",
+  "aliases": [
+   "POLICY_FEUDAL_CONTRACT"
+  ],
+  "summary": "Military card. +50% Production toward Ancient, Classical, Medieval, and Renaissance era melee, anti-cavalry, and ranged units.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Feudalism"
+   ],
+   "obsoleted_by": [
+    "Grande Armée"
+   ],
+   "effect": "+50% Production toward Ancient, Classical, Medieval, and Renaissance era melee, anti-cavalry, and ranged units."
+  }
+ },
+ {
+  "id": "policy:finest_hour",
+  "name": "Their Finest Hour",
+  "aliases": [
+   "POLICY_FINEST_HOUR"
+  ],
+  "summary": "Wildcard card. All units +5 Combat Strength when fighting in or adjacent to their home territory.",
+  "fields": {
+   "slot": "Wildcard",
+   "requires": [
+    "Suffrage"
+   ],
+   "effect": "All units +5 Combat Strength when fighting in or adjacent to their home territory."
+  }
+ },
+ {
+  "id": "policy:five_year_plan",
+  "name": "Five-Year Plan",
+  "aliases": [
+   "POLICY_FIVE_YEAR_PLAN"
+  ],
+  "summary": "Economic card. +100% Campus and Industrial Zone district adjacency bonuses.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Ideology"
+   ],
+   "effect": "+100% Campus and Industrial Zone district adjacency bonuses."
+  }
+ },
+ {
+  "id": "policy:flower_power",
+  "name": "Flower Power",
+  "aliases": [
+   "POLICY_FLOWER_POWER"
+  ],
+  "summary": "Wildcard card. All Civilizations not currently at war receive +100% of the Tourism from your Concerts. BUT: The cost of producing is decreased by 100% and purchasing is +100% for units other than Rock Bands..",
+  "fields": {
+   "slot": "Wildcard",
+   "age": "Dark Age only",
+   "effect": "All Civilizations not currently at war receive +100% of the Tourism from your Concerts. BUT: The cost of producing is decreased by 100% and purchasing is +100% for units other than Rock Bands.."
+  }
+ },
+ {
+  "id": "policy:force_modernization",
+  "name": "Force Modernization",
+  "aliases": [
+   "POLICY_FORCE_MODERNIZATION"
+  ],
+  "summary": "Military card. 50% Gold and resource discount on all unit upgrades.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Urbanization"
+   ],
+   "effect": "50% Gold and resource discount on all unit upgrades."
+  }
+ },
+ {
+  "id": "policy:free_market",
+  "name": "Free Market",
+  "aliases": [
+   "POLICY_FREE_MARKET"
+  ],
+  "summary": "Economic card. Extra Gold from buildings in Commercial Hubs: +50% if city Citizen population is 15 or higher, +50% if district has at least +4 adjacency bonus.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "The Enlightenment"
+   ],
+   "effect": "Extra Gold from buildings in Commercial Hubs: +50% if city Citizen population is 15 or higher, +50% if district has at least +4 adjacency bonus."
+  }
+ },
+ {
+  "id": "policy:frescoes",
+  "name": "Frescoes",
+  "aliases": [
+   "POLICY_FRESCOES"
+  ],
+  "summary": "Great Person card. +2 Great Artist points per turn. +2 Great Artist points per turn for every Art Museum.",
+  "fields": {
+   "slot": "Great Person",
+   "requires": [
+    "Humanism"
+   ],
+   "effect": "+2 Great Artist points per turn. +2 Great Artist points per turn for every Art Museum."
+  }
+ },
+ {
+  "id": "policy:future_counter_culture",
+  "name": "Space Tourism",
+  "aliases": [
+   "POLICY_FUTURE_COUNTER_CULTURE"
+  ],
+  "summary": "Wildcard card. Tourism from other players is reduced by 20% versus your civilization.",
+  "fields": {
+   "slot": "Wildcard",
+   "requires": [
+    "Exodus Imperative"
+   ],
+   "effect": "Tourism from other players is reduced by 20% versus your civilization."
+  }
+ },
+ {
+  "id": "policy:future_counter_diplomatic",
+  "name": "Rabblerousing",
+  "aliases": [
+   "POLICY_FUTURE_COUNTER_DIPLOMATIC"
+  ],
+  "summary": "Wildcard card. When you reduce a player's Diplomatic Victory points in the World Congress, get 50% of your spent Diplomatic Favor back. +1 Diplomatic Favor per turn.",
+  "fields": {
+   "slot": "Wildcard",
+   "requires": [
+    "Information Warfare"
+   ],
+   "effect": "When you reduce a player's Diplomatic Victory points in the World Congress, get 50% of your spent Diplomatic Favor back. +1 Diplomatic Favor per turn."
+  }
+ },
+ {
+  "id": "policy:future_counter_domination",
+  "name": "Global Coalition",
+  "aliases": [
+   "POLICY_FUTURE_COUNTER_DOMINATION"
+  ],
+  "summary": "Wildcard card. +7 Combat Strength for units in friendly territory.",
+  "fields": {
+   "slot": "Wildcard",
+   "requires": [
+    "Smart Power Doctrine"
+   ],
+   "effect": "+7 Combat Strength for units in friendly territory."
+  }
+ },
+ {
+  "id": "policy:future_counter_science",
+  "name": "Non-State Actors",
+  "aliases": [
+   "POLICY_FUTURE_COUNTER_SCIENCE"
+  ],
+  "summary": "Wildcard card. Your Spy units can choose from any possible promotion.",
+  "fields": {
+   "slot": "Wildcard",
+   "requires": [
+    "Cultural Hegemony"
+   ],
+   "effect": "Your Spy units can choose from any possible promotion."
+  }
+ },
+ {
+  "id": "policy:future_victory_culture",
+  "name": "Hallyu",
+  "aliases": [
+   "POLICY_FUTURE_VICTORY_CULTURE"
+  ],
+  "summary": "Wildcard card. Your Rock Band units can choose from any possible promotion.",
+  "fields": {
+   "slot": "Wildcard",
+   "requires": [
+    "Cultural Hegemony"
+   ],
+   "effect": "Your Rock Band units can choose from any possible promotion."
+  }
+ },
+ {
+  "id": "policy:future_victory_diplomatic",
+  "name": "Diplomatic Capital",
+  "aliases": [
+   "POLICY_FUTURE_VICTORY_DIPLOMATIC"
+  ],
+  "summary": "Wildcard card. +4 Diplomatic Favor per turn.",
+  "fields": {
+   "slot": "Wildcard",
+   "requires": [
+    "Smart Power Doctrine"
+   ],
+   "effect": "+4 Diplomatic Favor per turn."
+  }
+ },
+ {
+  "id": "policy:future_victory_domination",
+  "name": "Integrated Attack Logistics",
+  "aliases": [
+   "POLICY_FUTURE_VICTORY_DOMINATION"
+  ],
+  "summary": "Wildcard card. +1 Movement if starting turn in enemy territory. +50% Production for Giant Death Robots.",
+  "fields": {
+   "slot": "Wildcard",
+   "requires": [
+    "Information Warfare"
+   ],
+   "effect": "+1 Movement if starting turn in enemy territory. +50% Production for Giant Death Robots."
+  }
+ },
+ {
+  "id": "policy:future_victory_science",
+  "name": "Aerospace Contractors",
+  "aliases": [
+   "POLICY_FUTURE_VICTORY_SCIENCE"
+  ],
+  "summary": "Wildcard card. Cities with a Spaceport gain +3 Aluminum per turn and +3 Power.",
+  "fields": {
+   "slot": "Wildcard",
+   "requires": [
+    "Exodus Imperative"
+   ],
+   "effect": "Cities with a Spaceport gain +3 Aluminum per turn and +3 Power."
+  }
+ },
+ {
+  "id": "policy:god_king",
+  "name": "God King",
+  "aliases": [
+   "POLICY_GOD_KING"
+  ],
+  "summary": "Economic card. +1 Faith and +1 Gold in the Capital.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Code of Laws"
+   ],
+   "obsoleted_by": [
+    "Scripture"
+   ],
+   "effect": "+1 Faith and +1 Gold in the Capital."
+  }
+ },
+ {
+  "id": "policy:gothic_architecture",
+  "name": "Gothic Architecture",
+  "aliases": [
+   "POLICY_GOTHIC_ARCHITECTURE"
+  ],
+  "summary": "Economic card. +15% Production toward Renaissance, Medieval, Classical, and Ancient wonders.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Divine Right"
+   ],
+   "obsoleted_by": [
+    "Skyscrapers"
+   ],
+   "effect": "+15% Production toward Renaissance, Medieval, Classical, and Ancient wonders."
+  }
+ },
+ {
+  "id": "policy:gov_autocracy",
+  "name": "Autocratic Legacy",
+  "aliases": [
+   "POLICY_GOV_AUTOCRACY"
+  ],
+  "summary": "Wildcard card. +1 to all yields for each government building and palace in a city.",
+  "fields": {
+   "slot": "Wildcard",
+   "effect": "+1 to all yields for each government building and palace in a city."
+  }
+ },
+ {
+  "id": "policy:gov_classical_republic",
+  "name": "Republican Legacy",
+  "aliases": [
+   "POLICY_GOV_CLASSICAL_REPUBLIC"
+  ],
+  "summary": "Wildcard card. All cities with a district receive +1 Housing and +1 Amenity.",
+  "fields": {
+   "slot": "Wildcard",
+   "effect": "All cities with a district receive +1 Housing and +1 Amenity."
+  }
+ },
+ {
+  "id": "policy:gov_communism",
+  "name": "Communist Legacy",
+  "aliases": [
+   "POLICY_GOV_COMMUNISM"
+  ],
+  "summary": "Wildcard card. +0.6 Production per Citizen in cities with Governors.",
+  "fields": {
+   "slot": "Wildcard",
+   "effect": "+0.6 Production per Citizen in cities with Governors."
+  }
+ },
+ {
+  "id": "policy:gov_democracy",
+  "name": "Democratic Legacy",
+  "aliases": [
+   "POLICY_GOV_DEMOCRACY"
+  ],
+  "summary": "Wildcard card. Your Trade Routes to an Ally or Suzerain's city provide +4 Food and +4 Production for both cities. Alliance Points with all allies increase by an additional.25 per turn.",
+  "fields": {
+   "slot": "Wildcard",
+   "effect": "Your Trade Routes to an Ally or Suzerain's city provide +4 Food and +4 Production for both cities. Alliance Points with all allies increase by an additional.25 per turn."
+  }
+ },
+ {
+  "id": "policy:gov_fascism",
+  "name": "Fascist Legacy",
+  "aliases": [
+   "POLICY_GOV_FASCISM"
+  ],
+  "summary": "Wildcard card. All units gain +5 Combat Strength. War Weariness reduced by 15%.",
+  "fields": {
+   "slot": "Wildcard",
+   "effect": "All units gain +5 Combat Strength. War Weariness reduced by 15%."
+  }
+ },
+ {
+  "id": "policy:gov_merchant_republic",
+  "name": "Mercantile Legacy",
+  "aliases": [
+   "POLICY_GOV_MERCHANT_REPUBLIC"
+  ],
+  "summary": "Wildcard card. +10% Gold in all cities with an established Governor.",
+  "fields": {
+   "slot": "Wildcard",
+   "effect": "+10% Gold in all cities with an established Governor."
+  }
+ },
+ {
+  "id": "policy:gov_monarchy",
+  "name": "Monarchic Legacy",
+  "aliases": [
+   "POLICY_GOV_MONARCHY"
+  ],
+  "summary": "Wildcard card. +1 Housing per level of Walls. +2 Diplomatic Favor for every Renaissance Wall.",
+  "fields": {
+   "slot": "Wildcard",
+   "effect": "+1 Housing per level of Walls. +2 Diplomatic Favor for every Renaissance Wall."
+  }
+ },
+ {
+  "id": "policy:gov_oligarchy",
+  "name": "Oligarchic Legacy",
+  "aliases": [
+   "POLICY_GOV_OLIGARCHY"
+  ],
+  "summary": "Wildcard card. All land melee, anti-cavalry, and naval melee class units gain +4 Combat Strength.",
+  "fields": {
+   "slot": "Wildcard",
+   "effect": "All land melee, anti-cavalry, and naval melee class units gain +4 Combat Strength."
+  }
+ },
+ {
+  "id": "policy:gov_theocracy",
+  "name": "Theocratic Legacy",
+  "aliases": [
+   "POLICY_GOV_THEOCRACY"
+  ],
+  "summary": "Wildcard card. +5 Religious Strength in Theological Combat. +0.5 Faith per Citizen in cities with Governors.",
+  "fields": {
+   "slot": "Wildcard",
+   "effect": "+5 Religious Strength in Theological Combat. +0.5 Faith per Citizen in cities with Governors."
+  }
+ },
+ {
+  "id": "policy:grand_opera",
+  "name": "Grand Opera",
+  "aliases": [
+   "POLICY_GRAND_OPERA"
+  ],
+  "summary": "Economic card. Extra Culture from buildings in Theater Squares: +50% if city Citizen population is 15 or higher, +50% if district has at least +4 adjacency bonus.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Opera and Ballet"
+   ],
+   "effect": "Extra Culture from buildings in Theater Squares: +50% if city Citizen population is 15 or higher, +50% if district has at least +4 adjacency bonus."
+  }
+ },
+ {
+  "id": "policy:grande_armee",
+  "name": "Grande Armée",
+  "aliases": [
+   "POLICY_GRANDE_ARMEE"
+  ],
+  "summary": "Military card. +50% Production toward Industrial era and earlier melee, anti-cavalry, and ranged units.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Nationalism"
+   ],
+   "obsoleted_by": [
+    "Military First"
+   ],
+   "effect": "+50% Production toward Industrial era and earlier melee, anti-cavalry, and ranged units."
+  }
+ },
+ {
+  "id": "policy:gunboat_diplomacy",
+  "name": "Gunboat Diplomacy",
+  "aliases": [
+   "POLICY_GUNBOAT_DIPLOMACY"
+  ],
+  "summary": "Diplomatic card. Open Borders with all city-states, and +4 Influence points per turn toward earning Envoys.",
+  "fields": {
+   "slot": "Diplomatic",
+   "requires": [
+    "Ideology"
+   ],
+   "effect": "Open Borders with all city-states, and +4 Influence points per turn toward earning Envoys."
+  }
+ },
+ {
+  "id": "policy:heritage_tourism",
+  "name": "Heritage Tourism",
+  "aliases": [
+   "POLICY_HERITAGE_TOURISM"
+  ],
+  "summary": "Economic card. +100% Tourism from Great Works of Art and Artifacts.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Cultural Heritage"
+   ],
+   "effect": "+100% Tourism from Great Works of Art and Artifacts."
+  }
+ },
+ {
+  "id": "policy:ilkum",
+  "name": "Ilkum",
+  "aliases": [
+   "POLICY_ILKUM"
+  ],
+  "summary": "Economic card. +30% Production toward Builders.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Craftsmanship"
+   ],
+   "obsoleted_by": [
+    "Serfdom"
+   ],
+   "effect": "+30% Production toward Builders."
+  }
+ },
+ {
+  "id": "policy:inquisition",
+  "name": "Inquisition",
+  "aliases": [
+   "POLICY_INQUISITION"
+  ],
+  "summary": "Wildcard card. Start Inquisition with 1 Apostle charge. All Religious units +15 Religious Combat Strength in friendly territory. BUT: -25% Science in all cities.",
+  "fields": {
+   "slot": "Wildcard",
+   "age": "Dark Age only",
+   "effect": "Start Inquisition with 1 Apostle charge. All Religious units +15 Religious Combat Strength in friendly territory. BUT: -25% Science in all cities."
+  }
+ },
+ {
+  "id": "policy:inspiration",
+  "name": "Inspiration",
+  "aliases": [
+   "POLICY_INSPIRATION"
+  ],
+  "summary": "Great Person card. +2 Great Scientist points per turn.",
+  "fields": {
+   "slot": "Great Person",
+   "requires": [
+    "Mysticism"
+   ],
+   "obsoleted_by": [
+    "Science Foundations"
+   ],
+   "effect": "+2 Great Scientist points per turn."
+  }
+ },
+ {
+  "id": "policy:insulae",
+  "name": "Insulae",
+  "aliases": [
+   "POLICY_INSULAE"
+  ],
+  "summary": "Economic card. +1 Housing in all cities with at least 2 specialty districts.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Games and Recreation"
+   ],
+   "obsoleted_by": [
+    "Medina Quarter"
+   ],
+   "effect": "+1 Housing in all cities with at least 2 specialty districts."
+  }
+ },
+ {
+  "id": "policy:integrated_space_cell",
+  "name": "Integrated Space Cell",
+  "aliases": [
+   "POLICY_INTEGRATED_SPACE_CELL"
+  ],
+  "summary": "Military card. +15% Production toward Space Race projects if a city has either a Military Academy or a Seaport.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Space Race"
+   ],
+   "effect": "+15% Production toward Space Race projects if a city has either a Military Academy or a Seaport."
+  }
+ },
+ {
+  "id": "policy:international_space_agency",
+  "name": "International Space Agency",
+  "aliases": [
+   "POLICY_INTERNATIONAL_SPACE_AGENCY"
+  ],
+  "summary": "Diplomatic card. +5% Science per city-state you are the Suzerain of.",
+  "fields": {
+   "slot": "Diplomatic",
+   "requires": [
+    "Globalization"
+   ],
+   "effect": "+5% Science per city-state you are the Suzerain of."
+  }
+ },
+ {
+  "id": "policy:international_waters",
+  "name": "International Waters",
+  "aliases": [
+   "POLICY_INTERNATIONAL_WATERS"
+  ],
+  "summary": "Military card. +100% Production toward all naval units, excluding Carriers.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Cold War"
+   ],
+   "effect": "+100% Production toward all naval units, excluding Carriers."
+  }
+ },
+ {
+  "id": "policy:invention",
+  "name": "Invention",
+  "aliases": [
+   "POLICY_INVENTION"
+  ],
+  "summary": "Great Person card. +4 Great Engineer points per turn. +2 Great Engineer points per turn for every Workshop.",
+  "fields": {
+   "slot": "Great Person",
+   "requires": [
+    "Humanism"
+   ],
+   "effect": "+4 Great Engineer points per turn. +2 Great Engineer points per turn for every Workshop."
+  }
+ },
+ {
+  "id": "policy:isolationism",
+  "name": "Isolationism",
+  "aliases": [
+   "POLICY_ISOLATIONISM"
+  ],
+  "summary": "Wildcard card. Domestic routes provide +2 Food, +2 Production. BUT: Can't train or buy Settlers nor settle new cities.",
+  "fields": {
+   "slot": "Wildcard",
+   "age": "Dark Age only",
+   "effect": "Domestic routes provide +2 Food, +2 Production. BUT: Can't train or buy Settlers nor settle new cities."
+  }
+ },
+ {
+  "id": "policy:laissez_faire",
+  "name": "Laissez-Faire",
+  "aliases": [
+   "POLICY_LAISSEZ_FAIRE"
+  ],
+  "summary": "Great Person card. +2 Great Merchant points per turn for every Bank and +4 Great Merchant points per turn for every Stock Exchange. +2 Great Admiral points per turn for every Shipyard and +4 Great Admiral points per turn for every Seaport.",
+  "fields": {
+   "slot": "Great Person",
+   "requires": [
+    "Capitalism"
+   ],
+   "effect": "+2 Great Merchant points per turn for every Bank and +4 Great Merchant points per turn for every Stock Exchange. +2 Great Admiral points per turn for every Shipyard and +4 Great Admiral points per turn for every Seaport."
+  }
+ },
+ {
+  "id": "policy:land_surveyors",
+  "name": "Land Surveyors",
+  "aliases": [
+   "POLICY_LAND_SURVEYORS"
+  ],
+  "summary": "Economic card. Reduces the cost of purchasing a tile by 20%.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Early Empire"
+   ],
+   "obsoleted_by": [
+    "Expropriation"
+   ],
+   "effect": "Reduces the cost of purchasing a tile by 20%."
+  }
+ },
+ {
+  "id": "policy:letters_of_marque",
+  "name": "Letters of Marque",
+  "aliases": [
+   "POLICY_LETTERS_OF_MARQUE"
+  ],
+  "summary": "Wildcard card. Naval Raiders: +100% Production, +2 Movement. Yields doubled from plundering Trade Routes. BUT: Trade Route yields -50%.",
+  "fields": {
+   "slot": "Wildcard",
+   "age": "Dark Age only",
+   "effect": "Naval Raiders: +100% Production, +2 Movement. Yields doubled from plundering Trade Routes. BUT: Trade Route yields -50%."
+  }
+ },
+ {
+  "id": "policy:levee_en_masse",
+  "name": "Levée en Masse",
+  "aliases": [
+   "POLICY_LEVEE_EN_MASSE"
+  ],
+  "summary": "Military card. Unit maintenance cost reduced by 2 Gold per turn, per unit.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Mobilization"
+   ],
+   "effect": "Unit maintenance cost reduced by 2 Gold per turn, per unit."
+  }
+ },
+ {
+  "id": "policy:liberalism",
+  "name": "Liberalism",
+  "aliases": [
+   "POLICY_LIBERALISM"
+  ],
+  "summary": "Economic card. +1 Amenity to all cities with at least 2 specialty districts.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "The Enlightenment"
+   ],
+   "effect": "+1 Amenity to all cities with at least 2 specialty districts."
+  }
+ },
+ {
+  "id": "policy:lightning_warfare",
+  "name": "Lightning Warfare",
+  "aliases": [
+   "POLICY_LIGHTNING_WARFARE"
+  ],
+  "summary": "Military card. +50% Production for all heavy and light cavalry units.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Ideology"
+   ],
+   "effect": "+50% Production for all heavy and light cavalry units."
+  }
+ },
+ {
+  "id": "policy:limes",
+  "name": "Limes",
+  "aliases": [
+   "POLICY_LIMES"
+  ],
+  "summary": "Military card. +100% Production toward defensive buildings.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Defensive Tactics"
+   ],
+   "obsoleted_by": [
+    "Lightning Warfare"
+   ],
+   "effect": "+100% Production toward defensive buildings."
+  }
+ },
+ {
+  "id": "policy:limitanei",
+  "name": "Limitanei",
+  "aliases": [
+   "POLICY_LIMITANEI"
+  ],
+  "summary": "Military card. +2 Loyalty per turn for cities with a garrisoned unit.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Early Empire"
+   ],
+   "effect": "+2 Loyalty per turn for cities with a garrisoned unit."
+  }
+ },
+ {
+  "id": "policy:literary_tradition",
+  "name": "Literary Tradition",
+  "aliases": [
+   "POLICY_LITERARY_TRADITION"
+  ],
+  "summary": "Great Person card. +2 Great Writer points per turn.",
+  "fields": {
+   "slot": "Great Person",
+   "requires": [
+    "Drama and Poetry"
+   ],
+   "effect": "+2 Great Writer points per turn."
+  }
+ },
+ {
+  "id": "policy:logistics",
+  "name": "Logistics",
+  "aliases": [
+   "POLICY_LOGISTICS"
+  ],
+  "summary": "Military card. +1 Movement if starting turn in friendly territory.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Mercantilism"
+   ],
+   "effect": "+1 Movement if starting turn in friendly territory."
+  }
+ },
+ {
+  "id": "policy:machiavellianism",
+  "name": "Machiavellianism",
+  "aliases": [
+   "POLICY_MACHIAVELLIANISM"
+  ],
+  "summary": "Diplomatic card. +50% Production toward Spies. Spy operations take 25% less time.",
+  "fields": {
+   "slot": "Diplomatic",
+   "requires": [
+    "Diplomatic Service"
+   ],
+   "effect": "+50% Production toward Spies. Spy operations take 25% less time."
+  }
+ },
+ {
+  "id": "policy:maneuver",
+  "name": "Maneuver",
+  "aliases": [
+   "POLICY_MANEUVER"
+  ],
+  "summary": "Military card. +50% Production toward Ancient and Classical era heavy and light cavalry units.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Military Tradition"
+   ],
+   "obsoleted_by": [
+    "Chivalry",
+    "Lightning Warfare"
+   ],
+   "effect": "+50% Production toward Ancient and Classical era heavy and light cavalry units."
+  }
+ },
+ {
+  "id": "policy:maritime_industries",
+  "name": "Maritime Industries",
+  "aliases": [
+   "POLICY_MARITIME_INDUSTRIES"
+  ],
+  "summary": "Military card. +100% Production toward Ancient and Classical era naval units.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Foreign Trade"
+   ],
+   "obsoleted_by": [
+    "Press Gangs",
+    "International Waters"
+   ],
+   "effect": "+100% Production toward Ancient and Classical era naval units."
+  }
+ },
+ {
+  "id": "policy:market_economy",
+  "name": "Market Economy",
+  "aliases": [
+   "POLICY_MARKET_ECONOMY"
+  ],
+  "summary": "Economic card. Your international Trade Routes provide +1 Gold per Luxury and Strategic resource improved at the destination, as well as +2 Culture and +2 Science.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Capitalism"
+   ],
+   "effect": "Your international Trade Routes provide +1 Gold per Luxury and Strategic resource improved at the destination, as well as +2 Culture and +2 Science."
+  }
+ },
+ {
+  "id": "policy:martial_law",
+  "name": "Martial Law",
+  "aliases": [
+   "POLICY_MARTIAL_LAW"
+  ],
+  "summary": "Wildcard card. Accumulate 25% less war weariness than usual. Cities with a garrisoned unit get +4 Loyalty per turn.",
+  "fields": {
+   "slot": "Wildcard",
+   "requires": [
+    "Totalitarianism"
+   ],
+   "effect": "Accumulate 25% less war weariness than usual. Cities with a garrisoned unit get +4 Loyalty per turn."
+  }
+ },
+ {
+  "id": "policy:medina_quarter",
+  "name": "Medina Quarter",
+  "aliases": [
+   "POLICY_MEDINA_QUARTER"
+  ],
+  "summary": "Economic card. +2 Housing in all cities with at least 3 specialty districts.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Medieval Faires"
+   ],
+   "obsoleted_by": [
+    "New Deal"
+   ],
+   "effect": "+2 Housing in all cities with at least 3 specialty districts."
+  }
+ },
+ {
+  "id": "policy:merchant_confederation",
+  "name": "Merchant Confederation",
+  "aliases": [
+   "POLICY_MERCHANT_CONFEDERATION"
+  ],
+  "summary": "Diplomatic card. +1 Gold from each of your Envoys at city-states.",
+  "fields": {
+   "slot": "Diplomatic",
+   "requires": [
+    "Medieval Faires"
+   ],
+   "effect": "+1 Gold from each of your Envoys at city-states."
+  }
+ },
+ {
+  "id": "policy:military_first",
+  "name": "Military First",
+  "aliases": [
+   "POLICY_MILITARY_FIRST"
+  ],
+  "summary": "Military card. +50% Production toward all melee, anti-cavalry, and ranged units.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Rapid Deployment"
+   ],
+   "effect": "+50% Production toward all melee, anti-cavalry, and ranged units."
+  }
+ },
+ {
+  "id": "policy:military_organization",
+  "name": "Military Organization",
+  "aliases": [
+   "POLICY_MILITARY_ORGANIZATION"
+  ],
+  "summary": "Great Person card. +2 Great General points per turn for every Armory and +4 Great General points per turn for every Military Academy. Great Generals receive +2 Movement.",
+  "fields": {
+   "slot": "Great Person",
+   "requires": [
+    "Scorched Earth"
+   ],
+   "effect": "+2 Great General points per turn for every Armory and +4 Great General points per turn for every Military Academy. Great Generals receive +2 Movement."
+  }
+ },
+ {
+  "id": "policy:military_research",
+  "name": "Military Research",
+  "aliases": [
+   "POLICY_MILITARY_RESEARCH"
+  ],
+  "summary": "Military card. Military Academies, Seaports, and Renaissance Walls generate +2 Science.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Urbanization"
+   ],
+   "obsoleted_by": [
+    "Integrated Space Cell"
+   ],
+   "effect": "Military Academies, Seaports, and Renaissance Walls generate +2 Science."
+  }
+ },
+ {
+  "id": "policy:monasticism",
+  "name": "Monasticism",
+  "aliases": [
+   "POLICY_MONASTICISM"
+  ],
+  "summary": "Wildcard card. +75% Science in cities with a Holy Site. BUT: -25% Culture in all cities.",
+  "fields": {
+   "slot": "Wildcard",
+   "age": "Dark Age only",
+   "effect": "+75% Science in cities with a Holy Site. BUT: -25% Culture in all cities."
+  }
+ },
+ {
+  "id": "policy:music_censorship",
+  "name": "Music Censorship",
+  "aliases": [
+   "POLICY_MUSIC_CENSORSHIP"
+  ],
+  "summary": "Diplomatic card. Rock Bands from other players may not enter your territory. -1 Amenity in all of your cities with 10 or more Citizen Population.",
+  "fields": {
+   "slot": "Diplomatic",
+   "requires": [
+    "Space Race"
+   ],
+   "effect": "Rock Bands from other players may not enter your territory. -1 Amenity in all of your cities with 10 or more Citizen Population."
+  }
+ },
+ {
+  "id": "policy:national_identity",
+  "name": "National Identity",
+  "aliases": [
+   "POLICY_NATIONAL_IDENTITY"
+  ],
+  "summary": "Military card. Units have 50% less Combat Strength reduction from being injured.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Nationalism"
+   ],
+   "effect": "Units have 50% less Combat Strength reduction from being injured."
+  }
+ },
+ {
+  "id": "policy:native_conquest",
+  "name": "Native Conquest",
+  "aliases": [
+   "POLICY_NATIVE_CONQUEST"
+  ],
+  "summary": "Military card. Combat victories over units from earlier eras provide Gold equal to 50% of the Combat Strength of the defeated unit. (on Standard Speed)",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Colonialism"
+   ],
+   "effect": "Combat victories over units from earlier eras provide Gold equal to 50% of the Combat Strength of the defeated unit. (on Standard Speed)"
+  }
+ },
+ {
+  "id": "policy:natural_philosophy",
+  "name": "Natural Philosophy",
+  "aliases": [
+   "POLICY_NATURAL_PHILOSOPHY"
+  ],
+  "summary": "Economic card. +100% Campus district adjacency bonuses.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Recorded History"
+   ],
+   "obsoleted_by": [
+    "Five-Year Plan"
+   ],
+   "effect": "+100% Campus district adjacency bonuses."
+  }
+ },
+ {
+  "id": "policy:naval_infrastructure",
+  "name": "Naval Infrastructure",
+  "aliases": [
+   "POLICY_NAVAL_INFRASTRUCTURE"
+  ],
+  "summary": "Economic card. +100% Harbor district adjacency bonuses.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Naval Tradition"
+   ],
+   "obsoleted_by": [
+    "Economic Union"
+   ],
+   "effect": "+100% Harbor district adjacency bonuses."
+  }
+ },
+ {
+  "id": "policy:navigation",
+  "name": "Navigation",
+  "aliases": [
+   "POLICY_NAVIGATION"
+  ],
+  "summary": "Great Person card. +2 Great Admiral points per turn.",
+  "fields": {
+   "slot": "Great Person",
+   "requires": [
+    "Naval Tradition"
+   ],
+   "effect": "+2 Great Admiral points per turn."
+  }
+ },
+ {
+  "id": "policy:new_deal",
+  "name": "New Deal",
+  "aliases": [
+   "POLICY_NEW_DEAL"
+  ],
+  "summary": "Economic card. +4 Housing and +2 Amenities to all cities with at least 3 specialty districts.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Suffrage"
+   ],
+   "effect": "+4 Housing and +2 Amenities to all cities with at least 3 specialty districts."
+  }
+ },
+ {
+  "id": "policy:nobel_prize",
+  "name": "Science Foundations",
+  "aliases": [
+   "POLICY_NOBEL_PRIZE"
+  ],
+  "summary": "Great Person card. +2 Great Scientist points per turn for every University and +4 Great Scientist points per turn for every Research Lab. +2 Great Engineer points per turn for every Factory and +4 Great Engineer points per turn for every Power Plant",
+  "fields": {
+   "slot": "Great Person",
+   "requires": [
+    "Nuclear Program"
+   ],
+   "effect": "+2 Great Scientist points per turn for every University and +4 Great Scientist points per turn for every Research Lab. +2 Great Engineer points per turn for every Factory and +4 Great Engineer points per turn for every Power Plant"
+  }
+ },
+ {
+  "id": "policy:nuclear_espionage",
+  "name": "Nuclear Espionage",
+  "aliases": [
+   "POLICY_NUCLEAR_ESPIONAGE"
+  ],
+  "summary": "Diplomatic card. Spies who steal a tech boost without being detected gain an extra boost.",
+  "fields": {
+   "slot": "Diplomatic",
+   "requires": [
+    "Nuclear Program"
+   ],
+   "effect": "Spies who steal a tech boost without being detected gain an extra boost."
+  }
+ },
+ {
+  "id": "policy:online_communities",
+  "name": "Online Communities",
+  "aliases": [
+   "POLICY_ONLINE_COMMUNITIES"
+  ],
+  "summary": "Economic card. +50% Tourism output to civilizations to which you have a Trade Route.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Social Media"
+   ],
+   "effect": "+50% Tourism output to civilizations to which you have a Trade Route."
+  }
+ },
+ {
+  "id": "policy:praetorium",
+  "name": "Praetorium",
+  "aliases": [
+   "POLICY_PRAETORIUM"
+  ],
+  "summary": "Diplomatic card. Governors provide +2 Loyalty per turn to their city.",
+  "fields": {
+   "slot": "Diplomatic",
+   "requires": [
+    "Recorded History"
+   ],
+   "obsoleted_by": [
+    "Communications Office"
+   ],
+   "effect": "Governors provide +2 Loyalty per turn to their city."
+  }
+ },
+ {
+  "id": "policy:press_gangs",
+  "name": "Press Gangs",
+  "aliases": [
+   "POLICY_PRESS_GANGS"
+  ],
+  "summary": "Military card. 100% Production toward Industrial era and earlier naval units.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Exploration"
+   ],
+   "obsoleted_by": [
+    "International Waters"
+   ],
+   "effect": "100% Production toward Industrial era and earlier naval units."
+  }
+ },
+ {
+  "id": "policy:professional_army",
+  "name": "Professional Army",
+  "aliases": [
+   "POLICY_PROFESSIONAL_ARMY"
+  ],
+  "summary": "Military card. 50% Gold discount on all unit upgrades.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Mercenaries"
+   ],
+   "obsoleted_by": [
+    "Force Modernization"
+   ],
+   "effect": "50% Gold discount on all unit upgrades."
+  }
+ },
+ {
+  "id": "policy:propaganda",
+  "name": "Propaganda",
+  "aliases": [
+   "POLICY_PROPAGANDA"
+  ],
+  "summary": "Military card. Accumulate 25% less war weariness than usual.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Mass Media"
+   ],
+   "effect": "Accumulate 25% less war weariness than usual."
+  }
+ },
+ {
+  "id": "policy:public_transport",
+  "name": "Public Transport",
+  "aliases": [
+   "POLICY_PUBLIC_TRANSPORT"
+  ],
+  "summary": "Economic card. Neighborhoods with Charming appeal receive +3 Food and +1 Production, Breathtaking Neighborhoods are granted an additional +1 of each yield. All Neighborhoods receive +1 Gold.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Urbanization"
+   ],
+   "effect": "Neighborhoods with Charming appeal receive +3 Food and +1 Production, Breathtaking Neighborhoods are granted an additional +1 of each yield. All Neighborhoods receive +1 Gold."
+  }
+ },
+ {
+  "id": "policy:public_works",
+  "name": "Public Works",
+  "aliases": [
+   "POLICY_PUBLIC_WORKS"
+  ],
+  "summary": "Economic card. +30% Production toward Builders, and newly trained Builders gain 2 extra build actions.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Civil Engineering"
+   ],
+   "effect": "+30% Production toward Builders, and newly trained Builders gain 2 extra build actions."
+  }
+ },
+ {
+  "id": "policy:raid",
+  "name": "Raid",
+  "aliases": [
+   "POLICY_RAID"
+  ],
+  "summary": "Military card. Yields gained from pillaging and coastal raids are +50%.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Military Training"
+   ],
+   "obsoleted_by": [
+    "Total War"
+   ],
+   "effect": "Yields gained from pillaging and coastal raids are +50%."
+  }
+ },
+ {
+  "id": "policy:raj",
+  "name": "Raj",
+  "aliases": [
+   "POLICY_RAJ"
+  ],
+  "summary": "Diplomatic card. +2 Science, Culture, Faith, and Gold from each city-state you are Suzerain of. Trade Routes to City-States receive +2 Gold.",
+  "fields": {
+   "slot": "Diplomatic",
+   "requires": [
+    "Colonialism"
+   ],
+   "effect": "+2 Science, Culture, Faith, and Gold from each city-state you are Suzerain of. Trade Routes to City-States receive +2 Gold."
+  }
+ },
+ {
+  "id": "policy:rationalism",
+  "name": "Rationalism",
+  "aliases": [
+   "POLICY_RATIONALISM"
+  ],
+  "summary": "Economic card. Extra Science from buildings in Campuses: +50% if city Citizen population is 15 or higher, +50% if district has at least +4 adjacency bonus.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "The Enlightenment"
+   ],
+   "effect": "Extra Science from buildings in Campuses: +50% if city Citizen population is 15 or higher, +50% if district has at least +4 adjacency bonus."
+  }
+ },
+ {
+  "id": "policy:religious_orders",
+  "name": "Religious Orders",
+  "aliases": [
+   "POLICY_RELIGIOUS_ORDERS"
+  ],
+  "summary": "Economic card. All Religious units +5 Religious Strength in theological combat.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Reformed Church"
+   ],
+   "effect": "All Religious units +5 Religious Strength in theological combat."
+  }
+ },
+ {
+  "id": "policy:resource_management",
+  "name": "Resource Management",
+  "aliases": [
+   "POLICY_RESOURCE_MANAGEMENT"
+  ],
+  "summary": "Military card. All improved Aluminum and Oil resources yield 1 additional resource per turn.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Conservation"
+   ],
+   "effect": "All improved Aluminum and Oil resources yield 1 additional resource per turn."
+  }
+ },
+ {
+  "id": "policy:retainers",
+  "name": "Retainers",
+  "aliases": [
+   "POLICY_RETAINERS"
+  ],
+  "summary": "Military card. +1 Amenity for cities with a garrisoned unit.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Civil Service"
+   ],
+   "obsoleted_by": [
+    "Propaganda"
+   ],
+   "effect": "+1 Amenity for cities with a garrisoned unit."
+  }
+ },
+ {
+  "id": "policy:retinues",
+  "name": "Retinues",
+  "aliases": [
+   "POLICY_RETINUES"
+  ],
+  "summary": "Military card. 50% resource discount on all unit upgrades.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Mercenaries"
+   ],
+   "obsoleted_by": [
+    "Force Modernization"
+   ],
+   "effect": "50% resource discount on all unit upgrades."
+  }
+ },
+ {
+  "id": "policy:revelation",
+  "name": "Revelation",
+  "aliases": [
+   "POLICY_REVELATION"
+  ],
+  "summary": "Great Person card. +2 Great Prophet points per turn.",
+  "fields": {
+   "slot": "Great Person",
+   "requires": [
+    "Mysticism"
+   ],
+   "obsoleted_by": [
+    "Invention"
+   ],
+   "effect": "+2 Great Prophet points per turn."
+  }
+ },
+ {
+  "id": "policy:robber_barons",
+  "name": "Robber Barons",
+  "aliases": [
+   "POLICY_ROBBER_BARONS"
+  ],
+  "summary": "Wildcard card. +50% Gold in cities with a Stock Exchange. +25% Production in cities with a Factory. BUT: -2 Amenities in all cities.",
+  "fields": {
+   "slot": "Wildcard",
+   "age": "Dark Age only",
+   "effect": "+50% Gold in cities with a Stock Exchange. +25% Production in cities with a Factory. BUT: -2 Amenities in all cities."
+  }
+ },
+ {
+  "id": "policy:rogue_state",
+  "name": "Rogue State",
+  "aliases": [
+   "POLICY_ROGUE_STATE"
+  ],
+  "summary": "Wildcard card. +50% Production to nuclear program projects and Nuclear Devices. BUT: Earn no influence toward new Envoys.",
+  "fields": {
+   "slot": "Wildcard",
+   "age": "Dark Age only",
+   "effect": "+50% Production to nuclear program projects and Nuclear Devices. BUT: Earn no influence toward new Envoys."
+  }
+ },
+ {
+  "id": "policy:satellite_broadcasts",
+  "name": "Satellite Broadcasts",
+  "aliases": [
+   "POLICY_SATELLITE_BROADCASTS"
+  ],
+  "summary": "Economic card. +200% Tourism from Great Works of Music.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Space Race"
+   ],
+   "effect": "+200% Tourism from Great Works of Music."
+  }
+ },
+ {
+  "id": "policy:scripture",
+  "name": "Scripture",
+  "aliases": [
+   "POLICY_SCRIPTURE"
+  ],
+  "summary": "Economic card. +100% Holy Site adjacency bonuses.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Theology"
+   ],
+   "effect": "+100% Holy Site adjacency bonuses."
+  }
+ },
+ {
+  "id": "policy:second_strike_capability",
+  "name": "Second Strike Capability",
+  "aliases": [
+   "POLICY_SECOND_STRIKE_CAPABILITY"
+  ],
+  "summary": "Military card. Nuclear Device maintenance reduced by 50% Gold per turn.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Cold War"
+   ],
+   "effect": "Nuclear Device maintenance reduced by 50% Gold per turn."
+  }
+ },
+ {
+  "id": "policy:serfdom",
+  "name": "Serfdom",
+  "aliases": [
+   "POLICY_SERFDOM"
+  ],
+  "summary": "Economic card. Newly trained Builders gain 2 extra build actions.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Feudalism"
+   ],
+   "obsoleted_by": [
+    "Public Works"
+   ],
+   "effect": "Newly trained Builders gain 2 extra build actions."
+  }
+ },
+ {
+  "id": "policy:simultaneum",
+  "name": "Simultaneum",
+  "aliases": [
+   "POLICY_SIMULTANEUM"
+  ],
+  "summary": "Economic card. Extra Faith from buildings in Holy Sites: +50% if city Citizen population is 15 or higher, +50% if district has at least +4 adjacency bonus.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Reformed Church"
+   ],
+   "effect": "Extra Faith from buildings in Holy Sites: +50% if city Citizen population is 15 or higher, +50% if district has at least +4 adjacency bonus."
+  }
+ },
+ {
+  "id": "policy:skyscrapers",
+  "name": "Skyscrapers",
+  "aliases": [
+   "POLICY_SKYSCRAPERS"
+  ],
+  "summary": "Economic card. +15% Production toward all wonders.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Civil Engineering"
+   ],
+   "effect": "+15% Production toward all wonders."
+  }
+ },
+ {
+  "id": "policy:sports_media",
+  "name": "Sports Media",
+  "aliases": [
+   "POLICY_SPORTS_MEDIA"
+  ],
+  "summary": "Economic card. +100% Theater Square district adjacency bonuses, and Stadiums generate +1 Amenity.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Professional Sports"
+   ],
+   "effect": "+100% Theater Square district adjacency bonuses, and Stadiums generate +1 Amenity."
+  }
+ },
+ {
+  "id": "policy:strategic_air_force",
+  "name": "Strategic Air Force",
+  "aliases": [
+   "POLICY_STRATEGIC_AIR_FORCE"
+  ],
+  "summary": "Military card. +50% Production toward all air units and toward Carriers.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Globalization"
+   ],
+   "effect": "+50% Production toward all air units and toward Carriers."
+  }
+ },
+ {
+  "id": "policy:strategos",
+  "name": "Strategos",
+  "aliases": [
+   "POLICY_STRATEGOS"
+  ],
+  "summary": "Great Person card. +2 Great General points per turn.",
+  "fields": {
+   "slot": "Great Person",
+   "requires": [
+    "Military Tradition"
+   ],
+   "obsoleted_by": [
+    "Military Organization"
+   ],
+   "effect": "+2 Great General points per turn."
+  }
+ },
+ {
+  "id": "policy:survey",
+  "name": "Survey",
+  "aliases": [
+   "POLICY_SURVEY"
+  ],
+  "summary": "Military card. Double experience for recon units.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Code of Laws"
+   ],
+   "obsoleted_by": [
+    "Native Conquest"
+   ],
+   "effect": "Double experience for recon units."
+  }
+ },
+ {
+  "id": "policy:symphonies",
+  "name": "Symphonies",
+  "aliases": [
+   "POLICY_SYMPHONIES"
+  ],
+  "summary": "Great Person card. +4 Great Musician points per turn. +4 Great Musician points per turn for every Broadcast Center.",
+  "fields": {
+   "slot": "Great Person",
+   "requires": [
+    "Opera and Ballet"
+   ],
+   "effect": "+4 Great Musician points per turn. +4 Great Musician points per turn for every Broadcast Center."
+  }
+ },
+ {
+  "id": "policy:third_alternative",
+  "name": "Third Alternative",
+  "aliases": [
+   "POLICY_THIRD_ALTERNATIVE"
+  ],
+  "summary": "Military card. +2 Culture and +4 Gold from each Research Lab, Military Academy, Coal Power Plant, Oil Power Plant, and Nuclear Power Plant.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Totalitarianism"
+   ],
+   "effect": "+2 Culture and +4 Gold from each Research Lab, Military Academy, Coal Power Plant, Oil Power Plant, and Nuclear Power Plant."
+  }
+ },
+ {
+  "id": "policy:total_war",
+  "name": "Total War",
+  "aliases": [
+   "POLICY_TOTAL_WAR"
+  ],
+  "summary": "Military card. Yields gained from pillaging, coastal raids, and plundering Trade Routes are +50%.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Scorched Earth"
+   ],
+   "effect": "Yields gained from pillaging, coastal raids, and plundering Trade Routes are +50%."
+  }
+ },
+ {
+  "id": "policy:town_charters",
+  "name": "Town Charters",
+  "aliases": [
+   "POLICY_TOWN_CHARTERS"
+  ],
+  "summary": "Economic card. +100% Commercial Hub district adjacency bonuses.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Guilds"
+   ],
+   "obsoleted_by": [
+    "Economic Union"
+   ],
+   "effect": "+100% Commercial Hub district adjacency bonuses."
+  }
+ },
+ {
+  "id": "policy:trade_confederation",
+  "name": "Trade Confederation",
+  "aliases": [
+   "POLICY_TRADE_CONFEDERATION"
+  ],
+  "summary": "Economic card. +1 Culture and +1 Science from international Trade Routes.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Mercenaries"
+   ],
+   "obsoleted_by": [
+    "Market Economy"
+   ],
+   "effect": "+1 Culture and +1 Science from international Trade Routes."
+  }
+ },
+ {
+  "id": "policy:traveling_merchants",
+  "name": "Traveling Merchants",
+  "aliases": [
+   "POLICY_TRAVELING_MERCHANTS"
+  ],
+  "summary": "Great Person card. +2 Great Merchant points per turn.",
+  "fields": {
+   "slot": "Great Person",
+   "requires": [
+    "Guilds"
+   ],
+   "obsoleted_by": [
+    "Laissez-Faire"
+   ],
+   "effect": "+2 Great Merchant points per turn."
+  }
+ },
+ {
+  "id": "policy:triangular_trade",
+  "name": "Triangular Trade",
+  "aliases": [
+   "POLICY_TRIANGULAR_TRADE"
+  ],
+  "summary": "Economic card. +4 Gold and +1 Faith from all Trade Routes.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Mercantilism"
+   ],
+   "obsoleted_by": [
+    "Ecommerce"
+   ],
+   "effect": "+4 Gold and +1 Faith from all Trade Routes."
+  }
+ },
+ {
+  "id": "policy:twilight_valor",
+  "name": "Twilight Valor",
+  "aliases": [
+   "POLICY_TWILIGHT_VALOR"
+  ],
+  "summary": "Wildcard card. +5 Combat Strength for all melee attack units. BUT: Cannot heal outside your territory.",
+  "fields": {
+   "slot": "Wildcard",
+   "age": "Dark Age only",
+   "effect": "+5 Combat Strength for all melee attack units. BUT: Cannot heal outside your territory."
+  }
+ },
+ {
+  "id": "policy:urban_planning",
+  "name": "Urban Planning",
+  "aliases": [
+   "POLICY_URBAN_PLANNING"
+  ],
+  "summary": "Economic card. +1 Production in all cities.",
+  "fields": {
+   "slot": "Economic",
+   "requires": [
+    "Code of Laws"
+   ],
+   "obsoleted_by": [
+    "Rationalism"
+   ],
+   "effect": "+1 Production in all cities."
+  }
+ },
+ {
+  "id": "policy:veterancy",
+  "name": "Veterancy",
+  "aliases": [
+   "POLICY_VETERANCY"
+  ],
+  "summary": "Military card. +30% Production toward Encampment districts, Harbor districts, and buildings for these districts.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Military Training"
+   ],
+   "effect": "+30% Production toward Encampment districts, Harbor districts, and buildings for these districts."
+  }
+ },
+ {
+  "id": "policy:wars_of_religion",
+  "name": "Wars of Religion",
+  "aliases": [
+   "POLICY_WARS_OF_RELIGION"
+  ],
+  "summary": "Military card. +4 Combat Strength when a non-religious unit fights a civilization that follows another Religion.",
+  "fields": {
+   "slot": "Military",
+   "requires": [
+    "Reformed Church"
+   ],
+   "effect": "+4 Combat Strength when a non-religious unit fights a civilization that follows another Religion."
+  }
+ },
+ {
+  "id": "policy:wisselbanken",
+  "name": "Wisselbanken",
+  "aliases": [
+   "POLICY_WISSELBANKEN"
+  ],
+  "summary": "Diplomatic card. Your Trade Routes to an Ally's city or vassal city-state provide +2 Food and +2 Production for both cities. Alliance Points with all allies increase by an additional.25 per turn.",
+  "fields": {
+   "slot": "Diplomatic",
+   "requires": [
+    "Diplomatic Service"
+   ],
+   "effect": "Your Trade Routes to an Ally's city or vassal city-state provide +2 Food and +2 Production for both cities. Alliance Points with all allies increase by an additional.25 per turn."
+  }
+ }
+]

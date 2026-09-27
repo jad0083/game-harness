@@ -1,0 +1,2153 @@
+[
+ {
+  "id": "promotion:advanced_engines",
+  "name": "Advanced Engines",
+  "aliases": [
+   "PROMOTION_ADVANCED_ENGINES"
+  ],
+  "summary": "Naval Carrier tier 2: +1 Movement.",
+  "fields": {
+   "class": "Naval Carrier",
+   "tier": 2,
+   "requires": [
+    "Scout Planes",
+    "Hangar Deck"
+   ],
+   "effect": "+1 Movement."
+  }
+ },
+ {
+  "id": "promotion:advanced_rangefinding",
+  "name": "Advanced Rangefinding",
+  "aliases": [
+   "PROMOTION_ADVANCED_RANGEFINDING"
+  ],
+  "summary": "Siege tier 3: +10 Combat Strength vs. naval units.",
+  "fields": {
+   "class": "Siege",
+   "tier": 3,
+   "requires": [
+    "Shrapnel",
+    "Shells"
+   ],
+   "effect": "+10 Combat Strength vs. naval units."
+  }
+ },
+ {
+  "id": "promotion:album_cover_art",
+  "name": "Album Cover Art",
+  "aliases": [
+   "PROMOTION_ALBUM_COVER_ART"
+  ],
+  "summary": "Rock Band tier 1: Performs as if 1 level more experienced on wonder tiles.",
+  "fields": {
+   "class": "Rock Band",
+   "tier": 1,
+   "effect": "Performs as if 1 level more experienced on wonder tiles."
+  }
+ },
+ {
+  "id": "promotion:alpine",
+  "name": "Alpine",
+  "aliases": [
+   "PROMOTION_ALPINE"
+  ],
+  "summary": "Recon tier 1: Faster Movement on Hill terrain.",
+  "fields": {
+   "class": "Recon",
+   "tier": 1,
+   "effect": "Faster Movement on Hill terrain."
+  }
+ },
+ {
+  "id": "promotion:ambush",
+  "name": "Ambush",
+  "aliases": [
+   "PROMOTION_AMBUSH"
+  ],
+  "summary": "Recon tier 3: +20 Combat Strength in all situations.",
+  "fields": {
+   "class": "Recon",
+   "tier": 3,
+   "requires": [
+    "Guerrilla"
+   ],
+   "effect": "+20 Combat Strength in all situations."
+  }
+ },
+ {
+  "id": "promotion:amphibious",
+  "name": "Amphibious",
+  "aliases": [
+   "PROMOTION_AMPHIBIOUS"
+  ],
+  "summary": "Melee tier 2: No Combat Strength and Movement penalty when attacking from sea or river.",
+  "fields": {
+   "class": "Melee",
+   "tier": 2,
+   "requires": [
+    "Tortoise",
+    "Commando"
+   ],
+   "effect": "No Combat Strength and Movement penalty when attacking from sea or river."
+  }
+ },
+ {
+  "id": "promotion:arena_rock",
+  "name": "Arena Rock",
+  "aliases": [
+   "PROMOTION_ARENA_ROCK"
+  ],
+  "summary": "Rock Band tier 1: Performs as if 2 levels more experienced on Entertainment Complex district tiles.",
+  "fields": {
+   "class": "Rock Band",
+   "tier": 1,
+   "effect": "Performs as if 2 levels more experienced on Entertainment Complex district tiles."
+  }
+ },
+ {
+  "id": "promotion:armor_piercing",
+  "name": "Armor Piercing",
+  "aliases": [
+   "PROMOTION_ARMOR_PIERCING"
+  ],
+  "summary": "Heavy Cavalry tier 3: +7 Combat Strength against other heavy cavalry units.",
+  "fields": {
+   "class": "Heavy Cavalry",
+   "tier": 3,
+   "requires": [
+    "Marauding"
+   ],
+   "effect": "+7 Combat Strength against other heavy cavalry units."
+  }
+ },
+ {
+  "id": "promotion:arrow_storm",
+  "name": "Arrow Storm",
+  "aliases": [
+   "PROMOTION_ARROW_STORM"
+  ],
+  "summary": "Ranged tier 2: +7 Ranged Strength vs. land and naval units.",
+  "fields": {
+   "class": "Ranged",
+   "tier": 2,
+   "requires": [
+    "Volley"
+   ],
+   "effect": "+7 Ranged Strength vs. land and naval units."
+  }
+ },
+ {
+  "id": "promotion:auxiliary_ships",
+  "name": "Auxiliary Ships",
+  "aliases": [
+   "PROMOTION_AUXILIARY_SHIPS"
+  ],
+  "summary": "Naval Melee tier 3: Heal outside of friendly territory.",
+  "fields": {
+   "class": "Naval Melee",
+   "tier": 3,
+   "requires": [
+    "Reinforced Hull",
+    "Rutter"
+   ],
+   "effect": "Heal outside of friendly territory."
+  }
+ },
+ {
+  "id": "promotion:barding",
+  "name": "Barding",
+  "aliases": [
+   "PROMOTION_BARDING"
+  ],
+  "summary": "Heavy Cavalry tier 1: +7 Combat Strength when defending vs. ranged attacks.",
+  "fields": {
+   "class": "Heavy Cavalry",
+   "tier": 1,
+   "effect": "+7 Combat Strength when defending vs. ranged attacks."
+  }
+ },
+ {
+  "id": "promotion:battlecry",
+  "name": "Battlecry",
+  "aliases": [
+   "PROMOTION_BATTLECRY"
+  ],
+  "summary": "Melee tier 1: +7 Combat Strength vs. melee and ranged units.",
+  "fields": {
+   "class": "Melee",
+   "tier": 1,
+   "effect": "+7 Combat Strength vs. melee and ranged units."
+  }
+ },
+ {
+  "id": "promotion:boarding",
+  "name": "Boarding",
+  "aliases": [
+   "PROMOTION_BOARDING"
+  ],
+  "summary": "Naval Raider tier 1: Obtain Gold from naval victories.",
+  "fields": {
+   "class": "Naval Raider",
+   "tier": 1,
+   "effect": "Obtain Gold from naval victories."
+  }
+ },
+ {
+  "id": "promotion:bombardment",
+  "name": "Bombardment",
+  "aliases": [
+   "PROMOTION_BOMBARDMENT"
+  ],
+  "summary": "Naval Ranged tier 1: +7 Combat Strength vs. district defenses.",
+  "fields": {
+   "class": "Naval Ranged",
+   "tier": 1,
+   "effect": "+7 Combat Strength vs. district defenses."
+  }
+ },
+ {
+  "id": "promotion:box_formation",
+  "name": "Box Formation",
+  "aliases": [
+   "PROMOTION_BOX_FORMATION"
+  ],
+  "summary": "Air Bomber tier 1: +7 Combat Strength when defending vs. fighter class units.",
+  "fields": {
+   "class": "Air Bomber",
+   "tier": 1,
+   "effect": "+7 Combat Strength when defending vs. fighter class units."
+  }
+ },
+ {
+  "id": "promotion:breakthrough",
+  "name": "Breakthrough",
+  "aliases": [
+   "PROMOTION_BREAKTHROUGH"
+  ],
+  "summary": "Heavy Cavalry tier 4: +1 additional attack per turn if Movement allows.",
+  "fields": {
+   "class": "Heavy Cavalry",
+   "tier": 4,
+   "requires": [
+    "Armor Piercing",
+    "Reactive Armor"
+   ],
+   "effect": "+1 additional attack per turn if Movement allows."
+  }
+ },
+ {
+  "id": "promotion:camouflage",
+  "name": "Camouflage",
+  "aliases": [
+   "PROMOTION_CAMOUFLAGE"
+  ],
+  "summary": "Recon tier 4: Only adjacent enemy units can reveal this unit.",
+  "fields": {
+   "class": "Recon",
+   "tier": 4,
+   "requires": [
+    "Spyglass",
+    "Ambush"
+   ],
+   "effect": "Only adjacent enemy units can reveal this unit."
+  }
+ },
+ {
+  "id": "promotion:caparison",
+  "name": "Caparison",
+  "aliases": [
+   "PROMOTION_CAPARISON"
+  ],
+  "summary": "Light Cavalry tier 1: +5 Combat Strength vs. anti-cavalry.",
+  "fields": {
+   "class": "Light Cavalry",
+   "tier": 1,
+   "effect": "+5 Combat Strength vs. anti-cavalry."
+  }
+ },
+ {
+  "id": "promotion:chaplain",
+  "name": "Chaplain",
+  "aliases": [
+   "PROMOTION_CHAPLAIN"
+  ],
+  "summary": "Religious Apostle tier 1: Apostle operates as a Medic, providing extra healing to units within 1 tile.",
+  "fields": {
+   "class": "Religious Apostle",
+   "tier": 1,
+   "effect": "Apostle operates as a Medic, providing extra healing to units within 1 tile."
+  }
+ },
+ {
+  "id": "promotion:charge",
+  "name": "Charge",
+  "aliases": [
+   "PROMOTION_CHARGE"
+  ],
+  "summary": "Heavy Cavalry tier 1: +10 Combat Strength vs. fortified defender.",
+  "fields": {
+   "class": "Heavy Cavalry",
+   "tier": 1,
+   "effect": "+10 Combat Strength vs. fortified defender."
+  }
+ },
+ {
+  "id": "promotion:choke_points",
+  "name": "Choke Points",
+  "aliases": [
+   "PROMOTION_CHOKE_POINTS"
+  ],
+  "summary": "Anti Cavalry tier 3: +7 Combat Strength when defending in Woods, Jungle, Hills, or Marsh.",
+  "fields": {
+   "class": "Anti Cavalry",
+   "tier": 3,
+   "requires": [
+    "Square",
+    "Schiltron"
+   ],
+   "effect": "+7 Combat Strength when defending in Woods, Jungle, Hills, or Marsh."
+  }
+ },
+ {
+  "id": "promotion:close_air_support",
+  "name": "Close Air Support",
+  "aliases": [
+   "PROMOTION_CLOSE_AIR_SUPPORT"
+  ],
+  "summary": "Air Bomber tier 2: +12 Combat Strength vs. land units.",
+  "fields": {
+   "class": "Air Bomber",
+   "tier": 2,
+   "requires": [
+    "Evasive Maneuvers",
+    "Box Formation"
+   ],
+   "effect": "+12 Combat Strength vs. land units."
+  }
+ },
+ {
+  "id": "promotion:cockpit_armor",
+  "name": "Cockpit Armor",
+  "aliases": [
+   "PROMOTION_COCKPIT_ARMOR"
+  ],
+  "summary": "Air Fighter tier 1: +7 Combat Strength when defending vs. anti-air.",
+  "fields": {
+   "class": "Air Fighter",
+   "tier": 1,
+   "effect": "+7 Combat Strength when defending vs. anti-air."
+  }
+ },
+ {
+  "id": "promotion:coincidence_rangefinding",
+  "name": "Coincidence Rangefinding",
+  "aliases": [
+   "PROMOTION_COINCIDENCE_RANGEFINDING"
+  ],
+  "summary": "Naval Ranged tier 4: +1 Range.",
+  "fields": {
+   "class": "Naval Ranged",
+   "tier": 4,
+   "requires": [
+    "Supply Fleet",
+    "Proximity Fuses"
+   ],
+   "effect": "+1 Range."
+  }
+ },
+ {
+  "id": "promotion:commando",
+  "name": "Commando",
+  "aliases": [
+   "PROMOTION_COMMANDO"
+  ],
+  "summary": "Melee tier 2: +1 Movement. Can scale Cliff walls.",
+  "fields": {
+   "class": "Melee",
+   "tier": 2,
+   "requires": [
+    "Battlecry",
+    "Amphibious"
+   ],
+   "effect": "+1 Movement. Can scale Cliff walls."
+  }
+ },
+ {
+  "id": "promotion:convoy",
+  "name": "Convoy",
+  "aliases": [
+   "PROMOTION_CONVOY"
+  ],
+  "summary": "Naval Melee tier 3: +10 Combat Strength when in a formation.",
+  "fields": {
+   "class": "Naval Melee",
+   "tier": 3,
+   "requires": [
+    "Reinforced Hull",
+    "Rutter"
+   ],
+   "effect": "+10 Combat Strength when in a formation."
+  }
+ },
+ {
+  "id": "promotion:coursers",
+  "name": "Coursers",
+  "aliases": [
+   "PROMOTION_COURSERS"
+  ],
+  "summary": "Light Cavalry tier 1: +5 Combat Strength when attacking ranged and siege units.",
+  "fields": {
+   "class": "Light Cavalry",
+   "tier": 1,
+   "effect": "+5 Combat Strength when attacking ranged and siege units."
+  }
+ },
+ {
+  "id": "promotion:creeping_attack",
+  "name": "Creeping Attack",
+  "aliases": [
+   "PROMOTION_CREEPING_ATTACK"
+  ],
+  "summary": "Naval Melee tier 4: +14 Combat Strength vs. naval raider units.",
+  "fields": {
+   "class": "Naval Melee",
+   "tier": 4,
+   "requires": [
+    "Auxiliary Ships",
+    "Convoy"
+   ],
+   "effect": "+14 Combat Strength vs. naval raider units."
+  }
+ },
+ {
+  "id": "promotion:crew_weapons",
+  "name": "Crew Weapons",
+  "aliases": [
+   "PROMOTION_CREW_WEAPONS"
+  ],
+  "summary": "Siege tier 1: +7 Combat Strength when defending.",
+  "fields": {
+   "class": "Siege",
+   "tier": 1,
+   "effect": "+7 Combat Strength when defending."
+  }
+ },
+ {
+  "id": "promotion:debater",
+  "name": "Debater",
+  "aliases": [
+   "PROMOTION_DEBATER"
+  ],
+  "summary": "Religious Apostle tier 1: +20 Religious Strength in Theological Combat.",
+  "fields": {
+   "class": "Religious Apostle",
+   "tier": 1,
+   "effect": "+20 Religious Strength in Theological Combat."
+  }
+ },
+ {
+  "id": "promotion:deck_crews",
+  "name": "Deck Crews",
+  "aliases": [
+   "PROMOTION_DECK_CREWS"
+  ],
+  "summary": "Naval Carrier tier 3: Can heal after attacking.",
+  "fields": {
+   "class": "Naval Carrier",
+   "tier": 3,
+   "requires": [
+    "Advanced Engines",
+    "Folding Wings"
+   ],
+   "effect": "Can heal after attacking."
+  }
+ },
+ {
+  "id": "promotion:depredation",
+  "name": "Depredation",
+  "aliases": [
+   "PROMOTION_DEPREDATION"
+  ],
+  "summary": "Light Cavalry tier 2: Pillaging costs only 1 Movement point.",
+  "fields": {
+   "class": "Light Cavalry",
+   "tier": 2,
+   "requires": [
+    "Caparison"
+   ],
+   "effect": "Pillaging costs only 1 Movement point."
+  }
+ },
+ {
+  "id": "promotion:dogfighting",
+  "name": "Dogfighting",
+  "aliases": [
+   "PROMOTION_DOGFIGHTING"
+  ],
+  "summary": "Air Fighter tier 1: +7 Combat Strength vs. fighter class units.",
+  "fields": {
+   "class": "Air Fighter",
+   "tier": 1,
+   "effect": "+7 Combat Strength vs. fighter class units."
+  }
+ },
+ {
+  "id": "promotion:double_envelopment",
+  "name": "Double Envelopment",
+  "aliases": [
+   "PROMOTION_DOUBLE_ENVELOPMENT"
+  ],
+  "summary": "Light Cavalry tier 2: 2x flanking bonus.",
+  "fields": {
+   "class": "Light Cavalry",
+   "tier": 2,
+   "requires": [
+    "Coursers"
+   ],
+   "effect": "2x flanking bonus."
+  }
+ },
+ {
+  "id": "promotion:drop_tanks",
+  "name": "Drop Tanks",
+  "aliases": [
+   "PROMOTION_DROP_TANKS"
+  ],
+  "summary": "Air Fighter tier 4: +2 Range.",
+  "fields": {
+   "class": "Air Fighter",
+   "tier": 4,
+   "requires": [
+    "Ground Crews",
+    "Tank Buster"
+   ],
+   "effect": "+2 Range."
+  }
+ },
+ {
+  "id": "promotion:echelon",
+  "name": "Echelon",
+  "aliases": [
+   "PROMOTION_ECHELON"
+  ],
+  "summary": "Anti Cavalry tier 1: +5 Combat Strength vs. cavalry units.",
+  "fields": {
+   "class": "Anti Cavalry",
+   "tier": 1,
+   "effect": "+5 Combat Strength vs. cavalry units."
+  }
+ },
+ {
+  "id": "promotion:elite_guard",
+  "name": "Elite Guard",
+  "aliases": [
+   "PROMOTION_ELITE_GUARD"
+  ],
+  "summary": "Melee tier 4: +1 additional attack per turn if Movement allows. Can move after attacking.",
+  "fields": {
+   "class": "Melee",
+   "tier": 4,
+   "requires": [
+    "Zweihander",
+    "Urban Warfare"
+   ],
+   "effect": "+1 additional attack per turn if Movement allows. Can move after attacking."
+  }
+ },
+ {
+  "id": "promotion:embolon",
+  "name": "Embolon",
+  "aliases": [
+   "PROMOTION_EMBOLON"
+  ],
+  "summary": "Naval Melee tier 1: +7 Combat Strength vs. Naval units.",
+  "fields": {
+   "class": "Naval Melee",
+   "tier": 1,
+   "effect": "+7 Combat Strength vs. Naval units."
+  }
+ },
+ {
+  "id": "promotion:emplacement",
+  "name": "Emplacement",
+  "aliases": [
+   "PROMOTION_EMPLACEMENT"
+  ],
+  "summary": "Ranged tier 3: +10 Combat Strength when defending vs. city attacks.",
+  "fields": {
+   "class": "Ranged",
+   "tier": 3,
+   "requires": [
+    "Incendiaries",
+    "Arrow Storm"
+   ],
+   "effect": "+10 Combat Strength when defending vs. city attacks."
+  }
+ },
+ {
+  "id": "promotion:escort_mobility",
+  "name": "Escort Mobility",
+  "aliases": [
+   "PROMOTION_ESCORT_MOBILITY"
+  ],
+  "summary": "Light Cavalry tier 4: Formation units all inherit escort's Movement speed.",
+  "fields": {
+   "class": "Light Cavalry",
+   "tier": 4,
+   "requires": [
+    "Spiking the Guns",
+    "Pursuit"
+   ],
+   "effect": "Formation units all inherit escort's Movement speed."
+  }
+ },
+ {
+  "id": "promotion:evasive_maneuvers",
+  "name": "Evasive Maneuvers",
+  "aliases": [
+   "PROMOTION_EVASIVE_MANEUVERS"
+  ],
+  "summary": "Air Bomber tier 1: +7 Combat Strength when defending vs. anti-air.",
+  "fields": {
+   "class": "Air Bomber",
+   "tier": 1,
+   "effect": "+7 Combat Strength when defending vs. anti-air."
+  }
+ },
+ {
+  "id": "promotion:expert_crew",
+  "name": "Expert Crew",
+  "aliases": [
+   "PROMOTION_EXPERT_CREW"
+  ],
+  "summary": "Siege tier 3: Can attack after moving.",
+  "fields": {
+   "class": "Siege",
+   "tier": 3,
+   "requires": [
+    "Shrapnel",
+    "Shells"
+   ],
+   "effect": "Can attack after moving."
+  }
+ },
+ {
+  "id": "promotion:expert_marksman",
+  "name": "Expert Marksman",
+  "aliases": [
+   "PROMOTION_EXPERT_MARKSMAN"
+  ],
+  "summary": "Ranged tier 4: +1 additional attack per turn if unit has not moved.",
+  "fields": {
+   "class": "Ranged",
+   "tier": 4,
+   "requires": [
+    "Suppression",
+    "Emplacement"
+   ],
+   "effect": "+1 additional attack per turn if unit has not moved."
+  }
+ },
+ {
+  "id": "promotion:flight_deck",
+  "name": "Flight Deck",
+  "aliases": [
+   "PROMOTION_FLIGHT_DECK"
+  ],
+  "summary": "Naval Carrier tier 1: +1 additional aircraft slot.",
+  "fields": {
+   "class": "Naval Carrier",
+   "tier": 1,
+   "effect": "+1 additional aircraft slot."
+  }
+ },
+ {
+  "id": "promotion:folding_wings",
+  "name": "Folding Wings",
+  "aliases": [
+   "PROMOTION_FOLDING_WINGS"
+  ],
+  "summary": "Naval Carrier tier 3: +1 additional aircraft slot.",
+  "fields": {
+   "class": "Naval Carrier",
+   "tier": 3,
+   "requires": [
+    "Hangar Deck"
+   ],
+   "effect": "+1 additional aircraft slot."
+  }
+ },
+ {
+  "id": "promotion:forward_observers",
+  "name": "Forward Observers",
+  "aliases": [
+   "PROMOTION_FORWARD_OBSERVERS"
+  ],
+  "summary": "Siege tier 4: +1 Range.",
+  "fields": {
+   "class": "Siege",
+   "tier": 4,
+   "requires": [
+    "Advanced Rangefinding",
+    "Expert Crew"
+   ],
+   "effect": "+1 Range."
+  }
+ },
+ {
+  "id": "promotion:garrison",
+  "name": "Garrison",
+  "aliases": [
+   "PROMOTION_GARRISON"
+  ],
+  "summary": "Ranged tier 1: +10 Combat Strength when occupying either an improvement that provides Defense Strength or a district.",
+  "fields": {
+   "class": "Ranged",
+   "tier": 1,
+   "effect": "+10 Combat Strength when occupying either an improvement that provides Defense Strength or a district."
+  }
+ },
+ {
+  "id": "promotion:gdr_aa_defense",
+  "name": "Drone Air Defense",
+  "aliases": [
+   "PROMOTION_GDR_AA_DEFENSE"
+  ],
+  "summary": "GDR tier 1: Anti-Air Defense Strength increased to 130.",
+  "fields": {
+   "class": "GDR",
+   "tier": 1,
+   "effect": "Anti-Air Defense Strength increased to 130."
+  }
+ },
+ {
+  "id": "promotion:gdr_armor_upgrade",
+  "name": "Reinforced Armor Plating",
+  "aliases": [
+   "PROMOTION_GDR_ARMOR_UPGRADE"
+  ],
+  "summary": "GDR tier 1: +10 Combat Strength when defending against land and naval units.",
+  "fields": {
+   "class": "GDR",
+   "tier": 1,
+   "effect": "+10 Combat Strength when defending against land and naval units."
+  }
+ },
+ {
+  "id": "promotion:gdr_bonus_movement",
+  "name": "Enhanced Mobility",
+  "aliases": [
+   "PROMOTION_GDR_BONUS_MOVEMENT"
+  ],
+  "summary": "GDR tier 1: +3 Movement. Can perform a Jump action to cross over mountain terrain.",
+  "fields": {
+   "class": "GDR",
+   "tier": 1,
+   "effect": "+3 Movement. Can perform a Jump action to cross over mountain terrain."
+  }
+ },
+ {
+  "id": "promotion:gdr_siege_laser",
+  "name": "Particle Beam Siege Cannon",
+  "aliases": [
+   "PROMOTION_GDR_SIEGE_LASER"
+  ],
+  "summary": "GDR tier 1: Ranged attacks against Cities and Encampments are 100% effective and gain +30 Ranged Strength.",
+  "fields": {
+   "class": "GDR",
+   "tier": 1,
+   "effect": "Ranged attacks against Cities and Encampments are 100% effective and gain +30 Ranged Strength."
+  }
+ },
+ {
+  "id": "promotion:glam_rock",
+  "name": "Glam Rock",
+  "aliases": [
+   "PROMOTION_GLAM_ROCK"
+  ],
+  "summary": "Rock Band tier 1: Performs as if 2 levels more experienced on Theater Square district tiles.",
+  "fields": {
+   "class": "Rock Band",
+   "tier": 1,
+   "effect": "Performs as if 2 levels more experienced on Theater Square district tiles."
+  }
+ },
+ {
+  "id": "promotion:goes_to",
+  "name": "Goes to 11",
+  "aliases": [
+   "PROMOTION_GOES_TO"
+  ],
+  "summary": "Rock Band tier 1: Civilizations within 10 tiles receive 50% of the Tourism from this concert.",
+  "fields": {
+   "class": "Rock Band",
+   "tier": 1,
+   "effect": "Civilizations within 10 tiles receive 50% of the Tourism from this concert."
+  }
+ },
+ {
+  "id": "promotion:grape_shot",
+  "name": "Grape Shot",
+  "aliases": [
+   "PROMOTION_GRAPE_SHOT"
+  ],
+  "summary": "Siege tier 1: +7 Combat Strength vs. land units.",
+  "fields": {
+   "class": "Siege",
+   "tier": 1,
+   "effect": "+7 Combat Strength vs. land units."
+  }
+ },
+ {
+  "id": "promotion:ground_crews",
+  "name": "Ground Crews",
+  "aliases": [
+   "PROMOTION_GROUND_CREWS"
+  ],
+  "summary": "Air Fighter tier 3: Heal while patrolling or deployed.",
+  "fields": {
+   "class": "Air Fighter",
+   "tier": 3,
+   "requires": [
+    "Interceptor"
+   ],
+   "effect": "Heal while patrolling or deployed."
+  }
+ },
+ {
+  "id": "promotion:guerrilla",
+  "name": "Guerrilla",
+  "aliases": [
+   "PROMOTION_GUERRILLA"
+  ],
+  "summary": "Recon tier 2: Can move after attacking.",
+  "fields": {
+   "class": "Recon",
+   "tier": 2,
+   "requires": [
+    "Ranger",
+    "Alpine"
+   ],
+   "effect": "Can move after attacking."
+  }
+ },
+ {
+  "id": "promotion:hangar_deck",
+  "name": "Hangar Deck",
+  "aliases": [
+   "PROMOTION_HANGAR_DECK"
+  ],
+  "summary": "Naval Carrier tier 2: +1 additional aircraft slot.",
+  "fields": {
+   "class": "Naval Carrier",
+   "tier": 2,
+   "requires": [
+    "Flight Deck"
+   ],
+   "effect": "+1 additional aircraft slot."
+  }
+ },
+ {
+  "id": "promotion:heathen_conversion",
+  "name": "Heathen Conversion",
+  "aliases": [
+   "PROMOTION_HEATHEN_CONVERSION"
+  ],
+  "summary": "Religious Apostle tier 1: Can convert all adjacent Barbarians to your side by using a religious charge.",
+  "fields": {
+   "class": "Religious Apostle",
+   "tier": 1,
+   "effect": "Can convert all adjacent Barbarians to your side by using a religious charge."
+  }
+ },
+ {
+  "id": "promotion:helmsman",
+  "name": "Helmsman",
+  "aliases": [
+   "PROMOTION_HELMSMAN"
+  ],
+  "summary": "Naval Melee tier 1: +1 Movement.",
+  "fields": {
+   "class": "Naval Melee",
+   "tier": 1,
+   "effect": "+1 Movement."
+  }
+ },
+ {
+  "id": "promotion:hold_the_line",
+  "name": "Hold the Line",
+  "aliases": [
+   "PROMOTION_HOLD_THE_LINE"
+  ],
+  "summary": "Anti Cavalry tier 4: Adjacent units of a different class get +10 Combat Strength vs. cavalry.",
+  "fields": {
+   "class": "Anti Cavalry",
+   "tier": 4,
+   "requires": [
+    "Redeploy",
+    "Choke Points"
+   ],
+   "effect": "Adjacent units of a different class get +10 Combat Strength vs. cavalry."
+  }
+ },
+ {
+  "id": "promotion:homing_torpedoes",
+  "name": "Homing Torpedoes",
+  "aliases": [
+   "PROMOTION_HOMING_TORPEDOES"
+  ],
+  "summary": "Naval Raider tier 2: +10 Combat Strength vs. naval units.",
+  "fields": {
+   "class": "Naval Raider",
+   "tier": 2,
+   "requires": [
+    "Boarding",
+    "Swift Keel"
+   ],
+   "effect": "+10 Combat Strength vs. naval units."
+  }
+ },
+ {
+  "id": "promotion:incendiaries",
+  "name": "Incendiaries",
+  "aliases": [
+   "PROMOTION_INCENDIARIES"
+  ],
+  "summary": "Ranged tier 2: +7 Ranged Strength vs. district defenses.",
+  "fields": {
+   "class": "Ranged",
+   "tier": 2,
+   "requires": [
+    "Garrison"
+   ],
+   "effect": "+7 Ranged Strength vs. district defenses."
+  }
+ },
+ {
+  "id": "promotion:indie",
+  "name": "Indie",
+  "aliases": [
+   "PROMOTION_INDIE"
+  ],
+  "summary": "Rock Band tier 1: Performing a concert causes that city to lose 40 Loyalty.",
+  "fields": {
+   "class": "Rock Band",
+   "tier": 1,
+   "effect": "Performing a concert causes that city to lose 40 Loyalty."
+  }
+ },
+ {
+  "id": "promotion:indulgence_vendor",
+  "name": "Indulgence Vendor",
+  "aliases": [
+   "PROMOTION_INDULGENCE_VENDOR"
+  ],
+  "summary": "Religious Apostle tier 1: Gain 100 Gold if this unit converts a city to your Religion for the first time.",
+  "fields": {
+   "class": "Religious Apostle",
+   "tier": 1,
+   "effect": "Gain 100 Gold if this unit converts a city to your Religion for the first time."
+  }
+ },
+ {
+  "id": "promotion:interceptor",
+  "name": "Interceptor",
+  "aliases": [
+   "PROMOTION_INTERCEPTOR"
+  ],
+  "summary": "Air Fighter tier 2: +7 Combat Strength vs. bomber class units.",
+  "fields": {
+   "class": "Air Fighter",
+   "tier": 2,
+   "requires": [
+    "Dogfighting"
+   ],
+   "effect": "+7 Combat Strength vs. bomber class units."
+  }
+ },
+ {
+  "id": "promotion:line_of_battle",
+  "name": "Line of Battle",
+  "aliases": [
+   "PROMOTION_LINE_OF_BATTLE"
+  ],
+  "summary": "Naval Ranged tier 1: +7 Combat Strength vs. naval units.",
+  "fields": {
+   "class": "Naval Ranged",
+   "tier": 1,
+   "effect": "+7 Combat Strength vs. naval units."
+  }
+ },
+ {
+  "id": "promotion:long_range",
+  "name": "Long Range",
+  "aliases": [
+   "PROMOTION_LONG_RANGE"
+  ],
+  "summary": "Air Bomber tier 3: +2 Range.",
+  "fields": {
+   "class": "Air Bomber",
+   "tier": 3,
+   "requires": [
+    "Close Air Support"
+   ],
+   "effect": "+2 Range."
+  }
+ },
+ {
+  "id": "promotion:loot",
+  "name": "Loot",
+  "aliases": [
+   "PROMOTION_LOOT"
+  ],
+  "summary": "Naval Raider tier 1: +50 Gold from coastal raids. (on Standard Speed)",
+  "fields": {
+   "class": "Naval Raider",
+   "tier": 1,
+   "effect": "+50 Gold from coastal raids. (on Standard Speed)"
+  }
+ },
+ {
+  "id": "promotion:marauding",
+  "name": "Marauding",
+  "aliases": [
+   "PROMOTION_MARAUDING"
+  ],
+  "summary": "Heavy Cavalry tier 2: +7 Combat Strength vs. units in districts.",
+  "fields": {
+   "class": "Heavy Cavalry",
+   "tier": 2,
+   "requires": [
+    "Charge",
+    "Rout"
+   ],
+   "effect": "+7 Combat Strength vs. units in districts."
+  }
+ },
+ {
+  "id": "promotion:martyr",
+  "name": "Martyr",
+  "aliases": [
+   "PROMOTION_MARTYR"
+  ],
+  "summary": "Religious Apostle tier 1: Relic is created if this Apostle dies in Theological Combat.",
+  "fields": {
+   "class": "Religious Apostle",
+   "tier": 1,
+   "effect": "Relic is created if this Apostle dies in Theological Combat."
+  }
+ },
+ {
+  "id": "promotion:monk_cobra_strike",
+  "name": "Cobra Strike",
+  "aliases": [
+   "PROMOTION_MONK_COBRA_STRIKE"
+  ],
+  "summary": "Warrior Monk tier 4: +15 Combat Strength in all situations.",
+  "fields": {
+   "class": "Warrior Monk",
+   "tier": 4,
+   "requires": [
+    "Sweeping Wind",
+    "Dancing Crane"
+   ],
+   "effect": "+15 Combat Strength in all situations."
+  }
+ },
+ {
+  "id": "promotion:monk_dancing_crane",
+  "name": "Dancing Crane",
+  "aliases": [
+   "PROMOTION_MONK_DANCING_CRANE"
+  ],
+  "summary": "Warrior Monk tier 3: +1 Movement.",
+  "fields": {
+   "class": "Warrior Monk",
+   "tier": 3,
+   "requires": [
+    "Exploding Palms",
+    "Disciples"
+   ],
+   "effect": "+1 Movement."
+  }
+ },
+ {
+  "id": "promotion:monk_disciples",
+  "name": "Disciples",
+  "aliases": [
+   "PROMOTION_MONK_DISCIPLES"
+  ],
+  "summary": "Warrior Monk tier 2: This unit spreads its Religion to nearby cities when it defeats an enemy unit.",
+  "fields": {
+   "class": "Warrior Monk",
+   "tier": 2,
+   "requires": [
+    "Shadow Strike",
+    "Twilight Veil"
+   ],
+   "effect": "This unit spreads its Religion to nearby cities when it defeats an enemy unit."
+  }
+ },
+ {
+  "id": "promotion:monk_exploding_palms",
+  "name": "Exploding Palms",
+  "aliases": [
+   "PROMOTION_MONK_EXPLODING_PALMS"
+  ],
+  "summary": "Warrior Monk tier 2: +10 Combat Strength in all situations.",
+  "fields": {
+   "class": "Warrior Monk",
+   "tier": 2,
+   "requires": [
+    "Shadow Strike",
+    "Twilight Veil"
+   ],
+   "effect": "+10 Combat Strength in all situations."
+  }
+ },
+ {
+  "id": "promotion:monk_shadow_strike",
+  "name": "Shadow Strike",
+  "aliases": [
+   "PROMOTION_MONK_SHADOW_STRIKE"
+  ],
+  "summary": "Warrior Monk tier 1: 2x flanking bonus.",
+  "fields": {
+   "class": "Warrior Monk",
+   "tier": 1,
+   "effect": "2x flanking bonus."
+  }
+ },
+ {
+  "id": "promotion:monk_sweeping_wind",
+  "name": "Sweeping Wind",
+  "aliases": [
+   "PROMOTION_MONK_SWEEPING_WIND"
+  ],
+  "summary": "Warrior Monk tier 3: +1 additional attack per turn if Movement allows.",
+  "fields": {
+   "class": "Warrior Monk",
+   "tier": 3,
+   "requires": [
+    "Exploding Palms",
+    "Disciples"
+   ],
+   "effect": "+1 additional attack per turn if Movement allows."
+  }
+ },
+ {
+  "id": "promotion:monk_twilight_veil",
+  "name": "Twilight Veil",
+  "aliases": [
+   "PROMOTION_MONK_TWILIGHT_VEIL"
+  ],
+  "summary": "Warrior Monk tier 1: Only adjacent enemy units can reveal this unit.",
+  "fields": {
+   "class": "Warrior Monk",
+   "tier": 1,
+   "effect": "Only adjacent enemy units can reveal this unit."
+  }
+ },
+ {
+  "id": "promotion:music_festival",
+  "name": "Music Festival",
+  "aliases": [
+   "PROMOTION_MUSIC_FESTIVAL"
+  ],
+  "summary": "Rock Band tier 1: Performs at National Parks and Natural Wonders for expected 1000 Tourism and 1 level more experienced.",
+  "fields": {
+   "class": "Rock Band",
+   "tier": 1,
+   "effect": "Performs at National Parks and Natural Wonders for expected 1000 Tourism and 1 level more experienced."
+  }
+ },
+ {
+  "id": "promotion:nihang_faith_for_victories",
+  "name": "Trehsool Mukh",
+  "aliases": [
+   "PROMOTION_NIHANG_FAITH_FOR_VICTORIES"
+  ],
+  "summary": "Nihang tier 1: When defeating an enemy unit, gain Faith equal to 50% that unit's base Combat Strength. (on Standard Speed)",
+  "fields": {
+   "class": "Nihang",
+   "tier": 1,
+   "effect": "When defeating an enemy unit, gain Faith equal to 50% that unit's base Combat Strength. (on Standard Speed)"
+  }
+ },
+ {
+  "id": "promotion:nihang_flanked_bonus",
+  "name": "Tegh",
+  "aliases": [
+   "PROMOTION_NIHANG_FLANKED_BONUS"
+  ],
+  "summary": "Nihang tier 1: +7 Combat Strength when flanked.",
+  "fields": {
+   "class": "Nihang",
+   "tier": 1,
+   "effect": "+7 Combat Strength when flanked."
+  }
+ },
+ {
+  "id": "promotion:nihang_movement_bonus",
+  "name": "Jangi Mojeh",
+  "aliases": [
+   "PROMOTION_NIHANG_MOVEMENT_BONUS"
+  ],
+  "summary": "Nihang tier 2: +1 Movement.",
+  "fields": {
+   "class": "Nihang",
+   "tier": 2,
+   "requires": [
+    "Tegh",
+    "Sanjo"
+   ],
+   "effect": "+1 Movement."
+  }
+ },
+ {
+  "id": "promotion:nihang_no_wounded_penalty",
+  "name": "Sanjo",
+  "aliases": [
+   "PROMOTION_NIHANG_NO_WOUNDED_PENALTY"
+  ],
+  "summary": "Nihang tier 2: No combat penalty when damaged.",
+  "fields": {
+   "class": "Nihang",
+   "tier": 2,
+   "requires": [
+    "Trehsool Mukh",
+    "Jangi Mojeh"
+   ],
+   "effect": "No combat penalty when damaged."
+  }
+ },
+ {
+  "id": "promotion:nihang_suzerain_combat_bonus",
+  "name": "Jangi Kara",
+  "aliases": [
+   "PROMOTION_NIHANG_SUZERAIN_COMBAT_BONUS"
+  ],
+  "summary": "Nihang tier 3: +10 Combat Strength while Suzerain of Lahore.",
+  "fields": {
+   "class": "Nihang",
+   "tier": 3,
+   "requires": [
+    "Jangi Mojeh",
+    "Sanjo"
+   ],
+   "effect": "+10 Combat Strength while Suzerain of Lahore."
+  }
+ },
+ {
+  "id": "promotion:observation",
+  "name": "Observation",
+  "aliases": [
+   "PROMOTION_OBSERVATION"
+  ],
+  "summary": "Naval Raider tier 3: +1 sight range.",
+  "fields": {
+   "class": "Naval Raider",
+   "tier": 3,
+   "requires": [
+    "Swift Keel"
+   ],
+   "effect": "+1 sight range."
+  }
+ },
+ {
+  "id": "promotion:orator",
+  "name": "Orator",
+  "aliases": [
+   "PROMOTION_ORATOR"
+  ],
+  "summary": "Religious Apostle tier 1: Can spread Religion 2 extra times.",
+  "fields": {
+   "class": "Religious Apostle",
+   "tier": 1,
+   "effect": "Can spread Religion 2 extra times."
+  }
+ },
+ {
+  "id": "promotion:pilgrim",
+  "name": "Pilgrim",
+  "aliases": [
+   "PROMOTION_PILGRIM"
+  ],
+  "summary": "Religious Apostle tier 1: Gains 3 extra spreads when moving adjacent to a natural wonder for the first time.",
+  "fields": {
+   "class": "Religious Apostle",
+   "tier": 1,
+   "effect": "Gains 3 extra spreads when moving adjacent to a natural wonder for the first time."
+  }
+ },
+ {
+  "id": "promotion:pop",
+  "name": "Pop Star",
+  "aliases": [
+   "PROMOTION_POP"
+  ],
+  "summary": "Rock Band tier 1: Earn Gold equal to 25% of the Tourism generated.",
+  "fields": {
+   "class": "Rock Band",
+   "tier": 1,
+   "effect": "Earn Gold equal to 25% of the Tourism generated."
+  }
+ },
+ {
+  "id": "promotion:preparatory_fire",
+  "name": "Preparatory Fire",
+  "aliases": [
+   "PROMOTION_PREPARATORY_FIRE"
+  ],
+  "summary": "Naval Ranged tier 2: +7 Combat Strength vs. land units.",
+  "fields": {
+   "class": "Naval Ranged",
+   "tier": 2,
+   "requires": [
+    "Line of Battle"
+   ],
+   "effect": "+7 Combat Strength vs. land units."
+  }
+ },
+ {
+  "id": "promotion:proselytizer",
+  "name": "Proselytizer",
+  "aliases": [
+   "PROMOTION_PROSELYTIZER"
+  ],
+  "summary": "Religious Apostle tier 1: Religious spread eliminates 75% of existing pressure from other Religions in the target city.",
+  "fields": {
+   "class": "Religious Apostle",
+   "tier": 1,
+   "effect": "Religious spread eliminates 75% of existing pressure from other Religions in the target city."
+  }
+ },
+ {
+  "id": "promotion:proximity_fuses",
+  "name": "Proximity Fuses",
+  "aliases": [
+   "PROMOTION_PROXIMITY_FUSES"
+  ],
+  "summary": "Naval Ranged tier 3: +7 Combat Strength when defending vs. air attacks.",
+  "fields": {
+   "class": "Naval Ranged",
+   "tier": 3,
+   "requires": [
+    "Preparatory Fire",
+    "Rolling Barrage"
+   ],
+   "effect": "+7 Combat Strength when defending vs. air attacks."
+  }
+ },
+ {
+  "id": "promotion:pursuit",
+  "name": "Pursuit",
+  "aliases": [
+   "PROMOTION_PURSUIT"
+  ],
+  "summary": "Light Cavalry tier 3: +1 Movement.",
+  "fields": {
+   "class": "Light Cavalry",
+   "tier": 3,
+   "requires": [
+    "Depredation",
+    "Double Envelopment"
+   ],
+   "effect": "+1 Movement."
+  }
+ },
+ {
+  "id": "promotion:ranger",
+  "name": "Ranger",
+  "aliases": [
+   "PROMOTION_RANGER"
+  ],
+  "summary": "Recon tier 1: Faster Movement in Woods and Rainforest terrain.",
+  "fields": {
+   "class": "Recon",
+   "tier": 1,
+   "effect": "Faster Movement in Woods and Rainforest terrain."
+  }
+ },
+ {
+  "id": "promotion:reactive_armor",
+  "name": "Reactive Armor",
+  "aliases": [
+   "PROMOTION_REACTIVE_ARMOR"
+  ],
+  "summary": "Heavy Cavalry tier 3: +7 Combat Strength when defending against heavy cavalry and anti-cavalry.",
+  "fields": {
+   "class": "Heavy Cavalry",
+   "tier": 3,
+   "requires": [
+    "Rout"
+   ],
+   "effect": "+7 Combat Strength when defending against heavy cavalry and anti-cavalry."
+  }
+ },
+ {
+  "id": "promotion:redeploy",
+  "name": "Redeploy",
+  "aliases": [
+   "PROMOTION_REDEPLOY"
+  ],
+  "summary": "Anti Cavalry tier 3: +1 Movement.",
+  "fields": {
+   "class": "Anti Cavalry",
+   "tier": 3,
+   "requires": [
+    "Square",
+    "Schiltron"
+   ],
+   "effect": "+1 Movement."
+  }
+ },
+ {
+  "id": "promotion:reggae_rock",
+  "name": "Reggae Rock",
+  "aliases": [
+   "PROMOTION_REGGAE_ROCK"
+  ],
+  "summary": "Rock Band tier 1: Performs as if 2 levels more experienced on Water Park district tiles.",
+  "fields": {
+   "class": "Rock Band",
+   "tier": 1,
+   "effect": "Performs as if 2 levels more experienced on Water Park district tiles."
+  }
+ },
+ {
+  "id": "promotion:reinforced_hull",
+  "name": "Reinforced Hull",
+  "aliases": [
+   "PROMOTION_REINFORCED_HULL"
+  ],
+  "summary": "Naval Melee tier 2: +10 Combat Strength when defending vs. ranged attacks.",
+  "fields": {
+   "class": "Naval Melee",
+   "tier": 2,
+   "requires": [
+    "Embolon"
+   ],
+   "effect": "+10 Combat Strength when defending vs. ranged attacks."
+  }
+ },
+ {
+  "id": "promotion:religious_rock",
+  "name": "Religious Rock",
+  "aliases": [
+   "PROMOTION_RELIGIOUS_ROCK"
+  ],
+  "summary": "Rock Band tier 1: Performs a concert that converts the majority religion of that city to the religion founded by the player.",
+  "fields": {
+   "class": "Rock Band",
+   "tier": 1,
+   "effect": "Performs a concert that converts the majority religion of that city to the religion founded by the player."
+  }
+ },
+ {
+  "id": "promotion:roadies",
+  "name": "Roadies",
+  "aliases": [
+   "PROMOTION_ROADIES"
+  ],
+  "summary": "Rock Band tier 1: +4 Movement.",
+  "fields": {
+   "class": "Rock Band",
+   "tier": 1,
+   "effect": "+4 Movement."
+  }
+ },
+ {
+  "id": "promotion:rolling_barrage",
+  "name": "Rolling Barrage",
+  "aliases": [
+   "PROMOTION_ROLLING_BARRAGE"
+  ],
+  "summary": "Naval Ranged tier 2: +10 Combat Strength vs. district defenses.",
+  "fields": {
+   "class": "Naval Ranged",
+   "tier": 2,
+   "requires": [
+    "Bombardment"
+   ],
+   "effect": "+10 Combat Strength vs. district defenses."
+  }
+ },
+ {
+  "id": "promotion:rout",
+  "name": "Rout",
+  "aliases": [
+   "PROMOTION_ROUT"
+  ],
+  "summary": "Heavy Cavalry tier 2: +5 Combat Strength against damaged units.",
+  "fields": {
+   "class": "Heavy Cavalry",
+   "tier": 2,
+   "requires": [
+    "Barding",
+    "Marauding"
+   ],
+   "effect": "+5 Combat Strength against damaged units."
+  }
+ },
+ {
+  "id": "promotion:rutter",
+  "name": "Rutter",
+  "aliases": [
+   "PROMOTION_RUTTER"
+  ],
+  "summary": "Naval Melee tier 2: +1 sight range.",
+  "fields": {
+   "class": "Naval Melee",
+   "tier": 2,
+   "requires": [
+    "Helmsman"
+   ],
+   "effect": "+1 sight range."
+  }
+ },
+ {
+  "id": "promotion:schiltron",
+  "name": "Schiltron",
+  "aliases": [
+   "PROMOTION_SCHILTRON"
+  ],
+  "summary": "Anti Cavalry tier 2: +10 Combat Strength when defending vs. melee class units.",
+  "fields": {
+   "class": "Anti Cavalry",
+   "tier": 2,
+   "requires": [
+    "Thrust"
+   ],
+   "effect": "+10 Combat Strength when defending vs. melee class units."
+  }
+ },
+ {
+  "id": "promotion:scout_planes",
+  "name": "Scout Planes",
+  "aliases": [
+   "PROMOTION_SCOUT_PLANES"
+  ],
+  "summary": "Naval Carrier tier 1: +1 sight range.",
+  "fields": {
+   "class": "Naval Carrier",
+   "tier": 1,
+   "effect": "+1 sight range."
+  }
+ },
+ {
+  "id": "promotion:sentry",
+  "name": "Sentry",
+  "aliases": [
+   "PROMOTION_SENTRY"
+  ],
+  "summary": "Recon tier 2: Can see through Woods and Jungle.",
+  "fields": {
+   "class": "Recon",
+   "tier": 2,
+   "requires": [
+    "Ranger",
+    "Alpine"
+   ],
+   "effect": "Can see through Woods and Jungle."
+  }
+ },
+ {
+  "id": "promotion:shells",
+  "name": "Shells",
+  "aliases": [
+   "PROMOTION_SHELLS"
+  ],
+  "summary": "Siege tier 2: +10 Combat Strength vs. district defenses.",
+  "fields": {
+   "class": "Siege",
+   "tier": 2,
+   "requires": [
+    "Crew Weapons"
+   ],
+   "effect": "+10 Combat Strength vs. district defenses."
+  }
+ },
+ {
+  "id": "promotion:shrapnel",
+  "name": "Shrapnel",
+  "aliases": [
+   "PROMOTION_SHRAPNEL"
+  ],
+  "summary": "Siege tier 2: +10 Combat Strength vs. land units.",
+  "fields": {
+   "class": "Siege",
+   "tier": 2,
+   "requires": [
+    "Grape Shot"
+   ],
+   "effect": "+10 Combat Strength vs. land units."
+  }
+ },
+ {
+  "id": "promotion:silent_running",
+  "name": "Silent Running",
+  "aliases": [
+   "PROMOTION_SILENT_RUNNING"
+  ],
+  "summary": "Naval Raider tier 3: Can move after attacking.",
+  "fields": {
+   "class": "Naval Raider",
+   "tier": 3,
+   "requires": [
+    "Homing Torpedoes"
+   ],
+   "effect": "Can move after attacking."
+  }
+ },
+ {
+  "id": "promotion:space_rock",
+  "name": "Space Rock",
+  "aliases": [
+   "PROMOTION_SPACE_ROCK"
+  ],
+  "summary": "Rock Band tier 1: Performs at Spaceports and Campuses for +500 Tourism (+1000 Tourism if Campus has a University) and 1 level more experienced.",
+  "fields": {
+   "class": "Rock Band",
+   "tier": 1,
+   "effect": "Performs at Spaceports and Campuses for +500 Tourism (+1000 Tourism if Campus has a University) and 1 level more experienced."
+  }
+ },
+ {
+  "id": "promotion:spiking_the_guns",
+  "name": "Spiking the Guns",
+  "aliases": [
+   "PROMOTION_SPIKING_THE_GUNS"
+  ],
+  "summary": "Light Cavalry tier 3: +7 Combat Strength vs. siege units.",
+  "fields": {
+   "class": "Light Cavalry",
+   "tier": 3,
+   "requires": [
+    "Depredation",
+    "Double Envelopment"
+   ],
+   "effect": "+7 Combat Strength vs. siege units."
+  }
+ },
+ {
+  "id": "promotion:spy_ace_driver",
+  "name": "Ace Driver",
+  "aliases": [
+   "PROMOTION_SPY_ACE_DRIVER"
+  ],
+  "summary": "Espionage tier 1: If caught on a mission, have a much higher chance of escape (+4 levels).",
+  "fields": {
+   "class": "Espionage",
+   "tier": 1,
+   "effect": "If caught on a mission, have a much higher chance of escape (+4 levels)."
+  }
+ },
+ {
+  "id": "promotion:spy_cat_burglar",
+  "name": "Cat Burglar",
+  "aliases": [
+   "PROMOTION_SPY_CAT_BURGLAR"
+  ],
+  "summary": "Espionage tier 1: Steal Great Works as if 2 levels more experienced.",
+  "fields": {
+   "class": "Espionage",
+   "tier": 1,
+   "effect": "Steal Great Works as if 2 levels more experienced."
+  }
+ },
+ {
+  "id": "promotion:spy_con_artist",
+  "name": "Con Artist",
+  "aliases": [
+   "PROMOTION_SPY_CON_ARTIST"
+  ],
+  "summary": "Espionage tier 1: Siphon Funds as if 2 levels more experienced.",
+  "fields": {
+   "class": "Espionage",
+   "tier": 1,
+   "effect": "Siphon Funds as if 2 levels more experienced."
+  }
+ },
+ {
+  "id": "promotion:spy_covert_action",
+  "name": "Covert Action",
+  "aliases": [
+   "PROMOTION_SPY_COVERT_ACTION"
+  ],
+  "summary": "Espionage tier 1: Foment Unrest as if 2 levels more experienced.",
+  "fields": {
+   "class": "Espionage",
+   "tier": 1,
+   "effect": "Foment Unrest as if 2 levels more experienced."
+  }
+ },
+ {
+  "id": "promotion:spy_demolitions",
+  "name": "Demolitions",
+  "aliases": [
+   "PROMOTION_SPY_DEMOLITIONS"
+  ],
+  "summary": "Espionage tier 1: Sabotage Production as if 2 levels more experienced.",
+  "fields": {
+   "class": "Espionage",
+   "tier": 1,
+   "effect": "Sabotage Production as if 2 levels more experienced."
+  }
+ },
+ {
+  "id": "promotion:spy_disguise",
+  "name": "Disguise",
+  "aliases": [
+   "PROMOTION_SPY_DISGUISE"
+  ],
+  "summary": "Espionage tier 1: Takes no time to establish presence in an enemy city.",
+  "fields": {
+   "class": "Espionage",
+   "tier": 1,
+   "effect": "Takes no time to establish presence in an enemy city."
+  }
+ },
+ {
+  "id": "promotion:spy_guerilla_leader",
+  "name": "Guerrilla Leader",
+  "aliases": [
+   "PROMOTION_SPY_GUERILLA_LEADER"
+  ],
+  "summary": "Espionage tier 1: Recruit Partisans as if 2 levels more experienced.",
+  "fields": {
+   "class": "Espionage",
+   "tier": 1,
+   "effect": "Recruit Partisans as if 2 levels more experienced."
+  }
+ },
+ {
+  "id": "promotion:spy_license_to_kill",
+  "name": "License to Kill",
+  "aliases": [
+   "PROMOTION_SPY_LICENSE_TO_KILL"
+  ],
+  "summary": "Espionage tier 1: Neutralize Governor as if 2 levels more experienced.",
+  "fields": {
+   "class": "Espionage",
+   "tier": 1,
+   "effect": "Neutralize Governor as if 2 levels more experienced."
+  }
+ },
+ {
+  "id": "promotion:spy_linguist",
+  "name": "Linguist",
+  "aliases": [
+   "PROMOTION_SPY_LINGUIST"
+  ],
+  "summary": "Espionage tier 1: Time to complete all missions reduced by 25%.",
+  "fields": {
+   "class": "Espionage",
+   "tier": 1,
+   "effect": "Time to complete all missions reduced by 25%."
+  }
+ },
+ {
+  "id": "promotion:spy_polygraph",
+  "name": "Polygraph",
+  "aliases": [
+   "PROMOTION_SPY_POLYGRAPH"
+  ],
+  "summary": "Espionage tier 1: If this Spy is in home territory, enemy Spies in your lands operate at 1 level below usual.",
+  "fields": {
+   "class": "Espionage",
+   "tier": 1,
+   "effect": "If this Spy is in home territory, enemy Spies in your lands operate at 1 level below usual."
+  }
+ },
+ {
+  "id": "promotion:spy_quartermaster",
+  "name": "Quartermaster",
+  "aliases": [
+   "PROMOTION_SPY_QUARTERMASTER"
+  ],
+  "summary": "Espionage tier 1: If this Spy is in home territory, all your Spies operate at +1 level.",
+  "fields": {
+   "class": "Espionage",
+   "tier": 1,
+   "effect": "If this Spy is in home territory, all your Spies operate at +1 level."
+  }
+ },
+ {
+  "id": "promotion:spy_rocket_scientist",
+  "name": "Rocket Scientist",
+  "aliases": [
+   "PROMOTION_SPY_ROCKET_SCIENTIST"
+  ],
+  "summary": "Espionage tier 1: Disrupt Rocketry as if 2 levels more experienced.",
+  "fields": {
+   "class": "Espionage",
+   "tier": 1,
+   "effect": "Disrupt Rocketry as if 2 levels more experienced."
+  }
+ },
+ {
+  "id": "promotion:spy_satchel_charges",
+  "name": "Satchel Charges",
+  "aliases": [
+   "PROMOTION_SPY_SATCHEL_CHARGES"
+  ],
+  "summary": "Espionage tier 1: Breach Dam as if 2 levels more experienced.",
+  "fields": {
+   "class": "Espionage",
+   "tier": 1,
+   "effect": "Breach Dam as if 2 levels more experienced."
+  }
+ },
+ {
+  "id": "promotion:spy_seduction",
+  "name": "Seduction",
+  "aliases": [
+   "PROMOTION_SPY_SEDUCTION"
+  ],
+  "summary": "Espionage tier 1: Counterspy as if 2 levels more experienced.",
+  "fields": {
+   "class": "Espionage",
+   "tier": 1,
+   "effect": "Counterspy as if 2 levels more experienced."
+  }
+ },
+ {
+  "id": "promotion:spy_smear_campaign",
+  "name": "Smear Campaign",
+  "aliases": [
+   "PROMOTION_SPY_SMEAR_CAMPAIGN"
+  ],
+  "summary": "Espionage tier 1: Fabricate Scandal as if 2 levels more experienced.",
+  "fields": {
+   "class": "Espionage",
+   "tier": 1,
+   "effect": "Fabricate Scandal as if 2 levels more experienced."
+  }
+ },
+ {
+  "id": "promotion:spy_surveillance",
+  "name": "Surveillance",
+  "aliases": [
+   "PROMOTION_SPY_SURVEILLANCE"
+  ],
+  "summary": "Espionage tier 1: When Counterspying all city districts are defended (and +1 level at districts within 1 hex).",
+  "fields": {
+   "class": "Espionage",
+   "tier": 1,
+   "effect": "When Counterspying all city districts are defended (and +1 level at districts within 1 hex)."
+  }
+ },
+ {
+  "id": "promotion:spy_technologist",
+  "name": "Technologist",
+  "aliases": [
+   "PROMOTION_SPY_TECHNOLOGIST"
+  ],
+  "summary": "Espionage tier 1: Steal Technology as if 2 levels more experienced.",
+  "fields": {
+   "class": "Espionage",
+   "tier": 1,
+   "effect": "Steal Technology as if 2 levels more experienced."
+  }
+ },
+ {
+  "id": "promotion:spyglass",
+  "name": "Spyglass",
+  "aliases": [
+   "PROMOTION_SPYGLASS"
+  ],
+  "summary": "Recon tier 3: +1 sight range.",
+  "fields": {
+   "class": "Recon",
+   "tier": 3,
+   "requires": [
+    "Sentry"
+   ],
+   "effect": "+1 sight range."
+  }
+ },
+ {
+  "id": "promotion:square",
+  "name": "Square",
+  "aliases": [
+   "PROMOTION_SQUARE"
+  ],
+  "summary": "Anti Cavalry tier 2: Double Support bonus.",
+  "fields": {
+   "class": "Anti Cavalry",
+   "tier": 2,
+   "requires": [
+    "Echelon"
+   ],
+   "effect": "Double Support bonus."
+  }
+ },
+ {
+  "id": "promotion:strafe",
+  "name": "Strafe",
+  "aliases": [
+   "PROMOTION_STRAFE"
+  ],
+  "summary": "Air Fighter tier 2: +17 Combat Strength vs. non-cavalry units.",
+  "fields": {
+   "class": "Air Fighter",
+   "tier": 2,
+   "requires": [
+    "Cockpit Armor"
+   ],
+   "effect": "+17 Combat Strength vs. non-cavalry units."
+  }
+ },
+ {
+  "id": "promotion:super_carrier",
+  "name": "Supercarrier",
+  "aliases": [
+   "PROMOTION_SUPER_CARRIER"
+  ],
+  "summary": "Naval Carrier tier 4: Heal outside of friendly territory.",
+  "fields": {
+   "class": "Naval Carrier",
+   "tier": 4,
+   "requires": [
+    "Folding Wings",
+    "Deck Crews"
+   ],
+   "effect": "Heal outside of friendly territory."
+  }
+ },
+ {
+  "id": "promotion:superfortress",
+  "name": "Superfortress",
+  "aliases": [
+   "PROMOTION_SUPERFORTRESS"
+  ],
+  "summary": "Air Bomber tier 4: No minimum health requirement to air pillage.",
+  "fields": {
+   "class": "Air Bomber",
+   "tier": 4,
+   "requires": [
+    "Tactical Maintenance",
+    "Long Range"
+   ],
+   "effect": "No minimum health requirement to air pillage."
+  }
+ },
+ {
+  "id": "promotion:supply_fleet",
+  "name": "Supply Fleet",
+  "aliases": [
+   "PROMOTION_SUPPLY_FLEET"
+  ],
+  "summary": "Naval Ranged tier 3: Heal outside of friendly territory.",
+  "fields": {
+   "class": "Naval Ranged",
+   "tier": 3,
+   "requires": [
+    "Preparatory Fire",
+    "Rolling Barrage"
+   ],
+   "effect": "Heal outside of friendly territory."
+  }
+ },
+ {
+  "id": "promotion:suppression",
+  "name": "Suppression",
+  "aliases": [
+   "PROMOTION_SUPPRESSION"
+  ],
+  "summary": "Ranged tier 3: Exercise zone of control.",
+  "fields": {
+   "class": "Ranged",
+   "tier": 3,
+   "requires": [
+    "Incendiaries",
+    "Arrow Storm"
+   ],
+   "effect": "Exercise zone of control."
+  }
+ },
+ {
+  "id": "promotion:surf_rock",
+  "name": "Surf Band",
+  "aliases": [
+   "PROMOTION_SURF_ROCK"
+  ],
+  "summary": "Rock Band tier 1: Performs at Seaside Resorts and Harbors for +500 Tourism (+1000 Tourism if Harbor has a Shipyard) and 1 level more experienced.",
+  "fields": {
+   "class": "Rock Band",
+   "tier": 1,
+   "effect": "Performs at Seaside Resorts and Harbors for +500 Tourism (+1000 Tourism if Harbor has a Shipyard) and 1 level more experienced."
+  }
+ },
+ {
+  "id": "promotion:swift_keel",
+  "name": "Swift Keel",
+  "aliases": [
+   "PROMOTION_SWIFT_KEEL"
+  ],
+  "summary": "Naval Raider tier 2: +1 Movement.",
+  "fields": {
+   "class": "Naval Raider",
+   "tier": 2,
+   "requires": [
+    "Loot",
+    "Homing Torpedoes"
+   ],
+   "effect": "+1 Movement."
+  }
+ },
+ {
+  "id": "promotion:tactical_maintenance",
+  "name": "Tactical Maintenance",
+  "aliases": [
+   "PROMOTION_TACTICAL_MAINTENANCE"
+  ],
+  "summary": "Air Bomber tier 3: Can heal after attacking.",
+  "fields": {
+   "class": "Air Bomber",
+   "tier": 3,
+   "requires": [
+    "Torpedo Bomber"
+   ],
+   "effect": "Can heal after attacking."
+  }
+ },
+ {
+  "id": "promotion:tank_buster",
+  "name": "Tank Buster",
+  "aliases": [
+   "PROMOTION_TANK_BUSTER"
+  ],
+  "summary": "Air Fighter tier 3: +17 Combat Strength vs. cavalry units.",
+  "fields": {
+   "class": "Air Fighter",
+   "tier": 3,
+   "requires": [
+    "Strafe"
+   ],
+   "effect": "+17 Combat Strength vs. cavalry units."
+  }
+ },
+ {
+  "id": "promotion:thrust",
+  "name": "Thrust",
+  "aliases": [
+   "PROMOTION_THRUST"
+  ],
+  "summary": "Anti Cavalry tier 1: +5 Combat Strength vs. melee units.",
+  "fields": {
+   "class": "Anti Cavalry",
+   "tier": 1,
+   "effect": "+5 Combat Strength vs. melee units."
+  }
+ },
+ {
+  "id": "promotion:torpedo_bomber",
+  "name": "Torpedo Bomber",
+  "aliases": [
+   "PROMOTION_TORPEDO_BOMBER"
+  ],
+  "summary": "Air Bomber tier 2: +17 Combat Strength vs. naval units.",
+  "fields": {
+   "class": "Air Bomber",
+   "tier": 2,
+   "requires": [
+    "Box Formation",
+    "Evasive Maneuvers"
+   ],
+   "effect": "+17 Combat Strength vs. naval units."
+  }
+ },
+ {
+  "id": "promotion:tortoise",
+  "name": "Tortoise",
+  "aliases": [
+   "PROMOTION_TORTOISE"
+  ],
+  "summary": "Melee tier 1: +10 Combat Strength when defending against ranged attacks.",
+  "fields": {
+   "class": "Melee",
+   "tier": 1,
+   "effect": "+10 Combat Strength when defending against ranged attacks."
+  }
+ },
+ {
+  "id": "promotion:translator",
+  "name": "Translator",
+  "aliases": [
+   "PROMOTION_TRANSLATOR"
+  ],
+  "summary": "Religious Apostle tier 1: Religious spread is triple strength in cities of other civilizations.",
+  "fields": {
+   "class": "Religious Apostle",
+   "tier": 1,
+   "effect": "Religious spread is triple strength in cities of other civilizations."
+  }
+ },
+ {
+  "id": "promotion:urban_warfare",
+  "name": "Urban Warfare",
+  "aliases": [
+   "PROMOTION_URBAN_WARFARE"
+  ],
+  "summary": "Melee tier 3: +10 Combat Strength when fighting in a district.",
+  "fields": {
+   "class": "Melee",
+   "tier": 3,
+   "requires": [
+    "Commando",
+    "Amphibious"
+   ],
+   "effect": "+10 Combat Strength when fighting in a district."
+  }
+ },
+ {
+  "id": "promotion:volley",
+  "name": "Volley",
+  "aliases": [
+   "PROMOTION_VOLLEY"
+  ],
+  "summary": "Ranged tier 1: +5 Ranged Strength vs. land units.",
+  "fields": {
+   "class": "Ranged",
+   "tier": 1,
+   "effect": "+5 Ranged Strength vs. land units."
+  }
+ },
+ {
+  "id": "promotion:wolfpack",
+  "name": "Wolfpack",
+  "aliases": [
+   "PROMOTION_WOLFPACK"
+  ],
+  "summary": "Naval Raider tier 4: +1 additional attack per turn.",
+  "fields": {
+   "class": "Naval Raider",
+   "tier": 4,
+   "requires": [
+    "Observation",
+    "Silent Running"
+   ],
+   "effect": "+1 additional attack per turn."
+  }
+ },
+ {
+  "id": "promotion:zweihander",
+  "name": "Zweihander",
+  "aliases": [
+   "PROMOTION_ZWEIHANDER"
+  ],
+  "summary": "Melee tier 3: +7 Combat Strength vs. anti-cavalry units.",
+  "fields": {
+   "class": "Melee",
+   "tier": 3,
+   "requires": [
+    "Commando",
+    "Amphibious"
+   ],
+   "effect": "+7 Combat Strength vs. anti-cavalry units."
+  }
+ }
+]

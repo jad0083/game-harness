@@ -1,0 +1,886 @@
+[
+ {
+  "id": "resource:aluminum",
+  "name": "Aluminum",
+  "aliases": [
+   "RESOURCE_ALUMINUM"
+  ],
+  "summary": "Strategic resource: +1 Science; improved by Mine.",
+  "fields": {
+   "class": "strategic",
+   "yields": "+1 Science",
+   "improvement": [
+    "Mine"
+   ],
+   "revealed_by": [
+    "Radio"
+   ],
+   "accumulation": "+2 per turn per improved source; stockpile capped (cap rises by era)"
+  }
+ },
+ {
+  "id": "resource:amber",
+  "name": "Amber",
+  "aliases": [
+   "RESOURCE_AMBER"
+  ],
+  "summary": "Luxury resource: +1 Culture; improved by Fishing Boats, Mine.",
+  "fields": {
+   "class": "luxury",
+   "yields": "+1 Culture",
+   "improvement": [
+    "Fishing Boats",
+    "Mine"
+   ],
+   "amenities": 4
+  }
+ },
+ {
+  "id": "resource:antiquity_site",
+  "name": "Antiquity Site",
+  "aliases": [
+   "RESOURCE_ANTIQUITY_SITE"
+  ],
+  "summary": "Artifact resource.",
+  "fields": {
+   "class": "artifact",
+   "revealed_by": [
+    "Natural History"
+   ]
+  }
+ },
+ {
+  "id": "resource:bananas",
+  "name": "Bananas",
+  "aliases": [
+   "RESOURCE_BANANAS"
+  ],
+  "summary": "Bonus resource: +1 Food; improved by Plantation.",
+  "fields": {
+   "class": "bonus",
+   "yields": "+1 Food",
+   "improvement": [
+    "Plantation"
+   ],
+   "harvest": [
+    "20 Food (with Irrigation)"
+   ]
+  }
+ },
+ {
+  "id": "resource:cattle",
+  "name": "Cattle",
+  "aliases": [
+   "RESOURCE_CATTLE"
+  ],
+  "summary": "Bonus resource: +1 Food; improved by Pasture.",
+  "fields": {
+   "class": "bonus",
+   "yields": "+1 Food",
+   "improvement": [
+    "Pasture"
+   ],
+   "harvest": [
+    "20 Food (with Animal Husbandry)"
+   ]
+  }
+ },
+ {
+  "id": "resource:cinnamon",
+  "name": "Cinnamon",
+  "aliases": [
+   "RESOURCE_CINNAMON"
+  ],
+  "summary": "Luxury resource.",
+  "fields": {
+   "class": "luxury",
+   "amenities": 6
+  }
+ },
+ {
+  "id": "resource:citrus",
+  "name": "Citrus",
+  "aliases": [
+   "RESOURCE_CITRUS"
+  ],
+  "summary": "Luxury resource: +2 Food; improved by Plantation.",
+  "fields": {
+   "class": "luxury",
+   "yields": "+2 Food",
+   "improvement": [
+    "Plantation"
+   ],
+   "amenities": 4
+  }
+ },
+ {
+  "id": "resource:cloves",
+  "name": "Cloves",
+  "aliases": [
+   "RESOURCE_CLOVES"
+  ],
+  "summary": "Luxury resource.",
+  "fields": {
+   "class": "luxury",
+   "amenities": 6
+  }
+ },
+ {
+  "id": "resource:coal",
+  "name": "Coal",
+  "aliases": [
+   "RESOURCE_COAL"
+  ],
+  "summary": "Strategic resource: +2 Production; improved by Mine.",
+  "fields": {
+   "class": "strategic",
+   "yields": "+2 Production",
+   "improvement": [
+    "Mine"
+   ],
+   "revealed_by": [
+    "Industrialization"
+   ],
+   "accumulation": "+3 per turn per improved source; stockpile capped (cap rises by era)",
+   "power": "4 power per unit"
+  }
+ },
+ {
+  "id": "resource:cocoa",
+  "name": "Cocoa",
+  "aliases": [
+   "RESOURCE_COCOA"
+  ],
+  "summary": "Luxury resource: +3 Gold; improved by Plantation.",
+  "fields": {
+   "class": "luxury",
+   "yields": "+3 Gold",
+   "improvement": [
+    "Plantation"
+   ],
+   "amenities": 4
+  }
+ },
+ {
+  "id": "resource:coffee",
+  "name": "Coffee",
+  "aliases": [
+   "RESOURCE_COFFEE"
+  ],
+  "summary": "Luxury resource: +1 Culture; improved by Plantation.",
+  "fields": {
+   "class": "luxury",
+   "yields": "+1 Culture",
+   "improvement": [
+    "Plantation"
+   ],
+   "amenities": 4
+  }
+ },
+ {
+  "id": "resource:copper",
+  "name": "Copper",
+  "aliases": [
+   "RESOURCE_COPPER"
+  ],
+  "summary": "Bonus resource: +2 Gold; improved by Mine.",
+  "fields": {
+   "class": "bonus",
+   "yields": "+2 Gold",
+   "improvement": [
+    "Mine"
+   ],
+   "harvest": [
+    "40 Gold (with Mining)"
+   ]
+  }
+ },
+ {
+  "id": "resource:cosmetics",
+  "name": "Cosmetics",
+  "aliases": [
+   "RESOURCE_COSMETICS"
+  ],
+  "summary": "Luxury resource.",
+  "fields": {
+   "class": "luxury",
+   "amenities": 4
+  }
+ },
+ {
+  "id": "resource:cotton",
+  "name": "Cotton",
+  "aliases": [
+   "RESOURCE_COTTON"
+  ],
+  "summary": "Luxury resource: +3 Gold; improved by Plantation.",
+  "fields": {
+   "class": "luxury",
+   "yields": "+3 Gold",
+   "improvement": [
+    "Plantation"
+   ],
+   "amenities": 4
+  }
+ },
+ {
+  "id": "resource:crabs",
+  "name": "Crabs",
+  "aliases": [
+   "RESOURCE_CRABS"
+  ],
+  "summary": "Bonus resource: +2 Gold; improved by Fishing Boats.",
+  "fields": {
+   "class": "bonus",
+   "yields": "+2 Gold",
+   "improvement": [
+    "Fishing Boats"
+   ],
+   "harvest": [
+    "40 Gold (with Celestial Navigation)"
+   ]
+  }
+ },
+ {
+  "id": "resource:deer",
+  "name": "Deer",
+  "aliases": [
+   "RESOURCE_DEER"
+  ],
+  "summary": "Bonus resource: +1 Production; improved by Camp.",
+  "fields": {
+   "class": "bonus",
+   "yields": "+1 Production",
+   "improvement": [
+    "Camp"
+   ],
+   "harvest": [
+    "20 Production (with Animal Husbandry)"
+   ]
+  }
+ },
+ {
+  "id": "resource:diamonds",
+  "name": "Diamonds",
+  "aliases": [
+   "RESOURCE_DIAMONDS"
+  ],
+  "summary": "Luxury resource: +3 Gold; improved by Mine.",
+  "fields": {
+   "class": "luxury",
+   "yields": "+3 Gold",
+   "improvement": [
+    "Mine"
+   ],
+   "amenities": 4
+  }
+ },
+ {
+  "id": "resource:dyes",
+  "name": "Dyes",
+  "aliases": [
+   "RESOURCE_DYES"
+  ],
+  "summary": "Luxury resource: +1 Faith; improved by Plantation.",
+  "fields": {
+   "class": "luxury",
+   "yields": "+1 Faith",
+   "improvement": [
+    "Plantation"
+   ],
+   "amenities": 4
+  }
+ },
+ {
+  "id": "resource:fish",
+  "name": "Fish",
+  "aliases": [
+   "RESOURCE_FISH"
+  ],
+  "summary": "Bonus resource: +1 Food; improved by Fishing Boats.",
+  "fields": {
+   "class": "bonus",
+   "yields": "+1 Food",
+   "improvement": [
+    "Fishing Boats"
+   ],
+   "harvest": [
+    "20 Food (with Celestial Navigation)"
+   ]
+  }
+ },
+ {
+  "id": "resource:furs",
+  "name": "Furs",
+  "aliases": [
+   "RESOURCE_FURS"
+  ],
+  "summary": "Luxury resource: +1 Food, +1 Gold; improved by Camp.",
+  "fields": {
+   "class": "luxury",
+   "yields": "+1 Food, +1 Gold",
+   "improvement": [
+    "Camp"
+   ],
+   "amenities": 4
+  }
+ },
+ {
+  "id": "resource:gypsum",
+  "name": "Gypsum",
+  "aliases": [
+   "RESOURCE_GYPSUM"
+  ],
+  "summary": "Luxury resource: +1 Gold, +1 Production; improved by Quarry.",
+  "fields": {
+   "class": "luxury",
+   "yields": "+1 Gold, +1 Production",
+   "improvement": [
+    "Quarry"
+   ],
+   "amenities": 4
+  }
+ },
+ {
+  "id": "resource:honey",
+  "name": "Honey",
+  "aliases": [
+   "RESOURCE_HONEY"
+  ],
+  "summary": "Luxury resource: +2 Food; improved by Camp.",
+  "fields": {
+   "class": "luxury",
+   "yields": "+2 Food",
+   "improvement": [
+    "Camp"
+   ],
+   "amenities": 4
+  }
+ },
+ {
+  "id": "resource:horses",
+  "name": "Horses",
+  "aliases": [
+   "RESOURCE_HORSES"
+  ],
+  "summary": "Strategic resource: +1 Food, +1 Production; improved by Pasture.",
+  "fields": {
+   "class": "strategic",
+   "yields": "+1 Food, +1 Production",
+   "improvement": [
+    "Pasture"
+   ],
+   "revealed_by": [
+    "Animal Husbandry"
+   ],
+   "accumulation": "+2 per turn per improved source; stockpile capped (cap rises by era)"
+  }
+ },
+ {
+  "id": "resource:incense",
+  "name": "Incense",
+  "aliases": [
+   "RESOURCE_INCENSE"
+  ],
+  "summary": "Luxury resource: +1 Faith; improved by Plantation.",
+  "fields": {
+   "class": "luxury",
+   "yields": "+1 Faith",
+   "improvement": [
+    "Plantation"
+   ],
+   "amenities": 4
+  }
+ },
+ {
+  "id": "resource:iron",
+  "name": "Iron",
+  "aliases": [
+   "RESOURCE_IRON"
+  ],
+  "summary": "Strategic resource: +1 Science; improved by Mine.",
+  "fields": {
+   "class": "strategic",
+   "yields": "+1 Science",
+   "improvement": [
+    "Mine"
+   ],
+   "revealed_by": [
+    "Bronze Working"
+   ],
+   "accumulation": "+2 per turn per improved source; stockpile capped (cap rises by era)"
+  }
+ },
+ {
+  "id": "resource:ivory",
+  "name": "Ivory",
+  "aliases": [
+   "RESOURCE_IVORY"
+  ],
+  "summary": "Luxury resource: +1 Gold, +1 Production; improved by Camp.",
+  "fields": {
+   "class": "luxury",
+   "yields": "+1 Gold, +1 Production",
+   "improvement": [
+    "Camp"
+   ],
+   "amenities": 4
+  }
+ },
+ {
+  "id": "resource:jade",
+  "name": "Jade",
+  "aliases": [
+   "RESOURCE_JADE"
+  ],
+  "summary": "Luxury resource: +1 Culture; improved by Mine.",
+  "fields": {
+   "class": "luxury",
+   "yields": "+1 Culture",
+   "improvement": [
+    "Mine"
+   ],
+   "amenities": 4
+  }
+ },
+ {
+  "id": "resource:jeans",
+  "name": "Jeans",
+  "aliases": [
+   "RESOURCE_JEANS"
+  ],
+  "summary": "Luxury resource.",
+  "fields": {
+   "class": "luxury",
+   "amenities": 4
+  }
+ },
+ {
+  "id": "resource:maize",
+  "name": "Maize",
+  "aliases": [
+   "RESOURCE_MAIZE"
+  ],
+  "summary": "Bonus resource: +2 Gold; improved by Farm.",
+  "fields": {
+   "class": "bonus",
+   "yields": "+2 Gold",
+   "improvement": [
+    "Farm"
+   ],
+   "harvest": [
+    "40 Gold (with Pottery)"
+   ]
+  }
+ },
+ {
+  "id": "resource:marble",
+  "name": "Marble",
+  "aliases": [
+   "RESOURCE_MARBLE"
+  ],
+  "summary": "Luxury resource: +1 Culture; improved by Quarry.",
+  "fields": {
+   "class": "luxury",
+   "yields": "+1 Culture",
+   "improvement": [
+    "Quarry"
+   ],
+   "amenities": 4
+  }
+ },
+ {
+  "id": "resource:mercury",
+  "name": "Mercury",
+  "aliases": [
+   "RESOURCE_MERCURY"
+  ],
+  "summary": "Luxury resource: +1 Science; improved by Mine.",
+  "fields": {
+   "class": "luxury",
+   "yields": "+1 Science",
+   "improvement": [
+    "Mine"
+   ],
+   "amenities": 4
+  }
+ },
+ {
+  "id": "resource:niter",
+  "name": "Niter",
+  "aliases": [
+   "RESOURCE_NITER"
+  ],
+  "summary": "Strategic resource: +1 Food, +1 Production; improved by Mine.",
+  "fields": {
+   "class": "strategic",
+   "yields": "+1 Food, +1 Production",
+   "improvement": [
+    "Mine"
+   ],
+   "revealed_by": [
+    "Military Engineering"
+   ],
+   "accumulation": "+2 per turn per improved source; stockpile capped (cap rises by era)"
+  }
+ },
+ {
+  "id": "resource:oil",
+  "name": "Oil",
+  "aliases": [
+   "RESOURCE_OIL"
+  ],
+  "summary": "Strategic resource: +3 Production; improved by Oil Well, Offshore Oil Rig.",
+  "fields": {
+   "class": "strategic",
+   "yields": "+3 Production",
+   "improvement": [
+    "Oil Well",
+    "Offshore Oil Rig"
+   ],
+   "revealed_by": [
+    "Refining"
+   ],
+   "accumulation": "+3 per turn per improved source; stockpile capped (cap rises by era)",
+   "power": "4 power per unit"
+  }
+ },
+ {
+  "id": "resource:olives",
+  "name": "Olives",
+  "aliases": [
+   "RESOURCE_OLIVES"
+  ],
+  "summary": "Luxury resource: +1 Gold, +1 Production; improved by Plantation.",
+  "fields": {
+   "class": "luxury",
+   "yields": "+1 Gold, +1 Production",
+   "improvement": [
+    "Plantation"
+   ],
+   "amenities": 4
+  }
+ },
+ {
+  "id": "resource:pearls",
+  "name": "Pearls",
+  "aliases": [
+   "RESOURCE_PEARLS"
+  ],
+  "summary": "Luxury resource: +1 Faith; improved by Fishing Boats.",
+  "fields": {
+   "class": "luxury",
+   "yields": "+1 Faith",
+   "improvement": [
+    "Fishing Boats"
+   ],
+   "amenities": 4
+  }
+ },
+ {
+  "id": "resource:perfume",
+  "name": "Perfume",
+  "aliases": [
+   "RESOURCE_PERFUME"
+  ],
+  "summary": "Luxury resource.",
+  "fields": {
+   "class": "luxury",
+   "amenities": 6
+  }
+ },
+ {
+  "id": "resource:rice",
+  "name": "Rice",
+  "aliases": [
+   "RESOURCE_RICE"
+  ],
+  "summary": "Bonus resource: +1 Food; improved by Farm.",
+  "fields": {
+   "class": "bonus",
+   "yields": "+1 Food",
+   "improvement": [
+    "Farm"
+   ],
+   "harvest": [
+    "20 Food (with Pottery)"
+   ]
+  }
+ },
+ {
+  "id": "resource:salt",
+  "name": "Salt",
+  "aliases": [
+   "RESOURCE_SALT"
+  ],
+  "summary": "Luxury resource: +1 Food, +1 Gold; improved by Mine.",
+  "fields": {
+   "class": "luxury",
+   "yields": "+1 Food, +1 Gold",
+   "improvement": [
+    "Mine"
+   ],
+   "amenities": 4
+  }
+ },
+ {
+  "id": "resource:sheep",
+  "name": "Sheep",
+  "aliases": [
+   "RESOURCE_SHEEP"
+  ],
+  "summary": "Bonus resource: +1 Food; improved by Pasture.",
+  "fields": {
+   "class": "bonus",
+   "yields": "+1 Food",
+   "improvement": [
+    "Pasture"
+   ],
+   "harvest": [
+    "20 Food (with Animal Husbandry)"
+   ]
+  }
+ },
+ {
+  "id": "resource:shipwreck",
+  "name": "Shipwreck",
+  "aliases": [
+   "RESOURCE_SHIPWRECK"
+  ],
+  "summary": "Artifact resource.",
+  "fields": {
+   "class": "artifact",
+   "revealed_by": [
+    "Cultural Heritage"
+   ]
+  }
+ },
+ {
+  "id": "resource:silk",
+  "name": "Silk",
+  "aliases": [
+   "RESOURCE_SILK"
+  ],
+  "summary": "Luxury resource: +1 Culture; improved by Plantation.",
+  "fields": {
+   "class": "luxury",
+   "yields": "+1 Culture",
+   "improvement": [
+    "Plantation"
+   ],
+   "amenities": 4
+  }
+ },
+ {
+  "id": "resource:silver",
+  "name": "Silver",
+  "aliases": [
+   "RESOURCE_SILVER"
+  ],
+  "summary": "Luxury resource: +3 Gold; improved by Mine.",
+  "fields": {
+   "class": "luxury",
+   "yields": "+3 Gold",
+   "improvement": [
+    "Mine"
+   ],
+   "amenities": 4
+  }
+ },
+ {
+  "id": "resource:spices",
+  "name": "Spices",
+  "aliases": [
+   "RESOURCE_SPICES"
+  ],
+  "summary": "Luxury resource: +2 Food; improved by Plantation.",
+  "fields": {
+   "class": "luxury",
+   "yields": "+2 Food",
+   "improvement": [
+    "Plantation"
+   ],
+   "amenities": 4
+  }
+ },
+ {
+  "id": "resource:stone",
+  "name": "Stone",
+  "aliases": [
+   "RESOURCE_STONE"
+  ],
+  "summary": "Bonus resource: +1 Production; improved by Quarry.",
+  "fields": {
+   "class": "bonus",
+   "yields": "+1 Production",
+   "improvement": [
+    "Quarry"
+   ],
+   "harvest": [
+    "20 Production (with Masonry)"
+   ]
+  }
+ },
+ {
+  "id": "resource:sugar",
+  "name": "Sugar",
+  "aliases": [
+   "RESOURCE_SUGAR"
+  ],
+  "summary": "Luxury resource: +2 Food; improved by Plantation.",
+  "fields": {
+   "class": "luxury",
+   "yields": "+2 Food",
+   "improvement": [
+    "Plantation"
+   ],
+   "amenities": 4
+  }
+ },
+ {
+  "id": "resource:tea",
+  "name": "Tea",
+  "aliases": [
+   "RESOURCE_TEA"
+  ],
+  "summary": "Luxury resource: +1 Science; improved by Plantation.",
+  "fields": {
+   "class": "luxury",
+   "yields": "+1 Science",
+   "improvement": [
+    "Plantation"
+   ],
+   "amenities": 4
+  }
+ },
+ {
+  "id": "resource:tobacco",
+  "name": "Tobacco",
+  "aliases": [
+   "RESOURCE_TOBACCO"
+  ],
+  "summary": "Luxury resource: +1 Faith; improved by Plantation.",
+  "fields": {
+   "class": "luxury",
+   "yields": "+1 Faith",
+   "improvement": [
+    "Plantation"
+   ],
+   "amenities": 4
+  }
+ },
+ {
+  "id": "resource:toys",
+  "name": "Toys",
+  "aliases": [
+   "RESOURCE_TOYS"
+  ],
+  "summary": "Luxury resource.",
+  "fields": {
+   "class": "luxury",
+   "amenities": 4
+  }
+ },
+ {
+  "id": "resource:truffles",
+  "name": "Truffles",
+  "aliases": [
+   "RESOURCE_TRUFFLES"
+  ],
+  "summary": "Luxury resource: +3 Gold; improved by Camp.",
+  "fields": {
+   "class": "luxury",
+   "yields": "+3 Gold",
+   "improvement": [
+    "Camp"
+   ],
+   "amenities": 4
+  }
+ },
+ {
+  "id": "resource:turtles",
+  "name": "Turtles",
+  "aliases": [
+   "RESOURCE_TURTLES"
+  ],
+  "summary": "Luxury resource: +1 Science; improved by Fishing Boats.",
+  "fields": {
+   "class": "luxury",
+   "yields": "+1 Science",
+   "improvement": [
+    "Fishing Boats"
+   ],
+   "amenities": 4
+  }
+ },
+ {
+  "id": "resource:uranium",
+  "name": "Uranium",
+  "aliases": [
+   "RESOURCE_URANIUM"
+  ],
+  "summary": "Strategic resource: +2 Production; improved by Mine.",
+  "fields": {
+   "class": "strategic",
+   "yields": "+2 Production",
+   "improvement": [
+    "Mine"
+   ],
+   "revealed_by": [
+    "Combined Arms"
+   ],
+   "accumulation": "+3 per turn per improved source; stockpile capped (cap rises by era)",
+   "power": "16 power per unit"
+  }
+ },
+ {
+  "id": "resource:whales",
+  "name": "Whales",
+  "aliases": [
+   "RESOURCE_WHALES"
+  ],
+  "summary": "Luxury resource: +1 Production, +1 Gold; improved by Fishing Boats.",
+  "fields": {
+   "class": "luxury",
+   "yields": "+1 Production, +1 Gold",
+   "improvement": [
+    "Fishing Boats"
+   ],
+   "amenities": 4
+  }
+ },
+ {
+  "id": "resource:wheat",
+  "name": "Wheat",
+  "aliases": [
+   "RESOURCE_WHEAT"
+  ],
+  "summary": "Bonus resource: +1 Food; improved by Farm.",
+  "fields": {
+   "class": "bonus",
+   "yields": "+1 Food",
+   "improvement": [
+    "Farm"
+   ],
+   "harvest": [
+    "20 Food (with Pottery)"
+   ]
+  }
+ },
+ {
+  "id": "resource:wine",
+  "name": "Wine",
+  "aliases": [
+   "RESOURCE_WINE"
+  ],
+  "summary": "Luxury resource: +1 Food, +1 Gold; improved by Plantation.",
+  "fields": {
+   "class": "luxury",
+   "yields": "+1 Food, +1 Gold",
+   "improvement": [
+    "Plantation"
+   ],
+   "amenities": 4
+  }
+ }
+]

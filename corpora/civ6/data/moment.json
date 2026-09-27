@@ -1,0 +1,1741 @@
+[
+ {
+  "id": "moment:artifact_extracted",
+  "name": "Artifact Extracted",
+  "aliases": [
+   "MOMENT_ARTIFACT_EXTRACTED"
+  ],
+  "summary": "+1 era score. An artifact has been uncovered, giving us insight into the past.",
+  "fields": {
+   "era_score": 1,
+   "description": "An artifact has been uncovered, giving us insight into the past."
+  }
+ },
+ {
+  "id": "moment:artifact_extracted_shipwreck_first",
+  "name": "First Shipwreck Excavated",
+  "aliases": [
+   "MOMENT_ARTIFACT_EXTRACTED_SHIPWRECK_FIRST"
+  ],
+  "summary": "+2 era score. Your archaeologists have excavated their first shipwreck.",
+  "fields": {
+   "era_score": 2,
+   "description": "Your archaeologists have excavated their first shipwreck."
+  }
+ },
+ {
+  "id": "moment:artifact_extracted_shipwreck_first_in_world",
+  "name": "World's First Shipwreck Excavated",
+  "aliases": [
+   "MOMENT_ARTIFACT_EXTRACTED_SHIPWRECK_FIRST_IN_WORLD"
+  ],
+  "summary": "+3 era score. Your archaeologists have completed the world's first excavation of a shipwreck.",
+  "fields": {
+   "era_score": 3,
+   "description": "Your archaeologists have completed the world's first excavation of a shipwreck."
+  }
+ },
+ {
+  "id": "moment:barbarian_camp_destroyed",
+  "name": "Barbarian Camp Destroyed",
+  "aliases": [
+   "MOMENT_BARBARIAN_CAMP_DESTROYED"
+  ],
+  "summary": "+2 era score. A hostile barbarian camp was leveled to the ground by a unit, spreading peace through the area.",
+  "fields": {
+   "era_score": 2,
+   "eras": "Ancient Era to Medieval Era",
+   "description": "A hostile barbarian camp was leveled to the ground by a unit, spreading peace through the area."
+  }
+ },
+ {
+  "id": "moment:barbarian_camp_destroyed_near_your_city",
+  "name": "Threatening Camp Destroyed",
+  "aliases": [
+   "MOMENT_BARBARIAN_CAMP_DESTROYED_NEAR_YOUR_CITY"
+  ],
+  "summary": "+3 era score. A hostile barbarian camp within 6 tiles of one of your cities was destroyed by a unit.",
+  "fields": {
+   "era_score": 3,
+   "eras": "Ancient Era to Medieval Era",
+   "description": "A hostile barbarian camp within 6 tiles of one of your cities was destroyed by a unit."
+  }
+ },
+ {
+  "id": "moment:belief_added_max_beliefs_reached",
+  "name": "Religion Adopts All Beliefs",
+  "aliases": [
+   "MOMENT_BELIEF_ADDED_MAX_BELIEFS_REACHED"
+  ],
+  "summary": "+3 era score. Your Religion has added its final Belief and is now complete.",
+  "fields": {
+   "era_score": 3,
+   "description": "Your Religion has added its final Belief and is now complete."
+  }
+ },
+ {
+  "id": "moment:belief_added_max_beliefs_reached_first_in_world",
+  "name": "World's First Religion to Adopt All Beliefs",
+  "aliases": [
+   "MOMENT_BELIEF_ADDED_MAX_BELIEFS_REACHED_FIRST_IN_WORLD"
+  ],
+  "summary": "+4 era score. Your Religion is the first in the world to add its final Belief and become complete.",
+  "fields": {
+   "era_score": 4,
+   "description": "Your Religion is the first in the world to add its final Belief and become complete."
+  }
+ },
+ {
+  "id": "moment:building_constructed_first_unique",
+  "name": "Unique Building Constructed",
+  "aliases": [
+   "MOMENT_BUILDING_CONSTRUCTED_FIRST_UNIQUE"
+  ],
+  "summary": "+4 era score. You have completed this unique building for the first time.",
+  "fields": {
+   "era_score": 4,
+   "description": "You have completed this unique building for the first time."
+  }
+ },
+ {
+  "id": "moment:building_constructed_full_aerodrome_first",
+  "name": "First Aerodrome Fully Developed",
+  "aliases": [
+   "MOMENT_BUILDING_CONSTRUCTED_FULL_AERODROME_FIRST"
+  ],
+  "summary": "+3 era score. You have completed every building in an Aerodrome district for the first time.",
+  "fields": {
+   "era_score": 3,
+   "description": "You have completed every building in an Aerodrome district for the first time."
+  }
+ },
+ {
+  "id": "moment:building_constructed_full_encampment_first",
+  "name": "First Encampment Fully Developed",
+  "aliases": [
+   "MOMENT_BUILDING_CONSTRUCTED_FULL_ENCAMPMENT_FIRST"
+  ],
+  "summary": "+3 era score. You have completed every building in an Encampment district for the first time.",
+  "fields": {
+   "era_score": 3,
+   "description": "You have completed every building in an Encampment district for the first time."
+  }
+ },
+ {
+  "id": "moment:building_constructed_full_entertainment_complex_first",
+  "name": "First Entertainment Complex Fully Developed",
+  "aliases": [
+   "MOMENT_BUILDING_CONSTRUCTED_FULL_ENTERTAINMENT_COMPLEX_FIRST"
+  ],
+  "summary": "+3 era score. You have completed every building in an Entertainment Complex district for the first time.",
+  "fields": {
+   "era_score": 3,
+   "description": "You have completed every building in an Entertainment Complex district for the first time."
+  }
+ },
+ {
+  "id": "moment:building_constructed_full_water_entertainment_complex_first",
+  "name": "First Water Park Fully Developed",
+  "aliases": [
+   "MOMENT_BUILDING_CONSTRUCTED_FULL_WATER_ENTERTAINMENT_COMPLEX_FIRST"
+  ],
+  "summary": "+3 era score. You have completed every building in a Water Park district for the first time.",
+  "fields": {
+   "era_score": 3,
+   "description": "You have completed every building in a Water Park district for the first time."
+  }
+ },
+ {
+  "id": "moment:building_constructed_game_era_wonder",
+  "name": "World Wonder Completed",
+  "aliases": [
+   "MOMENT_BUILDING_CONSTRUCTED_GAME_ERA_WONDER"
+  ],
+  "summary": "+4 era score. A world wonder is completed, showing our grandeur over other civilizations.",
+  "fields": {
+   "era_score": 4,
+   "description": "A world wonder is completed, showing our grandeur over other civilizations."
+  }
+ },
+ {
+  "id": "moment:building_constructed_past_era_wonder",
+  "name": "Old World Wonder Completed",
+  "aliases": [
+   "MOMENT_BUILDING_CONSTRUCTED_PAST_ERA_WONDER"
+  ],
+  "summary": "+3 era score. A World Wonder is completed. Even though it belongs to a bygone era, it will still show our grandeur over other civilizations.",
+  "fields": {
+   "era_score": 3,
+   "description": "A World Wonder is completed. Even though it belongs to a bygone era, it will still show our grandeur over other civilizations."
+  }
+ },
+ {
+  "id": "moment:city_built_became_largest_civ_by_margin",
+  "name": "World's Largest Civilization",
+  "aliases": [
+   "MOMENT_CITY_BUILT_BECAME_LARGEST_CIV_BY_MARGIN"
+  ],
+  "summary": "+3 era score. Your civilization has become the largest in the world, with at least 3 more cities than its next biggest rival.",
+  "fields": {
+   "era_score": 3,
+   "description": "Your civilization has become the largest in the world, with at least 3 more cities than its next biggest rival."
+  }
+ },
+ {
+  "id": "moment:city_built_near_floodable_river",
+  "name": "City near Floodable River",
+  "aliases": [
+   "MOMENT_CITY_BUILT_NEAR_FLOODABLE_RIVER"
+  ],
+  "summary": "+1 era score. A city is placed within 2 tiles of a river that could flood.",
+  "fields": {
+   "era_score": 1,
+   "description": "A city is placed within 2 tiles of a river that could flood."
+  }
+ },
+ {
+  "id": "moment:city_built_near_natural_wonder",
+  "name": "City of Awe",
+  "aliases": [
+   "MOMENT_CITY_BUILT_NEAR_NATURAL_WONDER"
+  ],
+  "summary": "+3 era score. A city is placed within 2 tiles of a natural wonder.",
+  "fields": {
+   "era_score": 3,
+   "description": "A city is placed within 2 tiles of a natural wonder."
+  }
+ },
+ {
+  "id": "moment:city_built_near_other_civ_city",
+  "name": "Aggressive City Placement",
+  "aliases": [
+   "MOMENT_CITY_BUILT_NEAR_OTHER_CIV_CITY"
+  ],
+  "summary": "+1 era score. A city is placed within 5 tiles of another civilization's city.",
+  "fields": {
+   "era_score": 1,
+   "description": "A city is placed within 5 tiles of another civilization's city."
+  }
+ },
+ {
+  "id": "moment:city_built_near_volcano",
+  "name": "City near Volcano",
+  "aliases": [
+   "MOMENT_CITY_BUILT_NEAR_VOLCANO"
+  ],
+  "summary": "+1 era score. A city is placed within 2 tiles of a volcano that could erupt.",
+  "fields": {
+   "era_score": 1,
+   "description": "A city is placed within 2 tiles of a volcano that could erupt."
+  }
+ },
+ {
+  "id": "moment:city_built_new_continent",
+  "name": "City on New Continent",
+  "aliases": [
+   "MOMENT_CITY_BUILT_NEW_CONTINENT"
+  ],
+  "summary": "+2 era score. A city is placed on a continent you have not yet settled.",
+  "fields": {
+   "era_score": 2,
+   "description": "A city is placed on a continent you have not yet settled."
+  }
+ },
+ {
+  "id": "moment:city_built_on_desert",
+  "name": "Desert City",
+  "aliases": [
+   "MOMENT_CITY_BUILT_ON_DESERT"
+  ],
+  "summary": "+1 era score. A city is established on difficult Desert terrain, expanding your reach into the wilds.",
+  "fields": {
+   "era_score": 1,
+   "description": "A city is established on difficult Desert terrain, expanding your reach into the wilds."
+  }
+ },
+ {
+  "id": "moment:city_built_on_snow",
+  "name": "Snow City",
+  "aliases": [
+   "MOMENT_CITY_BUILT_ON_SNOW"
+  ],
+  "summary": "+1 era score. A city is established on difficult Snow terrain, expanding your reach into the wilds.",
+  "fields": {
+   "era_score": 1,
+   "description": "A city is established on difficult Snow terrain, expanding your reach into the wilds."
+  }
+ },
+ {
+  "id": "moment:city_built_on_tundra",
+  "name": "Tundra City",
+  "aliases": [
+   "MOMENT_CITY_BUILT_ON_TUNDRA"
+  ],
+  "summary": "+1 era score. A city is established on difficult Tundra terrain, expanding your reach into the wilds.",
+  "fields": {
+   "era_score": 1,
+   "description": "A city is established on difficult Tundra terrain, expanding your reach into the wilds."
+  }
+ },
+ {
+  "id": "moment:city_changed_religion_enemy_city_during_war",
+  "name": "Enemy City Adopts Our Religion",
+  "aliases": [
+   "MOMENT_CITY_CHANGED_RELIGION_ENEMY_CITY_DURING_WAR"
+  ],
+  "summary": "+3 era score. An enemy city, despite being at war, has seen the light and adopted our Religion.",
+  "fields": {
+   "era_score": 3,
+   "description": "An enemy city, despite being at war, has seen the light and adopted our Religion."
+  }
+ },
+ {
+  "id": "moment:city_changed_religion_other_holy_city",
+  "name": "Rival Holy City Converted",
+  "aliases": [
+   "MOMENT_CITY_CHANGED_RELIGION_OTHER_HOLY_CITY"
+  ],
+  "summary": "+4 era score. The Holy City of another Religion has converted to our Religion.",
+  "fields": {
+   "era_score": 4,
+   "description": "The Holy City of another Religion has converted to our Religion."
+  }
+ },
+ {
+  "id": "moment:city_power_generated_from_resource_first",
+  "name": "First Resource consumed for Power",
+  "aliases": [
+   "MOMENT_CITY_POWER_GENERATED_FROM_RESOURCE_FIRST"
+  ],
+  "summary": "+2 era score. Your civilization consumes a resource to generate Power for its cities.",
+  "fields": {
+   "era_score": 2,
+   "description": "Your civilization consumes a resource to generate Power for its cities."
+  }
+ },
+ {
+  "id": "moment:city_power_generated_from_resource_first_in_world",
+  "name": "First Resource consumed for Power in World",
+  "aliases": [
+   "MOMENT_CITY_POWER_GENERATED_FROM_RESOURCE_FIRST_IN_WORLD"
+  ],
+  "summary": "+3 era score. Your civilization is the first in the world to consume a resource to generate Power for its cities.",
+  "fields": {
+   "era_score": 3,
+   "description": "Your civilization is the first in the world to consume a resource to generate Power for its cities."
+  }
+ },
+ {
+  "id": "moment:city_size_extra_large_first",
+  "name": "First Gigantic City",
+  "aliases": [
+   "MOMENT_CITY_SIZE_EXTRA_LARGE_FIRST"
+  ],
+  "summary": "+1 era score. A city has reached 25 Citizen Population for the first time in your civilization.",
+  "fields": {
+   "era_score": 1,
+   "description": "A city has reached 25 Citizen Population for the first time in your civilization."
+  }
+ },
+ {
+  "id": "moment:city_size_extra_large_first_in_world",
+  "name": "World's First Gigantic City",
+  "aliases": [
+   "MOMENT_CITY_SIZE_EXTRA_LARGE_FIRST_IN_WORLD"
+  ],
+  "summary": "+2 era score. A city has reached 25 Citizen Population for the first time in the world.",
+  "fields": {
+   "era_score": 2,
+   "description": "A city has reached 25 Citizen Population for the first time in the world."
+  }
+ },
+ {
+  "id": "moment:city_size_large_first",
+  "name": "First Enormous City",
+  "aliases": [
+   "MOMENT_CITY_SIZE_LARGE_FIRST"
+  ],
+  "summary": "+1 era score. A city has reached 20 Citizen Population for the first time in your civilization.",
+  "fields": {
+   "era_score": 1,
+   "description": "A city has reached 20 Citizen Population for the first time in your civilization."
+  }
+ },
+ {
+  "id": "moment:city_size_large_first_in_world",
+  "name": "World's First Enormous City",
+  "aliases": [
+   "MOMENT_CITY_SIZE_LARGE_FIRST_IN_WORLD"
+  ],
+  "summary": "+2 era score. A city has reached 20 Citizen Population for the first time in the world.",
+  "fields": {
+   "era_score": 2,
+   "description": "A city has reached 20 Citizen Population for the first time in the world."
+  }
+ },
+ {
+  "id": "moment:city_size_medium_first",
+  "name": "First Large City",
+  "aliases": [
+   "MOMENT_CITY_SIZE_MEDIUM_FIRST"
+  ],
+  "summary": "+1 era score. A city has reached 15 Citizen Population for the first time in your civilization.",
+  "fields": {
+   "era_score": 1,
+   "description": "A city has reached 15 Citizen Population for the first time in your civilization."
+  }
+ },
+ {
+  "id": "moment:city_size_medium_first_in_world",
+  "name": "World's First Large City",
+  "aliases": [
+   "MOMENT_CITY_SIZE_MEDIUM_FIRST_IN_WORLD"
+  ],
+  "summary": "+2 era score. A city has reached 15 Citizen Population for the first time in the world.",
+  "fields": {
+   "era_score": 2,
+   "description": "A city has reached 15 Citizen Population for the first time in the world."
+  }
+ },
+ {
+  "id": "moment:city_size_small_first",
+  "name": "First Bustling City",
+  "aliases": [
+   "MOMENT_CITY_SIZE_SMALL_FIRST"
+  ],
+  "summary": "+1 era score. A city has reached 10 Citizen Population for the first time in your civilization.",
+  "fields": {
+   "era_score": 1,
+   "obsolete_era": "Modern Era",
+   "description": "A city has reached 10 Citizen Population for the first time in your civilization."
+  }
+ },
+ {
+  "id": "moment:city_size_small_first_in_world",
+  "name": "World's First Bustling City",
+  "aliases": [
+   "MOMENT_CITY_SIZE_SMALL_FIRST_IN_WORLD"
+  ],
+  "summary": "+2 era score. A city has reached 10 Citizen Population for the first time in the world.",
+  "fields": {
+   "era_score": 2,
+   "obsolete_era": "Modern Era",
+   "description": "A city has reached 10 Citizen Population for the first time in the world."
+  }
+ },
+ {
+  "id": "moment:city_transferred_disloyal_free_city",
+  "name": "Free City Joins",
+  "aliases": [
+   "MOMENT_CITY_TRANSFERRED_DISLOYAL_FREE_CITY"
+  ],
+  "summary": "+2 era score. A Free City has decided to pledge its loyalty to us, joining our empire.",
+  "fields": {
+   "era_score": 2,
+   "description": "A Free City has decided to pledge its loyalty to us, joining our empire."
+  }
+ },
+ {
+  "id": "moment:city_transferred_foreign_capital",
+  "name": "Foreign Capital Taken",
+  "aliases": [
+   "MOMENT_CITY_TRANSFERRED_FOREIGN_CAPITAL"
+  ],
+  "summary": "+4 era score. You have taken control of a foreign power's original capital city.",
+  "fields": {
+   "era_score": 4,
+   "description": "You have taken control of a foreign power's original capital city."
+  }
+ },
+ {
+  "id": "moment:city_transferred_player_defeated",
+  "name": "Final Foreign City Taken",
+  "aliases": [
+   "MOMENT_CITY_TRANSFERRED_PLAYER_DEFEATED"
+  ],
+  "summary": "+5 era score. You have taken control of a civilization's last remaining city.",
+  "fields": {
+   "era_score": 5,
+   "description": "You have taken control of a civilization's last remaining city."
+  }
+ },
+ {
+  "id": "moment:city_transferred_to_original_owner",
+  "name": "City Returns to Original Owner",
+  "aliases": [
+   "MOMENT_CITY_TRANSFERRED_TO_ORIGINAL_OWNER"
+  ],
+  "summary": "+2 era score. A city has returned to its original owner.",
+  "fields": {
+   "era_score": 2,
+   "description": "A city has returned to its original owner."
+  }
+ },
+ {
+  "id": "moment:civic_culturvated_in_era_first",
+  "name": "First Civic of New Era",
+  "aliases": [
+   "MOMENT_CIVIC_CULTURVATED_IN_ERA_FIRST"
+  ],
+  "summary": "+1 era score. You have completed your civilization's first civic from a new era of discovery.",
+  "fields": {
+   "era_score": 1,
+   "description": "You have completed your civilization's first civic from a new era of discovery."
+  }
+ },
+ {
+  "id": "moment:civic_culturvated_in_era_first_in_world",
+  "name": "World's First Civic of New Era",
+  "aliases": [
+   "MOMENT_CIVIC_CULTURVATED_IN_ERA_FIRST_IN_WORLD"
+  ],
+  "summary": "+2 era score. You have completed the world's first civic from a new era of discovery.",
+  "fields": {
+   "era_score": 2,
+   "description": "You have completed the world's first civic from a new era of discovery."
+  }
+ },
+ {
+  "id": "moment:district_constructed_canal",
+  "name": "Canal Completed",
+  "aliases": [
+   "MOMENT_DISTRICT_CONSTRUCTED_CANAL"
+  ],
+  "summary": "+2 era score. You have completed your civilization's first Canal district.",
+  "fields": {
+   "era_score": 2,
+   "description": "You have completed your civilization's first Canal district."
+  }
+ },
+ {
+  "id": "moment:district_constructed_first_unique",
+  "name": "Unique District Completed",
+  "aliases": [
+   "MOMENT_DISTRICT_CONSTRUCTED_FIRST_UNIQUE"
+  ],
+  "summary": "+4 era score. You have completed this unique district for the first time.",
+  "fields": {
+   "era_score": 4,
+   "description": "You have completed this unique district for the first time."
+  }
+ },
+ {
+  "id": "moment:district_constructed_high_adjacency_campus",
+  "name": "Splendid Campus Completed",
+  "aliases": [
+   "MOMENT_DISTRICT_CONSTRUCTED_HIGH_ADJACENCY_CAMPUS"
+  ],
+  "summary": "+3 era score. You have completed your civilization's first Campus with a starting adjacency bonus of 3 Science or higher.",
+  "fields": {
+   "era_score": 3,
+   "description": "You have completed your civilization's first Campus with a starting adjacency bonus of 3 Science or higher."
+  }
+ },
+ {
+  "id": "moment:district_constructed_high_adjacency_commercial_hub",
+  "name": "Splendid Commercial Hub Completed",
+  "aliases": [
+   "MOMENT_DISTRICT_CONSTRUCTED_HIGH_ADJACENCY_COMMERCIAL_HUB"
+  ],
+  "summary": "+3 era score. You have completed your civilization's first Commercial Hub with a starting adjacency bonus of 4 Gold or higher.",
+  "fields": {
+   "era_score": 3,
+   "description": "You have completed your civilization's first Commercial Hub with a starting adjacency bonus of 4 Gold or higher."
+  }
+ },
+ {
+  "id": "moment:district_constructed_high_adjacency_harbor",
+  "name": "Splendid Harbor Completed",
+  "aliases": [
+   "MOMENT_DISTRICT_CONSTRUCTED_HIGH_ADJACENCY_HARBOR"
+  ],
+  "summary": "+3 era score. You have completed your civilization's first Harbor with a starting adjacency bonus of 4 Gold or higher.",
+  "fields": {
+   "era_score": 3,
+   "description": "You have completed your civilization's first Harbor with a starting adjacency bonus of 4 Gold or higher."
+  }
+ },
+ {
+  "id": "moment:district_constructed_high_adjacency_holy_site",
+  "name": "Splendid Holy Site Completed",
+  "aliases": [
+   "MOMENT_DISTRICT_CONSTRUCTED_HIGH_ADJACENCY_HOLY_SITE"
+  ],
+  "summary": "+3 era score. You have completed your civilization's first Holy Site with a starting adjacency bonus of 3 Faith or higher.",
+  "fields": {
+   "era_score": 3,
+   "description": "You have completed your civilization's first Holy Site with a starting adjacency bonus of 3 Faith or higher."
+  }
+ },
+ {
+  "id": "moment:district_constructed_high_adjacency_industrial_zone",
+  "name": "Splendid Industrial Zone Completed",
+  "aliases": [
+   "MOMENT_DISTRICT_CONSTRUCTED_HIGH_ADJACENCY_INDUSTRIAL_ZONE"
+  ],
+  "summary": "+3 era score. You have completed your civilization's first Industrial Zone with a starting adjacency bonus of 4 Production or higher.",
+  "fields": {
+   "era_score": 3,
+   "description": "You have completed your civilization's first Industrial Zone with a starting adjacency bonus of 4 Production or higher."
+  }
+ },
+ {
+  "id": "moment:district_constructed_high_adjacency_theater_square",
+  "name": "Splendid Theater Square Completed",
+  "aliases": [
+   "MOMENT_DISTRICT_CONSTRUCTED_HIGH_ADJACENCY_THEATER_SQUARE"
+  ],
+  "summary": "+3 era score. You have completed your civilization's first Theater Square with a starting adjacency bonus of 3 Culture or higher.",
+  "fields": {
+   "era_score": 3,
+   "description": "You have completed your civilization's first Theater Square with a starting adjacency bonus of 3 Culture or higher."
+  }
+ },
+ {
+  "id": "moment:district_constructed_neighborhood_first",
+  "name": "First Neighborhood Completed",
+  "aliases": [
+   "MOMENT_DISTRICT_CONSTRUCTED_NEIGHBORHOOD_FIRST"
+  ],
+  "summary": "+2 era score. You have completed your civilization's first Neighborhood district.",
+  "fields": {
+   "era_score": 2,
+   "description": "You have completed your civilization's first Neighborhood district."
+  }
+ },
+ {
+  "id": "moment:district_constructed_neighborhood_first_in_world",
+  "name": "World's First Neighborhood",
+  "aliases": [
+   "MOMENT_DISTRICT_CONSTRUCTED_NEIGHBORHOOD_FIRST_IN_WORLD"
+  ],
+  "summary": "+3 era score. You have completed the world's first Neighborhood district.",
+  "fields": {
+   "era_score": 3,
+   "obsolete_era": "Modern Era",
+   "description": "You have completed the world's first Neighborhood district."
+  }
+ },
+ {
+  "id": "moment:emergency_won_as_member",
+  "name": "Emergency Completed Successfully",
+  "aliases": [
+   "MOMENT_EMERGENCY_WON_AS_MEMBER"
+  ],
+  "summary": "+3 era score. As a member, you have succeeded in an Emergency.",
+  "fields": {
+   "era_score": 3,
+   "obsolete_era": "Modern Era",
+   "description": "As a member, you have succeeded in an Emergency."
+  }
+ },
+ {
+  "id": "moment:emergency_won_as_target",
+  "name": "Emergency Successfully Defended",
+  "aliases": [
+   "MOMENT_EMERGENCY_WON_AS_TARGET"
+  ],
+  "summary": "+4 era score. As the target, you have succeeded in fighting off an Emergency against you.",
+  "fields": {
+   "era_score": 4,
+   "description": "As the target, you have succeeded in fighting off an Emergency against you."
+  }
+ },
+ {
+  "id": "moment:find_natural_wonder",
+  "name": "Discovery of a Natural Wonder",
+  "aliases": [
+   "MOMENT_FIND_NATURAL_WONDER"
+  ],
+  "summary": "+1 era score. Your civilization discovers this natural wonder for the first time.",
+  "fields": {
+   "era_score": 1,
+   "description": "Your civilization discovers this natural wonder for the first time."
+  }
+ },
+ {
+  "id": "moment:find_natural_wonder_first_in_world",
+  "name": "First Discovery of a Natural Wonder",
+  "aliases": [
+   "MOMENT_FIND_NATURAL_WONDER_FIRST_IN_WORLD"
+  ],
+  "summary": "+3 era score. Our civilization's explorers are the first in the world to behold this natural wonder.",
+  "fields": {
+   "era_score": 3,
+   "description": "Our civilization's explorers are the first in the world to behold this natural wonder."
+  }
+ },
+ {
+  "id": "moment:find_new_continent_first_in_world",
+  "name": "First Discovery of a New Continent",
+  "aliases": [
+   "MOMENT_FIND_NEW_CONTINENT_FIRST_IN_WORLD"
+  ],
+  "summary": "+4 era score. Our civilization's explorers are the first in the world to find this continent.",
+  "fields": {
+   "era_score": 4,
+   "description": "Our civilization's explorers are the first in the world to find this continent."
+  }
+ },
+ {
+  "id": "moment:formation_armada_first",
+  "name": "First Armada",
+  "aliases": [
+   "MOMENT_FORMATION_ARMADA_FIRST"
+  ],
+  "summary": "+1 era score. Your civilization's first Armada is formed.",
+  "fields": {
+   "era_score": 1,
+   "description": "Your civilization's first Armada is formed."
+  }
+ },
+ {
+  "id": "moment:formation_armada_first_in_world",
+  "name": "World's First Armada",
+  "aliases": [
+   "MOMENT_FORMATION_ARMADA_FIRST_IN_WORLD"
+  ],
+  "summary": "+2 era score. The world's very first Armada is formed, under your command.",
+  "fields": {
+   "era_score": 2,
+   "description": "The world's very first Armada is formed, under your command."
+  }
+ },
+ {
+  "id": "moment:formation_army_first",
+  "name": "First Army",
+  "aliases": [
+   "MOMENT_FORMATION_ARMY_FIRST"
+  ],
+  "summary": "+1 era score. Your civilization's first Army is formed.",
+  "fields": {
+   "era_score": 1,
+   "obsolete_era": "Atomic Era",
+   "description": "Your civilization's first Army is formed."
+  }
+ },
+ {
+  "id": "moment:formation_army_first_in_world",
+  "name": "World's First Army",
+  "aliases": [
+   "MOMENT_FORMATION_ARMY_FIRST_IN_WORLD"
+  ],
+  "summary": "+2 era score. The world's very first Army is formed, under your command.",
+  "fields": {
+   "era_score": 2,
+   "obsolete_era": "Atomic Era",
+   "description": "The world's very first Army is formed, under your command."
+  }
+ },
+ {
+  "id": "moment:formation_corps_first",
+  "name": "First Corps",
+  "aliases": [
+   "MOMENT_FORMATION_CORPS_FIRST"
+  ],
+  "summary": "+1 era score. Your civilization's first Corps is formed.",
+  "fields": {
+   "era_score": 1,
+   "obsolete_era": "Modern Era",
+   "description": "Your civilization's first Corps is formed."
+  }
+ },
+ {
+  "id": "moment:formation_corps_first_in_world",
+  "name": "World's First Corps",
+  "aliases": [
+   "MOMENT_FORMATION_CORPS_FIRST_IN_WORLD"
+  ],
+  "summary": "+2 era score. The world's very first Corps is formed, under your command.",
+  "fields": {
+   "era_score": 2,
+   "obsolete_era": "Modern Era",
+   "description": "The world's very first Corps is formed, under your command."
+  }
+ },
+ {
+  "id": "moment:formation_fleet_first",
+  "name": "First Fleet",
+  "aliases": [
+   "MOMENT_FORMATION_FLEET_FIRST"
+  ],
+  "summary": "+1 era score. Your civilization's first Fleet is formed.",
+  "fields": {
+   "era_score": 1,
+   "description": "Your civilization's first Fleet is formed."
+  }
+ },
+ {
+  "id": "moment:formation_fleet_first_in_world",
+  "name": "World's First Fleet",
+  "aliases": [
+   "MOMENT_FORMATION_FLEET_FIRST_IN_WORLD"
+  ],
+  "summary": "+2 era score. The world's very first Fleet is formed, under your command.",
+  "fields": {
+   "era_score": 2,
+   "description": "The world's very first Fleet is formed, under your command."
+  }
+ },
+ {
+  "id": "moment:goody_hut_triggered",
+  "name": "Tribal Village Contacted",
+  "aliases": [
+   "MOMENT_GOODY_HUT_TRIGGERED"
+  ],
+  "summary": "+1 era score. A Tribal Village was contacted, giving strength to our budding cities.",
+  "fields": {
+   "era_score": 1,
+   "eras": "Ancient Era to Ancient Era",
+   "description": "A Tribal Village was contacted, giving strength to our budding cities."
+  }
+ },
+ {
+  "id": "moment:government_enacted_tier_1_first",
+  "name": "First Tier 1 Government",
+  "aliases": [
+   "MOMENT_GOVERNMENT_ENACTED_TIER_1_FIRST"
+  ],
+  "summary": "+2 era score. Your civilization adopts its first Tier 1 Government.",
+  "fields": {
+   "era_score": 2,
+   "obsolete_era": "Medieval Era",
+   "description": "Your civilization adopts its first Tier 1 Government."
+  }
+ },
+ {
+  "id": "moment:government_enacted_tier_1_first_in_world",
+  "name": "First Tier 1 Government in World",
+  "aliases": [
+   "MOMENT_GOVERNMENT_ENACTED_TIER_1_FIRST_IN_WORLD"
+  ],
+  "summary": "+3 era score. Your civilization is the first to adopt a Tier 1 Government in the world.",
+  "fields": {
+   "era_score": 3,
+   "obsolete_era": "Medieval Era",
+   "description": "Your civilization is the first to adopt a Tier 1 Government in the world."
+  }
+ },
+ {
+  "id": "moment:government_enacted_tier_2_first",
+  "name": "First Tier 2 Government",
+  "aliases": [
+   "MOMENT_GOVERNMENT_ENACTED_TIER_2_FIRST"
+  ],
+  "summary": "+2 era score. Your civilization adopts its first Tier 2 Government.",
+  "fields": {
+   "era_score": 2,
+   "obsolete_era": "Renaissance Era",
+   "description": "Your civilization adopts its first Tier 2 Government."
+  }
+ },
+ {
+  "id": "moment:government_enacted_tier_2_first_in_world",
+  "name": "First Tier 2 Government in World",
+  "aliases": [
+   "MOMENT_GOVERNMENT_ENACTED_TIER_2_FIRST_IN_WORLD"
+  ],
+  "summary": "+3 era score. Your civilization is the first to adopt a Tier 2 Government in the world.",
+  "fields": {
+   "era_score": 3,
+   "obsolete_era": "Renaissance Era",
+   "description": "Your civilization is the first to adopt a Tier 2 Government in the world."
+  }
+ },
+ {
+  "id": "moment:government_enacted_tier_3_first",
+  "name": "First Tier 3 Government",
+  "aliases": [
+   "MOMENT_GOVERNMENT_ENACTED_TIER_3_FIRST"
+  ],
+  "summary": "+2 era score. Your civilization adopts its first Tier 3 Government.",
+  "fields": {
+   "era_score": 2,
+   "obsolete_era": "Atomic Era",
+   "description": "Your civilization adopts its first Tier 3 Government."
+  }
+ },
+ {
+  "id": "moment:government_enacted_tier_3_first_in_world",
+  "name": "First Tier 3 Government in World",
+  "aliases": [
+   "MOMENT_GOVERNMENT_ENACTED_TIER_3_FIRST_IN_WORLD"
+  ],
+  "summary": "+3 era score. Your civilization is the first to adopt a Tier 3 Government in the world.",
+  "fields": {
+   "era_score": 3,
+   "obsolete_era": "Atomic Era",
+   "description": "Your civilization is the first to adopt a Tier 3 Government in the world."
+  }
+ },
+ {
+  "id": "moment:government_enacted_tier_4_first",
+  "name": "First Tier 4 Government",
+  "aliases": [
+   "MOMENT_GOVERNMENT_ENACTED_TIER_4_FIRST"
+  ],
+  "summary": "+2 era score. Your civilization adopts its first Tier 4 Government.",
+  "fields": {
+   "era_score": 2,
+   "obsolete_era": "Future Era",
+   "description": "Your civilization adopts its first Tier 4 Government."
+  }
+ },
+ {
+  "id": "moment:government_enacted_tier_4_first_in_world",
+  "name": "First Tier 4 Government in World",
+  "aliases": [
+   "MOMENT_GOVERNMENT_ENACTED_TIER_4_FIRST_IN_WORLD"
+  ],
+  "summary": "+3 era score. Your civilization is the first to adopt a Tier 4 Government in the world.",
+  "fields": {
+   "era_score": 3,
+   "obsolete_era": "Future Era",
+   "description": "Your civilization is the first to adopt a Tier 4 Government in the world."
+  }
+ },
+ {
+  "id": "moment:governor_all_appointed_first",
+  "name": "All Governors Appointed",
+  "aliases": [
+   "MOMENT_GOVERNOR_ALL_APPOINTED_FIRST"
+  ],
+  "summary": "+1 era score. You have appointed all available Governors, securing the prosperity of many cities.",
+  "fields": {
+   "era_score": 1,
+   "description": "You have appointed all available Governors, securing the prosperity of many cities."
+  }
+ },
+ {
+  "id": "moment:governor_fully_promoted_first",
+  "name": "Governor Fully Promoted",
+  "aliases": [
+   "MOMENT_GOVERNOR_FULLY_PROMOTED_FIRST"
+  ],
+  "summary": "+1 era score. You have fully promoted a Governor for the first time, unlocking powerful abilities to help a city.",
+  "fields": {
+   "era_score": 1,
+   "obsolete_era": "Modern Era",
+   "description": "You have fully promoted a Governor for the first time, unlocking powerful abilities to help a city."
+  }
+ },
+ {
+  "id": "moment:great_person_created_game_era",
+  "name": "Great Person Recruited",
+  "aliases": [
+   "MOMENT_GREAT_PERSON_CREATED_GAME_ERA"
+  ],
+  "summary": "+1 era score. A Great Person has traveled to our lands to share unique talents.",
+  "fields": {
+   "era_score": 1,
+   "description": "A Great Person has traveled to our lands to share unique talents."
+  }
+ },
+ {
+  "id": "moment:great_person_created_past_era",
+  "name": "Old Great Person Recruited",
+  "aliases": [
+   "MOMENT_GREAT_PERSON_CREATED_PAST_ERA"
+  ],
+  "summary": "+1 era score. A Great Person has traveled to our lands. Though better suited to a past era, they will still contribute great things to our civilization.",
+  "fields": {
+   "era_score": 1,
+   "description": "A Great Person has traveled to our lands. Though better suited to a past era, they will still contribute great things to our civilization."
+  }
+ },
+ {
+  "id": "moment:great_person_created_patronage_faith_over_half",
+  "name": "Great Person Lured by Faith",
+  "aliases": [
+   "MOMENT_GREAT_PERSON_CREATED_PATRONAGE_FAITH_OVER_HALF"
+  ],
+  "summary": "+3 era score. A Great Person has traveled to our lands to share unique talents, thanks to our use of Faith to make up more than half their recruitment cost.",
+  "fields": {
+   "era_score": 3,
+   "description": "A Great Person has traveled to our lands to share unique talents, thanks to our use of Faith to make up more than half their recruitment cost."
+  }
+ },
+ {
+  "id": "moment:great_person_created_patronage_gold_over_half",
+  "name": "Great Person Lured by Gold",
+  "aliases": [
+   "MOMENT_GREAT_PERSON_CREATED_PATRONAGE_GOLD_OVER_HALF"
+  ],
+  "summary": "+3 era score. A Great Person has traveled to our lands to share unique talents, thanks to our generous stipend of Gold.",
+  "fields": {
+   "era_score": 3,
+   "description": "A Great Person has traveled to our lands to share unique talents, thanks to our generous stipend of Gold."
+  }
+ },
+ {
+  "id": "moment:improvement_constructed_first_unique",
+  "name": "Unique Tile Improvement Built",
+  "aliases": [
+   "MOMENT_IMPROVEMENT_CONSTRUCTED_FIRST_UNIQUE"
+  ],
+  "summary": "+4 era score. Your Builders have constructed this unique tile improvement for the first time.",
+  "fields": {
+   "era_score": 4,
+   "description": "Your Builders have constructed this unique tile improvement for the first time."
+  }
+ },
+ {
+  "id": "moment:improvement_constructed_mountain_tunnel_first",
+  "name": "First Mountain Tunnel",
+  "aliases": [
+   "MOMENT_IMPROVEMENT_CONSTRUCTED_MOUNTAIN_TUNNEL_FIRST"
+  ],
+  "summary": "+2 era score. Your civilization builds its first Mountain Tunnel.",
+  "fields": {
+   "era_score": 2,
+   "description": "Your civilization builds its first Mountain Tunnel."
+  }
+ },
+ {
+  "id": "moment:improvement_constructed_mountain_tunnel_first_in_world",
+  "name": "First Mountain Tunnel in World",
+  "aliases": [
+   "MOMENT_IMPROVEMENT_CONSTRUCTED_MOUNTAIN_TUNNEL_FIRST_IN_WORLD"
+  ],
+  "summary": "+3 era score. Your civilization is the first to build a Mountain Tunnel in the world.",
+  "fields": {
+   "era_score": 3,
+   "description": "Your civilization is the first to build a Mountain Tunnel in the world."
+  }
+ },
+ {
+  "id": "moment:improvement_constructed_on_disaster_yield_tile_first",
+  "name": "First Improvement after Natural Disaster",
+  "aliases": [
+   "MOMENT_IMPROVEMENT_CONSTRUCTED_ON_DISASTER_YIELD_TILE_FIRST"
+  ],
+  "summary": "+1 era score. Your civilization builds its first improvement on a tile that was enriched by a natural disaster.",
+  "fields": {
+   "era_score": 1,
+   "description": "Your civilization builds its first improvement on a tile that was enriched by a natural disaster."
+  }
+ },
+ {
+  "id": "moment:improvement_constructed_renewable_energy_first",
+  "name": "First Green Improvement",
+  "aliases": [
+   "MOMENT_IMPROVEMENT_CONSTRUCTED_RENEWABLE_ENERGY_FIRST"
+  ],
+  "summary": "+2 era score. Your civilization builds its first tile improvement dedicated to providing renewable Power.",
+  "fields": {
+   "era_score": 2,
+   "description": "Your civilization builds its first tile improvement dedicated to providing renewable Power."
+  }
+ },
+ {
+  "id": "moment:improvement_constructed_renewable_energy_first_in_world",
+  "name": "First Green Improvement in World",
+  "aliases": [
+   "MOMENT_IMPROVEMENT_CONSTRUCTED_RENEWABLE_ENERGY_FIRST_IN_WORLD"
+  ],
+  "summary": "+3 era score. Your civilization is the first to build a tile improvement dedicated to providing renewable Power in the world.",
+  "fields": {
+   "era_score": 3,
+   "description": "Your civilization is the first to build a tile improvement dedicated to providing renewable Power in the world."
+  }
+ },
+ {
+  "id": "moment:improvement_constructed_seaside_resort_first",
+  "name": "First Seaside Resort",
+  "aliases": [
+   "MOMENT_IMPROVEMENT_CONSTRUCTED_SEASIDE_RESORT_FIRST"
+  ],
+  "summary": "+2 era score. You have completed your first Seaside Resort tile improvement.",
+  "fields": {
+   "era_score": 2,
+   "description": "You have completed your first Seaside Resort tile improvement."
+  }
+ },
+ {
+  "id": "moment:improvement_constructed_seaside_resort_first_in_world",
+  "name": "World's First Seaside Resort",
+  "aliases": [
+   "MOMENT_IMPROVEMENT_CONSTRUCTED_SEASIDE_RESORT_FIRST_IN_WORLD"
+  ],
+  "summary": "+3 era score. You have completed the world's first Seaside Resort tile improvement.",
+  "fields": {
+   "era_score": 3,
+   "description": "You have completed the world's first Seaside Resort tile improvement."
+  }
+ },
+ {
+  "id": "moment:inquisition_launched",
+  "name": "Inquisition Begins",
+  "aliases": [
+   "MOMENT_INQUISITION_LAUNCHED"
+  ],
+  "summary": "+1 era score. Your Religion launches an inquisition.",
+  "fields": {
+   "era_score": 1,
+   "description": "Your Religion launches an inquisition."
+  }
+ },
+ {
+  "id": "moment:inquisition_launched_first_in_world",
+  "name": "World's First Inquisition",
+  "aliases": [
+   "MOMENT_INQUISITION_LAUNCHED_FIRST_IN_WORLD"
+  ],
+  "summary": "+2 era score. Your Religion launches the world's first inquisition.",
+  "fields": {
+   "era_score": 2,
+   "description": "Your Religion launches the world's first inquisition."
+  }
+ },
+ {
+  "id": "moment:mitigated_coastal_flood",
+  "name": "Coastal Flood Mitigated",
+  "aliases": [
+   "MOMENT_MITIGATED_COASTAL_FLOOD"
+  ],
+  "summary": "+1 era score. Your Flood Barrier has prevented catastrophic damage from a coastal flood.",
+  "fields": {
+   "era_score": 1,
+   "description": "Your Flood Barrier has prevented catastrophic damage from a coastal flood."
+  }
+ },
+ {
+  "id": "moment:mitigated_river_flood",
+  "name": "River Flood Mitigated",
+  "aliases": [
+   "MOMENT_MITIGATED_RIVER_FLOOD"
+  ],
+  "summary": "+1 era score. Your constructed infrastructure has prevented damage from a river flood.",
+  "fields": {
+   "era_score": 1,
+   "description": "Your constructed infrastructure has prevented damage from a river flood."
+  }
+ },
+ {
+  "id": "moment:national_park_created",
+  "name": "National Park Founded",
+  "aliases": [
+   "MOMENT_NATIONAL_PARK_CREATED"
+  ],
+  "summary": "+3 era score. You have founded a National Park.",
+  "fields": {
+   "era_score": 3,
+   "description": "You have founded a National Park."
+  }
+ },
+ {
+  "id": "moment:national_park_created_first_in_world",
+  "name": "World's First National Park",
+  "aliases": [
+   "MOMENT_NATIONAL_PARK_CREATED_FIRST_IN_WORLD"
+  ],
+  "summary": "+4 era score. You have founded the world's first National Park.",
+  "fields": {
+   "era_score": 4,
+   "description": "You have founded the world's first National Park."
+  }
+ },
+ {
+  "id": "moment:pantheon_founded",
+  "name": "Pantheon Founded",
+  "aliases": [
+   "MOMENT_PANTHEON_FOUNDED"
+  ],
+  "summary": "+1 era score. Your people adopt Belief in a Pantheon.",
+  "fields": {
+   "era_score": 1,
+   "obsolete_era": "Medieval Era",
+   "description": "Your people adopt Belief in a Pantheon."
+  }
+ },
+ {
+  "id": "moment:pantheon_founded_first_in_world",
+  "name": "World's First Pantheon",
+  "aliases": [
+   "MOMENT_PANTHEON_FOUNDED_FIRST_IN_WORLD"
+  ],
+  "summary": "+2 era score. Your people are the first in the world to adopt Belief in a Pantheon.",
+  "fields": {
+   "era_score": 2,
+   "obsolete_era": "Medieval Era",
+   "description": "Your people are the first in the world to adopt Belief in a Pantheon."
+  }
+ },
+ {
+  "id": "moment:player_earned_diplomatic_victory_point",
+  "name": "Diplomatic Victory Resolution Won",
+  "aliases": [
+   "MOMENT_PLAYER_EARNED_DIPLOMATIC_VICTORY_POINT"
+  ],
+  "summary": "+2 era score. You have won the Diplomatic Victory resolution and earned Victory Points.",
+  "fields": {
+   "era_score": 2,
+   "description": "You have won the Diplomatic Victory resolution and earned Victory Points."
+  }
+ },
+ {
+  "id": "moment:player_gave_envoy_became_suzerain_first_in_world",
+  "name": "City-State's First Suzerain",
+  "aliases": [
+   "MOMENT_PLAYER_GAVE_ENVOY_BECAME_SUZERAIN_FIRST_IN_WORLD"
+  ],
+  "summary": "+2 era score. You have become the first Suzerain of this city-state.",
+  "fields": {
+   "era_score": 2,
+   "obsolete_era": "Medieval Era",
+   "description": "You have become the first Suzerain of this city-state."
+  }
+ },
+ {
+  "id": "moment:player_gave_envoy_canceled_levy",
+  "name": "Levied Army Stands Down",
+  "aliases": [
+   "MOMENT_PLAYER_GAVE_ENVOY_CANCELED_LEVY"
+  ],
+  "summary": "+2 era score. Your use of Envoys has convinced this city-state's levied army to stand down.",
+  "fields": {
+   "era_score": 2,
+   "description": "Your use of Envoys has convinced this city-state's levied army to stand down."
+  }
+ },
+ {
+  "id": "moment:player_gave_envoy_canceled_suzerain_during_war",
+  "name": "Enemy City-State Pacified",
+  "aliases": [
+   "MOMENT_PLAYER_GAVE_ENVOY_CANCELED_SUZERAIN_DURING_WAR"
+  ],
+  "summary": "+2 era score. Your use of Envoys has toppled a hostile city-state's Suzerain, convincing it to end hostilities with you.",
+  "fields": {
+   "era_score": 2,
+   "description": "Your use of Envoys has toppled a hostile city-state's Suzerain, convincing it to end hostilities with you."
+  }
+ },
+ {
+  "id": "moment:player_levied_military",
+  "name": "City-State Army Levied",
+  "aliases": [
+   "MOMENT_PLAYER_LEVIED_MILITARY"
+  ],
+  "summary": "+1 era score. You have levied the military forces of a city-state.",
+  "fields": {
+   "era_score": 1,
+   "description": "You have levied the military forces of a city-state."
+  }
+ },
+ {
+  "id": "moment:player_levied_military_near_enemy_city",
+  "name": "City-State Army Levied Near Enemy",
+  "aliases": [
+   "MOMENT_PLAYER_LEVIED_MILITARY_NEAR_ENEMY_CITY"
+  ],
+  "summary": "+2 era score. You have levied the military forces of a city-state within striking distance of an enemy civilization.",
+  "fields": {
+   "era_score": 2,
+   "description": "You have levied the military forces of a city-state within striking distance of an enemy civilization."
+  }
+ },
+ {
+  "id": "moment:player_met_all_majors",
+  "name": "Met All Civilizations",
+  "aliases": [
+   "MOMENT_PLAYER_MET_ALL_MAJORS"
+  ],
+  "summary": "+3 era score. You have met all living civilizations in the world.",
+  "fields": {
+   "era_score": 3,
+   "description": "You have met all living civilizations in the world."
+  }
+ },
+ {
+  "id": "moment:player_met_all_majors_first_in_world",
+  "name": "World's First to Meet All Civilizations",
+  "aliases": [
+   "MOMENT_PLAYER_MET_ALL_MAJORS_FIRST_IN_WORLD"
+  ],
+  "summary": "+5 era score. You are the first to meet all living civilizations in the world.",
+  "fields": {
+   "era_score": 5,
+   "description": "You are the first to meet all living civilizations in the world."
+  }
+ },
+ {
+  "id": "moment:player_met_major",
+  "name": "Met New Civilization",
+  "aliases": [
+   "MOMENT_PLAYER_MET_MAJOR"
+  ],
+  "summary": "+1 era score. You have made contact with a new civilization.",
+  "fields": {
+   "era_score": 1,
+   "description": "You have made contact with a new civilization."
+  }
+ },
+ {
+  "id": "moment:project_founded_exoplanet",
+  "name": "Exoplanet Expedition Launched",
+  "aliases": [
+   "MOMENT_PROJECT_FOUNDED_EXOPLANET"
+  ],
+  "summary": "+2 era score. You have launched your civilization's expedition to a distant planet.",
+  "fields": {
+   "era_score": 2,
+   "description": "You have launched your civilization's expedition to a distant planet."
+  }
+ },
+ {
+  "id": "moment:project_founded_exoplanet_first_in_world",
+  "name": "World's First Exoplanet Expedition Launched",
+  "aliases": [
+   "MOMENT_PROJECT_FOUNDED_EXOPLANET_FIRST_IN_WORLD"
+  ],
+  "summary": "+4 era score. You are the first in the world to launch an expedition to a distant planet.",
+  "fields": {
+   "era_score": 4,
+   "description": "You are the first in the world to launch an expedition to a distant planet."
+  }
+ },
+ {
+  "id": "moment:project_founded_manhatten",
+  "name": "Manhattan Project Completed",
+  "aliases": [
+   "MOMENT_PROJECT_FOUNDED_MANHATTEN"
+  ],
+  "summary": "+2 era score. Your scientists completed the Manhattan Project.",
+  "fields": {
+   "era_score": 2,
+   "description": "Your scientists completed the Manhattan Project."
+  }
+ },
+ {
+  "id": "moment:project_founded_mars",
+  "name": "Martian Colony Established",
+  "aliases": [
+   "MOMENT_PROJECT_FOUNDED_MARS"
+  ],
+  "summary": "+2 era score. You have established a colony on Mars.",
+  "fields": {
+   "era_score": 2,
+   "description": "You have established a colony on Mars."
+  }
+ },
+ {
+  "id": "moment:project_founded_mars_first_in_world",
+  "name": "World's First Martian Colony Established",
+  "aliases": [
+   "MOMENT_PROJECT_FOUNDED_MARS_FIRST_IN_WORLD"
+  ],
+  "summary": "+4 era score. You are the first in the world to establish a colony on Mars.",
+  "fields": {
+   "era_score": 4,
+   "description": "You are the first in the world to establish a colony on Mars."
+  }
+ },
+ {
+  "id": "moment:project_founded_moon_landing",
+  "name": "Landed on the Moon",
+  "aliases": [
+   "MOMENT_PROJECT_FOUNDED_MOON_LANDING"
+  ],
+  "summary": "+2 era score. You send a successful mission to land on the moon.",
+  "fields": {
+   "era_score": 2,
+   "description": "You send a successful mission to land on the moon."
+  }
+ },
+ {
+  "id": "moment:project_founded_moon_landing_first_in_world",
+  "name": "World's First Landing on the Moon",
+  "aliases": [
+   "MOMENT_PROJECT_FOUNDED_MOON_LANDING_FIRST_IN_WORLD"
+  ],
+  "summary": "+4 era score. You are the first in the world to land on the moon.",
+  "fields": {
+   "era_score": 4,
+   "description": "You are the first in the world to land on the moon."
+  }
+ },
+ {
+  "id": "moment:project_founded_operation_ivy",
+  "name": "Operation Ivy Completed",
+  "aliases": [
+   "MOMENT_PROJECT_FOUNDED_OPERATION_IVY"
+  ],
+  "summary": "+2 era score. Your scientists completed Operation Ivy.",
+  "fields": {
+   "era_score": 2,
+   "description": "Your scientists completed Operation Ivy."
+  }
+ },
+ {
+  "id": "moment:project_founded_satellite_launch",
+  "name": "Satellite Launched Into Orbit",
+  "aliases": [
+   "MOMENT_PROJECT_FOUNDED_SATELLITE_LAUNCH"
+  ],
+  "summary": "+2 era score. You launched your civilization's first satellite into orbit.",
+  "fields": {
+   "era_score": 2,
+   "description": "You launched your civilization's first satellite into orbit."
+  }
+ },
+ {
+  "id": "moment:project_founded_satellite_launch_first_in_world",
+  "name": "World's First Satellite in Orbit",
+  "aliases": [
+   "MOMENT_PROJECT_FOUNDED_SATELLITE_LAUNCH_FIRST_IN_WORLD"
+  ],
+  "summary": "+4 era score. You launched the world's first satellite into orbit.",
+  "fields": {
+   "era_score": 4,
+   "description": "You launched the world's first satellite into orbit."
+  }
+ },
+ {
+  "id": "moment:religion_founded",
+  "name": "Religion Founded",
+  "aliases": [
+   "MOMENT_RELIGION_FOUNDED"
+  ],
+  "summary": "+2 era score. A Great Prophet founds a Religion, bringing light to your people.",
+  "fields": {
+   "era_score": 2,
+   "description": "A Great Prophet founds a Religion, bringing light to your people."
+  }
+ },
+ {
+  "id": "moment:religion_founded_first_in_world",
+  "name": "World's First Religion",
+  "aliases": [
+   "MOMENT_RELIGION_FOUNDED_FIRST_IN_WORLD"
+  ],
+  "summary": "+3 era score. Your people are the first to form a Religion, bringing light to the world at large!",
+  "fields": {
+   "era_score": 3,
+   "description": "Your people are the first to form a Religion, bringing light to the world at large!"
+  }
+ },
+ {
+  "id": "moment:route_created_railroad_connects_two_cities",
+  "name": "First Railroad Connection",
+  "aliases": [
+   "MOMENT_ROUTE_CREATED_RAILROAD_CONNECTS_TWO_CITIES"
+  ],
+  "summary": "+2 era score. Your civilization builds its first Railroad to connect two of your cities.",
+  "fields": {
+   "era_score": 2,
+   "description": "Your civilization builds its first Railroad to connect two of your cities."
+  }
+ },
+ {
+  "id": "moment:route_created_railroad_connects_two_cities_first_in_world",
+  "name": "First Railroad Connection in World",
+  "aliases": [
+   "MOMENT_ROUTE_CREATED_RAILROAD_CONNECTS_TWO_CITIES_FIRST_IN_WORLD"
+  ],
+  "summary": "+3 era score. Your civilization is the first to build a Railroad to connect two of its cities in the world.",
+  "fields": {
+   "era_score": 3,
+   "description": "Your civilization is the first to build a Railroad to connect two of its cities in the world."
+  }
+ },
+ {
+  "id": "moment:spy_max_level",
+  "name": "Master Spy Earned",
+  "aliases": [
+   "MOMENT_SPY_MAX_LEVEL"
+  ],
+  "summary": "+1 era score. One of your Spies has reached its maximum promotion level.",
+  "fields": {
+   "era_score": 1,
+   "description": "One of your Spies has reached its maximum promotion level."
+  }
+ },
+ {
+  "id": "moment:spy_max_level_first",
+  "name": "First Master Spy Earned",
+  "aliases": [
+   "MOMENT_SPY_MAX_LEVEL_FIRST"
+  ],
+  "summary": "+2 era score. For the first time, one of your Spies has reached its maximum promotion level.",
+  "fields": {
+   "era_score": 2,
+   "description": "For the first time, one of your Spies has reached its maximum promotion level."
+  }
+ },
+ {
+  "id": "moment:tech_researched_in_era_first",
+  "name": "First Technology of New Era",
+  "aliases": [
+   "MOMENT_TECH_RESEARCHED_IN_ERA_FIRST"
+  ],
+  "summary": "+1 era score. You have completed your civilization's first technology from a new era of discovery.",
+  "fields": {
+   "era_score": 1,
+   "description": "You have completed your civilization's first technology from a new era of discovery."
+  }
+ },
+ {
+  "id": "moment:tech_researched_in_era_first_in_world",
+  "name": "World's First Technology of New Era",
+  "aliases": [
+   "MOMENT_TECH_RESEARCHED_IN_ERA_FIRST_IN_WORLD"
+  ],
+  "summary": "+2 era score. You have completed the world's first technology from a new era of discovery.",
+  "fields": {
+   "era_score": 2,
+   "description": "You have completed the world's first technology from a new era of discovery."
+  }
+ },
+ {
+  "id": "moment:trading_post_constructed_in_every_civ",
+  "name": "Trading Posts in All Civilizations",
+  "aliases": [
+   "MOMENT_TRADING_POST_CONSTRUCTED_IN_EVERY_CIV"
+  ],
+  "summary": "+3 era score. You have established a Trading Post in all civilizations.",
+  "fields": {
+   "era_score": 3,
+   "description": "You have established a Trading Post in all civilizations."
+  }
+ },
+ {
+  "id": "moment:trading_post_constructed_in_every_civ_first_in_world",
+  "name": "First Trading Posts in All Civilizations",
+  "aliases": [
+   "MOMENT_TRADING_POST_CONSTRUCTED_IN_EVERY_CIV_FIRST_IN_WORLD"
+  ],
+  "summary": "+5 era score. You are the first in the world to establish a Trading Post in all civilizations.",
+  "fields": {
+   "era_score": 5,
+   "description": "You are the first in the world to establish a Trading Post in all civilizations."
+  }
+ },
+ {
+  "id": "moment:trading_post_constructed_in_other_civ",
+  "name": "Trading Post Established in New Civilization",
+  "aliases": [
+   "MOMENT_TRADING_POST_CONSTRUCTED_IN_OTHER_CIV"
+  ],
+  "summary": "+1 era score. You have established your first Trading Post in this civilization, opening up access to new markets.",
+  "fields": {
+   "era_score": 1,
+   "description": "You have established your first Trading Post in this civilization, opening up access to new markets."
+  }
+ },
+ {
+  "id": "moment:unit_created_first_domain_air",
+  "name": "Taking Flight",
+  "aliases": [
+   "MOMENT_UNIT_CREATED_FIRST_DOMAIN_AIR"
+  ],
+  "summary": "+3 era score. You own your first flying unit. People rejoice at the new possibilities this entails.",
+  "fields": {
+   "era_score": 3,
+   "description": "You own your first flying unit. People rejoice at the new possibilities this entails."
+  }
+ },
+ {
+  "id": "moment:unit_created_first_domain_air_in_world",
+  "name": "World's First Flight",
+  "aliases": [
+   "MOMENT_UNIT_CREATED_FIRST_DOMAIN_AIR_IN_WORLD"
+  ],
+  "summary": "+5 era score. You own the world's first flying unit! People rejoice at the new possibilities this entails.",
+  "fields": {
+   "era_score": 5,
+   "description": "You own the world's first flying unit! People rejoice at the new possibilities this entails."
+  }
+ },
+ {
+  "id": "moment:unit_created_first_domain_sea",
+  "name": "On the Waves",
+  "aliases": [
+   "MOMENT_UNIT_CREATED_FIRST_DOMAIN_SEA"
+  ],
+  "summary": "+2 era score. You own your first seafaring unit. A world of possibility awaits on the horizon.",
+  "fields": {
+   "era_score": 2,
+   "description": "You own your first seafaring unit. A world of possibility awaits on the horizon."
+  }
+ },
+ {
+  "id": "moment:unit_created_first_domain_sea_in_world",
+  "name": "World's First Seafaring",
+  "aliases": [
+   "MOMENT_UNIT_CREATED_FIRST_DOMAIN_SEA_IN_WORLD"
+  ],
+  "summary": "+3 era score. You own the world's first seafaring unit! A world of possibility awaits on the horizon.",
+  "fields": {
+   "era_score": 3,
+   "description": "You own the world's first seafaring unit! A world of possibility awaits on the horizon."
+  }
+ },
+ {
+  "id": "moment:unit_created_first_requiring_strategic",
+  "name": "Strategic Resource Potential Unleashed",
+  "aliases": [
+   "MOMENT_UNIT_CREATED_FIRST_REQUIRING_STRATEGIC"
+  ],
+  "summary": "+1 era score. You own your first unit that uses this strategic resource.",
+  "fields": {
+   "era_score": 1,
+   "description": "You own your first unit that uses this strategic resource."
+  }
+ },
+ {
+  "id": "moment:unit_created_first_requiring_strategic_in_world",
+  "name": "World's First Strategic Resource Potential Unleashed",
+  "aliases": [
+   "MOMENT_UNIT_CREATED_FIRST_REQUIRING_STRATEGIC_IN_WORLD"
+  ],
+  "summary": "+2 era score. You are the world's first civilization to own a unit using this strategic resource.",
+  "fields": {
+   "era_score": 2,
+   "description": "You are the world's first civilization to own a unit using this strategic resource."
+  }
+ },
+ {
+  "id": "moment:unit_created_first_unique",
+  "name": "Unique Unit Marches",
+  "aliases": [
+   "MOMENT_UNIT_CREATED_FIRST_UNIQUE"
+  ],
+  "summary": "+4 era score. You have trained this unique unit for the first time, giving you an edge on the battlefield.",
+  "fields": {
+   "era_score": 4,
+   "description": "You have trained this unique unit for the first time, giving you an edge on the battlefield."
+  }
+ },
+ {
+  "id": "moment:unit_high_level",
+  "name": "Unit Promoted with Distinction",
+  "aliases": [
+   "MOMENT_UNIT_HIGH_LEVEL"
+  ],
+  "summary": "+1 era score. One of your units reaches its fourth level of promotion.",
+  "fields": {
+   "era_score": 1,
+   "description": "One of your units reaches its fourth level of promotion."
+  }
+ },
+ {
+  "id": "moment:unit_high_level_first",
+  "name": "First Unit Promoted with Distinction",
+  "aliases": [
+   "MOMENT_UNIT_HIGH_LEVEL_FIRST"
+  ],
+  "summary": "+1 era score. For the first time, one of your units reaches its fourth level of promotion.",
+  "fields": {
+   "era_score": 1,
+   "description": "For the first time, one of your units reaches its fourth level of promotion."
+  }
+ },
+ {
+  "id": "moment:unit_killed_assisted_by_admiral",
+  "name": "Admiral Defeats Enemy",
+  "aliases": [
+   "MOMENT_UNIT_KILLED_ASSISTED_BY_ADMIRAL"
+  ],
+  "summary": "+2 era score. One of your Great Admirals has overseen their first victorious offensive against an enemy unit.",
+  "fields": {
+   "era_score": 2,
+   "description": "One of your Great Admirals has overseen their first victorious offensive against an enemy unit."
+  }
+ },
+ {
+  "id": "moment:unit_killed_assisted_by_general",
+  "name": "General Defeats Enemy",
+  "aliases": [
+   "MOMENT_UNIT_KILLED_ASSISTED_BY_GENERAL"
+  ],
+  "summary": "+2 era score. One of your Great Generals has overseen their first victorious offensive against an enemy unit.",
+  "fields": {
+   "era_score": 2,
+   "description": "One of your Great Generals has overseen their first victorious offensive against an enemy unit."
+  }
+ },
+ {
+  "id": "moment:unit_killed_underdog_military_formation",
+  "name": "Enemy Formation Defeated",
+  "aliases": [
+   "MOMENT_UNIT_KILLED_UNDERDOG_MILITARY_FORMATION"
+  ],
+  "summary": "+1 era score. One of your units defeated an enemy unit with a superior military formation.",
+  "fields": {
+   "era_score": 1,
+   "description": "One of your units defeated an enemy unit with a superior military formation."
+  }
+ },
+ {
+  "id": "moment:unit_killed_underdog_promotions",
+  "name": "Enemy Veteran Defeated",
+  "aliases": [
+   "MOMENT_UNIT_KILLED_UNDERDOG_PROMOTIONS"
+  ],
+  "summary": "+3 era score. One of your units defeated an enemy unit with at least 2 more promotions than it.",
+  "fields": {
+   "era_score": 3,
+   "description": "One of your units defeated an enemy unit with at least 2 more promotions than it."
+  }
+ },
+ {
+  "id": "moment:unit_tourism_bomb",
+  "name": "First Rock Band Concert",
+  "aliases": [
+   "MOMENT_UNIT_TOURISM_BOMB"
+  ],
+  "summary": "+2 era score. Your civilization performs its first Rock Band concert.",
+  "fields": {
+   "era_score": 2,
+   "description": "Your civilization performs its first Rock Band concert."
+  }
+ },
+ {
+  "id": "moment:unit_tourism_bomb_first_in_world",
+  "name": "First Rock Band Concert in World",
+  "aliases": [
+   "MOMENT_UNIT_TOURISM_BOMB_FIRST_IN_WORLD"
+  ],
+  "summary": "+3 era score. Your civilization is the first to perform a Rock Band concert in the world.",
+  "fields": {
+   "era_score": 3,
+   "description": "Your civilization is the first to perform a Rock Band concert in the world."
+  }
+ },
+ {
+  "id": "moment:war_declared_using_casus_belli",
+  "name": "Cause for War",
+  "aliases": [
+   "MOMENT_WAR_DECLARED_USING_CASUS_BELLI"
+  ],
+  "summary": "+2 era score. You have utilized a Casus Belli to make war on another civilization.",
+  "fields": {
+   "era_score": 2,
+   "description": "You have utilized a Casus Belli to make war on another civilization."
+  }
+ },
+ {
+  "id": "moment:world_circumnavigated",
+  "name": "World Circumnavigated",
+  "aliases": [
+   "MOMENT_WORLD_CIRCUMNAVIGATED"
+  ],
+  "summary": "+3 era score. Your civilization has revealed a tile in every vertical line of the map. This forms a path around the world, even if the path does not end where it began.",
+  "fields": {
+   "era_score": 3,
+   "description": "Your civilization has revealed a tile in every vertical line of the map. This forms a path around the world, even if the path does not end where it began."
+  }
+ },
+ {
+  "id": "moment:world_circumnavigated_first_in_world",
+  "name": "World's First Circumnavigation",
+  "aliases": [
+   "MOMENT_WORLD_CIRCUMNAVIGATED_FIRST_IN_WORLD"
+  ],
+  "summary": "+5 era score. Your civilization is the first to reveal a tile in every vertical line of the map. This forms a path around the world, even if the path does not end where it began.",
+  "fields": {
+   "era_score": 5,
+   "description": "Your civilization is the first to reveal a tile in every vertical line of the map. This forms a path around the world, even if the path does not end where it began."
+  }
+ }
+]

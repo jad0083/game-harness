@@ -1,0 +1,752 @@
+[
+ {
+  "id": "city_state:akkad",
+  "name": "Akkad",
+  "aliases": [
+   "CIVILIZATION_AKKAD"
+  ],
+  "summary": "Militaristic city-state. Suzerain: Melee and anti-cavalry unit's attacks do full damage to the city's Walls.",
+  "fields": {
+   "type": "militaristic",
+   "suzerain_bonus": [
+    "Melee and anti-cavalry unit's attacks do full damage to the city's Walls."
+   ],
+   "dlc": "Gathering Storm"
+  }
+ },
+ {
+  "id": "city_state:antananarivo",
+  "name": "Antananarivo",
+  "aliases": [
+   "CIVILIZATION_ANTANANARIVO"
+  ],
+  "summary": "Cultural city-state. Suzerain: Your Civilization gains +2% Culture for each Great Person it has ever earned, up to a total of +30%.",
+  "fields": {
+   "type": "cultural",
+   "suzerain_bonus": [
+    "Your Civilization gains +2% Culture for each Great Person it has ever earned, up to a total of +30%."
+   ],
+   "dlc": "Vikings Scenario Pack"
+  }
+ },
+ {
+  "id": "city_state:antioch",
+  "name": "Venice",
+  "aliases": [
+   "CIVILIZATION_ANTIOCH"
+  ],
+  "summary": "Trade city-state. Suzerain: Your Trade Routes to foreign cities earn +1 Gold for each Luxury resource at the destination.",
+  "fields": {
+   "type": "trade",
+   "suzerain_bonus": [
+    "Your Trade Routes to foreign cities earn +1 Gold for each Luxury resource at the destination."
+   ],
+   "dlc": "Gathering Storm"
+  }
+ },
+ {
+  "id": "city_state:armagh",
+  "name": "Armagh",
+  "aliases": [
+   "CIVILIZATION_ARMAGH"
+  ],
+  "summary": "Religious city-state. Suzerain: Your Builders can now make Monastery improvements. Monasteries provide +2 Faith. +15 HP healing for friendly religious unit on this tile that has not attacked this turn. +1 Faith for every 2 adjacent Districts. Provides +1 Housing. Receive an additional Housing once Colonialism is discovered. Cannot be built next to another Monastery.",
+  "fields": {
+   "type": "religious",
+   "suzerain_bonus": [
+    "Your Builders can now make Monastery improvements. Monasteries provide +2 Faith. +15 HP healing for friendly religious unit on this tile that has not attacked this turn. +1 Faith for every 2 adjacent Districts. Provides +1 Housing. Receive an additional Housing once Colonialism is discovered. Cannot be built next to another Monastery."
+   ],
+   "unique_improvement": [
+    "Monastery (improvement)"
+   ],
+   "dlc": "Vikings Scenario Pack"
+  }
+ },
+ {
+  "id": "city_state:auckland",
+  "name": "Auckland",
+  "aliases": [
+   "CIVILIZATION_AUCKLAND"
+  ],
+  "summary": "Industrial city-state. Suzerain: Shallow water tiles you own provide +1 Production. Additional +1 when you reach the Industrial era.",
+  "fields": {
+   "type": "industrial",
+   "suzerain_bonus": [
+    "Shallow water tiles you own provide +1 Production. Additional +1 when you reach the Industrial era."
+   ],
+   "dlc": "Vikings Scenario Pack"
+  }
+ },
+ {
+  "id": "city_state:ayutthaya",
+  "name": "Ayutthaya",
+  "aliases": [
+   "CIVILIZATION_AYUTTHAYA"
+  ],
+  "summary": "Cultural city-state. Suzerain: Gain Culture equal to 10% of the construction cost when finishing buildings.",
+  "fields": {
+   "type": "cultural",
+   "suzerain_bonus": [
+    "Gain Culture equal to 10% of the construction cost when finishing buildings."
+   ],
+   "dlc": "Babylon Pack"
+  }
+ },
+ {
+  "id": "city_state:babylon",
+  "name": "Anshan",
+  "aliases": [
+   "CIVILIZATION_BABYLON"
+  ],
+  "summary": "Scientific city-state. Suzerain: +2 Science from each Great Work of Writing. +1 Science from each Relic and Artifact.",
+  "fields": {
+   "type": "scientific",
+   "suzerain_bonus": [
+    "+2 Science from each Great Work of Writing. +1 Science from each Relic and Artifact."
+   ],
+   "dlc": "Gathering Storm"
+  }
+ },
+ {
+  "id": "city_state:bologna",
+  "name": "Bologna",
+  "aliases": [
+   "CIVILIZATION_BOLOGNA"
+  ],
+  "summary": "Scientific city-state. Suzerain: Your districts with a building provide +1 Great Person point of their type (Great Writer, Great Artist, and Great Musician for Theater Square districts with a building).",
+  "fields": {
+   "type": "scientific",
+   "suzerain_bonus": [
+    "Your districts with a building provide +1 Great Person point of their type (Great Writer, Great Artist, and Great Musician for Theater Square districts with a building)."
+   ],
+   "dlc": "Gathering Storm"
+  }
+ },
+ {
+  "id": "city_state:brussels",
+  "name": "Brussels",
+  "aliases": [
+   "CIVILIZATION_BRUSSELS"
+  ],
+  "summary": "Industrial city-state. Suzerain: Your cities get +15% Production towards wonders.",
+  "fields": {
+   "type": "industrial",
+   "suzerain_bonus": [
+    "Your cities get +15% Production towards wonders."
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "city_state:buenos_aires",
+  "name": "Buenos Aires",
+  "aliases": [
+   "CIVILIZATION_BUENOS_AIRES"
+  ],
+  "summary": "Industrial city-state. Suzerain: Your Bonus resources behave like Luxury resources, providing 1 Amenity per type.",
+  "fields": {
+   "type": "industrial",
+   "suzerain_bonus": [
+    "Your Bonus resources behave like Luxury resources, providing 1 Amenity per type."
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "city_state:caguana",
+  "name": "Caguana",
+  "aliases": [
+   "CIVILIZATION_CAGUANA"
+  ],
+  "summary": "Cultural city-state. Suzerain: Your Builders can now make Batey improvements. +1 Culture. +1 Culture for every adjacent Bonus resource and Entertainment Complex (increased to +2 Culture when Exploration is discovered). Provides Tourism after researching Flight. Cannot be built adjacent to another Batey.",
+  "fields": {
+   "type": "cultural",
+   "suzerain_bonus": [
+    "Your Builders can now make Batey improvements. +1 Culture. +1 Culture for every adjacent Bonus resource and Entertainment Complex (increased to +2 Culture when Exploration is discovered). Provides Tourism after researching Flight. Cannot be built adjacent to another Batey."
+   ],
+   "unique_improvement": [
+    "Batey (improvement)"
+   ],
+   "dlc": "Maya & Gran Colombia Pack"
+  }
+ },
+ {
+  "id": "city_state:cahokia",
+  "name": "Cahokia",
+  "aliases": [
+   "CIVILIZATION_CAHOKIA"
+  ],
+  "summary": "Trade city-state. Suzerain: Your Builders can now make Cahokia Mounds improvements. Cahokia Mounds provide +3 Gold. Cities receive +1 Amenity from their first Cahokia Mound improvement. Upon discovering Natural History, cities receive +1 Amenity from their second Cahokia Mound improvement. +1 Food for every 2 adjacent Districts once Feudalism is discovered or for every adjacent District once Replaceable Parts is researched. Provides +1 Housing. Receive an additional Housing once Cultural Heritage is discovered. Cannot be built adjacent to other Cahokia Mounds.",
+  "fields": {
+   "type": "trade",
+   "suzerain_bonus": [
+    "Your Builders can now make Cahokia Mounds improvements. Cahokia Mounds provide +3 Gold. Cities receive +1 Amenity from their first Cahokia Mound improvement. Upon discovering Natural History, cities receive +1 Amenity from their second Cahokia Mound improvement. +1 Food for every 2 adjacent Districts once Feudalism is discovered or for every adjacent District once Replaceable Parts is researched. Provides +1 Housing. Receive an additional Housing once Cultural Heritage is discovered. Cannot be built adjacent to other Cahokia Mounds."
+   ],
+   "unique_improvement": [
+    "Cahokia Mounds (improvement)"
+   ],
+   "dlc": "Gathering Storm"
+  }
+ },
+ {
+  "id": "city_state:cardiff",
+  "name": "Cardiff",
+  "aliases": [
+   "CIVILIZATION_CARDIFF"
+  ],
+  "summary": "Industrial city-state. Suzerain: Cities receive +2 Power for every Harbor building.",
+  "fields": {
+   "type": "industrial",
+   "suzerain_bonus": [
+    "Cities receive +2 Power for every Harbor building."
+   ],
+   "dlc": "Gathering Storm"
+  }
+ },
+ {
+  "id": "city_state:chinguetti",
+  "name": "Chinguetti",
+  "aliases": [
+   "CIVILIZATION_CHINGUETTI"
+  ],
+  "summary": "Religious city-state. Suzerain: International and domestic Trade Routes receive +1 Faith for every follower in this city, of your founded or majority religion.",
+  "fields": {
+   "type": "religious",
+   "suzerain_bonus": [
+    "International and domestic Trade Routes receive +1 Faith for every follower in this city, of your founded or majority religion."
+   ],
+   "dlc": "Babylon Pack"
+  }
+ },
+ {
+  "id": "city_state:fez",
+  "name": "Fez",
+  "aliases": [
+   "CIVILIZATION_FEZ"
+  ],
+  "summary": "Scientific city-state. Suzerain: When you use a religious unit to convert a city for the first time earn 20 Science per Citizen Population of that city (on Standard Speed).",
+  "fields": {
+   "type": "scientific",
+   "suzerain_bonus": [
+    "When you use a religious unit to convert a city for the first time earn 20 Science per Citizen Population of that city (on Standard Speed)."
+   ],
+   "dlc": "Gathering Storm"
+  }
+ },
+ {
+  "id": "city_state:geneva",
+  "name": "Geneva",
+  "aliases": [
+   "CIVILIZATION_GENEVA"
+  ],
+  "summary": "Scientific city-state. Suzerain: Your cities earn +15% Science whenever you are not at war with any civilization.",
+  "fields": {
+   "type": "scientific",
+   "suzerain_bonus": [
+    "Your cities earn +15% Science whenever you are not at war with any civilization."
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "city_state:granada",
+  "name": "Granada",
+  "aliases": [
+   "CIVILIZATION_GRANADA"
+  ],
+  "summary": "Militaristic city-state. Suzerain: Your Builders can now make Alcázar improvements. Alcázars provide +2 Culture. Provides Science equal to 50% of the tile's Appeal. Occupying unit receives +4 Defense Strength, and automatically gains 2 turns of fortification. Provides Tourism after researching Flight. Cannot be built next to another Alcázar.",
+  "fields": {
+   "type": "militaristic",
+   "suzerain_bonus": [
+    "Your Builders can now make Alcázar improvements. Alcázars provide +2 Culture. Provides Science equal to 50% of the tile's Appeal. Occupying unit receives +4 Defense Strength, and automatically gains 2 turns of fortification. Provides Tourism after researching Flight. Cannot be built next to another Alcázar."
+   ],
+   "unique_improvement": [
+    "Alcázar (improvement)"
+   ],
+   "dlc": "Vikings Scenario Pack"
+  }
+ },
+ {
+  "id": "city_state:hattusa",
+  "name": "Hattusa",
+  "aliases": [
+   "CIVILIZATION_HATTUSA"
+  ],
+  "summary": "Scientific city-state. Suzerain: Provides you with 2 of each Strategic resource per turn that you have revealed but have not improved.",
+  "fields": {
+   "type": "scientific",
+   "suzerain_bonus": [
+    "Provides you with 2 of each Strategic resource per turn that you have revealed but have not improved."
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "city_state:hong_kong",
+  "name": "Hong Kong",
+  "aliases": [
+   "CIVILIZATION_HONG_KONG"
+  ],
+  "summary": "Industrial city-state. Suzerain: Your cities get +20% Production towards city projects.",
+  "fields": {
+   "type": "industrial",
+   "suzerain_bonus": [
+    "Your cities get +20% Production towards city projects."
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "city_state:hunza",
+  "name": "Hunza",
+  "aliases": [
+   "CIVILIZATION_HUNZA"
+  ],
+  "summary": "Trade city-state. Suzerain: Your Trade Routes generate +1 Gold for every 5 tiles they travel.",
+  "fields": {
+   "type": "trade",
+   "suzerain_bonus": [
+    "Your Trade Routes generate +1 Gold for every 5 tiles they travel."
+   ],
+   "dlc": "Maya & Gran Colombia Pack"
+  }
+ },
+ {
+  "id": "city_state:jakarta",
+  "name": "Bandar Brunei",
+  "aliases": [
+   "CIVILIZATION_JAKARTA"
+  ],
+  "summary": "Trade city-state. Suzerain: Your Trading Posts in foreign cities provide +1 Gold to your Trade Routes passing through or going to the city.",
+  "fields": {
+   "type": "trade",
+   "suzerain_bonus": [
+    "Your Trading Posts in foreign cities provide +1 Gold to your Trade Routes passing through or going to the city."
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "city_state:jerusalem",
+  "name": "Jerusalem",
+  "aliases": [
+   "CIVILIZATION_JERUSALEM"
+  ],
+  "summary": "Religious city-state. Suzerain: Your cities with Holy Sites exert pressure as if they were Holy Cities (4x Religion pressure on all cities within 10 tiles).",
+  "fields": {
+   "type": "religious",
+   "suzerain_bonus": [
+    "Your cities with Holy Sites exert pressure as if they were Holy Cities (4x Religion pressure on all cities within 10 tiles)."
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "city_state:johannesburg",
+  "name": "Johannesburg",
+  "aliases": [
+   "CIVILIZATION_JOHANNESBURG"
+  ],
+  "summary": "Industrial city-state. Suzerain: Cities receive +1 Production for every improved resource type. After researching Industrialization it becomes +2 Production.",
+  "fields": {
+   "type": "industrial",
+   "suzerain_bonus": [
+    "Cities receive +1 Production for every improved resource type. After researching Industrialization it becomes +2 Production."
+   ],
+   "dlc": "Babylon Pack"
+  }
+ },
+ {
+  "id": "city_state:kabul",
+  "name": "Kabul",
+  "aliases": [
+   "CIVILIZATION_KABUL"
+  ],
+  "summary": "Militaristic city-state. Suzerain: Your units receive double experience from battles they initiate.",
+  "fields": {
+   "type": "militaristic",
+   "suzerain_bonus": [
+    "Your units receive double experience from battles they initiate."
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "city_state:kandy",
+  "name": "Kandy",
+  "aliases": [
+   "CIVILIZATION_KANDY"
+  ],
+  "summary": "Religious city-state. Suzerain: Receive a Relic every time you discover a new natural wonder, and earn +50% Faith from all Relics.",
+  "fields": {
+   "type": "religious",
+   "suzerain_bonus": [
+    "Receive a Relic every time you discover a new natural wonder, and earn +50% Faith from all Relics."
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "city_state:kumasi",
+  "name": "Kumasi",
+  "aliases": [
+   "CIVILIZATION_KUMASI"
+  ],
+  "summary": "Cultural city-state. Suzerain: Your Trade Routes to any city-state provide +2 Culture and +1 Gold for every specialty district in the origin city.",
+  "fields": {
+   "type": "cultural",
+   "suzerain_bonus": [
+    "Your Trade Routes to any city-state provide +2 Culture and +1 Gold for every specialty district in the origin city."
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "city_state:la_venta",
+  "name": "La Venta",
+  "aliases": [
+   "CIVILIZATION_LA_VENTA"
+  ],
+  "summary": "Religious city-state. Suzerain: Your Builders can now make Colossal Head improvements. Colossal Heads provide +2 Faith. +1 Faith for every 2 adjacent Rainforest or for every adjacent Rainforest once Humanism is discovered. +1 Faith for every 2 adjacent Woods or for every adjacent Woods once Humanism is discovered. Tourism from Faith once Flight is discovered. Cannot be built on Snow or Snow Hills.",
+  "fields": {
+   "type": "religious",
+   "suzerain_bonus": [
+    "Your Builders can now make Colossal Head improvements. Colossal Heads provide +2 Faith. +1 Faith for every 2 adjacent Rainforest or for every adjacent Rainforest once Humanism is discovered. +1 Faith for every 2 adjacent Woods or for every adjacent Woods once Humanism is discovered. Tourism from Faith once Flight is discovered. Cannot be built on Snow or Snow Hills."
+   ],
+   "unique_improvement": [
+    "Colossal Head (improvement)"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "city_state:lahore",
+  "name": "Lahore",
+  "aliases": [
+   "CIVILIZATION_LAHORE"
+  ],
+  "summary": "Militaristic city-state. Suzerain: Your cities can now train Nihang units. A unit with a unique Promotion tree that can be purchased with Faith. Combat Strength is increased when Barracks, Armory, and Military Academy buildings are first constructed.",
+  "fields": {
+   "type": "militaristic",
+   "suzerain_bonus": [
+    "Your cities can now train Nihang units. A unit with a unique Promotion tree that can be purchased with Faith. Combat Strength is increased when Barracks, Armory, and Military Academy buildings are first constructed."
+   ],
+   "unique_improvement": [
+    "Nihang (unit)"
+   ],
+   "dlc": "Maya & Gran Colombia Pack"
+  }
+ },
+ {
+  "id": "city_state:lisbon",
+  "name": "Mogadishu",
+  "aliases": [
+   "CIVILIZATION_LISBON"
+  ],
+  "summary": "Trade city-state. Suzerain: Your Trader units are immune to being plundered on water tiles.",
+  "fields": {
+   "type": "trade",
+   "suzerain_bonus": [
+    "Your Trader units are immune to being plundered on water tiles."
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "city_state:mexico_city",
+  "name": "Mexico City",
+  "aliases": [
+   "CIVILIZATION_MEXICO_CITY"
+  ],
+  "summary": "Industrial city-state. Suzerain: Regional effects from your Industrial Zone, Water Park, and Entertainment Complex districts reach 3 tiles farther.",
+  "fields": {
+   "type": "industrial",
+   "suzerain_bonus": [
+    "Regional effects from your Industrial Zone, Water Park, and Entertainment Complex districts reach 3 tiles farther."
+   ],
+   "dlc": "Gathering Storm"
+  }
+ },
+ {
+  "id": "city_state:mohenjo_daro",
+  "name": "Mohenjo-Daro",
+  "aliases": [
+   "CIVILIZATION_MOHENJO_DARO"
+  ],
+  "summary": "Cultural city-state. Suzerain: Your cities have full Housing from water, as if they were all next to a River.",
+  "fields": {
+   "type": "cultural",
+   "suzerain_bonus": [
+    "Your cities have full Housing from water, as if they were all next to a River."
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "city_state:muscat",
+  "name": "Muscat",
+  "aliases": [
+   "CIVILIZATION_MUSCAT"
+  ],
+  "summary": "Trade city-state. Suzerain: +1 Amenity in cities with a Commercial Hub district.",
+  "fields": {
+   "type": "trade",
+   "suzerain_bonus": [
+    "+1 Amenity in cities with a Commercial Hub district."
+   ],
+   "dlc": "Vikings Scenario Pack"
+  }
+ },
+ {
+  "id": "city_state:nalanda",
+  "name": "Nalanda",
+  "aliases": [
+   "CIVILIZATION_NALANDA"
+  ],
+  "summary": "Scientific city-state. Suzerain: Your Builders can now make Mahavihara improvements. +2 Science and +1 Housing. +1 Faith for every adjacent Holy Site district and +1 Science for every adjacent Campus district. After researching Scientific Theory receive an additional +1 Science for every adjacent Campus. When a player constructs their first Mahavihara receive a random technology. Must be built on flat terrain not adjacent to another Mahavihara.",
+  "fields": {
+   "type": "scientific",
+   "suzerain_bonus": [
+    "Your Builders can now make Mahavihara improvements. +2 Science and +1 Housing. +1 Faith for every adjacent Holy Site district and +1 Science for every adjacent Campus district. After researching Scientific Theory receive an additional +1 Science for every adjacent Campus. When a player constructs their first Mahavihara receive a random technology. Must be built on flat terrain not adjacent to another Mahavihara."
+   ],
+   "unique_improvement": [
+    "Mahavihara (improvement)"
+   ],
+   "dlc": "Babylon Pack"
+  }
+ },
+ {
+  "id": "city_state:nan_madol",
+  "name": "Nan Madol",
+  "aliases": [
+   "CIVILIZATION_NAN_MADOL"
+  ],
+  "summary": "Cultural city-state. Suzerain: Your districts on or next to Coast or Lake tiles provide +2 Culture.",
+  "fields": {
+   "type": "cultural",
+   "suzerain_bonus": [
+    "Your districts on or next to Coast or Lake tiles provide +2 Culture."
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "city_state:nazca",
+  "name": "Nazca",
+  "aliases": [
+   "CIVILIZATION_NAZCA"
+  ],
+  "summary": "Religious city-state. Suzerain: Your Builders can now make Nazca Line improvements. Nazca Lines provide +1 Faith to adjacent tiles. +1 Faith to adjacent tiles with a resource. +1 Food to adjacent Desert and Desert Hill tiles after discovering Civil Service. +1 Production to adjacent flat tiles after researching Mass Production. +1 Appeal. Can only be built on flat Desert. This tile cannot be worked.",
+  "fields": {
+   "type": "religious",
+   "suzerain_bonus": [
+    "Your Builders can now make Nazca Line improvements. Nazca Lines provide +1 Faith to adjacent tiles. +1 Faith to adjacent tiles with a resource. +1 Food to adjacent Desert and Desert Hill tiles after discovering Civil Service. +1 Production to adjacent flat tiles after researching Mass Production. +1 Appeal. Can only be built on flat Desert. This tile cannot be worked."
+   ],
+   "unique_improvement": [
+    "Nazca Line (improvement)"
+   ],
+   "dlc": "Gathering Storm"
+  }
+ },
+ {
+  "id": "city_state:ngazargamu",
+  "name": "Ngazargamu",
+  "aliases": [
+   "CIVILIZATION_NGAZARGAMU"
+  ],
+  "summary": "Militaristic city-state. Suzerain: Land combat or Support units are 20% cheaper to purchase with Gold for each Encampment district building in that city.",
+  "fields": {
+   "type": "militaristic",
+   "suzerain_bonus": [
+    "Land combat or Support units are 20% cheaper to purchase with Gold for each Encampment district building in that city."
+   ],
+   "dlc": "Gathering Storm"
+  }
+ },
+ {
+  "id": "city_state:palenque",
+  "name": "Mitla",
+  "aliases": [
+   "CIVILIZATION_PALENQUE"
+  ],
+  "summary": "Scientific city-state. Suzerain: City growth rate is 15% higher in cities with a Campus district.",
+  "fields": {
+   "type": "scientific",
+   "suzerain_bonus": [
+    "City growth rate is 15% higher in cities with a Campus district."
+   ],
+   "dlc": "Vikings Scenario Pack"
+  }
+ },
+ {
+  "id": "city_state:preslav",
+  "name": "Preslav",
+  "aliases": [
+   "CIVILIZATION_PRESLAV"
+  ],
+  "summary": "Militaristic city-state. Suzerain: You receive +2 Loyalty per turn in cities for each Encampment district building.",
+  "fields": {
+   "type": "militaristic",
+   "suzerain_bonus": [
+    "You receive +2 Loyalty per turn in cities for each Encampment district building."
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "city_state:rapa_nui",
+  "name": "Rapa Nui",
+  "aliases": [
+   "CIVILIZATION_RAPA_NUI"
+  ],
+  "summary": "Cultural city-state. Suzerain: Your Builders can now make Moai improvements. Moai provide +1 Culture. +1 Culture for every 2 adjacent Moai. +2 Culture if on or adjacent to a Volcanic Soil tile. +1 Culture if adjacent to a Coast or Lake tile. Additional Culture and Tourism as you advance through the Civics and Technology Tree. Can be built on Plains, Plains Hills, Grassland, Grassland Hills, or Volcanic Soil. Cannot be placed adjacent to a Woods or Rainforest tile.",
+  "fields": {
+   "type": "cultural",
+   "suzerain_bonus": [
+    "Your Builders can now make Moai improvements. Moai provide +1 Culture. +1 Culture for every 2 adjacent Moai. +2 Culture if on or adjacent to a Volcanic Soil tile. +1 Culture if adjacent to a Coast or Lake tile. Additional Culture and Tourism as you advance through the Civics and Technology Tree. Can be built on Plains, Plains Hills, Grassland, Grassland Hills, or Volcanic Soil. Cannot be placed adjacent to a Woods or Rainforest tile."
+   ],
+   "unique_improvement": [
+    "Moai (improvement)"
+   ],
+   "dlc": "Gathering Storm"
+  }
+ },
+ {
+  "id": "city_state:samarkand",
+  "name": "Samarkand",
+  "aliases": [
+   "CIVILIZATION_SAMARKAND"
+  ],
+  "summary": "Trade city-state. Suzerain: Your Builders can now make Trading Dome improvements. +2 Gold. +1 Gold for every adjacent Luxury resource. Your outgoing international Trade Routes grant +1 Gold per Trading Dome at the origin. Cannot be built next to another Trading Dome.",
+  "fields": {
+   "type": "trade",
+   "suzerain_bonus": [
+    "Your Builders can now make Trading Dome improvements. +2 Gold. +1 Gold for every adjacent Luxury resource. Your outgoing international Trade Routes grant +1 Gold per Trading Dome at the origin. Cannot be built next to another Trading Dome."
+   ],
+   "unique_improvement": [
+    "Trading Dome (improvement)"
+   ],
+   "dlc": "Babylon Pack"
+  }
+ },
+ {
+  "id": "city_state:singapore",
+  "name": "Singapore",
+  "aliases": [
+   "CIVILIZATION_SINGAPORE"
+  ],
+  "summary": "Industrial city-state. Suzerain: Your cities receive +2 Production for each foreign civilization they have a Trade Route to.",
+  "fields": {
+   "type": "industrial",
+   "suzerain_bonus": [
+    "Your cities receive +2 Production for each foreign civilization they have a Trade Route to."
+   ],
+   "dlc": "Maya & Gran Colombia Pack"
+  }
+ },
+ {
+  "id": "city_state:taruga",
+  "name": "Taruga",
+  "aliases": [
+   "CIVILIZATION_TARUGA"
+  ],
+  "summary": "Scientific city-state. Suzerain: +5% Science in all cities for each different improved Strategic resource they have.",
+  "fields": {
+   "type": "scientific",
+   "suzerain_bonus": [
+    "+5% Science in all cities for each different improved Strategic resource they have."
+   ],
+   "dlc": "Maya & Gran Colombia Pack"
+  }
+ },
+ {
+  "id": "city_state:valletta",
+  "name": "Valletta",
+  "aliases": [
+   "CIVILIZATION_VALLETTA"
+  ],
+  "summary": "Militaristic city-state. Suzerain: City Center buildings and Encampment district buildings can be bought with Faith. Cost of purchasing Ancient, Medieval, and Renaissance Walls is reduced, but they can only be bought with Faith.",
+  "fields": {
+   "type": "militaristic",
+   "suzerain_bonus": [
+    "City Center buildings and Encampment district buildings can be bought with Faith. Cost of purchasing Ancient, Medieval, and Renaissance Walls is reduced, but they can only be bought with Faith."
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "city_state:vatican_city",
+  "name": "Vatican City",
+  "aliases": [
+   "CIVILIZATION_VATICAN_CITY"
+  ],
+  "summary": "Religious city-state. Suzerain: When you activate a Great Person they spread 400 Religious pressure of your founded (or majority) religion to cities within 10 tiles.",
+  "fields": {
+   "type": "religious",
+   "suzerain_bonus": [
+    "When you activate a Great Person they spread 400 Religious pressure of your founded (or majority) religion to cities within 10 tiles."
+   ],
+   "dlc": "Maya & Gran Colombia Pack"
+  }
+ },
+ {
+  "id": "city_state:vilnius",
+  "name": "Vilnius",
+  "aliases": [
+   "CIVILIZATION_VILNIUS"
+  ],
+  "summary": "Cultural city-state. Suzerain: For the highest active Alliance Level, all your Theater Square districts receive +50% adjacency bonus.",
+  "fields": {
+   "type": "cultural",
+   "suzerain_bonus": [
+    "For the highest active Alliance Level, all your Theater Square districts receive +50% adjacency bonus."
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "city_state:wolin",
+  "name": "Wolin",
+  "aliases": [
+   "CIVILIZATION_WOLIN"
+  ],
+  "summary": "Militaristic city-state. Suzerain: Receive Great General points when a land unit defeats a major or minor civilization's unit and receive Great Admiral points when a naval unit defeats a major or minor civilization's unit equal to 25% of the opposing unit's strength (Standard Speed).",
+  "fields": {
+   "type": "militaristic",
+   "suzerain_bonus": [
+    "Receive Great General points when a land unit defeats a major or minor civilization's unit and receive Great Admiral points when a naval unit defeats a major or minor civilization's unit equal to 25% of the opposing unit's strength (Standard Speed)."
+   ],
+   "dlc": "Babylon Pack"
+  }
+ },
+ {
+  "id": "city_state:yerevan",
+  "name": "Yerevan",
+  "aliases": [
+   "CIVILIZATION_YEREVAN"
+  ],
+  "summary": "Religious city-state. Suzerain: Your Apostle units can choose from any possible promotion instead of receiving a random promotion.",
+  "fields": {
+   "type": "religious",
+   "suzerain_bonus": [
+    "Your Apostle units can choose from any possible promotion instead of receiving a random promotion."
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "city_state:zanzibar",
+  "name": "Zanzibar",
+  "aliases": [
+   "CIVILIZATION_ZANZIBAR"
+  ],
+  "summary": "Trade city-state. Suzerain: Receive the Cinnamon and Cloves Luxury resources. These cannot be earned any other way in the game, and provide 6 Amenities each.",
+  "fields": {
+   "type": "trade",
+   "suzerain_bonus": [
+    "Receive the Cinnamon and Cloves Luxury resources. These cannot be earned any other way in the game, and provide 6 Amenities each."
+   ],
+   "dlc": "Base game"
+  }
+ }
+]

@@ -1,0 +1,2317 @@
+[
+ {
+  "id": "leader:abraham_lincoln",
+  "name": "Abraham Lincoln",
+  "aliases": [
+   "LEADER_ABRAHAM_LINCOLN"
+  ],
+  "summary": "Leads America. Emancipation Proclamation",
+  "fields": {
+   "civ": [
+    "America"
+   ],
+   "ability": [
+    "Emancipation Proclamation: Industrial Zones give +2 Amenities and +3 Loyalty per turn but your Plantations give -2 Loyalty per turn. Receive a free Melee unit after constructing Industrial Zones and their buildings. The free unit does not require resources when created or to maintain and receives +5 Combat Strength."
+   ],
+   "agenda": "Preserver of the Union: Favors civilizations with the same type of government, dislikes civilizations that have different governments, and really dislikes civilizations with different governments of the same era as its own.",
+   "ai_traits": [
+    "Low city state preference war",
+    "Low religious preference",
+    "Nonreligious major civ"
+   ],
+   "ai_favours": [
+    "Ruhr Valley",
+    "Divine Right",
+    "Political Philosophy",
+    "Suffrage",
+    "Apprenticeship",
+    "Electricity",
+    "Industrialization",
+    "Faith"
+   ],
+   "dlc": "Great Negotiators Pack"
+  }
+ },
+ {
+  "id": "leader:alexander",
+  "name": "Alexander",
+  "aliases": [
+   "LEADER_ALEXANDER"
+  ],
+  "summary": "Leads Macedon. To World's End",
+  "fields": {
+   "civ": [
+    "Macedon"
+   ],
+   "ability": [
+    "To World's End: Cities do not incur war weariness. All military units heal completely when this player captures a city with a world wonder."
+   ],
+   "uniques": [
+    "Hetairoi (unit, replaces Horseman)"
+   ],
+   "agenda": "Short Life of Glory: Likes civilizations at war with major powers other than Macedon. Has disdain for civilizations at peace. Grievances against this leader decay at twice the usual rate.",
+   "ai_traits": [
+    "Aggressive military",
+    "Low religious preference"
+   ],
+   "ai_favours": [
+    "Faith",
+    "Military Tradition",
+    "Bronze Working",
+    "Horseback Riding",
+    "Iron Working"
+   ],
+   "dlc": "Persia and Macedon Pack"
+  }
+ },
+ {
+  "id": "leader:amanitore",
+  "name": "Amanitore",
+  "aliases": [
+   "LEADER_AMANITORE"
+  ],
+  "summary": "Leads Nubia. Kandake of Meroë",
+  "fields": {
+   "civ": [
+    "Nubia"
+   ],
+   "ability": [
+    "Kandake of Meroë: +20% Production towards all districts rising to +40% if there is a Nubian Pyramid adjacent to the City Center."
+   ],
+   "agenda": "City Planner: Always tries to keep the maximum number of districts in each city. Respects other civilizations who also develop their cities in this fashion.",
+   "ai_traits": [
+    "Science major civ"
+   ],
+   "ai_favours": [
+    "Craftsmanship",
+    "Feudalism",
+    "Apprenticeship",
+    "Archery",
+    "Ballistics",
+    "Industrialization",
+    "Masonry",
+    "Petra",
+    "Ruhr Valley"
+   ],
+   "dlc": "Nubia Civilization & Scenario Pack"
+  }
+ },
+ {
+  "id": "leader:ambiorix",
+  "name": "Ambiorix",
+  "aliases": [
+   "LEADER_AMBIORIX"
+  ],
+  "summary": "Leads Gaul. King of the Eburones",
+  "fields": {
+   "civ": [
+    "Gaul"
+   ],
+   "ability": [
+    "King of the Eburones: Your civilization gains Culture equal to 20% of the unit’s cost when a non-civilian is trained. Melee, Anti-Cavalry, and Ranged Units receive +2 Combat Strength for every adjacent unit."
+   ],
+   "agenda": "Scourge of Rome: Likes numerous combat units. Dislikes civilizations with tiny armies.",
+   "ai_traits": [
+    "Aggressive military"
+   ],
+   "dlc": "Byzantium & Gaul Pack"
+  }
+ },
+ {
+  "id": "leader:barbarossa",
+  "name": "Frederick Barbarossa",
+  "aliases": [
+   "LEADER_BARBAROSSA"
+  ],
+  "summary": "Leads Germany. Holy Roman Emperor",
+  "fields": {
+   "civ": [
+    "Germany"
+   ],
+   "ability": [
+    "Holy Roman Emperor: Additional Military policy slot. +7 Combat Strength when attacking city-states."
+   ],
+   "agenda": "Iron Crown: Likes civilizations who do not associate with city-states. Does not like Suzerains of city-states, or civilizations who conquered city-states.",
+   "ai_favours": [
+    "Ruhr Valley",
+    "Civil Engineering",
+    "Civil Service",
+    "Craftsmanship",
+    "Defensive Tactics",
+    "Diplomatic Service",
+    "Drama and Poetry",
+    "Early Empire",
+    "Feudalism",
+    "Foreign Trade",
+    "Games and Recreation",
+    "Guilds"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "leader:basil",
+  "name": "Basil II",
+  "aliases": [
+   "LEADER_BASIL"
+  ],
+  "summary": "Leads Byzantium. Porphyrogénnētos",
+  "fields": {
+   "civ": [
+    "Byzantium"
+   ],
+   "ability": [
+    "Porphyrogénnētos: Heavy and Light Cavalry units do full damage against cities following the same religion as Byzantium. Gain the Tagma unique unit when the Divine Right civic is discovered."
+   ],
+   "uniques": [
+    "Tagma (unit, replaces Knight)"
+   ],
+   "agenda": "Divine Guardian: Likes civilizations that follow the same Religion. Dislikes civilizations that don't predominantly follow his Religion.",
+   "ai_favours": [
+    "Medieval Walls",
+    "Renaissance Walls",
+    "Ancient Walls"
+   ],
+   "dlc": "Byzantium & Gaul Pack"
+  }
+ },
+ {
+  "id": "leader:catherine_de_medici",
+  "name": "Catherine de Medici (Black Queen)",
+  "aliases": [
+   "LEADER_CATHERINE_DE_MEDICI"
+  ],
+  "summary": "Leads France. Catherine's Flying Squadron",
+  "fields": {
+   "civ": [
+    "France"
+   ],
+   "ability": [
+    "Catherine's Flying Squadron: Has 1 level of Vis Limited Diplomatic Visibility greater than normal with every civilization that she's met. Receives a free Spy (and extra spy capacity) with the Castles technology. All spies start as Agents with a free promotion."
+   ],
+   "agenda": "Black Queen: Gains as many Spies and as much diplomatic access as possible. Does not like civilizations who ignore these espionage activities.",
+   "ai_traits": [
+    "Cultural major civ"
+   ],
+   "ai_favours": [
+    "Eiffel Tower",
+    "Forbidden City",
+    "Mont St. Michel",
+    "Potala Palace",
+    "Civil Engineering",
+    "Divine Right",
+    "Humanism",
+    "State Workforce",
+    "Castles",
+    "Computers",
+    "Flight",
+    "Printing"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "leader:catherine_de_medici_alt",
+  "name": "Catherine de Medici (Magnificence)",
+  "aliases": [
+   "LEADER_CATHERINE_DE_MEDICI_ALT"
+  ],
+  "summary": "Leads France. Catherine’s Magnificences",
+  "fields": {
+   "civ": [
+    "France"
+   ],
+   "ability": [
+    "Catherine’s Magnificences: Improved Luxury resources adjacent to Theater Square districts or Châteaux receive +2 Culture. May initiate the Court Festival project in any city with a Theater Square district."
+   ],
+   "agenda": "Sumptuous Finery: Likes civilizations that trade Luxury resources to her. Dislikes civilizations that have not made such a trade. Tries to collect as many copies of Luxury resources as possible.",
+   "ai_traits": [
+    "Cultural major civ"
+   ],
+   "dlc": "Catherine de Medici persona pack"
+  }
+ },
+ {
+  "id": "leader:chandragupta",
+  "name": "Chandragupta",
+  "aliases": [
+   "LEADER_CHANDRAGUPTA"
+  ],
+  "summary": "Leads India. Arthashastra",
+  "fields": {
+   "civ": [
+    "India"
+   ],
+   "ability": [
+    "Arthashastra: Can declare a War of Territorial Expansion after gaining the Military Training Civic. +2 Movement and +5 Combat Strength for the first 10 turns after declaring a War of Territorial Expansion."
+   ],
+   "agenda": "Maurya Empire: Tries to conquer neighboring civilizations, and likes civilizations that are not his neighbors (yet). Does not like his neighbors.",
+   "ai_traits": [
+    "Aggressive military"
+   ],
+   "ai_favours": [
+    "Feudalism",
+    "Military Tradition",
+    "Military Training",
+    "Professional Sports",
+    "Construction",
+    "Horseback Riding",
+    "Sanitation",
+    "Kotoku-in"
+   ],
+   "dlc": "Rise and Fall"
+  }
+ },
+ {
+  "id": "leader:cleopatra",
+  "name": "Cleopatra (Egyptian)",
+  "aliases": [
+   "LEADER_CLEOPATRA"
+  ],
+  "summary": "Leads Egypt. Mediterranean's Bride",
+  "fields": {
+   "civ": [
+    "Egypt"
+   ],
+   "ability": [
+    "Mediterranean's Bride: Your Trade Routes to other civilizations provide +4 Gold for Egypt. Other civilizations' Trade Routes to Egypt provide +2 Food for them and +2 Gold for Egypt. Trading with Allies earns twice as many bonus Alliance Points."
+   ],
+   "agenda": "Queen of the Nile: Likes civilizations with powerful militaries, and will try to ally with them to avoid damaging military conflicts. Dislikes civilizations with weak militaries.",
+   "ai_favours": [
+    "Big Ben",
+    "Great Library",
+    "Hanging Gardens",
+    "Hermitage",
+    "Mont St. Michel",
+    "Petra",
+    "Pyramids",
+    "Ruhr Valley",
+    "Stonehenge",
+    "Craftsmanship",
+    "Foreign Trade",
+    "Natural History"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "leader:cleopatra_alt",
+  "name": "Cleopatra (Ptolemaic)",
+  "aliases": [
+   "LEADER_CLEOPATRA_ALT"
+  ],
+  "summary": "Leads Egypt. Arrival of Hapi",
+  "fields": {
+   "civ": [
+    "Egypt"
+   ],
+   "ability": [
+    "Arrival of Hapi: Resources along Floodplains receive +1 Food and +1 Culture. Owned Floodplains tiles grant +1 Appeal to adjacent tiles instead of usual -1."
+   ],
+   "agenda": "Basilike Ge: Tries to build up Food, and likes civilizations that also focus on Food.",
+   "ai_traits": [
+    "Low city state preference war"
+   ],
+   "ai_favours": [
+    "Craftsmanship",
+    "Foreign Trade",
+    "Natural History",
+    "State Workforce",
+    "Big Ben",
+    "Great Library",
+    "Hanging Gardens",
+    "Hermitage",
+    "Mont St. Michel",
+    "Petra",
+    "Pyramids",
+    "Ruhr Valley"
+   ],
+   "dlc": "Rulers of the Sahara Pack"
+  }
+ },
+ {
+  "id": "leader:cyrus",
+  "name": "Cyrus",
+  "aliases": [
+   "LEADER_CYRUS"
+  ],
+  "summary": "Leads Persia. Fall of Babylon",
+  "fields": {
+   "civ": [
+    "Persia"
+   ],
+   "ability": [
+    "Fall of Babylon: +2 Movement for the first 10 turns after declaring a Surprise War on a major civilization. +5 Loyalty per turn in occupied cities with a garrisoned unit. Declaring a Surprise War only counts as a Formal War for the purposes of Grievances and warmongering."
+   ],
+   "agenda": "Opportunist: Likes leaders who have declared a Surprise War. Dismisses leaders who do not use Surprise War declarations.",
+   "ai_traits": [
+    "Aggressive military"
+   ],
+   "ai_favours": [
+    "Diplomatic Service",
+    "Political Philosophy",
+    "Currency",
+    "Flight",
+    "Iron Working",
+    "Colossus",
+    "Great Zimbabwe"
+   ],
+   "dlc": "Persia and Macedon Pack"
+  }
+ },
+ {
+  "id": "leader:dido",
+  "name": "Dido",
+  "aliases": [
+   "LEADER_DIDO"
+  ],
+  "summary": "Leads Phoenicia. Founder of Carthage",
+  "fields": {
+   "civ": [
+    "Phoenicia"
+   ],
+   "ability": [
+    "Founder of Carthage: Can move their original Capital to any city with a Cothon they founded by completing a unique project in that city. +1 Trade Route capacity for each Government Plaza building and the Government Plaza district. +50% Production toward districts in the city with the Government Plaza."
+   ],
+   "agenda": "Sicilian Wars: Wants to settle coastal cities. Likes those who settle inland. Dislikes those with mostly coastal cities.",
+   "ai_traits": [
+    "Expansionist",
+    "Low religious preference"
+   ],
+   "ai_favours": [
+    "Political Philosophy",
+    "Celestial Navigation",
+    "Construction",
+    "Sailing",
+    "Faith"
+   ],
+   "dlc": "Gathering Storm"
+  }
+ },
+ {
+  "id": "leader:eleanor_england",
+  "name": "Eleanor of Aquitaine (England)",
+  "aliases": [
+   "LEADER_ELEANOR_ENGLAND"
+  ],
+  "summary": "Leads England. Court of Love",
+  "fields": {
+   "civ": [
+    "England"
+   ],
+   "ability": [
+    "Court of Love: Great Works in Eleanor’s cities each cause -1 Loyalty per turn in foreign cities within 9 tiles. A city that leaves another civilization due to a loss of Loyalty and is currently receiving the most Loyalty per turn from Eleanor's civilization skips the Free City step to join this civilization."
+   ],
+   "agenda": "Angevin Empire: Builds populous cities. Likes civilizations whose nearby cities have high Citizen Population. Dislikes civilizations with small cities nearby that may become disloyal easily.",
+   "ai_favours": [
+    "Drama and Poetry",
+    "Humanism",
+    "Theater Square",
+    "Colosseum",
+    "Estádio do Maracanã",
+    "Taj Mahal"
+   ],
+   "dlc": "Gathering Storm"
+  }
+ },
+ {
+  "id": "leader:eleanor_france",
+  "name": "Eleanor of Aquitaine (France)",
+  "aliases": [
+   "LEADER_ELEANOR_FRANCE"
+  ],
+  "summary": "Leads France. Court of Love",
+  "fields": {
+   "civ": [
+    "France"
+   ],
+   "ability": [
+    "Court of Love: Great Works in Eleanor’s cities each cause -1 Loyalty per turn in foreign cities within 9 tiles. A city that leaves another civilization due to a loss of Loyalty and is currently receiving the most Loyalty per turn from Eleanor's civilization skips the Free City step to join this civilization."
+   ],
+   "agenda": "Angevin Empire: Builds populous cities. Likes civilizations whose nearby cities have high Citizen Population. Dislikes civilizations with small cities nearby that may become disloyal easily.",
+   "ai_traits": [
+    "Cultural major civ"
+   ],
+   "ai_favours": [
+    "Drama and Poetry",
+    "Humanism",
+    "Theater Square",
+    "Colosseum",
+    "Estádio do Maracanã",
+    "Taj Mahal"
+   ],
+   "dlc": "Gathering Storm"
+  }
+ },
+ {
+  "id": "leader:elizabeth",
+  "name": "Elizabeth I",
+  "aliases": [
+   "LEADER_ELIZABETH"
+  ],
+  "summary": "Leads England. Drake's Legacy",
+  "fields": {
+   "civ": [
+    "England"
+   ],
+   "ability": [
+    "Drake's Legacy: England's Trade Route Capacity is increased by 2 after acquiring your first Great Admiral. Trade Routes to any city-state provide +3 Gold for every specialty district in the origin city. +100% Yields from Plundering Trade Routes with Naval Units."
+   ],
+   "agenda": "Trade Agreement: Tries to maximize Trade Routes. Likes civilizations that trade with her, dislikes those who do not.",
+   "ai_favours": [
+    "Colonialism",
+    "Exploration",
+    "Mercantilism",
+    "Celestial Navigation",
+    "Colossus",
+    "Great Zimbabwe",
+    "Ventian arsenal"
+   ],
+   "dlc": "Rulers of England Pack"
+  }
+ },
+ {
+  "id": "leader:gandhi",
+  "name": "Gandhi",
+  "aliases": [
+   "LEADER_GANDHI"
+  ],
+  "summary": "Leads India. Satyagraha",
+  "fields": {
+   "civ": [
+    "India"
+   ],
+   "ability": [
+    "Satyagraha: +5 Faith for each civilization (including India) they have met that has founded a Religion and is not currently at war. Opposing civilizations receive double the war weariness for fighting against Gandhi."
+   ],
+   "agenda": "Peacekeeper: Never declares wars for which he can be branded a warmonger, and will try to befriend those who maintain the peace. Hates warmongers.",
+   "ai_traits": [
+    "Low city state preference war",
+    "Religious major civ"
+   ],
+   "ai_favours": [
+    "Hanging Gardens",
+    "Mahabodhi Temple",
+    "Oxford University",
+    "Civil Service",
+    "Diplomatic Service",
+    "Humanism",
+    "Theology",
+    "Astrology",
+    "Electricity",
+    "Horseback Riding",
+    "Irrigation"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "leader:genghis_khan",
+  "name": "Genghis Khan",
+  "aliases": [
+   "LEADER_GENGHIS_KHAN"
+  ],
+  "summary": "Leads Mongolia. Mongol Horde",
+  "fields": {
+   "civ": [
+    "Mongolia"
+   ],
+   "ability": [
+    "Mongol Horde: All cavalry class units gain +3 Combat Strength and a chance to capture defeated enemy cavalry class units."
+   ],
+   "agenda": "Horse Lord: Wants to build the world's most dominant cavalry force. Likes those who do not compete in cavalry. Dislikes those who rival him in cavalry strength.",
+   "ai_traits": [
+    "Aggressive military",
+    "Low religious preference"
+   ],
+   "ai_favours": [
+    "Divine Right",
+    "Foreign Trade",
+    "Bronze Working",
+    "Horseback Riding",
+    "Printing",
+    "Stirrups",
+    "Faith"
+   ],
+   "dlc": "Rise and Fall"
+  }
+ },
+ {
+  "id": "leader:gilgamesh",
+  "name": "Gilgamesh",
+  "aliases": [
+   "LEADER_GILGAMESH"
+  ],
+  "summary": "Leads Sumeria. Adventures of Enkidu",
+  "fields": {
+   "civ": [
+    "Sumeria"
+   ],
+   "ability": [
+    "Adventures of Enkidu: When at war with a common foe, they and their allies share pillage rewards and share combat experience gains if within 5 tiles. Their Alliances gain Alliance Points for being at war with a common foe. +5 Combat Strength against units of players at war with you and your ally."
+   ],
+   "agenda": "Ally of Enkidu: Likes civilizations who are willing to form a long-term alliance. Dislikes anyone denouncing or attacking his friends and allies.",
+   "ai_traits": [
+    "Low city state preference war",
+    "Low religious preference",
+    "Science major civ"
+   ],
+   "ai_favours": [
+    "Science",
+    "Faith"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "leader:gitarja",
+  "name": "Gitarja",
+  "aliases": [
+   "LEADER_GITARJA"
+  ],
+  "summary": "Leads Indonesia. Exalted Goddess of the Three Worlds",
+  "fields": {
+   "civ": [
+    "Indonesia"
+   ],
+   "ability": [
+    "Exalted Goddess of the Three Worlds: Naval units can be purchased with Faith. Religious units pay no movement to embark or disembark. +2Faith to City Centers that are adjacent to Coast or Lake tiles."
+   ],
+   "agenda": "Archipelagic State: Likes civilizations who avoid settling or conquering cities on small landmasses. Hates anyone with numerous cities on such islands.",
+   "ai_favours": [
+    "Civil Engineering",
+    "Mercenaries",
+    "Celestial Navigation",
+    "Electricity",
+    "Flight",
+    "Mass Production",
+    "Sailing",
+    "Shipbuilding",
+    "Great Lighthouse"
+   ],
+   "dlc": "Khmer and Indonesia Pack"
+  }
+ },
+ {
+  "id": "leader:gorgo",
+  "name": "Gorgo",
+  "aliases": [
+   "LEADER_GORGO"
+  ],
+  "summary": "Leads Greece. Thermopylae",
+  "fields": {
+   "civ": [
+    "Greece"
+   ],
+   "ability": [
+    "Thermopylae: Combat victories provide Culture equal to 50% of the Combat Strength of the defeated unit. (on Standard Speed) +1 Combat Strength for every Military Policy slotted."
+   ],
+   "agenda": "With Your Shield Or On It: Never gives up items in a peace deal, and likes civilizations who match that approach. Dislikes civilizations who have capitulated or who have never gone to war. Grievances against this leader decay at twice the usual rate.",
+   "ai_traits": [
+    "Aggressive military",
+    "Cultural major civ",
+    "Low religious preference"
+   ],
+   "ai_favours": [
+    "Faith"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "leader:hammurabi",
+  "name": "Hammurabi",
+  "aliases": [
+   "LEADER_HAMMURABI"
+  ],
+  "summary": "Leads Babylon. Ninu Ilu Sirum",
+  "fields": {
+   "civ": [
+    "Babylon"
+   ],
+   "ability": [
+    "Ninu Ilu Sirum: When each specialty district type except the Government Plaza is constructed for the first time receive the lowest Production cost building that can currently be constructed in that district. Receive an Envoy when any other district is constructed for the first time."
+   ],
+   "agenda": "Cradle of Civilization: Hammurabi prefers to build each different kind of district, and likes other Civilizations who do the same. He dislikes those who focus heavily on one district type or who do not build all types available",
+   "dlc": "Babylon Pack"
+  }
+ },
+ {
+  "id": "leader:harald_alt",
+  "name": "Harald Hardrada (Varangian)",
+  "aliases": [
+   "LEADER_HARALD_ALT"
+  ],
+  "summary": "Leads Norway. Varangian Guard",
+  "fields": {
+   "civ": [
+    "Norway"
+   ],
+   "ability": [
+    "Varangian Guard: All units pay 2 less Gold maintenance. 75% Discount on Levying units and levied units receive Culture, Faith and Science from kills equal to 50% of the opponents' Combat Strength. +1 Influence Points per turn from the Stave Church."
+   ],
+   "agenda": "Harald's Saga: Emphasizes protectorate wars. Admires civilizations that start protectorate wars. Dislikes civilizations that attack city states.",
+   "ai_traits": [
+    "Aggressive military",
+    "Low city state preference war"
+   ],
+   "ai_favours": [
+    "Great Lighthouse",
+    "Venetian Arsenal",
+    "Mercenaries",
+    "Military Training",
+    "Theology",
+    "Astrology",
+    "Military Tactics",
+    "Sailing",
+    "Shipbuilding"
+   ],
+   "dlc": "Rulers of England Pack"
+  }
+ },
+ {
+  "id": "leader:hardrada",
+  "name": "Harald Hardrada (Konge)",
+  "aliases": [
+   "LEADER_HARDRADA"
+  ],
+  "summary": "Leads Norway. Thunderbolt of the North",
+  "fields": {
+   "civ": [
+    "Norway"
+   ],
+   "ability": [
+    "Thunderbolt of the North: Allows coastal raiding for all naval melee units and +50% Production toward all naval melee units. Receive Science from pillaging and coastal raiding Mines in addition to Gold. Pillaging or coastal raiding Quarries, Pastures, Plantations, and Camps provide Culture in addition to Faith. Gain the Viking Longship unique unit with Sailing."
+   ],
+   "uniques": [
+    "Viking Longship (unit, replaces Galley)"
+   ],
+   "agenda": "Last Viking King: Builds a large navy and respects civilizations who follow their lead. Does not like civilizations with a weak navy.",
+   "ai_traits": [
+    "Aggressive military"
+   ],
+   "ai_favours": [
+    "Great Lighthouse",
+    "Venetian Arsenal",
+    "Mercenaries",
+    "Military Training",
+    "Theology",
+    "Astrology",
+    "Military Tactics",
+    "Sailing",
+    "Shipbuilding"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "leader:hojo",
+  "name": "Hojo Tokimune",
+  "aliases": [
+   "LEADER_HOJO"
+  ],
+  "summary": "Leads Japan. Divine Wind",
+  "fields": {
+   "civ": [
+    "Japan"
+   ],
+   "ability": [
+    "Divine Wind: Land units receive +5 Combat Strength in land tiles adjacent to Coast; naval units receive +5 Combat Strength in shallow water tiles. Builds Encampment, Holy Site and Theater Square districts in half the time. Units do not receive damage from Hurricanes. Civilizations that are at war with Japan receive +100% unit damage from Hurricanes in Japanese territory."
+   ],
+   "agenda": "Bushido: Likes civilizations that have a strong military and Faith and Culture output. Dislikes civilizations that are strong in military but weak in Faith and Culture output.",
+   "ai_favours": [
+    "Venetian Arsenal",
+    "Drama and Poetry",
+    "Humanism",
+    "Theology",
+    "Astrology",
+    "Bronze Working",
+    "Military Tactics"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "leader:jadwiga",
+  "name": "Jadwiga",
+  "aliases": [
+   "LEADER_JADWIGA"
+  ],
+  "summary": "Leads Poland. Lithuanian Union",
+  "fields": {
+   "civ": [
+    "Poland"
+   ],
+   "ability": [
+    "Lithuanian Union: Poland's majority religion becomes the dominant religion in cities that loses a tile to a Polish Culture Bomb. Holy Sites gain a Faith adjacency bonus from adjacent Districts. All Relics provide bonus Faith (+2), Culture (+2) and Gold (+4)."
+   ],
+   "agenda": "Saint: Tries to build up Faith, and likes civilizations that also focus on Faith.",
+   "ai_traits": [
+    "Low city state preference war",
+    "Religious major civ"
+   ],
+   "ai_favours": [
+    "Divine Right",
+    "Mercenaries",
+    "Military Training",
+    "Mysticism",
+    "Astrology",
+    "Bronze Working",
+    "Currency",
+    "Military Engineering",
+    "Siege Tactics",
+    "Military Engineer",
+    "Cristo Redentor",
+    "Stonehenge"
+   ],
+   "dlc": "Poland Civilization & Scenario Pack"
+  }
+ },
+ {
+  "id": "leader:jayavarman",
+  "name": "Jayavarman VII",
+  "aliases": [
+   "LEADER_JAYAVARMAN"
+  ],
+  "summary": "Leads Khmer. Monasteries of the King",
+  "fields": {
+   "civ": [
+    "Khmer"
+   ],
+   "ability": [
+    "Monasteries of the King: Holy Sites are granted a Major adjacency with Rivers, a Culture Bomb, Food equal to its adjacency bonus, and +2 Housing if on a River."
+   ],
+   "agenda": "An End to Suffering: Likes civilizations with many Holy Sites and with a high average city Citizen Population. Dislikes civs lacking in either of these areas.",
+   "ai_traits": [
+    "Low city state preference war",
+    "Religious major civ"
+   ],
+   "ai_favours": [
+    "Feudalism",
+    "Theology",
+    "Astrology",
+    "Engineering",
+    "Military Engineering",
+    "Replaceable Parts",
+    "Missionary",
+    "Angkor Wat",
+    "Cristo Redentor",
+    "Hagia Sophia"
+   ],
+   "dlc": "Khmer and Indonesia Pack"
+  }
+ },
+ {
+  "id": "leader:joao_iii",
+  "name": "João III",
+  "aliases": [
+   "LEADER_JOAO_III"
+  ],
+  "summary": "Leads Portugal. Porta do Cerco",
+  "fields": {
+   "civ": [
+    "Portugal"
+   ],
+   "ability": [
+    "Porta do Cerco: All units receive +1 sight. +1 Trade Route capacity when a civilization is met. Open Borders with all city-states."
+   ],
+   "agenda": "Navigator's Legacy: Appreciates civilizations who explore the world, and dislikes those who stay close to their borders.",
+   "ai_favours": [
+    "Foreign Trade"
+   ],
+   "dlc": "Portugal Pack"
+  }
+ },
+ {
+  "id": "leader:john_curtin",
+  "name": "John Curtin",
+  "aliases": [
+   "LEADER_JOHN_CURTIN"
+  ],
+  "summary": "Leads Australia. Citadel of Civilization",
+  "fields": {
+   "civ": [
+    "Australia"
+   ],
+   "ability": [
+    "Citadel of Civilization: +100% Production if they have either received a declaration of war or liberated a city in the past 10 turns."
+   ],
+   "agenda": "Perpetually on Guard: Likes civilizations that liberate cities. Dislikes civilizations in a war that are occupying enemy cities.",
+   "ai_traits": [
+    "Low city state preference war",
+    "Low religious preference",
+    "Science major civ"
+   ],
+   "ai_favours": [
+    "Diplomatic Service",
+    "Guilds",
+    "Rapid Deployment",
+    "Animal Husbandry",
+    "Replaceable Parts",
+    "Steam Power",
+    "Eiffel Tower",
+    "Faith"
+   ],
+   "dlc": "Australia Civilization & Scenario Pack"
+  }
+ },
+ {
+  "id": "leader:julius_caesar",
+  "name": "Julius Caesar",
+  "aliases": [
+   "LEADER_JULIUS_CAESAR"
+  ],
+  "summary": "Leads Rome. Veni, Vidi, Vici",
+  "fields": {
+   "civ": [
+    "Rome"
+   ],
+   "ability": [
+    "Veni, Vidi, Vici: +300 Gold whenever you conquer a city for the first time or when you earn Gold from a Barbarian Outpost. The Gold becomes 500 after researching Metal Casting and 700 after Steel (on Standard Speed). When targeting Barbarians receive +5 Combat Strength and always earn normal XP."
+   ],
+   "agenda": "Gallic Wars: Hates barbarians. Likes civilizations that clear out barbarian outposts. Does not like civilizations that ignore barbarian outposts.",
+   "ai_traits": [
+    "Aggressive military",
+    "Low religious preference"
+   ],
+   "ai_favours": [
+    "Craftsmanship",
+    "Early Empire",
+    "Scorched Earth",
+    "Animal Husbandry",
+    "Combustion",
+    "Engineering",
+    "Industrialization",
+    "Iron Working",
+    "Military Engineering",
+    "Steel",
+    "Colosseum",
+    "Colossus"
+   ],
+   "dlc": "Julius Caesar"
+  }
+ },
+ {
+  "id": "leader:kristina",
+  "name": "Kristina",
+  "aliases": [
+   "LEADER_KRISTINA"
+  ],
+  "summary": "Leads Sweden. Minerva of the North",
+  "fields": {
+   "civ": [
+    "Sweden"
+   ],
+   "ability": [
+    "Minerva of the North: Buildings with at least three Great Work slots and wonders with at least two Great Work slots are automatically themed when they have all their slots filled. She may construct the Queen's Bibliotheque in the Government Plaza."
+   ],
+   "uniques": [
+    "Queen's Bibliotheque (building)"
+   ],
+   "agenda": "Bibliophile: Wants to have more Great Works than anyone else. Likes those who leave the Great Works to her, dislikes those who also have many Great Works.",
+   "ai_traits": [
+    "Cultural major civ",
+    "Low city state preference war",
+    "Pursue diplomatic victory"
+   ],
+   "ai_favours": [
+    "Art Museum",
+    "Archaeological Museum",
+    "Queen's Bibliotheque",
+    "Divine Right",
+    "Drama and Poetry",
+    "Exploration",
+    "Humanism",
+    "Nationalism",
+    "Reformed Church",
+    "Metal Casting",
+    "Apadana",
+    "Bolshoi Theatre"
+   ],
+   "dlc": "Gathering Storm"
+  }
+ },
+ {
+  "id": "leader:kublai_khan_china",
+  "name": "Kublai Khan (China)",
+  "aliases": [
+   "LEADER_KUBLAI_KHAN_CHINA"
+  ],
+  "summary": "Leads China. Gerege",
+  "fields": {
+   "civ": [
+    "China"
+   ],
+   "ability": [
+    "Gerege: One extra Economic policy slot in any government. Receive a random Eureka and Inspiration when establishing a Trading Post in another Civilization's city for the first time."
+   ],
+   "agenda": "Pax Mongolica: Likes Civilizations that have a strong military and high Gold yield per turn. Dislikes Civilizations with a weak military or low income.",
+   "ai_favours": [
+    "Gold"
+   ],
+   "dlc": "Vietnam & Kublai Khan Pack"
+  }
+ },
+ {
+  "id": "leader:kublai_khan_mongolia",
+  "name": "Kublai Khan (Mongolia)",
+  "aliases": [
+   "LEADER_KUBLAI_KHAN_MONGOLIA"
+  ],
+  "summary": "Leads Mongolia. Gerege",
+  "fields": {
+   "civ": [
+    "Mongolia"
+   ],
+   "ability": [
+    "Gerege: One extra Economic policy slot in any government. Receive a random Eureka and Inspiration when establishing a Trading Post in another Civilization's city for the first time."
+   ],
+   "agenda": "Pax Mongolica: Likes Civilizations that have a strong military and high Gold yield per turn. Dislikes Civilizations with a weak military or low income.",
+   "ai_favours": [
+    "Gold"
+   ],
+   "dlc": "Vietnam & Kublai Khan Pack"
+  }
+ },
+ {
+  "id": "leader:kupe",
+  "name": "Kupe",
+  "aliases": [
+   "LEADER_KUPE"
+  ],
+  "summary": "Leads Māori. Kupe's Voyage",
+  "fields": {
+   "civ": [
+    "Māori"
+   ],
+   "ability": [
+    "Kupe's Voyage: Begin the game in an Ocean tile. Gain a free Builder and +1 Citizen Population when settling your first city. The Palace receives +3 Housing and +1 Amenity. +2 Science and +2 Culture per turn before you settle your first city."
+   ],
+   "agenda": "Kaitiakitanga: Retains natural features in their empire and builds National Parks. Likes civs who respect the environment; dislikes those who treat the planet poorly.",
+   "ai_traits": [
+    "Cultural major civ"
+   ],
+   "ai_favours": [
+    "Conservation",
+    "Drama and Poetry",
+    "Cartography",
+    "Flight",
+    "Plastics"
+   ],
+   "dlc": "Gathering Storm"
+  }
+ },
+ {
+  "id": "leader:lady_six_sky",
+  "name": "Lady Six Sky",
+  "aliases": [
+   "LEADER_LADY_SIX_SKY"
+  ],
+  "summary": "Leads Maya. Ix Mutal Ajaw",
+  "fields": {
+   "civ": [
+    "Maya"
+   ],
+   "ability": [
+    "Ix Mutal Ajaw: Non capital cities within 6 tiles of the Capital gain +10% to all yields and when founded receive a builder. Other non capital cities receive -15% to all yields. +5 Combat Strength to units within 6 tiles of the Capital."
+   ],
+   "agenda": "Solitary: Settles near her capital. Likes civilizations who settle at a distance. Dislikes any civilizations encroaching on Mayan territory.",
+   "dlc": "Maya & Gran Colombia Pack"
+  }
+ },
+ {
+  "id": "leader:lady_trieu",
+  "name": "Bà Triệu",
+  "aliases": [
+   "LEADER_LADY_TRIEU"
+  ],
+  "summary": "Leads Vietnam. Drive Out The Aggressors",
+  "fields": {
+   "civ": [
+    "Vietnam"
+   ],
+   "ability": [
+    "Drive Out The Aggressors: +5 Combat Strength for units fighting in Rainforest, Marsh, or Woods tiles. +1 Movement if they begin their turn there. Both these bonuses are doubled if the tile is your territory."
+   ],
+   "agenda": "Defender of the Homeland: Likes Civilizations who have not declared war on her. Dislikes Civilizations that have declared war on her. For these, her opinion decreases further each turn the war progresses, and this decreased opinion never decays.",
+   "dlc": "Vietnam & Kublai Khan Pack"
+  }
+ },
+ {
+  "id": "leader:laurier",
+  "name": "Wilfrid Laurier",
+  "aliases": [
+   "LEADER_LAURIER"
+  ],
+  "summary": "Leads Canada. The Last Best West",
+  "fields": {
+   "civ": [
+    "Canada"
+   ],
+   "ability": [
+    "The Last Best West: Allows Farms to be built on Tundra terrain. After Civil Engineering is unlocked Farms can be built on Tundra Hills. In Snow, Tundra, Snow Hills, and Tundra Hills all Mines provide +2 Production, Lumber Mills provide +2 Production, Camps provide +2 Food, Farms provide +2 Food, and strategic resource accumulation rate is +100%. Reduces the purchase cost of tiles in these terrain types by 50%."
+   ],
+   "agenda": "Canadian Expeditionary Force: Responds to as many Emergencies and Scored Competitions as possible. Likes those who also participate in such activities; dislikes those who have not gotten involved.",
+   "ai_traits": [
+    "Low city state preference war",
+    "Low religious preference",
+    "Pursue diplomatic victory"
+   ],
+   "ai_favours": [
+    "Colonialism",
+    "Conservation",
+    "Professional Sports",
+    "Amundsen-Scott Research Station",
+    "Eiffel Tower",
+    "St. Basil's Cathedral",
+    "Naturalist",
+    "Faith"
+   ],
+   "dlc": "Gathering Storm"
+  }
+ },
+ {
+  "id": "leader:lautaro",
+  "name": "Lautaro",
+  "aliases": [
+   "LEADER_LAUTARO"
+  ],
+  "summary": "Leads Mapuche. Swift Hawk",
+  "fields": {
+   "civ": [
+    "Mapuche"
+   ],
+   "ability": [
+    "Swift Hawk: +10 Combat Strength when fighting Free Cities or civilizations that are in a Golden or Heroic Age. Defeating an enemy unit within the borders of an enemy city causes that city to lose 20 Loyalty and 40 loyalty if that civilization is in a Golden or Heroic Age."
+   ],
+   "agenda": "Spirit of Tucapel: Tries to create and maintain a high degree of cultural loyalty. Dislikes civilizations that lose cities by failing to maintain the loyalty of their people, likes those that gain cities through loyalty.",
+   "ai_traits": [
+    "Low religious preference"
+   ],
+   "ai_favours": [
+    "Class Struggle",
+    "Craftsmanship",
+    "Reformed Church",
+    "State Workforce",
+    "Flight",
+    "Gunpowder",
+    "Casa de Contratación",
+    "Eiffel Tower",
+    "Faith"
+   ],
+   "dlc": "Rise and Fall"
+  }
+ },
+ {
+  "id": "leader:ludwig",
+  "name": "Ludwig II",
+  "aliases": [
+   "LEADER_LUDWIG"
+  ],
+  "summary": "Leads Germany. Swan King",
+  "fields": {
+   "civ": [
+    "Germany"
+   ],
+   "ability": [
+    "Swan King: Wonders, even if not finished, receive +2 Culture for every adjacent District. This Culture is displayed in the City Yields. All Culture adjacencies provide Tourism after discovering Castles."
+   ],
+   "agenda": "Eternal Enigma: Likes civilizations that do not keep the maximum number of Districts in each city. Dislikes civilizations that build as many districts as possible.",
+   "ai_traits": [
+    "Cultural major civ",
+    "Low city state preference war",
+    "Low religious preference",
+    "Nonreligious major civ"
+   ],
+   "ai_favours": [
+    "Faith",
+    "Ruhr Valley",
+    "Civil Engineering",
+    "Divine Right",
+    "Drama and Poetry",
+    "State Workforce",
+    "Apprenticeship",
+    "Castles",
+    "Electricity"
+   ],
+   "dlc": "Great Builders Pack"
+  }
+ },
+ {
+  "id": "leader:mansa_musa",
+  "name": "Mansa Musa",
+  "aliases": [
+   "LEADER_MANSA_MUSA"
+  ],
+  "summary": "Leads Mali. Sahel Merchants",
+  "fields": {
+   "civ": [
+    "Mali"
+   ],
+   "ability": [
+    "Sahel Merchants: International Trade Routes gain +1 Gold for every flat Desert tile in the origin city. Receive +1 Trade Capacity every time you enter a Golden Age."
+   ],
+   "agenda": "Lord of the Mines: Tries to maximize Gold output from cities and Trade Routes. Respects civilizations that act similarly, dislikes those who do not.",
+   "ai_favours": [
+    "Guilds",
+    "Currency",
+    "Stirrups",
+    "Big Ben",
+    "Colossus",
+    "Great Zimbabwe",
+    "Petra",
+    "University of Sankore",
+    "Gold",
+    "Drama and poetry"
+   ],
+   "dlc": "Gathering Storm"
+  }
+ },
+ {
+  "id": "leader:matthias_corvinus",
+  "name": "Matthias Corvinus",
+  "aliases": [
+   "LEADER_MATTHIAS_CORVINUS"
+  ],
+  "summary": "Leads Hungary. Raven King",
+  "fields": {
+   "civ": [
+    "Hungary"
+   ],
+   "ability": [
+    "Raven King: Levied units gain an ability giving them +2 Movement and +5 Combat Strength. It costs 75% less Gold and resources to upgrade Levied units. If you Levy troops from a City-State receive 2 Envoys with that City-State. Gain the Black Army unique unit when the Castles technology is researched."
+   ],
+   "uniques": [
+    "Black Army (unit, replaces Courser)"
+   ],
+   "agenda": "Raven Banner: Levies troops from city-states. Likes civilizations that also use city-state troops, dislikes those that shun such mercenaries.",
+   "ai_traits": [
+    "Aggressive military",
+    "Low city state preference war"
+   ],
+   "ai_favours": [
+    "Natural History",
+    "Castles",
+    "Military Science",
+    "Apadana",
+    "Országház"
+   ],
+   "dlc": "Gathering Storm"
+  }
+ },
+ {
+  "id": "leader:menelik",
+  "name": "Menelik II",
+  "aliases": [
+   "LEADER_MENELIK"
+  ],
+  "summary": "Leads Ethiopia. Council of Ministers",
+  "fields": {
+   "civ": [
+    "Ethiopia"
+   ],
+   "ability": [
+    "Council of Ministers: Receive Science and Culture equal to 15% of your Faith generation in cities founded on Hills. Units receive +4 Combat Strength on Hills."
+   ],
+   "agenda": "Ethiopian Highlands: Enjoys building on and around Hills if possible, and likes other civilizations that leave the areas near Hills to him. Dislikes those who also settle and build on and around Hills.",
+   "dlc": "Ethiopia Pack"
+  }
+ },
+ {
+  "id": "leader:montezuma",
+  "name": "Montezuma",
+  "aliases": [
+   "LEADER_MONTEZUMA"
+  ],
+  "summary": "Leads Aztec. Gifts for the Tlatoani",
+  "fields": {
+   "civ": [
+    "Aztec"
+   ],
+   "ability": [
+    "Gifts for the Tlatoani: Luxury resources in his territory provide an Amenity to 2 extra cities. Military units receive +1 Combat Strength when attacking for each different Luxury resource improved in Aztec lands."
+   ],
+   "agenda": "Tlatoani: Likes civilizations who have the same Luxury resources as he does, and will try to collect every Luxury resource available. Dislikes civilizations who have a new Luxury resource he has not yet collected.",
+   "ai_traits": [
+    "Aggressive military"
+   ],
+   "ai_favours": [
+    "Alhambra",
+    "Pyramids",
+    "Civil Engineering",
+    "Craftsmanship",
+    "Feudalism",
+    "Games and Recreation",
+    "Apprenticeship",
+    "Astrology",
+    "Bronze Working",
+    "Writing"
+   ],
+   "dlc": "Aztec Civilization Pack"
+  }
+ },
+ {
+  "id": "leader:mvemba",
+  "name": "Mvemba a Nzinga",
+  "aliases": [
+   "LEADER_MVEMBA"
+  ],
+  "summary": "Leads Kongo. Religious Convert",
+  "fields": {
+   "civ": [
+    "Kongo"
+   ],
+   "ability": [
+    "Religious Convert: May not build Holy Site districts, gain Great Prophets, or found Religions. Gains all Beliefs of any Religion that has established itself in a majority of his cities. Receives an Apostle each time he finishes a M'banza or Theater Square district (of that city's majority Religion)."
+   ],
+   "agenda": "Enthusiastic Disciple: Likes civilizations that bring Religion to the Kongo. Dislikes civilizations that have founded a Religion but not brought it to a Kongolese city.",
+   "ai_traits": [
+    "Cultural major civ"
+   ],
+   "ai_favours": [
+    "Bolshoi Theatre",
+    "Broadway",
+    "Chichen Itza",
+    "Hanging Gardens",
+    "Hermitage",
+    "Oxford University",
+    "Sydney Opera House",
+    "Drama and Poetry",
+    "Guilds",
+    "Currency",
+    "Iron Working"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "leader:nader_shah",
+  "name": "Nader Shah",
+  "aliases": [
+   "LEADER_NADER_SHAH"
+  ],
+  "summary": "Leads Persia. Sword of Persia",
+  "fields": {
+   "civ": [
+    "Persia"
+   ],
+   "ability": [
+    "Sword of Persia: +5 Combat Strength when attacking full Health Units. Cities not founded by Nader Shah receive +2 Faith and +3 Gold on Domestic Trade Routes."
+   ],
+   "agenda": "Jazayerchi: Likes civilizations with a high amount of land units. Dislikes civilizations with a low amount of land units.",
+   "ai_traits": [
+    "Aggressive military"
+   ],
+   "ai_favours": [
+    "Diplomatic Service",
+    "Political Philosophy",
+    "Currency",
+    "Flight",
+    "Iron Working",
+    "Colossus",
+    "Great Zimbabwe"
+   ],
+   "dlc": "Great Warlords Pack"
+  }
+ },
+ {
+  "id": "leader:nzinga_mbande",
+  "name": "Nzinga Mbande",
+  "aliases": [
+   "LEADER_NZINGA_MBANDE"
+  ],
+  "summary": "Leads Kongo. Queen of Ndongo and Matamba",
+  "fields": {
+   "civ": [
+    "Kongo"
+   ],
+   "ability": [
+    "Queen of Ndongo and Matamba: Cities receive +10% Yields if on the same continent as your Capital (Including your Capital), -15% if on another continent."
+   ],
+   "agenda": "Decolonization: Likes civilizations on continents where she has no cities. Dislikes civilizations that have a city on her home continent.",
+   "ai_traits": [
+    "Cultural major civ"
+   ],
+   "ai_favours": [
+    "Bolshoi Theatre",
+    "Broadway",
+    "Chichen Itza",
+    "Hanging Gardens",
+    "Hermitage",
+    "Oxford University",
+    "Sydney Opera House",
+    "Drama and Poetry",
+    "Guilds",
+    "Currency",
+    "Iron Working"
+   ],
+   "dlc": "Great Negotiators Pack"
+  }
+ },
+ {
+  "id": "leader:pachacuti",
+  "name": "Pachacuti",
+  "aliases": [
+   "LEADER_PACHACUTI"
+  ],
+  "summary": "Leads Inca. Qhapaq Ñan",
+  "fields": {
+   "civ": [
+    "Inca"
+   ],
+   "ability": [
+    "Qhapaq Ñan: Domestic Trade Routes gain +1 Food for every Mountain tile in the origin city. Gain the Qhapaq Ñan improvement when Foreign Trade civic is discovered."
+   ],
+   "uniques": [
+    "Qhapaq Ñan (improvement)"
+   ],
+   "agenda": "Sapa Inca: Wants to settle near Mountains. Likes those who leave the areas near Mountains to him, dislikes those who also settle near Mountains.",
+   "ai_traits": [
+    "Low religious preference",
+    "Science major civ"
+   ],
+   "ai_favours": [
+    "Faith",
+    "Feudalism",
+    "Foreign Trade",
+    "Engineering",
+    "Machinery",
+    "Replacable parts",
+    "Machu Picchu"
+   ],
+   "dlc": "Gathering Storm"
+  }
+ },
+ {
+  "id": "leader:pedro",
+  "name": "Pedro II",
+  "aliases": [
+   "LEADER_PEDRO"
+  ],
+  "summary": "Leads Brazil. Magnanimous",
+  "fields": {
+   "civ": [
+    "Brazil"
+   ],
+   "ability": [
+    "Magnanimous: After recruiting or patronizing a Great Person, 20% of its Great Person point cost is refunded."
+   ],
+   "agenda": "Patron of the Arts: Likes civilizations who are not competing for Great People, and will recruit Great People whenever possible. Dislikes losing a Great Person to another civilization.",
+   "ai_traits": [
+    "Cultural major civ"
+   ],
+   "ai_favours": [
+    "Chichen Itza",
+    "Oracle",
+    "Capitalism",
+    "Drama and Poetry",
+    "Games and Recreation",
+    "Guilds",
+    "Humanism",
+    "Mysticism",
+    "Nationalism",
+    "Opera and Ballet",
+    "Astrology",
+    "Currency"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "leader:pericles",
+  "name": "Pericles",
+  "aliases": [
+   "LEADER_PERICLES"
+  ],
+  "summary": "Leads Greece. Surrounded by Glory",
+  "fields": {
+   "civ": [
+    "Greece"
+   ],
+   "ability": [
+    "Surrounded by Glory: +5% Culture per city-state you are the Suzerain of."
+   ],
+   "agenda": "Delian League: Likes civilizations that aren't competing for the same city-state allegiance. Dislikes civilizations that are directly competing for city-state allegiance.",
+   "ai_traits": [
+    "Cultural major civ",
+    "Low religious preference",
+    "Pursue diplomatic victory"
+   ],
+   "ai_favours": [
+    "Faith",
+    "Potala Palace",
+    "Medieval Faires",
+    "Mercenaries",
+    "Military Training",
+    "Naval traditiion",
+    "Political Philosophy",
+    "Bronze Working"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "leader:peter_great",
+  "name": "Peter",
+  "aliases": [
+   "LEADER_PETER_GREAT"
+  ],
+  "summary": "Leads Russia. The Grand Embassy",
+  "fields": {
+   "civ": [
+    "Russia"
+   ],
+   "ability": [
+    "The Grand Embassy: Receives Science or Culture from Trade Routes to civilizations that are more advanced than Russia. +1 per 3 technologies or civics ahead."
+   ],
+   "agenda": "Westernizer: Friendly to those civilizations that are ahead of him in Science and Culture. Dislikes backwards civilizations that are lacking in Science and Culture.",
+   "ai_traits": [
+    "Religious major civ"
+   ],
+   "ai_favours": [
+    "Colossus",
+    "Feudalism",
+    "Animal Husbandry",
+    "Astrology",
+    "Military Science"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "leader:philip_ii",
+  "name": "Philip II",
+  "aliases": [
+   "LEADER_PHILIP_II"
+  ],
+  "summary": "Leads Spain. El Escorial",
+  "fields": {
+   "civ": [
+    "Spain"
+   ],
+   "ability": [
+    "El Escorial: Inquisitors can Remove Heresy one extra time. Inquisitors eliminate 100% of the presence of other Religions. Combat and Religious units have a bonus of +5 Combat Strength against players following other Religions."
+   ],
+   "agenda": "Counter Reformer: Likes civilizations who follow the same Religion, and wants their cities to all follow the same Religion. Hates anyone trying to spread their Religion into their empire.",
+   "ai_traits": [
+    "Religious major civ"
+   ],
+   "ai_favours": [
+    "Colossus",
+    "Great Lighthouse",
+    "Hagia Sophia",
+    "Mahabodhi Temple",
+    "Colonialism",
+    "Cultural Heritage",
+    "Exploration",
+    "Animal Husbandry",
+    "Astrology",
+    "Cartography",
+    "Celestial Navigation",
+    "Gunpowder"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "leader:poundmaker",
+  "name": "Poundmaker",
+  "aliases": [
+   "LEADER_POUNDMAKER"
+  ],
+  "summary": "Leads Cree. Favorable Terms",
+  "fields": {
+   "civ": [
+    "Cree"
+   ],
+   "ability": [
+    "Favorable Terms: All Alliance types provide Shared Visibility. Your outgoing Trade Routes grant +1 Food to Poundmaker per Camp or Pasture at the destination. Trade Routes sent to your cities grant +1 Gold to Poundmaker per Camp or Pasture at the destination."
+   ],
+   "agenda": "Iron Confederacy: Tries to form multiple alliances and respects those who do likewise. Dislikes those with few alliances.",
+   "ai_traits": [
+    "Low city state preference war"
+   ],
+   "ai_favours": [
+    "Civil Service",
+    "Conservation",
+    "Diplomatic Service",
+    "Suffrage",
+    "Animal Husbandry",
+    "Pottery",
+    "Colossus",
+    "Great Zimbabwe"
+   ],
+   "dlc": "Rise and Fall"
+  }
+ },
+ {
+  "id": "leader:qin",
+  "name": "Qin (Mandate of Heaven)",
+  "aliases": [
+   "LEADER_QIN"
+  ],
+  "summary": "Leads China. The First Emperor",
+  "fields": {
+   "civ": [
+    "China"
+   ],
+   "ability": [
+    "The First Emperor: When building Ancient and Classical wonders you may spend Builder charges to complete 15% of the original wonder cost. Builders receive an additional charge. Canals are unlocked with the Masonry technology."
+   ],
+   "agenda": "Wall of 10,000 Li: Likes civilizations not competing for wonders, and builds wonders whenever possible. Dislikes losing a wonder to another civilization.",
+   "ai_traits": [
+    "Cultural major civ",
+    "Low religious preference"
+   ],
+   "ai_favours": [
+    "Colosseum",
+    "Colossus",
+    "Forbidden City",
+    "Great Library",
+    "Great Lighthouse",
+    "Hanging Gardens",
+    "Pyramids",
+    "Terracotta Army",
+    "Civil Engineering",
+    "Divine Right",
+    "State Workforce",
+    "Castles"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "leader:qin_alt",
+  "name": "Qin (Unifier)",
+  "aliases": [
+   "LEADER_QIN_ALT"
+  ],
+  "summary": "Leads China. Thirty-Six Stratagems",
+  "fields": {
+   "civ": [
+    "China"
+   ],
+   "ability": [
+    "Thirty-Six Stratagems: Melee units receive the Convert Barbarians action. This action converts Barbarian units into your units, but it removes the melee unit."
+   ],
+   "agenda": "Sihai: Wants all the Barbarians following his side. Does not like civilizations that destroy Barbarian Outposts.",
+   "ai_traits": [
+    "Low religious preference"
+   ],
+   "ai_favours": [
+    "Faith",
+    "Castles",
+    "Flight",
+    "Masonry",
+    "Terracotta Army"
+   ],
+   "dlc": "Rulers of China Pack"
+  }
+ },
+ {
+  "id": "leader:ramses",
+  "name": "Ramses II",
+  "aliases": [
+   "LEADER_RAMSES"
+  ],
+  "summary": "Leads Egypt. Abu Simbel",
+  "fields": {
+   "civ": [
+    "Egypt"
+   ],
+   "ability": [
+    "Abu Simbel: Gain Culture equal to 15% of the construction cost when finishing Buildings and 30% when completing Wonders."
+   ],
+   "agenda": "Ma'at: Clears all features and improves all possible tiles. Likes civilizations with a high percentage of improved tiles. Dislikes civilizations with low percentage of improved tiles or that found National Parks.",
+   "ai_traits": [
+    "Cultural major civ"
+   ],
+   "ai_favours": [
+    "Craftsmanship",
+    "Foreign Trade",
+    "Natural History",
+    "State Workforce",
+    "Big Ben",
+    "Great Library",
+    "Hanging Gardens",
+    "Hermitage",
+    "Mont St. Michel",
+    "Petra",
+    "Pyramids",
+    "Ruhr Valley"
+   ],
+   "dlc": "Rulers of the Sahara Pack"
+  }
+ },
+ {
+  "id": "leader:robert_the_bruce",
+  "name": "Robert the Bruce",
+  "aliases": [
+   "LEADER_ROBERT_THE_BRUCE"
+  ],
+  "summary": "Leads Scotland. Bannockburn",
+  "fields": {
+   "civ": [
+    "Scotland"
+   ],
+   "ability": [
+    "Bannockburn: Can declare a War of Liberation after gaining the Defensive Tactics Civic. +100% Production and +2 Movement for the first 10 turns after declaring a War of Liberation."
+   ],
+   "agenda": "Flower of Scotland: Will not attack neighbors unless they break a promise to him. Likes those who do not war with neighbors, dislikes those who do.",
+   "ai_traits": [
+    "Low city state preference war",
+    "Science major civ"
+   ],
+   "ai_favours": [
+    "Defensive Tactics",
+    "Games and Recreation",
+    "Globalization",
+    "Reformed Church",
+    "Apprenticeship",
+    "Flight",
+    "Rifling",
+    "Writing",
+    "Alhambra",
+    "Colosseum",
+    "Estádio do Maracanã",
+    "Temple of Artemis"
+   ],
+   "dlc": "Rise and Fall"
+  }
+ },
+ {
+  "id": "leader:saladin",
+  "name": "Saladin (Vizier)",
+  "aliases": [
+   "LEADER_SALADIN"
+  ],
+  "summary": "Leads Arabia. Righteousness of the Faith",
+  "fields": {
+   "civ": [
+    "Arabia"
+   ],
+   "ability": [
+    "Righteousness of the Faith: The worship building for their Religion can be purchased by any player for just one-tenth of the usual Faith cost. This worship building is enhanced to add 10% to the Science, Faith, and Culture output of Arabian cities."
+   ],
+   "agenda": "Ayyubid Dynasty: Wants to have his Worship building in many cities, and likes a civilization with it. Dislikes civilizations following other Religions, or civilizations waging war on followers of his Religion.",
+   "ai_traits": [
+    "Religious major civ"
+   ],
+   "ai_favours": [
+    "Hagia Sophia",
+    "Mahabodhi Temple",
+    "Mont St. Michel",
+    "Reformed Church",
+    "Theology",
+    "Stirrups"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "leader:saladin_alt",
+  "name": "Saladin (Sultan)",
+  "aliases": [
+   "LEADER_SALADIN_ALT"
+  ],
+  "summary": "Leads Arabia. The Victorious",
+  "fields": {
+   "civ": [
+    "Arabia"
+   ],
+   "ability": [
+    "The Victorious: +100% Flanking and Support Bonus to all Combat and Religious units."
+   ],
+   "agenda": "Sultan of Egypt and Syria: Likes civilizations that have founded a Religion but not brought it to one of his cities. Dislikes civilizations that bring him their Religion.",
+   "ai_traits": [
+    "Religious major civ"
+   ],
+   "ai_favours": [
+    "Hagia Sophia",
+    "Mahabodhi Temple",
+    "Mont St. Michel",
+    "Military Tradition",
+    "Reformed Church",
+    "Theology",
+    "Stirrups"
+   ],
+   "dlc": "Great Negotiators Pack"
+  }
+ },
+ {
+  "id": "leader:sejong",
+  "name": "Sejong",
+  "aliases": [
+   "LEADER_SEJONG"
+  ],
+  "summary": "Leads Korea. Hangul",
+  "fields": {
+   "civ": [
+    "Korea"
+   ],
+   "ability": [
+    "Hangul: When you complete your first Technology from a new Era, receive double your Science per turn as Culture."
+   ],
+   "agenda": "Neo-Confucianism: Friendly to backwards civilizations that are lacking in Science and Culture. Dislikes civilizations that are ahead of him in Science and Culture.",
+   "ai_traits": [
+    "Low religious preference",
+    "Science major civ"
+   ],
+   "ai_favours": [
+    "Faith",
+    "Casa de Contratación",
+    "Great Library",
+    "Oxford University",
+    "Feudalism",
+    "Apprenticeship",
+    "Education",
+    "Gunpowder",
+    "Industrialization",
+    "Mining",
+    "Replaceable Parts",
+    "Writing"
+   ],
+   "dlc": "Great Builders Pack"
+  }
+ },
+ {
+  "id": "leader:seondeok",
+  "name": "Seondeok",
+  "aliases": [
+   "LEADER_SEONDEOK"
+  ],
+  "summary": "Leads Korea. Hwarang",
+  "fields": {
+   "civ": [
+    "Korea"
+   ],
+   "ability": [
+    "Hwarang: Governors established in a city provide +3% Culture and Science for each Promotion they have earned, including their first."
+   ],
+   "agenda": "Cheomseongdae: Tries to build up Science, and likes civilizations that also focus on Science. Dislikes those with low Science.",
+   "ai_traits": [
+    "Low religious preference",
+    "Science major civ"
+   ],
+   "ai_favours": [
+    "Feudalism",
+    "Apprenticeship",
+    "Education",
+    "Gunpowder",
+    "Industrialization",
+    "Mining",
+    "Replaceable Parts",
+    "Writing",
+    "Casa de Contratación",
+    "Great Library",
+    "Oxford University",
+    "Faith"
+   ],
+   "dlc": "Rise and Fall"
+  }
+ },
+ {
+  "id": "leader:shaka",
+  "name": "Shaka",
+  "aliases": [
+   "LEADER_SHAKA"
+  ],
+  "summary": "Leads Zulu. Amabutho",
+  "fields": {
+   "civ": [
+    "Zulu"
+   ],
+   "ability": [
+    "Amabutho: May form Corps (Mercenaries Civic) and Armies (Nationalism Civic) earlier. An additional +5 Base Combat Strength to both Corps and Armies."
+   ],
+   "agenda": "Horn, Chest, Loins: Tries to use as many corps and armies as possible and respects civilizations who follow his lead. Does not like civilizations who can't create corps or don't use them.",
+   "ai_traits": [
+    "Aggressive military",
+    "Low religious preference"
+   ],
+   "ai_favours": [
+    "Feudalism",
+    "Mercenaries",
+    "Military Tradition",
+    "Nationalism",
+    "Bronze Working",
+    "Military Engineering",
+    "Military Science",
+    "Military Tactics",
+    "Terracotta Army",
+    "Faith"
+   ],
+   "dlc": "Rise and Fall"
+  }
+ },
+ {
+  "id": "leader:simon_bolivar",
+  "name": "Simón Bolívar",
+  "aliases": [
+   "LEADER_SIMON_BOLIVAR"
+  ],
+  "summary": "Leads Gran Colombia. Campaña Admirable",
+  "fields": {
+   "civ": [
+    "Gran Colombia"
+   ],
+   "ability": [
+    "Campaña Admirable: Earn a Comandante General when the game enters a new era."
+   ],
+   "agenda": "Carabobo: Likes civilizations with highly-promoted units. Dislikes civilizations who have few highly-promoted units.",
+   "dlc": "Maya & Gran Colombia Pack"
+  }
+ },
+ {
+  "id": "leader:suleiman",
+  "name": "Suleiman (Kanuni)",
+  "aliases": [
+   "LEADER_SULEIMAN"
+  ],
+  "summary": "Leads Ottomans. Grand Vizier",
+  "fields": {
+   "civ": [
+    "Ottomans"
+   ],
+   "ability": [
+    "Grand Vizier: Exclusive unique Governor with military and diplomatic abilities. Gain the Janissary unique unit and a Governor Title when the Gunpowder technology is researched."
+   ],
+   "uniques": [
+    "Janissary (unit, replaces Musketman)"
+   ],
+   "agenda": "Lawgiver: Keeps his citizens happy and loyal. Impressed by those with similar priorities, especially if their cities were founded by many players. Dislikes those with happiness/loyalty issues or few captured cities.",
+   "ai_traits": [
+    "Aggressive military"
+   ],
+   "ai_favours": [
+    "Medieval Faires",
+    "Games and Recreation",
+    "Banking",
+    "Gunpower",
+    "Pseudoyield governor"
+   ],
+   "dlc": "Gathering Storm"
+  }
+ },
+ {
+  "id": "leader:suleiman_alt",
+  "name": "Suleiman (Muhteşem)",
+  "aliases": [
+   "LEADER_SULEIMAN_ALT"
+  ],
+  "summary": "Leads Ottomans. The Magnificent",
+  "fields": {
+   "civ": [
+    "Ottomans"
+   ],
+   "ability": [
+    "The Magnificent: +15% Science and Culture when in a Golden Age or Heroic Age. +4 Combat Strength when not in a Golden Age or Heroic Age against Civilizations who are also not in a Golden Age or Heroic Age."
+   ],
+   "agenda": "Golden Age of Suleiman: Impressed by any civilization that earns a Golden Age. Dislikes those in Dark Ages.",
+   "ai_traits": [
+    "Aggressive military"
+   ],
+   "ai_favours": [
+    "Games and Recreation",
+    "Medieval Faires",
+    "Banking",
+    "Gunpower",
+    "Taj Mahal"
+   ],
+   "dlc": "Great Warlords Pack"
+  }
+ },
+ {
+  "id": "leader:sundiata_keita",
+  "name": "Sundiata Keita",
+  "aliases": [
+   "LEADER_SUNDIATA_KEITA"
+  ],
+  "summary": "Leads Mali. Sogolon",
+  "fields": {
+   "civ": [
+    "Mali"
+   ],
+   "ability": [
+    "Sogolon: It costs 20% less Gold to recruit Great People and the Market gains 2 Great Writing slots in Cities founded by Mali. Great Works of Writing receive +4 Gold and +2 Production."
+   ],
+   "agenda": "Lion of Mali: Wants to be the civilization with the most Tourism, dislikes those who compete in Tourism.",
+   "ai_traits": [
+    "Cultural major civ"
+   ],
+   "dlc": "Rulers of the Sahara Pack"
+  }
+ },
+ {
+  "id": "leader:t_roosevelt",
+  "name": "Teddy Roosevelt (Bull Moose)",
+  "aliases": [
+   "LEADER_T_ROOSEVELT"
+  ],
+  "summary": "Leads America. Antiquities and Parks",
+  "fields": {
+   "civ": [
+    "America"
+   ],
+   "ability": [
+    "Antiquities and Parks: Breathtaking tiles adjacent to either a Natural Wonder or a Mountain receive +2 Science. Breathtaking tiles adjacent to either a Wonder or Woods receive +2 Culture. All tiles in a city with a National Park are +1 Appeal."
+   ],
+   "agenda": "The Bull Moose: Wants to settle near high appeal tiles and build high appeal districts and wonders, and likes those who do the same. Dislikes anyone that embraces low appeal territory.",
+   "ai_traits": [
+    "Cultural major civ",
+    "Low city state preference war",
+    "Low religious preference",
+    "Nonreligious major civ",
+    "Pursue diplomatic victory"
+   ],
+   "ai_favours": [
+    "Faith"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "leader:t_roosevelt_roughrider",
+  "name": "Teddy Roosevelt (Rough Rider)",
+  "aliases": [
+   "LEADER_T_ROOSEVELT_ROUGHRIDER"
+  ],
+  "summary": "Leads America. Roosevelt Corollary",
+  "fields": {
+   "civ": [
+    "America"
+   ],
+   "ability": [
+    "Roosevelt Corollary: Units receive +5 Combat Strength on their home continent. Envoys sent to City-States you have a Trade Route to count as two Envoys. Gain the Rough Rider unique unit with Rifling."
+   ],
+   "uniques": [
+    "Rough Rider (unit, replaces Cuirassier)"
+   ],
+   "agenda": "Big Stick Policy: Likes peaceful civilizations that have a city on his home continent. Hates civilizations starting wars against a city-state or civilization based on his continent.",
+   "ai_traits": [
+    "Cultural major civ",
+    "Low city state preference war",
+    "Low religious preference",
+    "Nonreligious major civ"
+   ],
+   "ai_favours": [
+    "Faith",
+    "Broadway",
+    "Panama Canal",
+    "Conservation",
+    "Divine Right",
+    "Political Philosophy",
+    "Suffrage",
+    "Radio",
+    "Rifling"
+   ],
+   "dlc": "Teddy Roosevelt persona pack"
+  }
+ },
+ {
+  "id": "leader:tamar",
+  "name": "Tamar",
+  "aliases": [
+   "LEADER_TAMAR"
+  ],
+  "summary": "Leads Georgia. Glory of the World, Kingdom and Faith",
+  "fields": {
+   "civ": [
+    "Georgia"
+   ],
+   "ability": [
+    "Glory of the World, Kingdom and Faith: Combat victories provide Faith equal to 50% of the Combat Strength of the defeated unit (on Standard Speed). Each Envoy you send to a city-state of your majority Religion counts as two Envoys. (Must have a majority Religion)."
+   ],
+   "agenda": "Narikala Fortress: Tries to put high-level walls around her cities and respects civilizations who follow her lead. Does not like civilizations who fail to fortify their cities.",
+   "ai_traits": [
+    "Low city state preference war",
+    "Pursue diplomatic victory",
+    "Religious major civ"
+   ],
+   "ai_favours": [
+    "Defensive Tactics",
+    "Divine Right",
+    "Castles",
+    "Masonry",
+    "Military Tactics",
+    "Siege Tactics",
+    "Kilwa Kisiwani",
+    "Taj Mahal"
+   ],
+   "dlc": "Rise and Fall"
+  }
+ },
+ {
+  "id": "leader:theodora",
+  "name": "Theodora",
+  "aliases": [
+   "LEADER_THEODORA"
+  ],
+  "summary": "Leads Byzantium. Metanoia",
+  "fields": {
+   "civ": [
+    "Byzantium"
+   ],
+   "ability": [
+    "Metanoia: Holy Sites provide Culture equal to their adjacency bonus. Farms provide a Faith adjacency to Hippodromes and Holy Sites."
+   ],
+   "agenda": "New Rome: Tries to build up Culture, and likes civilizations that also focus on Culture.",
+   "ai_traits": [
+    "Religious major civ"
+   ],
+   "dlc": "Great Builders Pack"
+  }
+ },
+ {
+  "id": "leader:tokugawa",
+  "name": "Tokugawa",
+  "aliases": [
+   "LEADER_TOKUGAWA"
+  ],
+  "summary": "Leads Japan. Bakuhan",
+  "fields": {
+   "civ": [
+    "Japan"
+   ],
+   "ability": [
+    "Bakuhan: International Trade Routes receive -25% Yield and Tourism, but Domestic Trade Routes provide +1 Culture, +1 Science, and +2 Gold for every Specialty District at the Destination. Cities within 6 tiles of Japan's Capital are 100% loyal and after researching Flight receive +1 Tourism for every District."
+   ],
+   "agenda": "Sakoku: Wants to stay safe from conquest. Dislikes those who have conquered other player's original capitals.",
+   "ai_traits": [
+    "Low religious preference",
+    "Science major civ"
+   ],
+   "ai_favours": [
+    "Faith",
+    "Colossus",
+    "Great Zimbabwe",
+    "Class strugle",
+    "Foreign Trade",
+    "Humanism",
+    "Bronze Working",
+    "Flight",
+    "Military Tactics"
+   ],
+   "dlc": "Great Warlords Pack"
+  }
+ },
+ {
+  "id": "leader:tomyris",
+  "name": "Tomyris",
+  "aliases": [
+   "LEADER_TOMYRIS"
+  ],
+  "summary": "Leads Scythia. Killer of Cyrus",
+  "fields": {
+   "civ": [
+    "Scythia"
+   ],
+   "ability": [
+    "Killer of Cyrus: All units receive +5 Combat Strength when attacking wounded units. When they eliminate a unit, they heal up to 30 hit points."
+   ],
+   "agenda": "Backstab Averse: Likes civilizations who are their declared friend. Hates civilizations who backstab and declare surprise wars.",
+   "ai_favours": [
+    "Capitalism",
+    "Divine Right",
+    "Guilds",
+    "Military Tradition",
+    "Totalitarianism",
+    "Animal Husbandry",
+    "Horseback Riding"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "leader:trajan",
+  "name": "Trajan",
+  "aliases": [
+   "LEADER_TRAJAN"
+  ],
+  "summary": "Leads Rome. Trajan's Column",
+  "fields": {
+   "civ": [
+    "Rome"
+   ],
+   "ability": [
+    "Trajan's Column: All cities start with an additional City Center building. (Starts with a Monument building in the Ancient era)."
+   ],
+   "agenda": "Optimus Princeps: Tries to include as much territory as possible in their empire. Does not like civilizations who control little territory.",
+   "ai_traits": [
+    "Expansionist",
+    "Low religious preference"
+   ],
+   "ai_favours": [
+    "Faith",
+    "Colosseum",
+    "Colossus",
+    "Estádio do Maracanã",
+    "Great Zimbabwe",
+    "Craftsmanship",
+    "Early Empire",
+    "Scorched Earth",
+    "Animal Husbandry",
+    "Combustion",
+    "Engineering",
+    "Industrialization"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "leader:victoria",
+  "name": "Victoria (Age of Empire)",
+  "aliases": [
+   "LEADER_VICTORIA"
+  ],
+  "summary": "Leads England. Pax Britannica",
+  "fields": {
+   "civ": [
+    "England"
+   ],
+   "ability": [
+    "Pax Britannica: Each time you found your first city on a continent other than your home continent receive a free melee unit and a Trade Route capacity. Constructing any Royal Navy Dockyard grants you a copy of the strongest naval unit you can build. Gain the Redcoat unique unit when the Military Science technology is researched."
+   ],
+   "uniques": [
+    "Redcoat (unit, replaces Line Infantry)"
+   ],
+   "agenda": "Sun Never Sets: Likes civilizations from her home continent, and wants to expand to all continents. Doesn’t like civilizations on continents where England has no city.",
+   "ai_traits": [
+    "Low religious preference"
+   ],
+   "ai_favours": [
+    "Faith",
+    "Great Lighthouse",
+    "Colonialism",
+    "Exploration",
+    "Mercantilism",
+    "Celestial Navigation",
+    "Industrialization",
+    "Military Science",
+    "Military Engineer"
+   ],
+   "dlc": "Base game"
+  }
+ },
+ {
+  "id": "leader:victoria_alt",
+  "name": "Victoria (Age of Steam)",
+  "aliases": [
+   "LEADER_VICTORIA_ALT"
+  ],
+  "summary": "Leads England. Age of Steam",
+  "fields": {
+   "civ": [
+    "England"
+   ],
+   "ability": [
+    "Age of Steam: +10% Production in Cities for every Industrial Zone building in that city. +2 Production to all Strategic Resources."
+   ],
+   "agenda": "Industrial Revolution: Tries to build up industry, and likes civilizations that also focus on Production.",
+   "ai_traits": [
+    "Low religious preference"
+   ],
+   "ai_favours": [
+    "Faith",
+    "Colonialism",
+    "Exploration",
+    "Mercantilism",
+    "Celestial Navigation",
+    "Ruhr Valley",
+    "Venetian Arsenal"
+   ],
+   "dlc": "Rulers of England Pack"
+  }
+ },
+ {
+  "id": "leader:wilhelmina",
+  "name": "Wilhelmina",
+  "aliases": [
+   "LEADER_WILHELMINA"
+  ],
+  "summary": "Leads Netherlands. Radio Oranje",
+  "fields": {
+   "civ": [
+    "Netherlands"
+   ],
+   "ability": [
+    "Radio Oranje: Your Trade Routes to your own cities provide +2 Loyalty per turn for the starting city. Trade Routes to foreign cities or from foreign cities provide +2 Culture to you."
+   ],
+   "agenda": "Billionaire: Tries to maximize Trade Routes. Likes civilizations that trade with her, dislikes those who do not.",
+   "ai_favours": [
+    "Civil Engineering",
+    "Foreign Trade",
+    "Guilds",
+    "Celestial Navigation",
+    "Electricity",
+    "Mass Production",
+    "Replaceable Parts",
+    "Square Rigging",
+    "Colossus",
+    "Great Zimbabwe"
+   ],
+   "dlc": "Rise and Fall"
+  }
+ },
+ {
+  "id": "leader:wu_zetian",
+  "name": "Wu Zetian",
+  "aliases": [
+   "LEADER_WU_ZETIAN"
+  ],
+  "summary": "Leads China. Manual of Entrapment",
+  "fields": {
+   "civ": [
+    "China"
+   ],
+   "ability": [
+    "Manual of Entrapment: All offensive Spies operate at 1 level higher. Whenever an offensive spy mission is successful, you also gain 100% of the Faith, Culture, and Science that the targeted city earned that turn. Receive a free spy (and extra spy capacity) after discovering Defensive Tactics. Can purchase Spies with Faith."
+   ],
+   "agenda": "Court Intrigue: Likes civilizations who pose no threat. Dislikes civilizations with strong militaries or ones with nearby cities.",
+   "ai_traits": [
+    "Cultural major civ",
+    "Low city state preference war"
+   ],
+   "ai_favours": [
+    "Defensive Tactics",
+    "Diplomatic Service",
+    "Ideology",
+    "Nationalism",
+    "Castles",
+    "Flight",
+    "Masonry",
+    "Forbidden City"
+   ],
+   "dlc": "Rulers of China Pack"
+  }
+ },
+ {
+  "id": "leader:yongle",
+  "name": "Yongle",
+  "aliases": [
+   "LEADER_YONGLE"
+  ],
+  "summary": "Leads China. Lijia",
+  "fields": {
+   "civ": [
+    "China"
+   ],
+   "ability": [
+    "Lijia: All Cities receive Projects where they can convert 50% of their Production into Food, Faith, or 100% if it is Gold. Cities with 10 or more Population receive +2 Gold, +1 Science, and +1 Culture per turn for each Population in the city."
+   ],
+   "agenda": "Yinding: Likes Civilizations with positive income per turn, dislikes civilizations with negative income per turn.",
+   "ai_traits": [
+    "Science major civ"
+   ],
+   "ai_favours": [
+    "Feudalism",
+    "Castles",
+    "Flight",
+    "Masonry",
+    "Forbidden City",
+    "Great Library"
+   ],
+   "dlc": "Rulers of China Pack"
+  }
+ }
+]

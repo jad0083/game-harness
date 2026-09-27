@@ -1,0 +1,605 @@
+[
+ {
+  "id": "project:bread_and_circuses",
+  "name": "Bread and Circuses",
+  "aliases": [
+   "PROJECT_BREAD_AND_CIRCUSES"
+  ],
+  "summary": "Entertainment Complex project, cost 25. City project which increases the Loyalty pressure that this city exerts on itself and other cities nearby.",
+  "fields": {
+   "district": "Entertainment Complex",
+   "cost": 25,
+   "effect": "City project which increases the Loyalty pressure that this city exerts on itself and other cities nearby. While active, each of your Citizens here exerts +0.5 Loyalty pressure to this city. This pressure also affects other cities within 9 tiles, but is 10% less effective per tile. Once completed, instantly gain +20 Loyalty in this city. Requires: Entertainment Complex district."
+  }
+ },
+ {
+  "id": "project:build_nuclear_device",
+  "name": "Build Nuclear Device",
+  "aliases": [
+   "PROJECT_BUILD_NUCLEAR_DEVICE"
+  ],
+  "summary": "cost 800. Adds one Nuclear Device to your nation's inventory. Requires Uranium. Maintenance is 14 Gold.",
+  "fields": {
+   "cost": 800,
+   "requires": [
+    "Nuclear Fission"
+   ],
+   "effect": "Adds one Nuclear Device to your nation's inventory. Requires Uranium. Maintenance is 14 Gold."
+  }
+ },
+ {
+  "id": "project:build_thermonuclear_device",
+  "name": "Build Thermonuclear Device",
+  "aliases": [
+   "PROJECT_BUILD_THERMONUCLEAR_DEVICE"
+  ],
+  "summary": "cost 1000. Adds a Thermonuclear Device to your nation's inventory. Requires Uranium. Maintenance is 16 Gold.",
+  "fields": {
+   "cost": 1000,
+   "requires": [
+    "Nuclear Fusion"
+   ],
+   "effect": "Adds a Thermonuclear Device to your nation's inventory. Requires Uranium. Maintenance is 16 Gold."
+  }
+ },
+ {
+  "id": "project:carbon_recapture",
+  "name": "Carbon Recapture",
+  "aliases": [
+   "PROJECT_CARBON_RECAPTURE"
+  ],
+  "summary": "Industrial Zone project, cost 400. Can be run in any city with an Industrial Zone. When complete, the lifetime carbon emissions of this civilization are reduced by 50 and 30 Diplomatic Favor are earned.",
+  "fields": {
+   "district": "Industrial Zone",
+   "cost": 400,
+   "requires": [
+    "Global Warming Mitigation"
+   ],
+   "effect": "Can be run in any city with an Industrial Zone. When complete, the lifetime carbon emissions of this civilization are reduced by 50 and 30 Diplomatic Favor are earned. This project can even reduce your carbon debt to zero and allow you to accumulate reductions against the global CO2 footprint."
+  }
+ },
+ {
+  "id": "project:carnival",
+  "name": "Carnival",
+  "aliases": [
+   "PROJECT_CARNIVAL"
+  ],
+  "summary": "Street Carnival project, cost 25. Brazilian unique project which provides +1 Amenity when active and Great Person Points for Great Engineers, Great Merchants, Great Writers, Great Artists, and Great Musicians once…",
+  "fields": {
+   "district": "Street Carnival",
+   "cost": 25,
+   "great_person_points": [
+    "5 Great Engineer",
+    "5 Great Merchant",
+    "5 Great Writer",
+    "5 Great Artist",
+    "5 Great Musician"
+   ],
+   "effect": "Brazilian unique project which provides +1 Amenity when active and Great Person Points for Great Engineers, Great Merchants, Great Writers, Great Artists, and Great Musicians once finished."
+  }
+ },
+ {
+  "id": "project:convert_reactor_to_coal",
+  "name": "Convert to Coal Power",
+  "aliases": [
+   "PROJECT_CONVERT_REACTOR_TO_COAL"
+  ],
+  "summary": "Industrial Zone project, cost 200. Decommissions the current Power Plant in this city, and replaces it with the Coal Power Plant.",
+  "fields": {
+   "district": "Industrial Zone",
+   "cost": 200,
+   "requires": [
+    "Industrialization"
+   ],
+   "effect": "Decommissions the current Power Plant in this city, and replaces it with the Coal Power Plant. Coal Power Plant: Automatically converts any amount of Coal into Power for cities within 6 tiles that need it each turn, at the rate of: - 1 Coal 4 Power - Heavy CO2 into the atmosphere"
+  }
+ },
+ {
+  "id": "project:convert_reactor_to_oil",
+  "name": "Convert to Oil Power",
+  "aliases": [
+   "PROJECT_CONVERT_REACTOR_TO_OIL"
+  ],
+  "summary": "Industrial Zone project, cost 300. Decommissions the current Power Plant in this city, and replaces it with the Oil Power Plant.",
+  "fields": {
+   "district": "Industrial Zone",
+   "cost": 300,
+   "requires": [
+    "Electricity"
+   ],
+   "effect": "Decommissions the current Power Plant in this city, and replaces it with the Oil Power Plant. Oil Power Plant: Automatically converts any amount of Oil into Power for cities within 6 tiles that need it each turn, at the rate of: - 1 Oil 4 Power - Moderate CO2 into the atmosphere Its Production bonus is extended to all City Centers within 6 tiles that do not already have a bonus from a Power Plant building."
+  }
+ },
+ {
+  "id": "project:convert_reactor_to_uranium",
+  "name": "Convert to Nuclear Power",
+  "aliases": [
+   "PROJECT_CONVERT_REACTOR_TO_URANIUM"
+  ],
+  "summary": "Industrial Zone project, cost 400. Decommissions the current Power Plant in this city, and replaces it with the Nuclear Power Plant.",
+  "fields": {
+   "district": "Industrial Zone",
+   "cost": 400,
+   "requires": [
+    "Nuclear Fission"
+   ],
+   "effect": "Decommissions the current Power Plant in this city, and replaces it with the Nuclear Power Plant. Nuclear Power Plant: Automatically converts any amount of Uranium into Power for cities within 6 tiles that need it each turn, at the rate of: - 1 Uranium 16 Power - Miniscule CO2 into the atmosphere Once built, as a Nuclear Power Plant ages, there is an increased chance for a Nuclear Accident to occur. Its Production and Science bonus is extended to all City Centers within 6 tiles that do not already have a bonus from a Power Plant building."
+  }
+ },
+ {
+  "id": "project:cothon_capital_move",
+  "name": "Move Capital",
+  "aliases": [
+   "PROJECT_COTHON_CAPITAL_MOVE"
+  ],
+  "summary": "Cothon project, cost 100. Phoenician unique project available to any city with a Cothon. When complete, the Phoenician Capital moves to this city.",
+  "fields": {
+   "district": "Cothon",
+   "cost": 100,
+   "effect": "Phoenician unique project available to any city with a Cothon. When complete, the Phoenician Capital moves to this city."
+  }
+ },
+ {
+  "id": "project:court_festival",
+  "name": "Court Festival",
+  "aliases": [
+   "PROJECT_COURT_FESTIVAL"
+  ],
+  "summary": "Theater Square project, cost 65. When complete, this project awards 50 Culture and 50 Tourism (on Standard speed) based on the number of excess copies of Luxury resources France possesses.",
+  "fields": {
+   "district": "Theater Square",
+   "cost": 65,
+   "effect": "When complete, this project awards 50 Culture and 50 Tourism (on Standard speed) based on the number of excess copies of Luxury resources France possesses."
+  }
+ },
+ {
+  "id": "project:decommission_coal_power_plant",
+  "name": "Decommission Coal Power Plant",
+  "aliases": [
+   "PROJECT_DECOMMISSION_COAL_POWER_PLANT"
+  ],
+  "summary": "Industrial Zone project, cost 400. Project to earn score for the Climate Accords competition. Removes the Coal Power Plant and all its effects from this city.",
+  "fields": {
+   "district": "Industrial Zone",
+   "cost": 400,
+   "effect": "Project to earn score for the Climate Accords competition. Removes the Coal Power Plant and all its effects from this city."
+  }
+ },
+ {
+  "id": "project:decommission_nuclear_power_plant",
+  "name": "Decommission Nuclear Power Plant",
+  "aliases": [
+   "PROJECT_DECOMMISSION_NUCLEAR_POWER_PLANT"
+  ],
+  "summary": "Industrial Zone project, cost 400. Project to earn score for the Climate Accords competition. Removes the Nuclear Power Plant and all its effects from this city.",
+  "fields": {
+   "district": "Industrial Zone",
+   "cost": 400,
+   "effect": "Project to earn score for the Climate Accords competition. Removes the Nuclear Power Plant and all its effects from this city."
+  }
+ },
+ {
+  "id": "project:decommission_oil_power_plant",
+  "name": "Decommission Oil Power Plant",
+  "aliases": [
+   "PROJECT_DECOMMISSION_OIL_POWER_PLANT"
+  ],
+  "summary": "Industrial Zone project, cost 400. Project to earn score for the Climate Accords competition. Removes the Oil Power Plant and all its effects from this city.",
+  "fields": {
+   "district": "Industrial Zone",
+   "cost": 400,
+   "effect": "Project to earn score for the Climate Accords competition. Removes the Oil Power Plant and all its effects from this city."
+  }
+ },
+ {
+  "id": "project:enhance_district_campus",
+  "name": "Campus Research Grants",
+  "aliases": [
+   "PROJECT_ENHANCE_DISTRICT_CAMPUS"
+  ],
+  "summary": "Campus project, cost 25. District-based project which provides Science every turn and Great Scientist points once finished.",
+  "fields": {
+   "district": "Campus",
+   "cost": 25,
+   "yield_conversion": [
+    "15% of production as Science"
+   ],
+   "great_person_points": [
+    "10 Great Scientist"
+   ],
+   "effect": "District-based project which provides Science every turn and Great Scientist points once finished."
+  }
+ },
+ {
+  "id": "project:enhance_district_commercial_hub",
+  "name": "Commercial Hub Investment",
+  "aliases": [
+   "PROJECT_ENHANCE_DISTRICT_COMMERCIAL_HUB"
+  ],
+  "summary": "Commercial Hub project, cost 25. District-based project which provides a large amount of Gold every turn and Great Merchant points once finished.",
+  "fields": {
+   "district": "Commercial Hub",
+   "cost": 25,
+   "yield_conversion": [
+    "30% of production as Gold"
+   ],
+   "great_person_points": [
+    "10 Great Merchant"
+   ],
+   "effect": "District-based project which provides a large amount of Gold every turn and Great Merchant points once finished."
+  }
+ },
+ {
+  "id": "project:enhance_district_encampment",
+  "name": "Encampment Training",
+  "aliases": [
+   "PROJECT_ENHANCE_DISTRICT_ENCAMPMENT"
+  ],
+  "summary": "Encampment project, cost 25. District-based project which provides Gold every turn and Great General points once finished.",
+  "fields": {
+   "district": "Encampment",
+   "cost": 25,
+   "yield_conversion": [
+    "15% of production as Gold"
+   ],
+   "great_person_points": [
+    "10 Great General"
+   ],
+   "effect": "District-based project which provides Gold every turn and Great General points once finished."
+  }
+ },
+ {
+  "id": "project:enhance_district_harbor",
+  "name": "Harbor Shipping",
+  "aliases": [
+   "PROJECT_ENHANCE_DISTRICT_HARBOR"
+  ],
+  "summary": "Harbor project, cost 25. District-based project which provides Gold every turn and Great Admiral points once finished.",
+  "fields": {
+   "district": "Harbor",
+   "cost": 25,
+   "yield_conversion": [
+    "15% of production as Gold"
+   ],
+   "great_person_points": [
+    "10 Great Admiral"
+   ],
+   "effect": "District-based project which provides Gold every turn and Great Admiral points once finished."
+  }
+ },
+ {
+  "id": "project:enhance_district_holy_site",
+  "name": "Holy Site Prayers",
+  "aliases": [
+   "PROJECT_ENHANCE_DISTRICT_HOLY_SITE"
+  ],
+  "summary": "Holy Site project, cost 25. District-based project which provides Faith and +100% Religious Pressure every turn. Awards Great Prophet points once finished.",
+  "fields": {
+   "district": "Holy Site",
+   "cost": 25,
+   "yield_conversion": [
+    "15% of production as Faith"
+   ],
+   "great_person_points": [
+    "10 Great Prophet"
+   ],
+   "effect": "District-based project which provides Faith and +100% Religious Pressure every turn. Awards Great Prophet points once finished."
+  }
+ },
+ {
+  "id": "project:enhance_district_industrial_zone",
+  "name": "Industrial Zone Logistics",
+  "aliases": [
+   "PROJECT_ENHANCE_DISTRICT_INDUSTRIAL_ZONE"
+  ],
+  "summary": "Industrial Zone project, cost 25. District-based project which provides this city with full Power while active. It also provides Great Engineer points once finished.",
+  "fields": {
+   "district": "Industrial Zone",
+   "cost": 25,
+   "great_person_points": [
+    "10 Great Engineer"
+   ],
+   "effect": "District-based project which provides this city with full Power while active. It also provides Great Engineer points once finished."
+  }
+ },
+ {
+  "id": "project:enhance_district_theater",
+  "name": "Theater Square Festival",
+  "aliases": [
+   "PROJECT_ENHANCE_DISTRICT_THEATER"
+  ],
+  "summary": "Theater Square project, cost 25. District-based project which provides Culture every turn and a small amount of Great Writer, Great Artist, and Great Musician points once finished.",
+  "fields": {
+   "district": "Theater Square",
+   "cost": 25,
+   "yield_conversion": [
+    "15% of production as Culture"
+   ],
+   "great_person_points": [
+    "5 Great Writer",
+    "5 Great Artist",
+    "5 Great Musician"
+   ],
+   "effect": "District-based project which provides Culture every turn and a small amount of Great Writer, Great Artist, and Great Musician points once finished."
+  }
+ },
+ {
+  "id": "project:launch_earth_satellite",
+  "name": "Launch Earth Satellite",
+  "aliases": [
+   "PROJECT_LAUNCH_EARTH_SATELLITE"
+  ],
+  "summary": "Spaceport project, cost 900. Space Race project which launches a small satellite into orbit. Reveals the geography of any unexplored corner of the world, and marks the first step towards the Science Victory.",
+  "fields": {
+   "district": "Spaceport",
+   "cost": 900,
+   "requires": [
+    "Rocketry"
+   ],
+   "space_race": true,
+   "max_per_player": 1,
+   "effect": "Space Race project which launches a small satellite into orbit. Reveals the geography of any unexplored corner of the world, and marks the first step towards the Science Victory."
+  }
+ },
+ {
+  "id": "project:launch_exoplanet_expedition",
+  "name": "Launch Exoplanet Expedition",
+  "aliases": [
+   "PROJECT_LAUNCH_EXOPLANET_EXPEDITION"
+  ],
+  "summary": "Spaceport project, cost 2100. Space Race project which travels through deep space at 1 Light Year per turn to spread humankind to another star system. Wins the Science Victory once it arrives.",
+  "fields": {
+   "district": "Spaceport",
+   "cost": 2100,
+   "requires": [
+    "Smart Materials"
+   ],
+   "space_race": true,
+   "max_per_player": 1,
+   "effect": "Space Race project which travels through deep space at 1 Light Year per turn to spread humankind to another star system. Wins the Science Victory once it arrives. Can be sped up by other projects."
+  }
+ },
+ {
+  "id": "project:launch_mars_base",
+  "name": "Launch Mars Colony",
+  "aliases": [
+   "PROJECT_LAUNCH_MARS_BASE"
+  ],
+  "summary": "Spaceport project, cost 1800. Space Race project which establishes a small human base on the surface of Mars. Marks the third step towards the Science Victory.",
+  "fields": {
+   "district": "Spaceport",
+   "cost": 1800,
+   "requires": [
+    "Nanotechnology"
+   ],
+   "space_race": true,
+   "max_per_player": 1,
+   "effect": "Space Race project which establishes a small human base on the surface of Mars. Marks the third step towards the Science Victory."
+  }
+ },
+ {
+  "id": "project:launch_moon_landing",
+  "name": "Launch Moon Landing",
+  "aliases": [
+   "PROJECT_LAUNCH_MOON_LANDING"
+  ],
+  "summary": "Spaceport project, cost 1500. Space Race project which launches a large rocket to land a human on the moon.",
+  "fields": {
+   "district": "Spaceport",
+   "cost": 1500,
+   "requires": [
+    "Satellites"
+   ],
+   "space_race": true,
+   "max_per_player": 1,
+   "effect": "Space Race project which launches a large rocket to land a human on the moon. Grants a one time Culture bonus equal to 10 times your Science per turn, and marks the second step towards the Science Victory."
+  }
+ },
+ {
+  "id": "project:lijia_faith",
+  "name": "Lijia (Faith)",
+  "aliases": [
+   "PROJECT_LIJIA_FAITH"
+  ],
+  "summary": "cost 1000. Project which provides Faith every turn equal to 50% of this city's production.",
+  "fields": {
+   "cost": 1000,
+   "yield_conversion": [
+    "50% of production as Faith"
+   ],
+   "effect": "Project which provides Faith every turn equal to 50% of this city's production."
+  }
+ },
+ {
+  "id": "project:lijia_food",
+  "name": "Lijia (Food)",
+  "aliases": [
+   "PROJECT_LIJIA_FOOD"
+  ],
+  "summary": "cost 1000. Project which provides Food every turn equal to 50% of this city's production.",
+  "fields": {
+   "cost": 1000,
+   "yield_conversion": [
+    "50% of production as Food"
+   ],
+   "effect": "Project which provides Food every turn equal to 50% of this city's production."
+  }
+ },
+ {
+  "id": "project:lijia_gold",
+  "name": "Lijia (Gold)",
+  "aliases": [
+   "PROJECT_LIJIA_GOLD"
+  ],
+  "summary": "cost 1000. Project which provides Gold every turn equal to 100% of this city's production.",
+  "fields": {
+   "cost": 1000,
+   "yield_conversion": [
+    "100% of production as Gold"
+   ],
+   "effect": "Project which provides Gold every turn equal to 100% of this city's production."
+  }
+ },
+ {
+  "id": "project:manhattan_project",
+  "name": "Manhattan Project",
+  "aliases": [
+   "PROJECT_MANHATTAN_PROJECT"
+  ],
+  "summary": "cost 1000. Allows for the creation of Nuclear Devices.",
+  "fields": {
+   "cost": 1000,
+   "requires": [
+    "Nuclear Fission"
+   ],
+   "max_per_player": 1,
+   "effect": "Allows for the creation of Nuclear Devices."
+  }
+ },
+ {
+  "id": "project:operation_ivy",
+  "name": "Operation Ivy",
+  "aliases": [
+   "PROJECT_OPERATION_IVY"
+  ],
+  "summary": "cost 1000. Allows for the creation of Thermonuclear Devices.",
+  "fields": {
+   "cost": 1000,
+   "requires": [
+    "Nuclear Fusion"
+   ],
+   "max_per_player": 1,
+   "effect": "Allows for the creation of Thermonuclear Devices."
+  }
+ },
+ {
+  "id": "project:orbital_laser",
+  "name": "Launch Lagrange Laser Station",
+  "aliases": [
+   "PROJECT_ORBITAL_LASER"
+  ],
+  "summary": "Spaceport project, cost 600. Requires 30 Aluminum to begin construction. (on Standard Speed) Space Race project which speeds up your Exoplanet Expedition by +1 Light Year per turn, accelerating your progress t…",
+  "fields": {
+   "district": "Spaceport",
+   "cost": 600,
+   "requires": [
+    "Offworld Mission"
+   ],
+   "space_race": true,
+   "effect": "Requires 30 Aluminum to begin construction. (on Standard Speed) Space Race project which speeds up your Exoplanet Expedition by +1 Light Year per turn, accelerating your progress towards a Science Victory."
+  }
+ },
+ {
+  "id": "project:recommission_reactor",
+  "name": "Recommission Nuclear Reactor",
+  "aliases": [
+   "PROJECT_RECOMMISSION_REACTOR"
+  ],
+  "summary": "cost 400. Allows for the recommissioning of a nuclear reactor to increase safety measures and reduce the risk of a nuclear accident. Recommissioning resets the reactor age to 0.",
+  "fields": {
+   "cost": 400,
+   "requires": [
+    "Nuclear Fission"
+   ],
+   "effect": "Allows for the recommissioning of a nuclear reactor to increase safety measures and reduce the risk of a nuclear accident. Recommissioning resets the reactor age to 0. The older a reactor gets, the higher the chance that a Nuclear Accident can occur."
+  }
+ },
+ {
+  "id": "project:repair_outer_defenses",
+  "name": "Repair Outer Defenses",
+  "aliases": [
+   "PROJECT_REPAIR_OUTER_DEFENSES"
+  ],
+  "summary": "cost 0. Repair the damage to the outer defenses of this city. Only possible if this city has not been attacked for at least 3 turns.",
+  "fields": {
+   "effect": "Repair the damage to the outer defenses of this city. Only possible if this city has not been attacked for at least 3 turns."
+  }
+ },
+ {
+  "id": "project:send_aid",
+  "name": "Send Aid",
+  "aliases": [
+   "PROJECT_SEND_AID"
+  ],
+  "summary": "cost 200. Project to earn score for your Aid Request competitions.",
+  "fields": {
+   "cost": 200,
+   "effect": "Project to earn score for your Aid Request competitions."
+  }
+ },
+ {
+  "id": "project:terrestrial_laser",
+  "name": "Build Terrestrial Laser Station",
+  "aliases": [
+   "PROJECT_TERRESTRIAL_LASER"
+  ],
+  "summary": "Spaceport project, cost 600. Once completed, this city's Power requirements increase by 5. Space Race project which speeds up your Exoplanet Expedition by +1 Light Year per turn as long as the city is Powered,…",
+  "fields": {
+   "district": "Spaceport",
+   "cost": 600,
+   "requires": [
+    "Offworld Mission"
+   ],
+   "space_race": true,
+   "effect": "Once completed, this city's Power requirements increase by 5. Space Race project which speeds up your Exoplanet Expedition by +1 Light Year per turn as long as the city is Powered, accelerating your progress towards a Science Victory."
+  }
+ },
+ {
+  "id": "project:train_astronauts",
+  "name": "Train Astronauts",
+  "aliases": [
+   "PROJECT_TRAIN_ASTRONAUTS"
+  ],
+  "summary": "Spaceport project, cost 200. Project to earn score for the International Space Station competition.",
+  "fields": {
+   "district": "Spaceport",
+   "cost": 200,
+   "effect": "Project to earn score for the International Space Station competition."
+  }
+ },
+ {
+  "id": "project:train_athletes",
+  "name": "Train Athletes",
+  "aliases": [
+   "PROJECT_TRAIN_ATHLETES"
+  ],
+  "summary": "cost 200. Project to earn score for the World Games competition.",
+  "fields": {
+   "cost": 200,
+   "effect": "Project to earn score for the World Games competition."
+  }
+ },
+ {
+  "id": "project:water_bread_and_circuses",
+  "name": "Bread and Circuses",
+  "aliases": [
+   "PROJECT_WATER_BREAD_AND_CIRCUSES"
+  ],
+  "summary": "Water Park project, cost 25. City project which increases the Loyalty pressure that this city exerts on itself and other cities nearby.",
+  "fields": {
+   "district": "Water Park",
+   "cost": 25,
+   "effect": "City project which increases the Loyalty pressure that this city exerts on itself and other cities nearby. While active, each of your Citizens here exert +1 Loyalty pressure to this city. This pressure also affects other cities within 9 tiles, but is 10% less effective per tile. Once completed, instantly gain +20 Loyalty in this city. Requires: Water Park district."
+  }
+ },
+ {
+  "id": "project:water_carnival",
+  "name": "Carnival",
+  "aliases": [
+   "PROJECT_WATER_CARNIVAL"
+  ],
+  "summary": "Copacabana project, cost 25. Brazilian unique project which provides +1 Amenity when active and Great Person Points for Great Engineers, Great Merchants, Great Writers, Great Artists, and Great Musicians once…",
+  "fields": {
+   "district": "Copacabana",
+   "cost": 25,
+   "great_person_points": [
+    "5 Great Engineer",
+    "5 Great Merchant",
+    "5 Great Writer",
+    "5 Great Artist",
+    "5 Great Musician"
+   ],
+   "effect": "Brazilian unique project which provides +1 Amenity when active and Great Person Points for Great Engineers, Great Merchants, Great Writers, Great Artists, and Great Musicians once finished."
+  }
+ }
+]

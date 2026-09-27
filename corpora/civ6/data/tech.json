@@ -1,0 +1,1914 @@
+[
+ {
+  "id": "tech:advanced_ai",
+  "name": "Advanced AI",
+  "aliases": [
+   "TECH_ADVANCED_AI"
+  ],
+  "summary": "Future Era, cost 2200. Eureka: Boost through Spy. (40%).",
+  "fields": {
+   "era": "Future Era",
+   "cost": 2200,
+   "eureka": "Boost through Spy. (40%)",
+   "effects": [
+    "grant promotion(PromotionType Drone Air Defense) on player units [if unit tag matches (Class giant death robot)]"
+   ],
+   "description": "Unlocks Giant Death Robot upgrade: Drone Air Defense +100 Anti-Air Strength."
+  }
+ },
+ {
+  "id": "tech:advanced_ballistics",
+  "name": "Advanced Ballistics",
+  "aliases": [
+   "TECH_ADVANCED_BALLISTICS"
+  ],
+  "summary": "Atomic Era, cost 1480. Eureka: Build 1 Oil Power Plant (40%). Unlocks Anti-Air Gun (unit), Machine Gun (unit).",
+  "fields": {
+   "era": "Atomic Era",
+   "cost": 1480,
+   "prerequisites": [
+    "Replaceable Parts",
+    "Steel"
+   ],
+   "leads_to": [
+    "Nuclear Fission",
+    "Guidance Systems"
+   ],
+   "eureka": "Build 1 Oil Power Plant (40%)",
+   "unlocks": [
+    "Anti-Air Gun (unit)",
+    "Machine Gun (unit)"
+   ]
+  }
+ },
+ {
+  "id": "tech:advanced_flight",
+  "name": "Advanced Flight",
+  "aliases": [
+   "TECH_ADVANCED_FLIGHT"
+  ],
+  "summary": "Atomic Era, cost 1480. Eureka: Build 2 Biplanes. (40%). Unlocks Fighter (unit), P-51 Mustang (unit, unique: America), Bomber (unit), Airport (building).",
+  "fields": {
+   "era": "Atomic Era",
+   "cost": 1480,
+   "prerequisites": [
+    "Radio"
+   ],
+   "leads_to": [
+    "Satellites"
+   ],
+   "eureka": "Build 2 Biplanes. (40%)",
+   "unlocks": [
+    "Fighter (unit)",
+    "P-51 Mustang (unit, unique: America)",
+    "Bomber (unit)",
+    "Airport (building)"
+   ]
+  }
+ },
+ {
+  "id": "tech:advanced_power_cells",
+  "name": "Advanced Power Cells",
+  "aliases": [
+   "TECH_ADVANCED_POWER_CELLS"
+  ],
+  "summary": "Future Era, cost 2200. Eureka: Boost through Spy. (40%).",
+  "fields": {
+   "era": "Future Era",
+   "cost": 2200,
+   "eureka": "Boost through Spy. (40%)",
+   "effects": [
+    "grant promotion(PromotionType Particle Beam Siege Cannon) on player units [if unit tag matches (Class giant death robot)]",
+    "adjust co2 generation reduction(Amount 50, ResourceUsageType Usage unit) on owner"
+   ],
+   "description": "CO2 emissions from units reduced by 50%. Unlocks Giant Death Robot upgrade: Particle Beam Siege Cannon Ranged attacks against Cities and Encampments are 100% effective and gain +30 Ranged Strength."
+  }
+ },
+ {
+  "id": "tech:animal_husbandry",
+  "name": "Animal Husbandry",
+  "aliases": [
+   "TECH_ANIMAL_HUSBANDRY"
+  ],
+  "summary": "Ancient Era, cost 25. Unlocks Pasture (improvement), Camp (improvement), Kurgan (improvement, unique: Scythia), reveals Horses.",
+  "fields": {
+   "era": "Ancient Era",
+   "cost": 25,
+   "leads_to": [
+    "Archery"
+   ],
+   "unlocks": [
+    "Pasture (improvement)",
+    "Camp (improvement)",
+    "Kurgan (improvement, unique: Scythia)",
+    "reveals Horses"
+   ],
+   "description": "Allows harvesting of Cattle, Sheep, and Deer."
+  }
+ },
+ {
+  "id": "tech:apprenticeship",
+  "name": "Apprenticeship",
+  "aliases": [
+   "TECH_APPRENTICESHIP"
+  ],
+  "summary": "Medieval Era, cost 300. Eureka: Build 3 Mines. (40%). Unlocks Man-At-Arms (unit), Workshop (building), Industrial Zone (district), Hansa (district, unique: Germany).",
+  "fields": {
+   "era": "Medieval Era",
+   "cost": 300,
+   "prerequisites": [
+    "Currency",
+    "Horseback Riding"
+   ],
+   "leads_to": [
+    "Education",
+    "Gunpowder",
+    "Stirrups"
+   ],
+   "eureka": "Build 3 Mines. (40%)",
+   "unlocks": [
+    "Man-At-Arms (unit)",
+    "Workshop (building)",
+    "Industrial Zone (district)",
+    "Hansa (district, unique: Germany)"
+   ],
+   "description": "+1 Production to the Mine improvement."
+  }
+ },
+ {
+  "id": "tech:archery",
+  "name": "Archery",
+  "aliases": [
+   "TECH_ARCHERY"
+  ],
+  "summary": "Ancient Era, cost 50. Eureka: Kill a unit with a Slinger. (40%). Unlocks Archer (unit), Hul'che (unit, unique: Maya), Pítati Archer (unit, unique: Nubia), Temple of Artemis (wonder).",
+  "fields": {
+   "era": "Ancient Era",
+   "cost": 50,
+   "prerequisites": [
+    "Animal Husbandry"
+   ],
+   "leads_to": [
+    "Horseback Riding"
+   ],
+   "eureka": "Kill a unit with a Slinger. (40%)",
+   "unlocks": [
+    "Archer (unit)",
+    "Hul'che (unit, unique: Maya)",
+    "Pítati Archer (unit, unique: Nubia)",
+    "Temple of Artemis (wonder)"
+   ]
+  }
+ },
+ {
+  "id": "tech:astrology",
+  "name": "Astrology",
+  "aliases": [
+   "TECH_ASTROLOGY"
+  ],
+  "summary": "Ancient Era, cost 50. Eureka: Find a natural wonder. (40%). Unlocks Shrine (building), Stonehenge (wonder), Holy Site (district), Lavra (district, unique: Russia).",
+  "fields": {
+   "era": "Ancient Era",
+   "cost": 50,
+   "leads_to": [
+    "Celestial Navigation"
+   ],
+   "eureka": "Find a natural wonder. (40%)",
+   "unlocks": [
+    "Shrine (building)",
+    "Stonehenge (wonder)",
+    "Holy Site (district)",
+    "Lavra (district, unique: Russia)"
+   ]
+  }
+ },
+ {
+  "id": "tech:astronomy",
+  "name": "Astronomy",
+  "aliases": [
+   "TECH_ASTRONOMY"
+  ],
+  "summary": "Renaissance Era, cost 730. Eureka: Build a University adjacent to a Mountain. (40%). Unlocks Potala Palace (wonder).",
+  "fields": {
+   "era": "Renaissance Era",
+   "cost": 730,
+   "prerequisites": [
+    "Education"
+   ],
+   "leads_to": [
+    "Scientific Theory"
+   ],
+   "eureka": "Build a University adjacent to a Mountain. (40%)",
+   "unlocks": [
+    "Potala Palace (wonder)"
+   ]
+  }
+ },
+ {
+  "id": "tech:ballistics",
+  "name": "Ballistics",
+  "aliases": [
+   "TECH_BALLISTICS"
+  ],
+  "summary": "Industrial Era, cost 930. Eureka: Have 2 Forts in your territory. Both constructed by a Military Engineer. (40%). Unlocks Field Cannon (unit), Cuirassier (unit), Rough Rider (unit, unique: Teddy Roosevelt (Rough Rider) (America)).",
+  "fields": {
+   "era": "Industrial Era",
+   "cost": 930,
+   "prerequisites": [
+    "Metal Casting"
+   ],
+   "leads_to": [
+    "Rifling"
+   ],
+   "eureka": "Have 2 Forts in your territory. Both constructed by a Military Engineer. (40%)",
+   "unlocks": [
+    "Field Cannon (unit)",
+    "Cuirassier (unit)",
+    "Rough Rider (unit, unique: Teddy Roosevelt (Rough Rider) (America))"
+   ]
+  }
+ },
+ {
+  "id": "tech:banking",
+  "name": "Banking",
+  "aliases": [
+   "TECH_BANKING"
+  ],
+  "summary": "Renaissance Era, cost 600. Eureka: Have the Guilds civic. (40%). Unlocks Bank (building), Great Zimbabwe (wonder), Grand Bazaar (building, unique: Ottomans).",
+  "fields": {
+   "era": "Renaissance Era",
+   "cost": 600,
+   "prerequisites": [
+    "Education",
+    "Stirrups"
+   ],
+   "leads_to": [
+    "Scientific Theory"
+   ],
+   "eureka": "Have the Guilds civic. (40%)",
+   "unlocks": [
+    "Bank (building)",
+    "Great Zimbabwe (wonder)",
+    "Grand Bazaar (building, unique: Ottomans)"
+   ]
+  }
+ },
+ {
+  "id": "tech:bronze_working",
+  "name": "Bronze Working",
+  "aliases": [
+   "TECH_BRONZE_WORKING"
+  ],
+  "summary": "Ancient Era, cost 80. Eureka: Kill 3 Barbarians. (40%). Unlocks Spearman (unit), Hoplite (unit, unique: Greece), Barracks (building), Basilikoi Paides (building, unique: Macedon), Encampment (district), Ikanda (district, unique: Zulu)….",
+  "fields": {
+   "era": "Ancient Era",
+   "cost": 80,
+   "prerequisites": [
+    "Mining"
+   ],
+   "leads_to": [
+    "Iron Working"
+   ],
+   "eureka": "Kill 3 Barbarians. (40%)",
+   "unlocks": [
+    "Spearman (unit)",
+    "Hoplite (unit, unique: Greece)",
+    "Barracks (building)",
+    "Basilikoi Paides (building, unique: Macedon)",
+    "Encampment (district)",
+    "Ikanda (district, unique: Zulu)",
+    "Thành (district, unique: Vietnam)",
+    "reveals Iron"
+   ],
+   "description": "Allows chopping of Rainforest. Reveals Iron."
+  }
+ },
+ {
+  "id": "tech:buttress",
+  "name": "Buttress",
+  "aliases": [
+   "TECH_BUTTRESS"
+  ],
+  "summary": "Medieval Era, cost 300. Eureka: Build a Classical era or later wonder (40%). Unlocks Hagia Sophia (wonder), Dam (district).",
+  "fields": {
+   "era": "Medieval Era",
+   "cost": 300,
+   "prerequisites": [
+    "Shipbuilding",
+    "Mathematics"
+   ],
+   "leads_to": [
+    "Cartography",
+    "Mass Production"
+   ],
+   "eureka": "Build a Classical era or later wonder (40%)",
+   "unlocks": [
+    "Hagia Sophia (wonder)",
+    "Dam (district)"
+   ]
+  }
+ },
+ {
+  "id": "tech:cartography",
+  "name": "Cartography",
+  "aliases": [
+   "TECH_CARTOGRAPHY"
+  ],
+  "summary": "Renaissance Era, cost 600. Eureka: Build 2 Harbors. (40%). Unlocks Caravel (unit), Nau (unit, unique: Portugal), Casa de Contratación (wonder).",
+  "fields": {
+   "era": "Renaissance Era",
+   "cost": 600,
+   "prerequisites": [
+    "Buttress"
+   ],
+   "leads_to": [
+    "Square Rigging"
+   ],
+   "eureka": "Build 2 Harbors. (40%)",
+   "unlocks": [
+    "Caravel (unit)",
+    "Nau (unit, unique: Portugal)",
+    "Casa de Contratación (wonder)"
+   ],
+   "effects": [
+    "adjust unit valid terrain(TerrainType Ocean, Valid 1) on player units"
+   ],
+   "description": "+2 Gold from the Fishing Boat improvement. All naval and embarked units can navigate Ocean tiles."
+  }
+ },
+ {
+  "id": "tech:castles",
+  "name": "Castles",
+  "aliases": [
+   "TECH_CASTLES"
+  ],
+  "summary": "Medieval Era, cost 390. Eureka: Adopt a government with 6 inherent policy slots. (40%). Unlocks Oromo Cavalry (unit, unique: Ethiopia), Courser (unit), Black Army (unit, unique: Matthias Corvinus (Hungary)), Medieval Walls (building), Alhambra (wonder).",
+  "fields": {
+   "era": "Medieval Era",
+   "cost": 390,
+   "prerequisites": [
+    "Construction"
+   ],
+   "leads_to": [
+    "Siege Tactics"
+   ],
+   "eureka": "Adopt a government with 6 inherent policy slots. (40%)",
+   "unlocks": [
+    "Oromo Cavalry (unit, unique: Ethiopia)",
+    "Courser (unit)",
+    "Black Army (unit, unique: Matthias Corvinus (Hungary))",
+    "Medieval Walls (building)",
+    "Alhambra (wonder)"
+   ],
+   "description": "Bonus Culture for the Great Wall improvement for adjacency. Gain a free Spy if playing as Catherine de Medici (Black Queen)."
+  }
+ },
+ {
+  "id": "tech:celestial_navigation",
+  "name": "Celestial Navigation",
+  "aliases": [
+   "TECH_CELESTIAL_NAVIGATION"
+  ],
+  "summary": "Classical Era, cost 120. Eureka: Improve 2 sea resources. (40%). Unlocks Lighthouse (building), Great Lighthouse (wonder), Harbor (district), Royal Navy Dockyard (district, unique: England), Cothon (district, unique: Phoenicia).",
+  "fields": {
+   "era": "Classical Era",
+   "cost": 120,
+   "prerequisites": [
+    "Sailing",
+    "Astrology"
+   ],
+   "eureka": "Improve 2 sea resources. (40%)",
+   "unlocks": [
+    "Lighthouse (building)",
+    "Great Lighthouse (wonder)",
+    "Harbor (district)",
+    "Royal Navy Dockyard (district, unique: England)",
+    "Cothon (district, unique: Phoenicia)"
+   ],
+   "description": "Allows Traders to embark, and allows harvesting of Fish and Crabs."
+  }
+ },
+ {
+  "id": "tech:chemistry",
+  "name": "Chemistry",
+  "aliases": [
+   "TECH_CHEMISTRY"
+  ],
+  "summary": "Modern Era, cost 1370. Eureka: Have a level 2 Alliance. (40%). Unlocks AT Crew (unit), Research Lab (building), Mountain Tunnel (improvement).",
+  "fields": {
+   "era": "Modern Era",
+   "cost": 1370,
+   "prerequisites": [
+    "Sanitation",
+    "Replaceable Parts"
+   ],
+   "leads_to": [
+    "Rocketry"
+   ],
+   "eureka": "Have a level 2 Alliance. (40%)",
+   "unlocks": [
+    "AT Crew (unit)",
+    "Research Lab (building)",
+    "Mountain Tunnel (improvement)"
+   ]
+  }
+ },
+ {
+  "id": "tech:combined_arms",
+  "name": "Combined Arms",
+  "aliases": [
+   "TECH_COMBINED_ARMS"
+  ],
+  "summary": "Atomic Era, cost 1480. Eureka: Have 3 Armies or Armadas (40%). Unlocks Aircraft Carrier (unit), Destroyer (unit), reveals Uranium.",
+  "fields": {
+   "era": "Atomic Era",
+   "cost": 1480,
+   "prerequisites": [
+    "Steel",
+    "Combustion"
+   ],
+   "leads_to": [
+    "Nuclear Fission"
+   ],
+   "eureka": "Have 3 Armies or Armadas (40%)",
+   "unlocks": [
+    "Aircraft Carrier (unit)",
+    "Destroyer (unit)",
+    "reveals Uranium"
+   ]
+  }
+ },
+ {
+  "id": "tech:combustion",
+  "name": "Combustion",
+  "aliases": [
+   "TECH_COMBUSTION"
+  ],
+  "summary": "Modern Era, cost 1370. Eureka: Extract an Artifact. (40%). Unlocks Tank (unit), Supply Convoy (unit), Golden Gate Bridge (wonder).",
+  "fields": {
+   "era": "Modern Era",
+   "cost": 1370,
+   "prerequisites": [
+    "Steel",
+    "Refining"
+   ],
+   "leads_to": [
+    "Combined Arms",
+    "Plastics"
+   ],
+   "eureka": "Extract an Artifact. (40%)",
+   "unlocks": [
+    "Tank (unit)",
+    "Supply Convoy (unit)",
+    "Golden Gate Bridge (wonder)"
+   ],
+   "effects": [
+    "+1 Movement for embarked units"
+   ],
+   "description": "+1 Movement for embarked units."
+  }
+ },
+ {
+  "id": "tech:composites",
+  "name": "Composites",
+  "aliases": [
+   "TECH_COMPOSITES"
+  ],
+  "summary": "Information Era, cost 1850. Eureka: Own 3 Tanks. (40%). Unlocks Modern AT (unit), Modern Armor (unit), Wind Farm (improvement).",
+  "fields": {
+   "era": "Information Era",
+   "cost": 1850,
+   "prerequisites": [
+    "Synthetic Materials"
+   ],
+   "leads_to": [
+    "Nanotechnology"
+   ],
+   "eureka": "Own 3 Tanks. (40%)",
+   "unlocks": [
+    "Modern AT (unit)",
+    "Modern Armor (unit)",
+    "Wind Farm (improvement)"
+   ]
+  }
+ },
+ {
+  "id": "tech:computers",
+  "name": "Computers",
+  "aliases": [
+   "TECH_COMPUTERS"
+  ],
+  "summary": "Atomic Era, cost 1660. Eureka: Adopt a government with 8 inherent policy slots. (40%). Unlocks Drone (unit), Flood Barrier (building).",
+  "fields": {
+   "era": "Atomic Era",
+   "cost": 1660,
+   "prerequisites": [
+    "Electricity",
+    "Radio"
+   ],
+   "leads_to": [
+    "Telecommunications",
+    "Robotics"
+   ],
+   "eureka": "Adopt a government with 8 inherent policy slots. (40%)",
+   "unlocks": [
+    "Drone (unit)",
+    "Flood Barrier (building)"
+   ],
+   "effects": [
+    "+1 Spy capacity",
+    "+25% Tourism"
+   ],
+   "description": "Grants the ability to construct an additional Spy. +25% Tourism across your empire."
+  }
+ },
+ {
+  "id": "tech:construction",
+  "name": "Construction",
+  "aliases": [
+   "TECH_CONSTRUCTION"
+  ],
+  "summary": "Classical Era, cost 200. Eureka: Build a Water Mill. (40%). Unlocks Toa (unit, unique: Māori), Terracotta Army (wonder), Lumber Mill (improvement).",
+  "fields": {
+   "era": "Classical Era",
+   "cost": 200,
+   "prerequisites": [
+    "Masonry",
+    "Horseback Riding"
+   ],
+   "leads_to": [
+    "Castles",
+    "Military Engineering"
+   ],
+   "eureka": "Build a Water Mill. (40%)",
+   "unlocks": [
+    "Toa (unit, unique: Māori)",
+    "Terracotta Army (wonder)",
+    "Lumber Mill (improvement)"
+   ]
+  }
+ },
+ {
+  "id": "tech:currency",
+  "name": "Currency",
+  "aliases": [
+   "TECH_CURRENCY"
+  ],
+  "summary": "Classical Era, cost 120. Eureka: Make a Trade Route. (40%). Unlocks Market (building), Sukiennice (building, unique: Poland), Commercial Hub (district), Suguba (district, unique: Mali).",
+  "fields": {
+   "era": "Classical Era",
+   "cost": 120,
+   "prerequisites": [
+    "Writing"
+   ],
+   "leads_to": [
+    "Mathematics",
+    "Apprenticeship"
+   ],
+   "eureka": "Make a Trade Route. (40%)",
+   "unlocks": [
+    "Market (building)",
+    "Sukiennice (building, unique: Poland)",
+    "Commercial Hub (district)",
+    "Suguba (district, unique: Mali)"
+   ]
+  }
+ },
+ {
+  "id": "tech:cybernetics",
+  "name": "Cybernetics",
+  "aliases": [
+   "TECH_CYBERNETICS"
+  ],
+  "summary": "Future Era, cost 2200. Eureka: Boost through Spy. (40%).",
+  "fields": {
+   "era": "Future Era",
+   "cost": 2200,
+   "eureka": "Boost through Spy. (40%)",
+   "effects": [
+    "grant promotion(PromotionType Enhanced Mobility) on player units [if unit tag matches (Class giant death robot)]"
+   ],
+   "description": "Unlocks Giant Death Robot upgrade: Enhanced Mobility +3 Movement. Can perform a Jump action to cross over mountain terrain."
+  }
+ },
+ {
+  "id": "tech:economics",
+  "name": "Economics",
+  "aliases": [
+   "TECH_ECONOMICS"
+  ],
+  "summary": "Industrial Era, cost 1070. Eureka: Build 2 Banks. (40%). Unlocks Stock Exchange (building), Big Ben (wonder).",
+  "fields": {
+   "era": "Industrial Era",
+   "cost": 1070,
+   "prerequisites": [
+    "Scientific Theory",
+    "Metal Casting"
+   ],
+   "leads_to": [
+    "Replaceable Parts"
+   ],
+   "eureka": "Build 2 Banks. (40%)",
+   "unlocks": [
+    "Stock Exchange (building)",
+    "Big Ben (wonder)"
+   ]
+  }
+ },
+ {
+  "id": "tech:education",
+  "name": "Education",
+  "aliases": [
+   "TECH_EDUCATION"
+  ],
+  "summary": "Medieval Era, cost 390. Eureka: Earn a Great Scientist. (40%). Unlocks University (building), University of Sankore (wonder), Navigation School (building, unique: Portugal), Mission (improvement, unique: Spain).",
+  "fields": {
+   "era": "Medieval Era",
+   "cost": 390,
+   "prerequisites": [
+    "Mathematics",
+    "Apprenticeship"
+   ],
+   "leads_to": [
+    "Mass Production",
+    "Banking",
+    "Astronomy"
+   ],
+   "eureka": "Earn a Great Scientist. (40%)",
+   "unlocks": [
+    "University (building)",
+    "University of Sankore (wonder)",
+    "Navigation School (building, unique: Portugal)",
+    "Mission (improvement, unique: Spain)"
+   ]
+  }
+ },
+ {
+  "id": "tech:electricity",
+  "name": "Electricity",
+  "aliases": [
+   "TECH_ELECTRICITY"
+  ],
+  "summary": "Modern Era, cost 1370. Eureka: Own 2 Privateers. (40%). Unlocks Submarine (unit), U-Boat (unit, unique: Germany), Seaport (building), Hydroelectric Dam (building), Oil Power Plant (building), Convert to Oil Power (project).",
+  "fields": {
+   "era": "Modern Era",
+   "cost": 1370,
+   "prerequisites": [
+    "Steam Power"
+   ],
+   "leads_to": [
+    "Computers"
+   ],
+   "eureka": "Own 2 Privateers. (40%)",
+   "unlocks": [
+    "Submarine (unit)",
+    "U-Boat (unit, unique: Germany)",
+    "Seaport (building)",
+    "Hydroelectric Dam (building)",
+    "Oil Power Plant (building)",
+    "Convert to Oil Power (project)"
+   ]
+  }
+ },
+ {
+  "id": "tech:engineering",
+  "name": "Engineering",
+  "aliases": [
+   "TECH_ENGINEERING"
+  ],
+  "summary": "Classical Era, cost 200. Eureka: Build Ancient Walls. (40%). Unlocks Catapult (unit), Machu Picchu (wonder), Aqueduct (district), Bath (district, unique: Rome).",
+  "fields": {
+   "era": "Classical Era",
+   "cost": 200,
+   "prerequisites": [
+    "Wheel"
+   ],
+   "leads_to": [
+    "Machinery"
+   ],
+   "eureka": "Build Ancient Walls. (40%)",
+   "unlocks": [
+    "Catapult (unit)",
+    "Machu Picchu (wonder)",
+    "Aqueduct (district)",
+    "Bath (district, unique: Rome)"
+   ]
+  }
+ },
+ {
+  "id": "tech:flight",
+  "name": "Flight",
+  "aliases": [
+   "TECH_FLIGHT"
+  ],
+  "summary": "Modern Era, cost 1250. Eureka: Build an Industrial era or later wonder. (40%). Unlocks Observation Balloon (unit), Biplane (unit), Hangar (building), Aerodrome (district), Airstrip (improvement).",
+  "fields": {
+   "era": "Modern Era",
+   "cost": 1250,
+   "prerequisites": [
+    "Industrialization",
+    "Scientific Theory"
+   ],
+   "leads_to": [
+    "Radio"
+   ],
+   "eureka": "Build an Industrial era or later wonder. (40%)",
+   "unlocks": [
+    "Observation Balloon (unit)",
+    "Biplane (unit)",
+    "Hangar (building)",
+    "Aerodrome (district)",
+    "Airstrip (improvement)"
+   ],
+   "description": "Receive Tourism on all improvements that provide Culture. Amount of Tourism generated is equivalent to the improvement's Culture output."
+  }
+ },
+ {
+  "id": "tech:future_tech",
+  "name": "Future Tech",
+  "aliases": [
+   "TECH_FUTURE_TECH"
+  ],
+  "summary": "Future Era, cost 2600.",
+  "fields": {
+   "era": "Future Era",
+   "cost": 2600,
+   "effects": [
+    "adjust all projects production(Amount 5) on player cities"
+   ],
+   "description": "Can be completed multiple times, increasing your points towards the Score Victory. Also grants all of your cities +5% Production towards city projects each time it is completed.",
+   "repeatable": true
+  }
+ },
+ {
+  "id": "tech:guidance_systems",
+  "name": "Guidance Systems",
+  "aliases": [
+   "TECH_GUIDANCE_SYSTEMS"
+  ],
+  "summary": "Information Era, cost 1850. Eureka: Kill a Fighter. (40%). Unlocks Rocket Artillery (unit), Mobile SAM (unit).",
+  "fields": {
+   "era": "Information Era",
+   "cost": 1850,
+   "prerequisites": [
+    "Rocketry",
+    "Advanced Ballistics"
+   ],
+   "leads_to": [
+    "Robotics"
+   ],
+   "eureka": "Kill a Fighter. (40%)",
+   "unlocks": [
+    "Rocket Artillery (unit)",
+    "Mobile SAM (unit)"
+   ]
+  }
+ },
+ {
+  "id": "tech:gunpowder",
+  "name": "Gunpowder",
+  "aliases": [
+   "TECH_GUNPOWDER"
+  ],
+  "summary": "Renaissance Era, cost 600. Eureka: Build an Armory. (40%). Unlocks Musketman (unit), Conquistador (unit, unique: Spain), Hwacha (unit, unique: Korea), Malón Raider (unit, unique: Mapuche), Janissary (unit, unique: Suleiman (Kanuni) (Ottomans)).",
+  "fields": {
+   "era": "Renaissance Era",
+   "cost": 600,
+   "prerequisites": [
+    "Apprenticeship",
+    "Stirrups",
+    "Military Engineering"
+   ],
+   "leads_to": [
+    "Metal Casting"
+   ],
+   "eureka": "Build an Armory. (40%)",
+   "unlocks": [
+    "Musketman (unit)",
+    "Conquistador (unit, unique: Spain)",
+    "Hwacha (unit, unique: Korea)",
+    "Malón Raider (unit, unique: Mapuche)",
+    "Janissary (unit, unique: Suleiman (Kanuni) (Ottomans))"
+   ],
+   "description": "Quarry improvements receive +1 Production. Unlocks a Governor title for Suleiman (Kanuni)."
+  }
+ },
+ {
+  "id": "tech:horseback_riding",
+  "name": "Horseback Riding",
+  "aliases": [
+   "TECH_HORSEBACK_RIDING"
+  ],
+  "summary": "Classical Era, cost 120. Eureka: Build a Pasture. (40%). Unlocks Horseman (unit), Saka Horse Archer (unit, unique: Scythia), Varu (unit, unique: India), Hetairoi (unit, unique: Alexander (Macedon)), Stable (building), Ordu (building, unique: Mongolia).",
+  "fields": {
+   "era": "Classical Era",
+   "cost": 120,
+   "prerequisites": [
+    "Archery"
+   ],
+   "leads_to": [
+    "Construction",
+    "Apprenticeship",
+    "Stirrups"
+   ],
+   "eureka": "Build a Pasture. (40%)",
+   "unlocks": [
+    "Horseman (unit)",
+    "Saka Horse Archer (unit, unique: Scythia)",
+    "Varu (unit, unique: India)",
+    "Hetairoi (unit, unique: Alexander (Macedon))",
+    "Stable (building)",
+    "Ordu (building, unique: Mongolia)"
+   ]
+  }
+ },
+ {
+  "id": "tech:industrialization",
+  "name": "Industrialization",
+  "aliases": [
+   "TECH_INDUSTRIALIZATION"
+  ],
+  "summary": "Industrial Era, cost 930. Eureka: Build 2 Workshops. (40%). Unlocks Factory (building), Electronics Factory (building, unique: Japan), Ruhr Valley (wonder), Coal Power Plant (building), Convert to Coal Power (project), reveals Coal.",
+  "fields": {
+   "era": "Industrial Era",
+   "cost": 930,
+   "prerequisites": [
+    "Square Rigging",
+    "Mass Production"
+   ],
+   "leads_to": [
+    "Steam Power",
+    "Flight"
+   ],
+   "eureka": "Build 2 Workshops. (40%)",
+   "unlocks": [
+    "Factory (building)",
+    "Electronics Factory (building, unique: Japan)",
+    "Ruhr Valley (wonder)",
+    "Coal Power Plant (building)",
+    "Convert to Coal Power (project)",
+    "reveals Coal"
+   ],
+   "description": "+1 Production to the Mine improvement."
+  }
+ },
+ {
+  "id": "tech:iron_working",
+  "name": "Iron Working",
+  "aliases": [
+   "TECH_IRON_WORKING"
+  ],
+  "summary": "Classical Era, cost 120. Eureka: Build an Iron Mine. (40%). Unlocks Swordsman (unit), Legion (unit, unique: Rome), Ngao Mbeba (unit, unique: Kongo), Hypaspist (unit, unique: Macedon), Immortal (unit, unique: Persia), Jebel Barkal (wonder)….",
+  "fields": {
+   "era": "Classical Era",
+   "cost": 120,
+   "prerequisites": [
+    "Bronze Working"
+   ],
+   "leads_to": [
+    "Machinery"
+   ],
+   "eureka": "Build an Iron Mine. (40%)",
+   "unlocks": [
+    "Swordsman (unit)",
+    "Legion (unit, unique: Rome)",
+    "Ngao Mbeba (unit, unique: Kongo)",
+    "Hypaspist (unit, unique: Macedon)",
+    "Immortal (unit, unique: Persia)",
+    "Jebel Barkal (wonder)",
+    "Oppidum (district, unique: Gaul)"
+   ]
+  }
+ },
+ {
+  "id": "tech:irrigation",
+  "name": "Irrigation",
+  "aliases": [
+   "TECH_IRRIGATION"
+  ],
+  "summary": "Ancient Era, cost 50. Eureka: Farm a resource. (40%). Unlocks Hanging Gardens (wonder), Palgum (building, unique: Babylon), Plantation (improvement), Stepwell (improvement, unique: India).",
+  "fields": {
+   "era": "Ancient Era",
+   "cost": 50,
+   "prerequisites": [
+    "Pottery"
+   ],
+   "eureka": "Farm a resource. (40%)",
+   "unlocks": [
+    "Hanging Gardens (wonder)",
+    "Palgum (building, unique: Babylon)",
+    "Plantation (improvement)",
+    "Stepwell (improvement, unique: India)"
+   ],
+   "description": "Allows clearing of Marsh, and harvesting of Bananas."
+  }
+ },
+ {
+  "id": "tech:lasers",
+  "name": "Lasers",
+  "aliases": [
+   "TECH_LASERS"
+  ],
+  "summary": "Information Era, cost 1850. Eureka: Build 2 Drones. (40%). Unlocks Jet Fighter (unit), Missile Cruiser (unit).",
+  "fields": {
+   "era": "Information Era",
+   "cost": 1850,
+   "prerequisites": [
+    "Nuclear Fission"
+   ],
+   "leads_to": [
+    "Nuclear Fusion",
+    "Robotics"
+   ],
+   "eureka": "Build 2 Drones. (40%)",
+   "unlocks": [
+    "Jet Fighter (unit)",
+    "Missile Cruiser (unit)"
+   ]
+  }
+ },
+ {
+  "id": "tech:machinery",
+  "name": "Machinery",
+  "aliases": [
+   "TECH_MACHINERY"
+  ],
+  "summary": "Medieval Era, cost 300. Eureka: Own 3 Archers. (40%). Unlocks Siege Tower (unit), Crossbowman (unit), Crouching Tiger (unit, unique: China), Skirmisher (unit), Warak’aq (unit, unique: Inca), Voi Chiến (unit, unique: Vietnam)….",
+  "fields": {
+   "era": "Medieval Era",
+   "cost": 300,
+   "prerequisites": [
+    "Iron Working",
+    "Engineering"
+   ],
+   "leads_to": [
+    "Printing"
+   ],
+   "eureka": "Own 3 Archers. (40%)",
+   "unlocks": [
+    "Siege Tower (unit)",
+    "Crossbowman (unit)",
+    "Crouching Tiger (unit, unique: China)",
+    "Skirmisher (unit)",
+    "Warak’aq (unit, unique: Inca)",
+    "Voi Chiến (unit, unique: Vietnam)",
+    "Kilwa Kisiwani (wonder)"
+   ]
+  }
+ },
+ {
+  "id": "tech:masonry",
+  "name": "Masonry",
+  "aliases": [
+   "TECH_MASONRY"
+  ],
+  "summary": "Ancient Era, cost 80. Eureka: Build a Quarry. (40%). Unlocks Battering Ram (unit), Ancient Walls (building), Pyramids (wonder), Great Wall (improvement, unique: China), Nubian Pyramid (improvement, unique: Nubia).",
+  "fields": {
+   "era": "Ancient Era",
+   "cost": 80,
+   "prerequisites": [
+    "Mining"
+   ],
+   "leads_to": [
+    "Construction"
+   ],
+   "eureka": "Build a Quarry. (40%)",
+   "unlocks": [
+    "Battering Ram (unit)",
+    "Ancient Walls (building)",
+    "Pyramids (wonder)",
+    "Great Wall (improvement, unique: China)",
+    "Nubian Pyramid (improvement, unique: Nubia)"
+   ],
+   "description": "Allows harvesting of Stone."
+  }
+ },
+ {
+  "id": "tech:mass_production",
+  "name": "Mass Production",
+  "aliases": [
+   "TECH_MASS_PRODUCTION"
+  ],
+  "summary": "Renaissance Era, cost 600. Eureka: Build a Lumber Mill. (40%). Unlocks Shipyard (building), Venetian Arsenal (wonder).",
+  "fields": {
+   "era": "Renaissance Era",
+   "cost": 600,
+   "prerequisites": [
+    "Education",
+    "Buttress",
+    "Military Tactics"
+   ],
+   "leads_to": [
+    "Industrialization"
+   ],
+   "eureka": "Build a Lumber Mill. (40%)",
+   "unlocks": [
+    "Shipyard (building)",
+    "Venetian Arsenal (wonder)"
+   ]
+  }
+ },
+ {
+  "id": "tech:mathematics",
+  "name": "Mathematics",
+  "aliases": [
+   "TECH_MATHEMATICS"
+  ],
+  "summary": "Classical Era, cost 200. Eureka: Build 3 different specialty districts. (40%). Unlocks Petra (wonder), Consulate (building), Diplomatic Quarter (district).",
+  "fields": {
+   "era": "Classical Era",
+   "cost": 200,
+   "prerequisites": [
+    "Currency"
+   ],
+   "leads_to": [
+    "Military Tactics",
+    "Education",
+    "Buttress"
+   ],
+   "eureka": "Build 3 different specialty districts. (40%)",
+   "unlocks": [
+    "Petra (wonder)",
+    "Consulate (building)",
+    "Diplomatic Quarter (district)"
+   ],
+   "effects": [
+    "+1 Movement for naval units"
+   ],
+   "description": "+1 Movement for all naval units."
+  }
+ },
+ {
+  "id": "tech:metal_casting",
+  "name": "Metal Casting",
+  "aliases": [
+   "TECH_METAL_CASTING"
+  ],
+  "summary": "Renaissance Era, cost 730. Eureka: Own 2 Crossbowman. (40%). Unlocks Bombard (unit), Pike and Shot (unit), Carolean (unit, unique: Sweden).",
+  "fields": {
+   "era": "Renaissance Era",
+   "cost": 730,
+   "prerequisites": [
+    "Gunpowder"
+   ],
+   "leads_to": [
+    "Economics",
+    "Ballistics"
+   ],
+   "eureka": "Own 2 Crossbowman. (40%)",
+   "unlocks": [
+    "Bombard (unit)",
+    "Pike and Shot (unit)",
+    "Carolean (unit, unique: Sweden)"
+   ]
+  }
+ },
+ {
+  "id": "tech:military_engineering",
+  "name": "Military Engineering",
+  "aliases": [
+   "TECH_MILITARY_ENGINEERING"
+  ],
+  "summary": "Medieval Era, cost 390. Eureka: Build an Aqueduct. (40%). Unlocks Military Engineer (unit), Trebuchet (unit), Domrey (unit, unique: Khmer), Armory (building), reveals Niter.",
+  "fields": {
+   "era": "Medieval Era",
+   "cost": 390,
+   "prerequisites": [
+    "Construction"
+   ],
+   "leads_to": [
+    "Gunpowder"
+   ],
+   "eureka": "Build an Aqueduct. (40%)",
+   "unlocks": [
+    "Military Engineer (unit)",
+    "Trebuchet (unit)",
+    "Domrey (unit, unique: Khmer)",
+    "Armory (building)",
+    "reveals Niter"
+   ]
+  }
+ },
+ {
+  "id": "tech:military_science",
+  "name": "Military Science",
+  "aliases": [
+   "TECH_MILITARY_SCIENCE"
+  ],
+  "summary": "Industrial Era, cost 930. Eureka: Kill a unit with a Knight. (40%). Unlocks Cavalry (unit), Cossack (unit, unique: Russia), Redcoat (unit, unique: Victoria (Age of Empire) (England)), Garde Impériale (unit, unique: France), Line Infantry (unit), Huszár (unit, unique: Hungary)….",
+  "fields": {
+   "era": "Industrial Era",
+   "cost": 930,
+   "prerequisites": [
+    "Siege Tactics",
+    "Printing"
+   ],
+   "leads_to": [
+    "Rifling"
+   ],
+   "eureka": "Kill a unit with a Knight. (40%)",
+   "unlocks": [
+    "Cavalry (unit)",
+    "Cossack (unit, unique: Russia)",
+    "Redcoat (unit, unique: Victoria (Age of Empire) (England))",
+    "Garde Impériale (unit, unique: France)",
+    "Line Infantry (unit)",
+    "Huszár (unit, unique: Hungary)",
+    "Llanero (unit, unique: Gran Colombia)",
+    "Military Academy (building)"
+   ]
+  }
+ },
+ {
+  "id": "tech:military_tactics",
+  "name": "Military Tactics",
+  "aliases": [
+   "TECH_MILITARY_TACTICS"
+  ],
+  "summary": "Medieval Era, cost 300. Eureka: Kill a unit with a Spearman. (40%). Unlocks Berserker (unit, unique: Norway), Pikeman (unit), Impi (unit, unique: Zulu), Khevsur (unit, unique: Georgia), Huey Teocalli (wonder).",
+  "fields": {
+   "era": "Medieval Era",
+   "cost": 300,
+   "prerequisites": [
+    "Mathematics"
+   ],
+   "leads_to": [
+    "Mass Production"
+   ],
+   "eureka": "Kill a unit with a Spearman. (40%)",
+   "unlocks": [
+    "Berserker (unit, unique: Norway)",
+    "Pikeman (unit)",
+    "Impi (unit, unique: Zulu)",
+    "Khevsur (unit, unique: Georgia)",
+    "Huey Teocalli (wonder)"
+   ]
+  }
+ },
+ {
+  "id": "tech:mining",
+  "name": "Mining",
+  "aliases": [
+   "TECH_MINING"
+  ],
+  "summary": "Ancient Era, cost 25. Unlocks Mine (improvement), Quarry (improvement).",
+  "fields": {
+   "era": "Ancient Era",
+   "cost": 25,
+   "leads_to": [
+    "Masonry",
+    "Bronze Working",
+    "Wheel"
+   ],
+   "unlocks": [
+    "Mine (improvement)",
+    "Quarry (improvement)"
+   ],
+   "description": "Allows chopping of Woods, and harvesting of Copper."
+  }
+ },
+ {
+  "id": "tech:nanotechnology",
+  "name": "Nanotechnology",
+  "aliases": [
+   "TECH_NANOTECHNOLOGY"
+  ],
+  "summary": "Information Era, cost 2155. Eureka: Build an Aluminum Mine. (40%). Unlocks Launch Mars Colony (project).",
+  "fields": {
+   "era": "Information Era",
+   "cost": 2155,
+   "prerequisites": [
+    "Composites"
+   ],
+   "eureka": "Build an Aluminum Mine. (40%)",
+   "unlocks": [
+    "Launch Mars Colony (project)"
+   ]
+  }
+ },
+ {
+  "id": "tech:nuclear_fission",
+  "name": "Nuclear Fission",
+  "aliases": [
+   "TECH_NUCLEAR_FISSION"
+  ],
+  "summary": "Atomic Era, cost 1660. Eureka: Boost through Great Scientist or Spy. (40%). Unlocks Nuclear Power Plant (building), Manhattan Project (project), Build Nuclear Device (project), Convert to Nuclear Power (project), Recommission Nuclear Reactor (project).",
+  "fields": {
+   "era": "Atomic Era",
+   "cost": 1660,
+   "prerequisites": [
+    "Advanced Ballistics",
+    "Combined Arms"
+   ],
+   "leads_to": [
+    "Lasers"
+   ],
+   "eureka": "Boost through Great Scientist or Spy. (40%)",
+   "unlocks": [
+    "Nuclear Power Plant (building)",
+    "Manhattan Project (project)",
+    "Build Nuclear Device (project)",
+    "Convert to Nuclear Power (project)",
+    "Recommission Nuclear Reactor (project)"
+   ]
+  }
+ },
+ {
+  "id": "tech:nuclear_fusion",
+  "name": "Nuclear Fusion",
+  "aliases": [
+   "TECH_NUCLEAR_FUSION"
+  ],
+  "summary": "Information Era, cost 2155. Eureka: Build a Nuclear Power Plant. (40%). Unlocks Operation Ivy (project), Build Thermonuclear Device (project).",
+  "fields": {
+   "era": "Information Era",
+   "cost": 2155,
+   "prerequisites": [
+    "Lasers"
+   ],
+   "eureka": "Build a Nuclear Power Plant. (40%)",
+   "unlocks": [
+    "Operation Ivy (project)",
+    "Build Thermonuclear Device (project)"
+   ]
+  }
+ },
+ {
+  "id": "tech:offworld_mission",
+  "name": "Offworld Mission",
+  "aliases": [
+   "TECH_OFFWORLD_MISSION"
+  ],
+  "summary": "Future Era, cost 2500. Eureka: Boost through Spy. (40%). Unlocks Launch Lagrange Laser Station (project), Build Terrestrial Laser Station (project).",
+  "fields": {
+   "era": "Future Era",
+   "cost": 2500,
+   "eureka": "Boost through Spy. (40%)",
+   "unlocks": [
+    "Launch Lagrange Laser Station (project)",
+    "Build Terrestrial Laser Station (project)"
+   ]
+  }
+ },
+ {
+  "id": "tech:plastics",
+  "name": "Plastics",
+  "aliases": [
+   "TECH_PLASTICS"
+  ],
+  "summary": "Atomic Era, cost 1480. Eureka: Build an Oil Well. (40%). Unlocks Spec Ops (unit), Offshore Oil Rig (improvement).",
+  "fields": {
+   "era": "Atomic Era",
+   "cost": 1480,
+   "prerequisites": [
+    "Combustion"
+   ],
+   "leads_to": [
+    "Synthetic Materials"
+   ],
+   "eureka": "Build an Oil Well. (40%)",
+   "unlocks": [
+    "Spec Ops (unit)",
+    "Offshore Oil Rig (improvement)"
+   ],
+   "description": "+1 Food to Fishing Boats."
+  }
+ },
+ {
+  "id": "tech:pottery",
+  "name": "Pottery",
+  "aliases": [
+   "TECH_POTTERY"
+  ],
+  "summary": "Ancient Era, cost 25. Unlocks Granary (building), Great Bath (wonder), Mekewap (improvement, unique: Cree).",
+  "fields": {
+   "era": "Ancient Era",
+   "cost": 25,
+   "leads_to": [
+    "Writing",
+    "Irrigation"
+   ],
+   "unlocks": [
+    "Granary (building)",
+    "Great Bath (wonder)",
+    "Mekewap (improvement, unique: Cree)"
+   ],
+   "description": "Allows harvesting of Bonus resources improved by Farms."
+  }
+ },
+ {
+  "id": "tech:predictive_systems",
+  "name": "Predictive Systems",
+  "aliases": [
+   "TECH_PREDICTIVE_SYSTEMS"
+  ],
+  "summary": "Future Era, cost 2200. Eureka: Boost through Spy. (40%). Unlocks Offshore Wind Farm (improvement).",
+  "fields": {
+   "era": "Future Era",
+   "cost": 2200,
+   "eureka": "Boost through Spy. (40%)",
+   "unlocks": [
+    "Offshore Wind Farm (improvement)"
+   ],
+   "description": "+1 Production to Quarry, Oil Well, and Oil Rig improvements."
+  }
+ },
+ {
+  "id": "tech:printing",
+  "name": "Printing",
+  "aliases": [
+   "TECH_PRINTING"
+  ],
+  "summary": "Renaissance Era, cost 600. Eureka: Build 2 Universities. (40%). Unlocks Forbidden City (wonder).",
+  "fields": {
+   "era": "Renaissance Era",
+   "cost": 600,
+   "prerequisites": [
+    "Machinery"
+   ],
+   "leads_to": [
+    "Military Science"
+   ],
+   "eureka": "Build 2 Universities. (40%)",
+   "unlocks": [
+    "Forbidden City (wonder)"
+   ],
+   "effects": [
+    "add diplo visibility(Amount 1, Source Source tech, SourceType Diplo source all names) on owner",
+    "adjust city tourism(GreatWorkObjectType Greatworkobject writing, ScalingFactor 200) on player cities"
+   ],
+   "description": "Provides one more level of diplomatic visibility on all other civilizations. All Tourism yields from Great Works of Writing are doubled."
+  }
+ },
+ {
+  "id": "tech:radio",
+  "name": "Radio",
+  "aliases": [
+   "TECH_RADIO"
+  ],
+  "summary": "Modern Era, cost 1370. Eureka: Build a National Park. (40%). Unlocks Broadcast Center (building), Film Studio (building, unique: America), Seaside Resort (improvement), reveals Aluminum.",
+  "fields": {
+   "era": "Modern Era",
+   "cost": 1370,
+   "prerequisites": [
+    "Steam Power",
+    "Flight"
+   ],
+   "leads_to": [
+    "Computers",
+    "Advanced Flight",
+    "Rocketry"
+   ],
+   "eureka": "Build a National Park. (40%)",
+   "unlocks": [
+    "Broadcast Center (building)",
+    "Film Studio (building, unique: America)",
+    "Seaside Resort (improvement)",
+    "reveals Aluminum"
+   ]
+  }
+ },
+ {
+  "id": "tech:refining",
+  "name": "Refining",
+  "aliases": [
+   "TECH_REFINING"
+  ],
+  "summary": "Modern Era, cost 1250. Eureka: Build 1 Coal Power Plant. (40%). Unlocks Battleship (unit), Oil Well (improvement), reveals Oil.",
+  "fields": {
+   "era": "Modern Era",
+   "cost": 1250,
+   "prerequisites": [
+    "Rifling"
+   ],
+   "leads_to": [
+    "Combustion"
+   ],
+   "eureka": "Build 1 Coal Power Plant. (40%)",
+   "unlocks": [
+    "Battleship (unit)",
+    "Oil Well (improvement)",
+    "reveals Oil"
+   ]
+  }
+ },
+ {
+  "id": "tech:replaceable_parts",
+  "name": "Replaceable Parts",
+  "aliases": [
+   "TECH_REPLACEABLE_PARTS"
+  ],
+  "summary": "Modern Era, cost 1250. Eureka: Own 3 Line Infantry. (40%). Unlocks Infantry (unit), Digger (unit, unique: Australia), Food Market (building).",
+  "fields": {
+   "era": "Modern Era",
+   "cost": 1250,
+   "prerequisites": [
+    "Economics"
+   ],
+   "leads_to": [
+    "Advanced Ballistics",
+    "Chemistry"
+   ],
+   "eureka": "Own 3 Line Infantry. (40%)",
+   "unlocks": [
+    "Infantry (unit)",
+    "Digger (unit, unique: Australia)",
+    "Food Market (building)"
+   ],
+   "description": "Upgrades Farm improvements to Mechanized Agriculture. +1 Food Adjacency bonus for every Farm improvement they are adjacent to. Pasture improvements receive +1 Production."
+  }
+ },
+ {
+  "id": "tech:rifling",
+  "name": "Rifling",
+  "aliases": [
+   "TECH_RIFLING"
+  ],
+  "summary": "Industrial Era, cost 1070. Eureka: Build a Niter Mine. (40%). Unlocks Ranger (unit), Highlander (unit, unique: Scotland).",
+  "fields": {
+   "era": "Industrial Era",
+   "cost": 1070,
+   "prerequisites": [
+    "Ballistics",
+    "Military Science"
+   ],
+   "leads_to": [
+    "Steel",
+    "Refining"
+   ],
+   "eureka": "Build a Niter Mine. (40%)",
+   "unlocks": [
+    "Ranger (unit)",
+    "Highlander (unit, unique: Scotland)"
+   ]
+  }
+ },
+ {
+  "id": "tech:robotics",
+  "name": "Robotics",
+  "aliases": [
+   "TECH_ROBOTICS"
+  ],
+  "summary": "Information Era, cost 2155. Eureka: Have the Globalization civic. (40%). Unlocks Giant Death Robot (unit).",
+  "fields": {
+   "era": "Information Era",
+   "cost": 2155,
+   "prerequisites": [
+    "Computers",
+    "Satellites",
+    "Guidance Systems",
+    "Lasers"
+   ],
+   "eureka": "Have the Globalization civic. (40%)",
+   "unlocks": [
+    "Giant Death Robot (unit)"
+   ],
+   "description": "Pasture improvements receive +1 Food."
+  }
+ },
+ {
+  "id": "tech:rocketry",
+  "name": "Rocketry",
+  "aliases": [
+   "TECH_ROCKETRY"
+  ],
+  "summary": "Atomic Era, cost 1480. Eureka: Boost through Great Scientist or Spy. (40%). Unlocks Spaceport (district), Missile Silo (improvement), Launch Earth Satellite (project).",
+  "fields": {
+   "era": "Atomic Era",
+   "cost": 1480,
+   "prerequisites": [
+    "Radio",
+    "Chemistry"
+   ],
+   "leads_to": [
+    "Satellites",
+    "Guidance Systems"
+   ],
+   "eureka": "Boost through Great Scientist or Spy. (40%)",
+   "unlocks": [
+    "Spaceport (district)",
+    "Missile Silo (improvement)",
+    "Launch Earth Satellite (project)"
+   ],
+   "description": "+1 Production from the Quarry improvement."
+  }
+ },
+ {
+  "id": "tech:sailing",
+  "name": "Sailing",
+  "aliases": [
+   "TECH_SAILING"
+  ],
+  "summary": "Ancient Era, cost 50. Eureka: Found a city on the Coast. (40%). Unlocks Galley (unit), Viking Longship (unit, unique: Harald Hardrada (Konge) (Norway)), Bireme (unit, unique: Phoenicia), Fishing Boats (improvement), Fishery (improvement).",
+  "fields": {
+   "era": "Ancient Era",
+   "cost": 50,
+   "leads_to": [
+    "Shipbuilding",
+    "Celestial Navigation"
+   ],
+   "eureka": "Found a city on the Coast. (40%)",
+   "unlocks": [
+    "Galley (unit)",
+    "Viking Longship (unit, unique: Harald Hardrada (Konge) (Norway))",
+    "Bireme (unit, unique: Phoenicia)",
+    "Fishing Boats (improvement)",
+    "Fishery (improvement)"
+   ],
+   "description": "Allows Builders to embark."
+  }
+ },
+ {
+  "id": "tech:sanitation",
+  "name": "Sanitation",
+  "aliases": [
+   "TECH_SANITATION"
+  ],
+  "summary": "Industrial Era, cost 1070. Eureka: Build 2 Neighborhoods. (40%). Unlocks Medic (unit), Sewer (building), Országház (wonder).",
+  "fields": {
+   "era": "Industrial Era",
+   "cost": 1070,
+   "prerequisites": [
+    "Scientific Theory"
+   ],
+   "leads_to": [
+    "Chemistry"
+   ],
+   "eureka": "Build 2 Neighborhoods. (40%)",
+   "unlocks": [
+    "Medic (unit)",
+    "Sewer (building)",
+    "Országház (wonder)"
+   ],
+   "description": "Stepwell improvements receive +1 Housing."
+  }
+ },
+ {
+  "id": "tech:satellites",
+  "name": "Satellites",
+  "aliases": [
+   "TECH_SATELLITES"
+  ],
+  "summary": "Information Era, cost 1850. Eureka: Build 2 Broadcast Centers. (40%). Unlocks Mechanized Infantry (unit), Solar Farm (improvement), Launch Moon Landing (project).",
+  "fields": {
+   "era": "Information Era",
+   "cost": 1850,
+   "prerequisites": [
+    "Advanced Flight",
+    "Rocketry"
+   ],
+   "leads_to": [
+    "Robotics"
+   ],
+   "eureka": "Build 2 Broadcast Centers. (40%)",
+   "unlocks": [
+    "Mechanized Infantry (unit)",
+    "Solar Farm (improvement)",
+    "Launch Moon Landing (project)"
+   ]
+  }
+ },
+ {
+  "id": "tech:scientific_theory",
+  "name": "Scientific Theory",
+  "aliases": [
+   "TECH_SCIENTIFIC_THEORY"
+  ],
+  "summary": "Industrial Era, cost 930. Eureka: Have The Enlightenment civic. (40%). Unlocks Oxford University (wonder).",
+  "fields": {
+   "era": "Industrial Era",
+   "cost": 930,
+   "prerequisites": [
+    "Astronomy",
+    "Banking"
+   ],
+   "leads_to": [
+    "Economics",
+    "Sanitation",
+    "Flight"
+   ],
+   "eureka": "Have The Enlightenment civic. (40%)",
+   "unlocks": [
+    "Oxford University (wonder)"
+   ],
+   "description": "+1 Food from the Plantation improvement."
+  }
+ },
+ {
+  "id": "tech:seasteads",
+  "name": "Seasteads",
+  "aliases": [
+   "TECH_SEASTEADS"
+  ],
+  "summary": "Future Era, cost 2200. Eureka: Boost through Spy. (40%). Unlocks Seastead (improvement).",
+  "fields": {
+   "era": "Future Era",
+   "cost": 2200,
+   "eureka": "Boost through Spy. (40%)",
+   "unlocks": [
+    "Seastead (improvement)"
+   ],
+   "effects": [
+    "+1 Diplomatic Victory Point(s)"
+   ],
+   "description": "Awards 1 Diplomatic Victory point."
+  }
+ },
+ {
+  "id": "tech:shipbuilding",
+  "name": "Shipbuilding",
+  "aliases": [
+   "TECH_SHIPBUILDING"
+  ],
+  "summary": "Classical Era, cost 200. Eureka: Own 2 Galleys. (40%). Unlocks Quadrireme (unit), Dromon (unit, unique: Byzantium), Colossus (wonder), Kampung (improvement, unique: Indonesia).",
+  "fields": {
+   "era": "Classical Era",
+   "cost": 200,
+   "prerequisites": [
+    "Sailing"
+   ],
+   "leads_to": [
+    "Buttress"
+   ],
+   "eureka": "Own 2 Galleys. (40%)",
+   "unlocks": [
+    "Quadrireme (unit)",
+    "Dromon (unit, unique: Byzantium)",
+    "Colossus (wonder)",
+    "Kampung (improvement, unique: Indonesia)"
+   ],
+   "description": "Allows all land units to embark."
+  }
+ },
+ {
+  "id": "tech:siege_tactics",
+  "name": "Siege Tactics",
+  "aliases": [
+   "TECH_SIEGE_TACTICS"
+  ],
+  "summary": "Renaissance Era, cost 730. Eureka: Own 2 Trebuchets. (40%). Unlocks Renaissance Walls (building), Tsikhe (building, unique: Georgia), Fort (improvement).",
+  "fields": {
+   "era": "Renaissance Era",
+   "cost": 730,
+   "prerequisites": [
+    "Castles"
+   ],
+   "leads_to": [
+    "Military Science"
+   ],
+   "eureka": "Own 2 Trebuchets. (40%)",
+   "unlocks": [
+    "Renaissance Walls (building)",
+    "Tsikhe (building, unique: Georgia)",
+    "Fort (improvement)"
+   ]
+  }
+ },
+ {
+  "id": "tech:smart_materials",
+  "name": "Smart Materials",
+  "aliases": [
+   "TECH_SMART_MATERIALS"
+  ],
+  "summary": "Future Era, cost 2200. Eureka: Boost through Spy. (40%). Unlocks Launch Exoplanet Expedition (project).",
+  "fields": {
+   "era": "Future Era",
+   "cost": 2200,
+   "eureka": "Boost through Spy. (40%)",
+   "unlocks": [
+    "Launch Exoplanet Expedition (project)"
+   ],
+   "effects": [
+    "grant promotion(PromotionType Reinforced Armor Plating) on player units [if unit tag matches (Class giant death robot)]"
+   ],
+   "description": "Unlocks Giant Death Robot upgrade: Reinforced Armor Plating +10 Combat Strength when defending against land and naval units."
+  }
+ },
+ {
+  "id": "tech:square_rigging",
+  "name": "Square Rigging",
+  "aliases": [
+   "TECH_SQUARE_RIGGING"
+  ],
+  "summary": "Renaissance Era, cost 730. Eureka: Kill a unit with a Musketman. (40%). Unlocks Frigate (unit), De Zeven Provinciën (unit, unique: Netherlands).",
+  "fields": {
+   "era": "Renaissance Era",
+   "cost": 730,
+   "prerequisites": [
+    "Cartography"
+   ],
+   "leads_to": [
+    "Industrialization"
+   ],
+   "eureka": "Kill a unit with a Musketman. (40%)",
+   "unlocks": [
+    "Frigate (unit)",
+    "De Zeven Provinciën (unit, unique: Netherlands)"
+   ],
+   "effects": [
+    "+1 Movement for embarked units"
+   ],
+   "description": "+1 Movement for embarked units."
+  }
+ },
+ {
+  "id": "tech:stealth_technology",
+  "name": "Stealth Technology",
+  "aliases": [
+   "TECH_STEALTH_TECHNOLOGY"
+  ],
+  "summary": "Information Era, cost 1850. Eureka: Boost through Great Scientist or Spy. (40%). Unlocks Jet Bomber (unit).",
+  "fields": {
+   "era": "Information Era",
+   "cost": 1850,
+   "prerequisites": [
+    "Synthetic Materials"
+   ],
+   "eureka": "Boost through Great Scientist or Spy. (40%)",
+   "unlocks": [
+    "Jet Bomber (unit)"
+   ]
+  }
+ },
+ {
+  "id": "tech:steam_power",
+  "name": "Steam Power",
+  "aliases": [
+   "TECH_STEAM_POWER"
+  ],
+  "summary": "Industrial Era, cost 1070. Eureka: Build 2 Shipyards. (40%). Unlocks Ironclad (unit), Panama Canal (wonder), Canal (district).",
+  "fields": {
+   "era": "Industrial Era",
+   "cost": 1070,
+   "prerequisites": [
+    "Industrialization"
+   ],
+   "leads_to": [
+    "Electricity",
+    "Radio"
+   ],
+   "eureka": "Build 2 Shipyards. (40%)",
+   "unlocks": [
+    "Ironclad (unit)",
+    "Panama Canal (wonder)",
+    "Canal (district)"
+   ],
+   "effects": [
+    "+2 Movement for embarked units"
+   ],
+   "description": "+2 Movement for embarked units."
+  }
+ },
+ {
+  "id": "tech:steel",
+  "name": "Steel",
+  "aliases": [
+   "TECH_STEEL"
+  ],
+  "summary": "Modern Era, cost 1250. Eureka: Build a Coal Mine and an Ironclad. (40%). Unlocks Artillery (unit), Eiffel Tower (wonder).",
+  "fields": {
+   "era": "Modern Era",
+   "cost": 1250,
+   "prerequisites": [
+    "Rifling"
+   ],
+   "leads_to": [
+    "Combustion",
+    "Advanced Ballistics",
+    "Combined Arms"
+   ],
+   "eureka": "Build a Coal Mine and an Ironclad. (40%)",
+   "unlocks": [
+    "Artillery (unit)",
+    "Eiffel Tower (wonder)"
+   ],
+   "effects": [
+    "adjust cities has urban defenses(DefenseValue 400) on owner"
+   ],
+   "description": "+1 Production from the Lumber Mill improvement. Unlocks Urban Defenses, giving all of your cities an automatic 400 Fortification Strength and the ability to perform a ranged attack. All previous wall improvements become obsolete and siege support units are no longer effective."
+  }
+ },
+ {
+  "id": "tech:stirrups",
+  "name": "Stirrups",
+  "aliases": [
+   "TECH_STIRRUPS"
+  ],
+  "summary": "Medieval Era, cost 390. Eureka: Have the Feudalism civic. (40%). Unlocks Knight (unit), Mamluk (unit, unique: Arabia), Keshig (unit, unique: Mongolia), Mandekalu Cavalry (unit, unique: Mali).",
+  "fields": {
+   "era": "Medieval Era",
+   "cost": 390,
+   "prerequisites": [
+    "Horseback Riding",
+    "Apprenticeship"
+   ],
+   "leads_to": [
+    "Banking",
+    "Gunpowder"
+   ],
+   "eureka": "Have the Feudalism civic. (40%)",
+   "unlocks": [
+    "Knight (unit)",
+    "Mamluk (unit, unique: Arabia)",
+    "Keshig (unit, unique: Mongolia)",
+    "Mandekalu Cavalry (unit, unique: Mali)"
+   ],
+   "description": "Pasture improvements receive +1 Food."
+  }
+ },
+ {
+  "id": "tech:synthetic_materials",
+  "name": "Synthetic Materials",
+  "aliases": [
+   "TECH_SYNTHETIC_MATERIALS"
+  ],
+  "summary": "Atomic Era, cost 1660. Eureka: Build 2 Aerodromes. (40%). Unlocks Helicopter (unit), Biosphère (wonder), Geothermal Plant (improvement).",
+  "fields": {
+   "era": "Atomic Era",
+   "cost": 1660,
+   "prerequisites": [
+    "Plastics"
+   ],
+   "leads_to": [
+    "Composites",
+    "Stealth Technology"
+   ],
+   "eureka": "Build 2 Aerodromes. (40%)",
+   "unlocks": [
+    "Helicopter (unit)",
+    "Biosphère (wonder)",
+    "Geothermal Plant (improvement)"
+   ],
+   "description": "+2 Gold to Camps."
+  }
+ },
+ {
+  "id": "tech:telecommunications",
+  "name": "Telecommunications",
+  "aliases": [
+   "TECH_TELECOMMUNICATIONS"
+  ],
+  "summary": "Information Era, cost 1850. Eureka: Boost through Great Scientist or Spy. (40%). Unlocks Nuclear Submarine (unit).",
+  "fields": {
+   "era": "Information Era",
+   "cost": 1850,
+   "prerequisites": [
+    "Computers"
+   ],
+   "eureka": "Boost through Great Scientist or Spy. (40%)",
+   "unlocks": [
+    "Nuclear Submarine (unit)"
+   ]
+  }
+ },
+ {
+  "id": "tech:the_wheel",
+  "name": "Wheel",
+  "aliases": [
+   "TECH_THE_WHEEL"
+  ],
+  "summary": "Ancient Era, cost 80. Eureka: Mine a resource. (40%). Unlocks Heavy Chariot (unit), Maryannu Chariot Archer (unit, unique: Egypt), Water Mill (building).",
+  "fields": {
+   "era": "Ancient Era",
+   "cost": 80,
+   "prerequisites": [
+    "Mining"
+   ],
+   "leads_to": [
+    "Engineering"
+   ],
+   "eureka": "Mine a resource. (40%)",
+   "unlocks": [
+    "Heavy Chariot (unit)",
+    "Maryannu Chariot Archer (unit, unique: Egypt)",
+    "Water Mill (building)"
+   ]
+  }
+ },
+ {
+  "id": "tech:writing",
+  "name": "Writing",
+  "aliases": [
+   "TECH_WRITING"
+  ],
+  "summary": "Ancient Era, cost 50. Eureka: Meet another civilization. (40%). Unlocks Library (building), Etemenanki (wonder), Campus (district), Seowon (district, unique: Korea), Observatory (district, unique: Maya).",
+  "fields": {
+   "era": "Ancient Era",
+   "cost": 50,
+   "prerequisites": [
+    "Pottery"
+   ],
+   "leads_to": [
+    "Currency"
+   ],
+   "eureka": "Meet another civilization. (40%)",
+   "unlocks": [
+    "Library (building)",
+    "Etemenanki (wonder)",
+    "Campus (district)",
+    "Seowon (district, unique: Korea)",
+    "Observatory (district, unique: Maya)"
+   ]
+  }
+ }
+]

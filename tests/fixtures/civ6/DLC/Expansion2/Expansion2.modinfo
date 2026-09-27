@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hand-written test fixture in the game's modinfo format. -->
+<Mod id="00000000-0000-0000-0000-0000000000e2" version="1">
+	<ActionCriteria>
+		<Criteria id="Expansion2">
+			<GameCoreInUse>Expansion2</GameCoreInUse>
+		</Criteria>
+		<Criteria id="Expansion1">
+			<GameCoreInUse>Expansion1</GameCoreInUse>
+		</Criteria>
+	</ActionCriteria>
+	<InGameActions>
+		<UpdateDatabase id="Expansion2Core" criteria="Expansion2">
+			<Properties>
+				<LoadOrder>-100</LoadOrder>
+			</Properties>
+			<File Priority="1">Data/Expansion2_Data.xml</File>
+			<File Priority="2">Data/Expansion2_RemoveData.xml</File>
+		</UpdateDatabase>
+		<UpdateDatabase id="Expansion1Only" criteria="Expansion1">
+			<File>Data/Expansion1_Only.xml</File>
+		</UpdateDatabase>
+		<UpdateText id="Expansion2Text" criteria="Expansion2">
+			<File>Text/en_US/Expansion2_Text.xml</File>
+			<File>Text/Expansion2_Translations_Text.xml</File>
+		</UpdateText>
+	</InGameActions>
+</Mod>

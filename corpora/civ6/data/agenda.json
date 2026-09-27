@@ -1,0 +1,1506 @@
+[
+ {
+  "id": "agenda:airpower",
+  "name": "Air Power",
+  "aliases": [
+   "AGENDA_AIRPOWER"
+  ],
+  "summary": "Tries to build up air power. Admires civilizations with greater air power. Dislikes civilizations with weaker air power.",
+  "fields": {
+   "random": true,
+   "description": "Tries to build up air power. Admires civilizations with greater air power. Dislikes civilizations with weaker air power."
+  }
+ },
+ {
+  "id": "agenda:ally_of_enkidu",
+  "name": "Ally of Enkidu",
+  "aliases": [
+   "AGENDA_ALLY_OF_ENKIDU"
+  ],
+  "summary": "Likes civilizations who are willing to form a long-term alliance. Dislikes anyone denouncing or attacking his friends and allies.",
+  "fields": {
+   "historical_for": [
+    "Gilgamesh"
+   ],
+   "description": "Likes civilizations who are willing to form a long-term alliance. Dislikes anyone denouncing or attacking his friends and allies."
+  }
+ },
+ {
+  "id": "agenda:ambiorix_army",
+  "name": "Scourge of Rome",
+  "aliases": [
+   "AGENDA_AMBIORIX_ARMY"
+  ],
+  "summary": "Likes numerous combat units. Dislikes civilizations with tiny armies.",
+  "fields": {
+   "historical_for": [
+    "Ambiorix"
+   ],
+   "description": "Likes numerous combat units. Dislikes civilizations with tiny armies."
+  }
+ },
+ {
+  "id": "agenda:angevin_empire",
+  "name": "Angevin Empire",
+  "aliases": [
+   "AGENDA_ANGEVIN_EMPIRE"
+  ],
+  "summary": "Builds populous cities. Likes civilizations whose nearby cities have high Citizen Population. Dislikes civilizations with small cities nearby that may become disloyal easily.",
+  "fields": {
+   "historical_for": [
+    "Eleanor of Aquitaine (England)",
+    "Eleanor of Aquitaine (France)"
+   ],
+   "description": "Builds populous cities. Likes civilizations whose nearby cities have high Citizen Population. Dislikes civilizations with small cities nearby that may become disloyal easily."
+  }
+ },
+ {
+  "id": "agenda:archipelagic_state",
+  "name": "Archipelagic State",
+  "aliases": [
+   "AGENDA_ARCHIPELAGIC_STATE"
+  ],
+  "summary": "Likes civilizations who avoid settling or conquering cities on small landmasses. Hates anyone with numerous cities on such islands.",
+  "fields": {
+   "historical_for": [
+    "Gitarja"
+   ],
+   "description": "Likes civilizations who avoid settling or conquering cities on small landmasses. Hates anyone with numerous cities on such islands."
+  }
+ },
+ {
+  "id": "agenda:ayyubid_dynasty",
+  "name": "Ayyubid Dynasty",
+  "aliases": [
+   "AGENDA_AYYUBID_DYNASTY"
+  ],
+  "summary": "Wants to have his Worship building in many cities, and likes a civilization with it. Dislikes civilizations following other Religions, or civilizations waging war on followers of his Religion.",
+  "fields": {
+   "historical_for": [
+    "Saladin (Vizier)"
+   ],
+   "description": "Wants to have his Worship building in many cities, and likes a civilization with it. Dislikes civilizations following other Religions, or civilizations waging war on followers of his Religion."
+  }
+ },
+ {
+  "id": "agenda:backstab_averse",
+  "name": "Backstab Averse",
+  "aliases": [
+   "AGENDA_BACKSTAB_AVERSE"
+  ],
+  "summary": "Likes civilizations who are their declared friend. Hates civilizations who backstab and declare surprise wars.",
+  "fields": {
+   "historical_for": [
+    "Tomyris"
+   ],
+   "description": "Likes civilizations who are their declared friend. Hates civilizations who backstab and declare surprise wars."
+  }
+ },
+ {
+  "id": "agenda:backstabber",
+  "name": "Opportunist",
+  "aliases": [
+   "AGENDA_BACKSTABBER"
+  ],
+  "summary": "Likes leaders who have declared a Surprise War. Dismisses leaders who do not use Surprise War declarations.",
+  "fields": {
+   "historical_for": [
+    "Cyrus"
+   ],
+   "description": "Likes leaders who have declared a Surprise War. Dismisses leaders who do not use Surprise War declarations."
+  }
+ },
+ {
+  "id": "agenda:barbarian_lover",
+  "name": "Barbarian Ally",
+  "aliases": [
+   "AGENDA_BARBARIAN_LOVER"
+  ],
+  "summary": "Sympathizes with the barbarians. Does not like civilizations that destroy barbarian outposts.",
+  "fields": {
+   "description": "Sympathizes with the barbarians. Does not like civilizations that destroy barbarian outposts."
+  }
+ },
+ {
+  "id": "agenda:basil_zealot",
+  "name": "Divine Guardian",
+  "aliases": [
+   "AGENDA_BASIL_ZEALOT"
+  ],
+  "summary": "Likes civilizations that follow the same Religion. Dislikes civilizations that don't predominantly follow his Religion.",
+  "fields": {
+   "historical_for": [
+    "Basil II"
+   ],
+   "description": "Likes civilizations that follow the same Religion. Dislikes civilizations that don't predominantly follow his Religion."
+  }
+ },
+ {
+  "id": "agenda:big_stick_policy",
+  "name": "Big Stick Policy",
+  "aliases": [
+   "AGENDA_BIG_STICK_POLICY"
+  ],
+  "summary": "Likes peaceful civilizations that have a city on his home continent. Hates civilizations starting wars against a city-state or civilization based on his continent.",
+  "fields": {
+   "historical_for": [
+    "Teddy Roosevelt (Rough Rider)"
+   ],
+   "description": "Likes peaceful civilizations that have a city on his home continent. Hates civilizations starting wars against a city-state or civilization based on his continent."
+  }
+ },
+ {
+  "id": "agenda:billionaire",
+  "name": "Billionaire",
+  "aliases": [
+   "AGENDA_BILLIONAIRE"
+  ],
+  "summary": "Tries to maximize Trade Routes. Likes civilizations that trade with her, dislikes those who do not.",
+  "fields": {
+   "historical_for": [
+    "Wilhelmina"
+   ],
+   "description": "Tries to maximize Trade Routes. Likes civilizations that trade with her, dislikes those who do not."
+  }
+ },
+ {
+  "id": "agenda:black_queen",
+  "name": "Black Queen",
+  "aliases": [
+   "AGENDA_BLACK_QUEEN"
+  ],
+  "summary": "Gains as many Spies and as much diplomatic access as possible. Does not like civilizations who ignore these espionage activities.",
+  "fields": {
+   "historical_for": [
+    "Catherine de Medici (Black Queen)"
+   ],
+   "description": "Gains as many Spies and as much diplomatic access as possible. Does not like civilizations who ignore these espionage activities."
+  }
+ },
+ {
+  "id": "agenda:bull_moose",
+  "name": "The Bull Moose",
+  "aliases": [
+   "AGENDA_BULL_MOOSE"
+  ],
+  "summary": "Wants to settle near high appeal tiles and build high appeal districts and wonders, and likes those who do the same. Dislikes anyone that embraces low appeal territory.",
+  "fields": {
+   "historical_for": [
+    "Teddy Roosevelt (Bull Moose)"
+   ],
+   "description": "Wants to settle near high appeal tiles and build high appeal districts and wonders, and likes those who do the same. Dislikes anyone that embraces low appeal territory."
+  }
+ },
+ {
+  "id": "agenda:bushido",
+  "name": "Bushido",
+  "aliases": [
+   "AGENDA_BUSHIDO"
+  ],
+  "summary": "Likes civilizations that have a strong military and Faith and Culture output. Dislikes civilizations that are strong in military but weak in Faith and Culture output.",
+  "fields": {
+   "historical_for": [
+    "Hojo Tokimune"
+   ],
+   "description": "Likes civilizations that have a strong military and Faith and Culture output. Dislikes civilizations that are strong in military but weak in Faith and Culture output."
+  }
+ },
+ {
+  "id": "agenda:canadian_expeditionary",
+  "name": "Canadian Expeditionary Force",
+  "aliases": [
+   "AGENDA_CANADIAN_EXPEDITIONARY"
+  ],
+  "summary": "Responds to as many Emergencies and Scored Competitions as possible. Likes those who also participate in such activities; dislikes those who have not gotten involved.",
+  "fields": {
+   "historical_for": [
+    "Wilfrid Laurier"
+   ],
+   "description": "Responds to as many Emergencies and Scored Competitions as possible. Likes those who also participate in such activities; dislikes those who have not gotten involved."
+  }
+ },
+ {
+  "id": "agenda:cheomseongdae",
+  "name": "Cheomseongdae",
+  "aliases": [
+   "AGENDA_CHEOMSEONGDAE"
+  ],
+  "summary": "Tries to build up Science, and likes civilizations that also focus on Science. Dislikes those with low Science.",
+  "fields": {
+   "historical_for": [
+    "Seondeok"
+   ],
+   "description": "Tries to build up Science, and likes civilizations that also focus on Science. Dislikes those with low Science."
+  }
+ },
+ {
+  "id": "agenda:city_planner",
+  "name": "City Planner",
+  "aliases": [
+   "AGENDA_CITY_PLANNER"
+  ],
+  "summary": "Always tries to keep the maximum number of districts in each city. Respects other civilizations who also develop their cities in this fashion.",
+  "fields": {
+   "historical_for": [
+    "Amanitore"
+   ],
+   "description": "Always tries to keep the maximum number of districts in each city. Respects other civilizations who also develop their cities in this fashion."
+  }
+ },
+ {
+  "id": "agenda:city_state_ally",
+  "name": "City-State Ally",
+  "aliases": [
+   "AGENDA_CITY_STATE_ALLY"
+  ],
+  "summary": "Likes civilizations that aren't competing for the same city-state allegiance. Dislikes civilizations that are directly competing for city-state allegiance.",
+  "fields": {
+   "random": true,
+   "description": "Likes civilizations that aren't competing for the same city-state allegiance. Dislikes civilizations that are directly competing for city-state allegiance."
+  }
+ },
+ {
+  "id": "agenda:city_state_protector",
+  "name": "City State Protector",
+  "aliases": [
+   "AGENDA_CITY_STATE_PROTECTOR"
+  ],
+  "summary": "Emphasizes protectorate wars. Admires civilizations that start protectorate wars. Dislikes civilizations that attack city states.",
+  "fields": {
+   "random": true,
+   "description": "Emphasizes protectorate wars. Admires civilizations that start protectorate wars. Dislikes civilizations that attack city states."
+  }
+ },
+ {
+  "id": "agenda:civilized",
+  "name": "Civilized",
+  "aliases": [
+   "AGENDA_CIVILIZED"
+  ],
+  "summary": "Hates barbarians. Likes civilizations that clear out barbarian outposts. Does not like civilizations that ignore barbarian outposts.",
+  "fields": {
+   "random": true,
+   "description": "Hates barbarians. Likes civilizations that clear out barbarian outposts. Does not like civilizations that ignore barbarian outposts."
+  }
+ },
+ {
+  "id": "agenda:counter_reformer",
+  "name": "Counter Reformer",
+  "aliases": [
+   "AGENDA_COUNTER_REFORMER"
+  ],
+  "summary": "Likes civilizations who follow the same Religion, and wants their cities to all follow the same Religion. Hates anyone trying to spread their Religion into their empire.",
+  "fields": {
+   "historical_for": [
+    "Philip II"
+   ],
+   "description": "Likes civilizations who follow the same Religion, and wants their cities to all follow the same Religion. Hates anyone trying to spread their Religion into their empire."
+  }
+ },
+ {
+  "id": "agenda:court_intrigue",
+  "name": "Court Intrigue",
+  "aliases": [
+   "AGENDA_COURT_INTRIGUE"
+  ],
+  "summary": "Likes civilizations who pose no threat. Dislikes civilizations with strong militaries or ones with nearby cities.",
+  "fields": {
+   "historical_for": [
+    "Wu Zetian"
+   ],
+   "description": "Likes civilizations who pose no threat. Dislikes civilizations with strong militaries or ones with nearby cities."
+  }
+ },
+ {
+  "id": "agenda:cultured",
+  "name": "Cultured",
+  "aliases": [
+   "AGENDA_CULTURED"
+  ],
+  "summary": "Tries to build up Culture, and likes civilizations that also focus on Culture.",
+  "fields": {
+   "random": true,
+   "description": "Tries to build up Culture, and likes civilizations that also focus on Culture."
+  }
+ },
+ {
+  "id": "agenda:curmudgeon",
+  "name": "Unknown",
+  "aliases": [
+   "AGENDA_CURMUDGEON"
+  ],
+  "summary": "Unknown Agenda.",
+  "fields": {
+   "description": "Unknown Agenda."
+  }
+ },
+ {
+  "id": "agenda:darwinist",
+  "name": "Darwinist",
+  "aliases": [
+   "AGENDA_DARWINIST"
+  ],
+  "summary": "Likes to see civilizations at war, and believes in constant struggle.",
+  "fields": {
+   "random": true,
+   "description": "Likes to see civilizations at war, and believes in constant struggle."
+  }
+ },
+ {
+  "id": "agenda:decolonization",
+  "name": "Decolonization",
+  "aliases": [
+   "AGENDA_DECOLONIZATION"
+  ],
+  "summary": "Likes civilizations on continents where she has no cities. Dislikes civilizations that have a city on her home continent.",
+  "fields": {
+   "historical_for": [
+    "Nzinga Mbande"
+   ],
+   "description": "Likes civilizations on continents where she has no cities. Dislikes civilizations that have a city on her home continent."
+  }
+ },
+ {
+  "id": "agenda:delian_league",
+  "name": "Delian League",
+  "aliases": [
+   "AGENDA_DELIAN_LEAGUE"
+  ],
+  "summary": "Likes civilizations that aren't competing for the same city-state allegiance. Dislikes civilizations that are directly competing for city-state allegiance.",
+  "fields": {
+   "historical_for": [
+    "Pericles"
+   ],
+   "description": "Likes civilizations that aren't competing for the same city-state allegiance. Dislikes civilizations that are directly competing for city-state allegiance."
+  }
+ },
+ {
+  "id": "agenda:demagogue",
+  "name": "Demagogue",
+  "aliases": [
+   "AGENDA_DEMAGOGUE"
+  ],
+  "summary": "Wants to be the civilization earning the most Diplomatic Favor, dislikes those who compete in Diplomatic Favor.",
+  "fields": {
+   "random": true,
+   "description": "Wants to be the civilization earning the most Diplomatic Favor, dislikes those who compete in Diplomatic Favor."
+  }
+ },
+ {
+  "id": "agenda:destination_civ",
+  "name": "Destination Civ",
+  "aliases": [
+   "AGENDA_DESTINATION_CIV"
+  ],
+  "summary": "Wants to be the civilization with the most Tourism, dislikes those who compete in Tourism.",
+  "fields": {
+   "random": true,
+   "description": "Wants to be the civilization with the most Tourism, dislikes those who compete in Tourism."
+  }
+ },
+ {
+  "id": "agenda:devout",
+  "name": "Devout",
+  "aliases": [
+   "AGENDA_DEVOUT"
+  ],
+  "summary": "Tries to build up Faith, and likes civilizations that also focus on Faith.",
+  "fields": {
+   "random": true,
+   "description": "Tries to build up Faith, and likes civilizations that also focus on Faith."
+  }
+ },
+ {
+  "id": "agenda:end_to_suffering",
+  "name": "An End to Suffering",
+  "aliases": [
+   "AGENDA_END_TO_SUFFERING"
+  ],
+  "summary": "Likes civilizations with many Holy Sites and with a high average city Citizen Population. Dislikes civs lacking in either of these areas.",
+  "fields": {
+   "historical_for": [
+    "Jayavarman VII"
+   ],
+   "description": "Likes civilizations with many Holy Sites and with a high average city Citizen Population. Dislikes civs lacking in either of these areas."
+  }
+ },
+ {
+  "id": "agenda:enthusiastic_disciple",
+  "name": "Enthusiastic Disciple",
+  "aliases": [
+   "AGENDA_ENTHUSIASTIC_DISCIPLE"
+  ],
+  "summary": "Likes civilizations that bring Religion to the Kongo. Dislikes civilizations that have founded a Religion but not brought it to a Kongolese city.",
+  "fields": {
+   "historical_for": [
+    "Mvemba a Nzinga"
+   ],
+   "description": "Likes civilizations that bring Religion to the Kongo. Dislikes civilizations that have founded a Religion but not brought it to a Kongolese city."
+  }
+ },
+ {
+  "id": "agenda:environmentalist",
+  "name": "Environmentalist",
+  "aliases": [
+   "AGENDA_ENVIRONMENTALIST"
+  ],
+  "summary": "Retains natural features in their empire and builds National Parks. Likes civs who respect the environment; dislikes those who treat the planet poorly.",
+  "fields": {
+   "random": true,
+   "description": "Retains natural features in their empire and builds National Parks. Likes civs who respect the environment; dislikes those who treat the planet poorly."
+  }
+ },
+ {
+  "id": "agenda:eternal",
+  "name": "Eternal Enigma",
+  "aliases": [
+   "AGENDA_ETERNAL"
+  ],
+  "summary": "Likes civilizations that do not keep the maximum number of Districts in each city. Dislikes civilizations that build as many districts as possible.",
+  "fields": {
+   "historical_for": [
+    "Ludwig II"
+   ],
+   "description": "Likes civilizations that do not keep the maximum number of Districts in each city. Dislikes civilizations that build as many districts as possible."
+  }
+ },
+ {
+  "id": "agenda:ethiopian_highlands",
+  "name": "Ethiopian Highlands",
+  "aliases": [
+   "AGENDA_ETHIOPIAN_HIGHLANDS"
+  ],
+  "summary": "Enjoys building on and around Hills if possible, and likes other civilizations that leave the areas near Hills to him. Dislikes those who also settle and build on and around Hills.",
+  "fields": {
+   "historical_for": [
+    "Menelik II"
+   ],
+   "description": "Enjoys building on and around Hills if possible, and likes other civilizations that leave the areas near Hills to him. Dislikes those who also settle and build on and around Hills."
+  }
+ },
+ {
+  "id": "agenda:expansionist",
+  "name": "Expansionist",
+  "aliases": [
+   "AGENDA_EXPANSIONIST"
+  ],
+  "summary": "Tries to include as much territory as possible in their empire. Does not like civilizations who control little territory.",
+  "fields": {
+   "random": true,
+   "description": "Tries to include as much territory as possible in their empire. Does not like civilizations who control little territory."
+  }
+ },
+ {
+  "id": "agenda:exploitative",
+  "name": "Exploitative",
+  "aliases": [
+   "AGENDA_EXPLOITATIVE"
+  ],
+  "summary": "Clears all features and improves all possible tiles. Likes civilizations with a high percentage of improved tiles. Dislikes civilizations with low percentage of improved tiles or that found National Parks.",
+  "fields": {
+   "random": true,
+   "description": "Clears all features and improves all possible tiles. Likes civilizations with a high percentage of improved tiles. Dislikes civilizations with low percentage of improved tiles or that found National Parks."
+  }
+ },
+ {
+  "id": "agenda:explorer",
+  "name": "Explorer",
+  "aliases": [
+   "AGENDA_EXPLORER"
+  ],
+  "summary": "Tries to explore the map, and likes civilizations that have explored less of the map than itself and dislikes civilizations that have explored more of the map than itself.",
+  "fields": {
+   "random": true,
+   "description": "Tries to explore the map, and likes civilizations that have explored less of the map than itself and dislikes civilizations that have explored more of the map than itself."
+  }
+ },
+ {
+  "id": "agenda:flat_earther",
+  "name": "Flat Earther",
+  "aliases": [
+   "AGENDA_FLAT_EARTHER"
+  ],
+  "summary": "Wants to block humankind from circumnavigating the globe or going into space.",
+  "fields": {
+   "random": true,
+   "description": "Wants to block humankind from circumnavigating the globe or going into space."
+  }
+ },
+ {
+  "id": "agenda:flirtatious",
+  "name": "Unknown",
+  "aliases": [
+   "AGENDA_FLIRTATIOUS"
+  ],
+  "summary": "Unknown Agenda.",
+  "fields": {
+   "description": "Unknown Agenda."
+  }
+ },
+ {
+  "id": "agenda:flower_of_scotland",
+  "name": "Flower of Scotland",
+  "aliases": [
+   "AGENDA_FLOWER_OF_SCOTLAND"
+  ],
+  "summary": "Will not attack neighbors unless they break a promise to him. Likes those who do not war with neighbors, dislikes those who do.",
+  "fields": {
+   "historical_for": [
+    "Robert the Bruce"
+   ],
+   "description": "Will not attack neighbors unless they break a promise to him. Likes those who do not war with neighbors, dislikes those who do."
+  }
+ },
+ {
+  "id": "agenda:fun_loving",
+  "name": "Fun-Loving",
+  "aliases": [
+   "AGENDA_FUN_LOVING"
+  ],
+  "summary": "Tries to make the citizens in each city as happy as possible. Likes civilizations that also develop in this fashion.",
+  "fields": {
+   "random": true,
+   "description": "Tries to make the citizens in each city as happy as possible. Likes civilizations that also develop in this fashion."
+  }
+ },
+ {
+  "id": "agenda:gallic_wars",
+  "name": "Gallic Wars",
+  "aliases": [
+   "AGENDA_GALLIC_WARS"
+  ],
+  "summary": "Hates barbarians. Likes civilizations that clear out barbarian outposts. Does not like civilizations that ignore barbarian outposts.",
+  "fields": {
+   "historical_for": [
+    "Julius Caesar"
+   ],
+   "description": "Hates barbarians. Likes civilizations that clear out barbarian outposts. Does not like civilizations that ignore barbarian outposts."
+  }
+ },
+ {
+  "id": "agenda:golden_age",
+  "name": "Golden Age of Suleiman",
+  "aliases": [
+   "AGENDA_GOLDEN_AGE"
+  ],
+  "summary": "Impressed by any civilization that earns a Golden Age. Dislikes those in Dark Ages.",
+  "fields": {
+   "historical_for": [
+    "Suleiman (Muhteşem)"
+   ],
+   "description": "Impressed by any civilization that earns a Golden Age. Dislikes those in Dark Ages."
+  }
+ },
+ {
+  "id": "agenda:gossip",
+  "name": "Gossip",
+  "aliases": [
+   "AGENDA_GOSSIP"
+  ],
+  "summary": "Wants to know everything about everyone through friendship, open borders, delegations and embassies. Does not like civilizations who don't share information.",
+  "fields": {
+   "random": true,
+   "description": "Wants to know everything about everyone through friendship, open borders, delegations and embassies. Does not like civilizations who don't share information."
+  }
+ },
+ {
+  "id": "agenda:great_person_advocate",
+  "name": "Great Person Advocate",
+  "aliases": [
+   "AGENDA_GREAT_PERSON_ADVOCATE"
+  ],
+  "summary": "Likes civilizations who are not competing for Great People, and will recruit Great People whenever possible. Dislikes losing a Great Person to another civilization.",
+  "fields": {
+   "random": true,
+   "description": "Likes civilizations who are not competing for Great People, and will recruit Great People whenever possible. Dislikes losing a Great Person to another civilization."
+  }
+ },
+ {
+  "id": "agenda:great_person_obsessed",
+  "name": "Patron of the Arts",
+  "aliases": [
+   "AGENDA_GREAT_PERSON_OBSESSED"
+  ],
+  "summary": "Likes civilizations who are not competing for Great People, and will recruit Great People whenever possible. Dislikes losing a Great Person to another civilization.",
+  "fields": {
+   "historical_for": [
+    "Pedro II"
+   ],
+   "description": "Likes civilizations who are not competing for Great People, and will recruit Great People whenever possible. Dislikes losing a Great Person to another civilization."
+  }
+ },
+ {
+  "id": "agenda:great_white_fleet",
+  "name": "Great White Fleet",
+  "aliases": [
+   "AGENDA_GREAT_WHITE_FLEET"
+  ],
+  "summary": "Builds a large navy and respects civilizations who follow their lead. Does not like civilizations with a weak navy.",
+  "fields": {
+   "random": true,
+   "description": "Builds a large navy and respects civilizations who follow their lead. Does not like civilizations with a weak navy."
+  }
+ },
+ {
+  "id": "agenda:hammurabi_districts",
+  "name": "Cradle of Civilization",
+  "aliases": [
+   "AGENDA_HAMMURABI_DISTRICTS"
+  ],
+  "summary": "Hammurabi prefers to build each different kind of district, and likes other Civilizations who do the same. He dislikes those who focus heavily on one district type or who do not build all types available",
+  "fields": {
+   "historical_for": [
+    "Hammurabi"
+   ],
+   "description": "Hammurabi prefers to build each different kind of district, and likes other Civilizations who do the same. He dislikes those who focus heavily on one district type or who do not build all types available"
+  }
+ },
+ {
+  "id": "agenda:horn_chest_loins",
+  "name": "Horn, Chest, Loins",
+  "aliases": [
+   "AGENDA_HORN_CHEST_LOINS"
+  ],
+  "summary": "Tries to use as many corps and armies as possible and respects civilizations who follow his lead. Does not like civilizations who can't create corps or don't use them.",
+  "fields": {
+   "historical_for": [
+    "Shaka"
+   ],
+   "description": "Tries to use as many corps and armies as possible and respects civilizations who follow his lead. Does not like civilizations who can't create corps or don't use them."
+  }
+ },
+ {
+  "id": "agenda:horse_lord",
+  "name": "Horse Lord",
+  "aliases": [
+   "AGENDA_HORSE_LORD"
+  ],
+  "summary": "Wants to build the world's most dominant cavalry force. Likes those who do not compete in cavalry. Dislikes those who rival him in cavalry strength.",
+  "fields": {
+   "historical_for": [
+    "Genghis Khan"
+   ],
+   "description": "Wants to build the world's most dominant cavalry force. Likes those who do not compete in cavalry. Dislikes those who rival him in cavalry strength."
+  }
+ },
+ {
+  "id": "agenda:ideologue",
+  "name": "Ideologue",
+  "aliases": [
+   "AGENDA_IDEOLOGUE"
+  ],
+  "summary": "Favors civilizations with the same type of government, dislikes civilizations that have different governments, and really dislikes civilizations with different governments of the same era as its own.",
+  "fields": {
+   "random": true,
+   "description": "Favors civilizations with the same type of government, dislikes civilizations that have different governments, and really dislikes civilizations with different governments of the same era as its own."
+  }
+ },
+ {
+  "id": "agenda:industrial_revolution",
+  "name": "Industrial Revolution",
+  "aliases": [
+   "AGENDA_INDUSTRIAL_REVOLUTION"
+  ],
+  "summary": "Tries to build up industry, and likes civilizations that also focus on Production.",
+  "fields": {
+   "historical_for": [
+    "Victoria (Age of Steam)"
+   ],
+   "description": "Tries to build up industry, and likes civilizations that also focus on Production."
+  }
+ },
+ {
+  "id": "agenda:industrialist",
+  "name": "Heavy Industry",
+  "aliases": [
+   "AGENDA_INDUSTRIALIST"
+  ],
+  "summary": "Tries to build up industry, and likes civilizations that also focus on Production.",
+  "fields": {
+   "random": true,
+   "description": "Tries to build up industry, and likes civilizations that also focus on Production."
+  }
+ },
+ {
+  "id": "agenda:intolerant",
+  "name": "Intolerant",
+  "aliases": [
+   "AGENDA_INTOLERANT"
+  ],
+  "summary": "Likes civilizations who follow the same Religion, and wants their cities to all follow the same Religion. Hates anyone trying to spread their Religion into their empire.",
+  "fields": {
+   "random": true,
+   "description": "Likes civilizations who follow the same Religion, and wants their cities to all follow the same Religion. Hates anyone trying to spread their Religion into their empire."
+  }
+ },
+ {
+  "id": "agenda:iron_confederacy",
+  "name": "Iron Confederacy",
+  "aliases": [
+   "AGENDA_IRON_CONFEDERACY"
+  ],
+  "summary": "Tries to form multiple alliances and respects those who do likewise. Dislikes those with few alliances.",
+  "fields": {
+   "historical_for": [
+    "Poundmaker"
+   ],
+   "description": "Tries to form multiple alliances and respects those who do likewise. Dislikes those with few alliances."
+  }
+ },
+ {
+  "id": "agenda:iron_crown",
+  "name": "Iron Crown",
+  "aliases": [
+   "AGENDA_IRON_CROWN"
+  ],
+  "summary": "Likes civilizations who do not associate with city-states. Does not like Suzerains of city-states, or civilizations who conquered city-states.",
+  "fields": {
+   "historical_for": [
+    "Frederick Barbarossa"
+   ],
+   "description": "Likes civilizations who do not associate with city-states. Does not like Suzerains of city-states, or civilizations who conquered city-states."
+  }
+ },
+ {
+  "id": "agenda:joao_explorer",
+  "name": "Navigator's Legacy",
+  "aliases": [
+   "AGENDA_JOAO_EXPLORER"
+  ],
+  "summary": "Appreciates civilizations who explore the world, and dislikes those who stay close to their borders.",
+  "fields": {
+   "historical_for": [
+    "João III"
+   ],
+   "description": "Appreciates civilizations who explore the world, and dislikes those who stay close to their borders."
+  }
+ },
+ {
+  "id": "agenda:kaitiakitanga",
+  "name": "Kaitiakitanga",
+  "aliases": [
+   "AGENDA_KAITIAKITANGA"
+  ],
+  "summary": "Retains natural features in their empire and builds National Parks. Likes civs who respect the environment; dislikes those who treat the planet poorly.",
+  "fields": {
+   "historical_for": [
+    "Kupe"
+   ],
+   "description": "Retains natural features in their empire and builds National Parks. Likes civs who respect the environment; dislikes those who treat the planet poorly."
+  }
+ },
+ {
+  "id": "agenda:kublai_pax",
+  "name": "Pax Mongolica",
+  "aliases": [
+   "AGENDA_KUBLAI_PAX"
+  ],
+  "summary": "Likes Civilizations that have a strong military and high Gold yield per turn. Dislikes Civilizations with a weak military or low income.",
+  "fields": {
+   "historical_for": [
+    "Kublai Khan (China)",
+    "Kublai Khan (Mongolia)"
+   ],
+   "description": "Likes Civilizations that have a strong military and high Gold yield per turn. Dislikes Civilizations with a weak military or low income."
+  }
+ },
+ {
+  "id": "agenda:lady_six_sky",
+  "name": "Solitary",
+  "aliases": [
+   "AGENDA_LADY_SIX_SKY"
+  ],
+  "summary": "Settles near her capital. Likes civilizations who settle at a distance. Dislikes any civilizations encroaching on Mayan territory.",
+  "fields": {
+   "historical_for": [
+    "Lady Six Sky"
+   ],
+   "description": "Settles near her capital. Likes civilizations who settle at a distance. Dislikes any civilizations encroaching on Mayan territory."
+  }
+ },
+ {
+  "id": "agenda:last_viking_king",
+  "name": "Last Viking King",
+  "aliases": [
+   "AGENDA_LAST_VIKING_KING"
+  ],
+  "summary": "Builds a large navy and respects civilizations who follow their lead. Does not like civilizations with a weak navy.",
+  "fields": {
+   "historical_for": [
+    "Harald Hardrada (Konge)"
+   ],
+   "description": "Builds a large navy and respects civilizations who follow their lead. Does not like civilizations with a weak navy."
+  }
+ },
+ {
+  "id": "agenda:lawgiver",
+  "name": "Lawgiver",
+  "aliases": [
+   "AGENDA_LAWGIVER"
+  ],
+  "summary": "Keeps his citizens happy and loyal. Impressed by those with similar priorities, especially if their cities were founded by many players. Dislikes those with happiness/loyalty issues or few captured cities.",
+  "fields": {
+   "historical_for": [
+    "Suleiman (Kanuni)"
+   ],
+   "description": "Keeps his citizens happy and loyal. Impressed by those with similar priorities, especially if their cities were founded by many players. Dislikes those with happiness/loyalty issues or few captured cities."
+  }
+ },
+ {
+  "id": "agenda:libertarian",
+  "name": "Libertarian",
+  "aliases": [
+   "AGENDA_LIBERTARIAN"
+  ],
+  "summary": "Dislikes any civilization who makes a strong attempt to win a Diplomatic Victory.",
+  "fields": {
+   "random": true,
+   "description": "Dislikes any civilization who makes a strong attempt to win a Diplomatic Victory."
+  }
+ },
+ {
+  "id": "agenda:lion_of_mali",
+  "name": "Lion of Mali",
+  "aliases": [
+   "AGENDA_LION_OF_MALI"
+  ],
+  "summary": "Wants to be the civilization with the most Tourism, dislikes those who compete in Tourism.",
+  "fields": {
+   "historical_for": [
+    "Sundiata Keita"
+   ],
+   "description": "Wants to be the civilization with the most Tourism, dislikes those who compete in Tourism."
+  }
+ },
+ {
+  "id": "agenda:lord_of_mines",
+  "name": "Lord of the Mines",
+  "aliases": [
+   "AGENDA_LORD_OF_MINES"
+  ],
+  "summary": "Tries to maximize Gold output from cities and Trade Routes. Respects civilizations that act similarly, dislikes those who do not.",
+  "fields": {
+   "historical_for": [
+    "Mansa Musa"
+   ],
+   "description": "Tries to maximize Gold output from cities and Trade Routes. Respects civilizations that act similarly, dislikes those who do not."
+  }
+ },
+ {
+  "id": "agenda:maat",
+  "name": "Ma'at",
+  "aliases": [
+   "AGENDA_MAAT"
+  ],
+  "summary": "Clears all features and improves all possible tiles. Likes civilizations with a high percentage of improved tiles. Dislikes civilizations with low percentage of improved tiles or that found National Parks.",
+  "fields": {
+   "historical_for": [
+    "Ramses II"
+   ],
+   "description": "Clears all features and improves all possible tiles. Likes civilizations with a high percentage of improved tiles. Dislikes civilizations with low percentage of improved tiles or that found National Parks."
+  }
+ },
+ {
+  "id": "agenda:magnificences",
+  "name": "Sumptuous Finery",
+  "aliases": [
+   "AGENDA_MAGNIFICENCES"
+  ],
+  "summary": "Likes civilizations that trade Luxury resources to her. Dislikes civilizations that have not made such a trade. Tries to collect as many copies of Luxury resources as possible.",
+  "fields": {
+   "historical_for": [
+    "Catherine de Medici (Magnificence)"
+   ],
+   "description": "Likes civilizations that trade Luxury resources to her. Dislikes civilizations that have not made such a trade. Tries to collect as many copies of Luxury resources as possible."
+  }
+ },
+ {
+  "id": "agenda:maurya_empire",
+  "name": "Maurya Empire",
+  "aliases": [
+   "AGENDA_MAURYA_EMPIRE"
+  ],
+  "summary": "Tries to conquer neighboring civilizations, and likes civilizations that are not his neighbors (yet). Does not like his neighbors.",
+  "fields": {
+   "historical_for": [
+    "Chandragupta"
+   ],
+   "description": "Tries to conquer neighboring civilizations, and likes civilizations that are not his neighbors (yet). Does not like his neighbors."
+  }
+ },
+ {
+  "id": "agenda:money_grubber",
+  "name": "Money Grubber",
+  "aliases": [
+   "AGENDA_MONEY_GRUBBER"
+  ],
+  "summary": "Tries to maximize Gold output from cities and Trade Routes. Respects civilizations that act similarly, dislikes those who do not.",
+  "fields": {
+   "random": true,
+   "description": "Tries to maximize Gold output from cities and Trade Routes. Respects civilizations that act similarly, dislikes those who do not."
+  }
+ },
+ {
+  "id": "agenda:narikala_fortress",
+  "name": "Narikala Fortress",
+  "aliases": [
+   "AGENDA_NARIKALA_FORTRESS"
+  ],
+  "summary": "Tries to put high-level walls around her cities and respects civilizations who follow her lead. Does not like civilizations who fail to fortify their cities.",
+  "fields": {
+   "historical_for": [
+    "Tamar"
+   ],
+   "description": "Tries to put high-level walls around her cities and respects civilizations who follow her lead. Does not like civilizations who fail to fortify their cities."
+  }
+ },
+ {
+  "id": "agenda:naturalist",
+  "name": "Naturalist",
+  "aliases": [
+   "AGENDA_NATURALIST"
+  ],
+  "summary": "Tries to find all natural wonders. Likes civilizations that keep Woods and Rainforest unchopped, and those that establish National Parks.",
+  "fields": {
+   "description": "Tries to find all natural wonders. Likes civilizations that keep Woods and Rainforest unchopped, and those that establish National Parks."
+  }
+ },
+ {
+  "id": "agenda:new_rome",
+  "name": "New Rome",
+  "aliases": [
+   "AGENDA_NEW_ROME"
+  ],
+  "summary": "Tries to build up Culture, and likes civilizations that also focus on Culture.",
+  "fields": {
+   "historical_for": [
+    "Theodora"
+   ],
+   "description": "Tries to build up Culture, and likes civilizations that also focus on Culture."
+  }
+ },
+ {
+  "id": "agenda:nuke_lover",
+  "name": "Nuke Happy",
+  "aliases": [
+   "AGENDA_NUKE_LOVER"
+  ],
+  "summary": "Has no hesitation to use nuclear weapons. Respects other civilizations that project strength with nuclear weapons.",
+  "fields": {
+   "random": true,
+   "description": "Has no hesitation to use nuclear weapons. Respects other civilizations that project strength with nuclear weapons."
+  }
+ },
+ {
+  "id": "agenda:optimus_princeps",
+  "name": "Optimus Princeps",
+  "aliases": [
+   "AGENDA_OPTIMUS_PRINCEPS"
+  ],
+  "summary": "Tries to include as much territory as possible in their empire. Does not like civilizations who control little territory.",
+  "fields": {
+   "historical_for": [
+    "Trajan"
+   ],
+   "description": "Tries to include as much territory as possible in their empire. Does not like civilizations who control little territory."
+  }
+ },
+ {
+  "id": "agenda:paranoid",
+  "name": "Paranoid",
+  "aliases": [
+   "AGENDA_PARANOID"
+  ],
+  "summary": "Likes civilizations who pose no threat. Dislikes civilizations with strong militaries or ones with nearby cities.",
+  "fields": {
+   "random": true,
+   "description": "Likes civilizations who pose no threat. Dislikes civilizations with strong militaries or ones with nearby cities."
+  }
+ },
+ {
+  "id": "agenda:patron_of_arts",
+  "name": "Bibliophile",
+  "aliases": [
+   "AGENDA_PATRON_OF_ARTS"
+  ],
+  "summary": "Wants to have more Great Works than anyone else. Likes those who leave the Great Works to her, dislikes those who also have many Great Works.",
+  "fields": {
+   "historical_for": [
+    "Kristina"
+   ],
+   "description": "Wants to have more Great Works than anyone else. Likes those who leave the Great Works to her, dislikes those who also have many Great Works."
+  }
+ },
+ {
+  "id": "agenda:peacekeeper",
+  "name": "Peacekeeper",
+  "aliases": [
+   "AGENDA_PEACEKEEPER"
+  ],
+  "summary": "Never declares wars for which he can be branded a warmonger, and will try to befriend those who maintain the peace. Hates warmongers.",
+  "fields": {
+   "historical_for": [
+    "Gandhi"
+   ],
+   "description": "Never declares wars for which he can be branded a warmonger, and will try to befriend those who maintain the peace. Hates warmongers."
+  }
+ },
+ {
+  "id": "agenda:perpetually_on_guard",
+  "name": "Perpetually on Guard",
+  "aliases": [
+   "AGENDA_PERPETUALLY_ON_GUARD"
+  ],
+  "summary": "Likes civilizations that liberate cities. Dislikes civilizations in a war that are occupying enemy cities.",
+  "fields": {
+   "historical_for": [
+    "John Curtin"
+   ],
+   "description": "Likes civilizations that liberate cities. Dislikes civilizations in a war that are occupying enemy cities."
+  }
+ },
+ {
+  "id": "agenda:pillager",
+  "name": "Pillager",
+  "aliases": [
+   "AGENDA_PILLAGER"
+  ],
+  "summary": "Tries to pillage as many tiles as possible. Respects other civilizations who pillage.",
+  "fields": {
+   "random": true,
+   "description": "Tries to pillage as many tiles as possible. Respects other civilizations who pillage."
+  }
+ },
+ {
+  "id": "agenda:populous",
+  "name": "Populous",
+  "aliases": [
+   "AGENDA_POPULOUS"
+  ],
+  "summary": "Tries to have the highest overall population. Respects other high population civilizations.",
+  "fields": {
+   "random": true,
+   "description": "Tries to have the highest overall population. Respects other high population civilizations."
+  }
+ },
+ {
+  "id": "agenda:prefer_food",
+  "name": "Basilike Ge",
+  "aliases": [
+   "AGENDA_PREFER_FOOD"
+  ],
+  "summary": "Tries to build up Food, and likes civilizations that also focus on Food.",
+  "fields": {
+   "historical_for": [
+    "Cleopatra (Ptolemaic)"
+   ],
+   "description": "Tries to build up Food, and likes civilizations that also focus on Food."
+  }
+ },
+ {
+  "id": "agenda:prefer_landpower",
+  "name": "Jazayerchi",
+  "aliases": [
+   "AGENDA_PREFER_LANDPOWER"
+  ],
+  "summary": "Likes civilizations with a high amount of land units. Dislikes civilizations with a low amount of land units.",
+  "fields": {
+   "historical_for": [
+    "Nader Shah"
+   ],
+   "description": "Likes civilizations with a high amount of land units. Dislikes civilizations with a low amount of land units."
+  }
+ },
+ {
+  "id": "agenda:preserver_of_the_union",
+  "name": "Preserver of the Union",
+  "aliases": [
+   "AGENDA_PRESERVER_OF_THE_UNION"
+  ],
+  "summary": "Favors civilizations with the same type of government, dislikes civilizations that have different governments, and really dislikes civilizations with different governments of the same era as its own.",
+  "fields": {
+   "historical_for": [
+    "Abraham Lincoln"
+   ],
+   "description": "Favors civilizations with the same type of government, dislikes civilizations that have different governments, and really dislikes civilizations with different governments of the same era as its own."
+  }
+ },
+ {
+  "id": "agenda:queen_of_nile",
+  "name": "Queen of the Nile",
+  "aliases": [
+   "AGENDA_QUEEN_OF_NILE"
+  ],
+  "summary": "Likes civilizations with powerful militaries, and will try to ally with them to avoid damaging military conflicts. Dislikes civilizations with weak militaries.",
+  "fields": {
+   "historical_for": [
+    "Cleopatra (Egyptian)"
+   ],
+   "description": "Likes civilizations with powerful militaries, and will try to ally with them to avoid damaging military conflicts. Dislikes civilizations with weak militaries."
+  }
+ },
+ {
+  "id": "agenda:raven_banner",
+  "name": "Raven Banner",
+  "aliases": [
+   "AGENDA_RAVEN_BANNER"
+  ],
+  "summary": "Levies troops from city-states. Likes civilizations that also use city-state troops, dislikes those that shun such mercenaries.",
+  "fields": {
+   "historical_for": [
+    "Matthias Corvinus"
+   ],
+   "description": "Levies troops from city-states. Likes civilizations that also use city-state troops, dislikes those that shun such mercenaries."
+  }
+ },
+ {
+  "id": "agenda:saga",
+  "name": "Harald's Saga",
+  "aliases": [
+   "AGENDA_SAGA"
+  ],
+  "summary": "Emphasizes protectorate wars. Admires civilizations that start protectorate wars. Dislikes civilizations that attack city states.",
+  "fields": {
+   "historical_for": [
+    "Harald Hardrada (Varangian)"
+   ],
+   "description": "Emphasizes protectorate wars. Admires civilizations that start protectorate wars. Dislikes civilizations that attack city states."
+  }
+ },
+ {
+  "id": "agenda:saint",
+  "name": "Saint",
+  "aliases": [
+   "AGENDA_SAINT"
+  ],
+  "summary": "Tries to build up Faith, and likes civilizations that also focus on Faith.",
+  "fields": {
+   "historical_for": [
+    "Jadwiga"
+   ],
+   "description": "Tries to build up Faith, and likes civilizations that also focus on Faith."
+  }
+ },
+ {
+  "id": "agenda:sakoku",
+  "name": "Sakoku",
+  "aliases": [
+   "AGENDA_SAKOKU"
+  ],
+  "summary": "Wants to stay safe from conquest. Dislikes those who have conquered other player's original capitals.",
+  "fields": {
+   "historical_for": [
+    "Tokugawa"
+   ],
+   "description": "Wants to stay safe from conquest. Dislikes those who have conquered other player's original capitals."
+  }
+ },
+ {
+  "id": "agenda:sapa_inca",
+  "name": "Sapa Inca",
+  "aliases": [
+   "AGENDA_SAPA_INCA"
+  ],
+  "summary": "Wants to settle near Mountains. Likes those who leave the areas near Mountains to him, dislikes those who also settle near Mountains.",
+  "fields": {
+   "historical_for": [
+    "Pachacuti"
+   ],
+   "description": "Wants to settle near Mountains. Likes those who leave the areas near Mountains to him, dislikes those who also settle near Mountains."
+  }
+ },
+ {
+  "id": "agenda:sejong",
+  "name": "Neo-Confucianism",
+  "aliases": [
+   "AGENDA_SEJONG"
+  ],
+  "summary": "Friendly to backwards civilizations that are lacking in Science and Culture. Dislikes civilizations that are ahead of him in Science and Culture.",
+  "fields": {
+   "historical_for": [
+    "Sejong"
+   ],
+   "description": "Friendly to backwards civilizations that are lacking in Science and Culture. Dislikes civilizations that are ahead of him in Science and Culture."
+  }
+ },
+ {
+  "id": "agenda:short_life_glory",
+  "name": "Short Life of Glory",
+  "aliases": [
+   "AGENDA_SHORT_LIFE_GLORY"
+  ],
+  "summary": "Likes civilizations at war with major powers other than Macedon. Has disdain for civilizations at peace. Grievances against this leader decay at twice the usual rate.",
+  "fields": {
+   "historical_for": [
+    "Alexander"
+   ],
+   "description": "Likes civilizations at war with major powers other than Macedon. Has disdain for civilizations at peace. Grievances against this leader decay at twice the usual rate."
+  }
+ },
+ {
+  "id": "agenda:sicilian_wars",
+  "name": "Sicilian Wars",
+  "aliases": [
+   "AGENDA_SICILIAN_WARS"
+  ],
+  "summary": "Wants to settle coastal cities. Likes those who settle inland. Dislikes those with mostly coastal cities.",
+  "fields": {
+   "historical_for": [
+    "Dido"
+   ],
+   "description": "Wants to settle coastal cities. Likes those who settle inland. Dislikes those with mostly coastal cities."
+  }
+ },
+ {
+  "id": "agenda:sihai",
+  "name": "Sihai",
+  "aliases": [
+   "AGENDA_SIHAI"
+  ],
+  "summary": "Wants all the Barbarians following his side. Does not like civilizations that destroy Barbarian Outposts.",
+  "fields": {
+   "historical_for": [
+    "Qin (Unifier)"
+   ],
+   "description": "Wants all the Barbarians following his side. Does not like civilizations that destroy Barbarian Outposts."
+  }
+ },
+ {
+  "id": "agenda:simon_bolivar",
+  "name": "Carabobo",
+  "aliases": [
+   "AGENDA_SIMON_BOLIVAR"
+  ],
+  "summary": "Likes civilizations with highly-promoted units. Dislikes civilizations who have few highly-promoted units.",
+  "fields": {
+   "historical_for": [
+    "Simón Bolívar"
+   ],
+   "description": "Likes civilizations with highly-promoted units. Dislikes civilizations who have few highly-promoted units."
+  }
+ },
+ {
+  "id": "agenda:spirit_of_tucapel",
+  "name": "Spirit of Tucapel",
+  "aliases": [
+   "AGENDA_SPIRIT_OF_TUCAPEL"
+  ],
+  "summary": "Tries to create and maintain a high degree of cultural loyalty. Dislikes civilizations that lose cities by failing to maintain the loyalty of their people, likes those that gain cities through loyalty.",
+  "fields": {
+   "historical_for": [
+    "Lautaro"
+   ],
+   "description": "Tries to create and maintain a high degree of cultural loyalty. Dislikes civilizations that lose cities by failing to maintain the loyalty of their people, likes those that gain cities through loyalty."
+  }
+ },
+ {
+  "id": "agenda:standing_army",
+  "name": "Standing Army",
+  "aliases": [
+   "AGENDA_STANDING_ARMY"
+  ],
+  "summary": "Always tries to keep a large standing army. Respects other civilizations with large armies.",
+  "fields": {
+   "random": true,
+   "description": "Always tries to keep a large standing army. Respects other civilizations with large armies."
+  }
+ },
+ {
+  "id": "agenda:sultan",
+  "name": "Sultan of Egypt and Syria",
+  "aliases": [
+   "AGENDA_SULTAN"
+  ],
+  "summary": "Likes civilizations that have founded a Religion but not brought it to one of his cities. Dislikes civilizations that bring him their Religion.",
+  "fields": {
+   "historical_for": [
+    "Saladin (Sultan)"
+   ],
+   "description": "Likes civilizations that have founded a Religion but not brought it to one of his cities. Dislikes civilizations that bring him their Religion."
+  }
+ },
+ {
+  "id": "agenda:sun_never_sets",
+  "name": "Sun Never Sets",
+  "aliases": [
+   "AGENDA_SUN_NEVER_SETS"
+  ],
+  "summary": "Likes civilizations from her home continent, and wants to expand to all continents. Doesn’t like civilizations on continents where England has no city.",
+  "fields": {
+   "historical_for": [
+    "Victoria (Age of Empire)"
+   ],
+   "description": "Likes civilizations from her home continent, and wants to expand to all continents. Doesn’t like civilizations on continents where England has no city."
+  }
+ },
+ {
+  "id": "agenda:sycophant",
+  "name": "Sycophant",
+  "aliases": [
+   "AGENDA_SYCOPHANT"
+  ],
+  "summary": "Impressed by any civilization that earns a Golden Age. Dislikes those in Dark Ages.",
+  "fields": {
+   "random": true,
+   "description": "Impressed by any civilization that earns a Golden Age. Dislikes those in Dark Ages."
+  }
+ },
+ {
+  "id": "agenda:sympathizer",
+  "name": "Sympathizer",
+  "aliases": [
+   "AGENDA_SYMPATHIZER"
+  ],
+  "summary": "Feels bad for those going through Dark Ages. Dislikes those in Golden Ages.",
+  "fields": {
+   "random": true,
+   "description": "Feels bad for those going through Dark Ages. Dislikes those in Golden Ages."
+  }
+ },
+ {
+  "id": "agenda:technophile",
+  "name": "Technophile",
+  "aliases": [
+   "AGENDA_TECHNOPHILE"
+  ],
+  "summary": "Tries to build up Science, and likes civilizations that also focus on Science.",
+  "fields": {
+   "random": true,
+   "description": "Tries to build up Science, and likes civilizations that also focus on Science."
+  }
+ },
+ {
+  "id": "agenda:tlatoani",
+  "name": "Tlatoani",
+  "aliases": [
+   "AGENDA_TLATOANI"
+  ],
+  "summary": "Likes civilizations who have the same Luxury resources as he does, and will try to collect every Luxury resource available. Dislikes civilizations who have a new Luxury resource he has not yet collected.",
+  "fields": {
+   "historical_for": [
+    "Montezuma"
+   ],
+   "description": "Likes civilizations who have the same Luxury resources as he does, and will try to collect every Luxury resource available. Dislikes civilizations who have a new Luxury resource he has not yet collected."
+  }
+ },
+ {
+  "id": "agenda:trade_agreement",
+  "name": "Trade Agreement",
+  "aliases": [
+   "AGENDA_TRADE_AGREEMENT"
+  ],
+  "summary": "Tries to maximize Trade Routes. Likes civilizations that trade with her, dislikes those who do not.",
+  "fields": {
+   "historical_for": [
+    "Elizabeth I"
+   ],
+   "description": "Tries to maximize Trade Routes. Likes civilizations that trade with her, dislikes those who do not."
+  }
+ },
+ {
+  "id": "agenda:trieu_defender",
+  "name": "Defender of the Homeland",
+  "aliases": [
+   "AGENDA_TRIEU_DEFENDER"
+  ],
+  "summary": "Likes Civilizations who have not declared war on her. Dislikes Civilizations that have declared war on her. For these, her opinion decreases further each turn the war progresses, and this decreased opinion never decays.",
+  "fields": {
+   "historical_for": [
+    "Bà Triệu"
+   ],
+   "description": "Likes Civilizations who have not declared war on her. Dislikes Civilizations that have declared war on her. For these, her opinion decreases further each turn the war progresses, and this decreased opinion never decays."
+  }
+ },
+ {
+  "id": "agenda:turtler",
+  "name": "Turtler",
+  "aliases": [
+   "AGENDA_TURTLER"
+  ],
+  "summary": "Wants to stay safe from conquest. Dislikes those who have conquered other player's original capitals.",
+  "fields": {
+   "random": true,
+   "description": "Wants to stay safe from conquest. Dislikes those who have conquered other player's original capitals."
+  }
+ },
+ {
+  "id": "agenda:westernizer",
+  "name": "Westernizer",
+  "aliases": [
+   "AGENDA_WESTERNIZER"
+  ],
+  "summary": "Friendly to those civilizations that are ahead of him in Science and Culture. Dislikes backwards civilizations that are lacking in Science and Culture.",
+  "fields": {
+   "historical_for": [
+    "Peter"
+   ],
+   "description": "Friendly to those civilizations that are ahead of him in Science and Culture. Dislikes backwards civilizations that are lacking in Science and Culture."
+  }
+ },
+ {
+  "id": "agenda:with_your_shield_or_on_it",
+  "name": "With Your Shield Or On It",
+  "aliases": [
+   "AGENDA_WITH_YOUR_SHIELD_OR_ON_IT"
+  ],
+  "summary": "Never gives up items in a peace deal, and likes civilizations who match that approach. Dislikes civilizations who have capitulated or who have never gone to war. Grievances against this leader decay at twice the usual rate.",
+  "fields": {
+   "historical_for": [
+    "Gorgo"
+   ],
+   "description": "Never gives up items in a peace deal, and likes civilizations who match that approach. Dislikes civilizations who have capitulated or who have never gone to war. Grievances against this leader decay at twice the usual rate."
+  }
+ },
+ {
+  "id": "agenda:wonder_advocate",
+  "name": "Wonder Obsessed",
+  "aliases": [
+   "AGENDA_WONDER_ADVOCATE"
+  ],
+  "summary": "Likes civilizations not competing for wonders, and builds wonders whenever possible. Dislikes losing a wonder to another civilization.",
+  "fields": {
+   "random": true,
+   "description": "Likes civilizations not competing for wonders, and builds wonders whenever possible. Dislikes losing a wonder to another civilization."
+  }
+ },
+ {
+  "id": "agenda:wonder_obsessed",
+  "name": "Wall of 10,000 Li",
+  "aliases": [
+   "AGENDA_WONDER_OBSESSED"
+  ],
+  "summary": "Likes civilizations not competing for wonders, and builds wonders whenever possible. Dislikes losing a wonder to another civilization.",
+  "fields": {
+   "historical_for": [
+    "Qin (Mandate of Heaven)"
+   ],
+   "description": "Likes civilizations not competing for wonders, and builds wonders whenever possible. Dislikes losing a wonder to another civilization."
+  }
+ },
+ {
+  "id": "agenda:yinding",
+  "name": "Yinding",
+  "aliases": [
+   "AGENDA_YINDING"
+  ],
+  "summary": "Likes Civilizations with positive income per turn, dislikes civilizations with negative income per turn.",
+  "fields": {
+   "historical_for": [
+    "Yongle"
+   ],
+   "description": "Likes Civilizations with positive income per turn, dislikes civilizations with negative income per turn."
+  }
+ },
+ {
+  "id": "agenda:zealot",
+  "name": "Zealot",
+  "aliases": [
+   "AGENDA_ZEALOT"
+  ],
+  "summary": "Tries to gain a religious victory. Likes those civs who have already adopted their religion.",
+  "fields": {
+   "random": true,
+   "description": "Tries to gain a religious victory. Likes those civs who have already adopted their religion."
+  }
+ }
+]

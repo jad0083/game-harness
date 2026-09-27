@@ -1,0 +1,1016 @@
+[
+ {
+  "id": "wonder:alhambra",
+  "name": "Alhambra",
+  "aliases": [
+   "BUILDING_ALHAMBRA"
+  ],
+  "summary": "Medieval Era wonder, cost 710. +1 Military policy slot Provides the same defensive bonuses as the Fort improvement. Must be built on Hills adjacent to an Encampment district.",
+  "fields": {
+   "era": "Medieval Era",
+   "cost": 710,
+   "requires": [
+    "Castles"
+   ],
+   "placement": "on Grassland (Hills)/Plains (Hills)/Tundra (Hills)/Snow (Hills)/Desert (Hills); adjacent to Encampment",
+   "great_person_points": [
+    "+2 Great General"
+   ],
+   "amenities": 2,
+   "effect": "+1 Military policy slot Provides the same defensive bonuses as the Fort improvement. Must be built on Hills adjacent to an Encampment district."
+  }
+ },
+ {
+  "id": "wonder:amundsen_scott_research_station",
+  "name": "Amundsen-Scott Research Station",
+  "aliases": [
+   "BUILDING_AMUNDSEN_SCOTT_RESEARCH_STATION"
+  ],
+  "summary": "Atomic Era wonder, cost 1620. +20% Science and 10% Production in all cities. If there are 5 Snow or Snow Hills tiles within 3 tiles of a city and owned by this player these yields are doubled.",
+  "fields": {
+   "era": "Atomic Era",
+   "cost": 1620,
+   "requires": [
+    "Rapid Deployment"
+   ],
+   "placement": "on Snow/Snow (Hills); adjacent to Campus",
+   "great_person_points": [
+    "+5 Great Scientist"
+   ],
+   "effect": "+20% Science and 10% Production in all cities. If there are 5 Snow or Snow Hills tiles within 3 tiles of a city and owned by this player these yields are doubled. Must be built next to a Campus with a Research Lab on a Snow or Snow Hills tile."
+  }
+ },
+ {
+  "id": "wonder:angkor_wat",
+  "name": "Angkor Wat",
+  "aliases": [
+   "BUILDING_ANGKOR_WAT"
+  ],
+  "summary": "Medieval Era wonder, cost 710. +1 Citizen Population in all Current Cities when built. +1 Housing in all cities. Must be built adjacent to an Aqueduct district.",
+  "fields": {
+   "era": "Medieval Era",
+   "cost": 710,
+   "requires": [
+    "Medieval Faires"
+   ],
+   "placement": "adjacent to Aqueduct",
+   "yields": "+2 Faith",
+   "effect": "+1 Citizen Population in all Current Cities when built. +1 Housing in all cities. Must be built adjacent to an Aqueduct district."
+  }
+ },
+ {
+  "id": "wonder:apadana",
+  "name": "Apadana",
+  "aliases": [
+   "BUILDING_APADANA"
+  ],
+  "summary": "Classical Era wonder, cost 400. +2 Envoys when you build a wonder, including Apadana, in this city. Must be built adjacent to your Capital.",
+  "fields": {
+   "era": "Classical Era",
+   "cost": 400,
+   "requires": [
+    "Political Philosophy"
+   ],
+   "great_work_slots": [
+    "2 palace"
+   ],
+   "effect": "+2 Envoys when you build a wonder, including Apadana, in this city. Must be built adjacent to your Capital."
+  }
+ },
+ {
+  "id": "wonder:big_ben",
+  "name": "Big Ben",
+  "aliases": [
+   "BUILDING_BIG_BEN"
+  ],
+  "summary": "Industrial Era wonder, cost 1450. +1 Economic policy slot Immediately after construction Gold in treasury is increased by 50%. Must be built next to a River adjacent to a Commercial Hub district with a Bank.",
+  "fields": {
+   "era": "Industrial Era",
+   "cost": 1450,
+   "requires": [
+    "Economics"
+   ],
+   "placement": "adjacent to Commercial Hub; next to a river",
+   "yields": "+6 Gold",
+   "great_person_points": [
+    "+3 Great Merchant"
+   ],
+   "effect": "+1 Economic policy slot Immediately after construction Gold in treasury is increased by 50%. Must be built next to a River adjacent to a Commercial Hub district with a Bank."
+  }
+ },
+ {
+  "id": "wonder:biosphere",
+  "name": "Biosphère",
+  "aliases": [
+   "BUILDING_BIOSPHERE"
+  ],
+  "summary": "Atomic Era wonder, cost 1740. +200% Power for all Offshore Windfarms, Solar Farms, Wind Farms, Geothermal Plants, and Hydroelectric Dams. This building and these improvements provide Tourism equal to their Power.",
+  "fields": {
+   "era": "Atomic Era",
+   "cost": 1740,
+   "requires": [
+    "Synthetic Materials"
+   ],
+   "placement": "adjacent to Neighborhood; next to a river",
+   "effect": "+200% Power for all Offshore Windfarms, Solar Farms, Wind Farms, Geothermal Plants, and Hydroelectric Dams. This building and these improvements provide Tourism equal to their Power. +1 Appeal to tiles adjacent to Rainforest and Marsh in your empire. Must be built along a River adjacent to a Neighborhood district."
+  }
+ },
+ {
+  "id": "wonder:bolshoi_theatre",
+  "name": "Bolshoi Theatre",
+  "aliases": [
+   "BUILDING_BOLSHOI_THEATRE"
+  ],
+  "summary": "Industrial Era wonder, cost 1240. Awards 2 randomly-chosen free civics when completed. Must be built on flat land adjacent to a Theater Square district.",
+  "fields": {
+   "era": "Industrial Era",
+   "cost": 1240,
+   "requires": [
+    "Opera and Ballet"
+   ],
+   "placement": "on Grassland/Plains/Tundra/Snow/Desert; adjacent to Theater Square",
+   "great_person_points": [
+    "+2 Great Writer",
+    "+2 Great Musician"
+   ],
+   "great_work_slots": [
+    "1 writing",
+    "1 music"
+   ],
+   "effect": "Awards 2 randomly-chosen free civics when completed. Must be built on flat land adjacent to a Theater Square district."
+  }
+ },
+ {
+  "id": "wonder:broadway",
+  "name": "Broadway",
+  "aliases": [
+   "BUILDING_BROADWAY"
+  ],
+  "summary": "Modern Era wonder, cost 1620. +20% Culture in this city. 1 free random Atomic era civic boost. Must be built on flat land adjacent to a Theater Square district.",
+  "fields": {
+   "era": "Modern Era",
+   "cost": 1620,
+   "requires": [
+    "Mass Media"
+   ],
+   "placement": "on Grassland/Plains/Tundra/Snow/Desert; adjacent to Theater Square",
+   "great_person_points": [
+    "+3 Great Writer",
+    "+3 Great Musician"
+   ],
+   "great_work_slots": [
+    "1 writing",
+    "2 music"
+   ],
+   "effect": "+20% Culture in this city. 1 free random Atomic era civic boost. Must be built on flat land adjacent to a Theater Square district."
+  }
+ },
+ {
+  "id": "wonder:casa_de_contratacion",
+  "name": "Casa de Contratación",
+  "aliases": [
+   "BUILDING_CASA_DE_CONTRATACION"
+  ],
+  "summary": "Renaissance Era wonder, cost 920. Gain 3 Governor promotions. All your cities not on your original Capital's continent with a Governor gain +15% Production, +15% Faith and +15% Gold. Must be built adjacent to a Government Plaza.",
+  "fields": {
+   "era": "Renaissance Era",
+   "cost": 920,
+   "requires": [
+    "Cartography"
+   ],
+   "placement": "adjacent to Government Plaza",
+   "great_person_points": [
+    "+3 Great Merchant"
+   ],
+   "effect": "Gain 3 Governor promotions. All your cities not on your original Capital's continent with a Governor gain +15% Production, +15% Faith and +15% Gold. Must be built adjacent to a Government Plaza."
+  }
+ },
+ {
+  "id": "wonder:chichen_itza",
+  "name": "Chichen Itza",
+  "aliases": [
+   "BUILDING_CHICHEN_ITZA"
+  ],
+  "summary": "Medieval Era wonder, cost 710. +2 Culture to all Rainforest tiles for this city. +1 Production to all Rainforest tiles for this city. Must be built on Rainforest.",
+  "fields": {
+   "era": "Medieval Era",
+   "cost": 710,
+   "requires": [
+    "Guilds"
+   ],
+   "effect": "+2 Culture to all Rainforest tiles for this city. +1 Production to all Rainforest tiles for this city. Must be built on Rainforest."
+  }
+ },
+ {
+  "id": "wonder:colosseum",
+  "name": "Colosseum",
+  "aliases": [
+   "BUILDING_COLOSSEUM"
+  ],
+  "summary": "Classical Era wonder, cost 400. The Colosseum provides 2 of the following: Culture, Loyalty per turn, and Amenities to each city center within 6 tiles. Must be built on flat land adjacent to an Entertainment Complex with an Arena.",
+  "fields": {
+   "era": "Classical Era",
+   "cost": 400,
+   "requires": [
+    "Games and Recreation"
+   ],
+   "placement": "on Grassland/Plains/Tundra/Snow/Desert; adjacent to Entertainment Complex",
+   "yields": "+2 Culture",
+   "amenities": 2,
+   "effect": "The Colosseum provides 2 of the following: Culture, Loyalty per turn, and Amenities to each city center within 6 tiles. Must be built on flat land adjacent to an Entertainment Complex with an Arena."
+  }
+ },
+ {
+  "id": "wonder:colossus",
+  "name": "Colossus",
+  "aliases": [
+   "BUILDING_COLOSSUS"
+  ],
+  "summary": "Classical Era wonder, cost 400. +1 Trade Route capacity. Grants a Trader unit. Must be built on the Coast, adjacent to land and a Harbor district.",
+  "fields": {
+   "era": "Classical Era",
+   "cost": 400,
+   "requires": [
+    "Shipbuilding"
+   ],
+   "placement": "on Coast and Lake; adjacent to Harbor",
+   "yields": "+3 Gold",
+   "great_person_points": [
+    "+1 Great Admiral"
+   ],
+   "effect": "+1 Trade Route capacity. Grants a Trader unit. Must be built on the Coast, adjacent to land and a Harbor district."
+  }
+ },
+ {
+  "id": "wonder:cristo_redentor",
+  "name": "Cristo Redentor",
+  "aliases": [
+   "BUILDING_CRISTO_REDENTOR"
+  ],
+  "summary": "Modern Era wonder, cost 1620. Tourism output from Relics and Holy Cities is not diminished by other civilizations who have researched The Enlightenment civic. +100% Tourism from Seaside Resorts across your civilization.",
+  "fields": {
+   "era": "Modern Era",
+   "cost": 1620,
+   "requires": [
+    "Mass Media"
+   ],
+   "placement": "on Grassland (Hills)/Plains (Hills)/Tundra (Hills)/Snow (Hills)/Desert (Hills)",
+   "yields": "+4 Culture",
+   "effect": "Tourism output from Relics and Holy Cities is not diminished by other civilizations who have researched The Enlightenment civic. +100% Tourism from Seaside Resorts across your civilization. Must be built on Hills."
+  }
+ },
+ {
+  "id": "wonder:eiffel_tower",
+  "name": "Eiffel Tower",
+  "aliases": [
+   "BUILDING_EIFFEL_TOWER"
+  ],
+  "summary": "Modern Era wonder, cost 1620. All tiles in your civilization gain +2 Appeal. Must be built on flat land adjacent to the City Center.",
+  "fields": {
+   "era": "Modern Era",
+   "cost": 1620,
+   "requires": [
+    "Steel"
+   ],
+   "placement": "on Grassland/Plains/Tundra/Snow/Desert; adjacent to City Center",
+   "effect": "All tiles in your civilization gain +2 Appeal. Must be built on flat land adjacent to the City Center."
+  }
+ },
+ {
+  "id": "wonder:estadio_do_maracana",
+  "name": "Estádio do Maracanã",
+  "aliases": [
+   "BUILDING_ESTADIO_DO_MARACANA"
+  ],
+  "summary": "Atomic Era wonder, cost 1740. +2 Amenities in each city in your civilization. Must be built on flat land adjacent to an Entertainment Complex district with a Stadium.",
+  "fields": {
+   "era": "Atomic Era",
+   "cost": 1740,
+   "requires": [
+    "Professional Sports"
+   ],
+   "placement": "on Grassland/Plains/Tundra/Snow/Desert; adjacent to Entertainment Complex",
+   "yields": "+6 Culture",
+   "amenities": 2,
+   "effect": "+2 Amenities in each city in your civilization. Must be built on flat land adjacent to an Entertainment Complex district with a Stadium."
+  }
+ },
+ {
+  "id": "wonder:etemenanki",
+  "name": "Etemenanki",
+  "aliases": [
+   "BUILDING_ETEMENANKI"
+  ],
+  "summary": "Ancient Era wonder, cost 220. +2 Science and +1 Production to all Marsh tiles in your empire. +1 Science and +1 Production on all Floodplains tiles for this city. Must be built on Floodplains or Marsh.",
+  "fields": {
+   "era": "Ancient Era",
+   "cost": 220,
+   "requires": [
+    "Writing"
+   ],
+   "yields": "+2 Science",
+   "effect": "+2 Science and +1 Production to all Marsh tiles in your empire. +1 Science and +1 Production on all Floodplains tiles for this city. Must be built on Floodplains or Marsh."
+  }
+ },
+ {
+  "id": "wonder:forbidden_city",
+  "name": "Forbidden City",
+  "aliases": [
+   "BUILDING_FORBIDDEN_CITY"
+  ],
+  "summary": "Renaissance Era wonder, cost 920. +1 Wildcard policy slot Must be built on flat land adjacent to the City Center.",
+  "fields": {
+   "era": "Renaissance Era",
+   "cost": 920,
+   "requires": [
+    "Printing"
+   ],
+   "placement": "on Grassland/Plains/Tundra/Snow/Desert; adjacent to City Center",
+   "yields": "+5 Culture",
+   "effect": "+1 Wildcard policy slot Must be built on flat land adjacent to the City Center."
+  }
+ },
+ {
+  "id": "wonder:golden_gate_bridge",
+  "name": "Golden Gate Bridge",
+  "aliases": [
+   "BUILDING_GOLDEN_GATE_BRIDGE"
+  ],
+  "summary": "Modern Era wonder, cost 1620. Land units can cross without needing to embark. Acts as Modern Road and creates Modern Roads (if not present) in land tiles on either end. City gains +3 Amenities. All tiles in this city +4 Appeal.",
+  "fields": {
+   "era": "Modern Era",
+   "cost": 1620,
+   "requires": [
+    "Combustion"
+   ],
+   "placement": "on Coast and Lake",
+   "amenities": 3,
+   "effect": "Land units can cross without needing to embark. Acts as Modern Road and creates Modern Roads (if not present) in land tiles on either end. City gains +3 Amenities. All tiles in this city +4 Appeal. +100% Tourism from improvements and National Parks in this city. Trade Routes traveling through it can multiply the Gold they get from districts at their destination. Must be built on a Coast tile. The bridge must run straight across the hex between two land tiles directly opposite one another. At least one water tile must be present on both the left and right sides of the bridge."
+  }
+ },
+ {
+  "id": "wonder:great_bath",
+  "name": "Great Bath",
+  "aliases": [
+   "BUILDING_GREAT_BATH"
+  ],
+  "summary": "Ancient Era wonder, cost 180. The Floodplains tiles along the river containing the Great Bath are now immune to Flood damage (though Food and Production bonuses from flooding drop by 50%).",
+  "fields": {
+   "era": "Ancient Era",
+   "cost": 180,
+   "requires": [
+    "Pottery"
+   ],
+   "housing": 3,
+   "amenities": 1,
+   "effect": "The Floodplains tiles along the river containing the Great Bath are now immune to Flood damage (though Food and Production bonuses from flooding drop by 50%). Floodplains tiles belonging to this city gain +1 Faith for each time Flood damage is mitigated. Must be built on a Floodplains tile."
+  }
+ },
+ {
+  "id": "wonder:great_library",
+  "name": "Great Library",
+  "aliases": [
+   "BUILDING_GREAT_LIBRARY"
+  ],
+  "summary": "Classical Era wonder, cost 400. Receive boosts to all Ancient and Classical era technologies. Receive a random tech boost after another player recruits a Great Scientist.",
+  "fields": {
+   "era": "Classical Era",
+   "cost": 400,
+   "requires": [
+    "Recorded History"
+   ],
+   "placement": "on Grassland/Plains/Tundra/Snow/Desert; adjacent to Campus",
+   "yields": "+2 Science",
+   "great_person_points": [
+    "+1 Great Scientist",
+    "+1 Great Writer"
+   ],
+   "great_work_slots": [
+    "2 writing"
+   ],
+   "effect": "Receive boosts to all Ancient and Classical era technologies. Receive a random tech boost after another player recruits a Great Scientist. Must be built on flat land adjacent to a Campus district with a Library."
+  }
+ },
+ {
+  "id": "wonder:great_lighthouse",
+  "name": "Great Lighthouse",
+  "aliases": [
+   "BUILDING_GREAT_LIGHTHOUSE"
+  ],
+  "summary": "Classical Era wonder, cost 290. +1 Movement for all naval units Must be built on the Coast, and adjacent to land and a Harbor district with a Lighthouse.",
+  "fields": {
+   "era": "Classical Era",
+   "cost": 290,
+   "requires": [
+    "Celestial Navigation"
+   ],
+   "placement": "on Coast and Lake; adjacent to Harbor",
+   "yields": "+3 Gold",
+   "great_person_points": [
+    "+1 Great Admiral"
+   ],
+   "effect": "+1 Movement for all naval units Must be built on the Coast, and adjacent to land and a Harbor district with a Lighthouse."
+  }
+ },
+ {
+  "id": "wonder:great_zimbabwe",
+  "name": "Great Zimbabwe",
+  "aliases": [
+   "BUILDING_GREAT_ZIMBABWE"
+  ],
+  "summary": "Renaissance Era wonder, cost 920. +1 Trade Route capacity Your Trade Routes from this city get +2 Gold for every Bonus resource within 3 tiles of the city and in this city's territory.",
+  "fields": {
+   "era": "Renaissance Era",
+   "cost": 920,
+   "requires": [
+    "Banking"
+   ],
+   "placement": "adjacent to Commercial Hub; adjacent to Cattle",
+   "yields": "+5 Gold",
+   "great_person_points": [
+    "+2 Great Merchant"
+   ],
+   "effect": "+1 Trade Route capacity Your Trade Routes from this city get +2 Gold for every Bonus resource within 3 tiles of the city and in this city's territory. Must be built adjacent to a Commercial Hub district with a Market and adjacent to Cattle."
+  }
+ },
+ {
+  "id": "wonder:hagia_sophia",
+  "name": "Hagia Sophia",
+  "aliases": [
+   "BUILDING_HAGIA_SOPHIA"
+  ],
+  "summary": "Medieval Era wonder, cost 710. Missionaries and Apostles can spread Religion 1 extra time. Must be built on flat land adjacent to a Holy Site district, and you must have founded a Religion.",
+  "fields": {
+   "era": "Medieval Era",
+   "cost": 710,
+   "requires": [
+    "Buttress"
+   ],
+   "placement": "on Grassland/Plains/Tundra/Snow/Desert; adjacent to Holy Site",
+   "yields": "+4 Faith",
+   "effect": "Missionaries and Apostles can spread Religion 1 extra time. Must be built on flat land adjacent to a Holy Site district, and you must have founded a Religion."
+  }
+ },
+ {
+  "id": "wonder:halicarnassus_mausoleum",
+  "name": "Mausoleum at Halicarnassus",
+  "aliases": [
+   "BUILDING_HALICARNASSUS_MAUSOLEUM"
+  ],
+  "summary": "Classical Era wonder, cost 400. +1 Science, +1 Faith, and +1 Culture on all Coast tiles for this city. Great Engineers have an additional charge. Must be built adjacent to a Harbor district.",
+  "fields": {
+   "era": "Classical Era",
+   "cost": 400,
+   "requires": [
+    "Defensive Tactics"
+   ],
+   "placement": "adjacent to Harbor",
+   "effect": "+1 Science, +1 Faith, and +1 Culture on all Coast tiles for this city. Great Engineers have an additional charge. Must be built adjacent to a Harbor district."
+  }
+ },
+ {
+  "id": "wonder:hanging_gardens",
+  "name": "Hanging Gardens",
+  "aliases": [
+   "BUILDING_HANGING_GARDENS"
+  ],
+  "summary": "Ancient Era wonder, cost 180. Increases growth by 15% in all cities. Must be built next to a River.",
+  "fields": {
+   "era": "Ancient Era",
+   "cost": 180,
+   "requires": [
+    "Irrigation"
+   ],
+   "placement": "next to a river",
+   "housing": 2,
+   "effect": "Increases growth by 15% in all cities. Must be built next to a River."
+  }
+ },
+ {
+  "id": "wonder:hermitage",
+  "name": "Hermitage",
+  "aliases": [
+   "BUILDING_HERMITAGE"
+  ],
+  "summary": "Industrial Era wonder, cost 1450. Must be built along a River.",
+  "fields": {
+   "era": "Industrial Era",
+   "cost": 1450,
+   "requires": [
+    "Natural History"
+   ],
+   "placement": "next to a river",
+   "great_person_points": [
+    "+3 Great Artist"
+   ],
+   "great_work_slots": [
+    "4 art"
+   ],
+   "effect": "Must be built along a River."
+  }
+ },
+ {
+  "id": "wonder:huey_teocalli",
+  "name": "Huey Teocalli",
+  "aliases": [
+   "BUILDING_HUEY_TEOCALLI"
+  ],
+  "summary": "Medieval Era wonder, cost 710. +1 Amenity from entertainment for each Lake tile within one tile of Huey Teocalli. +1 Food and +1 Production for each Lake tile in your empire. Must be built on a Lake tile adjacent to land.",
+  "fields": {
+   "era": "Medieval Era",
+   "cost": 710,
+   "requires": [
+    "Military Tactics"
+   ],
+   "placement": "on Coast and Lake",
+   "effect": "+1 Amenity from entertainment for each Lake tile within one tile of Huey Teocalli. +1 Food and +1 Production for each Lake tile in your empire. Must be built on a Lake tile adjacent to land."
+  }
+ },
+ {
+  "id": "wonder:jebel_barkal",
+  "name": "Jebel Barkal",
+  "aliases": [
+   "BUILDING_JEBEL_BARKAL"
+  ],
+  "summary": "Classical Era wonder, cost 400. Awards 6 Iron per turn. Provides +4 Faith to all your cities that are within 6 tiles. Must be built on Desert (Hills) terrain.",
+  "fields": {
+   "era": "Classical Era",
+   "cost": 400,
+   "requires": [
+    "Iron Working"
+   ],
+   "placement": "on Desert (Hills)",
+   "yields": "+4 Faith",
+   "effect": "Awards 6 Iron per turn. Provides +4 Faith to all your cities that are within 6 tiles. Must be built on Desert (Hills) terrain."
+  }
+ },
+ {
+  "id": "wonder:kilwa_kisiwani",
+  "name": "Kilwa Kisiwani",
+  "aliases": [
+   "BUILDING_KILWA_KISIWANI"
+  ],
+  "summary": "Medieval Era wonder, cost 710. +3 Envoys when built. When you are the Suzerain of a City-State this city receives a +15% boost to the Type bonuses provided by that City-State.",
+  "fields": {
+   "era": "Medieval Era",
+   "cost": 710,
+   "requires": [
+    "Machinery"
+   ],
+   "placement": "on Grassland/Plains/Tundra/Snow/Desert; on coast",
+   "effect": "+3 Envoys when built. When you are the Suzerain of a City-State this city receives a +15% boost to the Type bonuses provided by that City-State. If you are the Suzerain to 2 or more City-States of that type an additional +15% boost is given to all your cities. Must be built on a flat tile adjacent to Coast."
+  }
+ },
+ {
+  "id": "wonder:kotoku_in",
+  "name": "Kotoku-in",
+  "aliases": [
+   "BUILDING_KOTOKU_IN"
+  ],
+  "summary": "Medieval Era wonder, cost 710. +20% Faith in this city. Grants 4 Warrior Monks. Must be built adjacent to a Holy Site district with a Temple.",
+  "fields": {
+   "era": "Medieval Era",
+   "cost": 710,
+   "requires": [
+    "Divine Right"
+   ],
+   "placement": "adjacent to Holy Site",
+   "effect": "+20% Faith in this city. Grants 4 Warrior Monks. Must be built adjacent to a Holy Site district with a Temple. Warrior Monks can only be received if player has founded a religion or if there is a majority religion for this player or city."
+  }
+ },
+ {
+  "id": "wonder:machu_picchu",
+  "name": "Machu Picchu",
+  "aliases": [
+   "BUILDING_MACHU_PICCHU"
+  ],
+  "summary": "Classical Era wonder, cost 400. Mountain tiles provide a standard adjacency bonus to Commercial Hub, Theater Square, and Industrial Zone districts in all cities. Must be built on a Mountain tile that does not contain a Volcano.",
+  "fields": {
+   "era": "Classical Era",
+   "cost": 400,
+   "requires": [
+    "Engineering"
+   ],
+   "placement": "on Grassland (Mountain)/Plains (Mountain)/Tundra (Mountain)/Snow (Mountain)/Desert (Mountain)",
+   "yields": "+4 Gold",
+   "effect": "Mountain tiles provide a standard adjacency bonus to Commercial Hub, Theater Square, and Industrial Zone districts in all cities. Must be built on a Mountain tile that does not contain a Volcano."
+  }
+ },
+ {
+  "id": "wonder:mahabodhi_temple",
+  "name": "Mahabodhi Temple",
+  "aliases": [
+   "BUILDING_MAHABODHI_TEMPLE"
+  ],
+  "summary": "Classical Era wonder, cost 400. +2 Diplomatic Victory Points and grants 2 Apostles when built. Must be built on Woods adjacent to a Holy Site district with a Temple, and you must have founded a Religion.",
+  "fields": {
+   "era": "Classical Era",
+   "cost": 400,
+   "requires": [
+    "Theology"
+   ],
+   "placement": "adjacent to Holy Site",
+   "yields": "+4 Faith",
+   "effect": "+2 Diplomatic Victory Points and grants 2 Apostles when built. Must be built on Woods adjacent to a Holy Site district with a Temple, and you must have founded a Religion."
+  }
+ },
+ {
+  "id": "wonder:meenakshi_temple",
+  "name": "Meenakshi Temple",
+  "aliases": [
+   "BUILDING_MEENAKSHI_TEMPLE"
+  ],
+  "summary": "Medieval Era wonder, cost 710. Grants 2 Gurus. Gurus are 30% cheaper to purchase. Religious units adjacent to Gurus receive +5 Religious Strength in Theological Combat and +1 Movement.",
+  "fields": {
+   "era": "Medieval Era",
+   "cost": 710,
+   "requires": [
+    "Civil Service"
+   ],
+   "placement": "adjacent to Holy Site",
+   "yields": "+3 Faith",
+   "effect": "Grants 2 Gurus. Gurus are 30% cheaper to purchase. Religious units adjacent to Gurus receive +5 Religious Strength in Theological Combat and +1 Movement. Must be built adjacent to a Holy Site and you must have founded a Religion."
+  }
+ },
+ {
+  "id": "wonder:mont_st_michel",
+  "name": "Mont St. Michel",
+  "aliases": [
+   "BUILDING_MONT_ST_MICHEL"
+  ],
+  "summary": "Medieval Era wonder, cost 710. All Apostles you create gain the Martyr ability in addition to a second ability you chose normally. Must be built on Floodplains or Marsh.",
+  "fields": {
+   "era": "Medieval Era",
+   "cost": 710,
+   "requires": [
+    "Divine Right"
+   ],
+   "yields": "+2 Faith",
+   "great_work_slots": [
+    "2 relic"
+   ],
+   "effect": "All Apostles you create gain the Martyr ability in addition to a second ability you chose normally. Must be built on Floodplains or Marsh."
+  }
+ },
+ {
+  "id": "wonder:oracle",
+  "name": "Oracle",
+  "aliases": [
+   "BUILDING_ORACLE"
+  ],
+  "summary": "Ancient Era wonder, cost 290. Patronage of Great People costs 25% less Faith. Districts in this city provide +2 Great Person points of their type (for example, Great Writer points from the Theater Square district).",
+  "fields": {
+   "era": "Ancient Era",
+   "cost": 290,
+   "requires": [
+    "Mysticism"
+   ],
+   "placement": "on Grassland (Hills)/Plains (Hills)/Tundra (Hills)/Snow (Hills)/Desert (Hills)",
+   "yields": "+1 Culture, +1 Faith",
+   "effect": "Patronage of Great People costs 25% less Faith. Districts in this city provide +2 Great Person points of their type (for example, Great Writer points from the Theater Square district). Must be built on Hills."
+  }
+ },
+ {
+  "id": "wonder:orszaghaz",
+  "name": "Országház",
+  "aliases": [
+   "BUILDING_ORSZAGHAZ"
+  ],
+  "summary": "Industrial Era wonder, cost 920. +100% Diplomatic Favor per turn from starting a turn as Suzerain of a City-State. Must be built on a River.",
+  "fields": {
+   "era": "Industrial Era",
+   "cost": 920,
+   "requires": [
+    "Sanitation"
+   ],
+   "placement": "next to a river",
+   "yields": "+4 Culture",
+   "effect": "+100% Diplomatic Favor per turn from starting a turn as Suzerain of a City-State. Must be built on a River."
+  }
+ },
+ {
+  "id": "wonder:oxford_university",
+  "name": "Oxford University",
+  "aliases": [
+   "BUILDING_OXFORD_UNIVERSITY"
+  ],
+  "summary": "Industrial Era wonder, cost 1240. +20% Science in this city, and awards 2 randomly-chosen free technologies when completed. Must be built on Grassland or Plains adjacent to a Campus district with a University.",
+  "fields": {
+   "era": "Industrial Era",
+   "cost": 1240,
+   "requires": [
+    "Scientific Theory"
+   ],
+   "placement": "on Grassland/Plains; adjacent to Campus",
+   "great_person_points": [
+    "+3 Great Scientist"
+   ],
+   "great_work_slots": [
+    "2 writing"
+   ],
+   "effect": "+20% Science in this city, and awards 2 randomly-chosen free technologies when completed. Must be built on Grassland or Plains adjacent to a Campus district with a University."
+  }
+ },
+ {
+  "id": "wonder:panama_canal",
+  "name": "Panama Canal",
+  "aliases": [
+   "BUILDING_PANAMA_CANAL"
+  ],
+  "summary": "Industrial Era wonder, cost 920. Upon completion 1 or 2 adjacent Canal districts are automatically constructed. The Canal wonder tile can now be crossed by naval units.",
+  "fields": {
+   "era": "Industrial Era",
+   "cost": 920,
+   "requires": [
+    "Steam Power"
+   ],
+   "yields": "+10 Gold",
+   "effect": "Upon completion 1 or 2 adjacent Canal districts are automatically constructed. The Canal wonder tile can now be crossed by naval units. Trade Routes traveling through it can multiply the Gold they get from districts at their destination. Must be built on a flat land tile where there are two adjacent tiles directly across the build tile from one another that meet the following criteria: one adjacent tile must be able to legally hold a Canal district connecting into the Panama Canal construction tile; the other must be either a city, a water tile, or be another tile that can hold a connecting Canal."
+  }
+ },
+ {
+  "id": "wonder:petra",
+  "name": "Petra",
+  "aliases": [
+   "BUILDING_PETRA"
+  ],
+  "summary": "Classical Era wonder, cost 400. +2 Food, +2 Gold, and +1 Production on all Desert tiles for this city (non-Floodplains). Must be built on Desert or Desert Floodplains without Hills.",
+  "fields": {
+   "era": "Classical Era",
+   "cost": 400,
+   "requires": [
+    "Mathematics"
+   ],
+   "placement": "on Desert; on Desert Floodplains",
+   "effect": "+2 Food, +2 Gold, and +1 Production on all Desert tiles for this city (non-Floodplains). Must be built on Desert or Desert Floodplains without Hills."
+  }
+ },
+ {
+  "id": "wonder:potala_palace",
+  "name": "Potala Palace",
+  "aliases": [
+   "BUILDING_POTALA_PALACE"
+  ],
+  "summary": "Renaissance Era wonder, cost 1060. +1 Diplomatic policy slot. +1 Diplomatic Victory point. Must be built on a Hill adjacent to a Mountain.",
+  "fields": {
+   "era": "Renaissance Era",
+   "cost": 1060,
+   "requires": [
+    "Astronomy"
+   ],
+   "placement": "on Grassland (Hills)/Plains (Hills)/Desert (Hills)/Tundra (Hills)/Snow (Hills); adjacent to a mountain",
+   "yields": "+2 Culture, +3 Faith",
+   "effect": "+1 Diplomatic policy slot. +1 Diplomatic Victory point. Must be built on a Hill adjacent to a Mountain."
+  }
+ },
+ {
+  "id": "wonder:pyramids",
+  "name": "Pyramids",
+  "aliases": [
+   "BUILDING_PYRAMIDS"
+  ],
+  "summary": "Ancient Era wonder, cost 220. Grants a free Builder. All Builders can build 1 extra improvement. Must be built on Desert (including Desert Floodplains) without Hills.",
+  "fields": {
+   "era": "Ancient Era",
+   "cost": 220,
+   "requires": [
+    "Masonry"
+   ],
+   "placement": "on Desert; on Desert Floodplains",
+   "yields": "+2 Culture",
+   "effect": "Grants a free Builder. All Builders can build 1 extra improvement. Must be built on Desert (including Desert Floodplains) without Hills."
+  }
+ },
+ {
+  "id": "wonder:ruhr_valley",
+  "name": "Ruhr Valley",
+  "aliases": [
+   "BUILDING_RUHR_VALLEY"
+  ],
+  "summary": "Industrial Era wonder, cost 1240. +20% Production in this city, and +1 Production for each Mine and Quarry in this city. Must be built along a River adjacent to an Industrial Zone district with a Factory.",
+  "fields": {
+   "era": "Industrial Era",
+   "cost": 1240,
+   "requires": [
+    "Industrialization"
+   ],
+   "placement": "adjacent to Industrial Zone; next to a river",
+   "effect": "+20% Production in this city, and +1 Production for each Mine and Quarry in this city. Must be built along a River adjacent to an Industrial Zone district with a Factory."
+  }
+ },
+ {
+  "id": "wonder:st_basils_cathedral",
+  "name": "St. Basil's Cathedral",
+  "aliases": [
+   "BUILDING_ST_BASILS_CATHEDRAL"
+  ],
+  "summary": "Renaissance Era wonder, cost 920. +100% Religious Tourism from this city. +1 Food, +1 Production, and +1 Culture on all Tundra tiles for this city. Must be built adjacent to a City Center.",
+  "fields": {
+   "era": "Renaissance Era",
+   "cost": 920,
+   "requires": [
+    "Reformed Church"
+   ],
+   "placement": "adjacent to City Center",
+   "great_work_slots": [
+    "3 relic"
+   ],
+   "effect": "+100% Religious Tourism from this city. +1 Food, +1 Production, and +1 Culture on all Tundra tiles for this city. Must be built adjacent to a City Center."
+  }
+ },
+ {
+  "id": "wonder:statue_liberty",
+  "name": "Statue of Liberty",
+  "aliases": [
+   "BUILDING_STATUE_LIBERTY"
+  ],
+  "summary": "Industrial Era wonder, cost 1240. +4 Diplomatic Victory Points when built. All your cities within 6 tiles are always 100% Loyal. Must be built on the Coast, adjacent to land and a Harbor district.",
+  "fields": {
+   "era": "Industrial Era",
+   "cost": 1240,
+   "requires": [
+    "Civil Engineering"
+   ],
+   "placement": "on Coast and Lake; adjacent to Harbor",
+   "effect": "+4 Diplomatic Victory Points when built. All your cities within 6 tiles are always 100% Loyal. Must be built on the Coast, adjacent to land and a Harbor district."
+  }
+ },
+ {
+  "id": "wonder:statue_of_zeus",
+  "name": "Statue of Zeus",
+  "aliases": [
+   "BUILDING_STATUE_OF_ZEUS"
+  ],
+  "summary": "Classical Era wonder, cost 400. Grants 3 Archers, 3 Spearmen, and a Battering Ram. +50% Production towards anti-cavalry units. Must be built on flat land adjacent to an Encampment district with a Barracks.",
+  "fields": {
+   "era": "Classical Era",
+   "cost": 400,
+   "requires": [
+    "Military Training"
+   ],
+   "placement": "on Grassland/Plains/Tundra/Snow/Desert; adjacent to Encampment",
+   "yields": "+3 Gold",
+   "effect": "Grants 3 Archers, 3 Spearmen, and a Battering Ram. +50% Production towards anti-cavalry units. Must be built on flat land adjacent to an Encampment district with a Barracks."
+  }
+ },
+ {
+  "id": "wonder:stonehenge",
+  "name": "Stonehenge",
+  "aliases": [
+   "BUILDING_STONEHENGE"
+  ],
+  "summary": "Ancient Era wonder, cost 180. Grants a free Great Prophet. Great Prophets may found a Religion on Stonehenge instead of a Holy Site. Must be adjacent to Stone and on flat land.",
+  "fields": {
+   "era": "Ancient Era",
+   "cost": 180,
+   "requires": [
+    "Astrology"
+   ],
+   "placement": "on Grassland/Plains/Tundra/Snow/Desert; adjacent to Stone",
+   "yields": "+2 Faith",
+   "effect": "Grants a free Great Prophet. Great Prophets may found a Religion on Stonehenge instead of a Holy Site. Must be adjacent to Stone and on flat land."
+  }
+ },
+ {
+  "id": "wonder:sydney_opera_house",
+  "name": "Sydney Opera House",
+  "aliases": [
+   "BUILDING_SYDNEY_OPERA_HOUSE"
+  ],
+  "summary": "Atomic Era wonder, cost 1850. Must be built on the Coast, adjacent to land and a Harbor district.",
+  "fields": {
+   "era": "Atomic Era",
+   "cost": 1850,
+   "requires": [
+    "Cultural Heritage"
+   ],
+   "placement": "on Coast and Lake; adjacent to Harbor",
+   "yields": "+8 Culture",
+   "great_person_points": [
+    "+5 Great Musician"
+   ],
+   "great_work_slots": [
+    "3 music"
+   ],
+   "effect": "Must be built on the Coast, adjacent to land and a Harbor district."
+  }
+ },
+ {
+  "id": "wonder:taj_mahal",
+  "name": "Taj Mahal",
+  "aliases": [
+   "BUILDING_TAJ_MAHAL"
+  ],
+  "summary": "Renaissance Era wonder, cost 920. +1 Era Score from Historic Moment earned after this wonder is complete if that Moment is usually worth 2 or more Era Score. Must be built next to a River.",
+  "fields": {
+   "era": "Renaissance Era",
+   "cost": 920,
+   "requires": [
+    "Humanism"
+   ],
+   "placement": "next to a river",
+   "effect": "+1 Era Score from Historic Moment earned after this wonder is complete if that Moment is usually worth 2 or more Era Score. Must be built next to a River."
+  }
+ },
+ {
+  "id": "wonder:temple_artemis",
+  "name": "Temple of Artemis",
+  "aliases": [
+   "BUILDING_TEMPLE_ARTEMIS"
+  ],
+  "summary": "Ancient Era wonder, cost 180. Each Camp, Pasture, and Plantation improvement within 4 tiles of this wonder provides +1 Amenity. Must be placed adjacent to a Camp improvement.",
+  "fields": {
+   "era": "Ancient Era",
+   "cost": 180,
+   "requires": [
+    "Archery"
+   ],
+   "placement": "adjacent to Camp",
+   "yields": "+4 Food",
+   "housing": 3,
+   "effect": "Each Camp, Pasture, and Plantation improvement within 4 tiles of this wonder provides +1 Amenity. Must be placed adjacent to a Camp improvement."
+  }
+ },
+ {
+  "id": "wonder:terracotta_army",
+  "name": "Terracotta Army",
+  "aliases": [
+   "BUILDING_TERRACOTTA_ARMY"
+  ],
+  "summary": "Classical Era wonder, cost 400. All current units gain a promotion level. All Archaeologists from the owner may enter foreign lands without Open Borders.",
+  "fields": {
+   "era": "Classical Era",
+   "cost": 400,
+   "requires": [
+    "Construction"
+   ],
+   "placement": "on Grassland/Plains; adjacent to Encampment",
+   "great_person_points": [
+    "+1 Great General"
+   ],
+   "effect": "All current units gain a promotion level. All Archaeologists from the owner may enter foreign lands without Open Borders. Must be built on flat Grassland or Plains adjacent to an Encampment district with a Barracks or Stable."
+  }
+ },
+ {
+  "id": "wonder:torre_de_belem",
+  "name": "Torre de Belém",
+  "aliases": [
+   "BUILDING_TORRE_DE_BELEM"
+  ],
+  "summary": "Renaissance Era wonder, cost 920. International Trade Routes from this city receive +2 Gold for every Luxury Resource at the destination.",
+  "fields": {
+   "era": "Renaissance Era",
+   "cost": 920,
+   "requires": [
+    "Mercantilism"
+   ],
+   "placement": "on Coast and Lake; adjacent to Harbor",
+   "yields": "+5 Gold",
+   "great_person_points": [
+    "+1 Great Admiral"
+   ],
+   "effect": "International Trade Routes from this city receive +2 Gold for every Luxury Resource at the destination. When the Torre de Belém is constructed, cities not on your home continent receive the lowest Production cost city center building they can currently construct. Must be built on a Coast tile that is adjacent to a Harbor district."
+  }
+ },
+ {
+  "id": "wonder:university_sankore",
+  "name": "University of Sankore",
+  "aliases": [
+   "BUILDING_UNIVERSITY_SANKORE"
+  ],
+  "summary": "Medieval Era wonder, cost 710. Other Civilizations' Trade Routes to this city provide +1 Science and +1 Gold for them. +2 Science for every Trade Route to this city. Domestic Trade Routes give an additional +1 Faith to this city.",
+  "fields": {
+   "era": "Medieval Era",
+   "cost": 710,
+   "requires": [
+    "Education"
+   ],
+   "placement": "on Desert/Desert (Hills); adjacent to Campus",
+   "yields": "+3 Science, +1 Faith",
+   "great_person_points": [
+    "+2 Great Scientist"
+   ],
+   "effect": "Other Civilizations' Trade Routes to this city provide +1 Science and +1 Gold for them. +2 Science for every Trade Route to this city. Domestic Trade Routes give an additional +1 Faith to this city. Must be built on the Desert or Desert Hills, and adjacent to a Campus district with a University."
+  }
+ },
+ {
+  "id": "wonder:venetian_arsenal",
+  "name": "Venetian Arsenal",
+  "aliases": [
+   "BUILDING_VENETIAN_ARSENAL"
+  ],
+  "summary": "Renaissance Era wonder, cost 920. Receive a second naval unit each time you train a naval unit. Must be built on a Coast tile that is adjacent to an Industrial Zone district.",
+  "fields": {
+   "era": "Renaissance Era",
+   "cost": 920,
+   "requires": [
+    "Mass Production"
+   ],
+   "placement": "on Coast and Lake; adjacent to Industrial Zone",
+   "great_person_points": [
+    "+2 Great Engineer"
+   ],
+   "effect": "Receive a second naval unit each time you train a naval unit. Must be built on a Coast tile that is adjacent to an Industrial Zone district."
+  }
+ }
+]

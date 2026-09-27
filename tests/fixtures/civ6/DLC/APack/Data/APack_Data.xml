@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hand-written test fixture. -->
+<GameData>
+	<Technologies>
+		<Update>
+			<Where TechnologyType="TECH_WRITING"/>
+			<Set Cost="60"/>
+		</Update>
+	</Technologies>
+</GameData>

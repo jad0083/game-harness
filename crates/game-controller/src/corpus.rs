@@ -951,4 +951,27 @@ dismiss_key = "esc"
         assert!(!c.search("draft colonists", 5).is_empty());
         assert!(c.get("doc:anomalies#0").is_some());
     }
+
+    #[test]
+    fn real_civ6_corpus_loads() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpora/civ6");
+        let c = GameCorpus::load_from_dir(&dir).expect("corpora/civ6 must load");
+        assert_eq!(c.manifest.metadata.id, "civ6");
+        let s = c.stats();
+        for (kind, at_least) in [("civ", 50), ("leader", 77), ("unit", 140), ("district", 30), ("tech", 77),
+                                 ("civic", 61), ("policy", 140), ("great_person", 200)] {
+            assert!(s.records.get(kind).copied().unwrap_or(0) >= at_least, "{kind}: {:?}", s.records);
+        }
+        match c.get("unit:roman_legion") {
+            Some(Item::Record(r)) => {
+                assert_eq!(r.name, "Legion");
+                assert_eq!(r.fields.get("unique_to").and_then(|v| v.as_str()), Some("Rome"));
+            }
+            _ => panic!("unit:roman_legion missing"),
+        }
+        assert_eq!(c.lookup("tech", "TECH_WRITING").map(|r| r.id.as_str()), Some("tech:writing"), "key is an alias");
+        assert_eq!(c.search("campus", 5)[0].id, "district:campus");
+        assert!(c.docs().len() >= 3, "reference docs expected");
+        assert!(!c.get_strategy().is_empty());
+    }
 }

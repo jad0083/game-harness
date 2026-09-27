@@ -1,0 +1,3631 @@
+[
+ {
+  "id": "unit:aircraft_carrier",
+  "name": "Aircraft Carrier",
+  "aliases": [
+   "UNIT_AIRCRAFT_CARRIER"
+  ],
+  "summary": "65 strength, 3 moves, cost 540; requires Combined Arms.",
+  "fields": {
+   "class": "Naval Carrier",
+   "domain": "sea",
+   "combat": 65,
+   "moves": 3,
+   "sight": 2,
+   "cost": 540,
+   "purchase": "gold",
+   "maintenance": 7,
+   "requires": [
+    "Combined Arms"
+   ],
+   "description": "Atomic era melee naval unit that can transport air units."
+  }
+ },
+ {
+  "id": "unit:american_p51",
+  "name": "P-51 Mustang",
+  "aliases": [
+   "UNIT_AMERICAN_P51"
+  ],
+  "summary": "Unique to America, replaces Fighter; 105 strength, 105 ranged, 10 moves, cost 520; requires Advanced Flight, Aerodrome.",
+  "fields": {
+   "unique_to": "America",
+   "replaces": "Fighter",
+   "class": "Air Fighter",
+   "domain": "air",
+   "combat": 105,
+   "ranged": 105,
+   "range": 5,
+   "moves": 10,
+   "sight": 4,
+   "cost": 520,
+   "purchase": "gold",
+   "maintenance": 7,
+   "resource_cost": "1 Aluminum",
+   "resource_upkeep": "1 Aluminum/turn",
+   "requires": [
+    "Advanced Flight",
+    "Aerodrome"
+   ],
+   "upgrades_to": [
+    "Jet Fighter"
+   ],
+   "description": "American unique Atomic era air unit that replaces the Fighter. Gains +5 Combat Strength against fighter aircraft, has +2 flight range, and gains +50% experience."
+  }
+ },
+ {
+  "id": "unit:american_rough_rider",
+  "name": "Rough Rider",
+  "aliases": [
+   "UNIT_AMERICAN_ROUGH_RIDER"
+  ],
+  "summary": "Unique to Teddy Roosevelt (Rough Rider) (America), replaces Cuirassier; 67 strength, 5 moves, cost 385; requires Ballistics.",
+  "fields": {
+   "unique_to": "Teddy Roosevelt (Rough Rider) (America)",
+   "replaces": "Cuirassier",
+   "class": "Heavy Cavalry",
+   "domain": "land",
+   "combat": 67,
+   "moves": 5,
+   "sight": 2,
+   "cost": 385,
+   "purchase": "gold",
+   "maintenance": 2,
+   "requires": [
+    "Ballistics"
+   ],
+   "upgrades_to": [
+    "Tank"
+   ],
+   "description": "American unique Industrial era unit when Teddy Roosevelt is their leader that replaces the Cuirassiers. Culture is earned from kills on their Capital's continent. +10 Combat Strength when fighting on Hills. Lower maintenance cost."
+  }
+ },
+ {
+  "id": "unit:antiair_gun",
+  "name": "Anti-Air Gun",
+  "aliases": [
+   "UNIT_ANTIAIR_GUN"
+  ],
+  "summary": "2 moves, cost 455; requires Advanced Ballistics.",
+  "fields": {
+   "class": "Support",
+   "domain": "land",
+   "range": 1,
+   "anti_air": 90,
+   "moves": 2,
+   "sight": 2,
+   "cost": 455,
+   "purchase": "gold",
+   "maintenance": 2,
+   "requires": [
+    "Advanced Ballistics"
+   ],
+   "upgrades_to": [
+    "Mobile SAM"
+   ],
+   "description": "Atomic era anti-air support unit. Provides cover from air attacks up to 1 hex away from the weapon."
+  }
+ },
+ {
+  "id": "unit:apostle",
+  "name": "Apostle",
+  "aliases": [
+   "UNIT_APOSTLE"
+  ],
+  "summary": "4 moves, cost 200.",
+  "fields": {
+   "class": "Religious Apostle",
+   "domain": "land",
+   "moves": 4,
+   "sight": 2,
+   "cost": 200,
+   "purchase": "faith",
+   "must_purchase": true,
+   "charges": 3,
+   "description": "May convert Citizens to their Religion and initiate theological combat with units of other Religions. Once per game may Launch Inquisition to allow the purchase of Inquisitors. Once per game may Evangelize Belief to add an additional Belief to their Religion. These uses consume the Apostle."
+  }
+ },
+ {
+  "id": "unit:arabian_mamluk",
+  "name": "Mamluk",
+  "aliases": [
+   "UNIT_ARABIAN_MAMLUK"
+  ],
+  "summary": "Unique to Arabia, replaces Knight; 50 strength, 4 moves, cost 220; requires Stirrups.",
+  "fields": {
+   "unique_to": "Arabia",
+   "replaces": "Knight",
+   "class": "Heavy Cavalry",
+   "domain": "land",
+   "combat": 50,
+   "moves": 4,
+   "sight": 2,
+   "cost": 220,
+   "purchase": "gold",
+   "maintenance": 4,
+   "resource_cost": "10 Iron",
+   "requires": [
+    "Stirrups"
+   ],
+   "upgrades_to": [
+    "Cuirassier"
+   ],
+   "description": "Arabian unique Medieval era unit that replaces the Knight. Heals at the end of every turn, even after moving or attacking."
+  }
+ },
+ {
+  "id": "unit:archaeologist",
+  "name": "Archaeologist",
+  "aliases": [
+   "UNIT_ARCHAEOLOGIST"
+  ],
+  "summary": "4 moves, cost 400; requires Natural History.",
+  "fields": {
+   "domain": "land",
+   "moves": 4,
+   "sight": 2,
+   "cost": 400,
+   "purchase": "gold",
+   "requires": [
+    "Natural History"
+   ],
+   "description": "Find and extract Artifacts from Antiquity Sites to be displayed in their home city's Museum."
+  }
+ },
+ {
+  "id": "unit:archer",
+  "name": "Archer",
+  "aliases": [
+   "UNIT_ARCHER"
+  ],
+  "summary": "15 strength, 25 ranged, 2 moves, cost 60; requires Archery.",
+  "fields": {
+   "class": "Ranged",
+   "domain": "land",
+   "combat": 15,
+   "ranged": 25,
+   "range": 2,
+   "moves": 2,
+   "sight": 2,
+   "cost": 60,
+   "purchase": "gold",
+   "maintenance": 1,
+   "requires": [
+    "Archery"
+   ],
+   "upgrades_to": [
+    "Crossbowman"
+   ],
+   "description": "First Ancient era ranged unit with a Range of 2."
+  }
+ },
+ {
+  "id": "unit:artillery",
+  "name": "Artillery",
+  "aliases": [
+   "UNIT_ARTILLERY"
+  ],
+  "summary": "60 strength, 80 bombard, 2 moves, cost 430; requires Steel.",
+  "fields": {
+   "class": "Siege",
+   "domain": "land",
+   "combat": 60,
+   "range": 2,
+   "bombard": 80,
+   "moves": 2,
+   "sight": 2,
+   "cost": 430,
+   "purchase": "gold",
+   "maintenance": 6,
+   "resource_cost": "1 Oil",
+   "resource_upkeep": "1 Oil/turn",
+   "requires": [
+    "Steel"
+   ],
+   "upgrades_to": [
+    "Rocket Artillery"
+   ],
+   "description": "Modern era siege unit, ideal for attacking cities. Cannot move and attack on the same turn unless they've earned the Expert Crew promotion."
+  }
+ },
+ {
+  "id": "unit:at_crew",
+  "name": "AT Crew",
+  "aliases": [
+   "UNIT_AT_CREW"
+  ],
+  "summary": "75 strength, 2 moves, cost 400; requires Chemistry.",
+  "fields": {
+   "class": "Anti Cavalry",
+   "domain": "land",
+   "combat": 75,
+   "moves": 2,
+   "sight": 2,
+   "cost": 400,
+   "purchase": "gold",
+   "maintenance": 4,
+   "requires": [
+    "Chemistry"
+   ],
+   "upgrades_to": [
+    "Modern AT"
+   ],
+   "description": "Modern era counter to cavalry class units."
+  }
+ },
+ {
+  "id": "unit:aztec_eagle_warrior",
+  "name": "Eagle Warrior",
+  "aliases": [
+   "UNIT_AZTEC_EAGLE_WARRIOR"
+  ],
+  "summary": "Unique to Aztec, replaces Warrior; 28 strength, 2 moves, cost 65.",
+  "fields": {
+   "unique_to": "Aztec",
+   "replaces": "Warrior",
+   "class": "Melee",
+   "domain": "land",
+   "combat": 28,
+   "moves": 2,
+   "sight": 2,
+   "cost": 65,
+   "purchase": "gold",
+   "upgrades_to": [
+    "Swordsman"
+   ],
+   "description": "Aztec unique Ancient era unit that replaces the Warrior. Has a chance to capture other civilization's military units by turning them into Builders."
+  }
+ },
+ {
+  "id": "unit:babylonian_sabum_kibittum",
+  "name": "Sabum Kibittum",
+  "aliases": [
+   "UNIT_BABYLONIAN_SABUM_KIBITTUM"
+  ],
+  "summary": "Unique to Babylon; 17 strength, 3 moves, cost 35.",
+  "fields": {
+   "unique_to": "Babylon",
+   "class": "Melee",
+   "domain": "land",
+   "combat": 17,
+   "moves": 3,
+   "sight": 3,
+   "cost": 35,
+   "purchase": "gold",
+   "upgrades_to": [
+    "Swordsman"
+   ],
+   "description": "Babylonian unique Ancient era melee unit. +17 Combat Strength against Heavy and Light Cavalry promotion class units. This unit has 3 Movement and sight."
+  }
+ },
+ {
+  "id": "unit:barbarian_horse_archer",
+  "name": "Barbarian Horse Archer",
+  "aliases": [
+   "UNIT_BARBARIAN_HORSE_ARCHER"
+  ],
+  "summary": "Unique to Barbarians; 10 strength, 15 ranged, 3 moves, cost 35.",
+  "fields": {
+   "unique_to": "Barbarians",
+   "class": "Ranged",
+   "domain": "land",
+   "combat": 10,
+   "ranged": 15,
+   "range": 1,
+   "moves": 3,
+   "sight": 2,
+   "cost": 35,
+   "purchase": "gold",
+   "maintenance": 1,
+   "description": "Ancient era primitive horseback archer."
+  }
+ },
+ {
+  "id": "unit:barbarian_horseman",
+  "name": "Barbarian Horseman",
+  "aliases": [
+   "UNIT_BARBARIAN_HORSEMAN"
+  ],
+  "summary": "Unique to Barbarians; 20 strength, 3 moves, cost 40.",
+  "fields": {
+   "unique_to": "Barbarians",
+   "class": "Light Cavalry",
+   "domain": "land",
+   "combat": 20,
+   "moves": 3,
+   "sight": 2,
+   "cost": 40,
+   "purchase": "gold",
+   "maintenance": 1,
+   "description": "Ancient era primitive horseback warrior."
+  }
+ },
+ {
+  "id": "unit:battering_ram",
+  "name": "Battering Ram",
+  "aliases": [
+   "UNIT_BATTERING_RAM"
+  ],
+  "summary": "2 moves, cost 65; requires Masonry.",
+  "fields": {
+   "class": "Support",
+   "domain": "land",
+   "moves": 2,
+   "sight": 2,
+   "cost": 65,
+   "purchase": "gold",
+   "maintenance": 1,
+   "requires": [
+    "Masonry"
+   ],
+   "upgrades_to": [
+    "Siege Tower"
+   ],
+   "obsolete_with": [
+    "Civil Engineering"
+   ],
+   "description": "Ancient era support unit. When adjacent to a city, attacking melee and anti-cavalry units do full damage to the city’s Walls. Does not affect cities with Medieval or Renaissance Walls. Ineffective against Urban Defenses."
+  }
+ },
+ {
+  "id": "unit:battleship",
+  "name": "Battleship",
+  "aliases": [
+   "UNIT_BATTLESHIP"
+  ],
+  "summary": "60 strength, 70 ranged, 5 moves, cost 430; requires Refining.",
+  "fields": {
+   "class": "Naval Ranged",
+   "domain": "sea",
+   "combat": 60,
+   "ranged": 70,
+   "range": 3,
+   "anti_air": 90,
+   "moves": 5,
+   "sight": 2,
+   "cost": 430,
+   "purchase": "gold",
+   "maintenance": 6,
+   "resource_cost": "1 Coal",
+   "resource_upkeep": "1 Coal/turn",
+   "requires": [
+    "Refining"
+   ],
+   "upgrades_to": [
+    "Missile Cruiser"
+   ],
+   "description": "Modern era naval ranged unit. Provides cover from air and nuclear attacks up to 1 tile away."
+  }
+ },
+ {
+  "id": "unit:biplane",
+  "name": "Biplane",
+  "aliases": [
+   "UNIT_BIPLANE"
+  ],
+  "summary": "80 strength, 75 ranged, 6 moves, cost 430; requires Flight, Aerodrome.",
+  "fields": {
+   "class": "Air Fighter",
+   "domain": "air",
+   "combat": 80,
+   "ranged": 75,
+   "range": 4,
+   "moves": 6,
+   "sight": 4,
+   "cost": 430,
+   "purchase": "gold",
+   "maintenance": 6,
+   "resource_cost": "1 Oil",
+   "resource_upkeep": "1 Oil/turn",
+   "requires": [
+    "Flight",
+    "Aerodrome"
+   ],
+   "upgrades_to": [
+    "Fighter"
+   ],
+   "description": "First air combat unit, available in the Modern era."
+  }
+ },
+ {
+  "id": "unit:bombard",
+  "name": "Bombard",
+  "aliases": [
+   "UNIT_BOMBARD"
+  ],
+  "summary": "45 strength, 55 bombard, 2 moves, cost 280; requires Metal Casting.",
+  "fields": {
+   "class": "Siege",
+   "domain": "land",
+   "combat": 45,
+   "range": 2,
+   "bombard": 55,
+   "moves": 2,
+   "sight": 2,
+   "cost": 280,
+   "purchase": "gold",
+   "maintenance": 4,
+   "resource_cost": "20 Niter",
+   "requires": [
+    "Metal Casting"
+   ],
+   "upgrades_to": [
+    "Artillery"
+   ],
+   "description": "Renaissance era siege unit, ideal for attacking cities. Cannot move and attack on the same turn unless they've earned the Expert Crew promotion."
+  }
+ },
+ {
+  "id": "unit:bomber",
+  "name": "Bomber",
+  "aliases": [
+   "UNIT_BOMBER"
+  ],
+  "summary": "85 strength, 110 bombard, 10 moves, cost 560; requires Advanced Flight, Aerodrome.",
+  "fields": {
+   "class": "Air Bomber",
+   "domain": "air",
+   "combat": 85,
+   "range": 10,
+   "bombard": 110,
+   "moves": 10,
+   "sight": 4,
+   "cost": 560,
+   "purchase": "gold",
+   "maintenance": 7,
+   "resource_cost": "1 Aluminum",
+   "resource_upkeep": "1 Aluminum/turn",
+   "requires": [
+    "Advanced Flight",
+    "Aerodrome"
+   ],
+   "upgrades_to": [
+    "Jet Bomber"
+   ],
+   "description": "First bomber unit, available in the Atomic era."
+  }
+ },
+ {
+  "id": "unit:brazilian_minas_geraes",
+  "name": "Minas Geraes",
+  "aliases": [
+   "UNIT_BRAZILIAN_MINAS_GERAES"
+  ],
+  "summary": "Unique to Brazil, replaces Battleship; 70 strength, 80 ranged, 5 moves, cost 430; requires Nationalism.",
+  "fields": {
+   "unique_to": "Brazil",
+   "replaces": "Battleship",
+   "class": "Naval Ranged",
+   "domain": "sea",
+   "combat": 70,
+   "ranged": 80,
+   "range": 3,
+   "anti_air": 95,
+   "moves": 5,
+   "sight": 2,
+   "cost": 430,
+   "purchase": "gold",
+   "maintenance": 6,
+   "resource_cost": "1 Coal",
+   "resource_upkeep": "1 Coal/turn",
+   "requires": [
+    "Nationalism"
+   ],
+   "upgrades_to": [
+    "Missile Cruiser"
+   ],
+   "description": "Brazilian unique Industrial era unit that replaces the Battleship. Stronger than the Battleship. Unlocked by Nationalism."
+  }
+ },
+ {
+  "id": "unit:builder",
+  "name": "Builder",
+  "aliases": [
+   "UNIT_BUILDER"
+  ],
+  "summary": "2 moves, cost 50.",
+  "fields": {
+   "domain": "land",
+   "moves": 2,
+   "sight": 2,
+   "cost": 50,
+   "purchase": "gold",
+   "charges": 3,
+   "description": "May create tile improvements, remove features like Woods or Rainforest, or Harvest some resources. Builders can be used 3 times. This can be increased through policies or wonders like the Pyramids."
+  }
+ },
+ {
+  "id": "unit:byzantine_dromon",
+  "name": "Dromon",
+  "aliases": [
+   "UNIT_BYZANTINE_DROMON"
+  ],
+  "summary": "Unique to Byzantium, replaces Quadrireme; 20 strength, 25 ranged, 3 moves, cost 120; requires Shipbuilding.",
+  "fields": {
+   "unique_to": "Byzantium",
+   "replaces": "Quadrireme",
+   "class": "Naval Ranged",
+   "domain": "sea",
+   "combat": 20,
+   "ranged": 25,
+   "range": 2,
+   "moves": 3,
+   "sight": 2,
+   "cost": 120,
+   "purchase": "gold",
+   "maintenance": 2,
+   "requires": [
+    "Shipbuilding"
+   ],
+   "upgrades_to": [
+    "Frigate"
+   ],
+   "description": "Byzantine unique Classical era unit that replaces the Quadrireme that has additional range and receives +10 Combat Strength against units."
+  }
+ },
+ {
+  "id": "unit:byzantine_tagma",
+  "name": "Tagma",
+  "aliases": [
+   "UNIT_BYZANTINE_TAGMA"
+  ],
+  "summary": "Unique to Basil II (Byzantium), replaces Knight; 50 strength, 4 moves, cost 220; requires Divine Right.",
+  "fields": {
+   "unique_to": "Basil II (Byzantium)",
+   "replaces": "Knight",
+   "class": "Heavy Cavalry",
+   "domain": "land",
+   "combat": 50,
+   "moves": 4,
+   "sight": 2,
+   "cost": 220,
+   "purchase": "gold",
+   "maintenance": 4,
+   "resource_cost": "10 Iron",
+   "requires": [
+    "Divine Right"
+   ],
+   "upgrades_to": [
+    "Cuirassier"
+   ],
+   "description": "Basil II's unique Medieval era unit that replaces the Knight. Land units within 1 tile of the Tagma receive +4 Combat Strength or Religious Strength."
+  }
+ },
+ {
+  "id": "unit:canada_mountie",
+  "name": "Mountie",
+  "aliases": [
+   "UNIT_CANADA_MOUNTIE"
+  ],
+  "summary": "Unique to Canada; 62 strength, 5 moves, cost 290; requires Conservation.",
+  "fields": {
+   "unique_to": "Canada",
+   "class": "Light Cavalry",
+   "domain": "land",
+   "combat": 62,
+   "moves": 5,
+   "sight": 4,
+   "cost": 290,
+   "purchase": "gold",
+   "maintenance": 3,
+   "requires": [
+    "Conservation"
+   ],
+   "description": "Canadian unique Modern era unit. Can create 2 National Parks. +5 Combat Strength when fighting within 2 tiles of a National Park. Additional +5 Combat Strength when fighting within 2 tiles of a National Park you own."
+  }
+ },
+ {
+  "id": "unit:caravel",
+  "name": "Caravel",
+  "aliases": [
+   "UNIT_CARAVEL"
+  ],
+  "summary": "55 strength, 4 moves, cost 240; requires Cartography.",
+  "fields": {
+   "class": "Naval Melee",
+   "domain": "sea",
+   "combat": 55,
+   "moves": 4,
+   "sight": 3,
+   "cost": 240,
+   "purchase": "gold",
+   "maintenance": 4,
+   "requires": [
+    "Cartography"
+   ],
+   "upgrades_to": [
+    "Ironclad"
+   ],
+   "description": "Fast Renaissance era exploration melee naval unit."
+  }
+ },
+ {
+  "id": "unit:catapult",
+  "name": "Catapult",
+  "aliases": [
+   "UNIT_CATAPULT"
+  ],
+  "summary": "25 strength, 35 bombard, 2 moves, cost 120; requires Engineering.",
+  "fields": {
+   "class": "Siege",
+   "domain": "land",
+   "combat": 25,
+   "range": 2,
+   "bombard": 35,
+   "moves": 2,
+   "sight": 2,
+   "cost": 120,
+   "purchase": "gold",
+   "maintenance": 2,
+   "requires": [
+    "Engineering"
+   ],
+   "upgrades_to": [
+    "Trebuchet"
+   ],
+   "description": "Classical era siege unit, ideal for attacking cities. Cannot move and attack on the same turn unless they've earned the Expert Crew promotion."
+  }
+ },
+ {
+  "id": "unit:cavalry",
+  "name": "Cavalry",
+  "aliases": [
+   "UNIT_CAVALRY"
+  ],
+  "summary": "62 strength, 5 moves, cost 330; requires Military Science.",
+  "fields": {
+   "class": "Light Cavalry",
+   "domain": "land",
+   "combat": 62,
+   "moves": 5,
+   "sight": 2,
+   "cost": 330,
+   "purchase": "gold",
+   "maintenance": 5,
+   "resource_cost": "20 Horses",
+   "requires": [
+    "Military Science"
+   ],
+   "upgrades_to": [
+    "Helicopter"
+   ],
+   "description": "Fast-moving Industrial era light cavalry unit."
+  }
+ },
+ {
+  "id": "unit:chinese_crouching_tiger",
+  "name": "Crouching Tiger",
+  "aliases": [
+   "UNIT_CHINESE_CROUCHING_TIGER"
+  ],
+  "summary": "Unique to China; 30 strength, 50 ranged, 2 moves, cost 140; requires Machinery.",
+  "fields": {
+   "unique_to": "China",
+   "class": "Ranged",
+   "domain": "land",
+   "combat": 30,
+   "ranged": 50,
+   "range": 1,
+   "moves": 2,
+   "sight": 2,
+   "cost": 140,
+   "purchase": "gold",
+   "maintenance": 3,
+   "requires": [
+    "Machinery"
+   ],
+   "upgrades_to": [
+    "Field Cannon"
+   ],
+   "description": "Chinese unique Medieval era unit. Ranged unit with a Range of 1 and high combat strength."
+  }
+ },
+ {
+  "id": "unit:colombian_llanero",
+  "name": "Llanero",
+  "aliases": [
+   "UNIT_COLOMBIAN_LLANERO"
+  ],
+  "summary": "Unique to Gran Colombia, replaces Cavalry; 62 strength, 5 moves, cost 330; requires Military Science.",
+  "fields": {
+   "unique_to": "Gran Colombia",
+   "replaces": "Cavalry",
+   "class": "Light Cavalry",
+   "domain": "land",
+   "combat": 62,
+   "moves": 5,
+   "sight": 2,
+   "cost": 330,
+   "purchase": "gold",
+   "maintenance": 2,
+   "resource_cost": "20 Horses",
+   "requires": [
+    "Military Science"
+   ],
+   "upgrades_to": [
+    "Helicopter"
+   ],
+   "description": "Gran Colombian Industrial era unique unit that replaces the Cavalry. Low maintenance cost. +2 Combat Strength for every adjacent Llanero. Fully heals when in range of a Comandante General that activates its retire ability."
+  }
+ },
+ {
+  "id": "unit:comandante_general",
+  "name": "Comandante General",
+  "aliases": [
+   "UNIT_COMANDANTE_GENERAL"
+  ],
+  "summary": "Unique to Gran Colombia; 4 moves, cost 1.",
+  "fields": {
+   "unique_to": "Gran Colombia",
+   "domain": "land",
+   "moves": 4,
+   "sight": 2,
+   "cost": 1,
+   "purchase": "none",
+   "can_train": "no",
+   "description": "A special type of Great Person only available to Simón Bolívar. Each has unique abilities, including a passive effect, and a Retire effect."
+  }
+ },
+ {
+  "id": "unit:courser",
+  "name": "Courser",
+  "aliases": [
+   "UNIT_COURSER"
+  ],
+  "summary": "46 strength, 5 moves, cost 200; requires Castles.",
+  "fields": {
+   "class": "Light Cavalry",
+   "domain": "land",
+   "combat": 46,
+   "moves": 5,
+   "sight": 2,
+   "cost": 200,
+   "purchase": "gold",
+   "maintenance": 3,
+   "resource_cost": "20 Horses",
+   "requires": [
+    "Castles"
+   ],
+   "upgrades_to": [
+    "Cavalry"
+   ],
+   "description": "Medieval Era light cavalry unit."
+  }
+ },
+ {
+  "id": "unit:cree_okihtcitaw",
+  "name": "Okihtcitaw",
+  "aliases": [
+   "UNIT_CREE_OKIHTCITAW"
+  ],
+  "summary": "Unique to Cree, replaces Scout; 20 strength, 3 moves, cost 40.",
+  "fields": {
+   "unique_to": "Cree",
+   "replaces": "Scout",
+   "class": "Recon",
+   "domain": "land",
+   "combat": 20,
+   "moves": 3,
+   "sight": 2,
+   "cost": 40,
+   "purchase": "gold",
+   "upgrades_to": [
+    "Skirmisher"
+   ],
+   "description": "Cree unique Ancient era unit that replaces the Scout. Strong reconnaissance unit. Starts with 1 free promotion."
+  }
+ },
+ {
+  "id": "unit:crossbowman",
+  "name": "Crossbowman",
+  "aliases": [
+   "UNIT_CROSSBOWMAN"
+  ],
+  "summary": "30 strength, 40 ranged, 2 moves, cost 180; requires Machinery.",
+  "fields": {
+   "class": "Ranged",
+   "domain": "land",
+   "combat": 30,
+   "ranged": 40,
+   "range": 2,
+   "moves": 2,
+   "sight": 2,
+   "cost": 180,
+   "purchase": "gold",
+   "maintenance": 3,
+   "requires": [
+    "Machinery"
+   ],
+   "upgrades_to": [
+    "Field Cannon"
+   ],
+   "description": "Medieval era ranged unit."
+  }
+ },
+ {
+  "id": "unit:cuirassier",
+  "name": "Cuirassier",
+  "aliases": [
+   "UNIT_CUIRASSIER"
+  ],
+  "summary": "64 strength, 4 moves, cost 330; requires Ballistics.",
+  "fields": {
+   "class": "Heavy Cavalry",
+   "domain": "land",
+   "combat": 64,
+   "moves": 4,
+   "sight": 2,
+   "cost": 330,
+   "purchase": "gold",
+   "maintenance": 5,
+   "resource_cost": "20 Iron",
+   "requires": [
+    "Ballistics"
+   ],
+   "upgrades_to": [
+    "Tank"
+   ],
+   "description": "Industrial Era heavy cavalry unit."
+  }
+ },
+ {
+  "id": "unit:de_zeven_provincien",
+  "name": "De Zeven Provinciën",
+  "aliases": [
+   "UNIT_DE_ZEVEN_PROVINCIEN"
+  ],
+  "summary": "Unique to Netherlands, replaces Frigate; 50 strength, 60 ranged, 4 moves, cost 280; requires Square Rigging.",
+  "fields": {
+   "unique_to": "Netherlands",
+   "replaces": "Frigate",
+   "class": "Naval Ranged",
+   "domain": "sea",
+   "combat": 50,
+   "ranged": 60,
+   "range": 2,
+   "moves": 4,
+   "sight": 2,
+   "cost": 280,
+   "purchase": "gold",
+   "maintenance": 5,
+   "resource_cost": "10 Niter",
+   "requires": [
+    "Square Rigging"
+   ],
+   "upgrades_to": [
+    "Battleship"
+   ],
+   "description": "Netherlands unique Renaissance Era unit that replaces the Frigate. +7 Combat Strength when attacking defensible districts."
+  }
+ },
+ {
+  "id": "unit:destroyer",
+  "name": "Destroyer",
+  "aliases": [
+   "UNIT_DESTROYER"
+  ],
+  "summary": "85 strength, 4 moves, cost 540; requires Combined Arms.",
+  "fields": {
+   "class": "Naval Melee",
+   "domain": "sea",
+   "combat": 85,
+   "anti_air": 90,
+   "moves": 4,
+   "sight": 3,
+   "cost": 540,
+   "purchase": "gold",
+   "maintenance": 7,
+   "resource_cost": "1 Oil",
+   "resource_upkeep": "1 Oil/turn",
+   "requires": [
+    "Combined Arms"
+   ],
+   "description": "Strongest melee naval unit. Reveals Naval Raiders within sight range."
+  }
+ },
+ {
+  "id": "unit:digger",
+  "name": "Digger",
+  "aliases": [
+   "UNIT_DIGGER"
+  ],
+  "summary": "Unique to Australia, replaces Infantry; 78 strength, 2 moves, cost 430; requires Replaceable Parts.",
+  "fields": {
+   "unique_to": "Australia",
+   "replaces": "Infantry",
+   "class": "Melee",
+   "domain": "land",
+   "combat": 78,
+   "moves": 2,
+   "sight": 2,
+   "cost": 430,
+   "purchase": "gold",
+   "maintenance": 6,
+   "requires": [
+    "Replaceable Parts"
+   ],
+   "upgrades_to": [
+    "Mechanized Infantry"
+   ],
+   "description": "Australian unique Modern era unit that replaces Infantry. +10 Combat Strength when fighting on Coastal tiles. +5 Combat Strength when fighting on Neutral or Foreign Territory."
+  }
+ },
+ {
+  "id": "unit:drone",
+  "name": "Drone",
+  "aliases": [
+   "UNIT_DRONE"
+  ],
+  "summary": "3 moves, cost 420; requires Computers.",
+  "fields": {
+   "class": "Support",
+   "domain": "land",
+   "moves": 3,
+   "sight": 5,
+   "cost": 420,
+   "purchase": "gold",
+   "maintenance": 3,
+   "requires": [
+    "Computers"
+   ],
+   "description": "Atomic era support unit. Adds +1 Range and +5 Bombard Strength to Siege class units within 1 hex."
+  }
+ },
+ {
+  "id": "unit:egyptian_chariot_archer",
+  "name": "Maryannu Chariot Archer",
+  "aliases": [
+   "UNIT_EGYPTIAN_CHARIOT_ARCHER"
+  ],
+  "summary": "Unique to Egypt; 25 strength, 35 ranged, 2 moves, cost 90; requires Wheel.",
+  "fields": {
+   "unique_to": "Egypt",
+   "class": "Ranged",
+   "domain": "land",
+   "combat": 25,
+   "ranged": 35,
+   "range": 2,
+   "moves": 2,
+   "sight": 2,
+   "cost": 90,
+   "purchase": "gold",
+   "maintenance": 1,
+   "requires": [
+    "Wheel"
+   ],
+   "upgrades_to": [
+    "Crossbowman"
+   ],
+   "description": "Egyptian unique Ancient era ranged unit. 4 Movement when starting in open terrain."
+  }
+ },
+ {
+  "id": "unit:english_redcoat",
+  "name": "Redcoat",
+  "aliases": [
+   "UNIT_ENGLISH_REDCOAT"
+  ],
+  "summary": "Unique to Victoria (Age of Empire) (England), replaces Line Infantry; 70 strength, 2 moves, cost 360; requires Military Science.",
+  "fields": {
+   "unique_to": "Victoria (Age of Empire) (England)",
+   "replaces": "Line Infantry",
+   "class": "Melee",
+   "domain": "land",
+   "combat": 70,
+   "moves": 2,
+   "sight": 2,
+   "cost": 360,
+   "purchase": "gold",
+   "maintenance": 5,
+   "resource_cost": "10 Niter",
+   "requires": [
+    "Military Science"
+   ],
+   "upgrades_to": [
+    "Infantry"
+   ],
+   "description": "English unique Industrial era unit when Victoria is their leader that replaces the Line Infantry. +10 Combat Strength when fighting on a continent other than that of your capital's. No disembark cost."
+  }
+ },
+ {
+  "id": "unit:english_seadog",
+  "name": "Sea Dog",
+  "aliases": [
+   "UNIT_ENGLISH_SEADOG"
+  ],
+  "summary": "Unique to England, replaces Privateer; 40 strength, 55 ranged, 4 moves, cost 280; requires Mercantilism.",
+  "fields": {
+   "unique_to": "England",
+   "replaces": "Privateer",
+   "class": "Naval Raider",
+   "domain": "sea",
+   "combat": 40,
+   "ranged": 55,
+   "range": 2,
+   "moves": 4,
+   "sight": 2,
+   "cost": 280,
+   "purchase": "gold",
+   "maintenance": 4,
+   "requires": [
+    "Mercantilism"
+   ],
+   "upgrades_to": [
+    "Submarine"
+   ],
+   "description": "English unique Renaissance era naval unit that replaces the Privateer. Has a chance to capture defeated enemy ships. Can only be seen by other Naval Raiders unless adjacent to it. Reveals Naval Raiders within sight range."
+  }
+ },
+ {
+  "id": "unit:ethiopian_oromo_cavalry",
+  "name": "Oromo Cavalry",
+  "aliases": [
+   "UNIT_ETHIOPIAN_OROMO_CAVALRY"
+  ],
+  "summary": "Unique to Ethiopia, replaces Courser; 48 strength, 5 moves, cost 200; requires Castles.",
+  "fields": {
+   "unique_to": "Ethiopia",
+   "replaces": "Courser",
+   "class": "Light Cavalry",
+   "domain": "land",
+   "combat": 48,
+   "moves": 5,
+   "sight": 3,
+   "cost": 200,
+   "purchase": "gold",
+   "maintenance": 3,
+   "resource_cost": "10 Horses",
+   "requires": [
+    "Castles"
+   ],
+   "upgrades_to": [
+    "Cavalry"
+   ],
+   "description": "Ethiopian unique Medieval era light cavalry unit. Stronger and greater sight than the Courser that it replaces. Receives no Movement penalty from moving in Hills."
+  }
+ },
+ {
+  "id": "unit:field_cannon",
+  "name": "Field Cannon",
+  "aliases": [
+   "UNIT_FIELD_CANNON"
+  ],
+  "summary": "50 strength, 60 ranged, 2 moves, cost 330; requires Ballistics.",
+  "fields": {
+   "class": "Ranged",
+   "domain": "land",
+   "combat": 50,
+   "ranged": 60,
+   "range": 2,
+   "moves": 2,
+   "sight": 2,
+   "cost": 330,
+   "purchase": "gold",
+   "maintenance": 5,
+   "requires": [
+    "Ballistics"
+   ],
+   "upgrades_to": [
+    "Machine Gun"
+   ],
+   "description": "Industrial era ranged unit."
+  }
+ },
+ {
+  "id": "unit:fighter",
+  "name": "Fighter",
+  "aliases": [
+   "UNIT_FIGHTER"
+  ],
+  "summary": "100 strength, 100 ranged, 8 moves, cost 520; requires Advanced Flight, Aerodrome.",
+  "fields": {
+   "class": "Air Fighter",
+   "domain": "air",
+   "combat": 100,
+   "ranged": 100,
+   "range": 5,
+   "moves": 8,
+   "sight": 4,
+   "cost": 520,
+   "purchase": "gold",
+   "maintenance": 7,
+   "resource_cost": "1 Aluminum",
+   "resource_upkeep": "1 Aluminum/turn",
+   "requires": [
+    "Advanced Flight",
+    "Aerodrome"
+   ],
+   "upgrades_to": [
+    "Jet Fighter"
+   ],
+   "description": "Atomic era Biplane upgrade."
+  }
+ },
+ {
+  "id": "unit:french_garde_imperiale",
+  "name": "Garde Impériale",
+  "aliases": [
+   "UNIT_FRENCH_GARDE_IMPERIALE"
+  ],
+  "summary": "Unique to France, replaces Line Infantry; 70 strength, 2 moves, cost 360; requires Military Science.",
+  "fields": {
+   "unique_to": "France",
+   "replaces": "Line Infantry",
+   "class": "Melee",
+   "domain": "land",
+   "combat": 70,
+   "moves": 2,
+   "sight": 2,
+   "cost": 360,
+   "purchase": "gold",
+   "maintenance": 5,
+   "resource_cost": "10 Niter",
+   "requires": [
+    "Military Science"
+   ],
+   "upgrades_to": [
+    "Infantry"
+   ],
+   "description": "French unique Industrial era melee unit that replaces the Line Infantry. +10 Combat Strength when fighting on your capital's continent. Great General points for killing units."
+  }
+ },
+ {
+  "id": "unit:frigate",
+  "name": "Frigate",
+  "aliases": [
+   "UNIT_FRIGATE"
+  ],
+  "summary": "45 strength, 55 ranged, 4 moves, cost 280; requires Square Rigging.",
+  "fields": {
+   "class": "Naval Ranged",
+   "domain": "sea",
+   "combat": 45,
+   "ranged": 55,
+   "range": 2,
+   "moves": 4,
+   "sight": 2,
+   "cost": 280,
+   "purchase": "gold",
+   "maintenance": 5,
+   "resource_cost": "20 Niter",
+   "requires": [
+    "Square Rigging"
+   ],
+   "upgrades_to": [
+    "Battleship"
+   ],
+   "description": "Renaissance era ranged naval unit."
+  }
+ },
+ {
+  "id": "unit:galley",
+  "name": "Galley",
+  "aliases": [
+   "UNIT_GALLEY"
+  ],
+  "summary": "30 strength, 3 moves, cost 65; requires Sailing.",
+  "fields": {
+   "class": "Naval Melee",
+   "domain": "sea",
+   "combat": 30,
+   "moves": 3,
+   "sight": 2,
+   "cost": 65,
+   "purchase": "gold",
+   "maintenance": 1,
+   "requires": [
+    "Sailing"
+   ],
+   "upgrades_to": [
+    "Caravel"
+   ],
+   "description": "Ancient era melee naval combat unit. Can only operate on Coastal waters until Cartography is researched."
+  }
+ },
+ {
+  "id": "unit:gaul_gaesatae",
+  "name": "Gaesatae",
+  "aliases": [
+   "UNIT_GAUL_GAESATAE"
+  ],
+  "summary": "Unique to Gaul, replaces Warrior; 20 strength, 2 moves, cost 60.",
+  "fields": {
+   "unique_to": "Gaul",
+   "replaces": "Warrior",
+   "class": "Melee",
+   "domain": "land",
+   "combat": 20,
+   "moves": 2,
+   "sight": 2,
+   "cost": 60,
+   "purchase": "gold",
+   "upgrades_to": [
+    "Man-At-Arms"
+   ],
+   "description": "Gallic unique Ancient era unit that replaces the Warrior. This unit has increased cost and receives +10 Combat Strength when fighting units with a higher base Combat Strength. +5 Combat Strength vs. district defenses."
+  }
+ },
+ {
+  "id": "unit:georgian_khevsureti",
+  "name": "Khevsur",
+  "aliases": [
+   "UNIT_GEORGIAN_KHEVSURETI"
+  ],
+  "summary": "Unique to Georgia, replaces Man-At-Arms; 48 strength, 2 moves, cost 160; requires Military Tactics.",
+  "fields": {
+   "unique_to": "Georgia",
+   "replaces": "Man-At-Arms",
+   "class": "Melee",
+   "domain": "land",
+   "combat": 48,
+   "moves": 2,
+   "sight": 2,
+   "cost": 160,
+   "purchase": "gold",
+   "maintenance": 3,
+   "resource_cost": "10 Iron",
+   "requires": [
+    "Military Tactics"
+   ],
+   "upgrades_to": [
+    "Musketman"
+   ],
+   "description": "Georgian unique Medieval Era unit that replaces the Man-At-Arms. +7 Combat Strength bonus when fighting in hill terrain. No Movement penalty in hill terrain."
+  }
+ },
+ {
+  "id": "unit:german_uboat",
+  "name": "U-Boat",
+  "aliases": [
+   "UNIT_GERMAN_UBOAT"
+  ],
+  "summary": "Unique to Germany, replaces Submarine; 65 strength, 75 ranged, 3 moves, cost 430; requires Electricity.",
+  "fields": {
+   "unique_to": "Germany",
+   "replaces": "Submarine",
+   "class": "Naval Raider",
+   "domain": "sea",
+   "combat": 65,
+   "ranged": 75,
+   "range": 2,
+   "moves": 3,
+   "sight": 3,
+   "cost": 430,
+   "purchase": "gold",
+   "maintenance": 6,
+   "requires": [
+    "Electricity"
+   ],
+   "upgrades_to": [
+    "Nuclear Submarine"
+   ],
+   "description": "German unique Modern era naval unit that replaces the Submarine. Cheaper to produce, +1 Sight, and +10 Combat Strength when fighting on Ocean tiles. Able to reveal other stealthed units."
+  }
+ },
+ {
+  "id": "unit:giant_death_robot",
+  "name": "Giant Death Robot",
+  "aliases": [
+   "UNIT_GIANT_DEATH_ROBOT"
+  ],
+  "summary": "130 strength, 120 ranged, 5 moves, cost 1500; requires Robotics.",
+  "fields": {
+   "class": "GDR",
+   "domain": "land",
+   "combat": 130,
+   "ranged": 120,
+   "range": 3,
+   "anti_air": 90,
+   "moves": 5,
+   "sight": 3,
+   "cost": 1500,
+   "purchase": "gold",
+   "maintenance": 15,
+   "resource_cost": "1 Uranium",
+   "resource_upkeep": "3 Uranium/turn",
+   "requires": [
+    "Robotics"
+   ],
+   "description": "Information Era Super-Unit. Able to move and fight in water. Resistant to Weapons of Mass Destruction. Combat abilities can be upgraded by researching future technologies."
+  }
+ },
+ {
+  "id": "unit:great_admiral",
+  "name": "Great Admiral",
+  "aliases": [
+   "UNIT_GREAT_ADMIRAL"
+  ],
+  "summary": "4 moves, cost 1.",
+  "fields": {
+   "domain": "sea",
+   "moves": 4,
+   "sight": 2,
+   "cost": 1,
+   "purchase": "none",
+   "can_train": "no",
+   "description": "Each Great Admiral has unique abilities, including a passive effect, and a Retire effect. Visit the Great People panel to learn more, and track your progress."
+  }
+ },
+ {
+  "id": "unit:great_artist",
+  "name": "Great Artist",
+  "aliases": [
+   "UNIT_GREAT_ARTIST"
+  ],
+  "summary": "4 moves, cost 1.",
+  "fields": {
+   "domain": "land",
+   "moves": 4,
+   "sight": 2,
+   "cost": 1,
+   "purchase": "none",
+   "can_train": "no",
+   "description": "Each Great Artist generates a Great Work of Art when activated. Visit the Great People panel to learn more, and track your progress."
+  }
+ },
+ {
+  "id": "unit:great_engineer",
+  "name": "Great Engineer",
+  "aliases": [
+   "UNIT_GREAT_ENGINEER"
+  ],
+  "summary": "4 moves, cost 1.",
+  "fields": {
+   "domain": "land",
+   "moves": 4,
+   "sight": 2,
+   "cost": 1,
+   "purchase": "none",
+   "can_train": "no",
+   "description": "Each Great Engineer has unique abilities when activated. Visit the Great People panel to learn more, and track your progress."
+  }
+ },
+ {
+  "id": "unit:great_general",
+  "name": "Great General",
+  "aliases": [
+   "UNIT_GREAT_GENERAL"
+  ],
+  "summary": "4 moves, cost 1.",
+  "fields": {
+   "domain": "land",
+   "moves": 4,
+   "sight": 2,
+   "cost": 1,
+   "purchase": "none",
+   "can_train": "no",
+   "description": "Each Great General has unique abilities, including a passive effect, and a Retire effect. Visit the Great People panel to learn more, and track your progress."
+  }
+ },
+ {
+  "id": "unit:great_merchant",
+  "name": "Great Merchant",
+  "aliases": [
+   "UNIT_GREAT_MERCHANT"
+  ],
+  "summary": "4 moves, cost 1.",
+  "fields": {
+   "domain": "land",
+   "moves": 4,
+   "sight": 2,
+   "cost": 1,
+   "purchase": "none",
+   "can_train": "no",
+   "description": "Each Great Merchant has unique abilities when activated. Visit the Great People panel to learn more, and track your progress."
+  }
+ },
+ {
+  "id": "unit:great_musician",
+  "name": "Great Musician",
+  "aliases": [
+   "UNIT_GREAT_MUSICIAN"
+  ],
+  "summary": "4 moves, cost 1.",
+  "fields": {
+   "domain": "land",
+   "moves": 4,
+   "sight": 2,
+   "cost": 1,
+   "purchase": "none",
+   "can_train": "no",
+   "description": "Each Great Musician generates a Great Work of Music when activated. Visit the Great People panel to learn more, and track your progress."
+  }
+ },
+ {
+  "id": "unit:great_prophet",
+  "name": "Great Prophet",
+  "aliases": [
+   "UNIT_GREAT_PROPHET"
+  ],
+  "summary": "4 moves, cost 1.",
+  "fields": {
+   "domain": "land",
+   "moves": 4,
+   "sight": 2,
+   "cost": 1,
+   "purchase": "none",
+   "can_train": "no",
+   "description": "Great Prophets can found a Religion when activated. Visit the Great People panel to learn more, and track your progress."
+  }
+ },
+ {
+  "id": "unit:great_scientist",
+  "name": "Great Scientist",
+  "aliases": [
+   "UNIT_GREAT_SCIENTIST"
+  ],
+  "summary": "4 moves, cost 1.",
+  "fields": {
+   "domain": "land",
+   "moves": 4,
+   "sight": 2,
+   "cost": 1,
+   "purchase": "none",
+   "can_train": "no",
+   "description": "Each Great Scientist has unique abilities when activated. Visit the Great People panel to learn more, and track your progress."
+  }
+ },
+ {
+  "id": "unit:great_writer",
+  "name": "Great Writer",
+  "aliases": [
+   "UNIT_GREAT_WRITER"
+  ],
+  "summary": "4 moves, cost 1.",
+  "fields": {
+   "domain": "land",
+   "moves": 4,
+   "sight": 2,
+   "cost": 1,
+   "purchase": "none",
+   "can_train": "no",
+   "description": "Each Great Writer generates a Great Work of Writing when activated. Visit the Great People panel to learn more, and track your progress."
+  }
+ },
+ {
+  "id": "unit:greek_hoplite",
+  "name": "Hoplite",
+  "aliases": [
+   "UNIT_GREEK_HOPLITE"
+  ],
+  "summary": "Unique to Greece, replaces Spearman; 28 strength, 2 moves, cost 65; requires Bronze Working.",
+  "fields": {
+   "unique_to": "Greece",
+   "replaces": "Spearman",
+   "class": "Anti Cavalry",
+   "domain": "land",
+   "combat": 28,
+   "moves": 2,
+   "sight": 2,
+   "cost": 65,
+   "purchase": "gold",
+   "maintenance": 1,
+   "requires": [
+    "Bronze Working"
+   ],
+   "upgrades_to": [
+    "Pikeman"
+   ],
+   "description": "Greek unique Ancient era anti-cavalry unit that replaces the Spearman. +10 Combat Strength if there is at least one adjacent Hoplite unit."
+  }
+ },
+ {
+  "id": "unit:guru",
+  "name": "Guru",
+  "aliases": [
+   "UNIT_GURU"
+  ],
+  "summary": "4 moves, cost 120.",
+  "fields": {
+   "domain": "land",
+   "moves": 4,
+   "sight": 2,
+   "cost": 120,
+   "purchase": "faith",
+   "must_purchase": true,
+   "description": "May use a charge to heal itself and all adjacent friendly religious units. May not initiate theological combat with units of other Religions (but can defend)."
+  }
+ },
+ {
+  "id": "unit:heavy_chariot",
+  "name": "Heavy Chariot",
+  "aliases": [
+   "UNIT_HEAVY_CHARIOT"
+  ],
+  "summary": "28 strength, 2 moves, cost 65; requires Wheel.",
+  "fields": {
+   "class": "Heavy Cavalry",
+   "domain": "land",
+   "combat": 28,
+   "moves": 2,
+   "sight": 2,
+   "cost": 65,
+   "purchase": "gold",
+   "maintenance": 1,
+   "requires": [
+    "Wheel"
+   ],
+   "upgrades_to": [
+    "Knight"
+   ],
+   "description": "Hard-hitting, Ancient era heavy cavalry unit. Gains 1 bonus Movement if it begins a turn on a flat tile with no Woods, Rainforest, or Hills."
+  }
+ },
+ {
+  "id": "unit:helicopter",
+  "name": "Helicopter",
+  "aliases": [
+   "UNIT_HELICOPTER"
+  ],
+  "summary": "86 strength, 4 moves, cost 600; requires Synthetic Materials.",
+  "fields": {
+   "class": "Light Cavalry",
+   "domain": "land",
+   "combat": 86,
+   "moves": 4,
+   "sight": 3,
+   "cost": 600,
+   "purchase": "gold",
+   "maintenance": 7,
+   "resource_cost": "1 Aluminum",
+   "resource_upkeep": "1 Aluminum/turn",
+   "requires": [
+    "Synthetic Materials"
+   ],
+   "description": "Fast-moving Atomic era light cavalry unit."
+  }
+ },
+ {
+  "id": "unit:horseman",
+  "name": "Horseman",
+  "aliases": [
+   "UNIT_HORSEMAN"
+  ],
+  "summary": "36 strength, 4 moves, cost 80; requires Horseback Riding.",
+  "fields": {
+   "class": "Light Cavalry",
+   "domain": "land",
+   "combat": 36,
+   "moves": 4,
+   "sight": 2,
+   "cost": 80,
+   "purchase": "gold",
+   "maintenance": 2,
+   "resource_cost": "20 Horses",
+   "requires": [
+    "Horseback Riding"
+   ],
+   "upgrades_to": [
+    "Courser"
+   ],
+   "description": "Fast-moving Classical era light cavalry unit."
+  }
+ },
+ {
+  "id": "unit:hungary_black_army",
+  "name": "Black Army",
+  "aliases": [
+   "UNIT_HUNGARY_BLACK_ARMY"
+  ],
+  "summary": "Unique to Matthias Corvinus (Hungary), replaces Courser; 49 strength, 5 moves, cost 205; requires Castles.",
+  "fields": {
+   "unique_to": "Matthias Corvinus (Hungary)",
+   "replaces": "Courser",
+   "class": "Light Cavalry",
+   "domain": "land",
+   "combat": 49,
+   "moves": 5,
+   "sight": 2,
+   "cost": 205,
+   "purchase": "gold",
+   "maintenance": 3,
+   "resource_cost": "10 Horses",
+   "requires": [
+    "Castles"
+   ],
+   "upgrades_to": [
+    "Cavalry"
+   ],
+   "description": "Hungarian unique Medieval Era unit that replaces the Courser. +3 Combat Strength for each adjacent Levied unit."
+  }
+ },
+ {
+  "id": "unit:hungary_huszar",
+  "name": "Huszár",
+  "aliases": [
+   "UNIT_HUNGARY_HUSZAR"
+  ],
+  "summary": "Unique to Hungary, replaces Cavalry; 65 strength, 5 moves, cost 335; requires Military Science.",
+  "fields": {
+   "unique_to": "Hungary",
+   "replaces": "Cavalry",
+   "class": "Light Cavalry",
+   "domain": "land",
+   "combat": 65,
+   "moves": 5,
+   "sight": 2,
+   "cost": 335,
+   "purchase": "gold",
+   "maintenance": 5,
+   "resource_cost": "10 Horses",
+   "requires": [
+    "Military Science"
+   ],
+   "upgrades_to": [
+    "Helicopter"
+   ],
+   "description": "Hungarian unique Industrial era unit that replaces Cavalry. +3 Combat Strength for every active Alliance."
+  }
+ },
+ {
+  "id": "unit:inca_warakaq",
+  "name": "Warak’aq",
+  "aliases": [
+   "UNIT_INCA_WARAKAQ"
+  ],
+  "summary": "Unique to Inca, replaces Skirmisher; 20 strength, 40 ranged, 3 moves, cost 165; requires Machinery.",
+  "fields": {
+   "unique_to": "Inca",
+   "replaces": "Skirmisher",
+   "class": "Recon",
+   "domain": "land",
+   "combat": 20,
+   "ranged": 40,
+   "range": 1,
+   "moves": 3,
+   "sight": 2,
+   "cost": 165,
+   "purchase": "gold",
+   "maintenance": 2,
+   "requires": [
+    "Machinery"
+   ],
+   "upgrades_to": [
+    "Ranger"
+   ],
+   "description": "Incan unique Medieval Era unit that replaces the Skirmisher. Stronger at ranged combat than the Skirmisher and +1 additional attack per turn."
+  }
+ },
+ {
+  "id": "unit:indian_varu",
+  "name": "Varu",
+  "aliases": [
+   "UNIT_INDIAN_VARU"
+  ],
+  "summary": "Unique to India; 40 strength, 2 moves, cost 120; requires Horseback Riding.",
+  "fields": {
+   "unique_to": "India",
+   "class": "Heavy Cavalry",
+   "domain": "land",
+   "combat": 40,
+   "moves": 2,
+   "sight": 3,
+   "cost": 120,
+   "purchase": "gold",
+   "maintenance": 2,
+   "requires": [
+    "Horseback Riding"
+   ],
+   "upgrades_to": [
+    "Cuirassier"
+   ],
+   "description": "Indian unique Classical era heavy cavalry unit. Adjacent enemy units receive -5 Combat Strength."
+  }
+ },
+ {
+  "id": "unit:indonesian_jong",
+  "name": "Jong",
+  "aliases": [
+   "UNIT_INDONESIAN_JONG"
+  ],
+  "summary": "Unique to Indonesia, replaces Frigate; 45 strength, 55 ranged, 5 moves, cost 300; requires Mercenaries.",
+  "fields": {
+   "unique_to": "Indonesia",
+   "replaces": "Frigate",
+   "class": "Naval Ranged",
+   "domain": "sea",
+   "combat": 45,
+   "ranged": 55,
+   "range": 2,
+   "moves": 5,
+   "sight": 2,
+   "cost": 300,
+   "purchase": "gold",
+   "maintenance": 5,
+   "requires": [
+    "Mercenaries"
+   ],
+   "upgrades_to": [
+    "Battleship"
+   ],
+   "description": "Indonesian unique Medieval era naval unit that replaces the Frigate. Formation units all inherit escort's Movement speed and +5 Combat Strength when in a formation."
+  }
+ },
+ {
+  "id": "unit:infantry",
+  "name": "Infantry",
+  "aliases": [
+   "UNIT_INFANTRY"
+  ],
+  "summary": "75 strength, 2 moves, cost 430; requires Replaceable Parts.",
+  "fields": {
+   "class": "Melee",
+   "domain": "land",
+   "combat": 75,
+   "moves": 2,
+   "sight": 2,
+   "cost": 430,
+   "purchase": "gold",
+   "maintenance": 6,
+   "resource_cost": "1 Oil",
+   "resource_upkeep": "1 Oil/turn",
+   "requires": [
+    "Replaceable Parts"
+   ],
+   "upgrades_to": [
+    "Mechanized Infantry"
+   ],
+   "description": "Modern era melee unit."
+  }
+ },
+ {
+  "id": "unit:inquisitor",
+  "name": "Inquisitor",
+  "aliases": [
+   "UNIT_INQUISITOR"
+  ],
+  "summary": "4 moves, cost 75.",
+  "fields": {
+   "class": "Religious Inquisitor",
+   "domain": "land",
+   "moves": 4,
+   "sight": 2,
+   "cost": 75,
+   "purchase": "faith",
+   "must_purchase": true,
+   "charges": 3,
+   "description": "May reduce the presence of other Religions in their territory by 75%, and initiate theological combat with units of other Religions."
+  }
+ },
+ {
+  "id": "unit:ironclad",
+  "name": "Ironclad",
+  "aliases": [
+   "UNIT_IRONCLAD"
+  ],
+  "summary": "70 strength, 5 moves, cost 380; requires Steam Power.",
+  "fields": {
+   "class": "Naval Melee",
+   "domain": "sea",
+   "combat": 70,
+   "moves": 5,
+   "sight": 3,
+   "cost": 380,
+   "purchase": "gold",
+   "maintenance": 5,
+   "resource_cost": "1 Coal",
+   "resource_upkeep": "1 Coal/turn",
+   "requires": [
+    "Steam Power"
+   ],
+   "upgrades_to": [
+    "Destroyer"
+   ],
+   "description": "Powerful Industrial era armored melee naval unit."
+  }
+ },
+ {
+  "id": "unit:japanese_samurai",
+  "name": "Samurai",
+  "aliases": [
+   "UNIT_JAPANESE_SAMURAI"
+  ],
+  "summary": "Unique to Japan, replaces Man-At-Arms; 48 strength, 2 moves, cost 160; requires Feudalism.",
+  "fields": {
+   "unique_to": "Japan",
+   "replaces": "Man-At-Arms",
+   "class": "Melee",
+   "domain": "land",
+   "combat": 48,
+   "moves": 2,
+   "sight": 2,
+   "cost": 160,
+   "purchase": "gold",
+   "maintenance": 3,
+   "resource_cost": "10 Iron",
+   "requires": [
+    "Feudalism"
+   ],
+   "upgrades_to": [
+    "Musketman"
+   ],
+   "description": "Japanese unique Medieval era melee unit that replaces the Man-At-Arms. Does not suffer combat penalties when damaged."
+  }
+ },
+ {
+  "id": "unit:jet_bomber",
+  "name": "Jet Bomber",
+  "aliases": [
+   "UNIT_JET_BOMBER"
+  ],
+  "summary": "90 strength, 120 bombard, 15 moves, cost 700; requires Stealth Technology, Aerodrome.",
+  "fields": {
+   "class": "Air Bomber",
+   "domain": "air",
+   "combat": 90,
+   "range": 15,
+   "bombard": 120,
+   "moves": 15,
+   "sight": 5,
+   "cost": 700,
+   "purchase": "gold",
+   "maintenance": 8,
+   "resource_cost": "1 Aluminum",
+   "resource_upkeep": "1 Aluminum/turn",
+   "requires": [
+    "Stealth Technology",
+    "Aerodrome"
+   ],
+   "description": "Information era Bomber upgrade."
+  }
+ },
+ {
+  "id": "unit:jet_fighter",
+  "name": "Jet Fighter",
+  "aliases": [
+   "UNIT_JET_FIGHTER"
+  ],
+  "summary": "110 strength, 110 ranged, 10 moves, cost 650; requires Lasers, Aerodrome.",
+  "fields": {
+   "class": "Air Fighter",
+   "domain": "air",
+   "combat": 110,
+   "ranged": 110,
+   "range": 6,
+   "moves": 10,
+   "sight": 5,
+   "cost": 650,
+   "purchase": "gold",
+   "maintenance": 8,
+   "resource_cost": "1 Aluminum",
+   "resource_upkeep": "1 Aluminum/turn",
+   "requires": [
+    "Lasers",
+    "Aerodrome"
+   ],
+   "description": "Information era Fighter upgrade."
+  }
+ },
+ {
+  "id": "unit:khmer_domrey",
+  "name": "Domrey",
+  "aliases": [
+   "UNIT_KHMER_DOMREY"
+  ],
+  "summary": "Unique to Khmer, replaces Trebuchet; 40 strength, 50 bombard, 2 moves, cost 200; requires Military Engineering.",
+  "fields": {
+   "unique_to": "Khmer",
+   "replaces": "Trebuchet",
+   "class": "Siege",
+   "domain": "land",
+   "combat": 40,
+   "range": 2,
+   "bombard": 50,
+   "moves": 2,
+   "sight": 2,
+   "cost": 200,
+   "purchase": "gold",
+   "maintenance": 3,
+   "requires": [
+    "Military Engineering"
+   ],
+   "upgrades_to": [
+    "Bombard"
+   ],
+   "description": "Khmer unique Medieval era siege unit that replaces the Trebuchet. This unit has a higher Combat Strength Melee and Range Strength than the Trebuchet. It can move and shoot in the same turn and exerts zone of control."
+  }
+ },
+ {
+  "id": "unit:knight",
+  "name": "Knight",
+  "aliases": [
+   "UNIT_KNIGHT"
+  ],
+  "summary": "50 strength, 4 moves, cost 220; requires Stirrups.",
+  "fields": {
+   "class": "Heavy Cavalry",
+   "domain": "land",
+   "combat": 50,
+   "moves": 4,
+   "sight": 2,
+   "cost": 220,
+   "purchase": "gold",
+   "maintenance": 4,
+   "resource_cost": "20 Iron",
+   "requires": [
+    "Stirrups"
+   ],
+   "upgrades_to": [
+    "Cuirassier"
+   ],
+   "description": "Hard-hitting, Medieval era heavy cavalry unit."
+  }
+ },
+ {
+  "id": "unit:kongo_shield_bearer",
+  "name": "Ngao Mbeba",
+  "aliases": [
+   "UNIT_KONGO_SHIELD_BEARER"
+  ],
+  "summary": "Unique to Kongo, replaces Swordsman; 38 strength, 2 moves, cost 110; requires Iron Working.",
+  "fields": {
+   "unique_to": "Kongo",
+   "replaces": "Swordsman",
+   "class": "Melee",
+   "domain": "land",
+   "combat": 38,
+   "moves": 2,
+   "sight": 2,
+   "cost": 110,
+   "purchase": "gold",
+   "maintenance": 2,
+   "resource_cost": "5 Iron",
+   "requires": [
+    "Iron Working"
+   ],
+   "upgrades_to": [
+    "Man-At-Arms"
+   ],
+   "description": "Kongo unique Classical era unit that replaces the Swordsman. +10 Combat Strength when defending against ranged attacks. Can move and see through Woods and Rainforest."
+  }
+ },
+ {
+  "id": "unit:korean_hwacha",
+  "name": "Hwacha",
+  "aliases": [
+   "UNIT_KOREAN_HWACHA"
+  ],
+  "summary": "Unique to Korea, replaces Field Cannon; 45 strength, 60 ranged, 2 moves, cost 250; requires Gunpowder.",
+  "fields": {
+   "unique_to": "Korea",
+   "replaces": "Field Cannon",
+   "class": "Ranged",
+   "domain": "land",
+   "combat": 45,
+   "ranged": 60,
+   "range": 2,
+   "moves": 2,
+   "sight": 2,
+   "cost": 250,
+   "purchase": "gold",
+   "maintenance": 3,
+   "requires": [
+    "Gunpowder"
+   ],
+   "upgrades_to": [
+    "Machine Gun"
+   ],
+   "description": "Korean unique Renaissance Era unit that replaces the Field Cannon. High Ranged Attack Strength. Cannot move and attack in the same turn."
+  }
+ },
+ {
+  "id": "unit:lahore_nihang",
+  "name": "Nihang",
+  "aliases": [
+   "UNIT_LAHORE_NIHANG"
+  ],
+  "summary": "Unique to Lahore (Lahore); 25 strength, 2 moves, cost 100.",
+  "fields": {
+   "unique_to": "Lahore (Lahore)",
+   "class": "Nihang",
+   "domain": "land",
+   "combat": 25,
+   "moves": 2,
+   "sight": 2,
+   "cost": 100,
+   "purchase": "faith",
+   "must_purchase": true,
+   "maintenance": 2,
+   "description": "Lahore City-State unique unit with a unique Promotion tree. Purchasable with Faith. Combat Strength is increased when Barracks, Armory, and Military Academy buildings are first constructed."
+  }
+ },
+ {
+  "id": "unit:line_infantry",
+  "name": "Line Infantry",
+  "aliases": [
+   "UNIT_LINE_INFANTRY"
+  ],
+  "summary": "65 strength, 2 moves, cost 360; requires Military Science.",
+  "fields": {
+   "class": "Melee",
+   "domain": "land",
+   "combat": 65,
+   "moves": 2,
+   "sight": 2,
+   "cost": 360,
+   "purchase": "gold",
+   "maintenance": 5,
+   "resource_cost": "20 Niter",
+   "requires": [
+    "Military Science"
+   ],
+   "upgrades_to": [
+    "Infantry"
+   ],
+   "description": "Industrial Era melee unit."
+  }
+ },
+ {
+  "id": "unit:macedonian_hetairoi",
+  "name": "Hetairoi",
+  "aliases": [
+   "UNIT_MACEDONIAN_HETAIROI"
+  ],
+  "summary": "Unique to Alexander (Macedon), replaces Horseman; 36 strength, 4 moves, cost 100; requires Horseback Riding.",
+  "fields": {
+   "unique_to": "Alexander (Macedon)",
+   "replaces": "Horseman",
+   "class": "Heavy Cavalry",
+   "domain": "land",
+   "combat": 36,
+   "moves": 4,
+   "sight": 2,
+   "cost": 100,
+   "purchase": "gold",
+   "maintenance": 2,
+   "resource_cost": "10 Horses",
+   "requires": [
+    "Horseback Riding"
+   ],
+   "upgrades_to": [
+    "Knight"
+   ],
+   "description": "Macedonian unique heavy cavalry unit that replaces the Horseman. Additional +5 Combat Strength when adjacent to a Great General. +5 Great General points when killing an enemy unit. Starts with 1 free Promotion."
+  }
+ },
+ {
+  "id": "unit:macedonian_hypaspist",
+  "name": "Hypaspist",
+  "aliases": [
+   "UNIT_MACEDONIAN_HYPASPIST"
+  ],
+  "summary": "Unique to Macedon, replaces Swordsman; 38 strength, 2 moves, cost 100; requires Iron Working.",
+  "fields": {
+   "unique_to": "Macedon",
+   "replaces": "Swordsman",
+   "class": "Melee",
+   "domain": "land",
+   "combat": 38,
+   "moves": 2,
+   "sight": 2,
+   "cost": 100,
+   "purchase": "gold",
+   "maintenance": 2,
+   "resource_cost": "5 Iron",
+   "requires": [
+    "Iron Working"
+   ],
+   "upgrades_to": [
+    "Man-At-Arms"
+   ],
+   "description": "Macedonian unique melee unit that replaces the Swordsman. +5 Combat Strength when besieging districts. 50% Additional Support Bonus."
+  }
+ },
+ {
+  "id": "unit:machine_gun",
+  "name": "Machine Gun",
+  "aliases": [
+   "UNIT_MACHINE_GUN"
+  ],
+  "summary": "70 strength, 85 ranged, 2 moves, cost 540; requires Advanced Ballistics.",
+  "fields": {
+   "class": "Ranged",
+   "domain": "land",
+   "combat": 70,
+   "ranged": 85,
+   "range": 2,
+   "moves": 2,
+   "sight": 2,
+   "cost": 540,
+   "purchase": "gold",
+   "maintenance": 6,
+   "requires": [
+    "Advanced Ballistics"
+   ],
+   "description": "Atomic era ranged unit."
+  }
+ },
+ {
+  "id": "unit:mali_mandekalu_cavalry",
+  "name": "Mandekalu Cavalry",
+  "aliases": [
+   "UNIT_MALI_MANDEKALU_CAVALRY"
+  ],
+  "summary": "Unique to Mali, replaces Knight; 55 strength, 4 moves, cost 220; requires Stirrups.",
+  "fields": {
+   "unique_to": "Mali",
+   "replaces": "Knight",
+   "class": "Heavy Cavalry",
+   "domain": "land",
+   "combat": 55,
+   "moves": 4,
+   "sight": 2,
+   "cost": 220,
+   "purchase": "gold",
+   "maintenance": 4,
+   "resource_cost": "10 Iron",
+   "requires": [
+    "Stirrups"
+   ],
+   "upgrades_to": [
+    "Cuirassier"
+   ],
+   "description": "Mali unique Medieval Era unit that replaces the Knight. Trader units are immune to being plundered if they are within 4 tiles of a Mandekalu Cavalry and on a land tile. Combat victories provide Gold equal to 100% of that unit's base Combat Strength (on Standard Speed)."
+  }
+ },
+ {
+  "id": "unit:man_at_arms",
+  "name": "Man-At-Arms",
+  "aliases": [
+   "UNIT_MAN_AT_ARMS"
+  ],
+  "summary": "45 strength, 2 moves, cost 160; requires Apprenticeship.",
+  "fields": {
+   "class": "Melee",
+   "domain": "land",
+   "combat": 45,
+   "moves": 2,
+   "sight": 2,
+   "cost": 160,
+   "purchase": "gold",
+   "maintenance": 3,
+   "resource_cost": "20 Iron",
+   "requires": [
+    "Apprenticeship"
+   ],
+   "upgrades_to": [
+    "Musketman"
+   ],
+   "description": "Medieval Era melee unit."
+  }
+ },
+ {
+  "id": "unit:maori_toa",
+  "name": "Toa",
+  "aliases": [
+   "UNIT_MAORI_TOA"
+  ],
+  "summary": "Unique to Māori, replaces Swordsman; 38 strength, 2 moves, cost 120; requires Construction.",
+  "fields": {
+   "unique_to": "Māori",
+   "replaces": "Swordsman",
+   "class": "Melee",
+   "domain": "land",
+   "combat": 38,
+   "moves": 2,
+   "sight": 2,
+   "cost": 120,
+   "purchase": "gold",
+   "requires": [
+    "Construction"
+   ],
+   "upgrades_to": [
+    "Man-At-Arms"
+   ],
+   "charges": 1,
+   "description": "Māori unique Classical era melee unit. Adjacent enemy units receive -5 Combat Strength. Can build the unique Pā improvement."
+  }
+ },
+ {
+  "id": "unit:mapuche_malon_raider",
+  "name": "Malón Raider",
+  "aliases": [
+   "UNIT_MAPUCHE_MALON_RAIDER"
+  ],
+  "summary": "Unique to Mapuche; 55 strength, 4 moves, cost 230; requires Gunpowder.",
+  "fields": {
+   "unique_to": "Mapuche",
+   "class": "Light Cavalry",
+   "domain": "land",
+   "combat": 55,
+   "moves": 4,
+   "sight": 2,
+   "cost": 230,
+   "purchase": "gold",
+   "maintenance": 4,
+   "requires": [
+    "Gunpowder"
+   ],
+   "upgrades_to": [
+    "Cavalry"
+   ],
+   "description": "Mapuche unique Renaissance Era unit. +5 Combat Strength bonus if within 4 hexes of friendly territory. Pillaging costs 1 Movement."
+  }
+ },
+ {
+  "id": "unit:mayan_hulche",
+  "name": "Hul'che",
+  "aliases": [
+   "UNIT_MAYAN_HULCHE"
+  ],
+  "summary": "Unique to Maya, replaces Archer; 15 strength, 28 ranged, 2 moves, cost 60; requires Archery.",
+  "fields": {
+   "unique_to": "Maya",
+   "replaces": "Archer",
+   "class": "Ranged",
+   "domain": "land",
+   "combat": 15,
+   "ranged": 28,
+   "range": 2,
+   "moves": 2,
+   "sight": 2,
+   "cost": 60,
+   "purchase": "gold",
+   "maintenance": 1,
+   "requires": [
+    "Archery"
+   ],
+   "upgrades_to": [
+    "Crossbowman"
+   ],
+   "description": "Mayan unique Ancient Era ranged unit that replaces the Archer. Strong ranged attack. +5 Combat Strength when fighting a wounded opponent."
+  }
+ },
+ {
+  "id": "unit:mechanized_infantry",
+  "name": "Mechanized Infantry",
+  "aliases": [
+   "UNIT_MECHANIZED_INFANTRY"
+  ],
+  "summary": "85 strength, 3 moves, cost 650; requires Satellites.",
+  "fields": {
+   "class": "Melee",
+   "domain": "land",
+   "combat": 85,
+   "moves": 3,
+   "sight": 2,
+   "cost": 650,
+   "purchase": "gold",
+   "maintenance": 8,
+   "resource_cost": "1 Oil",
+   "resource_upkeep": "1 Oil/turn",
+   "requires": [
+    "Satellites"
+   ],
+   "description": "Information era melee unit."
+  }
+ },
+ {
+  "id": "unit:medic",
+  "name": "Medic",
+  "aliases": [
+   "UNIT_MEDIC"
+  ],
+  "summary": "2 moves, cost 370; requires Sanitation.",
+  "fields": {
+   "class": "Support",
+   "domain": "land",
+   "moves": 2,
+   "sight": 2,
+   "cost": 370,
+   "purchase": "gold",
+   "maintenance": 5,
+   "requires": [
+    "Sanitation"
+   ],
+   "upgrades_to": [
+    "Supply Convoy"
+   ],
+   "description": "Industrial era support unit. Can heal adjacent units."
+  }
+ },
+ {
+  "id": "unit:military_engineer",
+  "name": "Military Engineer",
+  "aliases": [
+   "UNIT_MILITARY_ENGINEER"
+  ],
+  "summary": "2 moves, cost 170; requires Military Engineering.",
+  "fields": {
+   "class": "Support",
+   "domain": "land",
+   "moves": 2,
+   "sight": 2,
+   "cost": 170,
+   "purchase": "gold",
+   "maintenance": 2,
+   "requires": [
+    "Military Engineering"
+   ],
+   "charges": 2,
+   "description": "Medieval era support unit. Requires an Armory to produce. Can construct Roads, Railroads, Forts, Airstrips, Missile Silos, and Mountain Tunnel improvements. One of their build charges can also be used to complete 20% of a Canal, Dam or Aqueduct district or a Flood Barrier building."
+  }
+ },
+ {
+  "id": "unit:missile_cruiser",
+  "name": "Missile Cruiser",
+  "aliases": [
+   "UNIT_MISSILE_CRUISER"
+  ],
+  "summary": "75 strength, 90 ranged, 5 moves, cost 680; requires Lasers.",
+  "fields": {
+   "class": "Naval Ranged",
+   "domain": "sea",
+   "combat": 75,
+   "ranged": 90,
+   "range": 3,
+   "anti_air": 110,
+   "moves": 5,
+   "sight": 3,
+   "cost": 680,
+   "purchase": "gold",
+   "maintenance": 8,
+   "resource_cost": "1 Oil",
+   "resource_upkeep": "1 Oil/turn",
+   "requires": [
+    "Lasers"
+   ],
+   "description": "Strongest ranged naval unit, available in the Information era."
+  }
+ },
+ {
+  "id": "unit:missionary",
+  "name": "Missionary",
+  "aliases": [
+   "UNIT_MISSIONARY"
+  ],
+  "summary": "4 moves, cost 75.",
+  "fields": {
+   "domain": "land",
+   "moves": 4,
+   "sight": 2,
+   "cost": 75,
+   "purchase": "faith",
+   "must_purchase": true,
+   "charges": 3,
+   "description": "May convert Citizens to their Religion. May not initiate theological combat with units of other Religions (but can defend)."
+  }
+ },
+ {
+  "id": "unit:mobile_sam",
+  "name": "Mobile SAM",
+  "aliases": [
+   "UNIT_MOBILE_SAM"
+  ],
+  "summary": "3 moves, cost 590; requires Guidance Systems.",
+  "fields": {
+   "class": "Support",
+   "domain": "land",
+   "range": 1,
+   "anti_air": 100,
+   "moves": 3,
+   "sight": 2,
+   "cost": 590,
+   "purchase": "gold",
+   "maintenance": 4,
+   "requires": [
+    "Guidance Systems"
+   ],
+   "description": "Information era anti-air support unit. Provides cover from air and nuclear attacks up to 1 hex away from the weapon."
+  }
+ },
+ {
+  "id": "unit:modern_armor",
+  "name": "Modern Armor",
+  "aliases": [
+   "UNIT_MODERN_ARMOR"
+  ],
+  "summary": "95 strength, 4 moves, cost 680; requires Composites.",
+  "fields": {
+   "class": "Heavy Cavalry",
+   "domain": "land",
+   "combat": 95,
+   "moves": 4,
+   "sight": 2,
+   "cost": 680,
+   "purchase": "gold",
+   "maintenance": 8,
+   "resource_cost": "1 Oil",
+   "resource_upkeep": "1 Oil/turn",
+   "requires": [
+    "Composites"
+   ],
+   "description": "Information era heavy cavalry unit that is fast and strong."
+  }
+ },
+ {
+  "id": "unit:modern_at",
+  "name": "Modern AT",
+  "aliases": [
+   "UNIT_MODERN_AT"
+  ],
+  "summary": "85 strength, 3 moves, cost 580; requires Composites.",
+  "fields": {
+   "class": "Anti Cavalry",
+   "domain": "land",
+   "combat": 85,
+   "moves": 3,
+   "sight": 2,
+   "cost": 580,
+   "purchase": "gold",
+   "maintenance": 8,
+   "requires": [
+    "Composites"
+   ],
+   "description": "Information era counter to cavalry class units."
+  }
+ },
+ {
+  "id": "unit:mongolian_keshig",
+  "name": "Keshig",
+  "aliases": [
+   "UNIT_MONGOLIAN_KESHIG"
+  ],
+  "summary": "Unique to Mongolia; 35 strength, 45 ranged, 4 moves, cost 160; requires Stirrups.",
+  "fields": {
+   "unique_to": "Mongolia",
+   "class": "Ranged",
+   "domain": "land",
+   "combat": 35,
+   "ranged": 45,
+   "range": 2,
+   "moves": 4,
+   "sight": 2,
+   "cost": 160,
+   "purchase": "gold",
+   "maintenance": 3,
+   "resource_cost": "10 Horses",
+   "requires": [
+    "Stirrups"
+   ],
+   "upgrades_to": [
+    "Field Cannon"
+   ],
+   "description": "Mongolian unique Medieval Era Ranged Cavalry unit. Can escort moving civilian and support units at their higher Movement speed."
+  }
+ },
+ {
+  "id": "unit:musketman",
+  "name": "Musketman",
+  "aliases": [
+   "UNIT_MUSKETMAN"
+  ],
+  "summary": "55 strength, 2 moves, cost 240; requires Gunpowder.",
+  "fields": {
+   "class": "Melee",
+   "domain": "land",
+   "combat": 55,
+   "moves": 2,
+   "sight": 2,
+   "cost": 240,
+   "purchase": "gold",
+   "maintenance": 4,
+   "resource_cost": "20 Niter",
+   "requires": [
+    "Gunpowder"
+   ],
+   "upgrades_to": [
+    "Line Infantry"
+   ],
+   "description": "Renaissance era melee unit."
+  }
+ },
+ {
+  "id": "unit:naturalist",
+  "name": "Naturalist",
+  "aliases": [
+   "UNIT_NATURALIST"
+  ],
+  "summary": "4 moves, cost 300; requires Conservation.",
+  "fields": {
+   "domain": "land",
+   "moves": 4,
+   "sight": 3,
+   "cost": 300,
+   "purchase": "faith",
+   "must_purchase": true,
+   "requires": [
+    "Conservation"
+   ],
+   "description": "A late-game civilian who can create a single National Park to attract Tourists. Must be purchased with Faith."
+  }
+ },
+ {
+  "id": "unit:norwegian_berserker",
+  "name": "Berserker",
+  "aliases": [
+   "UNIT_NORWEGIAN_BERSERKER"
+  ],
+  "summary": "Unique to Norway, replaces Man-At-Arms; 48 strength, 2 moves, cost 160; requires Military Tactics.",
+  "fields": {
+   "unique_to": "Norway",
+   "replaces": "Man-At-Arms",
+   "class": "Melee",
+   "domain": "land",
+   "combat": 48,
+   "moves": 2,
+   "sight": 2,
+   "cost": 160,
+   "purchase": "gold",
+   "maintenance": 3,
+   "resource_cost": "10 Iron",
+   "requires": [
+    "Military Tactics"
+   ],
+   "upgrades_to": [
+    "Musketman"
+   ],
+   "description": "Norwegian unique Medieval era melee unit that replaces the Man-At-Arms. 4 Movement if this unit starts in enemy territory. +10 Combat Strength when attacking and -5 Combat Strength when defending against melee attacks."
+  }
+ },
+ {
+  "id": "unit:norwegian_longship",
+  "name": "Viking Longship",
+  "aliases": [
+   "UNIT_NORWEGIAN_LONGSHIP"
+  ],
+  "summary": "Unique to Harald Hardrada (Konge) (Norway), replaces Galley; 35 strength, 3 moves, cost 65; requires Sailing.",
+  "fields": {
+   "unique_to": "Harald Hardrada (Konge) (Norway)",
+   "replaces": "Galley",
+   "class": "Naval Melee",
+   "domain": "sea",
+   "combat": 35,
+   "moves": 3,
+   "sight": 2,
+   "cost": 65,
+   "purchase": "gold",
+   "maintenance": 1,
+   "requires": [
+    "Sailing"
+   ],
+   "upgrades_to": [
+    "Caravel"
+   ],
+   "description": "Norwegian unique Ancient era naval unit that replaces the Galley. Can pillage enemy coastal lands and capture civilians if adjacent using its coastal raiding ability. 4 Movement while in coastal waters."
+  }
+ },
+ {
+  "id": "unit:nubian_pitati",
+  "name": "Pítati Archer",
+  "aliases": [
+   "UNIT_NUBIAN_PITATI"
+  ],
+  "summary": "Unique to Nubia, replaces Archer; 17 strength, 30 ranged, 3 moves, cost 70; requires Archery.",
+  "fields": {
+   "unique_to": "Nubia",
+   "replaces": "Archer",
+   "class": "Ranged",
+   "domain": "land",
+   "combat": 17,
+   "ranged": 30,
+   "range": 2,
+   "moves": 3,
+   "sight": 2,
+   "cost": 70,
+   "purchase": "gold",
+   "maintenance": 1,
+   "requires": [
+    "Archery"
+   ],
+   "upgrades_to": [
+    "Crossbowman"
+   ],
+   "description": "Nubian unique Ancient era unit that replaces the Archer. Stronger than the Archer with extra Movement. Upgrades to Crossbowman."
+  }
+ },
+ {
+  "id": "unit:nuclear_submarine",
+  "name": "Nuclear Submarine",
+  "aliases": [
+   "UNIT_NUCLEAR_SUBMARINE"
+  ],
+  "summary": "80 strength, 85 ranged, 4 moves, cost 680; requires Telecommunications.",
+  "fields": {
+   "class": "Naval Raider",
+   "domain": "sea",
+   "combat": 80,
+   "ranged": 85,
+   "range": 2,
+   "moves": 4,
+   "sight": 2,
+   "cost": 680,
+   "purchase": "gold",
+   "maintenance": 8,
+   "requires": [
+    "Telecommunications"
+   ],
+   "description": "Highly advanced Information era ranged raiding naval unit that can be armed with nuclear weapons. Can only be seen by other Naval Raiders unless adjacent to it. Reveals Naval Raiders within sight range."
+  }
+ },
+ {
+  "id": "unit:observation_balloon",
+  "name": "Observation Balloon",
+  "aliases": [
+   "UNIT_OBSERVATION_BALLOON"
+  ],
+  "summary": "2 moves, cost 240; requires Flight.",
+  "fields": {
+   "class": "Support",
+   "domain": "land",
+   "moves": 2,
+   "sight": 3,
+   "cost": 240,
+   "purchase": "gold",
+   "maintenance": 2,
+   "requires": [
+    "Flight"
+   ],
+   "upgrades_to": [
+    "Drone"
+   ],
+   "description": "Modern era support unit. Grants +1 Range to Siege class units within 1 hex."
+  }
+ },
+ {
+  "id": "unit:ottoman_barbary_corsair",
+  "name": "Barbary Corsair",
+  "aliases": [
+   "UNIT_OTTOMAN_BARBARY_CORSAIR"
+  ],
+  "summary": "Unique to Ottomans, replaces Privateer; 40 strength, 50 ranged, 4 moves, cost 240; requires Medieval Faires.",
+  "fields": {
+   "unique_to": "Ottomans",
+   "replaces": "Privateer",
+   "class": "Naval Raider",
+   "domain": "sea",
+   "combat": 40,
+   "ranged": 50,
+   "range": 2,
+   "moves": 4,
+   "sight": 2,
+   "cost": 240,
+   "purchase": "gold",
+   "maintenance": 3,
+   "requires": [
+    "Medieval Faires"
+   ],
+   "upgrades_to": [
+    "Submarine"
+   ],
+   "description": "Ottoman unique Medieval era naval unit that replaces the Privateer. It costs no Movement to coastal raid. Can only be seen by other Naval Raiders unless adjacent to it. Reveals Naval Raiders within sight range."
+  }
+ },
+ {
+  "id": "unit:persian_immortal",
+  "name": "Immortal",
+  "aliases": [
+   "UNIT_PERSIAN_IMMORTAL"
+  ],
+  "summary": "Unique to Persia, replaces Swordsman; 35 strength, 25 ranged, 2 moves, cost 100; requires Iron Working.",
+  "fields": {
+   "unique_to": "Persia",
+   "replaces": "Swordsman",
+   "class": "Melee",
+   "domain": "land",
+   "combat": 35,
+   "ranged": 25,
+   "range": 2,
+   "moves": 2,
+   "sight": 2,
+   "cost": 100,
+   "purchase": "gold",
+   "maintenance": 2,
+   "resource_cost": "10 Iron",
+   "requires": [
+    "Iron Working"
+   ],
+   "upgrades_to": [
+    "Man-At-Arms"
+   ],
+   "description": "Persian unique melee unit that replaces the Swordsman. Melee class unit with a ranged attack, Range 2. Strong defense strength."
+  }
+ },
+ {
+  "id": "unit:phoenicia_bireme",
+  "name": "Bireme",
+  "aliases": [
+   "UNIT_PHOENICIA_BIREME"
+  ],
+  "summary": "Unique to Phoenicia, replaces Galley; 35 strength, 4 moves, cost 65; requires Sailing.",
+  "fields": {
+   "unique_to": "Phoenicia",
+   "replaces": "Galley",
+   "class": "Naval Melee",
+   "domain": "sea",
+   "combat": 35,
+   "moves": 4,
+   "sight": 2,
+   "cost": 65,
+   "purchase": "gold",
+   "maintenance": 1,
+   "requires": [
+    "Sailing"
+   ],
+   "upgrades_to": [
+    "Caravel"
+   ],
+   "description": "Phoenician unique Ancient Era unit that replaces the Galley. Increased Combat Strength and Movement. Trader units are immune to being plundered if they are within 4 tiles of a Bireme and on a water tile."
+  }
+ },
+ {
+  "id": "unit:pike_and_shot",
+  "name": "Pike and Shot",
+  "aliases": [
+   "UNIT_PIKE_AND_SHOT"
+  ],
+  "summary": "55 strength, 2 moves, cost 250; requires Metal Casting.",
+  "fields": {
+   "class": "Anti Cavalry",
+   "domain": "land",
+   "combat": 55,
+   "moves": 2,
+   "sight": 2,
+   "cost": 250,
+   "purchase": "gold",
+   "maintenance": 4,
+   "requires": [
+    "Metal Casting"
+   ],
+   "upgrades_to": [
+    "AT Crew"
+   ],
+   "description": "Late Renaissance era anti-cavalry unit."
+  }
+ },
+ {
+  "id": "unit:pikeman",
+  "name": "Pikeman",
+  "aliases": [
+   "UNIT_PIKEMAN"
+  ],
+  "summary": "45 strength, 2 moves, cost 180; requires Military Tactics.",
+  "fields": {
+   "class": "Anti Cavalry",
+   "domain": "land",
+   "combat": 45,
+   "moves": 2,
+   "sight": 2,
+   "cost": 180,
+   "purchase": "gold",
+   "maintenance": 2,
+   "requires": [
+    "Military Tactics"
+   ],
+   "upgrades_to": [
+    "Pike and Shot"
+   ],
+   "description": "Medieval era anti-cavalry unit."
+  }
+ },
+ {
+  "id": "unit:polish_hussar",
+  "name": "Winged Hussar",
+  "aliases": [
+   "UNIT_POLISH_HUSSAR"
+  ],
+  "summary": "Unique to Poland, replaces Cuirassier; 64 strength, 4 moves, cost 330; requires Mercantilism.",
+  "fields": {
+   "unique_to": "Poland",
+   "replaces": "Cuirassier",
+   "class": "Heavy Cavalry",
+   "domain": "land",
+   "combat": 64,
+   "moves": 4,
+   "sight": 2,
+   "cost": 330,
+   "purchase": "gold",
+   "maintenance": 5,
+   "resource_cost": "10 Iron",
+   "requires": [
+    "Mercantilism"
+   ],
+   "upgrades_to": [
+    "Tank"
+   ],
+   "description": "Polish unique Renaissance era unit that replaces the Cuirassier. Pushes defending enemy units back from their hex in any battle where they score more damage. Defenders that cannot retreat suffer additional damage."
+  }
+ },
+ {
+  "id": "unit:portuguese_nau",
+  "name": "Nau",
+  "aliases": [
+   "UNIT_PORTUGUESE_NAU"
+  ],
+  "summary": "Unique to Portugal, replaces Caravel; 55 strength, 4 moves, cost 240; requires Cartography.",
+  "fields": {
+   "unique_to": "Portugal",
+   "replaces": "Caravel",
+   "class": "Naval Melee",
+   "domain": "sea",
+   "combat": 55,
+   "moves": 4,
+   "sight": 3,
+   "cost": 240,
+   "purchase": "gold",
+   "maintenance": 2,
+   "requires": [
+    "Cartography"
+   ],
+   "upgrades_to": [
+    "Ironclad"
+   ],
+   "charges": 2,
+   "description": "Portuguese unique naval melee unit that replaces the Caravel. Starts with 1 free Promotion and is less maintenance. Has two charges to build Feitorias."
+  }
+ },
+ {
+  "id": "unit:privateer",
+  "name": "Privateer",
+  "aliases": [
+   "UNIT_PRIVATEER"
+  ],
+  "summary": "40 strength, 50 ranged, 4 moves, cost 280; requires Mercantilism.",
+  "fields": {
+   "class": "Naval Raider",
+   "domain": "sea",
+   "combat": 40,
+   "ranged": 50,
+   "range": 2,
+   "moves": 4,
+   "sight": 2,
+   "cost": 280,
+   "purchase": "gold",
+   "maintenance": 4,
+   "requires": [
+    "Mercantilism"
+   ],
+   "upgrades_to": [
+    "Submarine"
+   ],
+   "description": "Renaissance era ranged naval unit with the ability to coastal raid.Can only be seen by other Naval Raiders unless adjacent to it. Reveals Naval Raiders within sight range."
+  }
+ },
+ {
+  "id": "unit:quadrireme",
+  "name": "Quadrireme",
+  "aliases": [
+   "UNIT_QUADRIREME"
+  ],
+  "summary": "20 strength, 25 ranged, 3 moves, cost 120; requires Shipbuilding.",
+  "fields": {
+   "class": "Naval Ranged",
+   "domain": "sea",
+   "combat": 20,
+   "ranged": 25,
+   "range": 1,
+   "moves": 3,
+   "sight": 2,
+   "cost": 120,
+   "purchase": "gold",
+   "maintenance": 2,
+   "requires": [
+    "Shipbuilding"
+   ],
+   "upgrades_to": [
+    "Frigate"
+   ],
+   "description": "Classical era ranged naval unit. Can only operate on Coastal waters until Cartography is researched."
+  }
+ },
+ {
+  "id": "unit:ranger",
+  "name": "Ranger",
+  "aliases": [
+   "UNIT_RANGER"
+  ],
+  "summary": "45 strength, 60 ranged, 3 moves, cost 380; requires Rifling.",
+  "fields": {
+   "class": "Recon",
+   "domain": "land",
+   "combat": 45,
+   "ranged": 60,
+   "range": 1,
+   "moves": 3,
+   "sight": 2,
+   "cost": 380,
+   "purchase": "gold",
+   "maintenance": 5,
+   "requires": [
+    "Rifling"
+   ],
+   "upgrades_to": [
+    "Spec Ops"
+   ],
+   "description": "Fast-moving Industrial era recon unit."
+  }
+ },
+ {
+  "id": "unit:rock_band",
+  "name": "Rock Band",
+  "aliases": [
+   "UNIT_ROCK_BAND"
+  ],
+  "summary": "4 moves, cost 300; requires Cold War.",
+  "fields": {
+   "class": "Rock Band",
+   "domain": "land",
+   "moves": 4,
+   "sight": 2,
+   "cost": 300,
+   "purchase": "faith",
+   "must_purchase": true,
+   "requires": [
+    "Cold War"
+   ],
+   "description": "Can perform a rock concert at a valid venue, including at Wonders, at a District with one of the required buildings, or at a special target allowed by one of the band's promotions. Their Album Sales stat is the expected Tourism strength at their next concert. After performing concerts their Album Sales and Rock Band Level may increase. Must be purchased with Faith. Cannot perform on the same tile twice."
+  }
+ },
+ {
+  "id": "unit:rocket_artillery",
+  "name": "Rocket Artillery",
+  "aliases": [
+   "UNIT_ROCKET_ARTILLERY"
+  ],
+  "summary": "70 strength, 100 bombard, 3 moves, cost 680; requires Guidance Systems.",
+  "fields": {
+   "class": "Siege",
+   "domain": "land",
+   "combat": 70,
+   "range": 3,
+   "bombard": 100,
+   "moves": 3,
+   "sight": 3,
+   "cost": 680,
+   "purchase": "gold",
+   "maintenance": 8,
+   "resource_cost": "1 Oil",
+   "resource_upkeep": "1 Oil/turn",
+   "requires": [
+    "Guidance Systems"
+   ],
+   "description": "Information era siege unit, ideal for attacking cities. Cannot move and attack on the same turn unless they've earned the Expert Crew promotion."
+  }
+ },
+ {
+  "id": "unit:roman_legion",
+  "name": "Legion",
+  "aliases": [
+   "UNIT_ROMAN_LEGION"
+  ],
+  "summary": "Unique to Rome, replaces Swordsman; 40 strength, 2 moves, cost 110; requires Iron Working.",
+  "fields": {
+   "unique_to": "Rome",
+   "replaces": "Swordsman",
+   "class": "Melee",
+   "domain": "land",
+   "combat": 40,
+   "moves": 2,
+   "sight": 2,
+   "cost": 110,
+   "purchase": "gold",
+   "maintenance": 2,
+   "resource_cost": "10 Iron",
+   "requires": [
+    "Iron Working"
+   ],
+   "upgrades_to": [
+    "Man-At-Arms"
+   ],
+   "charges": 1,
+   "description": "Roman unique Classical era melee unit that replaces the Swordsman. Can build a Roman Fort."
+  }
+ },
+ {
+  "id": "unit:russian_cossack",
+  "name": "Cossack",
+  "aliases": [
+   "UNIT_RUSSIAN_COSSACK"
+  ],
+  "summary": "Unique to Russia, replaces Cavalry; 67 strength, 5 moves, cost 340; requires Military Science.",
+  "fields": {
+   "unique_to": "Russia",
+   "replaces": "Cavalry",
+   "class": "Light Cavalry",
+   "domain": "land",
+   "combat": 67,
+   "moves": 5,
+   "sight": 2,
+   "cost": 340,
+   "purchase": "gold",
+   "maintenance": 5,
+   "resource_cost": "10 Horses",
+   "requires": [
+    "Military Science"
+   ],
+   "upgrades_to": [
+    "Helicopter"
+   ],
+   "description": "Russian unique Industrial era unit that replaces Cavalry. Stronger than Cavalry, and gains +5 Combat Strength when fighting in or adjacent to its home territory. Can move after attacking if Movement points remain."
+  }
+ },
+ {
+  "id": "unit:scottish_highlander",
+  "name": "Highlander",
+  "aliases": [
+   "UNIT_SCOTTISH_HIGHLANDER"
+  ],
+  "summary": "Unique to Scotland, replaces Ranger; 50 strength, 65 ranged, 3 moves, cost 380; requires Rifling.",
+  "fields": {
+   "unique_to": "Scotland",
+   "replaces": "Ranger",
+   "class": "Recon",
+   "domain": "land",
+   "combat": 50,
+   "ranged": 65,
+   "range": 1,
+   "moves": 3,
+   "sight": 2,
+   "cost": 380,
+   "purchase": "gold",
+   "maintenance": 5,
+   "requires": [
+    "Rifling"
+   ],
+   "upgrades_to": [
+    "Spec Ops"
+   ],
+   "description": "Scottish unique Industrial Era unit that replaces the Ranger. Strong reconnaissance unit. +5 Combat Strength bonus when fighting in Hill and Forest terrain."
+  }
+ },
+ {
+  "id": "unit:scout",
+  "name": "Scout",
+  "aliases": [
+   "UNIT_SCOUT"
+  ],
+  "summary": "10 strength, 3 moves, cost 30.",
+  "fields": {
+   "class": "Recon",
+   "domain": "land",
+   "combat": 10,
+   "moves": 3,
+   "sight": 2,
+   "cost": 30,
+   "purchase": "gold",
+   "upgrades_to": [
+    "Skirmisher"
+   ],
+   "description": "Fast-moving Ancient era recon unit."
+  }
+ },
+ {
+  "id": "unit:scythian_horse_archer",
+  "name": "Saka Horse Archer",
+  "aliases": [
+   "UNIT_SCYTHIAN_HORSE_ARCHER"
+  ],
+  "summary": "Unique to Scythia; 20 strength, 25 ranged, 4 moves, cost 100; requires Horseback Riding.",
+  "fields": {
+   "unique_to": "Scythia",
+   "class": "Ranged",
+   "domain": "land",
+   "combat": 20,
+   "ranged": 25,
+   "range": 1,
+   "moves": 4,
+   "sight": 2,
+   "cost": 100,
+   "purchase": "gold",
+   "maintenance": 2,
+   "requires": [
+    "Horseback Riding"
+   ],
+   "upgrades_to": [
+    "Crossbowman"
+   ],
+   "description": "Scythian unique Classical era unit. Ranged unit with 4 Movement with a Range of 1."
+  }
+ },
+ {
+  "id": "unit:settler",
+  "name": "Settler",
+  "aliases": [
+   "UNIT_SETTLER"
+  ],
+  "summary": "2 moves, cost 80.",
+  "fields": {
+   "domain": "land",
+   "moves": 2,
+   "sight": 3,
+   "cost": 80,
+   "purchase": "gold",
+   "description": "May create new cities. Reduces city's Citizen Population by 1 when completed."
+  }
+ },
+ {
+  "id": "unit:siege_tower",
+  "name": "Siege Tower",
+  "aliases": [
+   "UNIT_SIEGE_TOWER"
+  ],
+  "summary": "2 moves, cost 100; requires Machinery.",
+  "fields": {
+   "class": "Support",
+   "domain": "land",
+   "moves": 2,
+   "sight": 2,
+   "cost": 100,
+   "purchase": "gold",
+   "maintenance": 2,
+   "requires": [
+    "Machinery"
+   ],
+   "upgrades_to": [
+    "Medic"
+   ],
+   "obsolete_with": [
+    "Civil Engineering"
+   ],
+   "description": "Medieval era support unit. When adjacent to a city, attacking melee and anti-cavalry units ignore Walls and immediately assault the city. Does not affect cities with Renaissance Walls. Ineffective against Urban Defenses."
+  }
+ },
+ {
+  "id": "unit:skirmisher",
+  "name": "Skirmisher",
+  "aliases": [
+   "UNIT_SKIRMISHER"
+  ],
+  "summary": "20 strength, 30 ranged, 3 moves, cost 150; requires Machinery.",
+  "fields": {
+   "class": "Recon",
+   "domain": "land",
+   "combat": 20,
+   "ranged": 30,
+   "range": 1,
+   "moves": 3,
+   "sight": 2,
+   "cost": 150,
+   "purchase": "gold",
+   "maintenance": 2,
+   "requires": [
+    "Machinery"
+   ],
+   "upgrades_to": [
+    "Ranger"
+   ],
+   "description": "Medieval Era recon unit."
+  }
+ },
+ {
+  "id": "unit:slinger",
+  "name": "Slinger",
+  "aliases": [
+   "UNIT_SLINGER"
+  ],
+  "summary": "5 strength, 15 ranged, 2 moves, cost 35.",
+  "fields": {
+   "class": "Ranged",
+   "domain": "land",
+   "combat": 5,
+   "ranged": 15,
+   "range": 1,
+   "moves": 2,
+   "sight": 2,
+   "cost": 35,
+   "purchase": "gold",
+   "upgrades_to": [
+    "Archer"
+   ],
+   "description": "Weak Ancient era ranged unit. Better on attack than defense."
+  }
+ },
+ {
+  "id": "unit:spanish_conquistador",
+  "name": "Conquistador",
+  "aliases": [
+   "UNIT_SPANISH_CONQUISTADOR"
+  ],
+  "summary": "Unique to Spain, replaces Musketman; 58 strength, 2 moves, cost 250; requires Gunpowder.",
+  "fields": {
+   "unique_to": "Spain",
+   "replaces": "Musketman",
+   "class": "Melee",
+   "domain": "land",
+   "combat": 58,
+   "moves": 2,
+   "sight": 2,
+   "cost": 250,
+   "purchase": "gold",
+   "maintenance": 4,
+   "resource_cost": "10 Niter",
+   "requires": [
+    "Gunpowder"
+   ],
+   "upgrades_to": [
+    "Line Infantry"
+   ],
+   "description": "Spanish unique Renaissance era unit that replaces the Musketman. +10 Combat Strength when there is a religious unit within one hex. If this unit captures a city or is adjacent to a city when it is captured, the city will automatically adopt the Conquistador player's Religion as the dominant Religion."
+  }
+ },
+ {
+  "id": "unit:spearman",
+  "name": "Spearman",
+  "aliases": [
+   "UNIT_SPEARMAN"
+  ],
+  "summary": "25 strength, 2 moves, cost 65; requires Bronze Working.",
+  "fields": {
+   "class": "Anti Cavalry",
+   "domain": "land",
+   "combat": 25,
+   "moves": 2,
+   "sight": 2,
+   "cost": 65,
+   "purchase": "gold",
+   "maintenance": 1,
+   "requires": [
+    "Bronze Working"
+   ],
+   "upgrades_to": [
+    "Pikeman"
+   ],
+   "description": "Ancient era anti-cavalry unit."
+  }
+ },
+ {
+  "id": "unit:spec_ops",
+  "name": "Spec Ops",
+  "aliases": [
+   "UNIT_SPEC_OPS"
+  ],
+  "summary": "60 strength, 65 ranged, 3 moves, cost 520; requires Plastics.",
+  "fields": {
+   "class": "Recon",
+   "domain": "land",
+   "combat": 60,
+   "ranged": 65,
+   "range": 2,
+   "moves": 3,
+   "sight": 2,
+   "cost": 520,
+   "purchase": "gold",
+   "maintenance": 7,
+   "requires": [
+    "Plastics"
+   ],
+   "description": "Atomic Era reconnaissance unit. Paradrop ability allows movement from friendly tile to location 7 tiles away (12 if starting from Aerodrome or Airstrip). Can attack support units directly without having to eliminate the combat unit first."
+  }
+ },
+ {
+  "id": "unit:spy",
+  "name": "Spy",
+  "aliases": [
+   "UNIT_SPY"
+  ],
+  "summary": "1 moves, cost 225.",
+  "fields": {
+   "class": "Espionage",
+   "domain": "land",
+   "moves": 1,
+   "sight": 3,
+   "cost": 225,
+   "purchase": "none",
+   "maintenance": 4,
+   "description": "Performs secret missions in foreign cities and protects your cities from enemy Spies."
+  }
+ },
+ {
+  "id": "unit:submarine",
+  "name": "Submarine",
+  "aliases": [
+   "UNIT_SUBMARINE"
+  ],
+  "summary": "65 strength, 75 ranged, 3 moves, cost 480; requires Electricity.",
+  "fields": {
+   "class": "Naval Raider",
+   "domain": "sea",
+   "combat": 65,
+   "ranged": 75,
+   "range": 2,
+   "moves": 3,
+   "sight": 2,
+   "cost": 480,
+   "purchase": "gold",
+   "maintenance": 6,
+   "resource_cost": "1 Oil",
+   "resource_upkeep": "1 Oil/turn",
+   "requires": [
+    "Electricity"
+   ],
+   "upgrades_to": [
+    "Nuclear Submarine"
+   ],
+   "description": "Modern era ranged raiding naval unit. Can only be seen by other Naval Raiders unless adjacent to it. Reveals Naval Raiders within sight range."
+  }
+ },
+ {
+  "id": "unit:suleiman_janissary",
+  "name": "Janissary",
+  "aliases": [
+   "UNIT_SULEIMAN_JANISSARY"
+  ],
+  "summary": "Unique to Suleiman (Kanuni) (Ottomans), replaces Musketman; 60 strength, 2 moves, cost 120; requires Gunpowder.",
+  "fields": {
+   "unique_to": "Suleiman (Kanuni) (Ottomans)",
+   "replaces": "Musketman",
+   "class": "Melee",
+   "domain": "land",
+   "combat": 60,
+   "moves": 2,
+   "sight": 2,
+   "cost": 120,
+   "purchase": "gold",
+   "maintenance": 4,
+   "resource_cost": "10 Niter",
+   "requires": [
+    "Gunpowder"
+   ],
+   "upgrades_to": [
+    "Line Infantry"
+   ],
+   "description": "Ottoman unique Renaissance Era unit that replaces the Musketman. Starts with a free promotion. Stronger and cheaper than the Musketman. To train a Janissary a city must have a population of at least 2. If a city is founded by the Ottomans and trains a Janissary it loses a population."
+  }
+ },
+ {
+  "id": "unit:sumerian_war_cart",
+  "name": "War-Cart",
+  "aliases": [
+   "UNIT_SUMERIAN_WAR_CART"
+  ],
+  "summary": "Unique to Sumeria; 30 strength, 3 moves, cost 55.",
+  "fields": {
+   "unique_to": "Sumeria",
+   "class": "Heavy Cavalry",
+   "domain": "land",
+   "combat": 30,
+   "moves": 3,
+   "sight": 2,
+   "cost": 55,
+   "purchase": "gold",
+   "upgrades_to": [
+    "Knight"
+   ],
+   "description": "Sumerian unique Ancient era unit. Stronger than all other starting units. No penalties against anti-cavalry units. 4 Movement if this unit starts in open terrain."
+  }
+ },
+ {
+  "id": "unit:supply_convoy",
+  "name": "Supply Convoy",
+  "aliases": [
+   "UNIT_SUPPLY_CONVOY"
+  ],
+  "summary": "4 moves, cost 450; requires Combustion.",
+  "fields": {
+   "class": "Support",
+   "domain": "land",
+   "moves": 4,
+   "sight": 2,
+   "cost": 450,
+   "purchase": "gold",
+   "maintenance": 2,
+   "requires": [
+    "Combustion"
+   ],
+   "description": "Modern era support unit. Increases healing for adjacent units. Gives units 1 bonus Movement if move is started adjacent to the Convoy."
+  }
+ },
+ {
+  "id": "unit:sweden_carolean",
+  "name": "Carolean",
+  "aliases": [
+   "UNIT_SWEDEN_CAROLEAN"
+  ],
+  "summary": "Unique to Sweden, replaces Pike and Shot; 55 strength, 3 moves, cost 250; requires Metal Casting.",
+  "fields": {
+   "unique_to": "Sweden",
+   "replaces": "Pike and Shot",
+   "class": "Anti Cavalry",
+   "domain": "land",
+   "combat": 55,
+   "moves": 3,
+   "sight": 2,
+   "cost": 250,
+   "purchase": "gold",
+   "maintenance": 3,
+   "requires": [
+    "Metal Casting"
+   ],
+   "upgrades_to": [
+    "AT Crew"
+   ],
+   "description": "Swedish unique Renaissance Era unit that replaces the Pike and Shot. Faster than the Pike and Shot. +3 Combat Strength per unused Movement."
+  }
+ },
+ {
+  "id": "unit:swordsman",
+  "name": "Swordsman",
+  "aliases": [
+   "UNIT_SWORDSMAN"
+  ],
+  "summary": "35 strength, 2 moves, cost 90; requires Iron Working.",
+  "fields": {
+   "class": "Melee",
+   "domain": "land",
+   "combat": 35,
+   "moves": 2,
+   "sight": 2,
+   "cost": 90,
+   "purchase": "gold",
+   "maintenance": 2,
+   "resource_cost": "20 Iron",
+   "requires": [
+    "Iron Working"
+   ],
+   "upgrades_to": [
+    "Man-At-Arms"
+   ],
+   "description": "Strong Classical era melee unit."
+  }
+ },
+ {
+  "id": "unit:tank",
+  "name": "Tank",
+  "aliases": [
+   "UNIT_TANK"
+  ],
+  "summary": "85 strength, 4 moves, cost 480; requires Combustion.",
+  "fields": {
+   "class": "Heavy Cavalry",
+   "domain": "land",
+   "combat": 85,
+   "moves": 4,
+   "sight": 2,
+   "cost": 480,
+   "purchase": "gold",
+   "maintenance": 6,
+   "resource_cost": "1 Oil",
+   "resource_upkeep": "1 Oil/turn",
+   "requires": [
+    "Combustion"
+   ],
+   "upgrades_to": [
+    "Modern Armor"
+   ],
+   "description": "Fast-moving Modern era heavy cavalry unit that ignores zone of control."
+  }
+ },
+ {
+  "id": "unit:trader",
+  "name": "Trader",
+  "aliases": [
+   "UNIT_TRADER"
+  ],
+  "summary": "2 moves, cost 40; requires Foreign Trade.",
+  "fields": {
+   "domain": "land",
+   "moves": 2,
+   "sight": 2,
+   "cost": 40,
+   "purchase": "gold",
+   "requires": [
+    "Foreign Trade"
+   ],
+   "description": "May make and maintain a single Trade Route. Automatically creates Roads as it travels."
+  }
+ },
+ {
+  "id": "unit:trebuchet",
+  "name": "Trebuchet",
+  "aliases": [
+   "UNIT_TREBUCHET"
+  ],
+  "summary": "35 strength, 45 bombard, 2 moves, cost 200; requires Military Engineering.",
+  "fields": {
+   "class": "Siege",
+   "domain": "land",
+   "combat": 35,
+   "range": 2,
+   "bombard": 45,
+   "moves": 2,
+   "sight": 2,
+   "cost": 200,
+   "purchase": "gold",
+   "maintenance": 3,
+   "requires": [
+    "Military Engineering"
+   ],
+   "upgrades_to": [
+    "Bombard"
+   ],
+   "description": "Medieval era siege unit, ideal for attacking cities. Cannot move and attack on the same turn unless they've earned the Expert Crew promotion."
+  }
+ },
+ {
+  "id": "unit:vietnamese_voi_chien",
+  "name": "Voi Chiến",
+  "aliases": [
+   "UNIT_VIETNAMESE_VOI_CHIEN"
+  ],
+  "summary": "Unique to Vietnam, replaces Crossbowman; 35 strength, 40 ranged, 3 moves, cost 200; requires Machinery.",
+  "fields": {
+   "unique_to": "Vietnam",
+   "replaces": "Crossbowman",
+   "class": "Ranged",
+   "domain": "land",
+   "combat": 35,
+   "ranged": 40,
+   "range": 2,
+   "moves": 3,
+   "sight": 3,
+   "cost": 200,
+   "purchase": "gold",
+   "maintenance": 3,
+   "requires": [
+    "Machinery"
+   ],
+   "upgrades_to": [
+    "Field Cannon"
+   ],
+   "description": "Vietnamese unique Medieval era ranged unit that replaces the Crossbowman. These units have additional movement and can move after attacking. They are also stronger when defending, more expensive, and have greater sight."
+  }
+ },
+ {
+  "id": "unit:warrior",
+  "name": "Warrior",
+  "aliases": [
+   "UNIT_WARRIOR"
+  ],
+  "summary": "20 strength, 2 moves, cost 40.",
+  "fields": {
+   "class": "Melee",
+   "domain": "land",
+   "combat": 20,
+   "moves": 2,
+   "sight": 2,
+   "cost": 40,
+   "purchase": "gold",
+   "upgrades_to": [
+    "Swordsman"
+   ],
+   "description": "Weak Ancient era melee unit."
+  }
+ },
+ {
+  "id": "unit:warrior_monk",
+  "name": "Warrior Monk",
+  "aliases": [
+   "UNIT_WARRIOR_MONK"
+  ],
+  "summary": "40 strength, 3 moves, cost 100.",
+  "fields": {
+   "class": "Warrior Monk",
+   "domain": "land",
+   "combat": 40,
+   "moves": 3,
+   "sight": 2,
+   "cost": 100,
+   "purchase": "faith",
+   "must_purchase": true,
+   "maintenance": 2,
+   "description": "Fast-moving land combat unit with a unique promotion tree."
+  }
+ },
+ {
+  "id": "unit:zulu_impi",
+  "name": "Impi",
+  "aliases": [
+   "UNIT_ZULU_IMPI"
+  ],
+  "summary": "Unique to Zulu, replaces Pikeman; 45 strength, 2 moves, cost 125; requires Military Tactics.",
+  "fields": {
+   "unique_to": "Zulu",
+   "replaces": "Pikeman",
+   "class": "Anti Cavalry",
+   "domain": "land",
+   "combat": 45,
+   "moves": 2,
+   "sight": 2,
+   "cost": 125,
+   "purchase": "gold",
+   "maintenance": 1,
+   "requires": [
+    "Military Tactics"
+   ],
+   "upgrades_to": [
+    "Pike and Shot"
+   ],
+   "description": "Zulu unique Medieval Era unit that replaces the Pikeman. Increased Flanking bonus, low cost and low maintenance. Earns XP faster."
+  }
+ }
+]

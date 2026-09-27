@@ -1,0 +1,529 @@
+[
+ {
+  "id": "random_event:blizzard_crippling",
+  "name": "Crippling Blizzard",
+  "aliases": [
+   "RANDOM_EVENT_BLIZZARD_CRIPPLING"
+  ],
+  "summary": "The howling wind and lashing snow turn sky and land white. Familiar forms disappear beneath frozen mounds.",
+  "fields": {
+   "severity": 2,
+   "effect": "- May damage improvements or districts - May damage units or reduce city populations",
+   "yields_after": [
+    "+1 Food (20% of tiles)"
+   ],
+   "description": "The howling wind and lashing snow turn sky and land white. Familiar forms disappear beneath frozen mounds."
+  }
+ },
+ {
+  "id": "random_event:blizzard_significant",
+  "name": "Significant Blizzard",
+  "aliases": [
+   "RANDOM_EVENT_BLIZZARD_SIGNIFICANT"
+  ],
+  "summary": "An icy wind sweeps blanketing snow across the landscape, as living creatures huddle in their dens.",
+  "fields": {
+   "severity": 1,
+   "effect": "- May damage improvements or districts",
+   "yields_after": [
+    "+1 Food (10% of tiles)"
+   ],
+   "description": "An icy wind sweeps blanketing snow across the landscape, as living creatures huddle in their dens."
+  }
+ },
+ {
+  "id": "random_event:drought_extreme",
+  "name": "Withering Drought",
+  "aliases": [
+   "RANDOM_EVENT_DROUGHT_EXTREME"
+  ],
+  "summary": "A merciless sun beats down on the drought-stricken and withered earth. No rain has fallen, and the skies promise no relief.",
+  "fields": {
+   "severity": 1,
+   "effect": "- Will drop Food by 1 per tile if the city has no Aqueduct, Dam, or Stepwell. - May destroy or pillage Farms, Camps, Pastures, and Plantations.",
+   "description": "A merciless sun beats down on the drought-stricken and withered earth. No rain has fallen, and the skies promise no relief."
+  }
+ },
+ {
+  "id": "random_event:drought_major",
+  "name": "Major Drought",
+  "aliases": [
+   "RANDOM_EVENT_DROUGHT_MAJOR"
+  ],
+  "summary": "Locusts whirr and dust stirs in the hot wind. The land is parched by drought.",
+  "fields": {
+   "effect": "- Will drop Food by 1 per tile if the city has no Aqueduct, Dam, or Stepwell. - May destroy or pillage Farms, Camps, Pastures, and Plantations.",
+   "description": "Locusts whirr and dust stirs in the hot wind. The land is parched by drought."
+  }
+ },
+ {
+  "id": "random_event:dust_storm_gradient",
+  "name": "Gradient Dust Storm",
+  "aliases": [
+   "RANDOM_EVENT_DUST_STORM_GRADIENT"
+  ],
+  "summary": "The sun is an angry orange disc in a hazy sky as people scurry about their business, cloth wrapped around noses and mouths.",
+  "fields": {
+   "severity": 1,
+   "effect": "+ May add fertility to tiles it passes over - May damage improvements or districts",
+   "yields_after": [
+    "+1 Food (10% of tiles)",
+    "+1 Production (20% of tiles)"
+   ],
+   "description": "The sun is an angry orange disc in a hazy sky as people scurry about their business, cloth wrapped around noses and mouths."
+  }
+ },
+ {
+  "id": "random_event:dust_storm_haboob",
+  "name": "Haboob Dust Storm",
+  "aliases": [
+   "RANDOM_EVENT_DUST_STORM_HABOOB"
+  ],
+  "summary": "From far off people see the approaching wall of driven sand, and scatter to seek safety before the scouring wind!",
+  "fields": {
+   "severity": 2,
+   "effect": "+ May add fertility to tiles it passes over - May damage improvements or districts - May damage units or reduce city populations",
+   "yields_after": [
+    "+1 Food (20% of tiles)",
+    "+1 Production (30% of tiles)"
+   ],
+   "description": "From far off people see the approaching wall of driven sand, and scatter to seek safety before the scouring wind!"
+  }
+ },
+ {
+  "id": "random_event:eyjafjallajokull_catastrophic",
+  "name": "Catastrophic Eruption",
+  "aliases": [
+   "RANDOM_EVENT_EYJAFJALLAJOKULL_CATASTROPHIC"
+  ],
+  "summary": "People must go far out of their way to avoid the huge plume of ash that erupts from Eyjafjallajökull.",
+  "fields": {
+   "severity": 1,
+   "effect": "+ May add fertility to tiles it passes over - May damage improvements or districts - May damage units or reduce city populations",
+   "yields_after": [
+    "+1 Food (50% of tiles)",
+    "+1 Production (25% of tiles)",
+    "+1 Science (10% of tiles)"
+   ],
+   "description": "People must go far out of their way to avoid the huge plume of ash that erupts from Eyjafjallajökull."
+  }
+ },
+ {
+  "id": "random_event:eyjafjallajokull_megacolossal",
+  "name": "Megacolossal Eruption",
+  "aliases": [
+   "RANDOM_EVENT_EYJAFJALLAJOKULL_MEGACOLOSSAL"
+  ],
+  "summary": "Eyjafjallajökull tears open a rift in the earth, as if the goddess Hel herself were escaping from the netherworld!",
+  "fields": {
+   "severity": 2,
+   "effect": "+ May add fertility to tiles it passes over - May damage improvements or districts - May damage units or reduce city populations",
+   "yields_after": [
+    "+1 Food (75% of tiles)",
+    "+1 Production (35% of tiles)",
+    "+1 Science (15% of tiles)"
+   ],
+   "description": "Eyjafjallajökull tears open a rift in the earth, as if the goddess Hel herself were escaping from the netherworld!"
+  }
+ },
+ {
+  "id": "random_event:flood_1000_year",
+  "name": "1000 Year Flood",
+  "aliases": [
+   "RANDOM_EVENT_FLOOD_1000_YEAR"
+  ],
+  "summary": "The river bursts its banks, and rising water covers the land for miles around. Not for a thousand years has the river flooded to such an extent!",
+  "fields": {
+   "severity": 2,
+   "effect": "+ May add fertility to tiles it passes over - May damage improvements or districts - May damage units or reduce city populations",
+   "yields_after": [
+    "+1 Food (45% of tiles)",
+    "+1 Production (25% of tiles)",
+    "+1 Food (40% of tiles)",
+    "+1 Production (40% of tiles)",
+    "+1 Food (60% of tiles)",
+    "+1 Production (15% of tiles)"
+   ],
+   "description": "The river bursts its banks, and rising water covers the land for miles around. Not for a thousand years has the river flooded to such an extent!"
+  }
+ },
+ {
+  "id": "random_event:flood_major",
+  "name": "Major Flood",
+  "aliases": [
+   "RANDOM_EVENT_FLOOD_MAJOR"
+  ],
+  "summary": "Surging, murky water rushes over the land around the river during an intense flood.",
+  "fields": {
+   "severity": 1,
+   "effect": "+ May add fertility to tiles it passes over - May damage improvements or districts - May damage units or reduce city populations",
+   "yields_after": [
+    "+1 Food (30% of tiles)",
+    "+1 Production (15% of tiles)",
+    "+1 Food (25% of tiles)",
+    "+1 Production (30% of tiles)",
+    "+1 Food (45% of tiles)",
+    "+1 Production (10% of tiles)"
+   ],
+   "description": "Surging, murky water rushes over the land around the river during an intense flood."
+  }
+ },
+ {
+  "id": "random_event:flood_moderate",
+  "name": "Moderate Flood",
+  "aliases": [
+   "RANDOM_EVENT_FLOOD_MODERATE"
+  ],
+  "summary": "Rising waters overflow the banks of the river and spill into the land beyond.",
+  "fields": {
+   "effect": "+ May add fertility to tiles it passes over - May damage improvements or districts",
+   "yields_after": [
+    "+1 Food (25% of tiles)",
+    "+1 Food (15% of tiles)",
+    "+1 Food (30% of tiles)"
+   ],
+   "description": "Rising waters overflow the banks of the river and spill into the land beyond."
+  }
+ },
+ {
+  "id": "random_event:forest_fire",
+  "name": "Forest Fire",
+  "aliases": [
+   "RANDOM_EVENT_FOREST_FIRE"
+  ],
+  "summary": "The trees catch alight, creating an unstoppable fire that will rage across the landscape. Only you could have prevented this.",
+  "fields": {
+   "severity": 1,
+   "effect": "+ Causes the forest to regrow with improved yields - Damages units and improvements",
+   "yields_after": [
+    "+1 Food (100% of tiles)",
+    "+1 Production (100% of tiles)"
+   ],
+   "description": "The trees catch alight, creating an unstoppable fire that will rage across the landscape. Only you could have prevented this."
+  }
+ },
+ {
+  "id": "random_event:hurricane_cat_4",
+  "name": "Category-4 Hurricane",
+  "aliases": [
+   "RANDOM_EVENT_HURRICANE_CAT_4"
+  ],
+  "summary": "Pelting rain and a howling gale mark the arrival of a mighty hurricane.",
+  "fields": {
+   "severity": 1,
+   "effect": "+ May add fertility to tiles it passes over - May damage improvements or districts - May damage naval units",
+   "yields_after": [
+    "+1 Food (30% of tiles)"
+   ],
+   "description": "Pelting rain and a howling gale mark the arrival of a mighty hurricane."
+  }
+ },
+ {
+  "id": "random_event:hurricane_cat_5",
+  "name": "Category-5 Hurricane",
+  "aliases": [
+   "RANDOM_EVENT_HURRICANE_CAT_5"
+  ],
+  "summary": "The wind screams, the torrents of rain fall, and the waves drive inexorably ashore. Little can stand where this hurricane passes!",
+  "fields": {
+   "severity": 2,
+   "effect": "+ May add fertility to tiles it passes over - May damage improvements or districts - May damage units or reduce city populations",
+   "yields_after": [
+    "+1 Food (45% of tiles)",
+    "+1 Production (15% of tiles)"
+   ],
+   "description": "The wind screams, the torrents of rain fall, and the waves drive inexorably ashore. Little can stand where this hurricane passes!"
+  }
+ },
+ {
+  "id": "random_event:jungle_fire",
+  "name": "Forest Fire",
+  "aliases": [
+   "RANDOM_EVENT_JUNGLE_FIRE"
+  ],
+  "summary": "The trees catch alight, creating an unstoppable fire that will rage across the landscape. Only you could have prevented this.",
+  "fields": {
+   "severity": 1,
+   "effect": "+ Causes the forest to regrow with improved yields - Damages units and improvements",
+   "yields_after": [
+    "+1 Food (100% of tiles)",
+    "+1 Production (100% of tiles)"
+   ],
+   "description": "The trees catch alight, creating an unstoppable fire that will rage across the landscape. Only you could have prevented this."
+  }
+ },
+ {
+  "id": "random_event:kilimanjaro_catastrophic",
+  "name": "Catastrophic Eruption",
+  "aliases": [
+   "RANDOM_EVENT_KILIMANJARO_CATASTROPHIC"
+  ],
+  "summary": "Kilimanjaro roars, and a plume of smoke and ash jets into the sky, as people and animals flee in terror!",
+  "fields": {
+   "severity": 1,
+   "effect": "+ May add fertility to tiles it passes over - May damage improvements or districts - May damage units or reduce city populations",
+   "yields_after": [
+    "+1 Food (50% of tiles)",
+    "+1 Production (35% of tiles)",
+    "+1 Science (15% of tiles)"
+   ],
+   "description": "Kilimanjaro roars, and a plume of smoke and ash jets into the sky, as people and animals flee in terror!"
+  }
+ },
+ {
+  "id": "random_event:kilimanjaro_gentle",
+  "name": "Gentle Eruption",
+  "aliases": [
+   "RANDOM_EVENT_KILIMANJARO_GENTLE"
+  ],
+  "summary": "People gaze skyward in concern, watching smoke rise from a once-quiet volcano.",
+  "fields": {
+   "effect": "+ May add fertility to tiles it passes over - May damage improvements or districts",
+   "yields_after": [
+    "+1 Food (50% of tiles)",
+    "+1 Production (25% of tiles)"
+   ],
+   "description": "People gaze skyward in concern, watching smoke rise from a once-quiet volcano."
+  }
+ },
+ {
+  "id": "random_event:meteor_shower",
+  "name": "Meteor Shower",
+  "aliases": [
+   "RANDOM_EVENT_METEOR_SHOWER"
+  ],
+  "summary": "Debris rains down from the sky. Go collect the remains to earn a powerful unit.",
+  "fields": {
+   "severity": 1,
+   "effect": "+ Places an improvement which players may collect by bringing any unit to the tile. Doing so grants an advanced unit",
+   "description": "Debris rains down from the sky. Go collect the remains to earn a powerful unit."
+  }
+ },
+ {
+  "id": "random_event:nuclear_accident_catastrophic",
+  "name": "Nuclear Meltdown",
+  "aliases": [
+   "RANDOM_EVENT_NUCLEAR_ACCIDENT_CATASTROPHIC"
+  ],
+  "summary": "An ominous explosion thunders, and a dark plume rises above the Nuclear Power Plant. One by one, the wailing of sirens becomes a shrieking chorus, as hellish lumps of burning fuel begin to rain down.",
+  "fields": {
+   "severity": 2,
+   "description": "An ominous explosion thunders, and a dark plume rises above the Nuclear Power Plant. One by one, the wailing of sirens becomes a shrieking chorus, as hellish lumps of burning fuel begin to rain down."
+  }
+ },
+ {
+  "id": "random_event:nuclear_accident_major",
+  "name": "Major Radiation Leak",
+  "aliases": [
+   "RANDOM_EVENT_NUCLEAR_ACCIDENT_MAJOR"
+  ],
+  "summary": "Alarms sound at the Nuclear Power Plant! Jets of steam rise from cracks in the reactor and dosimeters click and whir as radiation blankets the area.",
+  "fields": {
+   "severity": 1,
+   "description": "Alarms sound at the Nuclear Power Plant! Jets of steam rise from cracks in the reactor and dosimeters click and whir as radiation blankets the area."
+  }
+ },
+ {
+  "id": "random_event:nuclear_accident_minor",
+  "name": "Radioactive Steam Venting",
+  "aliases": [
+   "RANDOM_EVENT_NUCLEAR_ACCIDENT_MINOR"
+  ],
+  "summary": "Engineers in the Nuclear Power Plant control room work feverishly to contain a spreading leak. They have already prevented a worse outcome, but the situation is still serious.",
+  "fields": {
+   "description": "Engineers in the Nuclear Power Plant control room work feverishly to contain a spreading leak. They have already prevented a worse outcome, but the situation is still serious."
+  }
+ },
+ {
+  "id": "random_event:sea_level_rise1",
+  "name": "Climate Change Phase I",
+  "aliases": [
+   "RANDOM_EVENT_SEA_LEVEL_RISE1"
+  ],
+  "summary": "0.5",
+  "fields": {
+   "severity": 1,
+   "climate_change_points": 2,
+   "description": "0.5"
+  }
+ },
+ {
+  "id": "random_event:sea_level_rise2",
+  "name": "Climate Change Phase II",
+  "aliases": [
+   "RANDOM_EVENT_SEA_LEVEL_RISE2"
+  ],
+  "summary": "1.0",
+  "fields": {
+   "severity": 2,
+   "climate_change_points": 3,
+   "description": "1.0"
+  }
+ },
+ {
+  "id": "random_event:sea_level_rise3",
+  "name": "Climate Change Phase III",
+  "aliases": [
+   "RANDOM_EVENT_SEA_LEVEL_RISE3"
+  ],
+  "summary": "1.5",
+  "fields": {
+   "severity": 3,
+   "climate_change_points": 4,
+   "description": "1.5"
+  }
+ },
+ {
+  "id": "random_event:sea_level_rise4",
+  "name": "Climate Change Phase IV",
+  "aliases": [
+   "RANDOM_EVENT_SEA_LEVEL_RISE4"
+  ],
+  "summary": "2.0",
+  "fields": {
+   "severity": 4,
+   "climate_change_points": 5,
+   "description": "2.0",
+   "long_description": "Storms and Floods no longer improve fertility."
+  }
+ },
+ {
+  "id": "random_event:sea_level_rise5",
+  "name": "Climate Change Phase V",
+  "aliases": [
+   "RANDOM_EVENT_SEA_LEVEL_RISE5"
+  ],
+  "summary": "2.5",
+  "fields": {
+   "severity": 5,
+   "climate_change_points": 6,
+   "description": "2.5",
+   "long_description": "Storms and Droughts passing over a tile begin to remove bonus fertility added earlier in the game."
+  }
+ },
+ {
+  "id": "random_event:sea_level_rise6",
+  "name": "Climate Change Phase VI",
+  "aliases": [
+   "RANDOM_EVENT_SEA_LEVEL_RISE6"
+  ],
+  "summary": "3.0",
+  "fields": {
+   "severity": 6,
+   "climate_change_points": 7,
+   "description": "3.0",
+   "long_description": "Storms and Droughts passing over a tile regularly remove bonus fertility added earlier in the game."
+  }
+ },
+ {
+  "id": "random_event:sea_level_rise7",
+  "name": "Climate Change Phase VII",
+  "aliases": [
+   "RANDOM_EVENT_SEA_LEVEL_RISE7"
+  ],
+  "summary": "3.5",
+  "fields": {
+   "severity": 7,
+   "climate_change_points": 8,
+   "description": "3.5",
+   "long_description": "Storms and Droughts passing over a tile quite often remove bonus fertility added earlier in the game."
+  }
+ },
+ {
+  "id": "random_event:tornado_family",
+  "name": "Tornado Family",
+  "aliases": [
+   "RANDOM_EVENT_TORNADO_FAMILY"
+  ],
+  "summary": "A tornado slowly descends from a summer storm, and people seek refuge.",
+  "fields": {
+   "severity": 1,
+   "effect": "- May damage improvements or districts",
+   "description": "A tornado slowly descends from a summer storm, and people seek refuge."
+  }
+ },
+ {
+  "id": "random_event:tornado_outbreak",
+  "name": "Tornado Outbreak",
+  "aliases": [
+   "RANDOM_EVENT_TORNADO_OUTBREAK"
+  ],
+  "summary": "A fast-moving line of storms gallop across the darkening summer sky, with tornadoes ominously forming beneath.",
+  "fields": {
+   "severity": 2,
+   "effect": "- May damage improvements or districts - May damage units or reduce city populations",
+   "description": "A fast-moving line of storms gallop across the darkening summer sky, with tornadoes ominously forming beneath."
+  }
+ },
+ {
+  "id": "random_event:vesuvius_megacolossal",
+  "name": "Megacolossal Eruption",
+  "aliases": [
+   "RANDOM_EVENT_VESUVIUS_MEGACOLOSSAL"
+  ],
+  "summary": "Citizens scream in terror and flee towards safety as the pyroclastic wave crashes down the flanks of Vesuvius!",
+  "fields": {
+   "severity": 2,
+   "effect": "+ May add fertility to tiles it passes over - May damage improvements or districts - May damage units or reduce city populations",
+   "yields_after": [
+    "+1 Food (25% of tiles)",
+    "+1 Production (25% of tiles)",
+    "+1 Science (25% of tiles)",
+    "+1 Culture (50% of tiles)"
+   ],
+   "description": "Citizens scream in terror and flee towards safety as the pyroclastic wave crashes down the flanks of Vesuvius!"
+  }
+ },
+ {
+  "id": "random_event:volcano_catastrophic",
+  "name": "Catastrophic Eruption",
+  "aliases": [
+   "RANDOM_EVENT_VOLCANO_CATASTROPHIC"
+  ],
+  "summary": "People living near the volcano flee as lava and ash blankets the surrounding land.",
+  "fields": {
+   "severity": 1,
+   "effect": "+ May add fertility to tiles it passes over - May damage improvements or districts - May damage units or reduce city populations",
+   "yields_after": [
+    "+1 Food (50% of tiles)",
+    "+1 Production (25% of tiles)",
+    "+1 Science (10% of tiles)"
+   ],
+   "description": "People living near the volcano flee as lava and ash blankets the surrounding land."
+  }
+ },
+ {
+  "id": "random_event:volcano_gentle",
+  "name": "Gentle Eruption",
+  "aliases": [
+   "RANDOM_EVENT_VOLCANO_GENTLE"
+  ],
+  "summary": "People gaze skyward in concern, watching smoke rise from a once-quiet volcano.",
+  "fields": {
+   "effect": "+ May add fertility to tiles it passes over - May damage improvements or districts",
+   "yields_after": [
+    "+1 Food (35% of tiles)",
+    "+1 Production (15% of tiles)"
+   ],
+   "description": "People gaze skyward in concern, watching smoke rise from a once-quiet volcano."
+  }
+ },
+ {
+  "id": "random_event:volcano_megacolossal",
+  "name": "Megacolossal Eruption",
+  "aliases": [
+   "RANDOM_EVENT_VOLCANO_MEGACOLOSSAL"
+  ],
+  "summary": "People flee in terror as pyroclastic flows lash the slopes of the volcano and jets of smoke pour into the sky!",
+  "fields": {
+   "severity": 2,
+   "effect": "+ May add fertility to tiles it passes over - May damage improvements or districts - May damage units or reduce city populations",
+   "yields_after": [
+    "+1 Food (75% of tiles)",
+    "+1 Production (35% of tiles)",
+    "+1 Science (15% of tiles)"
+   ],
+   "description": "People flee in terror as pyroclastic flows lash the slopes of the volcano and jets of smoke pour into the sky!"
+  }
+ }
+]

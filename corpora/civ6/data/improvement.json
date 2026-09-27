@@ -1,0 +1,1839 @@
+[
+ {
+  "id": "improvement:airstrip",
+  "name": "Airstrip",
+  "aliases": [
+   "IMPROVEMENT_AIRSTRIP"
+  ],
+  "summary": "Unlocks the Military Engineer ability to construct an Airstrip. Can support 3 air units. Can only be built on flat terrain. -1 Appeal.",
+  "fields": {
+   "valid_on": [
+    "Desert",
+    "Tundra",
+    "Plains",
+    "Grassland",
+    "Snow",
+    "Volcanic Soil"
+   ],
+   "requires": [
+    "Flight"
+   ],
+   "built_by": [
+    "Military Engineer"
+   ],
+   "appeal": -1,
+   "effect": "Unlocks the Military Engineer ability to construct an Airstrip. Can support 3 air units. Can only be built on flat terrain. -1 Appeal."
+  }
+ },
+ {
+  "id": "improvement:alcazar",
+  "name": "Alcázar",
+  "aliases": [
+   "IMPROVEMENT_ALCAZAR"
+  ],
+  "summary": "Unique to Granada (Granada). +2 Culture.",
+  "fields": {
+   "unique_to": "Granada (Granada)",
+   "yields": "+2 Culture",
+   "valid_on": [
+    "Desert",
+    "Tundra",
+    "Plains",
+    "Grassland",
+    "Snow",
+    "Desert (Hills)",
+    "Tundra (Hills)",
+    "Plains (Hills)",
+    "Grassland (Hills)",
+    "Snow (Hills)"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "tourism": [
+    "culture with Flight"
+   ],
+   "effect": "Unlocks the Builder ability to construct an Alcázar. +2 Culture. Provides Science equal to 50% of the tile's Appeal. Occupying unit receives +4 Defense Strength, and automatically gains 2 turns of fortification. Provides Tourism after researching Flight. Cannot be built next to another Alcázar."
+  }
+ },
+ {
+  "id": "improvement:barbarian_camp",
+  "name": "Barbarian Outpost",
+  "aliases": [
+   "IMPROVEMENT_BARBARIAN_CAMP"
+  ],
+  "summary": "Unique to Barbarians. Creates additional Barbarians.Gold award if destroyed. -1 Appeal",
+  "fields": {
+   "unique_to": "Barbarians",
+   "valid_on": [
+    "Desert",
+    "Tundra",
+    "Plains",
+    "Grassland",
+    "Snow",
+    "Desert (Hills)",
+    "Tundra (Hills)",
+    "Plains (Hills)",
+    "Grassland (Hills)",
+    "Snow (Hills)",
+    "Woods",
+    "Rainforest",
+    "Marsh",
+    "Volcanic Soil",
+    "Desert Floodplains",
+    "Grassland Floodplains",
+    "Plains Floodplains"
+   ],
+   "appeal": -1,
+   "buildable": "no",
+   "effect": "Creates additional Barbarians.Gold award if destroyed. -1 Appeal"
+  }
+ },
+ {
+  "id": "improvement:batey",
+  "name": "Batey",
+  "aliases": [
+   "IMPROVEMENT_BATEY"
+  ],
+  "summary": "Unique to Caguana (Caguana). +1 Culture. Adjacency: +1 Culture per adjacent Entertainment Complex or bonus resource (until Exploration); +2 Culture per adjacent Entertainment Complex or bonus resource (with Exploration).",
+  "fields": {
+   "unique_to": "Caguana (Caguana)",
+   "yields": "+1 Culture",
+   "adjacency": [
+    "+1 Culture per adjacent Entertainment Complex or bonus resource (until Exploration)",
+    "+2 Culture per adjacent Entertainment Complex or bonus resource (with Exploration)"
+   ],
+   "valid_on": [
+    "Plains",
+    "Grassland",
+    "Desert",
+    "Tundra",
+    "Snow"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "tourism": [
+    "culture with Flight"
+   ],
+   "effect": "Unlocks the Builder ability to construct a Batey. +1 Culture. +1 Culture for every adjacent Bonus Resource and Entertainment Complex (increased to +2 Culture when Exploration is discovered). Provides Tourism after researching Flight. Cannot be built adjacent to another Batey or on Hills."
+  }
+ },
+ {
+  "id": "improvement:beach_resort",
+  "name": "Seaside Resort",
+  "aliases": [
+   "IMPROVEMENT_BEACH_RESORT"
+  ],
+  "summary": "Unlocks the Builder ability to construct Seaside Resorts. Provides Tourism equal to the tile's Appeal.",
+  "fields": {
+   "valid_on": [
+    "Desert",
+    "Plains",
+    "Grassland",
+    "Volcanic Soil"
+   ],
+   "requires": [
+    "Radio"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "tourism": [
+    "appeal"
+   ],
+   "effect": "Unlocks the Builder ability to construct Seaside Resorts. Provides Tourism equal to the tile's Appeal. Can only be built on Coastal Desert, Coastal Plains, or Coastal Grassland tiles. Minimum Appeal of Breathtaking."
+  }
+ },
+ {
+  "id": "improvement:camp",
+  "name": "Camp",
+  "aliases": [
+   "IMPROVEMENT_CAMP"
+  ],
+  "summary": "+2 Gold.",
+  "fields": {
+   "yields": "+2 Gold",
+   "valid_on": [
+    "Deer",
+    "Furs",
+    "Ivory",
+    "Truffles",
+    "Honey"
+   ],
+   "requires": [
+    "Animal Husbandry"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "bonus_yields": [
+    "+1 Production with Mercantilism",
+    "+1 Food with Mercantilism",
+    "+2 Gold with Synthetic Materials"
+   ],
+   "housing": 1,
+   "effect": "Unlocks the Builder ability to construct Camps. +2 Gold. Can only be built on valid resources. If built on Luxury resources, the city will gain use of that resource."
+  }
+ },
+ {
+  "id": "improvement:chateau",
+  "name": "Château",
+  "aliases": [
+   "IMPROVEMENT_CHATEAU"
+  ],
+  "summary": "Unique to France. +2 Culture, +1 Gold. Adjacency: +1 Culture per adjacent wonder (until Flight); +2 Culture per adjacent wonder (with Flight).",
+  "fields": {
+   "unique_to": "France",
+   "yields": "+2 Culture, +1 Gold",
+   "adjacency": [
+    "+1 Culture per adjacent wonder (until Flight)",
+    "+2 Culture per adjacent wonder (with Flight)",
+    "+2 Gold per adjacent River"
+   ],
+   "valid_on": [
+    "Desert",
+    "Tundra",
+    "Plains",
+    "Grassland",
+    "Snow",
+    "Desert (Hills)",
+    "Tundra (Hills)",
+    "Plains (Hills)",
+    "Grassland (Hills)",
+    "Snow (Hills)",
+    "Desert Floodplains",
+    "Grassland Floodplains",
+    "Plains Floodplains"
+   ],
+   "requires": [
+    "Humanism"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "tourism": [
+    "culture with Flight"
+   ],
+   "appeal": 1,
+   "effect": "Unlocks the Builder ability to construct a Château, unique to France. +2 Culture and +1 Gold. +1 Appeal. +1 Culture for every adjacent wonder (becomes +2 after researching Flight). +2 Gold if on a tile containing a River edge. Provides Tourism from Culture after researching Flight. Must be placed adjacent to a Bonus or Luxury resource. Cannot be built adjacent to another Château."
+  }
+ },
+ {
+  "id": "improvement:chemamull",
+  "name": "Chemamull",
+  "aliases": [
+   "IMPROVEMENT_CHEMAMULL"
+  ],
+  "summary": "Unique to Mapuche. +1 Production.",
+  "fields": {
+   "unique_to": "Mapuche",
+   "yields": "+1 Production",
+   "valid_on": [
+    "Desert",
+    "Tundra",
+    "Plains",
+    "Grassland",
+    "Snow",
+    "Desert (Hills)",
+    "Tundra (Hills)",
+    "Plains (Hills)",
+    "Grassland (Hills)",
+    "Snow (Hills)"
+   ],
+   "requires": [
+    "Craftsmanship"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "tourism": [
+    "culture with Flight"
+   ],
+   "effect": "Unlocks the Builder ability to construct a Chemamull, unique to Mapuche. +1 Production. Provides Culture equal to 75% of the tile's Appeal. Additional Tourism after researching Flight. Minimum Appeal of Breathtaking."
+  }
+ },
+ {
+  "id": "improvement:city_park",
+  "name": "City Park",
+  "aliases": [
+   "IMPROVEMENT_CITY_PARK"
+  ],
+  "summary": "+1 Culture.",
+  "fields": {
+   "yields": "+1 Culture",
+   "valid_on": [
+    "Desert",
+    "Tundra",
+    "Plains",
+    "Grassland",
+    "Snow",
+    "Desert (Hills)",
+    "Tundra (Hills)",
+    "Plains (Hills)",
+    "Grassland (Hills)",
+    "Snow (Hills)"
+   ],
+   "requires": [
+    "Games and Recreation"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "tourism": [
+    "culture with Flight"
+   ],
+   "appeal": 2,
+   "effect": "A Governor unique improvement that can be built in a city with a Surveyor Governor with the Parks and Recreation promotion. Yields 2 Appeal and 1 Culture. +1 Amenity if adjacent to water. +3 Culture if in a city with a Surveyor Governor with the Parks and Recreation promotion. Cannot be adjacent to another City Park."
+  }
+ },
+ {
+  "id": "improvement:colossal_head",
+  "name": "Colossal Head",
+  "aliases": [
+   "IMPROVEMENT_COLOSSAL_HEAD"
+  ],
+  "summary": "Unique to La Venta (La Venta). +2 Faith. Adjacency: +1 Faith per 2 adjacent Woods tiles (until Humanism); +1 Faith per 2 adjacent Rainforest tiles (until Humanism).",
+  "fields": {
+   "unique_to": "La Venta (La Venta)",
+   "yields": "+2 Faith",
+   "adjacency": [
+    "+1 Faith per 2 adjacent Woods tiles (until Humanism)",
+    "+1 Faith per 2 adjacent Rainforest tiles (until Humanism)",
+    "+1 Faith per adjacent Woods or Rainforest (with Humanism)"
+   ],
+   "valid_on": [
+    "Desert",
+    "Tundra",
+    "Plains",
+    "Grassland",
+    "Desert (Hills)",
+    "Tundra (Hills)",
+    "Plains (Hills)",
+    "Grassland (Hills)",
+    "Volcanic Soil"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "tourism": [
+    "faith with Flight"
+   ],
+   "effect": "Unlocks the Builder ability to construct a Colossal Head. +2 Faith. +1 Faith for every 2 adjacent Rainforest or for every adjacent Rainforest once Humanism is discovered. +1 Faith for every 2 adjacent Woods or for every adjacent Woods once Humanism is discovered. Tourism from Faith once Flight is researched. Cannot be built on Snow or Snow Hills."
+  }
+ },
+ {
+  "id": "improvement:farm",
+  "name": "Farm",
+  "aliases": [
+   "IMPROVEMENT_FARM"
+  ],
+  "summary": "+1 Food. Adjacency: +1 Food per 2 adjacent Farm tiles (with Feudalism, until Replaceable Parts); +1 Food per adjacent Farm (with Replaceable Parts).",
+  "fields": {
+   "yields": "+1 Food",
+   "adjacency": [
+    "+1 Food per 2 adjacent Farm tiles (with Feudalism, until Replaceable Parts)",
+    "+1 Food per adjacent Farm (with Replaceable Parts)",
+    "+1 Food per adjacent Seowon",
+    "+1 Production per adjacent Observatory"
+   ],
+   "valid_on": [
+    "Plains",
+    "Grassland",
+    "Plains (Hills)",
+    "Grassland (Hills)",
+    "Desert Floodplains",
+    "Grassland Floodplains",
+    "Plains Floodplains",
+    "Volcanic Soil",
+    "Rice",
+    "Wheat",
+    "Maize"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "housing": 1,
+   "effect": "Unlocks the Builder ability to construct Farms. +1 Food. Can only be built on Grassland or Plains. Constructing farms adjacent to other Farms provides bonuses to Housing."
+  }
+ },
+ {
+  "id": "improvement:feitoria",
+  "name": "Feitoria",
+  "aliases": [
+   "IMPROVEMENT_FEITORIA"
+  ],
+  "summary": "Unique to Portugal. +4 Gold, +1 Production.",
+  "fields": {
+   "unique_to": "Portugal",
+   "yields": "+4 Gold, +1 Production",
+   "valid_on": [
+    "Coast and Lake"
+   ],
+   "built_by": [
+    "Nau"
+   ],
+   "effect": "Unlocks the Nau ability to construct a Feitoria, unique to Portugal. Provides +4 Gold and +1 Production. Trade routes sent to this city from Portugal gain +4 Gold and +1 Production. Can only be built adjacent to Luxury or Bonus resources in territory belonging to other Civilizations or City-States that you have Open Borders with. Must be built on a Coast or Lake tile adjacent to land and not adjacent to another Feitoria. Feitorias cannot be removed."
+  }
+ },
+ {
+  "id": "improvement:fishery",
+  "name": "Fishery",
+  "aliases": [
+   "IMPROVEMENT_FISHERY"
+  ],
+  "summary": "+1 Food. Adjacency: +1 Food per adjacent sea resource.",
+  "fields": {
+   "yields": "+1 Food",
+   "adjacency": [
+    "+1 Food per adjacent sea resource"
+   ],
+   "valid_on": [
+    "Coast and Lake"
+   ],
+   "requires": [
+    "Sailing"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "housing": 1,
+   "effect": "A Governor unique improvement that can be built in a city with a Surveyor Governor with the Aquaculture promotion. Yields 1 Food, +0.5 Housing, +1 additional Food if adjacent to a sea resource. +1 Production if in a city with a Surveyor Governor with the Aquaculture promotion. Must be built on a coastal plot."
+  }
+ },
+ {
+  "id": "improvement:fishing_boats",
+  "name": "Fishing Boats",
+  "aliases": [
+   "IMPROVEMENT_FISHING_BOATS"
+  ],
+  "summary": "+1 Food. Adjacency: +1 Production per adjacent Seastead.",
+  "fields": {
+   "yields": "+1 Food",
+   "adjacency": [
+    "+1 Production per adjacent Seastead"
+   ],
+   "valid_on": [
+    "Crabs",
+    "Fish",
+    "Pearls",
+    "Whales",
+    "Amber",
+    "Turtles"
+   ],
+   "requires": [
+    "Sailing"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "bonus_yields": [
+    "+2 Gold with Cartography",
+    "+1 Food with Plastics",
+    "+1 Production with Colonialism"
+   ],
+   "housing": 1,
+   "effect": "Unlocks the Builder ability to construct Fishing Boats. +1 Food. Can only be built on valid resources. If built on Luxury resources, the city will gain use of that resource."
+  }
+ },
+ {
+  "id": "improvement:fort",
+  "name": "Fort",
+  "aliases": [
+   "IMPROVEMENT_FORT"
+  ],
+  "summary": "Occupying unit receives +4 Defense Strength, and automatically gains 2 turns of fortification.",
+  "fields": {
+   "valid_on": [
+    "Desert",
+    "Tundra",
+    "Plains",
+    "Grassland",
+    "Snow",
+    "Desert (Hills)",
+    "Tundra (Hills)",
+    "Plains (Hills)",
+    "Grassland (Hills)",
+    "Snow (Hills)",
+    "Volcanic Soil"
+   ],
+   "requires": [
+    "Siege Tactics"
+   ],
+   "built_by": [
+    "Military Engineer"
+   ],
+   "effect": "Occupying unit receives +4 Defense Strength, and automatically gains 2 turns of fortification."
+  }
+ },
+ {
+  "id": "improvement:geothermal_plant",
+  "name": "Geothermal Plant",
+  "aliases": [
+   "IMPROVEMENT_GEOTHERMAL_PLANT"
+  ],
+  "summary": "+2 Production, +1 Science.",
+  "fields": {
+   "yields": "+2 Production, +1 Science",
+   "valid_on": [
+    "Geothermal Fissure"
+   ],
+   "requires": [
+    "Synthetic Materials"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "buildable": "no",
+   "effect": "Unlocks the Builder ability to construct a Geothermal Plant. +1 Science. +2 Production. Provides 4 Power per turn. Must be built on a Geothermal Fissure."
+  }
+ },
+ {
+  "id": "improvement:golf_course",
+  "name": "Golf Course",
+  "aliases": [
+   "IMPROVEMENT_GOLF_COURSE"
+  ],
+  "summary": "Unique to Scotland. +2 Gold. Adjacency: +1 Culture per adjacent City Center or Entertainment Complex.",
+  "fields": {
+   "unique_to": "Scotland",
+   "yields": "+2 Gold",
+   "adjacency": [
+    "+1 Culture per adjacent City Center or Entertainment Complex"
+   ],
+   "valid_on": [
+    "Tundra",
+    "Plains",
+    "Grassland",
+    "Snow",
+    "Tundra (Hills)",
+    "Plains (Hills)",
+    "Grassland (Hills)",
+    "Snow (Hills)"
+   ],
+   "requires": [
+    "Reformed Church"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "tourism": [
+    "culture with Flight"
+   ],
+   "appeal": 1,
+   "one_per_city": true,
+   "effect": "Unlocks the Builder ability to construct a Golf Course, unique to Scotland. +2 Amenities and +2 Gold. +1 Culture if adjacent to a City Center district and +1 Culture if adjacent to an Entertainment Complex district. Additional Tourism and Housing as you advance through the Civics and Technology Tree. Cannot be placed on Desert or Desert Hills. One per city. Tiles with Golf Courses cannot be swapped. +1 Appeal."
+  }
+ },
+ {
+  "id": "improvement:goody_hut",
+  "name": "Tribal Village",
+  "aliases": [
+   "IMPROVEMENT_GOODY_HUT"
+  ],
+  "summary": "No base yield.",
+  "fields": {
+   "valid_on": [
+    "Desert",
+    "Tundra",
+    "Plains",
+    "Grassland",
+    "Snow",
+    "Desert (Hills)",
+    "Tundra (Hills)",
+    "Plains (Hills)",
+    "Grassland (Hills)",
+    "Snow (Hills)",
+    "Woods",
+    "Rainforest",
+    "Marsh",
+    "Desert Floodplains",
+    "Grassland Floodplains",
+    "Plains Floodplains"
+   ],
+   "buildable": "no"
+  }
+ },
+ {
+  "id": "improvement:great_wall",
+  "name": "Great Wall",
+  "aliases": [
+   "IMPROVEMENT_GREAT_WALL"
+  ],
+  "summary": "Unique to China. +2 Gold. Adjacency: +2 Gold per adjacent Great Wall (with Masonry); +2 Culture per adjacent Great Wall (with Castles).",
+  "fields": {
+   "unique_to": "China",
+   "yields": "+2 Gold",
+   "adjacency": [
+    "+2 Gold per adjacent Great Wall (with Masonry)",
+    "+2 Culture per adjacent Great Wall (with Castles)"
+   ],
+   "valid_on": [
+    "Desert",
+    "Tundra",
+    "Plains",
+    "Grassland",
+    "Snow",
+    "Desert (Hills)",
+    "Tundra (Hills)",
+    "Plains (Hills)",
+    "Grassland (Hills)",
+    "Snow (Hills)",
+    "Volcanic Soil"
+   ],
+   "requires": [
+    "Masonry"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "tourism": [
+    "culture with Flight"
+   ],
+   "effect": "Unlocks the Builder ability to construct the Great Wall, unique to China. +2 Gold. Provides an increase to Combat Strength Defense. Bonus to Gold if adjacent to other segments. Additional Culture and Tourism as you advance through the Technology Tree for adjacent segments. Must be built in a line along the borders of your empire. Can only be pillaged (never destroyed) by natural disasters."
+  }
+ },
+ {
+  "id": "improvement:hacienda",
+  "name": "Hacienda",
+  "aliases": [
+   "IMPROVEMENT_HACIENDA"
+  ],
+  "summary": "Unique to Gran Colombia. +2 Gold, +1 Production. Adjacency: +1 Food per 2 adjacent Plantation tiles (until Replaceable Parts); +1 Food per adjacent Plantation (with Replaceable Parts).",
+  "fields": {
+   "unique_to": "Gran Colombia",
+   "yields": "+2 Gold, +1 Production",
+   "adjacency": [
+    "+1 Food per 2 adjacent Plantation tiles (until Replaceable Parts)",
+    "+1 Food per adjacent Plantation (with Replaceable Parts)",
+    "+1 Production per 2 adjacent Hacienda tiles (until Rapid Deployment)",
+    "+1 Production per adjacent Hacienda (with Rapid Deployment)"
+   ],
+   "valid_on": [
+    "Plains (Hills)",
+    "Plains",
+    "Grassland (Hills)",
+    "Grassland"
+   ],
+   "requires": [
+    "Mercantilism"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "housing": 1,
+   "effect": "Unlocks the Builder ability to construct a Hacienda, unique to Gran Colombia. +2 Gold, +1 Production, and +0.5 Housing. +1 Food for every two adjacent Plantations (increased to every Plantation with Replaceable Parts). Plantations and Haciendas receive +1 Production for every two adjacent Haciendas (increased to every Hacienda with Rapid Deployment). Can only be built on Plains, Plains Hills, Grassland, and Grassland Hills."
+  }
+ },
+ {
+  "id": "improvement:ice_hockey_rink",
+  "name": "Ice Hockey Rink",
+  "aliases": [
+   "IMPROVEMENT_ICE_HOCKEY_RINK"
+  ],
+  "summary": "Unique to Canada. Unlocks the Builder ability to construct an Ice Hockey Rink, unique to Canada. +1 Amenity. Adjacency: +1 Culture per adjacent Tundra or Tundra (Hills) or Snow or Snow (Hills).",
+  "fields": {
+   "unique_to": "Canada",
+   "adjacency": [
+    "+1 Culture per adjacent Tundra or Tundra (Hills) or Snow or Snow (Hills)"
+   ],
+   "valid_on": [
+    "Tundra",
+    "Snow",
+    "Tundra (Hills)",
+    "Snow (Hills)"
+   ],
+   "requires": [
+    "Colonialism"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "bonus_yields": [
+    "+2 Production with Professional Sports",
+    "+2 Food with Professional Sports"
+   ],
+   "tourism": [
+    "culture with Flight"
+   ],
+   "appeal": 2,
+   "one_per_city": true,
+   "effect": "Unlocks the Builder ability to construct an Ice Hockey Rink, unique to Canada. +1 Amenity. +1 Culture for each adjacent Tundra, Tundra Hills, Snow, and Snow Hills tile. Provides Tourism from Culture once Flight is unlocked. +2 Food and Production once the Professional Sports civic is unlocked. +4 Culture if adjacent to a Stadium building. Can be built on Tundra, Tundra Hills, Snow, and Snow Hills. One per city. +2 Appeal."
+  }
+ },
+ {
+  "id": "improvement:kampung",
+  "name": "Kampung",
+  "aliases": [
+   "IMPROVEMENT_KAMPUNG"
+  ],
+  "summary": "Unique to Indonesia. +1 Production. Adjacency: +1 Food per adjacent Fishing Boats.",
+  "fields": {
+   "unique_to": "Indonesia",
+   "yields": "+1 Production",
+   "adjacency": [
+    "+1 Food per adjacent Fishing Boats"
+   ],
+   "valid_on": [
+    "Coast and Lake"
+   ],
+   "requires": [
+    "Shipbuilding"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "bonus_yields": [
+    "+1 Production with Civil Engineering"
+   ],
+   "tourism": [
+    "food with Flight"
+   ],
+   "housing": 2,
+   "effect": "Unlocks the Builder ability to construct a Kampung, unique to Indonesia. +1 Production and +1 Housing. +1 Food for each adjacent Fishing Boat. Additional Production, Housing, and Tourism as you advance through the Technology and Civics Tree. Must be placed on a Coast or Lake tile adjacent to a sea resource."
+  }
+ },
+ {
+  "id": "improvement:kurgan",
+  "name": "Kurgan",
+  "aliases": [
+   "IMPROVEMENT_KURGAN"
+  ],
+  "summary": "Unique to Scythia. +3 Gold, +1 Faith. Adjacency: +1 Faith per adjacent Pasture (until Stirrups); +2 Faith per adjacent Pasture (with Stirrups).",
+  "fields": {
+   "unique_to": "Scythia",
+   "yields": "+3 Gold, +1 Faith",
+   "adjacency": [
+    "+1 Faith per adjacent Pasture (until Stirrups)",
+    "+2 Faith per adjacent Pasture (with Stirrups)"
+   ],
+   "valid_on": [
+    "Desert",
+    "Tundra",
+    "Plains",
+    "Grassland",
+    "Snow"
+   ],
+   "requires": [
+    "Animal Husbandry"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "tourism": [
+    "faith with Flight"
+   ],
+   "effect": "Unlocks the Builder ability to construct a Kurgan, unique to Scythia. +1 Faith and +3 Gold. +1 Faith for each adjacent Pasture (becomes +2 after researching Stirrups). Provides Tourism from Faith after researching Flight. Cannot be built on Hills."
+  }
+ },
+ {
+  "id": "improvement:lumber_mill",
+  "name": "Lumber Mill",
+  "aliases": [
+   "IMPROVEMENT_LUMBER_MILL"
+  ],
+  "summary": "+2 Production.",
+  "fields": {
+   "yields": "+2 Production",
+   "valid_on": [
+    "Woods",
+    "Rainforest"
+   ],
+   "requires": [
+    "Construction"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "bonus_yields": [
+    "+1 Production with Steel",
+    "+1 Production with Cybernetics"
+   ],
+   "effect": "Unlocks the Builder ability to construct a Lumber Mill. +2 Production. Can only be built on Woods. Once Mercantilism is unlocked it can also be built on Rainforest."
+  }
+ },
+ {
+  "id": "improvement:mahavihara",
+  "name": "Mahavihara",
+  "aliases": [
+   "IMPROVEMENT_MAHAVIHARA"
+  ],
+  "summary": "Unique to Nalanda (Nalanda). +2 Science. Adjacency: +1 Science per adjacent Campus or Observatory (until Scientific Theory); +2 Science per adjacent Campus or Observatory (with Scientific Theory).",
+  "fields": {
+   "unique_to": "Nalanda (Nalanda)",
+   "yields": "+2 Science",
+   "adjacency": [
+    "+1 Science per adjacent Campus or Observatory (until Scientific Theory)",
+    "+2 Science per adjacent Campus or Observatory (with Scientific Theory)",
+    "+1 Faith per adjacent Holy Site or Lavra"
+   ],
+   "valid_on": [
+    "Plains",
+    "Grassland",
+    "Desert",
+    "Tundra",
+    "Snow"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "housing": 2,
+   "effect": "Unlocks the Builder ability to construct a Mahavihara. +2 Science and +1 Housing. +1 Faith for every adjacent Holy Site district and +1 Science for every adjacent Campus district. After researching Scientific Theory receive an additional +1 Science for every adjacent Campus. When a player constructs their first Mahavihara receive a random technology. Must be built on flat terrain not adjacent to another Mahavihara."
+  }
+ },
+ {
+  "id": "improvement:maori_pa",
+  "name": "Pā",
+  "aliases": [
+   "IMPROVEMENT_MAORI_PA"
+  ],
+  "summary": "Unique to Māori. Unlocks the Toa ability to construct a Pā, unique to Māori. Occupying unit receives +4 Defense Strength, and automatically gains 2 turns of fortification.",
+  "fields": {
+   "unique_to": "Māori",
+   "valid_on": [
+    "Plains (Hills)",
+    "Grassland (Hills)",
+    "Desert (Hills)",
+    "Tundra (Hills)",
+    "Snow (Hills)"
+   ],
+   "built_by": [
+    "Toa"
+   ],
+   "effect": "Unlocks the Toa ability to construct a Pā, unique to Māori. Occupying unit receives +4 Defense Strength, and automatically gains 2 turns of fortification. A Māori unit occupying a Pā heals even if they just moved or attacked. Must be built on a Hill tile."
+  }
+ },
+ {
+  "id": "improvement:mekewap",
+  "name": "Mekewap",
+  "aliases": [
+   "IMPROVEMENT_MEKEWAP"
+  ],
+  "summary": "Unique to Cree. +1 Production. Adjacency: +1 Food per 2 adjacent bonus resource tiles (until Conservation); +1 Food per adjacent bonus resource (with Conservation).",
+  "fields": {
+   "unique_to": "Cree",
+   "yields": "+1 Production",
+   "adjacency": [
+    "+1 Food per 2 adjacent bonus resource tiles (until Conservation)",
+    "+1 Food per adjacent bonus resource (with Conservation)",
+    "+2 Gold per adjacent luxury resource (with Cartography)"
+   ],
+   "valid_on": [
+    "Desert",
+    "Tundra",
+    "Plains",
+    "Grassland",
+    "Snow",
+    "Desert (Hills)",
+    "Tundra (Hills)",
+    "Plains (Hills)",
+    "Grassland (Hills)",
+    "Snow (Hills)"
+   ],
+   "requires": [
+    "Pottery"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "bonus_yields": [
+    "+1 Production with Civil Service"
+   ],
+   "housing": 2,
+   "effect": "Unlocks the Builder ability to construct a Mekewap, unique to Cree. Provides +1 Production and +1 Housing. +1 Gold if adjacent to a Luxury resource. For every 2 adjacent Bonus Resources +1 Food. Additional Production, Gold, Food, and Housing as you advance through the Civics and Technology Tree. Must be placed adjacent to a Bonus or Luxury resource. Cannot be built adjacent to another Mekewap."
+  }
+ },
+ {
+  "id": "improvement:meteor_goody",
+  "name": "Meteor Site",
+  "aliases": [
+   "IMPROVEMENT_METEOR_GOODY"
+  ],
+  "summary": "No base yield.",
+  "fields": {
+   "valid_on": [
+    "Desert",
+    "Tundra",
+    "Plains",
+    "Grassland",
+    "Snow",
+    "Desert (Hills)",
+    "Tundra (Hills)",
+    "Plains (Hills)",
+    "Grassland (Hills)",
+    "Snow (Hills)",
+    "Woods",
+    "Rainforest",
+    "Marsh"
+   ],
+   "buildable": "no"
+  }
+ },
+ {
+  "id": "improvement:mine",
+  "name": "Mine",
+  "aliases": [
+   "IMPROVEMENT_MINE"
+  ],
+  "summary": "+1 Production. Adjacency: +1 Science per adjacent Seowon.",
+  "fields": {
+   "yields": "+1 Production",
+   "adjacency": [
+    "+1 Science per adjacent Seowon"
+   ],
+   "valid_on": [
+    "Grassland (Hills)",
+    "Plains (Hills)",
+    "Desert (Hills)",
+    "Tundra (Hills)",
+    "Snow (Hills)",
+    "Volcanic Soil",
+    "Copper",
+    "Diamonds",
+    "Jade",
+    "Mercury",
+    "Salt",
+    "Silver",
+    "Aluminum",
+    "Coal",
+    "Iron",
+    "Niter",
+    "Uranium",
+    "Amber"
+   ],
+   "requires": [
+    "Mining"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "bonus_yields": [
+    "+1 Production with Apprenticeship",
+    "+1 Production with Industrialization",
+    "+1 Production with Smart Materials"
+   ],
+   "tourism": [
+    "culture with Flight"
+   ],
+   "appeal": -1,
+   "effect": "Unlocks the Builder ability to construct Mines. +1 Production. -1 Appeal. Can be built on hills or valid resources. If built on Luxury or Strategic resources, the city will gain use of that resource."
+  }
+ },
+ {
+  "id": "improvement:missile_silo",
+  "name": "Missile Silo",
+  "aliases": [
+   "IMPROVEMENT_MISSILE_SILO"
+  ],
+  "summary": "Unlocks the Military Engineer ability to construct a Missile Silo. Acts as a launch site for Nuclear and Thermonuclear Devices.",
+  "fields": {
+   "valid_on": [
+    "Desert",
+    "Tundra",
+    "Plains",
+    "Grassland",
+    "Snow",
+    "Volcanic Soil"
+   ],
+   "requires": [
+    "Rocketry"
+   ],
+   "built_by": [
+    "Military Engineer"
+   ],
+   "effect": "Unlocks the Military Engineer ability to construct a Missile Silo. Acts as a launch site for Nuclear and Thermonuclear Devices."
+  }
+ },
+ {
+  "id": "improvement:mission",
+  "name": "Mission",
+  "aliases": [
+   "IMPROVEMENT_MISSION"
+  ],
+  "summary": "Unique to Spain. +2 Faith. Adjacency: +1 Science per adjacent Holy Site or Campus.",
+  "fields": {
+   "unique_to": "Spain",
+   "yields": "+2 Faith",
+   "adjacency": [
+    "+1 Science per adjacent Holy Site or Campus"
+   ],
+   "valid_on": [
+    "Desert",
+    "Tundra",
+    "Plains",
+    "Grassland",
+    "Snow",
+    "Desert (Hills)",
+    "Tundra (Hills)",
+    "Plains (Hills)",
+    "Grassland (Hills)",
+    "Snow (Hills)"
+   ],
+   "requires": [
+    "Education"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "bonus_yields": [
+    "+2 Science with Cultural Heritage"
+   ],
+   "effect": "Unlocks the Builder ability to construct a Mission, unique to Spain. +2 Faith. +2 Faith, +1 Production, and +1 Food if on a different continent than your Capital. +1 Science for every adjacent Campus and Holy Site district. Additional Science once Cultural Heritage is discovered. +2 Loyalty per turn for cities with a Mission improvement adjacent to the City Center and not on your original Capital's continent."
+  }
+ },
+ {
+  "id": "improvement:moai",
+  "name": "Moai",
+  "aliases": [
+   "IMPROVEMENT_MOAI"
+  ],
+  "summary": "Unique to Rapa Nui (Rapa Nui). +1 Culture. Adjacency: +1 Culture per 2 adjacent Moai tiles (until Medieval Faires); +1 Culture per adjacent Moai (with Medieval Faires).",
+  "fields": {
+   "unique_to": "Rapa Nui (Rapa Nui)",
+   "yields": "+1 Culture",
+   "adjacency": [
+    "+1 Culture per 2 adjacent Moai tiles (until Medieval Faires)",
+    "+1 Culture per adjacent Moai (with Medieval Faires)"
+   ],
+   "valid_on": [
+    "Plains",
+    "Plains (Hills)",
+    "Grassland",
+    "Grassland (Hills)",
+    "Volcanic Soil"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "tourism": [
+    "culture with Flight"
+   ],
+   "effect": "Unlocks the Builder ability to construct a Moai. +1 Culture. +1 Culture for every 2 adjacent Moai. +2 Culture if on or adjacent to a Volcanic Soil tile. +1 Culture if adjacent to a Coast or Lake tile. Additional Culture and Tourism as you advance through the Civics and Technology Tree. Can be built on Plains, Plains Hills, Grassland, Grassland Hills, or Volcanic Soil. Cannot be placed adjacent to a Woods or Rainforest tile."
+  }
+ },
+ {
+  "id": "improvement:monastery",
+  "name": "Monastery",
+  "aliases": [
+   "IMPROVEMENT_MONASTERY"
+  ],
+  "summary": "Unique to Armagh (Armagh). +2 Faith. Adjacency: +1 Faith per 2 adjacent districts.",
+  "fields": {
+   "unique_to": "Armagh (Armagh)",
+   "yields": "+2 Faith",
+   "adjacency": [
+    "+1 Faith per 2 adjacent districts"
+   ],
+   "valid_on": [
+    "Desert",
+    "Tundra",
+    "Plains",
+    "Grassland",
+    "Snow",
+    "Desert (Hills)",
+    "Tundra (Hills)",
+    "Plains (Hills)",
+    "Grassland (Hills)",
+    "Snow (Hills)"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "housing": 2,
+   "effect": "Unlocks the Builder ability to construct a Monastery. +2 Faith. +15 HP healing for friendly religious unit on this tile that has not attacked this turn. +1 Faith for every 2 adjacent Districts. Provides +1 Housing. Receive an additional Housing once Colonialism is discovered. Cannot be built next to another Monastery."
+  }
+ },
+ {
+  "id": "improvement:mound",
+  "name": "Cahokia Mounds",
+  "aliases": [
+   "IMPROVEMENT_MOUND"
+  ],
+  "summary": "Unique to Cahokia (Cahokia). +3 Gold. Adjacency: +1 Food per 2 adjacent districts (with Feudalism, until Replaceable Parts); +1 Food per adjacent district (with Replaceable Parts).",
+  "fields": {
+   "unique_to": "Cahokia (Cahokia)",
+   "yields": "+3 Gold",
+   "adjacency": [
+    "+1 Food per 2 adjacent districts (with Feudalism, until Replaceable Parts)",
+    "+1 Food per adjacent district (with Replaceable Parts)"
+   ],
+   "valid_on": [
+    "Plains",
+    "Grassland",
+    "Desert",
+    "Tundra",
+    "Desert Floodplains",
+    "Grassland Floodplains",
+    "Plains Floodplains"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "housing": 2,
+   "effect": "Unlocks the Builder ability to construct a Cahokia Mounds. +3 Gold. Cities receive +1 Amenity from their first Cahokia Mound improvement. Upon discovering Natural History, cities receive +1 Amenity from their second Cahokia Mound improvement. +1 Food for every 2 adjacent Districts once Feudalism is discovered or for every adjacent District once Replaceable Parts is researched. Provides +1 Housing. Receive an additional Housing once Cultural Heritage is discovered. Cannot be built adjacent to other Cahokia Mounds."
+  }
+ },
+ {
+  "id": "improvement:mountain_road",
+  "name": "Qhapaq Ñan",
+  "aliases": [
+   "IMPROVEMENT_MOUNTAIN_ROAD"
+  ],
+  "summary": "Unique to Pachacuti (Inca). Unlocks the Builder ability to construct a Qhapaq Ñan, unique to Pachacuti.",
+  "fields": {
+   "unique_to": "Pachacuti (Inca)",
+   "valid_on": [
+    "Grassland (Mountain)",
+    "Plains (Mountain)",
+    "Desert (Mountain)",
+    "Tundra (Mountain)",
+    "Snow (Mountain)"
+   ],
+   "requires": [
+    "Foreign Trade"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "effect": "Unlocks the Builder ability to construct a Qhapaq Ñan, unique to Pachacuti. Acts as a movement portal on a mountain range, allowing units to move into it and exit from another portal at the cost of 2 Movement. Trade Routes traveling through it can multiply the Gold they get from districts at their destination. Can only be built on an adjacent Mountain tile. Cannot be pillaged or removed."
+  }
+ },
+ {
+  "id": "improvement:mountain_tunnel",
+  "name": "Mountain Tunnel",
+  "aliases": [
+   "IMPROVEMENT_MOUNTAIN_TUNNEL"
+  ],
+  "summary": "Unlocks the Military Engineer ability to construct a Mountain Tunnel.",
+  "fields": {
+   "valid_on": [
+    "Grassland (Mountain)",
+    "Plains (Mountain)",
+    "Desert (Mountain)",
+    "Tundra (Mountain)",
+    "Snow (Mountain)"
+   ],
+   "requires": [
+    "Chemistry"
+   ],
+   "built_by": [
+    "Military Engineer"
+   ],
+   "effect": "Unlocks the Military Engineer ability to construct a Mountain Tunnel. Acts as a movement portal on a mountain range, allowing units to move into it and exit from another portal at the cost of 2 Movement. Trade Routes traveling through it can multiply the Gold they get from districts at their destination. Can only be built on an adjacent Mountain tile. Cannot be pillaged or removed."
+  }
+ },
+ {
+  "id": "improvement:nazca_line",
+  "name": "Nazca Line",
+  "aliases": [
+   "IMPROVEMENT_NAZCA_LINE"
+  ],
+  "summary": "Unique to Nazca (Nazca). Unlocks the Builder ability to construct a Nazca Line. +1 Faith to adjacent tiles. +1 Faith to adjacent tiles with a resource.",
+  "fields": {
+   "unique_to": "Nazca (Nazca)",
+   "valid_on": [
+    "Desert"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "appeal": 1,
+   "effect": "Unlocks the Builder ability to construct a Nazca Line. +1 Faith to adjacent tiles. +1 Faith to adjacent tiles with a resource. +1 Food to adjacent Desert and Desert Hill tiles after discovering Civil Service. +1 Production to adjacent flat tiles after researching Mass Production. +1 Appeal. Can only be built on flat Desert. This tile cannot be worked."
+  }
+ },
+ {
+  "id": "improvement:offshore_oil_rig",
+  "name": "Offshore Oil Rig",
+  "aliases": [
+   "IMPROVEMENT_OFFSHORE_OIL_RIG"
+  ],
+  "summary": "+2 Production.",
+  "fields": {
+   "yields": "+2 Production",
+   "valid_on": [
+    "Coast and Lake",
+    "Ocean",
+    "Oil"
+   ],
+   "requires": [
+    "Plastics"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "bonus_yields": [
+    "+1 Production with Predictive Systems"
+   ],
+   "appeal": -1,
+   "buildable": "no",
+   "effect": "Unlocks the Builder ability to construct an Offshore Oil Rig. -1 Appeal. Can only be built on Coast or Lake tiles with Oil."
+  }
+ },
+ {
+  "id": "improvement:offshore_wind_farm",
+  "name": "Offshore Wind Farm",
+  "aliases": [
+   "IMPROVEMENT_OFFSHORE_WIND_FARM"
+  ],
+  "summary": "+2 Production.",
+  "fields": {
+   "yields": "+2 Production",
+   "valid_on": [
+    "Coast and Lake"
+   ],
+   "requires": [
+    "Predictive Systems"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "buildable": "no",
+   "effect": "Unlocks the Builder ability to construct an Offshore Wind Farm. +2 Production. Provides 2 Power per turn. Must be built on Coast or Lake terrain."
+  }
+ },
+ {
+  "id": "improvement:oil_well",
+  "name": "Oil Well",
+  "aliases": [
+   "IMPROVEMENT_OIL_WELL"
+  ],
+  "summary": "+2 Production.",
+  "fields": {
+   "yields": "+2 Production",
+   "valid_on": [
+    "Desert",
+    "Tundra",
+    "Plains",
+    "Grassland",
+    "Snow",
+    "Desert (Hills)",
+    "Tundra (Hills)",
+    "Plains (Hills)",
+    "Grassland (Hills)",
+    "Snow (Hills)",
+    "Oil"
+   ],
+   "requires": [
+    "Refining"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "bonus_yields": [
+    "+1 Production with Predictive Systems"
+   ],
+   "appeal": -1,
+   "buildable": "no",
+   "effect": "Unlocks the Builder ability to construct an Oil Well. -1 Appeal. Can only be built on land tiles withOil."
+  }
+ },
+ {
+  "id": "improvement:open_air_museum",
+  "name": "Open-Air Museum",
+  "aliases": [
+   "IMPROVEMENT_OPEN_AIR_MUSEUM"
+  ],
+  "summary": "Unique to Sweden. Unlocks the Builder ability to construct an Open-Air Museum, unique to Sweden. Provides +2 Loyalty per turn in this city.",
+  "fields": {
+   "unique_to": "Sweden",
+   "valid_on": [
+    "Plains (Hills)",
+    "Plains",
+    "Grassland (Hills)",
+    "Grassland",
+    "Desert (Hills)",
+    "Desert",
+    "Tundra (Hills)",
+    "Tundra",
+    "Snow (Hills)",
+    "Snow"
+   ],
+   "requires": [
+    "Nationalism"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "tourism": [
+    "culture"
+   ],
+   "one_per_city": true,
+   "effect": "Unlocks the Builder ability to construct an Open-Air Museum, unique to Sweden. Provides +2 Loyalty per turn in this city. +2 Culture and +2 Tourism for each type of terrain (Snow, Tundra, Desert, Plains or Grassland) in which at least one Swedish city is founded. One per city. Tiles with Open-Air Museums cannot be swapped."
+  }
+ },
+ {
+  "id": "improvement:outback_station",
+  "name": "Outback Station",
+  "aliases": [
+   "IMPROVEMENT_OUTBACK_STATION"
+  ],
+  "summary": "Unique to Australia. +1 Production, +1 Food. Adjacency: +1 Food per adjacent Pasture; +1 Production per 2 adjacent Outback Station tiles (with Steam Power).",
+  "fields": {
+   "unique_to": "Australia",
+   "yields": "+1 Production, +1 Food",
+   "adjacency": [
+    "+1 Food per adjacent Pasture",
+    "+1 Production per 2 adjacent Outback Station tiles (with Steam Power)",
+    "+1 Food per 2 adjacent Outback Station tiles (with Rapid Deployment)"
+   ],
+   "valid_on": [
+    "Grassland",
+    "Plains",
+    "Desert",
+    "Desert (Hills)"
+   ],
+   "requires": [
+    "Guilds"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "housing": 1,
+   "effect": "Unlocks the Builder ability to construct an Outback Station, unique to Australia. +1 Food and +1 Production. +1 Food for each adjacent Pasture. Additional Food and Production as you advance through the Technology and Civic Tree for adjacent Outback Stations and Pastures. Can only be built in Desert, Desert Hills, Grassland, and Plains tiles."
+  }
+ },
+ {
+  "id": "improvement:pairidaeza",
+  "name": "Pairidaeza",
+  "aliases": [
+   "IMPROVEMENT_PAIRIDAEZA"
+  ],
+  "summary": "Unique to Persia. +1 Culture, +2 Gold. Adjacency: +1 Gold per adjacent City Center or Commercial Hub; +1 Culture per adjacent Holy Site or Theater Square.",
+  "fields": {
+   "unique_to": "Persia",
+   "yields": "+1 Culture, +2 Gold",
+   "adjacency": [
+    "+1 Gold per adjacent City Center or Commercial Hub",
+    "+1 Culture per adjacent Holy Site or Theater Square"
+   ],
+   "valid_on": [
+    "Grassland",
+    "Plains",
+    "Desert",
+    "Grassland (Hills)",
+    "Plains (Hills)",
+    "Desert (Hills)"
+   ],
+   "requires": [
+    "Early Empire"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "bonus_yields": [
+    "+1 Culture with Diplomatic Service"
+   ],
+   "tourism": [
+    "culture with Flight"
+   ],
+   "appeal": 1,
+   "effect": "Unlocks the Builder ability to construct a Pairidaeza, unique to Persia. +1 Culture and +2 Gold. +1 Appeal. +1 Culture for each adjacent Holy Site and Theater Square. +1 Gold for each adjacent Commercial Hub and City Center. Additional Culture and Tourism as you advance through the Technology and Civics Tree. Cannot be built on Snow, Tundra, Snow Hills, or Tundra Hills or adjacent to another Pairidaeza."
+  }
+ },
+ {
+  "id": "improvement:pasture",
+  "name": "Pasture",
+  "aliases": [
+   "IMPROVEMENT_PASTURE"
+  ],
+  "summary": "+1 Production. Adjacency: +1 Production per adjacent Outback Station (with Steam Power).",
+  "fields": {
+   "yields": "+1 Production",
+   "adjacency": [
+    "+1 Production per adjacent Outback Station (with Steam Power)"
+   ],
+   "valid_on": [
+    "Cattle",
+    "Sheep",
+    "Horses"
+   ],
+   "requires": [
+    "Animal Husbandry"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "bonus_yields": [
+    "+1 Food with Stirrups",
+    "+1 Production with Replaceable Parts",
+    "+1 Food with Robotics"
+   ],
+   "tourism": [
+    "culture with Flight"
+   ],
+   "housing": 1,
+   "effect": "Unlocks the Builder ability to construct Pastures. +1 Production. Can only be built on valid resources. If built on Strategic resources, the city will gain use of that resource."
+  }
+ },
+ {
+  "id": "improvement:plantation",
+  "name": "Plantation",
+  "aliases": [
+   "IMPROVEMENT_PLANTATION"
+  ],
+  "summary": "+2 Gold. Adjacency: +1 Production per 2 adjacent Hacienda tiles (until Rapid Deployment); +1 Production per adjacent Hacienda (with Rapid Deployment).",
+  "fields": {
+   "yields": "+2 Gold",
+   "adjacency": [
+    "+1 Production per 2 adjacent Hacienda tiles (until Rapid Deployment)",
+    "+1 Production per adjacent Hacienda (with Rapid Deployment)"
+   ],
+   "valid_on": [
+    "Bananas",
+    "Citrus",
+    "Cocoa",
+    "Coffee",
+    "Cotton",
+    "Dyes",
+    "Incense",
+    "Silk",
+    "Spices",
+    "Sugar",
+    "Tea",
+    "Tobacco",
+    "Wine",
+    "Olives"
+   ],
+   "requires": [
+    "Irrigation"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "bonus_yields": [
+    "+1 Food with Scientific Theory",
+    "+2 Gold with Globalization",
+    "+1 Food with Feudalism"
+   ],
+   "tourism": [
+    "culture with Flight"
+   ],
+   "housing": 1,
+   "effect": "Unlocks the Builder ability to construct Plantations. +2 Gold. Can only be built on valid resources. If built on Luxury resources, the city will gain use of that resource."
+  }
+ },
+ {
+  "id": "improvement:polder",
+  "name": "Polder",
+  "aliases": [
+   "IMPROVEMENT_POLDER"
+  ],
+  "summary": "Unique to Netherlands. +1 Food, +1 Production. Adjacency: +1 Food per adjacent Polder (until Replaceable Parts); +2 Food per adjacent Polder (with Replaceable Parts).",
+  "fields": {
+   "unique_to": "Netherlands",
+   "yields": "+1 Food, +1 Production",
+   "adjacency": [
+    "+1 Food per adjacent Polder (until Replaceable Parts)",
+    "+2 Food per adjacent Polder (with Replaceable Parts)",
+    "+1 Production per adjacent Polder (with Replaceable Parts)"
+   ],
+   "valid_on": [
+    "Coast and Lake"
+   ],
+   "requires": [
+    "Guilds"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "bonus_yields": [
+    "+4 Gold with Civil Engineering"
+   ],
+   "housing": 1,
+   "effect": "Unlocks the Builder ability to construct a Polder, unique to Netherlands. +1 Food, +1 Production, and +0.5 Housing. +1 Food if adjacent to a Polder improvement. Additional Production, Gold, and Food as you advance through the Civics and Technology Tree. Must be placed on a Coast or Lake tile adjacent to 3 or more passable land tiles. Increases Movement Cost of tile to 3."
+  }
+ },
+ {
+  "id": "improvement:pyramid",
+  "name": "Nubian Pyramid",
+  "aliases": [
+   "IMPROVEMENT_PYRAMID"
+  ],
+  "summary": "Unique to Nubia. +2 Faith, +2 Food. Adjacency: +1 Food per adjacent City Center; +1 Science per adjacent Campus.",
+  "fields": {
+   "unique_to": "Nubia",
+   "yields": "+2 Faith, +2 Food",
+   "adjacency": [
+    "+1 Food per adjacent City Center",
+    "+1 Science per adjacent Campus",
+    "+1 Gold per adjacent Commercial Hub or Harbor",
+    "+1 Faith per adjacent Holy Site",
+    "+1 Production per adjacent Industrial Zone",
+    "+1 Culture per adjacent Theater Square"
+   ],
+   "valid_on": [
+    "Desert",
+    "Desert (Hills)",
+    "Desert Floodplains"
+   ],
+   "requires": [
+    "Masonry"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "effect": "Improvement that unlocks with Masonry and must be built on Desert, Desert Hills or Floodplains. +2 Faith and +2 Food. Receives additional yields from adjacent districts. +1 Food if adjacent to a city center. For all other districts that award adjacency bonuses: +1 of the appropriate yield if that district is adjacent."
+  }
+ },
+ {
+  "id": "improvement:quarry",
+  "name": "Quarry",
+  "aliases": [
+   "IMPROVEMENT_QUARRY"
+  ],
+  "summary": "+1 Production.",
+  "fields": {
+   "yields": "+1 Production",
+   "valid_on": [
+    "Gypsum",
+    "Marble",
+    "Stone"
+   ],
+   "requires": [
+    "Mining"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "bonus_yields": [
+    "+1 Production with Rocketry",
+    "+1 Production with Gunpowder",
+    "+1 Production with Predictive Systems"
+   ],
+   "appeal": -1,
+   "effect": "Unlocks the Builder ability to construct Quarries. +1 Production. -1 Appeal. Can only be built on valid resources. If built on a Luxury resource, the city will gain use of that resource."
+  }
+ },
+ {
+  "id": "improvement:rock_hewn_church",
+  "name": "Rock-Hewn Church",
+  "aliases": [
+   "IMPROVEMENT_ROCK_HEWN_CHURCH"
+  ],
+  "summary": "Unique to Ethiopia. +1 Faith. Adjacency: +1 Faith per adjacent Mountain or Grassland (Hills) or Plains (Hills) or Desert (Hills) or Tundra (Hills) or Snow (Hills).",
+  "fields": {
+   "unique_to": "Ethiopia",
+   "yields": "+1 Faith",
+   "adjacency": [
+    "+1 Faith per adjacent Mountain or Grassland (Hills) or Plains (Hills) or Desert (Hills) or Tundra (Hills) or Snow (Hills)"
+   ],
+   "valid_on": [
+    "Plains (Hills)",
+    "Grassland (Hills)",
+    "Desert (Hills)",
+    "Tundra (Hills)",
+    "Snow (Hills)",
+    "Volcanic Soil"
+   ],
+   "requires": [
+    "Drama and Poetry"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "tourism": [
+    "faith with Flight"
+   ],
+   "appeal": 1,
+   "effect": "Unlocks the Builder ability to construct a Rock-Hewn Church, unique to Ethiopia. +1 Faith. +1 Faith for every adjacent Mountain and Hills tile. Provides Tourism from Faith, after researching Flight. +1 Appeal. Can only be pillaged (never destroyed) by natural disasters. Can only be built on Hills or Volcanic Soil not adjacent to another Rock-Hewn Church."
+  }
+ },
+ {
+  "id": "improvement:roman_fort",
+  "name": "Roman Fort",
+  "aliases": [
+   "IMPROVEMENT_ROMAN_FORT"
+  ],
+  "summary": "Unlocks the Roman Legion ability to construct a Roman Fort, unique to Rome.",
+  "fields": {
+   "valid_on": [
+    "Desert",
+    "Tundra",
+    "Plains",
+    "Grassland",
+    "Snow",
+    "Desert (Hills)",
+    "Tundra (Hills)",
+    "Plains (Hills)",
+    "Grassland (Hills)",
+    "Snow (Hills)",
+    "Volcanic Soil"
+   ],
+   "built_by": [
+    "Legion"
+   ],
+   "effect": "Unlocks the Roman Legion ability to construct a Roman Fort, unique to Rome. Occupying unit receives +4 Defense Strength, and automatically gains 2 turns of fortification."
+  }
+ },
+ {
+  "id": "improvement:seastead",
+  "name": "Seastead",
+  "aliases": [
+   "IMPROVEMENT_SEASTEAD"
+  ],
+  "summary": "+2 Food. Adjacency: +1 Production per adjacent Fishing Boats; +1 Culture per adjacent Reef.",
+  "fields": {
+   "yields": "+2 Food",
+   "adjacency": [
+    "+1 Production per adjacent Fishing Boats",
+    "+1 Culture per adjacent Reef"
+   ],
+   "valid_on": [
+    "Coast and Lake",
+    "Ocean"
+   ],
+   "requires": [
+    "Seasteads"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "tourism": [
+    "culture"
+   ],
+   "housing": 4,
+   "buildable": "no",
+   "effect": "Unlocks the Builder ability to construct a Seastead. +2 Food. +1 Production for each adjacent Fishing Boats. Fishing Boats receive +1 Production for each adjacent Seastead. +1 Culture and Tourism for every adjacent Reef. +2 Housing. Must be built on Coast, Lake or Ocean terrain. Cannot be placed adjacent to another Seastead."
+  }
+ },
+ {
+  "id": "improvement:ski_resort",
+  "name": "Ski Resort",
+  "aliases": [
+   "IMPROVEMENT_SKI_RESORT"
+  ],
+  "summary": "Unlocks the Builder ability to construct a Ski Resort. Provides +4 Tourism. Provides an Amenity. Can only be built on a Mountain.",
+  "fields": {
+   "valid_on": [
+    "Grassland (Mountain)",
+    "Plains (Mountain)",
+    "Desert (Mountain)",
+    "Tundra (Mountain)",
+    "Snow (Mountain)"
+   ],
+   "requires": [
+    "Professional Sports"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "tourism": [
+    "appeal"
+   ],
+   "effect": "Unlocks the Builder ability to construct a Ski Resort. Provides +4 Tourism. Provides an Amenity. Can only be built on a Mountain. Cannot be built adjacent to another Ski Resort. Cannot be pillaged, worked or removed."
+  }
+ },
+ {
+  "id": "improvement:solar_farm",
+  "name": "Solar Farm",
+  "aliases": [
+   "IMPROVEMENT_SOLAR_FARM"
+  ],
+  "summary": "+1 Gold, +1 Production.",
+  "fields": {
+   "yields": "+1 Gold, +1 Production",
+   "valid_on": [
+    "Plains",
+    "Grassland",
+    "Desert",
+    "Tundra"
+   ],
+   "requires": [
+    "Satellites"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "buildable": "no",
+   "effect": "Unlocks the Builder ability to construct a Solar Farm. +1 Gold. +1 Production. Provides 2 Power per turn. Must be built on flat terrain. Cannot be built on Snow."
+  }
+ },
+ {
+  "id": "improvement:sphinx",
+  "name": "Sphinx",
+  "aliases": [
+   "IMPROVEMENT_SPHINX"
+  ],
+  "summary": "Unique to Egypt. +1 Culture, +1 Faith.",
+  "fields": {
+   "unique_to": "Egypt",
+   "yields": "+1 Culture, +1 Faith",
+   "valid_on": [
+    "Desert",
+    "Tundra",
+    "Plains",
+    "Grassland",
+    "Desert (Hills)",
+    "Tundra (Hills)",
+    "Plains (Hills)",
+    "Grassland (Hills)",
+    "Desert Floodplains",
+    "Grassland Floodplains",
+    "Plains Floodplains"
+   ],
+   "requires": [
+    "Craftsmanship"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "bonus_yields": [
+    "+1 Culture with Natural History"
+   ],
+   "tourism": [
+    "culture with Flight"
+   ],
+   "appeal": 2,
+   "effect": "Unlocks the Builder ability to construct a Sphinx, unique to Egypt. +1 Faith and +1 Culture. +2 Appeal. +2 Faith if next to a wonder. +1 Culture if built on Floodplains. Additional Culture once Natural History is discovered. Provides Tourism after researching Flight. Cannot be built next to another Sphinx. Cannot be built on Snow or Snow Hills."
+  }
+ },
+ {
+  "id": "improvement:stepwell",
+  "name": "Stepwell",
+  "aliases": [
+   "IMPROVEMENT_STEPWELL"
+  ],
+  "summary": "Unique to India. +1 Food.",
+  "fields": {
+   "unique_to": "India",
+   "yields": "+1 Food",
+   "valid_on": [
+    "Desert",
+    "Tundra",
+    "Plains",
+    "Grassland",
+    "Snow"
+   ],
+   "requires": [
+    "Irrigation"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "bonus_yields": [
+    "+1 Faith with Feudalism",
+    "+1 Food with Professional Sports"
+   ],
+   "housing": 2,
+   "effect": "Unlocks the Builder ability to construct a Stepwell, unique to India. +1 Food and +1 Housing. +1 Faith if adjacent to a Holy Site district. +1 Food if adjacent to a Farm. Additional Housing, Faith, and Food as you advance through the Technology and Civics Tree. Prevents Food loss during Drought. Cannot be built on Hills or adjacent to another Stepwell."
+  }
+ },
+ {
+  "id": "improvement:terrace_farm",
+  "name": "Terrace Farm",
+  "aliases": [
+   "IMPROVEMENT_TERRACE_FARM"
+  ],
+  "summary": "Unique to Inca. +1 Food. Adjacency: +1 Food per adjacent Mountain; +1 Food per 2 adjacent Terrace Farm tiles (with Feudalism, until Replaceable Parts).",
+  "fields": {
+   "unique_to": "Inca",
+   "yields": "+1 Food",
+   "adjacency": [
+    "+1 Food per adjacent Mountain",
+    "+1 Food per 2 adjacent Terrace Farm tiles (with Feudalism, until Replaceable Parts)",
+    "+1 Food per adjacent Terrace Farm (with Replaceable Parts)",
+    "+2 Production per adjacent Aqueduct"
+   ],
+   "valid_on": [
+    "Plains (Hills)",
+    "Grassland (Hills)",
+    "Desert (Hills)",
+    "Volcanic Soil"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "housing": 2,
+   "effect": "Unlocks the Builder ability to construct a Terrace Farm, unique to the Inca. +1 Food. Provides +1 Housing. +1 Food for each adjacent Mountain Tile. Gain +2 Production for each adjacent Aqueduct district. Receive +1 Production if adjacent to Fresh Water and not an Aqueduct district. Additional Food as you advance through the Civics and Technology Tree for adjacency with other Terrace Farms. Can be placed on Grassland Hills, Plains Hills, and Desert Hills."
+  }
+ },
+ {
+  "id": "improvement:trading_dome",
+  "name": "Trading Dome",
+  "aliases": [
+   "IMPROVEMENT_TRADING_DOME"
+  ],
+  "summary": "Unique to Samarkand (Samarkand). +2 Gold. Adjacency: +1 Gold per adjacent luxury resource.",
+  "fields": {
+   "unique_to": "Samarkand (Samarkand)",
+   "yields": "+2 Gold",
+   "adjacency": [
+    "+1 Gold per adjacent luxury resource"
+   ],
+   "valid_on": [
+    "Plains",
+    "Grassland",
+    "Desert",
+    "Tundra",
+    "Snow",
+    "Plains (Hills)",
+    "Grassland (Hills)",
+    "Desert (Hills)",
+    "Tundra (Hills)",
+    "Snow (Hills)"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "effect": "Unlocks the Builder ability to construct a Trading Dome. +2 Gold. +1 Gold for every adjacent Luxury resource. Your outgoing international Trade Routes grant +1 Gold per Trading Dome at the origin. Cannot be built next to another Trading Dome."
+  }
+ },
+ {
+  "id": "improvement:wind_farm",
+  "name": "Wind Farm",
+  "aliases": [
+   "IMPROVEMENT_WIND_FARM"
+  ],
+  "summary": "+2 Gold, +1 Production.",
+  "fields": {
+   "yields": "+2 Gold, +1 Production",
+   "valid_on": [
+    "Plains (Hills)",
+    "Grassland (Hills)",
+    "Desert (Hills)",
+    "Tundra (Hills)",
+    "Snow (Hills)"
+   ],
+   "requires": [
+    "Composites"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "buildable": "no",
+   "effect": "Unlocks the Builder ability to construct a Wind Farm. +2 Gold. +1 Production. Provides 2 Power per turn. Must be built on Hills terrain."
+  }
+ },
+ {
+  "id": "improvement:ziggurat",
+  "name": "Ziggurat",
+  "aliases": [
+   "IMPROVEMENT_ZIGGURAT"
+  ],
+  "summary": "Unique to Sumeria. +2 Science.",
+  "fields": {
+   "unique_to": "Sumeria",
+   "yields": "+2 Science",
+   "valid_on": [
+    "Desert",
+    "Tundra",
+    "Plains",
+    "Grassland",
+    "Snow",
+    "Desert Floodplains",
+    "Grassland Floodplains",
+    "Plains Floodplains"
+   ],
+   "built_by": [
+    "Builder"
+   ],
+   "bonus_yields": [
+    "+1 Culture with Natural History"
+   ],
+   "tourism": [
+    "culture with Flight"
+   ],
+   "effect": "Unlocks the Builder ability to construct a Ziggurat, unique to Sumeria. +2 Science. +1 Culture if next to River. Cannot be built on Hills but may be built on Floodplains."
+  }
+ }
+]

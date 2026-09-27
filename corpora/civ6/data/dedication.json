@@ -1,0 +1,170 @@
+[
+ {
+  "id": "dedication:aeronautical",
+  "name": "Sky and Stars",
+  "aliases": [
+   "COMMEMORATION_AERONAUTICAL"
+  ],
+  "summary": "Sky and Stars Golden Age: Unlocks the Eurekas for Satellites, Nuclear Fusion, and Nanotechnology if in the Information Era.",
+  "fields": {
+   "golden_age": "Sky and Stars Golden Age: Unlocks the Eurekas for Satellites, Nuclear Fusion, and Nanotechnology if in the Information Era. When chosen in the Future Era the Eurekas for Smart Materials, Predictive Systems, and Offworld Mission are unlocked. +100% XP earned for all Air Units. Aluminum mines accumulate +2 more resources per turn.",
+   "normal_age": "Sky and Stars Dedication Bonus: Gain +1 Era Score for each Aerodrome building constructed. Gain +1 Era Score each time a Great Person is earned or purchased.",
+   "dark_age": "Sky and Stars Dedication Bonus: Gain +1 Era Score for each Aerodrome building constructed. Gain +1 Era Score each time a Great Person is earned or purchased.",
+   "eras": "Information Era"
+  }
+ },
+ {
+  "id": "dedication:automaton",
+  "name": "Automaton Warfare",
+  "aliases": [
+   "COMMEMORATION_AUTOMATON"
+  ],
+  "summary": "Automaton Warfare Golden Age: Gain a Giant Death Robot in your capital. Receive 3 Uranium per turn. Uranium mines accumulate +1 more resource per turn.",
+  "fields": {
+   "golden_age": "Automaton Warfare Golden Age: Gain a Giant Death Robot in your capital. Receive 3 Uranium per turn. Uranium mines accumulate +1 more resource per turn.",
+   "normal_age": "Automaton Warfare Dedication Bonus: Gain +1 Era Score each time you kill a non-Barbarian unit with a Giant Death Robot.",
+   "dark_age": "Automaton Warfare Dedication Bonus: Gain +1 Era Score each time you kill a non-Barbarian unit with a Giant Death Robot.",
+   "eras": "Information Era"
+  }
+ },
+ {
+  "id": "dedication:cultural",
+  "name": "Pen, Brush, and Voice",
+  "aliases": [
+   "COMMEMORATION_CULTURAL"
+  ],
+  "summary": "Pen, Brush, and Voice Golden Age: Inspirations provide an additional 10% of civic costs. Each city receives +1 Culture for each specialty district",
+  "fields": {
+   "golden_age": "Pen, Brush, and Voice Golden Age: Inspirations provide an additional 10% of civic costs. Each city receives +1 Culture for each specialty district",
+   "normal_age": "Pen, Brush, and Voice Dedication Bonus: Gain +1 Era Score each time you trigger an Inspiration. +1 Era Score for constructing a building with a Great Work Slot.",
+   "dark_age": "Pen, Brush, and Voice Dedication Bonus: Gain +1 Era Score each time you trigger an Inspiration. +1 Era Score for constructing a building with a Great Work Slot.",
+   "eras": "Classical Era to Medieval Era"
+  }
+ },
+ {
+  "id": "dedication:economic",
+  "name": "Reform the Coinage",
+  "aliases": [
+   "COMMEMORATION_ECONOMIC"
+  ],
+  "summary": "Reform the Coinage Golden Age: Your Traders cannot be plundered. International Trade Routes provide +3 Gold per specialty district in the foreign city.",
+  "fields": {
+   "golden_age": "Reform the Coinage Golden Age: Your Traders cannot be plundered. International Trade Routes provide +3 Gold per specialty district in the foreign city.",
+   "normal_age": "Reform the Coinage Dedication Bonus: Gain +1 Era Score each time you successfully complete a Trade Route.",
+   "dark_age": "Reform the Coinage Dedication Bonus: Gain +1 Era Score each time you successfully complete a Trade Route.",
+   "eras": "Renaissance Era to Modern Era"
+  }
+ },
+ {
+  "id": "dedication:espionage",
+  "name": "Bodyguard of Lies",
+  "aliases": [
+   "COMMEMORATION_ESPIONAGE"
+  ],
+  "summary": "Bodyguard of Lies Golden Age: Spies take no time to establish their presence in another civilization's city. Time to complete all offensive missions reduced by 25%.",
+  "fields": {
+   "golden_age": "Bodyguard of Lies Golden Age: Spies take no time to establish their presence in another civilization's city. Time to complete all offensive missions reduced by 25%.",
+   "normal_age": "Bodyguard of Lies Dedication Bonus: Gain +1 Era Score for each successful offensive Spy operation.",
+   "dark_age": "Bodyguard of Lies Dedication Bonus: Gain +1 Era Score for each successful offensive Spy operation.",
+   "eras": "Atomic Era"
+  }
+ },
+ {
+  "id": "dedication:exploration",
+  "name": "Hic Sunt Dracones",
+  "aliases": [
+   "COMMEMORATION_EXPLORATION"
+  ],
+  "summary": "Hic Sunt Dracones Golden Age: +3 starting Citizen Population for cities settled on a different continent than your first city. +2 Movement for naval and embarked units.",
+  "fields": {
+   "golden_age": "Hic Sunt Dracones Golden Age: +3 starting Citizen Population for cities settled on a different continent than your first city. +2 Movement for naval and embarked units. +2 Loyalty per turn for cities not on your original Capital's continent.",
+   "normal_age": "Hic Sunt Dracones Dedication Bonus: Gain +3 Era Score each time you discover a new Continent or natural wonder. Gain +1 Era Score each time you kill a non-Barbarian naval unit in combat.",
+   "dark_age": "Hic Sunt Dracones Dedication Bonus: Gain +3 Era Score each time you discover a new Continent or natural wonder. Gain +1 Era Score each time you kill a non-Barbarian naval unit in combat.",
+   "eras": "Renaissance Era to Modern Era"
+  }
+ },
+ {
+  "id": "dedication:industrial",
+  "name": "Heartbeat of Steam",
+  "aliases": [
+   "COMMEMORATION_INDUSTRIAL"
+  ],
+  "summary": "Heartbeat of Steam Golden Age: +10% Production toward Industrial era and later wonders. Campus district's Science adjacency bonus provides Production as well.",
+  "fields": {
+   "golden_age": "Heartbeat of Steam Golden Age: +10% Production toward Industrial era and later wonders. Campus district's Science adjacency bonus provides Production as well.",
+   "normal_age": "Heartbeat of Steam Dedication Bonus: Gain +1 Era Score for each Industrial or later building constructed.",
+   "dark_age": "Heartbeat of Steam Dedication Bonus: Gain +1 Era Score for each Industrial or later building constructed.",
+   "eras": "Industrial Era to Atomic Era"
+  }
+ },
+ {
+  "id": "dedication:infrastructure",
+  "name": "Monumentality",
+  "aliases": [
+   "COMMEMORATION_INFRASTRUCTURE"
+  ],
+  "summary": "Monumentality Golden Age: +2 Movement for all Builders. May purchase civilian units with Faith. Builders and Settlers are 30% cheaper to purchase with Faith and Gold.",
+  "fields": {
+   "golden_age": "Monumentality Golden Age: +2 Movement for all Builders. May purchase civilian units with Faith. Builders and Settlers are 30% cheaper to purchase with Faith and Gold.",
+   "normal_age": "Monumentality Dedication Bonus: Gain +1 Era Score each time you construct a new specialty District.",
+   "dark_age": "Monumentality Dedication Bonus: Gain +1 Era Score each time you construct a new specialty District.",
+   "eras": "Classical Era to Renaissance Era"
+  }
+ },
+ {
+  "id": "dedication:military",
+  "name": "To Arms!",
+  "aliases": [
+   "COMMEMORATION_MILITARY"
+  ],
+  "summary": "To Arms! Golden Age: Unlock a special Casus Belli which generates 75% less Grievances than Formal War and can be used immediately after Denouncing the target. +15% Production towards military units.",
+  "fields": {
+   "golden_age": "To Arms! Golden Age: Unlock a special Casus Belli which generates 75% less Grievances than Formal War and can be used immediately after Denouncing the target. +15% Production towards military units.",
+   "normal_age": "To Arms! Dedication Bonus: Gain +1 Era Score each time you kill a non-Barbarian Corps in combat and +2 Era Score each time you kill a non-Barbarian Army in combat.",
+   "dark_age": "To Arms! Dedication Bonus: Gain +1 Era Score each time you kill a non-Barbarian Corps in combat and +2 Era Score each time you kill a non-Barbarian Army in combat.",
+   "eras": "Industrial Era to Atomic Era"
+  }
+ },
+ {
+  "id": "dedication:religious",
+  "name": "Exodus of the Evangelists",
+  "aliases": [
+   "COMMEMORATION_RELIGIOUS"
+  ],
+  "summary": "Exodus of the Evangelists Golden Age: +2 Movement for all Missionaries, Apostles, and Inquisitors. Additionally, newly trained ones get +2 Charges. +4 Great Prophet points per turn.",
+  "fields": {
+   "golden_age": "Exodus of the Evangelists Golden Age: +2 Movement for all Missionaries, Apostles, and Inquisitors. Additionally, newly trained ones get +2 Charges. +4 Great Prophet points per turn.",
+   "normal_age": "Exodus of the Evangelists Dedication Bonus: Gain +2 Era Score each time you convert a city to your founded Religion for the first time.",
+   "dark_age": "Exodus of the Evangelists Dedication Bonus: Gain +2 Era Score each time you convert a city to your founded Religion for the first time.",
+   "eras": "Classical Era to Renaissance Era"
+  }
+ },
+ {
+  "id": "dedication:scientific",
+  "name": "Free Inquiry",
+  "aliases": [
+   "COMMEMORATION_SCIENTIFIC"
+  ],
+  "summary": "Free Inquiry Golden Age: Eurekas provide an additional 10% of technology costs. Commercial Hub and Harbor district's Gold adjacency bonus provides Science as well.",
+  "fields": {
+   "golden_age": "Free Inquiry Golden Age: Eurekas provide an additional 10% of technology costs. Commercial Hub and Harbor district's Gold adjacency bonus provides Science as well.",
+   "normal_age": "Free Inquiry Dedication Bonus: Gain +1 Era Score each time you trigger a Eureka. +1 Era Score for constructing a building that provides Science as a base yield.",
+   "dark_age": "Free Inquiry Dedication Bonus: Gain +1 Era Score each time you trigger a Eureka. +1 Era Score for constructing a building that provides Science as a base yield.",
+   "eras": "Classical Era to Medieval Era"
+  }
+ },
+ {
+  "id": "dedication:tourism",
+  "name": "Wish You Were Here",
+  "aliases": [
+   "COMMEMORATION_TOURISM"
+  ],
+  "summary": "Wish You Were Here Golden Age: Cities with Governors receive +50% Tourism from World Wonders. +100% Tourism to all National Parks.",
+  "fields": {
+   "golden_age": "Wish You Were Here Golden Age: Cities with Governors receive +50% Tourism from World Wonders. +100% Tourism to all National Parks.",
+   "normal_age": "Wish You Were Here Dedication Bonus: Gain +1 Era Score for each Artifact extracted.",
+   "dark_age": "Wish You Were Here Dedication Bonus: Gain +1 Era Score for each Artifact extracted.",
+   "eras": "Atomic Era"
+  }
+ }
+]

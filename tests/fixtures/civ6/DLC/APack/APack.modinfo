@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hand-written test fixture: sorts before Expansion2 by folder name, but LoadOrder 100 loads it later. -->
+<Mod id="00000000-0000-0000-0000-0000000000a1" version="1">
+	<ActionCriteria>
+		<Criteria id="APack" any="1">
+			<LeaderPlayable>Players:StandardPlayers::LEADER_TRAJAN</LeaderPlayable>
+			<RuleSetInUse>RULESET_STANDARD, RULESET_EXPANSION_2</RuleSetInUse>
+		</Criteria>
+		<Criteria id="APack_Heroes">
+			<RuleSetInUse>RULESET_EXPANSION_2</RuleSetInUse>
+			<ConfigurationValueMatches>
+				<ConfigurationId>GAMEMODE_HEROES</ConfigurationId>
+				<Group>Game</Group>
+				<Value>1</Value>
+			</ConfigurationValueMatches>
+		</Criteria>
+	</ActionCriteria>
+	<InGameActions>
+		<UpdateDatabase id="APackGameplay" criteria="APack">
+			<Properties>
+				<LoadOrder>100</LoadOrder>
+			</Properties>
+			<File>Data/APack_Data.xml</File>
+		</UpdateDatabase>
+		<UpdateDatabase id="APackHeroes" criteria="APack_Heroes">
+			<File>Data/APack_Heroes_MODE.xml</File>
+		</UpdateDatabase>
+	</InGameActions>
+</Mod>

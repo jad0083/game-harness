@@ -1,0 +1,243 @@
+# AI agendas (Civilization VI)
+Source: https://civilization.fandom.com/wiki/List_of_agendas_in_Civ6
+License: CC BY-SA 3.0 (Civilization Wiki, Fandom: "Community content is available under CC-BY-SA unless otherwise noted.")
+
+_Retrieved 2026-09-26 through the wiki's MediaWiki API (List of agendas in Civ6 rev 467995). Wiki prose may predate Gathering Storm balance changes; the generated records in ../data (the game's own files, 1.0.12.68) win where numbers differ._
+
+The following is a **list of agendas** in Civilization VI and its expansions, sorted by type.
+
+## Leader
+- Agenda | Leader | Effects
+- Ally of Enkidu | Is easy to befriend, and likes civilizations who are his Declared Friends. Dislikes anyone denouncing or attacking his friends.
+- An End to Suffering | Likes civilizations with many Holy Sites and with a high average city Citizen Population. Dislikes civilizations lacking in either of these areas.
+- Angevin Empire | Builds up the Citizen Population of her cities, and likes those whose nearby cities also have a high Citizen Population. Dislikes civilizations whose nearby cities have low Citizen Population.
+- Archipelagic State | Likes civilizations who avoid having cities on small landmasses. Dislikes those who have numerous cities on such islands.
+- Ayyubid Dynasty | Wants his Worship building in as many cities as possible, and likes civilizations with it. Dislikes civilizations following other Religions or waging war on followers of his Religion.
+- Backstab Averse | Likes civilizations who are her Declared Friends. Dislikes civilizations who backstab their former allies and declare Surprise Wars.
+- Basilike Ge | Likes civilizations with high Food output. Dislikes those with low Food output.
+- Bibliophile | Tries to collect as many Great Works as possible, and likes those who leave them to her. Dislikes civilizations with many Great Works.
+- Big Stick Policy | | Likes peaceful civilizations that have a city on his home continent. Dislikes civilizations starting wars on his continent.
+- Billionaire | Tries to have as many Trade Routes as possible, and likes civilizations that trade with her cities. Dislikes those who refrain from sending Trade Routes to her cities.
+- Black Queen | Gains as many Spies and as much diplomatic access as possible, and likes those who do the same. Dislikes civilizations that ignore these espionage activities.
+- Bushido | Likes civilizations that have both a strong military and Faith or Culture outputs. Dislikes civilizations that are strong in military but weak in Faith or Culture.
+- Canadian Expeditionary Force | Participates in Emergencies and Competitions whenever possible, and likes civilizations who do the same. Dislikes those that ignore Emergencies and Competitions.
+- Carabobo | Focuses on promoting his units by building many Encampments, and likes civilizations with many promoted units. Dislikes civilizations without an elite, highly-promoted army.
+- Cheomseongdae | Tries to build up Science, and likes those that also focus on Science. Dislikes civilizations with a weak Science output.
+- City Planner | Tries to keep the maximum number of Districts in each city and likes those that do the same. Dislikes civilizations that do not build as many districts as possible in their cities.
+- Counter Reformer | Likes civilizations who follow the same Religion as him, and wants his cities to all follow the same Religion. Dislikes those who spread their Religion into his empire.
+- Court Intrigue | Likes civilizations who pose no threat. Dislikes civilizations with strong military or ones with nearby cities.
+- Cradle of Civilization | Tries to build every type of District, and likes those who do the same. Dislikes civilizations that focus heavily on building one type of district or do not build every type of district.
+- Decolonization | Likes civilizations on continents where she has no cities. Dislikes civilizations that have a city on her home continent.
+- Defender of the Homeland | Likes civilizations that have never declared war on Vietnam. She will never forgive those who have, with her opinion decreasing further with each turn the war lasts, and this decreased opinion never recovering.
+- Delian League | Likes civilizations that are not competing for the same city-state allegiance. Dislikes civilizations that are directly competing for city-state allegiance.
+- Divine Guardian | Focuses on spreading his Religion to other civilizations, and likes those who follow it. Dislikes those that do not follow his Religion.
+- Enthusiastic Disciple | Likes civilizations that bring Religion to the Kongo. Dislikes civilizations that have founded a Religion but not brought it to a Kongolese city.
+- Eternal Enigma | Likes civilizations who do not maximize the number of Districts in their cities, and dislikes those who do.
+- Ethiopian Highlands | Tries to settle cities on Hills, and likes civilizations who avoid settling near Hills. Dislikes civilizations that settle around Hills.
+- Flower of Scotland | Will never attack his neighboring civilizations unless they break a promise to him. Dislikes civilizations waging war on their neighbors, and likes those at peace with their neighbors.
+- Gallic Wars | Hates Barbarians, and likes civilizations that also destroy their Outposts. Dislikes civilizations that ignore Barbarian Outposts.
+- Golden Age of Suleiman | Likes civilizations that earn a Golden Age. Dislikes those in Dark Ages.
+- Harald's Saga | Likes civilizations that ally with city-states. Dislikes civilizations that ignore alliances with city-states.
+- Horn, Chest, Loins | Forms as many Corps and Armies as possible, and likes those who do the same. Dislikes civilizations with few Corps and Armies.
+- Horse Lord | Builds a strong cavalry force, and likes those who do not compete in cavalry. Dislikes civilizations who rival him in cavalry strength.
+- Industrial Revolution | Likes civilizations with high Production. Dislikes those with low Production.
+- Iron Confederacy | Tries to establish as many Alliances as possible, and likes civilizations that do the same. Dislikes civilizations that do not establish Alliances.
+- Iron Crown | Tries to conquer as many city-states as possible, and likes those who do not associate with them. Dislikes Suzerains of city-states, or civilizations who have conquered city-states.
+- Jazayerchi | Likes civilizations with a high number of land units. Dislikes civilizations with a low number of land units.
+- Kaitiakitanga | Tries to avoid contributing to climate change by not removing features, planting Woods, and founding National Parks, and likes those who do the same. Dislikes civilizations that show little concern for the environment.
+- Last Viking King | Builds a strong navy, and likes civilizations who do the same. Dislikes civilizations that neglect their navies.
+- Lawgiver | Tries to keep his cities happy and loyal, and likes those who do the same, especially if they have taken cities from other civilizations. Dislikes those who struggle with happiness and loyalty, or that own few conquered cities.
+- Lion of Mali | Focuses on generating Tourism, and likes those with low Tourism. Dislikes civilizations that compete with him in Tourism.
+- Lord of the Mines | Tries to build up Gold, and likes those that also focus on Gold. Dislikes civilizations with a weak Gold output.
+- Ma'at | Clears all features and improves all possible tiles, and likes civilizations that do the same. Dislikes civilizations with few improved tiles or that found National Parks.
+- Maurya Empire | Dislikes civilizations that have cities close to his borders and will try to conquer them. Likes civilizations that are not his neighbors.
+- Narikala Fortress | Builds high-level walls around her cities and likes those who do the same. Dislikes civilizations that do not fortify their cities with walls.
+- Navigator's Legacy | Focuses on exploring as much of the map as possible, and likes those who do the same. Dislikes civilizations that shun exploration.
+- Neo-Confucianism | Likes civilizations who are behind him in Culture and Science. Dislikes those who are ahead in either of these fields.
+- New Rome | Tries to build up Culture, and likes those that also focus on Culture. Dislikes civilizations with a weak Culture output.
+- Opportunist | Will often declare Surprise Wars, and likes civilizations that do the same. Dislikes civilizations that do not declare Surprise Wars.
+- Optimus Princeps | Tries to include as much territory as possible in his empire, and likes those who do the same. Dislikes civilizations with little territory.
+- Patron of the Arts | Likes civilizations who are not competing for Great People, and will recruit Great People whenever possible. Dislikes civilizations that take Great People from him.
+- Pax Mongolica | Likes civilizations with a strong military and Gold output. Dislikes those who have a weak military or low Gold income.
+- Peacekeeper | Never declares wars for which he can be branded a warmonger, and likes peaceful civilizations. Heavily dislikes warmongers.
+- Perpetually on Guard | Likes civilizations that liberate cities. Dislikes civilizations that are occupying enemy cities.
+- Preserver of the Union | Likes civilizations that have the same form of government as he does. Dislikes those with a different government, especially those with a different form of government from the same era as his own.
+- Queen of the Nile | Likes civilizations with powerful militaries, and will try to ally with them to avoid conflict. Dislikes civilizations with weak militaries.
+- Raven Banner | Will often levy troops from city-states, and likes those who do the same. Dislikes civilizations that shun such mercenaries.
+- Saint | Tries to build up Faith, and likes those that also focus on Faith. Dislikes civilizations with a weak Faith output.
+- Sakoku | Wants to stay safe from conquest. Dislikes those who have conquered other civilizations' Capitals.
+- Sapa Inca | Tries to settle near Mountains, and likes those who leave those areas to him. Dislikes civilizations that also settle near Mountains.
+- Scourge of Rome | Focuses on having many military units, and likes those who do the same. Dislikes civilizations that have few military units.
+- Short Life of Glory | Likes civilizations at war with powers other than Macedon. Dislikes civilizations at peace. Grievances against this leader decay at twice the usual rate.
+- Sicilian Wars | Wants to settle coastal cities, and likes civilizations that settle inland. Dislikes civilizations with many coastal cities.
+- Sihai | Wants all Barbarians following his side, and does not like civilizations that destroy Barbarian Outposts. Likes civilizations that leave Barbarian Outposts alone.
+- Solitary | Keeps her cities clustered around her Capital, and likes civilizations who settle far away from her. Dislikes those who encroach upon her borders with cities or troops.
+- Spirit of Tucapel | Tries to keep his cities loyal, and dislikes civilizations who fail to do this. Likes civilizations who gain cities due to their Loyalty pressure.
+- Sultan of Egypt and Syria | Likes civilizations who have founded a religion but not brought it to his cities. Dislikes those that bring their religion to his cities.
+- Sumptuous Finery | Tries to collect as many copies of Luxury resources as possible, and likes civilizations that trade Luxury resources to her. Dislikes those that do not trade Luxuries with her.
+- Sun Never Sets | Likes civilizations who have a city on her home continent, and will try to expand to all continents. Dislikes civilizations on continents where she has no cities.
+- The Bull Moose | Tries to settle near high Appeal tiles, and builds Districts and Wonders to maximize Appeal. Likes civilizations with many high Appeal tiles in their territory, and dislikes those with many low Appeal tiles.
+- Tlatoani | Likes civilizations who have the same Luxury resources as he does, and will try to collect every Luxury resource available. Dislikes civilizations who have a new Luxury resource he has not yet collected.
+- Trade Agreement | Tries to have as many Trade Routes as possible, and likes civilizations that trade with her cities. Dislikes those who refrain from sending Trade Routes to her cities.
+- Wall of 10,000 Li | Builds wonders whenever possible, and likes civilizations not competing for wonders. Dislikes civilizations with more wonders than him.
+- Westernizer | Likes those ahead of him in civics and technologies. Dislikes backwards civilizations that are behind in civics and technologies.
+- With Your Shield Or On It | Never gives up items in a peace deal, and likes civilizations who match that approach. Dislikes civilizations who have capitulated or who have never gone to war. Grievances against this leader decay at twice the usual rate.
+- Yinding | Likes civilizations with a positive Gold income per turn. Dislikes those with a negative Gold income per turn.
+
+## Hidden
+- Agenda | Effects | Notes
+- Airpower (late era only) | Tries to build up air power. Admires civilizations with greater air power. Dislikes civilizations with weaker air power. | Nader Shah will never have this agenda.
+- Barbarian Ally | Sympathizes with the barbarians. Does not like civilizations that destroy barbarian outposts. | Julius Caesar and Qin Shi Huang (Unifier) will never have this agenda.
+- City-State Ally | Likes civilizations that aren't competing for the same city-state allegiance. Dislikes civilizations that are directly competing for city-state allegiance. | Frederick Barbarossa and Pericles will never have this agenda.
+- City-State Protector (early era only) | Emphasizes protectorate wars. Admires civilizations that start protectorate wars. Dislikes civilizations that attack city-states. | Alexander, Cyrus, Frederick Barbarossa and Harald Hardrada (Varangian) will never have this agenda.
+- Civilized (early era only) | Hates barbarians. Likes civilizations that clear out barbarian outposts. Does not like civilizations that ignore barbarian outposts. | Julius Caesar and Qin Shi Huang (Unifier) will never have this agenda.
+- Cultured (late era only) | Tries to build up Culture, and likes civilizations that also focus on Culture. | Hojo Tokimune, Peter, Sejong and Theodora will never have this agenda.
+- Darwinist (late era only) | Believes in survival of the fittest. Likes civilizations that are at war. | Alexander, Gandhi, Gilgamesh, John Curtin and Teddy Roosevelt will never have this agenda. No more than 3 leaders per game may have this agenda.
+- Demagogue (late era only) | Wants to be the civilization earning the most Diplomatic Favor, dislikes those who compete in Diplomatic Favor. | -
+- Destination Civ (late era only) | Wants to be the civilization with the most Tourism, dislikes those who compete in Tourism. | Sundiata Keita will never have this agenda.
+- Devout (early era only) | Tries to build up Faith, and likes civilizations that also focus on Faith. | Hojo Tokimune, Jadwiga and Mvemba a Nzinga will never have this agenda.
+- Environmentalist (late era only) | Builds National Parks, doesn't clear features, plants forests. Likes civilizations that plant forests or found National Parks. Dislikes civilizations that clear features. | 33% chance for Teddy Roosevelt to have this agenda. Kupe, Ramses II and Victoria (Age of Steam) will never have this agenda. Mutually exclusive with Exploitative agenda.
+- Expansionist | Tries to include as much territory as possible in their empire. Does not like civilizations who control little territory. | Lady Six Sky and Trajan will never have this agenda.
+- Exploitative | Clears all features and improves all possible tiles. Likes civilizations with a high percentage of improved tiles. Dislikes civilizations with low percentage of improved tiles or that found National Parks. | Kupe, Ramses II, Teddy Roosevelt and Wilfrid Laurier will never have this agenda. Mutually exclusive with Environmentalist agenda.
+- Explorer (early era only) | Tries to explore the map, and likes civilizations that have explored less of the map than itself and dislikes civilizations that have explored more of the map than itself. | João III will never have this agenda.
+- Flat Earther (late era only) | Wants to block humankind from circumnavigating the globe or going into space. | Seondeok will never have this agenda.
+- Fun-Loving | Tries to make the citizens in each city as happy as possible. Likes civilizations that also develop in this fashion. | Suleiman (Kanuni) will never have this agenda.
+- Gossip | Wants to know everything about everyone. | Catherine de Medici (Black Queen) will never have this agenda.
+- Great Person Advocate | Likes civilizations who are not competing for Great People, and will recruit Great People whenever possible. Dislikes losing a Great Person to another civilization. | 20% chance for Kristina to have this agenda. Pedro II will never have this agenda.
+- Great White Fleet | Builds a strong navy and respects civilizations who follow their lead. Does not like civilizations with a weak navy. | Harald Hardrada and Nader Shah will never have this agenda. Mutually exclusive with Paranoid agenda.
+- Heavy Industry | Tries to build up industry, and likes civilizations that also focus on Production. | Kupe and Victoria (Age of Steam) will never have this agenda.
+- Ideologue (late era only) | Favors civilizations with the same type of government, dislikes civilizations that have different governments, and really dislikes civilizations with different governments of the same era as its own. | Abraham Lincoln will never have this agenda.
+- Intolerant (late era only) | Likes civilizations who follow the same Religion, and wants their cities to all follow the same Religion. Hates anyone trying to spread their Religion into their empire. | Requires religion. Mvemba a Nzinga and Philip II will never have this agenda.
+- Libertarian (late era only) | Dislikes any civilization who makes a strong attempt to win a Diplomatic Victory. | -
+- Money Grubber | Tries to have the highest possible Gold per turn income. Respects other high income civilizations. | Mansa Musa and Yongle will never have this agenda.
+- Naturalist | Tries to find all natural wonders. Likes civilizations that keep Woods and Rainforest unchopped, and those that establish National Parks. | -
+- Nuke Happy (late era only) | Has no hesitation to use nuclear weapons. Respects other civilizations that project strength with nuclear weapons. | 70% chance for Gandhi to have this agenda. No more than 2 leaders per game may have this agenda.
+- Paranoid | Likes civilizations who pose no threat. Dislikes civilizations with strong militaries or ones with nearby cities. | Alexander, Ambiorix, Cleopatra, Genghis Khan, Harald Hardrada, Hojo Tokimune, Lady Six Sky, Shaka and Wu Zetian will never have this agenda. Mutually exclusive with Great White Fleet agenda.
+- Pillager (early era only) | Tries to pillage as many tiles as possible. Respects other civilizations who pillage. | -
+- Populous | Tries to have the highest overall population. Respects other high population civilizations. | 20% chance for Gandhi to have this agenda. Eleanor of Aquitaine will never have this agenda.
+- Standing Army | Always tries to keep a large standing army. Respects other civilizations with large armies. | Cleopatra, Hojo Tokimune, Ambiorix, and Nader Shah will never have this agenda.
+- Sycophant | Impressed by any civilization that earns a Golden Age. | 10% chance for Gorgo, Peter, and Philip II to have this agenda. Suleiman (Muhteşem) will never have this agenda. Mutually exclusive with Sympathizer agenda.
+- Sympathizer | Feels bad for those going through Dark Ages. | 10% chance for Genghis Khan, Jadwiga, Jayavarman VII, and Lautaro to have this agenda. Suleiman (Muhteşem) will never have this agenda. Mutually exclusive with Sycophant agenda.
+- Technophile (late era only) | Favors Science development. Dislikes civs who are behind technologically. | Peter, Sejong and Seondeok will never have this agenda.
+- Turtler (late era only) | Wants to stay safe from conquest. Dislike those who have conquered other players' original capitals. | Alexander and Tokugawa will never have this agenda.
+- Wonder Obsessed | Likes civilizations not competing for wonders, and builds wonders whenever possible. Dislikes losing a wonder to another civilization. | 33% chance for Ludwig II to have this agenda. Qin Shi Huang (Mandate of Heaven) will never have this agenda.
+- Zealot (late era only) | Tries to gain a Religious Victory. Likes those civs who have already adopted their religion. | Requires religion. Basil II will never have this agenda.
+
+## Removed
+These agendas were added with the release of Rise and Fall, but were removed shortly afterwards (in the March 2018 Update) following negative feedback from the community, as they were impossible to interact with.
+
+- Agenda | Effects
+- Curmudgeon | Has no time for dalliances with members of the opposite sex.
+- Flirtatious | Friendly to members of the opposite sex.
+
+## Lines
+The following table lists the approval and disapproval lines for each agenda. It contains only the in-game subtitles; the spoken language lines and their literal translations can be found on the individual leaders' pages.
+
+- Agenda | Approval | Disapproval
+- Airpower | I must say, the power of your airforce is not one to be trifled with. Very nice. | There is no glory to keeping your feet on the ground. You should really try building an airforce.
+- Ally of Enkidu | You are a good friend and ally. Gilgamesh will remember this. | If you harm my friends, you will face the might of Uruk; this I promise you.
+- An End to Suffering | Ending spiritual suffering is just as important as easing physical distress. You understand this. | How can your people attain the divine without examples of divinity?
+- Angevin Empire | I am told you have placed great cities near our common border, like a garden of splendid roses. Delightful! | If you are going to trouble yourself to make cities near our border, at least make them beautiful, prosperous cities, so I may enjoy the view.
+- Archipelagic State | You avoid the smaller shores. Such deference is noted—and well-regarded. | You cannot keep hold of your island territories. You should deliver them to someone who can.
+- Ayyubid Dynasty | Blessings be upon you. You spread truth and compassion through your acts in the name of the magnificent and perfect God. | I will not abide sacrilege. You will pay for your blasphemy against the most exalted, he who knows no imperfections.
+- Backstab Averse | Our two nations have never been stronger. May you have many victories in times of peace. | Loyalty is its own reward. Do you not know this?
+- Basilike Ge | All of our grand divine aspirations begin with a bit of bread, is it not so? | I hear your people make a porridge of ashes and twigs. Tell me, is that true?
+- Bibliophile | I’ve just acquired a new work and will host a viewing soon. Your emissaries are invited to attend. | I suppose you think art is great when it ties a room together, you philistine.
+- Big Stick Policy | Thanks for keeping the peace on the continent. Bully for you! | No man is above the law. It behooves you to remember that.
+- Billionaire | The Netherlands flourishes with every shipment you send to us. | Those who refuse trade often think they can take what they want from us. They are sorely mistaken.
+- Black Queen | I see you are also practiced in the subtler arts of statecraft. I've always rather enjoyed a bit of espionage, myself. | You really should start paying attention to what's going on around you. There are games being played here on so many levels.
+- Bushido | You build your empire as the Rising Sun: powerful and brilliant. | To follow Bushido is to train the body, the mind, and the soul… but where can your people do so?
+- Canadian Expeditionary Force | You have proved a reliable partner in resolving international conflict, Canada commends you. | Why do you not help resolve the crises that affect the world? Are you unmoved by the plight of others?
+- Carabobo | It seems that you understand both history and statecraft with a well promoted army. Your people benefit from your leadership. | May I offer a friendly word of warning? Change your ways, friend, or those who lead promoted armies will change them for you.
+- Cheomseongdae | Your mastery of creation's secrets is the envy of my people. | While others reach for the heavens, you claw at the dirt.
+- City Planner | Your cities are built properly. For each task, a place to perform it. | Your cities overflow with filth. Why not put your land to more productive use?
+- City-State Ally | We are true friends with the smaller civilizations. We appreciate that you recognize this fact. | You tread on dangerous ground by making common cause with city-states. Leave them to us.
+- City-State Protector | It is an admirable thing to look out for those who cannot look out for themselves. | It is a deplorable thing to bully the weak.
+- Civilized | These Barbarians have been a nuisance to us all. Thank you for your help! | How can you let those Barbarians run amok so close to your home?
+- Counter Reformer | I am relieved you understand that we cannot tolerate heretics. It is against God, of course. | Rather than penitent, you are blasphemous. The vengeance of God will be upon your head.
+- Court Intrigue | You've been such a comfort to me. As loyal as my eunuchs. | You think I am here to be plotted against? I am the one that plots!
+- Cradle of Civilization | To copy Hammurabi is the best course. You do this, which is good. | You must do what I tell you, or I may destroy you.
+- Cultured | I am impressed with the unique culture your people are developing. | You are not doing much to develop a strong culture. What will we have to remember about your people?
+- Darwinist | It is in combat that the true soul of a civilization is revealed. May the best man win. | -
+- Decolonization | Let us exchange ideas, gold, and good... just not land. | The divine has granted each of us a land to rule as we see fit. Stay in your corner.
+- Defender of the Homeland | You have not been plotting my destruction, so I will not plot yours. | Vietnam watches you.
+- Delian League | You are wise to leave our neighboring city-state to us. | That city is ours. I would suggest you don't interfere.
+- Demagogue | I am pleased that you are ready to accept me as the supreme leader of this planet. Already others whisper that my time is at hand. **Pericles:** You will never know the joy of a responsive mob to a good speech, because you never practice the art of politics. | I see through your honeyed words and your curried favors. You seek ultimate power for yourself, and you would have the nations give it to you of their own free will. **Pericles:** I'll ostracize you for what you're doing! Playing on emotions of the mob is my route to power!
+- Destination Civ | We’ve started a tour package for your citizens who want a world-class vacation. Apparently, nothing like this exists in your civilization. **Mvemba a Nzinga:** Your people have a simple culture. It is amusing and somewhat tragic. You could learn from the rest of the world. | I know the world is beating a path to your tourist sites, but be warned! Our people possess blue jeans and rock music and are not afraid to use them. **Mvemba a Nzinga:** Vibrant and unique cultures are threatened by the rising tide of your popular culture.
+- Devout | Peace be to you and yours. It is heartening to see another just as pious as myself. | What guides you? Surely, you cannot believe in nothing. Come, show your people the light!
+- Divine Guardian | Your decisive actions, your great victories, all are a gift of God. Make sure you thank Him. | You lack dignity, honor, piety, and all that makes a ruler righteous. Perhaps you should copy me.
+- Enthusiastic Disciple | I welcome the words of your prophets and priests. We learn so much from their good works. | I can only assume your reluctance to spread your religion comes from lack of conviction.
+- Environmentalist | We have only been given one earth, and I am glad that I am not the only one to respect that. | I must tell you that your destruction of our earth is not just affecting you, but your neighbors as well.
+- Eternal Enigma | You know well how to treasure the forests and lakes of your homeland. | You order your cities like a ledger: here is where the scientists go, that zone is for poets. Banality.
+- Ethiopian Highlands | I am pleased you find comfort in flat land, for the hills are mine. | The high hills are mine by right and custom. You are better off settling elsewhere.
+- Expansionist | It is better that you lack ambition to claim land, because I believe you lack the acumen to rule what you would take. **Qin Shi Huang:** I am pleased you have chosen to remain a barbarian people, whose kingdom merely emphasizes my glory. | How can you dare to claim such lands for yourself, when your people are weak and so badly led? **Qin Shi Huang:** I am the Emperor of all under heaven. That means all lands, including those you seek to possess for yourself, are rightfully mine. Do not strive to equal me.
+- Exploitative | The world is ours for the taking! And take it, you have. | Bountiful lands surround you! How can you ignore them?
+- Explorer | Yes, very good. Leave the exploring to me. | There is only so much to discover, and I'm afraid I cannot abide anyone who sets out ahead of my own explorers.
+- Flat Earther | I agree with you—There are too many pressing problems on earth to be pinning our hopes on space. **Cleopatra:** Blessed is the one who leaves the heavens to the Gods, and does not aspire to walk among them. | How can you think about a future in space, when the present situation on earth should command your full attention! **Cleopatra:** Do not approach the sun god Amun-Ra, nor the sky goddess Nut! Your impiety offends them! You will bring about the ruin of the world!
+- Flower of Scotland | Wise to keep peace with your neighbors. Blood feuds are paid at great expense. | Keep your wars distant. Otherwise you track the muck through your own lands.
+- Fun-Loving | I'm hearing talk that your people want to celebrate your rule. Nice job keeping them happy. | You might want to look into a few more amenities for your citizens. I don't think they are enjoying your rule.
+- Gallic Wars | A victorious army is one led by a victor. | The danger lies at your very doorstep, and you do nothing.
+- Golden Age of Suleiman | Our poets and philosophers hold up your civilization as the light of the world, and I must agree with them. | Aspire to be a worthier example to the rest of the world! Your people will love you if you lead them to glory.
+- Gossip | It is good that our relationship is built on the strength of knowing other people's secrets. **Catherine de Medici:** Maybe you've heard whispers that I consider you to be one of my best sources. But who listens to what people say? Besides you and I, of course. **Pericles:** You must enjoy the reports of your envoys and spies as much as I do! **Victoria:** The next time I send a delegation to you, the leader will have a big, fat dossier full of good secrets. Make sure no one's around when you open it. | I often wonder why you say so little. I believe you've nothing interesting to say.
+- Great Person Advocate | I am pleased to see that the great minds of the world prefer our empire to yours. | Your recruitment of great people we coveted is becoming a real problem.
+- Great White Fleet | Those of us with great navies can make our will felt across the world, and we are the true masters of the seas. **Teddy Roosevelt:** So, you seek to challenge our supremacy at sea? Bully! I relish the competition! | You must make an effort at building ships and projecting your power across the seas, or no nation will respect you. **Teddy Roosevelt:** Do you so readily concede competition in the arena of the seas? Why intentionally constrain your sovereignty? Are you afraid?
+- Harald's Saga | Honor demands we stand firm when our thralls are threatened, and you and I are both people of honor. | A good king is one who cares for those who would be his jarls. You are no good king.
+- Heavy Industry | I extend my heartiest congratulations on the productivity of your people. | Your people are lazy and unworthy. If you can produce nothing, your civilization will soon be forgotten.
+- Horn, Chest, Loins | The armies you field reveal your strength. Did you purge the rabble? Always wise to purge the rabble. | Why allow your forces to keep their identity? They should band together to serve one will—yours.
+- Horse Lord | The cavalry you field is an embarrassment, but thankfully a small one. | You wouldn't wear a sheep's bladder and call it a helmet. So why claim you have amassed "cavalry?"
+- Ideologue | I see you're a like-minded individual, and must commend your government practices. | Our ideological differences are only the beginning. I cannot approve of the way you govern your people...
+- Industrial Revolution | Industry, as you show well, is our only path forward. And you have made great strides. | A word of advice: progress is not a tool. It is a wave, and will drown those who cannot keep ahead of it.
+- Intolerant | How happy is the land whose ruler follows the one true religion, and protects the souls of his people! | Blasphemy and heresy spill from the lips of your subjects! You must restore your people's souls by restoring the true religion!
+- Iron Confederacy | I have great respect for those who declare their friendships to the world. | Choose your friendships wisely—but you must choose.
+- Iron Crown | I commend you on your prudence. To aid that city-state is to invite death. | I will destroy my enemies, and if you continue to help them, I will destroy you as well.
+- Jazayerchi | I would love to speak to you of the beauty of horses. | You should never seek a land war on my continent.
+- Kaitiakitanga | Your land stays green and your waters are clean and clear. Choice. | You pile filth on the land and dump it in the sea! You waste and spoil the world!
+- Last Viking King | A strong navy… that's a beautiful sight. | Your seas are unprotected, friend. All too easy to raid.
+- Lawgiver | You, too, must possess the wisdom of Solomon, for your nation is made of many people who live in harmony. | If you would be master of the world, you must first be master of your people—and you show no signs of mastery in this matter.
+- Libertarian | Maximal freedom can come only from civilizations pursuing their own interests, wouldn't you say? **Frederick Barbarossa:** I am pleased that you recognize these political gestures are mere games, devoid of true power and without respect for the right of rule. | By what right do you impose your political agenda on my sovereign civilization? I do not consent to be ruled against my will. **Frederick Barbarossa:** Your attempts at creating this greater political union comes close to stealing the authority of my crown. I do not take kindly to those who do not respect this crown.
+- Lord of the Mines | Rejoice with me, friend, for we are free from every want and can devote our time to the will of God. | What have you done, that God has withdrawn his bounty from you? See that you return to righteousness!
+- Maurya Empire | The best neighbors are distant ones. Right now, you are India's best neighbor. | There is no distance between our lands. My people are forced to endure the stench of your own.
+- Money Grubber | Your treasury is filling up quite nicely. It's always nice to have such strong income, isn't it? | Your empire is headed toward bankruptcy. How can you survive with debt piling up?
+- Narikala Fortress | I appreciate the walls you build for your people. You have a Georgian spirit. | Your people are too trusting. They'll let anyone into their cities—even barbarians.
+- Navigator's Legacy | Ah, yes. You and I both know the sweet melancholy of the sea. | How can you stand to sit on your own shores and not look beyond?
+- Neo-Confucianism | The true scholar leads, and provides an example for others to follow. | To take a step down a false path is not progress.
+- New Rome | We create power with props and stage sets, with poetry and grace. | Surely there is more to life than what you offer?
+- Nuke Happy | Great minds think alike, I see. There are so many uses for that technology... | Nuclear weaponry is the future! How can you not see that?
+- Opportunist | I understand all too well, there are some opportunities one simply can't pass up. | If there's deception afoot, I prefer it when I am the one providing the intrigue.
+- Optimus Princeps | The reach of your empire is as Jupiter's over the heavens. Well done. | You have left the richest parts of the land for your enemies to claim. Are you so scared of expansion?
+- Paranoid | I am relieved to see that your empire poses no threat to ours. | Your cities are so close. Your troops are so strong. You are making me nervous!
+- Patron of the Arts | Imagine all the amazing things the brilliant minds of my nation will accomplish. | Your finest engineers and architects would be happier in a place where they could grow. Brazil, for instance.
+- Pax Mongolica | You show wisdom and might working in harmony, like well-alloyed steel. | If you cannot rule well, a better ruler will come and overthrow you. All of history teaches us this.
+- Peacekeeper | There is no shame in deterrence. Having a weapon is very different from actually using it. | If you are so bloodthirsty, maybe it is better to put an end to your leadership.
+- Perpetually on Guard | I commend your perseverance. We share a common interest in protecting those who often cannot protect themselves. | War can only bring us loss. Loss of lives, loss of productivity, loss of our very humanity!
+- Pillager | Your enemies know you by flame and fear. They pray to be delivered from your wrath, but the heavens are silent. **Harald Hardrada:** Good! You punish your enemies with fire and sword until they tremble at the sound of your name. Pity you were not born a Viking. | Your enemies make war on you, but you do not plunder their lands in retribution. Is it out of cowardice? Or an excess of politeness? **Harald Hardrada:** You lack the courage to punish your enemies, and you lack the fortitude to make their lands an ashen wasteland. Pathetic.
+- Populous | The number of people living in your empire is truly impressive. | There are so few people living in your empire. It must be hard to get anything done.
+- Preserver of the Union | Is it not easier to agree, when we both defer to justice. | A House divided against itself cannot stand. We hope you follow our lead in advancing the cause of liberty.
+- Queen of the Nile | I am only interested in people worthy of my time. You are obviously one of them. | You are not worthy to bask in our presence. Your power is as fragile as your army is weak.
+- Raven Banner | The quickest way to success is to levy the strengths of your little allies, wouldn't you agree? | They say you pay your auxiliaries in patriotism. That and two pennies will buy them a beer.
+- Saint | I see you have found God's wisdom, and that you share it with the world. Good. | Everyday, I pray for your soul, that you find the wisdom of the Lord.
+- Sakoku | Strong borders make for good neighbors. | We can manage our own affairs. Without you.
+- Sapa Inca | You recognize that the Inca are the masters of the heights. This shows wisdom on your part. | The Inca are masters of the mountains. Do not challenge me on this ground. Be content with the lowlands.
+- Scourge of Rome | So many troops! Ha ha! Look at them all! | Your lands are quiet and peaceful. And weak.
+- Short Life of Glory | I hope we never meet in battle, it would be a shame to lose such a worthy foe. | How do you intend on growing your empire if you refuse to fight for your people?!
+- Sicilian Wars | May prosperity come to your cities—the ones away from the coast. | We have no interest in the land—that is for you to claim—but the seas and the shores are Phoenician.
+- Sihai | Just as we cultivate the land before it bears fruit, so we cultivate the lesser peoples so that they might join with us. | Is that all you are, a killer of the wild folk?
+- Solitary | See that you continue to stay away from the Mayan homeland. For now the stars shine in your favor. | The stars themselves look away from your deeds. Do not approach my lands.
+- Spirit of Tucapel | Your people take great pride in where they come from. It is clear they follow your lead. | How do you lead such a boring people? Do they follow the example you set?
+- Standing Army | I love a leader who is surrounded by an impressive military. | You have so few troops. Aren't you scared for your life?
+- Sultan of Egypt and Syria | Faith means peace, where the strong defend the weak. | My sword shall stand between you and the holy places of the world. Your touch will not defile them.
+- Sumptuous Finery | All of my lovers are positively murdering each other to get some of your goods. What fun! | How can my Flying Squadron critique your supposed luxuries if you don't even send me any?
+- Sun Never Sets | Please accept my warmest thanks for your kind endeavors on the continent we share. | You tread on dangerous waters in the face of England and her loyal colonies.
+- Sycophant | Our poets and philosophers hold up your civilization as the light of the world, and I must agree with them. **Gorgo:** Yes! Your excellence—your Arete—is truly worthy of emulation! **Pedro II:** I look upon your civilization and its works, and I understand why your people are praised in song and story around the world. **Peter:** Your civilization is the model on which I will build the new Russia! **Philip II:** What could be better than to surround oneself with such poets and playwrights, saints and scientists? I have always thought that a great nation is a manifestation of the blessings of the Almighty. **Qin Shi Huang:** Your personal magnificence is reflected in the glory of your civilization! **Teddy Roosevelt:** The people of every civilization look upon you with wonder. You are an inspiration to the world! | Aspire to be a worthier example to the rest of the world! Your people will love you if you lead them to glory.
+- Sympathizer | Our civilization admires the way you're bearing your current trouble with hardiness and resolve. **Catherine de Medici:** I am sending you a gift: A ring inscribed with “This Too Shall Pass.” May it comfort you in times of trouble. **Genghis Khan:** I admire the way you rule. I appreciate not having to come up with a complicated strategy to conquer your civilization. **Jadwiga:** Your heart must ache for the suffering of your people. Poland understands your plight, and we pray for you. **Jayavarman VII:** You are tied to the cycle of samsara now. I pray unceasingly that you will soon be liberated, and at peace. **Lautaro:** You, too, know what it means to resist the cruelty of the powerful. Mapuche respect what you do. **Peter:** A lesser leader would be unable to do what you are doing: Keeping firm control of your civilization in a time of crisis. **Victoria:** You bear the suffering of your Dark Age with such nobility! I wish my subjects were as stalwart as you! | Your people's "glorious age" looks a lot like gloating to me. I look forward to the day of your fall.
+- Technophile | I am impressed with the depth of your scientific research. | You are not spending much time on research. How will your people keep up?
+- The Bull Moose | I hear you've got some capital hiking over there. | We are defined by how we live with our surroundings. Remember that.
+- Tlatoani | We have more in common, than not. You follow Tlacaelel's words. | You have much that I do not! Do you want your people taken as slaves?
+- Trade Agreement | Thank you for your interest in a trade agreement with England. | Brass shines as fair to the ignorant as gold to the goldsmiths.
+- Turtler | Good fences make good neighbors, and good defenses a peaceable kingdom. I am pleased you are content to protect your lands. **Hojo Tokimune:** Ambition for territory is the seed that ruins dynasties. I am pleased you seek only to defend your lands. | In your rush to war and conquest, you set events into motion whose course you cannot foresee. Better to stay home and protect, than go abroad and conquer. **Hojo Tokimune:** I perceive your conquests with concern, but not with fear. Know that if you invade Japan, the very wind and seas will come to our aid.
+- Wall of 10,000 Li | It is good that you do not try to compete with the glorious empire of Qin. Our wonders are inimitable. | What need do you have for wonder when you can look upon the works of the Middle Kingdom?
+- Westernizer | Yours is a society to emulate. Arts, sciences… what don't you have? | Your people are starved for knowledge and beauty, and yet you ignore science and art. Why?
+- With Your Shield Or On It | You would make a good Spartan… resilient, strong, brave. | Are you such a coward, to avoid bloodshed? To yield so easily? Where is your honor?
+- Wonder Obsessed | It makes me happy that you leave the wonder building to us. | Do you not realize that we are supposed to be the preeminent builders of wonders?
+- Yinding | We only deal with those who have something to offer. Like you, for instance. | We must seek wealth, from the ox-driver to the king.
+- Zealot | How happy is the land whose ruler follows the one true religion, and protects the souls of his people! **Montezuma:** It is good that you have chosen the right faith. You probably did so from admiration of me. That is understandable. **Pedro II:** You know that a good ruler leads the souls of his people on the right course, and in doing so brings the blessings of heaven to them. | Blasphemy and heresy spill from the lips of your subjects! You must restore your people's souls by restoring the true religion! **Montezuma:** I am making a gift of my religion to you! Why do you not accept? You will shame yourself, and face destruction in the afterlife! **Pedro II:** I fear you have mistaken spreading religious infidelity for a lively carnival of ideas.

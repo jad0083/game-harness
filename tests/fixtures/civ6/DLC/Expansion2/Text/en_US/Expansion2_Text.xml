@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hand-written test fixture. -->
+<GameData>
+	<LocalizedText>
+		<Replace Tag="LOC_UNIT_ROMAN_LEGION_DESCRIPTION" Language="en_US">
+			<Text>Roman unique melee unit that replaces the Swordsman. Can build a Roman Fort.</Text>
+		</Replace>
+		<Update>
+			<Where Tag="LOC_BOOST_TRIGGER_WRITING" Language="en_US"/>
+			<Set Text="Meet another civilization."/>
+		</Update>
+		<Delete Tag="LOC_DELETED_LATER"/>
+		<Row Tag="LOC_TECH_WRITING_NAME" Language="fr_FR"><Text>Écriture</Text></Row>
+	</LocalizedText>
+</GameData>

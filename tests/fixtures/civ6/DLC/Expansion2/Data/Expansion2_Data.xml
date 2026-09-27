@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hand-written test fixture. -->
+<GameData>
+	<Technologies>
+		<Update>
+			<Where TechnologyType="TECH_WRITING"/>
+			<Set Cost="55"/>
+		</Update>
+	</Technologies>
+	<Units>
+		<Replace UnitType="UNIT_ROMAN_LEGION" Name="LOC_UNIT_ROMAN_LEGION_NAME" BaseMoves="2" Combat="40" Domain="DOMAIN_LAND" Cost="110"
+			PurchaseYield="YIELD_GOLD" PrereqTech="TECH_IRON_WORKING" TraitType="TRAIT_CIVILIZATION_UNIT_ROMAN_LEGION"
+			Description="LOC_UNIT_ROMAN_LEGION_DESCRIPTION" StrategicResource="RESOURCE_IRON"/>
+	</Units>
+</GameData>

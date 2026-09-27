@@ -139,6 +139,9 @@
 - [x] Game pillars: each game defines its strategy pillars, metrics and actions in `corpora/<game>/pillars.toml`; the strategy layer, decisions, actions and dashboard use them as guardrails (spec docs/design/2026-09-26-game-pillars-design.md; deployed 2e9f24d on mini-rig2, two live reviews accepted with milestones and trait-based identity)
 - [ ] Civilization VI integration (after game pillars)
 - [ ] Civ VI tuner relay (agent 1.6.0 /tuner/*, controller civ6 states|lua)
+- [x] Civ VI corpus: `scripts/extract-civ6.py` rebuilds the Gathering Storm + DLC rules database from the game's XML (modinfo criteria, load order, cascading deletes) → 1,783 records in 29 kinds; 16 docs (13 wiki pages, civ6-mcp playbook, CivBench appendix, links); first `strategy.md`; manifest with the window title; loads in the controller and CI
+- [ ] Civ VI corpus: compare the Gathering Storm build with a GS `DebugGameplay.sqlite` (`CopyDatabasesToDisk 1`, load a GS game; `--check-against`) and the DLC load order in `Logs/Modding.log`
+- [ ] Civ VI pillars.toml, hotkeys and screens once the game can be read (tuner relay or saves) and played
 - [x] Dashboard access key: `PILOT_DASHBOARD_KEY` or `runs/dashboard.key`, one link per browser (`python -m pilot dashboard-link`), JSON-only same-origin changes
 
 ## Hosts

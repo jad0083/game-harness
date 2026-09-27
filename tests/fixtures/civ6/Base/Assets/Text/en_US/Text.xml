@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hand-written test fixture in the game's text format. -->
+<GameData>
+	<BaseGameText>
+		<Row Tag="LOC_ERA_ANCIENT_NAME"><Text>Ancient Era</Text></Row>
+		<Row Tag="LOC_ERA_CLASSICAL_NAME"><Text>Classical Era</Text></Row>
+		<Row Tag="LOC_YIELD_SCIENCE_NAME"><Text>Science</Text></Row>
+		<Row Tag="LOC_TERRAIN_GRASS_MOUNTAIN_NAME"><Text>Grassland (Mountain)</Text></Row>
+		<Row Tag="LOC_TERRAIN_PLAINS_MOUNTAIN_NAME"><Text>Plains (Mountain)</Text></Row>
+		<Row Tag="LOC_TECH_POTTERY_NAME"><Text>Pottery</Text></Row>
+		<Row Tag="LOC_TECH_WRITING_NAME"><Text>Writing</Text></Row>
+		<Row Tag="LOC_TECH_OLD_LORE_NAME"><Text>Old Lore</Text></Row>
+		<Row Tag="LOC_TECH_IRON_WORKING_NAME"><Text>Iron Working</Text></Row>
+		<Row Tag="LOC_BOOST_TRIGGER_WRITING"><Text>Meet another civilization.</Text></Row>
+		<Row Tag="LOC_UNIT_SWORDSMAN_NAME"><Text>Swordsman</Text></Row>
+		<Row Tag="LOC_UNIT_ROMAN_LEGION_NAME"><Text>Legion</Text></Row>
+		<Row Tag="LOC_UNIT_ROMAN_LEGION_DESCRIPTION"><Text>Old description.</Text></Row>
+		<Row Tag="LOC_UNIT_GREAT_SCIENTIST_NAME"><Text>Great Scientist</Text></Row>
+		<Row Tag="LOC_TRAIT_ALL_ROADS_NAME"><Text>All Roads Lead to Rome</Text></Row>
+		<Row Tag="LOC_TRAIT_ALL_ROADS_DESCRIPTION"><Text>Your [ICON_TradeRoute] Trade Routes earn +1 [ICON_Gold] Gold.[NEWLINE]Cities start with a Trading Post.</Text></Row>
+		<Row Tag="LOC_CIVILIZATION_ROME_NAME"><Text>Rome</Text></Row>
+		<Row Tag="LOC_LEADER_TRAJAN_NAME"><Text>Trajan</Text></Row>
+		<Row Tag="LOC_DISTRICT_CAMPUS_NAME"><Text>Campus</Text></Row>
+		<Row Tag="LOC_BUILDING_LIBRARY_NAME"><Text>Library</Text></Row>
+		<Row Tag="LOC_GREAT_PERSON_CLASS_SCIENTIST_NAME"><Text>Great Scientist</Text></Row>
+		<Row Tag="LOC_GP_HYPATIA_NAME"><Text>Hypatia</Text></Row>
+		<Row Tag="LOC_GP_LIBRARIES_SCIENCE"><Text>{BuildingType} buildings provide +{Amount} [ICON_Science] Science.</Text></Row>
+		<Row Tag="LOC_GP_TWO_BOOSTS"><Text>Triggers the [ICON_TechBoosted] Eureka for {Amount} random {Amount : plural 1?technology; other?technologies;}.</Text></Row>
+		<Row Tag="LOC_DELETED_LATER"><Text>gone</Text></Row>
+	</BaseGameText>
+</GameData>

@@ -31,6 +31,7 @@ cargo check -p game-agent --target x86_64-pc-windows-gnu --quiet 2>&1 | tail -1
 
 stage "corpus loads"
 ./target/release/game-controller --corpus corpora/galciv4 corpus | sed -n '2,10p'
+./target/release/game-controller --corpus corpora/civ6 corpus | sed -n '1,3p'
 
 else
 stage "rust stages skipped: no Rust, Cargo or corpus files in this commit"

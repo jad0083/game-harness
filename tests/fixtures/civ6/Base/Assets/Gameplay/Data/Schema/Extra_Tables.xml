@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hand-written test fixture: a table defined in schema XML, as the game's Leader_Tables.xml does. -->
+<GameData>
+	<Table name="LeaderNotes">
+		<Column name="Leader" type="text" notnull="true" primarykey="true"/>
+		<Column name="Sort" type="integer" default="0"/>
+		<Column name="Tooltip" type="text" default=""/>
+	</Table>
+</GameData>

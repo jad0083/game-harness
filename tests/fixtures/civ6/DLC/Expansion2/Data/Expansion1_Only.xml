@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hand-written test fixture: gated on the Rise and Fall game core, so a Gathering Storm build skips it. -->
+<GameData>
+	<Technologies>
+		<Update>
+			<Where TechnologyType="TECH_WRITING"/>
+			<Set Cost="777"/>
+		</Update>
+	</Technologies>
+</GameData>

@@ -224,6 +224,8 @@ Generic records — `id`, `name`, `aliases`, `summary`, `fields` — so the extr
 - Effects render through `StatTypeDisplayDefs` (`+20% Manufacturing (Colony)`, percentages honoured, target qualifiers such as `capital world only` kept); UI markup such as `[ICON=…]` is stripped and script bookkeeping (flags, counters, stored event targets) left out.
 - Display-name collisions are resolved deliberately: tutorial variants lose, `_Human`/`_Terran` variants beat the base definition, other factions' variants lose, and genuine tiers (`Project_UpgradeWealth1/2/3`, `DysonSphereBaseModule_Red/_Blue`) are kept under suffixed ids (tier number, else the distinguishing part of the internal name) with a `variant` field. Events are never ranked away: exact duplicates merge and every distinct outcome set is kept.
 
+Civilization VI (`corpora/civ6/`, `scripts/extract-civ6.py`) has no single rules file: the extractor rebuilds the game's in-memory rules database from the base XML and each DLC's modinfo actions for the Gathering Storm ruleset, then renders 1,783 records in 29 kinds (civs, leaders, units, districts with adjacency, techs with eurekas, policies, great people, emergencies, resolutions, …) with the game's own text; see `docs/corpus.md` and `corpora/civ6/data/README.md`.
+
 The loader rejects nameless records and duplicate ids at startup, so a bad extract fails the build rather than a game turn. The raw XML is not committed (Stardock's data); `data/_meta.json` records the game version and generator commit for reproducibility.
 
 ### Chunks (`docs/*.md`, `strategy.md`)

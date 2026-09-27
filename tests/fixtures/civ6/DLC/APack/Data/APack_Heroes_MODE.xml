@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hand-written test fixture: a game-mode file, loaded only when the heroes mode is requested. -->
+<GameData>
+	<Technologies>
+		<Update>
+			<Where TechnologyType="TECH_POTTERY"/>
+			<Set Cost="1"/>
+		</Update>
+	</Technologies>
+</GameData>

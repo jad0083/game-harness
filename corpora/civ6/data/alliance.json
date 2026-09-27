@@ -1,0 +1,91 @@
+[
+ {
+  "id": "alliance:cultural",
+  "name": "Cultural Alliance",
+  "aliases": [
+   "ALLIANCE_CULTURAL"
+  ],
+  "summary": "Cultural Alliance level [AllianceLevel]",
+  "fields": {
+   "effects": [
+    "Level 1: +1 Culture from Trade Routes from your ally",
+    "Level 1: +2 Culture from Trade Routes to your ally",
+    "Level 1: Your ally's cities do not exert Loyalty pressure on yours, and vice versa",
+    "Level 2: Each of your Districts grant an additional Great Person Point per turn if you have a Trade Route from that city to your ally",
+    "Level 3: You gain +10% of your ally's Culture from Cities",
+    "Level 3: You gain +20% of your ally's Tourism from Cities"
+   ],
+   "description": "Cultural Alliance level [AllianceLevel]"
+  }
+ },
+ {
+  "id": "alliance:economic",
+  "name": "Economic Alliance",
+  "aliases": [
+   "ALLIANCE_ECONOMIC"
+  ],
+  "summary": "Economic Alliance level [AllianceLevel]",
+  "fields": {
+   "effects": [
+    "Level 1: +2 Gold from Trade Routes from your ally",
+    "Level 1: +4 Gold from Trade Routes to your ally",
+    "Level 2: Bonus Envoy Point for every City State with your ally as Suzerain",
+    "Level 3: Share Suzerain unique bonuses with your ally"
+   ],
+   "description": "Economic Alliance level [AllianceLevel]"
+  }
+ },
+ {
+  "id": "alliance:military",
+  "name": "Military Alliance",
+  "aliases": [
+   "ALLIANCE_MILITARY"
+  ],
+  "summary": "Military Alliance level [AllianceLevel]",
+  "fields": {
+   "effects": [
+    "Level 1: +5 Combat Strength against units of players at war with you and your ally",
+    "Level 2: +15% Production toward military units when you or your ally are at war",
+    "Level 2: Shared Visibility",
+    "Level 3: Units start with a free Promotion"
+   ],
+   "description": "Military Alliance level [AllianceLevel]"
+  }
+ },
+ {
+  "id": "alliance:religious",
+  "name": "Religious Alliance",
+  "aliases": [
+   "ALLIANCE_RELIGIOUS"
+  ],
+  "summary": "Religious Alliance level [AllianceLevel]",
+  "fields": {
+   "effects": [
+    "Level 1: +1 Faith from Trade Routes from your ally",
+    "Level 1: +2 Faith from Trade Routes to your ally",
+    "Level 1: Your ally's Religion does not exert Religious pressure on cities dominated by your Religion, and vice versa",
+    "Level 2: +10 Religious Combat Strength against non-ally Religions",
+    "Level 3: +1 Faith for each of your Citizens following your ally's religion",
+    "Level 3: Bonus Religious Pressure in cities with no followers of your ally's Religion"
+   ],
+   "description": "Religious Alliance level [AllianceLevel]"
+  }
+ },
+ {
+  "id": "alliance:research",
+  "name": "Research Alliance",
+  "aliases": [
+   "ALLIANCE_RESEARCH"
+  ],
+  "summary": "Research Alliance level [AllianceLevel]",
+  "fields": {
+   "effects": [
+    "Level 1: +1 Science from Trade Routes from your ally",
+    "Level 1: +2 Science from Trade Routes to your ally",
+    "Level 2: Every 30 turns (on Standard), you unlock a Eureka for a tech that your ally has researched or boosted, but you have not",
+    "Level 3: +10% Science when you or your ally are researching a tech that the other has completed, or are researching the same tech"
+   ],
+   "description": "Research Alliance level [AllianceLevel]"
+  }
+ }
+]
