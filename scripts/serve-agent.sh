@@ -93,5 +93,5 @@ echo
 echo "Serving on http://$IP:$PORT/ (this address only). Stop it (Ctrl-C) as soon as the installer"
 echo "has finished: it serves the agent token. It stops by itself after $((SECS / 60)) minutes."
 [[ -n ${GA_DRY_RUN:-} ]] && exit 0
-timeout "$SECS" python3 -m http.server "$PORT" --bind "$IP" --directory "$STAGE" || true
+timeout --foreground "$SECS" python3 -m http.server "$PORT" --bind "$IP" --directory "$STAGE" || true
 echo "server stopped"

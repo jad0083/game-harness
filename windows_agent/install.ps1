@@ -51,7 +51,8 @@ if ($env:GA_SRC) {
     try {
         Invoke-WebRequest "$env:GA_SRC/agent_token.txt" -UseBasicParsing -OutFile $dlToken
     } catch { $dlToken = $null; Write-Host '    no token served; the agent will generate one' }
-    if ($dlToken -and (Get-Content $dlToken -Raw).Trim().Length -lt 32) {
+    if ($dlToken -and "$(Get-Content $dlToken -Raw)".Trim().Length -lt 32) {
+        Remove-Item -Force $dlToken, $dlExe
         throw 'The served token is shorter than 32 characters; the agent (>= 1.5.0) would refuse it.'
     }
 }

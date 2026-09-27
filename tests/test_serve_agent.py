@@ -125,3 +125,9 @@ def test_per_host_token_files_are_gitignored():
     for name in (".agent_token", ".agent_token.gaming-pc2", "agent_token.txt"):
         r = subprocess.run(["git", "check-ignore", "-q", name], cwd=REPO, check=False)
         assert r.returncode == 0, f"{name} must be gitignored"
+
+
+def test_ctrl_c_reaches_the_server():
+    # Without --foreground, timeout puts the server in its own process group and Ctrl-C misses it.
+    script = (REPO / "scripts/serve-agent.sh").read_text()
+    assert re.search(r"^timeout --foreground \"\$SECS\" python3 -m http\.server", script, re.MULTILINE)
