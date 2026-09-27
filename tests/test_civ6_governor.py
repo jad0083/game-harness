@@ -1107,3 +1107,290 @@ def test_orders_still_followed_survive_a_restart(setup, tmp_path):
     third.status_poll_s, third.start_grace_s = 0, 0.05
     third.run(max_decisions=1)
     assert third._tracking == [], "a resolved order is not followed again"
+
+
+# ---- the last stand (docs/design/2026-09-27-civ6-levers-design.md, rulings 22-27) ----------------
+
+FALLING = {"threatened": True, "enemies_near": 2, "capture_adjacent": 1, "garrison": None, "incoming": 30,
+           "defense": {"garrison_hp": 80, "garrison_max": 200, "walls_hp": 0, "walls_max": 0}}
+SAFE = {"threatened": False, "enemies_near": 0, "capture_adjacent": 0, "incoming": 0,
+        "defense": {"garrison_hp": 200, "garrison_max": 200, "walls_hp": 0, "walls_max": 0}}
+LS_ARCHER = {"id": 5, "owner": 0, "x": 22, "y": 22, "damage": 0, "moves": 2, "attacks": 1}
+LS_BARB = {"id": 1, "owner": 63, "x": 23, "y": 21, "damage": 40, "moves": 2, "attacks": 1}
+SHOT = {"action": "ranged_attack", "actor": "unit:5", "unit": "UNIT_ARCHER",
+        "target": {"id": 1, "owner": 63, "type": "UNIT_WARRIOR", "x": 23, "y": 21, "hp": 60},
+        "predicted_damage": 30, "predicted_kill": False}
+T0 = FIXTURE["turn"]
+STAND_CALLS = ("turn_ready", "ls_state", "stand", "finish_moves")
+
+
+def falls(state):
+    state["cities"][0].update(json.loads(json.dumps(FALLING)))
+
+
+def recovers(state):
+    state["cities"][0].update(json.loads(json.dumps(SAFE)))
+
+
+def stand_game(events=None, **kw) -> FakeCiv6:
+    """Beijing falls at T0+1 (the urgent decision) and recovers at T0+2, unless `events` says else."""
+    return FakeCiv6(FIXTURE, index=INDEX, events=events or {T0 + 1: falls, T0 + 2: recovers},
+                    ls={"me": 0, "units": [dict(LS_ARCHER), dict(LS_BARB)]}, **kw)
+
+
+def stand_governor(setup, game, *answers, on=True, every=3) -> Civ6Governor:
+    s, _ = setup
+    s.last_stand, s.decide_every_turns = on, every
+    g = governor(setup, game, orders_model(*(answers or ([],))))
+    g.stand_pause_s = g.stand_idle_poll_s = 0
+    return g
+
+
+def after_order(game: FakeCiv6, n: int = 1) -> list:
+    """The calls after the n-th order, by kind (and the stand's action)."""
+    idx = [i for i, a in enumerate(game.actions) if a[0] == "order"][n - 1]
+    return [a[0] if a[0] != "stand" else f"stand {a[2]}" for a in game.actions[idx + 1:]]
+
+
+def stand_rows(setup) -> list[tuple]:
+    return [(e["key"], e["result"]) for e in _events(setup) if e["kind"] == "order_outcome" and e["key"].startswith("stand")]
+
+
+def test_a_city_is_about_to_fall_only_when_it_can_be_taken_now():
+    from pilot.civ6 import about_to_fall
+    city = lambda **over: {**_city0(), **FALLING, **over}
+    assert about_to_fall(city()), "worn down to 80/200, a capturer adjacent, no walls"
+    assert not about_to_fall(city(capture_adjacent=0)), "nothing next to it that can take it"
+    assert not about_to_fall(city(defense={**FALLING["defense"], "walls_hp": 50, "walls_max": 100})), "walls stand"
+    assert about_to_fall(city(defense={**FALLING["defense"], "walls_hp": 0, "walls_max": 100})), "walls down"
+    assert not about_to_fall(city(defense={**FALLING["defense"], "garrison_hp": 150}, incoming=100))
+    assert about_to_fall(city(defense={**FALLING["defense"], "garrison_hp": 150}, incoming=150)), "burst"
+    assert about_to_fall(city(defense={**FALLING["defense"], "garrison_hp": 100})), "exactly half"
+    beijing_t61 = city(capture_adjacent=2, incoming=40, defense=SAFE["defense"])
+    assert not about_to_fall(beijing_t61), "Beijing at T61: 200/200 with two capturers adjacent"
+    scout = city(capture_adjacent=0, enemies_near=1, defense=SAFE["defense"])
+    assert not about_to_fall(scout), "a lone scout"
+    assert not about_to_fall(_city0(threatened=True, enemies_near=3, damaged=True)), "an old snapshot never falls"
+
+
+def test_a_city_starting_to_fall_is_urgent_once():
+    now = {**FIXTURE, "cities": [{**_city0(), **FALLING}]}
+    assert any(u.startswith("city falling: Beijing (garrison 80/200, no walls, 1 unit(s) next to it")
+               for u in urgent_changes(FIXTURE, now))
+    assert not any(u.startswith("city falling") for u in urgent_changes(now, now)), "only on the transition"
+    text = briefing_text(now, INDEX)
+    assert "ABOUT TO FALL" in text
+
+
+def test_a_stand_action_took_only_when_the_read_back_shows_it():
+    from pilot.civ6 import stand_verdict
+    before = {"me": 0, "units": [dict(LS_ARCHER), dict(LS_BARB)]}
+    hit = {"me": 0, "units": [{**LS_ARCHER, "attacks": 0}, {**LS_BARB, "damage": 70}]}
+    assert stand_verdict(SHOT, before, hit) == ("took", "target: 30 damage (predicted 30)")
+    assert stand_verdict(SHOT, before, {"me": 0, "units": [{**LS_ARCHER, "attacks": 0}]})[0] == "took", "killed"
+    assert stand_verdict(SHOT, before, before)[0] == "did_not_take"
+    kept = {"me": 0, "units": [dict(LS_ARCHER), {**LS_BARB, "damage": 70}]}
+    assert stand_verdict(SHOT, before, kept) == (
+        "did_not_take", "the attacker kept its attack; target: 30 damage (predicted 30)")
+    strike = {"action": "city_strike", "actor": "city:65536", "target": SHOT["target"], "predicted_damage": 20}
+    assert stand_verdict(strike, before, hit)[0] == "took"
+    back = {"action": "retreat", "actor": "unit:5", "to": {"x": 21, "y": 23}}
+    assert stand_verdict(back, before, {"me": 0, "units": [{**LS_ARCHER, "x": 21, "y": 23}]}) == ("took", "on 21,23")
+    assert stand_verdict(back, before, before)[0] == "did_not_take"
+    assert stand_verdict(SHOT, before, None) == ("unknown", "no read-back")
+    assert stand_verdict(None, before, hit)[0] == "took", "a lost reply is judged by any change"
+    assert stand_verdict(None, before, before)[0] == "did_not_take"
+
+
+def test_stand_actions_join_the_order_record():
+    rows = _rows("stand ranged", ["took", "did_not_take", "took"]) + _rows("stand retreat", ["unknown"])
+    rec = order_record(rows, 30, ORDERS)
+    assert (rec["stand ranged"]["judged"], rec["stand ranged"]["rate"]) == (3, 0.67)
+    assert rec["stand retreat"]["judged"] == 0 and rec["stand retreat"]["excluded"]["unknown"] == 1
+    text = order_record_text(rec)
+    assert "- stand ranged: 3 judged; 2 took, 1 did not take; held 67%" in text
+
+
+def test_the_last_stand_is_off_by_default_and_capped_at_three(monkeypatch):
+    assert (Settings().last_stand, Settings().last_stand_max) == (False, 3)
+    monkeypatch.setenv("PILOT_LAST_STAND", "1")
+    monkeypatch.setenv("PILOT_LAST_STAND_MAX", "2")
+    s = Settings.from_env()
+    assert (s.last_stand, s.last_stand_max) == (True, 2)
+    monkeypatch.setenv("PILOT_LAST_STAND", "0")
+    assert Settings.from_env().last_stand is False
+
+
+def test_a_falling_city_gets_its_stand_between_the_urgent_decision_and_a_one_turn_hand_back(setup):
+    """(a) urgent decision → orders read back → steps → pins → autoplay 1; (g) nothing is sent while
+    autoplay runs."""
+    game = stand_game(stand=[SHOT])
+    g = stand_governor(setup, game, [], [{"kind": "research", "id": "tech:pottery"}], [])
+    g.run(max_decisions=3)
+    urgent = traces(setup)[1]
+    assert "city falling: Beijing" in urgent["trigger"]
+    assert [o["outcome"] for o in urgent["orders"]] == ["stuck"], "the model's orders are read back first"
+    assert after_order(game)[:9] == ["turn_ready", "ls_state", "stand ranged_attack", "ls_state", "turn_ready",
+                                     "stand done", "finish_moves", "turn_ready", "autoplay"]
+    hand_back = [a for a in game.actions if a[0] == "autoplay"][1]
+    assert hand_back == ("autoplay", 1, False), "one turn: the AI plays the rest of the turn"
+    turns = [e for e in _events(setup) if e["kind"] == "turn"]
+    assert (turns[1]["turn"], turns[1]["turns"]) == (T0 + 2, 1), "the turn advanced by exactly one"
+    assert all(not a[-1] for a in game.actions if a[0] in (*STAND_CALLS, "order")), "(g) never while autoplay runs"
+    assert stand_rows(setup) == [("stand ranged", "took"), ("stand pin", "took")]
+    stand = next(e for e in _events(setup) if e["kind"] == "last_stand")
+    assert stand["stopped"] == "done: nothing left to do" and stand["pins"] == [{"id": 5, "x": 22, "y": 22}]
+    assert [a["action"] for a in stand["actions"]] == ["ranged_attack", "pin"]
+    assert sum(1 for a in game.actions if a[0] == "stand") == 2, "one stand: the city recovered at T0+2"
+    s, _ = setup
+    assert "Last stand for Beijing (stand 1 in a row): ranged_attack took" in s.journal.read_text()
+
+
+def test_without_the_setting_a_falling_city_only_autoplays(setup):
+    """(b) off by default: no new call at all."""
+    game = stand_game(stand=[SHOT])
+    g = stand_governor(setup, game, [], [{"kind": "research", "id": "tech:pottery"}], [], on=False)
+    g.run(max_decisions=3)
+    assert "city falling: Beijing" in traces(setup)[1]["trigger"], "the urgent decision still runs"
+    assert {a[0] for a in game.actions} <= {"order", "autoplay", "autoplay_stop"}
+    assert [a for a in game.actions if a[0] == "autoplay"] == [("autoplay", 1, False)] * 4
+
+
+def test_an_ignored_first_action_stops_the_stand_and_still_hands_back(setup):
+    """(c)"""
+    game = stand_game(stand=[SHOT, SHOT], stand_ignored=True)
+    g = stand_governor(setup, game)
+    g.run(max_decisions=3)
+    calls = [a[0] if a[0] != "stand" else f"stand {a[2]}" for a in game.actions]
+    i = calls.index("stand ranged_attack")
+    assert calls[i:i + 4] == ["stand ranged_attack", "ls_state", "turn_ready", "autoplay"], "stopped at once"
+    assert stand_rows(setup) == [("stand ranged", "did_not_take")]
+    stand = next(e for e in _events(setup) if e["kind"] == "last_stand")
+    assert stand["stopped"].startswith("ranged_attack did not take: the attacker kept its attack")
+    assert not any(e["kind"] == "last_stand_off" for e in _events(setup)), "one failure is not enough"
+
+
+def test_two_ignored_first_actions_turn_the_stand_off_for_the_run(setup):
+    """(d) the circuit breaker: the next falling turn only autoplays."""
+    game = stand_game(events={T0 + 1: falls}, stand=[SHOT] * 5, stand_ignored=True)
+    g = stand_governor(setup, game, every=4)
+    g.run(max_decisions=3)
+    assert [a[2] for a in game.actions if a[0] == "stand"] == ["ranged_attack", "ranged_attack"]
+    off = [e for e in _events(setup) if e["kind"] == "last_stand_off"]
+    assert len(off) == 1 and off[0]["reason"].startswith("the first action of 2 stands did not take")
+    s, _ = setup
+    assert "Last stand turned off for this run" in s.journal.read_text()
+    autoplays = [a for a in game.actions if a[0] == "autoplay"]
+    assert len(autoplays) == 5 and all(a == ("autoplay", 1, False) for a in autoplays)
+
+
+def test_a_lost_reply_is_never_sent_again(setup):
+    """(e) the action ran but its reply was lost: read back, recorded, and the stand ends."""
+    game = stand_game(stand=[SHOT, SHOT], stand_lost_reply=True)
+    g = stand_governor(setup, game)
+    g.run(max_decisions=3)
+    assert [a[2] for a in game.actions if a[0] == "stand"] == ["ranged_attack"]
+    assert stand_rows(setup) == [("stand lost reply", "took")]
+    stand = next(e for e in _events(setup) if e["kind"] == "last_stand")
+    assert "not sent again" in stand["stopped"] and stand["pins"] == []
+
+
+def test_after_three_stands_in_a_row_the_ai_defends_alone(setup):
+    """(f)"""
+    game = stand_game(events={T0 + 1: falls})
+    g = stand_governor(setup, game, every=5)
+    g.run(max_decisions=3)
+    assert [a[2] for a in game.actions if a[0] == "stand"] == ["done"] * 3
+    s, _ = setup
+    journal = s.journal.read_text()
+    assert journal.count("has had 3 stands in a row (the limit)") == 1
+    assert game.state["turn"] == T0 + 6, "T0+1..T0+3 with a stand, T0+4 and T0+5 without"
+
+
+def test_the_action_cap_and_the_time_budget_stop_a_stand(setup):
+    """(h) at most 8 actions per stand, and 90 s."""
+    archers = [{**LS_ARCHER, "id": i} for i in range(5, 15)]
+    shots = [{**SHOT, "actor": f"unit:{i}", "predicted_damage": 5} for i in range(5, 15)]
+    game = FakeCiv6(FIXTURE, index=INDEX, events={T0 + 1: falls, T0 + 2: recovers},
+                    ls={"me": 0, "units": [*archers, dict(LS_BARB)]}, stand=shots)
+    g = stand_governor(setup, game)
+    g.run(max_decisions=3)
+    assert sum(1 for a in game.actions if a[0] == "stand") == 8
+    assert sum(1 for a in game.actions if a[0] == "finish_moves") == 8
+    stand = next(e for e in _events(setup) if e["kind"] == "last_stand")
+    assert stand["stopped"] == "8 actions (the limit)"
+
+
+def test_the_time_budget_stops_a_stand(setup):
+    game = stand_game(stand=[SHOT, {**SHOT, "actor": "unit:6"}])
+    g = stand_governor(setup, game)
+    clock = iter(range(0, 10_000, 50))
+    g._now = lambda: next(clock)
+    g.run(max_decisions=3)
+    assert [a[2] for a in game.actions if a[0] == "stand"] == ["ranged_attack"]
+    stand = next(e for e in _events(setup) if e["kind"] == "last_stand")
+    assert stand["stopped"] == "the 90 s budget ran out"
+    assert not any(a[0] == "finish_moves" for a in game.actions), "no pins after the budget"
+
+
+def test_a_popup_means_no_action_and_a_hand_back(setup):
+    """(i) turn-ready fails: nothing is sent; autoplay takes the turn after a few polls."""
+    game = stand_game(stand=[SHOT], popup=True)
+    g = stand_governor(setup, game)
+    g.run(max_decisions=3)
+    calls = [a[0] for a in game.actions]
+    assert "stand" not in calls and "ls_state" not in calls
+    i = calls.index("turn_ready")
+    assert calls[i:i + 6] == ["turn_ready"] * 6 and calls[i + 6] == "autoplay", "1 check, 5 polls, then autoplay"
+    stand = next(e for e in _events(setup) if e["kind"] == "last_stand")
+    assert stand["stopped"].startswith("not ready: on screen: TechCivicCompletedPopup; nothing sent")
+
+
+def test_no_game_core_read_means_no_action(setup):
+    game = stand_game(stand=[SHOT], ls_fails=1)
+    g = stand_governor(setup, game)
+    g.run(max_decisions=3)
+    assert not any(a[0] == "stand" for a in game.actions)
+    stand = next(e for e in _events(setup) if e["kind"] == "last_stand")
+    assert stand["stopped"] == "no GameCore read before the first action: nothing sent"
+    assert [a for a in game.actions if a[0] == "autoplay"][1] == ("autoplay", 1, False)
+
+
+def test_a_pinned_unit_the_hand_back_moved_is_noted(setup):
+    def moved(state):
+        recovers(state)
+        state["cities"][0]["defenders"] = [{"id": 5, "x": 20, "y": 22}]
+    game = stand_game(events={T0 + 1: falls, T0 + 2: moved}, stand=[SHOT])
+    g = stand_governor(setup, game)
+    g.run(max_decisions=3)
+    check = next(e for e in _events(setup) if e["kind"] == "last_stand_check")
+    assert check["pins"][0]["result"] == "moved" and check["pins"][0]["now"] == {"x": 20, "y": 22}
+    s, _ = setup
+    assert "the hand-back moved pinned unit(s) 5 (22,22 → 20,22): pins do not hold" in s.journal.read_text()
+
+
+def test_the_controller_wrapper_runs_the_last_stand_subcommands(tmp_path):
+    from pilot.civ6 import ControllerCiv6, GameRefused
+    stub = tmp_path / "game-controller"
+    log = tmp_path / "args.txt"
+    stub.write_text(f"""#!/bin/sh
+printf '%s\\n' "$@" >> {log}
+case "$4" in
+  turn-ready) echo '{{"ok":true,"ready":false,"why":["engine busy"],"turn":7}}' ;;
+  ls-state) echo '{{"ok":true,"turn":7,"me":0,"units":[]}}' ;;
+  last-stand-step) echo '{{"ok":false,"error":"not ready: engine busy"}}'; exit 2 ;;
+  finish-moves) echo '{{"ok":false,"error":"no unit of ours with ID 9"}}'; exit 2 ;;
+esac
+""")
+    stub.chmod(0o755)
+    game = ControllerCiv6(stub, tmp_path / "civ6", "http://pc:8765", tmp_path, token="t" * 32)
+    assert game.turn_ready()["why"] == ["engine busy"]
+    assert game.ls_state(65536)["units"] == []
+    assert game.last_stand_step(65536, {"63:1": 40}, ["city:65536", "unit:5"]) == {"ok": False,
+                                                                                   "error": "not ready: engine busy"}
+    with pytest.raises(GameRefused):
+        game.finish_moves(9)
+    args = log.read_text().splitlines()
+    i = args.index("last-stand-step")
+    assert args[i:i + 6] == ["last-stand-step", "65536", "--damage", '{"63:1": 40}', "--skip", "city:65536,unit:5"]
+    assert args[args.index("ls-state") + 1] == "65536" and args[args.index("finish-moves") + 1] == "9"

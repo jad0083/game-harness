@@ -1247,10 +1247,12 @@ function describe(ev) {
     case "model": return `now using ${ev.model} (${ev.thinking} thinking)`;
     case "model_retry": return `${ev.error}; trying again in ${ev.delay} s`;
     case "pace": return ev.speed ? `game speed ${ev.speed}` : `a decision every ${ev.every_months} in-game months`;
+    case "last_stand": return `last stand for ${ev.city} (${ev.date}): ${(ev.actions || []).map((a) => `${a.action} ${String(a.result).replace(/_/g, " ")}`).join(", ") || "no action"}; stopped: ${ev.stopped}`;
+    case "last_stand_off": return `last stand off for this run: ${ev.reason}`;
     default: { const { t, kind, ...rest } = ev; return JSON.stringify(rest).slice(0, 200); }
   }
 }
-const KCLASS = { model_retry: "bad", episode_error: "bad", needs_attention: "bad", learn_rejected: "bad", briefing_error: "bad", learned: "learn", instruction: "human", orders: "human", answer: "human" };
+const KCLASS = { model_retry: "bad", episode_error: "bad", needs_attention: "bad", learn_rejected: "bad", briefing_error: "bad", last_stand_off: "bad", learned: "learn", instruction: "human", orders: "human", answer: "human" };
 function addFeed(ev) {
   if (QUIET.has(ev.kind)) return;
   $("feed").insertAdjacentHTML("afterbegin", `<li><span class="t">${new Date(ev.t * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span><span><span class="k ${KCLASS[ev.kind] || ""}">${esc(human(ev.kind))}</span>${esc(describe(ev))}</span></li>`);

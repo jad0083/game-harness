@@ -4,7 +4,8 @@
 --
 -- The world: player 0 (China) with Beijing at 22,21 (no garrison, no walls, a barbarian Spearman
 -- and Warrior adjacent, a peaceful Scout 3 tiles away) and Xi'an at 26,13 (an Archer on its tile,
--- the City Center damaged). Tests change MOCK before calling the snapshot.
+-- the City Center damaged). Tests change MOCK before calling the snapshot. The last stand's calls
+-- (turn_ready, ls_state, last_stand_step, finish_moves) record what they request in REQUESTS.
 
 local function hash(s)
   local h = 0
@@ -31,7 +32,10 @@ local function members(list)
   return { Members = function() local i = 0 return function() i = i + 1 if list[i] then return i, list[i] end end end }
 end
 
-MOCK = { busy = false, simulate_fails = false, simulate_zero = false, religion_fails = false, turn = 61, walls = 0 }
+MOCK = { busy = false, simulate_fails = false, simulate_zero = false, religion_fails = false, turn = 61, walls = 0,
+         strike = {}, preview = {}, wars = {}, war_state = nil, popup = nil, autoplay = false, refuse = false,
+         hills = {} }
+REQUESTS = {}
 
 GameInfo = {
   Units = tbl({
@@ -69,6 +73,10 @@ YieldTypes = { FOOD = 0, PRODUCTION = 1 }
 DefenseTypes = { DISTRICT_GARRISON = 11, DISTRICT_OUTER = 12 }
 CityCommandTypes = { PURCHASE = 21, RANGE_ATTACK = 22, PARAM_UNIT_TYPE = 23, PARAM_BUILDING_TYPE = 24, PARAM_YIELD_TYPE = 25,
                      PARAM_MILITARY_FORMATION_TYPE = 26, PARAM_X = 27, PARAM_Y = 28 }
+-- PARAM_X and PARAM_Y share their hashes with CityCommandTypes (checked live)
+UnitOperationTypes = { RANGE_ATTACK = 71, MOVE_TO = 72, PARAM_X = 27, PARAM_Y = 28, PARAM_MODIFIERS = 73 }
+UnitOperationResults = { PLOTS = 81, MODIFIERS = 82, MODIFIER_IS_TARGET = 83 }
+UnitOperationMoveModifiers = { NONE = 0, ATTACK = 16 }
 CityCommandResults = { PLOTS = 31, MODIFIERS = 32, MODIFIER_IS_TARGET = 33 }
 MilitaryFormationTypes = { STANDARD_MILITARY_FORMATION = 0 }
 CombatTypes = { MELEE = 41, RANGED = 42, BOMBARD = 43 }
@@ -94,6 +102,7 @@ function U:GetCombat() return GameInfo.Units[self.utype].Combat end
 function U:GetRangedCombat() return GameInfo.Units[self.utype].RangedCombat end
 function U:GetBombardCombat() return GameInfo.Units[self.utype].Bombard end
 function U:GetComponentID() return { player = self.owner, id = self.id } end
+function U:GetUnitType() return self.utype end
 function unit(t) setmetatable(t, U) UNITS[#UNITS + 1] = t return t end
 
 BARB = 63
@@ -119,6 +128,14 @@ function Map.GetUnitsAt(x, y)
   return { Units = function() local i = 0 return function() i = i + 1 return list[i] end end }
 end
 function Map.GetMapSize() return 0 end
+local W = 40
+function Map.GetPlotByIndex(i)
+  local x, y = i % W, math.floor(i / W)
+  return { GetX = function() return x end, GetY = function() return y end, GetOwner = function() return 0 end,
+           IsHills = function() return MOCK.hills[x .. ',' .. y] or false end }
+end
+function plot_index(x, y) return y * W + x end
+PlayersVisibility = { [0] = { IsVisible = function(_, x, y) return not (MOCK.hidden and MOCK.hidden[x .. ',' .. y]) end } }
 
 -- ---- cities --------------------------------------------------------------------------------------
 
@@ -192,13 +209,16 @@ local function player(id, major)
   function p:IsAlive() return true end
   function p:IsMajor() return major end
   function p:IsFreeCities() return false end
+  function p:IsTurnActive() return not MOCK.not_our_turn end
   function p:GetDiplomacy()
-    return { IsAtWarWith = function() return false end, HasMet = function() return true end }
+    return { IsAtWarWith = function(_, other) return MOCK.wars[other] or false end, HasMet = function() return true end }
   end
   function p:GetUnits()
     local l = {}
     for _, u in ipairs(UNITS) do if u.owner == id then l[#l + 1] = u end end
-    return members(l)
+    local m = members(l)
+    m.FindID = function(_, uid) for _, u in ipairs(l) do if u.id == uid then return u end end return nil end
+    return m
   end
   function p:GetCities() return members(id == 0 and CITIES or {}) end
   function p:GetTechs()
@@ -266,19 +286,33 @@ Game = {
   end,
 }
 
-AutoplayManager = { IsActive = function() return false end, GetTurns = function() return 0 end,
+AutoplayManager = { IsActive = function() return MOCK.autoplay end, GetTurns = function() return 0 end,
                     GetReturnAsPlayer = function() return 0 end }
+ContextPtr = { LookUpControl = function(_, path)
+  if MOCK.popup and path == '/InGame/' .. MOCK.popup then return { IsHidden = function() return false end } end
+  return nil
+end }
 NotificationManager = {
   GetFirstEndTurnBlocking = function() return EndTurnBlockingTypes.ENDTURN_BLOCKING_COMMEMORATION_AVAILABLE end,
   GetAllEndTurnBlocking = function()
     return { EndTurnBlockingTypes.ENDTURN_BLOCKING_COMMEMORATION_AVAILABLE, EndTurnBlockingTypes.ENDTURN_BLOCKING_UNITS }
   end,
 }
-UI = { IsGameCoreBusy = function() return MOCK.busy end }
+UI = { IsGameCoreBusy = function() return MOCK.busy end, IsProcessingMessages = function() return false end,
+       HasSentTurnComplete = function() return false end }
 
 -- a land unit on the city tile: the game refuses a land-unit purchase there (stacking)
+local function listed(xy_list, x, y)
+  for _, p in ipairs(xy_list) do if p[1] == x and p[2] == y then return true end end
+  return false
+end
+
 CityManager = {
-  CanStartCommand = function(c, cmd, _, params)
+  CanStartCommand = function(c, cmd, a, b)
+    if cmd == CityCommandTypes.RANGE_ATTACK then
+      return MOCK.walls > 0 and listed(MOCK.strike, a[CityCommandTypes.PARAM_X], a[CityCommandTypes.PARAM_Y])
+    end
+    local params = b
     if cmd ~= CityCommandTypes.PURCHASE then return false end
     local units = Map.GetUnitsAt(c:GetX(), c:GetY())
     if units then
@@ -288,14 +322,70 @@ CityManager = {
     end
     return params[CityCommandTypes.PARAM_YIELD_TYPE] ~= nil
   end,
-  GetCommandTargets = function() return { [CityCommandResults.PLOTS] = {}, [CityCommandResults.MODIFIERS] = {} } end,
+  GetCommandTargets = function()
+    local plots, mods = {}, {}
+    for _, p in ipairs(MOCK.strike) do
+      plots[#plots + 1] = plot_index(p[1], p[2])
+      mods[#mods + 1] = CityCommandResults.MODIFIER_IS_TARGET
+    end
+    return { [CityCommandResults.PLOTS] = plots, [CityCommandResults.MODIFIERS] = mods }
+  end,
+  RequestCommand = function(c, cmd, params)
+    REQUESTS[#REQUESTS + 1] = 'city ' .. params[CityCommandTypes.PARAM_X] .. ',' .. params[CityCommandTypes.PARAM_Y]
+  end,
+}
+
+UnitManager = {
+  -- the game's target list: only the plots in MOCK.op_targets (it can miss valid targets)
+  GetOperationTargets = function(u)
+    local plots, mods = {}, {}
+    for _, p in ipairs((MOCK.op_targets or {})[u.id] or {}) do
+      plots[#plots + 1] = plot_index(p[1], p[2])
+      mods[#mods + 1] = UnitOperationResults.MODIFIER_IS_TARGET
+    end
+    return { [UnitOperationResults.PLOTS] = plots, [UnitOperationResults.MODIFIERS] = mods }
+  end,
+  CanStartOperation = function(u, op, _, params)
+    if MOCK.refuse then return false end
+    return Map.GetPlotDistance(u.x, u.y, params[UnitOperationTypes.PARAM_X], params[UnitOperationTypes.PARAM_Y])
+      <= (op == UnitOperationTypes.MOVE_TO and 1 or (u.range or 0))
+  end,
+  RequestOperation = function(u, op, params)
+    local name = op == UnitOperationTypes.RANGE_ATTACK and 'RANGE_ATTACK' or 'MOVE_TO'
+    REQUESTS[#REQUESTS + 1] = 'unit ' .. u.id .. ' ' .. name .. ' ' .. params[UnitOperationTypes.PARAM_X] .. ','
+      .. params[UnitOperationTypes.PARAM_Y] .. (params[UnitOperationTypes.PARAM_MODIFIERS] and
+      (' mod=' .. params[UnitOperationTypes.PARAM_MODIFIERS]) or '')
+  end,
+  GetReachableMovement = function(u)
+    local out = {}
+    for dy = -1, 1 do
+      for dx = -1, 1 do
+        if Map.GetPlotDistance(u.x, u.y, u.x + dx, u.y + dy) == 1 then out[#out + 1] = plot_index(u.x + dx, u.y + dy) end
+      end
+    end
+    return out
+  end,
+  FinishMoves = function(u) u.moves = 0 end,
 }
 CombatManager = {
+  -- a war-state change for attacking (x, y): MOCK.war_state when set, else {4} for a unit of player 4
+  -- there while not at war with it (the live answer for a peaceful major's Scout)
+  IsAttackChangeWarState = function(_, x, y)
+    if MOCK.war_state then return MOCK.war_state end
+    for _, u in ipairs(UNITS) do
+      if u.x == x and u.y == y and u.owner == 4 and not MOCK.wars[4] then return { 4 } end
+    end
+    return {}
+  end,
   SimulateAttackVersus = function(attacker)
     if MOCK.simulate_fails then error('no combat preview here') end
+    local r = {}
+    if attacker.district or attacker.owner == 0 or attacker.player == 0 then       -- our city or unit attacks
+      r[CombatResultParameters.DEFENDER] = { [CombatResultParameters.DAMAGE_TO] = MOCK.preview[attacker.id or 'city'] or 20 }
+      return r
+    end
     local u
     for _, x in ipairs(UNITS) do if x.id == attacker.id then u = x end end
-    local r = {}
     local dmg = MOCK.simulate_zero and 0 or ({ [1] = 18, [2] = 15, [4] = 40 })[u.id] or 0
     r[CombatResultParameters.DEFENDER] = { [CombatResultParameters.DAMAGE_TO] = dmg }
     return r

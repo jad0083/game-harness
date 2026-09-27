@@ -324,4 +324,8 @@ Rules:
 - Menus, when the screen must be used: the UI ignores a click without a preceding hover (move the
   mouse onto the button, then click), and the "Continue" screen after loading needs a key press.
 - Throwaway games only: the tuner turns achievements off.
+- The scripted last stand for a city about to fall (`PILOT_LAST_STAND=1`; off by default) sends
+  unit and city actions: `civ6 last-stand-step`, `ls-state`, `finish-moves`, `turn-ready` (numeric
+  IDs, never model orders). Its first live use follows the L6 checklist of
+  `docs/design/2026-09-27-civ6-levers-design.md` on a throwaway save or in a maintenance window.
 

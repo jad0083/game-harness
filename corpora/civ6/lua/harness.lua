@@ -838,6 +838,310 @@ function H.purchase(city_ref, key, currency, max_cost)
   return { requested = key, city = name_of(c:GetName()), currency = currency, cost = cost }
 end
 
+-- ---- last stand (docs/design/2026-09-27-civ6-levers-design.md, rulings 22-27) ------------------
+-- A city about to fall gets scripted actions before the AI plays the turn: one action per call, and
+-- the governor reads each result back in GameCore (ls_state) before asking for the next. Requests
+-- exist only in InGame (checked live at T61); ls_state and finish_moves run in GameCore. The
+-- requests themselves are unverified in this build: a request the game ignores shows in the
+-- read-back. Cities are named by their numeric ID (GameCore has no Locale for names).
+
+local KILL_MARGIN = 6      -- half of COMBAT_MAX_EXTRA_DAMAGE (12): a planned kill survives bad luck
+local LS_RADIUS = 3        -- the stand acts on visible plots within this many tiles of the city
+local RETREAT_HP = 40      -- % HP at or below which a unit next to a capturer pulls back
+
+local POPUPS = { 'TechCivicCompletedPopup', 'NaturalWonderPopup', 'NaturalDisasterPopup', 'WonderBuiltPopup',
+  'EraCompletePopup', 'HistoricMoments', 'MomentPopup', 'ProjectBuiltPopup', 'RockBandPopup', 'RockBandMoviePopup',
+  'InGamePopup', 'GenericPopup', 'PopupDialog', 'BoostUnlockedPopup', 'DiplomacyActionView', 'DiplomacyDealView' }
+
+-- A check that errors counts as failed: the stand acts only when every check answers.
+local function check(why, name, fn)
+  local ok, bad = pcall(fn)
+  if not ok then why[#why + 1] = 'cannot check: ' .. name elseif bad then why[#why + 1] = name end
+end
+
+-- Our turn, in our hands, the engine idle and nothing modal on screen. Read-only (InGame).
+function H.turn_ready()
+  local me = H.me()
+  local why = H.array()
+  check(why, 'autoplay active', function() return AutoplayManager.IsActive() end)
+  check(why, 'not our turn', function() return Game.GetLocalPlayer() ~= me or not Players[me]:IsTurnActive() end)
+  check(why, 'turn already sent', function() return UI.HasSentTurnComplete() end)
+  check(why, 'engine busy', function() return UI.IsGameCoreBusy() or UI.IsProcessingMessages() end)
+  for _, n in ipairs(POPUPS) do
+    local ok, ctl = pcall(function() return ContextPtr:LookUpControl('/InGame/' .. n) end)
+    if ok and ctl and not ctl:IsHidden() then why[#why + 1] = 'on screen: ' .. n end
+  end
+  return { ready = #why == 0, why = why, turn = Game.GetCurrentGameTurn() }
+end
+
+-- Authoritative damage, moves and attacks of every unit within LS_RADIUS of our city (GameCore;
+-- InGame lags after combat). Read-only.
+function H.ls_state(city_id)
+  local c = H.find_city(city_id)
+  if c == nil then return fail('no city of ours with ID ' .. tostring(city_id)) end
+  local cx, cy = c:GetX(), c:GetY()
+  local units = H.array()
+  for i = 0, 63 do
+    local p = Players[i]
+    if p and p:IsAlive() then
+      for _, u in p:GetUnits():Members() do
+        local x, y = u:GetX(), u:GetY()
+        if x >= 0 and Map.GetPlotDistance(cx, cy, x, y) <= LS_RADIUS then
+          units[#units + 1] = { id = u:GetID(), owner = i, x = x, y = y, damage = u:GetDamage(),
+                                moves = u:GetMovesRemaining(), attacks = u:GetAttacksRemaining() }
+        end
+      end
+    end
+  end
+  return { turn = Game.GetCurrentGameTurn(), me = H.me(), units = units }
+end
+
+-- Pin a unit the stand used: the hand-back's AI cannot walk it back (GameCore; unverified here).
+function H.finish_moves(unit_id)
+  local u = Players[H.me()]:GetUnits():FindID(unit_id)
+  if u == nil then return fail('no unit of ours with ID ' .. tostring(unit_id)) end
+  local before = u:GetMovesRemaining()
+  UnitManager.FinishMoves(u)
+  return { unit = unit_id, moves_before = before, moves = u:GetMovesRemaining() }
+end
+
+-- A target is hostile two ways: its owner is a barbarian or at war with us, and attacking it would
+-- not change a war state (IsAttackChangeWarState empty; Civ6Common.lua). Civilians and support
+-- units are never targets (the war check alone misses them, E10).
+local function hostile_owner(me, owner)
+  if owner == me then return false end
+  local ok, barb = pcall(function() return Players[owner]:IsBarbarian() end)
+  return (ok and barb) or owner == 63 or at_war_with(me, owner)
+end
+
+local function war_safe(cid, x, y)
+  local ok, res = pcall(CombatManager.IsAttackChangeWarState, cid, x, y)
+  return ok and (res == nil or #res == 0)
+end
+
+local function marked_plots(res, plots_key, mods_key, is_target)
+  local out = {}
+  if type(res) ~= 'table' then return out end
+  local mods = res[mods_key] or {}
+  for i, idx in ipairs(res[plots_key] or {}) do
+    if mods[i] == is_target then
+      local p = Map.GetPlotByIndex(idx)
+      out[p:GetX() .. ',' .. p:GetY()] = true
+    end
+  end
+  return out
+end
+
+-- The engine's own combat preview (UnitPanel.lua); it ignores range, so every attack is gated by
+-- the game's CanStart check as well.
+local function preview(attacker_cid, defender, ctype)
+  local ok, r = pcall(CombatManager.SimulateAttackVersus, attacker_cid, defender:GetComponentID(), ctype)
+  if not ok or type(r) ~= 'table' then return nil end
+  local D = r[CombatResultParameters.DEFENDER]
+  if type(D) ~= 'table' then return nil end
+  return { dmg = D[CombatResultParameters.DAMAGE_TO] or 0 }
+end
+
+-- Target priority (ruling 23), weakest first within a class.
+local function priority(e)
+  local p = 50
+  if e.dist == 1 and (e.kind == 'melee' or e.kind == 'cavalry') then p = 300
+  elseif e.kind == 'siege' and e.dist <= 2 then p = 250
+  elseif e.dist == 1 then p = 200
+  elseif e.dist == 2 then p = 100 end
+  return p - e.hp / 10
+end
+
+local function hostiles_at(me, x, y)
+  local out = {}
+  local here = Map.GetUnitsAt(x, y)
+  if here then
+    for u in here:Units() do
+      local row = GameInfo.Units[u:GetType()]
+      if is_military(row) and hostile_owner(me, u:GetOwner()) then out[#out + 1] = { u = u, row = row } end
+    end
+  end
+  return out
+end
+
+-- Hostile military units on visible plots within LS_RADIUS (with authoritative HP when the
+-- controller passes `damage`, keyed "<owner>:<id>"), and our military units there.
+local function gather(me, c, damage)
+  local cx, cy = c:GetX(), c:GetY()
+  local enemies, at = {}, {}
+  for dy = -LS_RADIUS, LS_RADIUS do
+    for dx = -LS_RADIUS, LS_RADIUS do
+      local x, y = cx + dx, cy + dy
+      local dist = Map.GetPlotDistance(cx, cy, x, y)
+      local ok, vis = pcall(function() return PlayersVisibility[me]:IsVisible(x, y) end)
+      if dist >= 1 and dist <= LS_RADIUS and ok and vis then
+        for _, h in ipairs(hostiles_at(me, x, y)) do
+          local u = h.u
+          local dmg = damage[u:GetOwner() .. ':' .. u:GetID()] or u:GetDamage()
+          local e = { u = u, id = u:GetID(), owner = u:GetOwner(), type = h.row.UnitType, kind = unit_kind(h.row),
+                      x = x, y = y, dist = dist, hp = u:GetMaxDamage() - dmg }
+          e.score = priority(e)
+          enemies[#enemies + 1] = e
+          at[x .. ',' .. y] = e
+        end
+      end
+    end
+  end
+  table.sort(enemies, function(a, b) return a.score > b.score end)
+  local ours = {}
+  for _, u in Players[me]:GetUnits():Members() do
+    local row = GameInfo.Units[u:GetType()]
+    local x, y = u:GetX(), u:GetY()
+    if is_military(row) and x >= 0 and Map.GetPlotDistance(cx, cy, x, y) <= LS_RADIUS then
+      ours[#ours + 1] = { u = u, id = u:GetID(), type = row.UnitType, kind = unit_kind(row), x = x, y = y,
+                          hp = u:GetMaxDamage() - u:GetDamage(), max = u:GetMaxDamage(), moves = u:GetMovesRemaining(),
+                          attacks = u:GetAttacksRemaining(), range = u:GetRange(), garrison = (x == cx and y == cy) }
+    end
+  end
+  return enemies, at, ours
+end
+
+local function public(e)
+  return { id = e.id, owner = e.owner, type = e.type, x = e.x, y = e.y, hp = e.hp }
+end
+
+local function at_xy(enum, x, y)
+  local t = {}
+  t[enum.PARAM_X] = x
+  t[enum.PARAM_Y] = y
+  return t
+end
+
+local function kills(s, e)
+  return s ~= nil and s.dmg - KILL_MARGIN >= e.hp
+end
+
+-- The best reachable plot for a hurt unit: next to no hostile, empty but for our civilians;
+-- +20 an empty city centre, -10 per hostile 2 tiles away, -3 per tile from the city, +5 our
+-- territory, +2 hills.
+local function best_retreat(me, o, c, enemies)
+  local ok, reach = pcall(UnitManager.GetReachableMovement, o.u)
+  if not ok or type(reach) ~= 'table' then return nil end
+  local best, best_score
+  for _, idx in ipairs(reach) do
+    local p = Map.GetPlotByIndex(idx)
+    local x, y = p:GetX(), p:GetY()
+    local free = not (x == o.x and y == o.y)
+    for dy = -1, 1 do
+      for dx = -1, 1 do
+        if free and Map.GetPlotDistance(x, y, x + dx, y + dy) == 1 and #hostiles_at(me, x + dx, y + dy) > 0 then free = false end
+      end
+    end
+    local here = Map.GetUnitsAt(x, y)
+    if free and here then
+      for other in here:Units() do
+        local row = GameInfo.Units[other:GetType()]
+        if other:GetOwner() ~= me or (row and row.FormationClass ~= 'FORMATION_CLASS_CIVILIAN') then free = false end
+      end
+    end
+    if free then
+      local near2 = 0
+      for _, e in ipairs(enemies) do
+        if Map.GetPlotDistance(x, y, e.x, e.y) == 2 then near2 = near2 + 1 end
+      end
+      local hills = false
+      pcall(function() hills = p:IsHills() end)
+      local score = ((x == c:GetX() and y == c:GetY()) and 20 or 0) - 10 * near2
+        - 3 * Map.GetPlotDistance(x, y, c:GetX(), c:GetY()) + (p:GetOwner() == me and 5 or 0) + (hills and 2 or 0)
+      if best == nil or score > best_score then best, best_score = { x = x, y = y }, score end
+    end
+  end
+  return best
+end
+
+-- One action of a last stand for our city `city_id`, or `done`. `damage` maps "<owner>:<id>" to
+-- authoritative damage (from ls_state); `skip` holds "city:<id>" / "unit:<id>" for every actor
+-- already used this turn. Priority: city strike (needs walls), ranged and siege attacks (a sure kill
+-- first, by the weakest shooter that kills), retreat of a hurt unit (never the garrison).
+function H.last_stand_step(city_id, damage, skip)
+  local ready = H.turn_ready()
+  if not ready.ready then return fail('not ready: ' .. table.concat(ready.why, ', ')) end
+  local me = H.me()
+  local c = H.find_city(city_id)
+  if c == nil then return fail('no city of ours with ID ' .. tostring(city_id)) end
+  damage, skip = damage or {}, skip or {}
+  local enemies, at, ours = gather(me, c, damage)
+  if #enemies == 0 then return { done = true, reason = 'no hostile unit within ' .. LS_RADIUS .. ' tiles' } end
+
+  if not skip['city:' .. c:GetID()] then
+    local d = center_of(c)
+    local ok, res = pcall(CityManager.GetCommandTargets, c, CityCommandTypes.RANGE_ATTACK)
+    local targets = marked_plots(ok and res, CityCommandResults.PLOTS, CityCommandResults.MODIFIERS,
+                                 CityCommandResults.MODIFIER_IS_TARGET)
+    for _, e in ipairs(enemies) do
+      local params = at_xy(CityCommandTypes, e.x, e.y)
+      if d and targets[e.x .. ',' .. e.y] and war_safe(d:GetComponentID(), e.x, e.y)
+          and CityManager.CanStartCommand(c, CityCommandTypes.RANGE_ATTACK, params) then
+        local s = preview(d:GetComponentID(), e.u, CombatTypes.RANGED)
+        CityManager.RequestCommand(c, CityCommandTypes.RANGE_ATTACK, params)
+        return { action = 'city_strike', actor = 'city:' .. c:GetID(), target = public(e),
+                 predicted_damage = s and s.dmg, predicted_kill = kills(s, e) }
+      end
+    end
+  end
+
+  -- every hostile within the shooter's range, plus the game's target plots (that list can miss valid targets)
+  local cands = {}
+  for _, o in ipairs(ours) do
+    local u = o.u
+    if (o.kind == 'ranged' or o.kind == 'siege') and o.moves > 0 and o.attacks > 0 and not skip['unit:' .. o.id] then
+      local ctype = (u:GetBombardCombat() > u:GetRangedCombat()) and CombatTypes.BOMBARD or CombatTypes.RANGED
+      local seen = {}
+      local function consider(e)
+        if e == nil or seen[e] then return end
+        seen[e] = true
+        local s = preview(u:GetComponentID(), e.u, ctype)
+        local kill = kills(s, e)
+        cands[#cands + 1] = { o = o, e = e, s = s, kill = kill,
+                              score = e.score + (kill and (1000 - (s.dmg - e.hp)) or (s and s.dmg or 0)) }
+      end
+      for _, e in ipairs(enemies) do
+        if Map.GetPlotDistance(o.x, o.y, e.x, e.y) <= o.range then consider(e) end
+      end
+      local ok, res = pcall(UnitManager.GetOperationTargets, u, UnitOperationTypes.RANGE_ATTACK)
+      for key in pairs(marked_plots(ok and res, UnitOperationResults.PLOTS, UnitOperationResults.MODIFIERS,
+                                    UnitOperationResults.MODIFIER_IS_TARGET)) do
+        consider(at[key])
+      end
+    end
+  end
+  table.sort(cands, function(a, b) return a.score > b.score end)
+  for _, cd in ipairs(cands) do
+    local params = at_xy(UnitOperationTypes, cd.e.x, cd.e.y)
+    if war_safe(cd.o.u:GetComponentID(), cd.e.x, cd.e.y)
+        and UnitManager.CanStartOperation(cd.o.u, UnitOperationTypes.RANGE_ATTACK, nil, params) then
+      UnitManager.RequestOperation(cd.o.u, UnitOperationTypes.RANGE_ATTACK, params)
+      return { action = 'ranged_attack', actor = 'unit:' .. cd.o.id, unit = cd.o.type, target = public(cd.e),
+               predicted_damage = cd.s and cd.s.dmg, predicted_kill = cd.kill }
+    end
+  end
+
+  for _, o in ipairs(ours) do
+    if not o.garrison and o.moves > 0 and o.hp * 100 <= RETREAT_HP * o.max and not skip['unit:' .. o.id] then
+      local pressed = false
+      for _, e in ipairs(enemies) do
+        if (e.kind == 'melee' or e.kind == 'cavalry') and Map.GetPlotDistance(o.x, o.y, e.x, e.y) == 1 then pressed = true end
+      end
+      local dest = pressed and best_retreat(me, o, c, enemies)
+      if dest and war_safe(o.u:GetComponentID(), dest.x, dest.y) then
+        local params = at_xy(UnitOperationTypes, dest.x, dest.y)
+        params[UnitOperationTypes.PARAM_MODIFIERS] = UnitOperationMoveModifiers.NONE
+        if UnitManager.CanStartOperation(o.u, UnitOperationTypes.MOVE_TO, nil, params) then
+          UnitManager.RequestOperation(o.u, UnitOperationTypes.MOVE_TO, params)
+          return { action = 'retreat', actor = 'unit:' .. o.id, unit = o.type, from = { x = o.x, y = o.y }, to = dest,
+                   hp = o.hp }
+        end
+      end
+    end
+  end
+  return { done = true, reason = 'nothing left to do' }
+end
+
 -- ---- autoplay ----------------------------------------------------------------------------------
 
 -- The game's AI plays our civ for `turns` turns, then hands it back.

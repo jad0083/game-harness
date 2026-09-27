@@ -30,6 +30,12 @@ class Civ6Game(Protocol):
     def autoplay(self, turns: int) -> dict: ...
     def autoplay_stop(self) -> dict: ...
     def autoplay_status(self) -> dict: ...
+    # the last stand (docs/design/2026-09-27-civ6-levers-design.md, rulings 22-27): controller
+    # subcommands, never model-facing orders
+    def turn_ready(self) -> dict: ...
+    def ls_state(self, city_id: int) -> dict: ...
+    def last_stand_step(self, city_id: int, damage: dict[str, int], skip: list[str]) -> dict: ...
+    def finish_moves(self, unit_id: int) -> dict: ...
     def corpus(self, tool: str, **args) -> str: ...
     def close(self) -> None: ...
 
@@ -95,6 +101,25 @@ class ControllerCiv6:
     def autoplay_status(self) -> dict:
         return self._json("civ6", "autoplay-status")
 
+    def turn_ready(self) -> dict:
+        return self._json("civ6", "turn-ready")
+
+    def ls_state(self, city_id: int) -> dict:
+        return self._json("civ6", "ls-state", str(int(city_id)))
+
+    def last_stand_step(self, city_id: int, damage: dict[str, int], skip: list[str]) -> dict:
+        """The game's reply, like `order`: `{"ok": false}` when refused (not ready, no city), and
+        `transport` when no JSON came back (the action may or may not have been requested)."""
+        code, out, err = self._run("civ6", "last-stand-step", str(int(city_id)), "--damage", json.dumps(damage),
+                                   "--skip", ",".join(skip))
+        try:
+            return json.loads(out.splitlines()[-1])
+        except (ValueError, IndexError):
+            return {"ok": False, "transport": True, "error": (err or out or f"exit {code}")[:400]}
+
+    def finish_moves(self, unit_id: int) -> dict:
+        return self._json("civ6", "finish-moves", str(int(unit_id)))
+
     def corpus(self, tool: str, **args) -> str:
         if tool == "corpus_search":
             _, out, err = self._run("corpus", "search", str(args.get("query", "")), "--limit", str(args.get("limit", 5)))
@@ -135,13 +160,23 @@ class FakeCiv6:
     orders fails), `transport` (orders time out after they ran), `lost_start_reply` (the first
     autoplay call times out but runs), `lost_start_not_run` (the first N autoplay calls time out
     and do not run, as seen live at T57), `blink` (autoplay reads inactive once before its last turn
-    ends, as seen live)."""
+    ends, as seen live).
+    The last stand: `ls` is the world around the city ({"me": 0, "units": [{id, owner, x, y, damage,
+    moves, attacks}]}) that `ls_state` reads; `stand` lists `last_stand_step`'s replies in order
+    (then `done`); a requested action changes `ls` through `stand_effect(ls, reply)` (default: the
+    target takes the predicted damage and dies at 100, the attacker spends its attack, a retreat
+    moves the unit) unless `stand_ignored`; `stand_lost_reply` loses the step's reply after it ran;
+    `ls_fails` fails that many `ls_state` reads first; `popup` makes `turn_ready` (and every step)
+    not ready; `pin_ignored` leaves `finish_moves` without effect."""
 
     def __init__(self, base: dict, events: dict | None = None, replies: dict | None = None,
                  prices: dict | None = None, sticks: bool = True, index: CorpusIndex | None = None, ai=None,
                  busy: bool = False, start_fails: bool = False, never_starts: bool = False,
                  stop_raises: bool = False, readback_fails: bool = False, transport: bool = False,
-                 lost_start_reply: bool = False, blink: bool = False, lost_start_not_run: int = 0):
+                 lost_start_reply: bool = False, blink: bool = False, lost_start_not_run: int = 0,
+                 ls: dict | None = None, stand: list[dict] | None = None, stand_effect=None,
+                 stand_ignored: bool = False, stand_lost_reply: bool = False, ls_fails: int = 0,
+                 popup: bool = False, pin_ignored: bool = False):
         self.state = copy.deepcopy(base)
         self.events = dict(events or {})
         self.replies = dict(replies or {})
@@ -154,6 +189,11 @@ class FakeCiv6:
         self.lost_start_reply = lost_start_reply
         self.lost_start_not_run = lost_start_not_run
         self.blink, self._blinked = blink, False
+        self.ls = copy.deepcopy(ls or {"me": 0, "units": []})
+        self.stand = list(stand or [])
+        self.stand_effect = stand_effect or _stand_apply
+        self.stand_ignored, self.stand_lost_reply, self.ls_fails = stand_ignored, stand_lost_reply, ls_fails
+        self.popup, self.pin_ignored = popup, pin_ignored
         self.actions: list[tuple] = []
         self.active = False
         self.remaining = 0
@@ -244,6 +284,43 @@ class FakeCiv6:
         self.active, self.remaining = False, 0
         return {"ok": True, "active": False}
 
+    def turn_ready(self) -> dict:
+        self.actions.append(("turn_ready", self.active))
+        self._tick("turn_ready")
+        why = (["autoplay active"] if self.active else []) + (["on screen: TechCivicCompletedPopup"] if self.popup else [])
+        return {"ok": True, "ready": not why, "why": why, "turn": self.state["turn"]}
+
+    def ls_state(self, city_id: int) -> dict:
+        self.actions.append(("ls_state", city_id, self.active))
+        self._tick("ls_state")
+        if self.ls_fails > 0:
+            self.ls_fails -= 1
+            raise TimeoutError("ls-state: no reply")
+        return {"ok": True, "turn": self.state["turn"], **copy.deepcopy(self.ls)}
+
+    def last_stand_step(self, city_id: int, damage: dict[str, int], skip: list[str]) -> dict:
+        reply = dict(self.stand.pop(0)) if self.stand else {"done": True, "reason": "nothing left to do"}
+        self.actions.append(("stand", city_id, reply.get("action") or "done", self.active))
+        self._tick("last_stand_step")
+        if self.popup:
+            return {"ok": False, "error": "not ready: on screen: TechCivicCompletedPopup"}
+        if reply.get("action") and not self.stand_ignored:
+            self.stand_effect(self.ls, reply)
+        if reply.get("action") and self.stand_lost_reply:
+            raise TimeoutError("last-stand-step: no reply")
+        return {"ok": True, **reply}
+
+    def finish_moves(self, unit_id: int) -> dict:
+        self.actions.append(("finish_moves", unit_id, self.active))
+        self._tick("finish_moves")
+        unit = next((u for u in self.ls["units"] if u["id"] == unit_id and u["owner"] == self.ls.get("me", 0)), None)
+        if unit is None:
+            return {"ok": False, "error": f"no unit of ours with ID {unit_id}"}
+        before = unit["moves"]
+        if not self.pin_ignored:
+            unit["moves"] = 0
+        return {"ok": True, "unit": unit_id, "moves_before": before, "moves": unit["moves"]}
+
     def corpus(self, tool: str, **args) -> str:
         self.actions.append(("corpus", tool, args))
         return "- `tech:writing` [tech] Writing — Ancient Era, cost 50."
@@ -280,6 +357,25 @@ def _apply_fake(s: dict, o: dict) -> None:
         if key and key.startswith("UNIT_"):
             by_type = s.setdefault("units", {}).setdefault("by_type", {})
             by_type[key] = by_type.get(key, 0) + 1
+
+
+def _stand_apply(ls: dict, reply: dict) -> None:
+    """FakeCiv6's default effect of a last-stand action on the world `ls`."""
+    me = ls.get("me", 0)
+    actor = str(reply.get("actor") or "")
+    mover = next((u for u in ls["units"] if actor == f"unit:{u['id']}" and u["owner"] == me), None)
+    if reply.get("action") == "retreat" and mover:
+        mover["x"], mover["y"] = reply["to"]["x"], reply["to"]["y"]
+        mover["moves"] = max(0, mover["moves"] - 1)
+        return
+    t = reply.get("target") or {}
+    target = next((u for u in ls["units"] if u["id"] == t.get("id") and u["owner"] == t.get("owner")), None)
+    if target:
+        target["damage"] += reply.get("predicted_damage") or 0
+        if target["damage"] >= 100:
+            ls["units"].remove(target)
+    if mover:
+        mover["attacks"] = 0
 
 
 # ---- the corpus: game type keys <-> corpus ids ---------------------------------------------------
@@ -762,10 +858,15 @@ def read_back(c: Checked, reply: dict, snapshot: dict) -> str:
 # Every order that took is followed on each snapshot until it resolves; its outcome row feeds the
 # stick rate per kind of order.
 
-JUDGED = ("completed", "held", "overridden")      # the outcomes a stick rate counts
+SUCCEEDED = ("completed", "held", "took")          # a last-stand action "took" (ruling 26)
+FAILED = ("overridden", "did_not_take")
+JUDGED = SUCCEEDED + FAILED                        # the outcomes a stick rate counts
 EXCLUDED = ("invalidated", "superseded", "refused", "lost", "unknown")
+# last-stand actions (ruling 26): the step's action name -> the record's key
+STAND_KEYS = {"city_strike": "stand city_strike", "ranged_attack": "stand ranged", "retreat": "stand retreat",
+              "pin": "stand pin"}
 RECORD_KEYS = ("research", "civic", "policies", "production fill", "production replace", "purchase gold",
-               "purchase faith")
+               "purchase faith", *STAND_KEYS.values())
 
 
 def order_situation(before: dict, key: str, city_name: str) -> str:
@@ -885,9 +986,10 @@ def _key_rank(key: str) -> tuple[int, str]:
 
 def order_record(rows: list[dict], now_turn: int, spec) -> dict[str, dict]:
     """The stick rate per key (ruling 14) from order_outcome rows: judged orders (completed, held,
-    overridden) resolved in the last `spec.window_turns` turns, widened back until `min_resolved`
-    are judged (or to the first row). `rate` = (completed + held) / judged, None below the key's
-    minimum samples; `weak` when a rate is at or below `weak_rate`."""
+    overridden; a last-stand action took or did_not_take) resolved in the last `spec.window_turns`
+    turns, widened back until `min_resolved` are judged (or to the first row). `rate` = (completed
+    + held + took) / judged, None below the key's minimum samples; `weak` when a rate is at or
+    below `weak_rate`."""
     out: dict[str, dict] = {}
     for key in sorted({r.get("key") for r in rows if r.get("key")}, key=_key_rank):
         mine = sorted((r for r in rows if r.get("key") == key), key=lambda r: r.get("turn") or 0)
@@ -899,7 +1001,7 @@ def order_record(rows: list[dict], now_turn: int, spec) -> dict[str, dict]:
         counts = {res: sum(1 for r in recent if r.get("result") == res) for res in JUDGED}
         n = len(recent)
         enough = n >= spec.min_samples_of(key)
-        rate = (counts["completed"] + counts["held"]) / n if n else None
+        rate = sum(counts[res] for res in SUCCEEDED) / n if n else None
         last = next((r for r in reversed(recent) if r.get("result") == "overridden"), None)
         excluded = {res: sum(1 for r in mine if r.get("result") == res and (r.get("turn") or 0) >= since)
                     for res in EXCLUDED}
@@ -983,6 +1085,10 @@ def order_record_text(rec: dict[str, dict], idle: dict[str, tuple[int, int]] | N
             parts.append(f"{r['overridden']} replaced by the AI"
                          + (f" (last: {last.get('id')} → {last.get('by') or 'nothing'}{where}, {last.get('date')})"
                             if last else ""))
+        if r.get("took"):
+            parts.append(f"{r['took']} took")
+        if r.get("did_not_take"):
+            parts.append(f"{r['did_not_take']} did not take")
         line = f"- {key}: {r['judged']} judged" + (f"; {', '.join(parts)}" if parts else "")
         other = ", ".join(f"{n} {res}" for res, n in r["excluded"].items() if n)
         if other:
@@ -996,6 +1102,76 @@ def order_record_text(rec: dict[str, dict], idle: dict[str, tuple[int, int]] | N
         if n:
             lines.append(f"- {kind} idle at {n} of {of} snapshots in the last {window} turns")
     return "\n".join(lines)
+
+
+# ---- the last stand (docs/design/2026-09-27-civ6-levers-design.md, rulings 22-27) ---------------
+#
+# A city about to fall gets scripted actions before the AI plays the turn: a city strike, ranged
+# attacks, the retreat of hurt units, then pins. Off by default (PILOT_LAST_STAND); each action is
+# one call, read back in GameCore before the next.
+
+FALL_CAPTURE_ADJACENT = 1     # units next to the city that can take it (melee, cavalry): one is enough
+FALL_GARRISON_SHARE = 0.5     # worn down: the garrison at or below this share of its hit points
+
+
+def about_to_fall(city: dict) -> bool:
+    """A city the next enemy turn can take (ruling 22): a unit that can capture it stands next to
+    it, no walls stand, and the garrison is worn down to half or one attack from each enemy in range
+    would take what is left (`incoming`). Without the ruling-11 fields: False. Beijing at T61 (200 of
+    200, two capturers adjacent) is not falling."""
+    d = city.get("defense") or {}
+    hp, top, walls = d.get("garrison_hp"), d.get("garrison_max"), d.get("walls_hp")
+    if not all(isinstance(v, (int, float)) for v in (hp, top, walls)) or not top:
+        return False
+    if (city.get("capture_adjacent") or 0) < FALL_CAPTURE_ADJACENT or walls > 0:
+        return False
+    incoming = city.get("incoming")
+    return hp <= FALL_GARRISON_SHARE * top or (isinstance(incoming, (int, float)) and incoming >= hp)
+
+
+def _ls_unit(state: dict, owner, uid) -> dict | None:
+    return next((u for u in state.get("units") or [] if u.get("owner") == owner and u.get("id") == uid), None)
+
+
+def _actor_id(reply: dict) -> int | None:
+    kind, _, uid = str(reply.get("actor") or "").partition(":")
+    return int(uid) if kind == "unit" and uid.isdigit() else None
+
+
+def stand_verdict(reply: dict | None, before: dict, after: dict | None) -> tuple[str, str]:
+    """Whether a last-stand action took (ruling 26), from the GameCore reads before and after it:
+    ('took' | 'did_not_take' | 'unknown', why). A strike took when its target's damage rose or the
+    target is gone; a ranged attack also needs the attacker's attacks or moves to drop; a retreat,
+    the unit on its destination. `reply` None (the reply was lost): took when anything changed.
+    `after` None (no read-back): unknown."""
+    if after is None:
+        return "unknown", "no read-back"
+    me = before.get("me", 0)
+    if reply is None:
+        key = lambda u: (u.get("owner"), u.get("id"))
+        now = {key(u): u for u in after.get("units") or []}
+        changed = [u for u in before.get("units") or [] if key(u) not in now or any(
+            now[key(u)].get(f) != u.get(f) for f in ("x", "y", "damage", "moves", "attacks"))]
+        return ("took", f"{len(changed)} unit(s) changed") if changed else ("did_not_take", "nothing changed")
+    uid = _actor_id(reply)
+    if reply.get("action") == "retreat":
+        u, to = _ls_unit(after, me, uid), reply.get("to") or {}
+        if u and (u.get("x"), u.get("y")) == (to.get("x"), to.get("y")):
+            return "took", f"on {to.get('x')},{to.get('y')}"
+        return "did_not_take", "not on its destination" + (f" (at {u.get('x')},{u.get('y')})" if u else " (gone)")
+    t = reply.get("target") or {}
+    was, now = _ls_unit(before, t.get("owner"), t.get("id")), _ls_unit(after, t.get("owner"), t.get("id"))
+    hit = was is not None and (now is None or (now.get("damage") or 0) > (was.get("damage") or 0))
+    what = ("killed" if now is None else f"{(now.get('damage') or 0) - (was.get('damage') or 0)} damage") if hit \
+        else "no damage"
+    predicted = f" (predicted {reply.get('predicted_damage')})" if reply.get("predicted_damage") is not None else ""
+    if reply.get("action") == "ranged_attack":
+        a0, a1 = _ls_unit(before, me, uid), _ls_unit(after, me, uid)
+        spent = a0 is not None and a1 is not None and (
+            (a1.get("attacks") or 0) < (a0.get("attacks") or 0) or (a1.get("moves") or 0) < (a0.get("moves") or 0))
+        if not spent:
+            return "did_not_take", f"the attacker kept its attack; target: {what}{predicted}"
+    return ("took" if hit else "did_not_take"), f"target: {what}{predicted}"
 
 
 # ---- measures, urgency, briefing -----------------------------------------------------------------
@@ -1050,6 +1226,11 @@ def urgent_changes(before: dict, now: dict, gold_reserve: int = 0, wonders: froz
         if besieged and not was_besieged:
             out.append(f"city threatened: {c['name']} ({c.get('enemies_near', 0)} enemy units near"
                        f"{', under siege' if c.get('under_siege') else ''}{', damaged' if c.get('damaged') else ''})")
+        if about_to_fall(c) and not about_to_fall(prev):         # ruling 22: the model decides first
+            d = c.get("defense") or {}
+            out.append(f"city falling: {c['name']} (garrison {d.get('garrison_hp')}/{d.get('garrison_max')}, no walls, "
+                       f"{c.get('capture_adjacent')} unit(s) next to it that can take it"
+                       + (f", about {c['incoming']} damage incoming" if c.get("incoming") else "") + ")")
         w = prev.get("producing")
         elsewhere = now.get("wonders_elsewhere")      # built by another player: a lost race, not the AI's switch
         if w and w in wonders and w != c.get("producing") and w not in (c.get("wonders") or []) \
@@ -1079,7 +1260,7 @@ def _danger_text(x: dict, cid, index: CorpusIndex | None = None, limits=None) ->
     """A city in danger (ruling 17): what can take it, its defence, the unit on its tile and what a
     defender costs (ruling 19); without walls it cannot strike (ruling 21)."""
     d = x.get("defense") or {}
-    parts = [f"IN DANGER: {x.get('enemies_near', 0)} enemy units within 3 tiles"
+    parts = [f"{'ABOUT TO FALL' if about_to_fall(x) else 'IN DANGER'}: {x.get('enemies_near', 0)} enemy units within 3 tiles"
              + (f", {x['capture_adjacent']} next to it that can take it" if x.get("capture_adjacent") else "")
              + (", under siege" if x.get("under_siege") else "")]
     if d:
@@ -1150,7 +1331,7 @@ def briefing_text(s: dict, index: CorpusIndex, gold_reserve: int = 0, limits=Non
     lines.append(f"Cities ({len(cities)}):")
     for x in cities:
         threat = []
-        if in_danger(x) and has_defence_fields(x):
+        if (in_danger(x) or about_to_fall(x)) and has_defence_fields(x):
             threat = [_danger_text(x, cid, index, limits)]
         elif x.get("threatened"):
             threat = [f"THREATENED: {x.get('enemies_near', 0)} enemy units within 3 tiles"

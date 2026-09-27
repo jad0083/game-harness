@@ -80,6 +80,13 @@ The compiled controller binary provides full programmatic access to all agent fu
 #     ids are corpus ids, checked against data/ first; exit 2 when the game or the check refuses
 ./target/release/game-controller --corpus corpora/civ6 civ6 autoplay 5         # 1..50 turns by the game's AI
 ./target/release/game-controller --corpus corpora/civ6 civ6 autoplay-status    # / autoplay-stop
+# The last stand's calls (controller only, never model orders; numeric city and unit IDs; a city's
+# `id` is in the snapshot):
+./target/release/game-controller --corpus corpora/civ6 civ6 turn-ready         # read-only: our turn, idle, no popup
+./target/release/game-controller --corpus corpora/civ6 civ6 ls-state 65536     # read-only (GameCore): units within 3 tiles
+./target/release/game-controller --corpus corpora/civ6 civ6 last-stand-step 65536 --damage '{"63:5":69}' --skip city:65536
+#     requests ONE action (city strike, ranged attack, retreat) or prints {"done": true}; changes the game
+./target/release/game-controller --corpus corpora/civ6 civ6 finish-moves 131073  # GameCore: the unit keeps its place this turn
 
 # 13. Launch Stdio MCP Server (Claude Code / Gemini / Antigravity)
 ./target/release/game-controller mcp

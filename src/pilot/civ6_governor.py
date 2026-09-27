@@ -23,12 +23,16 @@ from pydantic_ai.usage import UsageLimits
 
 from .civ6 import (
     ORDER_ACTION,
+    STAND_KEYS,
     UNKNOWN,
     Checked,
     Civ6Decision,
     Civ6Order,
     CorpusIndex,
     GameRefused,
+    _actor_id,
+    _ls_unit,
+    about_to_fall,
     briefing_text,
     check_orders,
     faith_reserve_now,
@@ -46,6 +50,7 @@ from .civ6 import (
     order_window,
     read_back,
     record_key,
+    stand_verdict,
     urgent_changes,
 )
 from .claude_code import resolve_model
@@ -152,6 +157,12 @@ class Civ6Governor(Governor):
     start_grace_s = 20.0             # autoplay must show as running (or the turn advance) by then
     snapshot_tries = 3               # snapshots between turns before the run waits for the human
     start_retries = 2                # an autoplay start whose reply was lost and that did not run is sent again
+    # the last stand's safety limits (docs/design/2026-09-27-civ6-levers-design.md, ruling 24)
+    stand_max_actions = 8            # actions per stand (a city plus 2-4 nearby units, with margin)
+    stand_budget_s = 90.0            # wall-clock per stand
+    stand_pause_s = 1.5              # between an action and its GameCore read-back
+    stand_idle_polls = 5             # turn-ready polls before the hand-back...
+    stand_idle_poll_s = 1.0          # ...this far apart
 
     def __init__(self, settings, game, log, **kw):
         super().__init__(settings, game, log, **kw)
@@ -172,6 +183,11 @@ class Civ6Governor(Governor):
         self._seen_idle: dict[int, list[str]] = {}   # turn -> kinds with nothing in progress (ruling 16)
         self._tracked_turn: int | None = None
         self._after_orders: dict | None = None    # the snapshot read back after the last orders
+        self._stand_streak: dict[str, int] = {}   # city -> last stands in a row (ruling 22)
+        self._stand_capped: set[str] = set()      # cities whose cap the journal already noted
+        self._stand_first_fails = 0               # stands whose first action did not take (ruling 26)
+        self._stand_off = ""                      # why the stand turned itself off for this run
+        self._pinned: list[dict] = []             # units the last stand pinned, checked at the next snapshot
         log.state.info["directives"] = []
         log.state.info["decide_turns"] = settings.decide_every_turns
         log.state.info["controls"] = [c for c in log.state.info.get("controls", []) if c not in ("override", "set_speed")]
@@ -310,8 +326,12 @@ class Civ6Governor(Governor):
             if not self.requests.empty():
                 return last, "request"
             try:
-                self._play_turns(last["turn"], autoplay_turns(last, chunk=self.s.autoplay_chunk,
-                                                              left=target - last["turn"]))
+                falling = self._stand_city(last)
+                if falling is not None:
+                    self._last_stand(last, falling)            # ends with a one-turn hand-back
+                else:
+                    self._play_turns(last["turn"], autoplay_turns(last, chunk=self.s.autoplay_chunk,
+                                                                  left=target - last["turn"]))
                 b = self._snapshot_between_turns()
             except Civ6Stuck as e:
                 self._needs_attention(f"{e}. Check the game (a dialog, a crash, the main menu), then press Resume.")
@@ -323,6 +343,7 @@ class Civ6Governor(Governor):
                 return last, ""
             self.log.emit("metrics", **metrics(b))
             self._track(b)
+            self._check_pins(b)
             self.log.state.game_date = b["date"]
             self.log.state.turns_advanced += b["turn"] - last["turn"]
             urgent = urgent_changes(last, b, self._gold_reserve(b), self._wonders)
@@ -403,6 +424,213 @@ class Civ6Governor(Governor):
                 if i + 1 < self.snapshot_tries:
                     time.sleep(self.status_poll_s)
         raise Civ6Stuck(f"no snapshot after {self.snapshot_tries} tries: {err}"[:400])
+
+    # ---- the last stand (docs/design/2026-09-27-civ6-levers-design.md, rulings 22-27) ------------
+    #
+    # At a hand-back turn, a city about to fall gets scripted actions before the AI plays the turn:
+    # one action per call (InGame), each read back in GameCore before the next, then pins, then the
+    # hand-back by one-turn autoplay. Off by default (PILOT_LAST_STAND). Nothing is ever resent, and
+    # every stop still hands the turn back.
+
+    def _now(self) -> float:
+        return time.monotonic()
+
+    def _stand_city(self, b: dict) -> dict | None:
+        """The city a last stand runs for at this hand-back, or None: the stand is on and not turned
+        off, a city is about to fall, and it has had fewer than `last_stand_max` stands in a row (the
+        most worn-down city first). A city that stopped falling starts its count again."""
+        falling = [c for c in b.get("cities") or [] if about_to_fall(c)]
+        names = {c.get("name") for c in falling}
+        for name in [n for n in self._stand_streak if n not in names]:
+            self._stand_streak.pop(name)
+            self._stand_capped.discard(name)
+        if not self.s.last_stand or self._stand_off or not falling:
+            return None
+        ranked = sorted(falling, key=lambda c: (c["defense"]["garrison_hp"] / c["defense"]["garrison_max"],
+                                                -(c.get("incoming") or 0)))
+        for c in ranked:
+            n = self._stand_streak.get(c["name"], 0)
+            if n < self.s.last_stand_max:
+                return c
+            if c["name"] not in self._stand_capped:
+                self._stand_capped.add(c["name"])
+                self.journal.note(f"Last stand: {c['name']} has had {n} stands in a row (the limit); the AI defends "
+                                  "it alone until it stops falling.", b.get("date", ""))
+                self.log.emit("journal", text=f"last stand limit reached for {c['name']} ({n} in a row)")
+        return None
+
+    def _not_ready(self) -> str:
+        """Why the game is not ready for a scripted action ('' when it is): autoplay on, not our turn,
+        the turn sent, the engine busy, a popup or diplomacy screen (read-only, InGame)."""
+        try:
+            r = self.game.turn_ready()
+        except Exception as e:  # noqa: BLE001 - no answer: not ready
+            return f"turn-ready failed: {type(e).__name__}: {e}"[:200]
+        return "" if r.get("ready") else ", ".join(r.get("why") or ["not ready"])
+
+    def _ls_read(self, city_id: int) -> dict | None:
+        try:
+            return self.game.ls_state(city_id)
+        except Exception as e:  # noqa: BLE001 - a failed read-back stops the stand
+            self.log.emit("briefing_error", error=f"ls-state: {e}"[:200])
+            return None
+
+    def _last_stand(self, b: dict, city: dict) -> None:
+        """Scripted actions for a falling city (rulings 23-26), then the hand-back (ruling 25). Emits
+        `last_stand` with the report and one `order_outcome` per action; never raises before the
+        hand-back."""
+        name = city["name"]
+        self._stand_streak[name] = self._stand_streak.get(name, 0) + 1
+        self._status("last stand")
+        report = {"city": name, "city_id": city.get("id"), "turn": b["turn"], "date": b["date"],
+                  "in_a_row": self._stand_streak[name], "actions": [], "pins": [], "stopped": ""}
+        try:
+            report["stopped"] = self._stand_actions(b, city, report)
+        except Exception as e:  # noqa: BLE001 - a stand never keeps the turn from being handed back
+            report["stopped"] = f"error: {type(e).__name__}: {e}"[:300]
+        self._stand_breaker(report, b)
+        self.log.emit("last_stand", **report)
+        acts = "; ".join(f"{a['action']} {a['result'].replace('_', ' ')} ({a['detail']})" for a in report["actions"])
+        self.journal.note(f"Last stand for {name} (stand {report['in_a_row']} in a row): {acts or 'no action'}"
+                          + (f"; {len(report['pins'])} unit(s) pinned" if report["pins"] else "")
+                          + f"; stopped: {report['stopped']}.", b["date"])
+        self._status("playing")
+        self._hand_back(b["turn"])
+
+    def _stand_actions(self, b: dict, city: dict, report: dict) -> str:
+        """The action loop; returns why it stopped. Every action is read back in GameCore: `did_not_take`
+        or `unknown` stops the stand at once, as do a lost reply (never resent), a refused step, the
+        game not being ready and the turn changing. Only a stand that ended by itself (`done`) or at
+        `stand_max_actions` pins its units; `stand_budget_s` bounds actions and pins together."""
+        started, cid = self._now(), city["id"]
+        why = self._not_ready()
+        if why:
+            return f"not ready: {why}; nothing sent"
+        state = self._ls_read(cid)
+        if state is None:
+            return "no GameCore read before the first action: nothing sent"
+        me, skip, acted = state.get("me", 0), [], []
+        stop = f"{self.stand_max_actions} actions (the limit)"
+        for n in range(self.stand_max_actions):
+            if self._now() - started > self.stand_budget_s:
+                return f"the {self.stand_budget_s:.0f} s budget ran out"
+            damage = {f"{u['owner']}:{u['id']}": min(1000, max(0, int(u.get("damage") or 0)))
+                      for u in state.get("units") or [] if u.get("owner") != me}
+            try:
+                reply = self.game.last_stand_step(cid, damage, list(skip))
+            except Exception as e:  # noqa: BLE001 - no reply: it may have run; read it back, never resend
+                reply = {"ok": False, "transport": True, "error": f"{type(e).__name__}: {e}"}
+            lost = bool(reply.get("transport"))
+            if not lost and reply.get("ok") is False:
+                return f"step refused: {reply.get('error')}"[:300]
+            if not lost and reply.get("done"):
+                stop = f"done: {reply.get('reason')}"
+                break
+            time.sleep(self.stand_pause_s)
+            after = self._ls_read(cid)
+            verdict, detail = stand_verdict(None if lost else reply, state, after)
+            action = "lost reply" if lost else str(reply.get("action"))
+            self._stand_row(b, city, action, reply, verdict, detail, report, first=n == 0)
+            if lost:
+                return f"the reply was lost ({reply.get('error')}): not sent again"[:300]
+            if verdict != "took":
+                return f"{action} {verdict.replace('_', ' ')}: {detail}"
+            if re.fullmatch(r"(city|unit):\d{1,12}", str(reply.get("actor"))):
+                skip.append(str(reply.get("actor")))
+            if _actor_id(reply) is not None:
+                acted.append(_actor_id(reply))
+            state = after
+            if after.get("turn") != b["turn"]:
+                return "the turn changed"
+            why = self._not_ready()
+            if why:
+                return f"not ready: {why}"
+        return stop + self._stand_pins(b, city, state, me, acted, report, started)
+
+    def _stand_pins(self, b: dict, city: dict, state: dict, me: int, acted: list[int], report: dict,
+                    started: float) -> str:
+        """Pin every unit the stand used that still has moves (GameCore FinishMoves), so the
+        hand-back's AI cannot walk it back; the reply's moves are the read-back."""
+        for uid in dict.fromkeys(acted):
+            u = _ls_unit(state, me, uid)
+            if not u or not u.get("moves"):
+                continue
+            if self._now() - started > self.stand_budget_s:
+                return "; pins stopped by the budget"
+            try:
+                r = self.game.finish_moves(uid)
+                verdict, detail = ("took", "no moves left") if r.get("moves") == 0 else \
+                    ("did_not_take", f"{r.get('moves')} moves left")
+            except GameRefused as e:
+                verdict, detail = "did_not_take", str(e)[:200]
+            except Exception as e:  # noqa: BLE001 - lost: never resent
+                verdict, detail = "unknown", f"{type(e).__name__}: {e}"[:200]
+            self._stand_row(b, city, "pin", {"actor": f"unit:{uid}"}, verdict, detail, report)
+            if verdict != "took":
+                return f"; pin {verdict.replace('_', ' ')}: {detail}"
+            report["pins"].append({"id": uid, "x": u.get("x"), "y": u.get("y")})
+            self._pinned.append({"id": uid, "x": u.get("x"), "y": u.get("y"), "turn": b["turn"], "city": city["name"]})
+        return ""
+
+    def _stand_row(self, b: dict, city: dict, action: str, reply: dict, verdict: str, detail: str, report: dict,
+                   first: bool = False) -> None:
+        """An action (or pin) in the report and the order record (key `stand <action>`), with what was
+        predicted and what the read-back showed."""
+        report["actions"].append({"action": action, "actor": reply.get("actor"), "unit": reply.get("unit"),
+                                  "target": reply.get("target"), "to": reply.get("to"),
+                                  "predicted_damage": reply.get("predicted_damage"),
+                                  "predicted_kill": reply.get("predicted_kill"), "result": verdict, "detail": detail,
+                                  "first": first})
+        self._emit_row({"order_kind": "stand", "key": STAND_KEYS.get(action, f"stand {action}"), "item_kind": "stand",
+                        "id": reply.get("unit") or reply.get("actor"), "city": city["name"], "currency": None,
+                        "situation": None, "ordered": b["date"], "top3_hit": None, "result": verdict, "by": None,
+                        "turns": 0, "date": b["date"], "turn": b["turn"], "detail": detail[:300],
+                        "predicted": {"damage": reply.get("predicted_damage"), "kill": reply.get("predicted_kill")},
+                        "target": reply.get("target")})
+
+    def _stand_breaker(self, report: dict, b: dict) -> None:
+        """Ruling 26: when the first action of two stands in this run does not take, the channel is
+        taken as dead and the stand turns itself off for the run (autoplay carries on)."""
+        first = next((a for a in report["actions"] if a["first"]), None)
+        if first is None or first["result"] == "took":
+            return
+        self._stand_first_fails += 1
+        if self._stand_first_fails >= 2 and not self._stand_off:
+            self._stand_off = (f"the first action of {self._stand_first_fails} stands did not take "
+                               f"(last: {first['action']} {first['result'].replace('_', ' ')}: {first['detail']})")[:300]
+            self.log.emit("last_stand_off", reason=self._stand_off)
+            self.journal.note(f"Last stand turned off for this run: {self._stand_off}. Autoplay defends alone; a restart "
+                              "turns it on again.", b["date"])
+
+    def _hand_back(self, turn: int) -> None:
+        """Ruling 25: once turn-ready shows the engine idle (a few polls at most; a popup does not
+        stop autoplay), one-turn autoplay: the AI plays the rest of turn T, ends it and hands back at
+        T+1."""
+        for i in range(self.stand_idle_polls):
+            if not self._not_ready():
+                break
+            if i + 1 < self.stand_idle_polls:
+                time.sleep(self.stand_idle_poll_s)
+        self._play_turns(turn, 1)
+
+    def _check_pins(self, b: dict) -> None:
+        """At the next snapshot: did the hand-back's AI move a pinned unit? The snapshot lists our units
+        near threatened cities (`defenders`); a unit not listed cannot be told."""
+        if not self._pinned:
+            return
+        seen = {d.get("id"): d for c in b.get("cities") or [] for d in c.get("defenders") or []}
+        results = []
+        for p in self._pinned:
+            d = seen.get(p["id"])
+            state = "unknown" if d is None else "held" if (d.get("x"), d.get("y")) == (p["x"], p["y"]) else "moved"
+            results.append({**p, "result": state, **({"now": {"x": d.get("x"), "y": d.get("y")}} if d else {})})
+        self._pinned = []
+        self.log.emit("last_stand_check", pins=results, date=b.get("date"))
+        moved = [r for r in results if r["result"] == "moved"]
+        if moved:
+            self.journal.note("Last stand: the hand-back moved pinned unit(s) "
+                              + ", ".join(f"{r['id']} ({r['x']},{r['y']} → {r['now']['x']},{r['now']['y']})" for r in moved)
+                              + ": pins do not hold (ruling 25's manual end turn is the next step).", b.get("date", ""))
 
     # ---- a decision ----------------------------------------------------------------------------------
 

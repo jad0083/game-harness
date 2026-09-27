@@ -29,6 +29,7 @@ PC in use.
 | `PILOT_GAME`, `PILOT_SPEED`, `PILOT_DECIDE_MONTHS`, `PILOT_POLL_S` | game, Stellaris speed, months between decisions, autosave poll |
 | `PILOT_DECIDE_TURNS` | Civilization VI: turns the game's AI plays between decisions (default 5; `--decide-turns`) |
 | `PILOT_AUTOPLAY_CHUNK` | Civilization VI: turns per autoplay call in peace (default 3, which keeps the AI's multi-turn plans); at war with a major or with a city in danger it plays one turn at a time |
+| `PILOT_LAST_STAND`, `PILOT_LAST_STAND_MAX` | Civilization VI: scripted actions for a city about to fall (default `0`, off until the live checklist L6 passes); at most this many stands in a row per city (default 3) |
 | `PILOT_THINKING`, `PILOT_GOVERNOR_THINKING` | thinking level for GC4 episodes / Stellaris decisions (default `medium`) |
 | `PILOT_RETRO_EVERY` | strategy review every N decisions (default 5) |
 | `PILOT_PORT`, `PILOT_RUNS_DIR`, `PILOT_CAMPAIGN`, `PILOT_COMMIT`, `PILOT_JOURNAL` | live dashboard port, run folder, campaign id, commit learned knowledge, journal file |
@@ -95,7 +96,7 @@ helper library `corpora/civ6/lua/harness.lua` inside the game through the agent'
 The loop: snapshot → decide → apply orders → read back → then N times: autoplay **one** turn, poll
 the cheap `autoplay-status` every second until the game hands the turn back, take a snapshot while
 the game is idle → decide again after N turns or as soon as something urgent happens (a new war, a
-city lost or threatened, a new era, a great person or wonder race lost, gold below the purchase
+city lost, threatened or about to fall, a new era, a great person or wonder race lost, gold below the purchase
 reserve); stopping early is simply not starting the next turn. The tuner does not answer while the
 AI plays its turn, so unanswered status polls are expected; only the turn's deadline counts (10
 minutes, for long late-game turns). A turn that does not start (20 s) or end in time, or a game that
@@ -148,6 +149,24 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   defender bought in the same city within 5 turns, what the city finishes within 2 turns anyway and a
   known price over the cap are refused before sending. `gold` and `faith` balances cannot be
   milestone metrics (`[metrics] milestone_exclude`).
+- **Last stand** (rulings 22-27, off unless `PILOT_LAST_STAND=1`): a city is *about to fall* when a
+  unit that can capture it (melee or cavalry) stands next to it, no walls stand, and its garrison is
+  at half its hit points or less, or one attack from each enemy in range would take the rest
+  (`about_to_fall`). The change to falling is urgent ("city falling: X"), so the model decides first
+  and its purchases are read back. Then, at the hand-back, the governor runs scripted actions before
+  the AI plays the turn, one per call: a city strike (only with walls), ranged and siege attacks on
+  hostile units within 3 tiles (a sure kill first, by the weakest shooter that kills), and the
+  retreat of units at 40% HP or less next to a capturer (never the garrison). Each action is read
+  back in GameCore (`civ6 ls-state`): it `took`, `did_not_take` or is `unknown`; anything but
+  `took`, a lost reply (never resent), a popup or a changed turn stops the stand at once. Units that
+  acted and still have moves are pinned (`civ6 finish-moves`), then one-turn autoplay hands the turn
+  back: the AI plays the rest of it (no manual end turn). At most 8 actions and 90 s per stand, 3
+  stands in a row per city; targets are barbarians or players at war with us whose attack would not
+  change a war state, never civilians. Each action is an `order_outcome` row (keys `stand
+  city_strike`, `stand ranged`, `stand retreat`, `stand pin`) and each stand a `last_stand` event and
+  a journal line; the next snapshot checks whether the AI moved a pinned unit (`last_stand_check`).
+  When the first action of two stands does not take, the stand turns itself off for the run
+  (`last_stand_off`).
 - **Blockers**: with no research or no civic in progress and no valid order for it, the governor asks
   the model once more; if the answer still has none, it orders the strategy's first preferred item
   the game offers (else the first offered) and reports it "filled by the governor".
