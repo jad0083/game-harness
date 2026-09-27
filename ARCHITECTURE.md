@@ -406,7 +406,10 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   changed unpinned pillars; `keep_pinned`; `milestone_status` from metrics rows; weights: `Strategy`
   derives each pillar's rank from its weight and converts a ranked strategy to weights on load
   (`default_weights`), `pressures` = weight x `[weights.need]` of the pillar's worst milestone status,
-  `directive_pressure` / `suggestion` (exclusive mode) or `shares` (share mode) for `frame_text`,
+  `directive_pressure` / `suggestion` (exclusive mode) or `shares` (share mode) for `frame_text`;
+  `directive_record` compares a directive's held and other growth of ours ÷ the peer median when the
+  rows carry it (`[metrics] peer_keys`), else absolute; `expand_blocked` in governor.py adds the
+  frame's hint for an expansion held back by unsurveyed space,
   `rebalance` for a human weight edit). `governor.py`:
   `_review_strategy` (role `strategy`, `StrategyReview` output, one corrective retry, `strategy` and
   `strategy_review` events, saved as a decision row with `decision = "strategy_review"` and a

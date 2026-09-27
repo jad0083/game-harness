@@ -49,6 +49,9 @@ names = ["systems", "colonies", "pops", "techs_known", "military_power", "econom
          "rank:systems", "rank:pops", "rank:techs", "rank:military_power", "rank:economy_power",
          "rank:tech_power", "rank:colonies"]
 row_keys = { colonies = "planets" }   # metrics rows store colonies as `planets`
+# where a row keeps the metric's median over the other empires (`peers`; default: the metric's name):
+# a directive's efficacy is then the yearly change of ours / median, not of ours (levers ruling 7)
+peer_keys = { techs_known = "techs" }
 
 [pillars.economy]
 label = "Economy"

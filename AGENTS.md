@@ -294,6 +294,9 @@ Rules:
 - **Weighted pillars** (`[weights]` in pillars.toml): pillars carry weights (sum 100, 5..50, heaviest
   >= 2x lightest); each decision gets every directive's pressure (weight x milestone need) and a
   suggestion (the top one, or keep within a 1.25 switch margin); decisions name what they `serve`.
+  A directive held 2+ years whose pillar metric grew no faster, as ours ÷ the peer median per year,
+  than while not held has its pressure halved; the frame says when expand is held back by unsurveyed
+  space (none surveyed in reach, influence 950+ for 12 months).
 - **Strategy detail** (`[strategy]` in pillars.toml): every pillar needs a milestone, the heaviest two
   on different dates (a checkpoint and an end target), the top 3 two goals, and each stance a figure from
   the briefing; a Strategist answer that misses one is sent back once with its errors. Pinned pillars

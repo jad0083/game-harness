@@ -812,3 +812,56 @@ def test_a_short_or_working_record_keeps_full_pressure():
     for rec in (short, working):
         p = pressures(wstrat(), SPEC, lambda n, m: "at_risk", record_of=lambda name, metric, r=rec: r)
         assert all(x.get("efficacy", 1.0) == 1.0 for x in p.values())
+
+
+# ---- directive efficacy relative to the peer median (stellaris levers design, ruling 7) -------------
+
+def _series(parts, metric="military_power", peer="military_power", start=(100.0, 100.0)):
+    """Yearly metrics rows from [(directive, years, ours per year, median per year)], each step
+    counting for the directive in force at its start; `peer` None leaves the median out."""
+    rows, (ours, med), y = [], start, 2200
+    for d, years, dours, dmed in [*parts, ("end", 1, 0, 0)]:
+        for _ in range(years):
+            rows.append({"date": f"{y}.01.01", "directive": d, metric: round(ours, 4),
+                         **({"peers": {peer: {"median": round(med, 4), "rank": 3}}} if peer else {})})
+            ours, med, y = ours + dours, med + dmed, y + 1
+    return rows
+
+
+def _works(r) -> bool:
+    return r["held_rate"] > r["other_rate"]
+
+
+def test_efficacy_is_the_change_of_ours_over_the_peer_median_and_flips_a_late_expansion():
+    """E2's four campaigns on synthetic rows: absolute rates praise UNE2's expand, held early while
+    every empire expanded; against the median it fell behind (stall), as did UNE2 defend and Gaea
+    tech_rush, while Theia's defend still gained on the median."""
+    from pilot.strategy import directive_record
+    cases = [  # (rows, directive, metric, works absolute, works relative)
+        (_series([("expand", 10, 120, 150), ("defend", 10, 170, 160)]), "defend", "military_power", True, True),
+        (_series([("expand", 10, 0.73, 2.0), ("defend", 10, 0.06, 0.05)], "systems", "systems", (10, 10)),
+         "expand", "systems", True, False),
+        (_series([("expand", 10, 57.8, 50), ("defend", 10, -9.2, 20)]), "defend", "military_power", False, False),
+        (_series([("expand", 10, 0.8, 0.8), ("tech_rush", 10, 0.52, 0.8)], "techs_known", "techs", (50, 50)),
+         "tech_rush", "techs_known", False, False),
+    ]
+    for rows, d, metric, works_abs, works_rel in cases:
+        flat = [{k: v for k, v in r.items() if k != "peers"} for r in rows]
+        absolute = directive_record(flat, d, metric)
+        relative = directive_record(rows, d, metric, peer_keys={"techs_known": "techs"})
+        assert "relative" not in absolute and _works(absolute) == works_abs, (d, metric, absolute)
+        assert relative["relative"] is True and _works(relative) == works_rel, (d, metric, relative)
+    une2 = directive_record(cases[1][0], "expand", "systems")
+    assert (une2["held_rate"], une2["other_rate"], une2["held_years"]) == (-0.042, 0.001, 10.0), "3 decimals"
+
+
+def test_a_metric_without_a_median_and_rank_metrics_stay_absolute():
+    from pilot.strategy import directive_record
+    rows = _series([("expand", 3, 1, 1), ("defend", 3, 2, 1)], "pops", peer="military_power")   # no pops median
+    assert "relative" not in directive_record(rows, "defend", "pops")
+    ranks = [{"date": f"22{y:02d}.01.01", "directive": "defend" if y < 3 else "expand",
+              "peers": {"military_power": {"rank": 8 - y, "median": 50.0}}} for y in range(6)]
+    r = directive_record(ranks, "defend", "rank:military_power")
+    assert "relative" not in r and r["held_rate"] == 1.0
+    techs = _series([("expand", 3, 1, 1), ("tech_rush", 3, 2, 1)], "techs_known", "techs", (50, 50))
+    assert "relative" not in directive_record(techs, "tech_rush", "techs_known"), "techs_known's median is under techs"

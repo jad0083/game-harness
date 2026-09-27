@@ -415,3 +415,14 @@ def test_directive_policies_come_from_the_directives_file():
     assert got["tech_rush"] == {"economic_policy": "economic_policy_civilian"}
     assert got["defend"] == {"diplomatic_stance": "diplo_stance_belligerent"}
     assert set(got) == {"expand", "consolidate_economy", "tech_rush", "prepare_war", "defend", "diplomacy_first"}
+
+
+def test_stellaris_metrics_name_their_peer_median_keys():
+    spec = load_pillars(REPO / "corpora/stellaris")
+    assert dict(spec.peer_keys) == {"techs_known": "techs"}
+    assert load_pillars(REPO / "corpora/civ6").peer_keys == {}
+
+
+def test_a_peer_key_for_an_unknown_metric_is_rejected(tmp_path):
+    with pytest.raises(PillarsError, match=re.escape("metrics.peer_keys.bogus")):
+        load_pillars(civ_corpus(tmp_path, CIV_MINI.replace("[metrics]\n", '[metrics]\npeer_keys = { bogus = "x" }\n')))

@@ -262,7 +262,15 @@ Each pillar has:
 directive's pressure is within the switch margin (1.25) of the top. A directive held at least 2
 years in the campaign whose pillar's milestone metric grew no faster than when it was not held
 "does not work here" and has its pressure halved; the frame shows its record, and the Strategist
-sees every directive's record when it sets weights. The model may choose
+sees every directive's record when it sets weights. Where the metrics rows carry the metric's
+median over the other empires (military, economy, tech power, systems, pops, colonies, techs), the
+growth compared is that of ours ÷ median per year (e.g. `military_power ÷ median -0.009/yr over 56 y
+held vs +0.005/yr otherwise`), since an absolute rate rewards whatever was held late, when every
+empire grows faster (levers design ruling 7: it turns UNE2's early `expand` from "works" to a
+stall); ranks and metrics without a median stay absolute (`[metrics] peer_keys` names a median kept
+under another key). When unclaimed systems lie within 2 jumps but none is surveyed and influence
+stayed at 950 or more for 12 months, the frame adds "expand cannot claim here: no surveyed room;
+influence is not the limit" (Gaea 2221-2252). The model may choose
 otherwise when the briefing gives a reason, says why, and names the milestone its choice
 `serves`. A choice outside the top two is tagged off-frame and asks for a review. Games with many
 levers at once (GalCiv IV, Civ VI) can use `mode = "share"`, which shows each pillar's share of

@@ -268,6 +268,29 @@ def trends(old: dict | None, now: dict) -> str:
     return line
 
 
+EXPAND_BLOCKED = "expand cannot claim here: no surveyed room; influence is not the limit"
+
+
+def expand_blocked(rows: list[dict]) -> str:
+    """EXPAND_BLOCKED when the newest metrics row counts unclaimed systems within 2 jumps (`room` > 0)
+    but none surveyed (`room_surveyed` 0) and the influence stock stayed at 950 or more through the
+    last 12 months, else "" (levers design ruling 7, E12: Gaea held expand 41 years at the influence
+    cap with 8-14 unclaimed systems in reach and at most 1 surveyed; the stall rule saw only "slow").
+    A boxed-in empire (`room` 0: nothing to survey either; "boxed in" is its own urgent reason) gets
+    no hint. Rows oldest first; a row without the fields (older telemetry) gives none."""
+    dated = [r for r in rows if r.get("date")]
+    if not dated or dated[-1].get("room_surveyed") != 0 or not (dated[-1].get("room") or 0) > 0:
+        return ""
+    now = months(dated[-1]["date"])
+    if not any(now - months(r["date"]) >= 12 for r in dated):
+        return ""
+    year = [r for r in dated if now - months(r["date"]) <= 12]
+    influence = [(r.get("stockpile") or {}).get("influence") for r in year]
+    if all(isinstance(v, (int, float)) and v >= 950 for v in influence):
+        return EXPAND_BLOCKED
+    return ""
+
+
 def _num(v) -> str:
     """Readable number for reasons: 405.92577500000004 -> '406', 1.0 -> '1', 12.34 -> '12.3'."""
     if not isinstance(v, (int, float)):
@@ -348,8 +371,8 @@ def frame_text(strategy: Strategy | None, spec: PillarSpec, milestones: str, pre
         text = f"{pillar} {p['weight']} x {status} {p['need']:g}"
         if p.get("efficacy", 1.0) < 1.0:
             r = p["record"]
-            text += (f" x not working here {p['efficacy']:g}: {r['metric']} {r['held_rate']:+g}/yr over "
-                     f"{r['held_years']:g} y held vs {r['other_rate']:+g}/yr otherwise")
+            text += (f" x not working here {p['efficacy']:g}: {r['metric']}{' ÷ median' if r.get('relative') else ''} "
+                     f"{r['held_rate']:+g}/yr over {r['held_years']:g} y held vs {r['other_rate']:+g}/yr otherwise")
         return text
     if spec.weights.mode == "share":
         sh = shares(press)
@@ -360,6 +383,9 @@ def frame_text(strategy: Strategy | None, spec: PillarSpec, milestones: str, pre
                      + " > ".join(f"{d} {p:g} ({why(pl)})" for d, p, pl in ranked))
         sug = suggestion(ranked, current, spec.weights.switch_margin)
         lines.append(f"Suggested: {'keep ' + current if sug == 'keep' and current else sug}")
+    for name, p in press.items():
+        if p.get("hint"):       # e.g. expand blocked by unsurveyed space (levers ruling 7)
+            lines.append(p["hint"])
     for name, pl in strategy.sorted_pillars():
         lines.append(f"{name} (weight {pl.weight}{', pinned by the human' if pl.pinned else ''}): {pl.stance}")
     at_risk = [m for m in milestones.splitlines() if m.endswith(("at_risk", "missed"))]
@@ -1715,9 +1741,14 @@ class Governor:
         today = rows[-1]["date"]
         try:
             spec = self.pillars
-            return pressures(self.strategy, spec, lambda _n, m: milestone_status(m, rows, today, spec.row_keys),
-                             record_of=lambda name, metric: (directive_record(rows, d, metric, spec.row_keys)
-                                                             if (d := spec.directive_of(name)) else None))
+            press = pressures(self.strategy, spec, lambda _n, m: milestone_status(m, rows, today, spec.row_keys),
+                              record_of=lambda name, metric: (directive_record(rows, d, metric, spec.row_keys, spec.peer_keys)
+                                                              if (d := spec.directive_of(name)) else None))
+            hint = expand_blocked(rows)
+            for name in press:
+                if hint and spec.directive_of(name) == "expand":
+                    press[name]["hint"] = hint
+            return press
         except Exception as e:  # noqa: BLE001 - advisory; the decision still runs on weights
             self.log.emit("briefing_error", error=f"pressure: {type(e).__name__}: {e}"[:200])
             return None
@@ -1734,13 +1765,14 @@ class Governor:
             if not d or not pl.milestones:
                 continue
             metric = pl.milestones[0].metric
-            r = directive_record(rows, d, metric, spec.row_keys)
+            r = directive_record(rows, d, metric, spec.row_keys, spec.peer_keys)
             if r is None:
                 out.append(f"- {d} ({name}, {metric}): not held long enough to judge")
                 continue
             verdict = (" — does not work here" if w.stall_years and r["held_years"] >= w.stall_years
                        and r["held_rate"] <= r["other_rate"] else "")
-            out.append(f"- {d} ({name}, {metric}): {r['held_rate']:+g}/yr over {r['held_years']:g} y held vs "
+            label = f"{metric} ÷ median" if r.get("relative") else metric
+            out.append(f"- {d} ({name}, {label}): {r['held_rate']:+g}/yr over {r['held_years']:g} y held vs "
                        f"{r['other_rate']:+g}/yr otherwise{verdict}")
         return "\n".join(out) or "(no data yet)"
 

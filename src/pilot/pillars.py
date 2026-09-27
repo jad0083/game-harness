@@ -40,7 +40,7 @@ NEED_STATUSES = ("met", "on_track", "at_risk", "missed")
 _STRATEGY_KEYS = {"min_milestones_top", "min_milestones_each", "min_milestones_first", "min_goals", "min_goals_top",
                   "stance_needs_figure", "metric_aliases", "instructions", "date_format", "identity"}
 DATE_FORMATS = ("calendar", "turns")     # milestone dates: YYYY.MM.DD, or T<turn> (turn-based games)
-_METRICS_KEYS = {"names", "row_keys", "milestone_exclude"}
+_METRICS_KEYS = {"names", "row_keys", "milestone_exclude", "peer_keys"}
 _PILLAR_KEYS = {"label", "description", "directive", "actions"}
 _RESERVED_IDS = {"focus", "reason", "pillars"}      # fields of the Strategist's output model
 _ID = re.compile(r"^[a-z][a-z0-9_]*$")
@@ -131,6 +131,8 @@ class PillarSpec:
     metrics: tuple[str, ...]
     metric_aliases: dict[str, str] = field(default_factory=dict)
     row_keys: dict[str, str] = field(default_factory=dict)
+    # metric -> the key of its peer median in a metrics row's `peers` (default: the metric's name)
+    peer_keys: dict[str, str] = field(default_factory=dict)
     actions: dict[str, ActionLimits] = field(default_factory=dict)
     min_milestones_top: int = 0
     min_milestones_each: int = 0      # every unpinned pillar
@@ -446,6 +448,10 @@ def _parse(path: Path, corpus: Path) -> PillarSpec:
     for k in row_keys:
         if k not in names:
             raise _err(path, f"metrics.row_keys.{k}", "not a metric in metrics.names")
+    peer_keys = _str_map(path, "metrics.peer_keys", mt.get("peer_keys", {}))
+    for k in peer_keys:
+        if k not in names:
+            raise _err(path, f"metrics.peer_keys.{k}", "not a metric in metrics.names")
     exclude = mt.get("milestone_exclude", [])
     if not isinstance(exclude, list) or not all(isinstance(m, str) and m in names for m in exclude):
         raise _err(path, "metrics.milestone_exclude", "must be a list of metrics from metrics.names")
@@ -508,6 +514,7 @@ def _parse(path: Path, corpus: Path) -> PillarSpec:
     orders = _orders(path, raw["orders"]) if "orders" in raw else None
     return PillarSpec(game=corpus.name, weights=weights, orders=orders, milestone_exclude=tuple(exclude), pillars=types.MappingProxyType(pillars), metrics=tuple(names),
                       metric_aliases=types.MappingProxyType(aliases), row_keys=types.MappingProxyType(row_keys),
+                      peer_keys=types.MappingProxyType(peer_keys),
                       actions=types.MappingProxyType(actions), min_milestones_top=top, stance_needs_figure=figure,
                       instructions=instructions.strip(), date_format=date_format,
                       identity=identity.strip(), **detail)

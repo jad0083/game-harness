@@ -4348,3 +4348,58 @@ def test_a_malformed_save_date_never_stops_the_action_record(setup):
     g._settle_at_review({"date": "soon"})                         # must not raise
     g._resolve_action(tech_action("tech_b", "physics", "2200.01.01"), "failed", None, "x", "not a date")
     assert any(e["kind"] == "briefing_error" and "action record" in e["error"] for e in log.recent)
+
+
+# ---- efficacy relative to the peer median, and the blocked hint for expand (levers ruling 7) -------
+
+def test_the_frame_shows_a_relative_record_against_the_median():
+    from pilot.governor import frame_text
+    press = _press(defence="at_risk")
+    press["defence"].update(efficacy=0.5, pressure=22.5, record={
+        "metric": "military_power", "held_years": 16.0, "held_rate": -0.009, "other_rate": 0.005, "relative": True})
+    text = frame_text(_strategy_with(), STELLARIS, "(none)", press, current="defend")
+    assert ("defence 30 x at_risk 1.5 x not working here 0.5: military_power ÷ median -0.009/yr over 16 y held vs "
+            "+0.005/yr otherwise") in text
+
+
+def test_the_strategist_sees_relative_records(setup, monkeypatch):
+    s, log = setup
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": _strategist([])})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    rows = [{"date": f"22{y:02d}.01.01", "directive": "tech_rush" if y < 3 else "defend", "systems": 10 + y,
+             "peers": {"systems": {"median": 10 + 3 * y}}} for y in range(6)]
+    monkeypatch.setattr(g, "_metrics_rows", lambda: rows)
+    text = g._directive_records_text()
+    assert "- tech_rush (technology, systems ÷ median): -0.105/yr over 3 y held vs -0.042/yr otherwise — does not work here" in text
+
+
+def _influence_rows(n: int, influence=1000.0, surveyed=0, room=9) -> list[dict]:
+    return [{"date": f"{2215 + (m // 12)}.{m % 12 + 1:02d}.01", "directive": "expand", "systems": 9,
+             "stockpile": {"influence": influence}, "room": room, "room_surveyed": surveyed} for m in range(n)]
+
+
+def test_expand_is_blocked_when_nothing_surveyed_is_in_reach_and_influence_piles_up():
+    from pilot.governor import EXPAND_BLOCKED, expand_blocked
+    assert EXPAND_BLOCKED == "expand cannot claim here: no surveyed room; influence is not the limit"
+    assert expand_blocked(_influence_rows(13)) == EXPAND_BLOCKED, "12 months at the cap, 0 surveyed"
+    assert expand_blocked(_influence_rows(12)) == "", "11 months only"
+    low = _influence_rows(13)
+    low[5]["stockpile"] = {"influence": 900.0}
+    assert expand_blocked(low) == "", "influence dipped under 950 within the year: it may be the limit"
+    assert expand_blocked(_influence_rows(13, surveyed=1)) == "", "a surveyed system to claim"
+    assert expand_blocked([{**r, "room_surveyed": None} for r in _influence_rows(13)]) == "", "older rows: unknown"
+    assert expand_blocked(_influence_rows(13, room=0)) == "", "boxed in (UNE2 581 months): nothing to survey either"
+
+
+def test_the_frame_says_expand_cannot_claim_here(setup, monkeypatch):
+    from pilot.governor import EXPAND_BLOCKED, frame_text
+    s, log = setup
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": _strategist([])})
+    g._review_strategy(briefing("2215.01.01"), "start of run")
+    monkeypatch.setattr(g, "_metrics_rows", lambda: _influence_rows(13))
+    press = g._pressures()
+    assert press["expansion"]["hint"] == EXPAND_BLOCKED and not any(p.get("hint") for n, p in press.items() if n != "expansion")
+    text = frame_text(g.strategy, g.pillars, "(none)", press, current="expand")
+    assert EXPAND_BLOCKED in text.splitlines(), "a line of its own"
+    monkeypatch.setattr(g, "_metrics_rows", lambda: _influence_rows(13, surveyed=2))
+    assert "hint" not in g._pressures()["expansion"]
