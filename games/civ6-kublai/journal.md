@@ -83,3 +83,46 @@ snapshot takes 0.3 s.
 Seen: an autoplay stretch can end with a city building nothing, which the next decision fills; the
 tuner does not answer during the AI's turn processing, so mid-stretch urgent stops need polls that
 land between turns.
+
+## 2026-09-26 — one-turn autoplay after the code review (T17 → T41)
+
+Same setup (fast, cheap decision model; scratch runs folder and journal; no commits), after the
+review fixes: the governor autoplays one turn at a time, polls `autoplay-status` every second, and
+reads, checks and orders only between turns.
+
+- **Stuck turn (T17)**: the first one-turn test held T17 for over 10 minutes with autoplay active
+  and player 0's turn "complete". A screenshot showed a tutorial advisor popup ("Reconnaissance units
+  like Scouts…", OK / Tell me more) waiting for a click. Two clicks on OK (the first as the hover)
+  released it. `Harness.autoplay` now sets `UserConfiguration` `TutorialLevel` to -1 for the session
+  (the saved options still say 1); no advisor popup since.
+- **Per-turn timing** (one turn per call): T18-T21 4.6 s, 6.0 s, 32.8 s (one poll unanswered);
+  governor run T21-T25 4.4, 5.8, 4.5, 4.5 s; T25-T27 34 s and 37 s (one poll unanswered each; a
+  timed-out poll costs about 20-30 s, so the turn itself is shorter); T27-T31 8.7-10.3 s. A 4-turn
+  call (T31-T35) took about 15 s; a 3-turn chunk (T38-T41) 68 s with two unanswered polls.
+- **Hand-back side effects**: the library stayed installed in both states across every hand-back
+  (no reinstall per turn; versions checked after each turn). The human's popups appear at hand-back
+  (Research Completed: Animal Husbandry at T25) and blockers show (ENDTURN_BLOCKING_PANTHEON); they
+  did not stop the next autoplay turn. Right after some hand-backs the tuner timed out: the autoplay
+  call at T25 (the run waited for Resume; the fix since treats a lost reply as "maybe started" and
+  lets the polls decide) and two snapshots at T41 (the third answered).
+- **Autoplay's last turn**: with a 3-turn call from T35, autoplay read inactive (turns 0) at T37 while
+  the last turn was still to come; the governor decided then. Fixed: an early end now needs the turn
+  unchanged for 20 s. The next 3-turn chunk (T38-T41) decided at T41.
+- **The AI's behaviour with one-turn toggling looked worse**: T24-T31 the Settler stood unsettled
+  for 7 turns, the pantheon blocker stayed open with 59-83 faith, and Beijing's Slinger (our order,
+  T27) was replaced by a Granary. One 4-turn call (T31-T35) then settled Chengdu, chose a pantheon and
+  used the Builder. Barbarians near Beijing (2 units from T27) may explain the Settler; the pantheon
+  and the replaced order point at the hand-back each turn. `PILOT_AUTOPLAY_CHUNK` now sets turns per
+  call (default 1); issues.md keeps the comparison open. Military strength fell from 35 (T38) to 12
+  (T41) during a chunk.
+- **Real policy change (T27)**: Craftsmanship completed at T26 (unlock cost 0); the decision at T27
+  ordered Agoge, God King, Urban Planning — Discipline was replaced by Agoge in the military slot and
+  read back as stuck. `UNLOCK_POLICIES` then `RequestPolicyChanges`, sent from the tuner, works.
+- **Real purchases**: a direct order bought a Scout in Beijing for 120 gold (gold 120 → 0, scouts
+  1 → 2); at T35 the governor bought a Warrior with 80 faith (read back as stuck).
+- **Orders and read-back**: T27 (urgent "city threatened: Beijing (2 enemy units near)", which also
+  started a strategy review that shifted weight to the military): civic Foreign Trade, the policies
+  above and a Slinger in Beijing, all stuck. T35: a production order whose reply was lost (tuner
+  timeout) was reported "unknown"; the model repeated it at T37 and it was not refused. T37 and T41:
+  urgent decisions on gold below the reserve (36 < 60), a missed science milestone and threatened
+  cities; Slingers ordered in both cities, stuck.
