@@ -283,7 +283,7 @@ def validate(s: Strategy, spec: PillarSpec, *, previous: Strategy | None, tech_i
                             else f"{name}: milestone by {m.by!r} is not a date YYYY.MM.DD")
             if m.metric not in spec.metrics:
                 errs.append(f"{name}: unknown metric {m.metric!r}")
-            elif m.metric in spec.milestone_exclude:
+            elif m.metric in spec.milestone_exclude and require_milestones and not pl.pinned:
                 errs.append(f"{name}: {m.metric} is a balance, not a milestone metric here (pillars.toml [metrics] "
                             "milestone_exclude: a stock rewards hoarding); use a per-turn measure")
         declared = spec.pillars[name].actions if name in spec.pillars else ()

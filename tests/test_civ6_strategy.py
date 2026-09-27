@@ -115,3 +115,12 @@ def test_a_milestone_on_a_balance_is_rejected():
     assert "never gold or faith: a balance rewards hoarding" in text
     names = text.split("exactly these names: ")[1].split(";")[0].split(", ")
     assert "faith_yield" in names and "faith" not in names and "gold" not in names
+
+
+def test_balance_milestones_bind_the_strategist_not_pins_or_human_edits():
+    pinned = civ_strategy(economy={"milestones": [Milestone(metric="gold", op=">=", target=60, by="T130")],
+                                   "pinned": True})
+    assert errors(pinned) == [], "a pinned pillar comes back unchanged in every answer"
+    human = civ_strategy(economy={"milestones": [Milestone(metric="gold", op=">=", target=60, by="T130")]})
+    assert validate(human, SPEC, previous=None, tech_ids=set(), idle=set(), income={}, ids=IDS,
+                    briefing_checked={"science"}, require_milestones=False) == [], "a human edit elsewhere"

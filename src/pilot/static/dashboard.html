@@ -1225,7 +1225,7 @@ function flag(name) { const b = document.querySelector(`.tabs [data-tab="${name}
 document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
 
 // ---------- activity ----------
-const QUIET = new Set(["metrics", "status", "trace", "chat", "plan", "order_outcome"]);
+const QUIET = new Set(["metrics", "status", "trace", "chat", "plan", "order_outcome", "order_followed"]);
 function describe(ev) {
   switch (ev.kind) {
     case "episode": return `${ev.situation}: ${ev.decision}`;

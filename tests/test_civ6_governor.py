@@ -450,6 +450,7 @@ def test_a_lost_reply_to_autoplay_is_not_a_failure(setup):
     g = governor(setup, game, orders_model([]))
     g.run(max_decisions=2)
     assert traces(setup)[1]["trigger"] == "scheduled (3 turns)"
+    assert [a[0] for a in game.actions].count("autoplay") == 3, "a start that ran is never sent again"
 
 
 def test_autoplay_chunks_play_several_turns_per_call(setup):
@@ -1038,3 +1039,71 @@ def test_the_backfill_script_reads_only_until_asked_and_writes_once(tmp_path, ca
     rows = Telemetry(db).campaign_events("civ6/kublai", "order_outcome")
     assert [r["result"] for r in rows] == ["refused", "lost", "completed", "unknown", "refused", "refused", "completed"]
     assert mod.main(["--db", str(db), "--campaign", "civ6/kublai", "--write"]) == 1, "never twice"
+
+
+# ---- review fixes ------------------------------------------------------------------------------
+
+def test_a_city_that_cannot_get_a_defender_now_does_not_block_other_purchases():
+    monument = {"kind": "purchase", "city": "Beijing", "id": "building:monument"}
+    s = {**FIXTURE, "gold": 400, "faith": 200, "turn": 12, "cities": [danger_city()]}
+    cooling = check_orders([Civ6Order(**monument)], s, SPEC, INDEX, defender_buys={"beijing": 10})
+    assert cooling[0].wire, "its defender cooldown runs: nothing to buy there first"
+    closed = buy(monument, city=danger_city(defence_prices=[{**WARRIOR, "gold_allowed": False, "faith_allowed": False}]))
+    assert closed[0].wire, "no listed defender is allowed now"
+    tried = buy({"kind": "purchase", "city": "Beijing", "id": "unit:warrior", "currency": "gold"}, monument,
+                gold=100, faith=0)
+    assert "over the 70 allowed" in tried[0].error and tried[1].wire, "the defender was tried and did not fit"
+    assert "buy a defender there first" in buy(monument)[0].error
+
+
+def test_a_unit_another_city_also_builds_is_not_read_as_completed():
+    c = Checked(order={"kind": "production"}, expect={"city": "Beijing", "producing": "UNIT_TRADER"})
+    base = {"turn": 100, "turns_left": 6, "count": 0, "others": 1}
+    both = [_city0(producing="BUILDING_GRANARY"), {**_city0(), "name": "Chengdu", "producing": "UNIT_BUILDER"}]
+    one_more = snap(102, cities=both, units={"by_type": {"UNIT_TRADER": 1}})
+    assert held_outcome(c, base, one_more, 9) == ("unknown", "BUILDING_GRANARY"), "Chengdu's Trader, or ours?"
+    two_more = snap(107, cities=both, units={"by_type": {"UNIT_TRADER": 2}})
+    assert held_outcome(c, base, two_more, 9) == ("completed", None)
+    from pilot.civ6 import order_base
+    after = snap(100, cities=[_city0(producing="UNIT_TRADER", turns_left=6),
+                              {**_city0(), "name": "Chengdu", "producing": "UNIT_TRADER"}])
+    assert order_base(c, after)["others"] == 1
+
+
+def test_the_pantheon_reserve_holds_below_its_price_and_stops_when_none_is_left():
+    from pilot.civ6 import faith_reserve_now
+    rel = {"pantheon": None, "pantheon_cost": 25}
+    assert faith_reserve_now({"faith": 20, "religion": {**rel, "can_create_pantheon": False}}, BUY)[0] == 25
+    assert faith_reserve_now({"faith": 90, "religion": {**rel, "can_create_pantheon": True}}, BUY)[0] == 25
+    assert faith_reserve_now({"faith": 90, "religion": {**rel, "can_create_pantheon": False}}, BUY)[0] == 0, \
+        "the game refuses a pantheon we could pay for: none is left"
+
+
+def test_orders_still_followed_survive_a_restart(setup, tmp_path):
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    first = Civ6Governor(s, FakeCiv6(_replace_fixture(), index=INDEX), EventLog(s.runs_dir, "r1", s.model, telemetry=tel),
+                         model=orders_model([{"kind": "production", "city": "Beijing", "id": "unit:slinger"}]))
+    first.status_poll_s, first.start_grace_s = 0, 0.05
+    first.run(max_decisions=1)
+    assert len(first._tracking) == 1, "open when the run ends"
+    ref = first._tracking[0].row["ref"]
+
+    def ai(state):
+        state["cities"][0]["producing"] = "BUILDING_GRANARY"
+
+    after = {**_replace_fixture(), "cities": [_city0(producing="UNIT_SLINGER", turns_left=4)]}
+    seen: list[str] = []
+    second = Civ6Governor(s, FakeCiv6(after, index=INDEX, ai=ai), EventLog(s.runs_dir, "r2", s.model, telemetry=tel),
+                          model=orders_model([], seen=seen))
+    second.status_poll_s, second.start_grace_s = 0, 0.05
+    second.run(max_decisions=2)
+    assert "production unit:slinger in Beijing: replaced by the AI with building:granary by T13" in seen[1]
+    rows = tel.campaign_events("civ6/kublai_khan_china_702403662", "order_outcome")
+    assert [(r["ref"], r["result"]) for r in rows] == [(ref, "overridden")]
+    third = Civ6Governor(s, FakeCiv6(after, index=INDEX), EventLog(s.runs_dir, "r3", s.model, telemetry=tel),
+                         model=orders_model([]))
+    third.status_poll_s, third.start_grace_s = 0, 0.05
+    third.run(max_decisions=1)
+    assert third._tracking == [], "a resolved order is not followed again"

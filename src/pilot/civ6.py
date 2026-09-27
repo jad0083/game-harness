@@ -407,8 +407,8 @@ def gold_reserve_now(snapshot: dict, limits) -> int:
 
 
 def faith_reserve_now(snapshot: dict, limits) -> tuple[int, str]:
-    """The faith kept back and why (ruling 18): the static `faith_reserve`; until a pantheon is founded
-    (and one can be), at least its live price; while a Great Prophet of our own is within reach,
+    """The faith kept back and why (ruling 18): the static `faith_reserve`; until a pantheon is founded,
+    at least its live price (unless the game refuses one we could pay for); while a Great Prophet of our own is within reach,
     `prophet_faith_reserve`. Without the snapshot's `religion` block only the static reserve holds."""
     if limits is None:
         return 0, ""
@@ -418,7 +418,9 @@ def faith_reserve_now(snapshot: dict, limits) -> tuple[int, str]:
     if not isinstance(rel, dict):
         return reserve, why
     cost = rel.get("pantheon_cost")
-    if limits.pantheon_reserve and not rel.get("pantheon") and rel.get("can_create_pantheon") \
+    # off only when the game refuses a pantheon we could pay for (none left to found)
+    unavailable = rel.get("can_create_pantheon") is False and float(snapshot.get("faith") or 0) >= (cost or 0)
+    if limits.pantheon_reserve and not rel.get("pantheon") and not unavailable \
             and isinstance(cost, (int, float)) and cost > reserve:
         reserve, why = int(cost), f"keeps {int(cost)} faith for the pantheon"
     points, price = rel.get("prophet_points"), rel.get("prophet_cost")
@@ -491,6 +493,7 @@ class _Checks:
     cities_ordered: set[str] = field(default_factory=set)      # production: one order per city
     land_bought: set[str] = field(default_factory=set)         # a land unit bought onto the city tile
     defended: set[str] = field(default_factory=set)            # cities that get a defender now
+    defence_tried: set[str] = field(default_factory=set)       # cities a defender purchase was checked for
     known: dict = field(default_factory=dict)
     defender_buys: dict[str, int] = field(default_factory=dict)
 
@@ -577,6 +580,26 @@ def _check(c: Checked, o: Civ6Order, snapshot: dict, spec, index: CorpusIndex, f
 WALLS = ("building:walls", "building:castle", "building:star_fort")
 
 
+def _needs_defender_first(city: dict, snapshot: dict, index: CorpusIndex, limits, st: _Checks) -> bool:
+    """Whether an ungarrisoned city in danger holds back other purchases (ruling 19): not once a
+    defender purchase for it was checked in this decision, while its cooldown runs, or when its
+    listed defenders (those of the pillars' classes) are none allowed and affordable."""
+    name = city.get("name")
+    if not (in_danger(city) and "garrison" in city and not city.get("garrison")):
+        return False
+    if name in st.defended or name in st.defence_tried:
+        return False
+    last, turn, wait = st.defender_buys.get(str(name).lower()), snapshot.get("turn"), limits.defence_cooldown_turns
+    if wait and isinstance(last, int) and isinstance(turn, int) and turn - last < wait:
+        return False
+    if city.get("defence_prices") is None:
+        return True                                 # prices unknown: the model can price one
+    return any(p.get(f"{cur}_allowed") and isinstance(p.get(cur), (int, float))
+               and p[cur] <= purchase_cap(snapshot, city, cur, limits, st.committed[cur])
+               for p in city["defence_prices"] if is_defender(index.cid(p.get("unit")), index, limits)
+               for cur in ("gold", "faith"))
+
+
 def _check_one(c: Checked, o: Civ6Order, snapshot: dict, index: CorpusIndex, limits, options: dict,
                st: _Checks) -> bool:
     """Fill `c.wire`/`c.expect`, or `c.error`; True when the order is valid."""
@@ -653,9 +676,11 @@ def _check_purchase(c: Checked, o: Civ6Order, key: str, city: dict, snapshot: di
         holder = index.cid(city["garrison"]) if city.get("garrison") else "the unit bought before this one"
         c.error = f"{name} already has {holder} on its tile: the game refuses a second land unit there"
         return False
+    if defender:
+        st.defence_tried.add(name)
     if limits.defence_first and not defender:
         for other in snapshot.get("cities") or []:
-            if in_danger(other) and "garrison" in other and not other.get("garrison") and other.get("name") not in st.defended:
+            if _needs_defender_first(other, snapshot, index, limits, st):
                 c.error = f"{other['name']} is in danger with no defender on its tile: buy a defender there first"
                 return False
     last, turn, wait = st.defender_buys.get(name.lower()), snapshot.get("turn"), limits.defence_cooldown_turns
@@ -785,6 +810,8 @@ def order_base(c: Checked, after: dict) -> dict:
         city = _city(after, e["city"]) or {}
         base["turns_left"] = city.get("turns_left")
         base["count"] = ((after.get("units") or {}).get("by_type") or {}).get(e["producing"], 0)
+        # other cities of ours building the same unit: their units raise the same count
+        base["others"] = sum(1 for x in after.get("cities") or [] if x is not city and x.get("producing") == e["producing"])
     return base
 
 
@@ -828,9 +855,12 @@ def held_outcome(c: Checked, base: dict, now: dict, window: int) -> tuple[str, s
         if city is None:
             return "unknown", None                          # lost or renamed
         producing, can = city.get("producing"), city.get("can_build")
-        rose = ((now.get("units") or {}).get("by_type") or {}).get(key, 0) > (base.get("count") or 0)
-        if key.startswith("UNIT_") and rose and (producing != key or elapsed >= (base.get("turns_left") or 0)):
+        gain = ((now.get("units") or {}).get("by_type") or {}).get(key, 0) - (base.get("count") or 0)
+        needed = 1 + (base.get("others") or 0)             # every other city building it may add one too
+        if key.startswith("UNIT_") and gain >= needed and (producing != key or elapsed >= (base.get("turns_left") or 0)):
             return "completed", None                        # (built, and the AI may have queued another)
+        if key.startswith("UNIT_") and 0 < gain < needed and producing != key:
+            return "unknown", producing                     # the new unit may be another city's
         if key.startswith("BUILDING_") and key in (city.get("buildings") or []):
             return "completed", None
         if key.startswith("DISTRICT_") and key in (city.get("districts") or []):     # no longer "(building)"
@@ -1045,7 +1075,7 @@ def _n(v) -> str:
     return str(v)
 
 
-def _danger_text(x: dict, cid) -> str:
+def _danger_text(x: dict, cid, index: CorpusIndex | None = None, limits=None) -> str:
     """A city in danger (ruling 17): what can take it, its defence, the unit on its tile and what a
     defender costs (ruling 19); without walls it cannot strike (ruling 21)."""
     d = x.get("defense") or {}
@@ -1059,7 +1089,8 @@ def _danger_text(x: dict, cid) -> str:
         parts.append(f"one attack from each enemy in range: about {x['incoming']} damage")
     if "garrison" in x:
         parts.append(f"on its tile: {cid(x['garrison']) if x.get('garrison') else 'no unit'}")
-    prices = x.get("defence_prices") or []
+    prices = [p for p in x.get("defence_prices") or []
+              if limits is None or index is None or is_defender(cid(p.get("unit")), index, limits)]
     if prices:
         parts.append("defenders to buy: " + ", ".join(
             f"{cid(p.get('unit'))} {p.get('gold')} gold{'' if p.get('gold_allowed') else ' (not allowed now)'} / "
@@ -1120,7 +1151,7 @@ def briefing_text(s: dict, index: CorpusIndex, gold_reserve: int = 0, limits=Non
     for x in cities:
         threat = []
         if in_danger(x) and has_defence_fields(x):
-            threat = [_danger_text(x, cid)]
+            threat = [_danger_text(x, cid, index, limits)]
         elif x.get("threatened"):
             threat = [f"THREATENED: {x.get('enemies_near', 0)} enemy units within 3 tiles"
                       + (", under siege" if x.get("under_siege") else "") + (", damaged" if x.get("damaged") else "")]

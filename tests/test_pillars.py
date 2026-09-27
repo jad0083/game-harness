@@ -392,3 +392,11 @@ def test_milestone_exclude_names_known_metrics(tmp_path):
     other.mkdir()
     with pytest.raises(PillarsError, match=re.escape("metrics.milestone_exclude")):
         load_pillars(civ_corpus(other, bad))
+
+
+def test_the_public_view_shows_every_buy_out_rule_and_the_record_settings():
+    pub = load_pillars(REPO / "corpora/civ6").public()
+    buy = pub["actions"]["purchase"]
+    assert buy["defender_classes"][0] == "Melee" and buy["prophet_faith_reserve"] == 0 and buy["pantheon_reserve"]
+    assert pub["orders"]["window_turns"] == 30 and pub["milestone_exclude"] == ["gold", "faith"]
+    assert load_pillars(REPO / "corpora/stellaris").public()["orders"] is None

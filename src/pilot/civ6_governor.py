@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import re
 import time
+import uuid
 from dataclasses import dataclass, replace
 
 from pydantic_ai import Agent, RunContext, Tool
@@ -230,13 +231,21 @@ class Civ6Governor(Governor):
         self._load_order_record()
 
     def _load_order_record(self) -> None:
-        """The campaign's order record from earlier runs (ruling 13): its order_outcome rows, and which
-        turns had nothing in progress (metrics rows). Advisory: a failed read leaves it empty."""
+        """The campaign's order record from earlier runs (ruling 13): its order_outcome rows, the
+        orders still being followed (`order_followed` events with no outcome yet), and which turns had
+        nothing in progress (metrics rows). Advisory: a failed read leaves it empty."""
         tel, cid = self.log.telemetry, self.log.campaign_id
         if tel is None or not cid:
             return
         try:
             self._order_rows = tel.campaign_events(cid, "order_outcome")
+            done = {r.get("ref") for r in self._order_rows if r.get("ref")}
+            mine = {t.row.get("ref") for t in self._tracking}
+            for f in tel.campaign_events(cid, "order_followed"):
+                if f.get("ref") and f["ref"] not in done and f["ref"] not in mine:
+                    c = Checked(order=f["order"], wire=f.get("wire"), expect=f["expect"])
+                    self._tracking.append(Tracked(c, {**f["row"], "ref": f["ref"]}, f["base"], int(f["window"])))
+                    mine.add(f["ref"])
             self._seen_idle = {int(r["turn"]): list(r["idle"]) for r in tel.metrics_rows(cid)
                                if isinstance(r.get("turn"), int) and isinstance(r.get("idle"), list)}
         except Exception as e:  # noqa: BLE001 - the record is advisory
@@ -342,7 +351,8 @@ class Civ6Governor(Governor):
                 lost = True
                 self.log.emit("briefing_error", error=f"autoplay at T{turn}: {e}"[:200])
             try:
-                self._wait_turns(turn, n, started)
+                # a lost reply waits twice the grace before sending again: a slow start must show first
+                self._wait_turns(turn, n, started, self.start_grace_s * (2 if lost else 1))
                 return
             except _NotStarted as e:
                 if not lost or attempt == self.start_retries:
@@ -350,7 +360,7 @@ class Civ6Governor(Governor):
                 self.log.emit("briefing_error", error=f"{e}; its reply was lost, so it is sent again "
                                                       f"({attempt + 1} of {self.start_retries})"[:300])
 
-    def _wait_turns(self, turn: int, n: int, started: float) -> None:
+    def _wait_turns(self, turn: int, n: int, started: float, grace: float) -> None:
         seen_active, misses, deadline = False, 0, self.turn_deadline_s * n
         idle_since: tuple[float, int] | None = None
         while True:
@@ -365,7 +375,7 @@ class Civ6Governor(Governor):
                     self.log.emit("turn", turn=st["turn"], turns=n, seconds=round(elapsed, 1), unanswered_polls=misses)
                     return
                 seen_active = seen_active or bool(st.get("active")) or st.get("turn", turn) > turn
-                if not seen_active and elapsed > self.start_grace_s:
+                if not seen_active and elapsed > grace:
                     raise _NotStarted(f"autoplay did not start at T{turn} (still inactive after {elapsed:.0f} s)")
                 # Autoplay reads inactive (turns 0) before its last turn ends (seen live), so an early
                 # end counts only when the turn stays unchanged for the start grace.
@@ -749,7 +759,12 @@ class Civ6Governor(Governor):
             base = order_base(c, after or b)
             window = order_window(o["kind"], base.get("turns_left"), *((spec.open_cap_turns, spec.open_grace_turns)
                                                                         if spec else ()))
+            ref = uuid.uuid4().hex[:12]
+            row["ref"] = ref
             self._tracking.append(Tracked(c, row, base, window))
+            # followed across restarts: reloaded until an order_outcome with this ref exists
+            self.log.emit("order_followed", ref=ref, row=row, order=c.order, wire=c.wire, expect=c.expect,
+                          base=base, window=window)
             return
         if status == "stuck":
             result, detail = "completed", ""

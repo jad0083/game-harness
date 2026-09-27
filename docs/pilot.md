@@ -128,7 +128,8 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   options, a unit's count rose, a building appeared), `held` (still current when its window of
   turns left + 3, at most 20, ends), `overridden` (the AI switched while it was still available),
   `invalidated`, `superseded` by our own later order, or `unknown`. Each resolved, refused or lost
-  order emits an `order_outcome` event (telemetry keeps it, so the record survives restarts). The
+  order emits an `order_outcome` event and each order still followed an `order_followed` event;
+  telemetry keeps both, so the record and the open orders survive restarts. The
   decision prompt and the Strategist get one line per kind (research, civic, policies, production
   fill or replace, purchase gold or faith) with its stick rate over the last 30 turns (`[orders]` in
   `pillars.toml`), flagged "does not stick here" at 50% or less; the dashboard gets

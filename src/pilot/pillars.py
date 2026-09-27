@@ -176,9 +176,15 @@ class PillarSpec:
                                 "gold_reserve": a.gold_reserve, "faith_reserve": a.faith_reserve,
                                 "treasury_share": a.treasury_share, "threatened_share": a.threatened_share,
                                 "gold_reserve_per_deficit": a.gold_reserve_per_deficit,
-                                "pantheon_reserve": a.pantheon_reserve, "skip_turns_left": a.skip_turns_left,
-                                "defence_first": a.defence_first, "defence_cooldown_turns": a.defence_cooldown_turns}
-                            for k, a in self.actions.items()}}
+                                "pantheon_reserve": a.pantheon_reserve, "prophet_faith_reserve": a.prophet_faith_reserve,
+                                "skip_turns_left": a.skip_turns_left, "defence_first": a.defence_first,
+                                "defender_classes": list(a.defender_classes),
+                                "defence_cooldown_turns": a.defence_cooldown_turns}
+                            for k, a in self.actions.items()},
+                "orders": None if self.orders is None else {
+                    "window_turns": self.orders.window_turns, "min_resolved": self.orders.min_resolved,
+                    "min_samples": dict(self.orders.min_samples), "weak_rate": self.orders.weak_rate,
+                    "open_cap_turns": self.orders.open_cap_turns, "open_grace_turns": self.orders.open_grace_turns}}
 
 
 _CACHE: dict[tuple[str, int], PillarSpec] = {}
