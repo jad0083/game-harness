@@ -22,7 +22,9 @@ _ACTION_KEYS = {
 }
 _ACTION_REQUIRED = {"tech": ("max_items", "ids_from_corpus"),
                     "market": ("max_items", "resources_from_manifest", "amount_max")}
-_TOP_KEYS = {"strategy", "metrics", "pillars", "actions"}
+_TOP_KEYS = {"strategy", "metrics", "pillars", "actions", "weights"}
+_WEIGHTS_KEYS = {"mode", "min", "max", "spread", "switch_margin", "need"}
+NEED_STATUSES = ("met", "on_track", "at_risk", "missed")
 _STRATEGY_KEYS = {"min_milestones_top", "min_milestones_each", "min_milestones_first", "min_goals", "min_goals_top",
                   "stance_needs_figure", "metric_aliases", "instructions"}
 _METRICS_KEYS = {"names", "row_keys"}
@@ -59,6 +61,19 @@ class ActionLimits:
 
 
 @dataclass(frozen=True)
+class WeightsSpec:
+    """How pillar weights are bounded and how milestone status turns weight into pressure
+    (docs/superpowers/specs/2026-09-26-weighted-pillars-design.md). The defaults leave weights free
+    and pressure equal to weight."""
+    mode: str = "exclusive"          # exclusive: one standing directive; share: effort split across levers
+    min: int = 0
+    max: int = 100
+    spread: float = 1.0              # heaviest >= spread x lightest
+    switch_margin: float = 1.0       # keep the current directive while its pressure >= top / margin
+    need: dict[str, float] = field(default_factory=lambda: dict.fromkeys(NEED_STATUSES, 1.0))
+
+
+@dataclass(frozen=True)
 class PillarSpec:
     game: str
     pillars: dict[str, PillarDef]
@@ -72,6 +87,7 @@ class PillarSpec:
     min_goals: int = 0                # for each of the top `min_goals_top` pillars
     min_goals_top: int = 0
     stance_needs_figure: bool = False  # a stance cites a number from the briefing
+    weights: WeightsSpec = field(default_factory=WeightsSpec)
     instructions: str = ""
 
     @property
@@ -92,7 +108,10 @@ class PillarSpec:
 
     def public(self) -> dict:
         """JSON view for the dashboard."""
+        w = self.weights
         return {"game": self.game, "metrics": list(self.metrics), "min_milestones_top": self.min_milestones_top,
+                "weights": {"mode": w.mode, "min": w.min, "max": w.max, "spread": w.spread,
+                            "switch_margin": w.switch_margin, "need": dict(w.need)},
                 "pillars": [{"id": p.id, "label": p.label, "description": p.description, "directive": p.directive,
                              "actions": list(p.actions)} for p in self.pillars.values()],
                 "actions": {k: {"field": a.field, "max_items": a.max_items, "resources": list(a.resources),
@@ -209,6 +228,41 @@ def _action(path: Path, corpus: Path, kind: str, t) -> ActionLimits:
                         sell_requires_idle=idle, note=note.strip())
 
 
+def _num(v) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
+def _weights(path: Path, t, n: int) -> WeightsSpec:
+    if not isinstance(t, dict):
+        raise _err(path, "weights", "must be a table")
+    _unknown(path, "weights", t, _WEIGHTS_KEYS)
+    d = WeightsSpec()
+    mode = t.get("mode", d.mode)
+    if mode not in ("exclusive", "share"):
+        raise _err(path, "weights.mode", 'must be "exclusive" or "share"')
+    lo = t.get("min", d.min)
+    if not _int(lo) or not 0 <= lo <= 100 // n:
+        raise _err(path, "weights.min", f"must be 0..{100 // n} (at most 100 / {n} pillars)")
+    hi = t.get("max", d.max)
+    if not _int(hi) or not lo <= hi <= 100 or hi * n < 100:
+        raise _err(path, "weights.max", f"must be min..100 and leave room for 100 across {n} pillars")
+    for key in ("spread", "switch_margin"):
+        v = t.get(key, getattr(d, key))
+        if not _num(v) or v < 1:
+            raise _err(path, f"weights.{key}", "must be a number >= 1")
+    need_raw = t.get("need", {})
+    if not isinstance(need_raw, dict):
+        raise _err(path, "weights.need", "must be a table")
+    _unknown(path, "weights.need", need_raw, set(NEED_STATUSES))
+    need = dict(d.need)
+    for k, v in need_raw.items():
+        if not _num(v) or v < 0:
+            raise _err(path, f"weights.need.{k}", "must be a number >= 0")
+        need[k] = float(v)
+    return WeightsSpec(mode=mode, min=lo, max=hi, spread=float(t.get("spread", d.spread)),
+                       switch_margin=float(t.get("switch_margin", d.switch_margin)), need=need)
+
+
 def _parse(path: Path, corpus: Path) -> PillarSpec:
     try:
         raw = tomllib.loads(path.read_text(encoding="utf-8"))
@@ -277,7 +331,8 @@ def _parse(path: Path, corpus: Path) -> PillarSpec:
     instructions = strat.get("instructions", "")
     if not isinstance(instructions, str):
         raise _err(path, "strategy.instructions", "must be text")
-    return PillarSpec(game=corpus.name, pillars=types.MappingProxyType(pillars), metrics=tuple(names),
+    weights = _weights(path, raw.get("weights", {}), len(pillars))
+    return PillarSpec(game=corpus.name, weights=weights, pillars=types.MappingProxyType(pillars), metrics=tuple(names),
                       metric_aliases=types.MappingProxyType(aliases), row_keys=types.MappingProxyType(row_keys),
                       actions=types.MappingProxyType(actions), min_milestones_top=top, stance_needs_figure=figure,
                       instructions=instructions.strip(), **detail)

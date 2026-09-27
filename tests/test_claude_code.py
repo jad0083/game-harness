@@ -58,7 +58,7 @@ def cli(monkeypatch):
 
 def _review_answer():
     prios = {"defence": 1, "economy": 2, "technology": 3, "expansion": 4, "diplomacy": 5, "government": 6, "society": 7}
-    pillars = {p: {"priority": n, "stance": f"{p} stance", "goals": ["g"],
+    pillars = {p: {"weight": 20 - 2 * n, "stance": f"{p} stance", "goals": ["g"],
                    "milestones": [{"metric": "systems", "op": ">=", "target": 10, "by": "2230.01.01"}] if n <= 3 else []}
                for p, n in prios.items()}
     return {"change": True, "assessment": "grew well", "rules": [], "strategy": {**pillars, "focus": "grow", "reason": "start"}}

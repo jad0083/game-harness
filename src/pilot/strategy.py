@@ -51,7 +51,8 @@ class MarketOrder(BaseModel):
 class Pillar(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    priority: int
+    weight: int = 0         # share of the empire's effort; all pillars sum to 100
+    priority: int = 0       # derived: rank by weight, 1 = heaviest (set by Strategy)
     stance: str
     goals: list[str] = Field(default_factory=list)
     milestones: list[Milestone] = Field(default_factory=list)
@@ -69,9 +70,40 @@ class Strategy(BaseModel):
     reason: str = ""
     identity: str = ""      # how our species, traits, ethics, civics and origin shape this strategy
 
+    @model_validator(mode="after")
+    def _weights_and_ranks(self):
+        """A strategy stored with ranks only (before weights) gets weights from its ranks; then every
+        pillar's `priority` is set to its rank by weight. Works on copies: the pillars passed in may be
+        shared with other strategies."""
+        self.pillars = {n: pl.model_copy() for n, pl in self.pillars.items()}
+        if self.pillars and not any(pl.weight for pl in self.pillars.values()):
+            by_rank = sorted(self.pillars.items(), key=lambda kv: (kv[1].priority, kv[0]))
+            for (_, pl), w in zip(by_rank, default_weights(len(by_rank), LEGACY_MIN_WEIGHT), strict=True):
+                pl.weight = w
+        for rank, (_, pl) in enumerate(self.sorted_pillars(), 1):
+            pl.priority = rank
+        return self
+
     def sorted_pillars(self) -> list[tuple[str, Pillar]]:
-        """(name, pillar) pairs in priority order."""
-        return sorted(self.pillars.items(), key=lambda kv: kv[1].priority)
+        """(name, pillar) pairs, heaviest first (equal weights by name)."""
+        return sorted(self.pillars.items(), key=lambda kv: (-kv[1].weight, kv[0]))
+
+
+LEGACY_MIN_WEIGHT = 5
+
+
+def default_weights(n: int, lo: int) -> list[int]:
+    """Weights for ranks 1..n: `lo` each plus the rest in proportion to n+1-rank, rounded by largest
+    remainder so they sum to 100 (7 pillars, lo 5: 21/19/17/14/12/10/7)."""
+    if n <= 0:
+        return []
+    lo = min(lo, 100 // n)
+    total = n * (n + 1) / 2
+    raw = [lo + (100 - n * lo) * (n + 1 - r) / total for r in range(1, n + 1)]
+    out = [int(x) for x in raw]
+    for i in sorted(range(n), key=lambda i: raw[i] - out[i], reverse=True)[:100 - sum(out)]:
+        out[i] += 1
+    return out
 
 
 def ranking(s: Strategy, spec: PillarSpec) -> list[str]:
@@ -148,6 +180,22 @@ def _action_errors(name: str, kind: str, items: list, a: ActionLimits, tech_ids:
     return errs
 
 
+def _weight_errors(s: Strategy, spec: PillarSpec) -> list[str]:
+    """pillars.toml [weights]: the weights sum to 100, each within min..max, the heaviest at least
+    `spread` x the lightest."""
+    w = spec.weights
+    errs = []
+    total = sum(pl.weight for pl in s.pillars.values())
+    if total != 100:
+        errs.append(f"weights must sum to 100 (got {total})")
+    errs.extend(f"{name}: weight must be {w.min}..{w.max}" for name, pl in s.pillars.items()
+                if not w.min <= pl.weight <= w.max)
+    ws = [pl.weight for pl in s.pillars.values()]
+    if ws and w.spread > 1 and max(ws) < w.spread * min(ws):
+        errs.append(f"the heaviest pillar ({max(ws)}) must weigh at least {w.spread:g} x the lightest ({min(ws)})")
+    return errs
+
+
 def _detail_errors(s: Strategy, spec: PillarSpec) -> list[str]:
     """The spec's detail rules for a Strategist's answer: milestones on every pillar and a checkpoint
     plus an end target on the first, concrete goals on the top pillars, figures in each stance.
@@ -160,9 +208,9 @@ def _detail_errors(s: Strategy, spec: PillarSpec) -> list[str]:
             errs.append(f"{name}: needs at least {spec.min_milestones_each} milestone"
                         f"{'' if spec.min_milestones_each == 1 else 's'}")
         if rank == 1 and spec.min_milestones_first and len({m.by for m in pl.milestones}) < spec.min_milestones_first:
-            errs.append(f"{name}: priority 1 needs at least {spec.min_milestones_first} milestones on different dates")
+            errs.append(f"{name}: the heaviest pillar needs at least {spec.min_milestones_first} milestones on different dates")
         if rank <= spec.min_goals_top and len(pl.goals) < spec.min_goals:
-            errs.append(f"{name}: priority {pl.priority} is in the top {spec.min_goals_top} and needs at least "
+            errs.append(f"{name}: weight rank {rank} is in the top {spec.min_goals_top} and needs at least "
                         f"{spec.min_goals} goals")
         if spec.stance_needs_figure and not re.search(r"\d", pl.stance):
             errs.append(f"{name}: the stance must cite at least one figure from the briefing")
@@ -181,17 +229,11 @@ def validate(s: Strategy, spec: PillarSpec, *, previous: Strategy | None, tech_i
     briefing never blocks a review (see `pinned_misfits`). With `require_milestones`, each unpinned
     pillar among the top `spec.min_milestones_top` by priority needs a milestone (human edits pass False)."""
     checked = _briefing_checked(s, previous) if briefing_checked is None else briefing_checked
-    n = len(spec.pillars)
     errs: list[str] = []
     errs.extend(f"missing pillar {p}" for p in spec.pillars if p not in s.pillars)
     errs.extend(f"unknown pillar {p!r}" for p in s.pillars if p not in spec.pillars)
-    seen: dict[int, str] = {}
+    errs.extend(_weight_errors(s, spec))
     for name, pl in s.pillars.items():
-        if pl.priority in seen:
-            errs.append(f"duplicate priority {pl.priority} ({seen[pl.priority]}, {name})")
-        seen[pl.priority] = name
-        if not 1 <= pl.priority <= n:
-            errs.append(f"{name}: priority must be 1..{n}")
         if len(pl.stance) > 400:
             errs.append(f"{name}: stance is over 400 characters")
         if len(pl.goals) > 3:
@@ -293,7 +335,7 @@ class PillarOut(BaseModel):
     """One pillar as the Strategist writes it; action fields are added per pillar from the spec."""
     model_config = ConfigDict(extra="forbid")
 
-    priority: int = Field(description="unique; 1 = first")
+    weight: int = Field(description="share of the empire's effort; all pillars together sum to 100")
     stance: str = Field(description="one or two sentences")
     goals: list[str] = Field(default_factory=list, description="1-3 goals")
     milestones: list[Milestone] = Field(default_factory=list, description="measurable targets with a date")
@@ -305,7 +347,7 @@ class PillarOut(BaseModel):
         action list is dropped too (the stored shape carries every action field on every pillar); a
         non-empty one on a pillar that does not declare it still fails."""
         if isinstance(data, dict):
-            data = {k: v for k, v in data.items() if k not in ("pinned", "edited_by")
+            data = {k: v for k, v in data.items() if k not in ("pinned", "edited_by", "priority")
                     and not (k in ACTION_KINDS.values() and k not in cls.model_fields and v == [])}
         return data
 
@@ -364,7 +406,7 @@ def strategy_for_prompt(s: Strategy, spec: PillarSpec) -> str:
     out: dict = {}
     for name, pl in s.sorted_pillars():
         declared = spec.pillars[name].actions if name in spec.pillars else ()
-        keep = {"priority", "stance", "goals", "milestones"} | {ACTION_KINDS[k] for k in declared if k in ACTION_KINDS}
+        keep = {"weight", "stance", "goals", "milestones"} | {ACTION_KINDS[k] for k in declared if k in ACTION_KINDS}
         out[name] = pl.model_dump(include=keep)
     out.update(focus=s.focus, reason=s.reason)
     return json.dumps(out, indent=1, ensure_ascii=False)
@@ -389,7 +431,11 @@ def strategist_instructions(spec: PillarSpec) -> str:
     for p in spec.pillars.values():
         ranks = f"ranks the directive {p.directive}" if p.directive else "ranks no directive"
         lines.append(f"- {p.id} ({p.label}): {p.description} [{ranks}]")
-    lines.append(f"Each pillar: a unique priority (1..{len(spec.pillars)}, 1 = first), a stance of one or two "
+    w = spec.weights
+    lines.append(f"Each pillar: a weight (a whole number, the share of the empire's effort; all pillars sum to "
+                 f"100, each {w.min}..{w.max}"
+                 + (f", the heaviest at least {w.spread:g} x the lightest" if w.spread > 1 else "")
+                 + "; the governor steers by weight x how far behind the pillar's milestones are), a stance of one or two "
                  "sentences, 1-3 goals, and milestones on the briefing's measures (exactly these names: "
                  + ", ".join(spec.metrics) + "; a rank is 1 = best, so use op <= for it) with a target and an "
                  "in-game date YYYY.MM.DD.")
@@ -399,10 +445,10 @@ def strategist_instructions(spec: PillarSpec) -> str:
         lines.append(f"Every pillar needs at least {spec.min_milestones_each} milestone"
                      f"{'' if spec.min_milestones_each == 1 else 's'}, so each one can be measured.")
     if spec.min_milestones_first:
-        lines.append(f"The priority-1 pillar needs at least {spec.min_milestones_first} milestones: a checkpoint "
+        lines.append(f"The heaviest pillar needs at least {spec.min_milestones_first} milestones: a checkpoint "
                      "and a later end target.")
     if spec.min_goals:
-        lines.append(f"Each of the {spec.min_goals_top} highest-priority pillars needs at least {spec.min_goals} "
+        lines.append(f"Each of the {spec.min_goals_top} heaviest pillars needs at least {spec.min_goals} "
                      "concrete goals (what to reach and where, not 'wait' or 'maintain').")
     if spec.stance_needs_figure:
         lines.append("Each stance cites at least one figure from the briefing (a stock, a monthly net, a ratio "
@@ -433,3 +479,59 @@ def strategist_instructions(spec: PillarSpec) -> str:
     if spec.instructions:
         lines.append(spec.instructions)
     return "\n".join(lines)
+
+
+# ---- pressure: weight x milestone need (weighted pillars spec) -------------------------------------
+
+def pressures(s: Strategy, spec: PillarSpec, status_of) -> dict[str, dict]:
+    """Per pillar: weight, need (the largest `[weights.need]` multiplier among its milestones' statuses,
+    1.0 without milestones), the status that set it and pressure = weight x need. `status_of(name,
+    milestone)` gives a milestone's status (met / on_track / at_risk / missed)."""
+    table = spec.weights.need
+    out = {}
+    for name, pl in s.sorted_pillars():
+        statuses = [status_of(name, m) for m in pl.milestones]
+        worst = max(statuses, key=lambda st: table.get(st, 1.0), default="")
+        need = table.get(worst, 1.0) if worst else 1.0
+        out[name] = {"weight": pl.weight, "need": need, "status": worst, "pressure": round(pl.weight * need, 1)}
+    return out
+
+
+def directive_pressure(press: dict[str, dict], spec: PillarSpec) -> list[tuple[str, float, str]]:
+    """(directive, pressure, pillar) for every pillar that ranks a directive, highest pressure first."""
+    rows = [(d, p["pressure"], name) for name, p in press.items() if (d := spec.directive_of(name))]
+    return sorted(rows, key=lambda r: (-r[1], r[2]))
+
+
+def suggestion(ranked: list[tuple[str, float, str]], current: str | None, margin: float) -> str:
+    """The top-pressure directive, or "keep" while the current directive's pressure is at least the
+    top's divided by `margin` (switching costs the game's AI time to re-plan)."""
+    if not ranked:
+        return "keep"
+    top = ranked[0]
+    cur = next((r for r in ranked if r[0] == current), None)
+    if cur is not None and (cur is top or cur[1] >= top[1] / margin):
+        return "keep"
+    return top[0]
+
+
+def shares(press: dict[str, dict]) -> dict[str, int]:
+    """Each pillar's share of the total pressure, in whole percent (share mode)."""
+    total = sum(p["pressure"] for p in press.values())
+    return {name: round(100 * p["pressure"] / total) if total else 0 for name, p in press.items()}
+
+
+def rebalance(pillars: dict[str, Pillar], edited: str) -> dict[str, Pillar]:
+    """`pillars` after a human set `edited`'s weight: the other unpinned pillars are rescaled in
+    proportion (largest remainder) so all weights sum to 100 again; pinned ones keep theirs. Bounds
+    are left to `validate`."""
+    fixed = sum(pl.weight for n, pl in pillars.items() if n == edited or pl.pinned)
+    free = [n for n, pl in pillars.items() if n != edited and not pl.pinned]
+    target, have = 100 - fixed, sum(pillars[n].weight for n in free)
+    if not free or have <= 0 or target < 0:
+        return pillars
+    raw = {n: pillars[n].weight * target / have for n in free}
+    new = {n: int(v) for n, v in raw.items()}
+    for n in sorted(free, key=lambda n: raw[n] - new[n], reverse=True)[:target - sum(new.values())]:
+        new[n] += 1
+    return {n: pl.model_copy(update={"weight": new[n]}) if n in new else pl for n, pl in pillars.items()}

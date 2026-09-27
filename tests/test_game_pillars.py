@@ -62,10 +62,10 @@ def _strategist(schemas: list):
     def respond(messages, info: AgentInfo) -> ModelResponse:
         schemas.append(info.output_tools[0].parameters_json_schema)
         body = {"change": True, "assessment": "ok", "rules": [], "strategy": {
-            "science": {"priority": 1, "stance": "research first", "goals": ["g"],
+            "science": {"weight": 50, "stance": "research first", "goals": ["g"],
                         "milestones": [{"metric": "planets", "op": ">=", "target": 6, "by": "2230.01.01"}]},
-            "growth": {"priority": 2, "stance": "settle", "goals": ["g"]},
-            "culture": {"priority": 3, "stance": "later"},
+            "growth": {"weight": 30, "stance": "settle", "goals": ["g"]},
+            "culture": {"weight": 20, "stance": "later"},
             "focus": "tall", "reason": "start"}}
         return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, body)])
     return FunctionModel(respond)
@@ -94,7 +94,7 @@ def test_a_synthetic_game_runs_review_and_decisions_on_its_own_pillars(synth):
     assert set(g.strategy.pillars) == {"science", "growth", "culture"}
     assert g.strategy.pillars["science"].milestones[0].metric == "colonies", "the synthetic game's alias"
     assert ranking(g.strategy, spec) == ["tech_rush", "expand"]
-    assert "Directive ranking: tech_rush > expand" in prompts[0]
+    assert "Directive pressure (weight x milestone need): tech_rush " in prompts[0] and "> expand " in prompts[0]
     traces = [e for e in log.recent if e["kind"] == "trace" and e.get("decision") == "defend"]
     assert traces and traces[-1].get("off_frame") is True, "defend is outside this game's ranking"
     assert g.review_requested and "off-frame" in g.review_requested
@@ -120,19 +120,19 @@ def test_the_synthetic_strategist_prompt_and_schema_carry_no_stellaris_pillars(s
 def test_validation_follows_the_synthetic_spec(synth):
     _, _, spec = synth
     ms = [Milestone(metric="pops", op=">=", target=5, by="2230.01.01")]
-    ok = Strategy(pillars={"science": Pillar(priority=1, stance="s", goals=["g"], milestones=ms),
-                           "growth": Pillar(priority=2, stance="s"), "culture": Pillar(priority=3, stance="s")}, focus="f")
+    ok = Strategy(pillars={"science": Pillar(weight=50, stance="s", goals=["g"], milestones=ms),
+                           "growth": Pillar(weight=30, stance="s"), "culture": Pillar(weight=20, stance="s")}, focus="f")
     assert validate(ok, spec, previous=None, tech_ids=set(), idle=set(), income={}) == []
-    stellaris_shaped = Strategy(pillars={"economy": Pillar(priority=1, stance="s", milestones=ms)}, focus="f")
+    stellaris_shaped = Strategy(pillars={"economy": Pillar(weight=100, stance="s", milestones=ms)}, focus="f")
     errs = " | ".join(validate(stellaris_shaped, spec, previous=None, tech_ids=set(), idle=set(), income={}))
     assert "unknown pillar 'economy'" in errs and "missing pillar science" in errs
-    bad = ok.model_copy(update={"pillars": {**ok.pillars, "culture": Pillar(
-        priority=4, stance="s", milestones=[Milestone(metric="systems", op=">=", target=1, by="2230.01.01")],
-        prefer_techs=["x"])}})
+    bad = Strategy(pillars={**ok.pillars, "culture": Pillar(
+        weight=25, stance="s", milestones=[Milestone(metric="systems", op=">=", target=1, by="2230.01.01")],
+        prefer_techs=["x"])}, focus="f")
     errs = " | ".join(validate(bad, spec, previous=None, tech_ids=set(), idle=set(), income={}))
-    assert "culture: priority must be 1..3" in errs
+    assert "weights must sum to 100 (got 105)" in errs
     assert "culture: unknown metric 'systems'" in errs
     assert "culture: prefer_techs is not an action in this game" in errs
-    no_ms = ok.model_copy(update={"pillars": {**ok.pillars, "science": Pillar(priority=1, stance="s")}})
+    no_ms = Strategy(pillars={**ok.pillars, "science": Pillar(weight=50, stance="s")}, focus="f")
     assert "science: priority 1 is in the top 1 and needs at least one milestone" in \
         validate(no_ms, spec, previous=None, tech_ids=set(), idle=set(), income={})

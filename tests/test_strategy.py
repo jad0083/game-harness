@@ -47,7 +47,6 @@ def test_validation_catches_bad_pillars_metrics_techs_and_orders():
                                market=[{"side": "sell", "resource": "energy", "amount": 500}]))
     errs = validate(bad, SPEC, previous=None, tech_ids={"tech_habitat_1"}, idle={"energy"}, income={"energy": 100})
     joined = " | ".join(errs)
-    assert "duplicate priority 3" in joined
     assert "unknown metric 'happiness'" in joined
     assert "unknown tech 'tech_nope'" in joined
     assert "energy 500 is over 20" in joined
@@ -410,10 +409,10 @@ def test_aliases_come_from_the_spec():
     assert s.pillars["economy"].milestones[0].metric == "rank:military", "Milestone itself only strips"
 
 
-def test_validation_uses_the_spec_metrics_and_pillar_count():
-    bad = strat(society=Pillar(priority=8, stance="s", milestones=[Milestone(metric="culture", op=">=", target=1, by="2250.01.01")]))
+def test_validation_uses_the_spec_metrics():
+    bad = strat(society=Pillar(priority=7, stance="s", milestones=[Milestone(metric="culture", op=">=", target=1, by="2250.01.01")]))
     joined = " | ".join(validate(bad, SPEC, previous=None, tech_ids=set(), idle=set(), income={}))
-    assert "society: priority must be 1..7" in joined and "society: unknown metric 'culture'" in joined
+    assert "society: unknown metric 'culture'" in joined
 
 
 # ---- the Strategist's schema is generated from the spec -------------------------------------------
@@ -447,16 +446,16 @@ def test_a_claude_style_answer_converts_to_a_valid_strategy():
     from pilot.strategy import review_model, to_strategy
     ms = [{"metric": "rank:military", "op": "<=", "target": 3, "by": "2250.01.01"}]
     answer = {"change": True, "assessment": "a", "rules": [], "strategy": {
-        "defence": {"priority": 1, "stance": "Maggar 2.3x", "goals": ["g", "h"],
+        "defence": {"weight": 30, "stance": "Maggar 2.3x", "goals": ["g", "h"],
                     "milestones": ms + [{**ms[0], "target": 5, "by": "2247.01.01"}]},
-        "economy": {"priority": 2, "stance": "energy -58.7", "goals": ["g", "h"], "milestones": ms,
+        "economy": {"weight": 22, "stance": "energy -58.7", "goals": ["g", "h"], "milestones": ms,
                     "market": [{"side": "buy", "resource": "alloys", "amount": 5}]},
-        "technology": {"priority": 3, "stance": "58 techs", "goals": ["g", "h"], "milestones": ms,
+        "technology": {"weight": 16, "stance": "58 techs", "goals": ["g", "h"], "milestones": ms,
                        "prefer_techs": ["tech_habitat_1"]},
-        "expansion": {"priority": 4, "stance": "14 systems", "milestones": ms},
-        "diplomacy": {"priority": 5, "stance": "opinion 888", "milestones": ms},
-        "government": {"priority": 6, "stance": "stability 46", "milestones": ms},
-        "society": {"priority": 7, "stance": "12 pops", "milestones": ms},
+        "expansion": {"weight": 12, "stance": "14 systems", "milestones": ms},
+        "diplomacy": {"weight": 8, "stance": "opinion 888", "milestones": ms},
+        "government": {"weight": 7, "stance": "stability 46", "milestones": ms},
+        "society": {"weight": 5, "stance": "12 pops", "milestones": ms},
         "focus": "hold the line"}}
     r = review_model(SPEC).model_validate(answer)
     s = to_strategy(r.strategy, SPEC)
@@ -487,7 +486,7 @@ def test_action_fields_exist_only_on_declaring_pillars():
 def test_the_stored_shape_and_human_fields_are_accepted_as_input():
     from pilot.strategy import review_model, to_strategy
     legacy = {"change": True, "assessment": "a", "strategy": {"focus": "f", "reason": "r", "pillars": {
-        "economy": {"priority": 1, "stance": "s", "pinned": True, "edited_by": "human"}}}}
+        "economy": {"weight": 100, "priority": 1, "stance": "s", "pinned": True, "edited_by": "human"}}}}
     s = to_strategy(review_model(SPEC).model_validate(legacy).strategy, SPEC)
     assert set(s.pillars) == {"economy"} and s.pillars["economy"].pinned is False, "a model can never pin"
 
@@ -596,15 +595,15 @@ def test_every_pillar_needs_a_milestone():
 
 def test_the_first_pillar_needs_a_checkpoint_and_an_end_target():
     one = Pillar(priority=1, stance="Maggar 2.3x", goals=["a", "b"], milestones=[_M])
-    assert "defence: priority 1 needs at least 2 milestones on different dates" in _ok(defence=one)
+    assert "defence: the heaviest pillar needs at least 2 milestones on different dates" in _ok(defence=one)
     same_day = one.model_copy(update={"milestones": [_M, _M]})
-    assert "defence: priority 1 needs at least 2 milestones on different dates" in _ok(defence=same_day)
+    assert "defence: the heaviest pillar needs at least 2 milestones on different dates" in _ok(defence=same_day)
     early = _M.model_copy(update={"by": "2247.01.01"})
     assert _ok(defence=one.model_copy(update={"milestones": [early, _M]})) == []
 
 
 def test_the_top_pillars_need_two_goals():
-    assert "economy: priority 2 is in the top 3 and needs at least 2 goals" in _ok(
+    assert "economy: weight rank 2 is in the top 3 and needs at least 2 goals" in _ok(
         economy=Pillar(priority=2, stance="Energy -58.7", goals=["one"], milestones=[_M]))
     assert _ok(expansion=Pillar(priority=4, stance="14 systems", goals=["one"], milestones=[_M])) == [], "priority 4 may have one"
 
@@ -625,6 +624,109 @@ def test_the_prompt_states_the_detail_rules():
     from pilot.strategy import strategist_instructions
     text = strategist_instructions(SPEC)
     assert "Every pillar needs at least 1 milestone" in text
-    assert "The priority-1 pillar needs at least 2 milestones: a checkpoint and a later end target." in text
-    assert "Each of the 3 highest-priority pillars needs at least 2 concrete goals" in text
+    assert "The heaviest pillar needs at least 2 milestones: a checkpoint and a later end target." in text
+    assert "Each of the 3 heaviest pillars needs at least 2 concrete goals" in text
+    assert "all pillars sum to 100, each 5..50, the heaviest at least 2 x the lightest" in text
     assert "Each stance cites at least one figure from the briefing" in text
+
+
+# ---- weighted pillars (docs/superpowers/specs/2026-09-26-weighted-pillars-design.md) ---------------
+
+W = {"defence": 30, "economy": 22, "technology": 16, "expansion": 12, "diplomacy": 8, "government": 7, "society": 5}
+
+
+def wstrat(**over) -> Strategy:
+    pillars = {p: Pillar(weight=w, stance=f"{p} at 42", goals=["a", "b"],
+                         milestones=[_M_EARLY, _M] if p == "defence" else [_M]) for p, w in W.items()}
+    pillars.update(over)
+    return Strategy(pillars=pillars, focus="f")
+
+
+def test_the_rank_follows_the_weights():
+    s = wstrat()
+    assert [n for n, _ in s.sorted_pillars()] == list(W)
+    assert {n: pl.priority for n, pl in s.pillars.items()} == {n: i for i, n in enumerate(W, 1)}
+    assert ranking(s, SPEC) == ["defend", "consolidate_economy", "tech_rush", "expand", "diplomacy_first"]
+
+
+def test_equal_weights_rank_by_name():
+    s = wstrat(government=Pillar(weight=8, stance="7 edicts", milestones=[_M]))
+    names = [n for n, _ in s.sorted_pillars()]
+    assert names.index("diplomacy") < names.index("government")
+
+
+def test_a_ranked_strategy_converts_to_weights_on_load():
+    from pilot.strategy import default_weights
+    assert default_weights(7, 5) == [21, 19, 17, 14, 12, 10, 7] and sum(default_weights(7, 5)) == 100
+    old = strat()                       # priorities only, as every stored strategy is today
+    assert {n: pl.weight for n, pl in old.pillars.items()} == dict(zip(PRIOS, [21, 19, 17, 14, 12, 10, 7], strict=True))
+    assert old.sorted_pillars()[0][0] == "defence"
+    assert validate(old, SPEC, previous=None, tech_ids=set(), idle=set(), income={}) == []
+
+
+def test_weights_must_sum_to_100_within_bounds_and_spread():
+    def errs(**w):
+        s = wstrat(**{p: wstrat().pillars[p].model_copy(update={"weight": v}) for p, v in w.items()})
+        return validate(s, SPEC, previous=None, tech_ids=set(), idle=set(), income={})
+    assert errs() == []
+    assert "weights must sum to 100 (got 101)" in errs(defence=31)
+    assert "society: weight must be 5..50" in errs(defence=34, society=1)
+    assert "defence: weight must be 5..50" in errs(defence=55, economy=10, technology=3)
+    flat = {"defence": 16, "economy": 15, "technology": 14, "expansion": 14, "diplomacy": 14, "government": 14, "society": 13}
+    assert "the heaviest pillar (16) must weigh at least 2 x the lightest (13)" in errs(**flat)
+
+
+def test_the_output_schema_takes_weights_and_drops_priority():
+    from pilot.strategy import review_model, to_strategy
+    Out = review_model(SPEC)
+    pillars = {p: {"weight": w, "priority": 9, "stance": f"{p} 1", "goals": ["a", "b"],
+                   "milestones": [{"metric": "systems", "op": ">=", "target": 3, "by": "2250.01.01"}]} for p, w in W.items()}
+    r = Out.model_validate({"change": True, "assessment": "a", "strategy": {**pillars, "focus": "f"}})
+    s = to_strategy(r.strategy, SPEC)
+    assert s.pillars["defence"].weight == 30 and s.pillars["defence"].priority == 1
+    import pydantic
+    with pytest.raises(pydantic.ValidationError, match="weight"):
+        Out.model_validate({"change": True, "assessment": "a",
+                            "strategy": {"defence": {"stance": "x"}, "focus": "f"}})
+
+
+def test_the_prompt_shape_shows_weights_not_priorities():
+    import json
+
+    from pilot.strategy import strategy_for_prompt
+    shown = json.loads(strategy_for_prompt(wstrat(), SPEC))
+    assert shown["defence"]["weight"] == 30 and "priority" not in shown["defence"]
+
+
+def test_need_is_the_largest_multiplier_among_the_milestones():
+    from pilot.strategy import pressures
+    st = {"defence": ["met", "at_risk"], "economy": ["met"], "technology": ["missed"], "expansion": []}
+    p = pressures(wstrat(), SPEC, lambda name, m: st.get(name, ["on_track"]).pop(0) if st.get(name) else "on_track")
+    assert p["defence"] == {"weight": 30, "need": 1.5, "status": "at_risk", "pressure": 45.0}
+    assert p["economy"]["need"] == 0.3 and p["economy"]["pressure"] == 6.6
+    assert p["technology"]["pressure"] == 32.0
+
+
+def test_a_pillar_without_milestones_has_need_one():
+    from pilot.strategy import pressures
+    s = wstrat(society=Pillar(weight=5, stance="3 pops"))
+    assert pressures(s, SPEC, lambda n, m: "missed")["society"] == {"weight": 5, "need": 1.0, "status": "", "pressure": 5.0}
+
+
+def test_directive_pressure_ranks_and_the_suggestion_respects_the_switch_margin():
+    from pilot.strategy import directive_pressure, suggestion
+    press = {"economy": {"pressure": 45.0}, "defence": {"pressure": 38.0}, "technology": {"pressure": 20.0},
+             "expansion": {"pressure": 12.0}, "diplomacy": {"pressure": 8.0}, "government": {"pressure": 7.0},
+             "society": {"pressure": 5.0}}
+    ranked = directive_pressure(press, SPEC)
+    assert [d for d, _, _ in ranked] == ["consolidate_economy", "defend", "tech_rush", "expand", "diplomacy_first"]
+    assert suggestion(ranked, "defend", 1.25) == "keep"            # 38 >= 45 / 1.25 = 36
+    assert suggestion(ranked, "tech_rush", 1.25) == "consolidate_economy"
+    assert suggestion(ranked, None, 1.25) == "consolidate_economy"
+    assert suggestion(ranked, "consolidate_economy", 1.25) == "keep"
+
+
+def test_shares_split_the_pressure():
+    from pilot.strategy import shares
+    assert shares({"a": {"pressure": 30.0}, "b": {"pressure": 10.0}}) == {"a": 75, "b": 25}
+    assert shares({"a": {"pressure": 0.0}}) == {"a": 0}

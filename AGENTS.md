@@ -250,7 +250,10 @@ Rules:
 - Directives are only those in `corpora/stellaris/directives.toml` (identifiers `[a-z0-9_]`); a
   new directive needs policy options that exist in the game's `common/policies`.
 - Settings used: autosave Monthly (`settings.txt` `autosave=2`), tutorial off.
-- **Strategy detail** (`[strategy]` in pillars.toml): every pillar needs a milestone, priority 1 two
+- **Weighted pillars** (`[weights]` in pillars.toml): pillars carry weights (sum 100, 5..50, heaviest
+  >= 2x lightest); each decision gets every directive's pressure (weight x milestone need) and a
+  suggestion (the top one, or keep within a 1.25 switch margin); decisions name what they `serve`.
+- **Strategy detail** (`[strategy]` in pillars.toml): every pillar needs a milestone, the heaviest two
   on different dates (a checkpoint and an end target), the top 3 two goals, and each stance a figure from
   the briefing; a Strategist answer that misses one is sent back once with its errors. Pinned pillars
   and human edits are exempt.
