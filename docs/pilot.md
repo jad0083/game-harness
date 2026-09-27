@@ -105,12 +105,15 @@ snapshots and human requests only ever happen between turns. `PILOT_AUTOPLAY_CHU
 several turns per call (urgent checks then run between chunks). Each autoplay call turns the
 tutorial advisor off for the session: its popups wait for a click and hold the turn forever.
 
-- **Snapshot** (`game-controller civ6 snapshot`, about 2 KB): turn, era and era score, civ and leader,
-  yields, treasury and faith, research and civic with turns left, what can be researched,
-  progressed and slotted now, government and policy slots, every city (population, production and
-  turns left, districts, threats, what it can build), units by type, the majors met with score and
-  military strength, wars, great person points, the end-turn blocker. The briefing names every item
-  by its corpus id (`tech:pottery`, `unit:settler`).
+- **Snapshot** (`game-controller civ6 snapshot`, 2-8 KB; 8.1 KB with six cities at T124): turn, era
+  and era score, civ and leader, yields, treasury and faith, research and civic with turns left,
+  what can be researched, progressed and slotted now, government and policy slots, every city
+  (position, population, production and turns left, districts, buildings, the land unit on its tile,
+  garrison and walls HP, threats, what it can build; for a threatened city also its enemies and
+  defenders, capture threats, incoming damage, whether it can strike and what a defender costs in
+  gold and faith), units by type, the majors met with score and military strength, wars, great
+  person points, pantheon and religion, every end-turn blocker. The briefing names every item by
+  its corpus id (`tech:pottery`, `unit:settler`).
 - **Orders** are structured, never Lua: `research`, `civic`, `policies`, `production`, `purchase`
   (see `corpora/civ6/pilot.md`). The governor checks each against the corpus, the snapshot (options,
   the city's buildable items) and `pillars.toml` (orders per decision; purchases keep the reserves and
