@@ -935,10 +935,16 @@ class Governor:
                 return b
             except Exception as e:  # noqa: BLE001
                 self._needs_attention(f"could not start: {type(e).__name__}: {e}. Fix the game or the agent, "
-                                      "then press Resume to try again.")
-                while self.control.paused and not self.control.stopping:
-                    time.sleep(0.5)
+                                      "then press Resume to try again.", auto_recover=self._transient(e))
+                self._wait_for_resume()
         return None
+
+    def _wait_for_resume(self) -> None:
+        """Wait for the human's Resume, or, after a transient failure, for the agent to answer again."""
+        while self.control.paused and not self.control.stopping:
+            if self._probe_recovered():
+                return
+            time.sleep(0.5 if self.recover_every_s else 0.01)
 
     def _handle_request(self, req: tuple[str, str], b: dict) -> dict:
         """Run one human request (already taken from the queue; the game is paused)."""

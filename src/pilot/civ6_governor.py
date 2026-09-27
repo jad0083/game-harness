@@ -321,10 +321,10 @@ class Civ6Governor(Governor):
                 self._decide(b, "start of run", reviewed_at_start=reviewed)
                 return self._after_orders or b
             except Exception as e:  # noqa: BLE001
+                # a timeout (the AI still playing its last turn when the run starts) is retried by itself
                 self._needs_attention(f"could not start: {type(e).__name__}: {e}. Load the game (with the tuner "
-                                      "enabled) and press Resume to try again.")
-                while self.control.paused and not self.control.stopping:
-                    time.sleep(0.5)
+                                      "enabled) and press Resume to try again.", auto_recover=self._transient(e))
+                self._wait_for_resume()
         return None
 
     def _handle_request(self, req: tuple[str, str], b: dict) -> dict:

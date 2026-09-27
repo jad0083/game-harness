@@ -3750,3 +3750,24 @@ def test_a_non_transient_failure_still_waits_for_the_human(setup, monkeypatch):
     assert log.state.status == "needs_attention" and not any(e["kind"] == "recovered" for e in log.recent)
     g.control.stopping = True
     t.join(5)
+
+
+def test_a_start_that_times_out_recovers_without_a_human(setup, monkeypatch):
+    import urllib.error
+    s, log = setup
+    game = FakeStellaris([briefing("2200.01.01"), briefing("2201.01.01"), briefing("2202.01.01")])
+    real, n = game.take_control, {"calls": 0}
+
+    def flaky():
+        n["calls"] += 1
+        if n["calls"] == 1:
+            raise urllib.error.URLError("timed out")
+        return real()
+
+    monkeypatch.setattr(game, "take_control", flaky)
+    g = Governor(s, game, log, model=decisions("defend"))
+    g.recover_every_s = 0
+    g.run(max_decisions=1)
+    kinds = [e["kind"] for e in log.recent]
+    assert "needs_attention" in kinds and "recovered" in kinds, kinds
+    assert log.state.episodes >= 1, "the start was tried again by itself"

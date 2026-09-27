@@ -1828,3 +1828,38 @@ def order_row_top3(setup, recs):
     c = Checked(order={"kind": "production", "city": "Beijing", "id": "unit:slinger"},
                 wire={"kind": "production", "city": "Beijing", "id": "unit:slinger"})
     return g._order_row(c, b, "replace")["top3"]
+
+
+def test_a_start_that_times_out_recovers_without_a_human(setup, monkeypatch):
+    # live 2026-09-27: the service restarted while the AI still played the last stretch; the first
+    # snapshot timed out and the run waited for a human although the tuner answered seconds later
+    game = FakeCiv6(FIXTURE, index=INDEX)
+    real, n = game.snapshot, {"calls": 0}
+
+    def flaky():
+        n["calls"] += 1
+        if n["calls"] == 1:
+            raise RuntimeError("game-controller civ6 snapshot failed (exit 1): operation timed out")
+        return real()
+
+    monkeypatch.setattr(game, "snapshot", flaky)
+    g = governor(setup, game, orders_model([]))
+    g.recover_every_s = 0
+    g.run(max_decisions=1)
+    kinds = [e["kind"] for e in g.log.recent]
+    assert "needs_attention" in kinds and "recovered" in kinds, kinds
+    assert traces(setup)[0]["trigger"] == "start of run", "the start was tried again by itself"
+
+
+def test_a_start_that_fails_for_another_reason_still_waits_for_the_human(setup, monkeypatch):
+    import threading
+    game = FakeCiv6(FIXTURE, index=INDEX)
+    monkeypatch.setattr(game, "snapshot", lambda: (_ for _ in ()).throw(RuntimeError("no game loaded")))
+    g = governor(setup, game, orders_model([]))
+    g.recover_every_s = 0
+    t = threading.Thread(target=g.run, kwargs={"max_decisions": 1}, daemon=True)
+    t.start()
+    t.join(2)
+    assert g.log.state.status == "needs_attention" and not any(e["kind"] == "recovered" for e in g.log.recent)
+    g.control.stopping = True
+    t.join(5)
