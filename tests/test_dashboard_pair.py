@@ -337,6 +337,39 @@ def test_the_device_a_grant_made_may_present_it_again(tmp_path, clock):
     assert auth.store.grant(g["id"])["state"] == "used"
 
 
+@pytest.mark.parametrize("how", ["revoke", "revoke_others", "cli_revoke_all", "store_only"])
+@pytest.mark.parametrize("face", ["link", "words"])
+def test_a_signed_out_device_leaves_no_code_behind(tmp_path, clock, monkeypatch, how, face):
+    """A stolen session that keeps a code live (a new one every 9 minutes) gets nothing from it once
+    that session is signed out: the code is cancelled with it, and a code whose maker is signed out
+    is refused however it was signed out (store_only: a revoke that left the grant waiting)."""
+    app, auth = viewer(tmp_path, clock)
+    owner, _ = browser_cookie(auth, name="Owner's Chrome")
+    thief, _ = browser_cookie(auth, name="Stolen session")
+    g = auth.store.create_grant(thief, words=True)
+    if how == "revoke":
+        auth.store.revoke(thief, "revoked", by=owner)
+    elif how == "revoke_others":
+        auth.store.revoke_others(owner, by=owner)
+    elif how == "cli_revoke_all":
+        monkeypatch.setenv("PILOT_AUTH_DB", str(auth.store.path))
+        with redirect_stdout(io.StringIO()):
+            assert cli.main(["dashboard-devices", "revoke-all", "--except", owner]) == 0
+    else:
+        auth.store._x("UPDATE devices SET revoked_at=?, revoke_reason='revoked' WHERE id=?", (clock(), thief))
+    if how != "store_only":
+        assert auth.store.grant(g["id"])["state"] == "cancelled"
+
+    async def go():
+        async with client(app) as c:
+            r = await c.post("/pair", json={face: link_of(g) if face == "link" else words_of(g)}, headers=origin(c))
+            assert r.status == 410, await r.text()
+            assert "pilot_session" not in r.headers.get("Set-Cookie", "")
+    asyncio.run(go())
+    live = [d for d in auth.store.list_devices() if d["kind"] == "browser"]
+    assert [d["id"] for d in live] == [owner]
+
+
 def test_a_wrong_link_token_counts_and_is_refused(tmp_path, clock):
     app, auth = viewer(tmp_path, clock)
     g = auth.store.create_grant("cli", words=True)

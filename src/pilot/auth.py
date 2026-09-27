@@ -574,10 +574,17 @@ class AuthStore:
         cur = self._x("UPDATE devices SET revoked_at=?, revoked_by=?, revoke_reason=? WHERE id=? AND revoked_at IS NULL",
                       (self.now(), by, reason, ident))
         if cur.rowcount:
+            self._cancel_orphan_grants()
             event = ("token_revoked" if row and row["kind"] == "script" else
                      {"signed_out": "signed_out", "idle": "idle", "rotate_unkept": "legacy_revoked"}.get(reason, "revoked"))
             self.audit(event, ip, ident, {"reason": reason, "by": by})
         return bool(cur.rowcount)
+
+    def _cancel_orphan_grants(self) -> int:
+        """Codes whose maker is signed out are cancelled with it: a stolen session that kept one live
+        must not sign a new device in after the owner signed it out."""
+        return self._x("UPDATE grants SET state='cancelled' WHERE state='waiting' AND created_by IN "
+                       "(SELECT id FROM devices WHERE revoked_at IS NOT NULL)").rowcount
 
     def end_carry_over(self) -> None:
         """The old key cookie stops working at once (a rotation ends the 72-hour window)."""
@@ -586,6 +593,7 @@ class AuthStore:
     def revoke_others(self, keep: str, by: str | None = None, ip: str | None = None) -> int:
         cur = self._x("UPDATE devices SET revoked_at=?, revoked_by=?, revoke_reason='revoke_others'"
                       " WHERE id != ? AND kind='browser' AND revoked_at IS NULL", (self.now(), by, keep))
+        self._cancel_orphan_grants()
         self.audit("revoke_others", ip, keep, {"count": cur.rowcount})
         return cur.rowcount
 
@@ -666,6 +674,11 @@ class AuthStore:
                            {"grant": g["id"], "device": dev["name"] if dev else None, "how": kind})
             return "conflict", {"device": dev["name"] if dev else "a browser", "used_ip": g["used_ip"],
                                 "used_at": g["used_at"]}
+        if g["state"] == "waiting" and ID_RE.fullmatch(g["created_by"] or ""):
+            maker = self.device(g["created_by"])
+            if not maker or maker["revoked_at"]:        # its maker was signed out: the code goes with it
+                self._x("UPDATE grants SET state='cancelled' WHERE id=? AND state='waiting'", (g["id"],))
+                return "expired", {}
         if g["state"] != "waiting" or now > g["expires_at"]:
             if g["state"] == "waiting":
                 self._x("UPDATE grants SET state='expired' WHERE id=? AND state='waiting'", (g["id"],))
@@ -724,6 +737,7 @@ class AuthStore:
         with self._lock:
             self.db.execute("UPDATE devices SET revoked_at=?, revoked_by='idle', revoke_reason='idle' WHERE kind='browser'"
                             " AND revoked_at IS NULL AND COALESCE(last_seen_at, created_at) < ?", (now, now - IDLE_S))
+            self._cancel_orphan_grants()
             self.db.execute("DELETE FROM devices WHERE revoke_reason='idle' AND revoked_at < ?", (now - PRUNE_S,))
             self.db.execute("DELETE FROM grants WHERE created_at < ?", (now - GRANT_KEEP_S,))
             self.db.execute("DELETE FROM auth_events WHERE t < ?", (now - AUDIT_KEEP_S,))

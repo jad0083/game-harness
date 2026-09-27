@@ -604,7 +604,9 @@ The dashboard listens on the LAN, so every request needs a principal (design:
   in `runs/auth.sqlite` (`PILOT_AUTH_DB`; mode 0600). Each is a named device that can be signed out
   on its own; a browser unused for 180 days is signed out. A page whose browser was signed out
   says so ("This browser was signed out from Pixel phone at 14:02"), stops polling and its event
-  stream, and links to sign in again; an open event stream closes within 15 s of a sign-out.
+  stream, and links to sign in again; an open event stream closes within 15 s of a sign-out. A
+  sign-in code the signed-out browser had made (⋯ > Add a device) is cancelled with it, and a code
+  whose maker is signed out never signs anyone in.
 - **The service key** (`PILOT_DASHBOARD_KEY`, else `runs/dashboard.key`, 0600) works only as the
   `X-Pilot-Key` or `Authorization: Bearer` header from the controller itself (127.0.0.1 / ::1),
   never through `Forwarded` / `X-Forwarded-For`, never as a cookie or in a URL, and it is no
