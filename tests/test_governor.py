@@ -4620,3 +4620,234 @@ def test_a_restarted_governor_keeps_checking_planets_from_the_campaign_rows(setu
     g2 = Governor(s, second, EventLog(s.runs_dir, "run10", s.model, telemetry=tel), model=_prompts_model(seen, "keep"))
     g2.run(max_decisions=1)
     assert "Planet check: Arnvoss amenities -300 (3 saves); nothing queued here" in seen[0]
+
+
+# ---- the war crisis overlay (levers design rulings 12-16) --------------------------------------------
+
+_WAR = {"id": "50331650", "name": "Khell Zen vs Theia", "attacker": False, "our_exhaustion": 0.2,
+        "their_exhaustion": 0.3, "battle_count": 4,
+        "own_battles_12m": {"won": 0, "lost": 1, "ships_lost": 3, "ground_at_our_colonies": 0, "invasions": []}}
+
+
+def _war_save(date: str, *, occupied=False, wars=True, shipyard=True, **extra) -> dict:
+    """At war (unless told otherwise), 10,000 trade (+100), 300 alloys, one colony and one shipyard."""
+    b = _trading(briefing(date, wars=[dict(_WAR)] if wars else []))
+    b["stockpile"]["alloys"] = 300.0
+    col = {**_colony(), "occupied": occupied, "occupier": "Khell Zen" if occupied else None}
+    return {**b, "planets": [col], "systems": 30, "military_power": 1000.0,
+            "shipyards": [{"system": "Sol", "occupied": not shipyard}],
+            "market": {"kind": "galactic", "fluct": {}, "bought": {}, "sold": {}, "trades_net": {}}, **extra}
+
+
+def _alloys_measured(s) -> None:
+    """The test corpus as after live check L2 measured the alloys start amount."""
+    manifest = s.corpus_dir / "manifest.toml"
+    text = manifest.read_text(encoding="utf-8")
+    manifest.write_text(text.replace("new_trade_amount = { energy = 10,", "new_trade_amount = { alloys = 3, energy = 10,"),
+                        encoding="utf-8")
+
+
+def _index(log, test) -> int:
+    return next(i for i, e in enumerate(log.recent) if test(e))
+
+
+def _row_of(log, key: str) -> dict:
+    return next(e for e in log.recent if e["kind"] == "order_outcome" and e.get("key") == key)
+
+
+def test_a_colony_occupied_at_war_runs_the_ladder_in_order(setup):
+    s, log = setup
+    _alloys_measured(s)
+    calls: list[str] = []
+    game = FakeStellaris([_war_save("2256.01.01"), _war_save("2256.02.01", occupied=True)])
+    g = Governor(s, game, log, model=decisions("expand", "keep"), role_models={"strategy": _strategist(calls)})
+    g.run(max_decisions=2)
+    ep = [e for e in log.recent if e["kind"] == "episode"][1]
+    assert ep["situation"] == "urgent: war going badly: Arnvoss occupied", ep["situation"]
+    review = _index(log, lambda e: e["kind"] == "strategy_review" and e["trigger"].startswith("war going badly"))
+    defend = _index(log, lambda e: e["kind"] == "order_followed" and e["action"]["key"] == "crisis defend")
+    posture = _index(log, lambda e: e["kind"] == "order_outcome" and e.get("key") == "crisis posture war_crisis")
+    market = _index(log, lambda e: e["kind"] == "order_followed" and e["action"]["key"] == "crisis market buy alloys")
+    cadence = _index(log, lambda e: e["kind"] == "order_outcome" and e.get("key") == "crisis cadence")
+    assert review < defend < posture < market < cadence
+    assert ("directive", "defend") in game.actions, "the model's keep is overridden by defend"
+    assert "not verified" in _row_of(log, "crisis posture war_crisis")["detail"]
+    assert _row_of(log, "crisis posture war_crisis")["result"] == "no_op"
+    assert ("market_sync", [{"side": "buy", "resource": "alloys", "amount": 25}]) in game.actions
+    assert g.s.decide_every_months == 3 and log.state.info["every_months"] == 3
+    info = log.state.info["crisis"]
+    assert info["active"] and info["boost"] == {"defence": "missed"}
+    assert "war crisis: defend forced over keep" in log.state.last_decision
+    question = [e for e in log.recent if e["kind"] == "question"]
+    assert len(question) == 1 and question[0]["blocking"] is False and "status-quo" in question[0]["question"]
+
+
+def test_no_alloys_without_a_shipyard_in_a_system_we_control(setup):
+    s, log = setup
+    _alloys_measured(s)
+    game = FakeStellaris([_war_save("2256.01.01", shipyard=False), _war_save("2256.02.01", occupied=True, shipyard=False)])
+    g = Governor(s, game, log, model=decisions("expand", "keep"), role_models={"strategy": _strategist([])})
+    g.run(max_decisions=2)
+    assert not any(a[0] == "market_sync" and a[1] for a in game.actions)
+    assert "no shipyard in a system we control" in _row_of(log, "crisis market buy alloys")["detail"]
+
+
+def test_the_alloys_buy_waits_for_the_measured_start_amount(setup):
+    s, log = setup
+    game = FakeStellaris([_war_save("2256.01.01"), _war_save("2256.02.01", occupied=True)])
+    g = Governor(s, game, log, model=decisions("expand", "keep"), role_models={"strategy": _strategist([])})
+    g.run(max_decisions=2)
+    assert not any(a[0] == "market_sync" and a[1] for a in game.actions)
+    row = _row_of(log, "crisis market buy alloys")
+    assert row["result"] == "no_op" and "start amount not measured" in row["detail"]
+
+
+def _pace_model(holder: dict, at: int, months_: int):
+    """Keeps the directive; on its `at`-th decision the human sets the pace to `months_`."""
+    calls = {"n": 0}
+
+    def respond(messages, info):
+        if _is_strategy_review(info):
+            return _quiet_no_change(info)
+        calls["n"] += 1
+        if calls["n"] == at:
+            holder["g"].set_months(months_)
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"directive": "keep", "reason": "r"})])
+    return FunctionModel(respond)
+
+
+def _crisis_saves() -> list[dict]:
+    return [_war_save("2256.01.01"), _war_save("2256.02.01", occupied=True)] + \
+        [_war_save(f"2256.{m:02d}.01") for m in range(3, 10)]
+
+
+def test_six_quiet_saves_end_the_crisis_and_restore_the_cadence(setup):
+    s, log = setup
+    game = FakeStellaris(_crisis_saves())
+    g = Governor(s, game, log, model=decisions("expand", "keep"))
+    g.run(max_decisions=4)
+    eps = [e["situation"] for e in log.recent if e["kind"] == "episode"]
+    assert eps[1].startswith("urgent: war going badly") and eps[2].startswith("scheduled (3 months)")
+    assert eps[3] == "urgent: war crisis over: 6 quiet saves", eps
+    assert g.s.decide_every_months == 12 and log.state.info["crisis"] is None
+    assert [e["event"] for e in log.recent if e["kind"] == "crisis"] == ["enter", "ladder", "exit"]
+
+
+def test_the_humans_cadence_during_a_crisis_is_kept_at_its_end(setup):
+    s, log = setup
+    holder: dict = {}
+    game = FakeStellaris(_crisis_saves())
+    g = holder["g"] = Governor(s, game, log, model=_pace_model(holder, 3, 2))
+    g.run(max_decisions=5)
+    assert any(e["situation"].startswith("urgent: war crisis over") for e in log.recent if e["kind"] == "episode")
+    assert g.s.decide_every_months == 2, "the human's pace stays"
+
+
+def test_a_human_pause_blocks_every_step(setup):
+    s, log = setup
+    game = FakeStellaris([_war_save("2256.02.01", occupied=True)])
+    g = Governor(s, game, log, model=decisions("keep"), role_models={"strategy": _strategist([])})
+    g._review_strategy(_war_save("2256.01.01"), "start of run")
+    g._observe(_war_save("2256.01.01"))
+    g.pause()
+    g._decide(_war_save("2256.02.01", occupied=True), "human request")
+    assert g._crisis is None or not g._crisis.get("active"), "no entry while paused"
+    g.resume()
+    g._crisis = {"active": True, "since": "2256.02.01", "conditions": [["C1", "Arnvoss occupied"]], "quiet": 0,
+                 "entries": {}, "wars": [_WAR["id"]]}
+    g._crisis_pending = "enter"
+    g.pause()
+    g._decide(_war_save("2256.03.01", occupied=True), "human request")
+    assert ("directive", "defend") not in game.actions and g.s.decide_every_months == 12
+    assert not any(e["kind"] == "order_outcome" and str(e.get("key", "")).startswith("crisis") for e in log.recent)
+
+
+def test_the_overlay_is_off_with_pilot_war_crisis_0(setup, monkeypatch):
+    from dataclasses import replace
+    s, log = setup
+    s2 = replace(s, war_crisis=False)
+    s2.__class__ = s.__class__
+    game = FakeStellaris([_war_save("2256.01.01"), _war_save("2256.02.01", occupied=True), _war_save("2257.01.01", occupied=True)])
+    Governor(s2, game, log, model=decisions("expand", "keep")).run(max_decisions=2)
+    assert not any(e["kind"] == "crisis" for e in log.recent) and ("directive", "defend") not in game.actions
+    from pilot.config import Settings
+    monkeypatch.setenv("PILOT_WAR_CRISIS", "0")
+    assert Settings.from_env().war_crisis is False
+    monkeypatch.setenv("PILOT_WAR_CRISIS", "1")
+    assert Settings.from_env().war_crisis is True
+    monkeypatch.delenv("PILOT_WAR_CRISIS")
+    assert Settings.from_env().war_crisis is True, "on by default (ruling 14)"
+
+
+def test_the_posture_is_set_and_cleared_once_its_gates_pass(setup):
+    s, log = setup
+    d = s.corpus_dir / "directives.toml"
+    text = d.read_text(encoding="utf-8")
+    at = text.index("[posture.war_crisis]")
+    d.write_text(text[:at] + text[at:].replace("enabled = false", "enabled = true", 1), encoding="utf-8")
+    v2 = {"governor_vars": {"governor_naval_cap": 100.0, "governor_naval_used": 50.0}, "used_naval_capacity": 50}
+    saves = [{**b, **v2} for b in _crisis_saves()]
+    game = FakeStellaris(saves)
+    g = Governor(s, game, log, model=decisions("expand", "keep"))
+    g.run(max_decisions=4)
+    assert [a for a in game.actions if a[0] == "posture"] == [("posture", "war_crisis", True), ("posture", "war_crisis", False)]
+    rows = [(r["key"], r["result"]) for r in g._action_rows if r["key"] == "crisis posture war_crisis"]
+    assert ("crisis posture war_crisis", "took") in rows
+
+
+def test_the_need_boost_raises_defence_in_the_frame_only_during_a_crisis(setup):
+    s, log = setup
+    g = Governor(s, FakeStellaris([briefing("2256.01.01")]), log, model=decisions("keep"))
+    g.strategy = _strategy_with()
+    assert g._need_boost() == {} and g._pressures() is None
+    g._crisis = {"active": True, "since": "2256.02.01", "conditions": [], "quiet": 0, "entries": {}}
+    press = g._pressures()
+    assert press["defence"]["status"] == "war crisis" and press["defence"]["need"] == 2.0
+    assert press["defence"]["pressure"] == round(press["defence"]["weight"] * 2.0, 1)
+    assert press["economy"]["need"] == 1.0
+
+
+def test_civ6_keeps_its_triggers_and_pressures():
+    from pilot.civ6_governor import Civ6Governor
+    assert "war going badly" in Governor.event_triggers and "war going badly" not in Civ6Governor.event_triggers
+    assert Civ6Governor._need_boost is Governor._need_boost, "the hook returns {} unless a Stellaris crisis is on"
+
+
+def test_the_fake_game_sets_and_clears_posture_flags():
+    game = FakeStellaris([briefing("2256.01.01")])
+    game.directive("defend")
+    game.posture("war_crisis", True)
+    assert set(game.briefing()["flags"]) == {"governor_directive_defend", "governor_posture_war_crisis"}
+    game.directive("expand")
+    assert "governor_posture_war_crisis" in game.briefing()["flags"], "a directive never touches a posture"
+    game.posture("war_crisis", False)
+    assert game.briefing()["flags"] == ["governor_directive_expand"]
+
+
+def test_a_human_override_during_a_crisis_stands_until_it_ends(setup):
+    s, log = setup
+    game = FakeStellaris([_war_save("2256.03.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    g._crisis = {"active": True, "since": "2256.02.01", "conditions": [["C1", "Arnvoss occupied"]], "quiet": 0,
+                 "entries": {}, "wars": [_WAR["id"]]}
+    g._override(_war_save("2256.03.01"), "expand")
+    g._decide({**_war_save("2256.03.01"), "flags": ["governor_directive_expand"]}, "scheduled (3 months)")
+    assert [a for a in game.actions if a[0] == "directive"] == [("directive", "expand")]
+
+
+def test_a_restarted_governor_carries_on_the_crisis_and_its_entry_limit(setup, tmp_path):
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    src = "save games/theia_1/autosave.sav"
+    saves = [{**_war_save("2256.01.01"), "source": src}, {**_war_save("2256.02.01", occupied=True), "source": src}]
+    g = Governor(s, FakeStellaris(saves), EventLog(s.runs_dir, "run11", s.model, telemetry=tel),
+                 model=decisions("expand", "keep"))
+    g.run(max_decisions=2)
+    assert g._crisis_on()
+    log2 = EventLog(s.runs_dir, "run12", s.model, telemetry=tel)
+    g2 = Governor(s, FakeStellaris([{**_war_save("2256.03.01", occupied=True), "source": src}]), log2,
+                  model=decisions("keep"))
+    g2.run(max_decisions=1)
+    assert g2._crisis_on() and g2.s.decide_every_months == 3 and log2.state.info["crisis"]["active"]
+    assert not any(e["kind"] == "crisis" and e["event"] == "enter" for e in log2.recent), "no second entry"

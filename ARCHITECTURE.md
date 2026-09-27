@@ -431,7 +431,12 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   `planet_issues` (persisted 2 months), `planet_line`, `planet_urgent`, `planet_record`,
   `stability_loss`; the governor's `_observe` builds the save's row once per date from the last 24
   months of rows (`_rows`, seeded from telemetry by `_load_rows`), the Stellaris-only trigger tuple
-  `STELLARIS_TRIGGERS` on `Governor.event_triggers`),
+  `STELLARIS_TRIGGERS` on `Governor.event_triggers`), the war crisis (`stellaris_crisis.py`, pure:
+  `conditions`/`war_crisis` C1-C6, `crisis_step` the enter/exit state machine, `status_quo`,
+  `crisis_alloys`; the governor's `_crisis_update` in `_observe`, the ladder in `_decide`
+  (`_crisis_review` before the prompt, `_crisis_choice`, `_crisis_posture_step`, `_crisis_market` in
+  the market sync, `_crisis_finish`), `_need_boost` in `_pressures` ({} for Civ VI), `_set_pace`,
+  `crisis` events reloaded by `_load_crisis`; `Settings.war_crisis` from `PILOT_WAR_CRISIS`),
   `edit_pillar`/`unpin_pillar`/`request_review` under `_strategy_lock`. Telemetry: `strategies`
   table, `latest_strategy`, `strategy_history`, `metrics_rows`; dashboard `/api/strategy`, control
   actions `edit_pillar`, `unpin_pillar`, `review_strategy`. Rust: `choose_tech_pick` (only the

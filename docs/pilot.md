@@ -30,6 +30,7 @@ PC in use.
 | `PILOT_DECIDE_TURNS` | Civilization VI: turns the game's AI plays between decisions (default 5; `--decide-turns`) |
 | `PILOT_AUTOPLAY_CHUNK` | Civilization VI: turns per autoplay call in peace (default 3, which keeps the AI's multi-turn plans); at war with a major or with a city in danger it plays one turn at a time |
 | `PILOT_LAST_STAND`, `PILOT_LAST_STAND_MAX` | Civilization VI: scripted actions for a city about to fall (default `0`, off until the live checklist L6 passes); at most this many stands in a row per city (default 3) |
+| `PILOT_WAR_CRISIS` | Stellaris: the war crisis overlay (default `1`; `0` turns it off for a run) |
 | `PILOT_THINKING`, `PILOT_GOVERNOR_THINKING` | thinking level for GC4 episodes / Stellaris decisions (default `medium`) |
 | `PILOT_RETRO_EVERY` | strategy review every N decisions (default 5) |
 | `PILOT_PORT`, `PILOT_RUNS_DIR`, `PILOT_CAMPAIGN`, `PILOT_COMMIT`, `PILOT_JOURNAL` | live dashboard port, run folder, campaign id, commit learned knowledge, journal file |
@@ -278,8 +279,8 @@ effort instead.
 
 **Reviews** run at the start of a campaign without a strategy, every `PILOT_RETRO_EVERY`
 decisions, on big events (war, crisis, colony lost, boxed in, military fell by half, a milestone
-missed, an off-frame decision, a planet crisis or a planet losing pops; at most one per 12 in-game
-months) and on *Review strategy now*. An
+missed, an off-frame decision, a planet crisis or a planet losing pops, a war going badly or a war
+crisis over; at most one per 12 in-game months) and on *Review strategy now*. An
 answer is validated; an invalid one gets one corrective retry with its errors and the rejected
 answer, then the strategy stays. Reviews started at the beginning of a run or by you must name the
 species traits the strategy builds on. A review may add up to 3 rules to
@@ -347,6 +348,37 @@ followed (`order_followed`).
   "does not stick here" at 50% or less. It goes to the decision prompt ("Action record in this
   campaign", after the past outcomes), to the Strategist (before the directive record) and to the
   dashboard (`order_record`). It is advisory: no pressure factor.
+
+**War crisis** (Stellaris; levers design rulings 12-16, `src/pilot/stellaris_crisis.py`; `PILOT_WAR_CRISIS=0`
+turns it off). It enters when we are at war and a loss shows: a colony occupied (C1), systems 2 or
+more under their most in the last 12 months (C2), military at half or less of its most in 12 months
+(C3), a colony lost (C4), a new invasion of our colonies (C5, by battle index, so a retaken colony's
+old invasion does not count), or a colony under stability 25 on 2 saves in a row (C6). Never on a
+military ratio, battle counts (allies' included) or war exhaustion alone; at most once per war per 12
+months; not while you paused the run. The urgent reason `war going badly: <conditions>` runs the
+ladder at that decision, in order:
+1. a strategy review before the decision (12-month cap);
+2. the pillar that ranks `defend` gets need *missed* (2.0) and no stall factor while the crisis lasts
+   (the frame shows "war crisis"; dashboard `crisis`);
+3. `defend` is applied if the decision would leave it or not take it (`crisis defend`; the model's
+   other choices stand; your own override on the dashboard stands until the crisis ends);
+4. the `war_crisis` posture, only when it is enabled in `directives.toml` and the save shows the
+   Governor Bridge v2 running (a current naval-capacity export); until then "skipped: not verified";
+5. the market slot buys alloys (`crisis market buy alloys`) only with a shipyard in a system we hold,
+   naval use under 95% (or unknown with under 1,000 alloys), alloys not IDLE, a measured start amount
+   (not before live check L2) and the buy rules at the crisis cap, sized to what the cap and the
+   reserve allow (at most 25 until L2);
+6. decisions every 3 months (the earlier pace comes back at the end unless you changed it meanwhile);
+7. a status-quo question in the feed (never blocking; once per war per 12 months) when a colony is
+   occupied, systems fell, our war exhaustion is 60% or more and at least theirs, or their side can
+   force a status quo. The harness never proposes peace.
+
+Each step is an `order_outcome` row keyed `crisis <step>` (defend, posture and market judged as their
+kind; the others `done`, or `no_op` with why). It ends when every war has ended, or after 6 saves in a
+row with none of C1-C6 once held 6 months (`war crisis over: ...`, a review under the cap); `crisis`
+events keep its state across a restart. Replayed on the campaigns' metrics rows it enters 5 times in
+UNE2 (2256.02 and 2260.01 among them) and 25 times in Theia (first collapse 2256.08, 7 months before
+the capital fell), never in Gaea.
 
 **Planet check** (Stellaris, read-only; levers design ruling 22, `src/pilot/stellaris_planets.py`).
 A colony has a problem when its stability is under 50, its free amenities under -100 on 300+ pops,

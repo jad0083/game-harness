@@ -211,6 +211,11 @@ class McpGame:
         self.ensure_foreground()
         return self._checked(self.call("stellaris_market_sync", orders=orders))
 
+    def posture(self, name: str, on: bool) -> str:
+        """Set or clear one Governor Bridge posture (levers ruling 18; the war crisis's `war_crisis`)."""
+        self.ensure_foreground()
+        return self._checked(self.call("stellaris_posture", name=name, on=on))
+
     @staticmethod
     def _checked(r: ToolResult) -> str:
         if r.is_error:
@@ -415,6 +420,13 @@ class FakeStellaris:
         if self.market_sticky:
             self.market_orders = [dict(o) for o in orders]
         return "ok"
+
+    def posture(self, name: str, on: bool) -> str:
+        """Sets or clears the posture flag, as the controller does (directive flags stay)."""
+        self.actions.append(("posture", name, on))
+        flag = f"governor_posture_{name}"
+        self.flags = [f for f in self.flags if f != flag] + ([flag] if on else [])
+        return f"Posture {name} {'set' if on else 'cleared'} and confirmed in game.log."
 
     def screenshot(self) -> ToolResult:
         return ToolResult("Screenshot", None)

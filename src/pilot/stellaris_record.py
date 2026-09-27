@@ -10,6 +10,7 @@ one `order_outcome` row (the Civ VI row shape, so both games share `record.order
 | `tech` | `researched` (gone from current and offered), `held` (still researched at the next review or after the cap) | `did_not_stick` (still offered, not researched), `failed` (the tool failed) | `no_op` ("nothing to pick") |
 | `market <side> <resource>` | `took` (a removal gone in the next save; a buy in the list that trades nothing in 2 saves, by "not executing"), `held` (present at our next change or after the cap) | `did_not_take` (the next save differs), `removed` (gone later without our sync), `failed` (the tool failed) | `superseded` |
 | `posture <name>` | `took` (flag as sent in the next save) | `did_not_take` | `superseded` |
+| `crisis <step>` | a crisis `defend`, `posture` or `market` step as its kind | as its kind | `done` (review, need boost, cadence, status-quo question), `no_op` (skipped, with why) |
 
 Pure: actions are plain dicts (persisted as `order_followed` events); `judge` updates an action's
 `state` and says whether it resolved."""
@@ -24,7 +25,7 @@ from .record import order_record
 SUCCEEDED = ("took", "held", "researched")
 FAILED = ("overridden", "did_not_take", "failed", "did_not_stick", "removed")
 JUDGED = SUCCEEDED + FAILED
-EXCLUDED = ("superseded", "locked", "no_op")
+EXCLUDED = ("superseded", "locked", "no_op", "done")    # done: a war crisis step with nothing to judge
 KIND_ORDER = ("directive", "tech", "market", "posture", "crisis")
 OPEN = "open"
 
@@ -91,6 +92,12 @@ def market_action(order: dict, date: str, calibration: str, *, key: str | None =
     side, res, amount = order["side"], order["resource"], int(order.get("amount") or 0)
     return _action("market", key or f"market {side} {res}", f"{side} {res} {amount}", date,
                    {"side": side, "resource": res, "amount": amount}, calibration=calibration, **extra)
+
+
+def crisis_action(step: str, date: str) -> dict:
+    """A war crisis step with nothing to follow (the review, the need boost, the cadence, the
+    status-quo question, or a step skipped with its reason): resolved at once."""
+    return _action("crisis", f"crisis {step}", step, date, {})
 
 
 def posture_action(name: str, on: bool, date: str) -> dict:

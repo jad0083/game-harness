@@ -1,0 +1,502 @@
+{
+"source": "metrics rows of the Theia campaign (Federated Theian Preservers), 2254.07-2263.11 (levers design E8)",
+"rows": [
+{
+"date": "2254.07.01",
+"systems": 32,
+"planets": 9,
+"military_power": 1321.1,
+"wars": 1
+},
+{
+"date": "2254.09.01",
+"systems": 32,
+"planets": 9,
+"military_power": 1321.1,
+"wars": 1
+},
+{
+"date": "2254.10.01",
+"systems": 32,
+"planets": 9,
+"military_power": 1321.1,
+"wars": 1
+},
+{
+"date": "2254.12.01",
+"systems": 32,
+"planets": 9,
+"military_power": 788.5,
+"wars": 1
+},
+{
+"date": "2255.02.01",
+"systems": 32,
+"planets": 9,
+"military_power": 788.5,
+"wars": 1
+},
+{
+"date": "2255.03.01",
+"systems": 32,
+"planets": 9,
+"military_power": 788.5,
+"wars": 1
+},
+{
+"date": "2255.05.01",
+"systems": 32,
+"planets": 9,
+"military_power": 944.5,
+"wars": 1
+},
+{
+"date": "2255.07.01",
+"systems": 32,
+"planets": 9,
+"military_power": 1053.8,
+"wars": 1
+},
+{
+"date": "2255.08.01",
+"systems": 32,
+"planets": 9,
+"military_power": 1053.8,
+"wars": 1
+},
+{
+"date": "2255.10.01",
+"systems": 32,
+"planets": 9,
+"military_power": 1053.8,
+"wars": 1
+},
+{
+"date": "2255.12.01",
+"systems": 32,
+"planets": 9,
+"military_power": 1137.3,
+"wars": 1
+},
+{
+"date": "2256.01.01",
+"systems": 32,
+"planets": 9,
+"military_power": 1137.3,
+"wars": 1
+},
+{
+"date": "2256.03.01",
+"systems": 31,
+"planets": 9,
+"military_power": 1137.3,
+"wars": 1
+},
+{
+"date": "2256.04.01",
+"systems": 31,
+"planets": 9,
+"military_power": 1137.3,
+"wars": 1
+},
+{
+"date": "2256.06.01",
+"systems": 31,
+"planets": 9,
+"military_power": 1137.3,
+"wars": 1
+},
+{
+"date": "2256.08.01",
+"systems": 31,
+"planets": 9,
+"military_power": 386.6,
+"wars": 1
+},
+{
+"date": "2256.10.01",
+"systems": 31,
+"planets": 9,
+"military_power": 345.1,
+"wars": 1
+},
+{
+"date": "2256.11.01",
+"systems": 31,
+"planets": 9,
+"military_power": 264.4,
+"wars": 1
+},
+{
+"date": "2257.01.01",
+"systems": 30,
+"planets": 9,
+"military_power": 440.7,
+"wars": 1
+},
+{
+"date": "2257.02.01",
+"systems": 30,
+"planets": 9,
+"military_power": 440.7,
+"wars": 1
+},
+{
+"date": "2257.04.01",
+"systems": 30,
+"planets": 9,
+"military_power": 440.7,
+"wars": 1
+},
+{
+"date": "2257.06.01",
+"systems": 28,
+"planets": 9,
+"military_power": 440.7,
+"wars": 1
+},
+{
+"date": "2257.08.01",
+"systems": 28,
+"planets": 9,
+"military_power": 440.7,
+"wars": 1
+},
+{
+"date": "2257.10.01",
+"systems": 28,
+"planets": 9,
+"military_power": 440.7,
+"wars": 1
+},
+{
+"date": "2257.11.01",
+"systems": 28,
+"planets": 9,
+"military_power": 440.7,
+"wars": 1
+},
+{
+"date": "2258.01.01",
+"systems": 27,
+"planets": 9,
+"military_power": 440.7,
+"wars": 1
+},
+{
+"date": "2258.03.01",
+"systems": 27,
+"planets": 9,
+"military_power": 440.7,
+"wars": 1
+},
+{
+"date": "2258.04.01",
+"systems": 27,
+"planets": 9,
+"military_power": 440.7,
+"wars": 1
+},
+{
+"date": "2258.06.01",
+"systems": 27,
+"planets": 9,
+"military_power": 254.5,
+"wars": 1
+},
+{
+"date": "2258.08.01",
+"systems": 27,
+"planets": 9,
+"military_power": 246.5,
+"wars": 1
+},
+{
+"date": "2258.09.01",
+"systems": 27,
+"planets": 9,
+"military_power": 246.5,
+"wars": 1
+},
+{
+"date": "2258.11.01",
+"systems": 27,
+"planets": 9,
+"military_power": 254.5,
+"wars": 1
+},
+{
+"date": "2258.12.01",
+"systems": 27,
+"planets": 9,
+"military_power": 254.5,
+"wars": 1
+},
+{
+"date": "2259.02.01",
+"systems": 27,
+"planets": 9,
+"military_power": 59.8,
+"wars": 1
+},
+{
+"date": "2259.03.01",
+"systems": 27,
+"planets": 9,
+"military_power": 59.8,
+"wars": 1
+},
+{
+"date": "2259.05.01",
+"systems": 26,
+"planets": 9,
+"military_power": 59.8,
+"wars": 1
+},
+{
+"date": "2259.06.01",
+"systems": 26,
+"planets": 9,
+"military_power": 59.8,
+"wars": 1
+},
+{
+"date": "2259.08.01",
+"systems": 25,
+"planets": 9,
+"military_power": 59.8,
+"wars": 1
+},
+{
+"date": "2259.10.01",
+"systems": 25,
+"planets": 9,
+"military_power": 59.8,
+"wars": 1
+},
+{
+"date": "2259.11.01",
+"systems": 25,
+"planets": 9,
+"military_power": 59.8,
+"wars": 1
+},
+{
+"date": "2260.01.01",
+"systems": 25,
+"planets": 9,
+"military_power": 61.4,
+"wars": 1
+},
+{
+"date": "2260.03.01",
+"systems": 25,
+"planets": 9,
+"military_power": 61.4,
+"wars": 1
+},
+{
+"date": "2260.04.01",
+"systems": 25,
+"planets": 9,
+"military_power": 61.4,
+"wars": 1
+},
+{
+"date": "2260.06.01",
+"systems": 24,
+"planets": 9,
+"military_power": 61.4,
+"wars": 2
+},
+{
+"date": "2260.07.01",
+"systems": 24,
+"planets": 9,
+"military_power": 61.4,
+"wars": 2
+},
+{
+"date": "2260.09.01",
+"systems": 24,
+"planets": 9,
+"military_power": 61.4,
+"wars": 2
+},
+{
+"date": "2260.10.01",
+"systems": 24,
+"planets": 9,
+"military_power": 61.4,
+"wars": 2
+},
+{
+"date": "2260.12.01",
+"systems": 24,
+"planets": 9,
+"military_power": 61.4,
+"wars": 2
+},
+{
+"date": "2261.01.01",
+"systems": 24,
+"planets": 9,
+"military_power": 0,
+"wars": 2
+},
+{
+"date": "2261.03.01",
+"systems": 24,
+"planets": 9,
+"military_power": 0,
+"wars": 2
+},
+{
+"date": "2261.04.01",
+"systems": 24,
+"planets": 9,
+"military_power": 0,
+"wars": 2
+},
+{
+"date": "2261.06.01",
+"systems": 23,
+"planets": 9,
+"military_power": 0,
+"wars": 2
+},
+{
+"date": "2261.08.01",
+"systems": 23,
+"planets": 9,
+"military_power": 0,
+"wars": 2
+},
+{
+"date": "2261.09.01",
+"systems": 23,
+"planets": 9,
+"military_power": 0,
+"wars": 2
+},
+{
+"date": "2261.10.01",
+"systems": 23,
+"planets": 9,
+"military_power": 0,
+"wars": 2
+},
+{
+"date": "2261.12.01",
+"systems": 22,
+"planets": 9,
+"military_power": 0,
+"wars": 2
+},
+{
+"date": "2262.01.01",
+"systems": 22,
+"planets": 9,
+"military_power": 0,
+"wars": 2
+},
+{
+"date": "2262.03.01",
+"systems": 22,
+"planets": 9,
+"military_power": 0,
+"wars": 2
+},
+{
+"date": "2262.04.01",
+"systems": 22,
+"planets": 9,
+"military_power": 0,
+"wars": 2
+},
+{
+"date": "2262.06.01",
+"systems": 22,
+"planets": 9,
+"military_power": 0,
+"wars": 2
+},
+{
+"date": "2262.08.01",
+"systems": 22,
+"planets": 9,
+"military_power": 0,
+"wars": 2
+},
+{
+"date": "2262.09.01",
+"systems": 22,
+"planets": 9,
+"military_power": 0,
+"wars": 2
+},
+{
+"date": "2262.11.01",
+"systems": 22,
+"planets": 9,
+"military_power": 0,
+"wars": 2
+},
+{
+"date": "2262.12.01",
+"systems": 22,
+"planets": 9,
+"military_power": 0,
+"wars": 2
+},
+{
+"date": "2263.01.01",
+"systems": 22,
+"planets": 9,
+"military_power": 0,
+"wars": 2
+},
+{
+"date": "2263.03.01",
+"systems": 22,
+"planets": 9,
+"military_power": 0,
+"wars": 2
+},
+{
+"date": "2263.04.01",
+"systems": 22,
+"planets": 9,
+"military_power": 0,
+"wars": 2
+},
+{
+"date": "2263.06.01",
+"systems": 22,
+"planets": 9,
+"military_power": 0,
+"wars": 2
+},
+{
+"date": "2263.08.01",
+"systems": 22,
+"planets": 9,
+"military_power": 0,
+"wars": 2
+},
+{
+"date": "2263.10.01",
+"systems": 22,
+"planets": 9,
+"military_power": 0,
+"wars": 2
+},
+{
+"date": "2263.11.01",
+"systems": 22,
+"planets": 9,
+"military_power": 0,
+"wars": 2
+}
+]
+}

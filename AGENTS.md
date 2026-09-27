@@ -323,6 +323,13 @@ Rules:
   cover (6-24 months of stock left, 36 for motes, gases, crystals); else the next decision reads
   "trade idle: nothing qualifies to buy (reason)". A buy in the order list that trades nothing in 2
   saves (`market.trades_net`) is recorded took (not executing).
+- **War crisis** (`PILOT_WAR_CRISIS`, default 1): at war, a colony occupied, 2+ systems or half the
+  military lost within 12 months, a colony lost, a new invasion, or a colony under stability 25 twice
+  enters it (`war going badly: ...`; never on ratios, battle counts or exhaustion; once per war per 12
+  months). The ladder: review, defence need missed, `defend` applied, the `war_crisis` posture (skipped:
+  not verified until enabled and the v2 export is in the save), alloys on the market slot (only with a
+  shipyard we hold, naval room, a measured start amount: not before L2), decisions every 3 months, a
+  non-blocking status-quo question. Ends at peace or after 6 quiet saves held 6 months.
 - **Planet check** (read-only): a colony under stability 50, amenities under -100 (300+ pops), housing
   under 0 (1,000+ pops), 5% unemployed (not the capital), 20% fewer pops than its 12-month peak, or
   occupied, for 2+ months, is named in the decision prompt's `Planet check:` line with a hint

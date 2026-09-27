@@ -292,6 +292,20 @@ def load_directive_policies(corpus: Path) -> dict[str, dict[str, str]]:
     return {name: dict(d.get("policies") or {}) for name, d in (raw.get("directive") or {}).items()}
 
 
+def load_postures(corpus: Path) -> dict[str, dict]:
+    """The Governor Bridge postures of `<corpus>/directives.toml` (levers ruling 18): name -> {enabled,
+    mod_version}. A posture is set only while `enabled` (after its live probe)."""
+    f = Path(corpus) / "directives.toml"
+    try:
+        raw = tomllib.loads(f.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        raise PillarsError(f"{f}: missing") from None
+    except tomllib.TOMLDecodeError as e:
+        raise PillarsError(f"{f}: not valid TOML: {e}") from None
+    return {name: {"enabled": d.get("enabled") is True, "mod_version": d.get("mod_version")}
+            for name, d in (raw.get("posture") or {}).items() if isinstance(d, dict)}
+
+
 def _manifest_keys(path: Path, corpus: Path, dotted, key: str) -> tuple[str, ...]:
     f = corpus / "manifest.toml"
     if not isinstance(dotted, str):
