@@ -770,3 +770,51 @@ def test_the_dashboard_page_runs_only_its_own_inline_script(tmp_path, clock):
                 assert (await r.text()) == page
     asyncio.run(go())
     live_log.close()
+
+
+@pytest.mark.parametrize("how", ["corrupt", "deleted", "new_path"])
+def test_the_carry_over_window_survives_a_new_store(tmp_path, clock, monkeypatch, how):
+    """The 72 hours are counted from the first start of this code, not of this store: a store moved
+    aside as corrupt, deleted or pointed elsewhere (PILOT_AUTH_DB) neither reopens a closed window
+    nor extends an open one (runs/dashboard.carryover keeps the deadline)."""
+    monkeypatch.delenv("PILOT_AUTH_DB", raising=False)
+    runs = tmp_path / "runs"
+    runs.mkdir()
+    a1 = A.Auth.from_env(runs, key=KEY, clock=clock)
+    until = float(a1.store.meta("legacy_until"))
+    assert stat.S_IMODE((runs / "dashboard.carryover").stat().st_mode) == 0o600
+
+    def new_store():
+        a1.store.db.close()
+        db = runs / "auth.sqlite"
+        if how == "new_path":
+            monkeypatch.setenv("PILOT_AUTH_DB", str(tmp_path / f"elsewhere-{clock.t}" / "auth.sqlite"))
+            return
+        for p in runs.glob("auth.sqlite*"):
+            p.unlink()
+        if how == "corrupt":
+            db.write_bytes(b"this is not a database" * 100)
+
+    clock.t += 3600
+    new_store()
+    a2 = A.Auth.from_env(runs, key=KEY, clock=clock)
+    assert a2.legacy_open() and float(a2.store.meta("legacy_until")) == until      # not extended
+    clock.t += 72 * 3600
+    a1 = a2
+    new_store()
+    a3 = A.Auth.from_env(runs, key=KEY, clock=clock)
+    assert not a3.legacy_open()                                                     # not reopened
+
+
+def test_a_recreated_store_without_a_record_of_the_window_keeps_it_shut(tmp_path, clock, monkeypatch):
+    monkeypatch.delenv("PILOT_AUTH_DB", raising=False)
+    runs = tmp_path / "runs"
+    runs.mkdir()
+    a1 = A.Auth.from_env(runs, key=KEY, clock=clock)
+    a1.store.db.close()
+    (runs / "dashboard.carryover").unlink()
+    (runs / "auth.sqlite").write_bytes(b"this is not a database" * 100)
+    for p in runs.glob("auth.sqlite-*"):
+        p.unlink()
+    a2 = A.Auth.from_env(runs, key=KEY, clock=clock)
+    assert a2.store.recreated and not a2.legacy_open()

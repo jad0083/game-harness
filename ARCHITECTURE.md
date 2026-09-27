@@ -409,7 +409,8 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   re-stat at most every 2 s, re-read on mtime/inode/size or after a refusal), `AuthStore`
   (`runs/auth.sqlite`, 0600 before SQLite opens it, WAL, busy_timeout; `devices` for browsers and
   scripts with only `sha256(secret)`, `grants`, `auth_events` aggregated per event/IP/minute,
-  `meta` with the carry-over window; a corrupt file is moved aside; housekeeping at start and
+  `meta` with the carry-over window, which `runs/dashboard.carryover` keeps too so a new store
+  neither reopens nor extends it; a corrupt file is moved aside; housekeeping at start and
   hourly), `Throttle` (in memory, per IPv4 address or IPv6 /64 and overall, reserve-before-await),
   and `Auth.middleware`, the request pipeline of ruling 49: host allowlist (421) and canonical host
   (308), cross-site refusals, public routes, the principal (header: K from loopback or a `pgt_`

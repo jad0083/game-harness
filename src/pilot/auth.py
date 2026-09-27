@@ -49,6 +49,7 @@ KEY_HEADER = "X-Pilot-Key"
 DEVICE_HEADER = "X-Pilot-Device"         # viewer -> live pilot: the device behind a request (with K only)
 DEVICE_NAME_HEADER = "X-Pilot-Device-Name"   # its name, percent-encoded (headers are latin-1)
 KEY_ENV, KEY_FILE = "PILOT_DASHBOARD_KEY", "dashboard.key"
+CARRY_FILE = "dashboard.carryover"       # the carry-over window, next to the key: outlives a new store
 PRINCIPAL = web.RequestKey("pilot_principal", object)     # the Principal of a request
 COOKIES = web.RequestKey("pilot_cookies", list)          # cookie writes for on_response_prepare
 AUTH_KEY = web.AppKey("pilot_auth", object)
@@ -360,6 +361,24 @@ def dashboard_key(runs_dir: Path) -> str:
     return key
 
 
+def carry_over_record(runs_dir: Path | None) -> dict | None:
+    """The carry-over window as first opened ({fp, until}), kept next to the key so that a store moved
+    aside as corrupt, deleted, or opened at another PILOT_AUTH_DB path neither reopens nor extends it."""
+    if runs_dir is None:
+        return None
+    try:
+        rec = json.loads((Path(runs_dir) / CARRY_FILE).read_text())
+        return {"fp": str(rec["fp"]), "until": float(rec["until"])}
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def write_carry_over(runs_dir: Path | None, fp: str, until: float) -> None:
+    if runs_dir is not None:
+        Path(runs_dir).mkdir(parents=True, exist_ok=True)
+        _write_private(Path(runs_dir) / CARRY_FILE, json.dumps({"fp": fp, "until": until}) + "\n")
+
+
 class KeySource:
     """K, re-read when the file's mtime or inode changes (a stat at most every 2 s), so a rotation
     reaches a running process without a restart. A fixed key (tests, `make_app(key=)`) or the
@@ -433,9 +452,11 @@ class AuthStore:
         self.path, self.now = Path(path), clock
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._lock = threading.RLock()
+        self.recreated = False            # moved aside as corrupt: an empty store started
         try:
             self.db = self._open()
         except sqlite3.DatabaseError as e:
+            self.recreated = True
             stamp = time.strftime("%Y%m%d-%H%M%S")
             log.error("auth store %s is corrupt (%s): moved aside to %s.corrupt-%s; browsers sign in again "
                       "(python -m pilot dashboard-link), scripts on the controller keep working with the key",
@@ -984,10 +1005,23 @@ class Auth:
         return auth
 
     def start(self) -> None:
-        """First start of this code: open the 72-hour carry-over window for the current K."""
+        """First start of this code: open the 72-hour carry-over window for the current K, once. The
+        window is also kept next to the key (runs/dashboard.carryover), so a new store (a corrupt one
+        moved aside, a deleted file, another PILOT_AUTH_DB) takes it from there instead of opening a
+        new one; a store recreated after corruption with no such record keeps the window shut."""
+        runs = self.keys.runs_dir
+        side = carry_over_record(runs)
         if self.store.meta("legacy_key_fp") is None:
-            self.store.set_meta("legacy_key_fp", fingerprint(self.keys.get()))
-            self.store.set_meta("legacy_until", str(self.now() + LEGACY_WINDOW_S))
+            if side is not None:
+                fp, until = side["fp"], side["until"]
+            elif self.store.recreated:
+                fp, until = fingerprint(self.keys.get()), 0.0
+            else:
+                fp, until = fingerprint(self.keys.get()), self.now() + LEGACY_WINDOW_S
+            self.store.set_meta("legacy_key_fp", fp)
+            self.store.set_meta("legacy_until", str(until))
+        if side is None or side["until"] != float(self.store.meta("legacy_until") or 0):
+            write_carry_over(runs, self.store.meta("legacy_key_fp") or "", float(self.store.meta("legacy_until") or 0))
         self.store.housekeeping()
 
     # -- carry-over

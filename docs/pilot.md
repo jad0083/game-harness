@@ -635,7 +635,10 @@ The dashboard listens on the LAN, so every request needs a principal (design:
   browser holding the old `pilot_key` cookie keeps working, and its first page load turns it into
   a device ("carried over from the old link") and deletes the old cookie; an old `/?key=` link
   becomes a one-time sign-in link. Afterwards the old cookie is deleted wherever it is seen and
-  `?key=` values are never read.
+  `?key=` values are never read. The window's deadline is also kept next to the key
+  (`runs/dashboard.carryover`, 0600), so a new sign-in store (a corrupt one moved aside, a deleted
+  file, another `PILOT_AUTH_DB`) neither reopens nor extends it; a store recreated after corruption
+  with no such record keeps it shut.
 - **Host names**: the `Host` must be an IP literal, `localhost`, this machine's host name (also
   `.local` and its FQDN), a name in `PILOT_DASHBOARD_HOSTS` (comma list) or the host of
   `PILOT_PUBLIC_URL`; anything else gets 421 (no DNS rebinding). With `PILOT_PUBLIC_URL` set, page

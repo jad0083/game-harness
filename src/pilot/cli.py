@@ -299,7 +299,7 @@ def dashboard_key_cmd(s: Settings, a) -> int:
     """Rotate the service key: a new runs/dashboard.key (0600, atomic) that both new-code processes
     read within 2 s; the carried-over devices (the old key cookie) are kept only if named, and the
     carry-over ends. Other browsers and script tokens are untouched. The key is never printed."""
-    from .auth import KEY_ENV, KeySource
+    from .auth import KEY_ENV, KeySource, write_carry_over
     if not a.rotate:
         print("Pass --rotate [--keep all|none|ID,...] to replace the dashboard's service key (it is never printed).")
         return 2
@@ -344,6 +344,7 @@ def dashboard_key_cmd(s: Settings, a) -> int:
         return 2
     keys.rotate()
     store.end_carry_over()
+    write_carry_over(s.runs_dir, store.meta("legacy_key_fp") or "", 0.0)
     # read again: a browser carried over while the prompt waited is signed out too; what a kept browser
     # added is kept with it
     legacy, parent = store.legacy_family()
