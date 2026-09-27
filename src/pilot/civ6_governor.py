@@ -674,8 +674,9 @@ class Civ6Governor(Governor):
             if buy.skip_turns_left:
                 rules.append(f"never what the city finishes within {buy.skip_turns_left} turns anyway (refused)")
             if buy.defence_first:
-                rules.append("a city in danger with no unit on its tile gets a defender before any other purchase, and a "
-                             "production order for a defender there is bought instead when a listed price fits")
+                rules.append("a city in danger with no unit on its tile gets a defender before any other purchase (unless it "
+                             "finishes one of its own within 2 turns), and a production order for a defender there is bought "
+                             "instead when a listed price fits")
             if buy.defender_classes:
                 rules.append("a defender bought with gold is bought with faith when the game allows it and the faith fits")
             rules.append("one land unit per city tile (a second one is refused)")

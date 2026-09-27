@@ -636,6 +636,9 @@ def check_orders(orders: list[Civ6Order], snapshot: dict, spec, index: CorpusInd
         city = _city(snapshot, item[0].city) or {}
         return 0 if is_defender(item[0].id, index, buy) and in_danger(city) else 1
     for o, c, queued in sorted(purchases, key=defence_first):       # stable: the model's order otherwise
+        city = _city(snapshot, o.city or "")
+        if city is not None and is_defender(o.id, index, buy):
+            st.defence_tried.add(city["name"])                       # tried, whatever the checks answer
         if _check(c, o, snapshot, spec, index, failed_last, st) or queued is None:
             if queued is not None:
                 p = st.known.get((c.wire["city"].lower(), o.id, c.wire["currency"])) or {}
@@ -655,8 +658,7 @@ def _must_have(o: Civ6Order, snapshot: dict, index: CorpusIndex, buy, st: _Check
     city = _city(snapshot, o.city)
     if city is None or "garrison" not in city or city.get("garrison") or not in_danger(city):
         return None
-    now, left = city.get("producing"), city.get("turns_left")
-    if now and is_defender(index.cid(now), index, buy) and isinstance(left, int) and left <= max(buy.skip_turns_left, 2):
+    if _finishes_defender(city, index, buy):
         return None
     for currency in ("faith", "gold"):
         p = st.known.get((city["name"].lower(), o.id, currency))
@@ -690,14 +692,23 @@ def _check(c: Checked, o: Civ6Order, snapshot: dict, spec, index: CorpusIndex, f
 WALLS = ("building:walls", "building:castle", "building:star_fort")
 
 
+def _finishes_defender(city: dict, index: CorpusIndex, limits) -> bool:
+    """The city's own build is a defender it finishes within the skip window (ruling 20: at most
+    `skip_turns_left`, and 2 turns), so buying one there is refused or pointless."""
+    now, left = city.get("producing"), city.get("turns_left")
+    return bool(now and is_defender(index.cid(now), index, limits) and isinstance(left, int)
+                and left <= max(limits.skip_turns_left, 2))
+
+
 def _needs_defender_first(city: dict, snapshot: dict, index: CorpusIndex, limits, st: _Checks) -> bool:
     """Whether an ungarrisoned city in danger holds back other purchases (ruling 19): not once a
-    defender purchase for it was checked in this decision, while its cooldown runs, or when its
+    defender purchase for it was tried in this decision (whatever the checks answered), while it
+    finishes a defender of its own within the skip window, while its cooldown runs, or when its
     listed defenders (those of the pillars' classes) are none allowed and affordable."""
     name = city.get("name")
     if not (in_danger(city) and "garrison" in city and not city.get("garrison")):
         return False
-    if name in st.defended or name in st.defence_tried:
+    if name in st.defended or name in st.defence_tried or _finishes_defender(city, index, limits):
         return False
     last, turn, wait = st.defender_buys.get(str(name).lower()), snapshot.get("turn"), limits.defence_cooldown_turns
     if wait and isinstance(last, int) and isinstance(turn, int) and turn - last < wait:
@@ -786,8 +797,6 @@ def _check_purchase(c: Checked, o: Civ6Order, key: str, city: dict, snapshot: di
         holder = index.cid(city["garrison"]) if city.get("garrison") else "the unit bought before this one"
         c.error = f"{name} already has {holder} on its tile: the game refuses a second land unit there"
         return False
-    if defender:
-        st.defence_tried.add(name)
     if limits.defence_first and not defender:
         for other in snapshot.get("cities") or []:
             if _needs_defender_first(other, snapshot, index, limits, st):

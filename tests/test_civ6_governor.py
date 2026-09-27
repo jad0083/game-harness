@@ -1084,6 +1084,33 @@ def test_a_city_that_cannot_get_a_defender_now_does_not_block_other_purchases():
     assert "buy a defender there first" in buy(monument)[0].error
 
 
+def test_a_city_finishing_its_own_defender_or_whose_defender_was_refused_does_not_block_purchases():
+    """Ruling 20's skip rule refuses a defender the city finishes within 2 turns anyway, so defence
+    first must not hold other purchases back for it (as `_must_have` already declines); and a
+    defender purchase refused for any reason counts as tried for the city."""
+    from pilot.civ6 import order_key
+    warrior = {"kind": "purchase", "city": "Beijing", "id": "unit:warrior", "currency": "gold"}
+    monument = {"kind": "purchase", "city": "Chengdu", "id": "building:monument"}
+    chengdu = _city0(name="Chengdu", garrison="UNIT_ARCHER", producing="UNIT_SETTLER", turns_left=6)
+    finishing = danger_city(producing="UNIT_WARRIOR", turns_left=1, defence_prices=[WARRIOR])
+    s = {**FIXTURE, "gold": 400, "faith": 200, "cities": [finishing, chengdu]}
+    both = check_orders([Civ6Order(**warrior), Civ6Order(**monument)], s, SPEC, INDEX)
+    assert both[0].error == "Beijing finishes unit:warrior in 1 turn anyway"
+    assert both[1].wire and not both[1].error, both[1].error
+    alone = check_orders([Civ6Order(**monument)], s, SPEC, INDEX)
+    assert alone[0].wire and not alone[0].error, alone[0].error
+    two_left = {**s, "cities": [danger_city(producing="UNIT_ARCHER", turns_left=2), chengdu]}
+    assert check_orders([Civ6Order(**monument)], two_left, SPEC, INDEX)[0].wire, "an Archer 2 turns out"
+    three_left = {**s, "cities": [danger_city(producing="UNIT_ARCHER", turns_left=3), chengdu]}
+    assert "buy a defender there first" in check_orders([Civ6Order(**monument)], three_left, SPEC, INDEX)[0].error
+    # a defender refused because it did not stick at the last decision was still tried
+    s2 = {**s, "cities": [danger_city(), chengdu]}
+    refused = check_orders([Civ6Order(**warrior), Civ6Order(**monument)], s2, SPEC, INDEX,
+                           {order_key(Civ6Order(**warrior).model_dump())})
+    assert refused[0].error.startswith("did not stick at the last decision")
+    assert refused[1].wire and not refused[1].error, refused[1].error
+
+
 def test_a_unit_another_city_also_builds_is_not_read_as_completed():
     c = Checked(order={"kind": "production"}, expect={"city": "Beijing", "producing": "UNIT_TRADER"})
     base = {"turn": 100, "turns_left": 6, "count": 0, "others": 1}

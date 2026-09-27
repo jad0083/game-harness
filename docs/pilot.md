@@ -145,12 +145,13 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   autoplay chunks follow it too (with war against a major). The gold reserve is `gold_reserve` plus
   `gold_reserve_per_deficit` per gold of deficit; faith keeps the pantheon's live price until one is
   founded. Purchases are checked after the other orders, a defender for a city in danger first; while
-  such a city has no unit on its tile, other purchases are refused; a defender ordered with gold is
-  bought with faith when the snapshot's `defence_prices` (or a `price` answer) allow it and it fits;
-  a production order for a defender there is bought instead; a second land unit on a city tile, a
-  defender bought in the same city within 5 turns, what the city finishes within 2 turns anyway and a
-  known price over the cap are refused before sending. `gold` and `faith` balances cannot be
-  milestone metrics (`[metrics] milestone_exclude`).
+  such a city has no unit on its tile, other purchases are refused, unless a defender for it was
+  tried in the decision (whatever the answer) or it finishes one of its own within 2 turns; a
+  defender ordered with gold is bought with faith when the snapshot's `defence_prices` (or a `price`
+  answer) allow it and it fits; a production order for a defender there is bought instead; a second
+  land unit on a city tile, a defender bought in the same city within 5 turns, what the city
+  finishes within 2 turns anyway and a known price over the cap are refused before sending. `gold`
+  and `faith` balances cannot be milestone metrics (`[metrics] milestone_exclude`).
 - **The AI's own plan** (ruling 29): the briefing shows each city's top 3 builds from the game's AI
   (`GetBuildRecommendations`, the Production panel's call) and our player's strategies from the
   game's log `Logs/AI_Victories.csv` (e.g. "science victory (since T56, stopped T76)"; of the era
