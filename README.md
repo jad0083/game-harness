@@ -106,6 +106,8 @@ This is a tool for a home network, not the internet.
   minutes, and the one-liner pins the SHA-256 of `install.ps1` and of `game-agent.exe`.
 - The agent reads only game folders listed in its `roots.json` and writes only allow-listed files
   (a Stellaris mod folder, Civilization VI's options file).
+- The Civilization VI tuner relay (`/tuner/*`, agent 1.6.0) runs Lua inside the game, limited by the
+  game's own Lua sandbox; it connects only to 127.0.0.1 and sits behind the same token.
 - The dashboard can start runs and steer the game, so every request needs its access key. Open
   the link from `python -m pilot dashboard-link` (also printed in the viewer's log) once per
   browser; it sets an HttpOnly, SameSite=Lax cookie. The key is `PILOT_DASHBOARD_KEY` or
