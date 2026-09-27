@@ -12,6 +12,7 @@ echo 'GEMINI_API_KEY=…' >> .env                  # or OPENAI_API_KEY / ANTHROP
 .venv/bin/python -m pilot run --game galciv4      # a vision episode per blocker
 .venv/bin/python -m pilot run --game stellaris --months 12   # governor; --speed normal (default) … fastest
 .venv/bin/python -m pilot view                    # dashboard over the recorded runs
+.venv/bin/python -m pilot dashboard-link          # the dashboard link with its access key
 ```
 
 As services: `deploy/game-pilot.service` (the pilot) and `deploy/game-pilot-view.service` (the
@@ -28,6 +29,7 @@ PC in use.
 | `PILOT_THINKING`, `PILOT_GOVERNOR_THINKING` | thinking level for GC4 episodes / Stellaris decisions (default `medium`) |
 | `PILOT_RETRO_EVERY` | strategy review every N decisions (default 5) |
 | `PILOT_PORT`, `PILOT_RUNS_DIR`, `PILOT_CAMPAIGN`, `PILOT_COMMIT`, `PILOT_JOURNAL` | live dashboard port, run folder, campaign id, commit learned knowledge, journal file |
+| `PILOT_DASHBOARD_KEY` | the dashboard's access key (default: generated once into `runs/dashboard.key`) |
 
 ## Models
 
@@ -139,7 +141,24 @@ running pilot (whose own dashboard is on `PILOT_PORT`, 8790). It refreshes itsel
   now*, and the version history.
 - **Settings**: models per role; with no run active, *Start run* starts `game-pilot.service`.
 
-The dashboard has no login: keep it on a trusted network (see the security notes in the README).
+### Access key
+
+The dashboard listens on the LAN, so every request needs its access key: the API, the event
+stream, the frame, `/control`, `/status` and everything else except the short "how to get in" page.
+
+- **Getting in**: open the link once per browser. It is printed in the viewer's log when it starts
+  (`journalctl --user -u game-pilot-view`) and by `python -m pilot dashboard-link [--port 8780]`:
+  `http://<controller>:8780/?key=<key>`. The page stores the key in an HttpOnly, SameSite=Strict
+  cookie (`pilot_key`) and redirects to `/`, so the key leaves the address bar; bookmark the link
+  itself. Scripts send the key as the `X-Pilot-Key` header instead.
+- **Where it lives**: `PILOT_DASHBOARD_KEY` if set, else `runs/dashboard.key` (created on first
+  start, mode 0600; `runs/` is gitignored). The live pilot (8790) and the viewer (8780) read the
+  same key, and the viewer passes it on when it forwards live controls.
+- **Rotating**: delete `runs/dashboard.key` (or change `PILOT_DASHBOARD_KEY`) and restart both
+  services; old links and cookies stop working, and the page says how to get the new link.
+- Changes (`POST /control`, `/api/settings`, `/api/run`) must be `application/json`, and when a
+  browser sends an `Origin` it must be the dashboard's own host; anything else gets 403. This
+  stops other web pages from driving the pilot through your browser.
 
 ## Telemetry
 

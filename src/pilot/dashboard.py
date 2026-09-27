@@ -23,17 +23,26 @@ Telemetry (runs/telemetry.sqlite, across runs and models):
     GET  /api/pc                                gaming PC: agent reachable, version, window in front, games open
     POST /api/settings  {"models": [{"model", "thinking"}, ...], "rotate"}   the model list (live too); older {"model", "thinking", "fallback"}
     POST /api/run  {"game", "speed", "months"}   start a pilot run (game-pilot.service); viewer only
+
+Access: every request needs the dashboard key (`dashboard_key`) as the `pilot_key` cookie or the
+X-Pilot-Key header; GET /?key=<key> sets the cookie. POSTs must be JSON, and a browser's Origin must
+match the Host. Without the key, GET / answers with a short note on how to get the link.
 """
 
 from __future__ import annotations
 
 import asyncio
+import hmac
 import json
 import logging
+import os
 import re
+import secrets
+import socket
 import threading
 from pathlib import Path
 from typing import TYPE_CHECKING
+from urllib.parse import urlsplit
 
 from aiohttp import ClientError, ClientSession, ClientTimeout, web
 
@@ -45,6 +54,92 @@ log_ = logging.getLogger(__name__)
 
 
 RUN_ID = re.compile(r"^[A-Za-z0-9_.-]+$")
+
+KEY_ENV = "PILOT_DASHBOARD_KEY"
+KEY_FILE = "dashboard.key"
+KEY_COOKIE = "pilot_key"
+KEY_HEADER = "X-Pilot-Key"
+KEY_COOKIE_MAX_AGE = 400 * 24 * 3600     # the longest cookie lifetime browsers accept
+SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
+LOCKED_PAGE = """<!doctype html><meta charset="utf-8"><title>Game Pilot</title>
+<body style="font:16px system-ui,sans-serif;max-width:40em;margin:3em auto;padding:0 16px">
+<h1 style="font-size:1.3em">This dashboard needs its access link</h1>
+<p>Open the link with the key once in this browser; it is remembered after that.
+The link is printed in the dashboard's service log when it starts, and on the controller by:</p>
+<pre>python -m pilot dashboard-link</pre>
+<p>Opened the link from another app and still see this? <a href="/">Open the dashboard</a>.</p>
+"""
+
+
+def dashboard_key(runs_dir: Path) -> str:
+    """The dashboard's access key: $PILOT_DASHBOARD_KEY, else runs/dashboard.key (created once, mode
+    0600). The live pilot and the viewer read the same file, so the viewer's forwarded calls pass."""
+    env = os.environ.get(KEY_ENV, "").strip()
+    if env:
+        return env
+    path = Path(runs_dir) / KEY_FILE
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except FileExistsError:
+        key = path.read_text().strip()
+        if not key:
+            raise RuntimeError(f"{path} is empty: delete it to make a new dashboard key") from None
+        return key
+    key = secrets.token_urlsafe(32)
+    with os.fdopen(fd, "w") as f:
+        f.write(key + "\n")
+    return key
+
+
+def link_host(host: str) -> str:
+    """A host for links: this machine's LAN address when the dashboard listens on all interfaces."""
+    if host not in ("", "0.0.0.0", "::"):
+        return f"[{host}]" if ":" in host else host
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sk:
+            sk.connect(("192.0.2.1", 9))       # sends nothing; picks the outgoing interface
+            return sk.getsockname()[0]
+    except OSError:
+        return socket.gethostname()
+
+
+def dashboard_link(host: str, port: int, key: str) -> str:
+    return f"http://{link_host(host)}:{port}/?key={key}"
+
+
+def key_guard(key: str):
+    """Middleware: the key on every request (GET / without it gets the locked page), JSON-only
+    mutations, and a browser's Origin must be this host (no cross-site or DNS-rebinding requests)."""
+    want = key.encode()
+
+    def valid(given: str | None) -> bool:
+        return bool(given) and hmac.compare_digest(given.encode(), want)
+
+    def locked() -> web.Response:
+        return web.Response(status=401, text=LOCKED_PAGE, content_type="text/html")
+
+    @web.middleware
+    async def guard(request, handler):
+        if request.method == "GET" and request.path == "/" and "key" in request.query:
+            if not valid(request.query["key"]):
+                return locked()
+            resp = web.Response(status=303, headers={"Location": "/"})
+            resp.set_cookie(KEY_COOKIE, key, max_age=KEY_COOKIE_MAX_AGE, path="/", httponly=True, samesite="Strict")
+            return resp
+        if not (valid(request.headers.get(KEY_HEADER)) or valid(request.cookies.get(KEY_COOKIE))):
+            if request.path == "/":
+                return locked()
+            return web.Response(status=401, text="dashboard key required: open the link from `python -m pilot dashboard-link`")
+        if request.method not in SAFE_METHODS:
+            if request.content_type != "application/json":
+                return web.Response(status=403, text="requests that change something must be application/json")
+            origin = request.headers.get("Origin")
+            if origin is not None and urlsplit(origin).netloc.lower() != (request.host or "").lower():
+                return web.Response(status=403, text="cross-origin request refused")
+        return await handler(request)
+
+    return guard
 
 
 @web.middleware
@@ -64,8 +159,9 @@ LIVE_STATES = {"starting", "playing", "deciding", "paused", "needs_attention"}
 class LiveProxy:
     """Finds the live pilot run (newest run whose status.json names a dashboard port that answers)."""
 
-    def __init__(self, runs_dir: Path):
+    def __init__(self, runs_dir: Path, key: str):
         self.runs_dir = runs_dir
+        self.headers = {KEY_HEADER: key}     # the live pilot's dashboard wants the same key
         self._url: str | None = None
         self._checked = 0.0
         self._session: ClientSession | None = None
@@ -94,7 +190,7 @@ class LiveProxy:
                 continue
             url = f"http://127.0.0.1:{int(port)}"
             try:
-                async with self.session().get(url + "/status", timeout=ClientTimeout(total=2)) as r:
+                async with self.session().get(url + "/status", headers=self.headers, timeout=ClientTimeout(total=2)) as r:
                     if r.status == 200 and (await r.json()).get("run_id") == run["id"]:
                         self._url = url
                         break
@@ -142,12 +238,15 @@ def list_runs(runs_dir: Path, live_id: str | None = None) -> list[dict]:
     return out
 
 
-def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path | None = None) -> web.Application:
+def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path | None = None,
+             key: str | None = None) -> web.Application:
     """Dashboard for a live `pilot` (Pilot or Governor), or read-only over `runs_dir` when pilot is None.
-    `corpora` is where each game's pillars file is read (default: the repo's corpora/)."""
+    `corpora` is where each game's pillars file is read (default: the repo's corpora/). `key` is
+    the access key (default: `dashboard_key(runs_dir)`)."""
     from .config import REPO
     log = pilot.log if pilot else None
     runs_dir = runs_dir or (log.dir.parent if log else Path("runs"))
+    key = key or dashboard_key(runs_dir)
     tel = telemetry or (log.telemetry if log else None)
     corpora = corpora or (REPO / "corpora")
     live_url = None                  # set for the viewer: finds a live run to refuse a second start
@@ -414,14 +513,14 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
 
     if not log:
         # Always-on viewer: forward live endpoints to a running pilot's own dashboard, if any.
-        proxy = LiveProxy(runs_dir)
+        proxy = LiveProxy(runs_dir, key)
         live_url = proxy.url
 
         async def v_status(request):
             url = await proxy.url()
             if url:
                 try:
-                    async with proxy.session().get(url + "/status", timeout=ClientTimeout(total=3)) as r:
+                    async with proxy.session().get(url + "/status", headers=proxy.headers, timeout=ClientTimeout(total=3)) as r:
                         return web.json_response(await r.json())
                 except (OSError, TimeoutError, ClientError):
                     proxy.forget()
@@ -434,7 +533,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
             body = await request.read() if request.method == "POST" else None
             try:
                 async with proxy.session().request(request.method, url + request.path_qs, data=body,
-                                                   headers={"Content-Type": request.content_type},
+                                                   headers={"Content-Type": request.content_type, **proxy.headers},
                                                    timeout=ClientTimeout(total=30)) as r:
                     return web.Response(body=await r.read(), status=r.status,
                                         content_type=r.content_type, headers={"Cache-Control": "no-store"})
@@ -449,14 +548,15 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
             resp = web.StreamResponse(headers={"Content-Type": "text/event-stream", "Cache-Control": "no-cache"})
             await resp.prepare(request)
             try:
-                async with proxy.session().get(url + "/events", timeout=ClientTimeout(total=None, sock_read=60)) as r:
+                async with proxy.session().get(url + "/events", headers=proxy.headers,
+                                              timeout=ClientTimeout(total=None, sock_read=60)) as r:
                     async for chunk in r.content.iter_any():
                         await resp.write(chunk)
             except (OSError, TimeoutError, ClientError, ConnectionResetError, asyncio.CancelledError):
                 pass
             return resp
 
-        app = web.Application(middlewares=[no_store])
+        app = web.Application(middlewares=[no_store, key_guard(key)])
         app.on_cleanup.append(lambda _: proxy.close())
         app.add_routes([web.get("/", index), web.get("/status", v_status), web.get("/events", v_events),
                         web.get("/events.json", v_forward), web.get("/frame.jpg", v_forward),
@@ -571,7 +671,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
                                           "decide_now|override|edit_pillar|unpin_pillar|review_strategy, with its text/index/directive/pillar/fields")
         return web.json_response({"ok": True, "status": log.state.status})
 
-    app = web.Application(middlewares=[no_store])
+    app = web.Application(middlewares=[no_store, key_guard(key)])
     app.add_routes([web.get("/", index), web.get("/status", status), web.get("/frame.jpg", frame),
                     web.get("/events", events), web.get("/events.json", events_json), web.post("/control", control),
                     *history, *api])

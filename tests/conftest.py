@@ -26,6 +26,23 @@ def _time_limit():
     signal.signal(signal.SIGALRM, old)
 
 
+DASHBOARD_TEST_KEY = "test-dashboard-key"
+
+
+@pytest.fixture(autouse=True)
+def _dashboard_key(monkeypatch):
+    """Dashboards in tests use a fixed access key (never runs/dashboard.key), and aiohttp test
+    clients send it unless a test passes its own `headers` (the security tests pass `{}`)."""
+    from aiohttp import test_utils
+    monkeypatch.setenv("PILOT_DASHBOARD_KEY", DASHBOARD_TEST_KEY)
+    orig = test_utils.TestClient.__init__
+
+    def init(self, server, *a, headers=None, **kw):
+        orig(self, server, *a, headers={"X-Pilot-Key": DASHBOARD_TEST_KEY} if headers is None else headers, **kw)
+
+    monkeypatch.setattr(test_utils.TestClient, "__init__", init)
+
+
 class FakeBackend:
     """Records input calls; serves a synthetic gradient screen."""
 

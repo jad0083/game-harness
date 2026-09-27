@@ -102,7 +102,12 @@ This is a tool for a home network, not the internet.
   installer only on a trusted network and stop the server afterwards.
 - The agent reads only game folders listed in its `roots.json` and writes only allow-listed files
   (a Stellaris mod folder, Civilization VI's options file).
-- The dashboard has no login and can start runs and steer the game: bind it to a trusted network.
+- The dashboard can start runs and steer the game, so every request needs its access key. Open
+  the link from `python -m pilot dashboard-link` (also printed in the viewer's log) once per
+  browser; it sets an HttpOnly, SameSite=Strict cookie. The key is `PILOT_DASHBOARD_KEY` or
+  `runs/dashboard.key` (generated once, mode 0600); rotate it by deleting that file and restarting
+  both pilot services. Changes must be JSON from the dashboard's own origin. Details:
+  [docs/pilot.md](docs/pilot.md#access-key).
 - API keys belong in `.env` (gitignored); never commit `runs/`, `play/` or `incoming/`.
 
 ## Development
