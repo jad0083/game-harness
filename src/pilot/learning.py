@@ -27,7 +27,19 @@ from PIL import Image, ImageChops, ImageStat
 from .coords import IMAGE_H, IMAGE_W, to_norm
 
 NAME_RE = re.compile(r"^[a-z][a-z0-9_]{2,40}$")
-FORBIDDEN_KEYS = {"alt+f4", "ctrl+alt+delete", "ctrl+alt+del", "delete", "del", "win", "lwin", "rwin"}
+# Keys the pilot must never press: any combo with the Windows key (win+r opens Run, win+x the admin
+# menu, ...), and combos that close, switch or leave the game or reach the OS (Task Manager, Start).
+SYSTEM_KEYS = frozenset({"win", "lwin", "rwin", "super", "meta", "windows", "cmd"})
+FORBIDDEN_COMBOS = frozenset(frozenset(c.split("+")) for c in (
+    "alt+f4", "ctrl+f4", "ctrl+alt+delete", "ctrl+alt+del", "ctrl+shift+esc", "ctrl+shift+escape",
+    "alt+tab", "alt+shift+tab", "ctrl+alt+tab", "alt+esc", "alt+escape", "ctrl+esc", "ctrl+escape",
+    "alt+space", "delete", "del"))
+
+
+def is_forbidden_key(combo: str) -> bool:
+    """Whether a key combo ('Win + R', 'alt+f4') is one the pilot may not press."""
+    parts = frozenset(p for p in combo.lower().replace(" ", "").split("+") if p)
+    return bool(parts & SYSTEM_KEYS) or parts in FORBIDDEN_COMBOS
 MIN_DISTINCTNESS = 0.10      # template distance on frames without the screen must exceed this
 MATCH_THRESHOLD = 0.06       # manifest template_threshold for learned screens
 DISABLE_AFTER_FAILURES = 3
@@ -113,7 +125,7 @@ class LearnedStore:
             raise LearningRejected("box must be inside the frame with x0 < x1 and y0 < y1")
         if (x1 - x0) * (y1 - y0) < 300 or (x1 - x0) > 700 or (y1 - y0) > 400:
             raise LearningRejected("box should tightly cover a static label/title/icon (>= 300 px area, <= 700x400)")
-        if action.key and action.key.lower().replace(" ", "") in FORBIDDEN_KEYS:
+        if action.key and is_forbidden_key(action.key):
             raise LearningRejected(f"key {action.key!r} is not allowed for automatic actions")
         if not action.click and not action.key:
             raise LearningRejected("an action (click point or key) is required")

@@ -95,6 +95,8 @@
   .banner { margin: 12px 24px 0; padding: 12px 14px; border-left: 3px solid var(--accent); background: var(--surface);
             display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
   .banner p { margin: 0; flex: 1 1 320px; font-family: var(--serif); font-size: 17px; }
+  .banner.locked { border-left-color: var(--bad); }
+  .banner.locked code { font-size: 14px; }
 
   /* ---- layout: sections with hairlines, no card kit ---- */
   main { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(360px, 1fr); gap: 0 32px; padding: 4px 24px 32px; align-items: start; }
@@ -368,6 +370,7 @@
   <button class="btn danger live-only" id="b-stop" hidden>Stop</button>
 </div>
 <div class="toast" id="toast" role="status" hidden></div>
+<div class="banner locked" id="locked" role="alert" hidden><p id="locked-text"></p></div>
 <dialog id="start-dialog" aria-labelledby="start-title">
   <form method="dialog" id="start-form">
     <h2 id="start-title">Start a pilot run</h2>
@@ -518,6 +521,23 @@ const human = (s) => String(s || "").replace(/_/g, " ");
 const tidy = (s) => String(s ?? "").replace(/-?\d+\.\d{3,}/g, (m) => (+m).toFixed(1));
 // the model writes light markdown: bold and italic only, applied after escaping
 const md = (s) => esc(s).replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>").replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, "$1<em>$2</em>");
+// Every request needs the dashboard key, a cookie set by opening the dashboard link once. A 401 means
+// this browser has no key (or an old one after a rotation); a 403 means a change was refused.
+const baseFetch = window.fetch.bind(window);
+let lockedBy = 0;
+function showLocked(status) {
+  lockedBy = status;
+  $("locked-text").innerHTML = status === 401
+    ? "This browser has no valid dashboard key. Open the dashboard link again: it is in the dashboard's service log, or run <code>python -m pilot dashboard-link</code> on the controller."
+    : "The dashboard refused a change from this page (403: not JSON, or from another site). Reload the page and try again.";
+  $("locked").hidden = false;
+}
+window.fetch = async (...args) => {
+  const r = await baseFetch(...args);
+  if (r.status === 401 || r.status === 403) showLocked(r.status);
+  else if (r.ok && lockedBy === 401) { lockedBy = 0; $("locked").hidden = true; }
+  return r;
+};
 const api = async (u) => { const r = await fetch(u); if (!r.ok) throw new Error(`${u}: ${r.status}`); return r.json(); };
 
 const S = { live: false, status: {}, campaign: null, decisions: [], metrics: [], view: "net", sel: null, mode: "chat", strategy: null, reviewPending: false };

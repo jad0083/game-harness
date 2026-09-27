@@ -4,6 +4,7 @@
     python -m pilot run [--model M] [--port P] [--turns N] [--no-commit] [--episodes K]
     python -m pilot run --game stellaris [--speed fast|fastest|...] [--months N]
     python -m pilot view [--port P]           # read-only dashboard over recorded runs
+    python -m pilot dashboard-link [--port P] # the dashboard link with its access key
     python -m pilot rebuild-telemetry         # recreate runs/telemetry.sqlite from the run logs
 """
 
@@ -163,10 +164,20 @@ def rebuild(s: Settings) -> int:
 def view(s: Settings, port: int) -> int:
     from aiohttp import web
 
-    from .dashboard import make_app
-    print(f"viewer: http://{s.dashboard_host}:{port}/ over {s.runs_dir}", flush=True)
+    from .dashboard import dashboard_key, dashboard_link, make_app
+    key = dashboard_key(s.runs_dir)
+    print(f"viewer on {s.dashboard_host}:{port} over {s.runs_dir}; open (once per browser): "
+          f"{dashboard_link(s.dashboard_host, port, key)}", flush=True)
     from .telemetry import Telemetry
-    web.run_app(make_app(None, s.runs_dir, Telemetry(s.telemetry_db)), host=s.dashboard_host, port=port, print=None)
+    web.run_app(make_app(None, s.runs_dir, Telemetry(s.telemetry_db), key=key), host=s.dashboard_host, port=port,
+                print=None)
+    return 0
+
+
+def dashboard_link(s: Settings, port: int) -> int:
+    from .dashboard import dashboard_key
+    from .dashboard import dashboard_link as link
+    print(link(s.dashboard_host, port, dashboard_key(s.runs_dir)))
     return 0
 
 
@@ -183,6 +194,8 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("rebuild-telemetry", help="recreate runs/telemetry.sqlite from the run logs")
     view_p = sub.add_parser("view", help="read-only dashboard over recorded runs")
     view_p.add_argument("--port", type=int, default=8780)
+    link_p = sub.add_parser("dashboard-link", help="print the dashboard link with its access key")
+    link_p.add_argument("--port", type=int, default=8780, help="the viewer's port (the live pilot's: PILOT_PORT)")
     run_p = sub.choices["run"]
     run_p.add_argument("--port", type=int)
     run_p.add_argument("--turns", type=int, help="turns per autopilot call")
@@ -195,6 +208,8 @@ def main(argv: list[str] | None = None) -> int:
     s = Settings.from_env()
     if a.cmd == "view":
         return view(s, a.port)
+    if a.cmd == "dashboard-link":
+        return dashboard_link(s, a.port)
     if a.cmd == "rebuild-telemetry":
         return rebuild(s)
     # the dashboard's model choice beats the environment; command-line options beat both

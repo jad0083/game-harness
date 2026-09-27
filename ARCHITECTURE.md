@@ -300,7 +300,10 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   governor falls back to the role's next model.
 - `dashboard.py` API: `/api/campaigns`, `/api/decisions`, `/api/decision`, `/api/metrics`,
   `/runs/*`; the viewer's `LiveProxy` finds the live run by the dashboard port recorded in its
-  `status.json` and checks that it answers with the same run id.
+  `status.json` and checks that it answers with the same run id. `key_guard` middleware: every
+  request needs the key from `dashboard_key()` (`PILOT_DASHBOARD_KEY` or `runs/dashboard.key`) as
+  the `pilot_key` cookie (set by `/?key=`) or `X-Pilot-Key`; mutations must be JSON with a
+  matching Origin. `LiveProxy` sends the same key header to the live pilot.
 - Game pillars: `pillars.py` loads and validates `corpora/<game>/pillars.toml` into a read-only
   `PillarSpec` (pillars, metrics, aliases, row keys, action limits, min milestones, instructions),
   cached per file and mtime; unknown keys, directives missing from `directives.toml`, actions without
