@@ -32,6 +32,10 @@ class Civ6Game(Protocol):
     def close(self) -> None: ...
 
 
+class GameRefused(RuntimeError):
+    """The game (or the controller's check) answered and refused: `{"ok": false}`."""
+
+
 class ControllerCiv6:
     """The real game: `game-controller --corpus corpora/civ6 civ6 …` per call (one short HTTP
     exchange with the agent each). A snapshot gains `date` = "T<turn>" for the governor's clock.
@@ -60,7 +64,7 @@ class ControllerCiv6:
         except (ValueError, IndexError):
             raise RuntimeError(f"{what} failed (exit {code}): {(err or out)[:400]}") from None
         if code != 0 or reply.get("ok") is False:
-            raise RuntimeError(f"{what} refused: {reply.get('error') or (err or out)[:400]}")
+            raise GameRefused(f"{what} refused: {reply.get('error') or (err or out)[:400]}")
         return reply
 
     def snapshot(self) -> dict:
@@ -125,12 +129,14 @@ class FakeCiv6:
     Failure modes: `busy` (every call made while autoplay is active times out, like the real tuner
     during the AI's turn processing), `start_fails` (autoplay answers ok: false), `never_starts`
     (autoplay answers ok but no turn is played), `stop_raises`, `readback_fails` (the snapshot after
-    orders fails), `transport` (orders time out after they ran)."""
+    orders fails), `transport` (orders time out after they ran), `lost_start_reply` (the first
+    autoplay call times out but runs)."""
 
     def __init__(self, base: dict, events: dict | None = None, replies: dict | None = None,
                  prices: dict | None = None, sticks: bool = True, index: CorpusIndex | None = None, ai=None,
                  busy: bool = False, start_fails: bool = False, never_starts: bool = False,
-                 stop_raises: bool = False, readback_fails: bool = False, transport: bool = False):
+                 stop_raises: bool = False, readback_fails: bool = False, transport: bool = False,
+                 lost_start_reply: bool = False):
         self.state = copy.deepcopy(base)
         self.events = dict(events or {})
         self.replies = dict(replies or {})
@@ -140,6 +146,7 @@ class FakeCiv6:
         self.ai = ai
         self.busy, self.start_fails, self.never_starts = busy, start_fails, never_starts
         self.stop_raises, self.readback_fails, self.transport = stop_raises, readback_fails, transport
+        self.lost_start_reply = lost_start_reply
         self.actions: list[tuple] = []
         self.active = False
         self.remaining = 0
@@ -203,7 +210,11 @@ class FakeCiv6:
     def autoplay(self, turns: int) -> dict:
         self.actions.append(("autoplay", turns, self.active))
         if self.start_fails:
-            raise RuntimeError("game-controller civ6 autoplay refused: AutoplayManager missing")
+            raise GameRefused("game-controller civ6 autoplay refused: AutoplayManager missing")
+        if self.lost_start_reply:
+            self.lost_start_reply = False
+            self.active, self.remaining = True, turns
+            raise TimeoutError("autoplay: no reply (it ran anyway)")
         if not self.never_starts:
             self.active, self.remaining = True, turns
         return {"ok": True, "active": False, "turns": turns, "turn": self.state["turn"]}

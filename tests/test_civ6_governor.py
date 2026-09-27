@@ -427,3 +427,20 @@ def test_a_wonder_the_ai_dropped_is_not_a_lost_race():
     assert urgent_changes(building, {**FIXTURE, "wonders_elsewhere": []}, wonders={"BUILDING_PYRAMIDS"}) == []
     assert urgent_changes(building, {**FIXTURE, "wonders_elsewhere": ["BUILDING_PYRAMIDS"]},
                           wonders={"BUILDING_PYRAMIDS"}) == ["wonder race lost: BUILDING_PYRAMIDS in Beijing"]
+
+
+def test_a_lost_reply_to_autoplay_is_not_a_failure(setup):
+    game = FakeCiv6(FIXTURE, index=INDEX, lost_start_reply=True)
+    g = governor(setup, game, orders_model([]))
+    g.run(max_decisions=2)
+    assert traces(setup)[1]["trigger"] == "scheduled (3 turns)"
+
+
+def test_autoplay_chunks_play_several_turns_per_call(setup):
+    s, _ = setup
+    s.autoplay_chunk = 2
+    game = FakeCiv6(FIXTURE, index=INDEX)
+    g = governor(setup, game, orders_model([]))
+    g.run(max_decisions=2)
+    assert [a[1] for a in game.actions if a[0] == "autoplay"] == [2, 1], "the last chunk stops at the decision turn"
+    assert game.state["turn"] == FIXTURE["turn"] + 3

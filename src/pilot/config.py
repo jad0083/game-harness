@@ -77,6 +77,9 @@ class Settings:
     poll_s: float = 2.0
     # Civilization VI governor: turns the game's AI plays between decisions (one autoplay stretch)
     decide_every_turns: int = 5
+    # turns per autoplay call: 1 = one turn at a time (urgent checks every turn); more lets the AI
+    # carry multi-turn plans (settling, pantheon) without a hand-back each turn (see issues.md)
+    autoplay_chunk: int = 1
 
     @property
     def corpus_dir(self) -> Path:
@@ -139,6 +142,7 @@ class Settings:
         s.decide_every_months = int(env.get("PILOT_DECIDE_MONTHS", s.decide_every_months))
         s.poll_s = float(env.get("PILOT_POLL_S", s.poll_s))
         s.decide_every_turns = int(env.get("PILOT_DECIDE_TURNS", s.decide_every_turns))
+        s.autoplay_chunk = max(1, int(env.get("PILOT_AUTOPLAY_CHUNK", s.autoplay_chunk)))
         s.campaign = env.get("PILOT_CAMPAIGN", s.campaign)
         s.retro_every = int(env.get("PILOT_RETRO_EVERY", s.retro_every))
         if "PILOT_RUNS_DIR" in env:

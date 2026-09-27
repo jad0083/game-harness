@@ -317,6 +317,10 @@ Rules:
   wonders and new districts need a tile, which is not supported yet.
 - The tuner does not answer while the AI plays its turn (calls time out): the governor autoplays one
   turn at a time and only reads or orders between turns; never repeat an order blindly after a timeout.
+- Tutorial advisor popups hold an autoplay turn forever (seen at T17, cleared by clicking OK):
+  `Harness.autoplay` sets `UserConfiguration` `TutorialLevel` to -1 for the session.
+- One-turn autoplay costs the AI its multi-turn plans (a Settler idle for 7 turns, no pantheon; a
+  4-turn stretch settled and chose one at once): `PILOT_AUTOPLAY_CHUNK` sets turns per call.
 - Menus, when the screen must be used: the UI ignores a click without a preceding hover (move the
   mouse onto the button, then click), and the "Continue" screen after loading needs a key press.
 - Throwaway games only: the tuner turns achievements off.

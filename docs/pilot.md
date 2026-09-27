@@ -28,6 +28,7 @@ PC in use.
 | `PILOT_MODEL`, `PILOT_MODELS` | default model; extra models offered in the dashboard |
 | `PILOT_GAME`, `PILOT_SPEED`, `PILOT_DECIDE_MONTHS`, `PILOT_POLL_S` | game, Stellaris speed, months between decisions, autosave poll |
 | `PILOT_DECIDE_TURNS` | Civilization VI: turns the game's AI plays between decisions (default 5; `--decide-turns`) |
+| `PILOT_AUTOPLAY_CHUNK` | Civilization VI: turns per autoplay call (default 1; more keeps the AI's multi-turn plans, see issues.md) |
 | `PILOT_THINKING`, `PILOT_GOVERNOR_THINKING` | thinking level for GC4 episodes / Stellaris decisions (default `medium`) |
 | `PILOT_RETRO_EVERY` | strategy review every N decisions (default 5) |
 | `PILOT_PORT`, `PILOT_RUNS_DIR`, `PILOT_CAMPAIGN`, `PILOT_COMMIT`, `PILOT_JOURNAL` | live dashboard port, run folder, campaign id, commit learned knowledge, journal file |
@@ -99,7 +100,9 @@ reserve); stopping early is simply not starting the next turn. The tuner does no
 AI plays its turn, so unanswered status polls are expected; only the turn's deadline counts (10
 minutes, for long late-game turns). A turn that does not start (20 s) or end in time, or a game that
 gives no snapshot three times between turns, stops the run until the human presses Resume. Orders,
-snapshots and human requests only ever happen between turns.
+snapshots and human requests only ever happen between turns. `PILOT_AUTOPLAY_CHUNK` lets the AI play
+several turns per call (urgent checks then run between chunks). Each autoplay call turns the
+tutorial advisor off for the session: its popups wait for a click and hold the turn forever.
 
 - **Snapshot** (`game-controller civ6 snapshot`, about 2 KB): turn, era and era score, civ and leader,
   yields, treasury and faith, research and civic with turns left, what can be researched,
