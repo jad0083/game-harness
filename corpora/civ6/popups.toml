@@ -40,3 +40,18 @@ handler = "OnRandomEventOccurred"
 state = "RockBandMoviePopup"
 event = "PostTourismBomb"
 handler = "OnRockBandConcert"
+
+# An AI leader's statement to us (a warning, a proposal, a declaration): the view takes the engine
+# event (`UI.ReferenceCurrentEvent`) and shows the leader until a human answers, so the autoplay turn
+# never ends and the tuner is silent (T240, T342). The library's own handler answers instead, while
+# autoplay runs (`corpora/civ6/lua/harness.lua`, diplomacy auto-reply). Without this handler the
+# view (and the deal view it opens) shows no statement until the game is loaded again, and a
+# statement that comes outside autoplay waits until autoplay next starts.
+# `requires`: removed only while `Harness.dipl_handler` is set in InGame; otherwise the view's
+# handler is put back, so a statement holds the turn for a human rather than going unanswered and
+# unseen. A controller built before `requires` refuses this file (unknown field): rebuild it with it.
+[[quiet]]
+state = "DiplomacyActionView"
+event = "DiplomacyStatement"
+handler = "OnDiplomacyStatement"
+requires = "dipl_handler"

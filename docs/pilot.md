@@ -146,7 +146,8 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   (`recommend`); for a threatened city also its enemies and
   defenders, capture threats, incoming damage, whether it can strike and what a defender costs in
   gold and faith), units by type, the majors met with score and military strength, wars, great
-  person points, pantheon and religion, every end-turn blocker. The briefing names every item by
+  person points, pantheon and religion, every end-turn blocker, and the diplomacy the library answered
+  for us (below). The briefing names every item by
   its corpus id (`tech:pottery`, `unit:settler`).
 - **Orders** are structured, never Lua: `research`, `civic`, `policies`, `production`, `purchase`
   (see `corpora/civ6/pilot.md`). The governor checks each against the corpus, the snapshot (options,
@@ -233,6 +234,35 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   the model once more; if the answer still has none, it orders the strategy's first preferred item
   the game offers (else the first offered) and reports it "filled by the governor". A decision whose
   model call fails (an outage, the usage limit, every model of the pool) fills them the same way.
+- **Diplomacy auto-reply** (issues.md T240, T342): an AI leader's statement to us (a warning, a
+  proposal, a deal, a declaration) opens the game's leader screen (`DiplomacyActionView`), which holds
+  the engine until a human answers, so the autoplay turn never ends and the tuner goes silent.
+  `corpora/civ6/popups.toml` removes that screen's statement handler on every load (the deal screen
+  it opens goes with it), and the library registers its own `Events.DiplomacyStatement` handler in
+  `InGame` (only there: the install chunk names its state, and the library's version covers the
+  chunk's header, so an install by a controller built before it is replaced; a reinstall removes the
+  old handler first). The screen's handler is removed only while the library's is in place (the entry's
+  `requires = "dipl_handler"`, checked in `InGame` before each quieting); otherwise the controller
+  puts it back (`QUIET_HELD`), so a statement holds the turn for a human on screen instead of going
+  unanswered and unseen, and the briefing says the auto-reply is not installed. While autoplay runs it answers statements to our player from an explicit table: the five
+  warnings (troops near the border, settling, spying, digging, converting) get the conciliatory
+  promise ("My troops are merely passing by.", never the war or grievance choice), deals and demands
+  are refused as the deal screen refuses them, proposals (friendship, delegation, embassy, open
+  borders, alliance, renewing one, peace) and first meetings get Goodbye (no safe accept rule is
+  proven), and kudos, warnings, denouncements, war declarations and defeats get Goodbye, their only
+  choice. Every later statement of a session (the AI's "Thank you.") and any unknown kind get
+  Goodbye; a promise is sent only when the game's own data offers it for that statement without a
+  diplomatic action. A statement outside autoplay waits (the screen no longer shows it) and is
+  answered when autoplay next starts (a follow-up that came after the hand-back gets Goodbye then),
+  which also closes sessions answered earlier that no follow-up closed and logs that Goodbye (why
+  `sweep`). A reply the game refuses gets Goodbye at once; a session whose Goodbye failed stays listed
+  and is closed at the next autoplay start. The snapshot's `diplomacy` lists the last 20 (turn, from, statement, subtype, reply, why);
+  the governor emits one `diplomacy_reply` event per new answer (telemetry keeps them, so a restart
+  does not report them again), the briefing gets a "Diplomacy answered for us" line (or says the
+  handler is missing), the order record the Strategist reviews lists the campaign's last 8 answers
+  (published as `diplomacy_record` beside `order_record`, reloaded from telemetry after a restart),
+  and the dashboard's activity feed shows each answer. Until the game is loaded
+  again, a human at the PC sees no AI statement and cannot use the leader screen's conversations.
 - **Strategy**: `corpora/civ6/pillars.toml` in share mode (science, culture, faith, economy,
   military, expansion, diplomacy) with milestones on turns (`T60`); reviews as for Stellaris.
 - **Campaign** `civ6/<leader>_<map seed>`; metrics rows per turn (`date` `T<turn>`), so telemetry,

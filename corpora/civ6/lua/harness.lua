@@ -1,11 +1,13 @@
 -- Harness: the controller's helper library for Civilization VI, run in the game's InGame Lua
 -- state through the FireTuner relay (docs/design/2026-09-26-civ6-governor-design.md, ruling 2).
 --
--- The controller prepends `local HARNESS_VERSION = "<hash of this file>"` and sends the whole
--- file; a second install of the same version is a no-op. Every public function prints exactly
--- one JSON line ({"ok": true, ...} or {"ok": false, "error": "..."}), since the tuner returns
--- output only through print(). The controller calls functions with arguments it encodes itself
--- (JSON-style string literals of corpus type keys, numbers); nothing here evaluates text.
+-- The controller prepends `local HARNESS_VERSION = "<hash of this file and of these two lines' form>"`
+-- and `local HARNESS_STATE = "<Lua state>"` and sends the whole file; a second install of the same
+-- version is a no-op (a chunk of another form, such as one without HARNESS_STATE, has another). Every
+-- public function prints exactly one JSON line ({"ok": true, ...} or {"ok": false, "error": "..."}),
+-- since the tuner returns output only through print(). The controller calls functions with
+-- arguments it encodes itself (JSON-style string literals of corpus type keys, numbers); nothing
+-- here evaluates text.
 --
 -- API names for purchases (CityCommandTypes.PURCHASE, GetGold():GetPurchaseCost), production
 -- (CityOperationTypes.BUILD with VALUE_EXCLUSIVE), research and civics (GameCore's
@@ -21,6 +23,7 @@
 if Harness and Harness.version == HARNESS_VERSION then
   return
 end
+local OLD = Harness
 
 Harness = { version = HARNESS_VERSION }
 local H = Harness
@@ -698,6 +701,7 @@ function H.snapshot()
     blockers_all = bl_ok and bl or nil,
     religion = rel_ok and rel or nil,
     autoplay = { active = AutoplayManager.IsActive(), turns = AutoplayManager.GetTurns() },
+    diplomacy = H.diplomacy(),
   }
 end
 
@@ -1269,6 +1273,169 @@ function H.district_plots(city_id)
   return { turn = Game.GetCurrentGameTurn(), player = me, cities = cities, plots = plots, built = built }
 end
 
+-- ---- diplomacy auto-reply (issues.md T240, T342) ----------------------------------------------
+-- An AI leader's statement to us opens DiplomacyActionView, which locks the engine
+-- (UI.ReferenceCurrentEvent) until a human answers, so an autoplay turn never ends. popups.toml
+-- removes the view's handler; this one, in InGame only, answers while autoplay runs. The first
+-- statement of a session gets its reply below; every later one (the AI's "Thank you.") gets Goodbye,
+-- the only choice a follow-up offers. POSITIVE is the view's AddResponse key; EXIT is Goodbye
+-- (CloseSession); REFUSE is the deal view's refusal (AddResponse NEGATIVE). A POSITIVE is sent only
+-- when the game's data offers it for that statement without a DiplomaticActionType (the troop
+-- warning's other choice declares war); else Goodbye. An unknown kind gets Goodbye. Outside
+-- autoplay a statement waits until autoplay next starts. The last 20 are logged for the snapshot.
+local DIPLOMACY = {}
+H.DIPLOMACY = DIPLOMACY
+for reply, kinds in pairs({
+  -- promises: the conciliatory choice (the other costs grievances or, for troops, is a surprise war)
+  POSITIVE = 'WARNING_TOO_MANY_TROOPS_NEAR_ME WARNING_DONT_SETTLE_NEAR_ME WARNING_STOP_SPYING_ON_ME '
+    .. 'WARNING_STOP_DIGGING_UP_ARTIFACTS WARNING_STOP_CONVERTING_MY_CITIES',
+  REFUSE = 'MAKE_DEAL MAKE_DEMAND',              -- nothing is given away
+  -- proposals (no safe accept rule is proven) and first meetings: Goodbye, neither yes nor no;
+  -- kudos, warnings, denouncements, war declarations and defeats offer only Goodbye
+  EXIT = 'DECLARE_FRIEND DIPLOMATIC_DELEGATION RESIDENT_EMBASSY OPEN_BORDERS MAKE_ALLIANCE RENEW_ALLIANCE '
+    .. 'MAKE_PEACE FIRST_MEET_NEAR_RECIPIENT FIRST_MEET_VISIT_RECIPIENT FIRST_MEET_NEAR_INITIATOR FIRST_MEET_NO_MANS '
+    .. 'FIRST_MEET_NO_MANS_INFO_EXCHANGE DIPLOMATIC_KUDO DIPLOMATIC_WARNING DIPLOMATIC_HIDDEN_AGENDA_KUDO '
+    .. 'DIPLOMATIC_HIDDEN_AGENDA_WARNING DENOUNCE DEFEAT DECLARE_WAR_OF_RETRIBUTION DECLARE_JOINT_WAR_OF_RETRIBUTION',
+}) do
+  for k in kinds:gmatch('%S+') do DIPLOMACY[k] = reply end
+end
+for w in ('SURPRISE FORMAL HOLY RECONQUEST LIBERATION PROTECTORATE COLONIAL TERRITORIAL GOLDEN_AGE EMERGENCY IDEOLOGICAL '
+    .. 'JOINT_FORMAL JOINT_HOLY JOINT_RECONQUEST JOINT_LIBERATION JOINT_PROTECTORATE JOINT_COLONIAL JOINT_TERRITORIAL '
+    .. 'JOINT_GOLDEN_AGE JOINT_IDEOLOGICAL'):gmatch('%S+') do
+  DIPLOMACY['DECLARE_' .. w .. '_WAR'] = 'EXIT'
+end
+
+-- log, sessions waiting for autoplay, sessions answered and not closed (kept across reinstalls)
+local D = OLD and OLD.dipl or { n = 0, log = {}, wait = {}, open = {} }
+H.dipl = D
+
+-- Numbers an entry and logs it (the last 20 stay).
+local function add_log(e)
+  D.n = D.n + 1
+  e.n = D.n
+  table.insert(D.log, e)
+  if #D.log > 20 then table.remove(D.log, 1) end
+  return e
+end
+
+local function offered(kind, reply)
+  local set
+  for r in GameInfo.DiplomacyStatements() do
+    if r.Type == kind and r.Initiator == 'AI' and r.SubType == 'NONE' then set = r.Selections end
+  end
+  for r in GameInfo.DiplomacySelections() do
+    if set and r.Type == set and r.Key == 'CHOICE_' .. reply then return r.DiplomaticActionType == nil end
+  end
+  return false
+end
+
+local function reply_for(e)
+  if (e.sub or 'NONE') ~= 'NONE' or D.open[e.session] then return 'EXIT', 'follow-up' end
+  local r = DIPLOMACY[e.kind]
+  if r == nil then return 'EXIT', 'unknown' end
+  if r == 'POSITIVE' then
+    local ok, yes = pcall(offered, e.kind, r)
+    if not (ok and yes) then return 'EXIT', 'guard' end
+  end
+  return r, 'table'
+end
+
+-- The session is listed as open before any call and leaves the list only once Goodbye went through,
+-- so whatever fails here, the next autoplay start closes it. A failed answer gets Goodbye at once
+-- (`closed` when that worked).
+local function respond(e)
+  e.reply, e.why = reply_for(e)
+  e.at = Game.GetCurrentGameTurn()
+  if e.session ~= nil then D.open[e.session] = e end
+  local function goodbye()
+    DiplomacyManager.CloseSession(e.session)
+    D.open[e.session] = nil
+  end
+  local ok, err
+  if e.reply == 'EXIT' then
+    ok, err = pcall(goodbye)
+  else
+    ok, err = pcall(function()
+      DiplomacyManager.AddResponse(e.session, H.me(), e.reply == 'REFUSE' and 'NEGATIVE' or e.reply)
+    end)
+    if not ok and pcall(goodbye) then e.closed = true end
+  end
+  if not ok then e.err = tostring(err) end
+end
+
+local function on_statement(from, to, kv)
+  if Harness ~= H then return end                 -- a replaced library's handler left behind
+  pcall(function()
+    local me = H.me()
+    if to ~= me or from == me then return end
+    -- logged before it is read, so a failed read still shows (with `err`) and gets Goodbye (unknown kind)
+    local e = add_log({ turn = Game.GetCurrentGameTurn(), from = from, session = kv.SessionID })
+    local ok, err = pcall(function()
+      e.session = e.session or DiplomacyManager.FindOpenSessionID(me, from)
+      e.kind = DiplomacyManager.GetKeyName(kv.StatementType)
+      e.sub = DiplomacyManager.GetKeyName(kv.StatementSubType)
+    end)
+    if not ok then e.err = tostring(err) end
+    pcall(function() e.civ = PlayerConfigurations[from]:GetCivilizationTypeName() end)
+    if AutoplayManager.IsActive() then
+      respond(e)
+    elseif e.session == nil then
+      e.why = 'no session'                         -- nothing to answer later: never listed as waiting
+    else
+      e.why = 'waiting'
+      D.wait[e.session] = e
+    end
+  end)
+end
+
+-- The sweep's log entry for each answered session it closes: one per session, even when retried
+-- (kept in D by session id, so it survives a reinstall like the rest of the log).
+D.swept = D.swept or {}
+
+-- When autoplay starts: answer the statements that waited (a follow-up of an answered session, such
+-- as a "Thank you." that came after the hand-back, gets Goodbye as one), then close the sessions
+-- answered before this start that no follow-up closed. That Goodbye is logged too (why 'sweep'); a
+-- failed one keeps its session listed and is tried again at the next start.
+local function dipl_sweep()
+  local before = {}
+  for sid, e in pairs(D.open) do before[sid] = e end
+  for sid, e in pairs(D.wait) do
+    D.wait[sid] = nil
+    if DiplomacyManager.IsSessionIDOpen(sid) then
+      e.late = true
+      respond(e)
+    else
+      e.why = 'gone'
+    end
+  end
+  for sid, e in pairs(before) do
+    if D.open[sid] == e then
+      if DiplomacyManager.IsSessionIDOpen(sid) then
+        local s = D.swept[sid] or add_log({ turn = e.turn, from = e.from, civ = e.civ, session = sid, kind = e.kind,
+                                            sub = e.sub, reply = 'EXIT', why = 'sweep' })
+        D.swept[sid] = s
+        s.at = Game.GetCurrentGameTurn()
+        local ok, err = pcall(DiplomacyManager.CloseSession, sid)
+        s.err = (not ok) and tostring(err) or nil
+        if ok then D.open[sid], D.swept[sid] = nil, nil end
+      else
+        D.open[sid], D.swept[sid] = nil, nil
+      end
+    end
+  end
+end
+
+if HARNESS_STATE == 'InGame' then
+  if OLD and OLD.dipl_handler then pcall(function() Events.DiplomacyStatement.Remove(OLD.dipl_handler) end) end
+  if pcall(function() Events.DiplomacyStatement.Add(on_statement) end) then H.dipl_handler = on_statement end
+end
+
+function H.diplomacy()
+  local log = H.array()
+  for i, e in ipairs(D.log) do log[i] = e end
+  return { handler = H.dipl_handler ~= nil, log = log }
+end
+
 -- ---- autoplay ----------------------------------------------------------------------------------
 
 -- The game's AI plays our civ for `turns` turns, then hands it back.
@@ -1282,6 +1449,7 @@ function H.autoplay(turns)
   AutoplayManager.SetObserveAsPlayer(me)
   AutoplayManager.SetTurns(turns)
   AutoplayManager.SetActive(true)
+  pcall(dipl_sweep)                 -- after SetActive: an answer's follow-up is then answered at once
   return { active = AutoplayManager.IsActive(), turns = turns, turn = Game.GetCurrentGameTurn() }
 end
 

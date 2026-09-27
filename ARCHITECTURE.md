@@ -292,7 +292,14 @@ from the snapshot and our player's strategies from the game's `Logs/AI_Victories
 ai-strategies` reads through the agent's file API in one bounded read per decision. District
 placement is read-only so far: `civ6 district-plots` returns where each district may go (the game's
 own check) and the facts of the plots around each city, and `src/pilot/civ6_placement.py` scores
-them with the adjacency rules the extractor writes as data (`data/_adjacency.json`).
+them with the adjacency rules the extractor writes as data (`data/_adjacency.json`). One part of the
+library runs without a call: the install chunk names its Lua state (`HARNESS_STATE`), and in `InGame`
+the library registers an `Events.DiplomacyStatement` handler that answers an AI leader's statement to
+us while autoplay runs, from an explicit table (never a choice that declares war or accepts a deal),
+since the game's leader screen would hold the engine until a human answers; `corpora/civ6/popups.toml`
+removes that screen's handler only while the library's is registered (a `[[quiet]]` entry's `requires`
+names a `Harness` field the controller checks in `InGame` first; without it the popup's handler is put
+back), and the snapshot's `diplomacy` log feeds `diplomacy_reply` events.
 
 The loader rejects nameless records and duplicate ids at startup, so a bad extract fails the build rather than a game turn. The raw XML is not committed (Stardock's data); `data/_meta.json` records the game version and generator commit for reproducibility.
 

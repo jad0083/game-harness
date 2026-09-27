@@ -175,7 +175,8 @@ class FakeCiv6:
     target takes the predicted damage and dies at 100, the attacker spends its attack, a retreat
     moves the unit) unless `stand_ignored`; `stand_lost_reply` loses the step's reply after it ran;
     `ls_fails` fails that many `ls_state` reads first; `popup` makes `turn_ready` (and every step)
-    not ready; `pin_ignored` leaves `finish_moves` without effect.
+    not ready; `pin_ignored` leaves `finish_moves` without effect; `turn_ready_silent` makes every
+    n-th `turn_ready` call time out (1: every call), as the tuner does right after hand-backs.
     The AI's strategy log: `ai_log` rows (turn, player, strategy, status); `ai_strategies` returns
     those from `offset` on (the offset counts rows here, bytes in the real log)."""
 
@@ -186,7 +187,8 @@ class FakeCiv6:
                  lost_start_reply: bool = False, blink: bool = False, lost_start_not_run: int = 0,
                  ls: dict | None = None, stand: list[dict] | None = None, stand_effect=None,
                  stand_ignored: bool = False, stand_lost_reply: bool = False, ls_fails: int = 0,
-                 popup: bool = False, pin_ignored: bool = False, ai_log: list[tuple] | None = None):
+                 popup: bool = False, pin_ignored: bool = False, ai_log: list[tuple] | None = None,
+                 turn_ready_silent: int = 0):
         self.state = copy.deepcopy(base)
         self.events = dict(events or {})
         self.replies = dict(replies or {})
@@ -204,6 +206,7 @@ class FakeCiv6:
         self.stand_effect = stand_effect or _stand_apply
         self.stand_ignored, self.stand_lost_reply, self.ls_fails = stand_ignored, stand_lost_reply, ls_fails
         self.popup, self.pin_ignored = popup, pin_ignored
+        self.turn_ready_silent, self._turn_ready_calls = turn_ready_silent, 0
         self.ai_log = list(ai_log or [])
         self.actions: list[tuple] = []
         self.active = False
@@ -298,6 +301,9 @@ class FakeCiv6:
     def turn_ready(self) -> dict:
         self.actions.append(("turn_ready", self.active))
         self._tick("turn_ready")
+        self._turn_ready_calls += 1
+        if self.turn_ready_silent and self._turn_ready_calls % self.turn_ready_silent == 0:
+            raise TimeoutError("turn-ready: no reply")
         why = (["autoplay active"] if self.active else []) + (["on screen: TechCivicCompletedPopup"] if self.popup else [])
         return {"ok": True, "ready": not why, "why": why, "turn": self.state["turn"]}
 
@@ -1353,6 +1359,94 @@ def _religion_text(s: dict, cid, limits) -> str:
     return text + "."
 
 
+# ---- the diplomacy auto-reply (issues.md T240, T342) --------------------------------------------
+# corpora/civ6/lua/harness.lua answers an AI leader's statement during autoplay from its own table and
+# logs the last 20 in the snapshot's `diplomacy` ({"handler": bool, "log": [...]}): each entry has
+# n, turn, from, civ, session, kind, sub, and once answered reply (POSITIVE, EXIT or REFUSE), why and
+# at (the turn answered); `late` when it waited for autoplay, `err` when the game's call failed
+# (`closed` when Goodbye then went through instead). why 'sweep' is the Goodbye the library sent when
+# autoplay started to a session its answer had left open (no follow-up closed it).
+
+DIPLOMACY_REPLIES = {"POSITIVE": "the conciliatory reply (a promise)", "EXIT": "Goodbye", "REFUSE": "refused"}
+DIPLOMACY_WHY = {"unknown": "an unknown statement", "guard": "the promise was not offered safely by the game's data"}
+DIPLOMACY_SHOWN = 6            # log entries in the briefing line...
+DIPLOMACY_RECENT = 10          # ...from the last this many turns (one still waiting is always shown)
+DIPLOMACY_RECORD = 8           # the campaign's last answers in the order record (Strategist, published)
+DIPLOMACY_RECORD_HEADING = (f"Diplomacy answered for us in this campaign (the harness's auto-reply during autoplay; "
+                            f"the last {DIPLOMACY_RECORD}):")
+DIPLOMACY_RECORD_KEYS = ("turn", "at", "civ", "from", "statement", "subtype", "reply", "why", "text")
+
+
+def diplomacy_key(e: dict) -> str:
+    """One answer's identity across snapshots and restarts (the library's counter restarts on a load)."""
+    return f"{e.get('turn')}:{e.get('from')}:{e.get('session')}:{e.get('n')}"
+
+
+def diplomacy_answered(s: dict) -> list[dict]:
+    """The snapshot's logged statements that were answered, oldest first."""
+    d = s.get("diplomacy")
+    log = d.get("log") if isinstance(d, dict) else None
+    return [e for e in log or [] if isinstance(e, dict) and e.get("reply")]
+
+
+def diplomacy_reply_text(e: dict) -> str:
+    """What was answered, or why nothing was: "Goodbye (at T14, when autoplay started)"."""
+    if not e.get("reply"):
+        return {"gone": "closed before an answer",
+                "no session": "not answered (its session could not be read)"}.get(e.get("why"),
+                                                                                "waiting for the next autoplay")
+    notes = [DIPLOMACY_WHY[e["why"]]] if e.get("why") in DIPLOMACY_WHY else []
+    if e.get("why") == "sweep":
+        notes = [f"the session our answer left open, closed at T{e.get('at')} when autoplay started"]
+    if e.get("late"):
+        notes.append(f"at T{e.get('at')}, when autoplay started")
+    if e.get("err"):
+        notes.append(f"failed: {e['err']}"[:120])
+    if e.get("closed"):
+        notes.append("Goodbye sent instead")
+    text = DIPLOMACY_REPLIES.get(e["reply"], str(e["reply"]))
+    return text + (f" ({'; '.join(notes)})" if notes else "")
+
+
+def _statement_words(kind, sub) -> str:
+    """`warning too many troops near me (positive follow-up)`."""
+    sub = str(sub or "NONE")
+    return str(kind or "unnamed statement").lower().replace("_", " ") \
+        + (f" ({sub.lower().replace('_', ' ')} follow-up)" if sub != "NONE" else "")
+
+
+def _statement_text(e: dict, cid) -> str:
+    who = cid(e.get("civ")) if e.get("civ") else "player " + str(e.get("from"))
+    return f"T{e.get('turn')} {who} {_statement_words(e.get('kind'), e.get('sub'))}"
+
+
+def diplomacy_record_text(rows: list[dict]) -> str:
+    """The order record's diplomacy lines from the campaign's `diplomacy_reply` events (oldest first):
+    the last DIPLOMACY_RECORD, one per answer, e.g. `- T13 civ:australia warning too many troops near
+    me: the conciliatory reply (a promise)`; "" when none."""
+    return "\n".join(f"- T{r.get('turn')} {r.get('civ') or 'player ' + str(r.get('from'))} "
+                     f"{_statement_words(r.get('statement'), r.get('subtype'))}: {r.get('text') or r.get('reply')}"
+                     for r in rows[-DIPLOMACY_RECORD:])
+
+
+def diplomacy_text(s: dict, cid) -> str:
+    """The briefing's diplomacy line: the last statements the library answered (or holds) for us."""
+    d = s.get("diplomacy")
+    if not isinstance(d, dict):
+        return ""                                  # a library without the auto-reply
+    if not d.get("handler"):
+        return ("Diplomacy: the auto-reply is not installed in this game, so the leader screen is kept: an AI "
+                "leader's statement holds the autoplay turn until a human answers it on screen.")
+    now = s.get("turn") or 0
+    log = [e for e in d.get("log") or [] if isinstance(e, dict)
+           and (e.get("why") == "waiting" or (e.get("at") or e.get("turn") or 0) >= now - DIPLOMACY_RECENT)]
+    if not log:
+        return ""
+    return ("Diplomacy answered for us while the AI played (never war, no deal accepted; a promise to a warning, "
+            "Goodbye to proposals): " + "; ".join(f"{_statement_text(e, cid)}: {diplomacy_reply_text(e)}"
+                                                  for e in log[-DIPLOMACY_SHOWN:]) + ".")
+
+
 def briefing_text(s: dict, index: CorpusIndex, gold_reserve: int = 0, limits=None,
                   strategies: dict[str, dict] | None = None) -> str:
     """The snapshot as a compact briefing; every item is named by its corpus id. With the purchase
@@ -1418,6 +1512,9 @@ def briefing_text(s: dict, index: CorpusIndex, gold_reserve: int = 0, limits=Non
         lines.append("Civilizations met: none yet.")
     wars = s.get("wars") or []
     lines.append("Wars: " + (", ".join(cid(w.get("civ")) for w in wars) if wars else "none") + ".")
+    diplomacy = diplomacy_text(s, cid)
+    if diplomacy:
+        lines.append(diplomacy)
     gp = s.get("great_people") or {}
     close = [f"{g.get('class', '').removeprefix('GREAT_PERSON_CLASS_').lower()} {g.get('ours')}/{g.get('cost')}"
              for g in gp.get("current") or [] if g.get("ours")]
