@@ -205,7 +205,8 @@ class LiveProxy:
         return self._url
 
 
-GAME_WINDOWS = {"Stellaris": "stellaris", "Galactic Civilizations": "galciv4"}
+GAME_WINDOWS = {"Stellaris": "stellaris", "Galactic Civilizations": "galciv4",
+                "Civilization VI": "civ6"}      # "Sid Meier's Civilization VI" (DX11) and "(DX12)"
 
 
 def game_of(title: str) -> str | None:
@@ -250,7 +251,8 @@ def list_runs(runs_dir: Path, live_id: str | None = None) -> list[dict]:
                 st = {}
         out.append({"id": d.name, "live": d.name == live_id, "model": st.get("model", ""), "_status": st,
                     "game": (st.get("info") or {}).get("game", ""), "decisions": st.get("episodes", 0),
-                    "date": st.get("game_date", ""), "status": st.get("status", "")})
+                    "date": st.get("game_date", ""), "status": st.get("status", ""),
+                    "frame": (d / "latest.jpg").exists()})
     return out
 
 
@@ -314,7 +316,8 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
             "SELECT c.id, c.game, c.name, c.title, c.created,"
             " (SELECT COUNT(*) FROM runs r WHERE r.campaign_id=c.id) AS runs,"
             " (SELECT COUNT(*) FROM decisions d WHERE d.campaign_id=c.id AND (d.decision IS NULL OR d.decision != 'strategy_review')) AS decisions,"
-            " (SELECT MAX(date) FROM metrics m WHERE m.campaign_id=c.id) AS latest,"
+            " (SELECT m.date FROM metrics m WHERE m.campaign_id=c.id AND m.month IS NOT NULL"
+            "  ORDER BY m.month DESC, m.t DESC LIMIT 1) AS latest,"      # in game order: MAX(date) put "T99" after "T310"
             " (SELECT GROUP_CONCAT(DISTINCT r.model) FROM runs r WHERE r.campaign_id=c.id) AS models"
             " FROM campaigns c ORDER BY c.created DESC")
         return web.json_response(rows)
@@ -325,7 +328,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
         where, args = scope(request)
         rows = await q(f"SELECT run_id, episode, campaign_id, t, date, month, trigger, decision, reason, outcome, current,"
                        f" tokens_in, tokens_out, seconds, result, model_version, thinking,"
-                       f" json_extract(trace,'$.off_frame') AS off_frame,"
+                       f" json_extract(trace,'$.off_frame') AS off_frame, json_extract(trace,'$.error') AS error,"
                        f" COALESCE(model, (SELECT model FROM runs WHERE runs.id=decisions.run_id)) AS model"
                        f" FROM decisions WHERE {where} AND (decision IS NULL OR decision != 'strategy_review') ORDER BY t", args)
         for r in rows:

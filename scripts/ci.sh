@@ -41,6 +41,9 @@ stage "python: ruff + pytest"
 .venv/bin/ruff check .
 .venv/bin/pytest -q 2>&1 | tail -1
 
+stage "python: dashboard pages in Chromium (pytest -m ui, tests/ui)"
+if .venv/bin/python scripts/ci-has-chromium.py; then .venv/bin/pytest -q -m ui 2>&1 | tail -1; else echo "UI tests skipped: Playwright's Chromium is not installed"; fi
+
 stage "civ6 Lua library under LuaJIT (lupa from its own cache; pytest above skips it)"
 scripts/civ6-lua-check.sh 2>&1 | tail -1
 

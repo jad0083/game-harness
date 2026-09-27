@@ -39,3 +39,31 @@ def test_ci_runs_the_civ6_lua_library_in_luajit_on_every_run():
     assert runs, "scripts/ci.sh does not run scripts/civ6-lua-check.sh"
     rust_block_end = max(i for i, line in enumerate(lines) if line.strip() == "fi")
     assert all(i > rust_block_end for i in runs), "the Lua check sits inside a conditional block"
+
+
+def ui_gate(log_text: str, *paths: str, tmp_path) -> bool:
+    log = tmp_path / "ci.log"
+    log.write_text(log_text)
+    r = subprocess.run(["bash", str(REPO / "scripts/ci-ui-gate.sh"), str(log)], input="\n".join(paths) + "\n",
+                       text=True, capture_output=True, timeout=30, check=False)
+    assert r.returncode in (0, 1), r.stderr
+    return r.returncode == 0
+
+
+def test_ci_runs_the_browser_tests_when_chromium_is_there():
+    ci = (REPO / "scripts/ci.sh").read_text(encoding="utf-8")
+    assert "pytest -q -m ui" in ci and "UI tests skipped" in ci
+
+
+def test_a_page_change_is_not_committed_when_the_browser_tests_were_skipped(tmp_path):
+    skipped = "== python ==\nUI tests skipped: Playwright's Chromium is not installed\nCI OK\n"
+    ran = "== python ==\n7 passed in 12.1s\nCI OK\n"
+    for page in ("src/pilot/static/dashboard.html", "src/pilot/static/pair.html", "src/pilot/static/signin.js",
+                 "src/pilot/auth.py"):
+        assert not ui_gate(skipped, "README.md", page, tmp_path=tmp_path), page
+        assert ui_gate(ran, "README.md", page, tmp_path=tmp_path), page
+    assert ui_gate(skipped, "src/pilot/governor.py", "plan.md", tmp_path=tmp_path)
+
+
+def test_ci_commit_applies_the_ui_gate():
+    assert "scripts/ci-ui-gate.sh" in (REPO / "scripts/ci-commit.sh").read_text(encoding="utf-8")

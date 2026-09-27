@@ -119,6 +119,7 @@ This is a tool for a home network, not the internet.
 ## Development
 
 `scripts/ci.sh` runs the Rust build, tests, clippy, the Windows agent build check, corpus loading,
-ruff, pytest and the Civ VI Lua library under LuaJIT (`scripts/civ6-lua-check.sh`). Commit with `scripts/ci-commit.sh "type(scope): summary" "body"`, which commits
+ruff, pytest, the dashboard's browser tests (`pytest -m ui`, `tests/ui/`, when Playwright's Chromium
+is installed) and the Civ VI Lua library under LuaJIT (`scripts/civ6-lua-check.sh`). Commit with `scripts/ci-commit.sh "type(scope): summary" "body"`, which commits
 and pushes only when CI passes; Python-only changes skip the Rust stages. Conventions are in
 [AGENTS.md](AGENTS.md) §8–9.

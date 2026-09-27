@@ -8,6 +8,7 @@ if ! CI_CHANGED_FILES="$(git diff --cached --name-only)" scripts/ci.sh >"$log" 2
   echo "CI FAILED — nothing committed. Last lines:"; tail -25 "$log"; exit 1
 fi
 tail -2 "$log"
+if ! git diff --cached --name-only | scripts/ci-ui-gate.sh "$log"; then echo "nothing committed"; exit 1; fi
 if git diff --cached --quiet; then echo "nothing staged"; exit 1; fi
 if [ "$#" -ge 2 ]; then git commit -q -m "$1" -m "$2"; else git commit -q -m "$1"; fi
 git push -q && git log --oneline -1

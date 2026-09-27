@@ -425,7 +425,14 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   closed), positions in `corpora/stellaris/manifest.toml` `[ui.tech]`/`[ui.market]` (calibrated live
   on 4.5.1). The old free-text plan (`plan` events, `/api/plans`) remains readable history only.
 - `static/dashboard.html`: one file, no build step; SVG charts (palette validated for both themes;
-  light-mode relief via legend, hover values and a table view).
+  light-mode relief via legend, hover values and a table view). Dates reach the axis through
+  `monthOf` (months for "2288.08.01", the turn for "T57", like `telemetry.month_index`, null
+  otherwise); a view with no finite value renders the table instead of an axis. The frame is
+  fetched only when one exists (`status.frame_path` live, `/runs` rows' `frame` in history).
+  `/api/campaigns` takes `latest` from the metric with the highest `month`, `/api/decisions` returns
+  each failed decision's `error`. Browser tests: `tests/ui/` (Playwright's Chromium, marker `ui`,
+  fixture servers on 127.0.0.1 over a temp `runs/`); `scripts/ci-ui-gate.sh` refuses a commit that
+  stages a page or `auth.py` while they were skipped.
 - Design (keep it consistent): deep-space plane with warm ivory ink, dark first; one amber accent
   reserved for attention (falling behind, needs you, the live pulse, focus) and teal for sensors and
   tool calls; Bricolage Grotesque for the interface and Fraunces for the model's own words (reasons,

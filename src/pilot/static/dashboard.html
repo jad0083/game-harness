@@ -110,7 +110,7 @@
   .right { position: sticky; top: 58px; }
   @media (max-width: 1000px) { .right { position: static; } }
   @media (max-width: 1000px) {
-    main { display: flex; flex-direction: column; }
+    main { display: flex; flex-direction: column; align-items: stretch; }   /* each panel as wide as the screen, never its content */
     .col { display: contents; }
     #p-chart { order: 1; } #p-dec { order: 2; } #p-tabs { order: 3; } #p-frame { order: 4; }
   }
@@ -188,6 +188,7 @@
   .trigger { color: var(--muted); font-size: 13px; }
   .reason { font-family: var(--serif); font-size: 16px; line-height: 1.5; margin: 3px 0 0; color: var(--ink);
             display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .reason.sys { font-family: var(--sans); font-size: 14px; color: var(--bad); }
   .after { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
   .after .up { color: var(--good); } .after .down { color: var(--bad); }
 
@@ -204,6 +205,8 @@
   .t-when { color: var(--muted); font-size: 13px; }
   .t-decision { font-family: var(--serif); font-size: 30px; line-height: 1.15; margin: 4px 0 8px; font-weight: 400; font-variation-settings: "opsz" 48, "SOFT" 30; }
   .t-reason { font-family: var(--serif); font-size: 17.5px; line-height: 1.55; margin: 0 0 10px; max-width: 68ch; }
+  .t-error { font-size: 15px; line-height: 1.5; margin: 6px 0 10px; padding: 8px 12px; border-left: 3px solid var(--bad);
+             background: color-mix(in srgb, var(--bad) 10%, var(--surface)); max-width: 80ch; }
   .t-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; margin-bottom: 16px; }
   .steps { display: grid; gap: 14px; }
   .step h3 { margin: 0 0 4px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
@@ -409,7 +412,7 @@
       <label>Game speed while the AI plays <select id="pace-speed">
         <option value="slowest">slowest</option><option value="slow">slow</option><option value="normal">normal</option><option value="fast">fast</option><option value="fastest">fastest</option>
       </select></label>
-      <label>Decide every <span class="inline-num"><input id="pace-months" type="number" min="1" max="120"> in-game months</span></label>
+      <label>Decide every <span class="inline-num"><input id="pace-months" type="number" min="1" max="120"> <span id="pace-unit">in-game months</span></span></label>
     </fieldset>
     <div class="row"><button class="btn primary" value="close">Done</button></div>
   </form>
@@ -422,8 +425,8 @@
 </div>
 <section class="readout" id="readout" aria-label="Empire readout">
   <div class="ro-date"><span class="ro-label" id="ro-date-label">In-game date</span><b id="ro-date">–</b></div>
-  <div class="ro-item"><span class="ro-label">Directive</span><b id="ro-directive">–</b><span class="ro-sub" id="ro-directive-sub"></span></div>
-  <div class="ro-item"><span class="ro-label">Standing</span><b id="ro-standing">–</b><span class="ro-sub" id="ro-standing-sub"></span></div>
+  <div class="ro-item" id="ro-directive-cell"><span class="ro-label">Directive</span><b id="ro-directive">–</b><span class="ro-sub" id="ro-directive-sub"></span></div>
+  <div class="ro-item" id="ro-standing-cell"><span class="ro-label">Standing</span><b id="ro-standing">–</b><span class="ro-sub" id="ro-standing-sub"></span></div>
   <div class="ro-item"><span class="ro-label">Governor</span><b id="ro-gov">–</b><span class="ro-sub" id="ro-gov-sub"></span></div>
   <button class="ro-item ro-pace" id="ro-pace-btn" title="Game speed and decision interval (open Settings to change)">
     <span class="ro-label">Pace</span><b id="ro-pace">–</b><span class="ro-sub" id="ro-pace-sub"></span>
@@ -478,7 +481,7 @@
         <button role="tab" aria-selected="false" data-tab="strategy">Strategy<span class="dot" hidden></span></button>
         <button role="tab" aria-selected="false" data-tab="activity">Activity<span class="dot" hidden></span></button>
       </div>
-      <div class="tabpanel" id="tab-reasoning" role="tabpanel"><p class="empty">Pick a decision to read how it was made.</p></div>
+      <div class="tabpanel" id="tab-reasoning" role="tabpanel"></div>
       <div class="tabpanel" id="tab-talk" role="tabpanel" hidden>
         <div class="thread" id="thread"></div>
         <div id="talk-controls">
@@ -517,6 +520,13 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const fmt = (n) => n == null ? "–" : Math.abs(n) >= 1e6 ? (n / 1e6).toFixed(1) + "M" : Math.abs(n) >= 1e4 ? (n / 1e3).toFixed(1) + "k" : Math.abs(n) >= 100 ? Math.round(n).toLocaleString() : (+n).toFixed(1).replace(/\.0$/, "");
 const human = (s) => String(s || "").replace(/_/g, " ");
+const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+const GAME_NAMES = { stellaris: "Stellaris", galciv4: "GalCiv IV", civ6: "Civ VI" };
+// The game of the campaign on screen (live: the run's own; history: the campaign id's prefix).
+const gameNow = () => (S.live && S.campaign === (S.status.info || {}).campaign && (S.status.info || {}).game)
+  || String(S.campaign || "").split("/")[0] || (S.status.info || {}).game || "";
+// Turn-based games (Civ VI, GalCiv IV) count turns; Stellaris counts in-game months.
+const turnBased = () => ["civ6", "galciv4"].includes(gameNow());
 // long floats from older records (405.92577500000004) read as one decimal
 const tidy = (s) => String(s ?? "").replace(/-?\d+\.\d{3,}/g, (m) => (+m).toFixed(1));
 // the model writes light markdown: bold and italic only, applied after escaping
@@ -584,6 +594,7 @@ async function loadStatus() {
   renderOrders(info.orders || []);
   if ($("override-dir").options.length === 0 && info.directives)
     $("override-dir").innerHTML = info.directives.map((d) => `<option value="${esc(d)}">${esc(human(d))}</option>`).join("");
+  refreshFrame();
   $("stats").innerHTML = S.live ? [
     `<span>Decisions <b>${esc(S.status.episodes)}</b></span>`,
     `<span>Tokens <b>${fmt(S.status.tokens_in)}</b> in, <b>${fmt(S.status.tokens_out)}</b> out</span>`,
@@ -596,14 +607,20 @@ async function loadCampaigns() {
   try { camps = await api("/api/campaigns"); } catch { /* no telemetry yet */ }
   const live = (S.status.info || {}).campaign;
   const sel = $("campaign");
-  sel.innerHTML = camps.map((c) => `<option value="${esc(c.id)}">${esc(c.title || human(c.name))}${c.id === live ? " (live)" : ""}, ${esc(c.decisions)} decisions</option>`).join("")
+  sel.innerHTML = camps.map((c) => `<option value="${esc(c.id)}">${esc(c.title || human(c.name))}${c.id === live ? " (live)" : ""}, ${esc(plural(c.decisions, "decision"))}</option>`).join("")
     || `<option value="">No campaigns recorded yet</option>`;
   // Follow the live run's campaign unless the reader picked another one during this run.
   const prev = S.campaign;
   const keep = S.campaign && camps.some((c) => c.id === S.campaign);
   S.campaign = live && !S.pinned ? live : (keep ? S.campaign : (live || camps[0]?.id || null));
-  if (S.campaign !== prev) { S.sel = null; S.plansKey = undefined; S.showAll = false; }
+  if (S.campaign !== prev) clearReasoning();
   if (S.campaign) sel.value = S.campaign;
+}
+
+// A different campaign never keeps the previous one's decision in the reader.
+function clearReasoning() {
+  S.sel = null; S.plansKey = undefined; S.showAll = false;
+  $("tab-reasoning").innerHTML = `<p class="empty">Pick a decision to read how it was made.</p>`;
 }
 
 // ---------- strategy ----------
@@ -803,10 +820,11 @@ function renderStrategy(data) {
 
 async function loadCampaignData() {
   if (!S.campaign) { S.strategy = null; renderChart(); renderDecisions(); renderStrategy(null); return; }
-  const qs = "campaign=" + encodeURIComponent(S.campaign);
-  let strategy;
-  [S.decisions, S.metrics, strategy] = await Promise.all([api("/api/decisions?" + qs), api("/api/metrics?" + qs),
-                                                      api("/api/strategy?" + qs).catch(() => null)]);
+  const cid = S.campaign, qs = "campaign=" + encodeURIComponent(cid);
+  const [decisions, metrics, strategy] = await Promise.all([api("/api/decisions?" + qs), api("/api/metrics?" + qs),
+                                                            api("/api/strategy?" + qs).catch(() => null)]);
+  if (cid !== S.campaign) return;          // another campaign was picked meanwhile: its own load renders it
+  S.decisions = decisions; S.metrics = metrics;
   S.strategy = strategy;
   const skey = JSON.stringify(strategy && strategy.current);
   if (skey !== S.strategyKey) {
@@ -819,8 +837,29 @@ async function loadCampaignData() {
   // follow the newest decision unless the reader picked an older one
   if (newest && (!S.sel || S.follow) && !(S.sel && S.sel.run_id === newest.run_id && S.sel.episode === newest.episode))
     selectDecision(newest, false);
-  const last = S.decisions[S.decisions.length - 1];
-  $("frame").src = S.live ? "/frame.jpg?t=" + Date.now() : last ? `/runs/${encodeURIComponent(last.run_id)}/frame.jpg` : "";
+  if (!S.live) await loadRuns();
+  refreshFrame();
+}
+
+// ---------- game screen ----------
+// Fetched only when one exists (governor games such as Civ VI record none, and a missing frame is a
+// 404): live, the run's frame_path names the newest frame, so a new frame is a new URL; in history,
+// the newest run of the chosen campaign that has a frame.
+let frameUrl = "";
+async function loadRuns() { try { S.runs = await api("/runs"); } catch { S.runs = S.runs || []; } }
+function refreshFrame() {
+  let url = "";
+  if (S.live && S.campaign === (S.status.info || {}).campaign) {
+    if (S.status.frame_path) url = "/frame.jpg?f=" + encodeURIComponent(S.status.frame_path);
+  } else {
+    const ids = new Set(S.decisions.map((d) => d.run_id));
+    const run = (S.runs || []).find((r) => r.frame && ids.has(r.id));
+    if (run) url = `/runs/${encodeURIComponent(run.id)}/frame.jpg`;
+  }
+  if (url === frameUrl) return;
+  frameUrl = url;
+  if (url) $("frame").src = url;
+  else { $("frame").removeAttribute("src"); $("frame").hidden = true; $("noframe").hidden = false; }
 }
 
 // ---------- chart ----------
@@ -835,7 +874,14 @@ function niceTicks(lo, hi, n = 4) {
   return out;
 }
 
-const monthOf = (date) => { if (!date) return null; const [y, m] = String(date).split("."); return (+y) * 12 + (+m) - 1; };
+// A date's place on the time axis: months since year 0 for "2288.08.01", the turn for "T57", like
+// telemetry.month_index; null for anything else (so it never reaches the axis as NaN).
+const monthOf = (date) => {
+  const s = String(date || "");
+  if (/^T\d+$/.test(s)) return +s.slice(1);
+  const [y, m] = s.split(".");
+  return /^\d+$/.test(y || "") && /^\d+$/.test(m || "") ? (+y) * 12 + (+m) - 1 : null;
+};
 
 function directiveSpans() {
   const spans = [];
@@ -873,8 +919,10 @@ function renderReadout() {
   $("ro-date").textContent = date || "–";
   $("ro-date-label").textContent = live ? "In-game date, live" : "In-game date at the last record";
   const dir = live && info.directive !== undefined ? info.directive : (last && last.directive) || (lastDec && (lastDec.outcome === "applied" ? lastDec.decision : lastDec.current));
+  // absent means hidden: only Stellaris has directives, and a game without peer figures has no standing
+  $("ro-directive-cell").hidden = !dir && gameNow() !== "stellaris";
   $("ro-directive").textContent = dir ? human(dir) : "none";
-  $("ro-directive-sub").textContent = lastDec ? `since ${lastDec.date}` : "";
+  $("ro-directive-sub").textContent = lastDec && dir ? `since ${lastDec.date}` : "";
   const p = last && last.peers, sysP = p && p.systems, n = last ? (last.peer_count || 0) + 1 : 0;
   const behind = (last && last.behind) || [];
   const stEl = $("ro-standing");
@@ -882,19 +930,26 @@ function renderReadout() {
     stEl.textContent = `#${sysP.rank} of ${n} in systems`;
     stEl.className = behind.length ? "attn" : "";
     $("ro-standing-sub").textContent = behind.length ? `falling behind in ${behind.map(human).join(", ")}` : "keeping pace";
-  } else { stEl.textContent = "–"; stEl.className = ""; $("ro-standing-sub").textContent = ""; }
-  const cat = S.catalog || {};
-  const speed = live ? info.speed : cat.speed, months = live ? info.every_months : cat.months;
+  } else { stEl.textContent = ""; stEl.className = ""; $("ro-standing-sub").textContent = ""; }
+  $("ro-standing-cell").hidden = !sysP;
+  const cat = S.catalog || {}, turns = turnBased();
+  // Civ VI: the AI plays `decide_turns` turns between decisions, at the game's own pace (no speed)
+  const speed = turns ? "" : live ? info.speed : cat.speed;
+  const every = turns ? (live ? info.decide_turns : null) : (live ? info.every_months : cat.months);
+  const unit = turns ? "turns" : "months";
   if (document.activeElement !== $("pace-speed") && speed) $("pace-speed").value = speed;
-  if (document.activeElement !== $("pace-months") && months) $("pace-months").value = months;
-  $("ro-pace").textContent = speed || "–";
-  $("ro-pace-sub").textContent = months ? `a decision every ${months} months` : "";
+  if (document.activeElement !== $("pace-months") && every) $("pace-months").value = every;
+  $("pace-speed").closest("label").hidden = turns;
+  $("pace-unit").textContent = turns ? "turns" : "in-game months";
+  $("ro-pace").textContent = speed || (turns && every ? "game's own pace" : "");
+  $("ro-pace-sub").textContent = every ? `a decision every ${plural(every, unit.slice(0, -1))}` : "";
+  $("ro-pace-btn").hidden = !speed && !every;
   const st = S.status.status || "viewer";
   $("ro-gov").textContent = live ? ({ playing: "Watching the empire", deciding: "Deciding now", paused: "Paused", needs_attention: "Needs you" }[st] || st) : "Not running";
   $("ro-gov").className = st === "needs_attention" ? "attn" : "";
   const when = (t) => new Date(t * 1000).toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
   $("ro-gov-sub").textContent = live
-    ? `${(S.status.model || "").replace(/^google:/, "")}${info.speed ? ", " + info.speed + " speed" : ""}, ${S.status.episodes || 0} decisions this run`
+    ? `${(S.status.model || "").replace(/^google:/, "")}${info.speed ? ", " + info.speed + " speed" : ""}, ${plural(S.status.episodes || 0, "decision")} this run`
     : (lastDec ? `last decision ${when(lastDec.t)} by ${(lastDec.model || "").replace(/^google:/, "")}` : "");
 }
 
@@ -907,7 +962,7 @@ function renderChart() {
   $("chart-sub").textContent = ms.length ? `${ms[0].date} to ${ms[ms.length - 1].date}` : "";
   if (!ms.length) {
     $("legend").innerHTML = "";
-    wrap.innerHTML = `<p class="empty">No game metrics yet. Stellaris runs record the empire every in-game month.</p>`;
+    wrap.innerHTML = `<p class="empty">No game figures recorded in this campaign yet.</p>`;
     return;
   }
   if (view === "table") return renderTable(ms);
@@ -916,7 +971,13 @@ function renderChart() {
   const W = Math.max(wrap.clientWidth, 320), H = 280, L = 48, R = view === "power" ? 84 : 14, T = 30, B = 44;
   const x0 = ms[0].month, x1 = Math.max(ms[ms.length - 1].month, x0 + 1);
   let lo = Infinity, hi = -Infinity;
-  for (const m of ms) for (const [k] of series) { const v = value(m, view, k); if (v != null) { lo = Math.min(lo, v); hi = Math.max(hi, v); } }
+  for (const m of ms) for (const [k] of series) { const v = value(m, view, k); if (Number.isFinite(v)) { lo = Math.min(lo, v); hi = Math.max(hi, v); } }
+  if (hi === -Infinity) {        // this game records none of this view's figures: say so, never draw a NaN axis
+    const label = document.querySelector(`[data-view="${view}"]`).textContent.toLowerCase();
+    renderTable(ms);
+    wrap.insertAdjacentHTML("afterbegin", `<p class="empty">This campaign records no ${esc(label)} figures; these are the ones it records.</p>`);
+    return;
+  }
   if (view !== "net") lo = Math.min(lo, 0);
   const ticks = niceTicks(lo, hi);
   const y0 = ticks[0], y1 = ticks[ticks.length - 1];
@@ -943,12 +1004,17 @@ function renderChart() {
   });
   // grid + y ticks
   for (const t of ticks) svg += `<line x1="${L}" x2="${W - R}" y1="${Y(t)}" y2="${Y(t)}" stroke="${t === 0 ? "var(--axis)" : "var(--grid)"}" stroke-width="1"/><text x="${L - 8}" y="${Y(t) + 4}" text-anchor="end">${fmt(t)}</text>`;
-  // x ticks: years
-  const yrs = Math.max(1, Math.ceil((x1 - x0) / 12 / 6));
-  for (let mo = Math.ceil(x0 / 12) * 12; mo <= x1; mo += 12 * yrs) svg += `<text x="${X(mo)}" y="${H - B + 18}" text-anchor="middle">${Math.floor(mo / 12)}</text>`;
+  // x ticks: turns ("T250") for turn-based games, years for Stellaris
+  if (String(ms[0].date).startsWith("T")) {
+    const step = [1, 2, 5, 10, 25, 50, 100, 250].find((k) => (x1 - x0) / k <= 6) || 500;
+    for (let t = Math.ceil(x0 / step) * step; t <= x1; t += step) svg += `<text x="${X(t)}" y="${H - B + 18}" text-anchor="middle">T${t}</text>`;
+  } else {
+    const yrs = Math.max(1, Math.ceil((x1 - x0) / 12 / 6));
+    for (let mo = Math.ceil(x0 / 12) * 12; mo <= x1; mo += 12 * yrs) svg += `<text x="${X(mo)}" y="${H - B + 18}" text-anchor="middle">${Math.floor(mo / 12)}</text>`;
+  }
   // lines
   series.forEach(([k], i) => {
-    const pts = ms.map((m) => [X(m.month), value(m, view, k)]).filter(([, v]) => v != null).map(([x, v]) => `${x.toFixed(1)},${Y(v).toFixed(1)}`);
+    const pts = ms.map((m) => [X(m.month), value(m, view, k)]).filter(([, v]) => Number.isFinite(v)).map(([x, v]) => `${x.toFixed(1)},${Y(v).toFixed(1)}`);
     if (pts.length) svg += `<polyline points="${pts.join(" ")}" fill="none" stroke="${color(i)}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
     if (view === "power") {
       const last = [...ms].reverse().find((m) => value(m, view, k) != null);
@@ -968,7 +1034,7 @@ function renderChart() {
   });
   // strategy review marks: a thin diamond on the directive lane at each version's month
   const reviews = (S.strategy && S.strategy.history) || [];
-  const shown = reviews.filter((r) => monthOf(r.date) != null && monthOf(r.date) >= x0 - 1);
+  const shown = reviews.filter((r) => monthOf(r.date) != null && monthOf(r.date) >= x0 - 1 && monthOf(r.date) <= x1);
   shown.forEach((r) => {
     const mo = Math.min(Math.max(monthOf(r.date), x0), x1), x = X(mo);
     svg += `<g class="dmark rmark"><title>Strategy review: ${esc(tidy(r.trigger || ""))}</title>
@@ -1077,13 +1143,27 @@ function renderNeighbours(ms) {
 
 function renderTable(ms) {
   $("legend").innerHTML = "";
-  const cols = [["date", "Date"], ...SERIES.net.map(([k, l]) => ["net." + k, l + " / mo"]), ["planets", "Planets"], ["pops", "Pops"], ["military_power", "Military"], ["economy_power", "Economy"], ["tech_power", "Technology"]];
+  const known = [...SERIES.net.map(([k, l]) => ["net." + k, l + " / mo"]), ["planets", "Planets"], ["pops", "Pops"], ["military_power", "Military"], ["economy_power", "Economy"], ["tech_power", "Technology"]];
   const get = (m, c) => c.startsWith("net.") ? m.net?.[c.slice(4)] : m[c];
+  // the columns this campaign records: the Stellaris set where it has them, else every number it records
+  const shown = known.filter(([c]) => ms.some((m) => Number.isFinite(get(m, c))));
+  const other = [...new Set(ms.flatMap((m) => Object.keys(m)))]
+    .filter((k) => !["month", "prev", "t"].includes(k) && ms.some((m) => typeof m[k] === "number")).map((k) => [k, human(k)]);
+  const cols = [["date", "Date"], ...(shown.length ? shown : other)];
   $("chartwrap").innerHTML = `<div class="tablewrap"><table class="data"><thead><tr>${cols.map(([, l]) => `<th>${l}</th>`).join("")}</tr></thead><tbody>` +
     [...ms].reverse().map((m) => `<tr>${cols.map(([c]) => `<td>${c === "date" ? esc(m.date) : fmt(get(m, c))}</td>`).join("")}</tr>`).join("") + `</tbody></table></div>`;
 }
 
 // ---------- decisions ----------
+// One line for a failed decision's error; the raw text stays one disclosure away.
+function errorCause(err) {
+  const e = String(err || "");
+  if (/\b503\b|high demand|overloaded/i.test(e)) return "the model was overloaded (503)";
+  if (/\b429\b|rate.?limit|quota/i.test(e)) return "the model's rate limit was reached (429)";
+  if (/credit balance/i.test(e)) return "billing: credit balance too low";
+  if (/timed? ?out|timeout/i.test(e)) return "the model did not answer in time";
+  return tidy(e.split("\n")[0]).slice(0, 160);
+}
 const SCORED = [["systems", "systems"], ["planets", "planets"], ["pops", "pops"], ["techs_known", "techs"], ["military_power", "military"], ["economy_power", "economy"], ["tech_power", "tech"]];
 function afterText(r) {
   if (!r) return "";
@@ -1094,19 +1174,19 @@ function afterText(r) {
 
 function renderDecisions() {
   const ul = $("decisions");
-  $("dec-sub").textContent = S.decisions.length ? `${S.decisions.length} in this campaign, newest first` : "";
+  $("dec-sub").textContent = S.decisions.length ? `${plural(S.decisions.length, "decision")} in this campaign, newest first` : "";
   if (!S.decisions.length) { ul.innerHTML = `<li class="empty">No decisions yet.</li>`; return; }
   const all = [...S.decisions].reverse(), shown = S.showAll ? all : all.slice(0, 8);
   ul.innerHTML = shown.map((d) => {
     const i = S.decisions.indexOf(d);
-    const kept = d.decision === "keep" || d.outcome === "kept";
-    const label = kept ? `kept ${human(d.current || "none")}` : d.outcome === "applied" ? human(d.decision) : `${human(d.decision)} (${d.outcome || ""})`;
+    const kept = d.decision === "keep" || d.outcome === "kept", failed = d.outcome === "error";
+    const label = failed ? "No decision" : kept ? `kept ${human(d.current || "none")}` : d.outcome === "applied" ? human(d.decision) : `${human(d.decision)} (${d.outcome || ""})`;
     const sel = S.sel && S.sel.run_id === d.run_id && S.sel.episode === d.episode;
     return `<li class="${sel ? "sel" : ""}"><button data-i="${i}">
       <span class="d-date">${esc(d.date || "–")}</span>
       <span class="d-meta"><span class="nw">${d.model === "human" ? "you" : fmt(d.tokens_in) + " tokens"}</span>${d.seconds ? `<br><span class="nw">${esc(d.seconds)} s</span>` : ""}</span>
       <span class="d-main"><span class="d-head"><span class="dir${kept ? " kept" : ""}">${esc(label)}</span><span class="trigger">${esc(tidy(d.trigger || ""))}</span>${shortModel(d) ? `<span class="tag model">${esc(shortModel(d))}</span>` : ""}${d.off_frame ? '<span class="tag bad">off-frame</span>' : ""}</span>
-      <p class="reason">${esc(tidy(d.reason || ""))}</p>${afterText(d.result)}</span></button></li>`;
+      <p class="reason${failed ? " sys" : ""}">${esc(failed ? errorCause(d.error) : tidy(d.reason || ""))}</p>${afterText(d.result)}</span></button></li>`;
   }).join("") + (all.length > shown.length ? `<li class="more"><button class="btn" id="show-all">Show all ${all.length}</button></li>` : "");
   const more = $("show-all");
   if (more) more.addEventListener("click", () => { S.showAll = true; renderDecisions(); });
@@ -1122,16 +1202,23 @@ async function selectDecision(d, byUser = true) {
   if (byUser) showTab("reasoning"); else flag("reasoning");
   const box = $("tab-reasoning");
   box.innerHTML = `<p class="empty">Loading…</p>`;
-  try { renderTrace(await api(`/api/decision?run=${encodeURIComponent(d.run_id)}&episode=${d.episode}`)); }
-  catch (e) { box.innerHTML = `<p class="empty">Could not load this decision (${esc(e.message)}).</p>`; }
+  const still = () => S.sel && S.sel.run_id === d.run_id && S.sel.episode === d.episode;
+  try { const tr = await api(`/api/decision?run=${encodeURIComponent(d.run_id)}&episode=${d.episode}`); if (still()) renderTrace(tr); }
+  catch (e) { if (still()) box.innerHTML = `<p class="empty">Could not load this decision (${esc(e.message)}).</p>`; }
 }
 
 function renderTrace(d) {
   const t = d.trace || {}, steps = t.steps || [];
-  const kept = d.decision === "keep";
-  let h = `<div class="t-when">${esc(d.date)}, ${esc(tidy(d.trigger || ""))}</div>
-    <div class="t-decision">${kept ? "Kept " + esc(human(d.current || "no directive")) : esc(human(d.decision))}</div>
-    <p class="t-reason">${md(tidy(d.reason || ""))}</p>
+  const kept = d.decision === "keep", err = t.error || (d.outcome === "error" ? "no answer" : "");
+  let h = `<div class="t-when">${esc(d.date)}, ${esc(tidy(d.trigger || ""))}</div>`;
+  if (err) {       // a failed decision: the cause in the system's voice, the raw error behind a disclosure
+    h += `<div class="t-error" role="note">No decision: ${esc(errorCause(err))}.</div>
+      <details class="raw-error"><summary>Error as returned</summary><pre>${esc(err)}</pre></details>`;
+  } else {
+    h += `<div class="t-decision">${kept ? "Kept " + esc(human(d.current || "no directive")) : esc(human(d.decision))}</div>
+    <p class="t-reason">${md(tidy(d.reason || ""))}</p>`;
+  }
+  h += `
     ${t.serves ? `<p class="t-serves">Works toward: ${esc(t.serves)}</p>` : ""}
     <div class="t-meta"><span>${esc(d.model === "human" ? "Your decision" : modelLabel(d))}</span><span>${esc(d.outcome || "")}</span>
     ${d.tokens_in ? `<span>${fmt(d.tokens_in)} tokens in, ${fmt(d.tokens_out)} out</span>` : ""}${d.seconds ? `<span>${esc(d.seconds)} s</span>` : ""}</div>`;
@@ -1283,10 +1370,9 @@ function onEvent(ev) {
   // only the review's own result ends "Review requested…": a human edit mid-review must not
   if (ev.kind === "strategy_review" || (ev.kind === "episode_error" && String(ev.error || "").startsWith("strategy review:"))) { S.reviewPending = false; refreshSoon(); }
   if (ev.kind === "metrics" && S.campaign === (S.status.info || {}).campaign) {
-    S.metrics.push({ ...ev, month: ev.date ? (+ev.date.split(".")[0]) * 12 + (+ev.date.split(".")[1]) - 1 : null });
+    S.metrics.push({ ...ev, month: monthOf(ev.date) });
     renderChart();
   }
-  if (["action", "autopilot", "trace", "needs_attention"].includes(ev.kind)) $("frame").src = "/frame.jpg?t=" + Date.now();
   if (ev.kind !== "metrics") loadStatus();
 }
 function connect() {
@@ -1326,11 +1412,10 @@ async function loadHistoryFeed() {
 async function loadPc() {
   try { S.pc = await api("/api/pc"); } catch { S.pc = { online: false }; }
   const el = $("pc"), p = S.pc;
-  const names = { stellaris: "Stellaris", galciv4: "GalCiv IV" };
   if (!p.online) { el.className = "pc off"; el.textContent = "PC offline"; return; }
-  const open = (p.games || []).map((g) => names[g] || g);
+  const open = (p.games || []).map((g) => GAME_NAMES[g] || g);
   el.className = "pc on";
-  el.textContent = open.length ? `PC: ${open.join(", ")} open` : "PC on, no game open";
+  el.textContent = p.front_game ? `PC: ${GAME_NAMES[p.front_game] || p.front_game} in front` : open.length ? `PC: ${open.join(", ")} open` : "PC on, no game open";
 }
 
 function freshness() {
@@ -1349,7 +1434,7 @@ document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("clic
   renderChart();
 }));
 $("campaign").addEventListener("change", async (e) => {
-  S.campaign = e.target.value; S.sel = null; S.plansKey = undefined; S.showAll = false;
+  S.campaign = e.target.value; clearReasoning();
   S.pinned = S.campaign !== (S.status.info || {}).campaign;     // a deliberate look at another campaign
   await loadCampaignData();
 });
@@ -1497,7 +1582,7 @@ for (const sec of document.querySelectorAll("[data-collapsible]")) {
 
 async function setPace(kind) {
   const speed = $("pace-speed").value, months = +$("pace-months").value;
-  if (kind === "months" && !(months >= 1 && months <= 120)) { toast("Months must be a whole number from 1 to 120."); return; }
+  if (kind === "months" && !(months >= 1 && months <= 120)) { toast(`${turnBased() ? "Turns" : "Months"} must be a whole number from 1 to 120.`); return; }
   let r;
   if (S.live) {
     const body = kind === "speed" ? { action: "set_speed", speed } : { action: "set_months", months };
@@ -1507,7 +1592,7 @@ async function setPace(kind) {
                                        body: JSON.stringify(kind === "speed" ? { speed } : { months }) });
   }
   if (!r.ok) { toast(`Could not change: ${await r.text()}`); return; }
-  toast(kind === "speed" ? `Game speed ${speed}${S.live ? "" : " for the next run"}.` : `A decision every ${months} in-game months${S.live ? ", from now" : " for the next run"}.`);
+  toast(kind === "speed" ? `Game speed ${speed}${S.live ? "" : " for the next run"}.` : `A decision every ${plural(months, turnBased() ? "turn" : "in-game month")}${S.live ? ", from now" : " for the next run"}.`);
   await loadCatalog(); loadStatus();
 }
 $("pace-speed").addEventListener("change", () => setPace("speed"));
@@ -1531,7 +1616,7 @@ $("start-dialog").addEventListener("close", async () => {
   if ($("start-dialog").returnValue !== "start") return;
   const body = { game: $("start-game").value, speed: $("start-speed").value, months: +$("start-months").value };
   const r = await fetch("/api/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  toast(r.ok ? `Starting a ${body.game === "stellaris" ? "Stellaris" : "GalCiv4"} run. The page switches to it in a few seconds.`
+  toast(r.ok ? `Starting a ${GAME_NAMES[body.game] || body.game} run. The page switches to it in a few seconds.`
              : `Could not start: ${await r.text()}`);
   await loadCatalog();
 });
@@ -1544,6 +1629,7 @@ $("frame").addEventListener("error", () => { $("frame").hidden = true; $("nofram
 let resizeT; addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTimeout(renderChart, 150); });
 
 (async () => {
+  clearReasoning();
   await loadCatalog();
   await loadStatus();
   setMode(((S.status.info || {}).controls || []).includes("chat") ? "chat" : "instruct");
@@ -1554,7 +1640,7 @@ let resizeT; addEventListener("resize", () => { clearTimeout(resizeT); resizeT =
   setInterval(sync, 3000);
   setInterval(async () => {
     if (!S.ok) return;
-    if (S.live) { connect(); $("frame").src = "/frame.jpg?t=" + Date.now(); }
+    if (S.live) connect();
     else { await loadCampaigns(); await loadCampaignData(); await loadHistoryFeed(); }
   }, 10000);
   setInterval(freshness, 1000);

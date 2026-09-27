@@ -296,12 +296,19 @@ running pilot (whose own dashboard is on `PILOT_PORT`, 8790). It refreshes itsel
 3 s, the live event stream during a run, campaign data every 10 s otherwise.
 
 - **Readout**: in-game date, directive in force, standing, what the governor is doing, and the pace
-  (speed and months between decisions, both changeable).
+  (speed and months between decisions, both changeable). Each game shows only what it has: Civ VI
+  has no directive, standing or speed, and its pace is the turns the AI plays between decisions.
 - **Empire over time**: standing against the other empires, net income, stockpiles and power over
   in-game months, with the directive in force, war periods and a mark per decision.
-- **Decisions**: date, directive, trigger, model, the reason, and what changed 12 months later.
+- **Decisions**: date, directive, trigger, model, the reason, and what changed 12 months later. A
+  decision whose model calls all failed reads "No decision" with the cause (e.g. "the model was
+  overloaded (503)"); Reasoning keeps the raw error one disclosure away.
 - **Reasoning**: a decision's full trace: what the model was shown, its thinking where the provider
-  returns it, tool calls, the answer, what it works toward, tokens and time.
+  returns it, tool calls, the answer, what it works toward, tokens and time. Picking another
+  campaign clears it.
+- **Game screen**: the newest frame, fetched only when the run recorded one (governor games such as
+  Civ VI record none). The chart's x-axis counts turns for turn-based games; a view whose figures
+  the game does not record falls back to the table of the figures it does record.
 - **Talk** (live): ask the model about its reasoning, leave a note for the next decision, decide
   now, standing orders, override a directive, answer confirmations.
 - **Strategy**: focus, directives by pressure, one card per pillar (weight × need = pressure, share

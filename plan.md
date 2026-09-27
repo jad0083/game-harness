@@ -101,6 +101,7 @@
 ## Pilot app: observability and control
 - [ ] Dashboard v2 design pass with the learnings from three games (2026-09-27): information architecture per game, status and recovery when the governor stops, Civ VI and Stellaris lever views, phone and dark mode; research → design with rulings → build → review → deploy (after the Civ VI branch merges)
 - [ ] Dashboard sign-in without the clunky key cookie (2026-09-27): per-device sessions, adding a phone or another browser without a terminal, sign-out and revocation, no master key in URLs or cookies, automation keeps a header token
+- [ ] Dashboard v2 U0 (branch feat/dashboard-v2): truthful basics for Civ VI (PC chip knows Civ VI, readout hides what a game lacks, pace in turns, failed decisions show their cause, no NaN chart, frame fetched only when recorded, Reasoning cleared on a campaign switch, campaign dates in game order, real plurals); browser tests in CI (`pytest -m ui`)
 - [x] Decision traces: prompt, Gemini thought summaries, tool calls and results, answer, tokens, time (`runs/<id>/traces/`)
 - [x] Telemetry per campaign in SQLite (`runs/telemetry.sqlite`), rebuildable from the JSONL logs; outcome scoring 12 months later; governor tool `past_outcomes`
 - [x] Dashboard: campaign charts with directive lane and decision marks, decision list with outcomes, reasoning reader, activity feed; dark/light, phone layout

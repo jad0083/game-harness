@@ -211,8 +211,10 @@ git add <paths> && scripts/ci-commit.sh "type(scope): what changed" "why, and ho
 ```
 `ci-commit.sh` skips the Rust stages when no staged file needs them (`scripts/ci-needs-rust.sh`:
 Rust sources, Cargo files, corpora outside `learned/`, the CI scripts); `scripts/ci.sh` alone runs
-everything. Conventional commits (`feat` `fix` `docs` `refactor` `test` `chore`). **No AI/assistant
-attribution** anywhere (no "Co-Authored-By", no "generated with", no model names in code or
+everything. The dashboard's browser tests (`tests/ui/`, `pytest -m ui`) run when Playwright's
+Chromium is installed; a commit that stages a dashboard page or `src/pilot/auth.py` is refused
+while they were skipped (`scripts/ci-ui-gate.sh`). Conventional commits (`feat` `fix` `docs`
+`refactor` `test` `chore`). **No AI/assistant attribution** anywhere (no "Co-Authored-By", no "generated with", no model names in code or
 commit messages). One logical change per commit. Never commit `.agent_token`, `play/`,
 screenshots, or the game's raw XML (`incoming/`).
 
