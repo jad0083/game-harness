@@ -12,7 +12,7 @@
 - [x] Rust Windows agent (axum, GDI StretchBlt, SendInput) cross-compiled and installed on the PC
 - [x] Rust Linux controller: CLI, HTTP client, imaging, stdio MCP server (18 tools)
 - [x] GC4 corpus: `game.toml` hotkeys/screens/macros, `strategy.md`, 13 wiki articles
-- [x] Redeploy the DPI-aware agent build (installer fixed in 3e425bf; PC now reports 3840x2160)
+- [x] Redeploy the DPI-aware agent build (installer fixed in 20e43e9; PC now reports 3840x2160)
 - [ ] Restore `zoom`/`hover`/`scroll`/grid in the Rust MCP, or document why they're gone
 - [x] Tests for the Rust MCP coordinate mapping and for the agent's batch validation (`cargo test --workspace`: 18)
 - [ ] Decide the Python harness's fate: delete, or keep as the reference implementation with its tests pointed at what runs
@@ -86,8 +86,8 @@
 - [x] Evaluate the mod on 11 in-game years of telemetry: expansion is influence-gated; the expand directive's influence went to a nomad-only budget pool (journal, 2026-09-26)
 - [ ] Re-measure expansion ~5 in-game years after the fixed mod (influence → `stations`) is loaded
 - [ ] Screen templates: pause/date and event popups
-- [x] Strategy detail rules (pillars.toml `[strategy]`): a milestone on every pillar, checkpoint + end target on priority 1, two goals on the top 3, a briefing figure in each stance, so every model writes at the same detail (deployed 4decee2)
-- [x] Weighted pillars: weights (sum 100) instead of priorities; each decision sees directive pressure = weight × milestone need with a suggestion and switch margin (share mode defined for many-lever games); decisions name what they serve; dashboard shows weight × need = pressure (spec 2026-09-26-weighted-pillars-design.md; deployed d2823c3, live: Opus wrote weights, decision followed the suggestion)
+- [x] Strategy detail rules (pillars.toml `[strategy]`): a milestone on every pillar, checkpoint + end target on priority 1, two goals on the top 3, a briefing figure in each stance, so every model writes at the same detail (deployed d91768b)
+- [x] Weighted pillars: weights (sum 100) instead of priorities; each decision sees directive pressure = weight × milestone need with a suggestion and switch margin (share mode defined for many-lever games); decisions name what they serve; dashboard shows weight × need = pressure (spec 2026-09-26-weighted-pillars-design.md; deployed e8da86c, live: Opus wrote weights, decision followed the suggestion)
 - [ ] Directive efficacy: a directive that does not move its pillar's metric (held 2+ years, no faster than otherwise) loses half its pressure; its record goes to the frame and the Strategist (spec ruling 13)
 - [ ] Event boosts to milestone need (war → defence) and share-mode consumers for GalCiv IV / Civ VI
 
@@ -99,7 +99,7 @@
 - [x] Neighbours' identity in the briefing: ethics, government, civics, AI personality, species traits, colonies, traditions, perks
 - [x] Corpus: 363 species traits and 24 colonisable planet classes from the game files; advanced strategy doc (4.5.1 files + wiki); playbook §10 lessons from play and §11 species and identity, both sent with every decision
 - [x] Directives set policies only under each option's `valid` trigger; `expand`/`diplomacy_first` also set proactive first contact — live check that the policies change in game — verified 2026-09-26 in a new Theian game: the save holds `first_contact_protocol = first_contact_proactive`
-- [x] Versioned Claude Code models in the catalog (aliases plus every id from the Anthropic listing; deployed 4decee2)
+- [x] Versioned Claude Code models in the catalog (aliases plus every id from the Anthropic listing; deployed d91768b)
 - [x] Model provider `claude-code:*` (Claude Code CLI, Claude subscription instead of an API key) for any role, Strategy first; falls back to the next model on a usage limit or CLI error
 - [ ] Economic-plan subplans gated on directive flags (naval capacity under `defend`/`prepare_war`, research under `tech_rush`, pops under `expand`, small strategic-resource targets when one runs out) — test against the game files, then measure over ~10 in-game years
 - [ ] Evaluate carrier doctrine under `prepare_war` (`fleet_doctrine = strike_wing_fleet_doctrine`, cruisers and hangars known): live test that the AI's refreshed designs raise fleet power
@@ -129,14 +129,14 @@
 - [x] Dashboard redesign: readout strip, warm ivory on deep space, amber accent, Bricolage Grotesque + Fraunces, hairline sections instead of cards; PC status chip, campaign titles, markdown in the model's text, show-all decisions
 - [x] Game speed and decision interval shown and changeable on the dashboard (live and for the next run)
 - [x] Dashboard follows the live campaign; no-store responses; transient model errors retried
-- [x] Strategy layer: seven pillar strategies set by a Strategist model role at reviews and events, framing each directive; tech picks and market orders; Strategy tab with edit and pin (spec docs/design/2026-09-26-strategy-layer-design.md; deployed aaef9d3 + 0ad01e7, 30-year live evaluation running)
+- [x] Strategy layer: seven pillar strategies set by a Strategist model role at reviews and events, framing each directive; tech picks and market orders; Strategy tab with edit and pin (spec docs/design/2026-09-26-strategy-layer-design.md; deployed 1e2854c + 32d4b6d, 30-year live evaluation running)
 - [ ] War-readiness briefing (Theian postmortem): naval-capacity maximum, occupied planets, shipyards, fleets, production per planet, own vs. allies' battles; urgent triggers for military −50%, occupation, system lost
 - [ ] Directive read-back: check each directive's policies in the next save and report the ones that did not change; every directive sets all its policies
 - [ ] Two shipyards in different systems and alloys on two or more planets before any war (strategy rule and mod budget nudge)
 - [ ] Monthly fleet snapshot in telemetry to find what destroys ships in peacetime
 - [ ] Full decision prompts in traces (no 6,000-character cut)
 - [x] CI skips the Rust stages for commits with no Rust, Cargo or corpus files (`scripts/ci-needs-rust.sh`)
-- [x] Game pillars: each game defines its strategy pillars, metrics and actions in `corpora/<game>/pillars.toml`; the strategy layer, decisions, actions and dashboard use them as guardrails (spec docs/design/2026-09-26-game-pillars-design.md; deployed 2e9f24d on mini-rig2, two live reviews accepted with milestones and trait-based identity)
+- [x] Game pillars: each game defines its strategy pillars, metrics and actions in `corpora/<game>/pillars.toml`; the strategy layer, decisions, actions and dashboard use them as guardrails (spec docs/design/2026-09-26-game-pillars-design.md; deployed 31e3481 on mini-rig2, two live reviews accepted with milestones and trait-based identity)
 - [ ] Civilization VI integration (after game pillars)
 - [ ] Civ VI tuner relay (agent 1.6.0 /tuner/*, controller civ6 states|lua)
 - [x] Civ VI corpus: `scripts/extract-civ6.py` rebuilds the Gathering Storm + DLC rules database from the game's XML (modinfo criteria, load order, cascading deletes) → 1,783 records in 29 kinds; 16 docs (13 wiki pages, civ6-mcp playbook, CivBench appendix, links); first `strategy.md`; manifest with the window title; loads in the controller and CI
@@ -148,7 +148,7 @@
 - [x] Second game host mini-rig2 (2560x1440): agent 1.4.0 installed and reachable with the shared token (2026-09-26)
 - [ ] Host registry (`hosts.toml`: name, agent URL, screen) and one governor service per host (own dashboard port, `GAME_AGENT_URL`); dashboard lists live runs of every host
 - [ ] Installer detects Civilization VI folders (documents, saves, logs, install) for the agent's read roots; update both hosts
-- [x] Screen positions per resolution: `res/<W>x<H>.toml` overlays selected by `GAME_RESOLUTION`; Stellaris 2560x1440 screens measured live on mini-rig2 (a8c53a9, 110e638)
-- [x] Stellaris tech and market positions at 2560x1440: mapped from 4K by `scripts/res-map.py` (scale 1.2, anchors in `res/map.toml`), verified live with a tech pick and a market order added and removed (51143d9)
+- [x] Screen positions per resolution: `res/<W>x<H>.toml` overlays selected by `GAME_RESOLUTION`; Stellaris 2560x1440 screens measured live on mini-rig2 (8068268, 7d43af8)
+- [x] Stellaris tech and market positions at 2560x1440: mapped from 4K by `scripts/res-map.py` (scale 1.2, anchors in `res/map.toml`), verified live with a tech pick and a market order added and removed (e49d2bc)
 - [x] Stellaris on mini-rig2: borderless, monthly autosave, tutorial off, Governor Bridge playset; governor service points at mini-rig2 (systemd drop-in) and plays the new Blooms of Gaea campaign (2026-09-26)
 - [ ] Buy-outs per game (economy pillar action): Stellaris converts idle stock into the bottleneck resource on the market (no rush-buy exists); GalCiv4 rushes builds with credits (verify in play first); Civilization VI buys units, buildings, tiles and great people with gold or faith. Rule: spend when turns saved times the item's value beats the resource's other uses, keep a reserve, buy at once for a threatened city or planet
