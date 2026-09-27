@@ -327,6 +327,14 @@ Rules:
   `Harness.popups_quiet` flag; unsettled entries are retried on the next call, and the reply lists
   the outcomes in `popups_quieted`). A stall that still happens needs the screen: hover + click the
   popup's X.
+- An AI leader's statement (T240 "the mustering of your forces along our borders", T342 an agenda
+  warning) opens the leader screen, which holds the engine until a human answers. `popups.toml`
+  removes that screen's statement handler, and the library's own handler (registered in `InGame`
+  only) answers while autoplay runs, from its explicit table: the conciliatory promise to a warning,
+  Goodbye to proposals, first meetings and everything else, a refusal to deals and demands; never a
+  choice that declares war or accepts a deal. A statement outside autoplay waits until autoplay next
+  starts. The snapshot's `diplomacy` lists the last 20 answers; the governor emits `diplomacy_reply`
+  and adds a briefing line. Until the next load a human sees no AI statement on screen.
 - One-turn autoplay costs the AI its multi-turn plans (a Settler idle for 7 turns, no pantheon; a
   4-turn stretch settled and chose one at once): `PILOT_AUTOPLAY_CHUNK` sets turns per call.
 - Menus, when the screen must be used: the UI ignores a click without a preceding hover (move the
