@@ -701,10 +701,13 @@ async function submitEdit(name, slot, onSaved) {
 function renderStrategy(data) {
   const box = $("strategy");
   const cur = data && data.current;
-  // Ruling: a broken/missing pillars file (or the governor reporting the strategy layer is off)
-  // shows one plain line with the reason instead of pillar cards.
+  // Ruling: a broken/missing pillars file, the governor reporting the strategy layer is off, or a
+  // stored strategy that no longer matches the game's pillars shows one plain line with the reason
+  // instead of pillar cards. The server's message is complete; only a pillars-file error ("pillars: …")
+  // gets the "Strategy layer off" prefix.
   if (data && data.error) {
-    box.innerHTML = `<p class="empty">Strategy layer off: ${esc(data.error)}</p>`;
+    const msg = data.error.startsWith("pillars: ") ? `Strategy layer off: ${data.error}` : data.error;
+    box.innerHTML = `<p class="empty">${esc(msg.charAt(0).toUpperCase() + msg.slice(1))}</p>`;
     return;
   }
   if (!cur) {

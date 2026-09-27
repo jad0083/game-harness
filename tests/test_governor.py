@@ -3408,3 +3408,9 @@ def test_strategy_api_reports_the_live_pilots_pillars_error(setup, tmp_path):
     body = _get_strategy(make_app(g, s.runs_dir, tel), log.campaign_id)
     assert "pillars.toml: missing" in body["error"] and "strategy layer is off" in body["error"]
     assert body["spec"] is None, "no spec is served while the live layer is off (edits would fail)"
+
+
+def test_dashboard_prefixes_only_a_pillars_file_error_as_layer_off():
+    html = (REPO / "src/pilot/static/dashboard.html").read_text(encoding="utf-8")
+    assert '>Strategy layer off: ${esc(data.error)}<' not in html, "mismatch/live errors are complete messages"
+    assert 'data.error.startsWith("pillars: ")' in html
