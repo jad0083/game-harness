@@ -795,6 +795,35 @@ def test_an_idle_civic_and_research_are_filled_when_the_model_gives_no_answer(se
     assert orders_sent(idle_only_civic) == [{"kind": "civic", "id": "civic:craftsmanship"}], "research is running"
 
 
+def test_a_resolved_order_is_reported_to_the_next_model_that_answers(setup):
+    """A decision whose model call fails has shown nobody what became of earlier orders: those
+    lines wait for the next decision that gets an answer."""
+    prompts: list[str] = []
+    calls = {"n": 0}
+
+    def ai(state):
+        state["cities"][0]["producing"] = "BUILDING_GRANARY"
+
+    def flaky(messages, info: AgentInfo) -> ModelResponse:
+        if is_review(info):
+            return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name,
+                                                     {"change": False, "assessment": "n/a", "rules": []})])
+        calls["n"] += 1
+        if calls["n"] == 2:
+            raise RuntimeError("model unavailable")
+        prompts.append("\n".join(str(getattr(p, "content", "")) for m in messages for p in getattr(m, "parts", [])))
+        orders = [{"kind": "production", "city": "Beijing", "id": "unit:slinger"}] if calls["n"] == 1 else []
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"orders": orders, "reason": "test"})])
+
+    game = FakeCiv6(_replace_fixture(), index=INDEX, ai=ai)
+    g = governor(setup, game, FunctionModel(flaky))
+    g.run(max_decisions=3)
+    assert calls["n"] == 3 and len(prompts) == 2
+    assert traces(setup)[1]["outcome"] == "error"
+    assert "production unit:slinger in Beijing: replaced by the AI with building:granary by T13" in prompts[1]
+    assert g._resolved == [], "reported once it was shown"
+
+
 def test_an_idle_research_answered_on_the_retry_is_not_filled(setup):
     seen: list[str] = []
     game = FakeCiv6({**FIXTURE, "research": None}, index=INDEX)

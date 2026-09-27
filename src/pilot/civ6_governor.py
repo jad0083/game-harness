@@ -927,6 +927,7 @@ class Civ6Governor(Governor):
                 self.log.emit("briefing_error", error=f"outcome scoring: {e}"[:200])
         self._track(b)
         self._read_ai_strategies(b)
+        pending = list(self._resolved)          # shown to no model yet: kept if this call gets no answer
         held = self._held_report(b)
         extra = self.human.take_all()
         press = self._pressures() if self.strategy and self.pillars else None
@@ -964,6 +965,7 @@ class Civ6Governor(Governor):
             if isinstance(e, UsageLimitExceeded):
                 e = RuntimeError(f"no answer within {self.s.governor_max_requests} model calls; no orders given")
             self.log.emit("episode_error", error=f"{type(e).__name__}: {e}"[:500])
+            self._resolved = pending + self._resolved
             filled = self._fill_without_answer(b, f"{type(e).__name__}: {e}")
             self.log.save_trace(n, {**base, "outcome": "error", "error": f"{type(e).__name__}: {e}"[:2000],
                                     "seconds": round(time.time() - started, 1),
