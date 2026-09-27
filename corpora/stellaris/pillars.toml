@@ -1,0 +1,71 @@
+# Stellaris strategy pillars: what the Strategist may write and how it is checked, which directive
+# each pillar ranks, which metrics milestones may use, and the limits of the two player actions.
+# Loaded by src/pilot/pillars.py (docs/superpowers/specs/2026-09-26-game-pillars-design.md).
+# Unknown keys are an error; directives must exist in directives.toml. Pillar order = display
+# fallback; priorities come from the Strategist.
+
+[strategy]
+min_milestones_top = 3          # each of the 3 highest-priority pillars needs >= 1 milestone
+# spellings models use for the recorded measures (seen live: "rank:military" on 2452.03)
+metric_aliases = { military = "military_power", economy = "economy_power", tech = "tech_power", planets = "colonies", techs = "techs_known", "rank:military" = "rank:military_power", "rank:economy" = "rank:economy_power", "rank:tech" = "rank:tech_power", "rank:planets" = "rank:colonies" }
+instructions = """Everything must be achievable through directives, tech picks or market orders: the game's AI builds, designs ships and moves fleets.
+While at war, the defence stance must name its exit condition (peace, war exhaustion, or planets retaken). When a hostile neighbour's military is twice ours or more, a defence goal is two shipyards in different systems and alloy production on two or more planets; never reason from a naval-capacity cap the briefing does not show."""
+
+[metrics]
+# the briefing's recorded measures; rank:<measure> is our standing among the empires, 1 = best
+names = ["systems", "colonies", "pops", "techs_known", "military_power", "economy_power", "tech_power",
+         "rank:systems", "rank:pops", "rank:techs", "rank:military_power", "rank:economy_power",
+         "rank:tech_power", "rank:colonies"]
+row_keys = { colonies = "planets" }   # metrics rows store colonies as `planets`
+
+[pillars.economy]
+label = "Economy"
+description = "Income, deficits, stockpiles and the market."
+directive = "consolidate_economy"
+actions = ["market"]
+
+[pillars.expansion]
+label = "Expansion"
+description = "Outposts, colonies, systems and exploration."
+directive = "expand"
+
+[pillars.technology]
+label = "Technology"
+description = "Research speed and which techs to take."
+directive = "tech_rush"
+actions = ["tech"]
+
+[pillars.diplomacy]
+label = "Diplomacy"
+description = "Relations, pacts, federations and the galactic community."
+directive = "diplomacy_first"
+
+[pillars.defence]
+label = "Defence"
+description = "Fleets, starbases, wars and chokepoints."
+directive = "defend"
+
+[pillars.government]
+label = "Government"
+description = "Policies, civics, factions and stability."
+
+[pillars.society]
+label = "Society"
+description = "Pops, species, amenities and happiness."
+
+# At most one order until ui.market.order_row_pitch is measured live: the controller can only
+# find (and so remove) the first order row. Amounts equal mcp.rs MARKET_AMOUNT_MIN/MAX.
+[actions.market]
+max_items = 1
+resources_from_manifest = "ui.market.resources"
+amount_min = 1
+amount_max = 25
+sell_income_share = 0.2        # a sell takes at most 20% of that resource's monthly income
+sell_requires_idle = true      # sell only a resource the briefing flags IDLE
+note = "Market orders cannot use trade; sell only idle energy, minerals, food, consumer goods or alloys (strategic resources can only be bought)."
+
+# Equals mcp.rs stellaris_pick_tech's limit on `prefer`.
+[actions.tech]
+field = "prefer_techs"
+max_items = 6
+ids_from_corpus = "tech"       # data/tech.json

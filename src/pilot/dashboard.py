@@ -18,7 +18,7 @@ Telemetry (runs/telemetry.sqlite, across runs and models):
     GET  /api/decision?run=<id>&episode=<n>     one decision with its full trace
     GET  /api/metrics?campaign=<id>|run=<id>    metric points over in-game time
     GET  /api/plans?campaign=<id>|run=<id>      campaign plan versions, newest first
-    GET  /api/strategy?campaign=<id>            current pillar strategy, milestone status, version history
+    GET  /api/strategy?campaign=<id>            current pillar strategy, milestone status, version history, the game's pillars spec
     GET  /api/models                            models to offer, and the saved choice for the next run
     GET  /api/pc                                gaming PC: agent reachable, version, window in front, games open
     POST /api/settings  {"models": [{"model", "thinking"}, ...], "rotate"}   the model list (live too); older {"model", "thinking", "fallback"}
@@ -29,13 +29,19 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import re
 import threading
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from aiohttp import ClientError, ClientSession, ClientTimeout, web
 
+if TYPE_CHECKING:
+    from .pillars import PillarSpec
+
 STATIC = Path(__file__).parent / "static"
+log_ = logging.getLogger(__name__)
 
 
 RUN_ID = re.compile(r"^[A-Za-z0-9_.-]+$")
@@ -136,12 +142,42 @@ def list_runs(runs_dir: Path, live_id: str | None = None) -> list[dict]:
     return out
 
 
-def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Application:
-    """Dashboard for a live `pilot` (Pilot or Governor), or read-only over `runs_dir` when pilot is None."""
+def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path | None = None) -> web.Application:
+    """Dashboard for a live `pilot` (Pilot or Governor), or read-only over `runs_dir` when pilot is None.
+    `corpora` is where each game's pillars file is read (default: the repo's corpora/)."""
+    from .config import REPO
     log = pilot.log if pilot else None
     runs_dir = runs_dir or (log.dir.parent if log else Path("runs"))
     tel = telemetry or (log.telemetry if log else None)
+    corpora = corpora or (REPO / "corpora")
     live_url = None                  # set for the viewer: finds a live run to refuse a second start
+
+    def campaign_spec(cid: str, stored: bool = True) -> tuple[PillarSpec | None, str]:
+        """The pillars spec of a campaign's game (id '<game>/<name>'), and "" for no error; or
+        (None, "pillars: <message>") when the game's pillars file is missing or invalid (logged
+        too) — the caller must not silently compute milestone status without it (an empty
+        `row_keys` mis-maps every metric that needs row remapping, e.g. Stellaris's `colonies`).
+        The live governor's own spec wins for its game; for its own campaign with the layer off,
+        its error is returned (edits would fail). A game with no pillars file and no `stored`
+        strategy (e.g. galciv4) has no strategy layer at all: (None, "")."""
+        from .pillars import PillarsError, load_pillars
+        game = cid.split("/", 1)[0]
+        live_game = getattr(getattr(pilot, "s", None), "game", None) == game
+        live = getattr(pilot, "pillars", None)
+        if live is not None and live_game:
+            return live, ""
+        live_error = getattr(pilot, "pillars_error", "") if log is not None and cid == log.campaign_id else ""
+        if live_error and isinstance(live_error, str):
+            return None, f"the strategy layer is off: {live_error}"
+        if not re.fullmatch(r"[a-z0-9_]+", game):
+            return None, ""
+        if not stored and not (corpora / game / "pillars.toml").exists():
+            return None, ""
+        try:
+            return load_pillars(corpora / game), ""
+        except PillarsError as e:
+            log_.warning("campaign %s: pillars: %s", cid, e)
+            return None, f"pillars: {e}"
 
     def need_tel():
         if tel is None:
@@ -205,26 +241,32 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
         return web.json_response(rows)
 
     async def api_strategy(request):
-        """The current pillar strategy, its milestones' status, and version history for a campaign."""
+        """The current pillar strategy, its milestones' status, version history and the game's
+        pillars spec (labels, directives, actions) for a campaign."""
         from .strategy import Strategy, milestone_status
         cid = request.query.get("campaign") or (log.campaign_id if log else "")
+        cur = await asyncio.to_thread(tel.latest_strategy, cid) if tel is not None and cid else None
+        spec, error = campaign_spec(cid, stored=cur is not None) if cid else (None, "")
+        public = spec.public() if spec else None
         if tel is None or not cid:
-            return web.json_response({"current": None, "milestones": [], "history": []})
-        cur = await asyncio.to_thread(tel.latest_strategy, cid)
+            return web.json_response({"current": None, "milestones": [], "history": [], "spec": public, "error": error})
         rows = await asyncio.to_thread(tel.metrics_rows, cid)
         hist = await asyncio.to_thread(tel.strategy_history, cid)
-        ms = []
+        ms: list = []
         if cur:
             try:
                 s = Strategy.model_validate({k: v for k, v in cur.items() if k != "reason"})
             except ValueError:
                 s = None    # an older/foreign strategy shape: serve the raw record, no milestone status
-            if s is not None:
-                today = rows[-1]["date"] if rows else "2200.01.01"
+            if s is not None and spec is not None and set(s.pillars) != set(spec.ids):
+                error = "stored strategy does not match the game's pillars; the next review writes a new one"
+            elif s is not None and spec is not None:  # no spec (missing/invalid pillars file): no milestone status,
+                today = rows[-1]["date"] if rows else "2200.01.01"   # never guess with empty row_keys
                 for name, pl in s.pillars.items():
                     for m in pl.milestones:
-                        ms.append({"pillar": name, **m.model_dump(), "status": milestone_status(m, rows, today)})
-        return web.json_response({"current": cur, "milestones": ms, "history": hist})
+                        ms.append({"pillar": name, **m.model_dump(),
+                                  "status": milestone_status(m, rows, today, spec.row_keys)})
+        return web.json_response({"current": cur, "milestones": ms, "history": hist, "spec": public, "error": error})
 
     models_cache: dict = {}
 
@@ -479,7 +521,10 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None) -> web.Applica
             except ValueError as e:
                 raise web.HTTPBadRequest(text=str(e)) from e
         elif action == "review_strategy" and hasattr(pilot, "request_review"):
-            pilot.request_review()
+            try:
+                pilot.request_review()
+            except ValueError as e:
+                raise web.HTTPBadRequest(text=str(e)) from e
         elif action == "set_fallback" and hasattr(pilot, "set_fallback"):
             try:
                 pilot.set_fallback(str(body.get("model", "")) or None)

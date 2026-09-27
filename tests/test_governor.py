@@ -8,6 +8,16 @@ from pilot.config import REPO, Settings
 from pilot.events import EventLog
 from pilot.game import FakeStellaris
 from pilot.governor import Governor, current_directive, months, urgent_changes
+from pilot.pillars import load_pillars
+
+STELLARIS = load_pillars(REPO / "corpora/stellaris")
+
+
+def _pillars_body(prios: dict[str, int], stance: str = "{p} by model") -> dict:
+    """Strategist answer pillars; each top-3 pillar carries a milestone (pillars.toml min_milestones_top)."""
+    return {p: {"priority": n, "stance": stance.format(p=p), "goals": ["g"],
+                "milestones": [{"metric": "systems", "op": ">=", "target": 10, "by": "2230.01.01"}] if n <= 3 else []}
+            for p, n in prios.items()}
 
 
 def briefing(date: str, net: dict | None = None, wars: list | None = None) -> dict:
@@ -48,7 +58,7 @@ def decisions(*choices: str, consult_first: bool = False):
 def setup(tmp_path):
     corpus = tmp_path / "stellaris"
     corpus.mkdir()
-    for f in ("manifest.toml", "pilot.md", "strategy.md", "directives.toml"):
+    for f in ("manifest.toml", "pilot.md", "strategy.md", "directives.toml", "pillars.toml"):
         shutil.copy(REPO / "corpora/stellaris" / f, corpus / f)
     s = Settings(model="google:gemini-3.8-flash", runs_dir=tmp_path / "runs", journal=tmp_path / "journal.md",
                  commit_learnings=False, game="stellaris", speed="fastest", decide_every_months=12, poll_s=0,
@@ -630,9 +640,8 @@ def test_rebuild_survives_a_corrupt_trace_file(setup, tmp_path):
 
 def planner_model(retro_rules=("Survey before expanding: expand stalls when few reachable systems are surveyed.",)):
     """Decides `expand` on the first decision, `keep` afterwards; the strategist writes a new
-    version (with rules learned) whenever it is reviewed. `expansion` is priority 2 (PILLARS
+    version (with rules learned) whenever it is reviewed. `expansion` is priority 2 (STELLARIS.ids
     order), so the first `expand` choice stays within the frame's top 2 and is never off-frame."""
-    from pilot.strategy import PILLARS
     seen = []
     calls = {"n": 0}
 
@@ -643,8 +652,7 @@ def planner_model(retro_rules=("Survey before expanding: expand stalls when few 
                 if isinstance(p, UserPromptPart) and isinstance(p.content, str):
                     seen.append(p.content)
         if _is_strategy_review(info):
-            strategy = {"pillars": {p: {"priority": i + 1, "stance": f"{p} stance", "goals": ["g"]}
-                                    for i, p in enumerate(PILLARS)},
+            strategy = {"pillars": _pillars_body({p: i + 1 for i, p in enumerate(STELLARIS.ids)}, "{p} stance"),
                         "focus": "Survey before expanding", "reason": "bottleneck in surveying"}
             return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {
                 "change": True, "assessment": "Expansion lagged the median; surveying was the bottleneck.",
@@ -1358,17 +1366,15 @@ def test_strategy_versions_are_stored_per_campaign(tmp_path):
 # ---- Task 3: the Strategist (role `strategy`) replaces the retrospective -----------------------
 
 def _strategist(calls, *, change=True, pin_diplomacy_to=None):
-    from pilot.strategy import Pillar
-
     prios = {"defence": 1, "economy": 2, "technology": 3, "expansion": 4, "diplomacy": 5, "government": 6, "society": 7}
 
     def respond(messages, info):
         calls.append("strategist")
-        pillars = {p: Pillar(priority=n, stance=f"{p} by model", goals=["g"]).model_dump() for p, n in prios.items()}
+        pillars = _pillars_body(prios)
         if pin_diplomacy_to:
             pillars["diplomacy"]["stance"] = pin_diplomacy_to
         body = {"change": change, "assessment": "ok", "rules": [],
-                "strategy": {"pillars": pillars, "focus": "grow", "reason": "start"} if change else None}
+                "strategy": {**pillars, "focus": "grow", "reason": "start"} if change else None}
         return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, body)])
     return FunctionModel(respond)
 
@@ -1438,18 +1444,31 @@ def test_saved_retrospective_models_move_to_the_strategy_role(tmp_path):
 
 
 def test_strategy_instructions_cover_the_defence_naval_cap_ruling():
-    from pilot.governor import STRATEGY_INSTRUCTIONS
+    from pilot.strategy import strategist_instructions
+    text = strategist_instructions(STELLARIS)
     assert ("While at war, the defence stance must name its exit condition (peace, war exhaustion, "
-            "or planets retaken).") in STRATEGY_INSTRUCTIONS
+            "or planets retaken).") in text
     assert ("When a hostile neighbour's military is twice ours or more, a defence goal is two "
             "shipyards in different systems and alloy production on two or more planets; never "
-            "reason from a naval-capacity cap the briefing does not show.") in STRATEGY_INSTRUCTIONS
+            "reason from a naval-capacity cap the briefing does not show.") in text
 
 
 def test_strategy_instructions_forbid_trade_market_orders():
-    from pilot.governor import STRATEGY_INSTRUCTIONS
+    from pilot.strategy import strategist_instructions
     assert ("Market orders cannot use trade; sell only idle energy, minerals, food, consumer goods "
-            "or alloys (strategic resources can only be bought).") in STRATEGY_INSTRUCTIONS
+            "or alloys (strategic resources can only be bought).") in strategist_instructions(STELLARIS)
+
+
+def test_strategy_instructions_allow_at_most_one_small_monthly_order():
+    from pilot.strategy import strategist_instructions
+    text = strategist_instructions(STELLARIS)
+    assert "at most 1 small monthly order" in text and "at most 2 small" not in text
+
+
+def test_strategy_instructions_list_every_metric_name():
+    from pilot.strategy import strategist_instructions
+    for m in STELLARIS.metrics:
+        assert m in strategist_instructions(STELLARIS), m
 
 
 def test_the_strategist_receives_the_naval_cap_ruling_in_its_prompt(setup):
@@ -1473,12 +1492,11 @@ def test_the_strategist_receives_the_naval_cap_ruling_in_its_prompt(setup):
 
 def test_strategy_review_updates_bookkeeping_and_saves_a_trace(setup):
     """Item 1: tokens/requests grow, rules learned are counted, and a trace file is saved, like decisions."""
-    from pilot.strategy import Pillar
     s, log = setup
     prios = {"defence": 1, "economy": 2, "technology": 3, "expansion": 4, "diplomacy": 5, "government": 6, "society": 7}
 
     def respond(messages, info):
-        pillars = {p: Pillar(priority=n, stance=f"{p} by model", goals=["g"]).model_dump() for p, n in prios.items()}
+        pillars = _pillars_body(prios)
         body = {"change": True, "assessment": "ok", "rules": ["Always expand early."],
                 "strategy": {"pillars": pillars, "focus": "grow", "reason": "start"}}
         return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, body)])
@@ -1602,7 +1620,6 @@ def test_retro_every_counts_the_start_decision_when_no_review_ran(setup, tmp_pat
     start-of-run decision counts toward the schedule like any other."""
     from dataclasses import replace
 
-    from pilot.strategy import PILLARS
     from pilot.telemetry import Telemetry
     s, _ = setup
     s2 = replace(s, retro_every=1)
@@ -1612,7 +1629,7 @@ def test_retro_every_counts_the_start_decision_when_no_review_ran(setup, tmp_pat
     seed = EventLog(s2.runs_dir, "seed", s2.model, telemetry=tel)
     seed.emit("run_start", game="stellaris", model=s2.model)
     seed.set_campaign("stellaris", "emp_x", "Empire X")
-    strategy = {"pillars": {p: {"priority": i + 1, "stance": f"{p} s", "goals": ["g"]} for i, p in enumerate(PILLARS)},
+    strategy = {"pillars": {p: {"priority": i + 1, "stance": f"{p} s", "goals": ["g"]} for i, p in enumerate(STELLARIS.ids)},
                 "focus": "grow", "reason": "seed"}
     seed.emit("strategy", date="2199.01.01", trigger="start of run", model="seed", reason="seed", strategy=strategy)
 
@@ -1733,7 +1750,6 @@ def test_a_failed_reviews_retry_bypasses_the_event_cap_and_a_success_clears_it(s
     review_requested. The failed start review is retried at the next (scheduled) decision."""
     from dataclasses import replace
 
-    from pilot.strategy import Pillar
     s, log = setup
     s2 = replace(s, decide_every_months=1)
     s2.__class__ = s.__class__
@@ -1744,7 +1760,7 @@ def test_a_failed_reviews_retry_bypasses_the_event_cap_and_a_success_clears_it(s
         n["count"] += 1
         if n["count"] == 1:
             raise RuntimeError("boom")
-        pillars = {p: Pillar(priority=i, stance=f"{p} by model", goals=["g"]).model_dump() for p, i in prios.items()}
+        pillars = _pillars_body(prios)
         body = {"change": True, "assessment": "ok", "rules": [],
                 "strategy": {"pillars": pillars, "focus": "grow", "reason": "retry"}}
         return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, body)])
@@ -1762,12 +1778,13 @@ def test_a_failed_reviews_retry_bypasses_the_event_cap_and_a_success_clears_it(s
 def test_off_frame_does_not_fire_for_keep_even_when_current_is_top_ranked(setup):
     """Ruling: the off-frame tag (and the review it schedules) must not fire for 'keep' of the
     current directive when the current directive is itself top-ranked."""
+    from pilot.strategy import ranking
     s, log = setup
     calls = []
     game = FakeStellaris([briefing("2200.01.01"), briefing("2201.01.01")])
     g = Governor(s, game, log, model=decisions("defend", "keep"), role_models={"strategy": _strategist(calls)})
     g.run(max_decisions=2)
-    assert g.strategy.ranking()[0] == "defend", "defend is top-ranked and is the current directive"
+    assert ranking(g.strategy, STELLARIS)[0] == "defend", "defend is top-ranked and is the current directive"
     traces = [e for e in log.recent if e["kind"] == "trace" and e.get("decision") == "keep"]
     assert traces and traces[-1].get("off_frame") is False
     assert g.review_requested is None
@@ -1864,6 +1881,8 @@ def test_the_off_frame_cutoff_is_the_top_two_of_the_ranking(setup):
     """Item 3: pin the boundary exactly — the 2nd-ranked directive is in the frame, the 3rd-ranked
     is off it."""
     from dataclasses import replace
+
+    from pilot.strategy import ranking
     s, log = setup
     s2 = replace(s, decide_every_months=1)
     s2.__class__ = s.__class__
@@ -1872,7 +1891,7 @@ def test_the_off_frame_cutoff_is_the_top_two_of_the_ranking(setup):
     g = Governor(s2, game, log, model=decisions("consolidate_economy", "tech_rush"),
                  role_models={"strategy": _strategist(calls)})
     g.run(max_decisions=2)
-    assert g.strategy.ranking()[:3] == ["defend", "consolidate_economy", "tech_rush"]
+    assert ranking(g.strategy, STELLARIS)[:3] == ["defend", "consolidate_economy", "tech_rush"]
     traces = {e["decision"]: e for e in log.recent if e["kind"] == "trace"}
     assert traces["consolidate_economy"]["off_frame"] is False, "2nd-ranked is within the frame"
     assert traces["tech_rush"]["off_frame"] is True, "3rd-ranked is off it"
@@ -2224,10 +2243,44 @@ def test_strategy_api_returns_current_milestones_and_history(setup, tmp_path):
             r = await c.get(f"/api/strategy?campaign={log.campaign_id}")
             body = await r.json()
             assert body["current"]["focus"] == "grow" and len(body["history"]) == 1
+            assert body["error"] == "", "a valid pillars file reports no error"
             r = await c.post("/control", json={"action": "edit_pillar", "pillar": "economy", "fields": {"stance": "save energy"}})
             assert r.status == 200 and g.strategy.pillars["economy"].pinned
             r = await c.post("/control", json={"action": "review_strategy"})
             assert r.status == 200 and g.requests.get_nowait() == ("review", "requested from the dashboard")
+    asyncio.run(go())
+
+
+def test_strategy_api_reports_a_missing_pillars_file_without_computing_milestones(setup, tmp_path):
+    """Fix round 1, item 1: a campaign whose game has no (or an invalid) pillars.toml must not
+    silently compute milestone status with an empty row_keys mapping (every remapped metric, e.g.
+    Stellaris's colonies -> planets, would then read wrong); it must report the error instead, and
+    never 500."""
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from pilot.dashboard import make_app
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(s.runs_dir, "rb", s.model, telemetry=tel)
+    log.emit("run_start", model=s.model, game="brokengame")
+    log.set_campaign("brokengame", "c1", "Test")     # a game the live pilot (None) does not own
+    pillars = _pillars_body(PRIOS)
+    log.emit("strategy", date="2200.01.01", trigger="start of run", model=s.model, reason="seed",
+             strategy={"pillars": pillars, "focus": "grow", "reason": "seed"})
+    corpora_dir = tmp_path / "corpora"          # no "brokengame" subdirectory: load_pillars fails
+    corpora_dir.mkdir()
+
+    async def go():
+        async with TestClient(TestServer(make_app(None, s.runs_dir, tel, corpora=corpora_dir))) as c:
+            r = await c.get(f"/api/strategy?campaign={log.campaign_id}")
+            assert r.status == 200, "a broken pillars file must not 500 the endpoint"
+            body = await r.json()
+            assert body["milestones"] == [], "no milestone status without a valid spec's row_keys"
+            assert body["error"].startswith("pillars: "), body["error"]
+            assert body["current"]["focus"] == "grow", "the strategy itself is still served"
     asyncio.run(go())
 
 
@@ -2239,7 +2292,7 @@ def test_edit_pillar_rejects_an_invalid_edit_and_leaves_strategy_unchanged(setup
     g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": _strategist(calls)})
     g._review_strategy(briefing("2200.01.01"), "start of run")
     before = g.strategy.model_dump()
-    with pytest.raises(ValueError, match="only the technology pillar prefers techs"):
+    with pytest.raises(ValueError, match="only the technology pillar may set prefer_techs"):
         g.edit_pillar("diplomacy", {"prefer_techs": ["some_tech"]})
     assert g.strategy.model_dump() == before, "a rejected edit must not change the strategy"
 
@@ -2518,12 +2571,6 @@ def _pinned_energy_sell(amount=10):
                   market=[{"side": "sell", "resource": "energy", "amount": amount}])
 
 
-def test_strategy_instructions_allow_at_most_one_small_monthly_order():
-    from pilot.governor import STRATEGY_INSTRUCTIONS
-    assert "at most 1 small monthly order" in STRATEGY_INSTRUCTIONS
-    assert "at most 2 small" not in STRATEGY_INSTRUCTIONS
-
-
 def test_edit_pillar_is_not_blocked_by_a_pinned_pillar_that_no_longer_fits(setup):
     """Final review 1: the briefing checks apply to the edited pillar only."""
     s, log = setup
@@ -2600,6 +2647,36 @@ def test_a_sell_over_20_percent_of_todays_income_is_skipped(setup):
     assert not any(a[0] == "market_sync" for a in game.actions), "nothing to sync: no orders wanted, none placed"
     assert any("skipped sell energy" in e.get("result", "") and "20% of monthly income" in e["result"]
                for e in log.recent if e["kind"] == "strategy_action")
+
+
+def test_market_actions_are_skipped_when_the_game_has_no_market_action(tmp_path):
+    """Fix round 1, item 3: a spec with no [actions.market] must not KeyError, and the pillar that
+    owns market orders is found from the spec (`spec.owners('market')`), never hard-coded to
+    'economy'."""
+    import re
+
+    from pilot.strategy import Pillar
+    corpus = tmp_path / "stellaris"
+    corpus.mkdir()
+    for f in ("manifest.toml", "pilot.md", "strategy.md", "directives.toml"):
+        shutil.copy(REPO / "corpora/stellaris" / f, corpus / f)
+    text = (REPO / "corpora/stellaris/pillars.toml").read_text(encoding="utf-8")
+    text = text.replace('actions = ["market"]\n', "")               # economy no longer declares it
+    text = re.sub(r"\[actions\.market\][\s\S]*?(?=\n#|\n\[)", "", text)  # and the limits table is gone
+    (corpus / "pillars.toml").write_text(text, encoding="utf-8")
+
+    s = Settings(model="google:gemini-3.8-flash", runs_dir=tmp_path / "runs", journal=tmp_path / "journal.md",
+                 commit_learnings=False, game="stellaris", speed="fastest", decide_every_months=12, poll_s=0,
+                 ask_human_timeout_s=0.05, fallback_model=None)
+    s.__class__ = type("S", (Settings,), {"corpus_dir": property(lambda self: corpus)})
+    log = EventLog(s.runs_dir, "run_nomarket", s.model)
+    game = FakeStellaris([briefing("2200.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    assert g.pillars.actions.get("market") is None, "the test corpus must actually lack a market action"
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"],
+                                               market=[{"side": "sell", "resource": "energy", "amount": 5}]))
+    g._carry_out_actions(_idle_energy("2200.01.01"))               # must not raise (no KeyError on actions["market"])
+    assert not any(a[0] == "market_sync" for a in game.actions), "no market action in the spec: nothing to sync"
 
 
 def test_review_now_runs_at_once_without_waiting_for_a_scheduled_decision(setup):
@@ -2686,11 +2763,11 @@ def test_errored_decision_rows_with_a_null_decision_stay_visible(tmp_path):
 
 
 def _milestone_strategist(calls, by="2200.02.01"):
-    from pilot.strategy import Milestone, Pillar
+    from pilot.strategy import Milestone
 
     def respond(messages, info):
         calls.append("strategist")
-        pillars = {p: Pillar(priority=n, stance=f"{p} by model", goals=["g"]).model_dump() for p, n in PRIOS.items()}
+        pillars = _pillars_body(PRIOS)
         pillars["economy"]["milestones"] = [Milestone(metric="pops", op=">=", target=1000, by=by).model_dump()]
         body = {"change": True, "assessment": "ok", "rules": [],
                 "strategy": {"pillars": pillars, "focus": "grow", "reason": "start"}}
@@ -2798,7 +2875,7 @@ def test_frame_text_lists_only_at_risk_and_missed_milestones():
     from pilot.governor import frame_text
     lines = ("- economy: pops >= 100 by 2210.01.01: met\n- expansion: systems >= 20 by 2210.01.01: on_track\n"
              "- technology: techs_known >= 80 by 2210.01.01: at_risk\n- defence: military_power >= 5000 by 2205.01.01: missed")
-    text = frame_text(_strategy_with(), lines)
+    text = frame_text(_strategy_with(), STELLARIS, lines)
     assert "techs_known >= 80 by 2210.01.01: at_risk" in text and "military_power >= 5000 by 2205.01.01: missed" in text
     assert ": met" not in text and "on_track" not in text
 
@@ -2846,19 +2923,47 @@ def test_the_corrective_retry_shows_the_rejected_answer(setup):
 
 
 def test_rank_and_measure_aliases_map_to_the_recorded_metrics():
-    from pilot.strategy import METRICS, Milestone
+    from pilot.strategy import Milestone, Pillar, Strategy, apply_aliases
     for alias, real in (("rank:military", "rank:military_power"), ("rank:economy", "rank:economy_power"),
                         ("rank:tech", "rank:tech_power"), ("military", "military_power"), ("techs", "techs_known"),
                         ("planets", "colonies")):
-        m = Milestone(metric=alias, op=">=", target=1, by="2200.01.01")
-        assert m.metric == real and real in METRICS
+        s = Strategy(pillars={"economy": Pillar(priority=1, stance="s", milestones=[
+            Milestone(metric=alias, op=">=", target=1, by="2200.01.01")])}, focus="f")
+        m = apply_aliases(s, STELLARIS).pillars["economy"].milestones[0]
+        assert m.metric == real and real in STELLARIS.metrics
 
 
-def test_strategy_instructions_list_every_metric_name():
-    from pilot.governor import STRATEGY_INSTRUCTIONS
-    from pilot.strategy import METRICS
-    for m in METRICS:
-        assert m in STRATEGY_INSTRUCTIONS, m
+# ---- Fix round 1, item 2: aliases are pinned at the governor (both write paths) -----------------
+
+def test_a_strategist_reviews_milestone_metric_is_stored_aliased(setup):
+    """A Strategist answer written in a common model spelling ("rank:military") is stored under
+    the recorded measure's real name ("rank:military_power"), not the raw spelling."""
+    s, log = setup
+
+    def respond(messages, info):
+        pillars = _pillars_body(PRIOS)
+        pillars["economy"]["milestones"] = [{"metric": "rank:military", "op": "<=", "target": 3, "by": "2210.01.01"}]
+        body = {"change": True, "assessment": "ok", "rules": [],
+                "strategy": {"pillars": pillars, "focus": "grow", "reason": "start"}}
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, body)])
+
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": FunctionModel(respond)})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    assert g.strategy is not None, "the answer must have validated"
+    assert g.strategy.pillars["economy"].milestones[0].metric == "rank:military_power"
+
+
+def test_edit_pillar_stores_the_milestone_metric_aliased(setup):
+    """A human edit's milestone metric ("planets") is stored under the recorded measure's real
+    name ("colonies") too: edit_pillar aliases exactly like a model review."""
+    s, log = setup
+    calls = []
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": _strategist(calls)})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    g.edit_pillar("economy", {"milestones": [{"metric": "planets", "op": ">=", "target": 5, "by": "2210.01.01"}]})
+    assert g.strategy.pillars["economy"].milestones[0].metric == "colonies"
 
 
 def _species_briefing(date: str) -> dict:
@@ -2868,12 +2973,11 @@ def _species_briefing(date: str) -> dict:
 
 def _identity_strategist(identities: list[str], seen_prompts: list[str]):
     """Answers with a valid strategy whose `identity` is taken from `identities` in turn."""
-    from pilot.strategy import Pillar
     prios = {"defence": 1, "economy": 2, "technology": 3, "expansion": 4, "diplomacy": 5, "government": 6, "society": 7}
 
     def respond(messages, info):
         seen_prompts.append("\n".join(str(getattr(p, "content", "")) for m in messages for p in getattr(m, "parts", [])))
-        pillars = {p: Pillar(priority=n, stance=f"{p} by model", goals=["g"]).model_dump() for p, n in prios.items()}
+        pillars = _pillars_body(prios)
         ident = identities[min(len(seen_prompts) - 1, len(identities) - 1)]
         body = {"change": True, "assessment": "ok", "rules": [], "identity": ident,
                 "strategy": {"pillars": pillars, "focus": "grow", "reason": "start"}}
@@ -2909,3 +3013,471 @@ def test_the_strategist_prompt_names_our_species_and_traits(setup):
                  role_models={"strategy": _identity_strategist(["industrious enduring lithoids"], prompts)})
     g._review_strategy(_species_briefing("2200.01.01"), "start of run")
     assert "Our species: Lithoid humans" in prompts[0] and "industrious" in prompts[0]
+
+
+def test_a_named_field_review_is_accepted_with_its_milestones(setup):
+    """Live 2026-09-26: Claude returned `pillars: {}` twice for a dict-typed schema. With one named
+    field per pillar the answer is accepted and its milestones are kept."""
+    s, log = setup
+    calls, schemas = [], []
+    inner = _strategist(calls)
+
+    def respond(messages, info):
+        schemas.append(info.output_tools[0].parameters_json_schema)
+        return inner.function(messages, info)
+
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": FunctionModel(respond)})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    out = next(d for d in schemas[0]["$defs"].values() if "focus" in d.get("properties", {}))
+    assert set(STELLARIS.ids) <= set(out["properties"])
+    assert g.strategy is not None and set(g.strategy.pillars) == set(STELLARIS.ids)
+    assert g.strategy.pillars["defence"].milestones and g.strategy.pillars["technology"].milestones
+    assert not any(e["kind"] == "strategy_rejected" for e in log.recent)
+
+
+def test_the_corrective_retry_sends_back_the_named_field_shape(setup):
+    """Ruling 2: the corrective retry still includes the rejected answer, dumped as JSON of the
+    generated named-field shape (never the old {"pillars": {...}} shape)."""
+    s, log = setup
+    prompts = []
+    prios = {"defence": 1, "economy": 2, "technology": 3, "expansion": 4, "diplomacy": 5, "government": 6, "society": 7}
+
+    def bad_then_ok(messages, info):
+        prompts.append("\n".join(str(getattr(p, "content", "")) for m in messages for p in getattr(m, "parts", [])))
+        if len(prompts) == 1:
+            body = {"change": True, "assessment": "x", "rules": [], "strategy": {"focus": "f", "reason": "r"}}
+        else:
+            pillars = _pillars_body(prios)
+            body = {"change": True, "assessment": "ok", "rules": [], "strategy": {**pillars, "focus": "grow", "reason": "start"}}
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, body)])
+
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": FunctionModel(bad_then_ok)})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    assert len(prompts) == 2, "the first answer was rejected and retried once"
+    rejected = prompts[1].split("Your rejected answer:\n", 1)[1].split("\n\n", 1)[0]
+    assert '"pillars"' not in prompts[1] and '"focus": "f"' in rejected
+    assert "missing pillar defence" in prompts[1], "the reasons name the pillars the answer left out"
+    assert g.strategy is not None and set(g.strategy.pillars) == set(STELLARIS.ids)
+
+
+# ---- game pillars: governor wiring ----------------------------------------------------------------
+
+def test_a_missing_pillars_file_turns_the_strategy_layer_off(setup):
+    s, log = setup
+    (s.corpus_dir / "pillars.toml").unlink()
+    calls, seen = [], []
+
+    def respond(messages, info):
+        seen.append(" ".join(str(p.content) for m in messages for p in getattr(m, "parts", []) if hasattr(p, "content")))
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"directive": "expand", "reason": "r"})])
+
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=FunctionModel(respond),
+                 role_models={"strategy": _strategist(calls)})
+    g.run(max_decisions=1)
+    assert calls == [], "no Strategist call without a pillars file"
+    assert g.pillars is None and "pillars.toml" in g.pillars_error
+    off = [e for e in log.recent if e["kind"] == "strategy_disabled"]
+    assert len(off) == 1 and "pillars.toml: missing" in off[0]["error"]
+    assert any("No strategy yet." in t for t in seen)
+    assert ("directive", "expand") in g.game.actions, "decisions run as before the layer"
+    assert log.state.info["pillars"] is None
+    with pytest.raises(ValueError, match="strategy layer is off"):
+        g.edit_pillar("economy", {"stance": "x"})
+    with pytest.raises(ValueError, match="strategy layer is off"):
+        g.request_review()
+
+
+def test_an_invalid_pillars_file_turns_the_layer_off_naming_the_key(setup):
+    s, log = setup
+    f = s.corpus_dir / "pillars.toml"
+    f.write_text(f.read_text(encoding="utf-8").replace('label = "Society"', 'label = "Society"\ncolour = "red"'),
+                 encoding="utf-8")
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+    off = [e for e in log.recent if e["kind"] == "strategy_disabled"]
+    assert g.pillars is None and len(off) == 1 and "pillars.society.colour: unknown key" in off[0]["error"]
+
+
+def test_a_stored_strategy_with_other_pillar_ids_is_treated_as_none(setup, tmp_path):
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    seed = EventLog(s.runs_dir, "seed", s.model, telemetry=tel)
+    seed.emit("run_start", game="stellaris", model=s.model)
+    seed.set_campaign("stellaris", "emp_z", "Empire Z")
+    seed.emit("strategy", date="2199.01.01", trigger="start of run", model="seed", reason="seed",
+              strategy={"pillars": {"navy": {"priority": 1, "stance": "s", "goals": []}}, "focus": "f"})
+    calls = []
+    log = EventLog(s.runs_dir, "run2", s.model, telemetry=tel)
+    g = Governor(s, FakeStellaris([{**briefing("2200.01.01"), "source": "save games/emp_z/x.sav"}]), log,
+                 model=decisions("keep"), role_models={"strategy": _strategist(calls)})
+    g.run(max_decisions=1)
+    assert calls and calls[0] == "strategist", "reviewed at start as if there were no strategy"
+    assert set(g.strategy.pillars) == set(STELLARIS.ids)
+    mismatches = [e for e in log.recent if e["kind"] == "strategy_mismatch"]
+    assert len(mismatches) == 1
+    assert mismatches[0]["stored"] == ["navy"] and set(mismatches[0]["spec"]) == set(STELLARIS.ids)
+
+
+def test_a_declared_action_without_a_game_hook_is_skipped_once(setup):
+    from pilot.strategy import Pillar
+    s, log = setup
+
+    class NoMarket(FakeStellaris):
+        market_sync = None
+
+    game = NoMarket([briefing("2200.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    g.strategy = _strategy_with(
+        technology=Pillar(priority=3, stance="s", goals=["g"], prefer_techs=["tech_habitat_1"]),
+        economy=Pillar(priority=2, stance="s", goals=["g"], market=[{"side": "buy", "resource": "alloys", "amount": 5}]))
+    g._carry_out_actions(_idle_energy("2200.01.01"))
+    g._carry_out_actions(_idle_energy("2200.02.01"))
+    unsupported = [e for e in log.recent if e["kind"] == "strategy_action" and "not supported" in e.get("result", "")]
+    assert len(unsupported) == 1 and unsupported[0]["action"] == "market"
+    assert ("pick_tech", ["tech_habitat_1"]) in game.actions, "the supported action still runs"
+    assert log.state.status != "needs_attention"
+
+
+def test_edit_pillar_fields_follow_the_pillars_file(setup):
+    s, log = setup
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+    g.strategy = _strategy_with()
+    g._last_b = _idle_energy("2200.01.01")
+    with pytest.raises(ValueError, match="technology: only the economy pillar may set market"):
+        g.edit_pillar("technology", {"market": [{"side": "buy", "resource": "alloys", "amount": 5}]})
+    assert not g.strategy.pillars["technology"].pinned
+    g.edit_pillar("economy", {"market": [{"side": "buy", "resource": "alloys", "amount": 5}]})
+    assert g.strategy.pillars["economy"].market[0].resource == "alloys"
+    g.edit_pillar("society", {"milestones": [{"metric": "planets", "op": ">=", "target": 5, "by": "2230.01.01"}]})
+    assert g.strategy.pillars["society"].milestones[0].metric == "colonies", "aliases apply to human edits too"
+
+
+def test_the_pillars_spec_is_published_for_the_dashboard(setup):
+    s, log = setup
+    Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+    assert [p["id"] for p in log.state.info["pillars"]["pillars"]] == list(STELLARIS.ids)
+
+
+def test_no_review_is_attempted_while_the_strategy_layer_is_off(setup):
+    """Fix round 1, item 1: with the layer off, neither the scheduled retro-review check nor the
+    event-review call site (run loop) may reach _review_strategy — zero strategy_review_skipped
+    events even after more than retro_every decisions plus an urgent event, and decisions still
+    run normally."""
+    from dataclasses import replace
+    s, log = setup
+    (s.corpus_dir / "pillars.toml").unlink()
+    s2 = replace(s, retro_every=2, decide_every_months=1)
+    s2.__class__ = s.__class__
+    war = [{"name": "Test War", "attacker": False}]
+    briefings = [briefing("2200.01.01"), briefing("2200.02.01"), briefing("2200.03.01", wars=war),
+                 briefing("2200.04.01", wars=war)]
+    game = FakeStellaris(briefings)
+    g = Governor(s2, game, log, model=decisions("keep", "keep", "keep", "keep"))
+    g.run(max_decisions=4)
+    assert log.state.episodes == 4, "decisions still run with the layer off"
+    assert not any(e["kind"] == "strategy_review_skipped" for e in log.recent)
+    assert sum(1 for e in log.recent if e["kind"] == "strategy_disabled") == 1
+
+
+def test_control_review_strategy_returns_400_when_the_layer_is_off(setup, tmp_path):
+    """Fix round 1, item 2: the dashboard's review_strategy control must not 500 when the strategy
+    layer is off; request_review's ValueError is turned into a 400, like unpin_pillar."""
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from pilot.dashboard import make_app
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    (s.corpus_dir / "pillars.toml").unlink()
+    tel = Telemetry(tmp_path / "t7.sqlite")
+    log = EventLog(s.runs_dir, "rs7", s.model, telemetry=tel)
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+    log.set_campaign("stellaris", "c7", "Test")
+
+    async def go():
+        async with TestClient(TestServer(make_app(g, s.runs_dir, tel))) as c:
+            r = await c.post("/control", json={"action": "review_strategy"})
+            assert r.status == 400
+    asyncio.run(go())
+
+
+# ---- Task 5: dashboard renders the Strategy tab from the spec -----------------------------------
+
+THREE_PILLARS = '''[strategy]
+min_milestones_top = 1
+
+[metrics]
+names = ["systems", "pops"]
+
+[pillars.faith]
+label = "Faith"
+description = "Religion and its spread."
+
+[pillars.science]
+label = "Science"
+description = "Research output."
+
+[pillars.culture]
+label = "Culture"
+description = "Great works and tourism."
+'''
+
+
+def test_strategy_api_serves_the_games_pillars(setup, tmp_path):
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from pilot.dashboard import make_app
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(s.runs_dir, "rsp", s.model, telemetry=tel)
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": _strategist([])})
+    log.emit("run_start", model=s.model, game=s.game)
+    log.set_campaign("stellaris", "c9", "Test")
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+
+    async def go():
+        async with TestClient(TestServer(make_app(g, s.runs_dir, tel))) as c:
+            body = await (await c.get(f"/api/strategy?campaign={log.campaign_id}")).json()
+            assert [p["id"] for p in body["spec"]["pillars"]] == list(STELLARIS.ids)
+            assert body["spec"]["actions"]["market"]["max_items"] == 1
+    asyncio.run(go())
+
+
+def test_strategy_api_serves_a_three_pillar_spec_in_the_viewer(tmp_path):
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from pilot.dashboard import make_app
+    from pilot.telemetry import Telemetry
+    corpora = tmp_path / "corpora"
+    (corpora / "civtest").mkdir(parents=True)
+    (corpora / "civtest" / "pillars.toml").write_text(THREE_PILLARS, encoding="utf-8")
+    (corpora / "civtest" / "directives.toml").write_text("", encoding="utf-8")   # no directive is ranked
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(tmp_path / "runs", "r1", "test:model", telemetry=tel)
+    log.emit("run_start", model="test:model", game="civtest")
+    log.set_campaign("civtest", "c1", "Test civ")
+    strategy = {"pillars": {p: {"priority": i + 1, "stance": f"{p} stance", "goals": ["g"]}
+                            for i, p in enumerate(["science", "faith", "culture"])}, "focus": "pray"}
+    log.emit("strategy", date="2200.01.01", trigger="start of run", model="seed", reason="seed", strategy=strategy)
+
+    async def go():
+        async with TestClient(TestServer(make_app(None, tmp_path / "runs", tel, corpora=corpora))) as c:
+            body = await (await c.get("/api/strategy?campaign=civtest/c1")).json()
+            assert [(p["id"], p["label"], p["directive"], p["actions"]) for p in body["spec"]["pillars"]] == [
+                ("faith", "Faith", None, []), ("science", "Science", None, []), ("culture", "Culture", None, [])]
+            assert body["current"]["focus"] == "pray"
+            missing = await (await c.get("/api/strategy?campaign=nogame/c1")).json()
+            assert missing["spec"] is None
+    asyncio.run(go())
+
+
+def test_dashboard_strategy_tab_reads_the_spec_not_a_copied_map():
+    html = (REPO / "src/pilot/static/dashboard.html").read_text(encoding="utf-8")
+    assert "DIRECTIVE_OF" not in html
+    assert "data.spec" in html and "function specIndex(" in html
+    assert 'name === "technology"' not in html and 'name === "economy"' not in html
+
+
+# ---- final review fixes -------------------------------------------------------------------------
+
+def _main_shape_strategy(**over):
+    """A strategy as main stores it (every action field on every pillar, identity), top 3 with milestones."""
+    from pilot.strategy import Strategy
+    body = _pillars_body(PRIOS)
+    for p in body.values():
+        p.update(prefer_techs=[], market=[], pinned=False, edited_by="model")
+    body["economy"].update(pinned=True, edited_by="human", market=[{"side": "buy", "resource": "alloys", "amount": 5}])
+    for k, v in over.items():
+        body[k].update(v)
+    return Strategy.model_validate({"pillars": body, "focus": "hold", "reason": "seed", "identity": "industrious"})
+
+
+def _echo_strategist(prompts: list[str], *, spoil_first: bool = False):
+    """Answers change=true with the strategy JSON its own prompt shows (a verbatim echo)."""
+    import json
+
+    def respond(messages, info):
+        text = "\n".join(str(getattr(p, "content", "")) for m in messages for p in getattr(m, "parts", []))
+        prompts.append(text)
+        shown = json.loads(text.split("Current strategy:\n", 1)[1].split("\n\n", 1)[0])
+        if spoil_first and len(prompts) == 1:
+            shown["defence"]["milestones"] = []          # rejected: a top-3 pillar without a milestone
+        elif spoil_first:
+            shown = json.loads(text.split("Your rejected answer:\n", 1)[1].split("\n\n", 1)[0])
+            shown["defence"]["milestones"] = [{"metric": "systems", "op": ">=", "target": 12, "by": "2231.01.01"}]
+        body = {"change": True, "assessment": "echo", "rules": [], "strategy": shown}
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, body)])
+    return FunctionModel(respond)
+
+
+def test_a_strategist_echoing_the_prompts_strategy_is_accepted(setup):
+    s, log = setup
+    prompts = []
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": _echo_strategist(prompts)})
+    g.strategy = _main_shape_strategy()
+    g._review_strategy(briefing("2200.01.01"), "scheduled")
+    assert len(prompts) == 1 and not any(e["kind"] == "strategy_rejected" for e in log.recent)
+    shown = prompts[0].split("Current strategy:\n", 1)[1].split("\n\n", 1)[0]
+    assert '"pillars"' not in shown and '"pinned"' not in shown and '"identity"' not in shown
+    assert "Pinned by the human" in prompts[0] and "economy" in prompts[0].split("Pinned by the human", 1)[1][:80]
+    assert any(e["kind"] == "strategy_review" and e["accepted"] for e in log.recent)
+    assert g.strategy.pillars["economy"].pinned, "the human's pin is kept"
+
+
+def test_the_corrective_retry_shows_the_rejected_answer_in_the_output_shape(setup):
+    s, log = setup
+    prompts = []
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": _echo_strategist(prompts, spoil_first=True)})
+    g.strategy = _main_shape_strategy()
+    g._review_strategy(briefing("2200.01.01"), "scheduled")
+    assert len(prompts) == 2
+    rejected = prompts[1].split("Your rejected answer:\n", 1)[1].split("\n\n", 1)[0]
+    assert '"pinned"' not in rejected and "null" not in rejected and '"prefer_techs"' not in rejected.split('"technology"')[0]
+    assert not any(e["kind"] == "strategy_rejected" for e in log.recent), "the fixed echo is accepted"
+    assert g.strategy.pillars["defence"].milestones[0].target == 12
+
+
+def _viewer_campaign(tmp_path, game: str, strategy: dict | None, pillars: str | None):
+    """A telemetry db with one campaign '<game>/c1' (and a stored strategy), and a corpora dir."""
+    from pilot.telemetry import Telemetry
+    corpora = tmp_path / "corpora"
+    (corpora / game).mkdir(parents=True)
+    if pillars is not None:
+        (corpora / game / "pillars.toml").write_text(pillars, encoding="utf-8")
+        (corpora / game / "directives.toml").write_text("", encoding="utf-8")
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(tmp_path / "runs", "r1", "test:model", telemetry=tel)
+    log.emit("run_start", model="test:model", game=game)
+    log.set_campaign(game, "c1", "Test")
+    log.emit("metrics", date="2200.01.01", systems=3)
+    if strategy is not None:
+        log.emit("strategy", date="2200.01.01", trigger="start of run", model="seed", reason="seed", strategy=strategy)
+    return tel, corpora
+
+
+def _get_strategy(app, cid: str) -> dict:
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    async def go():
+        async with TestClient(TestServer(app)) as c:
+            r = await c.get(f"/api/strategy?campaign={cid}")
+            assert r.status == 200
+            return await r.json()
+    return asyncio.run(go())
+
+
+def test_strategy_api_reports_a_stored_strategy_with_other_pillars(tmp_path):
+    from pilot.dashboard import make_app
+    ms = [{"metric": "systems", "op": ">=", "target": 10, "by": "2230.01.01"}]
+    stored = {"pillars": {"navy": {"priority": 1, "stance": "s", "goals": [], "milestones": ms}}, "focus": "f"}
+    tel, corpora = _viewer_campaign(tmp_path, "civtest", stored, THREE_PILLARS)
+    body = _get_strategy(make_app(None, tmp_path / "runs", tel, corpora=corpora), "civtest/c1")
+    assert body["error"] == "stored strategy does not match the game's pillars; the next review writes a new one"
+    assert body["milestones"] == [] and body["current"]["focus"] == "f"
+
+
+def test_strategy_api_is_quiet_for_a_game_without_pillars_or_strategy(tmp_path):
+    from pilot.dashboard import make_app
+    tel, corpora = _viewer_campaign(tmp_path, "galciv4", None, None)
+    body = _get_strategy(make_app(None, tmp_path / "runs", tel, corpora=corpora), "galciv4/c1")
+    assert body["error"] == "" and body["spec"] is None and body["current"] is None
+
+
+def test_strategy_api_reports_the_live_pilots_pillars_error(setup, tmp_path):
+    from pilot.dashboard import make_app
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    (s.corpus_dir / "pillars.toml").unlink()
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(s.runs_dir, "rl", s.model, telemetry=tel)
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+    log.emit("run_start", model=s.model, game=s.game)
+    log.set_campaign("stellaris", "live", "Test")
+    body = _get_strategy(make_app(g, s.runs_dir, tel), log.campaign_id)
+    assert "pillars.toml: missing" in body["error"] and "strategy layer is off" in body["error"]
+    assert body["spec"] is None, "no spec is served while the live layer is off (edits would fail)"
+
+
+def test_dashboard_prefixes_only_a_pillars_file_error_as_layer_off():
+    html = (REPO / "src/pilot/static/dashboard.html").read_text(encoding="utf-8")
+    assert '>Strategy layer off: ${esc(data.error)}<' not in html, "mismatch/live errors are complete messages"
+    assert 'data.error.startsWith("pillars: ")' in html
+
+
+def test_a_failing_review_model_turns_the_layer_off(setup, monkeypatch):
+    import pilot.governor as gm
+    s, log = setup
+
+    def boom(spec):
+        raise TypeError("schema build failed")
+    monkeypatch.setattr(gm, "review_model", boom)
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("expand"))
+    assert g.pillars is None and "TypeError: schema build failed" in g.pillars_error
+    off = [e for e in log.recent if e["kind"] == "strategy_disabled"]
+    assert len(off) == 1 and "schema build failed" in off[0]["error"]
+    assert log.state.info["pillars"] is None
+    g.run(max_decisions=1)
+    assert ("directive", "expand") in g.game.actions, "decisions still run"
+
+
+def test_a_main_shape_strategy_without_milestones_upgrades_cleanly(setup, tmp_path):
+    """Upgrade path: main stored strategies with every action field on every pillar, identity, and
+    no milestones. It loads; change=false keeps it; change=true needs milestones on the new
+    version's top pillars only."""
+    from pilot.strategy import Strategy
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    seed = EventLog(s.runs_dir, "seed", s.model, telemetry=tel)
+    seed.emit("run_start", game="stellaris", model=s.model)
+    seed.set_campaign("stellaris", "emp_u", "Empire U")
+    old = {p: {"priority": n, "stance": f"{p} old", "goals": ["g"], "milestones": [], "prefer_techs": [], "market": [],
+               "pinned": False, "edited_by": "model"} for p, n in PRIOS.items()}
+    seed.emit("strategy", date="2199.01.01", trigger="start of run", model="main", reason="seed",
+              strategy={"pillars": old, "focus": "old focus", "reason": "seed", "identity": "industrious"})
+
+    new_prios = {"economy": 1, "expansion": 2, "society": 3, "defence": 4, "technology": 5, "diplomacy": 6, "government": 7}
+    answers = []
+
+    def respond(messages, info):
+        change, body = answers.pop(0)
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {
+            "change": change, "assessment": "a", "rules": [], "strategy": body})])
+
+    log = EventLog(s.runs_dir, "up", s.model, telemetry=tel)
+    log.emit("run_start", game="stellaris", model=s.model)
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": FunctionModel(respond)})
+    g._set_campaign({**briefing("2200.01.01"), "source": "save games/emp_u/x.sav"})
+    assert g.strategy is not None and g.strategy.focus == "old focus", "the main-shape strategy loads"
+    assert g.review_requested is None and not any(e["kind"] == "strategy_mismatch" for e in log.recent)
+    loaded = g.strategy
+
+    answers.append((False, None))
+    g._review_strategy(briefing("2200.01.01"), "scheduled")
+    assert g.strategy is loaded, "change=false keeps it although its top pillars have no milestones"
+
+    missing = _pillars_body(new_prios)
+    missing["society"]["milestones"] = []                # a new top-3 pillar without a milestone
+    answers.extend([(True, {**missing, "focus": "new"}), (True, {**missing, "focus": "new"})])
+    g._review_strategy(briefing("2200.02.01"), "scheduled")
+    assert g.strategy is loaded
+    rejected = [e for e in log.recent if e["kind"] == "strategy_rejected"]
+    assert rejected and rejected[-1]["errors"] == ["society: priority 3 is in the top 3 and needs at least one milestone"]
+
+    answers.append((True, {**_pillars_body(new_prios), "focus": "new"}))   # milestones on the new top 3 only
+    g._review_strategy(briefing("2200.03.01"), "scheduled")
+    assert isinstance(g.strategy, Strategy) and g.strategy.focus == "new"
+    assert [n for n, pl in g.strategy.sorted_pillars() if pl.milestones] == ["economy", "expansion", "society"]
