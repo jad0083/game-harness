@@ -1252,7 +1252,7 @@ def test_without_the_setting_a_falling_city_only_autoplays(setup):
     g = stand_governor(setup, game, [], [{"kind": "research", "id": "tech:pottery"}], [], on=False)
     g.run(max_decisions=3)
     assert "city falling: Beijing" in traces(setup)[1]["trigger"], "the urgent decision still runs"
-    assert {a[0] for a in game.actions} <= {"order", "autoplay", "autoplay_stop"}
+    assert {a[0] for a in game.actions} <= {"order", "autoplay", "autoplay_stop", "ai_strategies"}
     assert [a for a in game.actions if a[0] == "autoplay"] == [("autoplay", 1, False)] * 4
 
 
@@ -1394,3 +1394,84 @@ esac
     i = args.index("last-stand-step")
     assert args[i:i + 6] == ["last-stand-step", "65536", "--damage", '{"63:1": 40}', "--skip", "city:65536,unit:5"]
     assert args[args.index("ls-state") + 1] == "65536" and args[args.index("finish-moves") + 1] == "9"
+
+
+
+# ---- the AI's intent (docs/design/2026-09-27-civ6-levers-design.md, ruling 29) -------------------
+
+AI_LOG = [(1, 0, "STRATEGY_EARLY_EXPLORATION", "Following"), (1, 1, "STRATEGY_EARLY_EXPLORATION", "Following"),
+          (6, 0, "VICTORY_STRATEGY_RELIGIOUS_VICTORY", "Following"), (11, 0, "VICTORY_STRATEGY_SCIENCE_VICTORY", "Following"),
+          (33, 0, "STRATEGY_EARLY_EXPLORATION", "Stopped"), (36, 0, "VICTORY_STRATEGY_SCIENCE_VICTORY", "Stopped"),
+          (56, 0, "VICTORY_STRATEGY_SCIENCE_VICTORY", "Following"), (76, 0, "VICTORY_STRATEGY_SCIENCE_VICTORY", "Stopped")]
+RECOMMEND = [{"type": "DISTRICT_HOLY_SITE", "score": 729}, {"type": "DISTRICT_CAMPUS", "score": 669},
+             {"type": "BUILDING_ORACLE", "score": 632}]
+
+
+def test_the_ais_strategies_are_read_from_its_log():
+    from pilot.civ6 import ai_strategy_states
+    rows = [[turn, name, status] for turn, who, name, status in AI_LOG if who == 0]
+    st = ai_strategy_states(rows)
+    assert st["VICTORY_STRATEGY_SCIENCE_VICTORY"] == {"status": "Stopped", "since": 56, "stopped": 76}
+    assert st["VICTORY_STRATEGY_RELIGIOUS_VICTORY"] == {"status": "Following", "since": 6, "stopped": None}
+    assert st["STRATEGY_EARLY_EXPLORATION"] == {"status": "Stopped", "since": 1, "stopped": 33}
+
+
+def test_the_briefing_shows_the_ais_own_plan():
+    from pilot.civ6 import ai_plan_text, ai_strategy_states
+    rows = [[turn, name, status] for turn, who, name, status in AI_LOG if who == 0]
+    s = {**FIXTURE, "turn": 80, "cities": [_city0(recommend=RECOMMEND), {**_city0(), "name": "Xi'an", "recommend": []}]}
+    text = ai_plan_text(s, INDEX, ai_strategy_states(rows))
+    assert text == ("The AI's own plan: Beijing → district:holy_site, district:campus, wonder:oracle; strategies: "
+                    "religious victory (since T6), science victory (since T56, stopped T76).")
+    assert "early exploration" not in text, "stopped more than 30 turns ago"
+    assert text in briefing_text(s, INDEX, strategies=ai_strategy_states(rows))
+    assert ai_plan_text(FIXTURE, INDEX, {}) == "", "an old snapshot and no log: no line"
+
+
+def test_each_decision_reads_the_ai_log_once_from_where_it_stopped(setup):
+    seen: list[str] = []
+    base = {**FIXTURE, "cities": [_city0(recommend=RECOMMEND)]}
+    game = FakeCiv6(base, index=INDEX, ai_log=AI_LOG[:4])
+    g = governor(setup, game, orders_model([], seen=seen))
+
+    def more(state):
+        game.ai_log += AI_LOG[4:]
+    game.events[T0 + 2] = more
+    g.run(max_decisions=2)
+    reads = [a for a in game.actions if a[0] == "ai_strategies"]
+    assert reads == [("ai_strategies", 0, False), ("ai_strategies", 4, False)], "one read per decision, from the last end"
+    assert "The AI's own plan: Beijing → district:holy_site, district:campus, wonder:oracle; strategies: religious " \
+           "victory (since T6), science victory (since T11), early exploration (since T1)." in seen[0]
+    assert "science victory (since T56, stopped T76)" in seen[1]
+
+
+def test_a_failed_log_read_leaves_the_decision_alone(setup):
+    game = FakeCiv6({**FIXTURE, "cities": [_city0(recommend=RECOMMEND)]}, index=INDEX)
+    game.ai_strategies = lambda offset, player: (_ for _ in ()).throw(RuntimeError("HTTP 404"))
+    seen: list[str] = []
+    g = governor(setup, game, orders_model([], seen=seen))
+    g.run(max_decisions=1)
+    assert "The AI's own plan: Beijing → district:holy_site" in seen[0]
+    assert any(e["kind"] == "briefing_error" and "AI strategy log" in e["error"] for e in _events(setup))
+
+
+def test_an_override_records_whether_the_ai_took_its_own_top_three(setup):
+    """top3_hit: was the AI's replacement in the city's top 3 when we ordered?"""
+    recs = [{"type": "BUILDING_GRANARY", "score": 700}, {"type": "UNIT_SETTLER", "score": 650},
+            {"type": "UNIT_ARCHER", "score": 500}]
+    base = {**_replace_fixture(), "cities": [_city0(producing="UNIT_WARRIOR", turns_left=5, recommend=recs)]}
+
+    def ai(state):
+        state["cities"][0]["producing"] = "BUILDING_GRANARY"
+    seen: list[str] = []
+    game = FakeCiv6(base, index=INDEX, ai=ai)
+    g = governor(setup, game, orders_model([{"kind": "production", "city": "Beijing", "id": "unit:slinger"}], [],
+                                           seen=seen))
+    g.run(max_decisions=2)
+    rows = [e for e in _events(setup) if e["kind"] == "order_outcome"]
+    assert [(r["result"], r["by"], r["top3_hit"], r["top3"]) for r in rows] == [
+        ("overridden", "building:granary", True, ["building:granary", "unit:settler", "unit:archer"])]
+    assert "the AI's replacement was in the city's own top 3 builds (at order time) 1 of 1 times" in seen[1]
+    from pilot.civ6 import top3_hits
+    assert top3_hits([*rows, {"result": "overridden", "top3_hit": False}, {"result": "completed", "top3_hit": None}]) \
+        == (1, 2)

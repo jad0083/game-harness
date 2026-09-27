@@ -219,6 +219,14 @@ enum Civ6Action {
     FinishMoves { unit: String },
     /// Read-only (InGame): our turn, the engine idle and nothing modal on screen
     TurnReady,
+    /// Read-only: one player's rows of the game's AI strategy log (Logs/AI_Victories.csv), one agent
+    /// read from --offset (the previous reply's `next`)
+    AiStrategies {
+        #[arg(long, default_value_t = 0)]
+        offset: u64,
+        #[arg(long, default_value_t = 0)]
+        player: u32,
+    },
 }
 
 #[derive(Subcommand)]
@@ -435,6 +443,10 @@ async fn main() -> Result<()> {
             if !civ6::reply_ok(&v) {
                 std::process::exit(2);
             }
+        }
+        Commands::Civ6 { action: Civ6Action::AiStrategies { offset, player } } => {
+            let (chunk, size) = client.files_read_page(civ6::AI_LOG_ROOT, civ6::AI_LOG_PATH, offset, Some(civ6::AI_LOG_MAX)).await?;
+            println!("{}", serde_json::to_string(&civ6::ai_strategies_reply(&chunk, offset, size, player))?);
         }
         Commands::Corpus { action } => {
             if let Some(c) = corpus {
@@ -696,6 +708,9 @@ mod tests {
             Civ6Action::LastStandStep { damage, skip, .. } => assert_eq!((damage.as_str(), skip.as_str()), ("{}", "")),
             _ => panic!("defaults"),
         }
+        assert!(matches!(civ6(&["ai-strategies", "--offset", "9723", "--player", "0"]).unwrap(),
+                         Civ6Action::AiStrategies { offset: 9723, player: 0 }));
+        assert!(matches!(civ6(&["ai-strategies"]).unwrap(), Civ6Action::AiStrategies { offset: 0, player: 0 }));
         assert!(civ6(&["ls-state"]).is_err(), "a city ID is required");
         assert!(civ6(&["turn-ready", "extra"]).is_err());
     }

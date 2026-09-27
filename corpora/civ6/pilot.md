@@ -14,6 +14,9 @@
   progressed and slotted now, government and policy slots, every city (population, what it builds
   and in how many turns, districts, threats, what it can build), units by type, the civilizations
   met with score and military strength, wars and great person points.
+- The AI's own plan: each city's top 3 builds as the game's AI ranks them, and the strategies it
+  follows for us (e.g. science victory). An order against that plan is more likely to be replaced;
+  the order record says how often the AI's replacement was in its own top 3.
 - The strategy frame: each pillar's share of effort (weight x milestone need), stances and
   milestones at risk.
 - What your last orders did: carried out, refused (with the reason), and since then completed,

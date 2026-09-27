@@ -246,6 +246,38 @@ pub fn last_stand_step_call(city: &str, damage: &str, skip: &str) -> Result<(&'s
     Ok((STATE_UI, format!("Harness.run(Harness.last_stand_step, {city}, {{{}}}, {{{}}})", dmg.join(", "), used.join(", "))))
 }
 
+// ---- the AI's intent (docs/design/2026-09-27-civ6-levers-design.md, ruling 29) -----------------
+
+/// The game's log of AI strategies: "Game Turn, Player, Strategy, Status" rows, appended whenever a
+/// player's strategy starts ("Following") or stops ("Stopped"), under the agent's `civ6_appdata`
+/// root (`%LOCALAPPDATA%\Firaxis Games\Sid Meier's Civilization VI`).
+pub const AI_LOG_ROOT: &str = "civ6_appdata";
+pub const AI_LOG_PATH: &str = "Logs/AI_Victories.csv";
+/// At most this much of the log per read (the whole log was about 10 KB at T77).
+pub const AI_LOG_MAX: u64 = 64 * 1024;
+
+/// The reply of `civ6 ai-strategies`: one player's complete rows in `chunk`, read at `offset` of a
+/// file of `size` bytes, and the offset to read from next (a partial last line waits for it). A file
+/// smaller than `offset` was started again (a new game session): no rows, read again from 0.
+pub fn ai_strategies_reply(chunk: &[u8], offset: u64, size: u64, player: u32) -> serde_json::Value {
+    if offset > size {
+        return serde_json::json!({"ok": true, "size": size, "offset": offset, "next": 0, "restarted": true, "rows": []});
+    }
+    let end = chunk.iter().rposition(|&b| b == b'\n').map_or(0, |i| i + 1);
+    let mut rows = Vec::new();
+    for line in String::from_utf8_lossy(&chunk[..end]).lines() {
+        let f: Vec<&str> = line.split(',').map(str::trim).collect();
+        if f.len() != 4 {
+            continue;
+        }
+        let (Ok(turn), Ok(who)) = (f[0].parse::<u32>(), f[1].parse::<u32>()) else { continue };     // the header
+        if who == player {
+            rows.push(serde_json::json!([turn, f[2], f[3]]));
+        }
+    }
+    serde_json::json!({"ok": true, "size": size, "offset": offset, "next": offset + end as u64, "restarted": false, "rows": rows})
+}
+
 /// `Harness.run(Harness.autoplay, n)`.
 pub fn autoplay_call(turns: u32) -> Result<String> {
     if !(1..=MAX_AUTOPLAY_TURNS).contains(&turns) {
@@ -493,6 +525,24 @@ mod tests {
         assert!(err("[1, 2]", "").contains("JSON object"));
         assert!(err("{}", "tile:5").contains("city:<id> or unit:<id>"));
         assert!(err("{}", r#"unit:5"] = true}) os.exit() --"#).contains("numeric game ID"));
+    }
+
+    #[test]
+    fn ai_strategies_keep_one_players_complete_rows() {
+        let log = b"Game Turn, Player, Strategy, Status\n1, 0, STRATEGY_EARLY_EXPLORATION, Following\n\
+                    1, 1, STRATEGY_EARLY_EXPLORATION, Following\n56, 0, VICTORY_STRATEGY_SCIENCE_VICTORY, Following\n76, 0, VICT";
+        let r = ai_strategies_reply(log, 0, 500, 0);
+        assert_eq!(r["rows"], serde_json::json!([[1, "STRATEGY_EARLY_EXPLORATION", "Following"],
+                                                 [56, "VICTORY_STRATEGY_SCIENCE_VICTORY", "Following"]]));
+        let partial = log.len() - "76, 0, VICT".len();
+        assert_eq!(r["next"], partial as u64, "a partial last line waits for the next read");
+        let more = b"76, 0, VICTORY_STRATEGY_SCIENCE_VICTORY, Stopped\n";
+        let r = ai_strategies_reply(more, partial as u64, 500, 0);
+        assert_eq!(r["rows"], serde_json::json!([[76, "VICTORY_STRATEGY_SCIENCE_VICTORY", "Stopped"]]));
+        assert_eq!(r["next"], (partial + more.len()) as u64);
+        assert_eq!(ai_strategies_reply(log, 0, 500, 1)["rows"].as_array().unwrap().len(), 1, "player 1");
+        let restarted = ai_strategies_reply(b"", 900, 120, 0);
+        assert_eq!((restarted["restarted"].as_bool(), restarted["next"].as_u64()), (Some(true), Some(0)));
     }
 
     #[test]

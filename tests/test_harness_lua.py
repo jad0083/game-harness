@@ -228,3 +228,15 @@ def test_finish_moves_pins_our_unit():
     rt, out = stand_world()
     assert call(rt, out, "Harness.finish_moves, 20") == {"ok": True, "unit": 20, "moves_before": 2, "moves": 0}
     assert call(rt, out, "Harness.finish_moves, 1")["error"] == "no unit of ours with ID 1"
+
+
+# ---- the AI's intent (ruling 29) --------------------------------------------------------------------
+
+def test_each_city_lists_the_ais_top_three_builds():
+    s = snapshot(*runtime())
+    beijing, xian = s["cities"]
+    assert beijing["recommend"] == [{"type": "DISTRICT_HOLY_SITE", "score": 729}, {"type": "BUILDING_GRANARY", "score": 669},
+                                    {"type": "UNIT_ARCHER", "score": 632}]
+    assert xian["recommend"] == []
+    s = snapshot(*runtime(), "MOCK.no_city_ai = true")
+    assert s["ok"] is True and "recommend" not in s["cities"][0]

@@ -33,6 +33,7 @@ from .civ6 import (
     _actor_id,
     _ls_unit,
     about_to_fall,
+    ai_strategy_states,
     briefing_text,
     check_orders,
     faith_reserve_now,
@@ -51,6 +52,7 @@ from .civ6 import (
     read_back,
     record_key,
     stand_verdict,
+    top3_hits,
     urgent_changes,
 )
 from .claude_code import resolve_model
@@ -188,6 +190,8 @@ class Civ6Governor(Governor):
         self._stand_first_fails = 0               # stands whose first action did not take (ruling 26)
         self._stand_off = ""                      # why the stand turned itself off for this run
         self._pinned: list[dict] = []             # units the last stand pinned, checked at the next snapshot
+        self._ai_log_next = 0                     # where the next read of the AI's strategy log starts (ruling 29)
+        self._ai_rows: list = []                  # our player's rows of that log: [turn, strategy, status]
         log.state.info["directives"] = []
         log.state.info["decide_turns"] = settings.decide_every_turns
         log.state.info["controls"] = [c for c in log.state.info.get("controls", []) if c not in ("override", "set_speed")]
@@ -235,7 +239,23 @@ class Civ6Governor(Governor):
         return gold_reserve_now(b, self._buy_limits())
 
     def _briefing(self, b: dict) -> str:
-        return briefing_text(b, self.index, limits=self._buy_limits())
+        return briefing_text(b, self.index, limits=self._buy_limits(), strategies=ai_strategy_states(self._ai_rows))
+
+    def _read_ai_strategies(self, b: dict) -> None:
+        """The AI's own strategies for our player (ruling 29): at most one read of its log per
+        decision, from where the last one ended. Advisory: a failed read keeps what is known."""
+        read = getattr(self.game, "ai_strategies", None)
+        if read is None:
+            return
+        try:
+            r = read(self._ai_log_next, int(b.get("player") or 0))
+        except Exception as e:  # noqa: BLE001 - advisory
+            self.log.emit("briefing_error", error=f"AI strategy log: {e}"[:200])
+            return
+        if r.get("restarted"):
+            self._ai_rows = []
+        self._ai_rows += [list(x) for x in r.get("rows") or []]
+        self._ai_log_next = int(r.get("next") or 0)
 
     def _set_campaign(self, b: dict) -> None:
         """Campaign = civ6/<leader>_<map seed> (ruling 7), or PILOT_CAMPAIGN."""
@@ -685,6 +705,9 @@ class Civ6Governor(Governor):
         self._publish_record()
 
     def _resolve(self, t: Tracked, result: str, by: str | None, b: dict, detail: str = "") -> None:
+        top3 = t.row.get("top3")
+        if result == "overridden" and by and top3 is not None:
+            t.row["top3_hit"] = self.index.cid(by) in top3      # ruling 29: did the AI follow its own plan?
         row = {**t.row, "result": result, "by": self.index.cid(by) if by else None,
                "turns": (b.get("turn") or 0) - (t.base.get("turn") or 0), "date": b.get("date") or f"T{b.get('turn')}",
                "turn": b.get("turn"), "detail": detail}
@@ -712,11 +735,15 @@ class Civ6Governor(Governor):
         instead is a purchase, a purchase switched to faith a faith purchase."""
         o = c.wire or c.order
         oid = ", ".join(o.get("ids") or []) if o.get("kind") == "policies" else o.get("id")
+        city = (c.wire or {}).get("city") or o.get("city") or ""
+        recs = (_city_of(b, city) or {}).get("recommend") if o.get("kind") == "production" else None
         return {"order_kind": o.get("kind"), "key": record_key(o, situation),
                 "item_kind": "policy" if o.get("kind") == "policies" else self.index.kind_of.get(o.get("id") or ""),
-                "id": oid, "city": (c.wire or {}).get("city") or o.get("city") or "",
+                "id": oid, "city": city,
                 "currency": o.get("currency") if o.get("kind") == "purchase" else None, "situation": situation,
-                "ordered": b.get("date") or f"T{b.get('turn')}", "top3_hit": None}
+                "ordered": b.get("date") or f"T{b.get('turn')}", "top3_hit": None,
+                # the city's own top 3 builds when ordered (ruling 29), for top3_hit
+                "top3": [self.index.cid(r.get("type")) for r in recs] if isinstance(recs, list) else None}
 
     def _now_turn(self) -> int:
         return self._tracked_turn or max([r.get("turn") or 0 for r in self._order_rows] + [0])
@@ -730,7 +757,7 @@ class Civ6Governor(Governor):
         if spec is None:
             return ""
         return order_record_text(self._record(), idle_counts(self._seen_idle, self._now_turn(), spec.window_turns),
-                                 spec.window_turns)
+                                 spec.window_turns, top3_hits(self._order_rows))
 
     def _publish_record(self) -> None:
         self.log.state.info["order_record"] = self._record()
@@ -794,6 +821,7 @@ class Civ6Governor(Governor):
             except Exception as e:  # noqa: BLE001 - advisory
                 self.log.emit("briefing_error", error=f"outcome scoring: {e}"[:200])
         self._track(b)
+        self._read_ai_strategies(b)
         held = self._held_report(b)
         extra = self.human.take_all()
         press = self._pressures() if self.strategy and self.pillars else None
@@ -1004,6 +1032,11 @@ class Civ6Governor(Governor):
             result, detail = "refused", status
         self._emit_row({**row, "result": result, "by": None, "turns": 0, "date": now.get("date") or f"T{now.get('turn')}",
                         "turn": now.get("turn"), "detail": detail[:300]})
+
+
+def _city_of(snapshot: dict, name: str) -> dict | None:
+    want = str(name).strip().lower()
+    return next((c for c in snapshot.get("cities") or [] if str(c.get("name", "")).lower() == want), None)
 
 
 def _describe(o: dict) -> str:

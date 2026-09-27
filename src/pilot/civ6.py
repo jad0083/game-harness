@@ -36,6 +36,8 @@ class Civ6Game(Protocol):
     def ls_state(self, city_id: int) -> dict: ...
     def last_stand_step(self, city_id: int, damage: dict[str, int], skip: list[str]) -> dict: ...
     def finish_moves(self, unit_id: int) -> dict: ...
+    # the AI's own strategies (ruling 29): one read of its log per decision
+    def ai_strategies(self, offset: int, player: int) -> dict: ...
     def corpus(self, tool: str, **args) -> str: ...
     def close(self) -> None: ...
 
@@ -120,6 +122,9 @@ class ControllerCiv6:
     def finish_moves(self, unit_id: int) -> dict:
         return self._json("civ6", "finish-moves", str(int(unit_id)))
 
+    def ai_strategies(self, offset: int, player: int) -> dict:
+        return self._json("civ6", "ai-strategies", "--offset", str(int(offset)), "--player", str(int(player)))
+
     def corpus(self, tool: str, **args) -> str:
         if tool == "corpus_search":
             _, out, err = self._run("corpus", "search", str(args.get("query", "")), "--limit", str(args.get("limit", 5)))
@@ -167,7 +172,9 @@ class FakeCiv6:
     target takes the predicted damage and dies at 100, the attacker spends its attack, a retreat
     moves the unit) unless `stand_ignored`; `stand_lost_reply` loses the step's reply after it ran;
     `ls_fails` fails that many `ls_state` reads first; `popup` makes `turn_ready` (and every step)
-    not ready; `pin_ignored` leaves `finish_moves` without effect."""
+    not ready; `pin_ignored` leaves `finish_moves` without effect.
+    The AI's strategy log: `ai_log` rows (turn, player, strategy, status); `ai_strategies` returns
+    those from `offset` on (the offset counts rows here, bytes in the real log)."""
 
     def __init__(self, base: dict, events: dict | None = None, replies: dict | None = None,
                  prices: dict | None = None, sticks: bool = True, index: CorpusIndex | None = None, ai=None,
@@ -176,7 +183,7 @@ class FakeCiv6:
                  lost_start_reply: bool = False, blink: bool = False, lost_start_not_run: int = 0,
                  ls: dict | None = None, stand: list[dict] | None = None, stand_effect=None,
                  stand_ignored: bool = False, stand_lost_reply: bool = False, ls_fails: int = 0,
-                 popup: bool = False, pin_ignored: bool = False):
+                 popup: bool = False, pin_ignored: bool = False, ai_log: list[tuple] | None = None):
         self.state = copy.deepcopy(base)
         self.events = dict(events or {})
         self.replies = dict(replies or {})
@@ -194,6 +201,7 @@ class FakeCiv6:
         self.stand_effect = stand_effect or _stand_apply
         self.stand_ignored, self.stand_lost_reply, self.ls_fails = stand_ignored, stand_lost_reply, ls_fails
         self.popup, self.pin_ignored = popup, pin_ignored
+        self.ai_log = list(ai_log or [])
         self.actions: list[tuple] = []
         self.active = False
         self.remaining = 0
@@ -320,6 +328,12 @@ class FakeCiv6:
         if not self.pin_ignored:
             unit["moves"] = 0
         return {"ok": True, "unit": unit_id, "moves_before": before, "moves": unit["moves"]}
+
+    def ai_strategies(self, offset: int, player: int) -> dict:
+        self.actions.append(("ai_strategies", offset, self.active))
+        rows = [[turn, name, status] for turn, who, name, status in self.ai_log[offset:] if who == player]
+        return {"ok": True, "size": len(self.ai_log), "offset": offset, "next": len(self.ai_log), "restarted": False,
+                "rows": rows}
 
     def corpus(self, tool: str, **args) -> str:
         self.actions.append(("corpus", tool, args))
@@ -1069,11 +1083,19 @@ def idle_counts(seen: dict[int, list[str]], now_turn: int, window: int) -> dict[
     return {k: (sum(1 for t in turns if k in seen[t]), len(turns)) for k in ("research", "civic")}
 
 
+def top3_hits(rows: list[dict]) -> tuple[int, int]:
+    """Of the AI's replacements of our production orders whose city's top 3 was known at order time,
+    how many were in that top 3 (ruling 29): (hits, known)."""
+    known = [r for r in rows if r.get("result") == "overridden" and r.get("top3_hit") is not None]
+    return sum(1 for r in known if r["top3_hit"]), len(known)
+
+
 def order_record_text(rec: dict[str, dict], idle: dict[str, tuple[int, int]] | None = None,
-                      window: int = 30) -> str:
+                      window: int = 30, top3: tuple[int, int] | None = None) -> str:
     """One line per key for the decision prompt and the Strategist, e.g. `- production replace: 5
     judged; 2 completed, 3 replaced by the AI (last: unit:slinger → unit:trader in Chengdu, T41);
-    held 40% — does not stick here`."""
+    held 40% — does not stick here`; `top3` (`top3_hits`) adds how often the AI's replacement was in
+    the city's own top 3."""
     lines = []
     for key, r in rec.items():
         parts = [f"{r['completed']} completed"] if r["completed"] else []
@@ -1101,6 +1123,9 @@ def order_record_text(rec: dict[str, dict], idle: dict[str, tuple[int, int]] | N
     for kind, (n, of) in (idle or {}).items():
         if n:
             lines.append(f"- {kind} idle at {n} of {of} snapshots in the last {window} turns")
+    if top3 and top3[1]:
+        lines.append(f"- the AI's replacement was in the city's own top 3 builds (at order time) {top3[0]} of "
+                     f"{top3[1]} times")
     return "\n".join(lines)
 
 
@@ -1172,6 +1197,48 @@ def stand_verdict(reply: dict | None, before: dict, after: dict | None) -> tuple
         if not spent:
             return "did_not_take", f"the attacker kept its attack; target: {what}{predicted}"
     return ("took" if hit else "did_not_take"), f"target: {what}{predicted}"
+
+
+# ---- the AI's intent (docs/design/2026-09-27-civ6-levers-design.md, ruling 29) ------------------
+
+
+def ai_strategy_states(rows: list) -> dict[str, dict]:
+    """Each strategy's state from the AI's log rows ([turn, strategy, status], oldest first): its
+    last status, the turn its current run started (`since`) and, once stopped, the turn it stopped."""
+    out: dict[str, dict] = {}
+    for turn, name, status in rows:
+        s = out.setdefault(str(name), {"status": None, "since": None, "stopped": None})
+        if status == "Following":
+            if s["status"] != "Following":
+                s["since"], s["stopped"] = turn, None
+            s["status"] = "Following"
+        elif status == "Stopped":
+            s["status"], s["stopped"] = "Stopped", turn
+    return out
+
+
+def _strategy_name(key: str) -> str:
+    return key.removeprefix("VICTORY_STRATEGY_").removeprefix("STRATEGY_").lower().replace("_", " ")
+
+
+def ai_plan_text(s: dict, index: CorpusIndex, strategies: dict[str, dict] | None = None, window: int = 30) -> str:
+    """The AI's own plan (ruling 29): each city's top 3 builds and our player's strategies that run,
+    or stopped within the last `window` turns. The AI's scores are on their own scale, and how well
+    they predict what it builds is measured by the order record (`top3_hit`)."""
+    cid, now = index.cid, s.get("turn") or 0
+    cities = [f"{c.get('name')} → " + ", ".join(cid(r.get("type")) for r in c["recommend"])
+              for c in s.get("cities") or [] if c.get("recommend")]
+    shown = []
+    for key, st in sorted((strategies or {}).items(), key=lambda kv: (not kv[0].startswith("VICTORY_"), kv[0])):
+        if st["status"] == "Following":
+            shown.append(f"{_strategy_name(key)} (since T{st['since']})" if st["since"] is not None else _strategy_name(key))
+        elif st["status"] == "Stopped" and st["stopped"] is not None and now - st["stopped"] <= window:
+            since = f"since T{st['since']}, " if st["since"] is not None else ""
+            shown.append(f"{_strategy_name(key)} ({since}stopped T{st['stopped']})")
+    parts = ["; ".join(cities)] if cities else []
+    if shown:
+        parts.append("strategies: " + ", ".join(shown))
+    return ("The AI's own plan: " + "; ".join(parts) + ".") if parts else ""
 
 
 # ---- measures, urgency, briefing -----------------------------------------------------------------
@@ -1295,10 +1362,12 @@ def _religion_text(s: dict, cid, limits) -> str:
     return text + "."
 
 
-def briefing_text(s: dict, index: CorpusIndex, gold_reserve: int = 0, limits=None) -> str:
+def briefing_text(s: dict, index: CorpusIndex, gold_reserve: int = 0, limits=None,
+                  strategies: dict[str, dict] | None = None) -> str:
     """The snapshot as a compact briefing; every item is named by its corpus id. With the purchase
     `limits`, the reserves are today's (the gold reserve grows with a deficit; faith keeps the
-    pantheon's price) and the religion line says what faith is kept for."""
+    pantheon's price) and the religion line says what faith is kept for. `strategies`: the AI's own
+    (`ai_strategy_states`), shown with each city's top 3 builds."""
     cid = index.cid
     y = s.get("yields") or {}
     if limits is not None:
@@ -1344,6 +1413,9 @@ def briefing_text(s: dict, index: CorpusIndex, gold_reserve: int = 0, limits=Non
                      + (f", loyalty {x.get('loyalty')}" if (x.get("loyalty") or 100) < 100 else "")
                      + "".join(f"; {t}" for t in threat)
                      + (f". Can build: {', '.join(cid(k) for k in x.get('can_build') or [])}" if x.get("can_build") else ""))
+    plan = ai_plan_text(s, index, strategies)
+    if plan:
+        lines.append(plan)
     u = s.get("units") or {}
     lines.append(f"Units {u.get('total', 0)}: " + ", ".join(f"{cid(k)} {v}" for k, v in sorted((u.get("by_type") or {}).items())) + ".")
     majors = s.get("majors") or []

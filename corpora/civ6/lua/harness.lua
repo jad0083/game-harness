@@ -432,6 +432,17 @@ local function city_info(me, c)
     local d = center_of(c)
     if d then info.defense = defense_of(d) end
   end)
+  -- the AI's own top 3 for this city (ProductionPanel.lua's call; levers design, ruling 29)
+  pcall(function()
+    local recs = {}
+    for _, r in ipairs(c:GetCityAI():GetBuildRecommendations() or {}) do
+      recs[#recs + 1] = { type = type_of_hash(r.BuildItemHash) or tostring(r.BuildItemHash), score = math.floor(r.BuildItemScore + 0.5) }
+    end
+    table.sort(recs, function(a, b) return a.score > b.score end)
+    local top = H.array()
+    for i = 1, math.min(3, #recs) do top[i] = recs[i] end
+    info.recommend = top
+  end)
   if info.threatened then danger_detail(me, c, info, hostile) end
   return info
 end

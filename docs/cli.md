@@ -87,6 +87,9 @@ The compiled controller binary provides full programmatic access to all agent fu
 ./target/release/game-controller --corpus corpora/civ6 civ6 last-stand-step 65536 --damage '{"63:5":69}' --skip city:65536
 #     requests ONE action (city strike, ranged attack, retreat) or prints {"done": true}; changes the game
 ./target/release/game-controller --corpus corpora/civ6 civ6 finish-moves 131073  # GameCore: the unit keeps its place this turn
+# The AI's own strategies (read-only; one agent read of civ6_appdata:Logs/AI_Victories.csv, at most 64 KB):
+./target/release/game-controller civ6 ai-strategies --offset 0 --player 0
+#     {"rows": [[turn, strategy, "Following"|"Stopped"], …], "next": <offset for the next read>, "restarted": …}
 
 # 13. Launch Stdio MCP Server (Claude Code / Gemini / Antigravity)
 ./target/release/game-controller mcp

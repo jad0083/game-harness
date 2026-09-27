@@ -241,7 +241,9 @@ scripted last stand before the AI plays the turn (off by default): the controlle
 last-stand-step` requests one action in `InGame`, `civ6 ls-state` reads the result back in
 `GameCore` (whose unit damage does not lag), `civ6 finish-moves` pins the units that acted, and a
 one-turn autoplay hands the turn back; these commands take numeric IDs only and stay out of the
-model-facing `order` JSON.
+model-facing `order` JSON. The briefing also carries the AI's own plan: each city's top 3 builds
+from the snapshot and our player's strategies from the game's `Logs/AI_Victories.csv`, which `civ6
+ai-strategies` reads through the agent's file API in one bounded read per decision.
 
 The loader rejects nameless records and duplicate ids at startup, so a bad extract fails the build rather than a game turn. The raw XML is not committed (Stardock's data); `data/_meta.json` records the game version and generator commit for reproducibility.
 

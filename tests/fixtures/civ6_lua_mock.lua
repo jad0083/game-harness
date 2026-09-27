@@ -161,6 +161,18 @@ local function city(t)
     GetPopulation = function() return 3 end, IsCapital = function() return t.capital or false end,
     GetYield = function() return 4 end,
     GetCulturalIdentity = function() return { GetLoyalty = function() return 100 end } end,
+    -- the AI's build recommendations (unsorted, as the game gives them); MOCK.no_city_ai: the call fails
+    GetCityAI = function()
+      if MOCK.no_city_ai then error('no city AI here') end
+      return { GetBuildRecommendations = function()
+        local out = {}
+        for _, r in ipairs(t.recommend or {}) do
+          local row = GameInfo.Units[r[1]] or GameInfo.Buildings[r[1]] or GameInfo.Districts[r[1]]
+          out[#out + 1] = { BuildItemHash = row.Hash, BuildItemScore = r[2] }
+        end
+        return out
+      end }
+    end,
     GetDistricts = function() return members({ d }) end,
     GetBuildings = function() return { HasBuilding = function(_, i) return t.buildings[i] or false end } end,
     GetGold = function()
@@ -195,6 +207,7 @@ end
 CITIES = {
   city { id = 65536, name = 'LOC_CITY_BEIJING', x = 22, y = 21, capital = true, producing = 'UNIT_WARRIOR',
          can_build = { 'UNIT_WARRIOR', 'UNIT_ARCHER', 'UNIT_SPEARMAN', 'UNIT_SETTLER', 'BUILDING_GRANARY' },
+         recommend = { { 'UNIT_SETTLER', 100 }, { 'UNIT_ARCHER', 632.4 }, { 'DISTRICT_HOLY_SITE', 729 }, { 'BUILDING_GRANARY', 669 } },
          buildings = { [GameInfo.Buildings.BUILDING_MONUMENT.Index] = true, [GameInfo.Buildings.BUILDING_PYRAMIDS.Index] = true } },
   city { id = 262147, name = 'LOC_CITY_XIAN', x = 26, y = 13, producing = 'BUILDING_GRANARY', garrison_damage = 40,
          can_build = { 'UNIT_WARRIOR', 'UNIT_ARCHER', 'BUILDING_GRANARY' }, buildings = {} },

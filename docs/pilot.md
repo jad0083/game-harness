@@ -110,7 +110,8 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   and era score, civ and leader, yields, treasury and faith, research and civic with turns left,
   what can be researched, progressed and slotted now, government and policy slots, every city
   (position, population, production and turns left, districts, buildings, the land unit on its tile,
-  garrison and walls HP, threats, what it can build; for a threatened city also its enemies and
+  garrison and walls HP, threats, what it can build, the AI's own top 3 builds with their scores
+  (`recommend`); for a threatened city also its enemies and
   defenders, capture threats, incoming damage, whether it can strike and what a defender costs in
   gold and faith), units by type, the majors met with score and military strength, wars, great
   person points, pantheon and religion, every end-turn blocker. The briefing names every item by
@@ -149,6 +150,14 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   defender bought in the same city within 5 turns, what the city finishes within 2 turns anyway and a
   known price over the cap are refused before sending. `gold` and `faith` balances cannot be
   milestone metrics (`[metrics] milestone_exclude`).
+- **The AI's own plan** (ruling 29): the briefing shows each city's top 3 builds from the game's AI
+  (`GetBuildRecommendations`, the Production panel's call) and our player's strategies from the
+  game's log `Logs/AI_Victories.csv` (e.g. "science victory (since T56, stopped T76)"). Each decision
+  reads that log once (`game-controller civ6 ai-strategies`: one agent read from where the last one
+  ended, at most 64 KB). A production order's row keeps the city's top 3 at order time, and an
+  override records `top3_hit`: whether the AI's replacement was in it; the record shows how often
+  it was. The scores are on their own scale; if `top3_hit` stays near chance after 10 overrides the
+  line leaves the briefing (the design's test).
 - **Last stand** (rulings 22-27, off unless `PILOT_LAST_STAND=1`): a city is *about to fall* when a
   unit that can capture it (melee or cavalry) stands next to it, no walls stand, and its garrison is
   at half its hit points or less, or one attack from each enemy in range would take the rest
