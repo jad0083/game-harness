@@ -561,3 +561,15 @@ def test_a_session_whose_answer_failed_is_closed_when_autoplay_next_starts(kind)
     call(rt, out, "Harness.autoplay, 1")
     assert diplo_calls(rt) == ["close 7"]
     assert rt.eval("MOCK.open[7]") is None
+
+
+def test_a_statement_that_cannot_be_read_is_still_logged_and_closed():
+    """A failure while reading the statement (GetKeyName raising) must not swallow it: it is logged
+    with the error and gets Goodbye like an unknown kind."""
+    rt, out = autoplaying("MOCK.keyname_fails = true")
+    rt.execute("statement(3, 0, 'WARNING_TOO_MANY_TROOPS_NEAR_ME', 'NONE', 7)")
+    assert diplo_calls(rt) == ["close 7"]
+    e = diplo_log(rt, out)[-1]
+    assert (e.get("kind"), e["session"], e["civ"], e["reply"], e["why"]) == (
+        None, 7, "CIVILIZATION_AUSTRALIA", "EXIT", "unknown")
+    assert "no such key" in e["err"]

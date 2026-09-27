@@ -1358,13 +1358,18 @@ local function on_statement(from, to, kv)
   pcall(function()
     local me = H.me()
     if to ~= me or from == me then return end
+    -- logged before it is read, so a failed read still shows (with `err`) and gets Goodbye (unknown kind)
     D.n = D.n + 1
-    local e = { n = D.n, turn = Game.GetCurrentGameTurn(), from = from,
-                session = kv.SessionID or DiplomacyManager.FindOpenSessionID(me, from),
-                kind = DiplomacyManager.GetKeyName(kv.StatementType), sub = DiplomacyManager.GetKeyName(kv.StatementSubType) }
-    pcall(function() e.civ = PlayerConfigurations[from]:GetCivilizationTypeName() end)
+    local e = { n = D.n, turn = Game.GetCurrentGameTurn(), from = from, session = kv.SessionID }
     table.insert(D.log, e)
     if #D.log > 20 then table.remove(D.log, 1) end
+    local ok, err = pcall(function()
+      e.session = e.session or DiplomacyManager.FindOpenSessionID(me, from)
+      e.kind = DiplomacyManager.GetKeyName(kv.StatementType)
+      e.sub = DiplomacyManager.GetKeyName(kv.StatementSubType)
+    end)
+    if not ok then e.err = tostring(err) end
+    pcall(function() e.civ = PlayerConfigurations[from]:GetCivilizationTypeName() end)
     if AutoplayManager.IsActive() then
       respond(e)
     else

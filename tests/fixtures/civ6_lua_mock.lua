@@ -459,7 +459,7 @@ CombatManager = {
 -- game does (kVariants with the SessionID and the type hashes GetKeyName names); every call on
 -- DiplomacyManager and DealManager lands in DIPLO_CALLS. MOCK.open: the open sessions;
 -- MOCK.dipl_fails: AddResponse and CloseSession raise (true), or only the calls it names ('response',
--- 'close').
+-- 'close'); MOCK.keyname_fails: GetKeyName raises.
 
 local function rows_of(list, cols)
   local rows = {}
@@ -488,7 +488,7 @@ local function called(s)
   DIPLO_CALLS[#DIPLO_CALLS + 1] = s
 end
 DiplomacyManager = {
-  GetKeyName = function(h) return KEYNAME[h] end,
+  GetKeyName = function(h) if MOCK.keyname_fails then error('no such key') end return KEYNAME[h] end,
   AddResponse = function(sid, p, r) called('response ' .. tostring(sid) .. ' ' .. tostring(p) .. ' ' .. tostring(r)) end,
   CloseSession = function(sid) called('close ' .. tostring(sid)) MOCK.open[sid] = nil end,
   IsSessionIDOpen = function(sid) return MOCK.open[sid] == true end,
