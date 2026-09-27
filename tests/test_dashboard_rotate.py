@@ -107,6 +107,81 @@ def test_rotate_refuses_unknown_ids(runs):
     assert (runs["dir"] / "dashboard.key").read_text().strip() == OLD
 
 
+def _pair(app, *bodies: dict) -> list[int]:
+    """POST /pair with each body in turn, in fresh browsers (no cookie): their statuses."""
+    async def go():
+        out = []
+        for body in bodies:
+            async with TestClient(TestServer(app), headers=NO_KEY) as c:
+                r = await c.post("/pair", json=body, headers={"Origin": f"http://{c.server.host}:{c.server.port}"})
+                out.append(r.status)
+        return out
+    return asyncio.run(go())
+
+
+def test_a_device_added_from_a_carried_over_one_is_carried_over_too(runs):
+    """The leaked key's carried-over device L adds D through Add a device: D is flagged legacy, listed
+    under L at rotation and signed out with it (--keep none), so L cannot launder itself into D."""
+    store, auth = runs["store"], runs["auth"]
+    thief = store.create_device("browser", name="Chrome on Linux", created_via="legacy_cookie",
+                                created_by="legacy_link", ip="192.168.1.203", legacy=True)[0]
+    g = store.create_grant(thief["id"], words=True)
+    assert _pair(make_app(None, runs["dir"], auth=auth), {"words": g["words"], "name": "Innocent Chrome"}) == [200]
+    d = next(x for x in store.list_devices() if x["name"] == "Innocent Chrome")
+    assert d["legacy"] == 1 and d["created_by"] == thief["id"]
+    code, out = run_cli("dashboard-key", "--rotate", "--keep", "none")
+    assert code == 0 and "Innocent Chrome" in out
+    assert revoked(store, thief) == "rotate_unkept" and revoked(store, d) == "rotate_unkept"
+    assert [x["name"] for x in store.list_devices() if x["kind"] == "browser"] == []
+
+
+def test_keeping_a_carried_over_device_keeps_what_it_added(runs):
+    code, out = run_cli("dashboard-key", "--rotate", "--keep", runs["chrome"]["id"])
+    assert code == 0 and "Brave on Windows" in out                           # listed under Chrome
+    assert revoked(runs["store"], runs["brave"]) is None and revoked(runs["store"], runs["phone"]) == "rotate_unkept"
+
+
+def test_an_old_key_link_made_before_rotation_signs_nobody_in_after_it(runs):
+    store, auth = runs["store"], runs["auth"]
+    g = store.create_grant("legacy_link")
+    mine = store.create_grant(runs["phone"]["id"], words=True)            # a code the unkept phone left open
+    assert run_cli("dashboard-key", "--rotate", "--keep", runs["chrome"]["id"])[0] == 0
+    assert store.grant(g["id"])["state"] == "cancelled" and store.grant(mine["id"])["state"] == "cancelled"
+    assert _pair(make_app(None, runs["dir"], auth=auth), {"link": g["link"]}, {"words": mine["words"]}) == [410, 410]
+
+
+def test_an_old_key_link_expires_with_the_window(tmp_path):
+    from authkit import Clock, viewer
+    clock = Clock()
+    app, auth = viewer(tmp_path, clock)
+    g = auth.store.create_grant("legacy_link")
+    clock.t += A.LEGACY_WINDOW_S - 60                 # made in the window's last minutes
+    auth.store._x("UPDATE grants SET created_at=?, expires_at=? WHERE id=?", (clock.t, clock.t + 600, g["id"]))
+    clock.t += 120                                     # the window has closed; the grant has 8 minutes left
+    assert not auth.legacy_open()
+    assert _pair(app, {"link": g["link"]}) == [410]
+    assert [d for d in auth.store.list_devices() if d["kind"] == "browser"] == []
+
+
+def test_a_device_carried_over_while_the_prompt_waits_is_signed_out_too(runs, monkeypatch):
+    """The legacy list is read before the prompt; a carried-over device minted while it waits (one per
+    page load with another user agent) is not in it, and is signed out all the same."""
+    monkeypatch.setattr(cli, "_interactive", lambda: True)
+    store, late = runs["store"], {}
+
+    class Slow(io.StringIO):
+        def readline(self, *a):
+            late["dev"] = store.create_device("browser", name="Firefox on Linux", created_via="legacy_cookie",
+                                              created_by="legacy_link", ip="192.168.1.203", legacy=True)[0]
+            return "none\n"
+
+    monkeypatch.setattr("sys.stdin", Slow())
+    code, out = run_cli("dashboard-key", "--rotate")
+    assert code == 0, out
+    assert revoked(store, late["dev"]) == "rotate_unkept"
+    assert [x["name"] for x in store.list_devices() if x["kind"] == "browser"] == []
+
+
 def test_rotate_refuses_while_the_key_comes_from_the_environment(runs, monkeypatch):
     monkeypatch.setenv("PILOT_DASHBOARD_KEY", OLD)
     code, out = run_cli("dashboard-key", "--rotate", "--keep", "all")

@@ -315,12 +315,17 @@ def dashboard_key_cmd(s: Settings, a) -> int:
                   "startup; rotate after it restarts, or pass --force (its controls then fail until it restarts).")
             return 1
     store = auth_store(s)
-    legacy = [d for d in store.list_devices() if d["kind"] == "browser" and d["legacy"]]
+    legacy, parent = store.legacy_family()
     if legacy:
-        print("Carried over from the old key cookie (kept only if you name them):")
+        print("Carried over from the old key cookie, and the browsers added from those (kept only if you name "
+              "them or the browser that added them):")
         for d in legacy:
-            print(f"  {d['id']}  {d['name']}, first from {d['created_ip'] or 'unknown'}, last used {_when(d['last_seen_at'])}"
-                  f"{' from ' + d['last_ip'] if d['last_ip'] else ''}")
+            depth, up = 0, parent.get(d["id"])
+            while up:
+                depth, up = depth + 1, parent.get(up)
+            made = f", added from {store.device(parent[d['id']])['name']}" if d["id"] in parent else ""
+            print(f"  {'  ' * depth}{d['id']}  {d['name']}{made}, first from {d['created_ip'] or 'unknown'}, last used "
+                  f"{_when(d['last_seen_at'])}{' from ' + d['last_ip'] if d['last_ip'] else ''}")
     keep = a.keep
     if keep is None and legacy:
         if not _interactive():
@@ -339,12 +344,20 @@ def dashboard_key_cmd(s: Settings, a) -> int:
         return 2
     keys.rotate()
     store.end_carry_over()
+    # read again: a browser carried over while the prompt waited is signed out too; what a kept browser
+    # added is kept with it
+    legacy, parent = store.legacy_family()
+    keep_all = set(kept)
+    for d in legacy:
+        if parent.get(d["id"]) in keep_all:
+            keep_all.add(d["id"])
     signed_out = 0
     for d in legacy:
-        if d["id"] in kept:
+        if d["id"] in keep_all:
             store.audit("legacy_kept", None, d["id"], {"by": "cli"})
         else:
             signed_out += store.revoke(d["id"], "rotate_unkept", by="cli")
+    kept = keep_all
     store.audit("key_rotated", None, None, {"by": "cli", "kept": len(kept), "signed_out": signed_out})
     print(f"New service key written to {keys.path} (0600); both services read it within 2 s. The old key no "
           f"longer works anywhere, and old key cookies and ?key= links stop at once. Carried-over devices: kept "

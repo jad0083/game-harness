@@ -622,8 +622,11 @@ The dashboard listens on the LAN, so every request needs a principal (design:
 - **Rotating the service key**: `python -m pilot dashboard-key --rotate --keep <ids>|all|none
   [--force]` writes a new `runs/dashboard.key` (atomic, 0600) that both services read within 2 s,
   so nobody is signed out and nothing restarts. It lists the devices carried over from the old key
-  cookie (name, first address, last use) and keeps only those named (`--keep`, or the answer at a
-  terminal; no default); the rest are signed out and the carry-over ends. It refuses while the key
+  cookie (name, first address, last use), each with the browsers added from it (a device added from a
+  carried-over one, or through an old `?key=` link, is carried over too), and keeps only those named
+  and what they added (`--keep`, or the answer at a terminal; no default); the rest are signed out,
+  including any carried over while the prompt waited, and the carry-over ends: an old `?key=` link's
+  code made before it no longer signs anyone in (nor after the 72 hours). It refuses while the key
   comes from `PILOT_DASHBOARD_KEY` (change the variable and restart both services), and while a live
   pilot from before this change runs (it reads the key only at startup) unless `--force`.
   Suspected compromise: `dashboard-devices revoke-all`, `dashboard-key --rotate --keep none`, then

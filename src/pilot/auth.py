@@ -587,8 +587,32 @@ class AuthStore:
                        "(SELECT id FROM devices WHERE revoked_at IS NOT NULL)").rowcount
 
     def end_carry_over(self) -> None:
-        """The old key cookie stops working at once (a rotation ends the 72-hour window)."""
+        """The old key cookie stops working at once (a rotation ends the 72-hour window), and so do the
+        one-time links old ?key= bookmarks made."""
         self.set_meta("legacy_until", "0")
+        self._x("UPDATE grants SET state='cancelled' WHERE state='waiting' AND created_by='legacy_link'")
+
+    def legacy_family(self) -> tuple[list[dict], dict[str, str]]:
+        """The live browsers carried over from the old key and every browser added from one of them
+        (directly or through another), roots first with each one's additions after it; and the
+        maker of each addition. A rotation keeps only the ones the user names and their additions."""
+        rows = [d for d in self.list_devices() if d["kind"] == "browser"]
+        members = {d["id"] for d in rows if d["legacy"]}
+        grown = True
+        while grown:
+            new = {d["id"] for d in rows if d["created_by"] in members and d["id"] not in members}
+            members |= new
+            grown = bool(new)
+        parent = {d["id"]: d["created_by"] for d in rows if d["id"] in members and d["created_by"] in members}
+        out: list[dict] = []
+
+        def walk(ident: str) -> None:
+            out.append(next(d for d in rows if d["id"] == ident))
+            for d in sorted((d for d in rows if parent.get(d["id"]) == ident), key=lambda d: d["created_at"]):
+                walk(d["id"])
+        for d in sorted((d for d in rows if d["id"] in members and d["id"] not in parent), key=lambda d: d["created_at"]):
+            walk(d["id"])
+        return out, parent
 
     def revoke_others(self, keep: str, by: str | None = None, ip: str | None = None) -> int:
         cur = self._x("UPDATE devices SET revoked_at=?, revoked_by=?, revoke_reason='revoke_others'"
@@ -654,10 +678,12 @@ class AuthStore:
         return rows[0]
 
     def redeem(self, kind: str, value: str, *, ip: str | None, user_agent: str = "", client: str = "",
-               name: str = "", presenter: str | None = None) -> tuple[str, dict]:
+               name: str = "", presenter: str | None = None, legacy_ok: bool = True) -> tuple[str, dict]:
         """Spend a grant by its words (canonical) or link: ('ok', {device, cred}) | ('already', {}) |
         ('wrong', {}) | ('expired', {}) | ('conflict', {device, used_ip, used_at}). A spent grant
-        presented by anyone but the device it made signs that device out (ruling 42)."""
+        presented by anyone but the device it made signs that device out (ruling 42). An old-key link
+        needs the carry-over window (`legacy_ok`); a device made through one, or through a code from a
+        carried-over device, is carried over too (listed at rotation)."""
         g = self.grant_by_words(value) if kind == "words" else self.grant_by_link(value)
         if g is None:
             return "wrong", {}
@@ -674,11 +700,12 @@ class AuthStore:
                            {"grant": g["id"], "device": dev["name"] if dev else None, "how": kind})
             return "conflict", {"device": dev["name"] if dev else "a browser", "used_ip": g["used_ip"],
                                 "used_at": g["used_at"]}
-        if g["state"] == "waiting" and ID_RE.fullmatch(g["created_by"] or ""):
-            maker = self.device(g["created_by"])
-            if not maker or maker["revoked_at"]:        # its maker was signed out: the code goes with it
-                self._x("UPDATE grants SET state='cancelled' WHERE id=? AND state='waiting'", (g["id"],))
-                return "expired", {}
+        maker = self.device(g["created_by"]) if ID_RE.fullmatch(g["created_by"] or "") else None
+        if g["state"] == "waiting" and (
+                (ID_RE.fullmatch(g["created_by"] or "") and (not maker or maker["revoked_at"]))   # its maker is signed out
+                or (g["created_by"] == "legacy_link" and not legacy_ok)):                      # the window closed
+            self._x("UPDATE grants SET state='cancelled' WHERE id=? AND state='waiting'", (g["id"],))
+            return "expired", {}
         if g["state"] != "waiting" or now > g["expires_at"]:
             if g["state"] == "waiting":
                 self._x("UPDATE grants SET state='expired' WHERE id=? AND state='waiting'", (g["id"],))
@@ -692,14 +719,15 @@ class AuthStore:
                     row, cred = self.create_device("browser", name=clip_name(name, device_name(user_agent, client)),
                                                    created_via=kind, created_by=g["created_by"], ip=ip,
                                                    user_agent=user_agent, grant_id=g["id"],
-                                                   legacy=g["created_by"] == "legacy_link")
+                                                   legacy=g["created_by"] == "legacy_link" or bool(maker and maker["legacy"]))
                     self.db.execute("UPDATE grants SET device_id=? WHERE id=?", (row["id"], g["id"]))
                 self.db.execute("COMMIT")
             except BaseException:
                 self.db.execute("ROLLBACK")
                 raise
         if not spent:                                       # another request spent it a moment ago
-            return self.redeem(kind, value, ip=ip, user_agent=user_agent, client=client, name=name, presenter=presenter)
+            return self.redeem(kind, value, ip=ip, user_agent=user_agent, client=client, name=name, presenter=presenter,
+                               legacy_ok=legacy_ok)
         return "ok", {"device": row, "cred": cred}
 
     def switch_words_off(self) -> int:
@@ -1060,7 +1088,7 @@ class Auth:
         grant = await asyncio.to_thread(self.store.create_grant, "legacy_link")
         return see_other(f"/pair#c={grant['link']}")
 
-    async def _carry_over(self, request: web.Request) -> Principal:
+    async def _carry_over(self, request: web.Request) -> Principal | None:
         """The old cookie on the page itself becomes a device (once per browser: parallel loads of
         one page reuse the device minted in the last 30 s for the same address and user agent)."""
         ua = request.headers.get("User-Agent", "")
@@ -1070,6 +1098,8 @@ class Auth:
             hit = self._minting.get(key)
             if hit and self.now() - hit[0] < 30:
                 ident, cred = hit[1], hit[2]
+            elif not self.legacy_open():                 # a rotation closed the window a moment ago
+                return None
             else:
                 row, cred = await asyncio.to_thread(
                     self.store.create_device, "browser", name=device_name(ua), created_via="legacy_cookie",
@@ -1110,6 +1140,9 @@ class Auth:
             return refusal
         if principal.kind == "legacy" and request.method == "GET" and request.path == "/" and self.legacy_open():
             principal = await self._carry_over(request)
+            if principal is None:
+                self.drop_cookie(request, LEGACY_COOKIE)
+                return see_other("/pair?reason=old_link")
         # 5. changes: JSON only; a cookie needs a matching Origin; read tokens only read
         if request.method not in SAFE_METHODS:
             if request.content_type != "application/json":
@@ -1350,7 +1383,8 @@ class Auth:
         link, typed = body.get("link"), body.get("words")
         ua = request.headers.get("User-Agent", "")
         opts = {"ip": ip, "user_agent": ua, "client": str(body.get("client") or "")[:20],
-                "name": str(body.get("name") or ""), "presenter": mine["id"] if mine else None}
+                "name": str(body.get("name") or ""), "presenter": mine["id"] if mine else None,
+                "legacy_ok": self.legacy_open()}
         if link:
             if mine:                                             # signed in already: on to next, the code unspent
                 return web.json_response({"ok": True, "already": True, "next": nxt})
