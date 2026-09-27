@@ -91,10 +91,15 @@ helper library `corpora/civ6/lua/harness.lua` inside the game through the agent'
 .venv/bin/python -m pilot run --game civ6 --decide-turns 5     # the game loaded with EnableTuner 1
 ```
 
-The loop: snapshot → decide → apply orders → read back → autoplay N turns → poll a snapshot every
-3 s → decide again when the stretch ends or something urgent happens (a new war, a city lost or
-threatened, a new era, a great person or wonder race lost, gold below the purchase reserve), which
-stops autoplay at once.
+The loop: snapshot → decide → apply orders → read back → then N times: autoplay **one** turn, poll
+the cheap `autoplay-status` every second until the game hands the turn back, take a snapshot while
+the game is idle → decide again after N turns or as soon as something urgent happens (a new war, a
+city lost or threatened, a new era, a great person or wonder race lost, gold below the purchase
+reserve); stopping early is simply not starting the next turn. The tuner does not answer while the
+AI plays its turn, so unanswered status polls are expected; only the turn's deadline counts (10
+minutes, for long late-game turns). A turn that does not start (20 s) or end in time, or a game that
+gives no snapshot three times between turns, stops the run until the human presses Resume. Orders,
+snapshots and human requests only ever happen between turns.
 
 - **Snapshot** (`game-controller civ6 snapshot`, about 2 KB): turn, era and era score, civ and leader,
   yields, treasury and faith, research and civic with turns left, what can be researched,

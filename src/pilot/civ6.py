@@ -27,13 +27,15 @@ class Civ6Game(Protocol):
     def order(self, order: dict) -> dict: ...
     def autoplay(self, turns: int) -> dict: ...
     def autoplay_stop(self) -> dict: ...
+    def autoplay_status(self) -> dict: ...
     def corpus(self, tool: str, **args) -> str: ...
     def close(self) -> None: ...
 
 
 class ControllerCiv6:
     """The real game: `game-controller --corpus corpora/civ6 civ6 …` per call (one short HTTP
-    exchange with the agent each). A snapshot gains `date` = "T<turn>" for the governor's clock."""
+    exchange with the agent each). A snapshot gains `date` = "T<turn>" for the governor's clock.
+    A reply `{"ok": false}` or a failed call raises, except for `order`, whose reply says why."""
 
     def __init__(self, controller: Path, corpus: Path, agent_url: str, cwd: Path, token: str | None = None,
                  timeout_s: float = 90.0):
@@ -50,14 +52,16 @@ class ControllerCiv6:
                            timeout=self.timeout_s, check=False)
         return r.returncode, r.stdout.strip(), r.stderr.strip()
 
-    def _json(self, *args: str, ok_codes: tuple[int, ...] = (0,)) -> dict:
+    def _json(self, *args: str) -> dict:
         code, out, err = self._run(*args)
-        if code not in ok_codes:
-            raise RuntimeError(f"game-controller {' '.join(args[:2])} failed: {(err or out)[:400]}")
+        what = f"game-controller {' '.join(args[:2])}"
         try:
-            return json.loads(out.splitlines()[-1])
+            reply = json.loads(out.splitlines()[-1])
         except (ValueError, IndexError):
-            raise RuntimeError(f"game-controller {' '.join(args[:2])}: no JSON in {out[:300]!r}") from None
+            raise RuntimeError(f"{what} failed (exit {code}): {(err or out)[:400]}") from None
+        if code != 0 or reply.get("ok") is False:
+            raise RuntimeError(f"{what} refused: {reply.get('error') or (err or out)[:400]}")
+        return reply
 
     def snapshot(self) -> dict:
         s = self._json("civ6", "snapshot")
@@ -67,18 +71,23 @@ class ControllerCiv6:
     briefing = snapshot
 
     def order(self, order: dict) -> dict:
-        # exit code 2: the game (or the controller's check) refused the order; the reply says why
+        """The game's reply; exit 2 with JSON = refused (by the controller's check or the game). No
+        JSON at all (a tuner timeout, the agent unreachable) is marked `transport`: the order may
+        or may not have run."""
         code, out, err = self._run("civ6", "order", json.dumps(order))
         try:
             return json.loads(out.splitlines()[-1])
         except (ValueError, IndexError):
-            return {"ok": False, "error": (err or out or f"exit {code}")[:400]}
+            return {"ok": False, "transport": True, "error": (err or out or f"exit {code}")[:400]}
 
     def autoplay(self, turns: int) -> dict:
         return self._json("civ6", "autoplay", str(turns))
 
     def autoplay_stop(self) -> dict:
         return self._json("civ6", "autoplay-stop")
+
+    def autoplay_status(self) -> dict:
+        return self._json("civ6", "autoplay-status")
 
     def corpus(self, tool: str, **args) -> str:
         if tool == "corpus_search":
@@ -102,15 +111,26 @@ class ControllerCiv6:
         pass
 
 
+class GameBusy(TimeoutError):
+    """FakeCiv6's stand-in for a tuner call that timed out while the AI plays its turn."""
+
+
 class FakeCiv6:
-    """Civ VI for tests: one game state (a snapshot dict) that autoplay advances a turn per poll.
-    `events[turn](state)` changes the state when that turn is reached (a war, a lost city);
+    """Civ VI for tests: one game state (a snapshot dict). Autoplay advances one turn per call made
+    while it is active (snapshot, autoplay_status or order): the call that finds it active plays a
+    turn. `events[turn](state)` changes the state when that turn is reached (a war, a lost city);
     `ai(state)` runs on every autoplayed turn (the AI changing our choices). Orders are recorded;
-    `replies[kind]` answers one (default ok) and an accepted order changes the state unless
-    `sticks` is False. `prices[(city, id)]` is an item's live price (default 100)."""
+    `replies[kind]` answers one (default ok) and an accepted order changes the state unless `sticks`
+    is False. `prices[(city, id)]` is an item's live price (default 100).
+    Failure modes: `busy` (every call made while autoplay is active times out, like the real tuner
+    during the AI's turn processing), `start_fails` (autoplay answers ok: false), `never_starts`
+    (autoplay answers ok but no turn is played), `stop_raises`, `readback_fails` (the snapshot after
+    orders fails), `transport` (orders time out after they ran)."""
 
     def __init__(self, base: dict, events: dict | None = None, replies: dict | None = None,
-                 prices: dict | None = None, sticks: bool = True, index: CorpusIndex | None = None, ai=None):
+                 prices: dict | None = None, sticks: bool = True, index: CorpusIndex | None = None, ai=None,
+                 busy: bool = False, start_fails: bool = False, never_starts: bool = False,
+                 stop_raises: bool = False, readback_fails: bool = False, transport: bool = False):
         self.state = copy.deepcopy(base)
         self.events = dict(events or {})
         self.replies = dict(replies or {})
@@ -118,20 +138,35 @@ class FakeCiv6:
         self.sticks = sticks
         self.index = index
         self.ai = ai
+        self.busy, self.start_fails, self.never_starts = busy, start_fails, never_starts
+        self.stop_raises, self.readback_fails, self.transport = stop_raises, readback_fails, transport
         self.actions: list[tuple] = []
         self.active = False
         self.remaining = 0
+        self.calls_while_active = 0
+        self._ordered = False
+
+    def _tick(self, what: str) -> None:
+        """A call reaching the game: while autoplay runs it plays a turn (and, when busy, times out)."""
+        if not self.active:
+            return
+        self.calls_while_active += 1
+        self.state["turn"] += 1
+        self.remaining -= 1
+        if self.ai:
+            self.ai(self.state)
+        if self.state["turn"] in self.events:
+            self.events[self.state["turn"]](self.state)
+        if self.remaining <= 0:
+            self.active = False
+        if self.busy:
+            raise GameBusy(f"{what}: no reply from the game (busy with the AI's turn)")
 
     def snapshot(self) -> dict:
-        if self.active:
-            self.state["turn"] += 1
-            self.remaining -= 1
-            if self.ai:
-                self.ai(self.state)
-            if self.state["turn"] in self.events:
-                self.events[self.state["turn"]](self.state)
-            if self.remaining <= 0:
-                self.active = False
+        self._tick("snapshot")
+        if self.readback_fails and self._ordered:           # once: the read-back after the first orders
+            self._ordered = self.readback_fails = False
+            raise TimeoutError("snapshot: no reply")
         s = copy.deepcopy(self.state)
         s["date"] = f"T{s['turn']}"
         s["autoplay"] = {"active": self.active, "turns": self.remaining}
@@ -139,10 +174,16 @@ class FakeCiv6:
 
     briefing = snapshot
 
+    def autoplay_status(self) -> dict:
+        self._tick("autoplay_status")
+        return {"ok": True, "active": self.active, "turns": self.remaining, "turn": self.state["turn"]}
+
     def order(self, order: dict) -> dict:
-        self.actions.append(("order", dict(order)))
+        self.actions.append(("order", dict(order), self.active))
+        self._tick("order")
         if order["kind"] == "price":
             return {"ok": True, "cost": self.prices.get((order["city"], order["id"]), 100), "allowed": True}
+        self._ordered = True
         cost = None
         if order["kind"] == "purchase":
             cost = self.prices.get((order["city"], order["id"]), 100)
@@ -155,15 +196,22 @@ class FakeCiv6:
             key_of = self.index.key_of if self.index else {}
             _apply_fake(self.state, {**order, "cost": cost, "type_key": key_of.get(order.get("id", "")),
                                      "type_keys": [key_of.get(i) for i in order.get("ids", [])]})
+        if self.transport:
+            return {"ok": False, "transport": True, "error": "operation timed out"}
         return reply
 
     def autoplay(self, turns: int) -> dict:
-        self.actions.append(("autoplay", turns))
-        self.active, self.remaining = True, turns
-        return {"ok": True, "active": False, "turns": turns}
+        self.actions.append(("autoplay", turns, self.active))
+        if self.start_fails:
+            raise RuntimeError("game-controller civ6 autoplay refused: AutoplayManager missing")
+        if not self.never_starts:
+            self.active, self.remaining = True, turns
+        return {"ok": True, "active": False, "turns": turns, "turn": self.state["turn"]}
 
     def autoplay_stop(self) -> dict:
         self.actions.append(("autoplay_stop",))
+        if self.stop_raises:
+            raise TimeoutError("autoplay-stop: no reply")
         self.active, self.remaining = False, 0
         return {"ok": True, "active": False}
 
@@ -283,10 +331,11 @@ def _city(snapshot: dict, name: str) -> dict | None:
     return next((c for c in snapshot.get("cities", []) if str(c.get("name", "")).lower() == want), None)
 
 
-def purchase_cap(snapshot: dict, city: dict, currency: str, limits) -> int:
+def purchase_cap(snapshot: dict, city: dict, currency: str, limits, committed: float = 0.0) -> int:
     """The most one purchase may cost: the balance above the reserve, and at most the treasury share
-    of the balance (the threatened share when the city is threatened)."""
-    balance = float(snapshot.get("faith" if currency == "faith" else "gold") or 0)
+    of the balance (the threatened share when the city is threatened). `committed` is what earlier
+    purchases of the same decision may already spend, so together they never go below the reserve."""
+    balance = float(snapshot.get("faith" if currency == "faith" else "gold") or 0) - committed
     reserve = limits.faith_reserve if currency == "faith" else limits.gold_reserve
     share = (limits.threatened_share if city.get("threatened") and limits.threatened_share else limits.treasury_share) or 1.0
     return int(max(0.0, min(balance - reserve, share * balance)))
@@ -295,9 +344,12 @@ def purchase_cap(snapshot: dict, city: dict, currency: str, limits) -> int:
 def check_orders(orders: list[Civ6Order], snapshot: dict, spec, index: CorpusIndex,
                  failed_last: set[str] | None = None) -> list[Checked]:
     """Each order checked against the corpus, the pillars' limits and the snapshot. `failed_last`
-    holds orders (as `order_key`) that did not stick at the previous decision: not retried blindly."""
+    holds orders (as `order_key`) that did not stick at the previous decision: not retried blindly.
+    Without a pillars spec (a broken file) each kind gets one order and purchases are refused."""
     out: list[Checked] = []
     counts: dict[str, int] = {}
+    committed: dict[str, float] = {"gold": 0.0, "faith": 0.0}      # purchase caps already handed out
+    cities_ordered: set[str] = set()
     options = snapshot.get("options") or {}
     for o in orders:
         d = o.model_dump()
@@ -308,78 +360,97 @@ def check_orders(orders: list[Civ6Order], snapshot: dict, spec, index: CorpusInd
         if spec is not None and limits is None:
             c.error = f"{o.kind} orders are not enabled in pillars.toml"
             continue
-        counts[action] = counts.get(action, 0) + 1
-        if limits is not None and counts[action] > limits.max_orders:
-            c.error = f"at most {limits.max_orders} {o.kind} order(s) per decision"
+        if limits is None and o.kind == "purchase":
+            c.error = "purchases need the limits of pillars.toml, which did not load"
+            continue
+        quota = limits.max_orders if limits is not None else 1
+        if counts.get(action, 0) >= quota:
+            c.error = f"at most {quota} {o.kind} order(s) per decision"
             continue
         if failed_last and order_key(d) in failed_last:
             c.error = "did not stick at the last decision; not retried until something changes (say why to retry)"
             continue
-        kinds = ORDER_KINDS_OF[o.kind]
-        if o.kind == "policies":
-            bad = [p for p in o.ids if index.kind_of.get(p) != "policy"]
-            if not o.ids or bad:
-                c.error = f"unknown policy ids {bad}" if bad else "policies needs ids"
-                continue
-            keys = [index.key_of[p] for p in o.ids]
-            c.wire = {"kind": "policies", "ids": list(o.ids)}
-            c.expect = {"policies": keys}
+        if not _check_one(c, o, snapshot, index, limits, options, committed, cities_ordered):
             continue
-        kind = index.kind_of.get(o.id)
-        if kind == "wonder" and o.kind == "production":
-            c.error = f"{o.id}: wonders need a tile; placement is not supported yet"
-            continue
-        if kind not in kinds:
-            c.error = (f"unknown id {o.id!r}" if kind is None
-                       else f"{o.id} is a {kind}; {o.kind} takes {' / '.join(kinds)}")
-            continue
-        key = index.key_of[o.id]
-        if o.kind == "research":
-            if options.get("techs") is not None and key not in options["techs"]:
-                c.error = f"{o.id} cannot be researched now (options: {', '.join(index.cid(k) for k in options['techs'])})"
-                continue
-            c.wire, c.expect = {"kind": "research", "id": o.id}, {"research": key}
-            continue
-        if o.kind == "civic":
-            if options.get("civics") is not None and key not in options["civics"] \
-                    and (snapshot.get("civic") or {}).get("civic") != key:
-                c.error = f"{o.id} cannot be progressed now (options: {', '.join(index.cid(k) for k in options['civics'])})"
-                continue
-            c.wire, c.expect = {"kind": "civic", "id": o.id}, {"civic": key}
-            continue
-        city = _city(snapshot, o.city)
-        if city is None:
-            c.error = f"no city of ours named {o.city!r} (ours: {', '.join(x['name'] for x in snapshot.get('cities', []))})"
-            continue
-        if o.kind == "production":
-            if city.get("can_build") is not None and key not in city["can_build"]:
-                c.error = f"{city['name']} cannot build {o.id} now"
-                continue
-            c.wire = {"kind": "production", "city": city["name"], "id": o.id}
-            c.expect = {"city": city["name"], "producing": key}
-            continue
-        # purchase
-        if index.purchase.get(o.id) == "none":
-            c.error = f"{o.id} cannot be bought"
-            continue
-        cap = purchase_cap(snapshot, city, o.currency, limits) if limits is not None else None
-        if cap is not None and cap <= 0:
-            reserve = limits.faith_reserve if o.currency == "faith" else limits.gold_reserve
-            c.error = f"{o.currency} {snapshot.get(o.currency)} is at or below the reserve {reserve}"
-            continue
-        c.wire = {"kind": "purchase", "city": city["name"], "id": o.id, "currency": o.currency}
-        if cap is not None:
-            c.wire["max_cost"] = cap
-        c.expect = {"spend": o.currency, "before": snapshot.get(o.currency)}
+        counts[action] = counts.get(action, 0) + 1      # only valid orders use the quota
     return out
+
+
+def _check_one(c: Checked, o: Civ6Order, snapshot: dict, index: CorpusIndex, limits, options: dict,
+               committed: dict[str, float], cities_ordered: set[str]) -> bool:
+    """Fill `c.wire`/`c.expect`, or `c.error`; True when the order is valid."""
+    kinds = ORDER_KINDS_OF[o.kind]
+    if o.kind == "policies":
+        bad = [p for p in o.ids if index.kind_of.get(p) != "policy"]
+        if not o.ids or bad:
+            c.error = f"unknown policy ids {bad}" if bad else "policies needs ids"
+            return False
+        c.wire = {"kind": "policies", "ids": list(o.ids)}
+        c.expect = {"policies": [index.key_of[p] for p in o.ids]}
+        return True
+    kind = index.kind_of.get(o.id)
+    if kind == "wonder" and o.kind == "production":
+        c.error = f"{o.id}: wonders need a tile; placement is not supported yet"
+        return False
+    if kind not in kinds:
+        c.error = (f"unknown id {o.id!r}" if kind is None
+                   else f"{o.id} is a {kind}; {o.kind} takes {' / '.join(kinds)}")
+        return False
+    key = index.key_of[o.id]
+    if o.kind == "research":
+        if options.get("techs") is not None and key not in options["techs"]:
+            c.error = f"{o.id} cannot be researched now (options: {', '.join(index.cid(k) for k in options['techs'])})"
+            return False
+        c.wire, c.expect = {"kind": "research", "id": o.id}, {"research": key}
+        return True
+    if o.kind == "civic":
+        if options.get("civics") is not None and key not in options["civics"] \
+                and (snapshot.get("civic") or {}).get("civic") != key:
+            c.error = f"{o.id} cannot be progressed now (options: {', '.join(index.cid(k) for k in options['civics'])})"
+            return False
+        c.wire, c.expect = {"kind": "civic", "id": o.id}, {"civic": key}
+        return True
+    city = _city(snapshot, o.city)
+    if city is None:
+        c.error = f"no city of ours named {o.city!r} (ours: {', '.join(x['name'] for x in snapshot.get('cities', []))})"
+        return False
+    if o.kind == "production":
+        if city["name"] in cities_ordered:
+            c.error = f"{city['name']} already has a production order in this decision (one per city)"
+            return False
+        if city.get("can_build") is not None and key not in city["can_build"]:
+            c.error = f"{city['name']} cannot build {o.id} now"
+            return False
+        cities_ordered.add(city["name"])
+        c.wire = {"kind": "production", "city": city["name"], "id": o.id}
+        c.expect = {"city": city["name"], "producing": key}
+        return True
+    if index.purchase.get(o.id) == "none":
+        c.error = f"{o.id} cannot be bought"
+        return False
+    cap = purchase_cap(snapshot, city, o.currency, limits, committed[o.currency])
+    if cap <= 0:
+        reserve = limits.faith_reserve if o.currency == "faith" else limits.gold_reserve
+        c.error = (f"{o.currency} {snapshot.get(o.currency)} (less {committed[o.currency]:.0f} for earlier purchases) "
+                   f"is at or below the reserve {reserve}")
+        return False
+    committed[o.currency] += cap
+    c.wire = {"kind": "purchase", "city": city["name"], "id": o.id, "currency": o.currency, "max_cost": cap}
+    c.expect = {"spend": o.currency, "before": snapshot.get(o.currency)}
+    return True
 
 
 def order_key(d: dict) -> str:
     return json.dumps({k: d.get(k) for k in ("kind", "id", "ids", "city", "currency")}, sort_keys=True)
 
 
+UNKNOWN = "unknown"      # neither confirmed nor refuted: never counted as "did not stick"
+
+
 def read_back(c: Checked, reply: dict, snapshot: dict) -> str:
-    """'stuck' when the next snapshot shows the order took effect, else why not."""
+    """'stuck' when the snapshot shows the order took effect, 'unknown: …' when it cannot tell,
+    else why not. A purchase compares the balance's drop with `expect["total"]`, the cost of every
+    purchase of the decision in that currency (set by the governor; default this one's cost)."""
     e = c.expect
     if "research" in e:
         now = (snapshot.get("research") or {}).get("tech")
@@ -396,9 +467,15 @@ def read_back(c: Checked, reply: dict, snapshot: dict) -> str:
         missing = [k for k in e["policies"] if k not in slotted]
         return "stuck" if not missing else f"not slotted: {', '.join(missing)}"
     if "spend" in e:
-        cost = reply.get("cost") or 0
+        cost = float(reply.get("cost") or 0)
+        total = float(e.get("total") or cost)
         spent = float(e["before"] or 0) - float(snapshot.get(e["spend"]) or 0)
-        return "stuck" if cost and spent >= 0.9 * cost else f"{e['spend']} went from {e['before']} to {snapshot.get(e['spend'])}"
+        moved = f"{e['spend']} went from {e['before']} to {snapshot.get(e['spend'])}"
+        if total and spent >= 0.9 * total:
+            return "stuck"
+        if spent < 0.1 * (cost or total or 1):
+            return moved
+        return f"{UNKNOWN}: {moved}, less than every purchase together ({total:.0f})"
     return "stuck"
 
 
@@ -454,7 +531,9 @@ def urgent_changes(before: dict, now: dict, gold_reserve: int = 0, wonders: froz
             out.append(f"city threatened: {c['name']} ({c.get('enemies_near', 0)} enemy units near"
                        f"{', under siege' if c.get('under_siege') else ''}{', damaged' if c.get('damaged') else ''})")
         w = prev.get("producing")
-        if w and w in wonders and w != c.get("producing") and w not in (c.get("wonders") or []):
+        elsewhere = now.get("wonders_elsewhere")      # built by another player: a lost race, not the AI's switch
+        if w and w in wonders and w != c.get("producing") and w not in (c.get("wonders") or []) \
+                and (elsewhere is None or w in elsewhere):
             out.append(f"wonder race lost: {w} in {c['name']}")
     if (now.get("era_index") or 0) > (before.get("era_index") or 0):
         out.append(f"new era: {now.get('era')}")

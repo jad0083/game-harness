@@ -410,6 +410,9 @@ something done, tell them to use "Decide now", a standing order, or an override 
 
 
 class Governor:
+    event_triggers: ClassVar[tuple[str, ...]] = EVENT_TRIGGERS    # urgent reasons that start a strategy review
+    human_paused: bool = False       # paused from the dashboard: only the human's Resume ends it
+
     def __init__(self, settings: Settings, game: StellarisGame, log: EventLog, model=None, fallback=None,
                  role_models: dict | None = None):
         self.s = settings
@@ -620,10 +623,12 @@ class Governor:
 
     # dashboard controls (same surface as Pilot)
     def pause(self) -> None:
+        self.human_paused = True
         self.control.paused = True
         self._status("paused")
 
     def resume(self) -> None:
+        self.human_paused = False
         self.control.paused = False
         self._status("playing")
 
@@ -829,8 +834,8 @@ class Governor:
             self.log.emit("recover_probe", error=f"{type(e).__name__}: {e}"[:200])
             return False
         self._auto_recover = False
-        self.control.paused = False
-        self._status("playing")
+        self.control.paused = self.human_paused          # never lift a pause the human asked for
+        self._status("paused" if self.human_paused else "playing")
         self.log.emit("recovered", reason="the agent answers again")
         return True
 
@@ -872,7 +877,7 @@ class Governor:
                         reviews_before = self._reviews_run
                         self._decide(b, reason)
                         still_pending = pending and self.review_requested is not None
-                        event = reason.startswith("urgent:") and any(t in reason for t in EVENT_TRIGGERS)
+                        event = reason.startswith("urgent:") and any(t in reason for t in self.event_triggers)
                         if self._reviews_run == reviews_before and (still_pending or event) and self.pillars is not None:
                             self._maybe_event_review(b, self.review_requested or reason, retry=self._review_retry)
                 except Exception as e:  # noqa: BLE001 - any game-control failure (agent down, focus lost, a panel open)

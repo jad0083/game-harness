@@ -1,8 +1,8 @@
 """Civilization VI governor (docs/design/2026-09-26-civ6-governor-design.md, ruling 4): the game's AI
 plays our civilization through AutoplayManager; the model gives macro orders between stretches.
 
-    snapshot → decide (at decision points) → apply orders → read back → autoplay N turns
-             → poll a snapshot each turn: stop early on an urgent change → snapshot → …
+    snapshot → decide (at decision points) → apply orders → read back
+             → N x (autoplay one turn → wait for the hand-back → snapshot; stop early on an urgent change) → …
 
 It reuses the Stellaris governor's structure (model pool, strategy reviews, pressure frame in share
 mode, dashboard controls, telemetry); what differs is the game access (`civ6.Civ6Game`), the decision
@@ -21,6 +21,7 @@ from pydantic_ai.usage import UsageLimits
 
 from .civ6 import (
     ORDER_ACTION,
+    UNKNOWN,
     Checked,
     Civ6Decision,
     CorpusIndex,
@@ -71,9 +72,16 @@ def price(ctx: RunContext[GovDeps], city: str, item: str, currency: str = "gold"
                                            "currency": "faith" if currency == "faith" else "gold"}))
 
 
+class Civ6Stuck(RuntimeError):
+    """The game did not play or hand back a turn in time, or stopped answering between turns."""
+
+
 class Civ6Governor(Governor):
-    min_poll_s = 3.0                 # at most one snapshot every 3 s while the AI plays (shared agent)
-    start_grace_polls = 3            # polls without autoplay running before the stretch counts as over
+    event_triggers = EVENT_TRIGGERS_CIV6
+    status_poll_s = 1.0              # autoplay-status polls while the AI plays a turn (a tiny call)
+    turn_deadline_s = 600.0          # one AI turn; late-game turns take minutes and polls go unanswered
+    start_grace_s = 20.0             # autoplay must show as running (or the turn advance) by then
+    snapshot_tries = 3               # snapshots between turns before the run waits for the human
 
     def __init__(self, settings, game, log, **kw):
         super().__init__(settings, game, log, **kw)
@@ -152,8 +160,10 @@ class Civ6Governor(Governor):
     def _start(self) -> dict | None:
         while not self.control.stopping:
             try:
-                self.game.autoplay_stop()          # never decide while the AI is playing
+                self._stop_autoplay()                  # never decide while the AI is playing
                 b = self.game.snapshot()
+                if (b.get("autoplay") or {}).get("active"):
+                    raise Civ6Stuck("autoplay is still running and did not stop")
                 self._set_campaign(b)
                 self.last_briefing = self._briefing(b)
                 self.log.state.game_date = b["date"]
@@ -179,70 +189,88 @@ class Civ6Governor(Governor):
     def _stop_autoplay(self) -> None:
         try:
             self.game.autoplay_stop()
-        except Exception as e:  # noqa: BLE001 - the next poll or the exit stops it again
+        except Exception as e:  # noqa: BLE001 - one-turn stretches end by themselves
             self.log.emit("briefing_error", error=f"autoplay stop: {e}"[:200])
 
     def _run_until_next_decision(self, last: dict) -> tuple[dict | None, str]:
+        """The AI plays one turn at a time until `decide_every_turns` have passed or something urgent
+        happened. Between turns the game is idle and answers at once: the snapshot, urgent checks,
+        human requests and orders all happen there, and stopping early is simply not starting the
+        next turn. A turn that does not end (or never starts) within its deadline, or a game that
+        stops answering between turns, waits for the human (needs attention)."""
         last = self._after_orders or last
         self._after_orders = None
-        start, turns = last["turn"], self.s.decide_every_turns
+        target = last["turn"] + self.s.decide_every_turns
         self._status("playing")
-        self.game.autoplay(turns)
-        self.log.emit("autoplay", turn=start, turns=turns)
-        idle = 0
         while True:
             if self.control.stopping:
-                self._stop_autoplay()
                 return None, "stop"
             if self.control.paused:
-                return last, ""                     # the main loop stops autoplay (set_paused)
+                return last, ""
             if not self.requests.empty():
-                self._stop_autoplay()
-                return self.game.snapshot(), "request"
-            time.sleep(max(self.s.poll_s, self.min_poll_s))
+                return last, "request"
             try:
-                b = self.game.snapshot()
-            except Exception as e:  # noqa: BLE001 - a busy turn change; try again next poll
-                self.log.emit("briefing_error", error=str(e)[:200])
-                continue
+                self._play_one_turn(last["turn"])
+                b = self._snapshot_between_turns()
+            except Civ6Stuck as e:
+                self._needs_attention(f"{e}. Check the game (a dialog, a crash, the main menu), then press Resume.")
+                return last, ""
             if getattr(self, "_campaign_key", None) and (b.get("leader"), b.get("map_seed")) != self._campaign_key:
-                self._stop_autoplay()
                 self._needs_attention(f"the game changed: {b.get('leader')} on map {b.get('map_seed')}, this run governs "
                                       f"{self._campaign_key[0]} on map {self._campaign_key[1]}. Load that game again and "
                                       "press Resume, or start a new run.")
                 return last, ""
-            if b["turn"] != last["turn"]:
-                self.log.emit("metrics", **metrics(b))
-                self.log.state.game_date = b["date"]
-                self.log.state.turns_advanced += b["turn"] - last["turn"]
+            self.log.emit("metrics", **metrics(b))
+            self.log.state.game_date = b["date"]
+            self.log.state.turns_advanced += b["turn"] - last["turn"]
             urgent = urgent_changes(last, b, self._gold_reserve(), self._wonders)
-            if b["turn"] != last["turn"]:
-                urgent += self._newly_missed_milestones(last["date"], b["date"])
-            active = (b.get("autoplay") or {}).get("active")
+            urgent += self._newly_missed_milestones(last["date"], b["date"])
             if urgent:
-                self._stop_autoplay()
-                return self._fresh(b), "urgent: " + "; ".join(urgent)
-            if not active:
-                idle += 1
-                if b["turn"] >= start + turns or (b["turn"] > start and idle >= 2) or idle >= self.start_grace_polls:
-                    how = f"scheduled ({turns} turns)" if b["turn"] >= start + turns else \
-                        f"autoplay ended after {b['turn'] - start} of {turns} turns"
-                    return b, how
-            else:
-                idle = 0
+                return b, "urgent: " + "; ".join(urgent)
+            if b["turn"] >= target:
+                return b, f"scheduled ({self.s.decide_every_turns} turns)"
             last = b
 
-    def _fresh(self, b: dict) -> dict:
-        """A snapshot taken after autoplay stopped (the one that triggered may be mid-turn)."""
+    def _play_one_turn(self, turn: int) -> None:
+        """Autoplay one turn and wait until the game hands it back (turn advanced, autoplay off).
+        Status polls may go unanswered while the AI plays (the tuner is silent then); only the
+        deadline counts."""
+        started = time.time()
         try:
-            return self.game.snapshot()
-        except Exception:  # noqa: BLE001 - decide on the one we have
-            return b
+            self.game.autoplay(1)
+        except Exception as e:
+            raise Civ6Stuck(f"autoplay did not start at T{turn}: {e}"[:400]) from e
+        seen_active, misses = False, 0
+        while True:
+            time.sleep(self.status_poll_s)
+            try:
+                st = self.game.autoplay_status()
+            except Exception:  # noqa: BLE001 - the game is busy with the AI's turn
+                st, misses = None, misses + 1
+            elapsed = time.time() - started
+            if st is not None:
+                if st.get("turn", turn) > turn and not st.get("active"):
+                    self.log.emit("turn", turn=st["turn"], seconds=round(elapsed, 1), unanswered_polls=misses)
+                    return
+                seen_active = seen_active or bool(st.get("active")) or st.get("turn", turn) > turn
+                if not seen_active and elapsed > self.start_grace_s:
+                    raise Civ6Stuck(f"autoplay did not start at T{turn} (still inactive after {elapsed:.0f} s)")
+            if elapsed > self.turn_deadline_s:
+                self._stop_autoplay()
+                raise Civ6Stuck(f"T{turn} did not end within {self.turn_deadline_s:.0f} s "
+                                f"({misses} status polls unanswered)")
 
-    def _maybe_event_review(self, b: dict, trigger: str, retry: bool = False) -> bool:
-        if not any(t in trigger for t in EVENT_TRIGGERS_CIV6) and not retry and self.review_requested is None:
-            return False
-        return super()._maybe_event_review(b, trigger, retry)
+    def _snapshot_between_turns(self) -> dict:
+        err: Exception | None = None
+        for i in range(self.snapshot_tries):
+            try:
+                return self.game.snapshot()
+            except Exception as e:  # noqa: BLE001
+                err = e
+                self.log.emit("briefing_error", error=f"snapshot: {e}"[:200])
+                if i + 1 < self.snapshot_tries:
+                    time.sleep(self.status_poll_s)
+        raise Civ6Stuck(f"no snapshot after {self.snapshot_tries} tries: {err}"[:400])
 
     # ---- a decision ----------------------------------------------------------------------------------
 
@@ -351,23 +379,32 @@ class Civ6Governor(Governor):
 
     def _apply(self, d: Civ6Decision, b: dict) -> tuple[list[dict], int]:
         """Check, carry out and read back the decision's orders. Returns one outcome per order and how
-        many took. Never raises: a failure is an outcome, reported at the next decision; an order that
-        did not take is refused if repeated at the next decision (not retried blindly)."""
+        many took. Never raises: a failure is an outcome, reported at the next decision. Only a game
+        refusal or a read-back that contradicts the order counts as "did not stick" (refused if
+        repeated unchanged); an order whose effect cannot be told (no reply, no read-back) is
+        "unknown"."""
         checked = check_orders(d.orders, b, self.pillars, self.index, self._failed_last)
-        results: list[tuple[Checked, str]] = []
+        results: list[tuple[Checked, str, bool]] = []      # (order, outcome, counts as did-not-stick)
         sent: list[tuple[Checked, dict]] = []
         for c in checked:
             if c.error:
-                results.append((c, f"refused: {c.error}"))
+                results.append((c, f"refused: {c.error}", False))
                 continue
             try:
                 reply = self.game.order(c.wire)
             except Exception as e:  # noqa: BLE001
-                reply = {"ok": False, "error": f"{type(e).__name__}: {e}"}
-            if reply.get("ok"):
-                sent.append((c, reply))
+                reply = {"ok": False, "transport": True, "error": f"{type(e).__name__}: {e}"}
+            if reply.get("ok") or reply.get("transport"):
+                sent.append((c, reply))                     # a lost reply may still have run: read it back
             else:
-                results.append((c, f"refused by the game: {reply.get('error')}"))
+                results.append((c, f"refused by the game: {reply.get('error')}", True))
+        totals: dict[str, float] = {}
+        for c, reply in sent:
+            if "spend" in c.expect:
+                totals[c.expect["spend"]] = totals.get(c.expect["spend"], 0.0) + float(reply.get("cost") or 0)
+        for c, _ in sent:
+            if "spend" in c.expect:
+                c.expect["total"] = totals[c.expect["spend"]]
         after = None
         if sent:
             try:
@@ -376,16 +413,28 @@ class Civ6Governor(Governor):
                 self.log.emit("briefing_error", error=f"read-back: {e}"[:200])
         self._held = []
         for c, reply in sent:
-            status = read_back(c, reply, after) if after is not None else "not read back (no snapshot)"
-            results.append((c, status))
+            if after is None:
+                results.append((c, f"{UNKNOWN}: not read back (no snapshot)", False))
+                continue
+            status = read_back(c, reply, after)
+            if reply.get("transport") and status != "stuck":
+                status = f"{UNKNOWN}: no reply ({reply.get('error')}); {status}"
+            results.append((c, status, status != "stuck" and not status.startswith(UNKNOWN)))
             if status == "stuck":
                 self._held.append((c, reply))
         position = {id(c): i for i, c in enumerate(checked)}
         results.sort(key=lambda r: position[id(r[0])])          # outcomes in the model's order
-        self._failed_last = {order_key(c.order) for c, status in results if status != "stuck"}
-        outcomes = [{"order": _describe(c.order), "outcome": status} for c, status in results]
-        self._report = [f"{o['order']}: carried out and read back" if o["outcome"] == "stuck"
-                        else f"{o['order']}: {o['outcome']} (did not stick; not retried blindly)" for o in outcomes]
+        self._failed_last = {order_key(c.order) for c, _, failed in results if failed}
+        outcomes = [{"order": _describe(c.order), "outcome": status} for c, status, _ in results]
+        failed = {id(c) for c, _, f in results if f}
+        self._report = []
+        for (c, status, _), o in zip(results, outcomes, strict=True):
+            if status == "stuck":
+                self._report.append(f"{o['order']}: carried out and read back")
+            elif id(c) in failed:
+                self._report.append(f"{o['order']}: {status} (did not stick; not retried blindly)")
+            else:
+                self._report.append(f"{o['order']}: {status}")
         for o in outcomes:
             self.log.emit("strategy_action", action="order", result=f"{o['order']}: {o['outcome']}"[:300])
         self._after_orders = after

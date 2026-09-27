@@ -68,8 +68,26 @@ def setup(tmp_path):
 def governor(setup, game, model) -> Civ6Governor:
     s, log = setup
     g = Civ6Governor(s, game, log, model=model)
-    g.min_poll_s = 0
+    g.status_poll_s = 0
+    g.start_grace_s = 0.05
+    g.turn_deadline_s = 0.5
+    g.recover_every_s = 0
     return g
+
+
+def run_until_attention(g: Civ6Governor, limit_s: float = 5.0) -> None:
+    """Run the governor until it waits for the human, then stop it (as the dashboard would)."""
+    import threading
+    import time
+    t = threading.Thread(target=g.run, kwargs={"max_decisions": 2}, daemon=True)
+    t.start()
+    end = time.time() + limit_s
+    while g.log.state.status != "needs_attention" and t.is_alive() and time.time() < end:
+        time.sleep(0.01)
+    attention = g.log.state.status == "needs_attention"
+    g.stop()
+    t.join(5)
+    assert attention, "the governor should wait for the human"
 
 
 def traces(setup) -> list[dict]:
@@ -93,7 +111,8 @@ def test_a_decision_applies_orders_then_autoplays(setup):
                         {"kind": "production", "city": "Beijing", "id": "unit:settler"}]
     kinds = [a[0] for a in game.actions]
     assert kinds.index("autoplay") > kinds.index("order"), "orders first, then autoplay"
-    assert ("autoplay", 3) in game.actions
+    assert [a for a in game.actions if a[0] == "autoplay"] == [("autoplay", 1, False)] * 3, "one turn at a time"
+    assert all(not a[2] for a in game.actions if a[0] == "order"), "no order while the AI plays"
     first = traces(setup)[0]
     assert [o["outcome"] for o in first["orders"]] == ["stuck", "stuck"]
     assert game.state["turn"] == FIXTURE["turn"] + 3                 # the AI played the stretch
@@ -137,7 +156,7 @@ def test_an_urgent_change_stops_autoplay(setup):
     s.decide_every_turns = 5
     g = governor(setup, game, orders_model([]))
     g.run(max_decisions=2)
-    assert ("autoplay_stop",) in game.actions[game.actions.index(("autoplay", 5)):]
+    assert [a for a in game.actions if a[0] == "autoplay"] == [("autoplay", 1, False)], "no next turn after it"
     second = traces(setup)[1]
     assert second["trigger"].startswith("urgent: new war: CIVILIZATION_ROME")
     assert game.state["turn"] == FIXTURE["turn"] + 1
@@ -261,3 +280,150 @@ esac
     args = log.read_text().splitlines()
     assert json.loads(args[args.index("order") + 1]) == hostile, "the order is one argv entry, never shell text"
 
+
+
+# ---- review fixes: reserve across purchases, no pillars, autoplay failures, read-back, triggers ------
+
+def test_two_purchases_together_keep_the_reserve():
+    rich = {**FIXTURE, "gold": 300}
+    out = check_orders([Civ6Order(kind="purchase", city="Beijing", id="unit:warrior"),
+                        Civ6Order(kind="purchase", city="Beijing", id="unit:slinger")], rich, SPEC, INDEX)
+    caps = [c.wire["max_cost"] for c in out]
+    assert caps == [150, 75]
+    assert 300 - sum(caps) >= SPEC.actions["purchase"].gold_reserve
+
+
+def test_without_pillars_purchases_are_refused_and_each_kind_gets_one_order():
+    out = check_orders([Civ6Order(kind="purchase", city="Beijing", id="unit:warrior"),
+                        Civ6Order(kind="research", id="tech:pottery"),
+                        Civ6Order(kind="research", id="tech:mining")], {**FIXTURE, "gold": 900}, None, INDEX)
+    assert "purchases need the limits of pillars.toml" in out[0].error
+    assert out[1].error == "" and "at most 1 research" in out[2].error
+
+
+def test_an_invalid_order_does_not_use_the_quota():
+    out = check_orders([Civ6Order(kind="research", id="tech:warp"), Civ6Order(kind="research", id="tech:pottery")],
+                       FIXTURE, SPEC, INDEX)
+    assert out[0].error.startswith("unknown id") and out[1].error == ""
+
+
+def test_one_production_order_per_city():
+    out = check_orders([Civ6Order(kind="production", city="Beijing", id="unit:settler"),
+                        Civ6Order(kind="production", city="Beijing", id="unit:warrior")], FIXTURE, SPEC, INDEX)
+    assert out[0].error == "" and "one per city" in out[1].error
+
+
+def test_two_purchases_are_read_back_against_their_total(setup):
+    prices = {("Beijing", "unit:warrior"): 100, ("Beijing", "unit:slinger"): 60}
+    game = FakeCiv6({**FIXTURE, "gold": 400}, index=INDEX, prices=prices,
+                    replies={"purchase": {"ok": True}})
+    game.sticks = False                                      # the game said ok but nothing was spent
+    g = governor(setup, game, orders_model([{"kind": "purchase", "city": "Beijing", "id": "unit:warrior"},
+                                            {"kind": "purchase", "city": "Beijing", "id": "unit:slinger"}]))
+    g.run(max_decisions=1)
+    assert [o["outcome"] for o in traces(setup)[0]["orders"]] == ["gold went from 400 to 400"] * 2
+
+
+def test_autoplay_that_fails_to_start_waits_for_the_human(setup):
+    game = FakeCiv6(FIXTURE, index=INDEX, start_fails=True)
+    g = governor(setup, game, orders_model([]))
+    run_until_attention(g)
+    events = (setup[0].runs_dir / "civ1" / "events.jsonl").read_text()
+    assert "autoplay did not start at T12" in events and '"needs_attention"' in events
+    assert [a[0] for a in game.actions].count("autoplay") == 1, "no retry loop burning decisions"
+    assert len(traces(setup)) == 1
+
+
+def test_autoplay_that_never_runs_waits_for_the_human(setup):
+    game = FakeCiv6(FIXTURE, index=INDEX, never_starts=True)
+    g = governor(setup, game, orders_model([]))
+    run_until_attention(g)
+    events = (setup[0].runs_dir / "civ1" / "events.jsonl").read_text()
+    assert "still inactive" in events and len(traces(setup)) == 1
+
+
+def test_a_failing_autoplay_stop_does_not_block_the_loop(setup):
+    def war(state):
+        state["wars"] = [{"id": 1, "civ": "CIVILIZATION_ROME", "major": True}]
+
+    game = FakeCiv6(FIXTURE, index=INDEX, stop_raises=True, events={FIXTURE["turn"] + 1: war})
+    g = governor(setup, game, orders_model([{"kind": "research", "id": "tech:pottery"}], []))
+    g.run(max_decisions=2)
+    assert traces(setup)[1]["trigger"].startswith("urgent: new war")
+    assert all(not a[2] for a in game.actions if a[0] == "order")
+
+
+def test_the_loop_works_when_the_game_is_silent_during_ai_turns(setup):
+    """Like the real tuner: every call made while the AI plays times out."""
+    game = FakeCiv6(FIXTURE, index=INDEX, busy=True)
+    g = governor(setup, game, orders_model([{"kind": "production", "city": "Beijing", "id": "unit:settler"}], []))
+    g.run(max_decisions=2)
+    assert game.state["turn"] == FIXTURE["turn"] + 3
+    assert traces(setup)[1]["trigger"] == "scheduled (3 turns)"
+    assert all(not a[2] for a in game.actions if a[0] == "order")
+    events = (setup[0].runs_dir / "civ1" / "events.jsonl").read_text()
+    assert '"unanswered_polls": 1' in events and '"needs_attention"' not in events
+
+
+def test_a_turn_that_never_ends_waits_for_the_human(setup):
+    game = FakeCiv6(FIXTURE, index=INDEX)
+    game.autoplay_status = lambda: {"ok": True, "active": True, "turn": FIXTURE["turn"]}   # stuck mid-turn
+    g = governor(setup, game, orders_model([]))
+    run_until_attention(g)
+    events = (setup[0].runs_dir / "civ1" / "events.jsonl").read_text()
+    assert "T12 did not end within" in events
+
+
+def test_a_failed_read_back_is_unknown_not_a_failure(setup):
+    seen: list[str] = []
+    order = {"kind": "research", "id": "tech:pottery"}
+    game = FakeCiv6(FIXTURE, index=INDEX, readback_fails=True)
+    g = governor(setup, game, orders_model([order], seen=seen))
+    g.run(max_decisions=2)
+    first, second = traces(setup)[:2]
+    assert first["orders"][0]["outcome"].startswith("unknown: not read back")
+    assert second["orders"][0]["outcome"] == "stuck", "an unknown outcome is not refused as did-not-stick"
+
+
+def test_a_lost_reply_is_read_back_before_judging(setup):
+    game = FakeCiv6(FIXTURE, index=INDEX, transport=True)
+    g = governor(setup, game, orders_model([{"kind": "research", "id": "tech:pottery"}]))
+    g.run(max_decisions=1)
+    assert traces(setup)[0]["orders"][0]["outcome"] == "stuck"
+
+
+def test_civ6_urgent_events_start_a_strategy_review(setup):
+    def lose(state):
+        state["cities"] = []
+
+    game = FakeCiv6({**FIXTURE, "cities": [*FIXTURE["cities"], {**FIXTURE["cities"][0], "name": "Xian"}]},
+                    index=INDEX, events={FIXTURE["turn"] + 1: lose})
+    reviews = {"n": 0}
+
+    def respond(messages, info):
+        if is_review(info):
+            reviews["n"] += 1
+            return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name,
+                                                     {"change": False, "assessment": "n/a", "rules": []})])
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"orders": [], "reason": "r"})])
+
+    g = governor(setup, game, FunctionModel(respond))
+    g.run(max_decisions=2)
+    assert traces(setup)[1]["trigger"].startswith("urgent: city lost")
+    assert reviews["n"] == 2, "start of run + the city-lost review"
+
+
+def test_a_human_pause_survives_auto_recovery(setup):
+    game = FakeCiv6(FIXTURE, index=INDEX)
+    g = governor(setup, game, orders_model([]))
+    g.pause()
+    g._needs_attention("agent timed out", auto_recover=True)
+    assert g._probe_recovered() is True
+    assert g.control.paused is True and g.log.state.status == "paused"
+
+
+def test_a_wonder_the_ai_dropped_is_not_a_lost_race():
+    building = {**FIXTURE, "cities": [{**FIXTURE["cities"][0], "producing": "BUILDING_PYRAMIDS"}]}
+    assert urgent_changes(building, {**FIXTURE, "wonders_elsewhere": []}, wonders={"BUILDING_PYRAMIDS"}) == []
+    assert urgent_changes(building, {**FIXTURE, "wonders_elsewhere": ["BUILDING_PYRAMIDS"]},
+                          wonders={"BUILDING_PYRAMIDS"}) == ["wonder race lost: BUILDING_PYRAMIDS in Beijing"]

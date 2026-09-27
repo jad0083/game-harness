@@ -315,7 +315,8 @@ Rules:
   military strength and purchase prices). The library installs itself into each state on first use.
 - Policy cards change for free only in the turn a civic completes (`policies_unlock_cost` is 0);
   wonders and new districts need a tile, which is not supported yet.
-- A tuner call can time out around a turn change: poll again rather than repeating an order blindly.
+- The tuner does not answer while the AI plays its turn (calls time out): the governor autoplays one
+  turn at a time and only reads or orders between turns; never repeat an order blindly after a timeout.
 - Menus, when the screen must be used: the UI ignores a click without a preceding hover (move the
   mouse onto the button, then click), and the "Continue" screen after loading needs a key press.
 - Throwaway games only: the tuner turns achievements off.
