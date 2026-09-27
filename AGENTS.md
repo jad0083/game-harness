@@ -182,8 +182,9 @@ wiki prose in `docs/`. Never hand-edit `corpora/galciv4/data/`.
   names ending in a dot or space, UNC paths and `:` in file paths; its installer pins the exe by
   SHA-256 and limits the firewall rule to the controller on Private networks.
 - Agent **1.6** relays Lua to Civilization VI's FireTuner console (`EnableTuner 1`; the game listens
-  on 127.0.0.1:4318 only): `GET /tuner/states`, `POST /tuner/lua`. One tuner client at a time,
-  so close FireTuner while it runs.
+  on 127.0.0.1:4318 only): `GET /tuner/states`, `POST /tuner/lua`; controller
+  `game-controller civ6 states` and `civ6 lua [--state GameCore] "<code>"`. One tuner client at a
+  time, so close FireTuner while it runs.
 - Full list: `issues.md`.
 
 ## 8. Recording what you learn (required)

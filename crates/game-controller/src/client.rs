@@ -30,6 +30,32 @@ pub struct FileEntry {
     pub modified: u64,
 }
 
+/// `GET /tuner/states`: the game identity and its Lua states (index = position).
+#[derive(Debug, Clone, PartialEq, serde::Deserialize)]
+pub struct TunerStates {
+    pub app: String,
+    pub states: Vec<String>,
+}
+
+/// `POST /tuner/lua` reply: the first message back and any printed output after it.
+#[derive(Debug, Clone, PartialEq, serde::Deserialize)]
+pub struct LuaReply {
+    #[serde(default)]
+    pub state: String,
+    pub result: String,
+    #[serde(default)]
+    pub extra: Vec<String>,
+}
+
+/// A Lua state for `/tuner/lua`: all digits -> its index, otherwise its name.
+pub fn tuner_state_value(state: &str) -> serde_json::Value {
+    let s = state.trim();
+    match s.parse::<u64>() {
+        Ok(i) => serde_json::json!(i),
+        Err(_) => serde_json::json!(s),
+    }
+}
+
 #[derive(Serialize)]
 struct MoveReq {
     x: i32,
@@ -458,6 +484,37 @@ impl AgentClient {
         Ok(())
     }
 
+    /// Civilization VI's Lua states through the agent's tuner relay (agent >= 1.6.0).
+    pub async fn tuner_states(&self) -> Result<TunerStates> {
+        let resp = self
+            .client
+            .get(format!("{}/tuner/states", self.base_url))
+            .send()
+            .await
+            .context("Failed /tuner/states")?;
+        serde_json::from_value(json_ok(resp, "/tuner/states").await?).context("bad /tuner/states response")
+    }
+
+    /// Run Lua in a Civilization VI state (name or index) through the agent (agent >= 1.6.0).
+    /// `timeout_ms` bounds the game's reply (agent default 5000, max 30000).
+    pub async fn tuner_lua(&self, state: &str, code: &str, timeout_ms: Option<u64>) -> Result<LuaReply> {
+        let mut body = serde_json::json!({"state": tuner_state_value(state), "code": code});
+        if let Some(ms) = timeout_ms {
+            body["timeout_ms"] = serde_json::json!(ms);
+        }
+        // The agent may wait up to 30 s for the game, then collect printed output for a few seconds.
+        let wait = Duration::from_millis(timeout_ms.unwrap_or(5_000).min(30_000)) + Duration::from_secs(15);
+        let resp = self
+            .client
+            .post(format!("{}/tuner/lua", self.base_url))
+            .timeout(wait)
+            .json(&body)
+            .send()
+            .await
+            .context("Failed /tuner/lua")?;
+        serde_json::from_value(json_ok(resp, "/tuner/lua").await?).context("bad /tuner/lua response")
+    }
+
     pub async fn batch(&self, actions: Vec<serde_json::Value>) -> Result<Vec<serde_json::Value>> {
         let resp = self
             .client
@@ -538,6 +595,35 @@ mod tests {
         let c = AgentClient::new(Some(&url), Some("t")).unwrap();
         let e = c.windows().await.unwrap_err().to_string();
         assert!(e.contains("401"), "{e}");
+    }
+
+    #[test]
+    fn tuner_state_is_sent_as_an_index_when_numeric() {
+        assert_eq!(tuner_state_value("2"), serde_json::json!(2));
+        assert_eq!(tuner_state_value(" GameCore "), serde_json::json!("GameCore"));
+        assert_eq!(tuner_state_value("-1"), serde_json::json!("-1"));
+    }
+
+    #[tokio::test]
+    async fn tuner_states_and_lua_parse_the_agent_replies() {
+        let url = one_shot("200 OK", r#"{"app":"Civilization VI","states":["Main State","GameCore","InGame"]}"#).await;
+        let c = AgentClient::new(Some(&url), Some("t")).unwrap();
+        let s = c.tuner_states().await.unwrap();
+        assert_eq!(s.app, "Civilization VI");
+        assert_eq!(s.states, vec!["Main State", "GameCore", "InGame"]);
+
+        let url = one_shot("200 OK", r#"{"ok":true,"state":"GameCore","result":"42","extra":["hi"]}"#).await;
+        let c = AgentClient::new(Some(&url), Some("t")).unwrap();
+        let r = c.tuner_lua("GameCore", "print('hi') return 42", Some(1000)).await.unwrap();
+        assert_eq!(r, LuaReply { state: "GameCore".into(), result: "42".into(), extra: vec!["hi".into()] });
+    }
+
+    #[tokio::test]
+    async fn tuner_errors_carry_the_agents_message() {
+        let url = one_shot("502 Bad Gateway", r#"{"ok":false,"error":"Civilization VI tuner not reachable","kind":"unavailable"}"#).await;
+        let c = AgentClient::new(Some(&url), Some("t")).unwrap();
+        let e = c.tuner_lua("GameCore", "return 1", None).await.unwrap_err().to_string();
+        assert!(e.contains("502") && e.contains("not reachable"), "{e}");
     }
 
     #[tokio::test]

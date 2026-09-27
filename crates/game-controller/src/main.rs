@@ -126,6 +126,12 @@ enum Commands {
         action: StellarisAction,
     },
 
+    /// Civilization VI: Lua through the agent's FireTuner relay (agent >= 1.6.0)
+    Civ6 {
+        #[command(subcommand)]
+        action: Civ6Action,
+    },
+
     /// Run stdio Model Context Protocol (MCP) server for Claude / Gemini / Antigravity
     Mcp,
 }
@@ -165,6 +171,22 @@ enum StellarisAction {
     Log {
         #[arg(short, long, default_value_t = 30)]
         lines: usize,
+    },
+}
+
+#[derive(Subcommand)]
+enum Civ6Action {
+    /// The game identity and its Lua states (index = position in the list)
+    States,
+    /// Run Lua in a state; prints the result, then any printed output
+    Lua {
+        code: String,
+        /// Lua state: name (any case, or a unique prefix) or index
+        #[arg(long, default_value = "GameCore")]
+        state: String,
+        /// Wait for the game's reply (agent default 5000, max 30000)
+        #[arg(long)]
+        timeout_ms: Option<u64>,
     },
 }
 
@@ -313,6 +335,20 @@ async fn main() -> Result<()> {
             let all: Vec<&str> = text.lines().collect();
             for l in &all[all.len().saturating_sub(lines)..] {
                 println!("{l}");
+            }
+        }
+        Commands::Civ6 { action: Civ6Action::States } => {
+            let s = client.tuner_states().await?;
+            println!("{}", s.app);
+            for (i, name) in s.states.iter().enumerate() {
+                println!("{i}\t{name}");
+            }
+        }
+        Commands::Civ6 { action: Civ6Action::Lua { code, state, timeout_ms } } => {
+            let r = client.tuner_lua(&state, &code, timeout_ms).await?;
+            println!("{}", r.result);
+            for line in &r.extra {
+                println!("{line}");
             }
         }
         Commands::Corpus { action } => {
