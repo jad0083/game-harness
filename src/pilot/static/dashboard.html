@@ -135,7 +135,7 @@
   .panel > header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; margin-bottom: 12px; }
   .panel h2 { margin: 0; font-size: 15px; font-weight: 700; padding-left: 10px; border-left: 3px solid var(--accent); line-height: 1.2; }
   .panel .sub { color: var(--muted); font-size: 13px; }
-  .right { position: sticky; top: 58px; }
+  .right { position: sticky; top: 58px; }      /* top set by placeReader: a tall column scrolls with the page */
   @media (max-width: 1000px) { .right { position: static; } }
   @media (max-width: 1000px) {
     main { display: flex; flex-direction: column; align-items: stretch; }   /* each panel as wide as the screen, never its content */
@@ -200,29 +200,59 @@
   table.data th:first-child, table.data td:first-child { text-align: left; }
   .tablewrap { max-height: 320px; overflow: auto; }
 
-  /* ---- decisions ---- */
+  /* ---- decisions: the reason leads; fates are the only pills (rulings 27, 28) ---- */
   .decisions { list-style: none; margin: 0; padding: 0; }
   .decisions li { border-top: 1px solid var(--grid); }
   .decisions li:first-child { border-top: 0; }
-  .decisions button { display: grid; grid-template-columns: 96px 1fr; gap: 2px 14px; width: 100%; text-align: left;
-                      background: transparent; border: 0; padding: 12px 8px; cursor: pointer; }
+  .decisions button { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 2px 14px; width: 100%; text-align: left;
+                      background: transparent; border: 0; padding: 10px 8px; cursor: pointer; }
   .decisions button:hover { background: var(--surface); }
   .decisions li.sel button { background: var(--surface); box-shadow: inset 3px 0 0 var(--accent); }
   .decisions li.more { padding: 10px 8px 0; }
   .decisions li.more button { display: inline-block; width: auto; }
   .nw { white-space: nowrap; }
+  .d-when { display: grid; align-content: start; }
   .d-date { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 14px; }
-  .d-meta { color: var(--muted); font-size: 12.5px; grid-column: 1; }
-  .d-main { grid-column: 2; grid-row: 1 / span 2; min-width: 0; }
-  .d-head { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; }
+  .d-urgent { font-size: 12.5px; color: var(--warn); font-weight: 600; }
+  .d-main { min-width: 0; display: grid; gap: 3px; }
+  .d-head { display: flex; flex-wrap: wrap; gap: 2px 12px; align-items: baseline; justify-content: space-between; }
+  .d-trigger { font-size: 13.5px; color: var(--ink-2); font-weight: 600; }
+  .d-who { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .dir { font-weight: 600; }
-  .dir.kept { color: var(--ink-2); font-weight: 500; }
-  .trigger { color: var(--muted); font-size: 13px; }
-  .reason { font-family: var(--serif); font-size: 16px; line-height: 1.5; margin: 3px 0 0; color: var(--ink);
+  .reason { font-family: var(--serif); font-size: 16px; line-height: 1.45; margin: 0; color: var(--ink); max-width: 68ch;
             display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .reason.sys { font-family: var(--sans); font-size: 14px; color: var(--bad); }
-  .after { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .reason.sys { font-family: var(--sans); font-size: 14px; color: var(--bad); font-weight: 600; }
+  .chips { display: flex; gap: 6px; overflow: hidden; white-space: nowrap; }
+  .fcounts { display: none; gap: 12px; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .fchip { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; line-height: 20px; padding: 0 9px; border-radius: 999px;
+           border: 1px solid var(--hair); color: var(--ink); white-space: nowrap; max-width: 30ch; overflow: hidden; text-overflow: ellipsis; }
+  .fchip i { font-style: normal; font-weight: 700; }
+  .fchip.f-held, .fcount.f-held i { border-color: color-mix(in srgb, var(--good) 55%, transparent); }
+  .fchip.f-held i, .fcount.f-held i { color: var(--good); }
+  .fchip.f-replaced { border-color: color-mix(in srgb, var(--warn) 65%, transparent); }
+  .fchip.f-replaced i, .fcount.f-replaced i { color: var(--warn); }
+  .fchip.f-refused { border-color: color-mix(in srgb, var(--bad) 65%, transparent); }
+  .fchip.f-refused i, .fcount.f-refused i { color: var(--bad); }
+  .fchip.f-noreply i, .fchip.f-open i, .fchip.f-gone i, .fcount i { color: var(--ink-2); }
+  .fchip.more { color: var(--ink-2); }
+  .fcount i { font-style: normal; font-weight: 700; }
+  .after { display: flex; flex-wrap: wrap; gap: 2px 10px; font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
   .after .up { color: var(--good); } .after .down { color: var(--bad); }
+  .after .watch b { color: var(--warn); font-weight: 700; }
+  #dec-problems { margin-left: auto; }
+  .btn.small { padding: 3px 10px; font-size: 13px; }
+  .btn[aria-pressed="true"] { border-color: var(--accent); color: var(--ink); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+  /* Reasoning: labelled pairs, not a dotted meta string */
+  .t-pairs { display: grid; gap: 3px; margin: 0 0 14px; font-size: 13.5px; max-width: 80ch; }
+  .t-pairs div { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 10px; }
+  .t-pairs dt { color: var(--muted); }
+  .t-pairs dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+  .t-sub { margin: 14px 0 6px; font-size: 13.5px; font-weight: 600; color: var(--ink-2); }
+  .t-orders { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 6px; }
+  .t-orders li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 13.5px; }
+  .t-orders .fchip { max-width: none; }
+  .t-fate { color: var(--ink-2); }
+  .more-steps > summary { margin: 4px 0; }
 
   /* ---- tabs ---- */
   #p-tabs { padding-top: 12px; }
@@ -230,7 +260,7 @@
   .tabs button { position: relative; border: 0; background: transparent; padding: 8px 12px 10px; cursor: pointer; color: var(--muted); font-weight: 500; margin-bottom: -1px; }
   .tabs button[aria-selected="true"] { color: var(--ink); font-weight: 700; border-bottom: 2px solid var(--accent); }
   .tabs .dot { position: absolute; top: 7px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--thought); }
-  .tabpanel { padding: 16px 4px 8px; max-height: calc(100vh - 150px); overflow: auto; }
+  .tabpanel { padding: 16px 4px 8px; }
   @media (max-width: 1000px) { .tabpanel { max-height: none; } }
 
   /* ---- trace reader: the model's words in serif ---- */
@@ -452,8 +482,10 @@
   /* narrow screens: last, so it wins over the base rules above */
   @media (max-width: 600px) {
     .decisions button { grid-template-columns: 1fr; }
-    .d-meta { grid-column: 1; grid-row: 2; }
-    .d-main { grid-column: 1; grid-row: 3; margin-top: 4px; }
+    .d-when { grid-auto-flow: column; justify-content: start; gap: 8px; align-items: baseline; }
+    .chips { display: none; }
+    .fcounts { display: flex; }
+    .t-pairs div { grid-template-columns: 96px minmax(0, 1fr); }
   }
 </style>
 </head>
@@ -608,7 +640,8 @@
     </section>
 
     <section class="panel" id="p-dec" aria-labelledby="h-dec" data-collapsible>
-      <header><h2 id="h-dec">Decisions</h2><span class="sub" id="dec-sub"></span></header>
+      <header><h2 id="h-dec">Decisions</h2><span class="sub" id="dec-sub"></span>
+        <button type="button" class="btn small" id="dec-problems" aria-pressed="false" title="Errors, refused orders and failed directives">Problems only</button></header>
       <div class="body"><ul class="decisions" id="decisions"></ul></div>
     </section>
 
@@ -1692,43 +1725,98 @@ function renderTable(ms) {
     [...ms].reverse().map((m) => `<tr>${cols.map(([c]) => `<td>${c === "date" ? esc(gdate(m.date)) : Number.isFinite(metricValue(m, c)) ? fmt(metricValue(m, c)) : ""}</td>`).join("")}</tr>`).join("") + `</tbody></table></div>`;
 }
 
-// ---------- decisions ----------
-// One line for a failed decision's error; the raw text stays one disclosure away.
-function errorCause(err) {
-  const e = String(err || "");
-  if (/\b503\b|high demand|overloaded/i.test(e)) return "the model was overloaded (503)";
-  if (/\b429\b|rate.?limit|quota/i.test(e)) return "the model's rate limit was reached (429)";
-  if (/credit balance/i.test(e)) return "billing: credit balance too low";
-  if (/timed? ?out|timeout/i.test(e)) return "the model did not answer in time";
-  return tidy(e.split("\n")[0]).slice(0, 160);
+// The right column sticks under the bar; one taller than the window scrolls with the page and sticks
+// at its bottom, so it is the page that scrolls, never the tab panel inside itself (ruling 14).
+function placeReader() {
+  const col = document.querySelector(".col.right");
+  if (!col) return;
+  col.style.top = matchMedia("(max-width: 1000px)").matches ? "" : Math.min(58, innerHeight - col.offsetHeight - 12) + "px";
 }
-const SCORED = [["systems", "systems"], ["planets", "planets"], ["pops", "pops"], ["techs_known", "techs"], ["military_power", "military"], ["economy_power", "economy"], ["tech_power", "tech"]];
-function afterText(r) {
-  if (!r) return "";
-  const parts = SCORED.filter(([k]) => r[k]).map(([k, l]) => `<span class="${r[k] > 0 ? "up" : "down"}">${r[k] > 0 ? "+" : ""}${fmt(r[k])} ${l}</span>`);
-  if (r.deficits_after?.length) parts.push(`<span class="down">deficit: ${esc(r.deficits_after.map(human).join(", "))}</span>`);
-  return parts.length ? `<div class="after"><span>${esc(r.months)} months later:</span>${parts.join("")}</div>` : "";
-}
+if (window.ResizeObserver) new ResizeObserver(placeReader).observe(document.querySelector(".col.right"));
+addEventListener("resize", placeReader);
 
+// ---------- decisions (rulings 14, 27, 28) ----------
+// A row is the model's reason plus what came of it; machine text never leads. The server gives the
+// trigger in words (trigger_label), an error cut to its cause, each order by name with its fate.
+const FATE_WORD = { held: "held", replaced: "replaced by the AI", refused: "refused", noreply: "no reply", open: "in force", gone: "no longer in force" };
+function fateChip(o) {
+  const f = o.fate || {}, what = `${o.city ? o.city + ": " : ""}${o.name || o.id}${f.by ? " → " + f.by : ""}`;
+  const title = `${f.word || FATE_WORD[f.key] || ""}${f.why ? ": " + f.why : ""}`;
+  return `<span class="fchip f-${esc(f.key || "gone")}" title="${esc(title)}"><i aria-hidden="true">${esc(f.symbol || "·")}</i><span class="sr">${esc(f.word || "")}: </span>${esc(what)}</span>`;
+}
+function fateCounts(orders) {
+  const n = {};
+  orders.forEach((o) => { const k = (o.fate || {}).key || "gone"; n[k] = (n[k] || 0) + 1; });
+  return ["held", "replaced", "refused", "noreply", "open", "gone"].filter((k) => n[k]).map((k) =>
+    `<span class="fcount f-${k}" title="${n[k]} ${FATE_WORD[k]}"><i aria-hidden="true">${esc({ held: "✓", replaced: "↺", refused: "✕", noreply: "?", open: "⋯", gone: "–" }[k])}</i> ${n[k]}<span class="sr"> ${FATE_WORD[k]}</span></span>`).join("");
+}
+// What followed, in the game's words and unit: "12 turns later: score +17, military −226 ▲ watch".
+function outcomeLine(r) {
+  const spec = S.spec.outcomes;
+  if (!r || !spec) return "";
+  const signed = (v) => `${v > 0 ? "+" : v < 0 ? "−" : ""}${fmt(Math.abs(v))}`;
+  const parts = spec.keys.filter((k) => r[k]).map((k) => {
+    const watch = spec.watch[k] != null && r[k] <= spec.watch[k];
+    return `<span class="${r[k] > 0 ? "up" : "down"}${watch ? " watch" : ""}">${esc(mlabel(k).toLowerCase())} ${signed(r[k])}${watch ? ` <b>▲ watch</b>` : ""}</span>`;
+  });
+  if (spec.deficits && (r.deficits_after || []).length) parts.push(`<span class="down">deficit: ${esc(r.deficits_after.map(human).join(", "))}</span>`);
+  return parts.length ? `<div class="after"><span>${esc(spec.window.replace("{n}", r.months))}:</span>${parts.join("")}</div>` : "";
+}
+// The directive a Stellaris decision gave, in words: "Kept diplomacy first", "Expand".
+function directiveLabel(d) {
+  if (!S.spec.game.override && S.spec.known) return "";                 // games without directives
+  if (d.decision === "keep" || d.outcome === "kept") return `Kept ${human(d.current || "no directive")}`;
+  if (!d.decision || d.decision === "orders") return "";
+  return sentence(human(d.decision)) + (d.outcome && d.outcome !== "applied" ? ` (${tidy(d.outcome)})` : "");
+}
+const isProblem = (d) => d.outcome === "error" || String(d.outcome || "").startsWith("FAILED")
+  || (d.orders || []).some((o) => (o.fate || {}).key === "refused");
+function whoAndTime(d) {
+  const who = d.model === "human" ? "you" : shortModel(d).replace(/ · \w+$/, "") + (d.fallback ? " (fallback)" : "");
+  return [who, d.seconds ? `${Math.round(d.seconds)} s` : ""].filter(Boolean).join(" · ");
+}
 function renderDecisions() {
   const ul = $("decisions");
-  $("dec-sub").textContent = S.decisions.length ? `${plural(S.decisions.length, "decision")} in this campaign, newest first` : "";
+  const urgent = S.decisions.filter((d) => (d.trigger_label || {}).urgent).length;
+  $("dec-sub").textContent = S.decisions.length ? `${plural(S.decisions.length, "decision")}${urgent ? `, ${urgent} urgent` : ""}, newest first` : "";
+  $("dec-problems").hidden = !S.decisions.some(isProblem);
   if (!S.decisions.length) { ul.innerHTML = `<li class="empty">No decisions yet.</li>`; return; }
-  const all = [...S.decisions].reverse(), shown = S.showAll ? all : all.slice(0, 8);
+  const all = [...S.decisions].reverse().filter((d) => !S.problemsOnly || isProblem(d)), shown = S.showAll ? all : all.slice(0, 8);
   ul.innerHTML = shown.map((d) => {
-    const i = S.decisions.indexOf(d);
-    const kept = d.decision === "keep" || d.outcome === "kept", failed = d.outcome === "error";
-    const label = failed ? "No decision" : kept ? `kept ${human(d.current || "none")}` : d.outcome === "applied" ? human(d.decision) : `${human(d.decision)} (${d.outcome || ""})`;
+    const i = S.decisions.indexOf(d), trig = d.trigger_label || { text: tidy(d.trigger || ""), urgent: false };
+    const failed = d.outcome === "error";
     const sel = S.sel && S.sel.run_id === d.run_id && S.sel.episode === d.episode;
-    return `<li class="${sel ? "sel" : ""}"><button data-i="${i}">
-      <span class="d-date">${esc(d.date || "–")}</span>
-      <span class="d-meta"><span class="nw">${d.model === "human" ? "you" : fmt(d.tokens_in) + " tokens"}</span>${d.seconds ? `<br><span class="nw">${esc(d.seconds)} s</span>` : ""}</span>
-      <span class="d-main"><span class="d-head"><span class="dir${kept ? " kept" : ""}">${esc(label)}</span><span class="trigger">${esc(tidy(d.trigger || ""))}</span>${shortModel(d) ? `<span class="tag model">${esc(shortModel(d))}</span>` : ""}${d.off_frame ? '<span class="tag bad">off-frame</span>' : ""}</span>
-      <p class="reason${failed ? " sys" : ""}">${esc(failed ? errorCause(d.error) : tidy(d.reason || ""))}</p>${afterText(d.result)}</span></button></li>`;
-  }).join("") + (all.length > shown.length ? `<li class="more"><button class="btn" id="show-all">Show all ${all.length}</button></li>` : "");
+    const orders = d.orders || [], dir = directiveLabel(d);
+    const reason = failed ? `No decision: ${d.cause || errorCause(d.error)}` : tidy(d.reason || "");
+    return `<li class="${sel ? "sel" : ""}${failed ? " failed" : ""}"><button data-i="${i}">
+      <span class="d-when"><span class="d-date">${esc(gdate(d.date) || "–")}</span>${trig.urgent ? `<span class="d-urgent">urgent</span>` : ""}</span>
+      <span class="d-main">
+        <span class="d-head"><span class="d-trigger">${esc(trig.text)}</span><span class="d-who">${esc(whoAndTime(d))}</span></span>
+        ${dir && !failed ? `<span class="dir">${esc(dir)}</span>` : ""}
+        <span class="reason${failed ? " sys" : ""}">${esc(reason)}</span>
+        ${orders.length ? `<span class="chips">${orders.slice(0, 3).map(fateChip).join("")}${orders.length > 3 ? `<span class="fchip more">+${orders.length - 3}</span>` : ""}</span>
+        <span class="fcounts">${fateCounts(orders)}</span>` : ""}
+        ${outcomeLine(d.result)}${d.off_frame ? '<span class="tag bad">off the strategy</span>' : ""}
+      </span></button></li>`;
+  }).join("") + (all.length > shown.length ? `<li class="more"><button class="btn" id="show-all">Show all ${all.length}</button></li>` : "")
+    + (!all.length ? `<li class="empty">No problems in this campaign's decisions.</li>` : "");
   const more = $("show-all");
   if (more) more.addEventListener("click", () => { S.showAll = true; renderDecisions(); });
   ul.querySelectorAll("button[data-i]").forEach((b) => b.addEventListener("click", () => selectDecision(S.decisions[+b.dataset.i])));
+}
+$("dec-problems").addEventListener("click", () => {
+  S.problemsOnly = !S.problemsOnly;
+  $("dec-problems").setAttribute("aria-pressed", String(S.problemsOnly));
+  renderDecisions();
+});
+// One line for an error the server did not cut (an older record).
+function errorCause(err) {
+  const e = String(err || "");
+  if (/\b503\b|high demand|overloaded/i.test(e)) return "overloaded (503)";
+  if (/\b429\b|rate.?limit|quota/i.test(e)) return "rate limited (429)";
+  if (/credit balance/i.test(e)) return "billing: credit balance too low";
+  if (/timed? ?out|timeout/i.test(e)) return "no answer in time (timed out)";
+  return tidy(e.split("\n")[0]).slice(0, 160);
 }
 
 async function selectDecision(d, byUser = true) {
@@ -1743,40 +1831,64 @@ async function selectDecision(d, byUser = true) {
   const still = () => S.sel && S.sel.run_id === d.run_id && S.sel.episode === d.episode;
   try { const tr = await api(`/api/decision?run=${encodeURIComponent(d.run_id)}&episode=${d.episode}`); if (still()) renderTrace(tr); }
   catch (e) { if (still()) box.innerHTML = `<p class="empty">Could not load this decision (${esc(e.message)}).</p>`; }
+  placeReader();
 }
 
+// Reasoning leads with the decision, then why, then the evidence (ruling 14).
 function renderTrace(d) {
-  const t = d.trace || {}, steps = t.steps || [];
-  const kept = d.decision === "keep", err = t.error || (d.outcome === "error" ? "no answer" : "");
-  let h = `<div class="t-when">${esc(d.date)}, ${esc(tidy(d.trigger || ""))}</div>`;
+  const t = d.trace || {}, steps = t.steps || [], trig = d.trigger_label || { text: tidy(d.trigger || "") };
+  const err = t.error || (d.outcome === "error" ? "no answer" : "");
+  const attempts = d.attempts || [];
+  const chain = attempts.map((a) => `${shortModel({ model: a.model })} ${a.cause}${a.times > 1 ? ` ×${a.times}` : ""}`);
+  let h = `<div class="t-when">${esc(gdate(d.date))}${trig.urgent ? ", urgent" : ""}</div>`;
   if (err) {       // a failed decision: the cause in the system's voice, the raw error behind a disclosure
-    h += `<div class="t-error" role="note">No decision: ${esc(errorCause(err))}.</div>
+    h += `<div class="t-error" role="note">No decision: ${esc(d.cause || errorCause(err))}.${chain.length ? ` ${esc(chain.join(" → "))}.` : ""}</div>
       <details class="raw-error"><summary>Error as returned</summary><pre>${esc(err)}</pre></details>`;
   } else {
-    h += `<div class="t-decision">${kept ? "Kept " + esc(human(d.current || "no directive")) : esc(human(d.decision))}</div>
-    <p class="t-reason">${md(tidy(d.reason || ""))}</p>`;
+    const dir = directiveLabel(d);
+    const first = String(d.reason || "").split(/(?<=[.!?])\s+/)[0];
+    h += `<div class="t-decision">${esc(dir || tidy(first.length > 180 ? first.slice(0, 177) + "…" : first) || "No reason given")}</div>`;
   }
-  h += `
-    ${t.serves ? `<p class="t-serves">Works toward: ${esc(t.serves)}</p>` : ""}
-    <div class="t-meta"><span>${esc(d.model === "human" ? "Your decision" : modelLabel(d))}</span><span>${esc(d.outcome || "")}</span>
-    ${d.tokens_in ? `<span>${fmt(d.tokens_in)} tokens in, ${fmt(d.tokens_out)} out</span>` : ""}${d.seconds ? `<span>${esc(d.seconds)} s</span>` : ""}</div>`;
-  if (d.result) h += afterText(d.result).replace('class="after"', 'class="after" style="margin:-4px 0 14px"');
+  const pairs = [["Trigger", trig.text + ((trig.reasons || []).length > 1 ? ` (${trig.reasons.slice(1).map(tidy).join("; ")})` : "")]];
+  if (d.model && d.model !== "human" && !err) {
+    const thinking = d.thinking || t.thinking_level;
+    pairs.push(["Answered by", `${shortModel({ ...d, thinking: "" })}${thinking ? `, ${thinking} thinking` : ""}${attempts.length ? `, after ${attempts.map((a) => `${shortModel({ model: a.model })} was ${a.cause}${a.times > 1 ? ` (×${a.times})` : ""}`).join(", ")}` : ""}`]);
+  } else if (d.model === "human") pairs.push(["Decided by", "you"]);
+  const took = [d.seconds ? `${Math.round(d.seconds)} s` : "", d.tokens_in ? `${fmt(d.tokens_in)} tokens in, ${fmt(d.tokens_out)} out` : ""].filter(Boolean).join(" · ");
+  if (took) pairs.push(["Took", took]);
+  if (t.serves) pairs.push(["Works toward", t.serves]);
+  h += `<dl class="t-pairs">${pairs.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>`;
+  const orders = d.orders || [];
+  if (orders.length) {
+    h += `<h3 class="t-sub">${esc(sentence(S.spec.game.decision_noun || "Orders"))}</h3><ul class="t-orders">` + orders.map((o) => {
+      const badges = [o.filled ? "filled by the governor" : "", o.kind === "purchase" ? `bought with ${o.currency || "gold"}` : ""].filter(Boolean);
+      return `<li>${fateChip(o)} <span class="t-fate">${esc(o.fate.word)}${o.fate.why ? `: ${esc(o.fate.why)}` : ""}</span>${badges.map((b) => `<span class="tag">${esc(b)}</span>`).join("")}</li>`;
+    }).join("") + `</ul>`;
+    if (d.retried_for && d.retried_for.length) h += `<p class="hint">Asked again: ${esc(d.retried_for.map((k) => `${k} left idle`).join(", "))}.</p>`;
+  }
+  if (d.result) h += outcomeLine(d.result).replace('class="after"', 'class="after" style="margin:0 0 14px"');
+  if (!err && d.reason) h += `<h3 class="t-sub">The model's reason</h3><p class="t-reason">${md(tidy(d.reason || ""))}</p>`;
   h += `<div class="steps">`;
-  let call = 0;
+  let call = 0, shownSteps = 0;
+  const parts = [];
   for (let i = 0; i < steps.length; i++) {
-    const s = steps[i];
-    if (s.type === "prompt") h += `<details class="step"><summary>What the model was shown</summary><pre>${esc(s.text)}</pre></details>`;
-    else if (s.type === "thinking") h += `<div class="step thinking"><h3>Thinking</h3><p>${md(s.text)}</p></div>`;
-    else if (s.type === "text") h += `<div class="step text"><p>${md(s.text)}</p></div>`;
-    else if (s.type === "tool_call") {
-      const res = steps.slice(i + 1).find((x) => x.type === "tool_result" && x.tool === s.tool);
-      h += `<div class="step call"><span class="call-name">${esc(human(s.tool))}</span>${argsList(s.args)}
-        <details><summary>${res ? "Call and result as returned" : "Call as sent"}</summary><pre>${esc(JSON.stringify(s.args))}${res ? "\n\n" + esc(res.text) : ""}</pre></details></div>`;
-    } else if (s.type === "retry") h += `<div class="step retry">Retried ${esc(s.tool)}: ${esc(s.text)}</div>`;
-    else if (s.type === "output") h += `<details class="step"><summary>Answer as returned</summary><pre>${esc(JSON.stringify(s.args, null, 1))}</pre></details>`;
-    else if (s.type === "usage") { call++; h += `<div class="usage">Model call ${call}: ${fmt(s.in)} tokens in, ${fmt(s.out)} out</div>`; }
+    const st = steps[i];
+    let part = "";
+    if (st.type === "prompt") part = `<details class="step"><summary>What the model was shown</summary><pre>${esc(st.text)}</pre></details>`;
+    else if (st.type === "thinking") part = `<div class="step thinking"><h3>Thinking</h3><p>${md(st.text)}</p></div>`;
+    else if (st.type === "text") part = `<div class="step text"><p>${md(st.text)}</p></div>`;
+    else if (st.type === "tool_call") {
+      const res = steps.slice(i + 1).find((x) => x.type === "tool_result" && x.tool === st.tool);
+      part = `<div class="step call"><span class="call-name">${esc(human(st.tool))}</span>${argsList(st.args)}
+        <details><summary>${res ? "Call and result as returned" : "Call as sent"}</summary><pre>${esc(JSON.stringify(st.args))}${res ? "\n\n" + esc(res.text) : ""}</pre></details></div>`;
+    } else if (st.type === "retry") part = `<div class="step retry">Retried ${esc(st.tool)}: ${esc(st.text)}</div>`;
+    else if (st.type === "output") part = `<details class="step"><summary>Answer as returned</summary><pre>${esc(JSON.stringify(st.args, null, 1))}</pre></details>`;
+    else if (st.type === "usage") { call++; part = `<div class="usage">Model call ${call}: ${fmt(st.in)} tokens in, ${fmt(st.out)} out</div>`; }
+    if (part) { parts.push(part); shownSteps++; }
   }
-  if (!steps.some((s) => s.type === "thinking") && d.model !== "human") h += `<p class="hint">${esc(thinkingHint(d.model))}</p>`;
+  // each step after the first two is folded, so a long trace does not make the page endless
+  h += parts.slice(0, 2).join("") + (parts.length > 2 ? `<details class="more-steps"><summary>${plural(parts.length - 2, "more step")}</summary><div class="steps">${parts.slice(2).join("")}</div></details>` : "");
+  if (!steps.some((x) => x.type === "thinking") && d.model !== "human" && !err) h += `<p class="hint">${esc(thinkingHint(d.model))}</p>`;
   $("tab-reasoning").innerHTML = h + `</div>`;
 }
 

@@ -322,6 +322,59 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
             " FROM campaigns c ORDER BY c.created DESC")
         return web.json_response(rows)
 
+    def decorate(rows: list[dict], order_rows: list[dict], calls: list[dict]) -> list[dict]:
+        """What the page shows for each decision (rulings 27, 28, 30): the trigger as a category in
+        words, an error cut to its cause, each order by name with its fate (the order record's later
+        outcome where there is one), and whether a fallback model answered (`calls`: the runs'
+        model_retry / model_fallback events, oldest first)."""
+        from .wording import attempts, cause, fate, order_parts, trigger
+        by_run: dict[str, list[dict]] = {}
+        for e in calls:
+            by_run.setdefault(e["run_id"], []).append(e)
+        prev_t: dict[str, float] = {}
+        for r in rows:
+            game = game_of_campaign(r.get("campaign_id") or "")
+            name = lambda i, game=game: names.name(game, i)
+            r["trigger_label"] = trigger(r.get("trigger"), name)
+            if r.get("error"):
+                r["cause"] = cause(r["error"])
+            before = [e for e in by_run.get(r["run_id"], []) if prev_t.get(r["run_id"], 0) < e["t"] <= (r["t"] or 0)]
+            prev_t[r["run_id"]] = r["t"] or 0
+            r["attempts"] = attempts(before)
+            r["fallback"] = any(e["kind"] == "model_fallback" and e.get("role", "decisions") == "decisions" for e in before)
+            orders = json.loads(r.pop("orders_json", None) or "null")
+            if not orders:
+                continue
+            out = []
+            for o in orders:
+                p = order_parts(o)
+                later = [x for x in order_rows if x.get("ordered") == r["date"] and x.get("id") == p["id"]
+                         and (x.get("city") or "").lower() == p["city"].lower()
+                         and x.get("order_kind") in (p["kind"], "purchase" if p["kind"] == "production" else p["kind"])]
+                row = later[-1] if later else None
+                ids = [i.strip() for i in p["id"].split(",")] if p["kind"] == "policies" else [p["id"]]
+                out.append({**p, "name": ", ".join(str(names.name(game, i)) for i in ids if i),
+                            "text": o.get("order"), "outcome": o.get("outcome"),
+                            "fate": fate(o.get("outcome"), row.get("result") if row else None, kind=p["kind"],
+                                         by=", ".join(str(names.name(game, b.strip())) for b in (row.get("by") or "").split(",")
+                                                      if b.strip()) if row else "",
+                                         detail=(row or {}).get("detail") or "")})
+            r["orders"] = out
+        return rows
+
+    async def decision_context(rows: list[dict]) -> tuple[list[dict], list[dict]]:
+        """The order record rows of the decisions' campaigns and the model-call events of their runs."""
+        cids = sorted({r["campaign_id"] for r in rows if r.get("campaign_id")})
+        order_rows = [x for c in cids for x in await asyncio.to_thread(need_tel().campaign_events, c, "order_outcome")]
+        run_ids = sorted({r["run_id"] for r in rows})
+        calls = []
+        if run_ids:
+            marks = ",".join("?" * len(run_ids))
+            calls = [{"run_id": e["run_id"], "t": e["t"], "kind": e["kind"], **json.loads(e["data"])} for e in await q(
+                f"SELECT run_id, t, kind, data FROM events WHERE kind IN ('model_retry', 'model_fallback')"
+                f" AND run_id IN ({marks}) ORDER BY t", tuple(run_ids))]
+        return order_rows, calls
+
     async def api_decisions(request):
         # excludes strategy_review rows: this lists directive decisions, not strategy reviews (Task 9
         # adds its own review marks)
@@ -329,11 +382,14 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
         rows = await q(f"SELECT run_id, episode, campaign_id, t, date, month, trigger, decision, reason, outcome, current,"
                        f" tokens_in, tokens_out, seconds, result, model_version, thinking,"
                        f" json_extract(trace,'$.off_frame') AS off_frame, json_extract(trace,'$.error') AS error,"
+                       f" json_extract(trace,'$.orders') AS orders_json, json_extract(trace,'$.retried_for') AS retried_for,"
                        f" COALESCE(model, (SELECT model FROM runs WHERE runs.id=decisions.run_id)) AS model"
                        f" FROM decisions WHERE {where} AND (decision IS NULL OR decision != 'strategy_review') ORDER BY t", args)
         for r in rows:
             r["result"] = json.loads(r["result"]) if r["result"] else None
-        return web.json_response(rows)
+            r["retried_for"] = json.loads(r["retried_for"]) if r["retried_for"] else None
+        order_rows, calls = await decision_context(rows)
+        return web.json_response(await asyncio.to_thread(decorate, rows, order_rows, calls))
 
     async def api_decision(request):
         run, ep = request.query.get("run", ""), request.query.get("episode", "")
@@ -346,7 +402,12 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
         r = rows[0]
         r["trace"] = json.loads(r["trace"]) if r["trace"] else None
         r["result"] = json.loads(r["result"]) if r["result"] else None
-        return web.json_response(r)
+        r["orders_json"] = json.dumps((r["trace"] or {}).get("orders")) if (r["trace"] or {}).get("orders") else None
+        r["error"] = (r["trace"] or {}).get("error")
+        prev = await q("SELECT MAX(t) AS t FROM decisions WHERE run_id=? AND t < ?", (run, r["t"] or 0))
+        order_rows, calls = await decision_context([r])
+        calls = [e for e in calls if e["t"] > ((prev[0]["t"] if prev else None) or 0)]
+        return web.json_response((await asyncio.to_thread(decorate, [r], order_rows, calls))[0])
 
     def readable_rows(rows: list[dict], game: str) -> list[dict]:
         """Rivals keep their id and get a readable name (CIVILIZATION_GERMANY -> Germany)."""

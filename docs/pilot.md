@@ -335,12 +335,24 @@ running pilot (whose own dashboard is on `PILOT_PORT`, 8790, on 127.0.0.1). It r
   net income, stockpile, power) plus a table of every recorded figure, with war periods, the
   directive lane and a mark per decision. The rivals table (Civilizations met, Neighbours) has the
   view's columns; a column no rival has a value for is left out.
-- **Decisions**: date, directive, trigger, model, the reason, and what changed 12 months later. A
-  decision whose model calls all failed reads "No decision" with the cause (e.g. "the model was
-  overloaded (503)"); Reasoning keeps the raw error one disclosure away.
-- **Reasoning**: a decision's full trace: what the model was shown, its thinking where the provider
-  returns it, tool calls, the answer, what it works toward, tokens and time. Picking another
-  campaign clears it.
+- **Decisions**: each row leads with the model's reason (two lines, in the model's serif), under
+  the date, the trigger as a category in words ("City threatened: Chengdu", "Great Scientist race
+  lost", "Scheduled", with "urgent"), and the answering model and time at the right ("(fallback)"
+  when another model answered). Stellaris puts the directive before the reason ("Kept diplomacy
+  first"). Civ VI's orders show as fate chips, the only pills on the page: ✓ held or completed,
+  ↺ replaced by the AI → what it chose, ✕ refused (the reason in the chip's title), ? no reply,
+  ⋯ in force; one line with "+N" on a desktop, counts per fate on a phone. The outcome line uses
+  the game's outcome keys and unit ("12 turns later: score +17, military −226 ▲ watch"; a drop past
+  the view's `watch` threshold is flagged). A decision whose model calls all failed reads "No
+  decision:" with the cause. *Problems only* keeps errors, refused orders and failed directives.
+- **Reasoning** leads with the decision (Stellaris: the directive; Civ VI: the first sentence of the
+  reason), then labelled pairs (Trigger; Answered by, with the models that failed before it and
+  why, "after Gemini 3.8 Flash was overloaded (503) (×3)"; Took), the orders with their fates and
+  badges (filled by the governor, bought with faith, asked again when research was left idle), the
+  outcome, the model's reason in full, and the trace (what the model was shown, thinking, tool calls
+  with their arguments as pairs, the answer; steps after the first two folded). A failed decision
+  shows the cause and the chain of models tried, the raw error one disclosure away. The reader
+  column is not a scroll box: the page scrolls. Picking another campaign clears it.
 - **Game screen**: the newest frame, fetched only when the run recorded one (governor games such as
   Civ VI record none). The chart's x-axis counts turns for turn-based games; a view whose figures
   the game does not record falls back to the table of the figures it does record.

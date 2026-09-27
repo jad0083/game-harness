@@ -47,9 +47,9 @@ def cause(text) -> str:
     caused = _CAUSED.findall(t) if "caused by" in low else []
     if caused:
         return caused[-1][:160].rstrip(" .")
-    if timed_out and not _first_line(t):
+    if timed_out:
         return "no answer in time (timed out)"
-    return _first_line(t) or "no answer in time (timed out)"
+    return _first_line(t)
 
 
 ERROR_KINDS = ("briefing_error", "episode_error", "recover_probe", "model_fallback")
@@ -73,3 +73,145 @@ def attention(reason: str, category: str, recent, *, date: str = "", auto_recove
     return {"reason": reason[:500], "category": category, "since": round(now, 1), "date": date, "date_now": date,
             "auto_recover": auto_recover, "next_probe_at": next_probe_at, "probes": 0, "errors": causes,
             "raw": raw, "frame": frame}
+
+
+# ---- triggers (ruling 28): war, city threatened, city lost, race lost, milestone missed, gold below
+# the reserve, scheduled; raw ids become names -------------------------------------------------------
+
+_TRIGGERS = [  # (pattern on one urgent reason, category, words; {1} = the first group, named)
+    (r"^city (?:threatened): ([^(]+?)\s*(?:\(|$)", "city threatened", "City threatened: {1}"),
+    (r"^city falling: ([^(]+?)\s*(?:\(|$)", "city threatened", "City falling: {1}"),
+    (r"^city lost: (.+)$", "city lost", "City lost: {1}"),
+    (r"^colony lost\b", "city lost", "Colony lost"),
+    (r"^new war: (.+?)(?: is at war with us| \(we are \w+\))?$", "war", "War: {1}"),
+    (r"^war ended: (.+)$", "war", "Peace: {1}"),
+    (r"^great person race lost: (\S+)", "race lost", "{1} race lost"),
+    (r"^wonder race lost: (\S+)", "race lost", "{1} race lost"),
+    (r"^milestone missed: (\S+)", "milestone missed", "Milestone missed: {1}"),
+    (r"^gold below the reserve\b", "gold below reserve", "Gold below the reserve"),
+    (r"^military fell\b", "military fell", "Military fell"),
+    (r"^falling behind other empires in (\S+)", "falling behind", "Falling behind in {1}"),
+    (r"^(\w+) net turned negative\b", "deficit", "{1} income negative"),
+    (r"^crisis: (.+?) \(", "crisis", "Crisis: {1}"),
+    (r"^new era: (.+)$", "new era", "New era: {1}"),
+    (r"^boxed in\b", "boxed in", "Boxed in"),
+    (r"^off-frame decision\b", "off frame", "Off the strategy's frame"),
+]
+
+
+def trigger(raw, name=None) -> dict:
+    """{category, text, urgent, more}: "urgent: city threatened: Chengdu (2 enemy units near); gold
+    below the reserve: 12 < 30" -> city threatened, "City threatened: Chengdu, and 1 more". `name`
+    turns an id into its name (GREAT_PERSON_CLASS_SCIENTIST -> Great Scientist)."""
+    from .view import fallback_name
+    text = str(raw or "").strip()
+    urgent = text.startswith("urgent:")
+    reasons = [r.strip() for r in text.removeprefix("urgent:").split(";") if r.strip()] if urgent else [text]
+    first = reasons[0] if reasons else ""
+    low = first.lower()
+    if low.startswith("scheduled"):
+        cat, words = "scheduled", "Scheduled"
+    elif low.startswith("start of run"):
+        cat, words = "start", "Start of run"
+    elif low.startswith("human request"):
+        cat, words = "you", "Your request"
+    elif low.startswith("human override"):
+        cat, words = "you", "Your override"
+    else:
+        cat, words = "other", first[:1].upper() + first[1:80]
+        for pattern, c, w in _TRIGGERS:
+            m = re.search(pattern, first, re.IGNORECASE)
+            if m:
+                arg = m.group(1).strip() if m.groups() else ""
+                if re.fullmatch(r"[A-Z][A-Z0-9_]+", arg):
+                    arg = (name(arg) if name else None) or fallback_name(arg)
+                words = w.replace("{1}", arg)
+                words = words[:1].upper() + words[1:]
+                cat = c
+                break
+    more = len(reasons) - 1
+    return {"category": cat, "text": words + (f", and {more} more" if more > 0 else ""), "urgent": urgent,
+            "more": max(0, more), "reasons": reasons}
+
+
+# ---- order fates (ruling 28): the only pills; a symbol and words, never colour alone -------------------
+
+FATES = {  # key: (symbol, word)
+    "held": ("✓", "held"), "replaced": ("↺", "replaced by the AI"), "refused": ("✕", "refused"),
+    "noreply": ("?", "no reply"), "open": ("⋯", "in force"), "gone": ("–", "no longer in force"),
+}
+_RESULT = {"completed": ("held", "completed"), "held": ("held", "held"), "took": ("held", "took"),
+           "overridden": ("replaced", "replaced by the AI"), "did_not_take": ("refused", "did not take"),
+           "refused": ("refused", "refused"), "lost": ("noreply", "no reply"), "unknown": ("noreply", "cannot tell"),
+           "invalidated": ("gone", "no longer available"), "superseded": ("gone", "replaced by our own order")}
+
+
+def fate(apply_outcome, result=None, *, kind: str = "", by: str = "", detail: str = "") -> dict:
+    """An order's fate: {key, symbol, word, why}. `apply_outcome` is what the decision's trace says
+    when the order was sent ("stuck", "refused: …", "unknown: no reply …"); `result` the order
+    record's later outcome, if any (completed, held, overridden, refused, lost, unknown, ...)."""
+    out = str(apply_outcome or "")
+    why = ""
+    if result in _RESULT:
+        key, word = _RESULT[result]
+        if result == "overridden" and by:
+            why = f"the AI chose {by}"
+        elif detail:
+            why = cause(detail)
+    elif out == "stuck":
+        key, word = ("held", "completed") if kind == "purchase" else ("open", "in force")
+    elif out.startswith("refused"):
+        key, word, why = "refused", "refused", re.sub(r"^refused(?: by the game)?:\s*", "", out)
+    elif out.startswith("unknown"):
+        key, word = "noreply", ("no reply" if "no reply" in out else "cannot tell")
+        why = cause(out.removeprefix("unknown:").strip()) if "no reply" in out else ""
+    else:
+        key, word, why = "refused", "did not stick", out
+    return {"key": key, "symbol": FATES[key][0], "word": word, "why": why[:200],
+            "by": by if result == "overridden" else ""}
+
+
+_ORDER_TEXT = re.compile(r"^(?P<kind>research|civic|production|purchase|policies) (?P<id>.+?)(?: in (?P<city>.+?))?"
+                         r"(?: with (?P<currency>gold|faith))?(?: \((?P<note>.*)\))?$")
+
+
+def order_parts(o: dict) -> dict:
+    """kind, id, city, currency of a decision's order: the trace's fields, or (traces written before
+    the order record) parsed from its text ("purchase unit:slinger in Chengdu with faith")."""
+    text = str(o.get("order") or "")
+    m = _ORDER_TEXT.match(text.replace(" (filled by the governor)", ""))
+    parsed = m.groupdict() if m else {}
+    kind = o.get("kind") or parsed.get("kind") or ""
+    ident = o.get("id") or parsed.get("id") or ""
+    if kind == "policies" and not o.get("id"):
+        ident = parsed.get("id") or ""
+    return {"kind": kind, "id": ident, "city": o.get("city") or parsed.get("city") or "",
+            "currency": parsed.get("currency") or ("faith" if " with faith" in text else "gold" if kind == "purchase" else ""),
+            "filled": o.get("by") == "governor" or "(filled by the governor)" in text}
+
+
+_RETRY_MODEL = re.compile(r"model (\S+) answered (\d{3})")
+
+
+def attempts(events: list[dict]) -> list[dict]:
+    """The model calls before an answer, from model_retry and model_fallback events: [{model, cause,
+    times}] in order ("Gemini 3.8 Flash overloaded (503) x3, then 3.7 Flash overloaded")."""
+    out: list[dict] = []
+    for e in events:
+        if e.get("kind") == "model_retry":
+            m = _RETRY_MODEL.search(str(e.get("error") or ""))
+            model, why = (m.group(1), cause(e.get("error"))) if m else ("", cause(e.get("error")))
+        elif e.get("kind") == "model_fallback" and e.get("role", "decisions") == "decisions":
+            model, why = str(e.get("model") or ""), cause(e.get("error"))
+        else:
+            continue
+        last = out[-1] if out else None
+        if last and (last["model"] == model or (not model or model.endswith(":" + last["model"]) or
+                                                 last["model"].endswith(":" + model) or last["model"].endswith(model))) \
+                and last["cause"] == why:
+            last["times"] += 1
+            if ":" in model:
+                last["model"] = model
+        else:
+            out.append({"model": model, "cause": why, "times": 1})
+    return out

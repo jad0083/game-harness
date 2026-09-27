@@ -38,4 +38,5 @@ def test_short_model_label(d, label):
 
 def test_the_decision_row_shows_the_model():
     row = HTML[HTML.index("function renderDecisions"):HTML.index("async function selectDecision")]
-    assert "shortModel(d)" in row
+    who = HTML[HTML.index("function whoAndTime"):HTML.index("function renderDecisions")]
+    assert "whoAndTime(d)" in row and "shortModel(d)" in who

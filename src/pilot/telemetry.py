@@ -197,7 +197,7 @@ class Telemetry:
         if not mets:
             return 0
         scored = 0
-        for d in self.query("SELECT run_id, episode, month FROM decisions WHERE campaign_id=? AND month IS NOT NULL"
+        for d in self.query("SELECT run_id, episode, month, date FROM decisions WHERE campaign_id=? AND month IS NOT NULL"
                             " AND (decision IS NULL OR decision != 'strategy_review')", (campaign_id,)):
             # same run only (a reloaded older save repeats months), and an end point close to the mark
             run = [(m["month"], json.loads(m["data"])) for m in mets if m["run_id"] == d["run_id"]]
@@ -206,7 +206,8 @@ class Telemetry:
             if not start or not end:
                 continue
             delta = {k: round((end.get(k) or 0) - (start.get(k) or 0), 2) for k in SCORED if k in start or k in end}
-            delta["months"] = after_months
+            delta["months"] = after_months       # the window, in the game's unit:
+            delta["unit"] = "turns" if str(d.get("date") or start.get("date") or "").startswith("T") else "months"
             delta["deficits_after"] = sorted(r for r, v in (end.get("net") or {}).items() if v < 0)
             self._exec("UPDATE decisions SET result=? WHERE run_id=? AND episode=?",
                        (json.dumps(delta), d["run_id"], d["episode"]))

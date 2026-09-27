@@ -469,6 +469,13 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   decisions that fell back or failed (`/api/health`); `/api/capture` stores the game screen as the
   run's frame (the live pilot; the viewer forwards); `ControllerCiv6.screenshot` is the
   controller's `screenshot` (read-only). `pc_status` adds the host and a `state`.
+- Decisions on the page (rulings 14, 27, 28, 30): `/api/decisions` and `/api/decision` add
+  `trigger_label` (`wording.trigger`: the category and a few words, raw ids as names), `cause` for a
+  failed decision, `orders` (each trace order by name via `wording.order_parts`, with its fate from
+  `wording.fate`: the apply-time outcome, or the order record's later result when an
+  `order_outcome` row matches the decision's date, kind, id and city), `attempts` and `fallback`
+  (the run's `model_retry` / `model_fallback` events since the previous decision) and
+  `retried_for`. `telemetry.score` labels its window with the game's `unit` (turns or months).
 - `view.py`: each game's dashboard view (`corpora/<game>/dashboard.toml`, validated into one JSON shape
   with defaults; a missing or broken file gives the default view and the error, so the page still
   renders) and `Names` (ids to names from the game's corpus records, `aliases[0]` being the type

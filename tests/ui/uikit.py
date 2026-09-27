@@ -100,9 +100,23 @@ def seed_runs(runs: Path) -> dict:
         log.emit("metrics", **m)
     log.emit("strategy", date="T50", trigger="start of run", model="google:gemini-3.1-pro-preview",
              reason=CIV6_STRATEGY["reason"], strategy={k: v for k, v in CIV6_STRATEGY.items() if k != "reason"})
-    _trace(log, 1, date="T52", trigger="scheduled", decision="orders", outcome="research tech:writing: stuck",
-           reason="Chengdu is under siege; buy a slinger with faith and keep science on Writing.")
-    _trace(log, 2, date="T55", trigger="city threatened (Chengdu)", outcome="error",
+    _trace(log, 1, date="T52", trigger="scheduled (5 turns)", decision="orders", outcome="research tech:writing: stuck",
+           reason="Chengdu is under siege; buy a slinger with faith and keep science on Writing while the walls hold. "
+                  "Germany's army is twice ours near the border, so the second city needs a defender before any builder.",
+           orders=[{"order": "research tech:writing", "outcome": "stuck", "kind": "research", "id": "tech:writing", "city": ""},
+                   {"order": "production unit:slinger in Chengdu", "outcome": "stuck", "kind": "production",
+                    "id": "unit:slinger", "city": "Chengdu"},
+                   {"order": "purchase building:gurdwara in Beijing with faith", "outcome": "refused: 380 faith, over "
+                    "the 283 allowed", "kind": "purchase", "id": "building:gurdwara", "city": "Beijing"},
+                   {"order": "civic civic:foreign_trade", "outcome": "unknown: no reply (TimeoutError: timed out)",
+                    "kind": "civic", "id": "civic:foreign_trade", "city": ""},
+                   {"order": "purchase unit:warrior in Xian", "outcome": "stuck", "kind": "purchase", "id": "unit:warrior",
+                    "city": "Xian"}])
+    log.emit("order_outcome", order_kind="production", key="production replace", id="unit:slinger", city="Chengdu",
+             ordered="T52", result="overridden", by="unit:trader", turns=2, date="T54", turn=54)
+    tel._exec("UPDATE decisions SET result=? WHERE run_id=? AND episode=1",
+              ('{"score": 17, "science": 8.1, "military": -226, "pop": 2, "months": 12, "unit": "turns"}', log.state.run_id))
+    _trace(log, 2, date="T55", trigger="urgent: city threatened: Chengdu (2 enemy units near)", outcome="error",
            error="ModelHTTPError: status_code: 503, model_name: gemini-3.8-flash, body: {'error': {'code': 503, "
                  "'message': 'This model is currently experiencing high demand.'}}")
     info = log.state.info
