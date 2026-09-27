@@ -1,8 +1,8 @@
 {
  "game_version": "1.0.12.68",
  "ruleset": "RULESET_EXPANSION_2",
- "generated_at": "2026-09-27T03:15:26Z",
- "generator": "scripts/extract-civ6.py @ 342da54",
+ "generated_at": "2026-09-27T14:42:34Z",
+ "generator": "scripts/extract-civ6.py @ dab898d",
  "source": "xml-layered",
  "counts": {
   "civ": 50,

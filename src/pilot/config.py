@@ -80,6 +80,10 @@ class Settings:
     # turns per autoplay call: 1 = one turn at a time (urgent checks every turn); more lets the AI
     # carry multi-turn plans (settling, pantheon) without a hand-back each turn (see issues.md)
     autoplay_chunk: int = 3
+    # the scripted last stand for a city about to fall (docs/design/2026-09-27-civ6-levers-design.md,
+    # rulings 22-27): off until the live checklist passes; at most this many stands in a row per city
+    last_stand: bool = False
+    last_stand_max: int = 3
 
     @property
     def corpus_dir(self) -> Path:
@@ -143,6 +147,8 @@ class Settings:
         s.poll_s = float(env.get("PILOT_POLL_S", s.poll_s))
         s.decide_every_turns = int(env.get("PILOT_DECIDE_TURNS", s.decide_every_turns))
         s.autoplay_chunk = max(1, int(env.get("PILOT_AUTOPLAY_CHUNK", s.autoplay_chunk)))
+        s.last_stand = env.get("PILOT_LAST_STAND", "0").strip().lower() in ("1", "true", "yes", "on")
+        s.last_stand_max = max(1, int(env.get("PILOT_LAST_STAND_MAX", s.last_stand_max)))
         s.campaign = env.get("PILOT_CAMPAIGN", s.campaign)
         s.retro_every = int(env.get("PILOT_RETRO_EVERY", s.retro_every))
         if "PILOT_RUNS_DIR" in env:

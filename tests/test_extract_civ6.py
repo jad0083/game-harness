@@ -156,6 +156,42 @@ def test_district_adjacency_is_grouped_and_readable():
     assert "cheaper while you have fewer" in campus["fields"]["cost_progression"]
 
 
+def test_adjacency_rules_are_written_as_data(tmp_path):
+    """Ruling 30: the placement scorer reads the rules, not the prose."""
+    out = tmp_path / "data"
+    assert xc6.main([str(FIX), "--out", str(out), "--game-version", "9.9"]) == 0
+    adj = json.loads((out / "_adjacency.json").read_text())
+    assert adj["District_Adjacencies"] == [
+        {"DistrictType": "DISTRICT_CAMPUS", "YieldChangeId": "District_Science"},
+        {"DistrictType": "DISTRICT_CAMPUS", "YieldChangeId": "Mountains_Science1"},
+        {"DistrictType": "DISTRICT_CAMPUS", "YieldChangeId": "Mountains_Science2"}]
+    rules = {r["ID"]: r for r in adj["Adjacency_YieldChanges"]}
+    assert rules["District_Science"] == {"ID": "District_Science", "Description": "LOC_DISTRICT_DISTRICT_SCIENCE",
+                                         "YieldType": "YIELD_SCIENCE", "YieldChange": 1, "TilesRequired": 2,
+                                         "OtherDistrictAdjacent": 1, "AdjacentResourceClass": "NO_RESOURCECLASS"}
+    assert rules["Mountains_Science1"]["AdjacentTerrain"] == "TERRAIN_GRASS_MOUNTAIN"
+    assert "DISTRICT_CAMPUS" in adj["Districts"]
+    assert not any(f.stem == "_adjacency" for f in out.glob("[a-z]*.json")), "not a record file"
+
+
+def test_committed_adjacency_data_covers_the_specialty_districts():
+    adj = json.loads((REPO / "corpora/civ6/data/_adjacency.json").read_text())
+    by_district: dict[str, set] = {}
+    for r in adj["District_Adjacencies"]:
+        by_district.setdefault(r["DistrictType"], set()).add(r["YieldChangeId"])
+    assert {"Mountains_Science1", "District_Science", "Reef_Science"} <= by_district["DISTRICT_CAMPUS"]
+    assert {"River_Gold", "Harbor_Gold", "District_Gold"} <= by_district["DISTRICT_COMMERCIAL_HUB"]
+    assert {"NaturalWonder_Faith", "Forest_Faith"} <= by_district["DISTRICT_HOLY_SITE"]
+    rules = {r["ID"]: r for r in adj["Adjacency_YieldChanges"]}
+    assert rules["River_Gold"] == {"ID": "River_Gold", "Description": "LOC_DISTRICT_RIVER_GOLD", "YieldType": "YIELD_GOLD",
+                                   "YieldChange": 2, "TilesRequired": 1, "AdjacentRiver": 1,
+                                   "AdjacentResourceClass": "NO_RESOURCECLASS"}
+    assert adj["DistrictReplaces"]["DISTRICT_LAVRA"] == "DISTRICT_HOLY_SITE"
+    assert adj["Districts"]["DISTRICT_HARBOR"]["Coast"] is True
+    assert adj["ResourceClasses"]["RESOURCE_IRON"] == "RESOURCECLASS_STRATEGIC"
+    assert "FEATURE_PAMUKKALE" in adj["NaturalWonders"]
+
+
 def test_main_writes_records_and_meta(tmp_path):
     out = tmp_path / "data"
     assert xc6.main([str(FIX), "--out", str(out), "--game-version", "9.9"]) == 0

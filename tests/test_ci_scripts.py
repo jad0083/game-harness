@@ -28,3 +28,14 @@ def test_rust_sources_corpora_and_ci_itself_need_rust():
 
 def test_no_file_list_means_a_full_run():
     assert needs_rust()
+
+
+def test_ci_runs_the_civ6_lua_library_in_luajit_on_every_run():
+    """pytest skips tests/test_harness_lua.py (lupa is not in the shared .venv), so without this stage
+    a syntax or runtime error in corpora/civ6/lua/harness.lua would pass CI and break every live
+    Civ VI call. The stage must run whatever the commit touches (not only with the Rust stages)."""
+    lines = (REPO / "scripts/ci.sh").read_text(encoding="utf-8").splitlines()
+    runs = [i for i, line in enumerate(lines) if line.strip().startswith("scripts/civ6-lua-check.sh")]
+    assert runs, "scripts/ci.sh does not run scripts/civ6-lua-check.sh"
+    rust_block_end = max(i for i, line in enumerate(lines) if line.strip() == "fi")
+    assert all(i > rust_block_end for i in runs), "the Lua check sits inside a conditional block"

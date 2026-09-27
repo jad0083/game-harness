@@ -1103,6 +1103,34 @@ class Extractor:
             out.append(self.record("district", k, self.name(k), summ, fields))
         return out
 
+    def adjacency_data(self) -> dict:
+        """The district adjacency rules as data, for a placement scorer (levers design, ruling 30):
+        `Adjacency_YieldChanges` and `District_Adjacencies` rows with the game's own column names (NULL,
+        0 and false columns left out), `DistrictReplaces`, each placed district's placement flags, and the
+        facts the rules refer to (resource classes, natural wonder features). Written as
+        `data/_adjacency.json`: not a record file."""
+        def rows(table: str) -> list[dict]:
+            return [dict(r) for r in self.rows(table)]      # sqlite3.Row's `in` tests values, a dict's keys
+
+        def given(r: dict) -> dict:
+            return {k: v for k, v in r.items() if v not in (None, 0, "")}
+        districts = {}
+        for r in rows("Districts"):
+            if r.get("RequiresPlacement", 1):
+                districts[r["DistrictType"]] = {k: True for k in ("Coast", "NoAdjacentCity", "Aqueduct", "AdjacentToLand",
+                                                                  "OnePerCity", "CityCenter") if r.get(k)}
+        return {
+            "Adjacency_YieldChanges": [given(r) for r in sorted(rows("Adjacency_YieldChanges"), key=lambda r: r["ID"])],
+            "District_Adjacencies": [given(r) for r in sorted(rows("District_Adjacencies"),
+                                                              key=lambda r: (r["DistrictType"], r["YieldChangeId"]))],
+            "DistrictReplaces": {r["CivUniqueDistrictType"]: r["ReplacesDistrictType"] for r in rows("DistrictReplaces")},
+            "Districts": dict(sorted(districts.items())),
+            "District_ValidTerrains": [given(r) for r in rows("District_ValidTerrains")],
+            "ResourceClasses": {r["ResourceType"]: r["ResourceClassType"] for r in rows("Resources")
+                                if r.get("ResourceClassType")},
+            "NaturalWonders": sorted(r["FeatureType"] for r in rows("Features") if r.get("NaturalWonder")),
+        }
+
     def improvement(self):
         yc = defaultdict(list)
         for r in self.rows("Improvement_YieldChanges"):
@@ -1665,6 +1693,9 @@ def main(argv: list[str] | None = None) -> int:
         assert not dup, f"duplicate ids in {kind}: {sorted(dup)[:5]}"
         (a.out / f"{kind}.json").write_text(json.dumps(recs, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
         counts[kind] = len(recs)
+    if x.table_exists("Adjacency_YieldChanges"):
+        (a.out / "_adjacency.json").write_text(json.dumps(x.adjacency_data(), ensure_ascii=False, indent=1) + "\n",
+                                               encoding="utf-8")
     if a.db_out:
         if a.db_out.exists():
             a.db_out.unlink()

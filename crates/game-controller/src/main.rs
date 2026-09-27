@@ -212,6 +212,39 @@ enum Civ6Action {
     AutoplayStop,
     /// Whether autoplay is running, its turns and the current turn
     AutoplayStatus,
+    /// Last stand, read-only (GameCore): damage, moves and attacks of every unit within 3 tiles
+    /// of our city (numeric city ID)
+    LsState { city: String },
+    /// Last stand: request one action for our city (InGame): a city strike, a ranged attack on a
+    /// hostile unit, or the retreat of a hurt unit; prints it, or `done`
+    LastStandStep {
+        city: String,
+        /// Authoritative damage from ls-state: {"<owner>:<unit id>": damage}
+        #[arg(long, default_value = "{}")]
+        damage: String,
+        /// Actors already used this turn: city:<id>,unit:<id>,…
+        #[arg(long, default_value = "")]
+        skip: String,
+    },
+    /// Last stand: end the moves of our unit this turn (GameCore), so the AI cannot move it
+    FinishMoves { unit: String },
+    /// Read-only (InGame): our turn, the engine idle and nothing modal on screen
+    TurnReady,
+    /// Read-only (InGame): per city the districts placed, the plots each district it could place may
+    /// use (the game's own check) and the facts of the plots around it, for a placement scorer
+    DistrictPlots {
+        /// One city (numeric ID); all cities when left out
+        #[arg(long)]
+        city: Option<String>,
+    },
+    /// Read-only: one player's rows of the game's AI strategy log (Logs/AI_Victories.csv), one agent
+    /// read from --offset (the previous reply's `next`)
+    AiStrategies {
+        #[arg(long, default_value_t = 0)]
+        offset: u64,
+        #[arg(long, default_value_t = 0)]
+        player: u32,
+    },
     /// Remove the handlers of the popups that hold an autoplay turn (corpora/civ6/popups.toml);
     /// done automatically when the library is installed into InGame
     QuietPopups,
@@ -450,6 +483,34 @@ async fn main() -> Result<()> {
                 std::process::exit(2);
             }
         }
+        Commands::Civ6 { action: action @ (Civ6Action::LsState { .. } | Civ6Action::LastStandStep { .. }
+                                             | Civ6Action::FinishMoves { .. } | Civ6Action::TurnReady) } => {
+            let dir = cli.corpus.clone().unwrap_or_else(|| PathBuf::from("corpora/civ6"));
+            let (state, call) = match &action {
+                Civ6Action::LsState { city } => civ6::ls_state_call(city)?,
+                Civ6Action::LastStandStep { city, damage, skip } => civ6::last_stand_step_call(city, damage, skip)?,
+                Civ6Action::FinishMoves { unit } => civ6::finish_moves_call(unit)?,
+                _ => (civ6::TURN_READY_CALL.0, civ6::TURN_READY_CALL.1.to_string()),
+            };
+            let v = civ6::call(&client, &civ6::Library::load(&dir)?, state, &call).await?;
+            println!("{}", serde_json::to_string(&v)?);
+            if !civ6::reply_ok(&v) {
+                std::process::exit(2);
+            }
+        }
+        Commands::Civ6 { action: Civ6Action::DistrictPlots { city } } => {
+            let dir = cli.corpus.clone().unwrap_or_else(|| PathBuf::from("corpora/civ6"));
+            let (state, call) = civ6::district_plots_call(city.as_deref())?;
+            let v = civ6::call(&client, &civ6::Library::load(&dir)?, state, &call).await?;
+            println!("{}", serde_json::to_string(&v)?);
+            if !civ6::reply_ok(&v) {
+                std::process::exit(2);
+            }
+        }
+        Commands::Civ6 { action: Civ6Action::AiStrategies { offset, player } } => {
+            let (chunk, size) = client.files_read_page(civ6::AI_LOG_ROOT, civ6::AI_LOG_PATH, offset, Some(civ6::AI_LOG_MAX)).await?;
+            println!("{}", serde_json::to_string(&civ6::ai_strategies_reply(&chunk, offset, size, player))?);
+        }
         Commands::Corpus { action } => {
             if let Some(c) = corpus {
                 let lookup = |kind: &str, name: &str| match c.lookup(kind, name) {
@@ -681,4 +742,42 @@ async fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn civ6(args: &[&str]) -> Result<Civ6Action, clap::Error> {
+        let argv = ["game-controller", "civ6"].iter().chain(args).copied();
+        Cli::try_parse_from(argv).map(|c| match c.command {
+            Commands::Civ6 { action } => action,
+            _ => unreachable!(),
+        })
+    }
+
+    #[test]
+    fn the_last_stand_subcommands_parse() {
+        assert!(matches!(civ6(&["ls-state", "65536"]).unwrap(), Civ6Action::LsState { city } if city == "65536"));
+        assert!(matches!(civ6(&["finish-moves", "131073"]).unwrap(), Civ6Action::FinishMoves { unit } if unit == "131073"));
+        assert!(matches!(civ6(&["turn-ready"]).unwrap(), Civ6Action::TurnReady));
+        match civ6(&["last-stand-step", "65536", "--damage", r#"{"63:5":69}"#, "--skip", "city:65536"]).unwrap() {
+            Civ6Action::LastStandStep { city, damage, skip } => {
+                assert_eq!((city.as_str(), damage.as_str(), skip.as_str()), ("65536", r#"{"63:5":69}"#, "city:65536"));
+            }
+            _ => panic!("last-stand-step"),
+        }
+        match civ6(&["last-stand-step", "65536"]).unwrap() {
+            Civ6Action::LastStandStep { damage, skip, .. } => assert_eq!((damage.as_str(), skip.as_str()), ("{}", "")),
+            _ => panic!("defaults"),
+        }
+        assert!(matches!(civ6(&["ai-strategies", "--offset", "9723", "--player", "0"]).unwrap(),
+                         Civ6Action::AiStrategies { offset: 9723, player: 0 }));
+        assert!(matches!(civ6(&["ai-strategies"]).unwrap(), Civ6Action::AiStrategies { offset: 0, player: 0 }));
+        assert!(matches!(civ6(&["district-plots"]).unwrap(), Civ6Action::DistrictPlots { city: None }));
+        assert!(matches!(civ6(&["district-plots", "--city", "65536"]).unwrap(),
+                         Civ6Action::DistrictPlots { city: Some(c) } if c == "65536"));
+        assert!(civ6(&["ls-state"]).is_err(), "a city ID is required");
+        assert!(civ6(&["turn-ready", "extra"]).is_err());
+    }
 }

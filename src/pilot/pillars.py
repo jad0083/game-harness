@@ -23,20 +23,24 @@ ID_LIST_KINDS = ("tech", "civic", "policy", "production", "purchase")
 _ID_LIST_KEYS = {"field", "max_items", "max_orders", "ids_from_corpus", "full_ids", "note"}
 _ACTION_KEYS = {
     **dict.fromkeys(ID_LIST_KINDS, _ID_LIST_KEYS),
-    "purchase": _ID_LIST_KEYS | {"gold_reserve", "faith_reserve", "treasury_share", "threatened_share"},
+    "purchase": _ID_LIST_KEYS | {"gold_reserve", "faith_reserve", "treasury_share", "threatened_share",
+                                 "gold_reserve_per_deficit", "pantheon_reserve", "prophet_faith_reserve",
+                                 "skip_turns_left", "defence_first", "defender_classes", "defence_cooldown_turns"},
     "market": {"field", "max_items", "resources_from_manifest", "amount_min", "amount_max",
                "sell_income_share", "sell_requires_idle", "note"},
 }
 _ACTION_REQUIRED = {**dict.fromkeys(ID_LIST_KINDS, ("max_items", "ids_from_corpus")),
                     "purchase": ("max_items", "ids_from_corpus", "gold_reserve", "treasury_share"),
                     "market": ("max_items", "resources_from_manifest", "amount_max")}
-_TOP_KEYS = {"strategy", "metrics", "pillars", "actions", "weights"}
+_TOP_KEYS = {"strategy", "metrics", "pillars", "actions", "weights", "orders"}
+_ORDERS_KEYS = {"window_turns", "min_resolved", "min_samples", "weak_rate", "open_cap_turns", "open_grace_turns"}
+ORDER_SAMPLE_GROUPS = ("production", "purchase", "other")
 _WEIGHTS_KEYS = {"mode", "min", "max", "spread", "switch_margin", "need", "stall_years", "stall_factor"}
 NEED_STATUSES = ("met", "on_track", "at_risk", "missed")
 _STRATEGY_KEYS = {"min_milestones_top", "min_milestones_each", "min_milestones_first", "min_goals", "min_goals_top",
                   "stance_needs_figure", "metric_aliases", "instructions", "date_format", "identity"}
 DATE_FORMATS = ("calendar", "turns")     # milestone dates: YYYY.MM.DD, or T<turn> (turn-based games)
-_METRICS_KEYS = {"names", "row_keys"}
+_METRICS_KEYS = {"names", "row_keys", "milestone_exclude"}
 _PILLAR_KEYS = {"label", "description", "directive", "actions"}
 _RESERVED_IDS = {"focus", "reason", "pillars"}      # fields of the Strategist's output model
 _ID = re.compile(r"^[a-z][a-z0-9_]*$")
@@ -72,7 +76,16 @@ class ActionLimits:
     gold_reserve: int = 0                # purchase: gold kept back
     faith_reserve: int = 0               # purchase: faith kept back
     treasury_share: float | None = None  # purchase: at most this share of the balance per purchase
-    threatened_share: float | None = None  # ... or this share for a threatened city ("buy at once")
+    threatened_share: float | None = None  # ... or this share for a city in danger ("buy at once")
+    # Civ VI buy-out rules (docs/design/2026-09-27-civ6-levers-design.md, rulings 18-20); the defaults
+    # turn each rule off.
+    gold_reserve_per_deficit: float = 0.0  # the gold reserve grows by this per gold per turn of deficit
+    pantheon_reserve: bool = False       # keep the pantheon's live price in faith until one is founded
+    prophet_faith_reserve: int = 0       # faith kept while a Great Prophet (our religion) is within reach
+    skip_turns_left: int = 0             # never buy what the city finishes within this many turns anyway
+    defence_first: bool = False          # a city in danger with no defender on its tile gets one first
+    defender_classes: tuple[str, ...] = ()   # unit classes (data/unit.json fields.class) that defend a city
+    defence_cooldown_turns: int = 0      # at most one defender purchase per city per this many turns
 
     @property
     def corpus_files(self) -> tuple[str, ...]:
@@ -96,6 +109,22 @@ class WeightsSpec:
 
 
 @dataclass(frozen=True)
+class OrdersSpec:
+    """How the order record judges whether a kind of order sticks (games with orders, e.g. Civ VI;
+    docs/design/2026-09-27-civ6-levers-design.md, rulings 12 and 14). Absent: the record is off."""
+    window_turns: int = 30           # the stick rate looks at orders resolved in the last N turns...
+    min_resolved: int = 8            # ...widened back until it holds this many judged orders of the key
+    min_samples: dict[str, int] = field(default_factory=lambda: {"production": 4, "purchase": 4, "other": 3})
+    weak_rate: float = 0.5           # a rate at or below this (with enough samples): "does not stick here"
+    open_cap_turns: int = 20         # an order is followed at most this long (policies: exactly this long)
+    open_grace_turns: int = 3        # ...and at least its turns left plus this
+
+    def min_samples_of(self, key: str) -> int:
+        group = key.split(" ", 1)[0]
+        return self.min_samples.get(group if group in ("production", "purchase") else "other", 1)
+
+
+@dataclass(frozen=True)
 class PillarSpec:
     game: str
     pillars: dict[str, PillarDef]
@@ -113,6 +142,8 @@ class PillarSpec:
     instructions: str = ""
     date_format: str = "calendar"      # milestone `by`: "calendar" YYYY.MM.DD or "turns" T<turn>
     identity: str = ""                 # the Strategist's `identity` instruction (default: our species)
+    orders: OrdersSpec | None = None   # the order record's settings ([orders]); None: no record
+    milestone_exclude: tuple[str, ...] = ()   # metrics never used as milestones ([metrics] milestone_exclude)
 
     @property
     def ids(self) -> tuple[str, ...]:
@@ -139,12 +170,21 @@ class PillarSpec:
                             "stall_years": w.stall_years, "stall_factor": w.stall_factor},
                 "pillars": [{"id": p.id, "label": p.label, "description": p.description, "directive": p.directive,
                              "actions": list(p.actions)} for p in self.pillars.values()],
-                "date_format": self.date_format,
+                "date_format": self.date_format, "milestone_exclude": list(self.milestone_exclude),
                 "actions": {k: {"field": a.field, "max_items": a.max_items, "resources": list(a.resources),
                                 "amount_min": a.amount_min, "amount_max": a.amount_max, "max_orders": a.max_orders,
                                 "gold_reserve": a.gold_reserve, "faith_reserve": a.faith_reserve,
-                                "treasury_share": a.treasury_share, "threatened_share": a.threatened_share}
-                            for k, a in self.actions.items()}}
+                                "treasury_share": a.treasury_share, "threatened_share": a.threatened_share,
+                                "gold_reserve_per_deficit": a.gold_reserve_per_deficit,
+                                "pantheon_reserve": a.pantheon_reserve, "prophet_faith_reserve": a.prophet_faith_reserve,
+                                "skip_turns_left": a.skip_turns_left, "defence_first": a.defence_first,
+                                "defender_classes": list(a.defender_classes),
+                                "defence_cooldown_turns": a.defence_cooldown_turns}
+                            for k, a in self.actions.items()},
+                "orders": None if self.orders is None else {
+                    "window_turns": self.orders.window_turns, "min_resolved": self.orders.min_resolved,
+                    "min_samples": dict(self.orders.min_samples), "weak_rate": self.orders.weak_rate,
+                    "open_cap_turns": self.orders.open_cap_turns, "open_grace_turns": self.orders.open_grace_turns}}
 
 
 _CACHE: dict[tuple[str, int], PillarSpec] = {}
@@ -275,10 +315,31 @@ def _action(path: Path, corpus: Path, kind: str, t) -> ActionLimits:
         shares[key] = None if v is None else float(v)
     if shares["threatened_share"] is not None and shares["threatened_share"] < (shares["treasury_share"] or 0):
         raise _err(path, f"{where}.threatened_share", "must be at least treasury_share")
+    buyout: dict = {}
+    per = t.get("gold_reserve_per_deficit", 0)
+    if not _num(per) or per < 0:
+        raise _err(path, f"{where}.gold_reserve_per_deficit", "must be a number >= 0")
+    buyout["gold_reserve_per_deficit"] = float(per)
+    for key in ("pantheon_reserve", "defence_first"):
+        v = t.get(key, False)
+        if not isinstance(v, bool):
+            raise _err(path, f"{where}.{key}", "must be true or false")
+        buyout[key] = v
+    for key in ("prophet_faith_reserve", "skip_turns_left", "defence_cooldown_turns"):
+        v = t.get(key, 0)
+        if not _int(v) or v < 0:
+            raise _err(path, f"{where}.{key}", "must be an integer >= 0")
+        buyout[key] = v
+    classes = t.get("defender_classes", [])
+    if not isinstance(classes, list) or not all(isinstance(c, str) and c.strip() for c in classes):
+        raise _err(path, f"{where}.defender_classes", "must be a list of unit classes (data/unit.json fields.class)")
+    if buyout["defence_first"] and not classes:
+        raise _err(path, f"{where}.defender_classes", "defence_first needs the unit classes that defend a city")
+    buyout["defender_classes"] = tuple(c.strip() for c in classes)
     return ActionLimits(kind=kind, field=fld, max_items=t["max_items"], ids_from_corpus=ids, resources=resources,
                         amount_min=lo, amount_max=hi, sell_income_share=None if share is None else float(share),
                         sell_requires_idle=idle, note=note.strip(), max_orders=orders, full_ids=full,
-                        **reserves, **shares)
+                        **reserves, **shares, **buyout)
 
 
 def _num(v) -> bool:
@@ -323,6 +384,34 @@ def _weights(path: Path, t, n: int) -> WeightsSpec:
                        stall_years=float(stall_years), stall_factor=float(stall_factor))
 
 
+def _orders(path: Path, t) -> OrdersSpec:
+    if not isinstance(t, dict):
+        raise _err(path, "orders", "must be a table")
+    _unknown(path, "orders", t, _ORDERS_KEYS)
+    d = OrdersSpec()
+    ints = {}
+    for key, lo in (("window_turns", 1), ("min_resolved", 1), ("open_cap_turns", 1), ("open_grace_turns", 0)):
+        v = t.get(key, getattr(d, key))
+        if not _int(v) or v < lo:
+            raise _err(path, f"orders.{key}", f"must be an integer >= {lo}")
+        ints[key] = v
+    if ints["open_grace_turns"] > ints["open_cap_turns"]:
+        raise _err(path, "orders.open_grace_turns", "must be at most open_cap_turns")
+    rate = t.get("weak_rate", d.weak_rate)
+    if not _num(rate) or not 0 < rate < 1:
+        raise _err(path, "orders.weak_rate", "must be a number in (0, 1)")
+    raw = t.get("min_samples", {})
+    if not isinstance(raw, dict):
+        raise _err(path, "orders.min_samples", "must be a table")
+    _unknown(path, "orders.min_samples", raw, set(ORDER_SAMPLE_GROUPS))
+    samples = dict(d.min_samples)
+    for k, v in raw.items():
+        if not _int(v) or v < 1:
+            raise _err(path, f"orders.min_samples.{k}", "must be an integer >= 1")
+        samples[k] = v
+    return OrdersSpec(min_samples=types.MappingProxyType(samples), weak_rate=float(rate), **ints)
+
+
 def _parse(path: Path, corpus: Path) -> PillarSpec:
     try:
         raw = tomllib.loads(path.read_text(encoding="utf-8"))
@@ -344,6 +433,9 @@ def _parse(path: Path, corpus: Path) -> PillarSpec:
     for k in row_keys:
         if k not in names:
             raise _err(path, f"metrics.row_keys.{k}", "not a metric in metrics.names")
+    exclude = mt.get("milestone_exclude", [])
+    if not isinstance(exclude, list) or not all(isinstance(m, str) and m in names for m in exclude):
+        raise _err(path, "metrics.milestone_exclude", "must be a list of metrics from metrics.names")
     actions = {kind: _action(path, corpus, kind, t) for kind, t in _table(path, raw, "actions").items()}
     pillars_raw = _table(path, raw, "pillars")
     # a game whose pillars rank no directive (share mode, e.g. Civ VI) needs no directives.toml
@@ -400,7 +492,8 @@ def _parse(path: Path, corpus: Path) -> PillarSpec:
     if date_format not in DATE_FORMATS:
         raise _err(path, "strategy.date_format", f"must be one of {', '.join(DATE_FORMATS)}")
     weights = _weights(path, raw.get("weights", {}), len(pillars))
-    return PillarSpec(game=corpus.name, weights=weights, pillars=types.MappingProxyType(pillars), metrics=tuple(names),
+    orders = _orders(path, raw["orders"]) if "orders" in raw else None
+    return PillarSpec(game=corpus.name, weights=weights, orders=orders, milestone_exclude=tuple(exclude), pillars=types.MappingProxyType(pillars), metrics=tuple(names),
                       metric_aliases=types.MappingProxyType(aliases), row_keys=types.MappingProxyType(row_keys),
                       actions=types.MappingProxyType(actions), min_milestones_top=top, stance_needs_figure=figure,
                       instructions=instructions.strip(), date_format=date_format,

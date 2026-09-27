@@ -324,3 +324,79 @@ def test_bad_civ6_limits_are_rejected(tmp_path, old, new, where):
     assert old in CIV_MINI
     with pytest.raises(PillarsError, match=re.escape(where)):
         load_pillars(civ_corpus(tmp_path, CIV_MINI.replace(old, new)))
+
+
+def test_the_civ6_order_record_settings_load_and_stellaris_has_none():
+    orders = load_pillars(REPO / "corpora/civ6").orders
+    assert (orders.window_turns, orders.min_resolved, orders.weak_rate, orders.open_cap_turns,
+            orders.open_grace_turns) == (30, 8, 0.5, 20, 3)
+    assert dict(orders.min_samples) == {"production": 4, "purchase": 4, "other": 3}
+    assert (orders.min_samples_of("production replace"), orders.min_samples_of("purchase faith"),
+            orders.min_samples_of("civic")) == (4, 4, 3)
+    assert load_pillars(REPO / "corpora/stellaris").orders is None, "the record stays off in Stellaris"
+
+
+def test_a_file_without_an_orders_table_has_no_record(tmp_path):
+    assert load_pillars(civ_corpus(tmp_path)).orders is None
+
+
+@pytest.mark.parametrize("table, where", [
+    ("[orders]\nwindow_turns = 0", "orders.window_turns"),
+    ("[orders]\nmin_resolved = 1.5", "orders.min_resolved"),
+    ("[orders]\nweak_rate = 1", "orders.weak_rate"),
+    ("[orders]\nopen_grace_turns = 30", "orders.open_grace_turns"),
+    ("[orders]\nmin_samples = { production = 0 }", "orders.min_samples.production"),
+    ("[orders]\nmin_samples = { tactics = 2 }", "orders.min_samples.tactics"),
+    ("[orders]\nhorizon = 3", "orders.horizon"),
+])
+def test_bad_order_record_settings_are_rejected(tmp_path, table, where):
+    with pytest.raises(PillarsError, match=re.escape(where)):
+        load_pillars(civ_corpus(tmp_path, CIV_MINI + table + "\n"))
+
+
+def test_the_civ6_buy_out_rules_load():
+    spec = load_pillars(REPO / "corpora/civ6")
+    buy = spec.actions["purchase"]
+    assert (buy.gold_reserve, buy.gold_reserve_per_deficit, buy.faith_reserve) == (30, 10.0, 0)
+    assert (buy.pantheon_reserve, buy.prophet_faith_reserve, buy.skip_turns_left) == (True, 0, 2)
+    assert buy.defence_first and buy.defence_cooldown_turns == 5
+    assert buy.defender_classes == ("Melee", "Ranged", "Anti Cavalry", "Light Cavalry", "Heavy Cavalry")
+    assert spec.milestone_exclude == ("gold", "faith")
+    assert "walls" in buy.note.lower() and "cannot be bought" in buy.note
+    stellaris = load_pillars(REPO / "corpora/stellaris")
+    assert stellaris.milestone_exclude == () and "purchase" not in stellaris.actions
+
+
+@pytest.mark.parametrize("line, where", [
+    ("gold_reserve_per_deficit = -1", "actions.purchase.gold_reserve_per_deficit"),
+    ('pantheon_reserve = "yes"', "actions.purchase.pantheon_reserve"),
+    ("prophet_faith_reserve = 1.5", "actions.purchase.prophet_faith_reserve"),
+    ("skip_turns_left = -2", "actions.purchase.skip_turns_left"),
+    ("defence_first = 1", "actions.purchase.defence_first"),
+    ('defender_classes = "Melee"', "actions.purchase.defender_classes"),
+    ("defence_first = true", "actions.purchase.defender_classes"),       # needs the classes
+    ("defence_cooldown_turns = -5", "actions.purchase.defence_cooldown_turns"),
+    ("defence_now = true", "actions.purchase.defence_now"),
+])
+def test_bad_buy_out_rules_are_rejected(tmp_path, line, where):
+    text = CIV_MINI.replace("threatened_share = 0.9\n", f"threatened_share = 0.9\n{line}\n")
+    with pytest.raises(PillarsError, match=re.escape(where)):
+        load_pillars(civ_corpus(tmp_path, text))
+
+
+def test_milestone_exclude_names_known_metrics(tmp_path):
+    ok = CIV_MINI.replace('names = ["cities", "gold"]', 'names = ["cities", "gold"]\nmilestone_exclude = ["gold"]')
+    assert load_pillars(civ_corpus(tmp_path, ok)).milestone_exclude == ("gold",)
+    bad = CIV_MINI.replace('names = ["cities", "gold"]', 'names = ["cities", "gold"]\nmilestone_exclude = ["faith"]')
+    other = tmp_path / "other"          # a fresh file: loads are cached by path and modification time
+    other.mkdir()
+    with pytest.raises(PillarsError, match=re.escape("metrics.milestone_exclude")):
+        load_pillars(civ_corpus(other, bad))
+
+
+def test_the_public_view_shows_every_buy_out_rule_and_the_record_settings():
+    pub = load_pillars(REPO / "corpora/civ6").public()
+    buy = pub["actions"]["purchase"]
+    assert buy["defender_classes"][0] == "Melee" and buy["prophet_faith_reserve"] == 0 and buy["pantheon_reserve"]
+    assert pub["orders"]["window_turns"] == 30 and pub["milestone_exclude"] == ["gold", "faith"]
+    assert load_pillars(REPO / "corpora/stellaris").public()["orders"] is None

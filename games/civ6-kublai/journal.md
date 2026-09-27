@@ -127,6 +127,47 @@ reads, checks and orders only between turns.
   urgent decisions on gold below the reserve (36 < 60), a missed science milestone and threatened
   cities; Slingers ordered in both cities, stuck.
 
+## 2026-09-27 — snapshot defence fields checked live, read-only (T124-T134)
+
+Levers design ruling 11 (`docs/design/2026-09-27-civ6-levers-design.md`), check L1. The live
+governor (from `main`) kept playing; every query ran while it was deciding (the game idle between
+turns). Five tuner queries in all: the snapshot (guard, install of the branch's library, call) and
+two read-only Lua probes. No order, autoplay or state-changing Lua was sent; the live governor
+re-installed its own library at its next call.
+
+- **Snapshot at T124** (8.1 KB, answered in about 1 s): every city has `x`/`y` matching the T61
+  query (Beijing 22,21, Chengdu 24,16, Haarlem 16,21, Xi'an 26,13), `buildings` (Beijing: Monument,
+  Palace, Granary, Shrine; Xi'an: Granary, Walls), `garrison` null in all six cities (no land unit on
+  a city tile), `defense` garrison 200/200 everywhere, walls 0/0 except Xi'an 100/100 (walls built
+  since T61). No city was threatened, so the per-threat lists did not run. `religion`: pantheon
+  Initiation Rites, religion Buddhism, 4 of 4 religions founded, prophet points 34, and a prophet
+  cost of 2147483647 (no Prophet left: now read as null). `blockers_all`: RESEARCH and UNITS —
+  research was idle at T124 (the gap ruling 16 closes).
+- **Probe at T129**: the nearest enemy land unit was an Australian Catapult 4 tiles from Xi'an
+  (bombard 35, range 2, promotion class SIEGE); the City Center's `GetDefenseStrength()` is 28;
+  `GetComponentID()` works on districts; `GetCommandTargets(RANGE_ATTACK)` on walled Xi'an answers
+  (19 plots, 0 targets); Beijing's defenders cost half as much faith as gold (Spearman 260 gold / 130
+  faith); `GetRange()` and `GetAttacksRemaining()` answer for our units.
+- **Probe at T134** (`SimulateAttackVersus` with an enemy as the attacker, Xi'an as the defender):
+  an Archer and a Warrior 4 tiles away previewed 1 damage for every combat type, the Catapult 0
+  (`SimulateAttackInto` gave no defender table for it). The preview's `DAMAGE_TO` is the garrison's
+  share while walls stand, so a 0 preview now counts only with walls up; without walls it falls back
+  to the damage formula.
+- **Autoplay start timeouts**: the live run waited for a human four times (T57, T99, T117, T120),
+  each time after the autoplay call timed out on the tuner and the polls read inactive; each Resume
+  started it at once. The branch sends such a start again, twice, before waiting.
+- **Order record backfill (check L4, offline, read-only)**: `scripts/civ6-backfill-orders.py` over
+  `runs/telemetry.sqlite` (27 decisions of the live run, T43-T134; the scratch runs for T12-T41 are
+  not in it) recovers 15 apply-time outcomes: research refused 2 (tech:writing at T51, as E1 says;
+  an empty id at T117), civic refused 2 (an empty id at T90; civic:feudalism read back as "civic is
+  None" at T134), lost 1 (T73), unknown 1 (T85), policies refused 1 (T134: no free military or
+  wildcard slot), production refused 5 and unknown 1, and two purchases completed (a Warrior for 160
+  gold in Xi'an at T83, a Shrine for faith in Beijing at T104). All five production refusals are
+  Traders: the read-back found Chengdu still on the Pyramids (T104), Guangzhou on an Entertainment
+  Complex (T123), Beijing on a Settler (T129) and Chengdu on nothing (T134); T107 was the repeat
+  refused unchanged. For T43-T61 this matches E1 (the T51 refusal); the rest of E1 (the T35 purchase
+  and lost order) lies in the scratch runs.
+
 ## 2026-09-27 — a wonder movie stalls autoplay (T134)
 
 - **Stall**: the governor stopped with "T134 did not end within 600 s (14 status polls
@@ -149,6 +190,74 @@ reads, checks and orders only between turns.
 - **State at T134**: 6 cities, pop 22, score 186, military 218; gold 0 at +1/turn; faith 358.
   The T134 decision repeated the civic blocker ("civic is None"), asked for Conscription with no
   free military/wildcard slot (refused by the game) and a Trader in Chengdu that did not start.
+
+## 2026-09-27 — the AI's own plan and district placement checked live, read-only (T202-T207)
+
+Levers design, checks L2 and L3 (rulings 29 and 30, stage A). The live governor (from `main`) kept
+playing; each batch of queries started 2 s after it began deciding (the game idle between turns).
+Five tuner queries (the design's budget of 10, with the five above): at T202 an install of the
+branch's library in InGame, the snapshot and `district-plots`; at T207 a second install and one
+guarded call printing `turn_ready` and the built wonders. One agent file read of
+`Logs/AI_Victories.csv`. No order, autoplay or state-changing Lua was sent; the live governor
+re-installed its own library at its next call.
+
+- **L2, the AI's top 3 per city (T202)**: every city has `recommend` (the snapshot is 10.3 KB with
+  six cities). Beijing: Industrial Zone 2966, Kotoku-in 1898, Theater 1421; Chengdu: Industrial
+  Zone 2139, Campus 1868, Holy Site 1814; Haarlem: Aqueduct 1247, Forbidden City 696, Museum
+  (artifact) 606; Jiaodong: Campus 4833 (the district it is building), Industrial Zone 1586,
+  Aqueduct 1515; Guangzhou: Entertainment Complex 2618 (being built), Industrial Zone 2309, Campus
+  1490; Taiyuan: Holy Site 2516 (being built), Theater 1227, Campus 1201. Scores now run 600-4800
+  (about 700 at T73). Most top items are districts not yet placed, which production orders cannot
+  name.
+- **L2, the AI's strategy log**: one read of 13,127 bytes (T1-T202), 21 rows for player 0. The
+  briefing line at T202: "The AI's own plan: Beijing → district:industrial_zone, wonder:kotoku_in,
+  district:theater; … Taiyuan → district:holy_site, district:theater, district:campus; strategies:
+  religious victory (since T6), darkage (since T177), naval (since T115), rapid expansion (since
+  T167, stopped T177), renaissance changes (since T192)." Science victory followed T11-T36, T56-T76
+  and T136-T156. Rapid expansion started at T167 and stopped at T177: 10 turns, a counter-example to
+  vote 2's "every repeat change is 20 or more turns apart" (T1-T77); the option 4 probe should not
+  rely on a fixed 20-turn lock for every strategy. The era strategies keep "Following" once started,
+  so the briefing now shows only the latest.
+- **L3, district plots (T202)**: `district-plots` answered 27 KB in 0.4 s: 216 plots, each city's 37
+  plots within 3 tiles, and `GetOperationTargets(BUILD)` lists for 9-10 districts per city (Beijing
+  13 plots for most, Taiyuan 4, Haarlem none except one plot for an Aqueduct). A wonder stands on a
+  `DISTRICT_WONDER` plot, and the plot names its wonder while it is still being built (Mahabodhi
+  Temple in Beijing, Great Bath in Chengdu): the scorer now counts a wonder only once built (the
+  reply's `built` list, read live at T207: Pyramids) and never as a district.
+- **L3, scored** with the campaign's T171 weights (science 30, military 25, economy 15, culture 10,
+  faith 10, expansion 5, diplomacy 5): best plots such as Taiyuan's Harbor at 28,18 (+4 gold),
+  Jiaodong's Commercial Hub at 21,26 (+4 gold) and Guangzhou's Theater at 20,19 (+3 culture). The
+  AI's seven specialty districts against the free plots each city is offered now: Beijing Holy Site
+  0 (+2 at 23,20), Beijing Campus 3 (best), Chengdu Theater 0 (+2 at 24,17, next to the Pyramids),
+  Haarlem Campus 2 and Theater 1 (best of what is left), Jiaodong Campus 3 (best), Taiyuan Holy
+  Site 0 (+1 at 26,17): a mean gain of +0.71 over all seven, first read as no-go for stage B under
+  the design's criterion (+1 over at least 4 districts). **Corrected at review: go.** Haarlem's two
+  districts had one other plot each to compare with (the Aqueduct's, 4-13 for the others), so their
+  gain of 0 measured a full city, not the AI's choice. With districts that have fewer than 3 other
+  plots left out as not rateable, five are rated at **+1.00: go**, exactly the criterion (re-run
+  offline from the saved reply, `tests/fixtures/civ6_district_plots_t202.json`; no new query).
+  Counting the two unfinished wonders also gave go (+1.14), so the margin is thin either way. Stage
+  B still needs a throwaway save first (ruling 30). Caveats: alternatives are today's free plots,
+  not those free when the AI placed; rules that need a tech or civic are left out; resources are
+  read without our visibility check.
+- **`turn_ready` at T207** (read-only): every check answered (no "cannot check"), and it reported
+  not ready, "on screen: HistoricMoments", while the governor was deciding between turns. The
+  game's `HistoricMoments.lua` (Expansion 2) hides that context at start and shows it as a queued
+  popup for each new historic moment when the UI is idle, so this was most likely a real moment
+  popup left for the human at the hand-back (issues.md: popups pile up during autoplay). The stand
+  fails closed on it (no action, only the hand-back), so as it stands it would rarely act; the L6
+  checklist must measure how often a popup is up at the hand-back and whether closing it first is
+  acceptable (issues.md).
+
+## 2026-09-27 — review fixes on the levers branch (T291)
+
+- One read-only tuner query for the review fixes: a raw `InGame` read of the plot district type and
+  owner around Beijing, sent 2 s after the live governor began its T291 decision (right after a
+  3-turn autoplay stretch), timed out after 20 s; the governor carried on and its own calls
+  answered. What it was to confirm (`Plot:GetDistrictType()` and `Plot:GetOwner()` in `InGame`, used
+  by the last stand's new district filter) is already in the T202 `district-plots` reply, which
+  lists both for every plot, so no second query was sent. The stage-A verdict was re-run offline
+  from that reply (go, see the T202-T207 entry).
 
 ## 2026-09-27 — a leader scene holds the turn (T240)
 
