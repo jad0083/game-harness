@@ -2695,6 +2695,58 @@ def test_an_unmeasured_market_order_is_left_out_and_the_rest_of_the_sync_still_g
     assert '"; not added (start amount not measured): {}"' in rs
 
 
+def test_an_unmeasured_order_at_another_amount_keeps_the_one_in_the_save(setup):
+    """Re-review fix: the save buys alloys 7 and the strategy wants 5. The controller refuses the add
+    and keeps the 7 (it no longer removes it, which left the empire buying none); the governor
+    expects the 7 in the next save and from then on keeps it in what it asks for, matching the
+    unmeasured resource on side and resource, not on the amount."""
+    from pilot.strategy import Pillar
+    s, log = setup
+    alloys5, alloys7 = ({"side": "buy", "resource": "alloys", "amount": a} for a in (5, 7))
+
+    class Controller(FakeStellaris):
+        def market_sync(self, orders):
+            self.actions.append(("market_sync", list(orders)))
+            return ("nothing sent; not added (start amount not measured): buy alloys 5; "
+                    "kept (start amount not measured): buy alloys 7")
+
+    game = Controller([briefing("2200.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[alloys5]))
+    g._carry_out_actions({**briefing("2200.01.01"), "market_orders": [alloys7]})
+    assert game.actions.count(("market_sync", [alloys5])) == 1
+
+    def market_log():
+        return [e["result"] for e in log.recent if e["kind"] == "strategy_action" and e.get("action") == "market"]
+
+    # the next save still buys 7: that is what the controller said, so nothing failed to stick, and
+    # the kept order is asked for as it is (no sync that would remove it)
+    for month in ("2200.02.01", "2200.03.01"):
+        g._carry_out_actions({**briefing(month), "market_orders": [alloys7]})
+    assert not any("did not stick" in r for r in market_log()), market_log()
+    assert not g._market_stuck
+    assert sum(1 for a in game.actions if a[0] == "market_sync") == 1, game.actions
+    assert any("kept buy alloys 7" in r and "start amount not measured" in r for r in market_log()), market_log()
+    # the reply this test fakes is the controller's own wording (stellaris.rs MarketPlan::reply)
+    rs = (REPO / "crates/game-controller/src/stellaris.rs").read_text(encoding="utf-8")
+    assert '"; kept (start amount not measured): {}"' in rs
+
+
+def test_a_kept_sell_must_still_fit_todays_briefing(setup):
+    """A save's order is kept for an unmeasured resource only while it passes the checks the declared
+    order passed: a sell of 50 alloys over the 20% income cap (20) is removed, not kept."""
+    from pilot.strategy import Pillar
+    s, log = setup
+    game = FakeStellaris([briefing("2200.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"],
+                                               market=[{"side": "sell", "resource": "alloys", "amount": 10}]))
+    g._market_unmeasured = {"alloys"}
+    idle_alloys = {**briefing("2200.01.01", net={"alloys": 100.0}), "stockpile": {"alloys": 20000}}
+    g._carry_out_actions({**idle_alloys, "market_orders": [{"side": "sell", "resource": "alloys", "amount": 50}]})
+    assert ("market_sync", []) in game.actions, game.actions
+
+
 def test_sells_that_still_fit_are_synced(setup):
     from pilot.strategy import Pillar
     s, log = setup

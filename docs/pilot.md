@@ -278,7 +278,9 @@ autosave, and checked in a later save: `stellaris_pick_tech` (only in a research
 done) and `stellaris_market_sync` (monthly trades follow the strategy; hand-placed trades are
 removed once a strategy exists; an alloys or sr_* order to add is refused on its own until their
 fractional start amount is measured live: the rest of the sync, removals included, still goes, the
-refused order is not waited for in the next save, and later decisions skip it with that reason).
+refused order is not waited for in the next save, and later decisions skip it with that reason; an
+order of the same side and resource already in the save, e.g. buy alloys 7 when the strategy wants
+5, is kept at its amount rather than removed, while it passes the declared order's checks).
 
 **Your edits.** *Edit* on a pillar changes it and pins it (a review never changes a pinned pillar);
 changing its weight rescales the other unpinned pillars so the total stays 100. *Unpin* hands it

@@ -415,9 +415,11 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   actions `edit_pillar`, `unpin_pillar`, `review_strategy`. Rust: `choose_tech_pick` (only the
   alternatives listed before the current tech, first 4 visible), `market_diff`, `amount_clicks`
   (from the resource's own start amount, `trade_start`: 0.1 x its market amount; `market_plan` refuses
-  each alloys or sr_* add until measured, and the rest of the sync still goes; a missing or
+  each alloys or sr_* add until measured, and the rest of the sync still goes, except the current
+  order of the refused side and resource, which is kept at its amount (`kept`); a missing or
   non-table `new_trade_amount`, a manifest fault, fails the whole sync instead; the governor reads the
-  reply's "not added" list back and skips those resources), `pick_tech`/`sync_market` (paused, foreground-checked, screen always
+  reply's "not added" list back and skips those resources, keeping an order of the same side and
+  resource that the save holds while it passes the declared order's checks), `pick_tech`/`sync_market` (paused, foreground-checked, screen always
   closed), positions in `corpora/stellaris/manifest.toml` `[ui.tech]`/`[ui.market]` (calibrated live
   on 4.5.1). The old free-text plan (`plan` events, `/api/plans`) remains readable history only.
 - `static/dashboard.html`: one file, no build step; SVG charts (palette validated for both themes;

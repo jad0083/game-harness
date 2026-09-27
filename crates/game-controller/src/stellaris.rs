@@ -1986,12 +1986,15 @@ fn amount_clicks(ui: &toml::Table, resource: &str, target: i64) -> Result<(&'sta
 }
 
 /// What one sync does: the orders to add and remove, and the adds refused for want of a measured
-/// start amount (alloys and sr_*). A refusal is per order: removals and the other adds still go.
+/// start amount (alloys and sr_*). A refusal is per order: removals and the other adds still go,
+/// except a current order of the refused side and resource, which is `kept` at its amount (buying
+/// 7 alloys when the strategy wants 5 is closer than buying none).
 #[derive(Debug, Default, PartialEq)]
 struct MarketPlan {
     add: Vec<MarketOrderSpec>,
     remove: Vec<MarketOrderSpec>,
     refused: Vec<MarketOrderSpec>,
+    kept: Vec<MarketOrderSpec>,
 }
 
 impl MarketPlan {
@@ -2001,12 +2004,16 @@ impl MarketPlan {
 
     /// The tool's reply. "not added (start amount not measured): …" lists each refused order as
     /// `side resource amount`; the governor reads that list back (governor.py MARKET_REFUSED_RE).
+    /// "kept (start amount not measured): …" lists the current orders left in place for them.
     fn reply(&self) -> String {
-        let refused = if self.refused.is_empty() {
+        let mut refused = if self.refused.is_empty() {
             String::new()
         } else {
             format!("; not added (start amount not measured): {}", describe_orders(&self.refused))
         };
+        if !self.kept.is_empty() {
+            refused += &format!("; kept (start amount not measured): {}", describe_orders(&self.kept));
+        }
         if self.sends_anything() {
             format!("added {}; removed {}{refused}; the next autosave confirms it", describe_orders(&self.add), describe_orders(&self.remove))
         } else {
@@ -2015,16 +2022,19 @@ impl MarketPlan {
     }
 }
 
-/// `market_diff`, with each add that has no measured start amount moved to `refused`. A sync that
-/// adds anything needs the start-amount table: a broken one is an error for the whole sync.
+/// `market_diff`, with each add that has no measured start amount moved to `refused` and the current
+/// order of its side and resource moved from `remove` to `kept`. A sync that adds anything needs the
+/// start-amount table: a broken one is an error for the whole sync.
 fn market_plan(ui: &toml::Table, current: &[MarketOrderSpec], desired: &[MarketOrderSpec]) -> Result<MarketPlan> {
     let (add, remove) = market_diff(current, desired);
     if add.is_empty() {
-        return Ok(MarketPlan { add, remove, refused: vec![] });
+        return Ok(MarketPlan { add, remove, ..Default::default() });
     }
     let starts = trade_starts(ui)?;
-    let (add, refused) = add.into_iter().partition(|o| measured_start(starts, &o.resource).is_ok());
-    Ok(MarketPlan { add, remove, refused })
+    let (add, refused): (Vec<_>, Vec<_>) = add.into_iter().partition(|o| measured_start(starts, &o.resource).is_ok());
+    // a refused add leaves the current order of its side and resource in place, at its amount
+    let (kept, remove) = remove.into_iter().partition(|c| refused.iter().any(|r| r.side == c.side && r.resource == c.resource));
+    Ok(MarketPlan { add, remove, refused, kept })
 }
 
 /// Screen steps for `remove` and `add`, run after the Market dialog is open (`ui.market`). Kept
@@ -3871,6 +3881,18 @@ country={
         let none = market_plan(&ui, &[order("buy", "food", 5)], &[]).unwrap();
         assert!(none.sends_anything() && none.refused.is_empty());
         assert_eq!(none.reply(), "added none; removed buy food 5; the next autosave confirms it");
+        // the save buys alloys 7 and the strategy wants 5: the add is refused, so the 7 stays until
+        // the start amount is measured (removing it would leave the empire buying none)
+        let plan = market_plan(&ui, &[order("buy", "alloys", 7), order("buy", "food", 5)], &[order("buy", "alloys", 5)]).unwrap();
+        assert!(plan.add.is_empty());
+        assert_eq!(plan.remove, vec![order("buy", "food", 5)]);
+        assert_eq!(plan.refused, vec![order("buy", "alloys", 5)]);
+        assert_eq!(plan.kept, vec![order("buy", "alloys", 7)]);
+        assert_eq!(plan.reply(), "added none; removed buy food 5; not added (start amount not measured): buy alloys 5; \
+                                  kept (start amount not measured): buy alloys 7; the next autosave confirms it");
+        let only = market_plan(&ui, &[order("buy", "alloys", 7)], &[order("buy", "alloys", 5)]).unwrap();
+        assert!(!only.sends_anything());
+        assert_eq!(only.reply(), "nothing sent; not added (start amount not measured): buy alloys 5; kept (start amount not measured): buy alloys 7");
     }
 
     #[test]
