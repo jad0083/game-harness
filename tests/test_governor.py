@@ -3345,3 +3345,66 @@ def test_the_corrective_retry_shows_the_rejected_answer_in_the_output_shape(setu
     assert '"pinned"' not in rejected and "null" not in rejected and '"prefer_techs"' not in rejected.split('"technology"')[0]
     assert not any(e["kind"] == "strategy_rejected" for e in log.recent), "the fixed echo is accepted"
     assert g.strategy.pillars["defence"].milestones[0].target == 12
+
+
+def _viewer_campaign(tmp_path, game: str, strategy: dict | None, pillars: str | None):
+    """A telemetry db with one campaign '<game>/c1' (and a stored strategy), and a corpora dir."""
+    from pilot.telemetry import Telemetry
+    corpora = tmp_path / "corpora"
+    (corpora / game).mkdir(parents=True)
+    if pillars is not None:
+        (corpora / game / "pillars.toml").write_text(pillars, encoding="utf-8")
+        (corpora / game / "directives.toml").write_text("", encoding="utf-8")
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(tmp_path / "runs", "r1", "test:model", telemetry=tel)
+    log.emit("run_start", model="test:model", game=game)
+    log.set_campaign(game, "c1", "Test")
+    log.emit("metrics", date="2200.01.01", systems=3)
+    if strategy is not None:
+        log.emit("strategy", date="2200.01.01", trigger="start of run", model="seed", reason="seed", strategy=strategy)
+    return tel, corpora
+
+
+def _get_strategy(app, cid: str) -> dict:
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    async def go():
+        async with TestClient(TestServer(app)) as c:
+            r = await c.get(f"/api/strategy?campaign={cid}")
+            assert r.status == 200
+            return await r.json()
+    return asyncio.run(go())
+
+
+def test_strategy_api_reports_a_stored_strategy_with_other_pillars(tmp_path):
+    from pilot.dashboard import make_app
+    ms = [{"metric": "systems", "op": ">=", "target": 10, "by": "2230.01.01"}]
+    stored = {"pillars": {"navy": {"priority": 1, "stance": "s", "goals": [], "milestones": ms}}, "focus": "f"}
+    tel, corpora = _viewer_campaign(tmp_path, "civtest", stored, THREE_PILLARS)
+    body = _get_strategy(make_app(None, tmp_path / "runs", tel, corpora=corpora), "civtest/c1")
+    assert body["error"] == "stored strategy does not match the game's pillars; the next review writes a new one"
+    assert body["milestones"] == [] and body["current"]["focus"] == "f"
+
+
+def test_strategy_api_is_quiet_for_a_game_without_pillars_or_strategy(tmp_path):
+    from pilot.dashboard import make_app
+    tel, corpora = _viewer_campaign(tmp_path, "galciv4", None, None)
+    body = _get_strategy(make_app(None, tmp_path / "runs", tel, corpora=corpora), "galciv4/c1")
+    assert body["error"] == "" and body["spec"] is None and body["current"] is None
+
+
+def test_strategy_api_reports_the_live_pilots_pillars_error(setup, tmp_path):
+    from pilot.dashboard import make_app
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    (s.corpus_dir / "pillars.toml").unlink()
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(s.runs_dir, "rl", s.model, telemetry=tel)
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+    log.emit("run_start", model=s.model, game=s.game)
+    log.set_campaign("stellaris", "live", "Test")
+    body = _get_strategy(make_app(g, s.runs_dir, tel), log.campaign_id)
+    assert "pillars.toml: missing" in body["error"] and "strategy layer is off" in body["error"]
+    assert body["spec"] is None, "no spec is served while the live layer is off (edits would fail)"

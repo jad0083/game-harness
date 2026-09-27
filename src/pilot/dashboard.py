@@ -152,18 +152,26 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
     corpora = corpora or (REPO / "corpora")
     live_url = None                  # set for the viewer: finds a live run to refuse a second start
 
-    def campaign_spec(cid: str) -> tuple[PillarSpec | None, str]:
+    def campaign_spec(cid: str, stored: bool = True) -> tuple[PillarSpec | None, str]:
         """The pillars spec of a campaign's game (id '<game>/<name>'), and "" for no error; or
         (None, "pillars: <message>") when the game's pillars file is missing or invalid (logged
         too) — the caller must not silently compute milestone status without it (an empty
         `row_keys` mis-maps every metric that needs row remapping, e.g. Stellaris's `colonies`).
-        The live governor's own spec wins for its game."""
+        The live governor's own spec wins for its game; for its own campaign with the layer off,
+        its error is returned (edits would fail). A game with no pillars file and no `stored`
+        strategy (e.g. galciv4) has no strategy layer at all: (None, "")."""
         from .pillars import PillarsError, load_pillars
         game = cid.split("/", 1)[0]
+        live_game = getattr(getattr(pilot, "s", None), "game", None) == game
         live = getattr(pilot, "pillars", None)
-        if live is not None and getattr(getattr(pilot, "s", None), "game", None) == game:
+        if live is not None and live_game:
             return live, ""
+        live_error = getattr(pilot, "pillars_error", "") if log is not None and cid == log.campaign_id else ""
+        if live_error and isinstance(live_error, str):
+            return None, f"the strategy layer is off: {live_error}"
         if not re.fullmatch(r"[a-z0-9_]+", game):
+            return None, ""
+        if not stored and not (corpora / game / "pillars.toml").exists():
             return None, ""
         try:
             return load_pillars(corpora / game), ""
@@ -237,11 +245,11 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
         pillars spec (labels, directives, actions) for a campaign."""
         from .strategy import Strategy, milestone_status
         cid = request.query.get("campaign") or (log.campaign_id if log else "")
-        spec, error = campaign_spec(cid) if cid else (None, "")
+        cur = await asyncio.to_thread(tel.latest_strategy, cid) if tel is not None and cid else None
+        spec, error = campaign_spec(cid, stored=cur is not None) if cid else (None, "")
         public = spec.public() if spec else None
         if tel is None or not cid:
             return web.json_response({"current": None, "milestones": [], "history": [], "spec": public, "error": error})
-        cur = await asyncio.to_thread(tel.latest_strategy, cid)
         rows = await asyncio.to_thread(tel.metrics_rows, cid)
         hist = await asyncio.to_thread(tel.strategy_history, cid)
         ms: list = []
@@ -250,7 +258,9 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
                 s = Strategy.model_validate({k: v for k, v in cur.items() if k != "reason"})
             except ValueError:
                 s = None    # an older/foreign strategy shape: serve the raw record, no milestone status
-            if s is not None and spec is not None:  # no spec (missing/invalid pillars file): no milestone status,
+            if s is not None and spec is not None and set(s.pillars) != set(spec.ids):
+                error = "stored strategy does not match the game's pillars; the next review writes a new one"
+            elif s is not None and spec is not None:  # no spec (missing/invalid pillars file): no milestone status,
                 today = rows[-1]["date"] if rows else "2200.01.01"   # never guess with empty row_keys
                 for name, pl in s.pillars.items():
                     for m in pl.milestones:
