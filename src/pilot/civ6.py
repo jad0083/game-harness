@@ -1424,7 +1424,9 @@ def diplomacy_answered(s: dict) -> list[dict]:
 def diplomacy_reply_text(e: dict) -> str:
     """What was answered, or why nothing was: "Goodbye (at T14, when autoplay started)"."""
     if not e.get("reply"):
-        return "closed before an answer" if e.get("why") == "gone" else "waiting for the next autoplay"
+        return {"gone": "closed before an answer",
+                "no session": "not answered (its session could not be read)"}.get(e.get("why"),
+                                                                                "waiting for the next autoplay")
     notes = [DIPLOMACY_WHY[e["why"]]] if e.get("why") in DIPLOMACY_WHY else []
     if e.get("why") == "sweep":
         notes = [f"the session our answer left open, closed at T{e.get('at')} when autoplay started"]

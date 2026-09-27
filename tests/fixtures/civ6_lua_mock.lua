@@ -507,7 +507,7 @@ end
 Events = { DiplomacyStatement = event() }
 
 function statement(from, to, kind, sub, sid)
-  MOCK.open[sid] = true
+  if sid ~= nil then MOCK.open[sid] = true end    -- nil: an event without a session id
   local kv = { SessionID = sid, StatementType = key_hash(kind), StatementSubType = key_hash(sub or 'NONE'), FromPlayer = from }
   local fns = {}
   for i, f in ipairs(Events.DiplomacyStatement.fns) do fns[i] = f end

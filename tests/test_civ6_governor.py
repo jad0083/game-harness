@@ -1928,11 +1928,14 @@ def test_the_briefing_names_refusals_failures_and_sessions_closed_before_an_answ
         {"n": 3, "turn": 13, "from": 4, "civ": "CIVILIZATION_ROME", "session": 3, "kind": "OPEN_BORDERS", "sub": "NONE",
          "why": "gone"},
         {"n": 4, "turn": 14, "at": 14, "from": 4, "civ": "CIVILIZATION_ROME", "session": 4, "kind": "NEW_THING",
-         "sub": "NONE", "reply": "EXIT", "why": "unknown"})})
+         "sub": "NONE", "reply": "EXIT", "why": "unknown"},
+        {"n": 5, "turn": 14, "from": 4, "civ": "CIVILIZATION_ROME", "kind": "DENOUNCE", "sub": "NONE",
+         "why": "no session"})})
     assert "civ:rome make deal: refused" in line
     assert "civ:rome denounce: Goodbye (at T14, when autoplay started; failed: the session is gone)" in line
     assert "civ:rome open borders: closed before an answer" in line
     assert "civ:rome new thing: Goodbye (an unknown statement)" in line
+    assert "T14 civ:rome denounce: not answered (its session could not be read)" in line
 
 
 def test_the_briefing_says_goodbye_was_sent_after_a_failed_reply():

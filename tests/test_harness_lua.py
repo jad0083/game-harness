@@ -629,3 +629,26 @@ def test_an_install_without_the_state_header_is_replaced_by_the_next_version():
     rt.execute("MOCK.autoplay = true statement(3, 0, 'WARNING_TOO_MANY_TROOPS_NEAR_ME', 'NONE', 7)")
     assert diplo_calls(rt) == ["response 7 0 POSITIVE"]
     assert snapshot(rt, out)["diplomacy"]["handler"] is True
+
+
+def test_a_statement_without_a_readable_session_is_not_left_waiting():
+    """No SessionID in the event and FindOpenSessionID gives nothing, outside autoplay: there is no
+    session to answer later, so it is logged as such instead of waiting forever."""
+    rt, out = runtime()
+    rt.execute("MOCK.autoplay = false; MOCK.civs = { [3] = 'CIVILIZATION_AUSTRALIA' }; MOCK.find_session = nil")
+    rt.execute("statement(3, 0, 'DENOUNCE', 'NONE', nil)")
+    assert diplo_log(rt, out)[-1]["why"] == "no session"
+    rt.execute("MOCK.autoplay = true")
+    call(rt, out, "Harness.autoplay, 1")
+    assert [e["why"] for e in diplo_log(rt, out)] == ["no session"]
+
+
+def test_a_sweep_retried_after_a_reinstall_is_still_one_entry():
+    rt, out = autoplaying()
+    rt.execute("statement(3, 0, 'MAKE_DEAL', 'NONE', 5) MOCK.dipl_fails = 'close'")
+    call(rt, out, "Harness.autoplay, 1")
+    install(rt, version="next")
+    rt.execute("MOCK.dipl_fails = false")
+    call(rt, out, "Harness.autoplay, 1")
+    sweeps = [e for e in diplo_log(rt, out) if e["why"] == "sweep"]
+    assert len(sweeps) == 1 and "err" not in sweeps[0], sweeps

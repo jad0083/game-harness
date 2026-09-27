@@ -1379,6 +1379,8 @@ local function on_statement(from, to, kv)
     pcall(function() e.civ = PlayerConfigurations[from]:GetCivilizationTypeName() end)
     if AutoplayManager.IsActive() then
       respond(e)
+    elseif e.session == nil then
+      e.why = 'no session'                         -- nothing to answer later: never listed as waiting
     else
       e.why = 'waiting'
       D.wait[e.session] = e
@@ -1386,8 +1388,9 @@ local function on_statement(from, to, kv)
   end)
 end
 
--- The sweep's log entry for each answered session it closes: one per session, even when retried.
-local swept = setmetatable({}, { __mode = 'k' })
+-- The sweep's log entry for each answered session it closes: one per session, even when retried
+-- (kept in D by session id, so it survives a reinstall like the rest of the log).
+D.swept = D.swept or {}
 
 -- When autoplay starts: answer the statements that waited (a follow-up of an answered session, such
 -- as a "Thank you." that came after the hand-back, gets Goodbye as one), then close the sessions
@@ -1408,15 +1411,15 @@ local function dipl_sweep()
   for sid, e in pairs(before) do
     if D.open[sid] == e then
       if DiplomacyManager.IsSessionIDOpen(sid) then
-        local s = swept[e] or add_log({ turn = e.turn, from = e.from, civ = e.civ, session = sid, kind = e.kind,
-                                        sub = e.sub, reply = 'EXIT', why = 'sweep' })
-        swept[e] = s
+        local s = D.swept[sid] or add_log({ turn = e.turn, from = e.from, civ = e.civ, session = sid, kind = e.kind,
+                                            sub = e.sub, reply = 'EXIT', why = 'sweep' })
+        D.swept[sid] = s
         s.at = Game.GetCurrentGameTurn()
         local ok, err = pcall(DiplomacyManager.CloseSession, sid)
         s.err = (not ok) and tostring(err) or nil
-        if ok then D.open[sid] = nil end
+        if ok then D.open[sid], D.swept[sid] = nil, nil end
       else
-        D.open[sid] = nil
+        D.open[sid], D.swept[sid] = nil, nil
       end
     end
   end
