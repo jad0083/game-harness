@@ -160,7 +160,7 @@ class Tracked:
     """An order that took, followed on every snapshot until it resolves (ruling 13)."""
     c: Checked
     row: dict            # the order_outcome row so far (what, where, when ordered)
-    base: dict           # `order_base`: turn, turns left, unit count once it took
+    base: dict           # `order_base`: turn, turns left, unit count or slotted cards once it took
     window: int          # turns it is followed (`order_window`)
 
 
@@ -792,7 +792,8 @@ class Civ6Governor(Governor):
         top3 = t.row.get("top3")
         if result == "overridden" and by and top3 is not None:
             t.row["top3_hit"] = self.index.cid(by) in top3      # ruling 29: did the AI follow its own plan?
-        row = {**t.row, "result": result, "by": self.index.cid(by) if by else None,
+        by = ", ".join(self.index.cid(k) for k in by.split(", ")) if by else None    # policies: several cards
+        row = {**t.row, "result": result, "by": by,
                "turns": (b.get("turn") or 0) - (t.base.get("turn") or 0), "date": b.get("date") or f"T{b.get('turn')}",
                "turn": b.get("turn"), "detail": detail}
         self._resolved.append((row, _describe(t.c.order)))

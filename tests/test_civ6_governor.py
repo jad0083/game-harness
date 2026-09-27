@@ -586,6 +586,34 @@ def test_policies_changed_by_the_ai_are_overridden():
     assert held_outcome(c, base, snap(30, policy_slots=slots, options=no_cards), 20) == ("unknown", None)
 
 
+def test_an_overridden_policy_names_only_the_cards_the_ai_slotted_since_the_order():
+    """Cards already slotted when the order took (Discipline kept beside our God King) are not the
+    AI's replacement; only newly slotted ones are."""
+    from pilot.civ6 import order_base
+    c = Checked(order={"kind": "policies"}, expect={"policies": ["POLICY_GOD_KING"]})
+    took = snap(27, policy_slots=[{"policy": "POLICY_GOD_KING", "slot": 0}, {"policy": "POLICY_DISCIPLINE", "slot": 1}])
+    base = order_base(c, took)
+    assert base == {"turn": 27, "slots": ["POLICY_GOD_KING", "POLICY_DISCIPLINE"]}
+    unlocked = {**FIXTURE["options"], "policies": ["POLICY_GOD_KING"]}
+    swapped = [{"policy": "POLICY_SURVEY", "slot": 0}, {"policy": "POLICY_DISCIPLINE", "slot": 1}]
+    assert held_outcome(c, base, snap(30, policy_slots=swapped, options=unlocked), 20) == ("overridden", "POLICY_SURVEY")
+    emptied = [{"policy": None, "slot": 0}, {"policy": "POLICY_DISCIPLINE", "slot": 1}]
+    assert held_outcome(c, base, snap(30, policy_slots=emptied, options=unlocked), 20) == ("overridden", None)
+    # a row followed from before the order base kept the slots: every other slotted card, as before
+    assert held_outcome(c, {"turn": 27}, snap(30, policy_slots=swapped, options=unlocked), 20) \
+        == ("overridden", "POLICY_DISCIPLINE, POLICY_SURVEY")
+    assert "slots" not in order_base(c, {**took, "policy_slots": None}), "no slots read: nothing to compare with"
+
+
+def test_a_replacement_of_several_cards_is_named_by_corpus_ids(setup):
+    from pilot.civ6_governor import Tracked
+    g = governor(setup, FakeCiv6(FIXTURE, index=INDEX), orders_model([]))
+    c = Checked(order={"kind": "policies", "ids": ["policy:god_king"]}, expect={"policies": ["POLICY_GOD_KING"]})
+    t = Tracked(c, {"key": "policies", "id": "policy:god_king", "ordered": "T27"}, {"turn": 27}, 20)
+    g._resolve(t, "overridden", "POLICY_DISCIPLINE, POLICY_SURVEY", snap(30))
+    assert g._order_rows[-1]["by"] == "policy:discipline, policy:survey"
+
+
 def _rows(key: str, results: list[str], start: int = 10, step: int = 4) -> list[dict]:
     return [{"key": key, "result": r, "turn": start + step * i, "id": "unit:slinger", "by": "building:granary",
              "city": "Beijing", "date": f"T{start + step * i}"} for i, r in enumerate(results)]

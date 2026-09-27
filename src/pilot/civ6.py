@@ -925,10 +925,12 @@ def order_window(kind: str, turns_left, cap: int = 20, grace: int = 3) -> int:
 
 
 def order_base(c: Checked, after: dict) -> dict:
-    """What later snapshots are compared with: the turn, the item's turns left and, for a unit, how
-    many of its type we had once the order took."""
+    """What later snapshots are compared with: the turn, the item's turns left, for a unit how many
+    of its type we had once the order took and, for policies, the cards slotted then."""
     e = c.expect
     base: dict = {"turn": after.get("turn")}
+    if "policies" in e and isinstance(after.get("policy_slots"), list):
+        base["slots"] = [s.get("policy") for s in after["policy_slots"]]
     if "research" in e:
         base["turns_left"] = (after.get("research") or {}).get("turns_left")
     elif "civic" in e:
@@ -976,7 +978,9 @@ def held_outcome(c: Checked, base: dict, now: dict, window: int) -> tuple[str, s
             return "unknown", None                          # an obsolete card swapped out, or the AI's choice
         if not any(k in unlocked for k in missing):
             return "invalidated", None
-        instead = sorted(k for k in slotted if k and k not in e["policies"])
+        # the AI's cards are those slotted since the order took (base "slots"; a row followed from
+        # before it was kept names every other slotted card)
+        instead = sorted(k for k in slotted if k and k not in e["policies"] and k not in (base.get("slots") or []))
         return "overridden", ", ".join(instead) or None
     if "producing" in e:
         key = e["producing"]
