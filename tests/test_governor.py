@@ -4782,6 +4782,23 @@ def test_declared_alloys_buys_during_a_crisis_get_the_crisis_rules(setup):
     assert any(r.startswith("kept buy alloys 8 (9 wanted)") for r in _market_log(log)), _market_log(log)
 
 
+@pytest.mark.parametrize("measured, says", [
+    (False, "buys no alloys (alloys start amount not measured (live check L2))"),
+    (True, "buys 25 alloys a month on the market"),
+])
+def test_the_crisis_line_names_the_alloys_buy_only_when_there_is_one(setup, measured, says):
+    s, log = setup
+    if measured:
+        _alloys_measured(s)
+    seen: list[str] = []
+    game = FakeStellaris([_war_save("2256.01.01"), _war_save("2256.02.01", occupied=True)])
+    Governor(s, game, log, model=_prompts_model(seen, "expand", "keep"), role_models={"strategy": _strategist([])}).run(
+        max_decisions=2)
+    line = next(x for x in seen[1].splitlines() if x.startswith("WAR CRISIS"))
+    assert f"the harness holds defend, {says}, and decides every 3 months" in line, line
+    assert ("market_sync", [{"side": "buy", "resource": "alloys", "amount": 25}]) in game.actions or not measured
+
+
 def _pace_model(holder: dict, at: int, months_: int):
     """Keeps the directive; on its `at`-th decision the human sets the pace to `months_`."""
     calls = {"n": 0}

@@ -400,7 +400,8 @@ ladder at that decision, in order:
 5. the market slot buys alloys (`crisis market buy alloys`) only with a shipyard in a system we hold,
    naval use under 95% (or unknown with under 1,000 alloys), alloys not IDLE, a measured start amount
    (not before live check L2) and the buy rules at the crisis cap, sized to what the cap and the
-   reserve allow (at most 25 until L2);
+   reserve allow (at most 25 until L2); the decision prompt's `WAR CRISIS` line says what this
+   decision's sync buys ("buys 25 alloys a month on the market") or why it buys none;
 6. decisions every 3 months (the earlier pace comes back at the end unless you changed it meanwhile);
 7. a status-quo question in the feed (never blocking; once per war per 12 months) when a colony is
    occupied, systems fell, our war exhaustion is 60% or more and at least theirs, or their side can

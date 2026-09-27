@@ -1298,12 +1298,27 @@ class Governor:
                                           "boost": self._need_boost(), "every_months": self.s.decide_every_months}
                                          if self._crisis_on() else None)
 
-    def _crisis_line(self) -> str:
+    def _crisis_line(self, b: dict) -> str:
         c = self._crisis or {}
         conds = "; ".join(t for _c, t in c.get("conditions") or []) or f"quiet for {c.get('quiet', 0)} saves"
-        return (f"WAR CRISIS since {c.get('since')} ({conds}): the harness holds defend, buys alloys while a shipyard "
-                f"is ours and the buy rules allow, and decides every {CRISIS_PACE} months until every war ends or 6 "
-                "quiet saves pass; your other choices stand.")
+        return (f"WAR CRISIS since {c.get('since')} ({conds}): the harness holds defend, {self._crisis_alloys_text(b)}, "
+                f"and decides every {CRISIS_PACE} months until every war ends or 6 quiet saves pass; your other "
+                "choices stand.")
+
+    def _crisis_alloys_text(self, b: dict) -> str:
+        """What this decision's market sync does for the crisis (step 5), as the prompt states it: the
+        same pure check on the same save, so the model never plans on alloys that are not bought."""
+        if self.pillars is None or "market" not in self.pillars.actions or not self.pillars.owners("market"):
+            return "buys no alloys (no market action in the strategy)"
+        if self.strategy is None:
+            return "buys no alloys (no strategy yet)"
+        try:
+            order, why = crisis_alloys(b, self._prev_save, self.pillars.actions["market"], idle_resources(b),
+                                       self._market_measured - self._market_unmeasured, self._market_suspension,
+                                       placed=self._placed("buy", "alloys", b.get("market_orders") or []))
+        except Exception as e:  # noqa: BLE001 - a malformed save never stops play
+            return f"buys no alloys ({type(e).__name__}: {e})"[:200]
+        return f"buys {order['amount']} alloys a month on the market" if order else f"buys no alloys ({why})"
 
     def _crisis_row(self, step: str, result: str, detail: str, date: str) -> None:
         """A crisis step with nothing to follow, recorded at once: `done`, or `no_op` with why."""
@@ -1689,7 +1704,7 @@ class Governor:
                    if self.pillars else "")
                   or "No strategy yet.",
                   *([f"Market (last sync): {self._market_note}."] if self._market_note else []),
-                  *([self._crisis_line()] if self._crisis_on() else []),
+                  *([self._crisis_line(b)] if self._crisis_on() else []),
                   "Briefing from the latest autosave:", self.last_briefing]
         trend = self._trend(b)
         if trend:
