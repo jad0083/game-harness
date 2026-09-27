@@ -395,8 +395,9 @@ class Governor:
         try:
             self.pillars = load_pillars(settings.corpus_dir)
             self._review_type = review_model(self.pillars)
-        except PillarsError as e:
-            self.pillars_error = str(e)
+        except Exception as e:  # noqa: BLE001 - any failure building the layer (file or schema) turns it off, never the run
+            self.pillars = None
+            self.pillars_error = str(e) if isinstance(e, PillarsError) else f"{type(e).__name__}: {e}"
             log.emit("strategy_disabled", error=self.pillars_error[:500])
         log.state.info["pillars"] = self.pillars.public() if self.pillars else None
         self._unsupported: set[str] = set()       # action kinds already logged as "not supported"
@@ -926,6 +927,10 @@ class Governor:
                 if stored is not None and (self.pillars is None or set(stored.pillars) != set(self.pillars.ids)):
                     if self.pillars is not None:
                         self.log.emit("strategy_mismatch", stored=sorted(stored.pillars), spec=list(self.pillars.ids))
+                        # the next decision point writes a new one, past the 12-month cap (at the start
+                        # of a run, _start's own review runs first and clears this)
+                        self.review_requested = "stored strategy does not match the game's pillars"
+                        self._review_retry = True
                     stored = None
                 self.strategy = stored
             except Exception as e:  # noqa: BLE001

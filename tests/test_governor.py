@@ -3414,3 +3414,40 @@ def test_dashboard_prefixes_only_a_pillars_file_error_as_layer_off():
     html = (REPO / "src/pilot/static/dashboard.html").read_text(encoding="utf-8")
     assert '>Strategy layer off: ${esc(data.error)}<' not in html, "mismatch/live errors are complete messages"
     assert 'data.error.startsWith("pillars: ")' in html
+
+
+def test_a_failing_review_model_turns_the_layer_off(setup, monkeypatch):
+    import pilot.governor as gm
+    s, log = setup
+
+    def boom(spec):
+        raise TypeError("schema build failed")
+    monkeypatch.setattr(gm, "review_model", boom)
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("expand"))
+    assert g.pillars is None and "TypeError: schema build failed" in g.pillars_error
+    off = [e for e in log.recent if e["kind"] == "strategy_disabled"]
+    assert len(off) == 1 and "schema build failed" in off[0]["error"]
+    assert log.state.info["pillars"] is None
+    g.run(max_decisions=1)
+    assert ("directive", "expand") in g.game.actions, "decisions still run"
+
+
+def test_a_mid_run_mismatch_requests_a_review_that_bypasses_the_cap(setup, tmp_path):
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(s.runs_dir, "mm", s.model, telemetry=tel)
+    log.emit("run_start", game="stellaris", model=s.model)
+    calls = []
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": _strategist(calls)})
+    g.strategy = _main_shape_strategy()                        # the run's strategy so far
+    g._last_event_review_month = months("2200.01.01")          # the 12-month cap is closed
+    log.set_campaign("stellaris", "emp_m", "Empire M")
+    log.emit("strategy", date="2199.01.01", trigger="seed", model="seed", reason="seed",
+             strategy={"pillars": {"navy": {"priority": 1, "stance": "s", "goals": []}}, "focus": "f"})
+    g._set_campaign({**briefing("2200.01.01"), "source": "save games/emp_m/x.sav"})
+    assert g.strategy is None and g.review_requested and "match" in g.review_requested
+    assert g._review_retry is True, "the cap-bypass flag is set"
+    assert g._maybe_event_review(briefing("2200.02.01"), g.review_requested, retry=g._review_retry)
+    assert calls == ["strategist"] and set(g.strategy.pillars) == set(STELLARIS.ids)
