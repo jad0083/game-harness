@@ -8,6 +8,7 @@ import json
 import stat
 from contextlib import redirect_stdout
 
+import pytest
 from aiohttp.test_utils import TestClient, TestServer
 
 from pilot import dashboard
@@ -164,3 +165,15 @@ def test_viewer_passes_the_key_to_the_live_pilot(tmp_path):
         await live.close()
     asyncio.run(go())
     log.close()
+
+
+# ---------- run ids ----------
+
+@pytest.mark.parametrize("rid", ["20260926-185855", "run1", "archive_2"])
+def test_run_id_accepts_real_ids(rid):
+    assert dashboard.RUN_ID.match(rid)
+
+
+@pytest.mark.parametrize("rid", ["..", ".", ".hidden", "a/b", "a\\b", "a..b", ""])
+def test_run_id_rejects_traversal(rid):
+    assert not dashboard.RUN_ID.match(rid)

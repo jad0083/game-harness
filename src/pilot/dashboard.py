@@ -53,7 +53,7 @@ STATIC = Path(__file__).parent / "static"
 log_ = logging.getLogger(__name__)
 
 
-RUN_ID = re.compile(r"^[A-Za-z0-9_.-]+$")
+RUN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")    # e.g. 20260926-185855; no dots or separators
 
 KEY_ENV = "PILOT_DASHBOARD_KEY"
 KEY_FILE = "dashboard.key"
