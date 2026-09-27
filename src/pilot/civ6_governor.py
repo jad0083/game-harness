@@ -998,9 +998,12 @@ class Civ6Governor(Governor):
         """The order record at apply time (ruling 13): an order that took (or may have: no reply) ends
         the following of our older order of the same kind and city (superseded); one that took is
         followed from now on, except a purchase, which completed at once; refused and lost orders
-        get their row now."""
+        get their row now. A production order for what the city already builds changes nothing and
+        stays out of the record."""
         o = c.wire or c.order
         situation = order_situation(b, c.expect["producing"], c.expect["city"]) if "producing" in c.expect else None
+        if situation == "current":
+            return          # the city already built it: nothing changed, so nothing to follow or supersede
         row = self._order_row(c, b, situation)
         now = after or b
         if status == "stuck" or status.startswith(UNKNOWN):

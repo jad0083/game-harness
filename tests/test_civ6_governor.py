@@ -655,6 +655,29 @@ def test_a_decision_without_orders_keeps_following_earlier_ones(setup):
     assert "production unit:slinger in Beijing: replaced by the AI with building:monument by T14" in seen[2]
 
 
+def test_ordering_what_the_city_already_builds_changes_nothing_and_stays_out_of_the_record(setup):
+    """Ruling 14 keeps `production fill` (an empty queue, or the AI's item about to finish) apart from
+    `production replace`. Ordering the item the city already builds is neither: it changes nothing,
+    so it is not followed, gets no row, and does not end the following of our earlier order there."""
+    from pilot.civ6 import order_situation
+    archer = {**FIXTURE, "cities": [_city0(producing="UNIT_ARCHER", turns_left=5)]}
+    assert order_situation(archer, "UNIT_ARCHER", "Beijing") == "current"
+    assert order_situation(archer, "UNIT_SLINGER", "Beijing") == "replace"
+    assert order_situation({**FIXTURE, "cities": [_city0(producing=None)]}, "UNIT_ARCHER", "Beijing") == "fill"
+    seen: list[str] = []
+    s, _ = setup
+    s.decide_every_turns = 1
+    slinger = {"kind": "production", "city": "Beijing", "id": "unit:slinger"}
+    game = FakeCiv6(_replace_fixture(), index=INDEX)
+    g = governor(setup, game, orders_model([slinger], [slinger], [], seen=seen))
+    g.run(max_decisions=3)
+    assert [o for o in orders_sent(game)] == [slinger, slinger]
+    assert "production unit:slinger in Beijing: in force at T14 (2 of 7 turns followed)" in seen[2]
+    events = _events(setup)
+    assert len([e for e in events if e["kind"] == "order_followed"]) == 1
+    assert [e for e in events if e["kind"] == "order_outcome"] == [], "no superseded row, no fill row"
+
+
 def test_a_later_run_of_the_campaign_starts_with_its_record(setup, tmp_path):
     from pilot.telemetry import Telemetry
     s, _ = setup

@@ -884,11 +884,14 @@ RECORD_KEYS = ("research", "civic", "policies", "production fill", "production r
 
 
 def order_situation(before: dict, key: str, city_name: str) -> str:
-    """A production order 'fill's the city's queue when it was empty, the AI's item had one turn or
-    less left, or it already built this item; otherwise it 'replace's the AI's choice."""
+    """A production order 'fill's the city's queue when it was empty or the AI's item had one turn or
+    less left (ruling 14); it is 'current' when the city already built this item (a no-op, kept out
+    of the record); otherwise it 'replace's the AI's choice."""
     city = _city(before, city_name) or {}
     now = city.get("producing")
-    if not now or now == key or (city.get("turns_left") is not None and city["turns_left"] <= 1):
+    if now and now == key:
+        return "current"
+    if not now or (city.get("turns_left") is not None and city["turns_left"] <= 1):
         return "fill"
     return "replace"
 
