@@ -926,11 +926,8 @@ class Governor:
                 stored = Strategy.model_validate(raw) if raw else None
                 if stored is not None and (self.pillars is None or set(stored.pillars) != set(self.pillars.ids)):
                     if self.pillars is not None:
+                        # treated as no strategy: _start reviews at once (its only caller)
                         self.log.emit("strategy_mismatch", stored=sorted(stored.pillars), spec=list(self.pillars.ids))
-                        # the next decision point writes a new one, past the 12-month cap (at the start
-                        # of a run, _start's own review runs first and clears this)
-                        self.review_requested = "stored strategy does not match the game's pillars"
-                        self._review_retry = True
                     stored = None
                 self.strategy = stored
             except Exception as e:  # noqa: BLE001

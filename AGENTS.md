@@ -250,6 +250,9 @@ Rules:
 - Directives are only those in `corpora/stellaris/directives.toml` (identifiers `[a-z0-9_]`); a
   new directive needs policy options that exist in the game's `common/policies`.
 - Settings used: autosave Monthly (`settings.txt` `autosave=2`), tutorial off.
+- **Game pillars**: `corpora/stellaris/pillars.toml` defines the strategy's pillars, metrics, aliases
+  and action limits (edit it, not Python, to change them; `tests/test_pillars.py` checks it). A broken
+  file turns the strategy layer off with the reason on the Strategy tab.
 - **Strategy layer**: the governor keeps a pillar strategy (role `strategy`) that ranks the
   directives; decisions choose within it. Two actions go through the game's screens (positions in
   `[ui.tech]`/`[ui.market]` of the manifest, calibrated on 4.5.1): `stellaris_pick_tech` (clicking a

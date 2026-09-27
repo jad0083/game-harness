@@ -295,6 +295,14 @@ just-loaded game) makes the governor play until a fresh one exists. The briefing
 empires against ours (strength ratios, opinion both ways, rival/pact flags), and the prompt adds
 a 12-month trend line (flags alloys piling up while military stays flat). The game is paused whenever the model thinks,
 so any speed is safe. `prepare_war` is applied only after a human "yes" on the dashboard.
+**Game pillars** (`corpora/<game>/pillars.toml`, `src/pilot/pillars.py`): each game defines its strategy
+pillars (label, description, the directive each ranks, the actions it may carry), the milestone metrics
+and their aliases, the action limits and game-specific Strategist notes. Everything below reads it: the
+Strategist's answer has one named field per pillar, validation, ranking, the frame, actions, edits and
+the Strategy tab follow it. A missing or invalid file turns the strategy layer off (decisions as before,
+one `strategy_disabled` event, the reason on the Strategy tab). Stellaris's file reproduces the seven
+pillars below; a new game adds its own file and action tools.
+
 **Strategy layer** (`src/pilot/strategy.py`, `governor.py`): a **Strategist** (model role
 `strategy`; give it a strong reasoning model) keeps one strategy per campaign: seven pillars with a
 unique priority, a stance, goals, measurable milestones (`{metric, op, target, by}`, status computed
