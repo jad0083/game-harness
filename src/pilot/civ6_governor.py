@@ -63,6 +63,15 @@ oversees you. Answer their questions about the game and your decisions plainly a
 briefing numbers. You cannot act in this conversation: orders are only given at decision points. If
 the human wants something done, tell them to use "Decide now" or a standing order on the dashboard."""
 
+def autoplay_turns(snapshot: dict, *, chunk: int, left: int) -> int:
+    """Turns for the next autoplay call: `chunk` in peace (longer calls let the AI finish its
+    multi-turn plans; one-turn calls stalled a Settler and the pantheon live), a single turn at war or
+    with a threatened or besieged city (checks between every turn), never past the decision point."""
+    danger = bool(snapshot.get("wars")) or any(c.get("threatened") or c.get("under_siege")
+                                                for c in snapshot.get("cities", []))
+    return max(1, min(1 if danger else chunk, left))
+
+
 EVENT_TRIGGERS_CIV6 = (*EVENT_TRIGGERS, "city lost", "city threatened", "new era", "race lost")
 
 
@@ -211,7 +220,8 @@ class Civ6Governor(Governor):
             if not self.requests.empty():
                 return last, "request"
             try:
-                self._play_turns(last["turn"], max(1, min(self.s.autoplay_chunk, target - last["turn"])))
+                self._play_turns(last["turn"], autoplay_turns(last, chunk=self.s.autoplay_chunk,
+                                                              left=target - last["turn"]))
                 b = self._snapshot_between_turns()
             except Civ6Stuck as e:
                 self._needs_attention(f"{e}. Check the game (a dialog, a crash, the main menu), then press Resume.")

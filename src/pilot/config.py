@@ -79,7 +79,7 @@ class Settings:
     decide_every_turns: int = 5
     # turns per autoplay call: 1 = one turn at a time (urgent checks every turn); more lets the AI
     # carry multi-turn plans (settling, pantheon) without a hand-back each turn (see issues.md)
-    autoplay_chunk: int = 1
+    autoplay_chunk: int = 3
 
     @property
     def corpus_dir(self) -> Path:

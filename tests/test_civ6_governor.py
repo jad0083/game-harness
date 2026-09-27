@@ -60,7 +60,7 @@ def setup(tmp_path):
     shutil.copytree(REPO / "corpora/civ6/data", corpus / "data")
     s = Settings(model="google:gemini-3.8-flash", runs_dir=tmp_path / "runs", journal=tmp_path / "journal.md",
                  commit_learnings=False, game="civ6", decide_every_turns=3, poll_s=0, retro_every=0,
-                 ask_human_timeout_s=0.05, fallback_model=None)
+                 ask_human_timeout_s=0.05, fallback_model=None, autoplay_chunk=1)
     s.__class__ = type("S", (Settings,), {"corpus_dir": property(lambda self: corpus)})
     return s, EventLog(s.runs_dir, "civ1", s.model)
 
@@ -455,3 +455,18 @@ def test_autoplay_chunks_play_several_turns_per_call(setup):
     g.run(max_decisions=2)
     assert [a[1] for a in game.actions if a[0] == "autoplay"] == [2, 1], "the last chunk stops at the decision turn"
     assert game.state["turn"] == FIXTURE["turn"] + 3
+
+
+def test_autoplay_plays_single_turns_while_in_danger_and_chunks_otherwise():
+    """Ruling (live T27-T41): one-turn autoplay stalled the AI's plans (a Settler 7 turns, the
+    pantheon), so chunks of `autoplay_chunk` (default 3) run in peace, single turns at war or with a
+    threatened city."""
+    from pilot.civ6_governor import autoplay_turns
+    peace = {"wars": [], "cities": [{"threatened": False, "under_siege": False}]}
+    assert autoplay_turns(peace, chunk=3, left=10) == 3
+    assert autoplay_turns(peace, chunk=3, left=2) == 2
+    assert autoplay_turns({**peace, "wars": [{"with": "Rome"}]}, chunk=3, left=10) == 1
+    assert autoplay_turns({"wars": [], "cities": [{"threatened": True}]}, chunk=3, left=10) == 1
+    assert autoplay_turns({"wars": [], "cities": [{"under_siege": True}]}, chunk=3, left=10) == 1
+    from pilot.config import Settings
+    assert Settings().autoplay_chunk == 3
