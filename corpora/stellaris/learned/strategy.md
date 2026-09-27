@@ -473,8 +473,8 @@ Written by the pilot app during play; promote proven items into the main corpus.
 - The `consolidate_economy` directive can successfully eliminate basic resource deficits, such as turning a -14.8/month alloy shortfall into a positive +6.2/month net within a year.  
   _why:_ retrospective 2387.07.01 _(google:gemini-3.8-flash, 2026-09-26)_
 
-- A severe localized amenities deficit (e.g., -399 on a single planet) may persist or worsen even while `consolidate_economy` is active if rapid pop growth outpaces civilian infrastructure construction.  
-  _why:_ retrospective 2387.07.01 _(google:gemini-3.8-flash, 2026-09-26)_
+- A severe localized amenities deficit (e.g., -399 on a single planet) is no reason to hold or return to `consolidate_economy`, with or without fast pop growth: no directive repairs grown-colony amenity deficits (+5 to +14 amenities a planet-year under it). The Planet check line names the colony; under stability 25 it is urgent.  
+  _why:_ corrected 2026-09-27 (levers design ruling 22, E10): the retrospective of 2387.07.01 blamed rapid pop growth for a deficit the directive would otherwise repair
 
 - Leaving `tech_rush` for 12 months to stabilize the economy results in negligible tech growth (+60 tech power, 1 tech known) but allows military and economic power to recover safely.  
   _why:_ retrospective 2387.07.01 _(google:gemini-3.8-flash, 2026-09-26)_
@@ -488,8 +488,8 @@ Written by the pilot app during play; promote proven items into the main corpus.
 - Under 'consolidate_economy' an extreme amenities deficit moved only from -366 to -322 in 3 years (+15 a year): the directive does not repair it, so do not hold it for amenities.  
   _why:_ corrected 2026-09-27 (levers design ruling 22, E10): the retrospective of 2394.01.01 read that as a slow repair
 
-- A massive population size on single planets can cause extreme amenities deficits that resolve very slowly even under a dedicated 'consolidate_economy' directive.  
-  _why:_ retrospective 2394.01.01 _(google:gemini-3.8-flash, 2026-09-26)_
+- Extreme amenities deficits on planets with massive populations are not repaired by 'consolidate_economy', slowly or otherwise: no directive repairs grown-colony amenity deficits (+5 to +14 amenities a planet-year under it, 2 of 63-70 year-long intervals cleared). Do not hold it for them.  
+  _why:_ corrected 2026-09-27 (levers design ruling 22, E10): the retrospective of 2394.01.01 said they resolve very slowly under a dedicated consolidate_economy directive
 
 - If consolidate_economy has been held for several years and a deficit keeps getting deeper (consumer goods went from -19 to -32 a month over 7.5 years) while the stockpile covers more than 100 months, leave the directive: it is not fixing that deficit, and holding it only costs growth.  
   _why:_ retrospective 2398.09.01 _(google:gemini-3.8-flash, 2026-09-26)_
@@ -581,8 +581,8 @@ Written by the pilot app during play; promote proven items into the main corpus.
 - When a crisis power has roughly 50x our military, our own fleet will not decide the outcome, so defend should be judged by systems held (27, unchanged) and by keeping allies and the federation intact, not by closing the military gap.  
   _why:_ retrospective 2443.04.01 _(google:gemini-3.8-flash, 2026-09-26)_
 
-- Twelve months of the 'consolidate_economy' directive is insufficient to resolve extreme planetary amenity deficits (e.g., -666) when the population imbalance is massive.  
-  _why:_ retrospective 2447.04.01 _(google:gemini-3.8-flash, 2026-09-26)_
+- An extreme planetary amenity deficit (e.g., -666) left after a 'consolidate_economy' window does not mean the window was too short or too late: no directive repairs grown-colony amenity deficits (+5 to +14 amenities a planet-year under it, 2 of 63-70 year-long intervals cleared), so a longer or earlier one would not repair it either.  
+  _why:_ corrected 2026-09-27 (levers design ruling 22, E10): the retrospective of 2447.04.01 said twelve months of it were not enough when the population imbalance is massive
 
 - Under the 'defend' directive, military power will stagnate (e.g., +372 in a year) if monthly alloy production is critically low (+6.6/month).  
   _why:_ retrospective 2447.04.01 _(google:gemini-3.8-flash, 2026-09-26)_

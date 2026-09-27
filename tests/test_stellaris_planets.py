@@ -159,6 +159,9 @@ FALSE_CONSOLIDATE_RULES = (
     "is the clearest sign to return to `consolidate_economy` at once",                    # 2383.05
     "can take several years to repair extreme amenities deficits",                        # 2394.01
     "slowly reduces extreme amenities deficits on habitats",                              # 2430.02
+    "may persist or worsen even while `consolidate_economy` is active if rapid pop growth",  # 2387.07
+    "resolve very slowly even under a dedicated 'consolidate_economy' directive",         # 2394.01
+    "Twelve months of the 'consolidate_economy' directive is insufficient",              # 2447.04
     "necessitate 'consolidate_economy' to force the AI to build holistic infrastructure",  # 2436.05
     "When a consolidate_economy spell has fixed the problem it was chosen for (Berykinium",  # review 2215.05
     "requires prioritizing the consolidate_economy directive",                            # review 2247.02

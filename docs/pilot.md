@@ -434,8 +434,9 @@ pops). Each metrics row keeps every colony's pops, amenities, stability and prob
 the estimate of job output lost to stability under 75 (`stability_loss`, percent; the go criterion of
 a later planet lever), so the check survives a restart. The Strategist gets the planet record: per
 directive held, the amenity change per planet-year on colonies with a deficit. No directive repairs
-grown colonies (+5 to +14 amenities a planet-year under consolidate_economy); the 14 learned rules
-that said otherwise were corrected (`test_the_learned_rules_no_longer_credit_consolidate_economy_with_amenity_repairs`
+grown colonies (+5 to +14 amenities a planet-year under consolidate_economy); the 17 learned rules
+that said otherwise, or that only an edge case (fast growth, massive pops, a short window) stopped it,
+were corrected (`test_the_learned_rules_no_longer_credit_consolidate_economy_with_amenity_repairs`
 keeps them out).
 
 **Your edits.** *Edit* on a pillar changes it and pins it (a review never changes a pinned pillar);
