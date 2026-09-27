@@ -201,6 +201,9 @@ enum Civ6Action {
     AutoplayStop,
     /// Whether autoplay is running, its turns and the current turn
     AutoplayStatus,
+    /// Remove the handlers of the popups that hold an autoplay turn (corpora/civ6/popups.toml);
+    /// done automatically when the library is installed into InGame
+    QuietPopups,
 }
 
 #[derive(Subcommand)]
@@ -390,6 +393,16 @@ async fn main() -> Result<()> {
             let v = civ6::call(&client, &civ6::Library::load(&dir)?, civ6::STATE_UI, &civ6::autoplay_call(turns)?).await?;
             println!("{}", serde_json::to_string(&v)?);
             if !civ6::reply_ok(&v) {
+                std::process::exit(2);
+            }
+        }
+        Commands::Civ6 { action: Civ6Action::QuietPopups } => {
+            let dir = cli.corpus.clone().unwrap_or_else(|| PathBuf::from("corpora/civ6"));
+            let lib = civ6::Library::load(&dir)?;
+            let quieted = civ6::quiet_popups(&client, &lib.popups).await;
+            let ok = quieted.iter().all(|l| civ6::quiet_settled(l));
+            println!("{}", serde_json::json!({"ok": ok, "popups_quieted": quieted}));
+            if !ok {
                 std::process::exit(2);
             }
         }

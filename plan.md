@@ -144,6 +144,7 @@
 - [x] Civ VI pillars.toml, hotkeys and screens once the game can be read (tuner relay or saves) and played — pillars.toml in share mode live; hotkeys/screens not needed while the governor plays through the tuner
 - [x] Civ VI governor (spec docs/design/2026-09-26-civ6-governor-design.md): `corpora/civ6/lua/harness.lua` (snapshot, orders, autoplay; checked live), controller `civ6 snapshot|order|autoplay|autoplay-stop|autoplay-status`, `corpora/civ6/pillars.toml` in share mode, `python -m pilot run --game civ6` (first live runs; not yet a service) — deployed 4f6a969, one-turn/3-turn autoplay, review fixes
 - [x] Civ VI governor as a service on mini-rig2 (drop-in `PILOT_GAME=civ6`) with the dashboard following the campaign — running via runs/pilot-settings.json game=civ6 (dashboard Start run offers Civ VI)
+- [ ] Civ VI: engine-locking popups (wonder movies, natural wonders, projects, disasters, rock bands) quieted on every library install (`corpora/civ6/popups.toml`, `civ6 quiet-popups`)
 - [ ] Civ VI district and wonder placement (a tile planner, design option 2), so production orders can name them
 - [ ] Civ VI MCP tools for snapshot, orders and autoplay
 - [x] Dashboard access key: `PILOT_DASHBOARD_KEY` or `runs/dashboard.key`, one link per browser (`python -m pilot dashboard-link`), JSON-only same-origin changes

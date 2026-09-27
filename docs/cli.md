@@ -80,6 +80,7 @@ The compiled controller binary provides full programmatic access to all agent fu
 #     ids are corpus ids, checked against data/ first; exit 2 when the game or the check refuses
 ./target/release/game-controller --corpus corpora/civ6 civ6 autoplay 5         # 1..50 turns by the game's AI
 ./target/release/game-controller --corpus corpora/civ6 civ6 autoplay-status    # / autoplay-stop
+./target/release/game-controller --corpus corpora/civ6 civ6 quiet-popups      # popups.toml handlers removed (also on library install)
 
 # 13. Launch Stdio MCP Server (Claude Code / Gemini / Antigravity)
 ./target/release/game-controller mcp

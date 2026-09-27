@@ -303,6 +303,7 @@ $C civ6 order '{"kind":"production","city":"Beijing","id":"unit:settler"}'
 $C civ6 order '{"kind":"purchase","city":"Beijing","id":"unit:warrior","currency":"gold","max_cost":150}'
 $C civ6 autoplay 5                    # the AI plays 5 turns, then hands the civ back
 $C civ6 autoplay-status               # / autoplay-stop
+$C civ6 quiet-popups                  # remove the engine-locking popup handlers (automatic on library install)
 $C civ6 lua --state InGame "print(Game.GetCurrentGameTurn())"   # raw Lua, for investigation only
 .venv/bin/python -m pilot run --game civ6 --decide-turns 5        # the governor loop (docs/pilot.md)
 ```
@@ -319,6 +320,13 @@ Rules:
   turn at a time and only reads or orders between turns; never repeat an order blindly after a timeout.
 - Tutorial advisor popups hold an autoplay turn forever (seen at T17, cleared by clicking OK):
   `Harness.autoplay` sets `UserConfiguration` `TutorialLevel` to -1 for the session.
+- Wonder movies and four other popups hold the game's engine event until closed
+  (`ExclusivePopupManager:Lock`), so an autoplay turn never ends (T134: 600 s on the Pyramids). Each
+  popup is its own tuner state; `corpora/civ6/popups.toml` lists state, event and handler, and the
+  controller removes those handlers before the first `InGame` call of each load runs (the library's
+  `Harness.popups_quiet` flag; unsettled entries are retried on the next call, and the reply lists
+  the outcomes in `popups_quieted`). A stall that still happens needs the screen: hover + click the
+  popup's X.
 - One-turn autoplay costs the AI its multi-turn plans (a Settler idle for 7 turns, no pantheon; a
   4-turn stretch settled and chose one at once): `PILOT_AUTOPLAY_CHUNK` sets turns per call.
 - Menus, when the screen must be used: the UI ignores a click without a preceding hover (move the

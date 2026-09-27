@@ -1,0 +1,42 @@
+# Popups that hold the game's engine event until someone closes them: they call
+# `ExclusivePopupManager:Lock`, which takes `UI.ReferenceCurrentEvent()`. During autoplay nobody
+# closes them, so the AI's turn never ends and the tuner stays silent (T134 of the Kublai game
+# stalled 600 s on the Pyramids movie). The controller removes each handler in the popup's own Lua
+# state (`Events.<event>.Remove(<handler>)`) before the first `InGame` call of each game load runs
+# (and again on later calls until every entry is settled). We never watch the screen, so the movies
+# are not missed. The file is required; names must be plain Lua identifiers.
+#
+# Read from the game's UI Lua (Civ VI 1.0.12.68 with Gathering Storm): Base/Assets/UI/Popups and
+# DLC/Expansion2/UI/Additions. Left alone: popups that do not lock (tech/civic completed, boosts,
+# era review, dedications, World Congress, emergencies, historic moments) and the Gathering Storm era
+# popup, which locks in single player but unlocks itself when its animation ends.
+
+[[quiet]]
+state = "WonderBuiltPopup"
+event = "WonderCompleted"
+handler = "OnWonderCompleted"
+
+[[quiet]]
+state = "NaturalWonderPopup"
+event = "NaturalWonderRevealed"
+handler = "OnNaturalWonderRevealed"
+
+[[quiet]]
+state = "ProjectBuiltPopup"
+event = "CityProjectCompletedNarrative"
+handler = "OnProjectComplete"
+
+[[quiet]]
+state = "NaturalDisasterPopup"
+event = "RandomEventStarted"
+handler = "OnRandomEventStarted"
+
+[[quiet]]
+state = "NaturalDisasterPopup"
+event = "RandomEventOccurred"
+handler = "OnRandomEventOccurred"
+
+[[quiet]]
+state = "RockBandMoviePopup"
+event = "PostTourismBomb"
+handler = "OnRockBandConcert"
