@@ -586,8 +586,12 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
                         ms.append({"pillar": name, **m.model_dump(),
                                   "status": milestone_status(m, rows, today, spec.row_keys)})
                 press = pressures(s, spec, lambda _n, m: milestone_status(m, rows, today, spec.row_keys) if rows else "",
-                                  record_of=lambda name, metric: (directive_record(rows, d, metric, spec.row_keys)
+                                  record_of=lambda name, metric: (directive_record(rows, d, metric, spec.row_keys, spec.peer_keys)
                                                                   if (d := spec.directive_of(name)) and rows else None))
+                crisis = (log.state.info.get("crisis") or {}) if log is not None and cid == log.campaign_id else {}
+                if crisis.get("active"):     # the live governor's war crisis boost, as its frame has it
+                    from .stellaris_crisis import boost_pressures
+                    boost_pressures(press, spec, crisis.get("boost") or {})
             if s is not None:   # weights as the governor sees them (a ranked strategy converts on load)
                 cur = {**s.model_dump(), "reason": cur.get("reason", "")}
         ids = {i for pl in ((cur or {}).get("pillars") or {}).values() if isinstance(pl, dict)

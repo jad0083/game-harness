@@ -8,16 +8,21 @@ one standing directive. The game is paused while the model decides, so any game 
 
 from __future__ import annotations
 
+import copy
+import hashlib
 import html
 import json
+import os
 import queue
 import re
 import statistics
 import threading
 import time
+import tomllib
 from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass, replace
+from pathlib import Path
 from typing import ClassVar, Literal, Protocol
 
 from pydantic import BaseModel, Field
@@ -31,7 +36,36 @@ from .claude_code import resolve_model
 from .config import Settings
 from .events import EventLog
 from .learning import Journal, LearnedStore, LearningRejected
-from .pillars import ACTION_KINDS, PillarsError, PillarSpec, load_pillars
+from .pillars import ACTION_KINDS, OrdersSpec, PillarsError, PillarSpec, load_pillars, load_postures
+from .stellaris_crisis import CRISIS_PACE, POSTURE_GAP_MONTHS, boost_pressures, crisis_alloys, crisis_step, status_quo
+from .stellaris_market import buy_errors, idle_fill, keep_placed, price_note
+from .stellaris_planets import (
+    colony_row,
+    low_stability,
+    planet_issues,
+    planet_line,
+    planet_record,
+    planet_record_text,
+    planet_urgent,
+    stability_loss,
+)
+from .stellaris_record import (
+    NO_OP_PREFIX,
+    OPEN,
+    action_record,
+    action_record_text,
+    crisis_action,
+    directive_action,
+    judge,
+    market_action,
+    market_suspended,
+    outcome_row,
+    parse_directive_reply,
+    posture_action,
+    review_outcome,
+    supersede,
+    tech_action,
+)
 from .strategy import (
     Strategy,
     apply_aliases,
@@ -63,6 +97,10 @@ NEEDS_HUMAN = {"prepare_war"}      # strategy.md: only after the human confirmed
 # no strategy exists yet, bypasses that cap.
 EVENT_TRIGGERS = ("new war", "war ended", "crisis", "colony lost", "boxed in", "milestone missed",
                   "off-frame", "military fell")
+# Stellaris's own (levers design): the planet check's urgent reasons (ruling 22) and the war crisis's
+# entry and exit (rulings 12, 14). EVENT_TRIGGERS stays as it is, since Civ VI spreads it into its own
+# tuple.
+STELLARIS_TRIGGERS = (*EVENT_TRIGGERS, "planet crisis", "planet losing pops", "war going badly", "war crisis over")
 
 # The tool's own reply names the tech it actually picked ("picked <id> in <field>", or "clicked
 # <id> in <field> (option n); unverified until the next autosave …"); a reply that matches neither
@@ -73,6 +111,42 @@ TECH_PICK_RE = re.compile(r"^(?:picked|clicked) (\S+) in (\w+)")
 # removals and the other adds went ahead, except a current order of a refused side and resource,
 # which it kept at its amount ("kept (start amount not measured): buy alloys 7"; see _kept_for).
 MARKET_REFUSED_RE = re.compile(r"not added \(start amount not measured\): ([^;]+)")
+
+# The action record (docs/design/2026-09-27-stellaris-levers-design.md, rulings 2-6): heading of its
+# section in the decision prompt and the Strategist's review.
+ACTION_RECORD_HEADING = ("Action record in this campaign (each directive, tech pick, market order and posture followed in "
+                         "the saves until it resolves):")
+
+
+def _market_table(corpus_dir: Path) -> dict:
+    """The `[ui.market]` table the controller clicks with: the manifest's, and `res/<W>x<H>.toml`'s under
+    GAME_RESOLUTION ({} when unreadable)."""
+    table: dict = {}
+    try:
+        table = dict(tomllib.loads((Path(corpus_dir) / "manifest.toml").read_text(encoding="utf-8"))
+                     .get("ui", {}).get("market") or {})
+        res = os.environ.get("GAME_RESOLUTION", "").strip()
+        over = Path(corpus_dir) / "res" / f"{res}.toml"
+        if res and over.exists():
+            table.update((tomllib.loads(over.read_text(encoding="utf-8")).get("ui") or {}).get("market") or {})
+    except (OSError, ValueError, AttributeError):
+        pass
+    return table
+
+
+def market_calibration(corpus_dir: Path) -> str:
+    """A hash of the `[ui.market]` positions the controller clicks with: a market suspension holds only
+    while it is the same (ruling 6), so a recalibration commit lifts it."""
+    return hashlib.sha256(json.dumps(_market_table(corpus_dir), sort_keys=True, default=str).encode()).hexdigest()[:12]
+
+
+def market_measured(corpus_dir: Path) -> set[str]:
+    """Resources whose new monthly trade has a measured start amount (`new_trade_amount` in `[ui.market]`):
+    the controller refuses to add the others (alloys and sr_* until live check L2), so the idle-trade
+    fill never picks them."""
+    start = _market_table(corpus_dir).get("new_trade_amount")
+    return set(start) if isinstance(start, dict) else set()
+
 
 # Action kind -> the game method that carries it out. A game whose object lacks the method has no
 # hook for that kind: a pillar declaring it is logged "not supported" once and skipped.
@@ -143,6 +217,7 @@ class StellarisGame(Protocol):
     def take_control(self) -> str: ...
     def pick_tech(self, prefer: list[str]) -> str: ...
     def market_sync(self, orders: list[dict]) -> str: ...
+    def posture(self, name: str, on: bool) -> str: ...
     def screenshot(self): ...
     def corpus(self, tool: str, **args) -> str: ...
     def close(self) -> None: ...
@@ -226,6 +301,29 @@ def trends(old: dict | None, now: dict) -> str:
     return line
 
 
+EXPAND_BLOCKED = "expand cannot claim here: no surveyed room; influence is not the limit"
+
+
+def expand_blocked(rows: list[dict]) -> str:
+    """EXPAND_BLOCKED when the newest metrics row counts unclaimed systems within 2 jumps (`room` > 0)
+    but none surveyed (`room_surveyed` 0) and the influence stock stayed at 950 or more through the
+    last 12 months, else "" (levers design ruling 7, E12: Gaea held expand 41 years at the influence
+    cap with 8-14 unclaimed systems in reach and at most 1 surveyed; the stall rule saw only "slow").
+    A boxed-in empire (`room` 0: nothing to survey either; "boxed in" is its own urgent reason) gets
+    no hint. Rows oldest first; a row without the fields (older telemetry) gives none."""
+    dated = [r for r in rows if r.get("date")]
+    if not dated or dated[-1].get("room_surveyed") != 0 or not (dated[-1].get("room") or 0) > 0:
+        return ""
+    now = months(dated[-1]["date"])
+    if not any(now - months(r["date"]) >= 12 for r in dated):
+        return ""
+    year = [r for r in dated if now - months(r["date"]) <= 12]
+    influence = [(r.get("stockpile") or {}).get("influence") for r in year]
+    if all(isinstance(v, (int, float)) and v >= 950 for v in influence):
+        return EXPAND_BLOCKED
+    return ""
+
+
 def _num(v) -> str:
     """Readable number for reasons: 405.92577500000004 -> '406', 1.0 -> '1', 12.34 -> '12.3'."""
     if not isinstance(v, (int, float)):
@@ -306,8 +404,8 @@ def frame_text(strategy: Strategy | None, spec: PillarSpec, milestones: str, pre
         text = f"{pillar} {p['weight']} x {status} {p['need']:g}"
         if p.get("efficacy", 1.0) < 1.0:
             r = p["record"]
-            text += (f" x not working here {p['efficacy']:g}: {r['metric']} {r['held_rate']:+g}/yr over "
-                     f"{r['held_years']:g} y held vs {r['other_rate']:+g}/yr otherwise")
+            text += (f" x not working here {p['efficacy']:g}: {r['metric']}{' ÷ median' if r.get('relative') else ''} "
+                     f"{r['held_rate']:+g}/yr over {r['held_years']:g} y held vs {r['other_rate']:+g}/yr otherwise")
         return text
     if spec.weights.mode == "share":
         sh = shares(press)
@@ -318,6 +416,9 @@ def frame_text(strategy: Strategy | None, spec: PillarSpec, milestones: str, pre
                      + " > ".join(f"{d} {p:g} ({why(pl)})" for d, p, pl in ranked))
         sug = suggestion(ranked, current, spec.weights.switch_margin)
         lines.append(f"Suggested: {'keep ' + current if sug == 'keep' and current else sug}")
+    for name, p in press.items():
+        if p.get("hint"):       # e.g. expand blocked by unsurveyed space (levers ruling 7)
+            lines.append(p["hint"])
     for name, pl in strategy.sorted_pillars():
         lines.append(f"{name} (weight {pl.weight}{', pinned by the human' if pl.pinned else ''}): {pl.stance}")
     at_risk = [m for m in milestones.splitlines() if m.endswith(("at_risk", "missed"))]
@@ -418,7 +519,8 @@ something done, tell them to use "Decide now", a standing order, or an override 
 
 
 class Governor:
-    event_triggers: ClassVar[tuple[str, ...]] = EVENT_TRIGGERS    # urgent reasons that start a strategy review
+    event_triggers: ClassVar[tuple[str, ...]] = STELLARIS_TRIGGERS    # urgent reasons that start a strategy review
+    rows_months: ClassVar[int] = 24                # metrics rows kept in memory (planet check, war crisis)
     human_paused: bool = False       # paused from the dashboard: only the human's Resume ends it
     # date-stall watchdog (Stellaris; levers design ruling 23): the autosave date unchanged for
     # max(stall_floor_s, 10 x the median real seconds per month of this run's last stall_months)
@@ -471,12 +573,34 @@ class Governor:
         self._review_retry: bool = False          # review_requested was set by a failed review call (bypasses the cap)
         self._decision_military: float | None = None   # military_power as of the last decision (military-fell baseline)
         self._tech_misses: dict[str, int] = {}    # tech id -> misses this review (>=1: not retried until the next)
-        self._pending_pick: str | None = None     # a tech picked last time, watched for whether it stuck
         self._tech_sync_date: str | None = None   # briefing date of the last pick_tech attempt (at most one per date)
         self._market_sync_date: str | None = None  # briefing date of the last market_sync attempt (ditto)
-        self._pending_market: list[dict] | None = None   # orders last synced, watched for whether they stuck
-        self._market_stuck: bool = False          # a sync did not stick: no retry until the next review
         self._market_unmeasured: set[str] = set()   # resources the controller refused to add (no measured start)
+        # the action record (levers design rulings 2-6): every directive, tech pick, market order and
+        # posture sent is followed on each new save until it resolves into an order_outcome row
+        self._actions: list[dict] = []            # sent, not resolved yet (stellaris_record action dicts)
+        self._action_rows: list[dict] = []        # every order_outcome row of the campaign
+        self._followed_date: str | None = None    # the save date the actions were last judged on
+        self._now_date: str | None = None
+        self._tech_noops = 0                      # "nothing to pick" replies since the last answered review
+        self._review_noops = 0                    # ...as of the review being written (and its corrective retry)
+        self._market_cal = market_calibration(settings.corpus_dir)   # [ui.market] hash (market suspension)
+        self._market_measured = market_measured(settings.corpus_dir)  # new trades with a measured start amount
+        self._market_note = ""                    # the last sync's idle-trade line, for the next decision
+        self._prev_save: dict | None = None       # the save before the newest one followed (the AI's own buys)
+        self._last_save: dict | None = None
+        # the campaign's recent metrics rows, oldest first (seeded from telemetry at the campaign's start):
+        # the planet check reads each colony's earlier problems from them (ruling 22)
+        self._rows: list[dict] = []
+        self._observed: dict | None = None        # the newest save's metrics row
+        self._observed_b: dict | None = None      # ...and the save itself (the previous one for the next)
+        self._planet_line = ""                    # the planet check's line for the newest save
+        # the war crisis overlay (rulings 12-16): its state (stellaris_crisis.crisis_step, plus the
+        # ladder's pace_prior / pace_human / posture_on / posture_month / asked) and the ladder still to
+        # run at the next decision: "enter", "exit" or None
+        self._crisis: dict | None = None
+        self._crisis_pending: str | None = None
+        self._crisis_saved: dict | None = None    # the state as the last `crisis` event wrote it
         self._since_retro = 0
         self._strategy_trace_n = 0                # negative episode ids for strategy review traces (see _review_strategy)
         self._clock: Callable[[], float] = time.monotonic   # the watchdog's wall clock (tests inject one)
@@ -716,6 +840,8 @@ class Governor:
         self.s = replace(self.s, decide_every_months=months)
         self.log.state.info["every_months"] = months
         self.log.emit("pace", every_months=months)
+        if self._crisis_on():
+            self._crisis["pace_human"] = True      # kept when the crisis ends (ruling 13, step 6)
 
     def override(self, directive: str) -> None:
         """Apply a directive chosen by the human (recorded as a human decision)."""
@@ -1015,16 +1141,22 @@ class Governor:
         return b
 
     def _override(self, b: dict, directive: str) -> None:
+        if self._crisis_on():
+            self._crisis["human_directive"] = directive     # the human's choice stands for this crisis
+            self._save_crisis_state(b["date"])              # ...also after a restart
         self.log.state.episodes += 1
         n = self.log.state.episodes
         current = current_directive(b)
+        self._follow(b)
         try:
-            self.game.directive(directive)
+            reply = self.game.directive(directive)
             outcome = "applied"
             self.last_change = months(b["date"])
             self.log.state.info["directive"] = directive
+            self._directive_sent(directive, reply, b)
         except Exception as e:  # noqa: BLE001
             outcome = f"FAILED: {e}"[:200]
+            self._directive_failed(directive, e, b)
         reason = "Directive chosen by the human on the dashboard."
         self.log.state.last_decision = f"{b['date']}: {directive} ({outcome}) — human override"
         self.log.emit("episode", situation="human override", decision=f"{directive}: {reason}", date=b["date"],
@@ -1046,6 +1178,9 @@ class Governor:
         name = self.s.campaign or self._folder or (b.get("name") or "unknown").replace(" ", "_").lower()
         self.log.set_campaign(self.s.game, name, b.get("name") or "")
         self._load_campaign_state()
+        self._load_action_record()
+        self._load_rows()
+        self._load_crisis()
 
     def _load_campaign_state(self) -> None:
         """Standing orders, plan and strategy saved for the campaign just named."""
@@ -1074,6 +1209,360 @@ class Governor:
                 self.log.emit("briefing_error", error=f"loading the strategy: {e}"[:200])
         self.log.state.info["plan"] = self.plan
         self.log.state.info["strategy"] = self.strategy.model_dump() if self.strategy else None
+
+    def _load_rows(self) -> None:
+        """The campaign's last `rows_months` of metrics rows from telemetry (earlier runs), so the planet
+        check carries on across a restart. Advisory: a failed read starts from none."""
+        self._rows, self._observed = [], None
+        tel, cid = self.log.telemetry, self.log.campaign_id
+        if tel is None or not cid:
+            return
+        try:
+            rows = [r for r in tel.metrics_rows(cid) if r.get("date") and str(r["date"])[:1] != "T"]
+        except Exception as e:  # noqa: BLE001 - advisory
+            self.log.emit("briefing_error", error=f"loading the metrics rows: {e}"[:200])
+            return
+        if rows:
+            last = months(rows[-1]["date"])
+            self._rows = [r for r in rows if last - months(r["date"]) <= self.rows_months]
+
+    def _observe(self, b: dict) -> tuple[dict, list[str]]:
+        """Once per save date: the save's metrics row (with each colony's problems and the stability-loss
+        estimate), kept in `_rows`, and the urgent reasons of the planet check's transitions (ruling 22).
+        Returns (row, urgent reasons); a save already seen returns its row and no reasons. Advisory: a
+        malformed save gives the plain row."""
+        date = str(b.get("date") or "")
+        if self._observed is not None and self._observed.get("date") == date:
+            return self._observed, []
+        row, urgent = metrics(b), []
+        if date and date[:1] != "T":
+            before = [r for r in self._rows if months(r["date"]) < months(date)]
+            try:
+                row["colonies"] = colony_row(b, before)
+                row["stability_loss"] = stability_loss(b)
+                urgent = planet_urgent(b, before)
+                self._planet_line = planet_line(planet_issues(b, before))
+            except Exception as e:  # noqa: BLE001 - the check is advisory
+                self.log.emit("briefing_error", error=f"planet check: {type(e).__name__}: {e}"[:200])
+            try:
+                urgent += self._crisis_update(b, before, low_stability(b, before))
+            except Exception as e:  # noqa: BLE001 - a malformed save never stops play
+                self.log.emit("briefing_error", error=f"war crisis: {type(e).__name__}: {e}"[:200])
+            self.log.state.info["planet_check"] = self._planet_line
+            self._rows = [r for r in before if months(date) - months(r["date"]) <= self.rows_months] + [row]
+        self._observed, self._observed_b = row, b
+        return row, urgent
+
+    def _planet_record_section(self) -> str:
+        """The Strategist's planet record (ruling 22): per directive, the amenity change per planet-year on
+        colonies with an amenity deficit, from the campaign's metrics rows; "" without data."""
+        try:
+            text = planet_record_text(planet_record(self._metrics_rows() or self._rows))
+        except Exception as e:  # noqa: BLE001 - advisory
+            self.log.emit("briefing_error", error=f"planet record: {type(e).__name__}: {e}"[:200])
+            return ""
+        return ("Planet record in this campaign (free amenities on colonies with a deficit under -100, per "
+                "directive held; advisory):\n" + text) if text else ""
+
+    # ---- the war crisis overlay (docs/design/2026-09-27-stellaris-levers-design.md, rulings 12-16) ----
+
+    def _crisis_on(self) -> bool:
+        """A war crisis is on (and PILOT_WAR_CRISIS has not turned the overlay off)."""
+        return bool(self.s.war_crisis and self._crisis and self._crisis.get("active"))
+
+    def _ladder_allowed(self) -> bool:
+        """The ladder never acts while the human paused the run (ruling 14)."""
+        return bool(self.s.war_crisis) and not self.human_paused and not self.control.paused
+
+    def _need_boost(self) -> dict[str, str]:
+        """Pillars whose milestone need an event raises (weighted-pillars ruling 12's event boost): the
+        pillar that ranks `defend` is `missed` while a war crisis is on (ruling 13, step 2); {} otherwise,
+        and so always for Civ VI, which never enters one."""
+        if not self._crisis_on() or self.pillars is None:
+            return {}
+        return {name: "missed" for name in self.pillars.ids if self.pillars.directive_of(name) == "defend"}
+
+    def _crisis_update(self, b: dict, rows: list[dict], low: list[str]) -> list[str]:
+        """The crisis state after save `b` (from `_observe`; `rows` before it, `low` the colonies under
+        stability 25 twice): the urgent reason of an entry ("war going badly: ...") or an exit ("war
+        crisis over: ..."), whose decision runs the ladder. Nothing while the human paused the run."""
+        if not self.s.war_crisis or self.human_paused or self.control.paused:
+            return []
+        state, event = crisis_step(self._crisis, rows, b, self._observed_b, low)
+        self._crisis = state
+        out = []
+        if event == "enter":
+            state.pop("market_noted", None)
+            state.pop("human_directive", None)
+            self._crisis_pending = "enter"
+            texts = [t for _c, t in state["conditions"]]
+            out.append("war going badly: " + "; ".join(texts))
+            self._emit_crisis("enter", b["date"], conditions=texts)
+        elif event:
+            why = event.removeprefix("exit: ")
+            self._crisis_pending = "exit"
+            out.append(f"war crisis over: {why}")
+            self._emit_crisis("exit", b["date"], why=why)
+        else:
+            self._save_crisis_state(b["date"])      # quiet saves and conditions survive a restart
+        self._publish_crisis()
+        return out
+
+    def _emit_crisis(self, event: str, date: str, **extra) -> None:
+        """A `crisis` event carrying the whole state, which `_load_crisis` reads back after a restart:
+        enter / exit (their ladder still to run), ladder / closed (it ran), or state (it changed
+        between those: quiet saves, conditions, the human's directive, the status-quo asks)."""
+        if event == "state":
+            extra["pending"] = self._crisis_pending
+        self.log.emit("crisis", event=event, date=date, state=copy.deepcopy(self._crisis or {}), **extra)
+        self._crisis_saved = copy.deepcopy(self._crisis)
+
+    def _save_crisis_state(self, date: str) -> None:
+        """A `state` event when an active crisis changed since its last event (nothing otherwise)."""
+        if self._crisis_on() and self._crisis != self._crisis_saved:
+            self._emit_crisis("state", date)
+
+    def _publish_crisis(self) -> None:
+        """The crisis for the dashboard (`crisis`: since, conditions, quiet saves, the need boost, the
+        pace), or None."""
+        c = self._crisis or {}
+        self.log.state.info["crisis"] = ({"active": True, "since": c.get("since"),
+                                          "conditions": [t for _c, t in c.get("conditions") or []],
+                                          "quiet_saves": c.get("quiet", 0), "wars": list(c.get("wars") or []),
+                                          "boost": self._need_boost(), "every_months": self.s.decide_every_months}
+                                         if self._crisis_on() else None)
+
+    def _crisis_line(self, b: dict) -> str:
+        c = self._crisis or {}
+        conds = "; ".join(t for _c, t in c.get("conditions") or []) or f"quiet for {c.get('quiet', 0)} saves"
+        return (f"WAR CRISIS since {c.get('since')} ({conds}): the harness holds defend, {self._crisis_alloys_text(b)}, "
+                f"and decides every {CRISIS_PACE} months until every war ends or 6 quiet saves pass; your other "
+                "choices stand.")
+
+    def _crisis_alloys_text(self, b: dict) -> str:
+        """What this decision's market sync does for the crisis (step 5), as the prompt states it: the
+        same pure check on the same save, so the model never plans on alloys that are not bought."""
+        if self.pillars is None or "market" not in self.pillars.actions or not self.pillars.owners("market"):
+            return "buys no alloys (no market action in the strategy)"
+        if self.strategy is None:
+            return "buys no alloys (no strategy yet)"
+        try:
+            order, why = crisis_alloys(b, self._prev_save, self.pillars.actions["market"], idle_resources(b),
+                                       self._market_measured - self._market_unmeasured, self._market_suspension,
+                                       placed=self._placed("buy", "alloys", b.get("market_orders") or []))
+        except Exception as e:  # noqa: BLE001 - a malformed save never stops play
+            return f"buys no alloys ({type(e).__name__}: {e})"[:200]
+        if order is None:
+            return f"buys no alloys ({why})"
+        return f"buys {order['amount']} alloys a month on the market" + (" (price unknown)" if price_note(b) else "")
+
+    def _crisis_row(self, step: str, result: str, detail: str, date: str) -> None:
+        """A crisis step with nothing to follow, recorded at once: `done`, or `no_op` with why."""
+        self._resolve_action(crisis_action(step, date), result, None, detail, date)
+        self._log_action("crisis", f"{step}: {detail}"[:300])
+
+    def _crisis_review(self, b: dict, reviewed_at_start: bool) -> None:
+        """Step 1: the entry's strategy review, before the decision so it decides in the new frame; under
+        the 12-month cap of event reviews."""
+        trigger = "war going badly: " + "; ".join(t for _c, t in (self._crisis or {}).get("conditions") or [])
+        if self.pillars is None or reviewed_at_start:
+            self._crisis_row("review", "no_op", "the strategy layer is off" if self.pillars is None
+                             else "the start-of-run review just ran", b["date"])
+            return
+        ran = self._maybe_event_review(b, trigger)
+        self._crisis_row("review", "done" if ran else "no_op", "strategy review ran" if ran
+                         else "skipped: within 12 months of the last event review", b["date"])
+
+    def _crisis_boost_row(self, b: dict) -> None:
+        """Step 2's row: which pillar the need boost raises in the frame (`_need_boost`), or why none."""
+        boost = self._need_boost()
+        if boost and self.strategy is not None:
+            self._crisis_row("need boost", "done", f"{', '.join(boost)} need missed "
+                             f"({self.pillars.weights.need.get('missed', 2.0):.1f}), no stall factor, while the crisis lasts",
+                             b["date"])
+        else:
+            self._crisis_row("need boost", "no_op", "the strategy layer is off" if self.pillars is None
+                             else "no strategy yet" if self.strategy is None else "no pillar ranks defend", b["date"])
+
+    def _crisis_choice(self, b: dict, current: str | None, chosen: str, ladder: str | None) -> tuple[str, str | None]:
+        """Step 3: while a crisis is on, `defend` replaces a choice that would leave it or never take it
+        (recorded as `crisis defend`). (the directive to apply, the model's choice it replaced or None)."""
+        if not self._crisis_on() or not self._ladder_allowed() or self._crisis.get("human_directive"):
+            return chosen, None                 # a human override during the crisis stands until it ends
+        if (current if chosen == "keep" else chosen) == "defend":
+            if ladder == "enter":
+                self._crisis_row("defend", "no_op", "defend is held", b["date"])
+            return chosen, None
+        return "defend", chosen
+
+    def _crisis_without_answer(self, b: dict, current: str | None, ladder: str | None) -> None:
+        """The decision's model call failed: the ladder, which is the harness's, still runs."""
+        if not (ladder or self._crisis_on()) or not self._ladder_allowed():
+            return
+        _chosen, forced = self._crisis_choice(b, current, "keep", ladder)
+        if forced is not None:
+            try:
+                reply = self.game.directive("defend")
+                self.last_change = months(b["date"])
+                self.log.state.info["directive"] = "defend"
+                self._directive_sent("defend", reply, b, key="crisis defend")
+            except Exception as e:  # noqa: BLE001 - recorded; the other steps go on
+                self.log.emit("episode_error", error=f"directive defend: {e}"[:300])
+                self._directive_failed("defend", e, b, key="crisis defend")
+        self._crisis_posture_step(b, ladder)
+        self._carry_out_actions(b)
+        self._crisis_finish(b, ladder)
+
+    def _crisis_posture_step(self, b: dict, ladder: str | None) -> None:
+        """Step 4: the war_crisis posture on at the entry, off at the exit when the crisis set it."""
+        if not self._ladder_allowed() or self._crisis is None:
+            return
+        if ladder == "enter":
+            self._crisis_posture(b, True)
+        elif ladder == "exit" and self._crisis.get("posture_on"):
+            self._crisis_posture(b, False)
+
+    def _posture_gate(self, b: dict) -> str | None:
+        """Why the war_crisis posture may not be set yet (None: it may): it must be enabled in
+        directives.toml (after its live probe) and the Governor Bridge v2 must be seen running, i.e. the
+        save carries its current naval-capacity export (there is no bridge-check tool over MCP)."""
+        try:
+            enabled = load_postures(self.s.corpus_dir).get("war_crisis", {}).get("enabled")
+        except PillarsError as e:
+            return str(e)[:200]
+        if not enabled:
+            return "war_crisis is disabled in directives.toml until its live probe passes"
+        if not callable(getattr(self.game, "posture", None)):
+            return "this game has no posture tool"
+        if b.get("governor_vars_stale") or "governor_naval_cap" not in (b.get("governor_vars") or {}):
+            return "Governor Bridge v2 not seen: no current naval-capacity export in the save"
+        return None
+
+    def _crisis_posture(self, b: dict, on: bool) -> None:
+        """Set (on, gated, at most once per 6 months) or clear (always) the war_crisis posture; followed
+        as `crisis posture war_crisis`."""
+        date, step = b["date"], "posture war_crisis"
+        if on:
+            why = self._posture_gate(b)
+            last = self._crisis.get("posture_month")
+            if why is None and last is not None and months(date) - last < POSTURE_GAP_MONTHS:
+                why = f"toggled {months(date) - last} months ago (at most once per {POSTURE_GAP_MONTHS} months)"
+            if why:
+                self._crisis_row(step, "no_op", f"skipped: not verified ({why})" if "toggled" not in why
+                                 else f"skipped: {why}", date)
+                return
+        a = {**posture_action("war_crisis", on, date), "key": f"crisis {step}"}
+        try:
+            reply = self.game.posture("war_crisis", on)
+        except Exception as e:  # noqa: BLE001 - a step that fails is recorded; the ladder goes on
+            self._resolve_action(a, "failed", None, f"{type(e).__name__}: {e}", date)
+            self._log_action("crisis", f"{step} {'on' if on else 'off'} failed: {e}"[:300])
+            return
+        self._open_action(a)
+        self._crisis.update(posture_on=on, posture_month=months(date))
+        self._log_action("crisis", f"{step} {'on' if on else 'off'}: {str(reply)[:200]}")
+
+    def _crisis_market(self, b: dict, idle: set[str], later: bool) -> dict | None:
+        """Step 5: the crisis alloys order (stellaris_crisis.crisis_alloys), which takes the first market
+        slot; None with the reason logged, and recorded once per crisis."""
+        if not self._crisis_on() or not self._ladder_allowed() or "market" not in self.pillars.actions:
+            return None
+        try:
+            order, why = crisis_alloys(b, self._prev_save, self.pillars.actions["market"], idle,
+                                       self._market_measured - self._market_unmeasured, self._market_suspension,
+                                       placed=self._placed("buy", "alloys", b.get("market_orders") or []))
+        except Exception as e:  # noqa: BLE001 - a malformed save never stops play
+            order, why = None, f"{type(e).__name__}: {e}"
+        if order is not None and why and later:
+            self._log_action("market", f"war crisis: buy alloys {why}"[:300])
+        if order is None:
+            if later:
+                self._log_action("market", f"war crisis: no alloys bought ({why})"[:300])
+            if not self._crisis.get("market_noted"):
+                self._crisis["market_noted"] = True
+                self._crisis_row("market buy alloys", "no_op", f"skipped: {why}", str(b.get("date")))
+        return order
+
+    def _crisis_finish(self, b: dict, ladder: str | None) -> None:
+        """Steps 6-7, after the market: the cadence (every 3 months at the entry; at the exit the earlier
+        pace again unless the human changed it meanwhile) and the status-quo question; the ladder is then
+        done (a `crisis` event keeps its state for a restart)."""
+        if not self._ladder_allowed() or self._crisis is None:
+            return
+        date = b["date"]
+        if ladder == "enter":
+            prior = self.s.decide_every_months
+            self._crisis.update(pace_prior=prior, pace_human=False)
+            if prior > CRISIS_PACE:
+                self._set_pace(CRISIS_PACE, "war crisis")
+                self._crisis_row("cadence", "done", f"decisions every {CRISIS_PACE} months (was {prior})", date)
+            else:
+                self._crisis_row("cadence", "no_op", f"decisions already every {prior} months", date)
+        elif ladder == "exit":
+            prior = self._crisis.get("pace_prior")
+            if self._crisis.get("pace_human"):
+                self._crisis_row("cadence", "no_op", f"kept the human's pace ({self.s.decide_every_months} months)", date)
+            elif isinstance(prior, int) and prior != self.s.decide_every_months:
+                self._set_pace(prior, "war crisis over")
+                self._crisis_row("cadence", "done", f"decisions every {prior} months again", date)
+        if self._crisis_on():
+            self._crisis_status_quo(b)
+        self._crisis_pending = None
+        if ladder == "enter":
+            self._emit_crisis("ladder", date)
+        elif ladder == "exit":
+            self._emit_crisis("closed", date)
+        else:
+            self._save_crisis_state(date)            # e.g. a status-quo question asked since the entry
+        self._publish_crisis()
+
+    def _crisis_status_quo(self, b: dict) -> None:
+        """Step 7 (ruling 15): the status-quo question for the human, never blocking, at most once per war
+        per 12 months; the harness never proposes peace."""
+        c = self._crisis
+        conds = [tuple(x) for x in c.get("conditions") or []] if not c.get("quiet") else []
+        asked, now = dict(c.get("asked") or {}), months(b["date"])
+        for war, q in status_quo(b, self._rows, conds):
+            if war in asked and now - asked[war] < 12:
+                continue
+            asked[war] = now
+            self.log.emit("question", question=q, blocking=False)
+            self.journal.note(q, b["date"])
+            self._crisis_row("status_quo", "done", q, b["date"])
+        c["asked"] = asked
+
+    def _set_pace(self, every: int, by: str) -> None:
+        """The decision interval set by the harness (the war crisis), with no request queued: a human's
+        change is `set_months`."""
+        self.s = replace(self.s, decide_every_months=every)
+        self.log.state.info["every_months"] = every
+        self.log.emit("pace", every_months=every, by=by)
+
+    def _load_crisis(self) -> None:
+        """The campaign's war crisis from earlier runs (the newest `crisis` event's state, with its quiet
+        saves, the human's directive and the status-quo asks): an active one carries on at the crisis
+        pace, and each war keeps its 12-month entry limit. A run that stopped after an entry or an exit,
+        before its ladder ran (`ladder` / `closed` not yet written), leaves that ladder to the next
+        decision. Advisory."""
+        self._crisis, self._crisis_pending, self._observed_b = None, None, None
+        tel, cid = self.log.telemetry, self.log.campaign_id
+        if tel is not None and cid:
+            try:
+                events = tel.campaign_events(cid, "crisis")
+                last = next((e for e in reversed(events) if isinstance(e.get("state"), dict)), None)
+                if last:
+                    ev = last.get("event")
+                    self._crisis = dict(last["state"])
+                    self._crisis_pending = ev if ev in ("enter", "exit") else last.get("pending") if ev == "state" else None
+            except Exception as e:  # noqa: BLE001 - advisory
+                self.log.emit("briefing_error", error=f"loading the war crisis: {e}"[:200])
+        self._crisis_saved = copy.deepcopy(self._crisis)
+        if self._crisis_on() and self._crisis_pending != "enter":     # the entry's ladder sets the pace
+            prior = self.s.decide_every_months
+            self._crisis.update(pace_prior=prior, pace_human=False)
+            if prior > CRISIS_PACE:
+                self._set_pace(CRISIS_PACE, "war crisis (carried over)")
+        self._publish_crisis()
 
     def _run_until_next_decision(self, last: dict) -> tuple[dict | None, str]:
         start = months(last["date"])          # the interval can change mid-wait (dashboard)
@@ -1112,9 +1601,12 @@ class Governor:
                 if self.log.state.status == "needs_attention":
                     self._status("playing")
                 self.log.emit("recovered", reason="the newest autosave of this campaign reads again")
+            observed: list[str] = []
             if b["date"] != last["date"]:
                 self._date_moved(months(b["date"]) - months(last["date"]))
-                self.log.emit("metrics", **metrics(b))
+                row, observed = self._observe(b)
+                self.log.emit("metrics", **row)
+                self._follow(b)
                 self.log.state.game_date = b["date"]
                 self.log.state.turns_advanced = months(b["date"]) - months(last["date"]) + self.log.state.turns_advanced
             else:
@@ -1124,7 +1616,7 @@ class Governor:
                 if self._stalled(b["date"]):
                     return last, ""
             unread_since = None
-            urgent = urgent_changes(last, b)
+            urgent = urgent_changes(last, b) + observed
             if b["date"] != last["date"]:
                 urgent += self._newly_missed_milestones(last["date"], b["date"])
             mil_base, mil_now = self._decision_military, b.get("military_power")
@@ -1222,7 +1714,8 @@ class Governor:
         self._decision_military = b.get("military_power")   # baseline for "military fell" until the next decision
         self.log.state.episodes += 1
         self.log.state.game_date = b["date"]
-        self.log.emit("metrics", **metrics(b))
+        self.log.emit("metrics", **self._observe(b)[0])
+        self._follow(b)
         if self.log.telemetry is not None and self.log.campaign_id:
             try:
                 self.log.telemetry.score(self.log.campaign_id)
@@ -1238,23 +1731,34 @@ class Governor:
         self.log.state.info["directive"] = current or ""
         held = "" if self.last_change is None else f" (held {months(b['date']) - self.last_change} months)"
         extra = self.human.take_all()
-        press = self._pressures() if self.strategy and self.pillars else None
         self.last_briefing = self.game.briefing_text()
+        ladder = self._crisis_pending if self._ladder_allowed() else None     # "enter" / "exit" / None
+        if ladder == "enter":
+            self._crisis_review(b, reviewed_at_start)       # step 1, so the decision gets the new frame
+            self._crisis_boost_row(b)                        # step 2, applied in _pressures below
+        press = self._pressures() if self.strategy and self.pillars else None
         prompt = [f"Decision point: {reason}.",
                   f"Current directive: {current or 'none'}{held}.",
                   (frame_text(self.strategy, self.pillars, self._milestones_text(), press, current)
                    if self.pillars else "")
                   or "No strategy yet.",
+                  *([f"Market (last sync): {self._market_note}."] if self._market_note else []),
+                  *([self._crisis_line(b)] if self._crisis_on() else []),
                   "Briefing from the latest autosave:", self.last_briefing]
         trend = self._trend(b)
         if trend:
             prompt.append(trend)
+        if self._planet_line:
+            prompt.append(self._planet_line + " (read-only; a directive switch does not repair grown colonies)")
         if self.log.telemetry is not None and self.log.campaign_id:
             try:   # given up front, so the model rarely needs a second call for it
                 prompt.append("Earlier directive changes in this campaign and what followed 12 months later:\n"
                               + self.log.telemetry.past_outcomes(self.log.campaign_id, limit=6))
             except Exception as e:  # noqa: BLE001
                 self.log.emit("briefing_error", error=f"past outcomes: {e}"[:200])
+        record = self._action_record_section()
+        if record:
+            prompt.append(record)
         if self.orders:
             prompt.append("STANDING ORDERS from the human (always follow these): "
                           + " | ".join(f"{i + 1}. {o}" for i, o in enumerate(self.orders)))
@@ -1279,6 +1783,7 @@ class Governor:
             self.log.save_trace(n, {**base, "outcome": "error", "error": f"{type(e).__name__}: {e}"[:2000],
                                     "seconds": round(time.time() - started, 1),
                                     "steps": [{"type": "prompt", "text": "\n".join(prompt)}]})
+            self._crisis_without_answer(b, current, ladder)   # the ladder is the harness's, not the model's
             return
         d, usage = result.output, result.usage
         base["model_version"] = served_model(result)
@@ -1295,6 +1800,7 @@ class Governor:
         off_frame = bool(ranked) and chosen not in ("keep", current) and chosen not in ranked[:2]
         if off_frame and self.review_requested is None:   # keep the first pending request's trigger text
             self.review_requested = f"off-frame decision: {chosen} ({reason})"
+        chosen, forced = self._crisis_choice(b, current, chosen, ladder)
         applied = "kept"
         if chosen != "keep" and chosen != current:
             if chosen in NEEDS_HUMAN:
@@ -1309,16 +1815,20 @@ class Governor:
                     chosen, applied = "keep", f"not applied ({chosen} needs a human yes)"
             if chosen != "keep":
                 try:
-                    self.game.directive(chosen)
+                    reply = self.game.directive(chosen)
                     applied = "applied"
                     self.last_change = months(b["date"])
                     self.log.state.info["directive"] = chosen
+                    self._directive_sent(chosen, reply, b, key="crisis defend" if forced is not None else None)
                 except Exception as e:  # noqa: BLE001
                     applied = f"FAILED: {e}"[:200]
                     self.log.emit("episode_error", error=f"directive {chosen}: {e}"[:300])
+                    self._directive_failed(chosen, e, b, key="crisis defend" if forced is not None else None)
+        if forced is not None:
+            applied += f" (war crisis: defend forced over {forced})"
         st.last_decision = f"{b['date']}: {d.directive} ({applied}) — {d.reason}"
         self.log.emit("episode", situation=reason, decision=f"{d.directive}: {d.reason}", date=b["date"],
-                      resolved=not applied.startswith("FAILED"), actions=int(applied == "applied"),
+                      resolved=not applied.startswith("FAILED"), actions=int(applied.startswith("applied")),
                       seconds=round(time.time() - started, 1),
                       tokens_in=usage.input_tokens, tokens_out=usage.output_tokens)
         self.log.save_trace(n, {**base, "decision": d.directive, "reason": d.reason, "outcome": applied,
@@ -1329,7 +1839,9 @@ class Governor:
         self.journal.note(f"{d.directive} ({applied}) — {d.reason}", b["date"])
         if d.note:
             self.journal.note(d.note, b["date"])
-        self._carry_out_actions(b)
+        self._crisis_posture_step(b, ladder)              # step 4, between the directive and the market
+        self._carry_out_actions(b)                        # the market: step 5 takes the slot
+        self._crisis_finish(b, ladder)                    # steps 6-7
         if not (reason == "start of run" and reviewed_at_start):   # a review just ran for this decision point
             self._since_retro += 1
             if self.s.retro_every and self._since_retro >= self.s.retro_every and self.pillars is not None:
@@ -1349,7 +1861,9 @@ class Governor:
         through the game's hook for it (ACTION_METHODS); a kind without a hook is logged "not
         supported" once and skipped. Each tool acts at most once per briefing date (the result stays
         stale until the next autosave). Nothing here ever raises out of this call, pauses the game,
-        or undoes the decision already applied — any failure is logged as a strategy_action event."""
+        or undoes the decision already applied — any failure is logged as a strategy_action event.
+        What was sent before is judged on this save first (the action record, `_follow`)."""
+        self._follow(b)
         if not self.strategy or self.pillars is None:
             return
         hooks = action_hooks(self.game)
@@ -1375,81 +1889,166 @@ class Governor:
         return [x for name, pl in self.strategy.sorted_pillars() if name in owners for x in getattr(pl, fld)]
 
     def _carry_out_tech_actions(self, b: dict, pick_tech: Callable[[list[str]], str]) -> None:
+        """Pick the first preferred tech on offer (stellaris_pick_tech). A pick is followed until it is
+        researched, did not stick (then skipped until the next review) or is held; a "nothing to
+        pick" reply is a no-op, counted for the next review (ruling 6)."""
         date = b.get("date")
         limit = self.pillars.actions["tech"].max_items
         prefer = [t for t in dict.fromkeys(self._declared("tech")) if self._tech_misses.get(t, 0) < 1][:limit]
         fields = (b.get("research") or {}).values()
         researching = {((r or {}).get("current") or [None])[0] for r in fields}
-        offered = {t for r in fields for t in (r or {}).get("alternatives", [])}
-        pending = None
-        if self._pending_pick and date != self._tech_sync_date:   # judge a pick only on a later save
-            pending, self._pending_pick = self._pending_pick, None
-        if pending:
-            if pending in researching:
-                pass    # still being researched: stuck, nothing to verify yet
-            elif pending in offered:
-                # still offered but not picked up as current: the pick did not stick
-                self._tech_misses[pending] = self._tech_misses.get(pending, 0) + 1
-                self._log_action("tech", f"{pending} did not stick; skipped until the next review")
-                prefer = [t for t in prefer if t != pending]
-            else:
-                # neither current nor offered any more: researched to completion
-                self._log_action("tech", f"researched {pending}")
         if prefer and not researching & set(prefer) and date != self._tech_sync_date:
             self._tech_sync_date = date
             try:
                 res = pick_tech(prefer)
-                self._log_action("tech", res)
-                m = TECH_PICK_RE.match(res)
-                if m:
-                    self._pending_pick = m.group(1)
             except Exception as e:  # noqa: BLE001 - actions never stop play
                 self._log_action("tech", f"failed: {e}"[:300])
+                self._resolve_action(tech_action(", ".join(prefer), "", date), "failed", None, f"{e}", date)
+                return
+            self._log_action("tech", res)
+            m = TECH_PICK_RE.match(res)
+            if m and not any(a["kind"] == "tech" and a["id"] == m.group(1) for a in self._actions):
+                self._open_action(tech_action(m.group(1), m.group(2), date))
+            elif res.startswith(NO_OP_PREFIX):
+                self._tech_noops += 1
+                self._resolve_action(tech_action(", ".join(prefer), "", date), "no_op", None, res, date)
 
     def _carry_out_market_actions(self, b: dict, market_sync: Callable[[list[dict]], str]) -> None:
+        """Sync the declared monthly trades (stellaris_market_sync). A sell must fit today's briefing and
+        a buy the buy rules (ruling 9, stellaris_market.py); while trade is IDLE and no declared order
+        passed, the slot is filled with deficit cover (the idle-trade fill). Each side and resource the
+        sync changes is followed in the next saves (ruling 2); one that did not take twice in a row with
+        today's `[ui.market]` calibration is suspended until a recalibration (ruling 6), keeping any
+        order of it the save already holds, as for a resource whose start amount is not measured."""
         date = b.get("date")
         current = b.get("market_orders") or []
-        pending_market, later = self._pending_market, date != self._market_sync_date
-        if pending_market is not None and later:
-            self._pending_market = None
-            if not self._same_orders(current, pending_market):
-                self._log_action("market", f"market orders did not stick: wanted {pending_market}, save has {current}")
-                self._market_stuck = True
+        later = date != self._market_sync_date
         limits = self.pillars.actions["market"]
         idle, income = idle_resources(b), b.get("net") or {}
-        desired = []
+        unknown = price_note(b)                           # no market block: every buy at the base price
+        crisis = self._crisis_market(b, idle, later)      # war crisis step 5: it takes the first slot
+        war = self._crisis_on()                           # ruling 9's crisis rules for every alloys buy
+        desired = [crisis] if crisis else []
         for o in self._declared("market"):
-            errs = market_briefing_errors(o, limits, idle, income)
-            if errs:     # a sell that no longer fits today's briefing (e.g. a pinned or older order)
+            if crisis and len(desired) >= limits.max_items:
                 if later:
-                    self._log_action("market", f"skipped sell {o.resource}: {'; '.join(errs)}"[:300])
+                    self._log_action("market", f"skipped {o.side} {o.resource} {o.amount}: the war crisis alloys "
+                                               "order takes the slot")
                 continue
-            if o.resource in self._market_unmeasured and not any(self._same_orders([o.model_dump()], [c]) for c in current):
-                # the controller cannot add it yet; an order of that side and resource already in the
-                # save is kept at its amount (as the controller keeps it) while that amount passes the
-                # checks the declared order passed
+            errs = market_briefing_errors(o, limits, idle, income)
+            kept, errs = (None, errs) if errs else keep_placed(
+                o.model_dump(), self._placed(o.side, o.resource, current) if o.side == "buy" else 0,
+                lambda x: self._buy_errors(x, b, current, idle, crisis=war))
+            if errs:     # a sell or buy that does not fit today's briefing (e.g. a pinned or older order)
+                if later:  # a raise of an order in place that breaks a rule keeps that order at its amount
+                    what = f"sell {o.resource}" if o.side == "sell" else f"buy {o.resource} {o.amount}"
+                    self._log_action("market", ((f"kept buy {o.resource} {kept['amount']} ({o.amount} wanted)" if kept
+                                                 else f"skipped {what}") + f": {'; '.join(errs)}"
+                                                + (f"; {unknown}" if unknown and o.side == "buy" else ""))[:300])
+                if kept:
+                    desired.append(kept)
+                continue
+            blocked = ("start amount not measured (the controller refuses to add it)"
+                       if o.resource in self._market_unmeasured else self._market_suspension(o.side, o.resource))
+            if blocked and not any(self._same_orders([o.model_dump()], [c]) for c in current):
+                # an order of that side and resource already in the save is kept at its amount (as
+                # the controller keeps an unmeasured one) while that amount passes the checks the
+                # declared order passed
                 held = [h for h in self._kept_for([o.model_dump()], current)
-                        if not market_briefing_errors(o.model_copy(update={"amount": h.get("amount")}), limits, idle, income)]
+                        if not market_briefing_errors(o.model_copy(update={"amount": h.get("amount")}), limits, idle, income)
+                        and not self._buy_errors(h, b, current, idle, crisis=war)]
                 if later:
                     what = (", ".join(f"kept {h['side']} {h['resource']} {h['amount']}" for h in held)
                             + f" ({o.amount} wanted)" if held else f"skipped {o.side} {o.resource} {o.amount}")
-                    self._log_action("market", f"{what}: start amount not measured (the controller refuses to add it)")
+                    self._log_action("market", f"{what}: {blocked}")
                 desired += held
                 continue
             desired.append(o.model_dump())
-        if not self._market_stuck and not self._same_orders(desired, current) and later:
-            self._market_sync_date = date
-            try:
-                res = market_sync(desired)
-                self._log_action("market", res)
-                refused = self._refused_orders(res)
-                self._market_unmeasured |= {o["resource"] for o in refused}
-                # what the controller left out is not waited for in the next save; the order it kept
-                # in its place is
-                self._pending_market = [o for o in desired if not any(self._same_orders([o], [r]) for r in refused)] \
-                    + self._kept_for(refused, current)
-            except Exception as e:  # noqa: BLE001 - actions never stop play
-                self._log_action("market", f"failed: {e}"[:300])
+        fill, self._market_note = self._idle_fill(b, desired, current, idle, limits, crisis=war)
+        if fill:
+            desired.append(fill)
+        unknown = unknown if any(o.get("side") == "buy" for o in desired) else ""
+        if unknown:      # not refused (ruling 9), but said: in the log and to the next decision
+            self._market_note = "; ".join(x for x in (self._market_note, unknown) if x)
+        if self._market_note and later:
+            self._log_action("market", self._market_note[:300])
+        if self._same_orders(desired, current) or not later:
+            return
+        self._market_sync_date = date
+        changes = self._market_changes(desired, current)
+        try:
+            res = market_sync(desired)
+        except Exception as e:  # noqa: BLE001 - actions never stop play
+            self._log_action("market", f"failed: {e}"[:300])
+            for c in changes:       # failed, not did_not_take: an agent timeout never suspends a resource
+                self._resolve_action(market_action(c, date, self._market_cal), "failed", None, f"{e}", date)
+            return
+        self._log_action("market", res + (f" ({unknown})" if unknown else ""))
+        refused = self._refused_orders(res)
+        self._market_unmeasured |= {o["resource"] for o in refused}
+        # what the controller left out is not waited for in the next save; the order it kept in its
+        # place is
+        wanted = [o for o in desired if not any(self._same_orders([o], [r]) for r in refused)] \
+            + self._kept_for(refused, current)
+        auto = {(fill["side"], fill["resource"])} if fill else set()
+        for c in self._market_changes(wanted, current):
+            for a in [a for a in self._actions if a["kind"] == "market"
+                      and (a["expect"]["side"], a["expect"]["resource"]) == (c["side"], c["resource"])]:
+                self._resolve_action(a, *self._superseded(a), date)
+            extra = {"auto": "idle_fill"} if c["amount"] and (c["side"], c["resource"]) in auto else {}
+            if crisis and c["amount"] and (c["side"], c["resource"]) == ("buy", "alloys"):
+                extra = {"key": "crisis market buy alloys"}
+            self._open_action(market_action(c, date, self._market_cal, **extra))
+
+    def _buy_errors(self, o: dict, b: dict, current: list[dict], idle: set[str], *, crisis: bool = False) -> list[str]:
+        """Why buy `o` breaks the buy rules on save `b` (ruling 9); [] for a sell or without rules. An
+        order of that resource already in the save is kept up to the "never" price, up to its amount."""
+        rules = self.pillars.actions["market"].buy if self.pillars and "market" in self.pillars.actions else None
+        if rules is None or o.get("side") != "buy":
+            return []
+        try:
+            return buy_errors(o, b, self._prev_save, rules, idle, placed=self._placed("buy", o.get("resource"), current),
+                              crisis=crisis)
+        except Exception as e:  # noqa: BLE001 - a malformed save never stops play; the buy waits
+            return [f"buy rules: {type(e).__name__}: {e}"]
+
+    @staticmethod
+    def _placed(side: str, resource: str | None, current: list[dict]) -> int:
+        """The amount of `side` `resource` the save's market orders hold (0: none)."""
+        return max((int(c.get("amount") or 0) for c in current if (c.get("side"), c.get("resource")) == (side, resource)),
+                   default=0)
+
+    def _idle_fill(self, b: dict, desired: list[dict], current: list[dict], idle: set[str],
+                   limits, *, crisis: bool = False) -> tuple[dict | None, str]:
+        """The idle-trade fill (ruling 9): while the briefing flags trade IDLE and no declared order
+        passed, the first deficit to cover that passes the buy rules, has a measured start amount and is
+        not suspended. (order or None, the line for the next decision; "" when trade is not idle)."""
+        rules = limits.buy
+        if desired or rules is None or not rules.idle_fill or "trade" not in idle:
+            return None, ""
+        placed = lambda o: self._placed(o["side"], o["resource"], current)
+        try:
+            order, why = idle_fill(b, self._prev_save, limits, idle, self._market_measured - self._market_unmeasured,
+                                   self._market_suspension, placed=placed, crisis=crisis)
+        except Exception as e:  # noqa: BLE001 - a malformed save never stops play
+            return None, f"trade idle: the fill failed ({type(e).__name__}: {e})"
+        if order is None:
+            return None, f"trade idle: nothing qualifies to buy ({why})"
+        return order, f"trade idle: filled with buy {order['resource']} {order['amount']} (deficit cover{'; ' + why if why else ''})"
+
+    @staticmethod
+    def _market_changes(wanted: list[dict], current: list[dict]) -> list[dict]:
+        """Each side and resource whose amount a sync to `wanted` changes (amount 0: removed)."""
+        want = {(o.get("side"), o.get("resource")): int(o.get("amount") or 0) for o in wanted}
+        have = {(o.get("side"), o.get("resource")): int(o.get("amount") or 0) for o in current}
+        return [{"side": k[0], "resource": k[1], "amount": want.get(k, 0)}
+                for k in sorted(set(want) | set(have), key=str) if want.get(k, 0) != have.get(k, 0)]
+
+    def _market_suspension(self, side: str, resource: str) -> str | None:
+        if market_suspended(self._action_rows, side, resource, self._market_cal):
+            return ("suspended after 2 did not take in a row with this [ui.market] calibration; a recalibration "
+                    "lifts it")
+        return None
 
     @staticmethod
     def _kept_for(refused: list[dict], current: list[dict]) -> list[dict]:
@@ -1468,6 +2067,175 @@ class Governor:
             if len(words) == 3 and words[2].isdigit():
                 out.append({"side": words[0], "resource": words[1], "amount": int(words[2])})
         return out
+
+    # ---- the action record (docs/design/2026-09-27-stellaris-levers-design.md, rulings 2-6) --------
+
+    @property
+    def _pending_pick(self) -> str | None:
+        """The picked tech still followed (not yet researched, dropped or held)."""
+        return next((a["id"] for a in self._actions if a["kind"] == "tech"), None)
+
+    def _orders_spec(self) -> OrdersSpec:
+        """The record's settings (`[orders]` in pillars.toml, in months); defaults without one."""
+        return (self.pillars.orders if self.pillars is not None and self.pillars.orders is not None
+                else OrdersSpec())
+
+    def _now_month(self) -> int:
+        dates = [d for d in (self._now_date, self.log.state.game_date) if d and d[:1] != "T"]
+        return max([months(d) for d in dates] + [r.get("turn") or 0 for r in self._action_rows] + [0])
+
+    def _open_action(self, a: dict) -> None:
+        """Follow `a` from now on; the `order_followed` event lets a restart carry on following it."""
+        self._actions.append(a)
+        self.log.emit("order_followed", ref=a["ref"], action=a)
+
+    def _resolve_action(self, a: dict, result: str, by: str | None, detail: str, date: str) -> None:
+        """`a` resolved on the save of `date`: one order_outcome row (the Civ VI shape). Advisory: a
+        row that cannot be built (a malformed date) is logged and the action dropped."""
+        self._actions = [x for x in self._actions if x.get("ref") != a.get("ref")]
+        try:
+            row = outcome_row(a, result, by, detail, date)
+        except Exception as e:  # noqa: BLE001 - the record never stops play
+            self.log.emit("briefing_error", error=f"action record ({a.get('key')}): {type(e).__name__}: {e}"[:200])
+            return
+        self._action_rows.append(row)
+        self.log.emit("order_outcome", **row)
+        if a["kind"] == "tech" and result == "did_not_stick":
+            self._tech_misses[a["id"]] = self._tech_misses.get(a["id"], 0) + 1
+        self._publish_actions()
+
+    @staticmethod
+    def _superseded(a: dict) -> tuple[str, None, str]:
+        result, detail = supersede(a)
+        return result, None, detail
+
+    def _follow(self, b: dict) -> None:
+        """Judge every followed action on save `b`, once per save date (ruling 4): each one that
+        resolves writes its row; a tech or market resolution is also logged as a strategy_action.
+        Advisory: a malformed save is logged and never stops play."""
+        date = str(b.get("date") or "")
+        if not date or date == self._followed_date or date[:1] == "T":
+            return
+        self._followed_date = self._now_date = date
+        if self._last_save is None or self._last_save.get("date") != date:
+            self._prev_save, self._last_save = self._last_save, b
+        spec = self._orders_spec()
+        for a in list(self._actions):
+            before = (a.get("state"), a.get("dry", 0))      # what a restart needs to carry on following it
+            try:
+                result, by, detail = judge(a, b, spec.open_cap_turns, spec.open_grace_turns)
+            except Exception as e:  # noqa: BLE001 - the record is advisory
+                self.log.emit("briefing_error", error=f"action record ({a.get('key')}): {type(e).__name__}: {e}"[:200])
+                continue
+            if result == OPEN:
+                if (a.get("state"), a.get("dry", 0)) != before:
+                    self.log.emit("order_followed", ref=a["ref"], action=a)   # seen in force: kept across restarts
+                continue
+            self._resolve_action(a, result, by, detail, date)
+            if a["kind"] == "tech":
+                self._log_action("tech", {"did_not_stick": f"{a['id']} did not stick; skipped until the next review",
+                                          "researched": f"researched {a['id']}"}.get(result, f"{a['id']} {result}"))
+            elif a["kind"] == "market":
+                self._log_action("market", f"market order {a['id']} {result.replace('_', ' ')}: {detail}"[:300])
+
+    def _directive_sent(self, name: str, reply, b: dict, key: str | None = None) -> None:
+        """A directive was applied on save `b`: the one before it (and the postures it set) resolve as
+        held or superseded, and this one is followed with the policies the game reported set and the
+        postures its console lines set (ruling 3)."""
+        try:
+            date = b["date"]
+            for a in [a for a in self._actions if a["kind"] == "directive" or a.get("from") == "directive"]:
+                self._resolve_action(a, *self._superseded(a), date)
+            info = parse_directive_reply(str(reply or ""))
+            self._open_action({**directive_action(name, date, info), **({"key": key} if key else {})})
+            for posture in info["postures"]:
+                self._open_action({**posture_action(posture, True, date), "from": "directive"})
+        except Exception as e:  # noqa: BLE001 - the record is advisory
+            self.log.emit("briefing_error", error=f"action record (directive {name}): {type(e).__name__}: {e}"[:200])
+
+    def _directive_failed(self, name: str, e: BaseException, b: dict, key: str | None = None) -> None:
+        a = {**directive_action(name, b["date"], {}), **({"key": key} if key else {})}
+        self._resolve_action(a, "failed", None, f"{type(e).__name__}: {e}", b["date"])
+
+    def _settle_at_review(self, b: dict) -> None:
+        """At a strategy review: judge on this save, then a picked tech still researched is held."""
+        if not self._actions:
+            return
+        self._follow(b)
+        for a in list(self._actions):
+            verdict = review_outcome(a)
+            if verdict:
+                self._resolve_action(a, verdict[0], None, verdict[1], str(b.get("date") or a.get("ordered") or ""))
+
+    def _load_action_record(self) -> None:
+        """The campaign's action record from earlier runs (ruling 4): its order_outcome rows and the
+        actions still followed (the newest `order_followed` event of each one without an outcome).
+        Advisory: a failed read keeps what is in memory."""
+        tel, cid = self.log.telemetry, self.log.campaign_id
+        if tel is not None and cid:
+            try:
+                rows = [r for r in tel.campaign_events(cid, "order_outcome") if r.get("key")]
+                done = {r.get("ref") for r in rows if r.get("ref")}
+                followed: dict[str, dict] = {}
+                for f in tel.campaign_events(cid, "order_followed"):
+                    if isinstance(f.get("action"), dict) and f.get("ref") and f["ref"] not in done:
+                        followed[f["ref"]] = f["action"]
+                self._action_rows, self._actions = rows, list(followed.values())
+            except Exception as e:  # noqa: BLE001 - the record is advisory
+                self.log.emit("briefing_error", error=f"loading the action record: {e}"[:200])
+        self._publish_actions()
+
+    def _publish_actions(self) -> None:
+        """The record for the dashboard, in the Civ VI order record's key and shape."""
+        self.log.state.info["order_record"] = action_record(self._action_rows, self._now_month(), self._orders_spec())
+
+    def _action_record_text(self) -> str:
+        """One line per key (stick rate), each market order suspended, and how often the preferred
+        techs met the offer (ruling 6); empty while nothing resolved."""
+        rows = self._action_rows
+        if not rows:
+            return ""
+        lines = [action_record_text(action_record(rows, self._now_month(), self._orders_spec()))]
+        markets = sorted({tuple(r["key"].split(" ")[1:3]) for r in rows if str(r.get("key", "")).startswith("market ")})
+        for side, res in (m for m in markets if len(m) == 2):
+            if self._market_suspension(side, res):
+                lines.append(f"- market {side} {res}: suspended after 2 did not take in a row with this [ui.market] "
+                             "calibration; a recalibration lifts it")
+        latest = {r.get("key"): r for r in rows}
+        placed = {f"{o.get('side')} {o.get('resource')}" for o in ((self._last_save or {}).get("market_orders") or [])}
+        for key, r in latest.items():
+            # ruling 10: in the order list, but no trade (shown while the newest save still holds it)
+            if r.get("by") == "not executing" and (self._last_save is None or " ".join(str(r.get("id")).split()[:2]) in placed):
+                lines.append(f"- {key}: took (not executing): {r.get('detail') or ''}")
+        noops = sum(1 for r in rows if r.get("key") == "tech" and r.get("result") == "no_op")
+        if noops:
+            picks = sum(1 for r in rows if r.get("key") == "tech" and r.get("result") not in ("no_op", "failed")) \
+                + sum(1 for a in self._actions if a["kind"] == "tech")
+            lines.append(f"- tech picks: your preferred techs matched the offer {picks} times in {picks + noops} chances")
+        return "\n".join(x for x in lines if x)
+
+    def _action_record_section(self, b: dict | None = None, noops: int = 0) -> str:
+        """The record's prompt section, or "" when there is nothing in it (a Civ VI governor never
+        fills it). At a review after 3 or more no-op tech syncs (`noops`), it also lists what `b`
+        offers per field and asks prefer_techs to name one of them."""
+        try:
+            lines = [x for x in (self._action_record_text(), self._tech_advice(b, noops)) if x]
+        except Exception as e:  # noqa: BLE001 - the record is advisory
+            self.log.emit("briefing_error", error=f"action record: {type(e).__name__}: {e}"[:200])
+            return ""
+        return ACTION_RECORD_HEADING + "\n" + "\n".join(lines) if lines else ""
+
+    @staticmethod
+    def _tech_advice(b: dict | None, noops: int) -> str:
+        research = (b or {}).get("research")
+        if noops < 3 or not isinstance(research, dict):
+            return ""
+        offers = "; ".join(f"{fld}: {', '.join(r['alternatives'])}" for fld, r in sorted(research.items())
+                           if isinstance(r, dict) and r.get("alternatives"))
+        if not offers:
+            return ""
+        return (f"- tech picks: {noops} tech syncs since the last review found none of the preferred techs where it "
+                f"could pick; offered now: {offers}. Name at least one of them in prefer_techs.")
 
     def _maybe_event_review(self, b: dict, trigger: str, retry: bool = False) -> bool:
         """Run a strategy review for a big event, at most once per 12 in-game months. `retry`
@@ -1510,14 +2278,23 @@ class Governor:
         """Pressure per pillar from this campaign's metrics rows, or None without rows (the frame then
         uses pressure = weight). Never raises: it runs before every decision."""
         rows = self._metrics_rows()
-        if not rows or self.strategy is None or self.pillars is None:
+        boost = self._need_boost()
+        if (not rows and not boost) or self.strategy is None or self.pillars is None:
             return None
-        today = rows[-1]["date"]
         try:
             spec = self.pillars
-            return pressures(self.strategy, spec, lambda _n, m: milestone_status(m, rows, today, spec.row_keys),
-                             record_of=lambda name, metric: (directive_record(rows, d, metric, spec.row_keys)
-                                                             if (d := spec.directive_of(name)) else None))
+            if rows:
+                today = rows[-1]["date"]
+                press = pressures(self.strategy, spec, lambda _n, m: milestone_status(m, rows, today, spec.row_keys),
+                                  record_of=lambda name, metric: (directive_record(rows, d, metric, spec.row_keys, spec.peer_keys)
+                                                                  if (d := spec.directive_of(name)) else None))
+                hint = expand_blocked(rows)
+                for name in press:
+                    if hint and spec.directive_of(name) == "expand":
+                        press[name]["hint"] = hint
+            else:
+                press = pressures(self.strategy, spec, lambda _n, _m: "")
+            return boost_pressures(press, spec, boost)   # a war crisis (ruling 13, step 2): need missed, no stall factor
         except Exception as e:  # noqa: BLE001 - advisory; the decision still runs on weights
             self.log.emit("briefing_error", error=f"pressure: {type(e).__name__}: {e}"[:200])
             return None
@@ -1534,13 +2311,14 @@ class Governor:
             if not d or not pl.milestones:
                 continue
             metric = pl.milestones[0].metric
-            r = directive_record(rows, d, metric, spec.row_keys)
+            r = directive_record(rows, d, metric, spec.row_keys, spec.peer_keys)
             if r is None:
                 out.append(f"- {d} ({name}, {metric}): not held long enough to judge")
                 continue
             verdict = (" — does not work here" if w.stall_years and r["held_years"] >= w.stall_years
                        and r["held_rate"] <= r["other_rate"] else "")
-            out.append(f"- {d} ({name}, {metric}): {r['held_rate']:+g}/yr over {r['held_years']:g} y held vs "
+            label = f"{metric} ÷ median" if r.get("relative") else metric
+            out.append(f"- {d} ({name}, {label}): {r['held_rate']:+g}/yr over {r['held_years']:g} y held vs "
                        f"{r['other_rate']:+g}/yr otherwise{verdict}")
         return "\n".join(out) or "(no data yet)"
 
@@ -1601,8 +2379,10 @@ class Governor:
         self.review_requested = None
         self._review_retry = False
         self._tech_misses = {}
-        self._market_stuck = False
-        self._pending_market = None
+        self._settle_at_review(b)
+        if not retried:      # the corrective retry shows what the first prompt showed
+            self._review_noops, self._tech_noops = self._tech_noops, 0
+        noops = self._review_noops
         started = time.time()
         retry_errors: list[str] | None = None
         retry_rejected: str | None = None
@@ -1614,6 +2394,7 @@ class Governor:
             prompt = [f"Strategy review, trigger: {trigger}.", "Current strategy:\n" + current,
                       "Milestones (status computed from the recorded numbers):\n" + self._milestones_text(),
                       "Directive changes and what followed:\n" + self._past_outcomes_text(),
+                      *[x for x in (self._action_record_section(b, noops), self._planet_record_section()) if x],
                       self._records_section(),
                       "Latest briefing:\n" + (self.last_briefing or self.game.briefing_text())]
             sp_name, sp_traits = species_terms(b)
@@ -1703,6 +2484,8 @@ class Governor:
         except Exception as e:  # noqa: BLE001 - a failed review never stops play or pauses the game; retried at the next decision
             self.review_requested = trigger
             self._review_retry = True
+            # the no-op tech syncs go back to the count, so the retry lists the offers (ruling 6)
+            self._tech_noops, self._review_noops = self._tech_noops + noops, 0
             self.log.emit("episode_error", error=f"strategy review: {type(e).__name__}: {e}"[:500])
             return
         if retry_errors is not None:

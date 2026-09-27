@@ -87,6 +87,9 @@ class Settings:
     # rulings 22-27): off until the live checklist passes; at most this many stands in a row per city
     last_stand: bool = False
     last_stand_max: int = 3
+    # the Stellaris war crisis overlay (docs/design/2026-09-27-stellaris-levers-design.md, rulings
+    # 12-16): on by default; PILOT_WAR_CRISIS=0 turns it off for a run
+    war_crisis: bool = True
 
     @property
     def view_host(self) -> str:
@@ -158,6 +161,7 @@ class Settings:
         s.autoplay_chunk = max(1, int(env.get("PILOT_AUTOPLAY_CHUNK", s.autoplay_chunk)))
         s.last_stand = env.get("PILOT_LAST_STAND", "0").strip().lower() in ("1", "true", "yes", "on")
         s.last_stand_max = max(1, int(env.get("PILOT_LAST_STAND_MAX", s.last_stand_max)))
+        s.war_crisis = env.get("PILOT_WAR_CRISIS", "1").strip().lower() not in ("0", "false", "no", "off")
         s.campaign = env.get("PILOT_CAMPAIGN", s.campaign)
         s.retro_every = int(env.get("PILOT_RETRO_EVERY", s.retro_every))
         if "PILOT_RUNS_DIR" in env:

@@ -296,6 +296,9 @@ Rules:
 - **Weighted pillars** (`[weights]` in pillars.toml): pillars carry weights (sum 100, 5..50, heaviest
   >= 2x lightest); each decision gets every directive's pressure (weight x milestone need) and a
   suggestion (the top one, or keep within a 1.25 switch margin); decisions name what they `serve`.
+  A directive held 2+ years whose pillar metric grew no faster, as ours ÷ the peer median per year,
+  than while not held has its pressure halved; the frame says when expand is held back by unsurveyed
+  space (none surveyed in reach, influence 950+ for 12 months).
 - **Strategy detail** (`[strategy]` in pillars.toml): every pillar needs a milestone, the heaviest two
   on different dates (a checkpoint and an end target), the top 3 two goals, and each stance a figure from
   the briefing; a Strategist answer that misses one is sent back once with its errors. Pinned pillars
@@ -313,6 +316,34 @@ Rules:
   order of them to add is refused on its own until that is measured (removals and other adds still go,
   but an order of the same side and resource already placed stays at its amount); changes are computed from the last autosave, so call it at
   most once per autosave; trade is not a market resource).
+- **Market buy rules** (`[actions.market.buy]` in pillars.toml): every buy, declared or automatic,
+  keeps 2,500 trade after a year of its cost over the trade income, costs at most a quarter of that
+  income plus the surplus over two years, is not placed or raised above +50% price (an order in place is kept at its amount up to +100%), stays
+  within one base amount a month (six on the galactic market), and is never a resource the AI buys
+  itself (under 6 months of cover, or bought since the last save), an IDLE one, or alloys at 95% of
+  naval capacity. While trade is IDLE and no declared order passes, the slot is filled with deficit
+  cover (6-24 months of stock left, 36 for motes, gases, crystals); else the next decision reads
+  "trade idle: nothing qualifies to buy (reason)". A buy in the order list that trades nothing in 2
+  saves (`market.trades_net`) is recorded took (not executing).
+- **War crisis** (`PILOT_WAR_CRISIS`, default 1): at war, a colony occupied, 2+ systems or half the
+  military lost within 12 months, a colony lost, a new invasion, or a colony under stability 25 twice
+  enters it (`war going badly: ...`; never on ratios, battle counts or exhaustion; once per war per 12
+  months). The ladder: review, defence need missed, `defend` applied, the `war_crisis` posture (skipped:
+  not verified until enabled and the v2 export is in the save), alloys on the market slot (only with a
+  shipyard we hold, naval room, a measured start amount: not before L2), decisions every 3 months, a
+  non-blocking status-quo question. Ends at peace or after 6 quiet saves held 6 months (each save
+  counted once, also the one a restarted run re-reads).
+- **Planet check** (read-only): a colony under stability 50, amenities under -100 (300+ pops), housing
+  under 0 (1,000+ pops), 5% unemployed (not the capital), 20% fewer pops than its 12-month peak, or
+  occupied, for 2+ months (saves at most 3 months apart: a restart gap starts the count again), is named in the decision prompt's `Planet check:` line with a hint
+  (nothing queued, minerals net < 0). `planet crisis` (under 25 on 2 saves in a row) and `planet
+  losing pops` (1,000+ pops) are urgent once and start a review. No directive repairs grown colonies.
+- **Action record**: every directive, tech pick, market order and posture is followed in the
+  autosaves until it resolves (`order_outcome` events: took, held, researched; overridden, failed,
+  did not take, did not stick, removed; not judged: superseded, locked, no-op), with a stick rate per
+  key over 10 in-game years (`[orders]` in pillars.toml, in months) in the decision prompt, the
+  Strategist's review and the dashboard. Advisory, except that a market order that did not take twice
+  in a row is suspended until `[ui.market]` is recalibrated; a review resets only the tech skip.
 - **Other screen sizes**: positions and templates are measured at 3840x2160. A host with another size
   sets `GAME_RESOLUTION` (e.g. `2560x1440`); the controller then merges `res/<W>x<H>.toml`. Its
   `[ui.*]` points come from `scripts/res-map.py corpora/stellaris <W>x<H> --write` (one UI scale per
@@ -359,6 +390,19 @@ Rules:
   the outcomes in `popups_quieted`). A stall that still happens needs the screen: hover + click the
   popup's X. The governor emits `popups_quieted` (once per load) and the dashboard's game-health
   line on Now says when a popup failed to quiet, the tuner timed out, or a turn was held.
+- An AI leader's statement (T240 "the mustering of your forces along our borders", T342 an agenda
+  warning) opens the leader screen, which holds the engine until a human answers. `popups.toml`
+  removes that screen's statement handler, but only while the library's own handler (registered in
+  `InGame` only) is in place (`requires = "dipl_handler"`; otherwise the controller puts the screen's
+  handler back and a statement waits for a human on screen, as before). That handler answers while
+  autoplay runs, from its explicit table: the conciliatory promise to a warning, Goodbye to
+  proposals, first meetings and everything else, a refusal to deals and demands; never a choice that
+  declares war or accepts a deal. A statement outside autoplay waits until autoplay next starts.
+  The snapshot's `diplomacy` lists the last 20 answers; the governor emits `diplomacy_reply` and adds
+  a briefing line and the order record's diplomacy section. Until the next load a human sees no AI
+  statement on screen. A controller built before `requires` refuses that popups.toml (unknown
+  field), so build the binary with the corpus change (pause the governor across the merge and the
+  build).
 - One-turn autoplay costs the AI its multi-turn plans (a Settler idle for 7 turns, no pantheon; a
   4-turn stretch settled and chose one at once): `PILOT_AUTOPLAY_CHUNK` sets turns per call.
 - Menus, when the screen must be used: the UI ignores a click without a preceding hover (move the

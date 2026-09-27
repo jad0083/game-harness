@@ -31,7 +31,7 @@ The model plays each game the way that game allows:
 | Game | How it is played | State |
 |---|---|---|
 | **Galactic Civilizations IV** | The controller ends turns itself (each one verified by the date changing) and clears known screens; the model decides only real choices (events, research, builds, policies, trades) from screenshots. | Played live |
-| **Stellaris** | The game's own AI plays the empire; the model is a **governor** that picks one standing directive (expand, consolidate economy, tech rush, defend, …) from the monthly autosave, within a strategy of weighted pillars and milestones, and places tech picks and market trades. | Played live |
+| **Stellaris** | The game's own AI plays the empire; the model is a **governor** that picks one standing directive (expand, consolidate economy, tech rush, defend, …) from the monthly autosave, within a strategy of weighted pillars and milestones, and places tech picks and market trades (buys under a trade reserve, price and volume rules; idle trade buys deficit cover); each is followed in the saves until it resolves (a stick rate per kind), a read-only planet check names colonies in lasting trouble, and a war crisis overlay holds defend and decides every 3 months while a war is being lost. | Played live |
 | **Civilization VI** | The game's own AI plays a few turns at a time (autoplay); the model is a **governor** that reads a Lua snapshot through the game's tuner and gives structured orders between stretches (research, civic, policies, production, purchases), within weighted pillars in share mode. | Governor (first live runs) |
 
 ## Quick start

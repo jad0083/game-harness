@@ -281,7 +281,8 @@ Lua string literal, so no model text is ever evaluated. The pilot (`src/pilot/ci
 drives these commands; see `docs/pilot.md`. It follows every order that took on each later
 snapshot until it completes, holds or is replaced by the AI (`held_outcome` in `src/pilot/civ6.py`)
 and emits an `order_outcome` event per resolved order; `Telemetry.campaign_events` reloads them, so
-the stick rate per kind of order spans every run of a campaign. A city about to fall can get a
+the stick rate per kind of order spans every run of a campaign (the rate itself is `order_record` in
+`src/pilot/record.py`, shared with Stellaris; `civ6.py` re-exports it with its key order). A city about to fall can get a
 scripted last stand before the AI plays the turn (off by default): the controller's `civ6
 last-stand-step` requests one action in `InGame`, `civ6 ls-state` reads the result back in
 `GameCore` (whose unit damage does not lag), `civ6 finish-moves` pins the units that acted, and a
@@ -291,7 +292,14 @@ from the snapshot and our player's strategies from the game's `Logs/AI_Victories
 ai-strategies` reads through the agent's file API in one bounded read per decision. District
 placement is read-only so far: `civ6 district-plots` returns where each district may go (the game's
 own check) and the facts of the plots around each city, and `src/pilot/civ6_placement.py` scores
-them with the adjacency rules the extractor writes as data (`data/_adjacency.json`).
+them with the adjacency rules the extractor writes as data (`data/_adjacency.json`). One part of the
+library runs without a call: the install chunk names its Lua state (`HARNESS_STATE`), and in `InGame`
+the library registers an `Events.DiplomacyStatement` handler that answers an AI leader's statement to
+us while autoplay runs, from an explicit table (never a choice that declares war or accepts a deal),
+since the game's leader screen would hold the engine until a human answers; `corpora/civ6/popups.toml`
+removes that screen's handler only while the library's is registered (a `[[quiet]]` entry's `requires`
+names a `Harness` field the controller checks in `InGame` first; without it the popup's handler is put
+back), and the snapshot's `diplomacy` log feeds `diplomacy_reply` events.
 
 The loader rejects nameless records and duplicate ids at startup, so a bad extract fails the build rather than a game turn. The raw XML is not committed (Stardock's data); `data/_meta.json` records the game version and generator commit for reproducibility.
 
@@ -437,13 +445,39 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   changed unpinned pillars; `keep_pinned`; `milestone_status` from metrics rows; weights: `Strategy`
   derives each pillar's rank from its weight and converts a ranked strategy to weights on load
   (`default_weights`), `pressures` = weight x `[weights.need]` of the pillar's worst milestone status,
-  `directive_pressure` / `suggestion` (exclusive mode) or `shares` (share mode) for `frame_text`,
+  `directive_pressure` / `suggestion` (exclusive mode) or `shares` (share mode) for `frame_text`;
+  `directive_record` compares a directive's held and other growth of ours ÷ the peer median when the
+  rows carry it (`[metrics] peer_keys`), else absolute; `expand_blocked` in governor.py adds the
+  frame's hint for an expansion held back by unsurveyed space,
   `rebalance` for a human weight edit). `governor.py`:
   `_review_strategy` (role `strategy`, `StrategyReview` output, one corrective retry, `strategy` and
   `strategy_review` events, saved as a decision row with `decision = "strategy_review"` and a
   negative episode, excluded wherever directive decisions are meant), `_maybe_event_review` (12-month
   cap; failure retries, no-strategy and dashboard requests bypass it), `frame_text` + off-frame
   tagging in `_decide`, `_carry_out_actions` (once per save date, verified in a later save),
+  the action record (`stellaris_record.py`, pure: an action dict per directive, tech pick, market
+  change and posture sent; `judge` on each new save in `_follow`, called from the wait loop after
+  the metrics row and before any decision or action on a save; `order_outcome` rows and
+  `order_followed` events reloaded by `_load_action_record` from `Telemetry.campaign_events`; the
+  rate via `record.order_record` with Stellaris's outcomes; a market suspension keyed to the hash of
+  `[ui.market]`, `market_calibration`), the market buy rules (`stellaris_market.py`, pure:
+  `unit_price`, `buy_errors` (reserve, spend cap, price guard up to the amount in place, volume, the
+  AI's own buys, IDLE, naval room), `keep_placed` (a refused raise keeps the order in place), `idle_fill` (deficit cover while trade is IDLE); numbers in `BuyRules`, `[actions.market.buy]`;
+  the governor's `_buy_errors`/`_idle_fill` in `_carry_out_market_actions`, the save before the newest
+  kept by `_follow`, the fill's line shown to the next decision; a buy that took but trades nothing in
+  2 saves (`market.trades_net`) is recorded `took` by "not executing"), the planet check
+  (`stellaris_planets.py`, pure: `colony_codes` per save, `colony_row` into each metrics row,
+  `planet_issues` (persisted 2 months; saves over 3 months apart are not in a row), `planet_line`, `planet_urgent`, `planet_record`,
+  `stability_loss`; the governor's `_observe` builds the save's row once per date from the last 24
+  months of rows (`_rows`, seeded from telemetry by `_load_rows`), the Stellaris-only trigger tuple
+  `STELLARIS_TRIGGERS` on `Governor.event_triggers`), the war crisis (`stellaris_crisis.py`, pure:
+  `conditions`/`war_crisis` C1-C6, `crisis_step` the enter/exit state machine (each save once: `seen`), `status_quo`,
+  `crisis_alloys`; the governor's `_crisis_update` in `_observe`, the ladder in `_decide`
+  (`_crisis_review` and `_crisis_boost_row` before the prompt, `_crisis_choice`, `_crisis_posture_step`, `_crisis_market` in
+  the market sync, `_crisis_finish`), `_need_boost` in `_pressures` ({} for Civ VI; `boost_pressures` applies it there and in the
+  dashboard's `/api/strategy` for the live campaign), `_set_pace`,
+  `crisis` events (enter/exit/ladder/closed, and `state` from `_save_crisis_state` for changes between
+  them) reloaded by `_load_crisis`; `Settings.war_crisis` from `PILOT_WAR_CRISIS`),
   `edit_pillar`/`unpin_pillar`/`request_review` under `_strategy_lock`. Telemetry: `strategies`
   table, `latest_strategy`, `strategy_history`, `metrics_rows`; dashboard `/api/strategy`, control
   actions `edit_pillar`, `unpin_pillar`, `review_strategy`. Rust: `choose_tech_pick` (only the

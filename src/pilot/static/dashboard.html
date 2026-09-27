@@ -1198,7 +1198,7 @@ function weightLine(pl, p, total, share, weightTotal) {
   if (!p) return `<div class="p-weight"><span>Weight <b>${esc(pl.weight)}</b></span></div>`;
   const st = MS_STATUS[p.status] || ["", "", (pl.milestones || []).length ? "no data" : "no milestones"];
   const r = p.record, stall = p.efficacy && p.efficacy < 1 && r
-    ? ` · <span class="p-need bad" title="${esc(`${human(r.metric)} ${r.held_rate >= 0 ? "+" : ""}${r.held_rate}/yr over ${r.held_years} years with ${human(r.directive || "its directive")} vs ${r.other_rate >= 0 ? "+" : ""}${r.other_rate}/yr otherwise`)}">not working here ×${esc(p.efficacy)}</span>` : "";
+    ? ` · <span class="p-need bad" title="${esc(`${human(r.metric)}${r.relative ? " ÷ median" : ""} ${r.held_rate >= 0 ? "+" : ""}${r.held_rate}/yr over ${r.held_years} years with ${human(r.directive || "its directive")} vs ${r.other_rate >= 0 ? "+" : ""}${r.other_rate}/yr otherwise`)}">not working here ×${esc(p.efficacy)}</span>` : "";
   return `<div class="p-weight"><span>weight <b>${esc(pl.weight)}</b> · <span class="p-need ${st[0]}">need ×${esc(p.need)} (${esc(st[2])})</span>${stall} · pressure <b>${esc(fmt(p.pressure))}</b></span>
     ${bar("of all pressure")}</div>`;
 }
@@ -2742,6 +2742,19 @@ function describe(ev) {
     }
     case "last_stand": return `Last stand in ${ev.city} at ${gdate(ev.date || (ev.turn != null ? `T${ev.turn}` : ""))}: ${(ev.actions || []).map((a) => `${human(a.action)} ${human(a.result)}`).join(", ") || "no action"}; stopped: ${tidy(ev.stopped)}`;
     case "last_stand_off": return `Last stand off for this run: ${tidy(ev.reason)}`;
+    case "diplomacy_reply": {
+      const civ = ev.civ ? human(String(ev.civ).replace(/^[a-z_]+:/, "").replace(/^CIVILIZATION_/, "").toLowerCase()).replace(/\b\w/g, (c) => c.toUpperCase())
+        : ev.from != null ? `Player ${ev.from}` : "Another leader";
+      return `${civ}: ${human(String(ev.statement || "a statement").toLowerCase())}${ev.subtype && ev.subtype !== "NONE" ? " (follow-up)" : ""}; answered: ${clip(tidy(ev.text), 160)}`;
+    }
+    case "crisis": {
+      const conds = (ev.conditions || []).map(tidy).join("; ");
+      return ev.event === "enter" ? `War crisis${ev.date ? ` at ${gdate(ev.date)}` : ""}${conds ? `: ${clip(conds, 200)}` : ""}`
+        : ev.event === "exit" ? `War crisis over${ev.why ? `: ${clip(tidy(ev.why))}` : ""}`
+        : ev.event === "ladder" ? "War crisis steps applied"
+        : ev.event === "closed" ? "War crisis closed"
+        : "War crisis still on";
+    }
     case "last_stand_check": {
       const n = {};
       (ev.pins || []).forEach((p) => { n[p.result] = (n[p.result] || 0) + 1; });
