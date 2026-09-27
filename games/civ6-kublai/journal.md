@@ -149,3 +149,15 @@ reads, checks and orders only between turns.
 - **State at T134**: 6 cities, pop 22, score 186, military 218; gold 0 at +1/turn; faith 358.
   The T134 decision repeated the civic blocker ("civic is None"), asked for Conscription with no
   free military/wildcard slot (refused by the game) and a Trader in Chengdu that did not start.
+
+## 2026-09-27 — a leader scene holds the turn (T240)
+
+- Autoplay did not start at T240 after six earlier transient "did not start" stops that a resume
+  cleared. The screen showed John Curtin (Australia): "You can imagine how the mustering of your
+  forces along our borders must look?" with *My troops are merely passing by* / *You were right to
+  worry (Declare War)!*. Answered "merely passing by" (the governor has no mandate for wars), then
+  Goodbye (each needed hover + a second click). A "Chinese Empire Makes History" timeline followed;
+  its X ignored clicks, and `OnClose()` in the `HistoricMoments` tuner state closed it
+  (`IsHidden` false → true). Resumed: T243 and T245 played; the AI made the new era's dedication.
+- State at T240: science +56, culture +34.9, gold 523 (+34.9), faith 378, a Crossbowman army;
+  Jerusalem (city-state) and Jiaodong nearby.
