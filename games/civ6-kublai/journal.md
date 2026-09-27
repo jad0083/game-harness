@@ -212,7 +212,10 @@ re-installed its own library at its next call.
   is thin. Caveats: alternatives are today's free plots, not those free when the AI placed; rules
   that need a tech or civic are left out; resources are read without our visibility check.
 - **`turn_ready` at T207** (read-only): every check answered (no "cannot check"), and it reported
-  not ready, "on screen: HistoricMoments", while the governor was deciding between turns. Either a
-  Historic Moments screen was up at the hand-back or that context reads as shown when it is not; the
-  stand fails closed on it (no action, only the hand-back). To settle before the L6 checklist
-  (issues.md).
+  not ready, "on screen: HistoricMoments", while the governor was deciding between turns. The
+  game's `HistoricMoments.lua` (Expansion 2) hides that context at start and shows it as a queued
+  popup for each new historic moment when the UI is idle, so this was most likely a real moment
+  popup left for the human at the hand-back (issues.md: popups pile up during autoplay). The stand
+  fails closed on it (no action, only the hand-back), so as it stands it would rarely act; the L6
+  checklist must measure how often a popup is up at the hand-back and whether closing it first is
+  acceptable (issues.md).
