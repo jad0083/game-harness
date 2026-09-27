@@ -2,6 +2,7 @@
 
 ## Open
 
+- [ ] Pilot key denylist matched exact strings only, so `win+r`, `win+x`, `alt+tab` passed (B7): any combo with the Windows key and OS-level combos are refused; tick when deployed
 - [x] Dashboard said "PC on, no game open" while Stellaris ran on mini-rig2 (2026-09-26): only game-pilot.service had the host drop-in (`GAME_AGENT_URL`, `GAME_RESOLUTION`), so the dashboard polled the main PC (.77); the same `host.conf` drop-in is now on game-pilot-view.service (`/api/pc` reports Stellaris on 1.4.0). A host switch must update both services until the host registry (plan.md) lands
 - [ ] Anthropic API credit exhausted (2026-09-26): every Claude call fails with 400 "credit balance is too low"; the Strategist falls back to Gemini, so the Claude path of the named-field schema is verified by tests only until the account is topped up. Mitigated 2026-09-26: the Strategy role runs `claude-code:opus` on the subscription (live smoke 3.8 s), Gemini as fallback; `anthropic:*` removed from the model pools
 - [x] Game pillars (pre-merge review, 2026-09-26): the review prompt showed the stored strategy shape, so a Strategist echoing it failed the generated schema (13 extra inputs) and would re-review every decision; the prompt now shows the output shape and empty/identity echoes are accepted. Also: dashboard errors for a mismatched stored strategy, galciv4 campaigns and a live layer-off governor; layer off on any setup failure; a mismatch at start reviews at once. Deployed 2e9f24d

@@ -44,7 +44,7 @@ from .claude_code import resolve_model
 from .config import Settings
 from .events import EventLog
 from .game import Game, ToolResult
-from .learning import FORBIDDEN_KEYS, Journal, LearnedStore, LearningRejected, ScreenAction
+from .learning import Journal, LearnedStore, LearningRejected, ScreenAction, is_forbidden_key
 
 GENERIC_INSTRUCTIONS = """You are an autonomous player of a turn-based strategy game, acting only through tools.
 A verified autopilot plays routine turns; you are called when it stops on something that needs judgement.
@@ -164,7 +164,7 @@ def drag(ctx: RunContext[Deps], x1: float, y1: float, x2: float, y2: float) -> T
 
 def key(ctx: RunContext[Deps], combo: str) -> ToolReturn:
     """Press a key or combo, e.g. 'tab', 'esc', 'n', 'o', 'ctrl+s'."""
-    if combo.lower().replace(" ", "") in FORBIDDEN_KEYS:
+    if is_forbidden_key(combo):
         return ToolReturn(return_value=f"refused: {combo!r} is not allowed")
     return _act(ctx, f"key {combo}", ctx.deps.game.key(combo))
 
