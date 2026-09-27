@@ -2,6 +2,8 @@
 
 ## Open
 
+- [ ] Civ VI: the tuner does not answer while the game's AI plays its turns (2026-09-26, first governor run on mini-rig2): a snapshot sent mid-stretch timed out after 30 s and the stretch (T12 → T17) ended before any poll answered, so urgent triggers only fire on polls that land between turns; the autoplay-stop sent on exit timed out once too (the game was idle and answered 0.3 s later). Also seen once in manual tests: one status poll at a turn change timed out
+
 - [x] Every commit's author email published the controller's host name and home domain, and old `game-agent.exe` builds in history carried `/home` paths (security review 2026-09-26): history rewritten (mailmap to the GitHub noreply address, binaries dropped, cited hashes remapped) and force-pushed; new commits use the noreply address
 - [x] One agent timeout (2274.09, 2026-09-26; the agent was busy serving ~1,070 Civ VI file reads) stopped the Stellaris governor until a human pressed Resume, and the game ran ungoverned for 8 in-game years: transient network failures (timeout, refused connection) now probe the agent every 30 s by pausing the game and carry on by themselves (`recovered` event); other failures still wait for the human
 - [x] Dashboards (8780 viewer, 8790 live pilot) had no authentication on the LAN, and POSTs were open to CSRF / DNS rebinding (security review 2026-09-26, B1): fixed on the branch with an access key (cookie or `X-Pilot-Key`), JSON-only mutations and an Origin/Host check; deployed 2026-09-26 (d90c722; cookie SameSite=Lax since, so a link opened from another app works)

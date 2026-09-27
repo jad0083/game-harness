@@ -51,3 +51,35 @@ API names that differed from the expectation: slot types are 0 economic, 1 milit
 name or by that ID; `MapConfiguration.GetValue("RANDOM_SEED")` gives the map seed for the campaign
 id; the AI slots policies itself during autoplay (God King, Discipline, Urban Planning at turn 12),
 after which changing them costs gold (`GetCostToUnlockPolicies`) until the next civic completes.
+
+Later additions checked live the same day: the snapshot's `options` (at T12: Pottery, Animal
+Husbandry, Mining, Sailing, Astrology; Craftsmanship, Foreign Trade; Survey) and each city's
+`can_build` (Beijing: Settler, Builder, Scout, Warrior, Slinger, Monument); the library's install
+guard (installed twice with one version, a value set between the installs survived); an idle
+snapshot takes 0.3 s.
+
+## 2026-09-26 — first governor run (T12 → T17)
+
+`python -m pilot run --game civ6 --episodes 2 --decide-turns 5` with a fast, cheap decision model
+(`PILOT_MODEL`), a scratch runs folder and journal, and no commits. Campaign
+`civ6/kublai_khan_china_702403662`.
+
+- **Start-of-run review** (36 s): accepted at the first try, milestones on turns. Focus "rapid
+  opening expansion to 2 cities while leveraging Chinese 50% boosts and Kublai's economic slots";
+  weights expansion 25, science 20, economy 20, military 15, culture 10, faith 5, diplomacy 5;
+  expansion cities >= 2 by T40 and >= 3 by T60; preferred techs Mining, Animal Husbandry, Pottery,
+  Writing; civics Craftsmanship, Foreign Trade, Early Empire, State Workforce.
+- **T12, decision 1** (12 s): no orders — Beijing finishes its Builder next turn and Mining in 3,
+  treasury 66 against the 60 reserve. Autoplay 5 turns.
+- **Autoplay**: the first poll (T13) answered; the next snapshot, sent while the AI played, timed out
+  after 30 s (issues.md) and the stretch ended at T17 (about 40 s for 5 turns). The AI researched
+  Mining and chose Animal Husbandry, grew Beijing to 3, and left Beijing with nothing in production.
+- **T17, decision 2** (14 s): `production unit:settler in Beijing`, serving "expansion: cities >= 2
+  by T40". Read back in a fresh snapshot: stuck (Beijing builds UNIT_SETTLER), confirmed again after
+  the run.
+- **Exit**: the run stopped after its two decisions; the autoplay-stop sent on exit timed out once
+  (autoplay had already ended; the game answered 0.3 s later).
+
+Seen: an autoplay stretch can end with a city building nothing, which the next decision fills; the
+tuner does not answer during the AI's turn processing, so mid-stretch urgent stops need polls that
+land between turns.
