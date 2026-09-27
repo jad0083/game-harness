@@ -84,6 +84,8 @@
 - [x] Evaluate the mod on 11 in-game years of telemetry: expansion is influence-gated; the expand directive's influence went to a nomad-only budget pool (journal, 2026-09-26)
 - [ ] Re-measure expansion ~5 in-game years after the fixed mod (influence → `stations`) is loaded
 - [ ] Screen templates: pause/date and event popups
+- [x] Strategy detail rules (pillars.toml `[strategy]`): a milestone on every pillar, checkpoint + end target on priority 1, two goals on the top 3, a briefing figure in each stance, so every model writes at the same detail (deployed 4decee2)
+- [ ] Weighted pillars: weights (sum 100) instead of priorities, and each decision scores directives by weight × milestone need (met / on track / at risk / missed), with a hold time and switch margin; decisions name the milestone they serve; directive efficacy per metric fed back to the Strategist (spec first)
 
 ## Pilot app: observability and control
 - [x] Decision traces: prompt, Gemini thought summaries, tool calls and results, answer, tokens, time (`runs/<id>/traces/`)
@@ -93,6 +95,7 @@
 - [x] Neighbours' identity in the briefing: ethics, government, civics, AI personality, species traits, colonies, traditions, perks
 - [x] Corpus: 363 species traits and 24 colonisable planet classes from the game files; advanced strategy doc (4.5.1 files + wiki); playbook §10 lessons from play and §11 species and identity, both sent with every decision
 - [x] Directives set policies only under each option's `valid` trigger; `expand`/`diplomacy_first` also set proactive first contact — live check that the policies change in game — verified 2026-09-26 in a new Theian game: the save holds `first_contact_protocol = first_contact_proactive`
+- [x] Versioned Claude Code models in the catalog (aliases plus every id from the Anthropic listing; deployed 4decee2)
 - [x] Model provider `claude-code:*` (Claude Code CLI, Claude subscription instead of an API key) for any role, Strategy first; falls back to the next model on a usage limit or CLI error
 - [ ] Economic-plan subplans gated on directive flags (naval capacity under `defend`/`prepare_war`, research under `tech_rush`, pops under `expand`, small strategic-resource targets when one runs out) — test against the game files, then measure over ~10 in-game years
 - [ ] Evaluate carrier doctrine under `prepare_war` (`fleet_doctrine = strike_wing_fleet_doctrine`, cruisers and hangars known): live test that the AI's refreshed designs raise fleet power
