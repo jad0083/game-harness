@@ -50,6 +50,7 @@
 - [x] Console-subsystem exe launched as an interactive logon task → console window on the game desktop at every logon — fixed in agent 1.4.0 (GUI subsystem, logs to agent.log). Deployed 2026-09-26 (1.4.0 on the PC, no console window at logon)
 - [x] Zero tests for the shipped agent binary — 24 agent tests now (batch/drag validation, files, keys, token, bounds); run by scripts/ci.sh
 - [ ] Security review 2026-09-26 (B4): an empty `--token` gave an empty token that matched an empty header — fixed in agent 1.5.0: every token source must hold >= 32 characters or the agent refuses to start (not yet deployed)
+- [ ] Security review 2026-09-26 (B5): `/files/write` ran `create_dir_all` before its containment check, so a linked allowed folder let it create directories outside the root; paths were not checked for Windows device names, trailing dots/spaces or UNC prefixes — fixed in agent 1.5.0: names are checked on read and write, and directories are created one level at a time after checking the level above is a real directory (not yet deployed)
 
 ### Repo hygiene / docs
 - [x] `windows_agent/game-agent.exe` (1.4 MB) is tracked and re-committed on every rebuild — untracked and gitignored; scripts/serve-agent.sh builds it before serving

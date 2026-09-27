@@ -46,6 +46,42 @@ pub struct Entry {
     pub modified: u64,
 }
 
+/// Windows device names: opening one (with any extension, e.g. `nul.txt`) reaches the device,
+/// not a file in the folder.
+const DEVICE_NAMES: &[&str] = &[
+    "CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8",
+    "COM9", "COM\u{b9}", "COM\u{b2}", "COM\u{b3}", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8",
+    "LPT9", "LPT\u{b9}", "LPT\u{b2}", "LPT\u{b3}",
+];
+
+/// Check a request's relative path by name, on every OS (so tests on Linux cover the Windows
+/// rules): no drive, stream (`:`), UNC or `\\?\` syntax, no `..`, no Windows device name, and no
+/// name ending in a dot or a space (Windows strips those, so `x.` would name `x`).
+pub fn check_rel(rel: &str) -> Result<(), String> {
+    if rel.contains(':') {
+        return Err(format!("{rel:?}: drive or stream syntax (':') is not allowed"));
+    }
+    if rel.starts_with(['/', '\\']) || rel.contains("//") || rel.contains("\\\\") {
+        return Err(format!("{rel:?}: absolute, UNC and device paths are not allowed"));
+    }
+    for seg in rel.split(['/', '\\']) {
+        if seg.is_empty() || seg == "." {
+            continue;
+        }
+        if seg == ".." {
+            return Err(format!("path {rel:?} must be relative and must not contain '..'"));
+        }
+        if seg.ends_with(['.', ' ']) {
+            return Err(format!("{rel:?}: a name must not end in a dot or a space"));
+        }
+        let stem = seg.split('.').next().unwrap_or(seg).trim_end_matches(' ');
+        if DEVICE_NAMES.iter().any(|d| d.to_uppercase() == stem.to_uppercase()) {
+            return Err(format!("{rel:?}: {stem:?} is a Windows device name"));
+        }
+    }
+    Ok(())
+}
+
 impl Roots {
     /// Load roots; a missing file means no roots. A BOM (Windows PowerShell 5.1 writes one) is
     /// accepted; an unparsable file is reported on stderr and yields no roots.
@@ -65,15 +101,13 @@ impl Roots {
     /// Resolve `rel` inside root `name`, refusing anything that could escape it.
     pub fn resolve(&self, name: &str, rel: &str) -> Result<PathBuf, String> {
         let root = self.roots.get(name).ok_or_else(|| format!("unknown root {name:?}"))?;
+        check_rel(rel)?;
         let rel_path = Path::new(rel);
         for c in rel_path.components() {
             match c {
                 Component::Normal(_) | Component::CurDir => {}
                 _ => return Err(format!("path {rel:?} must be relative and must not contain '..'")),
             }
-        }
-        if rel.contains(':') {
-            return Err("drive or stream syntax (':') is not allowed".into());
         }
         let root_c = root.canonicalize().map_err(|e| format!("root {name:?} unavailable: {e}"))?;
         let full = root_c.join(rel_path);
@@ -85,11 +119,16 @@ impl Roots {
     }
 
     /// Write `data` to `rel` inside write root `name` (atomically: temp file + rename). Returns bytes written.
+    ///
+    /// The path is checked by name and against the allowlist first. Then each missing directory is
+    /// created one level at a time, after checking that the level above is a real directory (not a
+    /// link or junction), so no directory is ever created outside the root.
     pub fn write(&self, name: &str, rel: &str, data: &[u8]) -> Result<usize, String> {
         let wr = self.write_roots.get(name).ok_or_else(|| format!("{name:?} is not a writable root"))?;
         if data.len() > MAX_WRITE {
             return Err(format!("too large: {} bytes (max {MAX_WRITE})", data.len()));
         }
+        check_rel(rel)?;
         let rel_path = Path::new(rel);
         let mut parts = Vec::new();
         for c in rel_path.components() {
@@ -98,8 +137,8 @@ impl Roots {
                 _ => return Err(format!("path {rel:?} must be relative and must not contain '..'")),
             }
         }
-        if rel.contains(':') || parts.is_empty() {
-            return Err("drive or stream syntax (':') or an empty path is not allowed".into());
+        if parts.is_empty() {
+            return Err("an empty path is not allowed".into());
         }
         let norm = parts.join("/");
         let allowed = wr.allow.iter().any(|a| {
@@ -113,21 +152,38 @@ impl Roots {
             return Err(format!("{norm:?} is not writable (allowed: {})", wr.allow.join(", ")));
         }
         let root_c = wr.path.canonicalize().map_err(|e| format!("root {name:?} unavailable: {e}"))?;
-        let target = root_c.join(&norm);
-        let parent = target.parent().ok_or("no parent directory")?.to_path_buf();
-        std::fs::create_dir_all(&parent).map_err(|e| e.to_string())?;
+        let (file_name, dirs) = parts.split_last().ok_or("no file name")?;
+        let mut parent = root_c.clone();
+        for d in dirs {
+            parent.push(d);
+            if std::fs::symlink_metadata(&parent).is_err() {
+                // One level only (never create_dir_all): every level above was checked already.
+                if let Err(e) = std::fs::create_dir(&parent) {
+                    if e.kind() != std::io::ErrorKind::AlreadyExists {
+                        return Err(e.to_string());
+                    }
+                }
+            }
+            // On Windows, is_symlink() is also true for junctions (name-surrogate reparse points).
+            let meta = std::fs::symlink_metadata(&parent).map_err(|e| e.to_string())?;
+            if meta.file_type().is_symlink() {
+                return Err(format!("{norm:?}: {d:?} is a link or junction"));
+            }
+            if !meta.is_dir() {
+                return Err(format!("{norm:?}: {d:?} is not a directory"));
+            }
+        }
         let parent_c = parent.canonicalize().map_err(|e| e.to_string())?;
         if !parent_c.starts_with(&root_c) {
             return Err(format!("{norm:?} resolves outside root {name:?}"));
         }
-        let file_name = target.file_name().ok_or("no file name")?;
         let final_path = parent_c.join(file_name);
         if let Ok(meta) = std::fs::symlink_metadata(&final_path) {
             if meta.file_type().is_symlink() || meta.is_dir() {
                 return Err(format!("{norm:?} is a link or a directory"));
             }
         }
-        let tmp = parent_c.join(format!(".{}.tmp", file_name.to_string_lossy()));
+        let tmp = parent_c.join(format!(".{file_name}.tmp"));
         std::fs::write(&tmp, data).map_err(|e| e.to_string())?;
         std::fs::rename(&tmp, &final_path).map_err(|e| {
             let _ = std::fs::remove_file(&tmp);
@@ -283,6 +339,52 @@ mod tests {
         std::os::unix::fs::symlink(outside.path().join("f"), d.path().join("dlc_load.json")).unwrap();
         assert!(r.write("w", "dlc_load.json", b"x").is_err(), "file link");
         assert!(!outside.path().join("x.txt").exists() && !outside.path().join("f").exists());
+    }
+
+    #[test]
+    fn windows_special_names_are_refused_on_read_and_write() {
+        let (_d, r) = fixture();
+        let w = tempdir::TempDirLite::new("wspecial");
+        let wr = write_roots(w.path());
+        let bad = [
+            "CON", "con.txt", "save games/NUL", "nul.sav", "Aux.log", "PRN", "COM1", "com9.txt", "LPT1",
+            "lpt9.x.y", "COM\u{b9}", "CONIN$", "conout$.txt", "NUL .txt", "save games./x", "save games /x",
+            "x.", "x ", "save games\\..\\..\\secret.txt", "\\\\?\\C:\\x", "\\\\server\\share\\x", "//server/share/x",
+            "\\\\.\\pipe\\x", "a:b", "autosave.sav:stream", "save games/empire/autosave.sav::$DATA",
+        ];
+        for rel in bad {
+            assert!(check_rel(rel).is_err(), "{rel:?} must be refused");
+            assert!(r.read("game", rel, 0, 10).is_err(), "read {rel:?}");
+            let in_allowed = format!("mod/bridge/{rel}");
+            assert!(wr.write("w", &in_allowed, b"x").is_err(), "write {in_allowed:?}");
+        }
+        for ok in ["save games/empire/autosave.sav", "console.txt", "com10.txt", "lpt.txt", "nullable.txt", "CONFIG", "a.b.c", "./x"] {
+            assert!(check_rel(ok).is_ok(), "{ok:?} must be accepted");
+        }
+        // Nothing was created by the refused writes.
+        assert!(!w.path().join("mod").exists(), "refused writes must not create directories");
+    }
+
+    #[test]
+    fn write_creates_no_directory_for_a_refused_path() {
+        let d = tempdir::TempDirLite::new("wnodir");
+        let r = write_roots(d.path());
+        for bad in ["mod/other/deep/x.txt", "mod/bridge/NUL/x.txt", "mod/bridge/sub./x.txt"] {
+            assert!(r.write("w", bad, b"x").is_err(), "{bad:?}");
+        }
+        assert!(!d.path().join("mod").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn write_creates_nothing_outside_through_a_linked_parent() {
+        let d = tempdir::TempDirLite::new("wlink2");
+        let outside = tempdir::TempDirLite::new("wout2");
+        std::fs::create_dir_all(d.path().join("mod")).unwrap();
+        std::os::unix::fs::symlink(outside.path(), d.path().join("mod/bridge")).unwrap();
+        let r = write_roots(d.path());
+        assert!(r.write("w", "mod/bridge/new/deeper/x.txt", b"x").unwrap_err().contains("link"));
+        assert!(!outside.path().join("new").exists(), "no directory may be created outside the root");
     }
 
     #[test]
