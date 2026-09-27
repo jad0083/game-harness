@@ -416,7 +416,9 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   token; else the `pilot_session` cookie; else the old `pilot_key` cookie inside the window), JSON
   and Origin rules for changes, scopes. Cookies and security headers are written in
   `on_response_prepare` (as headers: aiohttp has already serialised `response.cookies` there), so
-  they reach files, streams and raised errors. Runners use `RUNNER_KWARGS` (no access log).
+  they reach files, streams and raised errors; the dashboard page itself adds `page_policy`, a
+  `script-src` of its one inline script's SHA-256 (`dashboard_page()` re-reads it when the file
+  changes). Runners use `RUNNER_KWARGS` (no access log).
   Signing in: `pair_words.txt` (the EFF short wordlist 2.0, vendored with its CC BY 3.0 US notice;
   "yo-yo" is never drawn), `canonical_words` (three tokens split on non-letters, each a 3+ letter
   prefix of a word), grants with a link token and a `words_hash` (`create_grant`: one live grant per

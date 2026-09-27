@@ -30,7 +30,7 @@ def test_the_reader_tabs_follow_the_game_and_take_arrow_keys(browser, live_serve
     page.keyboard.press("End")
     assert page.evaluate("document.activeElement.id") == "tb-activity" and page.is_visible("#stats")
     pick_campaign(page, "stellaris/theia")
-    page.wait_for_function("document.querySelector('#tb-levers .tlabel').textContent === 'Actions'")
+    page.wait_for_function("() => document.querySelector('#tb-levers .tlabel').textContent === 'Actions'")
     w.context.close()
 
 

@@ -87,7 +87,7 @@ def open_add_sheet(w):
     page.click("#b-more")
     page.click('#more-menu [data-act="add"]')
     page.wait_for_selector("#add-dialog[open]")
-    page.wait_for_function("document.getElementById('add-link').value.includes('/pair#c=')")
+    page.wait_for_function("() => document.getElementById('add-link').value.includes('/pair#c=')")
     return page
 
 
@@ -103,7 +103,7 @@ def test_second_browser_signs_in_by_link(browser, live_servers, tmp_path):
     b.page.click("#confirm-go")
     b.page.wait_for_selector("#decisions li button", state="attached")
     assert "#c=" not in b.page.url
-    page.wait_for_function("document.getElementById('add-status').textContent.startsWith('Signed in:')", timeout=6000)
+    page.wait_for_function("() => document.getElementById('add-status').textContent.startsWith('Signed in:')", timeout=6000)
     assert "Chrome on Android" in page.text_content("#add-status")
     assert expected_only(a.errors + b.errors) == []
     a.context.close()
@@ -176,7 +176,7 @@ def test_devices_tab_lists_this_browser_and_signs_another_out(browser, live_serv
     assert "laptop watch" in page.text_content("#dev-scripts") and "read only" in page.text_content("#dev-scripts")
     page.once("dialog", lambda d: d.accept())
     page.click(f'#dev-list [data-signout="{other["id"]}"]')
-    page.wait_for_function(f"!document.querySelector('#dev-list [data-signout=\"{other['id']}\"]')")
+    page.wait_for_function(f"() => !document.querySelector('#dev-list [data-signout=\"{other['id']}\"]')")
     assert auth.store.device(other["id"])["revoked_at"]
     assert expected_only(a.errors) == []
     a.context.close()

@@ -34,7 +34,7 @@ def test_problems_first_while_a_stop_is_open_and_repeats_group(browser, live_ser
     assert page.eval_on_selector_all("#feed li.ev", "els => els.every(e => e.classList.contains('problem'))")
     for turn in (55, 56, 57):               # the same failure, turn after turn
         live.call(log.emit, "briefing_error", error=TUNER.replace("T57", f"T{turn}"))
-    page.wait_for_function("document.querySelector('#feed li.ev .ev-say').textContent.includes('3 times')", timeout=5000)
+    page.wait_for_function("() => document.querySelector('#feed li.ev .ev-say').textContent.includes('3 times')", timeout=5000)
     first = rows(page)[0]
     assert first.startswith("Autoplay at T57 failed: the game's tuner did not answer (timed out)"), first
     page.click('#feed-filters [data-filter="all"]')
@@ -54,7 +54,7 @@ def test_each_row_has_its_game_date_wall_time_and_raw_event(browser, live_server
     page, log, live = w.page, live_servers["log"], live_servers["live"]
     live.call(log.emit, "turn", turn=57, turns=2, seconds=126.0, note="autoplay ended early")
     live.call(log.emit, "mystery_kind", detail={"a": 1})
-    page.wait_for_function("document.getElementById('feed').textContent.includes('Unrecognised event: mystery kind')", timeout=5000)
+    page.wait_for_function("() => document.getElementById('feed').textContent.includes('Unrecognised event: mystery kind')", timeout=5000)
     texts = rows(page)
     assert "Played T55 → T57 in 2 min 6 s; autoplay ended early" in texts, texts
     li = page.locator("#feed li.ev").first
@@ -74,7 +74,7 @@ def test_filters_sort_the_feed(browser, live_servers):
     page = w.page
     assert page.get_attribute('#feed-filters [data-filter="all"]', "aria-pressed") == "true"   # no stop open
     page.click("#b-toggle")                                                                   # Pause, from this browser
-    page.wait_for_function("document.getElementById('feed').textContent.includes('Paused, from Pixel phone')", timeout=5000)
+    page.wait_for_function("() => document.getElementById('feed').textContent.includes('Paused, from Pixel phone')", timeout=5000)
     page.click('#feed-filters [data-filter="you"]')
     page.wait_for_timeout(200)
     assert rows(page) == ["Paused, from Pixel phone"]
@@ -93,7 +93,7 @@ def test_a_past_campaign_shows_its_own_events(browser, live_servers):
     load(w)
     page = w.page
     pick_campaign(page, "stellaris/theia")
-    page.wait_for_function("document.getElementById('feed').textContent.includes('Run started: Stellaris')", timeout=5000)
+    page.wait_for_function("() => document.getElementById('feed').textContent.includes('Run started: Stellaris')", timeout=5000)
     feed = page.text_content("#feed")
     assert "Run ended" in feed and "Civ VI" not in feed and "Chengdu" not in feed
     dates = page.eval_on_selector_all("#feed .ev-date", "els => els.map(e => e.textContent.trim()).filter(Boolean)")
@@ -108,7 +108,7 @@ def test_long_strings_wrap_in_the_feed(browser, live_servers, name):
     load(w)
     page, log, live = w.page, live_servers["log"], live_servers["live"]
     live.call(log.emit, "journal", text="x" * 400)
-    page.wait_for_function("document.getElementById('feed').textContent.includes('xxxxxxxx')", timeout=5000)
+    page.wait_for_function("() => document.getElementById('feed').textContent.includes('xxxxxxxx')", timeout=5000)
     assert page.evaluate("document.documentElement.scrollWidth <= document.documentElement.clientWidth")
     assert w.errors == []
     w.context.close()

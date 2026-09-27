@@ -638,7 +638,9 @@ The dashboard listens on the LAN, so every request needs a principal (design:
 - Changes (`POST`) must be `application/json`; a browser's change must carry an `Origin` equal to
   the dashboard's host (`Origin: null`, another site or `Sec-Fetch-Site: cross-site` get 403),
   so other web pages cannot drive the pilot through your browser. Every response is `no-store`,
-  cannot be framed and carries `nosniff` and a `Referrer-Policy`. API 401s are JSON
+  cannot be framed and carries `nosniff` and a `Referrer-Policy`; the dashboard page's
+  `Content-Security-Policy` lets only its own inline script run (named by its SHA-256), so a name
+  that slipped into the page as markup runs no handler and loads no script. API 401s are JSON
   (`error`, `reason`, `fix`, `by`, `at`) with `WWW-Authenticate`; page loads go to `/pair`.
 - **Signing a browser in** (`/pair`, the sign-in page; it looks like the dashboard on a phone, in
   light and dark): a signed-in browser opens ⋯ > **Add a device**, which shows a QR code (behind

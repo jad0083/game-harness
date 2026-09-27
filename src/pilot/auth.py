@@ -15,6 +15,7 @@ in memory. Only the viewer and the CLI open the store; the live pilot needs none
 from __future__ import annotations
 
 import asyncio
+import base64
 import contextlib
 import hashlib
 import hmac
@@ -850,6 +851,15 @@ def security_headers(response: web.StreamResponse) -> None:
     h.setdefault("Content-Security-Policy", "frame-ancestors 'none'")
     h.setdefault("X-Content-Type-Options", "nosniff")
     h.setdefault("Referrer-Policy", "same-origin")
+
+
+def page_policy(page: str) -> str:
+    """The dashboard page's Content-Security-Policy: only its own inline script runs (named by its
+    hash), so markup that slipped into the page (an unescaped device name) runs no handler and loads
+    no script from elsewhere; no plugins, no <base>, never framed."""
+    hashes = [f"'sha256-{base64.b64encode(hashlib.sha256(s.encode()).digest()).decode()}'"
+              for s in re.findall(r"<script>(.*?)</script>", page, re.DOTALL)]
+    return f"script-src {' '.join(hashes) or chr(39) + 'none' + chr(39)}; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
 
 
 def cross_site(request: web.Request) -> web.Response | None:

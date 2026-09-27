@@ -86,7 +86,7 @@ def test_nothing_renders_without_the_data(browser, live_servers):
     load(w)
     page = w.page
     pick_campaign(page, "stellaris/theia")
-    page.wait_for_function("document.querySelector('#tb-levers .tlabel').textContent === 'Actions'")
+    page.wait_for_function("() => document.querySelector('#tb-levers .tlabel').textContent === 'Actions'")
     show(page, "levers")
     page.wait_for_timeout(300)
     assert page.query_selector_all("#levers .rec, #levers .market, #levers .o-alarm") == []

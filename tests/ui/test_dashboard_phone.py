@@ -153,7 +153,7 @@ def test_the_campaign_list_says_what_is_live_and_folds_empty_ones(browser, live_
         size = page.eval_on_selector("#camp-dialog", "e => { const r = e.getBoundingClientRect(); return [r.width, r.height]; }")
         assert size[0] >= 389 and size[1] >= 843, size
     page.click('#camp-list button[data-cid="stellaris/theia"]')
-    page.wait_for_function("document.getElementById('gov').dataset.state === 'history'")
+    page.wait_for_function("() => document.getElementById('gov').dataset.state === 'history'")
     assert page.get_attribute("#campaign", "data-cid") == "stellaris/theia"
     assert "Theian Union" in page.text_content("#campaign")
     assert page.evaluate(NO_OVERFLOW)

@@ -91,7 +91,7 @@ def test_reviews_have_their_own_lane_above_the_plot(browser, live_servers):
     load(w)
     page = w.page
     pick_campaign(page, "stellaris/theia")
-    page.wait_for_function("document.getElementById('h-chart').textContent === 'Empire over time'")
+    page.wait_for_function("() => document.getElementById('h-chart').textContent === 'Empire over time'")
     page.wait_for_selector("#chartwrap .lane")
     lane = page.eval_on_selector("#chartwrap .lane", "r => [+r.getAttribute('y'), +r.getAttribute('y') + +r.getAttribute('height')]")
     plot_top = float(page.get_attribute("#chartwrap #hit", "y"))

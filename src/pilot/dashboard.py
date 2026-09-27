@@ -65,6 +65,7 @@ from .auth import (
     ServiceAuth,
     dashboard_key,  # noqa: F401 - re-exported: the key's home before auth.py
     lan_address,
+    page_policy,
 )
 from .events import acting
 from .view import Names, Views
@@ -74,6 +75,18 @@ if TYPE_CHECKING:
 
 STATIC = Path(__file__).parent / "static"
 log_ = logging.getLogger(__name__)
+_PAGE: dict = {}
+
+
+def dashboard_page() -> tuple[str, str]:
+    """The dashboard page and its Content-Security-Policy (its inline script by hash), read again
+    when the file changes."""
+    path = STATIC / "dashboard.html"
+    st = path.stat()
+    if _PAGE.get("stamp") != (st.st_mtime_ns, st.st_size):
+        text = path.read_text(encoding="utf-8")
+        _PAGE.update(stamp=(st.st_mtime_ns, st.st_size), text=text, csp=page_policy(text))
+    return _PAGE["text"], _PAGE["csp"]
 
 
 RUN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")    # e.g. 20260926-185855; no dots or separators
@@ -748,7 +761,8 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
                web.get("/runs/{run}/trace/{n}", run_trace), web.get("/runs/{run}/frame.jpg", run_frame)]
 
     async def index(_):
-        return web.FileResponse(STATIC / "dashboard.html")
+        text, csp = dashboard_page()
+        return web.Response(text=text, content_type="text/html", headers={"Content-Security-Policy": csp})
 
     async def status(_):
         if not log:

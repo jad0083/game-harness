@@ -56,7 +56,7 @@ def test_resume_from_the_card_and_capture_the_screen(browser, live_servers):
     cap = next(e for e in live_servers["log"].recent if e["kind"] == "capture")
     assert cap["by"] == "Chrome on Windows"
     page.click("#gov-resume")
-    page.wait_for_function("document.getElementById('gov').dataset.state === 'playing'", timeout=5000)
+    page.wait_for_function("() => document.getElementById('gov').dataset.state === 'playing'", timeout=5000)
     assert "resume" in live_servers["pilot"].calls
     assert page.text_content("#toast") == "Resumed"
     assert page.title() == "T57 – Game Pilot"
@@ -99,7 +99,7 @@ def test_a_question_waits_in_the_governor_line_with_its_deadline(browser, live_s
     assert page.text_content("#gov-line").startswith("Question for you: Apply 'prepare_war'?")
     assert "means: no." in page.text_content("#gov-facts")
     page.click('#gov-actions [data-answer="yes"]')
-    page.wait_for_function("document.getElementById('gov').dataset.state !== 'question'", timeout=5000)
+    page.wait_for_function("() => document.getElementById('gov').dataset.state !== 'question'", timeout=5000)
     assert ("answer", "yes") in live_servers["pilot"].calls
     assert no_overflow(page)
     w.context.close()
@@ -120,12 +120,12 @@ def test_a_past_campaign_says_so_and_links_to_the_live_one(browser, live_servers
     load(w)
     page = w.page
     pick_campaign(page, "stellaris/theia")
-    page.wait_for_function("document.getElementById('gov').dataset.state === 'history'")
+    page.wait_for_function("() => document.getElementById('gov').dataset.state === 'history'")
     assert page.text_content("#gov-line").startswith("Viewing a past campaign: last played 2288.06")
     assert "Live now: Civ VI T57, Kublai Khan, China." in page.text_content("#gov-facts")
     assert page.title() == "Game Pilot"
     page.click("#gov-facts [data-live]")
-    page.wait_for_function("document.getElementById('gov').dataset.state === 'playing'")
+    page.wait_for_function("() => document.getElementById('gov').dataset.state === 'playing'")
     assert page.get_attribute("#campaign", "data-cid") == "civ6/kublai"
     w.context.close()
 
@@ -144,7 +144,7 @@ def test_an_empty_past_campaign_says_so_without_a_dash(browser, live_servers):
     page.click("#campaign")
     page.click("#camp-empty summary")
     page.click('#camp-dialog button[data-cid="galciv4/untitled"]')
-    page.wait_for_function("document.getElementById('gov').dataset.state === 'history'")
+    page.wait_for_function("() => document.getElementById('gov').dataset.state === 'history'")
     assert page.text_content("#gov-line") == "Viewing a past campaign with nothing recorded yet."
     assert "–" not in page.text_content("#gov")
     w.context.close()

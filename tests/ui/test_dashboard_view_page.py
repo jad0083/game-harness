@@ -67,7 +67,7 @@ def test_stellaris_history_speaks_months_and_directives(browser, live_servers):
     load(w)
     page = w.page
     pick_campaign(page, "stellaris/theia")
-    page.wait_for_function("document.getElementById('h-chart').textContent === 'Empire over time'")
+    page.wait_for_function("() => document.getElementById('h-chart').textContent === 'Empire over time'")
     page.wait_for_selector("#figures .fig")
     figs = figures(page)
     assert figs["Directive"] == ("Expand", "since 2288.03")

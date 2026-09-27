@@ -744,3 +744,29 @@ def test_legacy_window_is_recorded_once_at_the_first_start(tmp_path, clock):
     clock.t += 3600
     a2 = A.Auth.from_env(runs, key=KEY, clock=clock)            # a restart does not extend it
     assert float(a2.store.meta("legacy_until")) == until
+
+
+def test_the_dashboard_page_runs_only_its_own_inline_script(tmp_path, clock):
+    """script-src names the page's one inline script by hash: an injected handler or import() fails."""
+    import base64
+    import re
+    page = (A.STATIC / "dashboard.html").read_text(encoding="utf-8")
+    want = {f"'sha256-{base64.b64encode(hashlib.sha256(s.encode()).digest()).decode()}'"
+            for s in re.findall(r"<script>(.*?)</script>", page, re.DOTALL)}
+    assert len(want) == 1
+    app, _ = viewer(tmp_path, clock)
+    live_log = EventLog(tmp_path / "live", "run1", "m")
+    live = make_app(type("P", (), {"log": live_log})(), key=KEY)
+
+    async def go():
+        for a in (app, live):
+            async with client(a) as c:
+                r = await c.get("/", headers={"X-Pilot-Key": KEY})
+                assert r.status == 200
+                csp = r.headers["Content-Security-Policy"]
+                src = re.search(r"script-src ([^;]*)", csp).group(1).split()
+                assert set(src) == want, csp
+                assert "frame-ancestors 'none'" in csp and "object-src 'none'" in csp and "base-uri 'none'" in csp
+                assert (await r.text()) == page
+    asyncio.run(go())
+    live_log.close()

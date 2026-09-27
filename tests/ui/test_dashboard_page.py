@@ -109,6 +109,6 @@ def test_pause_is_attributed_to_the_browser_in_activity(browser, live_servers):
     page = w.page
     page.click("#b-toggle")
     show(page, "activity")
-    page.wait_for_function("document.getElementById('feed').textContent.includes('Paused, from Pixel phone')", timeout=5000)
+    page.wait_for_function("() => document.getElementById('feed').textContent.includes('Paused, from Pixel phone')", timeout=5000)
     assert live_servers["pilot"].calls == ["pause"]
     w.context.close()

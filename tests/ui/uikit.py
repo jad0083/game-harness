@@ -1,5 +1,6 @@
 """Helpers for the dashboard's browser tests: a fixture server in its own thread, a fake live pilot,
-and browser contexts with their errors collected."""
+and browser contexts with their errors collected. The dashboard's CSP forbids eval, so
+`wait_for_function` predicates are written as functions ("() => ..."), never bare expressions."""
 
 from __future__ import annotations
 
@@ -381,7 +382,7 @@ def pick_campaign(page, cid: str) -> None:
     page.click("#campaign")
     page.wait_for_selector("#camp-dialog[open]")
     page.click(f'#camp-dialog button[data-cid="{cid}"]')
-    page.wait_for_function(f"document.getElementById('campaign').dataset.cid === {cid!r}")
+    page.wait_for_function(f"() => document.getElementById('campaign').dataset.cid === {cid!r}")
     page.wait_for_timeout(300)
 
 
