@@ -766,6 +766,7 @@ def test_the_civ6_strategist_sees_the_order_record(setup):
     g.run(max_decisions=1)
     assert "Order record in this campaign (held until done / replaced by the AI):\n(no orders judged yet)" in prompts[0]
     assert "Directive record" not in prompts[0]
+    assert "Action record" not in prompts[0], "the Stellaris action record stays out of Civ VI reviews"
 
 
 def test_trace_orders_carry_kind_id_and_city(setup):

@@ -30,6 +30,7 @@ PC in use.
 | `PILOT_DECIDE_TURNS` | Civilization VI: turns the game's AI plays between decisions (default 5; `--decide-turns`) |
 | `PILOT_AUTOPLAY_CHUNK` | Civilization VI: turns per autoplay call in peace (default 3, which keeps the AI's multi-turn plans); at war with a major or with a city in danger it plays one turn at a time |
 | `PILOT_LAST_STAND`, `PILOT_LAST_STAND_MAX` | Civilization VI: scripted actions for a city about to fall (default `0`, off until the live checklist L6 passes); at most this many stands in a row per city (default 3) |
+| `PILOT_WAR_CRISIS` | Stellaris: the war crisis overlay (default `1`; `0` turns it off for a run) |
 | `PILOT_THINKING`, `PILOT_GOVERNOR_THINKING` | thinking level for GC4 episodes / Stellaris decisions (default `medium`) |
 | `PILOT_RETRO_EVERY` | strategy review every N decisions (default 5) |
 | `PILOT_PORT`, `PILOT_RUNS_DIR`, `PILOT_CAMPAIGN`, `PILOT_COMMIT`, `PILOT_JOURNAL` | live dashboard port, run folder, campaign id, commit learned knowledge, journal file |
@@ -283,8 +284,8 @@ Each pillar has:
 - a stance that cites figures from the briefing, and concrete goals;
 - **milestones** `{metric, op, target, by}` (every pillar has one; the heaviest has a checkpoint and
   an end target), whose status (met, on track, at risk, missed) comes from telemetry;
-- actions: preferred techs (technology) and one small monthly market order (economy; only an idle
-  resource, at most 25 and 20% of its income).
+- actions: preferred techs (technology) and one small monthly market order (economy; a sell only of
+  an idle resource, at most 25 and 20% of its income; a buy under the buy rules below).
 
 **Pressure drives decisions.** Before each decision the governor computes every pillar's pressure
 = weight × milestone need (met 0.3, on track 1, at risk 1.5, missed 2; a pillar without milestones
@@ -292,7 +293,15 @@ Each pillar has:
 directive's pressure is within the switch margin (1.25) of the top. A directive held at least 2
 years in the campaign whose pillar's milestone metric grew no faster than when it was not held
 "does not work here" and has its pressure halved; the frame shows its record, and the Strategist
-sees every directive's record when it sets weights. The model may choose
+sees every directive's record when it sets weights. Where the metrics rows carry the metric's
+median over the other empires (military, economy, tech power, systems, pops, colonies, techs), the
+growth compared is that of ours ÷ median per year (e.g. `military_power ÷ median -0.009/yr over 56 y
+held vs +0.005/yr otherwise`), since an absolute rate rewards whatever was held late, when every
+empire grows faster (levers design ruling 7: it turns UNE2's early `expand` from "works" to a
+stall); ranks and metrics without a median stay absolute (`[metrics] peer_keys` names a median kept
+under another key). When unclaimed systems lie within 2 jumps but none is surveyed and influence
+stayed at 950 or more for 12 months, the frame adds "expand cannot claim here: no surveyed room;
+influence is not the limit" (Gaea 2221-2252). The model may choose
 otherwise when the briefing gives a reason, says why, and names the milestone its choice
 `serves`. A choice outside the top two is tagged off-frame and asks for a review. Games with many
 levers at once (GalCiv IV, Civ VI) can use `mode = "share"`, which shows each pillar's share of
@@ -300,7 +309,8 @@ effort instead.
 
 **Reviews** run at the start of a campaign without a strategy, every `PILOT_RETRO_EVERY`
 decisions, on big events (war, crisis, colony lost, boxed in, military fell by half, a milestone
-missed, an off-frame decision; at most one per 12 in-game months) and on *Review strategy now*. An
+missed, an off-frame decision, a planet crisis or a planet losing pops, a war going badly or a war
+crisis over; at most one per 12 in-game months) and on *Review strategy now*. An
 answer is validated; an invalid one gets one corrective retry with its errors and the rejected
 answer, then the strategy stays. Reviews started at the beginning of a run or by you must name the
 species traits the strategy builds on. A review may add up to 3 rules to
@@ -314,6 +324,120 @@ fractional start amount is measured live: the rest of the sync, removals include
 refused order is not waited for in the next save, and later decisions skip it with that reason; an
 order of the same side and resource already in the save, e.g. buy alloys 7 when the strategy wants
 5, is kept at its amount rather than removed, while it passes the declared order's checks).
+
+**Market buy rules** (Stellaris; levers design rulings 9-10, `[actions.market.buy]` in
+`corpora/stellaris/pillars.toml`, `src/pilot/stellaris_market.py`), checked at every sync for the
+declared buys and the automatic ones; a buy that breaks one is skipped with the reason (an order of it
+in the save is then removed, as a sell that no longer fits):
+- price per unit = 100 / market amount x (1 + fluctuation) x 1.3 (the fee), the fluctuation from the
+  briefing's market block (0 without one: the buy is not refused, and the sync's log line and the
+  next decision's market note say "price unknown");
+- the reserve: trade - 12 x (cost over the monthly trade income) must leave 2,500 (where the AI's own
+  market spending starts); the spend cap: cost <= 0.25 x trade income + (trade - 2,500) / 24 (0.5 of
+  the income for alloys in a war crisis: declared buys, the orders kept in place and the fill alike);
+- the price guard: no new order above +50%; an order already placed stays up to +100%, but buying
+  more of it than its amount in the save is a new order (above +50% the order in place stays at its
+  amount, for a declared buy, the idle-trade fill and the crisis alloys alike);
+- the volume: at most one base amount a month on the internal market, six on the galactic one
+  (alloys 25 or 150, consumer goods 50 or 300, motes, gases and crystals 10 or 60);
+- never what the AI buys anyway: a deficit with under 6 months of stock (the AI buys there itself),
+  a resource the AI bought since the last save (our own monthly trade left out), an IDLE one, alloys
+  with the fleet at 95% of naval capacity or more (from the Governor Bridge export) outside a crisis.
+
+**Idle-trade fill.** While the briefing flags trade IDLE and no declared order passed, the slot is
+filled with deficit cover: the resource in deficit with the fewest months of stock between 6 and 24
+(36 for motes, gases and crystals), 1.2 x its monthly deficit (at most the volume and 25), that passes
+the rules, has a measured start amount (not alloys or sr_* until live check L2) and is not suspended.
+Otherwise nothing is bought and the next decision reads "trade idle: nothing qualifies to buy
+(reason)". `amount_max` stays 25 and one order until L2 measures the click step and the second row.
+
+**Read-back.** The next save shows whether an order took (`market_orders`); `market.trades_net` (last
+month's monthly trades) shows whether it trades. A buy in the order list with none of its resource
+bought in 2 saves after the one that first showed it is recorded **took (not executing)**, and the
+action record says so; a held order's line names its last trade (e.g. `+10 minerals for 13 trade`).
+
+**Action record** (Stellaris; spec `docs/design/2026-09-27-stellaris-levers-design.md`, rulings 2-6):
+sending is not the outcome, so every directive, tech pick, market order and posture is followed in
+the autosaves until it resolves, and each resolution is an `order_outcome` event (the Civ VI row
+shape; `turn` is the month), reloaded per campaign at the start of a run together with what is still
+followed (`order_followed`).
+- A directive **took** (flag in the next save, nothing set to follow), is **held** (every policy the
+  game reported set still reads back at the next directive or after 24 months), **failed** (no flag
+  in the next save, or the apply raised) or is **overridden** (a reported policy reads back another
+  option dated after our apply; the line names it, e.g. `economic_policy → economic_policy_balanced
+  on 2272.01.01`). Not judged: **superseded** (our next directive before a save) and **locked** (the
+  game set none of its policies: `can_set_policy` said no).
+- A tech pick is **researched**, **held** (still researched at the next review or after 24 months)
+  or **did not stick** (skipped until the next review); a "nothing to pick" reply is a **no-op**,
+  counted apart. After 3 no-op syncs the next review lists what each field offers and asks that
+  `prefer_techs` name one of them (a review whose model call fails keeps the count for its retry).
+- A market order **did not take** (the next save differs), is **held**, **removed** (gone later
+  without our sync) or **failed** (the sync raised, e.g. an agent timeout). Two *did not take* in a
+  row for the same side and resource suspend it (the order the save holds, if any, is kept) until
+  the `[ui.market]` positions change: each row carries a hash of them, so a recalibration commit
+  lifts it. A review no longer resets anything but the tech skip.
+- Stick rate per key = (took + held + researched) / judged, over the last 120 months widened back
+  to 6 judged, shown from 3 (`[orders]` in `corpora/stellaris/pillars.toml`, in months), flagged
+  "does not stick here" at 50% or less. It goes to the decision prompt ("Action record in this
+  campaign", after the past outcomes), to the Strategist (before the directive record) and to the
+  dashboard (`order_record`). It is advisory: no pressure factor.
+
+**War crisis** (Stellaris; levers design rulings 12-16, `src/pilot/stellaris_crisis.py`; `PILOT_WAR_CRISIS=0`
+turns it off). It enters when we are at war and a loss shows: a colony occupied (C1), systems 2 or
+more under their most in the last 12 months (C2), military at half or less of its most in 12 months
+(C3), a colony lost (C4), a new invasion of our colonies (C5, by battle index, so a retaken colony's
+old invasion does not count), or a colony under stability 25 on 2 saves in a row (C6). Never on a
+military ratio, battle counts (allies' included) or war exhaustion alone; at most once per war per 12
+months; not while you paused the run. The urgent reason `war going badly: <conditions>` runs the
+ladder at that decision, in order:
+1. a strategy review before the decision (12-month cap);
+2. the pillar that ranks `defend` gets need *missed* (2.0) and no stall factor while the crisis lasts
+   (the frame and the dashboard's Strategy tab show "war crisis"; dashboard `crisis`; row `crisis need boost`, `no_op` when no pillar
+   ranks defend or there is no strategy);
+3. `defend` is applied if the decision would leave it or not take it (`crisis defend`; the model's
+   other choices stand; your own override on the dashboard stands until the crisis ends);
+4. the `war_crisis` posture, only when it is enabled in `directives.toml` and the save shows the
+   Governor Bridge v2 running (a current naval-capacity export); until then "skipped: not verified";
+5. the market slot buys alloys (`crisis market buy alloys`) only with a shipyard in a system we hold,
+   naval use under 95% (or unknown with under 1,000 alloys), alloys not IDLE, a measured start amount
+   (not before live check L2) and the buy rules at the crisis cap, sized to what the cap and the
+   reserve allow (at most 25 until L2); the decision prompt's `WAR CRISIS` line says what this
+   decision's sync buys ("buys 25 alloys a month on the market") or why it buys none;
+6. decisions every 3 months (the earlier pace comes back at the end unless you changed it meanwhile);
+7. a status-quo question in the feed (never blocking; once per war per 12 months) when a colony is
+   occupied, systems fell, our war exhaustion is 60% or more and at least theirs, or their side can
+   force a status quo. The harness never proposes peace.
+
+Each step is an `order_outcome` row keyed `crisis <step>` (defend, posture and market judged as their
+kind; the others `done`, or `no_op` with why). It ends when every war has ended, or after 6 saves in a
+row with none of C1-C6 once held 6 months (`war crisis over: ...`, a review under the cap), each save
+counted once (a save not newer than the last one counted, such as the save a restarted run re-reads,
+changes nothing); `crisis`
+events keep its state across a restart (enter, exit, ladder and closed, and a `state` event whenever
+it changes between them: the quiet saves, the conditions, your override, the status-quo asks), and a run stopped between an entry or exit and its ladder
+leaves that ladder to the next run's first decision (so the posture is still cleared). Replayed on the campaigns' metrics rows it enters 5 times in
+UNE2 (2256.02 and 2260.01 among them) and 25 times in Theia (first collapse 2256.08, 7 months before
+the capital fell), never in Gaea.
+
+**Planet check** (Stellaris, read-only; levers design ruling 22, `src/pilot/stellaris_planets.py`).
+A colony has a problem when its stability is under 50, its free amenities under -100 on 300+ pops,
+its free housing under 0 on 1,000+ pops, 5% or more of its employable pops unemployed (not the
+capital), its pops 20% under their peak of the last 12 months, or it is occupied (pops count working
+robots). It is flagged once the problem persists across saves at least 2 months apart with none
+between them without it and none more than 3 months after the one before (a save from before a
+restart gap is not "the save before": nothing was observed between), and the decision prompt gets one line naming the flagged planets only, with
+a cause hint: `Planet check: Arnvoss stability 18 (3 saves), amenities -253, housing -283; nothing
+queued here` (also "minerals net < 0"; on the dashboard as `planet_check`). Two urgent reasons fire
+once, at the transition, and start a review (12-month cap): `planet crisis: <name> stability <n>` (a
+colony under 25 on 2 saves in a row, at most 3 months apart; war crisis C6 reads the same) and `planet losing pops: <name> -<p>% in 12 months` (1,000+
+pops). Each metrics row keeps every colony's pops, amenities, stability and problems (`colonies`) and
+the estimate of job output lost to stability under 75 (`stability_loss`, percent; the go criterion of
+a later planet lever), so the check survives a restart. The Strategist gets the planet record: per
+directive held, the amenity change per planet-year on colonies with a deficit. No directive repairs
+grown colonies (+5 to +14 amenities a planet-year under consolidate_economy); the 17 learned rules
+that said otherwise, or that only an edge case (fast growth, massive pops, a short window) stopped it,
+were corrected (`test_the_learned_rules_no_longer_credit_consolidate_economy_with_amenity_repairs`
+keeps them out).
 
 **Your edits.** *Edit* on a pillar changes it and pins it (a review never changes a pinned pillar);
 changing its weight rescales the other unpinned pillars so the total stays 100. *Unpin* hands it

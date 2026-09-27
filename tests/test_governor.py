@@ -2035,7 +2035,7 @@ def test_market_sync_is_skipped_when_orders_already_match_regardless_of_order(se
         {"side": "buy", "resource": "energy", "amount": 5},
         {"side": "buy", "resource": "minerals", "amount": 3},
     ])
-    b = {**briefing("2200.01.01"), "market_orders": [
+    b = {**_trading(briefing("2200.01.01")), "market_orders": [
         {"side": "buy", "resource": "minerals", "amount": 3},
         {"side": "buy", "resource": "energy", "amount": 5},
     ]}
@@ -2165,36 +2165,6 @@ def test_a_tech_gone_from_the_offers_is_treated_as_researched_not_a_miss(setup):
     researched = [e for e in log.recent if e["kind"] == "strategy_action" and e.get("action") == "tech"
                   and e["result"] == "researched tech_habitat_1"]
     assert researched
-
-
-def test_market_orders_that_do_not_stick_wait_for_the_next_review(setup):
-    """Fix round 1, item 3: after a sync, the next later save is checked against what was asked
-    for; a mismatch is logged and not retried until the following review resets the flag."""
-    from pilot.strategy import Pillar
-    s, log = setup
-    calls = []
-    game = FakeStellaris([briefing("2200.01.01")])
-    g = Governor(s, game, log, model=decisions("keep"), role_models={"strategy": _strategist(calls)})
-    g._review_strategy(briefing("2200.01.01"), "start of run")
-    g.strategy.pillars["economy"] = Pillar(priority=2, stance="s", goals=["g"],
-                                           market=[{"side": "sell", "resource": "energy", "amount": 5}])
-    g._carry_out_actions(_idle_energy("2200.01.01"))       # syncs
-    assert sum(1 for a in game.actions if a[0] == "market_sync") == 1
-
-    g._carry_out_actions(_idle_energy("2200.02.01"))       # later save still shows no orders: did not stick
-    assert sum(1 for a in game.actions if a[0] == "market_sync") == 1, "not retried right after the mismatch"
-    stuck = [e for e in log.recent if e["kind"] == "strategy_action" and e.get("action") == "market"
-             and "did not stick" in e["result"]]
-    assert stuck
-
-    g._carry_out_actions(_idle_energy("2200.03.01"))       # still stuck: no further attempts before a review
-    assert sum(1 for a in game.actions if a[0] == "market_sync") == 1
-
-    g._review_strategy(briefing("2200.04.01"), "scheduled")     # resets the give-up flag
-    g.strategy.pillars["economy"] = Pillar(priority=2, stance="s", goals=["g"],
-                                           market=[{"side": "sell", "resource": "energy", "amount": 5}])
-    g._carry_out_actions(_idle_energy("2200.05.01"))
-    assert sum(1 for a in game.actions if a[0] == "market_sync") == 2, "retried after the review reset the flag"
 
 
 def test_malformed_briefing_data_does_not_raise_out_of_carry_out_actions(setup):
@@ -2629,6 +2599,13 @@ def test_a_review_is_not_blocked_by_a_pinned_pillar_that_no_longer_fits_and_is_w
     assert "pinned economy no longer fits: selling energy but it is not idle" in prompts[0]
 
 
+def _trading(b: dict, trade: float = 10000.0, income: float = 100.0) -> dict:
+    """`b` with a trade stock that pays for buys under the buy rules (levers ruling 9) and is not IDLE
+    (under 15,000), so no idle-trade fill joins in."""
+    return {**b, "stockpile": {**(b.get("stockpile") or {}), "trade": trade},
+            "net": {**(b.get("net") or {}), "trade": income}}
+
+
 def _idle_energy(date: str) -> dict:
     """A briefing where energy is idle (big stock, positive net) with a 20% cap of 20."""
     return {**briefing(date, net={"energy": 100.0, "food": 3.0}), "stockpile": {"energy": 20000}}
@@ -2669,26 +2646,26 @@ def test_an_unmeasured_market_order_is_left_out_and_the_rest_of_the_sync_still_g
     game = Controller([briefing("2200.01.01")])
     g = Governor(s, game, log, model=decisions("keep"))
     g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[alloys]))
-    g._carry_out_actions({**briefing("2200.01.01"), "market_orders": [cg]})    # a stale order from before
+    g._carry_out_actions({**_trading(briefing("2200.01.01")), "market_orders": [cg]})    # a stale order from before
     assert game.actions.count(("market_sync", [alloys])) == 1
 
     def market_log():
         return [e["result"] for e in log.recent if e["kind"] == "strategy_action" and e.get("action") == "market"]
 
     # the next save holds no order: the controller did what it said, so nothing failed to stick
-    g._carry_out_actions({**briefing("2200.02.01"), "market_orders": []})
+    g._carry_out_actions({**_trading(briefing("2200.02.01")), "market_orders": []})
     assert not any("did not stick" in r for r in market_log()), market_log()
-    assert not g._market_stuck
+    assert not any(r["result"] == "did_not_take" for r in g._action_rows), g._action_rows
     assert sum(1 for a in game.actions if a[0] == "market_sync") == 1, "the refused order is not sent again"
     assert any("skipped buy alloys 5" in r and "start amount not measured" in r for r in market_log()), market_log()
 
     # an alloys order already in the save stays: keeping it adds nothing
-    g._carry_out_actions({**briefing("2200.03.01"), "market_orders": [alloys]})
+    g._carry_out_actions({**_trading(briefing("2200.03.01")), "market_orders": [alloys]})
     assert sum(1 for a in game.actions if a[0] == "market_sync") == 1
 
     # other resources still sync
     g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[food]))
-    g._carry_out_actions({**briefing("2200.04.01"), "market_orders": []})
+    g._carry_out_actions({**_trading(briefing("2200.04.01")), "market_orders": []})
     assert ("market_sync", [food]) in game.actions
     # the reply this test fakes is the controller's own wording (stellaris.rs MarketPlan::reply)
     rs = (REPO / "crates/game-controller/src/stellaris.rs").read_text(encoding="utf-8")
@@ -2713,7 +2690,7 @@ def test_an_unmeasured_order_at_another_amount_keeps_the_one_in_the_save(setup):
     game = Controller([briefing("2200.01.01")])
     g = Governor(s, game, log, model=decisions("keep"))
     g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[alloys5]))
-    g._carry_out_actions({**briefing("2200.01.01"), "market_orders": [alloys7]})
+    g._carry_out_actions({**_trading(briefing("2200.01.01")), "market_orders": [alloys7]})
     assert game.actions.count(("market_sync", [alloys5])) == 1
 
     def market_log():
@@ -2722,9 +2699,9 @@ def test_an_unmeasured_order_at_another_amount_keeps_the_one_in_the_save(setup):
     # the next save still buys 7: that is what the controller said, so nothing failed to stick, and
     # the kept order is asked for as it is (no sync that would remove it)
     for month in ("2200.02.01", "2200.03.01"):
-        g._carry_out_actions({**briefing(month), "market_orders": [alloys7]})
+        g._carry_out_actions({**_trading(briefing(month)), "market_orders": [alloys7]})
     assert not any("did not stick" in r for r in market_log()), market_log()
-    assert not g._market_stuck
+    assert not any(r["result"] == "did_not_take" for r in g._action_rows), g._action_rows
     assert sum(1 for a in game.actions if a[0] == "market_sync") == 1, game.actions
     assert any("kept buy alloys 7" in r and "start amount not measured" in r for r in market_log()), market_log()
     # the reply this test fakes is the controller's own wording (stellaris.rs MarketPlan::reply)
@@ -2785,7 +2762,7 @@ def test_market_actions_are_skipped_when_the_game_has_no_market_action(tmp_path)
         shutil.copy(REPO / "corpora/stellaris" / f, corpus / f)
     text = (REPO / "corpora/stellaris/pillars.toml").read_text(encoding="utf-8")
     text = text.replace('actions = ["market"]\n', "")               # economy no longer declares it
-    text = re.sub(r"\[actions\.market\][\s\S]*?(?=\n#|\n\[)", "", text)  # and the limits table is gone
+    text = re.sub(r"\[actions\.market(\.buy)?\][\s\S]*?(?=\n#|\n\[)", "", text)  # and the limits tables are gone
     (corpus / "pillars.toml").write_text(text, encoding="utf-8")
 
     s = Settings(model="google:gemini-3.8-flash", runs_dir=tmp_path / "runs", journal=tmp_path / "journal.md",
@@ -4120,3 +4097,1053 @@ def test_a_short_read_failure_does_not_restart_the_stall_timer(setup):
     stall = next(e for e in log.recent if e["kind"] == "stall")
     assert stall["seconds"] == 300 and game.calls == 6, (stall, game.calls)
     assert game.actions == [("paused", False)]
+
+
+# ---- the action record (docs/design/2026-09-27-stellaris-levers-design.md, rulings 2-6) -----------
+
+def _prompts_model(seen: list, *choices: str):
+    """`decisions(...)` that also collects every decision prompt."""
+    calls = {"n": 0}
+
+    def respond(messages, info: AgentInfo) -> ModelResponse:
+        if _is_strategy_review(info):
+            return _quiet_no_change(info)
+        seen.append("\n".join(str(getattr(p, "content", "")) for m in messages for p in getattr(m, "parts", [])))
+        choice = choices[min(calls["n"], len(choices) - 1)]
+        calls["n"] += 1
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"directive": choice, "reason": "r"})])
+    return FunctionModel(respond)
+
+
+def _review_prompts(prompts: list):
+    def review(messages, info):
+        prompts.append("\n".join(str(getattr(p, "content", "")) for m in messages for p in getattr(m, "parts", [])))
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name,
+                                                 {"change": False, "assessment": "x", "rules": []})])
+    return FunctionModel(review)
+
+
+def test_the_fake_directive_replies_in_the_controllers_words_and_keeps_other_flags():
+    game = FakeStellaris([briefing("2271.12.01")], reverts={"economic_policy": "economic_policy_balanced"})
+    game.flags = ["governor_posture_war_crisis", "governor_directive_expand"]
+    reply = game.directive("tech_rush")
+    assert game.flags == ["governor_posture_war_crisis", "governor_directive_tech_rush"]
+    assert "Policies set: economic_policy=economic_policy_civilian." in reply
+    rs = (REPO / "crates/game-controller/src/stellaris.rs").read_text(encoding="utf-8")
+    assert '"Policies set: {}. {already}Policies locked (not set: the 10-year policy lock, a rule such as no stance ' \
+           'change at war, or the option is not valid now): {}.{unread}"' in rs
+    b = game.briefing()
+    assert b["policies"]["economic_policy"] == "economic_policy_civilian" and b["policy_dates"]["economic_policy"] == "2271.12.01"
+
+
+def test_a_directive_the_ai_reverts_is_overridden_in_the_next_prompt_and_the_events(setup):
+    import json
+    s, log = setup
+    seen: list[str] = []
+    game = FakeStellaris([briefing("2271.12.01"), briefing("2272.01.01"), briefing("2272.02.01")],
+                         reverts={"economic_policy": "economic_policy_balanced"})
+    g = Governor(s, game, log, model=_prompts_model(seen, "tech_rush", "keep"))
+    g.set_months(1)
+    g.run(max_decisions=3)
+    assert "Action record in this campaign" not in seen[0]
+    assert ("- directive tech_rush: 1 judged; 1 overridden by the AI (last: economic_policy → "
+            "economic_policy_balanced on 2272.02.01)") in seen[2]
+    assert seen[2].index("Action record in this campaign") > seen[2].index("Briefing from the latest autosave")
+    events = [json.loads(line) for line in (s.runs_dir / "run1" / "events.jsonl").read_text().splitlines()]
+    out = [(e["key"], e["result"], e["by"], e["turn"]) for e in events if e["kind"] == "order_outcome"]
+    assert out == [("directive tech_rush", "overridden", "economic_policy_balanced", months("2272.02.01"))]
+    assert log.state.info["order_record"]["directive tech_rush"]["overridden"] == 1
+
+
+def test_a_directive_that_raises_is_recorded_as_failed(setup):
+    s, log = setup
+
+    class Refusing(FakeStellaris):
+        def directive(self, name):
+            raise RuntimeError("GOVERNOR_APPLIED did not appear in game.log")
+    g = Governor(s, Refusing([briefing("2200.01.01")]), log, model=decisions("expand"))
+    g.run(max_decisions=1)
+    assert [(r["key"], r["result"]) for r in g._action_rows] == [("directive expand", "failed")]
+    assert "GOVERNOR_APPLIED" in g._action_rows[0]["detail"]
+
+
+def test_postures_a_directive_set_are_followed_to_the_next_save(setup):
+    s, log = setup
+
+    class WithPosture(FakeStellaris):
+        def directive(self, name):
+            reply = super().directive(name)
+            self.flags.append("governor_posture_research_focus")
+            return reply + "\nConsole lines:\neffect set_country_flag = governor_posture_research_focus\n"
+    game = WithPosture([briefing("2271.12.01"), briefing("2272.01.01")])
+    g = Governor(s, game, log, model=decisions("tech_rush", "keep"))
+    g.set_months(1)
+    g.run(max_decisions=2)
+    assert ("posture research_focus", "took") in [(r["key"], r["result"]) for r in g._action_rows]
+
+
+def test_a_review_keeps_the_tech_record_and_resets_only_the_skip(setup):
+    from pilot.strategy import Pillar
+    s, log = setup
+    game = _TechTool([briefing("2200.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"), role_models={"strategy": _strategist([])})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    g.strategy.pillars["technology"] = Pillar(priority=3, stance="s", goals=["g"], prefer_techs=["tech_habitat_1"])
+    g._carry_out_actions(briefing("2200.01.01"))                  # picks tech_habitat_1
+    g._carry_out_actions({**briefing("2200.02.01"), "research": {"engineering": {
+        "current": ["tech_mining_2", 5.0], "alternatives": ["tech_mining_2", "tech_habitat_1"]}}})
+    assert [(r["key"], r["result"], r["by"]) for r in g._action_rows] == [("tech", "did_not_stick", "tech_mining_2")]
+    g._review_strategy(briefing("2200.03.01"), "scheduled")
+    assert g._tech_misses == {}, "the skip resets at a review"
+    assert [r["result"] for r in g._action_rows] == ["did_not_stick"], "the record does not"
+    assert log.state.info["order_record"]["tech"]["did_not_stick"] == 1
+
+
+def test_a_pick_still_researched_at_the_next_review_is_held(setup):
+    from pilot.strategy import Pillar
+    s, log = setup
+    game = _TechTool([briefing("2200.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"), role_models={"strategy": _strategist([])})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    g.strategy.pillars["technology"] = Pillar(priority=3, stance="s", goals=["g"], prefer_techs=["tech_habitat_1"])
+    g._carry_out_actions(briefing("2200.01.01"))
+    researching = {**briefing("2200.02.01"), "research": {"engineering": {"current": ["tech_habitat_1", 1.0],
+                                                                         "alternatives": ["tech_mining_2"]}}}
+    g._carry_out_actions(researching)
+    assert g._action_rows == [] and g._pending_pick == "tech_habitat_1"
+    g._review_strategy(researching, "scheduled")
+    assert [(r["key"], r["result"]) for r in g._action_rows] == [("tech", "held")]
+    assert g._pending_pick is None
+
+
+def test_three_tech_syncs_with_nothing_to_pick_bring_the_offers_to_the_next_review(setup):
+    from pilot.strategy import Pillar
+    s, log = setup
+    prompts: list[str] = []
+
+    class NothingToPick(FakeStellaris):
+        def pick_tech(self, prefer):
+            self.actions.append(("pick_tech", list(prefer)))
+            return "nothing to pick: no preferred tech offered in a field that is free to change"
+    g = Governor(s, NothingToPick([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": _review_prompts(prompts)})
+    g.strategy = _strategy_with(technology=Pillar(priority=3, stance="s", goals=["g"], prefer_techs=["tech_habitat_1"]))
+    offer = {"engineering": {"current": ["tech_mining_2", 5.0], "alternatives": ["tech_mining_2", "tech_zero_point"]},
+             "physics": {"current": ["tech_lasers_1", 1.0], "alternatives": ["tech_lasers_1", "tech_shields_1"]}}
+    for d in ("2200.02.01", "2200.03.01", "2200.04.01"):
+        g._carry_out_actions({**briefing(d), "research": offer})
+    assert [(r["key"], r["result"]) for r in g._action_rows] == [("tech", "no_op")] * 3
+    g._review_strategy({**briefing("2200.05.01"), "research": offer}, "scheduled")
+    text = prompts[-1]
+    assert "- tech: 0 judged (not judged: 3 no-op)" in text
+    assert "your preferred techs matched the offer 0 times in 3 chances" in text
+    assert ("offered now: engineering: tech_mining_2, tech_zero_point; physics: tech_lasers_1, tech_shields_1. "
+            "Name at least one of them in prefer_techs") in text
+    g._review_strategy({**briefing("2200.06.01"), "research": offer}, "scheduled")
+    assert "offered now" not in prompts[-1], "counted since the last review"
+
+
+def test_two_market_orders_that_did_not_take_suspend_that_resource_until_recalibration(setup):
+    from pilot.strategy import Pillar
+    s, log = setup
+    game = FakeStellaris([briefing("2250.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    buy = {"side": "buy", "resource": "consumer_goods", "amount": 15}
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[buy]))
+    six = [{**buy, "amount": 6}]
+
+    def syncs():
+        return sum(1 for a in game.actions if a[0] == "market_sync")
+    g._carry_out_actions({**_trading(briefing("2250.01.01")), "market_orders": []})
+    g._carry_out_actions({**_trading(briefing("2250.02.01")), "market_orders": six})     # did not take; sent again
+    assert syncs() == 2 and [r["result"] for r in g._action_rows] == ["did_not_take"]
+    g._carry_out_actions({**_trading(briefing("2250.03.01")), "market_orders": six})     # twice in a row: suspended
+    assert syncs() == 2 and [r["result"] for r in g._action_rows] == ["did_not_take", "did_not_take"]
+    assert "wanted buy consumer_goods 15, the save of 2250.03.01 has 6" in g._action_rows[-1]["detail"]
+    assert any("suspended" in e["result"] and "[ui.market]" in e["result"] for e in log.recent
+               if e["kind"] == "strategy_action")
+    g._review_strategy(briefing("2250.04.01"), "scheduled")                     # a review does not lift it
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[buy]))
+    g._carry_out_actions({**_trading(briefing("2250.05.01")), "market_orders": six})
+    assert syncs() == 2
+    assert "suspended after 2 did not take" in g._action_record_text()
+    manifest = s.corpus_dir / "manifest.toml"            # a recalibration commit changes [ui.market]
+    manifest.write_text(manifest.read_text(encoding="utf-8").replace("plus = [855, 388]", "plus = [856, 388]"),
+                        encoding="utf-8")
+    g2 = Governor(s, game, log, model=decisions("keep"))
+    g2._action_rows, g2.strategy = list(g._action_rows), g.strategy
+    g2._carry_out_actions({**_trading(briefing("2250.06.01")), "market_orders": six})
+    assert syncs() == 3, "lifted by the new calibration"
+
+
+def test_a_market_sync_that_fails_is_recorded_as_failed_and_suspends_nothing(setup):
+    from pilot.strategy import Pillar
+    s, log = setup
+
+    class TimingOut(FakeStellaris):
+        def market_sync(self, orders):
+            self.actions.append(("market_sync", list(orders)))
+            raise TimeoutError("agent timed out")
+    game = TimingOut([briefing("2250.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    buy = {"side": "buy", "resource": "food", "amount": 12}
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[buy]))
+    for d in ("2250.01.01", "2250.02.01", "2250.03.01"):
+        g._carry_out_actions({**_trading(briefing(d)), "market_orders": []})
+    assert [(r["key"], r["result"]) for r in g._action_rows] == [("market buy food", "failed")] * 3
+    assert sum(1 for a in game.actions if a[0] == "market_sync") == 3
+
+
+def test_a_market_order_that_took_is_followed_until_removed(setup):
+    from pilot.strategy import Pillar
+    s, log = setup
+    game = FakeStellaris([briefing("2250.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    buy = {"side": "buy", "resource": "food", "amount": 12}
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[buy]))
+    g._carry_out_actions({**_trading(briefing("2250.01.01")), "market_orders": []})
+    g._carry_out_actions({**_trading(briefing("2250.02.01")), "market_orders": [buy]})
+    assert g._action_rows == [] and sum(1 for a in game.actions if a[0] == "market_sync") == 1
+    g._follow({**briefing("2250.05.01"), "market_orders": []})
+    assert [(r["key"], r["result"]) for r in g._action_rows] == [("market buy food", "removed")]
+
+
+def test_a_new_governor_reloads_the_action_record_and_what_it_still_follows(setup, tmp_path):
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    src = "save games/theia_1/autosave.sav"
+    first = FakeStellaris([{**briefing(d), "source": src} for d in ("2271.12.01", "2272.01.01")])
+    g = Governor(s, first, EventLog(s.runs_dir, "run7", s.model, telemetry=tel), model=decisions("expand", "tech_rush"))
+    g.set_months(1)
+    g.run(max_decisions=2)
+    assert [(r["key"], r["result"]) for r in g._action_rows] == [("directive expand", "held")]
+
+    reverted = {**briefing("2272.02.01"), "source": src, "policies": {"economic_policy": "economic_policy_balanced"},
+                "policy_dates": {"economic_policy": "2272.01.20"}}
+    second = FakeStellaris([reverted])
+    second.flags = ["governor_directive_tech_rush"]
+    log2 = EventLog(s.runs_dir, "run8", s.model, telemetry=tel)
+    g2 = Governor(s, second, log2, model=decisions("keep"))
+    g2.run(max_decisions=1)
+    rec = log2.state.info["order_record"]
+    assert rec["directive expand"]["held"] == 1, "reloaded from the campaign's order_outcome events"
+    assert rec["directive tech_rush"]["overridden"] == 1, "still followed after the restart"
+
+
+def test_the_strategist_sees_the_action_record_before_the_directive_record(setup):
+    from pilot.stellaris_record import directive_action, parse_directive_reply
+    s, log = setup
+    prompts: list[str] = []
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": _review_prompts(prompts)})
+    a = directive_action("tech_rush", "2271.12.01", parse_directive_reply(
+        "Directive tech_rush applied. Policies set: economic_policy=economic_policy_civilian. Policies locked (x): none."))
+    g._resolve_action(a, "overridden", "economic_policy_balanced", "economic_policy → economic_policy_balanced on "
+                      "2272.01.01", "2272.02.01")
+    g._review_strategy(briefing("2272.02.01"), "scheduled")
+    text = prompts[0]
+    assert "- directive tech_rush: 1 judged; 1 overridden by the AI" in text
+    assert text.index("Action record in this campaign") < text.index("Directive record in this campaign")
+
+
+def test_a_malformed_save_date_never_stops_the_action_record(setup):
+    from pilot.stellaris_record import tech_action
+    s, log = setup
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+    g._open_action({**tech_action("tech_a", "physics", "2200.01.01"), "state": "current"})
+    g._settle_at_review({"date": "soon"})                         # must not raise
+    g._resolve_action(tech_action("tech_b", "physics", "2200.01.01"), "failed", None, "x", "not a date")
+    assert any(e["kind"] == "briefing_error" and "action record" in e["error"] for e in log.recent)
+
+
+# ---- efficacy relative to the peer median, and the blocked hint for expand (levers ruling 7) -------
+
+def test_the_frame_shows_a_relative_record_against_the_median():
+    from pilot.governor import frame_text
+    press = _press(defence="at_risk")
+    press["defence"].update(efficacy=0.5, pressure=22.5, record={
+        "metric": "military_power", "held_years": 16.0, "held_rate": -0.009, "other_rate": 0.005, "relative": True})
+    text = frame_text(_strategy_with(), STELLARIS, "(none)", press, current="defend")
+    assert ("defence 30 x at_risk 1.5 x not working here 0.5: military_power ÷ median -0.009/yr over 16 y held vs "
+            "+0.005/yr otherwise") in text
+
+
+def test_the_strategist_sees_relative_records(setup, monkeypatch):
+    s, log = setup
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": _strategist([])})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    rows = [{"date": f"22{y:02d}.01.01", "directive": "tech_rush" if y < 3 else "defend", "systems": 10 + y,
+             "peers": {"systems": {"median": 10 + 3 * y}}} for y in range(6)]
+    monkeypatch.setattr(g, "_metrics_rows", lambda: rows)
+    text = g._directive_records_text()
+    assert "- tech_rush (technology, systems ÷ median): -0.105/yr over 3 y held vs -0.042/yr otherwise — does not work here" in text
+
+
+def _influence_rows(n: int, influence=1000.0, surveyed=0, room=9) -> list[dict]:
+    return [{"date": f"{2215 + (m // 12)}.{m % 12 + 1:02d}.01", "directive": "expand", "systems": 9,
+             "stockpile": {"influence": influence}, "room": room, "room_surveyed": surveyed} for m in range(n)]
+
+
+def test_expand_is_blocked_when_nothing_surveyed_is_in_reach_and_influence_piles_up():
+    from pilot.governor import EXPAND_BLOCKED, expand_blocked
+    assert EXPAND_BLOCKED == "expand cannot claim here: no surveyed room; influence is not the limit"
+    assert expand_blocked(_influence_rows(13)) == EXPAND_BLOCKED, "12 months at the cap, 0 surveyed"
+    assert expand_blocked(_influence_rows(12)) == "", "11 months only"
+    low = _influence_rows(13)
+    low[5]["stockpile"] = {"influence": 900.0}
+    assert expand_blocked(low) == "", "influence dipped under 950 within the year: it may be the limit"
+    assert expand_blocked(_influence_rows(13, surveyed=1)) == "", "a surveyed system to claim"
+    assert expand_blocked([{**r, "room_surveyed": None} for r in _influence_rows(13)]) == "", "older rows: unknown"
+    assert expand_blocked(_influence_rows(13, room=0)) == "", "boxed in (UNE2 581 months): nothing to survey either"
+
+
+def test_the_frame_says_expand_cannot_claim_here(setup, monkeypatch):
+    from pilot.governor import EXPAND_BLOCKED, frame_text
+    s, log = setup
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"), role_models={"strategy": _strategist([])})
+    g._review_strategy(briefing("2215.01.01"), "start of run")
+    monkeypatch.setattr(g, "_metrics_rows", lambda: _influence_rows(13))
+    press = g._pressures()
+    assert press["expansion"]["hint"] == EXPAND_BLOCKED and not any(p.get("hint") for n, p in press.items() if n != "expansion")
+    text = frame_text(g.strategy, g.pillars, "(none)", press, current="expand")
+    assert EXPAND_BLOCKED in text.splitlines(), "a line of its own"
+    monkeypatch.setattr(g, "_metrics_rows", lambda: _influence_rows(13, surveyed=2))
+    assert "hint" not in g._pressures()["expansion"]
+
+
+def test_the_corrective_retry_of_a_review_keeps_the_tech_offers(setup):
+    from pilot.strategy import Pillar
+    s, log = setup
+    prompts: list[str] = []
+
+    def review(messages, info):
+        prompts.append("\n".join(str(getattr(p, "content", "")) for m in messages for p in getattr(m, "parts", [])))
+        body = {"change": len(prompts) == 1, "assessment": "x", "rules": []}      # the first: change without a strategy
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, body)])
+
+    class NothingToPick(FakeStellaris):
+        def pick_tech(self, prefer):
+            return "nothing to pick: no preferred tech offered in a field that is free to change"
+    g = Governor(s, NothingToPick([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": FunctionModel(review)})
+    g.strategy = _strategy_with(technology=Pillar(priority=3, stance="s", goals=["g"], prefer_techs=["tech_habitat_1"]))
+    offer = {"physics": {"current": ["tech_lasers_1", 1.0], "alternatives": ["tech_lasers_1", "tech_shields_1"]}}
+    for d in ("2200.02.01", "2200.03.01", "2200.04.01"):
+        g._carry_out_actions({**briefing(d), "research": offer})
+    g._review_strategy({**briefing("2200.05.01"), "research": offer}, "scheduled")
+    assert len(prompts) == 2 and all("offered now: physics: tech_lasers_1, tech_shields_1" in p for p in prompts)
+
+
+def test_a_review_whose_model_call_fails_keeps_the_tech_offers_for_its_retry(setup):
+    from pilot.strategy import Pillar
+    s, log = setup
+    prompts: list[str] = []
+
+    def review(messages, info):
+        prompts.append("\n".join(str(getattr(p, "content", "")) for m in messages for p in getattr(m, "parts", [])))
+        if len(prompts) == 1:
+            raise RuntimeError("503 provider unavailable")
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"change": False, "assessment": "x", "rules": []})])
+
+    class NothingToPick(FakeStellaris):
+        def pick_tech(self, prefer):
+            return "nothing to pick: no preferred tech offered in a field that is free to change"
+    g = Governor(s, NothingToPick([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": FunctionModel(review)})
+    g.strategy = _strategy_with(technology=Pillar(priority=3, stance="s", goals=["g"], prefer_techs=["tech_habitat_1"]))
+    offer = {"physics": {"current": ["tech_lasers_1", 1.0], "alternatives": ["tech_lasers_1", "tech_shields_1"]}}
+    for d in ("2200.02.01", "2200.03.01", "2200.04.01"):
+        g._carry_out_actions({**briefing(d), "research": offer})
+    g._review_strategy({**briefing("2200.05.01"), "research": offer}, "scheduled")
+    assert g.review_requested == "scheduled" and g._review_retry, "the failed review waits for the next decision"
+    g._maybe_event_review({**briefing("2200.06.01"), "research": offer}, g.review_requested, retry=True)
+    assert len(prompts) == 2 and all("offered now: physics: tech_lasers_1, tech_shields_1" in p for p in prompts)
+    assert g._tech_noops == 0 and g.review_requested is None, "the review that answered took the count"
+
+
+# ---- market buy rules and the idle-trade fill (levers design rulings 9-10) --------------------------
+
+def _market_briefing(date: str, *, trade=20000.0, income=100.0, stock=None, net=None, fluct=None, trades=None,
+                     orders=None) -> dict:
+    """A briefing with a galactic market block; trade 20,000 (+100 a month) is IDLE."""
+    b = _trading(briefing(date, net={"energy": 5.0, **(net or {})}), trade, income)
+    b["stockpile"].update(stock or {})
+    return {**b, "market": {"kind": "galactic", "fluct": dict(fluct or {}), "bought": {}, "sold": {},
+                            "trades_net": dict(trades or {})}, "market_orders": list(orders or [])}
+
+
+def _market_log(log) -> list[str]:
+    return [e["result"] for e in log.recent if e["kind"] == "strategy_action" and e.get("action") == "market"]
+
+
+def test_a_declared_buy_that_breaks_a_buy_rule_is_skipped_and_one_in_place_is_kept_to_plus_100(setup):
+    from pilot.strategy import Pillar
+    s, log = setup
+    game = FakeStellaris([briefing("2250.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    order = {"side": "buy", "resource": "minerals", "amount": 10}
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[order]))
+    g._carry_out_actions(_market_briefing("2250.01.01", trade=10000, fluct={"minerals": 60}))
+    assert not any(a[0] == "market_sync" for a in game.actions)
+    assert any("skipped buy minerals 10" in r and "no new order above +50%" in r for r in _market_log(log)), _market_log(log)
+    # the same order already in the save stays while the price is at +100% or less; above it goes
+    g._carry_out_actions(_market_briefing("2250.02.01", trade=10000, fluct={"minerals": 60}, orders=[order]))
+    assert not any(a[0] == "market_sync" for a in game.actions)
+    g._carry_out_actions(_market_briefing("2250.03.01", trade=10000, fluct={"minerals": 120}, orders=[order]))
+    assert ("market_sync", []) in game.actions
+
+
+def test_a_declared_buy_raising_an_order_in_place_above_plus_50_keeps_the_order_in_place(setup):
+    from pilot.strategy import Pillar
+    s, log = setup
+    game = FakeStellaris([briefing("2250.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"],
+                                               market=[{"side": "buy", "resource": "consumer_goods", "amount": 25}]))
+    placed = {"side": "buy", "resource": "consumer_goods", "amount": 5}
+    g._carry_out_actions(_market_briefing("2250.01.01", fluct={"consumer_goods": 80}, orders=[placed]))
+    assert not any(a[0] == "market_sync" for a in game.actions), "not raised fivefold at +80%, and not removed"
+    assert any("kept buy consumer_goods 5 (25 wanted)" in r and "no raise above +50%" in r for r in _market_log(log)), \
+        _market_log(log)
+    g._carry_out_actions(_market_briefing("2250.02.01", fluct={"consumer_goods": 20}, orders=[placed]))
+    assert ("market_sync", [{"side": "buy", "resource": "consumer_goods", "amount": 25}]) in game.actions
+
+
+def test_buys_on_a_save_without_a_market_block_say_price_unknown(setup):
+    """Ruling 9: without the fluctuation the rule assumes 0 and the line says "price unknown"."""
+    from pilot.strategy import Pillar
+    s, log = setup
+    game = FakeStellaris([briefing("2250.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    order = {"side": "buy", "resource": "minerals", "amount": 10}
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[order]))
+    bare = _trading(briefing("2250.01.01"))                                # no `market` block (an older controller)
+    g._carry_out_actions(bare)
+    assert ("market_sync", [order]) in game.actions, "not refused"
+    assert any("price unknown" in r for r in _market_log(log)), _market_log(log)
+    assert "price unknown" in g._market_note
+    game.actions.clear()
+    g2 = Governor(s, game, log, model=decisions("keep"))
+    g2.strategy = g.strategy
+    g2._carry_out_actions(_market_briefing("2250.02.01", trade=10000))
+    assert ("market_sync", [order]) in game.actions and "price unknown" not in g2._market_note
+    fill = {**_trading(briefing("2250.03.01", net={"minerals": -20.0}), trade=20000.0)}
+    fill["stockpile"]["minerals"] = 300
+    g3 = Governor(s, FakeStellaris([fill]), log, model=decisions("keep"))
+    g3.strategy = _strategy_with()
+    g3._carry_out_actions(fill)
+    assert g3._market_note.startswith("trade idle: filled with buy minerals 24") and "price unknown" in g3._market_note
+
+
+def test_idle_trade_fills_the_empty_slot_with_deficit_cover_and_follows_it(setup):
+    s, log = setup
+    game = FakeStellaris([briefing("2250.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    g.strategy = _strategy_with()                                           # no market order declared
+    b = _market_briefing("2250.01.01", stock={"minerals": 300}, net={"minerals": -20.0})
+    g._carry_out_actions(b)
+    fill = {"side": "buy", "resource": "minerals", "amount": 24}
+    assert ("market_sync", [fill]) in game.actions
+    followed = [a for a in g._actions if a["kind"] == "market"]
+    assert [(a["key"], a.get("auto")) for a in followed] == [("market buy minerals", "idle_fill")]
+    assert "trade idle: filled with buy minerals 24" in g._market_note
+    assert any("trade idle: filled with buy minerals 24" in r for r in _market_log(log))
+
+
+def test_a_declared_order_that_passes_leaves_no_room_for_the_fill(setup):
+    from pilot.strategy import Pillar
+    s, log = setup
+    game = FakeStellaris([briefing("2250.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    food = {"side": "buy", "resource": "food", "amount": 10}
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[food]))
+    g._carry_out_actions(_market_briefing("2250.01.01", stock={"minerals": 300}, net={"minerals": -20.0}))
+    assert [a for a in game.actions if a[0] == "market_sync"] == [("market_sync", [food])]
+
+
+def test_idle_trade_with_nothing_to_buy_says_why_in_the_next_decision(setup):
+    s, log = setup
+    seen: list[str] = []
+    b = _market_briefing("2250.01.01")                                     # IDLE trade, no deficit
+    game = FakeStellaris([b, {**b, "date": "2251.01.01"}])
+    g = Governor(s, game, log, model=_prompts_model(seen, "keep"), role_models={"strategy": _strategist([])})
+    g.run(max_decisions=2)
+    assert not any(a[0] == "market_sync" for a in game.actions)
+    assert "trade idle: nothing qualifies to buy (no resource in deficit" in seen[-1]
+    assert "trade idle" not in seen[0], "the note comes from the sync after the first decision"
+
+
+def test_a_buy_that_never_trades_is_recorded_took_not_executing(setup):
+    from pilot.strategy import Pillar
+    s, log = setup
+    game = FakeStellaris([briefing("2250.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    order = {"side": "buy", "resource": "minerals", "amount": 10}
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[order]))
+    g._carry_out_actions(_market_briefing("2250.01.01", trade=10000))
+    assert ("market_sync", [order]) in game.actions
+    for d in ("2250.02.01", "2250.03.01", "2250.04.01"):
+        g._carry_out_actions(_market_briefing(d, trade=10000, orders=[order]))
+    assert [(r["key"], r["result"], r["by"]) for r in g._action_rows] == [("market buy minerals", "took", "not executing")]
+    text = g._action_record_section()
+    assert "market buy minerals: took (not executing)" in text and "no minerals bought" in text
+    assert sum(1 for a in game.actions if a[0] == "market_sync") == 1, "the order stays; nothing is re-sent"
+    g._follow(_market_briefing("2250.05.01", trade=10000))           # the order is gone from the save
+    assert "not executing" not in g._action_record_section()
+
+
+def test_a_buy_that_trades_stays_followed(setup):
+    from pilot.strategy import Pillar
+    s, log = setup
+    game = FakeStellaris([briefing("2250.01.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    order = {"side": "buy", "resource": "minerals", "amount": 10}
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[order]))
+    g._carry_out_actions(_market_briefing("2250.01.01", trade=10000))
+    for d in ("2250.02.01", "2250.03.01", "2250.04.01"):
+        g._carry_out_actions(_market_briefing(d, trade=10000, orders=[order],
+                                              trades={"minerals": 10.0, "trade": -13.0}))
+    assert g._action_rows == [] and [a["key"] for a in g._actions] == ["market buy minerals"]
+    assert g._actions[0]["last_trade"] == "+10 minerals for 13 trade"
+    followed = [e for e in log.recent if e["kind"] == "order_followed"]
+    assert len(followed) == 2, "sent, then seen in force: a trade each month is no new event"
+
+
+def test_the_fake_game_fills_trades_from_its_orders(setup):
+    game = FakeStellaris([briefing("2250.01.01"), briefing("2250.02.01")], trades="orders")
+    game.market_sync([{"side": "buy", "resource": "minerals", "amount": 10}, {"side": "sell", "resource": "food", "amount": 5}])
+    game.briefing()
+    assert game.briefing()["market"]["trades_net"] == {"minerals": 10.0, "food": -5.0}
+    assert FakeStellaris([briefing("2250.01.01")], trades={}).briefing()["market"]["trades_net"] == {}
+
+
+# ---- the planet check, stage A (levers design ruling 22) --------------------------------------------
+
+def _colony(stability=70.0, amenities=10.0, pops=800, **extra) -> dict:
+    return {"id": 7, "name": "Arnvoss", "pops": pops, "stability": stability, "free_amenities": amenities,
+            "free_housing": 50.0, "employable": pops, "unemployed": 0, "capital": False, "occupied": False,
+            "queued": [], **extra}
+
+
+def test_a_planet_below_25_twice_is_urgent_once_and_the_check_line_reaches_the_decision(setup):
+    s, log = setup
+    seen: list[str] = []
+    low = lambda d: {**briefing(d), "planets": [_colony(stability=20.0, amenities=-253.0)]}
+    game = FakeStellaris([low(d) for d in ("2294.01.01", "2294.02.01", "2294.03.01", "2294.04.01")])
+    g = Governor(s, game, log, model=_prompts_model(seen, "keep"))
+    g.set_months(2)
+    g.run(max_decisions=3)
+    eps = [e["situation"] for e in log.recent if e["kind"] == "episode"]
+    assert eps[1] == "urgent: planet crisis: Arnvoss stability 20", eps
+    assert eps[2].startswith("scheduled"), "the transition fires once"
+    assert "Planet check:" not in seen[1], "2 saves 1 month apart are not yet a lasting problem"
+    assert "Planet check: Arnvoss stability 20 (4 saves), amenities -253; nothing queued here" in seen[2]
+    assert log.state.info["planet_check"] == "Planet check: Arnvoss stability 20 (4 saves), amenities -253; nothing queued here"
+    assert any(e["kind"] == "strategy_review" and "planet crisis" in e["trigger"] for e in log.recent), \
+        "a planet crisis starts a review"
+
+
+def test_each_metrics_row_keeps_the_colonies_for_the_check(setup):
+    s, log = setup
+    game = FakeStellaris([{**briefing("2250.01.01"), "planets": [_colony()]}])
+    g = Governor(s, game, log, model=decisions("keep"))
+    g.run(max_decisions=1)
+    row = next(e for e in log.recent if e["kind"] == "metrics")
+    assert row["colonies"] == {"7": [800, 10.0, 70.0, ""]} and row["stability_loss"] == pytest.approx(3.0)
+
+
+def test_the_planet_triggers_are_stellaris_only():
+    from pilot.civ6_governor import Civ6Governor
+    assert {"planet crisis", "planet losing pops"} <= set(Governor.event_triggers)
+    assert "planet losing pops" not in Civ6Governor.event_triggers
+
+
+def test_the_strategist_sees_the_planet_record_before_the_directive_record(setup):
+    s, log = setup
+    prompts: list[str] = []
+    g = Governor(s, FakeStellaris([briefing("2252.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": _review_prompts(prompts)})
+    g.strategy = _strategy_with()
+    g._rows = [{"date": "2250.01.01", "directive": "consolidate_economy", "colonies": {"1": [800, -200, 60, "a"]}},
+               {"date": "2251.01.01", "directive": "defend", "colonies": {"1": [800, -190, 60, "a"]}}]
+    g._review_strategy(briefing("2252.01.01"), "scheduled")
+    text = prompts[-1]
+    assert "- consolidate_economy: amenities +10 per planet-year over 1 planet-year on 1 planet" in text
+    assert text.index("Planet record") < text.index("Directive record in this campaign")
+    assert "Directive record in this campaign" in text.split("Latest briefing:")[0].split("Planet record")[-1]
+
+
+def test_a_restarted_governor_keeps_checking_planets_from_the_campaign_rows(setup, tmp_path):
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    src = "save games/theia_1/autosave.sav"
+    low = lambda d: {**briefing(d), "source": src, "planets": [_colony(amenities=-300.0)]}
+    first = FakeStellaris([low("2290.01.01"), low("2290.02.01")])
+    g = Governor(s, first, EventLog(s.runs_dir, "run9", s.model, telemetry=tel), model=decisions("keep"))
+    g.set_months(1)
+    g.run(max_decisions=2)
+    seen: list[str] = []
+    second = FakeStellaris([low("2290.03.01")])
+    g2 = Governor(s, second, EventLog(s.runs_dir, "run10", s.model, telemetry=tel), model=_prompts_model(seen, "keep"))
+    g2.run(max_decisions=1)
+    assert "Planet check: Arnvoss amenities -300 (3 saves); nothing queued here" in seen[0]
+
+
+# ---- the war crisis overlay (levers design rulings 12-16) --------------------------------------------
+
+_WAR = {"id": "50331650", "name": "Khell Zen vs Theia", "attacker": False, "our_exhaustion": 0.2,
+        "their_exhaustion": 0.3, "battle_count": 4,
+        "own_battles_12m": {"won": 0, "lost": 1, "ships_lost": 3, "ground_at_our_colonies": 0, "invasions": []}}
+
+
+def _war_save(date: str, *, occupied=False, wars=True, shipyard=True, **extra) -> dict:
+    """At war (unless told otherwise), 10,000 trade (+100), 300 alloys, one colony and one shipyard."""
+    b = _trading(briefing(date, wars=[dict(_WAR)] if wars else []))
+    b["stockpile"]["alloys"] = 300.0
+    col = {**_colony(), "occupied": occupied, "occupier": "Khell Zen" if occupied else None}
+    return {**b, "planets": [col], "systems": 30, "military_power": 1000.0,
+            "shipyards": [{"system": "Sol", "occupied": not shipyard}],
+            "market": {"kind": "galactic", "fluct": {}, "bought": {}, "sold": {}, "trades_net": {}}, **extra}
+
+
+def _alloys_measured(s) -> None:
+    """The test corpus as after live check L2 measured the alloys start amount."""
+    manifest = s.corpus_dir / "manifest.toml"
+    text = manifest.read_text(encoding="utf-8")
+    manifest.write_text(text.replace("new_trade_amount = { energy = 10,", "new_trade_amount = { alloys = 3, energy = 10,"),
+                        encoding="utf-8")
+
+
+def _index(log, test) -> int:
+    return next(i for i, e in enumerate(log.recent) if test(e))
+
+
+def _row_of(log, key: str) -> dict:
+    return next(e for e in log.recent if e["kind"] == "order_outcome" and e.get("key") == key)
+
+
+def test_a_colony_occupied_at_war_runs_the_ladder_in_order(setup):
+    s, log = setup
+    _alloys_measured(s)
+    calls: list[str] = []
+    game = FakeStellaris([_war_save("2256.01.01"), _war_save("2256.02.01", occupied=True)])
+    g = Governor(s, game, log, model=decisions("expand", "keep"), role_models={"strategy": _strategist(calls)})
+    g.run(max_decisions=2)
+    ep = [e for e in log.recent if e["kind"] == "episode"][1]
+    assert ep["situation"] == "urgent: war going badly: Arnvoss occupied", ep["situation"]
+    review = _index(log, lambda e: e["kind"] == "strategy_review" and e["trigger"].startswith("war going badly"))
+    boost = _index(log, lambda e: e["kind"] == "order_outcome" and e.get("key") == "crisis need boost")
+    defend = _index(log, lambda e: e["kind"] == "order_followed" and e["action"]["key"] == "crisis defend")
+    posture = _index(log, lambda e: e["kind"] == "order_outcome" and e.get("key") == "crisis posture war_crisis")
+    market = _index(log, lambda e: e["kind"] == "order_followed" and e["action"]["key"] == "crisis market buy alloys")
+    cadence = _index(log, lambda e: e["kind"] == "order_outcome" and e.get("key") == "crisis cadence")
+    assert review < boost < defend < posture < market < cadence
+    assert (_row_of(log, "crisis need boost")["result"], _row_of(log, "crisis need boost")["detail"]) == (
+        "done", "defence need missed (2.0), no stall factor, while the crisis lasts")
+    assert ("directive", "defend") in game.actions, "the model's keep is overridden by defend"
+    assert "not verified" in _row_of(log, "crisis posture war_crisis")["detail"]
+    assert _row_of(log, "crisis posture war_crisis")["result"] == "no_op"
+    assert ("market_sync", [{"side": "buy", "resource": "alloys", "amount": 25}]) in game.actions
+    assert g.s.decide_every_months == 3 and log.state.info["every_months"] == 3
+    info = log.state.info["crisis"]
+    assert info["active"] and info["boost"] == {"defence": "missed"}
+    assert "war crisis: defend forced over keep" in log.state.last_decision
+    question = [e for e in log.recent if e["kind"] == "question"]
+    assert len(question) == 1 and question[0]["blocking"] is False and "status-quo" in question[0]["question"]
+
+
+def test_the_need_boost_row_says_why_nothing_was_boosted(setup, monkeypatch):
+    s, log = setup
+    game = FakeStellaris([_war_save("2256.01.01"), _war_save("2256.02.01", occupied=True)])
+    g = Governor(s, game, log, model=decisions("expand", "keep"), role_models={"strategy": _strategist([])})
+    monkeypatch.setattr(g, "_need_boost", dict)       # a strategy whose pillars rank no defend
+    g.run(max_decisions=2)
+    row = _row_of(log, "crisis need boost")
+    assert (row["result"], row["detail"]) == ("no_op", "no pillar ranks defend")
+
+
+def test_the_crisis_alloys_order_takes_the_market_slot_from_a_declared_order(setup):
+    """Ruling 9: at most 1 order until L2, and the crisis order takes the first slot: the declared
+    order the save already holds is removed in the same sync that adds the alloys."""
+    from pilot.strategy import Pillar
+    s, log = setup
+    _alloys_measured(s)
+    food = {"side": "buy", "resource": "food", "amount": 10}
+    game = FakeStellaris([_war_save("2256.01.01"), _war_save("2256.02.01", occupied=True)])
+    g = Governor(s, game, log, model=decisions("expand", "keep"), role_models={"strategy": _review_prompts([])})
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[food]))
+    g.run(max_decisions=2)
+    syncs = [a for a in game.actions if a[0] == "market_sync"]
+    assert syncs == [("market_sync", [food]), ("market_sync", [{"side": "buy", "resource": "alloys", "amount": 25}])], syncs
+    assert "skipped buy food 10: the war crisis alloys order takes the slot" in _market_log(log)
+    assert [(r["key"], r["result"]) for r in g._action_rows if r["key"] == "market buy food"] == [("market buy food", "held")]
+    assert [a["expect"]["amount"] for a in g._actions if a["key"] == "market buy food"] == [0], "its removal is followed"
+
+
+def test_no_alloys_without_a_shipyard_in_a_system_we_control(setup):
+    s, log = setup
+    _alloys_measured(s)
+    game = FakeStellaris([_war_save("2256.01.01", shipyard=False), _war_save("2256.02.01", occupied=True, shipyard=False)])
+    g = Governor(s, game, log, model=decisions("expand", "keep"), role_models={"strategy": _strategist([])})
+    g.run(max_decisions=2)
+    assert not any(a[0] == "market_sync" and a[1] for a in game.actions)
+    assert "no shipyard in a system we control" in _row_of(log, "crisis market buy alloys")["detail"]
+
+
+def test_the_alloys_buy_waits_for_the_measured_start_amount(setup):
+    s, log = setup
+    game = FakeStellaris([_war_save("2256.01.01"), _war_save("2256.02.01", occupied=True)])
+    g = Governor(s, game, log, model=decisions("expand", "keep"), role_models={"strategy": _strategist([])})
+    g.run(max_decisions=2)
+    assert not any(a[0] == "market_sync" and a[1] for a in game.actions)
+    row = _row_of(log, "crisis market buy alloys")
+    assert row["result"] == "no_op" and "start amount not measured" in row["detail"]
+
+
+def test_declared_alloys_buys_during_a_crisis_get_the_crisis_rules(setup):
+    """Ruling 9: during a war crisis alloys have half the trade income to spend (not a quarter), also
+    when the crisis's own alloys step buys nothing (here: no shipyard we hold)."""
+    from pilot.strategy import Pillar
+    s, log = setup
+    game = FakeStellaris([briefing("2256.03.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    g._crisis = {"active": True, "since": "2256.02.01", "conditions": [["C1", "Arnvoss occupied"]], "quiet": 0,
+                 "entries": {}, "wars": [_WAR["id"]]}
+    at = lambda d, orders=(): {**_market_briefing(d, trade=2500, income=100, orders=list(orders)), "wars": [dict(_WAR)],
+                               "shipyards": [{"system": "Sol", "occupied": True}]}
+    alloys = lambda n: {"side": "buy", "resource": "alloys", "amount": n}
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[alloys(8)]))
+    g._carry_out_actions(at("2256.03.01"))      # 8 x 5.2 = 41.6 trade: over 0.25 x 100, within 0.5 x 100
+    assert ("market_sync", [alloys(8)]) in game.actions, _market_log(log)
+    # an order in the save kept for a refused add is checked with the crisis rules too
+    game.actions.clear()
+    g._market_unmeasured = {"alloys"}
+    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[alloys(9)]))
+    g._carry_out_actions(at("2256.04.01", [alloys(8)]))
+    assert not any(a[0] == "market_sync" for a in game.actions), "the alloys order in place is kept, not removed"
+    assert any(r.startswith("kept buy alloys 8 (9 wanted)") for r in _market_log(log)), _market_log(log)
+
+
+@pytest.mark.parametrize("measured, says", [
+    (False, "buys no alloys (alloys start amount not measured (live check L2))"),
+    (True, "buys 25 alloys a month on the market"),
+])
+def test_the_crisis_line_names_the_alloys_buy_only_when_there_is_one(setup, measured, says):
+    s, log = setup
+    if measured:
+        _alloys_measured(s)
+    seen: list[str] = []
+    game = FakeStellaris([_war_save("2256.01.01"), _war_save("2256.02.01", occupied=True)])
+    Governor(s, game, log, model=_prompts_model(seen, "expand", "keep"), role_models={"strategy": _strategist([])}).run(
+        max_decisions=2)
+    line = next(x for x in seen[1].splitlines() if x.startswith("WAR CRISIS"))
+    assert f"the harness holds defend, {says}, and decides every 3 months" in line, line
+    assert ("market_sync", [{"side": "buy", "resource": "alloys", "amount": 25}]) in game.actions or not measured
+
+
+def _pace_model(holder: dict, at: int, months_: int):
+    """Keeps the directive; on its `at`-th decision the human sets the pace to `months_`."""
+    calls = {"n": 0}
+
+    def respond(messages, info):
+        if _is_strategy_review(info):
+            return _quiet_no_change(info)
+        calls["n"] += 1
+        if calls["n"] == at:
+            holder["g"].set_months(months_)
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"directive": "keep", "reason": "r"})])
+    return FunctionModel(respond)
+
+
+def _crisis_saves() -> list[dict]:
+    return [_war_save("2256.01.01"), _war_save("2256.02.01", occupied=True)] + \
+        [_war_save(f"2256.{m:02d}.01") for m in range(3, 10)]
+
+
+def test_six_quiet_saves_end_the_crisis_and_restore_the_cadence(setup):
+    s, log = setup
+    game = FakeStellaris(_crisis_saves())
+    g = Governor(s, game, log, model=decisions("expand", "keep"))
+    g.run(max_decisions=4)
+    eps = [e["situation"] for e in log.recent if e["kind"] == "episode"]
+    assert eps[1].startswith("urgent: war going badly") and eps[2].startswith("scheduled (3 months)")
+    assert eps[3] == "urgent: war crisis over: 6 quiet saves", eps
+    assert g.s.decide_every_months == 12 and log.state.info["crisis"] is None
+    events = [e["event"] for e in log.recent if e["kind"] == "crisis"]
+    assert [e for e in events if e != "state"] == ["enter", "ladder", "exit", "closed"]
+    assert events.count("state") == 5, "each quiet save before the exit writes the state (a restart keeps it)"
+
+
+def test_the_humans_cadence_during_a_crisis_is_kept_at_its_end(setup):
+    s, log = setup
+    holder: dict = {}
+    game = FakeStellaris(_crisis_saves())
+    g = holder["g"] = Governor(s, game, log, model=_pace_model(holder, 3, 2))
+    g.run(max_decisions=5)
+    assert any(e["situation"].startswith("urgent: war crisis over") for e in log.recent if e["kind"] == "episode")
+    assert g.s.decide_every_months == 2, "the human's pace stays"
+
+
+def test_a_human_pause_blocks_every_step(setup):
+    s, log = setup
+    game = FakeStellaris([_war_save("2256.02.01", occupied=True)])
+    g = Governor(s, game, log, model=decisions("keep"), role_models={"strategy": _strategist([])})
+    g._review_strategy(_war_save("2256.01.01"), "start of run")
+    g._observe(_war_save("2256.01.01"))
+    g.pause()
+    g._decide(_war_save("2256.02.01", occupied=True), "human request")
+    assert g._crisis is None or not g._crisis.get("active"), "no entry while paused"
+    g.resume()
+    g._crisis = {"active": True, "since": "2256.02.01", "conditions": [["C1", "Arnvoss occupied"]], "quiet": 0,
+                 "entries": {}, "wars": [_WAR["id"]]}
+    g._crisis_pending = "enter"
+    g.pause()
+    g._decide(_war_save("2256.03.01", occupied=True), "human request")
+    assert ("directive", "defend") not in game.actions and g.s.decide_every_months == 12
+    assert not any(e["kind"] == "order_outcome" and str(e.get("key", "")).startswith("crisis") for e in log.recent)
+
+
+def test_the_overlay_is_off_with_pilot_war_crisis_0(setup, monkeypatch):
+    from dataclasses import replace
+    s, log = setup
+    s2 = replace(s, war_crisis=False)
+    s2.__class__ = s.__class__
+    game = FakeStellaris([_war_save("2256.01.01"), _war_save("2256.02.01", occupied=True), _war_save("2257.01.01", occupied=True)])
+    Governor(s2, game, log, model=decisions("expand", "keep")).run(max_decisions=2)
+    assert not any(e["kind"] == "crisis" for e in log.recent) and ("directive", "defend") not in game.actions
+    from pilot.config import Settings
+    monkeypatch.setenv("PILOT_WAR_CRISIS", "0")
+    assert Settings.from_env().war_crisis is False
+    monkeypatch.setenv("PILOT_WAR_CRISIS", "1")
+    assert Settings.from_env().war_crisis is True
+    monkeypatch.delenv("PILOT_WAR_CRISIS")
+    assert Settings.from_env().war_crisis is True, "on by default (ruling 14)"
+
+
+def test_the_posture_is_set_and_cleared_once_its_gates_pass(setup):
+    s, log = setup
+    d = s.corpus_dir / "directives.toml"
+    text = d.read_text(encoding="utf-8")
+    at = text.index("[posture.war_crisis]")
+    d.write_text(text[:at] + text[at:].replace("enabled = false", "enabled = true", 1), encoding="utf-8")
+    v2 = {"governor_vars": {"governor_naval_cap": 100.0, "governor_naval_used": 50.0}, "used_naval_capacity": 50}
+    saves = [{**b, **v2} for b in _crisis_saves()]
+    game = FakeStellaris(saves)
+    g = Governor(s, game, log, model=decisions("expand", "keep"))
+    g.run(max_decisions=4)
+    assert [a for a in game.actions if a[0] == "posture"] == [("posture", "war_crisis", True), ("posture", "war_crisis", False)]
+    rows = [(r["key"], r["result"]) for r in g._action_rows if r["key"] == "crisis posture war_crisis"]
+    assert ("crisis posture war_crisis", "took") in rows
+
+
+def test_the_need_boost_raises_defence_in_the_frame_only_during_a_crisis(setup):
+    s, log = setup
+    g = Governor(s, FakeStellaris([briefing("2256.01.01")]), log, model=decisions("keep"))
+    g.strategy = _strategy_with()
+    assert g._need_boost() == {} and g._pressures() is None
+    g._crisis = {"active": True, "since": "2256.02.01", "conditions": [], "quiet": 0, "entries": {}}
+    press = g._pressures()
+    assert press["defence"]["status"] == "war crisis" and press["defence"]["need"] == 2.0
+    assert press["defence"]["pressure"] == round(press["defence"]["weight"] * 2.0, 1)
+    assert press["economy"]["need"] == 1.0
+
+
+def test_the_dashboard_shows_the_pressure_the_governor_used_during_a_crisis(setup, tmp_path):
+    """Ruling 13 step 2 publishes the boost so the Strategy tab shows it: api_strategy applies it as
+    `_pressures` does, for the live governor's campaign only."""
+    import asyncio
+
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from pilot.dashboard import make_app
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(s.runs_dir, "rcr", s.model, telemetry=tel)
+    g = Governor(s, FakeStellaris([briefing("2256.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": _strategist([])})
+    log.emit("run_start", model=s.model, game=s.game)
+    log.set_campaign("stellaris", "c9", "Test")
+    g._review_strategy(briefing("2256.01.01"), "start of run")
+
+    async def pressure() -> dict:
+        async with TestClient(TestServer(make_app(g, s.runs_dir, tel))) as c:
+            return (await (await c.get(f"/api/strategy?campaign={log.campaign_id}")).json())["pressure"]
+    assert asyncio.run(pressure())["defence"]["status"] != "war crisis"
+    g._crisis = {"active": True, "since": "2256.02.01", "conditions": [["C1", "Arnvoss occupied"]], "quiet": 0,
+                 "entries": {}, "wars": [_WAR["id"]]}
+    g._publish_crisis()
+    shown, used = asyncio.run(pressure())["defence"], g._pressures()["defence"]
+    assert shown["status"] == used["status"] == "war crisis" and shown["need"] == used["need"] == 2.0
+    assert shown["pressure"] == used["pressure"] and "efficacy" not in shown
+
+
+def test_civ6_keeps_its_triggers_and_pressures():
+    from pilot.civ6_governor import Civ6Governor
+    assert "war going badly" in Governor.event_triggers and "war going badly" not in Civ6Governor.event_triggers
+    assert Civ6Governor._need_boost is Governor._need_boost, "the hook returns {} unless a Stellaris crisis is on"
+
+
+def test_the_fake_game_sets_and_clears_posture_flags():
+    game = FakeStellaris([briefing("2256.01.01")])
+    game.directive("defend")
+    game.posture("war_crisis", True)
+    assert set(game.briefing()["flags"]) == {"governor_directive_defend", "governor_posture_war_crisis"}
+    game.directive("expand")
+    assert "governor_posture_war_crisis" in game.briefing()["flags"], "a directive never touches a posture"
+    game.posture("war_crisis", False)
+    assert game.briefing()["flags"] == ["governor_directive_expand"]
+
+
+def test_a_human_override_during_a_crisis_stands_until_it_ends(setup):
+    s, log = setup
+    game = FakeStellaris([_war_save("2256.03.01")])
+    g = Governor(s, game, log, model=decisions("keep"))
+    g._crisis = {"active": True, "since": "2256.02.01", "conditions": [["C1", "Arnvoss occupied"]], "quiet": 0,
+                 "entries": {}, "wars": [_WAR["id"]]}
+    g._override(_war_save("2256.03.01"), "expand")
+    g._decide({**_war_save("2256.03.01"), "flags": ["governor_directive_expand"]}, "scheduled (3 months)")
+    assert [a for a in game.actions if a[0] == "directive"] == [("directive", "expand")]
+
+
+def test_a_restarted_governor_carries_on_the_crisis_and_its_entry_limit(setup, tmp_path):
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    src = "save games/theia_1/autosave.sav"
+    saves = [{**_war_save("2256.01.01"), "source": src}, {**_war_save("2256.02.01", occupied=True), "source": src}]
+    g = Governor(s, FakeStellaris(saves), EventLog(s.runs_dir, "run11", s.model, telemetry=tel),
+                 model=decisions("expand", "keep"))
+    g.run(max_decisions=2)
+    assert g._crisis_on()
+    log2 = EventLog(s.runs_dir, "run12", s.model, telemetry=tel)
+    g2 = Governor(s, FakeStellaris([{**_war_save("2256.03.01", occupied=True), "source": src}]), log2,
+                  model=decisions("keep"))
+    g2.run(max_decisions=1)
+    assert g2._crisis_on() and g2.s.decide_every_months == 3 and log2.state.info["crisis"]["active"]
+    assert not any(e["kind"] == "crisis" and e["event"] == "enter" for e in log2.recent), "no second entry"
+
+
+_THEIA = "save games/theia_1/autosave.sav"
+
+
+def _theia(b: dict) -> dict:
+    return {**b, "source": _THEIA}
+
+
+def test_a_restart_keeps_the_quiet_saves_counted(setup, tmp_path):
+    """Ruling 14's exit after 6 quiet saves holds across a restart: 3 quiet saves in the first run, 3 in
+    the second."""
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    first = [_theia(b) for b in _crisis_saves()[:5]]                     # 2256.01 - 2256.05
+    g = Governor(s, FakeStellaris(first), EventLog(s.runs_dir, "run21", s.model, telemetry=tel),
+                 model=decisions("expand", "keep"))
+    g.run(max_decisions=3)
+    assert g._crisis_on() and g._crisis["quiet"] == 3
+    log2 = EventLog(s.runs_dir, "run22", s.model, telemetry=tel)
+    g2 = Governor(s, FakeStellaris([_theia(b) for b in _crisis_saves()[5:]]), log2, model=decisions("keep"))
+    g2.run(max_decisions=2)
+    eps = [e["situation"] for e in log2.recent if e["kind"] == "episode"]
+    assert eps[1] == "urgent: war crisis over: 6 quiet saves", eps
+
+
+def _occupied_then_quiet() -> list[dict]:
+    """At war from 2256.01, Arnvoss occupied 2256.02-05 (the entry at 2256.02), quiet from 2256.06."""
+    return [_theia(_war_save("2256.01.01"))] + \
+        [_theia(_war_save(f"2256.{m:02d}.01", occupied=True)) for m in range(2, 6)] + \
+        [_theia(_war_save(f"2256.{m:02d}.01")) for m in range(6, 13)]
+
+
+def _exits(log) -> list[str]:
+    return [e["date"] for e in log.recent if e["kind"] == "crisis" and e["event"] == "exit"]
+
+
+def test_a_restart_on_the_save_last_seen_does_not_count_it_twice(setup, tmp_path):
+    """Ruling 14 counts 6 distinct quiet saves. A run that stopped at 2256.08 (3 quiet saves) and a new run
+    whose start re-reads that same save exit at 2256.11, as a single run does, not at 2256.10."""
+    from pilot.telemetry import Telemetry
+    s, log = setup
+    Governor(s, FakeStellaris(_occupied_then_quiet()), log, model=decisions("expand", "keep")).run(max_decisions=5)
+    assert _exits(log) == ["2256.11.01"], "a single run"
+    tel = Telemetry(tmp_path / "t.sqlite")
+    saves = _occupied_then_quiet()
+    g = Governor(s, FakeStellaris(saves[:8]), EventLog(s.runs_dir, "run27", s.model, telemetry=tel),
+                 model=decisions("expand", "keep"))
+    g.run(max_decisions=4)
+    assert g._observed["date"] == "2256.08.01" and g._crisis["quiet"] == 3
+    log2 = EventLog(s.runs_dir, "run28", s.model, telemetry=tel)
+    g2 = Governor(s, FakeStellaris(saves[7:]), log2, model=decisions("keep"))
+    g2.run(max_decisions=2)
+    assert _exits(log2) == ["2256.11.01"], "the re-read 2256.08 is not a 4th quiet save"
+
+
+def test_a_restart_keeps_the_humans_override_during_a_crisis(setup, tmp_path):
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    saves = [_theia(_war_save("2256.01.01")), _theia(_war_save("2256.02.01", occupied=True))]
+    g = Governor(s, FakeStellaris(saves), EventLog(s.runs_dir, "run23", s.model, telemetry=tel),
+                 model=decisions("expand", "keep"))
+    g.run(max_decisions=2)
+    g._override(_theia(_war_save("2256.03.01", occupied=True)), "consolidate_economy")
+    game = FakeStellaris([_theia(_war_save("2256.04.01", occupied=True))])
+    game.flags = ["governor_directive_consolidate_economy"]
+    Governor(s, game, EventLog(s.runs_dir, "run24", s.model, telemetry=tel), model=decisions("keep")).run(max_decisions=1)
+    assert ("directive", "defend") not in game.actions, "the human's choice stands until the crisis ends"
+
+
+def test_a_restart_keeps_the_status_quo_question_asked_after_the_entry(setup, tmp_path):
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    weak = lambda d, **kw: _theia(_war_save(d, military_power=400.0, **kw))
+    saves = [_theia(_war_save("2256.01.01")), weak("2256.02.01"), weak("2256.03.01"), weak("2256.04.01"),
+             weak("2256.05.01", occupied=True)]
+    log = EventLog(s.runs_dir, "run25", s.model, telemetry=tel)
+    Governor(s, FakeStellaris(saves), log, model=decisions("expand", "keep")).run(max_decisions=3)
+    asked = [e for e in log.recent if e["kind"] == "question"]
+    assert len(asked) == 1 and "occupied: Arnvoss" in asked[0]["question"], "asked at 2256.05, not at the entry (C3)"
+    log2 = EventLog(s.runs_dir, "run26", s.model, telemetry=tel)
+    Governor(s, FakeStellaris([weak("2256.06.01", occupied=True)]), log2, model=decisions("keep")).run(max_decisions=1)
+    assert not any(e["kind"] == "question" for e in log2.recent), "once per war per 12 months, across a restart"
+
+
+def _crisis_left_by_a_run(s, tel, event: str, state: dict) -> None:
+    """An earlier run of the campaign that stopped right after the crisis's `event`, before its ladder."""
+    log = EventLog(s.runs_dir, f"run_{event}", s.model, telemetry=tel)
+    log.emit("run_start", model=s.model, game="stellaris")
+    log.set_campaign("stellaris", "theia_1", "")
+    log.emit("crisis", event=event, date="2256.08.01", state=state)
+
+
+def test_a_restart_before_the_exit_ladder_still_clears_the_posture(setup, tmp_path):
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    _crisis_left_by_a_run(s, tel, "exit", {"active": False, "since": "2256.02.01", "conditions": [], "quiet": 6,
+                                           "entries": {}, "posture_on": True, "posture_month": months("2256.02.01"),
+                                           "pace_prior": 12})
+    game = FakeStellaris([{**_war_save("2256.09.01", wars=False), "source": "save games/theia_1/autosave.sav"}])
+    game.flags = ["governor_posture_war_crisis"]
+    g = Governor(s, game, EventLog(s.runs_dir, "run_after", s.model, telemetry=tel), model=decisions("keep"))
+    g.run(max_decisions=1)
+    assert ("posture", "war_crisis", False) in game.actions and g.s.decide_every_months == 12
+
+
+def test_a_restart_before_the_entry_ladder_runs_it_then(setup, tmp_path):
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    _crisis_left_by_a_run(s, tel, "enter", {"active": True, "since": "2256.08.01", "conditions": [["C1", "Arnvoss occupied"]],
+                                            "quiet": 0, "entries": {_WAR["id"]: months("2256.08.01")}, "wars": [_WAR["id"]]})
+    game = FakeStellaris([{**_war_save("2256.08.01", occupied=True), "source": "save games/theia_1/autosave.sav"}])
+    log = EventLog(s.runs_dir, "run_after", s.model, telemetry=tel)
+    g = Governor(s, game, log, model=decisions("keep"))
+    g.run(max_decisions=1)
+    assert ("directive", "defend") in game.actions and g.s.decide_every_months == 3
+    assert g._crisis["pace_prior"] == 12, "the earlier pace, not the crisis's own"
+    assert any(e["kind"] == "crisis" and e["event"] == "ladder" for e in log.recent)

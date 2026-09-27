@@ -326,14 +326,21 @@ def test_bad_civ6_limits_are_rejected(tmp_path, old, new, where):
         load_pillars(civ_corpus(tmp_path, CIV_MINI.replace(old, new)))
 
 
-def test_the_civ6_order_record_settings_load_and_stellaris_has_none():
+def test_the_civ6_order_record_settings_load():
     orders = load_pillars(REPO / "corpora/civ6").orders
     assert (orders.window_turns, orders.min_resolved, orders.weak_rate, orders.open_cap_turns,
             orders.open_grace_turns) == (30, 8, 0.5, 20, 3)
     assert dict(orders.min_samples) == {"production": 4, "purchase": 4, "other": 3}
     assert (orders.min_samples_of("production replace"), orders.min_samples_of("purchase faith"),
             orders.min_samples_of("civic")) == (4, 4, 3)
-    assert load_pillars(REPO / "corpora/stellaris").orders is None, "the record stays off in Stellaris"
+
+
+def test_the_stellaris_action_record_counts_in_months():
+    """Levers design ruling 5: 10 in-game years, widened to 6 judged, followed 24 months at most."""
+    orders = load_pillars(REPO / "corpora/stellaris").orders
+    assert (orders.window_turns, orders.min_resolved, orders.weak_rate, orders.open_cap_turns,
+            orders.open_grace_turns) == (120, 6, 0.5, 24, 1)
+    assert all(orders.min_samples_of(k) == 3 for k in ("directive tech_rush", "tech", "market buy food", "posture x"))
 
 
 def test_a_file_without_an_orders_table_has_no_record(tmp_path):
@@ -399,4 +406,72 @@ def test_the_public_view_shows_every_buy_out_rule_and_the_record_settings():
     buy = pub["actions"]["purchase"]
     assert buy["defender_classes"][0] == "Melee" and buy["prophet_faith_reserve"] == 0 and buy["pantheon_reserve"]
     assert pub["orders"]["window_turns"] == 30 and pub["milestone_exclude"] == ["gold", "faith"]
-    assert load_pillars(REPO / "corpora/stellaris").public()["orders"] is None
+    assert load_pillars(REPO / "corpora/stellaris").public()["orders"]["open_cap_turns"] == 24
+
+
+def test_directive_policies_come_from_the_directives_file():
+    from pilot.pillars import load_directive_policies
+    got = load_directive_policies(REPO / "corpora/stellaris")
+    assert got["tech_rush"] == {"economic_policy": "economic_policy_civilian"}
+    assert got["defend"] == {"diplomatic_stance": "diplo_stance_belligerent"}
+    assert set(got) == {"expand", "consolidate_economy", "tech_rush", "prepare_war", "defend", "diplomacy_first"}
+
+
+def test_stellaris_metrics_name_their_peer_median_keys():
+    spec = load_pillars(REPO / "corpora/stellaris")
+    assert dict(spec.peer_keys) == {"techs_known": "techs"}
+    assert load_pillars(REPO / "corpora/civ6").peer_keys == {}
+
+
+def test_a_peer_key_for_an_unknown_metric_is_rejected(tmp_path):
+    with pytest.raises(PillarsError, match=re.escape("metrics.peer_keys.bogus")):
+        load_pillars(civ_corpus(tmp_path, CIV_MINI.replace("[metrics]\n", '[metrics]\npeer_keys = { bogus = "x" }\n')))
+
+
+# ---- Stellaris market buy rules (docs/design/2026-09-27-stellaris-levers-design.md, ruling 9) --------
+
+def test_the_stellaris_market_buy_rules():
+    spec = load_pillars(REPO / "corpora/stellaris")
+    market = spec.actions["market"]
+    buy = market.buy
+    assert (market.amount_max, market.max_items) == (25, 1), "amounts and slots change only after live check L2"
+    assert (buy.base_amount["energy"], buy.base_amount["consumer_goods"], buy.base_amount["alloys"],
+            buy.base_amount["rare_crystals"], buy.base_amount["sr_zro"]) == (100, 50, 25, 10, 5)
+    assert set(buy.base_amount) == set(market.resources), "every market resource has a base price"
+    assert (buy.fee, buy.trade_reserve, buy.income_share, buy.crisis_income_share, buy.surplus_months) == (
+        0.3, 2500, 0.25, 0.5, 24)
+    assert (buy.skip_above_pct, buy.never_above_pct) == (50, 100)
+    assert dict(buy.volume) == {"internal": 1, "galactic": 6}
+    assert (buy.ai_cover_months, buy.cover_months, buy.strategic_cover_months) == (6, 24, 36)
+    assert buy.strategic == ("volatile_motes", "exotic_gases", "rare_crystals")
+    assert (buy.naval_full, buy.cover_factor, buy.idle_fill) == (0.95, 1.2, True)
+    assert spec.public()["actions"]["market"]["buy"]["trade_reserve"] == 2500
+
+
+def test_a_market_table_without_buy_rules_has_none(tmp_path):
+    assert load_pillars(corpus(tmp_path)).actions["market"].buy is None
+
+
+_BUY = "\n[actions.market.buy]\nbase_amount = { energy = 100, alloys = 25 }\n"
+
+
+@pytest.mark.parametrize("table, where", [
+    ("\n[actions.market.buy]\nfee = 0.3\n", "actions.market.buy.base_amount: required"),
+    ("\n[actions.market.buy]\nbase_amount = { energy = 0 }\n", "actions.market.buy.base_amount.energy"),
+    ("\n[actions.market.buy]\nbase_amount = { gold = 10 }\n", "actions.market.buy.base_amount.gold"),
+    (_BUY + "fee = 1.5\n", "actions.market.buy.fee"),
+    (_BUY + "trade_reserve = -1\n", "actions.market.buy.trade_reserve"),
+    (_BUY + "income_share = 0\n", "actions.market.buy.income_share"),
+    (_BUY + "crisis_income_share = 0.1\n", "actions.market.buy.crisis_income_share"),
+    (_BUY + "never_above_pct = 40\n", "actions.market.buy.never_above_pct"),
+    (_BUY + "volume = { internal = 0 }\n", "actions.market.buy.volume.internal"),
+    (_BUY + "volume = { lunar = 1 }\n", "actions.market.buy.volume.lunar"),
+    (_BUY + "cover_months = 3\n", "actions.market.buy.cover_months"),
+    (_BUY + 'strategic = ["gold"]\n', "actions.market.buy.strategic"),
+    (_BUY + "naval_full = 1.5\n", "actions.market.buy.naval_full"),
+    (_BUY + "idle_fill = 1\n", "actions.market.buy.idle_fill"),
+    (_BUY + "colour = 1\n", "actions.market.buy.colour: unknown key"),
+])
+def test_bad_buy_rules_are_rejected(tmp_path, table, where):
+    with pytest.raises(PillarsError, match=re.escape(where)):
+        load_pillars(corpus(tmp_path, MINI + table))

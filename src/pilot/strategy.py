@@ -538,28 +538,50 @@ def strategist_instructions(spec: PillarSpec) -> str:
 
 # ---- pressure: weight x milestone need (weighted pillars spec) -------------------------------------
 
+def _peer_median(row: dict, key: str | None) -> float | None:
+    m = (((row.get("peers") or {}).get(key) or {}).get("median")) if key else None
+    return float(m) if isinstance(m, (int, float)) and m > 0 else None
+
+
 def directive_record(rows: list[dict], directive: str, metric: str,
-                     row_keys: Mapping[str, str] | None = None) -> dict | None:
+                     row_keys: Mapping[str, str] | None = None,
+                     peer_keys: Mapping[str, str] | None = None) -> dict | None:
     """How `metric` grew per in-game year while `directive` was in force in this campaign versus the
     rest of the time, from consecutive metrics rows (each step counts for the directive in force at its
-    start). Ranks count going down as growth. None without at least 6 months of each."""
-    held = [0.0, 0]
-    other = [0.0, 0]
+    start). Ranks count going down as growth. None without at least 6 months of each.
+
+    When rows carry the metric's peer median (`peers[<peer_keys.get(metric, metric)>].median`), the
+    growth is that of ours / median, from the steps whose both rows have one, rounded to 3 decimals,
+    with `relative` True (stellaris levers design, ruling 7): an absolute rate rewards whatever was held
+    late, when every empire grows faster. Ranks and metrics without a median stay absolute."""
+    peer = None if metric.startswith("rank:") else (peer_keys or {}).get(metric, metric)
+    steps = []
     for a, b in itertools.pairwise(rows):
         va, vb = metric_value(a, metric, row_keys), metric_value(b, metric, row_keys)
         if va is None or vb is None or not a.get("date") or not b.get("date"):
             continue
         months = _months(b["date"]) - _months(a["date"])
-        if months <= 0:
-            continue
+        if months > 0:
+            steps.append((a, b, va, vb, months))
+    relative = any(_peer_median(a, peer) and _peer_median(b, peer) for a, b, *_ in steps)
+    held = [0.0, 0]
+    other = [0.0, 0]
+    for a, b, va, vb, months in steps:
+        if relative:
+            ma, mb = _peer_median(a, peer), _peer_median(b, peer)
+            if not (ma and mb):
+                continue
+            va, vb = va / ma, vb / mb
         delta = (va - vb) if metric.startswith("rank:") else (vb - va)
         bucket = held if a.get("directive") == directive else other
         bucket[0] += delta
         bucket[1] += months
     if held[1] < 6 or other[1] < 6:
         return None
-    return {"held_years": round(held[1] / 12, 1), "held_rate": round(held[0] * 12 / held[1], 1),
-            "other_rate": round(other[0] * 12 / other[1], 1)}
+    places = 3 if relative else 1
+    out = {"held_years": round(held[1] / 12, 1), "held_rate": round(held[0] * 12 / held[1], places),
+           "other_rate": round(other[0] * 12 / other[1], places)}
+    return {**out, "relative": True} if relative else out
 
 
 def pressures(s: Strategy, spec: PillarSpec, status_of, record_of=None) -> dict[str, dict]:

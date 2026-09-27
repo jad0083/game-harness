@@ -17,8 +17,8 @@ Written by the pilot app during play; promote proven items into the main corpus.
 - When an empire is boxed in with no unclaimed systems within 2 jumps, the 'expand' directive cannot function, and focus must shift to internal development or diplomacy.  
   _why:_ retrospective 2226.08.01 _(google:gemini-3.6-flash, 2026-09-26)_
 
-- A severe amenities deficit on a colony (e.g., -90 amenities) requires shifting the directive to 'consolidate_economy' to force the AI to build holistic infrastructure like holotheaters or housing.  
-  _why:_ retrospective 2226.08.01 _(google:gemini-3.6-flash, 2026-09-26)_
+- A colony's amenities deficit (e.g. -90) is no reason to switch to 'consolidate_economy': no directive repairs grown-colony deficits (+5 to +14 amenities a planet-year under it). The Planet check line names the colonies worth watching.  
+  _why:_ corrected 2026-09-27 (levers design ruling 22, E10): the retrospective of 2226.08.01 said such a deficit requires consolidate_economy
 
 - When a defensive war is declared, transitioning to the 'defend' directive successfully prioritizes survival and starbase defense, though military power may still take years to catch up to the galactic median.  
   _why:_ retrospective 2230.05.01 _(google:gemini-3.6-flash, 2026-09-26)_
@@ -26,14 +26,17 @@ Written by the pilot app during play; promote proven items into the main corpus.
 - A large energy stockpile can safely absorb temporary energy deficits during a war, allowing the empire to remain in a 'defend' posture without needing to switch to 'consolidate_economy'.  
   _why:_ retrospective 2230.05.01 _(google:gemini-3.6-flash, 2026-09-26)_
 
-- The 'consolidate_economy' directive effectively repairs severe amenity deficits and low stability, capable of raising a planet's stability by over 30 points in a single year.  
-  _why:_ retrospective 2235.05.01 _(google:gemini-3.6-flash, 2026-09-26)_
+- A wartime amenity deficit that recovers after peace (Las Veredas, 2235: stability up 30 points in a year) is the war ending, not 'consolidate_economy'. Do not switch directives to repair a colony's amenities.  
+  _why:_ corrected 2026-09-27 (levers design ruling 22, E10): the retrospective of 2235.05.01 credited consolidate_economy with a Las Veredas deficit that rebounded after peace
+
+- 'consolidate_economy' does not repair grown-colony amenity deficits: over four campaigns it moved them +5 to +14 amenities a planet-year and cleared 2 of 63-70 year-long intervals, most of them on 3 late Theian planets. Every colony under stability 25 was at war (Arnvoss 2294, Largoll 2338, the capital 2383): the Planet check line names such colonies and a planet crisis starts a strategy review; a directive switch does not fix them.  
+  _why:_ levers design ruling 22 (E10), measured on telemetry 2026-09-27
 
 - A prolonged defensive war preserves territory but typically causes an empire's technological and military growth to stagnate, falling behind peaceful peers.  
   _why:_ retrospective 2235.05.01 _(google:gemini-3.6-flash, 2026-09-26)_
 
-- Temporarily adopting the 'consolidate_economy' directive is an effective way to resolve severe amenities and stability deficits on colonies.  
-  _why:_ retrospective 2240.05.01 _(google:gemini-3.6-flash, 2026-09-26)_
+- Switching to 'consolidate_economy' does not resolve colony amenity and stability deficits: over four campaigns it cleared 2 of 63-70 year-long deficit intervals. It is for resource deficits.  
+  _why:_ corrected 2026-09-27 (levers design ruling 22, E10): the retrospective of 2240.05.01 called it an effective fix
 
 - Maintaining the 'defend' directive during an active war steadily increases military power but can cause minor energy deficits due to fleet upkeep.  
   _why:_ retrospective 2240.05.01 _(google:gemini-3.6-flash, 2026-09-26)_
@@ -95,8 +98,8 @@ Written by the pilot app during play; promote proven items into the main corpus.
 - Severe planetary amenities deficits (-142) will persist for decades while the 'defend' directive is active, as the AI continues to deprioritize civilian infrastructure to focus on survival.  
   _why:_ retrospective 2271.06.01 _(google:gemini-3.1-pro-preview, 2026-09-26)_
 
-- When a massive amenities deficit (e.g., -128) exists on a colony after a prolonged war, temporarily switching to the 'consolidate_economy' directive can rapidly improve stability and reduce the deficit.  
-  _why:_ retrospective 2274.11.01 _(google:gemini-3.1-pro-preview, 2026-09-26)_
+- A colony's amenities deficit after a prolonged war (e.g. -128) eases as the war's effects fade, not through a 'consolidate_economy' switch (Las Veredas rebounded after peace in 2235).  
+  _why:_ corrected 2026-09-27 (levers design ruling 22, E10): the retrospective of 2274.11.01 credited a switch to consolidate_economy
 
 - A 10-year truce after a defensive war provides a safe window to maintain 'tech_rush', allowing an empire to prioritize technological catch-up even if its military power is below half the galactic median.  
   _why:_ retrospective 2274.11.01 _(google:gemini-3.1-pro-preview, 2026-09-26)_
@@ -182,14 +185,14 @@ Written by the pilot app during play; promote proven items into the main corpus.
 - While 'expand' successfully prioritizes colonization, it can cause system claiming to stagnate if early alloy production is consumed by colony ships.  
   _why:_ retrospective 2206.09.01 _(google:gemini-3.7-flash, 2026-09-26)_
 
-- Severe amenities deficits (e.g., -92) and housing shortages on new colonies necessitate a temporary shift to 'consolidate_economy' to force the AI to construct civilian infrastructure.  
-  _why:_ retrospective 2206.09.01 _(google:gemini-3.7-flash, 2026-09-26)_
+- Amenity deficits (e.g. -92) and housing shortages on new colonies clear as the colonies grow, under any directive; they do not call for 'consolidate_economy'.  
+  _why:_ corrected 2026-09-27 (levers design ruling 22, E10): the retrospective of 2206.09.01 said they necessitate consolidate_economy
 
-- The 'consolidate_economy' directive efficiently resolves extreme planetary housing and amenities deficits in under two years, stabilizing colonies after rapid expansion.  
-  _why:_ retrospective 2211.09.01 _(google:gemini-3.7-flash, 2026-09-26)_
+- Housing and amenity deficits after rapid expansion sit on new colonies and clear as they grow, under any directive; their clearing is no evidence for 'consolidate_economy'.  
+  _why:_ corrected 2026-09-27 (levers design ruling 22, E10): the retrospective of 2211.09.01 credited consolidate_economy with clearing them
 
-- The 'consolidate_economy' directive successfully and rapidly resolves extreme planetary amenities deficits (e.g., reversing -119 to +93 in 14 months) by forcing the AI to prioritize holistic infrastructure.  
-  _why:_ retrospective 2218.04.01 _(google:gemini-3.1-pro-preview, 2026-09-26)_
+- A new colony's early amenities deficit (e.g. -119 to +93 in 14 months) clears as the colony grows, under any directive; it is no evidence for 'consolidate_economy'.  
+  _why:_ corrected 2026-09-27 (levers design ruling 22, E10): new colonies cleared their deficits under every directive
 
 - Territorial expansion can still progress under the 'consolidate_economy' directive (e.g., +3 systems) if sufficient influence and alloys allowed outposts to be queued prior to the stance change.  
   _why:_ retrospective 2218.04.01 _(google:gemini-3.1-pro-preview, 2026-09-26)_
@@ -386,8 +389,8 @@ Written by the pilot app during play; promote proven items into the main corpus.
 - When enemy war exhaustion climbs only about 2.5 points a year (66% in 2334 to 80% in 2339), a forced status-quo peace is 7+ years away. Plan the directive for years of war, not a near-term peace.  
   _why:_ retrospective 2339.06.01 _(google:gemini-3.8-flash, 2026-09-26)_
 
-- Holding 'defend' for 4+ years while a colony has stability below 10 (Largoll 6.5, amenities -1279) does not repair it. Once no territory has been lost for a year and deficits are covered by stockpiles, a 12-month consolidate_economy window is the only lever, because defend leaves civilian infrastructure alone.  
-  _why:_ retrospective 2339.06.01 _(google:gemini-3.8-flash, 2026-09-26)_
+- Holding 'defend' for 4+ years while a colony has stability below 10 (Largoll 6.5, amenities -1279) does not repair it, and neither does a consolidate_economy window: no directive clears grown-colony deficits. At war a colony under stability 25 enters the war crisis (C6), whose steps act on the war.  
+  _why:_ corrected 2026-09-27 (levers design ruling 22, E10): the retrospective of 2339.06.01 called a 12-month consolidate_economy window the only lever
 
 - Maintaining the 'defend' directive alongside a strong federation ally allows a severely outmatched empire (e.g., 5k vs 44k fleet power) to hold territory and steadily drive enemy war exhaustion toward 100% (currently 91%) through defensive victories (35-0).  
   _why:_ retrospective 2343.05.01 _(google:gemini-3.8-flash, 2026-09-26)_
@@ -461,8 +464,8 @@ Written by the pilot app during play; promote proven items into the main corpus.
 - A consumer goods deficit of about -115 a month that survived three years of `consolidate_economy` (-161 → -114) and then resumed under `expand` shows that leaving consolidation with a structural deficit just burns the stockpile (16.7k → 6.3k). Hold `consolidate_economy` until the net is near zero or positive, not merely smaller.  
   _why:_ retrospective 2383.05.01 _(google:gemini-3.8-flash, 2026-09-26)_
 
-- A single-planet amenities or housing collapse on the capital (Theia at -5,394 amenities, stability 16.9) that builds up during an `expand` stance is the clearest sign to return to `consolidate_economy` at once, ahead of expansion or research.  
-  _why:_ retrospective 2383.05.01 _(google:gemini-3.8-flash, 2026-09-26)_
+- The capital's amenities collapse (Theia at -5,394 amenities, stability 16.9 on 2383.05) came during a war, and the capital was lost two months later with a third of its pops: a switch to `consolidate_economy` would not have repaired it. A colony under stability 25 at war enters the war crisis (C6).  
+  _why:_ corrected 2026-09-27 (levers design ruling 22, E10): the retrospective of 2383.05.01 called it the clearest sign to return to consolidate_economy
 
 - Holding 'consolidate_economy' successfully resolves an alloy deficit (recovering to +6.2/month) and supports military (+916) and economic power growth (+71.4) over 12 months, but large consumer goods deficits (-65.7/month) require multiple years to fully balance.  
   _why:_ Between 2386.07 and 2387.07, consolidate_economy stabilized alloys to +6.2/month and grew military power by +916, while consumer goods remained in deficit at -65.7/month (stock 2007), showing that specialist resource stabilization takes longer than basic resources. _(google:gemini-3.8-flash, 2026-09-26)_
@@ -470,8 +473,8 @@ Written by the pilot app during play; promote proven items into the main corpus.
 - The `consolidate_economy` directive can successfully eliminate basic resource deficits, such as turning a -14.8/month alloy shortfall into a positive +6.2/month net within a year.  
   _why:_ retrospective 2387.07.01 _(google:gemini-3.8-flash, 2026-09-26)_
 
-- A severe localized amenities deficit (e.g., -399 on a single planet) may persist or worsen even while `consolidate_economy` is active if rapid pop growth outpaces civilian infrastructure construction.  
-  _why:_ retrospective 2387.07.01 _(google:gemini-3.8-flash, 2026-09-26)_
+- A severe localized amenities deficit (e.g., -399 on a single planet) is no reason to hold or return to `consolidate_economy`, with or without fast pop growth: no directive repairs grown-colony amenity deficits (+5 to +14 amenities a planet-year under it). The Planet check line names the colony; under stability 25 it is urgent.  
+  _why:_ corrected 2026-09-27 (levers design ruling 22, E10): the retrospective of 2387.07.01 blamed rapid pop growth for a deficit the directive would otherwise repair
 
 - Leaving `tech_rush` for 12 months to stabilize the economy results in negligible tech growth (+60 tech power, 1 tech known) but allows military and economic power to recover safely.  
   _why:_ retrospective 2387.07.01 _(google:gemini-3.8-flash, 2026-09-26)_
@@ -482,11 +485,11 @@ Written by the pilot app during play; promote proven items into the main corpus.
 - When influence is stockpiled (over 900) and the briefing shows unclaimed systems within 2 jumps with construction ships free, choose expand over tech_rush even when we are boxed in on colonisable planets, because outposts are the growth that is still possible.  
   _why:_ retrospective 2390.01.01 _(google:gemini-3.8-flash, 2026-09-26)_
 
-- The 'consolidate_economy' directive can take several years to repair extreme amenities deficits (e.g., -366 to -322 over 3 years), requiring large resource stockpiles to sustain the empire during the transition.  
-  _why:_ retrospective 2394.01.01 _(google:gemini-3.8-flash, 2026-09-26)_
+- Under 'consolidate_economy' an extreme amenities deficit moved only from -366 to -322 in 3 years (+15 a year): the directive does not repair it, so do not hold it for amenities.  
+  _why:_ corrected 2026-09-27 (levers design ruling 22, E10): the retrospective of 2394.01.01 read that as a slow repair
 
-- A massive population size on single planets can cause extreme amenities deficits that resolve very slowly even under a dedicated 'consolidate_economy' directive.  
-  _why:_ retrospective 2394.01.01 _(google:gemini-3.8-flash, 2026-09-26)_
+- Extreme amenities deficits on planets with massive populations are not repaired by 'consolidate_economy', slowly or otherwise: no directive repairs grown-colony amenity deficits (+5 to +14 amenities a planet-year under it, 2 of 63-70 year-long intervals cleared). Do not hold it for them.  
+  _why:_ corrected 2026-09-27 (levers design ruling 22, E10): the retrospective of 2394.01.01 said they resolve very slowly under a dedicated consolidate_economy directive
 
 - If consolidate_economy has been held for several years and a deficit keeps getting deeper (consumer goods went from -19 to -32 a month over 7.5 years) while the stockpile covers more than 100 months, leave the directive: it is not fixing that deficit, and holding it only costs growth.  
   _why:_ retrospective 2398.09.01 _(google:gemini-3.8-flash, 2026-09-26)_
@@ -536,8 +539,8 @@ Written by the pilot app during play; promote proven items into the main corpus.
 - With research income around +350 a month and techs costing about 10,000 points, tech_rush gained only 3 techs in 45 months (199 → 202). A tech gap then closes too slowly to justify holding tech_rush while a basic resource is running out.  
   _why:_ retrospective 2425.08.01 _(google:gemini-3.8-flash, 2026-09-26)_
 
-- The 'consolidate_economy' directive slowly reduces extreme amenities deficits on habitats (e.g., from -1093 to -1009 over four years) and steadily improves basic resource deficits, though it requires patience for the AI to construct the necessary infrastructure.  
-  _why:_ retrospective 2430.02.01 _(google:gemini-3.8-flash, 2026-09-26)_
+- 'consolidate_economy' steadily improves basic resource deficits, but it does not repair habitat amenity deficits (-1093 to -1009 in four years): do not hold it for them.  
+  _why:_ corrected 2026-09-27 (levers design ruling 22, E10): the retrospective of 2430.02.01 read that as a slow repair
 
 - Seven years of consolidate_economy (2426–2433) cut the mineral deficit from -67 to -9/month but made size-6 habitat amenities worse (Krail -1,093 to -1,227), so don't hold consolidate_economy waiting for habitat amenities to recover once basic resource deficits are small.  
   _why:_ retrospective 2433.10.01 _(google:gemini-3.8-flash, 2026-09-26)_
@@ -557,8 +560,8 @@ Written by the pilot app during play; promote proven items into the main corpus.
 - When multiple essential resources fall into deficit and basic stockpiles like minerals drop below a 12-month buffer, prioritizing 'consolidate_economy' over 'tech_rush' prevents economic collapse.  
   _why:_ retrospective 2436.05.01 _(google:gemini-3.8-flash, 2026-09-26)_
 
-- Severe habitat amenity deficits (e.g., -1017) alongside basic resource shortfalls necessitate 'consolidate_economy' to force the AI to build holistic infrastructure rather than focusing solely on research labs.  
-  _why:_ retrospective 2436.05.01 _(google:gemini-3.8-flash, 2026-09-26)_
+- Basic resource shortfalls call for 'consolidate_economy'; a habitat amenity deficit beside them (e.g. -1017) does not, since it worsened under that directive (Krail -725 to -896).  
+  _why:_ corrected 2026-09-27 (levers design ruling 22, E10): the retrospective of 2436.05.01 said the habitat deficit necessitates consolidate_economy
 
 - Once basic resource nets are back at zero or above, leave consolidate_economy even if habitat amenity deficits remain. Here 2.5 years of it turned minerals, alloys and rare crystals positive but only moved Krail's amenities from -1040 to -873, while tech power stayed at +0 and techs fell further behind the median (213 vs 222).  
   _why:_ retrospective 2438.09.01 _(google:gemini-3.8-flash, 2026-09-26)_
@@ -578,8 +581,8 @@ Written by the pilot app during play; promote proven items into the main corpus.
 - When a crisis power has roughly 50x our military, our own fleet will not decide the outcome, so defend should be judged by systems held (27, unchanged) and by keeping allies and the federation intact, not by closing the military gap.  
   _why:_ retrospective 2443.04.01 _(google:gemini-3.8-flash, 2026-09-26)_
 
-- Twelve months of the 'consolidate_economy' directive is insufficient to resolve extreme planetary amenity deficits (e.g., -666) when the population imbalance is massive.  
-  _why:_ retrospective 2447.04.01 _(google:gemini-3.8-flash, 2026-09-26)_
+- An extreme planetary amenity deficit (e.g., -666) left after a 'consolidate_economy' window does not mean the window was too short or too late: no directive repairs grown-colony amenity deficits (+5 to +14 amenities a planet-year under it, 2 of 63-70 year-long intervals cleared), so a longer or earlier one would not repair it either.  
+  _why:_ corrected 2026-09-27 (levers design ruling 22, E10): the retrospective of 2447.04.01 said twelve months of it were not enough when the population imbalance is massive
 
 - Under the 'defend' directive, military power will stagnate (e.g., +372 in a year) if monthly alloy production is critically low (+6.6/month).  
   _why:_ retrospective 2447.04.01 _(google:gemini-3.8-flash, 2026-09-26)_
@@ -668,8 +671,8 @@ Written by the pilot app during play; promote proven items into the main corpus.
 - When research income is under about 100 a month and the species is slow learners, set techs_known milestones at about 1 tech a year and spend prefer_techs on energy, bureaucracy and habitat techs rather than weapons.  
   _why:_ strategy review 2211.04.01 _(google:gemini-3.8-flash, 2026-09-26)_
 
-- When a consolidate_economy spell has fixed the problem it was chosen for (Berykinium's amenities went from -182 to +289) and the only deficit left is under 1 a month on a stock of several thousand, move economy down and give its place to the weakest measure, here technology (tech power last of 10).  
-  _why:_ strategy review 2215.05.01 _(google:gemini-3.8-flash, 2026-09-26)_
+- When the problem a consolidate_economy spell was chosen for is gone (Berykinium's amenities went from -182 to +289) and the only deficit left is under 1 a month on a stock of several thousand, move economy down and give its place to the weakest measure, here technology (tech power last of 10).  
+  _why:_ strategy review 2215.05.01; corrected 2026-09-27 (levers design ruling 22, E10): the amenities are not credited to the directive, since colony deficits clear with growth under any directive
 
 - When alloys pile up (1306, +26 a month) while military is last and stays flat, set a defence goal to spend them on ships and a second shipyard rather than raising alloy income.  
   _why:_ strategy review 2215.05.01 _(google:gemini-3.8-flash, 2026-09-26)_
@@ -752,8 +755,8 @@ Written by the pilot app during play; promote proven items into the main corpus.
 - When military power stagnates (+0 over 12 months) despite a massive alloy stockpile (e.g., 8,400+), the fleet is likely bottlenecked by shipyards or hidden naval capacity limits; prioritize technology for capacity doctrines and build a second shipyard.  
   _why:_ strategy review 2247.02.01 _(google:gemini-3.8-flash, 2026-09-26)_
 
-- A severe planetary amenities deficit (e.g., -357 on Omoderium) resulting in critically low stability (39.6) requires prioritizing the consolidate_economy directive to force the AI to build civilian infrastructure like holotheaters.  
-  _why:_ strategy review 2247.02.01 _(google:gemini-3.8-flash, 2026-09-26)_
+- A planetary amenities deficit (e.g. -357 on Omoderium, stability 39.6) does not call for prioritizing 'consolidate_economy': no directive repairs grown-colony deficits. Watch it in the Planet check line; a colony under stability 25 is urgent.  
+  _why:_ corrected 2026-09-27 (levers design ruling 22, E10): the strategy review of 2247.02.01 said it requires consolidate_economy
 
 - When the expansion room shows multiple unclaimed systems within 2 jumps but 0 of them are surveyed, territorial expansion is bottlenecked by science ship exploration, meaning the 'expand' directive will yield no new systems.  
   _why:_ strategy review 2247.02.01 _(google:gemini-3.8-flash, 2026-09-26)_
