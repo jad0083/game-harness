@@ -1115,6 +1115,8 @@ class Governor:
                 if self._stellaris_end_check(b, at_start=True):
                     return None                     # ruling 22: the campaign is over; no decision
                 if self._zero_saves:                # one save with no planet: the next save decides first
+                    # recorded as in the wait, so a stall after it ends the run (ruling 22)
+                    self.log.emit("metrics", **self._observe(b)[0])
                     self.log.emit("journal", text=f"{b['date']}: no planet of ours in the newest save; no decision "
                                                   "until the next one shows whether the campaign is lost")
                     return b
@@ -1854,7 +1856,11 @@ class Governor:
         self._decision_military = b.get("military_power")   # baseline for "military fell" until the next decision
         self.log.state.episodes += 1
         self.log.state.game_date = b["date"]
-        self.log.emit("metrics", **self._observe(b)[0])
+        row, fresh = self._observe(b)
+        self.log.emit("metrics", **row)
+        start = reason == "start of run"
+        if fresh:   # a save first read here (the start, a human request): its triggers reach this decision
+            reason += "; urgent: " + "; ".join(fresh)
         self._follow(b)
         if self.log.telemetry is not None and self.log.campaign_id:
             try:
@@ -1981,7 +1987,7 @@ class Governor:
         self._crisis_posture_step(b, ladder)              # step 4, between the directive and the market
         self._carry_out_actions(b)                        # the market: step 5 takes the slot
         self._crisis_finish(b, ladder)                    # steps 6-7
-        if not (reason == "start of run" and reviewed_at_start):   # a review just ran for this decision point
+        if not (start and reviewed_at_start):   # a review just ran for this decision point
             self._since_retro += 1
             if self.s.retro_every and self._since_retro >= self.s.retro_every and self.pillars is not None:
                 self._review_strategy(b, f"scheduled after {self.s.retro_every} decisions")
@@ -2492,8 +2498,8 @@ class Governor:
 
     def _newly_missed_milestones(self, before: str, today: str) -> list[str]:
         """Urgent reasons for milestones that are `missed` on `today` but were not on `before` (the
-        previous check's save date): each fires once per run (ruling 17: judged on the current value, a
-        milestone past its date can read met again and then missed; it does not fire twice)."""
+        previous check's save date): each fires once per run (ruling 17: past its date a milestone is
+        judged on its value at `by`, so it fires once, when that date passes unmet)."""
         strategy, rows = self.strategy, self._metrics_rows()
         if strategy is None or rows is None:
             return []

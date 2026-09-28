@@ -220,7 +220,7 @@ screenshots, or the game's raw XML (`incoming/`).
 merging and pulling on the controller, run `scripts/deploy-pilot.sh <from> <to>` (the commit deployed
 before, and the new one; `--dry-run` first shows what it will do). It restarts the pilot only when the
 running game's files or shared code changed, restarts the viewer for the dashboard's static files and
-shared code, and for a Rust change pauses the pilot through its dashboard, builds the controller and
+any `src/pilot/*.py` (it imports game modules too), and for a Rust change pauses the pilot through its dashboard, builds the controller and
 resumes a Civ VI pilot (it runs the binary afresh for each call) but restarts a Stellaris or GalCiv IV one
 (it keeps one `game-controller mcp` process for its run); otherwise it prints "not restarted: the running civ6 pilot is unaffected; the change
 applies at its next start". `scripts/pilot-affected.py <from> <to>` shows the classification alone
@@ -307,14 +307,15 @@ Rules:
   A directive held 2+ years whose pillar metric grew no faster, as ours ÷ the peer median per year,
   than while not held has its pressure halved; the frame says when expand is held back by unsurveyed
   space (none surveyed in reach, influence 950+ for 12 months). A milestone is judged on the latest
-  value since it was set (its `set` stamp), never on a past high: met, missed once due, else on track
-  or at risk (both games; postmortem-fixes design, ruling 17).
+  value since it was set (its `set` stamp; once due, the value on its due date), never on a past high:
+  met, missed once due, else on track or at risk (both games; postmortem-fixes design, ruling 17).
 - **Neighbour buildup** (postmortem-fixes design, ruling 11): a neighbour that is not an alliance or
   federation partner, at 2 x our military power, that grew 50% within 24 months is an urgent decision
-  (once per neighbour per window; no review, never a war-crisis entry).
-- **The end**: a save with no planet of ours gets no decision; two in a row (or a date stall after one)
-  end the run as lost with a report and no model call (`campaign_end`, journal, `info.end`, status
-  `ended`; postmortem-fixes design, ruling 22).
+  (once per neighbour per window; no review, never a war-crisis entry; one seen at the start of a run
+  or on a human request is in that decision's reason).
+- **The end**: a save with no planet of ours gets no decision; two in a row (or a date stall after one,
+  also the first save of a run) end the run as lost with a report and no model call (`campaign_end`,
+  journal, `info.end`, status `ended`; postmortem-fixes design, ruling 22).
 - **Pace**: each scheduled interval logs `interval {months, requested, date}`; more than one month over
   `decide_every_months` emits `pace_overrun`, for information only (postmortem-fixes design, ruling 27).
 - **Time constants** (`[time]` in pillars.toml, in months here): event reviews at most one per 12 months
@@ -440,9 +441,10 @@ Rules:
   comments when it installs it (line numbers kept), so rebuild the controller with this corpus before
   the governor runs it (pause the governor across the merge and the build).
 - The run ends when our civilization is gone (postmortem-fixes design, ruling 21): the snapshot's `alive`
-  false, or 0 cities and 0 settlers on 2 reads in a row (never the local player id -1). No decision or
-  review runs after it: autoplay stops, `campaign_end` with a report, a journal line, the run `lost` in
-  telemetry, status `ended`. If the game keeps playing all-AI turns, exit to the main menu by hand.
+  false, or 0 cities and 0 settlers on 2 reads in a row (never the local player id -1; a second read
+  that fails runs no decision, and the next hand-back checks again). No decision or review runs after
+  it: autoplay stops, `campaign_end` with a report, a journal line, the run `lost` in telemetry, status
+  `ended`. If the game keeps playing all-AI turns, exit to the main menu by hand.
 - Military milestones are relative to the majors met (`military_vs_median`, `military_vs_strongest`;
   `[strategy] relative_military`): while weak (under 0.6 x the median or last) the military pillar needs
   one at 0.5 or more, an absolute target under half the median is sent back, and a rank milestone needs 3

@@ -26,8 +26,8 @@ PC in use. One pilot unit runs whichever game `runs/pilot-settings.json` names, 
 `src/pilot/static/**`; rust: `crates/**`, `Cargo.*`; none: docs, games, tests, other `.md` files,
 `corpora/*/learned/**`, `scripts/ci*`; shared: every other `src/pilot/*.py` and `pyproject.toml`, and any
 path not listed). The running pilot (its game read from its own `/status`, else the settings file)
-restarts only when its game's class or shared changed; the viewer restarts for view and shared (it
-imports the shared modules); a Rust change pauses the pilot through its dashboard, builds the
+restarts only when its game's class or shared changed; the viewer restarts for view, shared and any
+`src/pilot/*.py` of a game's class (it imports game modules too, such as `stellaris_record` and `civ6`); a Rust change pauses the pilot through its dashboard, builds the
 controller and resumes a Civ VI pilot, which runs the binary afresh for each call (a pilot paused by the
 human or waiting for one is left as it is); a Stellaris or GalCiv IV pilot keeps one `game-controller
 mcp` child for its whole run, so a Rust change restarts it after the build. Otherwise
@@ -96,8 +96,9 @@ apply → resume → poll autosaves until the decision interval has passed or so
 happens (a war starts or ends, a resource turns negative, we newly fall below half the median in a
 measure, a milestone is missed, or a neighbour builds up: one that is not an alliance or federation
 partner, at 2 x our military power or more, grew 50% within `[time] buildup_window` (24 months), once
-per neighbour per window, a decision only, never a review or a war-crisis entry; postmortem-fixes
-design, ruling 11) → pause → decide again. Each scheduled interval logs the months that passed
+per neighbour per window, a decision only, never a review or a war-crisis entry; one seen by the
+start of a run or a human request goes into that decision's reason; postmortem-fixes design, ruling 11)
+→ pause → decide again. Each scheduled interval logs the months that passed
 (`interval {months, requested, date}`); more than one month over `decide_every_months` emits
 `pace_overrun`, for information only (ruling 27). The game is paused whenever a model
 thinks, so any speed is safe. `prepare_war` needs a human "yes" on the dashboard.
@@ -123,7 +124,8 @@ game stays paused, a `campaign_end` event (`result` lost, the last date we held 
 the loss was seen, the signal, the report: colonies lost, our military against the strongest enemy,
 the stocks left, decisions after the loss was seen), a journal line, the run's `lost` status in
 telemetry, `info.end` and the status `ended`. A date stall after a save with no planet ends it the
-same way (the game may stop saving once the empire falls; unverified). A new run on such a campaign
+same way, also when that save was the first of the run (the game may stop saving once the empire
+falls; unverified). A new run on such a campaign
 ends at its start. A lost capital stays the "colony lost" trigger, and a briefing that cannot find our
 country still waits for the human (another game's save reads the same way).
 
@@ -414,7 +416,8 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   again, a human at the PC sees no AI statement and cannot use the leader screen's conversations.
 - **The end of the campaign** (postmortem-fixes design, rulings 21-23): the snapshot's `alive` false
   ends the run at once; 0 cities and 0 settlers is read again at once and ends it when the second read
-  agrees (one glitched read never does). The local player id is never used (China was alive again at
+  agrees (one glitched read never does; a second read that fails runs no decision either: the next
+  stretch starts from a fresh snapshot and the next hand-back checks again). The local player id is never used (China was alive again at
   T913 while it read -1 at T916), and the run keeps the player id of its first snapshot: a snapshot for
   another player waits for the human. The end runs no model call and no review: autoplay is stopped,
   two `autoplay-status` reads 60 s apart tell whether the game keeps playing all-AI turns by itself
@@ -465,8 +468,9 @@ Each pillar has:
   judged on one value (postmortem-fixes design, ruling 17): the latest metrics row at or before today
   and not before its `set`, the date the governor stamped when it published the strategy (a milestone
   with the same metric, op, target and `by` as in the previous version keeps its earlier `set`; the
-  Strategist neither sees nor writes it). That value meeting the target is *met*; otherwise *missed*
-  once `by` has passed, else *on track* or *at risk* from its projection over the last 12 steps; no
+  Strategist neither sees nor writes it); once `by` has passed, the latest such row at or before `by`
+  (a target met on its date stays met after a later dip). That value meeting the target is *met*;
+  otherwise *missed* once `by` has passed, else *on track* or *at risk* from its projection over the last 12 steps; no
   reading since `set` is *at risk*. A value met in the past no longer counts ("military >= 170 by
   T350" read met at T350 with 124 before). "milestone missed" fires once per milestone per run;
 - actions: preferred techs (technology) and one small monthly market order (economy; a sell only of

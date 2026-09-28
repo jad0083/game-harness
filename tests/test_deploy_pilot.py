@@ -33,9 +33,13 @@ def test_each_path_gets_its_class():
 def test_a_stellaris_only_change_leaves_a_running_civ6_pilot_alone():
     p = pa.plan(["src/pilot/stellaris_market.py", "corpora/stellaris/pillars.toml", "docs/pilot.md",
                  "tests/test_stellaris_market.py", "corpora/civ6/learned/strategy.md"], "civ6")
-    assert not p["restart_pilot"] and not p["restart_view"] and not p["build"]
+    assert not p["restart_pilot"] and not p["build"]
+    assert p["restart_view"], "the viewer imports game modules too (stellaris_record, civ6) and keeps them"
     assert p["message"] == ("not restarted: the running civ6 pilot is unaffected; the change applies at its next start")
     assert pa.plan(["src/pilot/stellaris_market.py"], "stellaris")["restart_pilot"]
+    assert pa.plan(["src/pilot/controller.py"], "civ6")["restart_view"]
+    corpus = pa.plan(["corpora/stellaris/pillars.toml", "docs/pilot.md"], "civ6")
+    assert not corpus["restart_view"] and not corpus["restart_pilot"], "the viewer reads a corpus per request"
 
 
 def test_shared_code_restarts_any_pilot_and_the_viewer_and_unknown_is_shared():

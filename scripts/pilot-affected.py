@@ -21,7 +21,8 @@ Each changed path gets one class:
 
 The running pilot restarts when its game's class or `shared` is affected, and on `rust` when it keeps a
 long-lived controller (any game's class and `rust` when its game is unknown); the viewer restarts for
-`view` and `shared` (it imports the shared modules)."""
+`view`, `shared` and every src/pilot/*.py of a game's class (it imports game modules too, e.g.
+stellaris_record and civ6, and keeps them for its life; a corpus it reads per request needs none)."""
 
 from __future__ import annotations
 
@@ -75,7 +76,8 @@ def plan(paths: list[str], game: str = "unknown", running: bool = True) -> dict:
     else:
         message = f"not restarted: the running {game} pilot is unaffected; the change applies at its next start"
     return {"game": game, "running": running, "classes": classes, "build": "rust" in classes,
-            "restart_pilot": restart, "restart_view": bool({"view", "shared"} & set(classes)), "message": message}
+            "restart_pilot": restart, "restart_view": bool({"view", "shared"} & set(classes))
+            or any(fnmatch.fnmatchcase(p, "src/pilot/*.py") for p in paths), "message": message}
 
 
 def changed_paths(rev_from: str, rev_to: str, cwd: Path) -> list[str]:

@@ -2213,6 +2213,29 @@ def test_one_zero_city_read_does_not_end_the_run(setup):
     assert not g._ended
 
 
+def test_a_zero_city_read_whose_second_read_fails_goes_to_no_decision(setup):
+    """After elimination the tuner is silent while the game plays all-AI turns: the re-read times out.
+    That lone 0-city read runs no decision and no 'city lost' review (ruling 21)."""
+    class SilentAfterZero(FakeCiv6):
+        zero_reads = 0
+
+        def snapshot(self):
+            s = super().snapshot()
+            if not s["cities"]:
+                self.zero_reads += 1
+                if self.zero_reads > 1:
+                    raise TimeoutError("snapshot: no reply")
+            return s
+    game = SilentAfterZero(FIXTURE, index=INDEX, events={FIXTURE["turn"] + 1: _lost})
+    g = governor(setup, game, orders_model([]))
+    start = game.snapshot()
+    b, reason = g._run_until_next_decision(start)
+    assert (b, reason) == (start, ""), reason
+    assert g._stale and not g._ended, "the next stretch starts from a fresh snapshot"
+    _s, log = setup
+    assert any(e["kind"] == "briefing_error" and "second read failed" in e["error"] for e in log.recent)
+
+
 def test_alive_false_ends_it_at_once_and_a_settler_or_player_minus_one_does_not(setup, tmp_path):
     from pilot.campaign_end import civ6_read
     assert civ6_read({**FIXTURE, "alive": False}) == "not alive"

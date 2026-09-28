@@ -442,17 +442,20 @@ def milestone_status(m: Milestone, rows: list[dict], today: str, row_keys: Mappi
                      lookback: int = 12) -> str:
     """met / on_track / at_risk / missed, from metrics rows (oldest first) up to `today`, judged on one
     value (postmortem-fixes design, ruling 17): the latest row at or before `today` and not before the
-    milestone's `set`. met: it meets the target; missed: otherwise, once `today` is past `by`; else
-    on_track or at_risk from the projection (that value against a row at least `lookback` steps older,
-    months or turns: any row of the campaign, since a trend needs history). A milestone with no reading
-    since it was set is at_risk (missed once `by` has passed: nothing shows it met). A value met in the
-    past no longer counts ("military >= 170 by T350" read met at T350 with 124)."""
+    milestone's `set`; once `today` is past `by`, the latest such row at or before `by` (its check date:
+    a target met on its date stays met after a later dip, and does not fire "milestone missed"). met: it
+    meets the target; missed: otherwise, once `today` is past `by`; else on_track or at_risk from the
+    projection (that value against a row at least `lookback` steps older, months or turns: any row of
+    the campaign, since a trend needs history). A milestone with no reading since it was set is at_risk
+    (missed once `by` has passed: nothing shows it met). A value met before the latest row no longer
+    counts ("military >= 170 by T350" read met at T350 with 124)."""
     series = [(_months(r["date"]), metric_value(r, m.metric, row_keys)) for r in rows if r.get("date")]
     series = [(mo, v) for mo, v in series if v is not None and mo <= _months(today)]
     since = _months(m.set) if m.set else None
-    judged = [(mo, v) for mo, v in series if since is None or mo >= since]
-    ok = (lambda v: v >= m.target) if m.op == ">=" else (lambda v: v <= m.target)
     past_due = _months(today) > _months(m.by)
+    upto = _months(m.by) if past_due else _months(today)
+    judged = [(mo, v) for mo, v in series if (since is None or mo >= since) and mo <= upto]
+    ok = (lambda v: v >= m.target) if m.op == ">=" else (lambda v: v <= m.target)
     if not judged:
         return "missed" if past_due else "at_risk"
     now_mo, now = judged[-1]

@@ -10,7 +10,7 @@
 # builds the controller and resumes a Civ VI pilot (each call runs the binary afresh; a pilot the human had
 # paused stays paused); a Stellaris or GalCiv IV pilot keeps one `game-controller mcp` child for the run,
 # so it is restarted instead. game-pilot.service restarts when its game's files or shared code changed;
-# game-pilot-view.service restarts for the dashboard's static files and shared code.
+# game-pilot-view.service restarts for the dashboard's static files and any src/pilot/*.py.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 [ $# -ge 2 ] || { echo "usage: $0 <from> <to> [--dry-run]" >&2; exit 2; }

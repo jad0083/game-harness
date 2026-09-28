@@ -434,7 +434,9 @@ balance before + yield × turns − our spends − balance now.
       - **Stellaris.** A 24-month window, over the rows' `neighbours`. Those rows carry absolute
         `military_power`; `alliance` and federation statuses are skipped. It is an urgent decision only:
         no review, and never a war-crisis entry, because Stellaris levers ruling 12 keeps ratios out of
-        crisis entry.
+        crisis entry. A save first read by a decision itself (the start of a run, a human request) adds
+        its urgent reasons to that decision's reason, so a buildup that grew during downtime is not
+        marked fired and dropped.
     - **Why.**
       - strategy-9 [one]: Australia went from 233 (T454) to 1,106 (T525) with no trigger.
       - T5: neither game warned of a neighbour at 3× our strength.
@@ -530,6 +532,9 @@ balance before + yield × turns − our spends − balance now.
         `today` and not before the milestone's `set`.
         - **met**: that value meets the target;
         - **missed**: otherwise, when today is past `by`;
+        - once today is past `by`, the value judged is the latest row at or before `by` (still since
+          `set`): a target met on its date stays met after a later dip and never fires "milestone
+          missed", and one missed on its date stays missed;
         - **on_track** or **at_risk**: otherwise, from today's projection;
         - **at_risk**: when there is no row since `set` ("no reading since it was set").
       - **`set` stamp.** `Milestone` gains `set` (a date or turn). The governor stamps it when it publishes a
@@ -628,7 +633,9 @@ balance before + yield × turns − our spends − balance now.
         - 0 cities and 0 settlers on 2 consecutive snapshots.
 
         `local_player == -1` is never used: China was alive again at T913 while the local player read −1
-        at T916 (reliability-2's correction).
+        at T916 (reliability-2's correction). A 0-city read whose second read fails (the tuner is silent
+        while the game plays all-AI turns) runs no decision either: the next stretch starts from a fresh
+        snapshot and the next hand-back checks again.
       - **Actions, in order, with no model call:**
         1. stop autoplay;
         2. emit `campaign_end {result: "lost", last_city_turn, seen, signal, report}`;
@@ -665,7 +672,8 @@ balance before + yield × turns − our spends − balance now.
         ruling 21.
       - **Stall after 0 planets.** When the date stalls after a save with 0 planets, the date-stall watchdog
         (Stellaris levers ruling 23) ends the run as lost instead of raising `needs_attention`. The game may
-        stop saving once the empire falls (**unverified**).
+        stop saving once the empire falls (**unverified**). A run that starts on such a save records it
+        (its metrics row) as the wait does, so a stall after it ends the run too.
       - **Not an end:**
         - a lost capital, which stays the "colony lost" trigger;
         - a briefing that cannot find our country ("player country N not found"). That raises
@@ -795,6 +803,9 @@ balance before + yield × turns − our spends − balance now.
         Otherwise it prints "not restarted: the running civ6 pilot is unaffected; the change applies at its
         next start".
       - **AGENTS.md** §8 gets the rule.
+      - **The viewer** also restarts for any `src/pilot/*.py` of a game's class: it imports game modules
+        (`stellaris_record`, `civ6`, `governor`, which loads every `stellaris_*.py`) and keeps them for
+        its life. A corpus it reads per request needs no restart.
     - **Why.** H14 and T10: a Stellaris-only merge restarted the live Civ VI run at T462. One unit serves
       whichever game runs (E7).
     - **Cost if wrong.** A path misclassified to another game leaves the running pilot on old code until its

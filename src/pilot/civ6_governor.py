@@ -528,7 +528,10 @@ class Civ6Governor(Governor):
                 # ruling 27: more turns passed than requested (18 of 25 calls after T579): the end check
                 # runs before anything else, since a civilization gone reads as another player
                 self._overrun = False
-                b = self._end_check(b)
+                try:
+                    b = self._end_check(b)
+                except Civ6Stuck as e:
+                    return self._end_unconfirmed(last, e)
                 if b is None:
                     return None, "ended"
             if getattr(self, "_campaign_key", None) and (b.get("leader"), b.get("map_seed")) != self._campaign_key:
@@ -546,7 +549,10 @@ class Civ6Governor(Governor):
                 return last, ""
             spent = ai_spent(last, b)
             self._emit_metrics(b, spent)
-            b = self._end_check(b)
+            try:
+                b = self._end_check(b)
+            except Civ6Stuck as e:
+                return self._end_unconfirmed(last, e)
             if b is None:
                 return None, "ended"            # ruling 21: no decision and no review after the end
             self._note_diplomacy(b)
@@ -863,14 +869,15 @@ class Civ6Governor(Governor):
     def _end_check(self, b: dict) -> dict | None:
         """Ruling 21 on a fresh snapshot: `alive` false ends the run at once; 0 cities and 0 settlers
         is read again at once, and ends it when the second read agrees. Returns the snapshot to go on
-        with (the second read, when one was taken), or None when the run ended."""
+        with (the second read, when one was taken), or None when the run ended. A second read that
+        fails raises Civ6Stuck: one read never ends the run, and no decision runs on it either."""
         read = civ6_read(b)
         if read == "no cities":
             try:
                 again = self._snapshot_between_turns()
             except Civ6Stuck as e:
-                self.log.emit("briefing_error", error=f"end check: {e}"[:200])
-                return b                        # one read never ends the run
+                raise Civ6Stuck(f"one read at T{b.get('turn')} showed 0 cities and 0 settlers and the second "
+                                f"read failed ({e})"[:400]) from e
             self._emit_metrics(again)
             if civ6_read(again) is None:
                 self.log.emit("journal", text=f"one read at T{b.get('turn')} showed 0 cities and 0 settlers; the next "
@@ -881,6 +888,14 @@ class Civ6Governor(Governor):
             return b
         self._end_civ6(b, civ6_signal(read))
         return None
+
+    def _end_unconfirmed(self, last: dict, e: Civ6Stuck) -> tuple[dict, str]:
+        """A 0-city read whose second read failed (the tuner is silent while the game plays all-AI
+        turns after an elimination): no decision and no review on it (ruling 21). The next stretch
+        starts from a fresh snapshot and the next hand-back checks again."""
+        self._stale = True
+        self.log.emit("briefing_error", error=f"end check: {e}"[:300])
+        return last, ""
 
     def _end_civ6(self, b: dict, signal: str) -> None:
         """Ruling 21's actions, with no model call: stop autoplay, the report, `campaign_end`, the

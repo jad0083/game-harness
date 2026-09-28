@@ -897,6 +897,17 @@ def test_only_rows_since_the_milestone_was_set_are_judged():
         Milestone(metric="colonies", op=">=", target=5, by="2245.01.01", set="soon")
 
 
+def test_a_milestone_met_on_its_date_stays_met_after_a_later_dip():
+    """Past `by`, the value on the due date decides: rank 7 held at exactly 7 in Blooms of Gaea; a dip
+    to 8 after the date must not read missed (nor fire the 'milestone missed' trigger)."""
+    m = Milestone(metric="rank:economy_power", op="<=", target=7, by="2266.01.01", set="2264.03.01")
+    rows = [{"date": d, "peers": {"economy_power": {"rank": r}}}
+            for d, r in (("2266.01.01", 7), ("2266.05.01", 7), ("2266.06.01", 8))]
+    assert [milestone_status(m, rows, d) for d in ("2266.01.01", "2266.05.01", "2266.06.01")] == ["met"] * 3
+    late = [{"date": "2266.01.01", "peers": {"economy_power": {"rank": 9}}}, *rows[1:]]
+    assert milestone_status(m, late, "2266.05.01") == "missed", "and one missed on its date stays missed"
+
+
 def test_the_strategist_never_sees_or_writes_the_set_stamp():
     from pilot.strategy import review_model, stamp_milestones, strategy_for_prompt
     s = stamp_milestones(strat(), None, "2240.01.01")

@@ -5286,6 +5286,42 @@ def test_a_stall_after_a_save_with_no_planet_ends_the_run_as_lost(setup):
     assert not any(e["kind"] == "needs_attention" for e in log.recent)
 
 
+def test_a_run_that_starts_on_a_save_with_no_planet_and_then_stalls_ends_as_lost(setup):
+    """Ruling 22's case where the game stops saving once the empire falls, with the one save with no
+    planet read at the start of the run: the stall ends the run, it does not wait for a human."""
+    s, log = setup
+    clock = {"t": 0.0}
+    calls: list = []
+    game = FakeStellaris([_planets("2200.02.01", 0)])
+    g = Governor(s, game, log, model=_recording("decide", calls), role_models={"strategy": _strategist(calls)})
+    g._clock = lambda: clock.__setitem__("t", clock["t"] + 400.0) or clock["t"]
+    g.run(max_decisions=3)
+    end = [e for e in log.recent if e["kind"] == "campaign_end"]
+    assert calls == [] and len(end) == 1 and "after a save with 0 planets" in end[0]["signal"], end
+    assert not any(e["kind"] == "needs_attention" for e in log.recent) and g._ended
+    assert any(e["kind"] == "metrics" and e.get("date") == "2200.02.01" for e in log.recent), "the save is recorded"
+
+
+def test_a_neighbour_buildup_at_the_start_of_a_run_reaches_its_first_decision(setup, tmp_path):
+    """The start decision observes the save first: a buildup that grew during downtime is in its
+    reason, not marked fired and dropped for the next 24 months."""
+    from pilot.governor import metrics
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    src = {"source": "save games/rihi_1/x.sav"}
+    old = EventLog(s.runs_dir, "old", s.model, telemetry=tel)
+    old.emit("run_start", game="stellaris", model=s.model)
+    old.set_campaign("stellaris", "rihi_1", "UNE")
+    old.emit("metrics", **metrics({**_neighbours_save("2201.01.01", 2000, 3000, 500), **src}))
+    log = EventLog(s.runs_dir, "new", s.model, telemetry=tel)
+    game = FakeStellaris([{**_neighbours_save("2203.01.01", 2000, 4600, 500), **src}])
+    g = Governor(s, game, log, model=decisions("keep"), role_models={"strategy": _strategist([])})
+    g.run(max_decisions=1)
+    ep = next(e for e in log.recent if e["kind"] == "episode")
+    assert ep["situation"].startswith("start of run; urgent: neighbour buildup: Rihi Nar Consciousness 4,600"), ep
+
+
 def test_a_new_run_on_a_campaign_with_no_planet_ends_at_its_start(setup, tmp_path):
     from pilot.governor import metrics
     from pilot.telemetry import Telemetry
