@@ -437,3 +437,30 @@ def test_a_last_stand_is_a_live_run_to_the_viewer_and_the_cli(tmp_path, clock, m
     assert st["live"] is True and st["status"] == "last stand"
     assert [r for r, _v in found] == ["run1"]
     log.close()
+
+
+def test_a_settings_change_is_one_activity_row(tmp_path):
+    """set_models, set_roles, set_fallback, edit_pillar and unpin_pillar each leave their own event
+    (models, roles, strategy) carrying `by`: no second `control` row for the same save."""
+    class Pilot(FakePilot):
+        def set_models(self, models, rotate=None):
+            self.log.emit("models", models=models, rotate=bool(rotate))
+
+        def set_roles(self, roles):
+            self.log.emit("roles", roles=roles)
+
+    log = EventLog(tmp_path / "runs", "run1", "m")
+    app = make_app(Pilot(log), key=KEY)
+
+    async def go():
+        async with TestClient(TestServer(app), headers={"X-Pilot-Key": KEY}) as c:
+            dev = {A.DEVICE_HEADER: "a1b2c3d4e5", A.DEVICE_NAME_HEADER: quote("Pixel phone")}
+            pool = [{"model": "google:gemini-3.8-flash", "thinking": "medium"}]
+            assert (await c.post("/control", json={"action": "set_models", "models": pool}, headers=dev)).status == 200
+            assert (await c.post("/control", json={"action": "set_roles", "roles": {}}, headers=dev)).status == 200
+    asyncio.run(go())
+    assert events_of(log, "control") == []
+    assert [e["by"] for e in events_of(log, "models") + events_of(log, "roles")] == ["Pixel phone", "Pixel phone"]
+    from pilot.dashboard import OWN_EVENT
+    assert {"set_models", "set_roles", "set_fallback", "edit_pillar", "unpin_pillar"} <= OWN_EVENT
+    log.close()

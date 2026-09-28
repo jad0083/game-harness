@@ -119,7 +119,8 @@ def link_host(host: str) -> str:
 
 # control actions that already leave their own event (instruction, chat, orders): no extra `control` event
 OWN_EVENT = {"instruct", "chat", "answer", "order_add", "order_remove", "decide_now", "override", "review_strategy",
-             "set_speed", "set_months", "set_model"}
+             "set_speed", "set_months", "set_model", "set_models", "set_roles", "set_fallback",  # models, roles
+             "edit_pillar", "unpin_pillar"}                                                     # strategy
 ACTION_KEY = web.RequestKey("pilot_action", str)
 SERVICE = "game-pilot.service"      # deploy/game-pilot.service, started by the dashboard's Start run
 LIVE_STATES = {"starting", "playing", "deciding", "paused", "needs_attention", "last stand"}   # known ones
