@@ -502,7 +502,8 @@ class Civ6Governor(Governor):
         try:
             last = self._fresh(last)
         except Civ6Stuck as e:
-            self._needs_attention(f"{e}. Check the game (a dialog, a crash, the main menu), then press Resume.")
+            self._needs_attention(f"{e}. Check the game (a dialog, a crash, the main menu), then press Resume.",
+                                  category=e.category, auto_recover=isinstance(e, _NoAnswer))
             return last, ""
         target = last["turn"] + self.s.decide_every_turns
         self._status("playing")
@@ -532,8 +533,10 @@ class Civ6Governor(Governor):
                 b = self._snapshot_between_turns()
             except Civ6Stuck as e:
                 self._stale = True                             # the AI may have played part of the stretch
+                # a silent tuner (T258, a World Congress session) answers again by itself: probe it; a
+                # turn held by a dialog stays for the human, since probing cannot clear it
                 self._needs_attention(f"{e}. Check the game (a dialog, a crash, the main menu), then press Resume.",
-                                      category=e.category)
+                                      category=e.category, auto_recover=isinstance(e, _NoAnswer))
                 return last, ""
             if self._overrun:
                 # ruling 27: more turns passed than requested (18 of 25 calls after T579): the end check

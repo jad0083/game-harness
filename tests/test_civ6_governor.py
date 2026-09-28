@@ -3384,3 +3384,41 @@ def test_a_pause_or_a_stop_marks_the_snapshot_stale(setup):
     g._stale = False
     g._needs_attention("agent timed out")
     assert g._stale is True
+
+
+def test_a_tuner_that_goes_quiet_between_turns_recovers_without_a_human(setup, monkeypatch):
+    """Live 2026-09-28 T258 (a World Congress session): no snapshot after 3 tries, and the run waited
+    for a human although the tuner answered again minutes later. A silent tuner is transient: the
+    wait probes it and carries on."""
+    game = FakeCiv6(FIXTURE, index=INDEX)
+    real_snapshot, real_autoplay = game.snapshot, game.autoplay
+    fail = {"left": 0}
+
+    def autoplay(n):
+        out = real_autoplay(n)
+        if fail.get("armed") is None:
+            fail["armed"], fail["left"] = True, 10     # more than snapshot_tries: the tries run out
+        return out
+
+    def snapshot():
+        if fail["left"] > 0 and not game.active:
+            fail["left"] -= 1
+            raise TimeoutError("tuner: no reply")
+        return real_snapshot()
+
+    monkeypatch.setattr(game, "autoplay", autoplay)
+    monkeypatch.setattr(game, "snapshot", snapshot)
+    g = governor(setup, game, orders_model([], []))
+    g.status_poll_s, g.recover_every_s = 0.01, 0
+    import threading
+    t = threading.Thread(target=g.run, kwargs={"max_decisions": 2}, daemon=True)
+    t.start()
+    t.join(20)
+    waiting = t.is_alive()
+    if waiting:
+        g.stop()
+        t.join(5)
+    assert not waiting, "waited for the human"
+    kinds = [e["kind"] for e in g.log.recent]
+    assert "needs_attention" in kinds and "recovered" in kinds, kinds
+    assert len(traces(setup)) >= 2, "it went on deciding"
