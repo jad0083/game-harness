@@ -1,6 +1,7 @@
 import io
 import json
 import shutil
+import time
 import tomllib
 
 import pytest
@@ -298,3 +299,18 @@ def test_the_controller_gets_the_hosts_resolution(monkeypatch, tmp_path):
     assert g.env["GAME_RESOLUTION"] == "2560x1440"
     monkeypatch.delenv("GAME_RESOLUTION")
     assert "GAME_RESOLUTION" not in McpGame(tmp_path / "controller", tmp_path, "http://h:8765", tmp_path, token="t").env
+
+
+def test_deciding_says_since_when(corpus, tmp_path):
+    """The GalCiv pilot publishes info.deciding when it starts deciding (the page's Deciding timer counts
+    from it) and drops it after; before, the timer restarted at every render."""
+    s = Settings(runs_dir=tmp_path / "runs", journal=tmp_path / "j.md", commit_learnings=False)
+    s.__class__ = type("S", (Settings,), {"corpus_dir": property(lambda self: corpus)})
+    log = EventLog(s.runs_dir, "run3", s.model)
+    pilot = Pilot(s, FakeGame([]), log, model=scripted_model())
+    pilot._status("deciding")
+    since = log.state.info["deciding"]["since"]
+    assert abs(since - time.time()) < 5
+    pilot._status("playing")
+    assert "deciding" not in log.state.info
+    log.close()

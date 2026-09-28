@@ -87,6 +87,10 @@ class Pilot:
     def _status(self, status: str) -> None:
         if status != "needs_attention":
             self.log.state.info.pop("attention", None)       # the dashboard's card goes with the stop
+        if status == "deciding":                             # the dashboard's Deciding timer counts from here
+            self.log.state.info["deciding"] = {"since": round(time.time(), 1)}
+        else:
+            self.log.state.info.pop("deciding", None)
         self.log.state.status = status
         self.log.emit("status", status=status)
 

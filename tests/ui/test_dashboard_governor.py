@@ -213,3 +213,24 @@ def test_with_no_run_live_the_page_says_so_and_offers_start(browser, live_server
     page.wait_for_function("() => document.getElementById('gov').dataset.state === 'history'")
     assert w.errors == []
     w.context.close()
+
+
+@pytest.mark.parametrize("scenario", ["deciding_old"])
+def test_deciding_counts_from_when_it_started_without_info_deciding(browser, live_servers):
+    """A pilot without info.deciding: the timer counts from the deciding status event, not from each
+    render (it read "0 s … 2 s" over and over)."""
+    import time
+    for e in live_servers["log"].recent:                              # it started deciding 30 s ago
+        if e["kind"] == "status":
+            e["t"] = time.time() - 30
+    w = open_context(browser, "desktop-light", live_servers)
+    load(w)
+    page = w.page
+    page.wait_for_function("() => document.getElementById('gov').dataset.state === 'deciding'", timeout=5000)
+    first = page.text_content("#gov-line")
+    page.wait_for_timeout(3500)                                       # past a status poll
+    later = page.text_content("#gov-line")
+    secs = lambda t: int(t.split(":")[1].strip().split(" s")[0].split()[-1])
+    assert first.startswith("Deciding T57: ") and secs(first) >= 29, first
+    assert secs(later) >= secs(first) + 3, (first, later)
+    w.context.close()

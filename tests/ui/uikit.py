@@ -285,6 +285,8 @@ def seed_scenario(runs: Path, scenario: str = "playing") -> dict:
         st.info["deciding"] = {"since": now - 72, "trigger": "urgent: city threatened: Chengdu (2 enemy units near)",
                                "model": "google:gemini-3.1-pro-preview", "attempt": 2, "max_attempts": 2, "retry_at": None,
                                "retries": 0, "after": [{"model": "google:gemini-3.8-flash", "error": "overloaded (503)"}]}
+    elif scenario == "deciding_old":       # a pilot that publishes no info.deciding (GalCiv, older ones)
+        st.status = "deciding"
     elif scenario == "paused":
         st.status = "paused"
         from pilot.events import acting

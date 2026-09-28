@@ -1671,8 +1671,11 @@ function renderGovernor() {
     const t = S.last.turn;
     if (t && t.seconds != null && turnBased()) facts.push(`Last turn ${Math.round(t.seconds)} s.`);
   } else if (state === "deciding") {
-    const d = info.deciding || {};
-    line = `Deciding ${date}: <span class="tick" data-since="${d.since || S.status.t || Date.now() / 1000}" aria-hidden="true"></span>.`;
+    const d = info.deciding || {}, ev = S.last.status;
+    // since when: the pilot's info.deciding, else its deciding status event, else when this page first saw it
+    S.decidingSince = S.decidingSince || Date.now() / 1000;
+    const since = d.since || (ev && ev.status === "deciding" ? ev.t : 0) || S.decidingSince;
+    line = `Deciding ${date}: <span class="tick" data-since="${since}" aria-hidden="true"></span>.`;
     announce = `Deciding ${date}.`;
     if (d.model) {
       const after = (d.after || []).map((a) => `after ${shortModel({ model: a.model })} was ${a.error}`).join(", ");
@@ -1723,6 +1726,7 @@ function renderGovernor() {
     if (c) facts.push(`Last: ${esc(GAME_NAMES[c.game] || c.game)}, ${esc(c.title || human(c.name))}${c.latest ? `, ${esc(gdate(c.latest))}` : ""}${c.last_t ? `, stopped ${esc(when(c.last_t))}` : ""}.`);
     actions = S.ok ? `<button type="button" class="btn primary" data-act="start">Start run</button>` : "";
   }
+  if (state !== "deciding") S.decidingSince = 0;
   if (["playing", "paused", "history", "none"].includes(state)) { const a = answeredText(); if (a) facts.push(esc(a)); }
   const crisis = liveInfoHere().crisis;
   if (crisis && !["history", "none"].includes(state)) facts.push(`<span class="bad-text">${esc(crisisText(crisis))}</span>`);
@@ -2845,7 +2849,7 @@ const FEED_EMPTY = { problems: "No problems in this campaign's activity.", order
                      model: "No model activity yet.", you: "Nothing from you yet.", all: "Nothing has happened yet." };
 // the newest events the governor line reads: the last turn's time, who paused, an older pilot's stop
 function remember(ev) {
-  if (["turn", "needs_attention", "capture"].includes(ev.kind)) S.last[ev.kind] = ev;
+  if (["turn", "needs_attention", "capture", "status"].includes(ev.kind)) S.last[ev.kind] = ev;
   if (ev.kind === "strategy_action") (S.actions = S.actions || []).push(ev);
   if (ev.kind === "autopilot") (S.autopilot = S.autopilot || []).push(ev);
   if (["order_outcome", "order_followed", "last_stand", "last_stand_off", "popups_quieted"].includes(ev.kind)) { if (S.tab === "levers") flag("levers"); ordersSoon(); }
