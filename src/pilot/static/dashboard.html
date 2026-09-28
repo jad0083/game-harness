@@ -1445,10 +1445,13 @@ async function loadCampaignData() {
   if (cid !== S.campaign) return;          // another campaign was picked meanwhile: its own load renders it
   S.orders = orders;
   const liveHere = S.live && cid === (S.status.info || {}).campaign;
-  const newestRun = ([...decisions].reverse()[0] || {}).run_id;
-  if (!liveHere && newestRun && ["actions", "screen"].includes(S.spec.game.levers)) {   // this campaign's own, not the newest run's
+  // this campaign's own actions: the live run's when it is the live one (live pushes add to them),
+  // else its newest run's; never what the previously shown campaign left behind
+  const run = liveHere ? S.status.run_id : ([...decisions].reverse()[0] || {}).run_id;
+  if (["actions", "screen"].includes(S.spec.game.levers)) {
     try {
-      const evs = await api(`/runs/${encodeURIComponent(newestRun)}/events?kind=strategy_action,autopilot`);
+      const evs = run ? await api(`/runs/${encodeURIComponent(run)}/events?kind=strategy_action,autopilot`) : [];
+      if (cid !== S.campaign) return;
       S.actions = evs.filter((e) => e.kind === "strategy_action"); S.autopilot = evs.filter((e) => e.kind === "autopilot");
     } catch { S.actions = []; S.autopilot = []; }
   }

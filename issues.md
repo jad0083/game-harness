@@ -2,6 +2,7 @@
 
 ## Open
 
+- [ ] Dashboard v2 review (2026-09-27): after looking at a past campaign and switching back to the live one, Actions lately (Stellaris) and Blockers cleared lately (GalCiv) kept the past campaign's list with live pushes mixed in. Fixed on branch feat/dashboard-v2: the live campaign's list is loaded from the live run's own events
 - [ ] Dashboard v2 review (2026-09-27): the Deciding timer restarted on every render ("Deciding T57: 0 s ... 2 s" over and over) for GalCiv and older pilots, which publish no info.deciding. Fixed on branch feat/dashboard-v2: the GalCiv pilot publishes info.deciding, and the page falls back to the deciding status event's time, then to when it first saw the state
 - [ ] Dashboard v2 review (2026-09-27): the chart marked at most the three newest last stands, since it reused /api/orders' stands (capped at three for the Orders tab's cards). Fixed on branch feat/dashboard-v2: /api/orders adds stand_marks (every stand's date and city) for the chart
 - [ ] Dashboard v2 review (2026-09-27): the last-stand report card read `predicted` and `incoming`, fields the governor never writes (it writes predicted_damage and predicted_kill), so a real stand never showed its predicted damage; the tests passed on invented fixtures. Fixed on branch feat/dashboard-v2: the card reads the governor's fields, and the fixtures take the report's shape (a governor test checks it)

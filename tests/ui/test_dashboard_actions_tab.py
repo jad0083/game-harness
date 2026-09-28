@@ -109,3 +109,25 @@ def test_on_a_phone_the_crisis_mark_leaves_the_campaign_its_name(browser, live_s
     assert page.eval_on_selector("#camp-name", "e => e.scrollWidth <= e.clientWidth"), page.text_content("#camp-name")
     assert page.evaluate("document.documentElement.scrollWidth <= document.documentElement.clientWidth")
     w.context.close()
+
+
+@pytest.mark.parametrize("scenario", ["stellaris"])
+def test_back_on_the_live_campaign_the_actions_are_the_live_runs(browser, live_servers):
+    """Picking a past campaign loads its own actions; picking the live one again loads the live run's,
+    not the past campaign's list with live pushes mixed in."""
+    log = live_servers["log"]
+    log.emit("strategy_action", action="stellaris_market_sync", result="bought 5 alloys a month")
+    w = open_context(browser, "desktop-light", live_servers)
+    load(w)
+    page = w.page
+    show(page, "levers")
+    page.wait_for_selector("#levers .olog")
+    assert "bought 5 alloys a month" in page.text_content("#levers")
+    pick_campaign(page, "stellaris/theia")
+    show(page, "levers")
+    assert "bought 5 alloys a month" not in page.text_content("#levers")
+    pick_campaign(page, "stellaris/gaea")
+    show(page, "levers")
+    page.wait_for_selector("#levers .olog")
+    assert "bought 5 alloys a month" in page.text_content("#levers")
+    w.context.close()
