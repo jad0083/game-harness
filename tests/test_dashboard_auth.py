@@ -279,13 +279,14 @@ def test_store_files_are_private_and_hold_no_secrets(tmp_path, clock):
     store = A.AuthStore(tmp_path / "auth.sqlite", clock=clock)
     _, cookie = store.create_device("browser", name="x", created_via="cli", created_by="cli")
     _, token = store.create_device("script", name="w", scope="read", created_via="cli", created_by="cli")
-    grant = store.create_grant("cli")
+    grant = store.create_grant("cli", words=True)                  # the words too: only their hash is kept
+    assert grant["words"] and len(grant["words"].split()) == 3
     store.db.execute("PRAGMA wal_checkpoint(FULL)")
     for f in ("auth.sqlite", "auth.sqlite-wal", "auth.sqlite-shm"):
         assert stat.S_IMODE((tmp_path / f).stat().st_mode) == 0o600, f
     raw = b"".join((tmp_path / f).read_bytes() for f in ("auth.sqlite", "auth.sqlite-wal"))
-    for secret in (cookie.split(".")[2], token.split(".")[1], grant["link"].split(".")[1]):
-        assert secret.encode() not in raw
+    for secret in (cookie.split(".")[2], token.split(".")[1], grant["link"].split(".")[1], grant["words"]):
+        assert secret.encode() not in raw, secret
 
 
 def test_a_corrupt_store_is_moved_aside_and_an_empty_one_starts(tmp_path, clock, caplog):
