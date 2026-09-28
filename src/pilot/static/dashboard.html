@@ -1634,8 +1634,10 @@ function nextDecision(info) {
 // who gave the last decision: live, the pilot's own record; in history, the newest decision
 function answeredText() {
   const info = S.status.info || {}, liveHere = S.live && S.campaign === info.campaign;
-  if (liveHere && info.answered) return `Answered by ${shortModel({ model: info.answered.model })}${info.answered.fallback ? " (fallback)" : ""}.`;
   const d = S.decisions[S.decisions.length - 1];
+  // the newest decision failed: nobody answered it (an older answer is not this one's)
+  if (d && d.outcome === "error" && !(liveHere && info.answered && (info.answered.t || 0) > (d.t || 0))) return `No answer at ${gdate(d.date)}.`;
+  if (liveHere && info.answered) return `Answered by ${shortModel({ model: info.answered.model })}${info.answered.fallback ? " (fallback)" : ""}.`;
   if (!d || !d.model || d.model === "human") return "";
   return `Answered by ${shortModel({ model: d.model, model_version: d.model_version })}${S.health && S.health.last_fell_back ? " (fallback)" : ""}.`;
 }
@@ -2203,7 +2205,8 @@ function appliedText(a) {
 const isProblem = (d) => d.outcome === "error" || String(d.outcome || "").startsWith("FAILED")
   || (d.orders || []).some((o) => (o.fate || {}).key === "refused");
 function whoAndTime(d) {
-  const who = d.model === "human" ? "you" : shortModel(d).replace(/ · \w+$/, "") + (d.fallback ? " (fallback)" : "");
+  // a failed decision had no answer: only its time (ruling 27's error row), never a model's name
+  const who = d.outcome === "error" ? "" : d.model === "human" ? "you" : shortModel(d).replace(/ · \w+$/, "") + (d.fallback ? " (fallback)" : "");
   return [who, d.seconds ? `${Math.round(d.seconds)} s` : ""].filter(Boolean).join(" · ");
 }
 function renderDecisions() {

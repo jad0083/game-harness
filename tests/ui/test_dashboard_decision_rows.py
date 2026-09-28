@@ -85,3 +85,16 @@ def test_problems_only_keeps_errors_and_refusals(browser, live_servers):
     assert len(page.query_selector_all("#decisions li > button[data-i]")) == 2     # both have a problem
     assert page.evaluate("document.documentElement.scrollWidth <= document.documentElement.clientWidth")
     w.context.close()
+
+
+def test_a_failed_decision_is_credited_to_no_model(browser, live_servers):
+    """The T55 decision failed (every model overloaded): its row shows only its time, and the governor
+    line's facts say it had no answer instead of naming a model."""
+    w = open_context(browser, "desktop-light", live_servers)
+    load(w)
+    page = w.page
+    err = page.locator('#decisions button[data-i="1"]')
+    assert err.locator(".d-who").text_content() == "63 s"
+    facts = page.text_content("#gov-facts")
+    assert "No answer at T55." in facts and "Answered by" not in facts
+    w.context.close()

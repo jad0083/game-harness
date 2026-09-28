@@ -64,12 +64,16 @@ def test_resume_from_the_card_and_capture_the_screen(browser, live_servers):
 
 
 def test_playing_says_what_the_ai_plays_and_when_the_next_decision_is(browser, live_servers):
+    import time
+    # the pilot's own record of who answered, after the failed T55 decision (a later call answered)
+    live_servers["log"].state.info["answered"] = {"model": "google:gemini-3.1-pro-preview", "t": time.time() + 5,
+                                                  "fallback": True, "after": []}
     w = open_context(browser, "desktop-dark", live_servers)
     load(w)
     page = w.page
     assert page.text_content("#gov-line") == "The AI is playing T57."
     facts = page.text_content("#gov-facts")
-    assert "Next decision at T60 (every 5 turns)." in facts and "Answered by Gemini 3.1 Pro." in facts
+    assert "Next decision at T60 (every 5 turns)." in facts and "Answered by Gemini 3.1 Pro (fallback)." in facts
     page.click("#gov-facts [data-pace]")                              # the pace opens Settings > Game
     page.wait_for_selector("#settings-dialog[open]")
     assert page.is_visible("#pace-months")

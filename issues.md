@@ -2,6 +2,7 @@
 
 ## Open
 
+- [ ] Dashboard v2 review (2026-09-27): a failed decision ("No decision: overloaded (503)") still showed "Gemini 3.1 Pro · 63 s" in its row, and the facts line said "Answered by Gemini 3.1 Pro." while the newest decision had no answer. Fixed on branch feat/dashboard-v2: an error row shows only its time, and the facts say "No answer at T55." until a later call answers
 - [ ] Dashboard v2 review (2026-09-27): one save in Settings > Models wrote four Activity rows ("Models changed by Pixel phone", "Models changed, from Pixel phone", and the same for roles): set_models, set_roles, set_fallback, edit_pillar and unpin_pillar leave their own event, and the live pilot added a control event too. Fixed on branch feat/dashboard-v2: no control event for them
 - [ ] Dashboard v2 review (2026-09-27): trigger labels showed raw metric ids ("Falling behind in military_power", "Consumer_goods income negative"), against ruling 30. Fixed on branch feat/dashboard-v2: a metric id reads as the view's label, else in words
 - [ ] Dashboard v2 review (2026-09-27): cause() and the page's tidy() rounded "192.168" in an address as a decimal, so the needs-you card and Activity named the agent 192.2.1.77. Fixed on branch feat/dashboard-v2: only a decimal that is not part of a dotted sequence is rounded
