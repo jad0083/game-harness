@@ -171,7 +171,8 @@ class FakeCiv6:
     Failure modes: `busy` (every call made while autoplay is active times out, like the real tuner
     during the AI's turn processing), `start_fails` (autoplay answers ok: false), `never_starts`
     (autoplay answers ok but no turn is played), `stop_raises`, `readback_fails` (the snapshot after
-    orders fails), `transport` (orders time out after they ran), `lost_start_reply` (the first
+    orders fails), `transport` (orders time out after they ran), `lost_orders` (the first N orders
+    time out and do not run), `lost_start_reply` (the first
     autoplay call times out but runs), `lost_start_not_run` (the first N autoplay calls time out
     and do not run, as seen live at T57), `blink` (autoplay reads inactive once before its last turn
     ends, as seen live).
@@ -194,7 +195,7 @@ class FakeCiv6:
                  ls: dict | None = None, stand: list[dict] | None = None, stand_effect=None,
                  stand_ignored: bool = False, stand_lost_reply: bool = False, ls_fails: int = 0,
                  popup: bool = False, pin_ignored: bool = False, ai_log: list[tuple] | None = None,
-                 turn_ready_silent: int = 0, logs: dict[str, list[str]] | None = None):
+                 turn_ready_silent: int = 0, logs: dict[str, list[str]] | None = None, lost_orders: int = 0):
         self.state = copy.deepcopy(base)
         self.events = dict(events or {})
         self.replies = dict(replies or {})
@@ -204,6 +205,7 @@ class FakeCiv6:
         self.ai = ai
         self.busy, self.start_fails, self.never_starts = busy, start_fails, never_starts
         self.stop_raises, self.readback_fails, self.transport = stop_raises, readback_fails, transport
+        self.lost_orders = lost_orders
         self.lost_start_reply = lost_start_reply
         self.lost_start_not_run = lost_start_not_run
         self.blink, self._blinked = blink, False
@@ -263,6 +265,9 @@ class FakeCiv6:
         if order["kind"] == "price":
             return {"ok": True, "cost": self._price(order), "allowed": True, "currency": order.get("currency")}
         self._ordered = True
+        if self.lost_orders > 0:                      # no reply, and it never ran
+            self.lost_orders -= 1
+            return {"ok": False, "transport": True, "error": "operation timed out"}
         cost = None
         if order["kind"] == "purchase":
             cost = self._price(order)
@@ -984,6 +989,33 @@ def read_back(c: Checked, reply: dict, snapshot: dict) -> str:
             return moved
         return f"{UNKNOWN}: {moved}, less than every purchase together ({total:.0f})"
     return "stuck"
+
+
+def lost_proof(c: Checked, before: dict, after: dict | None, index: CorpusIndex) -> str | None:
+    """Proof that a purchase whose reply was lost never ran (postmortem-fixes design, ruling 5): the
+    read-back of the same turn shows the balance within 1 of its value before and the item's count
+    unchanged (a unit's `units.by_type`, a building in the city's `buildings`). "nothing spent (proved)",
+    or None when the read-back failed, the turn changed, the balance moved or the count cannot be read
+    (it may have run: never sent again)."""
+    w = c.wire or {}
+    if w.get("kind") != "purchase" or after is None or after.get("turn") != before.get("turn"):
+        return None
+    cur = w.get("currency") or "gold"
+    was, now = c.expect.get("before", before.get(cur)), after.get(cur)
+    if not isinstance(was, (int, float)) or not isinstance(now, (int, float)) or abs(now - was) > 1:
+        return None
+    key = index.key_of.get(w.get("id") or "")
+    if not key:
+        return None
+    if key.startswith("UNIT_"):
+        counts = [((s.get("units") or {}).get("by_type")) for s in (before, after)]
+        if not all(isinstance(x, dict) for x in counts) or counts[0].get(key, 0) != counts[1].get(key, 0):
+            return None
+    else:
+        held = [(_city(s, str(w.get("city") or "")) or {}).get("buildings") for s in (before, after)]
+        if not all(isinstance(x, list) for x in held) or (key in held[0]) != (key in held[1]):
+            return None
+    return "nothing spent (proved)"
 
 
 # ---- the rule-based defender (docs/design/2026-09-27-postmortem-fixes-design.md, ruling 3) -----------

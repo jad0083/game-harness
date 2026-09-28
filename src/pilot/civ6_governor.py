@@ -57,6 +57,7 @@ from .civ6 import (
     idle_counts,
     in_danger,
     is_defender,
+    lost_proof,
     metrics,
     order_base,
     order_key,
@@ -103,6 +104,7 @@ from .threat import (
 from .trace import serialize
 
 ORDER_RECORD_HEADING = "Order record in this campaign (held until done / replaced by the AI):"
+RESEND_NOTE = "sent again after a lost reply (nothing spent, proved)"
 
 INSTRUCTIONS = """You are the governor of a Civilization VI civilization. The game's own AI plays it turn by
 turn (units, tiles, city management, district and wonder placement, diplomacy) during stretches of
@@ -255,6 +257,9 @@ class Civ6Governor(Governor):
         self._loyalty_fired: set[str] = set()     # cities whose loyalty trigger fired and did not rise since (13)
         self._dipl_seen: set[str] = set()         # diplomacy answers already reported (`diplomacy_key`)
         self._dipl_rows: list[dict] = []          # the campaign's diplomacy_reply rows, oldest first (order record)
+        # purchases whose reply was lost and whose read-back proved nothing was spent, sent once more
+        # before the next autoplay (postmortem-fixes ruling 5): [{"order": wire order, "turn"}]
+        self._resend: list[dict] = []
         log.state.info["directives"] = []
         log.state.info["decide_turns"] = settings.decide_every_turns
         log.state.info["controls"] = [c for c in log.state.info.get("controls", []) if c not in ("override", "set_speed")]
@@ -462,6 +467,9 @@ class Civ6Governor(Governor):
             if not self.requests.empty():
                 return last, "request"
             try:
+                last, lost = self._resend_lost(last)           # ruling 5: before any autoplay
+                if lost:
+                    return last, "urgent: " + "; ".join(lost)
                 falling = self._stand_city(last)
                 if falling is not None:
                     self._last_stand(last, falling)            # ends with a one-turn hand-back
@@ -469,6 +477,9 @@ class Civ6Governor(Governor):
                     n = autoplay_turns(last, chunk=self.s.autoplay_chunk, left=target - last["turn"])
                     if n >= 2:
                         last = self._rule_buy(last) or last    # ruling 3: its read-back starts the stretch
+                        last, lost = self._resend_lost(last)   # the rule buy's own lost purchase
+                        if lost:
+                            return last, "urgent: " + "; ".join(lost)
                     self._play_turns(last["turn"], n)
                 b = self._snapshot_between_turns()
             except Civ6Stuck as e:
@@ -603,6 +614,55 @@ class Civ6Governor(Governor):
         self.journal.note(f"The governor, {note}: {summary}", last.get("date", ""))
         after, self._after_orders = self._after_orders, None
         return after
+
+    # ---- a lost purchase sent again (postmortem-fixes design, ruling 5) ------------------------------
+
+    def _engine_busy(self) -> str:
+        """'' once turn-ready reads the engine idle (a popup on screen does not count) within the start
+        grace; else what it last said."""
+        deadline, seen = time.time() + self.start_grace_s, "nothing"
+        while True:
+            try:
+                why = [str(w) for w in self.game.turn_ready().get("why") or []]
+                busy = [w for w in why if not w.startswith("on screen: ")]
+                if not busy:
+                    return ""
+                seen = ", ".join(busy)
+            except Exception as e:  # noqa: BLE001 - no answer: not idle yet
+                seen = f"no answer ({type(e).__name__})"
+            if time.time() >= deadline:
+                return seen
+            time.sleep(self.status_poll_s)
+
+    def _resend_lost(self, last: dict) -> tuple[dict, list[str]]:
+        """Ruling 5: each purchase whose reply was lost and whose read-back proved nothing was spent
+        (`lost_proof`) is sent once more before the next autoplay, once turn-ready reads the engine
+        idle (else at the next hand-back), through `check_orders` again on a fresh snapshot, so a new
+        price, a unit now on the tile or the cooldown refuses it. A second lost reply is an urgent
+        decision ("order lost twice: purchase unit:modern_at in Longxi"); nothing is sent a third time.
+        At T570 Longxi's Modern AT was lost this way and nothing ran until the discount ended at T572.
+        Returns the snapshot to go on with and the urgent reasons."""
+        if not self._resend:
+            return last, []
+        busy = self._engine_busy()
+        if busy:
+            self.log.emit("journal", text=f"the re-send of a lost purchase waits for the next hand-back: turn-ready "
+                                          f"reads {busy}")
+            return last, []
+        fresh = self._snapshot_between_turns()
+        pending, self._resend = self._resend, []
+        orders = [Civ6Order(**e["order"]) for e in pending]
+        report, failed = self._report, self._failed_last
+        outcomes, _ = self._apply(Civ6Decision(orders=orders, reason=RESEND_NOTE), fresh, set(), {},
+                                  resent={order_key(o.model_dump()) for o in orders})
+        self._report, self._failed_last = report + self._report, failed | self._failed_last
+        urgent = [f"order lost twice: {o['kind']} {o['id']} in {o['city']}" for o in outcomes
+                  if o["outcome"].startswith(f"{UNKNOWN}: no reply")]
+        self.log.emit("order_resend", turn=fresh.get("turn"), orders=outcomes, lost_twice=urgent)
+        self.journal.note(f"Purchase {RESEND_NOTE}: " + "; ".join(f"{o['order']}: {o['outcome']}" for o in outcomes),
+                          fresh.get("date", ""))
+        after, self._after_orders = self._after_orders, None
+        return after or fresh, urgent
 
     def _read_ai_buys(self, b: dict) -> None:
         """One read of AI_CityBuild.csv (at most once per hand-back turn) from where the last one ended,
@@ -1436,14 +1496,16 @@ class Civ6Governor(Governor):
                 self._review_strategy(self._after_orders or b, f"scheduled after {self.s.retro_every} decisions")
 
     def _apply(self, d: Civ6Decision, b: dict, filled: set[str] = frozenset(),
-               prices: dict | None = None) -> tuple[list[dict], int]:
+               prices: dict | None = None, resent: set[str] = frozenset()) -> tuple[list[dict], int]:
         """Check, carry out and read back the decision's orders. Returns one outcome per order and how
         many took. Never raises: a failure is an outcome, reported at the next decision. Only a game
         refusal or a read-back that contradicts the order counts as "did not stick" (refused if
         repeated unchanged); an order whose effect cannot be told (no reply, no read-back) is
         "unknown". Orders that took are followed until they resolve (the order record); refused,
         lost and bought ones get their row at once. `filled`: order keys the governor added;
-        `prices`: the `price` tool's answers in this decision."""
+        `prices`: the `price` tool's answers in this decision; `resent`: order keys sent again after a
+        lost reply (ruling 5: a purchase whose lost reply is proved to have spent nothing is queued for
+        one re-send, `_resend_lost`, unless it is one already)."""
         checked = check_orders(d.orders, b, self.pillars, self.index, self._failed_last, prices=prices,
                                defender_buys=self._defender_buys())
         results: list[tuple[Checked, str, bool]] = []      # (order, outcome, counts as did-not-stick)
@@ -1480,6 +1542,13 @@ class Civ6Governor(Governor):
             status = read_back(c, reply, after)
             if reply.get("transport") and status != "stuck":
                 status = f"{UNKNOWN}: no reply ({reply.get('error')}); {status}"
+                proof = lost_proof(c, b, after, self.index)
+                if proof and order_key(c.order) not in resent:
+                    status += f"; {proof}: sent again before the next autoplay"
+                    self._resend.append({"order": {k: c.wire[k] for k in ("kind", "city", "id", "currency")},
+                                         "turn": b.get("turn")})
+                elif proof:
+                    status += f"; {proof}"
             results.append((c, status, status != "stuck" and not status.startswith(UNKNOWN)))
         position = {id(c): i for i, c in enumerate(checked)}
         results.sort(key=lambda r: position[id(r[0])])          # outcomes in the model's order
@@ -1487,13 +1556,15 @@ class Civ6Governor(Governor):
         outcomes = []
         for c, status, _ in results:
             by_governor = order_key(c.order) in filled
+            again = order_key(c.order) in resent
             outcomes.append({"order": _describe(c.order) + (" (filled by the governor)" if by_governor else "")
+                             + (" (sent again after a lost reply)" if again else "")
                              + (f" ({c.note})" if c.note else ""),
                              "outcome": status, "kind": c.order.get("kind"),
                              "id": c.order.get("id") or ", ".join(c.order.get("ids") or []),
                              "city": (c.wire or {}).get("city") or c.order.get("city") or "",
                              **({"by": "governor"} if by_governor else {})})
-            self._record_order(c, status, b, after)
+            self._record_order(c, status, b, after, resent=again)
         failed = {id(c) for c, _, f in results if f}
         self._report = []
         for (c, status, _), o in zip(results, outcomes, strict=True):
@@ -1509,7 +1580,7 @@ class Civ6Governor(Governor):
         self._publish_record()
         return outcomes, sum(1 for o in outcomes if o["outcome"] == "stuck")
 
-    def _record_order(self, c: Checked, status: str, b: dict, after: dict | None) -> None:
+    def _record_order(self, c: Checked, status: str, b: dict, after: dict | None, resent: bool = False) -> None:
         """The order record at apply time (ruling 13): an order that took (or may have: no reply) ends
         the following of our older order of the same kind and city (superseded); one that took is
         followed from now on, except a purchase, which completed at once; refused and lost orders
@@ -1520,6 +1591,8 @@ class Civ6Governor(Governor):
         if situation == "current":
             return          # the city already built it: nothing changed, so nothing to follow or supersede
         row = self._order_row(c, b, situation)
+        if resent:
+            row["resent"] = True                  # sent again after a lost reply (ruling 5)
         now = after or b
         if status == "stuck" or status.startswith(UNKNOWN):
             city = row["city"].lower()

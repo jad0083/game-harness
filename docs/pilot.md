@@ -190,7 +190,17 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   districts need a tile and are refused (placement is not supported yet). `price` (a tool) reads a
   live purchase price.
 - **Read-back**: a fresh snapshot right after the orders shows which took; one that did not is
-  reported to the next decision and refused if it is repeated unchanged.
+  reported to the next decision and refused if it is repeated unchanged. An order whose reply was
+  lost is never sent again blindly (it may have run), with one exception (postmortem-fixes design,
+  ruling 5): a purchase whose read-back of the same turn shows the balance within 1 of its value
+  before and the item's count unchanged (`units.by_type`, or the city's buildings) is proved not to
+  have run; its row is `lost` ("nothing spent (proved)") and it is sent once more before the next
+  autoplay, once `turn-ready` reads the engine idle (else at the next hand-back), through the checks
+  again on a fresh snapshot (a new price, a unit now on the tile or the cooldown refuses it). A
+  second lost reply is an urgent decision ("order lost twice: purchase unit:modern_at in Longxi");
+  an `order_resend` event and a journal line record each re-send. At T570 Longxi's Modern AT (1,160
+  gold, allowed) was lost this way and nothing ran until the discount ended at T572. Last-stand
+  actions are never sent again.
 - **Order record** (spec `docs/design/2026-09-27-civ6-levers-design.md`, rulings 12-16): every order
   that took is followed on each snapshot until it resolves: `completed` (a tech or civic left the
   options, a unit's count rose, a building appeared), `held` (still current when its window of

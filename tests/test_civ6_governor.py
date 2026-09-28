@@ -2720,3 +2720,84 @@ def test_under_weakness_every_city_shows_the_defenders_it_can_buy():
     assert "on its tile: unit:musketman" in beijing and "defenders to buy" not in beijing
     calm = briefing_text({**s, "majors": [{"id": 3, "civ": "CIVILIZATION_AUSTRALIA", "military": 300}]}, INDEX, limits=BUY)
     assert "defenders to buy" not in calm, "no weakness: only cities in danger list them"
+
+
+# ---- postmortem-fixes design, ruling 5: re-send a lost purchase only with proof ---------------------
+
+AT_ORDER = {"kind": "purchase", "city": "Longxi", "id": "unit:modern_at"}
+
+
+def _lost_game(**kw) -> FakeCiv6:
+    """T570: Longxi's Modern AT (1,160 gold, allowed); the first purchase's reply is lost."""
+    return FakeCiv6(_longxi([MODERN_AT]), index=INDEX, prices={("Longxi", "unit:modern_at", "gold"): 1160}, **kw)
+
+
+def _purchases(game: FakeCiv6) -> list[tuple[dict, int]]:
+    """Each purchase sent, with the number of autoplay calls made before it."""
+    out, played = [], 0
+    for a in game.actions:
+        if a[0] == "autoplay":
+            played += 1
+        elif a[0] == "order" and a[1]["kind"] == "purchase":
+            out.append((a[1], played))
+    return out
+
+
+def test_a_lost_purchase_that_spent_nothing_is_sent_once_more_before_autoplay(setup):
+    """War-9, treasury-9: at T570 the reply was lost and "gold went from 1407.6484375 to 1407.6484375";
+    nothing was re-sent and the discount ended at T572."""
+    game = _lost_game(lost_orders=1)
+    g = governor(setup, game, orders_model([AT_ORDER], []))
+    g.run(max_decisions=2)
+    sent = _purchases(game)
+    assert [(o["id"], o["currency"], played) for o, played in sent] == [("unit:modern_at", "gold", 0)] * 2, \
+        "exactly one re-send, before the next autoplay starts"
+    assert game.state["units"]["by_type"]["UNIT_MODERN_AT"] == 1 and round(game.state["gold"], 1) == 247.6
+    rows = [(e["key"], e["result"], e.get("detail", "")) for e in _events(setup) if e["kind"] == "order_outcome"]
+    assert rows[0][:2] == ("purchase unit gold", "lost") and "nothing spent (proved)" in rows[0][2]
+    assert rows[1][:2] == ("purchase unit gold", "completed")
+    ev = next(e for e in g.log.recent if e["kind"] == "order_resend")
+    assert ev["orders"][0]["outcome"] == "stuck" and ev["turn"] == 570
+    s, _ = setup
+    assert "sent again after a lost reply (nothing spent, proved)" in s.journal.read_text()
+
+
+@pytest.mark.parametrize("kw, why", [
+    ({"transport": True}, "the reply was lost but the gold dropped: it ran"),
+    ({"lost_orders": 1, "readback_fails": True}, "no read-back: it may have run"),
+])
+def test_no_re_send_without_proof(setup, kw, why):
+    game = _lost_game(**kw)
+    g = governor(setup, game, orders_model([AT_ORDER], []))
+    g.run(max_decisions=1)
+    assert len(_purchases(game)) == 1, why
+    assert g._resend == []
+
+
+def test_a_second_lost_reply_is_an_urgent_decision(setup):
+    game = _lost_game(lost_orders=2)
+    g = governor(setup, game, orders_model([AT_ORDER], []))
+    g.run(max_decisions=2)
+    assert len(_purchases(game)) == 2, "one re-send only"
+    assert traces(setup)[1]["trigger"] == "urgent: order lost twice: purchase unit:modern_at in Longxi"
+    assert not any(a[0] == "autoplay" for a in game.actions), "decided before any autoplay"
+
+
+def test_a_re_send_waits_for_the_engine_and_goes_through_the_checks_again(setup):
+    from pilot.civ6 import lost_proof
+    game = _lost_game(lost_orders=1)
+    g = governor(setup, game, orders_model([AT_ORDER], []))
+    before = _longxi([MODERN_AT])
+    c = check_orders([Civ6Order(**AT_ORDER)], before, SPEC, INDEX)[0]
+    assert lost_proof(c, before, before, INDEX) == "nothing spent (proved)"
+    assert lost_proof(c, before, {**before, "gold": before["gold"] - 1160}, INDEX) is None, "the balance moved"
+    more = {**before, "units": {**before["units"], "by_type": {**before["units"]["by_type"], "UNIT_MODERN_AT": 1}}}
+    assert lost_proof(c, before, more, INDEX) is None, "a new unit of its type"
+    assert lost_proof(c, before, {**before, "turn": 571}, INDEX) is None, "another turn"
+    assert lost_proof(c, before, None, INDEX) is None
+    g._resend = [{"order": {**AT_ORDER, "currency": "gold"}, "turn": 570}]
+    game.state["cities"][0]["garrison"] = "UNIT_INFANTRY"          # a unit reached the tile meanwhile
+    _after, urgent = g._resend_lost(_longxi([MODERN_AT]))
+    assert urgent == [] and _purchases(game) == [] and g._resend == []
+    out = next(e for e in g.log.recent if e["kind"] == "order_resend")["orders"][0]["outcome"]
+    assert "already has unit:infantry on its tile" in out
