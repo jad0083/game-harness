@@ -350,13 +350,14 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
     async def api_campaigns(_):
         rows = await q(
             "SELECT c.id, c.game, c.name, c.title, c.created,"
-            " (SELECT COUNT(*) FROM runs r WHERE r.campaign_id=c.id) AS runs,"
+            " (SELECT COUNT(*) FROM runs r WHERE r.campaign_id=c.id AND r.id NOT LIKE '%-backfill') AS runs,"
             " (SELECT COUNT(*) FROM decisions d WHERE d.campaign_id=c.id AND (d.decision IS NULL OR d.decision != 'strategy_review')) AS decisions,"
             " (SELECT m.date FROM metrics m WHERE m.campaign_id=c.id AND m.month IS NOT NULL"
             "  ORDER BY m.month DESC, m.t DESC LIMIT 1) AS latest,"      # in game order: MAX(date) put "T99" after "T310"
             " (SELECT GROUP_CONCAT(DISTINCT r.model) FROM runs r WHERE r.campaign_id=c.id) AS models,"
             " (SELECT COUNT(*) FROM metrics m WHERE m.campaign_id=c.id) AS metrics,"
-            " (SELECT MAX(COALESCE(r.ended, r.started)) FROM runs r WHERE r.campaign_id=c.id) AS last_t"
+            " (SELECT MAX(COALESCE(r.ended, r.started)) FROM runs r WHERE r.campaign_id=c.id"
+            "  AND r.id NOT LIKE '%-backfill') AS last_t"
             " FROM campaigns c ORDER BY c.created DESC")
         # the campaign list (ruling 4): empty campaigns fold away; the live one says its state
         if log is not None:

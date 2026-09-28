@@ -89,6 +89,10 @@ def test_campaigns_say_their_runs_whether_they_are_empty_and_which_is_live(tmp_p
     old.emit("metrics", date="T50", turn=50, score=1)
     old.emit("run_end")
     old.close()
+    backfill = EventLog(runs, "20260926-223910-backfill", "m", telemetry=tel)    # ruling 20: hidden in run lists
+    backfill.emit("run_start", game="civ6", model="m")
+    backfill.set_campaign("civ6", "kublai", "Kublai Khan, China")
+    backfill.close()
     live = EventLog(runs, "20260927-080000", "m", telemetry=tel)
     live.emit("run_start", game="civ6", model="m")
     live.set_campaign("civ6", "kublai", "Kublai Khan, China")
