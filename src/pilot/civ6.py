@@ -1758,10 +1758,12 @@ def new_wars(before: dict, now: dict) -> list[dict]:
 
 def war_declarations(lines: list[str]) -> list[dict]:
     """The war declarations in DiplomacySummary.csv lines: [{"turn", "player" (who declared), "team"
-    (on whom), "kind" (the casus belli: Surprise, Formal, Defensive Pact...)}]. The rows look like
-    "539, 5, Team 0, Individual Declaring War on Team START, Surprise" (read offline for the
-    post-mortem; the live layout is unverified): a row that does not parse is skipped, so a changed
-    layout names nobody, never a wrong declarer. A team is taken as its player's id."""
+    (on whom), "kind" (the casus belli: Surprise, Formal, Defensive Pact...)}]. The columns are "Game
+    Turn, Initiator, Recipient, Action, Details, Mayhem, Visibility" and the rows look like "539, 5,
+    Team 0, Individual Declaring War on Team START, Surprise, 2950.5" (read offline for the
+    post-mortem; the live layout is unverified): the casus belli is Details, never the Mayhem number
+    after it. A row that does not parse is skipped, so a changed layout names nobody, never a wrong
+    declarer. A team is taken as its player's id."""
     out = []
     for line in lines:
         f = [x.strip() for x in str(line).split(",")]
@@ -1769,7 +1771,7 @@ def war_declarations(lines: list[str]) -> list[dict]:
             continue
         team = _TEAM_RE.match(f[2])
         if team:
-            out.append({"turn": int(f[0]), "player": int(f[1]), "team": int(team.group(1)), "kind": f[-1]})
+            out.append({"turn": int(f[0]), "player": int(f[1]), "team": int(team.group(1)), "kind": f[4]})
     return out
 
 

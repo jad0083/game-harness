@@ -2899,11 +2899,16 @@ def test_without_strategy_models_the_failed_models_are_not_tried_again(setup):
 
 # ---- postmortem-fixes design, ruling 24: who declared each war -------------------------------------------
 
-DIPLO_LOG = ["Game Turn, Player, Team, Action, Detail",
-             "121, 0, Team 5, Individual Declaring War on Team START, Surprise",
-             "539, 5, Team 0, Individual Declaring War on Team START, Surprise",
-             "539, 3, Team 5, Individual Declaring War on Team START, Defensive Pact",
-             "539, 5, Team 0, City Capture, Hunza"]
+DIPLO_LOG = [   # DiplomacySummary.csv of the Kublai campaign, as the game writes it (the Mayhem column last)
+    "Game Turn, Initiator, Recipient, Action, Details, Mayhem, Visibility",
+    "121, 0, Team 5, Individual Declaring War on Team START, Surprise,  368.0",
+    "121, 0, Team 5, Individual Declaring War on Team END, Surprise,  372.0",
+    "539, 5, Team 0, Individual Declaring War on Team START, Surprise, 2950.5",
+    "539, 3, Team 5, Individual Declaring War on Team START, Defensive Pact, 2954.5",
+    "539, 14, Team 5, Individual Declaring War on Team START, Suzerain War, 2956.5",
+    "539, 3, Team 5, Individual Declaring War on Team END, Defensive Pact, 2958.5",
+    "539, 5, Team 0, Individual Declaring War on Team END, Surprise, 2958.5",
+    "539, 5, Team 0, City Capture, Hunza, 2960.0"]
 AUSTRALIA = {"id": 5, "civ": "CIVILIZATION_AUSTRALIA", "major": True}
 MAJORS_T539 = [{"id": 5, "civ": "CIVILIZATION_AUSTRALIA", "military": 1106}, {"id": 3, "civ": "CIVILIZATION_MALI",
                                                                                 "military": 2428, "allied": True}]
@@ -2915,7 +2920,9 @@ def test_the_declarer_is_read_from_the_diplomacy_log():
     from pilot.civ6 import war_declarations, war_text
     rows = war_declarations(DIPLO_LOG)
     assert [(r["turn"], r["player"], r["team"], r["kind"]) for r in rows] == \
-        [(121, 0, 5, "Surprise"), (539, 5, 0, "Surprise"), (539, 3, 5, "Defensive Pact")]
+        [(121, 0, 5, "Surprise"), (121, 0, 5, "Surprise"), (539, 5, 0, "Surprise"), (539, 3, 5, "Defensive Pact"),
+         (539, 14, 5, "Suzerain War"), (539, 3, 5, "Defensive Pact"), (539, 5, 0, "Surprise")], \
+        "the casus belli is the Details column, never the Mayhem number after it"
     ours = war_text(AUSTRALIA, 0, [r for r in rows if 120 <= r["turn"] <= 121], MAJORS_T539)
     assert ours == "new war: our AI declared war on CIVILIZATION_AUSTRALIA (a surprise war)"
     theirs = war_text(AUSTRALIA, 0, [r for r in rows if 538 <= r["turn"] <= 540], MAJORS_T539)
@@ -2934,7 +2941,8 @@ def test_a_new_war_names_its_declarer_after_one_log_read(setup):
     game = FakeCiv6(base, index=INDEX, events={539: war}, logs={"DiplomacySummary.csv": DIPLO_LOG})
     g = governor(setup, game, orders_model([]))
     g.run(max_decisions=2)
-    assert traces(setup)[1]["trigger"].startswith("urgent: new war: CIVILIZATION_AUSTRALIA declared a surprise war on us")
+    assert traces(setup)[1]["trigger"] == ("urgent: new war: CIVILIZATION_AUSTRALIA declared a surprise war on us "
+                                           "(CIVILIZATION_MALI joined against it through its defensive pact)")
     assert [a[1] for a in game.actions if a[0] == "log_tail"] == ["DiplomacySummary.csv"], "one read, at the new war"
 
 
