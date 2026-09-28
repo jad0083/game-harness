@@ -716,14 +716,17 @@ class _Checks:
 
 def check_orders(orders: list[Civ6Order], snapshot: dict, spec, index: CorpusIndex,
                  failed_last: set[str] | None = None, *, prices: dict | None = None,
-                 defender_buys: dict[str, int] | None = None) -> list[Checked]:
+                 defender_buys: dict[str, int] | None = None, queue_only=frozenset()) -> list[Checked]:
     """Each order checked against the corpus, the pillars' limits and the snapshot. `failed_last`
     holds orders (as `order_key`) that did not stick at the previous decision: not retried blindly.
     Without a pillars spec (a broken file) each kind gets one order and purchases are refused.
     Other orders are checked in the model's order, then purchases, a defender for a city in danger
     first (ruling 19); a production order for a defender of an ungarrisoned city in danger becomes
     a purchase when a known price fits (ruling 20). `prices`: the `price` tool's answers in this
-    decision; `defender_buys`: the turn of each city's last defender purchase (lowercased name)."""
+    decision; `defender_buys`: the turn of each city's last defender purchase (lowercased name);
+    `queue_only`: order keys (`order_key`) of production orders that are never bought instead: the
+    governor's own fills (postmortem-fixes ruling 3), so a purchase is only ever the model's order or
+    ruling 3's single rule buy with its upkeep and cooldown checks."""
     out = [Checked(order=o.model_dump()) for o in orders]
     buy = spec.actions.get("purchase") if spec else None
     st = _Checks(known=known_prices(snapshot, index, prices), defender_buys=dict(defender_buys or {}),
@@ -733,7 +736,8 @@ def check_orders(orders: list[Civ6Order], snapshot: dict, spec, index: CorpusInd
         if o.kind == "purchase":
             purchases.append((o, c, None))
             continue
-        instead = _must_have(o, snapshot, index, buy, st) if o.kind == "production" else None
+        convert = o.kind == "production" and order_key(o.model_dump()) not in queue_only
+        instead = _must_have(o, snapshot, index, buy, st) if convert else None
         if instead is not None:
             purchases.append((instead, c, o))
             continue
@@ -1041,7 +1045,7 @@ def rule_buy_order(snapshot: dict, index: CorpusIndex, limits, defender_buys: di
         return None, "every city has a unit on its tile"
     rank = lambda c: (not in_danger(c), not c.get("threatened"), bool((c.get("defense") or {}).get("walls_max")),
                       not c.get("capital"), str(c.get("name")))
-    why = "no city lists a defender it can buy now"
+    why, upkept = "no city lists a defender it can buy now", ""
     for c in sorted(cities, key=rank):
         last = (defender_buys or {}).get(str(c.get("name", "")).lower())
         if wait and isinstance(last, int) and isinstance(turn, int) and turn - last < wait:
@@ -1053,14 +1057,18 @@ def rule_buy_order(snapshot: dict, index: CorpusIndex, limits, defender_buys: di
             for p in defender_entries(c, index, limits):
                 uid = index.cid(p.get("unit"))
                 upkeep = index.maintenance.get(uid, 0.0)
-                if (p.get(f"{cur}_allowed") and isinstance(p.get(cur), (int, float)) and p[cur] <= cap
-                        and _free_of_resources(uid, index)
-                        and (not isinstance(gold_yield, (int, float)) or gold_yield - upkeep >= 0)):
-                    fits.append((-index.strength.get(uid, 0.0), p[cur], uid))
+                if not (p.get(f"{cur}_allowed") and isinstance(p.get(cur), (int, float)) and p[cur] <= cap
+                        and _free_of_resources(uid, index)):
+                    continue
+                if isinstance(gold_yield, (int, float)) and gold_yield - upkeep < 0:
+                    upkept = upkept or (f"upkeep: {uid} in {c.get('name')} costs {upkeep:g} gold a turn and gold per "
+                                        f"turn is {gold_yield:+g}")
+                    continue
+                fits.append((-index.strength.get(uid, 0.0), p[cur], uid))
             if fits:
                 _s, _cost, uid = min(fits)
                 return Civ6Order(kind="purchase", id=uid, city=str(c.get("name")), currency=cur), ""
-    return None, why
+    return None, upkept or why
 
 
 def defender_to_build(city: dict, index: CorpusIndex, limits) -> str | None:

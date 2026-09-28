@@ -609,7 +609,8 @@ class Civ6Governor(Governor):
 
     def _production_fills(self, b: dict, taken: set[str]) -> list[Civ6Order]:
         """Ruling 3 (L15): under weakness, each ungarrisoned city with an empty queue and no production
-        order of the answer (`taken`, lowercased names) gets its strongest resource-free defender."""
+        order of the answer (`taken`, lowercased names) gets its strongest resource-free defender, as a
+        production order that `_apply` never lets become a purchase (`queue_only`)."""
         buy = self._buy_limits()
         if buy is None or not buy.rule_buy or not self._weak_now(b):
             return []
@@ -1588,12 +1589,13 @@ class Civ6Governor(Governor):
         refusal or a read-back that contradicts the order counts as "did not stick" (refused if
         repeated unchanged); an order whose effect cannot be told (no reply, no read-back) is
         "unknown". Orders that took are followed until they resolve (the order record); refused,
-        lost and bought ones get their row at once. `filled`: order keys the governor added;
+        lost and bought ones get their row at once. `filled`: order keys the governor added (a production
+        fill among them is queued, never bought instead);
         `prices`: the `price` tool's answers in this decision; `resent`: order keys sent again after a
         lost reply (ruling 5: a purchase whose lost reply is proved to have spent nothing is queued for
         one re-send, `_resend_lost`, unless it is one already)."""
         checked = check_orders(d.orders, b, self.pillars, self.index, self._failed_last, prices=prices,
-                               defender_buys=self._defender_buys())
+                               defender_buys=self._defender_buys(), queue_only=filled)
         results: list[tuple[Checked, str, bool]] = []      # (order, outcome, counts as did-not-stick)
         sent: list[tuple[Checked, dict]] = []
         for c in checked:

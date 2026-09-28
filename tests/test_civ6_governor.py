@@ -2897,6 +2897,63 @@ def test_without_strategy_models_the_failed_models_are_not_tried_again(setup):
     assert not any(a[0] == "order" and a[1]["kind"] == "purchase" for a in calm.actions), "no weakness: no rule buy"
 
 
+# ---- governor fills stay production orders (post-mortem fixes review) ----------------------------------
+
+AT_WAR = [{"id": 3, "civ": "CIVILIZATION_AUSTRALIA", "major": True}]
+
+
+def _besieged(city: dict, can_build: list[str]) -> dict:
+    """The city under siege (in danger), with no unit on its tile and an empty queue."""
+    return {**city, "under_siege": True, "producing": None, "turns_left": None, "can_build": can_build}
+
+
+def _sent(game: FakeCiv6, kind: str) -> list[dict]:
+    return [a[1] for a in game.actions if a[0] == "order" and a[1]["kind"] == kind]
+
+
+def test_a_governor_fill_in_a_city_in_danger_is_queued_never_bought(setup):
+    """Ruling 3's fill of an empty queue is a production order; levers ruling 20's conversion (a defender
+    production order for an ungarrisoned city in danger is bought when a price fits) is for the model's
+    orders. Answered "keep" at war, the governor sent purchase unit:modern_at in Rockhampton (1,160 faith)."""
+    rock = _besieged(_t496()["cities"][1], ["UNIT_MODERN_AT", "UNIT_INFANTRY"])
+    game = FakeCiv6(_t496(wars=AT_WAR, cities=[rock]), index=INDEX,
+                    prices={("Rockhampton", "unit:modern_at", "faith"): 1160})
+    g = governor(setup, game, orders_model([]))
+    g.run(max_decisions=1)
+    assert _sent(game, "purchase") == [], "the model kept everything: nothing is bought"
+    assert _sent(game, "production") == [{"kind": "production", "city": "Rockhampton", "id": "unit:modern_at"}]
+    fill = next(o for o in traces(setup)[0]["orders"] if o["kind"] == "production")
+    assert fill["by"] == "governor" and fill["outcome"] == "stuck" and "bought instead" not in fill["order"]
+
+
+def test_the_fallback_buys_one_defender_however_many_cities_are_in_danger(setup):
+    """Ruling 20 allows one rule-based buy "for the city most in need"; the fills of the other cities in
+    danger were bought too (3 purchases, 3,480 faith)."""
+    cities = [_besieged({**_calm_city(n, [AT_FAITH]), "capital": False}, ["UNIT_MODERN_AT"])
+              for n in ("Rockhampton", "Guangzhou", "Taiyuan")]
+    game = FakeCiv6({**_t525(), "faith": 5000, "cities": cities}, index=INDEX,
+                    prices={(n, "unit:modern_at", "faith"): 1160 for n in ("Rockhampton", "Guangzhou", "Taiyuan")})
+    g = _resilience_governor(setup, game, [])
+    g.run(max_decisions=1)
+    assert [(o["city"], o["id"]) for o in _sent(game, "purchase")] == [("Guangzhou", "unit:modern_at")], \
+        "one rule buy (the first city in danger by name), whatever the fills"
+    assert sorted(o["city"] for o in _sent(game, "production")) == ["Guangzhou", "Rockhampton", "Taiyuan"]
+
+
+def test_the_fallback_buys_nothing_when_upkeep_blocks_the_rule_buy_and_says_so(setup):
+    """T525 with gold per turn +5: the Machine Gun's upkeep (6) refuses the rule buy, and the fill of
+    Guangzhou's empty queue was then bought anyway ("bought instead of queued (in danger): 1080 faith")."""
+    gz = _besieged(_t525()["cities"][0], ["UNIT_MACHINE_GUN"])
+    game = FakeCiv6({**_t525(), "yields": {**_t525()["yields"], "gold": 5}, "cities": [gz]}, index=INDEX,
+                    prices={("Guangzhou", "unit:machine_gun", "faith"): 1080})
+    g = _resilience_governor(setup, game, [])
+    g.run(max_decisions=1)
+    assert _sent(game, "purchase") == []
+    assert _sent(game, "production") == [{"kind": "production", "city": "Guangzhou", "id": "unit:machine_gun"}]
+    note = next(e for e in g.log.recent if e["kind"] == "rule_buy")["note"]
+    assert "upkeep" in note and "unit:machine_gun" in note and "+5" in note, note
+
+
 # ---- postmortem-fixes design, ruling 24: who declared each war -------------------------------------------
 
 DIPLO_LOG = [   # DiplomacySummary.csv of the Kublai campaign, as the game writes it (the Mayhem column last)

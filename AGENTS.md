@@ -454,7 +454,8 @@ Rules:
   the defenders it can buy, with why each is refused.
 - Before an autoplay stretch of 2+ turns under military weakness the governor buys one defender itself
   (no model call; the first ungarrisoned city, resource-free, faith first, within the cap and upkeep;
-  `rule_buy` in `[actions.purchase]`) and fills empty queues of ungarrisoned cities with one; each
+  `rule_buy` in `[actions.purchase]`) and fills empty queues of ungarrisoned cities with one (a production
+  order, never bought instead, so one purchase at most); each
   decision's prompt says what the game's AI spent from our treasury since the last one ("Since T525 the
   AI spent 1,998 faith (UNIT_ROCK_BAND, T526) ..."), named from `AI_CityBuild.csv` (one `log-tail` read,
   only when there is a spend to name), and a stretch's spend at a defender's price is urgent

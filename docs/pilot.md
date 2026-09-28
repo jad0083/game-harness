@@ -295,7 +295,11 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   weakness: ...)", a `rule_buy` event and a journal line), at most one per stretch. At war with a major
   the chunk is already one turn and the hand-back decides instead ("city still in danger"). Under
   weakness an ungarrisoned city with an empty queue also gets its strongest resource-free defender as a
-  production order, at that step and at each decision whose answer leaves the queue empty.
+  production order, at that step and at each decision whose answer leaves the queue empty. A fill stays
+  a production order even in a city in danger: only the model's own production order for a defender is
+  bought instead (levers ruling 20), so the governor never buys past ruling 3's one purchase, its upkeep
+  check or the model's "keep". A rule buy refused for upkeep says so ("upkeep: unit:machine_gun in
+  Guangzhou costs 6 gold a turn and gold per turn is +5").
 - **What the AI spent** (ruling 4): at each hand-back, per currency, balance before + the start
   snapshot's yield x the turns played - balance now (our own purchases are already in the read-back the
   stretch starts from; E10: 2,278 + 226 x 3 - 958 = 1,998 faith, the Rock Band the game logged at T526);
@@ -366,7 +370,7 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   `retried_on` and `first_error`). A Strategy role without models of its own gets no retry: the models
   that just failed are not tried again. When the retry fails too, the governor acts by rule, with no
   model: it fills an idle research or civic, fills empty queues of ungarrisoned cities with a
-  defender under military weakness, and, while the weakness test holds, buys ruling 3's defender for
+  defender under military weakness (queued, never bought), and, while the weakness test holds, buys ruling 3's defender for
   the city most in need (in danger first; `rule_buy`), reported "no answer from the model: the
   governor acted by rule". T512, T522 and T525 failed on 503s and the request limit; T525 was the
   only pre-war window, with 2,278 faith and a Machine Gun at 1,080.
