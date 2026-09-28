@@ -785,7 +785,7 @@ balance before + yield × turns − our spends − balance now.
       | galciv4 | `src/pilot/controller.py`, `corpora/galciv4/**` except `learned/` | restart a GalCiv IV pilot |
       | shared | the other `src/pilot/*.py`, including `dashboard.py` (the pilot serves its live controls with it, `cli.py` 81-108), and `pyproject.toml` | restart any pilot, and the viewer for `dashboard.py` |
       | view | `src/pilot/static/**` | restart `game-pilot-view.service` only |
-      | rust | `crates/**`, `Cargo.*` | pause from the dashboard, build, resume. No restart: each call runs the binary afresh. |
+      | rust | `crates/**`, `Cargo.*` | pause from the dashboard, build, resume a Civ VI pilot (each call runs the binary afresh); restart a Stellaris or GalCiv IV pilot, which keeps one `game-controller mcp` child for the run (`McpGame`), and any pilot whose game is unknown. |
       | none | `docs/**`, `games/**`, `tests/**`, `*.md`, `corpora/*/learned/**`, `scripts/ci*` | nothing |
 
       - **Unknown paths** count as shared.

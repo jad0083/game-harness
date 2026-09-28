@@ -7,8 +7,9 @@
 # scripts/pilot-affected.py classifies the changed paths. The running pilot's game comes from its own
 # dashboard's /status (info.game; PILOT_PORT, the key from PILOT_DASHBOARD_KEY or runs/dashboard.key), or
 # from runs/pilot-settings.json when no pilot runs. A Rust change pauses the pilot through its dashboard,
-# builds the controller and resumes it (each call runs the binary afresh; a pilot the human had paused
-# stays paused). game-pilot.service restarts only when its game's files or shared code changed;
+# builds the controller and resumes a Civ VI pilot (each call runs the binary afresh; a pilot the human had
+# paused stays paused); a Stellaris or GalCiv IV pilot keeps one `game-controller mcp` child for the run,
+# so it is restarted instead. game-pilot.service restarts when its game's files or shared code changed;
 # game-pilot-view.service restarts for the dashboard's static files and shared code.
 set -euo pipefail
 cd "$(dirname "$0")/.."

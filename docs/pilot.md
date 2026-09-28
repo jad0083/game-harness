@@ -28,7 +28,9 @@ PC in use. One pilot unit runs whichever game `runs/pilot-settings.json` names, 
 path not listed). The running pilot (its game read from its own `/status`, else the settings file)
 restarts only when its game's class or shared changed; the viewer restarts for view and shared (it
 imports the shared modules); a Rust change pauses the pilot through its dashboard, builds the
-controller and resumes it (a pilot paused by the human or waiting for one is left as it is). Otherwise
+controller and resumes a Civ VI pilot, which runs the binary afresh for each call (a pilot paused by the
+human or waiting for one is left as it is); a Stellaris or GalCiv IV pilot keeps one `game-controller
+mcp` child for its whole run, so a Rust change restarts it after the build. Otherwise
 it prints "not restarted: the running civ6 pilot is unaffected; the change applies at its next start".
 
 | Variable | Meaning |

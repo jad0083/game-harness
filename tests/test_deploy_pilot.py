@@ -50,6 +50,18 @@ def test_shared_code_restarts_any_pilot_and_the_viewer_and_unknown_is_shared():
         "no pilot runs: the change applies at its next start"
 
 
+def test_a_rust_change_restarts_a_stellaris_or_galciv4_pilot_but_not_a_civ6_one():
+    """Stellaris and GalCiv IV keep one `game-controller mcp` child for the whole run (McpGame), so a
+    rebuilt binary reaches them only through a restart; Civ VI runs the binary afresh for each call."""
+    for game, path in (("stellaris", "crates/game-controller/src/stellaris.rs"),
+                       ("galciv4", "crates/game-controller/src/autopilot.rs"), ("unknown", "Cargo.lock")):
+        p = pa.plan([path], game)
+        assert p["build"] and p["restart_pilot"], game
+        assert "rust changed" in p["message"], p["message"]
+    civ6 = pa.plan(["crates/game-controller/src/civ6.rs"], "civ6")
+    assert civ6["build"] and not civ6["restart_pilot"], "paused, built and resumed: no restart"
+
+
 # ---- scripts/deploy-pilot.sh in a throwaway repository, with systemctl, curl and cargo stubbed -------------
 
 STUB = """#!/usr/bin/env bash
@@ -123,6 +135,17 @@ def test_a_rust_change_pauses_builds_and_resumes_without_a_restart(tmp_path):
     assert "would run: systemctl --user restart game-pilot.service" not in out
     held, _ = deploy(tmp_path / "held", "crates/game-controller/src/civ6.rs", {**CIV6, "status": "needs_attention"})
     assert "would pause" not in held and "would resume" not in held, "a pilot waiting for the human is left alone"
+
+
+def test_a_rust_change_with_a_running_stellaris_pilot_pauses_builds_and_restarts_it(tmp_path):
+    out, _ = deploy(tmp_path, "crates/game-controller/src/stellaris.rs", {"status": "playing", "info": {"game": "stellaris"}})
+    lines = out.splitlines()
+    pause = lines.index("would pause the stellaris pilot through its dashboard")
+    build = lines.index("would run: cargo build --release -p game-controller")
+    restart = lines.index("would run: systemctl --user restart game-pilot.service")
+    assert pause < build < restart
+    assert "would resume" not in out, "the restart starts it on the new binary"
+    assert "not restarted" not in out
 
 
 def test_a_real_run_pauses_through_the_dashboard_and_restarts_nothing_else(tmp_path):

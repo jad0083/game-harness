@@ -13,12 +13,15 @@ Each changed path gets one class:
     stellaris  src/pilot/stellaris*.py, corpora/stellaris/**
     galciv4    src/pilot/controller.py, corpora/galciv4/**
     view       src/pilot/static/**: the always-on viewer only
-    rust       crates/**, Cargo.*: pause, build the controller, resume (each call runs the binary afresh)
+    rust       crates/**, Cargo.*: build the controller. A Civ VI pilot is paused and resumed (each call
+               runs the binary afresh); a Stellaris or GalCiv IV pilot keeps one `game-controller mcp`
+               child for the whole run, so it restarts (paused for the build first)
     shared     every other src/pilot/*.py (dashboard.py too: the pilot serves its live controls with it),
                pyproject.toml, and any path not listed (the safe side)
 
-The running pilot restarts when its game's class or `shared` is affected (any game's class when its game
-is unknown); the viewer restarts for `view` and `shared` (it imports the shared modules)."""
+The running pilot restarts when its game's class or `shared` is affected, and on `rust` when it keeps a
+long-lived controller (any game's class and `rust` when its game is unknown); the viewer restarts for
+`view` and `shared` (it imports the shared modules)."""
 
 from __future__ import annotations
 
@@ -31,6 +34,9 @@ import sys
 from pathlib import Path
 
 GAMES = ("civ6", "stellaris", "galciv4")
+# pilots that start one `game-controller mcp` child and keep it for the run (McpGame): a rebuilt binary
+# reaches them only through a restart. Civ VI (ControllerCiv6) starts the binary for each call.
+PERSISTENT_CONTROLLER = ("stellaris", "galciv4")
 # first match wins: learned notes before their corpus, a corpus before the generic *.md rule
 RULES = (
     ("none", ("corpora/*/learned/*",)),
@@ -58,6 +64,8 @@ def plan(paths: list[str], game: str = "unknown", running: bool = True) -> dict:
     for p in paths:
         classes.setdefault(classify(p), []).append(p)
     pilot_classes = {"shared", game} if game in GAMES else {"shared", *GAMES}
+    if game in PERSISTENT_CONTROLLER or game not in GAMES:
+        pilot_classes.add("rust")
     affected = sorted(pilot_classes & set(classes))
     restart = running and bool(affected)
     if not running:

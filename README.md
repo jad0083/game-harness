@@ -123,4 +123,5 @@ ruff, pytest and the Civ VI Lua library under LuaJIT (`scripts/civ6-lua-check.sh
 and pushes only when CI passes; Python-only changes skip the Rust stages. Deploy a merge to the
 running services with `scripts/deploy-pilot.sh <from> <to>` (`--dry-run` first): it restarts the pilot
 only when the running game's files or shared code changed, and builds the controller for a Rust change
-with the pilot paused. Conventions are in [AGENTS.md](AGENTS.md) §8–9.
+with the pilot paused (then resumes a Civ VI pilot and restarts a Stellaris or GalCiv IV one, which keeps
+one controller process for its run). Conventions are in [AGENTS.md](AGENTS.md) §8–9.
