@@ -310,8 +310,12 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   rows carry it as `ai_spent`. The next decision's prompt says "Since T525 the AI spent 1,998 faith
   (UNIT_ROCK_BAND, T526) and 1,717 gold (not named)" when a currency's spend since the last decision is at
   least max(50, 10% of its yield over those turns); the items come from the game's
-  `Logs/AI_CityBuild.csv` (`FAITH PURCHASE` and `PURCHASE` rows of our player, read by `civ6 log-tail`: one read
-  per decision, only when there is a spend to name; a row whose layout does not match is "not named").
+  `Logs/AI_CityBuild.csv` (`FAITH PURCHASE` and `PURCHASE` rows of our player, read by `civ6 log-tail` at most
+  once per hand-back, only when there is a spend to name; a row whose layout does not match is "not named").
+  The log grows 10-15 KB a turn late in a game, so a read goes on from where the last one ended, page by
+  page to the end, while that is at most a page (64 KiB, about 4 turns) behind; otherwise it takes the
+  file's tail sized to the turns since the last decision (16 KiB a turn, at most a page, `--tail`), and
+  rows of turns an earlier read covered are not counted twice.
   A stretch whose spend in a currency reaches the cheapest defender the game allows in it is an urgent
   decision ("the AI spent 1,998 faith on UNIT_ROCK_BAND in T525-T528"); it never stops the run for a
   human.

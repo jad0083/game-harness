@@ -291,8 +291,9 @@ model-facing `order` JSON. The briefing also carries the AI's own plan: each cit
 from the snapshot and our player's strategies from the game's `Logs/AI_Victories.csv`, which `civ6
 ai-strategies` reads through the agent's file API in one bounded read per decision; `civ6 log-tail`
 reads the complete lines of one of three game logs the same way (an allowlist: `AI_CityBuild.csv`,
-`World_Congress.csv`, `DiplomacySummary.csv`; from an offset or the file's tail), for what the AI
-bought with our treasury (postmortem-fixes design, ruling 4). District
+`World_Congress.csv`, `DiplomacySummary.csv`; a 64 KiB page from an offset, or the file's last `--tail`
+bytes, 16 KiB by default), for what the AI bought with our treasury (postmortem-fixes design, ruling 4:
+the governor pages on from its last offset, or takes a tail sized to the turns it needs). District
 placement is read-only so far: `civ6 district-plots` returns where each district may go (the game's
 own check) and the facts of the plots around each city, and `src/pilot/civ6_placement.py` scores
 them with the adjacency rules the extractor writes as data (`data/_adjacency.json`). One part of the

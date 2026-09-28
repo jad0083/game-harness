@@ -2671,6 +2671,59 @@ def test_a_stretch_after_a_pause_starts_from_a_fresh_snapshot(setup):
     assert rows and all(abs(r["ai_spent"]["gold"]) < 1 for r in rows), [r["ai_spent"] for r in rows]
 
 
+def _city_build_log(first: int, last: int, ours: dict[int, str] | None = None, per_turn: int = 12_000) -> list[str]:
+    """AI_CityBuild.csv rows for turns first..last as late in the Kublai campaign (about 12 KB a turn, other
+    players' build rows); `ours[turn]` is a purchase row of our player (player 0) in the middle of that turn."""
+    out = ["Game Turn, Player, City, Food Adv., Prod. Adv., Construct, Order Source"]
+    for turn in range(first, last + 1):
+        rows = [f"{turn}, {1 + i % 5}, LOC_CITY_NAME_SYDNEY, , , UNIT_SCOUT, Default Specialization, , , Value 71.9"
+                for i in range(per_turn // 90)]
+        if turn in (ours or {}):
+            rows.insert(len(rows) // 2, f"{turn}, 0, {ours[turn]}, Unknown, CONTRACT 13393")
+        out += rows
+    return out
+
+
+ROCK_BAND = "FAITH PURCHASE, , , UNIT_ROCK_BAND"
+
+
+def test_the_t528_rock_band_is_named_from_a_log_that_grows_12_kb_a_turn(setup):
+    """E10 live: at the T528 hand-back the "526, 0, FAITH PURCHASE, , , UNIT_ROCK_BAND" row lay about 22 KB
+    from the end of the log, past the controller's default 16 KiB tail, so it read "(not named)"."""
+    city = {**_calm_city("Beijing", [AT_FAITH]), "capital": True}
+    start = {**FIXTURE, **_row_snapshot(525), "cities": [city], "majors": [], "wars": []}
+    t528 = _row_snapshot(528)
+    game = FakeCiv6(start, index=INDEX, events={528: lambda st: st.update(gold=t528["gold"], faith=t528["faith"])},
+                    logs={"AI_CityBuild.csv": _city_build_log(500, 527, {526: ROCK_BAND})})
+    log = "\n".join(game.logs["AI_CityBuild.csv"]) + "\n"
+    assert len(log) - log.index("526, 0, FAITH PURCHASE") > 16 * 1024
+    s, _ = setup
+    s.autoplay_chunk, s.decide_every_turns = 3, 5
+    g = governor(setup, game, orders_model([]))
+    g.run(max_decisions=2)
+    assert traces(setup)[1]["trigger"] == "urgent: the AI spent 1,998 faith on UNIT_ROCK_BAND in T525-T528"
+
+
+def test_ai_buy_reads_go_on_from_their_offset_and_drop_one_a_page_behind(setup):
+    game = FakeCiv6(FIXTURE, index=INDEX, logs={"AI_CityBuild.csv": _city_build_log(500, 527, {526: ROCK_BAND})})
+    g = governor(setup, game, orders_model([]))
+    reads = lambda: [a for a in game.actions if a[0] == "log_tail"]
+    g._read_ai_buys({"turn": 528, "player": 0}, 525)
+    assert [x["item"] for x in g._bought_between(525, 528)] == ["UNIT_ROCK_BAND"]
+    assert [(r[2], r[4]) for r in reads()] == [(None, 64 * 1024)], "one tail read sized to the interval"
+    end = g._build_log_next
+    game.logs["AI_CityBuild.csv"] += _city_build_log(528, 529, {529: "PURCHASE, , , BUILDING_SHRINE"})[1:]
+    g._read_ai_buys({"turn": 530, "player": 0}, 528)
+    assert [r[2] for r in reads()[1:]] == [end], "two turns on: from where the last read ended"
+    assert [x["item"] for x in g._bought_between(528, 530)] == ["BUILDING_SHRINE"]
+    assert [x["item"] for x in g._ai_buys] == ["UNIT_ROCK_BAND", "BUILDING_SHRINE"], "no row read twice"
+    game.logs["AI_CityBuild.csv"] += _city_build_log(530, 544, {544: ROCK_BAND})[1:]
+    n = len(reads())
+    g._read_ai_buys({"turn": 545, "player": 0}, 542)
+    assert [r[2] for r in reads()[n:]] == [None], "15 turns (180 KB) on: the tail, not a page of old rows"
+    assert [(x["turn"], x["item"]) for x in g._bought_between(542, 545)] == [(544, "UNIT_ROCK_BAND")]
+
+
 # ---- postmortem-fixes design, ruling 26: the capture test ---------------------------------------------
 
 def test_beijing_at_t545_and_guangzhou_at_t565_read_as_about_to_fall():

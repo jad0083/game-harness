@@ -458,8 +458,9 @@ Rules:
   `rule_buy` in `[actions.purchase]`) and fills empty queues of ungarrisoned cities with one (a production
   order, never bought instead, so one purchase at most); each
   decision's prompt says what the game's AI spent from our treasury since the last one ("Since T525 the
-  AI spent 1,998 faith (UNIT_ROCK_BAND, T526) ..."), named from `AI_CityBuild.csv` (one `log-tail` read,
-  only when there is a spend to name), and a stretch's spend at a defender's price is urgent
+  AI spent 1,998 faith (UNIT_ROCK_BAND, T526) ..."), named from `AI_CityBuild.csv` (`log-tail` at most once
+  per hand-back, only when there is a spend to name: on from the last read's offset to the end while it is
+  at most 64 KiB behind, else a `--tail` of 16 KiB per turn since the last decision), and a stretch's spend at a defender's price is urgent
   (postmortem-fixes design, rulings 3-4). The log's layout is unverified live: an unreadable row is "not named".
 - The order record keys purchases by item class and currency (`purchase unit faith`...) and shows them
   as counts only ("unit purchases: 0 sent; 1 refused by the harness (cap 1)"); refused purchase rows

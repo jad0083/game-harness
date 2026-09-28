@@ -25,10 +25,12 @@ from pydantic_ai.usage import UsageLimits
 from .campaign_end import civ6_read, civ6_signal, enemy_ratio, first_zero_after, last_held, losses
 from .civ6 import (
     AI_BUILD_LOG,
+    AI_BUILD_LOG_TURN,
     DIPLOMACY_LOG,
     DIPLOMACY_RECORD,
     DIPLOMACY_RECORD_HEADING,
     DIPLOMACY_RECORD_KEYS,
+    LOG_PAGE,
     ORDER_ACTION,
     STAND_KEYS,
     UNKNOWN,
@@ -264,7 +266,8 @@ class Civ6Governor(Governor):
         # decision's turn, per currency, with the yield over those turns; the AI_CityBuild.csv purchases
         # read (at most one read per decision, only when there is a spend to name)
         self._spend: dict | None = None
-        self._build_log_next: int | None = None
+        self._build_log_next: int | None = None       # where the last read of AI_CityBuild.csv ended...
+        self._build_log_turn: int | None = None       # ...and the hand-back turn it was made at
         self._build_log_read_turn: int | None = None
         self._ai_buys: list[dict] = []
         self._buildup_fired: dict[str, int] = {}  # neighbour -> turn of its last buildup trigger (ruling 11)
@@ -733,24 +736,52 @@ class Civ6Governor(Governor):
         after, self._after_orders = self._after_orders, None
         return (after if after is not None else self._fresh(fresh)), urgent
 
-    def _read_ai_buys(self, b: dict) -> None:
-        """One read of AI_CityBuild.csv (at most once per hand-back turn) from where the last one ended,
-        or its tail on the first; our player's purchases are kept. Advisory: a failed read names nothing."""
+    log_pages = 4       # AI_CityBuild.csv pages read on from an offset at most per hand-back
+
+    def _read_ai_buys(self, b: dict, since: int) -> None:
+        """Our player's purchases in AI_CityBuild.csv up to its end, at most once per hand-back turn: from
+        where the last read ended, page by page, while that is at most a page behind (about
+        `AI_BUILD_LOG_TURN` a turn); else its tail, sized to the turns since `since` (at most a page),
+        keeping only the turns from the last read's on, so no row counts twice. The log grew 10-15 KB a
+        turn late in the Kublai game: the controller's 16 KiB default tail missed the T526 Rock Band at the
+        T528 hand-back, and an old offset read a page of rows older than the spend. Advisory: a failed
+        read names nothing."""
         read = getattr(self.game, "log_tail", None)
-        if read is None or self._build_log_read_turn == b.get("turn"):
+        turn = b.get("turn")
+        if read is None or self._build_log_read_turn == turn or not isinstance(turn, int):
             return
-        self._build_log_read_turn = b.get("turn")
+        self._build_log_read_turn = turn
+        offset, last = self._build_log_next, self._build_log_turn
+        if offset is not None and (not isinstance(last, int) or (turn - last) * AI_BUILD_LOG_TURN > LOG_PAGE):
+            offset = None                               # more than a page behind: its rows are older than the spend
+        lines: list[str] = []
+        done = None                                     # where the lines read so far end
         try:
-            r = read(AI_BUILD_LOG, self._build_log_next)
+            for _ in range(self.log_pages):
+                if offset is None:
+                    tail = min(LOG_PAGE, (turn - min(since, turn) + 1) * AI_BUILD_LOG_TURN)
+                    r = read(AI_BUILD_LOG, None, tail)
+                else:
+                    r = read(AI_BUILD_LOG, offset)
+                    if r.get("restarted"):              # a new game session: read its tail instead
+                        offset = None
+                        continue
+                nxt, size = r.get("next"), r.get("size")
+                if offset is None and isinstance(last, int):
+                    lines += [x for x in r.get("lines") or [] if _turn_of(x) is None or _turn_of(x) >= last]
+                else:
+                    lines += r.get("lines") or []
+                done = nxt if isinstance(nxt, int) else None
+                if done is None or not isinstance(size, int) or done >= size or done == offset:
+                    break
+                offset = done
         except Exception as e:  # noqa: BLE001 - naming is advisory
             self.log.emit("briefing_error", error=f"{AI_BUILD_LOG}: {e}"[:200])
-            return
-        nxt, size = r.get("next"), r.get("size")
-        self._build_log_next = int(nxt) if isinstance(nxt, int) else None
-        if isinstance(nxt, int) and isinstance(size, int) and size - nxt > 64 * 1024:
-            self._build_log_next = None                 # fell behind: the next read takes the tail
+        if done is None and not lines:
+            return                                      # nothing read: the next read starts where this one would have
+        self._build_log_next, self._build_log_turn = done, turn
         player = b.get("player") if isinstance(b.get("player"), int) else getattr(self, "_player_id", 0)
-        self._ai_buys = (self._ai_buys + ai_purchases(r.get("lines") or [], int(player or 0)))[-500:]
+        self._ai_buys = (self._ai_buys + ai_purchases(lines, int(player or 0)))[-500:]
 
     def _bought_between(self, after: int, upto: int) -> list[dict]:
         return [x for x in self._ai_buys if after < x["turn"] <= upto]
@@ -774,7 +805,7 @@ class Civ6Governor(Governor):
                           if p.get(f"{cur}_allowed") and isinstance(p.get(cur), (int, float))]
                 if not prices or v < min(prices) or not spend_shown(v, ((last.get("yields") or {}).get(cur) or 0) * turns):
                     continue
-                self._read_ai_buys(b)
+                self._read_ai_buys(b, int(sp.get("since") or last.get("turn") or 0))
                 items = [x["item"] for x in self._bought_between(int(last.get("turn") or 0), int(b.get("turn") or 0))
                          if x["currency"] == cur]
                 out.append(f"the AI spent {v:,.0f} {cur} " + (f"on {', '.join(dict.fromkeys(items))}" if items
@@ -794,7 +825,7 @@ class Civ6Governor(Governor):
         spent = {k: sp.get(k, 0.0) for k in ("gold", "faith")}
         if not any(spend_shown(spent[c], sp["yield"].get(c, 0.0)) for c in spent):
             return ""
-        self._read_ai_buys(b)
+        self._read_ai_buys(b, sp["since"])
         return ai_spent_text(sp["since"], spent, sp["yield"], self._bought_between(sp["since"], int(b.get("turn") or 0)))
 
     def _price_change_line(self, b: dict) -> str:
@@ -1744,6 +1775,11 @@ class Civ6Governor(Governor):
                 row.update(purchase_refusal(status, o, b, self.index))
         self._emit_row({**row, "result": result, "by": None, "turns": 0, "date": now.get("date") or f"T{now.get('turn')}",
                         "turn": now.get("turn"), "detail": detail[:300]})
+
+
+def _turn_of(line: str) -> int | None:
+    head = str(line).split(",", 1)[0].strip()
+    return int(head) if head.isdigit() else None
 
 
 def _city_of(snapshot: dict, name: str) -> dict | None:

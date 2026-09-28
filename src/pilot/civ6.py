@@ -42,8 +42,9 @@ class Civ6Game(Protocol):
     def finish_moves(self, unit_id: int) -> dict: ...
     # the AI's own strategies (ruling 29): one read of its log per decision
     def ai_strategies(self, offset: int, player: int) -> dict: ...
-    # a game log's complete lines (postmortem-fixes rulings 4, 6, 24): from `offset`, or its tail
-    def log_tail(self, file: str, offset: int | None = None) -> dict: ...
+    # a game log's complete lines (postmortem-fixes rulings 4, 6, 24): a page from `offset`, or its last
+    # `tail` bytes (the controller's 16 KiB by default; at most a page, `LOG_PAGE`)
+    def log_tail(self, file: str, offset: int | None = None, tail: int | None = None) -> dict: ...
     def corpus(self, tool: str, **args) -> str: ...
     def close(self) -> None: ...
 
@@ -131,8 +132,9 @@ class ControllerCiv6:
     def ai_strategies(self, offset: int, player: int) -> dict:
         return self._json("civ6", "ai-strategies", "--offset", str(int(offset)), "--player", str(int(player)))
 
-    def log_tail(self, file: str, offset: int | None = None) -> dict:
-        return self._json("civ6", "log-tail", file, *(("--offset", str(int(offset))) if offset is not None else ()))
+    def log_tail(self, file: str, offset: int | None = None, tail: int | None = None) -> dict:
+        return self._json("civ6", "log-tail", file, *(("--offset", str(int(offset))) if offset is not None else ()),
+                          *(("--tail", str(int(tail))) if offset is None and tail is not None else ()))
 
     def corpus(self, tool: str, **args) -> str:
         if tool == "corpus_search":
@@ -356,13 +358,23 @@ class FakeCiv6:
         return {"ok": True, "size": len(self.ai_log), "offset": offset, "next": len(self.ai_log), "restarted": False,
                 "rows": rows}
 
-    def log_tail(self, file: str, offset: int | None = None) -> dict:
-        """The lines from `offset` (counted in lines here, bytes in the real log), or all of them."""
-        self.actions.append(("log_tail", file, offset, self.active))
-        lines = self.logs.get(file, [])
-        start = 0 if offset is None else offset
-        return {"ok": True, "file": file, "size": len(lines), "offset": start, "next": len(lines),
-                "restarted": start > len(lines), "lines": lines[start:]}
+    def log_tail(self, file: str, offset: int | None = None, tail: int | None = None) -> dict:
+        """As the controller reads it (`log_tail_reply`), in bytes of the lines joined by newlines: at
+        most `LOG_PAGE` from `offset`, or the last `tail` bytes (default `LOG_TAIL_DEFAULT`) whose first,
+        cut line is dropped; complete lines only, and `next` where the next read starts."""
+        self.actions.append(("log_tail", file, offset, self.active, tail))
+        data = "".join(f"{line}\n" for line in self.logs.get(file, [])).encode()
+        size = len(data)
+        if offset is not None and offset > size:
+            return {"ok": True, "file": file, "size": size, "offset": offset, "next": 0, "restarted": True, "lines": []}
+        start = offset if offset is not None else max(0, size - min(tail or LOG_TAIL_DEFAULT, LOG_PAGE))
+        chunk = data[start:start + LOG_PAGE]
+        end = chunk.rfind(b"\n") + 1
+        lines = chunk[:end].decode().splitlines()
+        if offset is None and start > 0 and lines:
+            lines = lines[1:]
+        return {"ok": True, "file": file, "size": size, "offset": start, "next": start + end, "restarted": False,
+                "lines": lines}
 
     def corpus(self, tool: str, **args) -> str:
         self.actions.append(("corpus", tool, args))
@@ -1083,6 +1095,9 @@ def defender_to_build(city: dict, index: CorpusIndex, limits) -> str | None:
 # ---- what the AI spent between decisions (postmortem-fixes design, ruling 4) ------------------------
 
 AI_BUILD_LOG = "AI_CityBuild.csv"
+LOG_PAGE = 64 * 1024            # the most one `civ6 log-tail` read returns (the controller's AI_LOG_MAX)
+LOG_TAIL_DEFAULT = 16 * 1024    # its tail without --tail (LOG_TAIL_DEFAULT)
+AI_BUILD_LOG_TURN = 16 * 1024   # AI_CityBuild.csv grew 10-15 KB a turn late in the Kublai game (T490 15.1 KB)
 AI_PURCHASE_KINDS = {"FAITH PURCHASE": "faith", "PURCHASE": "gold"}
 _ITEM_RE = re.compile(r"^(?:UNIT|BUILDING|DISTRICT|PROJECT)_[A-Z0-9_]+$")
 
