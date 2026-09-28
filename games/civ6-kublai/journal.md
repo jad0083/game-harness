@@ -281,3 +281,10 @@ re-installed its own library at its next call.
   The game shows the World Congress (Arms Control targeted China).
 - A post-mortem (war timeline, treasury and buy rules, long-run strategy, harness reliability, diplomacy,
   with every causal claim checked by two skeptics) is under way; its findings follow here.
+- **Post-mortem** (`postmortem.md` beside this journal; 45 claims, each checked by two verifiers): Australia's
+  surprise war (T539) met China at about a third of its military (318 vs 1,061 at T541); the AI playing China had
+  completed no combat unit since T380. The treasury never became defenders before the war: the 50% per-purchase
+  cap, Rock Bands bought by the AI with ~21,600 faith during autoplay, and two missed windows (a model misbelief
+  at T486, model outages at T525). Milestones counted as met once ever reached, and no falling-behind or
+  neighbour-buildup warning existed. Wartime harness defects cost 1-3 defenders, not the outcome; diplomacy and
+  the (disabled) last stand were not factors.
