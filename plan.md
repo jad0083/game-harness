@@ -188,7 +188,7 @@
 - [ ] End the run when the empire is gone (Civ VI: not alive, or 0 cities and 0 settlers twice; Stellaris: 0 planets twice), with a report and a "lost" state (rulings 21-23); on branch feat/postmortem-fixes, not deployed (the dashboard's "lost" rendering is feat/dashboard-v2's)
 - [ ] Turns advanced logged against those requested; full decision prompts in traces (ruling 27); on branch feat/postmortem-fixes, not deployed
 - [ ] Civ VI price changes in the briefing (World Congress discounts) (ruling 6); on branch feat/postmortem-fixes, not deployed (the `World_Congress.csv` layout and the session calendar are unverified live)
-- [ ] Known-false learned rules refused; the listed rules corrected at deploy (ruling 29)
+- [ ] Known-false learned rules refused; the listed rules corrected at deploy (ruling 29); refusal code and list on branch feat/postmortem-fixes, not deployed; the live file's corrections are made on `main` before the merge
 - [ ] A deploy restarts only the pilot of the game it affects (ruling 28); on branch feat/postmortem-fixes (`scripts/deploy-pilot.sh`, `scripts/pilot-affected.py`, AGENTS.md §8), not deployed
 
 ## Hosts

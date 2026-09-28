@@ -62,6 +62,18 @@ weak_rate = 0.5         # at or below: "does not stick here"
 open_cap_turns = 20     # an order is followed min(20, max(3, turns left + 3)) turns; policies 20
 open_grace_turns = 3
 
+# Known-false learned rules (docs/design/2026-09-27-postmortem-fixes-design.md, ruling 29): a rule that matches
+# one of these patterns (case-insensitive) is refused, and the model gets the reason. The patterns are the
+# phrases of the false rules the Kublai campaign learned (T546-T565).
+[learned]
+refuse = [
+  { pattern = "double the unit cost", why = "a defender may spend down to the reserve in a city in danger and, under military weakness, in any city (postmortem-fixes ruling 2); saving to twice the price left the defenders the game allowed at T496, T538 and T553 unbought" },
+  { pattern = "save .{0,60}until the balance is double", why = "a defender may spend down to the reserve in a city in danger and, under military weakness, in any city (postmortem-fixes ruling 2); saving to twice the price left the defenders the game allowed at T496, T538 and T553 unbought" },
+  { pattern = "cannot buy land units with faith", why = "false: faith bought land units at T35, T384 and T544, at about half the gold price (read both prices with `price`)" },
+  { pattern = "in danger.{0,60}('not allowed|purchases (there )?are not allowed)", why = "false: 'not allowed' in the defender list was the refusal of units needing a strategic resource we lacked (Oil); a Modern AT or Machine Gun could be bought in those cities. Read each refusal's reason in the briefing (needs 1 Oil, a unit is on the tile)" },
+  { pattern = "not allowed in endangered cities", why = "false: 'not allowed' in the defender list was the refusal of units needing a strategic resource we lacked (Oil); a Modern AT or Machine Gun could be bought in those cities. Read each refusal's reason in the briefing (needs 1 Oil, a unit is on the tile)" },
+]
+
 [metrics]
 # the snapshot's measures (src/pilot/civ6.py metrics); rank:<measure> is our standing among the
 # majors we have met, 1 = best

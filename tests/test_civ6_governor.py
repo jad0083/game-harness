@@ -3039,3 +3039,57 @@ def test_a_price_change_reaches_the_next_decision_after_one_congress_log_read(se
     seen2: list[str] = []
     governor((s, EventLog(s.runs_dir, "civ2", s.model)), other_era, orders_model([], seen=seen2)).run(max_decisions=2)
     assert "Price change" not in seen2[1], "compared within one era only"
+
+
+# ---- postmortem-fixes design, ruling 29: known-false learned rules are refused ---------------------------
+
+LIVE_FALSE_RULES = [       # corpora/civ6/learned/strategy.md of the Kublai campaign (T546-T565), as the model wrote them
+    ("When a city is lost, check if the remaining cities are IN DANGER; if they are only THREATENED, the 50% treasury "
+     "cap applies to gold purchases, so save gold until the balance is double the unit cost rather than interrupting "
+     "current defensive production."),
+    "A city IN DANGER shows its defender purchase as 'not allowed' -> buy defenders in the nearest cities that allow it",
+    ("A city is IN DANGER but purchases there are 'not allowed now' -> spend gold and faith on defenders in the "
+     "nearest safe cities"),
+    "A city IN DANGER where purchases are not allowed -> buy defenders with gold in the neighbouring safe cities",
+    "Defenders are not allowed in endangered cities -> buy them next door",
+    "We cannot buy land units with faith, so faith goes to buildings and Rock Bands",
+]
+
+
+def test_known_false_learned_rules_are_refused_with_their_reason(tmp_path):
+    """S6: four learned rules codified the defender-list misreading and one codified the cap as a saving
+    rule, which the model then followed (T556)."""
+    from pilot.learning import LearnedStore, LearningRejected
+    store = LearnedStore(tmp_path / "civ6", "m", "r")
+    store.refuse = SPEC.learned_refuse
+    for rule in LIVE_FALSE_RULES:
+        with pytest.raises(LearningRejected, match="^refused:"):
+            store.add_rule(rule, "strategy review")
+    with pytest.raises(LearningRejected, match="spend down to the reserve"):
+        store.add_rule("save gold until the balance is double the unit cost", "T555")
+    assert store.add_rule("A city in danger with a Modern AT allowed at 1,160 faith -> buy it at once", "T541").startswith(
+        "rule recorded")
+    assert store.add_rule("A defender that is not allowed for lack of Oil -> buy a Machine Gun, which needs none",
+                          "T566").startswith("rule recorded"), "the refusal's reason is a true rule"
+
+
+def test_the_governor_refuses_them_and_no_learned_file_holds_one(setup):
+    import re
+    g = governor(setup, FakeCiv6(FIXTURE, index=INDEX), orders_model([]))
+    assert g.store.refuse == SPEC.learned_refuse and len(SPEC.learned_refuse) == 5
+    for game in ("civ6", "stellaris", "galciv4"):
+        spec = load_pillars(REPO / "corpora" / game) if (REPO / "corpora" / game / "pillars.toml").exists() else None
+        for f in (REPO / "corpora" / game / "learned").glob("*.md") if spec else ():
+            text = f.read_text(encoding="utf-8")
+            hits = [p for p, _ in spec.learned_refuse if re.search(p, text, re.IGNORECASE)]
+            assert not hits, f"{f.relative_to(REPO)} holds a refused rule: {hits}"
+
+
+def test_a_bad_refusal_list_names_its_key(tmp_path):
+    from pilot.pillars import PillarsError
+    corpus = tmp_path / "civ6"
+    shutil.copytree(REPO / "corpora/civ6", corpus, ignore=shutil.ignore_patterns("learned", "lua"))
+    text = (corpus / "pillars.toml").read_text()
+    (corpus / "pillars.toml").write_text(text.replace('pattern = "double the unit cost"', 'pattern = "double (the"'))
+    with pytest.raises(PillarsError, match=r"learned.refuse\[0\].pattern"):
+        load_pillars(corpus)

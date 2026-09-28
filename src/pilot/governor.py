@@ -555,6 +555,7 @@ class Governor:
             self.pillars_error = str(e) if isinstance(e, PillarsError) else f"{type(e).__name__}: {e}"
             log.emit("strategy_disabled", error=self.pillars_error[:500])
         log.state.info["pillars"] = self.pillars.public() if self.pillars else None
+        self.store.refuse = self.pillars.learned_refuse if self.pillars else ()   # known-false rules (ruling 29)
         self._unsupported: set[str] = set()       # action kinds already logged as "not supported"
         text = (settings.corpus_dir / "pilot.md").read_text(encoding="utf-8")
         text += "\n\n" + strategy_core((settings.corpus_dir / "strategy.md").read_text(encoding="utf-8"))

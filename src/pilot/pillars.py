@@ -37,7 +37,7 @@ MARKET_KINDS = ("internal", "galactic")
 _ACTION_REQUIRED = {**dict.fromkeys(ID_LIST_KINDS, ("max_items", "ids_from_corpus")),
                     "purchase": ("max_items", "ids_from_corpus", "gold_reserve", "treasury_share"),
                     "market": ("max_items", "resources_from_manifest", "amount_max")}
-_TOP_KEYS = {"strategy", "metrics", "pillars", "actions", "weights", "orders", "time", "peers"}
+_TOP_KEYS = {"strategy", "metrics", "pillars", "actions", "weights", "orders", "time", "peers", "learned"}
 _TIME_KEYS = {"unit", "review_cap", "review_exempt", "milestone_lookback", "score_horizon", "buildup_window"}
 _PEERS_KEYS = {"behind", "last_min_peers"}
 TIME_UNITS = ("months", "turns")      # one step of the game's clock (postmortem-fixes design, ruling 19)
@@ -236,6 +236,9 @@ class PillarSpec:
     # words a goal may not name because no order can pursue them ([strategy] unpursuable; Civ VI:
     # diplomacy, which the game's AI handles during autoplay; postmortem-fixes design, ruling 25)
     unpursuable: tuple[str, ...] = ()
+    # known-false learned rules ([learned] refuse: (regex, why); postmortem-fixes design, ruling 29): a
+    # rule that matches one is refused and the model gets the reason
+    learned_refuse: tuple[tuple[str, str], ...] = ()
 
     @property
     def ids(self) -> tuple[str, ...]:
@@ -674,6 +677,31 @@ def _relative(path: Path, t, names: list[str], pillars: dict) -> RelativeSpec:
     return RelativeSpec(pillar=t["pillar"], metric=t["metric"], relative=tuple(rel), rank_min_peers=peers, **vals)
 
 
+def _learned(path: Path, t) -> tuple[tuple[str, str], ...]:
+    """`[learned] refuse = [{pattern, why}]`: case-insensitive regular expressions and their reasons."""
+    if not isinstance(t, dict):
+        raise _err(path, "learned", "must be a table")
+    _unknown(path, "learned", t, {"refuse"})
+    raw = t.get("refuse", [])
+    if not isinstance(raw, list):
+        raise _err(path, "learned.refuse", "must be a list of {pattern, why} tables")
+    out = []
+    for i, e in enumerate(raw):
+        where = f"learned.refuse[{i}]"
+        if not isinstance(e, dict):
+            raise _err(path, where, "must be a {pattern, why} table")
+        _unknown(path, where, e, {"pattern", "why"})
+        for k in ("pattern", "why"):
+            if not isinstance(e.get(k), str) or not e[k].strip():
+                raise _err(path, f"{where}.{k}", "required text")
+        try:
+            re.compile(e["pattern"], re.IGNORECASE)
+        except re.error as err:
+            raise _err(path, f"{where}.pattern", f"not a regular expression: {err}") from None
+        out.append((e["pattern"], e["why"].strip()))
+    return tuple(out)
+
+
 def _parse(path: Path, corpus: Path) -> PillarSpec:
     try:
         raw = tomllib.loads(path.read_text(encoding="utf-8"))
@@ -766,8 +794,9 @@ def _parse(path: Path, corpus: Path) -> PillarSpec:
                                                      for w in unpursuable):
         raise _err(path, "strategy.unpursuable", "must be a list of lowercase words")
     peers = _peers(path, raw["peers"]) if "peers" in raw else None
+    learned = _learned(path, raw["learned"]) if "learned" in raw else ()
     return PillarSpec(game=corpus.name, weights=weights, orders=orders, milestone_exclude=tuple(exclude), time=time,
-                      relative=relative, peers=peers, unpursuable=tuple(unpursuable),
+                      relative=relative, peers=peers, unpursuable=tuple(unpursuable), learned_refuse=learned,
                       pillars=types.MappingProxyType(pillars), metrics=tuple(names),
                       metric_aliases=types.MappingProxyType(aliases), row_keys=types.MappingProxyType(row_keys),
                       peer_keys=types.MappingProxyType(peer_keys),

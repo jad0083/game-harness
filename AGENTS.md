@@ -473,6 +473,10 @@ Rules:
 - A defender's price that moved 25% or more since the last decision (one era) is a prompt line, with
   the World Congress resolution named from one `log-tail World_Congress.csv` read ("gold unit prices halved
   since T543 ...; this may end at the next World Congress session"; postmortem-fixes design, ruling 6).
+- Learned rules matching `[learned] refuse` in `corpora/civ6/pillars.toml` are refused with their reason
+  (saving to double the unit cost, "cannot buy land units with faith", "not allowed" in cities in danger);
+  a test keeps those phrases out of `corpora/*/learned/*.md`, so correct such a rule before committing the
+  live learned file (postmortem-fixes design, ruling 29).
 - Each `turn` event logs the turns that passed and those requested; an autoplay that passed more emits
   `turn_overrun` and the next snapshot checks for the end first; traces keep whole prompts up to 100,000
   characters (postmortem-fixes design, ruling 27).

@@ -202,9 +202,15 @@ class LearnedStore:
             with open(path, "a", encoding="utf-8") as f:
                 f.write(f"\n- {text.strip()}  \n  _why:_ {why.strip()} _({self.model}, {time.strftime('%Y-%m-%d')})_\n")
 
+    # known-false rules of this game (pillars.toml [learned] refuse: (regex, why); set by the governor)
+    refuse: tuple[tuple[str, str], ...] = ()
+
     def add_rule(self, rule: str, why: str) -> str:
         if len(rule) < 15:
             raise LearningRejected("state the rule as a full sentence (situation -> choice)")
+        for pattern, reason in self.refuse:          # postmortem-fixes design, ruling 29
+            if re.search(pattern, rule, re.IGNORECASE):
+                raise LearningRejected(f"refused: {reason}")
         self._append_note("strategy.md", "Learned strategy rules", rule, why)
         self._ledger("rule", rule[:60], why=why)
         return "rule recorded in learned/strategy.md"
