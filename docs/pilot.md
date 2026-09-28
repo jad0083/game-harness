@@ -514,7 +514,8 @@ running pilot (whose own dashboard is on `PILOT_PORT`, 8790, on 127.0.0.1). It r
   when another model answered). Stellaris puts the directive before the reason ("Kept diplomacy
   first"). Civ VI's orders show as fate chips, the only pills on the page: ✓ held or completed,
   ↺ replaced by the AI → what it chose, ✕ refused (the reason in the chip's title), ? no reply,
-  ⋯ in force; one line with "+N" on a desktop, counts per fate on a phone. The outcome line uses
+  ⋯ in force (only while the order record still follows it; an order from before the record reads
+  "took, not followed"); one line with "+N" on a desktop, counts per fate on a phone. The outcome line uses
   the game's outcome keys and unit ("12 turns later: score +17, military −226 ▲ watch"; a drop past
   the view's `watch` threshold is flagged). A decision whose model calls all failed reads "No
   decision:" with the cause. *Problems only* keeps errors, refused orders and failed directives.

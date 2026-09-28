@@ -406,14 +406,16 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
                 later = [x for x in order_rows if x.get("ordered") == r["date"] and x.get("id") == p["id"]
                          and (x.get("city") or "").lower() == p["city"].lower()
                          and x.get("order_kind") in (p["kind"], "purchase" if p["kind"] == "production" else p["kind"])]
-                row = later[-1] if later else None
+                resolved = [x for x in later if not x.get("open")]
+                row = resolved[-1] if resolved else None
                 ids = [i.strip() for i in p["id"].split(",")] if p["kind"] == "policies" else [p["id"]]
                 out.append({**p, "name": ", ".join(str(names.name(game, i)) for i in ids if i),
                             "text": o.get("order"), "outcome": o.get("outcome"),
                             "fate": fate(o.get("outcome"), row.get("result") if row else None, kind=p["kind"],
                                          by=", ".join(str(names.name(game, b.strip())) for b in (row.get("by") or "").split(",")
                                                       if b.strip()) if row else "",
-                                         detail=(row or {}).get("detail") or "")})
+                                         detail=(row or {}).get("detail") or "",
+                                         followed=any(x.get("open") for x in later))})
             r["orders"] = out
         return rows
 
@@ -436,6 +438,13 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
         """The order record rows of the decisions' campaigns and the model-call events of their runs."""
         cids = sorted({r["campaign_id"] for r in rows if r.get("campaign_id")})
         order_rows = [x for c in cids for x in await asyncio.to_thread(need_tel().campaign_events, c, "order_outcome")]
+        # orders the record still follows (an order_followed ref not resolved yet): only these are "in force"
+        done = {x.get("ref") for x in order_rows if x.get("ref")}
+        for c in cids:
+            for f in await asyncio.to_thread(need_tel().campaign_events, c, "order_followed"):
+                if f.get("ref") and f["ref"] not in done and isinstance(f.get("row"), dict):
+                    done.add(f["ref"])
+                    order_rows.append({**f["row"], "result": None, "open": True})
         run_ids = sorted({r["run_id"] for r in rows})
         calls = []
         if run_ids:

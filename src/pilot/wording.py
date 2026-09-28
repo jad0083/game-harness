@@ -150,10 +150,12 @@ _RESULT = {"completed": ("held", "completed"), "held": ("held", "held"), "took":
            "locked": ("gone", "locked by the game"), "no_op": ("gone", "nothing to do"), "done": ("held", "done")}
 
 
-def fate(apply_outcome, result=None, *, kind: str = "", by: str = "", detail: str = "") -> dict:
+def fate(apply_outcome, result=None, *, kind: str = "", by: str = "", detail: str = "", followed: bool = True) -> dict:
     """An order's fate: {key, symbol, word, why}. `apply_outcome` is what the decision's trace says
     when the order was sent ("stuck", "refused: …", "unknown: no reply …"); `result` the order
-    record's later outcome, if any (completed, held, overridden, refused, lost, unknown, ...)."""
+    record's later outcome, if any (completed, held, overridden, refused, lost, unknown, ...);
+    `followed` whether the record still follows it: a stuck order nobody follows (a trace from before
+    the order record) took, and is not "in force" for ever."""
     out = str(apply_outcome or "")
     why = ""
     if result in _RESULT:
@@ -165,7 +167,8 @@ def fate(apply_outcome, result=None, *, kind: str = "", by: str = "", detail: st
         elif detail:
             why = cause(detail)
     elif out == "stuck":
-        key, word = ("held", "completed") if kind == "purchase" else ("open", "in force")
+        key, word = (("held", "completed") if kind == "purchase" else ("open", "in force") if followed
+                     else ("held", "took, not followed"))
     elif out.startswith("refused"):
         key, word, why = "refused", "refused", re.sub(r"^refused(?: by the game)?:\s*", "", out)
     elif out.startswith("unknown"):

@@ -38,6 +38,9 @@ def civ6_run(tmp_path):
                                    "kind": "civic", "id": "civic:foreign_trade", "city": "", "by": "governor"}]})
     log.emit("order_outcome", order_kind="production", key="production replace", id="unit:slinger", city="Chengdu",
              ordered="T41", result="overridden", by="unit:trader", turns=2, date="T43", turn=43)
+    log.emit("order_followed", ref="w1", row={"order_kind": "research", "key": "research", "id": "tech:writing", "city": "",
+                                              "ordered": "T41", "ref": "w1"},
+             order={"kind": "research", "id": "tech:writing"}, wire=None, expect={}, base={"turn": 41}, window=8)
     time.sleep(0.01)          # events are stamped to the millisecond: a model call comes after the last decision
     log.emit("model_retry", error="model gemini-3.8-flash answered 503", delay=5, attempt=1)
     log.emit("model_retry", error="model gemini-3.8-flash answered 503", delay=15, attempt=2)
@@ -132,4 +135,28 @@ def test_a_directives_policy_report_reaches_the_page(tmp_path):
             d = await (await c.get("/api/decision?run=20260927-120000&episode=1")).json()
             assert d["applied"] == want                                   # Reasoning has it too
     asyncio.run(go())
+    log.close()
+
+
+def test_an_order_is_in_force_only_while_the_record_follows_it(tmp_path):
+    """Traces from before the order record have no follow-up rows: their stuck orders took but were not
+    followed, and must not read "in force" for ever (about 100 of them on the live campaign); an order
+    the record still follows is in force, and one it resolved has its result."""
+    runs, tel, log = civ6_run(tmp_path)
+    log.save_trace(4, {"episode": 4, "date": "T56", "decision": "orders", "reason": "Pottery.", "outcome": "stuck",
+                       "steps": [], "orders": [{"order": "research tech:pottery", "outcome": "stuck"},
+                                               {"order": "civic civic:code_of_laws", "outcome": "stuck", "kind": "civic",
+                                                "id": "civic:code_of_laws", "city": ""}]})
+
+    async def go():
+        async with TestClient(TestServer(make_app(None, runs, tel, corpora=CORPORA))) as c:
+            return await (await c.get("/api/decisions?campaign=civ6/kublai")).json()
+    rows = asyncio.run(go())
+    old = [(o["name"], o["fate"]["key"], o["fate"]["word"]) for o in rows[-1]["orders"]]
+    assert old == [("Pottery", "held", "took, not followed"), ("Code of Laws", "held", "took, not followed")]
+    assert ("Writing", "open", "in force") in [(o["name"], o["fate"]["key"], o["fate"]["word"]) for o in rows[0]["orders"]]
+    log.emit("order_outcome", order_kind="research", key="research", id="tech:writing", city="", ordered="T41",
+             result="completed", turns=3, date="T44", turn=44, ref="w1")
+    rows = asyncio.run(go())
+    assert ("Writing", "held", "completed") in [(o["name"], o["fate"]["key"], o["fate"]["word"]) for o in rows[0]["orders"]]
     log.close()
