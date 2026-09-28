@@ -94,3 +94,21 @@ def test_civ6_settings_follow_the_game(browser, live_servers):
     assert page.is_visible("#pace-months") and page.input_value("#pace-months") == "5"
     assert page.text_content("#pace-unit") == "turns"
     w.context.close()
+
+
+def test_a_streamed_turn_keeps_the_rivals_names(browser, live_servers):
+    """A metrics row from the live stream carries raw ids (CIVILIZATION_GERMANY): the table must still
+    read Germany after the next turn arrives, not until the next decision reloads the campaign."""
+    from uikit import CIV6_METRICS
+    w = open_context(browser, "desktop-light", live_servers)
+    load(w)
+    page = w.page
+    log = live_servers["log"]
+    row = {**CIV6_METRICS[-1], "date": "T58", "turn": 58}
+    live_servers["live"].call(log.emit, "metrics", **row)
+    page.wait_for_function("() => document.getElementById('nb').textContent.includes('Germany')", timeout=5000)
+    page.wait_for_timeout(2500)
+    rows = page.eval_on_selector_all("#nb tbody tr", "rs => rs.map(r => r.querySelector('.who b').textContent)")
+    assert rows == ["Germany", "Netherlands", "Australia"], rows
+    assert "CIVILIZATION_" not in page.text_content("main")
+    w.context.close()

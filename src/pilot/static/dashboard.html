@@ -2962,6 +2962,19 @@ function ordersSoon() {
   }, 1500);
 }
 const refreshSoon = () => { clearTimeout(refreshTimer); refreshTimer = setTimeout(async () => { await loadCampaigns(); await loadCampaignData(); }, 400); };
+// The campaign's metrics again, with readable names (api_metrics' readable_rows), shortly after a
+// streamed row; several rows in a burst make one request.
+let metricsT;
+function metricsSoon() {
+  clearTimeout(metricsT);
+  metricsT = setTimeout(async () => {
+    const cid = S.campaign;
+    try {
+      const ms = await api("/api/metrics?campaign=" + encodeURIComponent(cid));
+      if (cid === S.campaign) { S.metrics = ms; renderChart(); }
+    } catch { /* the streamed rows stay */ }
+  }, 800);
+}
 function onEvent(ev) {
   S.lastOk = Date.now();
   if (!isNew(ev)) return;
@@ -2975,6 +2988,7 @@ function onEvent(ev) {
   if (ev.kind === "metrics" && S.campaign === (S.status.info || {}).campaign) {
     S.metrics.push({ ...ev, month: monthOf(ev.date) });
     renderChart();
+    metricsSoon();          // the stream's row carries raw ids (CIVILIZATION_GERMANY): the API's has names
   }
   if (ev.kind !== "metrics") loadStatus();
 }
