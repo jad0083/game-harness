@@ -23,7 +23,7 @@ from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import ClassVar, Literal, Protocol
+from typing import Any, ClassVar, Literal, Protocol
 
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent, RunContext, Tool
@@ -716,6 +716,35 @@ class Governor:
                 self.log.emit("model_fallback", role=role, model=entry["model"],
                               error=f"{type(e).__name__}: {e}"[:300], fallback=order[i + 1]["model"])
         raise RuntimeError(f"no models for {role}")
+
+    def _retry_models(self) -> list[dict]:
+        """The models a failed decision is retried on, once (postmortem-fixes design, ruling 20): the
+        strategy role's own, not cooling down. None when the role has no models of its own: the
+        decision models that just failed are not tried again."""
+        own = "strategy" in self._role_objs or bool(((self.s.roles or {}).get("strategy") or {}).get("models"))
+        if not own:
+            return []
+        failed, now = self.__dict__.setdefault("_failed_at", {}), time.time()
+        return [e for e in self._pool("strategy") if now - failed.get(e["model"], 0) >= self.s.model_cooldown_s]
+
+    def _retry_decision(self, ask) -> tuple[Any, dict] | None:
+        """Ruling 20's retry of a decision every decisions model failed (an outage, the request limit):
+        `ask(agent)` with the decisions agent on each `_retry_models` entry in turn, each tried once
+        (no overload waits). (result, entry), or None when none answered. T512, T522 and T525 failed on
+        503s and the request limit, and nothing retried: a retry on another model tells a provider
+        outage from a model that spends its budget on tool calls."""
+        failed = self.__dict__.setdefault("_failed_at", {})
+        for entry in self._retry_models():
+            try:
+                result = ask(self._agent_for(entry, "decisions"))
+            except Exception as e:  # noqa: BLE001 - the next model, then the caller's rules
+                failed[entry["model"]] = time.time()
+                self.log.emit("model_fallback", role="decisions retry", model=entry["model"],
+                              error=f"{type(e).__name__}: {e}"[:300], fallback=None)
+                continue
+            failed.pop(entry["model"], None)
+            return result, entry
+        return None
 
     def set_roles(self, roles: dict) -> None:
         """Give roles their own models ({role: {"models", "rotate"}}); None = use the decision models."""

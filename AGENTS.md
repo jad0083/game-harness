@@ -450,6 +450,10 @@ Rules:
 - The order record keys purchases by item class and currency (`purchase unit faith`...) and shows them
   as counts only ("unit purchases: 0 sent; 1 refused by the harness (cap 1)"); refused purchase rows
   carry `refusal` and `refused_by` (postmortem-fixes design, ruling 9).
+- A decision whose models all fail retries once on the Strategy role's own models ("Answer now, with at
+  most 3 tool calls."), then the governor acts by rule before any autoplay: idle research and civic,
+  empty queues of ungarrisoned cities, and under military weakness one rule-based defender
+  (postmortem-fixes design, ruling 20). Give the Strategy role a model of its own from another provider.
 - Triggers (postmortem-fixes design, rulings 10-14): falling behind the met majors (`[peers] behind`),
   a neighbour's buildup (2 x ours, +50% in 20 turns), gold per turn negative, loyalty falling toward a
   flip, and at war a decision at every hand-back while a city in danger has no unit on its tile and a

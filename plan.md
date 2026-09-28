@@ -182,7 +182,7 @@
 - [ ] Stellaris neighbour-buildup trigger (ruling 11); on branch feat/postmortem-fixes, not deployed
 - [ ] Civ VI rule-based defender buy before each multi-turn stretch; what the AI spent between decisions (rulings 3, 4); on branch feat/postmortem-fixes, not deployed (the `AI_CityBuild.csv` layout is unverified live)
 - [ ] Civ VI re-send of a lost purchase only when the read-back proves nothing was spent (ruling 5); on branch feat/postmortem-fixes, not deployed
-- [ ] A failed decision retries with the strategy model, then acts by rule before autoplay (ruling 20)
+- [ ] A failed decision retries with the strategy model, then acts by rule before autoplay (ruling 20); on branch feat/postmortem-fixes, not deployed (Civ VI; Stellaris keeps its directive)
 - [ ] Civ VI relative military milestones (military ÷ median, ÷ strongest non-ally) (ruling 18); on branch feat/postmortem-fixes, not deployed
 - [ ] Civ VI: name who declared each war; no diplomacy goals until an order exists (rulings 24, 25)
 - [ ] End the run when the empire is gone (Civ VI: not alive, or 0 cities and 0 settlers twice; Stellaris: 0 planets twice), with a report and a "lost" state (rulings 21-23); on branch feat/postmortem-fixes, not deployed (the dashboard's "lost" rendering is feat/dashboard-v2's)

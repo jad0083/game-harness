@@ -105,6 +105,8 @@ from .trace import serialize
 
 ORDER_RECORD_HEADING = "Order record in this campaign (held until done / replaced by the AI):"
 RESEND_NOTE = "sent again after a lost reply (nothing spent, proved)"
+RETRY_NOTE = "Answer now, with at most 3 tool calls."     # a failed decision's retry (postmortem-fixes ruling 20)
+BY_RULE = "no answer from the model: the governor acted by rule"
 
 INSTRUCTIONS = """You are the governor of a Civilization VI civilization. The game's own AI plays it turn by
 turn (units, tiles, city management, district and wonder placement, diplomacy) during stretches of
@@ -1346,21 +1348,32 @@ class Civ6Governor(Governor):
         return [kind for kind in self._idle_kinds(b) if kind not in valid]
 
     def _fill_without_answer(self, b: dict, error: str) -> list[dict]:
-        """Ruling 16's fallback when the decision got no answer (an outage, the usage limit, every model
-        of the pool failing): it needs no model, so an idle research or civic is still filled. The
-        orders are applied and reported like a decision's; earlier reports and did-not-stick keys
-        are kept, since no model has seen them yet."""
+        """The fallback when the decision got no answer, its retry included (an outage, the usage limit,
+        every model failing; postmortem-fixes ruling 20): it needs no model, so an idle research or
+        civic is still filled (levers ruling 16), empty queues of ungarrisoned cities get a defender
+        and, while the weakness test holds, ruling 3's defender is bought for the city most in need (in
+        danger first; `rule_buy` in [actions.purchase]). At T525, the only pre-war window, 2,278 faith
+        and a Machine Gun at 1,080 went unused when the decision failed. The orders are applied and
+        reported like a decision's; earlier reports and did-not-stick keys are kept, since no model
+        has seen them yet."""
         orders = [o for kind in self._idle_kinds(b) if (o := self._fill(b, kind)) is not None]
         orders += self._production_fills(b, set())             # ruling 3 (L15): empty queues under weakness
+        buy, weak = self._buy_limits(), self._weak_now(b)
+        if buy is not None and buy.rule_buy and weak:
+            order, why = rule_buy_order(b, self.index, buy, self._defender_buys(), weak)
+            if order is not None:
+                orders.append(order)
+            else:
+                self.log.emit("rule_buy", turn=b.get("turn"), orders=[], note=f"{BY_RULE}; nothing bought: {why}")
         if not orders:
             return []
         report, failed = self._report, self._failed_last
-        d = Civ6Decision(orders=orders, reason="no answer from the model: the governor filled what stood idle")
+        d = Civ6Decision(orders=orders, reason=BY_RULE)
         outcomes, _ = self._apply(d, b, {order_key(o.model_dump()) for o in orders}, {})
         self._report, self._failed_last = report + self._report, failed | self._failed_last
         summary = "; ".join(f"{o['order']}: {o['outcome']}" for o in outcomes)
-        self.log.state.last_decision = f"{b['date']}: {summary} — no answer from the model"
-        self.journal.note(f"No answer from the model ({error[:120]}); {summary}", b["date"])
+        self.log.state.last_decision = f"{b['date']}: {summary} — {BY_RULE}"
+        self.journal.note(f"No answer from the model ({error[:120]}): the governor acted by rule: {summary}", b["date"])
         return outcomes
 
     def _fill(self, b: dict, kind: str) -> Civ6Order | None:
@@ -1418,23 +1431,32 @@ class Civ6Governor(Governor):
         base = {"episode": n, "model": self.s.model, "thinking_level": self.s.governor_thinking, "game": self.s.game,
                 "date": b["date"], "trigger": reason, "current": None}
 
-        def ask(agent):
-            return agent.run_sync("\n".join(p for p in prompt if p), deps=deps,
+        def ask(agent, note: str = ""):
+            return agent.run_sync("\n".join(p for p in [*prompt, note] if p), deps=deps,
                                   usage_limits=UsageLimits(request_limit=self.s.governor_max_requests))
+        retried: dict = {}
+        retry_entry: dict | None = None           # the strategy model that answered a failed decision's retry
         try:
             result, _ = self._call("decisions", ask,
                                    on_try=lambda e: base.update(model=e["model"], thinking_level=e["thinking"]))
-        except Exception as e:  # noqa: BLE001 - keep playing: the AI carries on (idle research/civic filled)
+        except Exception as e:  # noqa: BLE001 - keep playing: a retry, then the governor acts by rule
             if isinstance(e, UsageLimitExceeded):
                 e = RuntimeError(f"no answer within {self.s.governor_max_requests} model calls; no orders given")
-            self.log.emit("episode_error", error=f"{type(e).__name__}: {e}"[:500])
-            self._resolved = pending + self._resolved
-            filled = self._fill_without_answer(b, f"{type(e).__name__}: {e}")
-            self.log.save_trace(n, {**base, "outcome": "error", "error": f"{type(e).__name__}: {e}"[:2000],
-                                    "seconds": round(time.time() - started, 1),
-                                    **({"orders": filled} if filled else {}),
-                                    "steps": [{"type": "prompt", "text": "\n".join(prompt)}]})
-            return
+            error = f"{type(e).__name__}: {e}"
+            self.log.emit("episode_error", error=error[:500])
+            got = self._retry_decision(lambda agent: ask(agent, RETRY_NOTE))       # ruling 20
+            if got is None:
+                self._resolved = pending + self._resolved
+                filled = self._fill_without_answer(b, error)
+                self.log.save_trace(n, {**base, "outcome": "error", "error": error[:2000],
+                                        "seconds": round(time.time() - started, 1),
+                                        **({"orders": filled} if filled else {}),
+                                        "steps": [{"type": "prompt", "text": "\n".join(prompt)}]})
+                return
+            result, retry_entry = got
+            base.update(model=retry_entry["model"], thinking_level=retry_entry["thinking"])
+            retried = {"retried_on": retry_entry["model"], "first_error": error[:500]}
+            self.log.emit("decision_retry", model=retry_entry["model"], date=b["date"], error=error[:300])
         d, usage = result.output, result.usage
         base["model_version"] = served_model(result)
         st = self.log.state
@@ -1453,10 +1475,13 @@ class Civ6Governor(Governor):
             corrective = (f"Your answer was incomplete: {ask_again}. Return your whole decision again with "
                           f"{' and '.join(f'a {k} order' for k in idle)} added; otherwise the governor fills it from "
                           "the strategy's preferred list.")
+
+            def correct(agent):
+                return agent.run_sync(corrective, deps=deps, message_history=result.all_messages(),
+                                      usage_limits=UsageLimits(request_limit=self.s.governor_max_requests))
             try:
-                again, _ = self._call("decisions", lambda agent: agent.run_sync(
-                    corrective, deps=deps, message_history=result.all_messages(),
-                    usage_limits=UsageLimits(request_limit=self.s.governor_max_requests)))
+                again = (self._call("decisions", correct)[0] if retry_entry is None
+                         else correct(self._agent_for(retry_entry, "decisions")))
                 u2 = again.usage
                 st.tokens_in += u2.input_tokens or 0
                 st.tokens_out += u2.output_tokens or 0
@@ -1485,7 +1510,7 @@ class Civ6Governor(Governor):
         self.log.save_trace(n, {**base, "decision": decision, "reason": d.reason, "outcome": summary[:2000],
                                 "orders": outcomes, "serves": d.serves, "seconds": round(time.time() - started, 1),
                                 "tokens_in": tokens_in, "tokens_out": tokens_out, "retried_for": idle or None,
-                                "steps": serialize(result.all_messages())})
+                                **retried, "steps": serialize(result.all_messages())})
         self.store.add_episode(reason, f"{summary}: {d.reason}", "applied" if applied else "kept", b["date"])
         self.journal.note(f"{summary} — {d.reason}", b["date"])
         if d.note:

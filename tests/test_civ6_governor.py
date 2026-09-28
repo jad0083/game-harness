@@ -2801,3 +2801,97 @@ def test_a_re_send_waits_for_the_engine_and_goes_through_the_checks_again(setup)
     assert urgent == [] and _purchases(game) == [] and g._resend == []
     out = next(e for e in g.log.recent if e["kind"] == "order_resend")["orders"][0]["outcome"]
     assert "already has unit:infantry on its tile" in out
+
+
+# ---- postmortem-fixes design, ruling 20: a failed decision retries, then acts by rule ------------------
+
+def _t525() -> dict:
+    """T525 (treasury-4): at peace under military weakness, 2,278 faith, a Machine Gun at 1,080 faith
+    allowed in Guangzhou (no unit on its tile); the decision failed on 503s and nothing was bought."""
+    gz = {**_calm_city("Guangzhou", [MG_BOTH]), "capital": False}
+    return {**FIXTURE, "turn": 525, "gold": 1630, "faith": 2278, "military": 471, "majors": WEAK_MAJORS, "wars": [],
+            "yields": {**FIXTURE["yields"], "gold": 272, "faith": 226}, "cities": [gz], "resources": {"RESOURCE_OIL": 0}}
+
+
+def _overloaded(calls: list):
+    from pydantic_ai.exceptions import ModelHTTPError
+
+    def respond(messages, info):
+        if is_review(info):
+            return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name,
+                                                     {"change": False, "assessment": "n/a", "rules": []})])
+        calls.append("decide")
+        raise ModelHTTPError(503, "gemini-flash", "high demand")
+    return FunctionModel(respond)
+
+
+def _strategist_model(calls: list, answer: dict | None):
+    """The strategy role's model: reviews answer 'no change'; a decision is answered with `answer` (the
+    retry of ruling 20), or fails with a 503 when None."""
+    from pydantic_ai.exceptions import ModelHTTPError
+
+    def strategist(messages, info):
+        if is_review(info):
+            calls.append("review")
+            return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name,
+                                                     {"change": False, "assessment": "n/a", "rules": []})])
+        calls.append("retry: " + str(getattr(messages[-1].parts[-1], "content", ""))[-40:])
+        if answer is None:
+            raise ModelHTTPError(503, "gemini-pro", "high demand")
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, answer)])
+    return FunctionModel(strategist)
+
+
+def _resilience_governor(setup, game, decide_calls, strategist=None) -> Civ6Governor:
+    s, log = setup
+    s.retry_delays, s.autoplay_chunk = (0, 0), 3
+    g = Civ6Governor(s, game, log, model=_overloaded(decide_calls),
+                     role_models={"strategy": strategist} if strategist else None)
+    g.status_poll_s, g.start_grace_s, g.turn_deadline_s, g.end_watch_s = 0, 0.05, 0.5, 0
+    return g
+
+
+def test_t525_a_failed_decision_retries_on_the_strategy_model_then_buys_by_rule_before_autoplay(setup):
+    decide, strat = [], []
+    game = FakeCiv6(_t525(), index=INDEX, prices={("Guangzhou", "unit:machine_gun", "faith"): 1080})
+    g = _resilience_governor(setup, game, decide, _strategist_model(strat, None))
+    g.run(max_decisions=1)
+    assert decide == ["decide"] * 3, "the decision models: one call and two overload retries"
+    retries = [c for c in strat if c.startswith("retry")]
+    assert len(retries) == 1 and retries[0].endswith("Answer now, with at most 3 tool calls."), strat
+    purchases = [(a[1], i) for i, a in enumerate(game.actions) if a[0] == "order" and a[1]["kind"] == "purchase"]
+    assert [(o["city"], o["id"], o["currency"]) for o, _ in purchases] == [("Guangzhou", "unit:machine_gun", "faith")]
+    first_autoplay = next((i for i, a in enumerate(game.actions) if a[0] == "autoplay"), len(game.actions))
+    assert purchases[0][1] < first_autoplay, "bought before any autoplay"
+    first = traces(setup)[0]
+    assert first["outcome"] == "error" and first["orders"][0]["by"] == "governor"
+    assert "no answer from the model: the governor acted by rule" in g.log.state.last_decision
+    s, _ = setup
+    assert "the governor acted by rule" in s.journal.read_text()
+
+
+def test_a_retry_that_answers_is_the_decision(setup):
+    decide, strat = [], []
+    answer = {"orders": [{"kind": "purchase", "city": "Guangzhou", "id": "unit:machine_gun", "currency": "faith"}],
+              "reason": "the strategy model answered"}
+    game = FakeCiv6(_t525(), index=INDEX, prices={("Guangzhou", "unit:machine_gun", "faith"): 1080})
+    g = _resilience_governor(setup, game, decide, _strategist_model(strat, answer))
+    g.run(max_decisions=1)
+    first = traces(setup)[0]
+    assert first["reason"] == "the strategy model answered" and first["orders"][0]["outcome"] == "stuck"
+    assert first["retried_on"] and "503" in first["first_error"]
+    assert not any(o.get("by") == "governor" for o in first["orders"])
+
+
+def test_without_strategy_models_the_failed_models_are_not_tried_again(setup):
+    decide: list = []
+    game = FakeCiv6(_t525(), index=INDEX, prices={("Guangzhou", "unit:machine_gun", "faith"): 1080})
+    g = _resilience_governor(setup, game, decide)
+    g.run(max_decisions=1)
+    assert decide == ["decide"] * 3, "no retry on the models that just failed"
+    assert [a[1]["id"] for a in game.actions if a[0] == "order" and a[1]["kind"] == "purchase"] == ["unit:machine_gun"]
+    calm = FakeCiv6({**_t525(), "majors": [], "military": 5000}, index=INDEX)
+    s, _ = setup
+    g2 = _resilience_governor((s, EventLog(s.runs_dir, "civ2", s.model)), calm, [])
+    g2.run(max_decisions=1)
+    assert not any(a[0] == "order" and a[1]["kind"] == "purchase" for a in calm.actions), "no weakness: no rule buy"

@@ -322,8 +322,18 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   (`last_stand_off`).
 - **Blockers**: with no research or no civic in progress and no valid order for it, the governor asks
   the model once more; if the answer still has none, it orders the strategy's first preferred item
-  the game offers (else the first offered) and reports it "filled by the governor". A decision whose
-  model call fails (an outage, the usage limit, every model of the pool) fills them the same way.
+  the game offers (else the first offered) and reports it "filled by the governor".
+- **A decision with no answer** (postmortem-fixes design, ruling 20): when every decisions model
+  fails (an outage, the usage limit; an `episode_error`), the same hand-back retries once, before any
+  autoplay, with the decisions agent on the Strategy role's own models (those not cooling down), the
+  same prompt plus "Answer now, with at most 3 tool calls." (a `decision_retry` event; the trace names
+  `retried_on` and `first_error`). A Strategy role without models of its own gets no retry: the models
+  that just failed are not tried again. When the retry fails too, the governor acts by rule, with no
+  model: it fills an idle research or civic, fills empty queues of ungarrisoned cities with a
+  defender under military weakness, and, while the weakness test holds, buys ruling 3's defender for
+  the city most in need (in danger first; `rule_buy`), reported "no answer from the model: the
+  governor acted by rule". T512, T522 and T525 failed on 503s and the request limit; T525 was the
+  only pre-war window, with 2,278 faith and a Machine Gun at 1,080.
 - **Diplomacy auto-reply** (issues.md T240, T342): an AI leader's statement to us (a warning, a
   proposal, a deal, a declaration) opens the game's leader screen (`DiplomacyActionView`), which holds
   the engine until a human answers, so the autoplay turn never ends and the tuner goes silent.
