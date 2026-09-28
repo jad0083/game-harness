@@ -513,7 +513,7 @@ def test_bad_time_constants_are_rejected(tmp_path, table, where):
 def test_the_civ6_weakness_thresholds_and_relative_military_rules_load():
     spec = load_pillars(REPO / "corpora/civ6")
     buy = spec.actions["purchase"]
-    assert (buy.weak_median_share, buy.strong_neighbour_ratio) == (0.6, 2.0)
+    assert (buy.weak_median_share, buy.strong_neighbour_ratio, buy.rule_buy) == (0.6, 2.0, True)
     assert buy.treasury_share <= 0.5, "ruling 2 changes who gets the threatened share, not the treasury share"
     rel = spec.relative
     assert (rel.pillar, rel.metric, rel.relative, rel.min_target, rel.absolute_share, rel.rank_min_peers) == \
@@ -524,6 +524,7 @@ def test_the_civ6_weakness_thresholds_and_relative_military_rules_load():
 @pytest.mark.parametrize("old, new, where", [
     ("weak_median_share = 0.6", "weak_median_share = 1.5", "actions.purchase.weak_median_share"),
     ("strong_neighbour_ratio = 2.0", "strong_neighbour_ratio = 0.5", "actions.purchase.strong_neighbour_ratio"),
+    ("rule_buy = true", 'rule_buy = "yes"', "actions.purchase.rule_buy"),
     ('relative = ["military_vs_median", "military_vs_strongest"]', 'relative = ["navy"]', "strategy.relative_military.relative"),
     ('pillar = "military"', 'pillar = "navy"', "strategy.relative_military.pillar"),
     ("min_target = 0.5", "min_target = 0", "strategy.relative_military.min_target"),

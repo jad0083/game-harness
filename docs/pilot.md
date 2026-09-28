@@ -227,6 +227,29 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   land unit on a city tile, a defender bought in the same city within 5 turns, what the city
   finishes within 2 turns anyway and a known price over the cap are refused before sending. `gold`
   and `faith` balances cannot be milestone metrics (`[metrics] milestone_exclude`).
+- **The governor's own defender** (postmortem-fixes design, ruling 3; `rule_buy = true` in
+  `[actions.purchase]`): before an autoplay call of 2 or more turns, while the weakness test holds and no
+  defender was bought at this hand-back, the governor orders one purchase itself, with no model call: the
+  first ungarrisoned city (in danger, then threatened, then without walls, then the capital, then by
+  name) whose `defence_prices` list a defender the game allows, of a defender class, needing no strategic
+  resource, within the defender cap, past its 5-turn cooldown, whose upkeep leaves gold per turn at 0 or
+  more; the strongest by corpus max(combat, ranged), then the cheaper, faith tried first. It goes through
+  the order checks and the read-back like any order (`by: governor`, "bought before autoplay (military
+  weakness: ...)", a `rule_buy` event and a journal line), at most one per stretch. At war with a major
+  the chunk is already one turn and the hand-back decides instead ("city still in danger"). Under
+  weakness an ungarrisoned city with an empty queue also gets its strongest resource-free defender as a
+  production order, at that step and at each decision whose answer leaves the queue empty.
+- **What the AI spent** (ruling 4): at each hand-back, per currency, balance before + the start
+  snapshot's yield x the turns played - balance now (our own purchases are already in the read-back the
+  stretch starts from; E10: 2,278 + 226 x 3 - 958 = 1,998 faith, the Rock Band the game logged at T526);
+  rows carry it as `ai_spent`. The next decision's prompt says "Since T525 the AI spent 1,998 faith
+  (UNIT_ROCK_BAND, T526) and 1,717 gold (not named)" when a currency's spend since the last decision is at
+  least max(50, 10% of its yield over those turns); the items come from the game's
+  `Logs/AI_CityBuild.csv` (`FAITH PURCHASE` and `PURCHASE` rows of our player, read by `civ6 log-tail`: one read
+  per decision, only when there is a spend to name; a row whose layout does not match is "not named").
+  A stretch whose spend in a currency reaches the cheapest defender the game allows in it is an urgent
+  decision ("the AI spent 1,998 faith on UNIT_ROCK_BAND in T525-T528"); it never stops the run for a
+  human.
 - **The AI's own plan** (ruling 29): the briefing shows each city's top 3 builds from the game's AI
   (`GetBuildRecommendations`, the Production panel's call) and our player's strategies from the
   game's log `Logs/AI_Victories.csv` (e.g. "science victory (since T56, stopped T76)"; of the era

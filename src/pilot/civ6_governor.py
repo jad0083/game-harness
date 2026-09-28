@@ -24,6 +24,7 @@ from pydantic_ai.usage import UsageLimits
 
 from .campaign_end import civ6_read, civ6_signal, enemy_ratio, first_zero_after, last_held, losses
 from .civ6 import (
+    AI_BUILD_LOG,
     DIPLOMACY_RECORD,
     DIPLOMACY_RECORD_HEADING,
     DIPLOMACY_RECORD_KEYS,
@@ -38,9 +39,14 @@ from .civ6 import (
     _actor_id,
     _ls_unit,
     about_to_fall,
+    ai_purchases,
+    ai_spent,
+    ai_spent_text,
     ai_strategy_states,
     briefing_text,
     check_orders,
+    defender_entries,
+    defender_to_build,
     diplomacy_answered,
     diplomacy_key,
     diplomacy_record_text,
@@ -62,6 +68,8 @@ from .civ6 import (
     read_back,
     record_key,
     resource_key,
+    rule_buy_order,
+    spend_shown,
     stand_verdict,
     standing_danger,
     top3_hits,
@@ -233,6 +241,13 @@ class Civ6Governor(Governor):
         self._ai_log_next = 0                     # where the next read of the AI's strategy log starts (ruling 29)
         self._ai_rows: list = []                  # our player's rows of that log: [turn, strategy, status]
         self._recent_rows: list[dict] = []        # this campaign's latest metrics rows (neighbour buildup)
+        # what the game's AI spent between our decisions (postmortem-fixes ruling 4): since the last
+        # decision's turn, per currency, with the yield over those turns; the AI_CityBuild.csv purchases
+        # read (at most one read per decision, only when there is a spend to name)
+        self._spend: dict | None = None
+        self._build_log_next: int | None = None
+        self._build_log_read_turn: int | None = None
+        self._ai_buys: list[dict] = []
         self._buildup_fired: dict[str, int] = {}  # neighbour -> turn of its last buildup trigger (ruling 11)
         self._loyalty_fired: set[str] = set()     # cities whose loyalty trigger fired and did not rise since (13)
         self._dipl_seen: set[str] = set()         # diplomacy answers already reported (`diplomacy_key`)
@@ -448,8 +463,10 @@ class Civ6Governor(Governor):
                 if falling is not None:
                     self._last_stand(last, falling)            # ends with a one-turn hand-back
                 else:
-                    self._play_turns(last["turn"], autoplay_turns(last, chunk=self.s.autoplay_chunk,
-                                                                  left=target - last["turn"]))
+                    n = autoplay_turns(last, chunk=self.s.autoplay_chunk, left=target - last["turn"])
+                    if n >= 2:
+                        last = self._rule_buy(last) or last    # ruling 3: its read-back starts the stretch
+                    self._play_turns(last["turn"], n)
                 b = self._snapshot_between_turns()
             except Civ6Stuck as e:
                 self._needs_attention(f"{e}. Check the game (a dialog, a crash, the main menu), then press Resume.")
@@ -466,6 +483,7 @@ class Civ6Governor(Governor):
                                       "Resume, or start a new run.")
                 return last, ""
             row = self._row(b)
+            spent = row["ai_spent"] = ai_spent(last, b)
             self.log.emit("metrics", **row)
             b = self._end_check(b)
             if b is None:
@@ -478,6 +496,7 @@ class Civ6Governor(Governor):
             urgent = urgent_changes(last, b, self._gold_reserve(b), self._wonders)
             urgent += self._newly_missed_milestones(last["date"], b["date"])
             urgent += self._threat_reasons(last, b)
+            urgent += self._ai_spend(last, b, spent)
             if urgent:
                 return b, "urgent: " + "; ".join(urgent)
             if b["turn"] >= target:
@@ -529,6 +548,122 @@ class Civ6Governor(Governor):
         except Exception as e:  # noqa: BLE001 - runs between turns; never stops play
             self.log.emit("briefing_error", error=f"threat triggers: {type(e).__name__}: {e}"[:200])
             return []
+
+    # ---- the rule-based defender and what the AI spent (postmortem-fixes design, rulings 3-4) ------
+
+    def _weak_now(self, b: dict) -> list[dict]:
+        buy = self._buy_limits()
+        return weakness(b, buy) if buy is not None else []
+
+    def _production_fills(self, b: dict, taken: set[str]) -> list[Civ6Order]:
+        """Ruling 3 (L15): under weakness, each ungarrisoned city with an empty queue and no production
+        order of the answer (`taken`, lowercased names) gets its strongest resource-free defender."""
+        buy = self._buy_limits()
+        if buy is None or not buy.rule_buy or not self._weak_now(b):
+            return []
+        out = []
+        for c in b.get("cities") or []:
+            if "garrison" in c and not c.get("garrison") and not c.get("producing") \
+                    and str(c.get("name", "")).lower() not in taken:
+                unit = defender_to_build(c, self.index, buy)
+                if unit:
+                    out.append(Civ6Order(kind="production", id=unit, city=str(c.get("name"))))
+        return out
+
+    def _rule_buy(self, last: dict) -> dict | None:
+        """Ruling 3, before an autoplay stretch of 2+ turns: while the weakness test holds and no defender
+        was bought at this hand-back, the governor buys one defender itself (`rule_buy_order`) and fills
+        empty queues of ungarrisoned cities, with no model call, through the same checks and read-back
+        as any order (`by: governor`). Returns the read-back snapshot, or None when nothing was sent."""
+        buy = self._buy_limits()
+        if buy is None or not buy.rule_buy:
+            return None
+        weak = self._weak_now(last)
+        if not weak:
+            return None
+        turn = last.get("turn")
+        if any(r.get("order_kind") == "purchase" and r.get("result") == "completed" and r.get("turn") == turn
+               and is_defender(r.get("id"), self.index, buy) for r in self._order_rows):
+            return None
+        note = "bought before autoplay (military weakness: " + ", ".join(c["clause"] for c in weak) + ")"
+        order, why = rule_buy_order(last, self.index, buy, self._defender_buys(), weak)
+        orders = ([order] if order else []) + self._production_fills(last, set())
+        if not orders:
+            self.log.emit("rule_buy", turn=turn, orders=[], note=f"nothing bought: {why}")
+            return None
+        report, failed = self._report, self._failed_last
+        d = Civ6Decision(orders=orders, reason=note)
+        outcomes, _ = self._apply(d, last, {order_key(o.model_dump()) for o in orders}, {})
+        self._report, self._failed_last = report + self._report, failed | self._failed_last
+        summary = "; ".join(f"{o['order']}: {o['outcome']}" for o in outcomes)
+        self.log.emit("rule_buy", turn=turn, orders=outcomes, note=note, by="governor")
+        self.journal.note(f"The governor, {note}: {summary}", last.get("date", ""))
+        after, self._after_orders = self._after_orders, None
+        return after
+
+    def _read_ai_buys(self, b: dict) -> None:
+        """One read of AI_CityBuild.csv (at most once per hand-back turn) from where the last one ended,
+        or its tail on the first; our player's purchases are kept. Advisory: a failed read names nothing."""
+        read = getattr(self.game, "log_tail", None)
+        if read is None or self._build_log_read_turn == b.get("turn"):
+            return
+        self._build_log_read_turn = b.get("turn")
+        try:
+            r = read(AI_BUILD_LOG, self._build_log_next)
+        except Exception as e:  # noqa: BLE001 - naming is advisory
+            self.log.emit("briefing_error", error=f"{AI_BUILD_LOG}: {e}"[:200])
+            return
+        nxt, size = r.get("next"), r.get("size")
+        self._build_log_next = int(nxt) if isinstance(nxt, int) else None
+        if isinstance(nxt, int) and isinstance(size, int) and size - nxt > 64 * 1024:
+            self._build_log_next = None                 # fell behind: the next read takes the tail
+        player = b.get("player") if isinstance(b.get("player"), int) else getattr(self, "_player_id", 0)
+        self._ai_buys = (self._ai_buys + ai_purchases(r.get("lines") or [], int(player or 0)))[-500:]
+
+    def _bought_between(self, after: int, upto: int) -> list[dict]:
+        return [x for x in self._ai_buys if after < x["turn"] <= upto]
+
+    def _ai_spend(self, last: dict, b: dict, spent: dict[str, float]) -> list[str]:
+        """Ruling 4 at a hand-back: add the stretch's spend to the interval since the last decision; when
+        it is, in a currency, at least the cheapest defender the game allows now in that currency, the
+        AI spent what a defender costs: an urgent decision naming it ("the AI spent 1,998 faith on
+        UNIT_ROCK_BAND"). Never needs attention: the user is hands-off (it would have stopped this run
+        16 times). Advisory."""
+        try:
+            turns = max(0, int(b.get("turn") or 0) - int(last.get("turn") or 0))
+            sp = self._spend or {"since": last.get("turn"), "gold": 0.0, "faith": 0.0, "yield": {"gold": 0.0, "faith": 0.0}}
+            for cur, v in spent.items():
+                sp[cur] = sp.get(cur, 0.0) + v
+                sp["yield"][cur] = sp["yield"].get(cur, 0.0) + ((last.get("yields") or {}).get(cur) or 0.0) * turns
+            self._spend = sp
+            buy, out = self._buy_limits(), []
+            for cur, v in spent.items():
+                prices = [p[cur] for c in b.get("cities") or [] for p in defender_entries(c, self.index, buy)
+                          if p.get(f"{cur}_allowed") and isinstance(p.get(cur), (int, float))]
+                if not prices or v < min(prices) or not spend_shown(v, ((last.get("yields") or {}).get(cur) or 0) * turns):
+                    continue
+                self._read_ai_buys(b)
+                items = [x["item"] for x in self._bought_between(int(last.get("turn") or 0), int(b.get("turn") or 0))
+                         if x["currency"] == cur]
+                out.append(f"the AI spent {v:,.0f} {cur} " + (f"on {', '.join(dict.fromkeys(items))}" if items
+                                                               else "(not named)") + f" in T{last.get('turn')}-T{b.get('turn')}")
+            return out
+        except Exception as e:  # noqa: BLE001 - runs between turns; never stops play
+            self.log.emit("briefing_error", error=f"AI spend: {type(e).__name__}: {e}"[:200])
+            return []
+
+    def _ai_spend_line(self, b: dict) -> str:
+        """The decision prompt's line on what the AI spent since the last decision (ruling 4), and the
+        interval restarts here."""
+        sp, self._spend = self._spend, {"since": b.get("turn"), "gold": 0.0, "faith": 0.0,
+                                        "yield": {"gold": 0.0, "faith": 0.0}}
+        if not sp or not isinstance(sp.get("since"), int):
+            return ""
+        spent = {k: sp.get(k, 0.0) for k in ("gold", "faith")}
+        if not any(spend_shown(spent[c], sp["yield"].get(c, 0.0)) for c in spent):
+            return ""
+        self._read_ai_buys(b)
+        return ai_spent_text(sp["since"], spent, sp["yield"], self._bought_between(sp["since"], int(b.get("turn") or 0)))
 
     # ---- the end of the campaign (postmortem-fixes design, rulings 21-23) --------------------------
 
@@ -1152,6 +1287,7 @@ class Civ6Governor(Governor):
         orders are applied and reported like a decision's; earlier reports and did-not-stick keys
         are kept, since no model has seen them yet."""
         orders = [o for kind in self._idle_kinds(b) if (o := self._fill(b, kind)) is not None]
+        orders += self._production_fills(b, set())             # ruling 3 (L15): empty queues under weakness
         if not orders:
             return []
         report, failed = self._report, self._failed_last
@@ -1198,7 +1334,7 @@ class Civ6Governor(Governor):
         prompt = [f"Decision point: {reason}.",
                   (frame_text(self.strategy, self.pillars, self._milestones_text(), press) if self.pillars else "")
                   or "No strategy yet.",
-                  "Briefing (live snapshot):", self.last_briefing, self._limits_text(b)]
+                  "Briefing (live snapshot):", self.last_briefing, self._ai_spend_line(b), self._limits_text(b)]
         if self._report or held:
             prompt.append("What your last orders did:\n" + "\n".join(f"- {x}" for x in self._report + held))
         record = self._record_text()
@@ -1271,6 +1407,9 @@ class Civ6Governor(Governor):
             if o is not None:
                 d.orders.append(o)
                 filled.add(order_key(o.model_dump()))
+        for o in self._production_fills(b, {o.city.lower() for o in d.orders if o.kind == "production"}):
+            d.orders.append(o)                                 # ruling 3 (L15): empty queues under weakness
+            filled.add(order_key(o.model_dump()))
 
         outcomes, applied = self._apply(d, b, filled, prices_seen(result.all_messages()))
         summary = "; ".join(f"{o['order']}: {o['outcome']}" for o in outcomes) or "no orders"

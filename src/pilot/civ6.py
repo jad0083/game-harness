@@ -42,6 +42,8 @@ class Civ6Game(Protocol):
     def finish_moves(self, unit_id: int) -> dict: ...
     # the AI's own strategies (ruling 29): one read of its log per decision
     def ai_strategies(self, offset: int, player: int) -> dict: ...
+    # a game log's complete lines (postmortem-fixes rulings 4, 6, 24): from `offset`, or its tail
+    def log_tail(self, file: str, offset: int | None = None) -> dict: ...
     def corpus(self, tool: str, **args) -> str: ...
     def close(self) -> None: ...
 
@@ -129,6 +131,9 @@ class ControllerCiv6:
     def ai_strategies(self, offset: int, player: int) -> dict:
         return self._json("civ6", "ai-strategies", "--offset", str(int(offset)), "--player", str(int(player)))
 
+    def log_tail(self, file: str, offset: int | None = None) -> dict:
+        return self._json("civ6", "log-tail", file, *(("--offset", str(int(offset))) if offset is not None else ()))
+
     def corpus(self, tool: str, **args) -> str:
         if tool == "corpus_search":
             _, out, err = self._run("corpus", "search", str(args.get("query", "")), "--limit", str(args.get("limit", 5)))
@@ -189,7 +194,7 @@ class FakeCiv6:
                  ls: dict | None = None, stand: list[dict] | None = None, stand_effect=None,
                  stand_ignored: bool = False, stand_lost_reply: bool = False, ls_fails: int = 0,
                  popup: bool = False, pin_ignored: bool = False, ai_log: list[tuple] | None = None,
-                 turn_ready_silent: int = 0):
+                 turn_ready_silent: int = 0, logs: dict[str, list[str]] | None = None):
         self.state = copy.deepcopy(base)
         self.events = dict(events or {})
         self.replies = dict(replies or {})
@@ -209,6 +214,7 @@ class FakeCiv6:
         self.popup, self.pin_ignored = popup, pin_ignored
         self.turn_ready_silent, self._turn_ready_calls = turn_ready_silent, 0
         self.ai_log = list(ai_log or [])
+        self.logs = {k: list(v) for k, v in (logs or {}).items()}     # log-tail: file -> its lines
         self.actions: list[tuple] = []
         self.active = False
         self.remaining = 0
@@ -345,6 +351,14 @@ class FakeCiv6:
         return {"ok": True, "size": len(self.ai_log), "offset": offset, "next": len(self.ai_log), "restarted": False,
                 "rows": rows}
 
+    def log_tail(self, file: str, offset: int | None = None) -> dict:
+        """The lines from `offset` (counted in lines here, bytes in the real log), or all of them."""
+        self.actions.append(("log_tail", file, offset, self.active))
+        lines = self.logs.get(file, [])
+        start = 0 if offset is None else offset
+        return {"ok": True, "file": file, "size": len(lines), "offset": start, "next": len(lines),
+                "restarted": start > len(lines), "lines": lines[start:]}
+
     def corpus(self, tool: str, **args) -> str:
         self.actions.append(("corpus", tool, args))
         return "- `tech:writing` [tech] Writing — Ancient Era, cost 50."
@@ -421,6 +435,7 @@ class CorpusIndex:
     resource_cost: dict[str, tuple[int, str]] = field(default_factory=dict)   # unit id -> (1, "Oil")
     maintenance: dict[str, float] = field(default_factory=dict)  # unit id -> gold per turn
     strength: dict[str, float] = field(default_factory=dict)     # unit id -> max(combat, ranged)
+    build_cost: dict[str, float] = field(default_factory=dict)   # unit id -> production cost
 
     @classmethod
     def load(cls, corpus: Path) -> CorpusIndex:
@@ -450,6 +465,8 @@ class CorpusIndex:
                     if isinstance(f.get("maintenance"), (int, float)):
                         idx.maintenance[r["id"]] = float(f["maintenance"])
                     idx.strength[r["id"]] = float(max(f.get("combat") or 0, f.get("ranged") or 0))
+                    if isinstance(f.get("cost"), (int, float)):
+                        idx.build_cost[r["id"]] = float(f["cost"])
         return idx
 
     def cid(self, key: str | None) -> str:
@@ -967,6 +984,120 @@ def read_back(c: Checked, reply: dict, snapshot: dict) -> str:
             return moved
         return f"{UNKNOWN}: {moved}, less than every purchase together ({total:.0f})"
     return "stuck"
+
+
+# ---- the rule-based defender (docs/design/2026-09-27-postmortem-fixes-design.md, ruling 3) -----------
+
+def _free_of_resources(uid: str, index: CorpusIndex) -> bool:
+    return uid not in index.resource_cost
+
+
+def rule_buy_order(snapshot: dict, index: CorpusIndex, limits, defender_buys: dict[str, int] | None = None,
+                   weak: list[dict] | None = None) -> tuple[Civ6Order | None, str]:
+    """The governor's own defender purchase before a multi-turn stretch while the weakness test holds
+    (ruling 3): the first ungarrisoned city (in danger, then threatened, then without walls, then the
+    capital, then by name) whose `defence_prices` list a defender the game allows, of a defender class,
+    needing no strategic resource, within the defender cap, past the city's defender cooldown, whose
+    upkeep leaves gold per turn at 0 or above; the strongest by corpus max(combat, ranged), then the
+    cheaper, faith tried first (the AI's own purchases drained it). (order, "") or (None, why none)."""
+    if limits is None:
+        return None, "no purchase limits"
+    turn, wait = snapshot.get("turn"), limits.defence_cooldown_turns
+    gold_yield = (snapshot.get("yields") or {}).get("gold")
+    cities = [c for c in snapshot.get("cities") or [] if "garrison" in c and not c.get("garrison")]
+    if not cities:
+        return None, "every city has a unit on its tile"
+    rank = lambda c: (not in_danger(c), not c.get("threatened"), bool((c.get("defense") or {}).get("walls_max")),
+                      not c.get("capital"), str(c.get("name")))
+    why = "no city lists a defender it can buy now"
+    for c in sorted(cities, key=rank):
+        last = (defender_buys or {}).get(str(c.get("name", "")).lower())
+        if wait and isinstance(last, int) and isinstance(turn, int) and turn - last < wait:
+            why = f"{c.get('name')} got a defender at T{last}"
+            continue
+        for cur in ("faith", "gold"):
+            cap = purchase_cap(snapshot, c, cur, limits, defender=True, weak=weak)
+            fits = []
+            for p in defender_entries(c, index, limits):
+                uid = index.cid(p.get("unit"))
+                upkeep = index.maintenance.get(uid, 0.0)
+                if (p.get(f"{cur}_allowed") and isinstance(p.get(cur), (int, float)) and p[cur] <= cap
+                        and _free_of_resources(uid, index)
+                        and (not isinstance(gold_yield, (int, float)) or gold_yield - upkeep >= 0)):
+                    fits.append((-index.strength.get(uid, 0.0), p[cur], uid))
+            if fits:
+                _s, _cost, uid = min(fits)
+                return Civ6Order(kind="purchase", id=uid, city=str(c.get("name")), currency=cur), ""
+    return None, why
+
+
+def defender_to_build(city: dict, index: CorpusIndex, limits) -> str | None:
+    """The strongest defender (then the cheaper to build) that the city can build and that needs no
+    strategic resource: the governor's fill of an empty queue under weakness (ruling 3, L15)."""
+    can = [index.cid(k) for k in city.get("can_build") or []]
+    options = [(-index.strength.get(u, 0.0), index.build_cost.get(u, 0.0), u) for u in can
+               if is_defender(u, index, limits) and _free_of_resources(u, index)]
+    return min(options)[2] if options else None
+
+
+# ---- what the AI spent between decisions (postmortem-fixes design, ruling 4) ------------------------
+
+AI_BUILD_LOG = "AI_CityBuild.csv"
+AI_PURCHASE_KINDS = {"FAITH PURCHASE": "faith", "PURCHASE": "gold"}
+_ITEM_RE = re.compile(r"^(?:UNIT|BUILDING|DISTRICT|PROJECT)_[A-Z0-9_]+$")
+
+
+def ai_spent(before: dict, now: dict) -> dict[str, float]:
+    """Per currency, what the game's AI spent between two snapshots (ruling 4): the balance before +
+    the start snapshot's yield x the turns played - the balance now. Our own purchases are already in
+    `before` (the read-back after our orders). T525 -> T528: 2,278 + 226 x 3 - 958 = 1,998 faith, the
+    Rock Band the game logged at T526 (E10). A yield change inside the stretch reads as spending."""
+    turns = max(0, int(now.get("turn") or 0) - int(before.get("turn") or 0))
+    out = {}
+    for cur in ("gold", "faith"):
+        b0, b1, y = before.get(cur), now.get(cur), (before.get("yields") or {}).get(cur)
+        if all(isinstance(v, (int, float)) for v in (b0, b1, y)):
+            out[cur] = round(b0 + y * turns - b1, 1)
+    return out
+
+
+def spend_shown(spent: float, yield_total: float) -> bool:
+    """A spend is worth a line at max(50, 10% of the yield over the interval): yields change mid-stretch."""
+    return spent >= max(50.0, 0.1 * abs(yield_total))
+
+
+def ai_purchases(lines: list[str], player: int) -> list[dict]:
+    """Our player's purchases in AI_CityBuild.csv lines: [{"turn", "currency", "item"}]. The layout is
+    unverified live: a row counts when its first two fields are the turn and the player, one field is
+    FAITH PURCHASE or PURCHASE and one names an item type (UNIT_*, BUILDING_*...); others are skipped,
+    so a changed layout gives "not named", never a wrong name."""
+    out = []
+    for line in lines:
+        f = [x.strip() for x in str(line).split(",")]
+        if len(f) < 4 or not f[0].isdigit() or f[1] != str(player):
+            continue
+        kind = next((AI_PURCHASE_KINDS[x.upper()] for x in f[2:] if x.upper() in AI_PURCHASE_KINDS), None)
+        item = next((x for x in f[2:] if _ITEM_RE.match(x)), None)
+        if kind and item:
+            out.append({"turn": int(f[0]), "currency": kind, "item": item})
+    return out
+
+
+def ai_spent_text(since: int, spent: dict[str, float], yields: dict[str, float], bought: list[dict] | None) -> str:
+    """The decision prompt's line (ruling 4), e.g. "Since T525 the AI spent 1,998 faith (UNIT_ROCK_BAND,
+    T526) and 1,717 gold (not named)."; "" when no currency passes `spend_shown`. `bought`: the log's
+    purchases in the interval (None: the log was not read)."""
+    parts = []
+    for cur in ("faith", "gold"):
+        v = spent.get(cur) or 0.0
+        if not spend_shown(v, yields.get(cur) or 0.0):
+            continue
+        items = [f"{x['item']}, T{x['turn']}" for x in bought or [] if x["currency"] == cur]
+        parts.append(f"{v:,.0f} {cur} (" + ("; ".join(items) if items else "not named") + ")")
+    if not parts:
+        return ""
+    return (f"Since T{since} the AI spent " + " and ".join(parts) + " between our decisions (balance before + "
+            "yield x turns - balance now; the game's AI buys with our treasury while it plays).")
 
 
 # ---- the order record (docs/design/2026-09-27-civ6-levers-design.md, rulings 12-16) --------------

@@ -180,7 +180,7 @@
 - [ ] Civ VI order record split by item class, with refusal counts (ruling 9)
 - [ ] Civ VI triggers: falling behind, neighbour buildup, negative income, loyalty; decide every hand-back while a city stays in danger (rulings 10-14); on branch feat/postmortem-fixes, not deployed
 - [ ] Stellaris neighbour-buildup trigger (ruling 11); on branch feat/postmortem-fixes, not deployed
-- [ ] Civ VI rule-based defender buy before each multi-turn stretch; what the AI spent between decisions (rulings 3, 4)
+- [ ] Civ VI rule-based defender buy before each multi-turn stretch; what the AI spent between decisions (rulings 3, 4); on branch feat/postmortem-fixes, not deployed (the `AI_CityBuild.csv` layout is unverified live)
 - [ ] Civ VI re-send of a lost purchase only when the read-back proves nothing was spent (ruling 5)
 - [ ] A failed decision retries with the strategy model, then acts by rule before autoplay (ruling 20)
 - [ ] Civ VI relative military milestones (military ÷ median, ÷ strongest non-ally) (ruling 18); on branch feat/postmortem-fixes, not deployed

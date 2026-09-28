@@ -26,7 +26,7 @@ _ACTION_KEYS = {
     "purchase": _ID_LIST_KEYS | {"gold_reserve", "faith_reserve", "treasury_share", "threatened_share",
                                  "gold_reserve_per_deficit", "pantheon_reserve", "prophet_faith_reserve",
                                  "skip_turns_left", "defence_first", "defender_classes", "defence_cooldown_turns",
-                                 "weak_median_share", "strong_neighbour_ratio"},
+                                 "weak_median_share", "strong_neighbour_ratio", "rule_buy"},
     "market": {"field", "max_items", "resources_from_manifest", "amount_min", "amount_max",
                "sell_income_share", "sell_requires_idle", "note", "buy"},
 }
@@ -123,6 +123,7 @@ class ActionLimits:
     # the weakness test (docs/design/2026-09-27-postmortem-fixes-design.md, ruling 1); 0: the default
     weak_median_share: float = 0.0       # our military under this x the median of the met majors: weak
     strong_neighbour_ratio: float = 0.0  # a met major, not our ally, at this x our military: outgunned
+    rule_buy: bool = False               # the governor's own defender buy before a multi-turn stretch (ruling 3)
     buy: BuyRules | None = None          # market: the buy rules ([actions.market.buy]); None: buys unchecked
 
     @property
@@ -269,7 +270,7 @@ class PillarSpec:
                                 "defender_classes": list(a.defender_classes),
                                 "defence_cooldown_turns": a.defence_cooldown_turns,
                                 "weak_median_share": a.weak_median_share,
-                                "strong_neighbour_ratio": a.strong_neighbour_ratio,
+                                "strong_neighbour_ratio": a.strong_neighbour_ratio, "rule_buy": a.rule_buy,
                                 "buy": None if a.buy is None else {
                                     **{k: getattr(a.buy, k) for k in sorted(_BUY_KEYS)
                                        if k not in ("base_amount", "volume", "strategic")},
@@ -446,7 +447,7 @@ def _action(path: Path, corpus: Path, kind: str, t) -> ActionLimits:
     if not _num(per) or per < 0:
         raise _err(path, f"{where}.gold_reserve_per_deficit", "must be a number >= 0")
     buyout["gold_reserve_per_deficit"] = float(per)
-    for key in ("pantheon_reserve", "defence_first"):
+    for key in ("pantheon_reserve", "defence_first", "rule_buy"):
         v = t.get(key, False)
         if not isinstance(v, bool):
             raise _err(path, f"{where}.{key}", "must be true or false")

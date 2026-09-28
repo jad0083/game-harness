@@ -153,4 +153,8 @@ defence_cooldown_turns = 5      # at most one defender purchase per city per 5 t
 # military last of the met majors (2+ met), under 0.6 x their median, or a met non-ally at 2 x ours.
 weak_median_share = 0.6
 strong_neighbour_ratio = 2.0
+# Ruling 3: while that test holds, before each autoplay stretch of 2+ turns the governor buys one defender
+# itself (the first ungarrisoned city; resource-free, of a defender class, within the cap and upkeep) and
+# fills empty queues of ungarrisoned cities with one. false turns it off.
+rule_buy = true
 note = "Buy only what saves several turns; never what the city finishes within 2 turns anyway. Prices are read live, in gold and in faith: faith buys defenders at about half the gold price. Walls, castles and star forts cannot be bought: they come from production."

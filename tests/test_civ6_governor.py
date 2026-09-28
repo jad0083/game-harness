@@ -2465,3 +2465,133 @@ def test_every_prompt_carries_the_purchase_limits_the_weakness_and_the_stock(set
     assert "Strategic stock: unknown" in briefing_text(FIXTURE, INDEX, limits=BUY)
     from pilot.civ6_governor import INSTRUCTIONS
     assert "cite this decision's price for it" in INSTRUCTIONS
+
+
+# ---- postmortem-fixes design, ruling 3: the governor's own defender before a stretch ----------------
+
+AT_FAITH = {"unit": "UNIT_MODERN_AT", "gold": 2320, "gold_allowed": True, "faith": 1160, "faith_allowed": True}
+MG_BOTH = {"unit": "UNIT_MACHINE_GUN", "gold": 2160, "gold_allowed": True, "faith": 1080, "faith_allowed": True}
+INF_OIL = {"unit": "UNIT_INFANTRY", "gold": 1720, "gold_allowed": True, "faith": 860, "faith_allowed": True}
+
+
+def _t496(**over) -> dict:
+    """T496: at peace, military 295 against Australia 598 and Maya 1,084 (outgunned, low); Rockhampton
+    (no walls) and Beijing (the capital, walls) without a unit on their tiles; 1,833 faith."""
+    rock = {**_calm_city("Rockhampton", [AT_FAITH, INF_OIL]), "capital": False, "producing": "BUILDING_LIBRARY",
+            "can_build": ["UNIT_MODERN_AT", "UNIT_INFANTRY"]}
+    beijing = {**_calm_city("Beijing", [AT_FAITH]), "capital": True, "producing": "BUILDING_UNIVERSITY",
+               "defense": {"garrison_hp": 200, "garrison_max": 200, "walls_hp": 400, "walls_max": 400}}
+    s = {**FIXTURE, "turn": 496, "gold": 1065, "faith": 1833, "military": 295,
+         "yields": {**FIXTURE["yields"], "gold": 172, "faith": 184},
+         "majors": [{"id": 3, "civ": "CIVILIZATION_AUSTRALIA", "military": 598},
+                    {"id": 2, "civ": "CIVILIZATION_MAYA", "military": 1084}],
+         "wars": [], "cities": [beijing, rock], "resources": {"RESOURCE_OIL": 0}}
+    return {**s, **over}
+
+
+def _stretch_governor(setup, game, chunk=3):
+    s, _ = setup
+    s.autoplay_chunk, s.decide_every_turns = chunk, 3
+    return governor(setup, game, orders_model([]))
+
+
+def test_before_a_three_turn_stretch_the_governor_buys_one_faith_modern_at(setup):
+    game = FakeCiv6(_t496(), index=INDEX, prices={("Rockhampton", "unit:modern_at", "faith"): 1160})
+    g = _stretch_governor(setup, game)
+    g.run(max_decisions=2)
+    sent = [(a[1], a[2]) for a in game.actions if a[0] == "order" and a[1]["kind"] == "purchase"]
+    assert len(sent) == 1, sent
+    order, active = sent[0]
+    assert (order["city"], order["id"], order["currency"], active) == ("Rockhampton", "unit:modern_at", "faith", False), \
+        "the first ungarrisoned city without walls; faith first; before autoplay starts"
+    first_autoplay = next(i for i, a in enumerate(game.actions) if a[0] == "autoplay")
+    buy_at = next(i for i, a in enumerate(game.actions) if a[0] == "order" and a[1]["kind"] == "purchase")
+    assert buy_at < first_autoplay
+    ev = next(e for e in g.log.recent if e["kind"] == "rule_buy")
+    assert ev["by"] == "governor" and ev["note"] == "bought before autoplay (military weakness: last, low, outgunned)"
+    assert ev["orders"][0]["by"] == "governor" and ev["orders"][0]["outcome"] == "stuck"
+    s, _ = setup
+    assert "The governor, bought before autoplay (military weakness: last, low, outgunned): purchase unit:modern_at in " \
+           "Rockhampton with faith (filled by the governor): stuck" in s.journal.read_text()
+    assert not any(a[0] == "order" and a[1]["kind"] == "purchase" for a in game.actions[first_autoplay:]), \
+        "at most one purchase per stretch"
+
+
+@pytest.mark.parametrize("over, chunk, why", [
+    ({}, 1, "a one-turn chunk"),
+    ({"majors": [{"id": 3, "civ": "CIVILIZATION_AUSTRALIA", "military": 300}], "military": 295}, 3, "no weakness"),
+    ({"yields": {**FIXTURE["yields"], "gold": 5, "faith": 184}}, 3, "upkeep 8 would take gold per turn below 0"),
+])
+def test_no_rule_buy(setup, over, chunk, why):
+    game = FakeCiv6(_t496(**over), index=INDEX, prices={("Rockhampton", "unit:modern_at", "faith"): 1160})
+    g = _stretch_governor(setup, game, chunk=chunk)
+    g.run(max_decisions=2)
+    assert any(a[0] == "autoplay" for a in game.actions), "a stretch was played"
+    assert not any(a[0] == "order" and a[1]["kind"] == "purchase" for a in game.actions), why
+
+
+def test_an_empty_queue_in_an_ungarrisoned_city_under_weakness_gets_a_defender(setup):
+    from pilot.civ6 import rule_buy_order
+    s = _t496()
+    s["cities"][1] = {**s["cities"][1], "producing": None, "turns_left": None}
+    game = FakeCiv6(s, index=INDEX, prices={("Rockhampton", "unit:modern_at", "faith"): 1160})
+    g = _stretch_governor(setup, game)
+    g.run(max_decisions=1)
+    prod = [a[1] for a in game.actions if a[0] == "order" and a[1]["kind"] == "production"]
+    assert prod == [{"kind": "production", "city": "Rockhampton", "id": "unit:modern_at"}], \
+        "the strongest resource-free defender it can build (not the Oil-bound Infantry)"
+    assert next(o for o in traces(setup)[0]["orders"] if o["kind"] == "production")["by"] == "governor"
+    from pilot.civ6 import defender_to_build
+    both = {**s["cities"][1], "can_build": ["UNIT_MODERN_AT", "UNIT_MACHINE_GUN"]}
+    assert defender_to_build(both, INDEX, BUY) == "unit:machine_gun", "equal strength (85): the cheaper to build"
+    tie = rule_buy_order(_t496(cities=[{**_t496()["cities"][1], "defence_prices": [AT_FAITH, MG_BOTH]}]), INDEX, BUY)[0]
+    assert (tie.id, tie.currency) == ("unit:machine_gun", "faith"), "equal strength: the cheaper (1,080 faith)"
+    order, _ = rule_buy_order(_t496(), INDEX, BUY, {"rockhampton": 494})
+    assert order.city == "Beijing", "Rockhampton's cooldown runs: the next city"
+
+
+# ---- postmortem-fixes design, ruling 4: what the AI spent between decisions ------------------------
+
+def _row_snapshot(turn: int) -> dict:
+    r = next(x for x in json.loads((REPO / "tests/fixtures/civ6_kublai_rows.json").read_text()) if x["turn"] == turn)
+    return {"turn": turn, "gold": r["gold"], "faith": r["faith"],
+            "yields": {"gold": r["gold_yield"], "faith": r["faith_yield"]}}
+
+
+def test_e10_the_ai_spend_reproduces_the_logged_rock_band_and_the_unnamed_gold():
+    from pilot.civ6 import ai_purchases, ai_spent, ai_spent_text
+    spent = ai_spent(_row_snapshot(525), _row_snapshot(528))
+    assert (round(spent["faith"]), round(spent["gold"])) == (1998, 1717)
+    assert round(ai_spent(_row_snapshot(496), _row_snapshot(499))["faith"]) == 1687
+    bought = ai_purchases(["Game Turn, Player, City, Order, Item",           # the header is skipped
+                           "526, 0, Beijing, FAITH PURCHASE, UNIT_ROCK_BAND, 1998",
+                           "526, 3, Sydney, PURCHASE, UNIT_TANK",             # another player
+                           "527, 0, Taiyuan, BUILD, BUILDING_LIBRARY"], 0)
+    assert bought == [{"turn": 526, "currency": "faith", "item": "UNIT_ROCK_BAND"}]
+    y = {"faith": 226.2 * 3, "gold": 272.2 * 3}
+    assert ai_spent_text(525, spent, y, bought).startswith(
+        "Since T525 the AI spent 1,998 faith (UNIT_ROCK_BAND, T526) and 1,717 gold (not named) between our decisions")
+    assert ai_spent_text(525, {"faith": 30.0, "gold": 0.0}, y, []) == "", "a 30-faith drift gives nothing"
+
+
+def test_the_ai_spend_is_urgent_named_by_one_log_read_and_shown_to_the_next_decision(setup):
+    seen: list[str] = []
+    city = {**_calm_city("Beijing", [AT_FAITH]), "capital": True}
+    start = {**FIXTURE, **_row_snapshot(525), "cities": [city], "majors": [], "wars": []}
+    t528 = _row_snapshot(528)
+
+    def spend(state):
+        state.update(gold=t528["gold"], faith=t528["faith"])
+    game = FakeCiv6(start, index=INDEX, events={528: spend},
+                    logs={"AI_CityBuild.csv": ["526, 0, Beijing, FAITH PURCHASE, UNIT_ROCK_BAND"]})
+    s, _ = setup
+    s.autoplay_chunk, s.decide_every_turns = 3, 5
+    g = governor(setup, game, orders_model([], seen=seen))
+    g.run(max_decisions=2)
+    second = traces(setup)[1]
+    assert second["trigger"] == "urgent: the AI spent 1,998 faith on UNIT_ROCK_BAND in T525-T528"
+    assert "Since T525 the AI spent 1,998 faith (UNIT_ROCK_BAND, T526) and 1,717 gold (not named)" in seen[1]
+    assert sum(1 for a in game.actions if a[0] == "log_tail") == 1, "one read, only when there is a spend to name"
+    rows = [e for e in g.log.recent if e["kind"] == "metrics" and e.get("turn") == 528]
+    assert round(rows[0]["ai_spent"]["faith"]) == 1998
+    assert not any(e["kind"] == "needs_attention" for e in g.log.recent), "never stops the hands-off run"

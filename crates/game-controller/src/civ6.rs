@@ -292,6 +292,40 @@ pub fn ai_strategies_reply(chunk: &[u8], offset: u64, size: u64, player: u32) ->
     serde_json::json!({"ok": true, "size": size, "offset": offset, "next": offset + end as u64, "restarted": false, "rows": rows})
 }
 
+/// The game logs `civ6 log-tail` may read (docs/design/2026-09-27-postmortem-fixes-design.md, rulings
+/// 4, 6 and 24), under `Logs/` of the `civ6_appdata` root: what the AI bought for us, the World
+/// Congress's resolutions and who declared each war. Any other name is refused.
+pub const LOG_TAIL_FILES: &[&str] = &["AI_CityBuild.csv", "World_Congress.csv", "DiplomacySummary.csv"];
+/// Without an offset, this much of the file's end is read (the whole-game logs grow to megabytes).
+pub const LOG_TAIL_DEFAULT: u64 = 16 * 1024;
+
+/// The log's path under `civ6_appdata`, or why it may not be read.
+pub fn log_tail_path(file: &str) -> Result<String> {
+    if !LOG_TAIL_FILES.contains(&file) {
+        bail!("log-tail reads only {}", LOG_TAIL_FILES.join(", "));
+    }
+    Ok(format!("Logs/{file}"))
+}
+
+/// The reply of `civ6 log-tail`: the complete lines of `chunk`, read at `offset` of a file of `size`
+/// bytes, and the offset to read from next (a partial last line waits for it). `from_end`: the chunk
+/// was read from inside the file, so its first line may be cut and is dropped. A file smaller than
+/// `offset` was started again (a new game session): no lines, read again from 0.
+pub fn log_tail_reply(file: &str, chunk: &[u8], offset: u64, size: u64, from_end: bool) -> serde_json::Value {
+    if offset > size {
+        return serde_json::json!({"ok": true, "file": file, "size": size, "offset": offset, "next": 0,
+                                  "restarted": true, "lines": []});
+    }
+    let end = chunk.iter().rposition(|&b| b == b'\n').map_or(0, |i| i + 1);
+    let text = String::from_utf8_lossy(&chunk[..end]);
+    let mut lines: Vec<&str> = text.lines().collect();
+    if from_end && offset > 0 && !lines.is_empty() {
+        lines.remove(0);
+    }
+    serde_json::json!({"ok": true, "file": file, "size": size, "offset": offset, "next": offset + end as u64,
+                       "restarted": false, "lines": lines})
+}
+
 /// `Harness.run(Harness.autoplay, n)`.
 pub fn autoplay_call(turns: u32) -> Result<String> {
     if !(1..=MAX_AUTOPLAY_TURNS).contains(&turns) {
@@ -713,6 +747,18 @@ mod tests {
         assert_eq!(district_plots_call(Some("65536")).unwrap().1, "Harness.run(Harness.district_plots, 65536)");
         assert!(district_plots_call(Some("Beijing")).is_err());
         assert!(district_plots_call(Some("1) os.exit() --")).is_err());
+    }
+
+    #[test]
+    fn log_tail_reads_only_its_three_logs_and_complete_lines() {
+        assert_eq!(log_tail_path("AI_CityBuild.csv").unwrap(), "Logs/AI_CityBuild.csv");
+        assert!(log_tail_path("../Saves/x.Civ6Save").is_err() && log_tail_path("AI_Victories.csv").is_err());
+        let r = log_tail_reply("AI_CityBuild.csv", b"526, 0, Beijing, FAITH PURCHASE, UNIT_ROCK_BAND\n527, 0, Xi", 100, 200, false);
+        assert_eq!(r["lines"], serde_json::json!(["526, 0, Beijing, FAITH PURCHASE, UNIT_ROCK_BAND"]));
+        assert_eq!(r["next"], 100 + 48, "the partial line waits for the next read");
+        let tail = log_tail_reply("AI_CityBuild.csv", b"ING\n526, 0, a\n", 180, 194, true);
+        assert_eq!(tail["lines"], serde_json::json!(["526, 0, a"]), "a read from inside the file drops its cut first line");
+        assert_eq!(log_tail_reply("World_Congress.csv", b"", 900, 100, false)["restarted"], true);
     }
 
     #[test]
