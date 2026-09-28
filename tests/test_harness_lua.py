@@ -711,3 +711,27 @@ def test_the_library_as_sent_with_comment_lines_blanked_still_runs():
     rt, out = bare_runtime()
     rt.execute('local HARNESS_VERSION = "sent" local HARNESS_STATE = "InGame"\n' + body)
     assert snapshot(rt, out)["ok"] is True
+
+
+# ---- postmortem-fixes design, ruling 26: every class that can take a city ---------------------------
+
+def test_a_giant_death_robot_next_to_the_city_counts_as_a_capturer_and_a_ranged_unit_does_not():
+    """War-12: Guangzhou (T565) fell to a GDR next to it (Combat 130, RangedCombat 120) without the
+    capture count seeing it: it read as ranged. A unit the game lets capture with a melee strength and a
+    class other than ranged or siege counts; a Crossbowman (ranged, CanCapture too) does not."""
+    setup = """UNITS = {}
+unit { id = 30, owner = BARB, utype = 'UNIT_GIANT_DEATH_ROBOT', x = 23, y = 21 }
+unit { id = 31, owner = BARB, utype = 'UNIT_CROSSBOWMAN', x = 23, y = 22, range = 2 }"""
+    beijing = snapshot(*runtime(), setup)["cities"][0]
+    assert beijing["capture_adjacent"] == 1, "the robot, not the crossbowman"
+    kinds = {e["type"]: (e["kind"], e["capture"]) for e in beijing["enemies"]}
+    assert kinds == {"UNIT_GIANT_DEATH_ROBOT": ("ranged", True), "UNIT_CROSSBOWMAN": ("ranged", False)}
+
+
+def test_the_last_stand_shoots_a_giant_death_robot_next_to_the_city_before_a_weaker_crossbowman():
+    """The stand's priority and retreat use the same test: a capturer next to the city comes first."""
+    rt, out = stand_world("""UNITS = { UNITS[#UNITS] }
+unit { id = 30, owner = BARB, utype = 'UNIT_GIANT_DEATH_ROBOT', x = 23, y = 21 }
+unit { id = 31, owner = BARB, utype = 'UNIT_CROSSBOWMAN', x = 23, y = 22, dmg = 50, range = 2 }""")
+    r = call(rt, out, "Harness.last_stand_step, 65536, {}, {}")
+    assert (r["action"], r["actor"], r["target"]["id"]) == ("ranged_attack", "unit:20", 30)

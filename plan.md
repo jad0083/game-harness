@@ -175,7 +175,7 @@
 - [ ] Milestones judged on the current value, not "ever met" (shared, so Stellaris too; ruling 17); on branch feat/postmortem-fixes, not deployed
 - [ ] Time constants per game in `[time]` of pillars.toml; Civ VI event-review cap 5 turns; "new war" and "city lost" always review (rulings 15, 19); on branch feat/postmortem-fixes, not deployed
 - [ ] Civ VI snapshot: `allied`, `alive`, strategic stock, defender prices for every city with the reason for each refusal (rulings 1, 7, 21); on branch feat/postmortem-fixes, not deployed (the live read of `allied` and the stock is unverified)
-- [ ] Civ VI capture test counts every capturer class (Giant Death Robot); the last stand stays off (ruling 26)
+- [ ] Civ VI capture test counts every capturer class (Giant Death Robot); the last stand stays off (ruling 26); on branch feat/postmortem-fixes, not deployed (`CanCapture` by class is unverified live)
 - [ ] Civ VI defenders may spend down to the reserve in war or military weakness; purchase limits and strategic stock in every prompt (rulings 1, 2, 8); on branch feat/postmortem-fixes, not deployed
 - [ ] Civ VI order record split by item class, with refusal counts (ruling 9)
 - [ ] Civ VI triggers: falling behind, neighbour buildup, negative income, loyalty; decide every hand-back while a city stays in danger (rulings 10-14); on branch feat/postmortem-fixes, not deployed

@@ -52,6 +52,9 @@ GameInfo = {
     { UnitType = 'UNIT_INFANTRY', FormationClass = 'FORMATION_CLASS_LAND_COMBAT', PromotionClass = 'PROMOTION_CLASS_MELEE', Domain = 'DOMAIN_LAND', Combat = 75, RangedCombat = 0, Bombard = 0, StrategicResource = 'RESOURCE_OIL' },
     { UnitType = 'UNIT_MACHINE_GUN', FormationClass = 'FORMATION_CLASS_LAND_COMBAT', PromotionClass = 'PROMOTION_CLASS_RANGED', Domain = 'DOMAIN_LAND', Combat = 70, RangedCombat = 85, Bombard = 0 },
     { UnitType = 'UNIT_MODERN_AT', FormationClass = 'FORMATION_CLASS_LAND_COMBAT', PromotionClass = 'PROMOTION_CLASS_ANTI_CAVALRY', Domain = 'DOMAIN_LAND', Combat = 85, RangedCombat = 0, Bombard = 0 },
+    -- a unit that can take a city while it reads as ranged (post-mortem war-12: Guangzhou at T565)
+    { UnitType = 'UNIT_GIANT_DEATH_ROBOT', FormationClass = 'FORMATION_CLASS_LAND_COMBAT', PromotionClass = 'PROMOTION_CLASS_GIANT_DEATH_ROBOT', Domain = 'DOMAIN_LAND', Combat = 130, RangedCombat = 120, Bombard = 0, CanCapture = true },
+    { UnitType = 'UNIT_CROSSBOWMAN', FormationClass = 'FORMATION_CLASS_LAND_COMBAT', PromotionClass = 'PROMOTION_CLASS_RANGED', Domain = 'DOMAIN_LAND', Combat = 30, RangedCombat = 40, Bombard = 0, CanCapture = true },
   }, 'UnitType'),
   Buildings = tbl({
     { BuildingType = 'BUILDING_MONUMENT', IsWonder = false },

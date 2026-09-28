@@ -13,7 +13,7 @@
 - [ ] A failed decision (503s, request limit) gets no retry and no rule-based action before autoplay (T512, T522, T525) (post-mortem H9; ruling 20)
 - [ ] The Civ VI order record shows purchases at 100% by construction and cannot show refusals by item class (post-mortem H11; ruling 9)
 - [ ] The Civ VI "new war" trigger never names who declared: the T121 war our own AI declared was recorded as Australia's (post-mortem H12; ruling 24)
-- [ ] `capture_adjacent` ignores ranged units that can capture (Giant Death Robot), so `about_to_fall` never tripped for Beijing T545 or Guangzhou T565 (post-mortem war-12; ruling 26)
+- [ ] `capture_adjacent` ignores ranged units that can capture (Giant Death Robot), so `about_to_fall` never tripped for Beijing T545 or Guangzhou T565 (post-mortem war-12; ruling 26). Fixed on branch feat/postmortem-fixes (a capturer is melee, cavalry, or a `CanCapture` unit with melee strength that is not ranged or siege; garrison 0 and walls 0 with an enemy within 2 tiles is falling); closes when deployed
 - [ ] `_wait_turns` logs the turns requested, not those that passed (18 of 25 calls after T579 overran), and traces cut prompts at 6,000 characters (post-mortem H13, H14; ruling 27)
 - [ ] A Stellaris-only deploy restarted the live Civ VI run at T462 (post-mortem H14; ruling 28)
 - [ ] Learned Civ VI rules built on misreadings (the T121 premise; "save gold until the balance is double the unit cost"; "not allowed" in endangered cities) (post-mortem S6; ruling 29)

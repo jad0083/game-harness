@@ -1343,19 +1343,32 @@ def order_record_text(rec: dict[str, dict], idle: dict[str, tuple[int, int]] | N
 # attacks, the retreat of hurt units, then pins. Off by default (PILOT_LAST_STAND); each action is
 # one call, read back in GameCore before the next.
 
-FALL_CAPTURE_ADJACENT = 1     # units next to the city that can take it (melee, cavalry): one is enough
+FALL_CAPTURE_ADJACENT = 1     # units next to the city that can take it: one is enough
 FALL_GARRISON_SHARE = 0.5     # worn down: the garrison at or below this share of its hit points
+FALL_BARE_RANGE = 2           # no garrison and no walls left: an enemy this close is enough
+
+
+def enemy_within(city: dict, tiles: int) -> bool:
+    """An enemy listed within `tiles` of the city (the snapshot lists the nearest few), or one next to
+    it that can take it."""
+    return (city.get("capture_adjacent") or 0) >= 1 or any(
+        isinstance(e.get("dist"), (int, float)) and e["dist"] <= tiles for e in city.get("enemies") or [])
 
 
 def about_to_fall(city: dict) -> bool:
     """A city the next enemy turn can take (ruling 22): a unit that can capture it stands next to
-    it, no walls stand, and the garrison is worn down to half or one attack from each enemy in range
-    would take what is left (`incoming`). Without the ruling-11 fields: False. Beijing at T61 (200 of
-    200, two capturers adjacent) is not falling."""
+    it (the library counts melee, cavalry and any unit the game lets capture that is not ranged or
+    siege by class, such as the Giant Death Robot; postmortem-fixes ruling 26), no walls stand, and the
+    garrison is worn down to half or one attack from each enemy in range would take what is left
+    (`incoming`); or nothing is left: garrison 0 and walls 0 with an enemy within 2 tiles (Beijing at
+    T545 fell that way with no capturer next to it). Without the ruling-11 fields: False. Beijing at
+    T61 (200 of 200, two capturers adjacent) is not falling."""
     d = city.get("defense") or {}
     hp, top, walls = d.get("garrison_hp"), d.get("garrison_max"), d.get("walls_hp")
     if not all(isinstance(v, (int, float)) for v in (hp, top, walls)) or not top:
         return False
+    if hp <= 0 and walls <= 0 and enemy_within(city, FALL_BARE_RANGE):
+        return True
     if (city.get("capture_adjacent") or 0) < FALL_CAPTURE_ADJACENT or walls > 0:
         return False
     incoming = city.get("incoming")
@@ -1510,9 +1523,10 @@ def urgent_changes(before: dict, now: dict, gold_reserve: int = 0, wonders: froz
                        f"{', under siege' if c.get('under_siege') else ''}{', damaged' if c.get('damaged') else ''})")
         if about_to_fall(c) and not about_to_fall(prev):         # ruling 22: the model decides first
             d = c.get("defense") or {}
+            near = (f"{c.get('capture_adjacent')} unit(s) next to it that can take it" if c.get("capture_adjacent")
+                    else f"an enemy within {FALL_BARE_RANGE} tiles")
             out.append(f"city falling: {c['name']} (garrison {d.get('garrison_hp')}/{d.get('garrison_max')}, no walls, "
-                       f"{c.get('capture_adjacent')} unit(s) next to it that can take it"
-                       + (f", about {c['incoming']} damage incoming" if c.get("incoming") else "") + ")")
+                       f"{near}" + (f", about {c['incoming']} damage incoming" if c.get("incoming") else "") + ")")
         w = prev.get("producing")
         elsewhere = now.get("wonders_elsewhere")      # built by another player: a lost race, not the AI's switch
         if w and w in wonders and w != c.get("producing") and w not in (c.get("wonders") or []) \

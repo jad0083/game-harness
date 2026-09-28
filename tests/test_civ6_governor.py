@@ -2595,3 +2595,28 @@ def test_the_ai_spend_is_urgent_named_by_one_log_read_and_shown_to_the_next_deci
     rows = [e for e in g.log.recent if e["kind"] == "metrics" and e.get("turn") == 528]
     assert round(rows[0]["ai_spent"]["faith"]) == 1998
     assert not any(e["kind"] == "needs_attention" for e in g.log.recent), "never stops the hands-off run"
+
+
+# ---- postmortem-fixes design, ruling 26: the capture test ---------------------------------------------
+
+def test_beijing_at_t545_and_guangzhou_at_t565_read_as_about_to_fall():
+    """War-12: both met the walls and garrison tests and fell in the next AI turn without tripping
+    about_to_fall. Beijing had no garrison left and no walls with enemies 2 tiles out; Guangzhou had a
+    Giant Death Robot next to it, which the library now counts as a capturer."""
+    from pilot.civ6 import about_to_fall
+    beijing = {**_city0(), "threatened": True, "enemies_near": 3, "capture_adjacent": 0, "garrison": None,
+               "defense": {"garrison_hp": 0, "garrison_max": 200, "walls_hp": 0, "walls_max": 400},
+               "enemies": [{"type": "UNIT_ARTILLERY", "kind": "siege", "capture": False, "dist": 2, "hp": 100}]}
+    assert about_to_fall(beijing), "garrison 0 and walls 0 with an enemy within 2"
+    far = {**beijing, "enemies": [{**beijing["enemies"][0], "dist": 3}]}
+    assert not about_to_fall(far), "the nearest enemy 3 tiles out"
+    walls = {**beijing, "defense": {**beijing["defense"], "walls_hp": 50}}
+    assert not about_to_fall(walls), "walls still stand"
+    guangzhou = {**_city0(), "threatened": True, "enemies_near": 2, "capture_adjacent": 1, "garrison": None,
+                 "defense": {"garrison_hp": 80, "garrison_max": 200, "walls_hp": 0, "walls_max": 400},
+                 "enemies": [{"type": "UNIT_GIANT_DEATH_ROBOT", "kind": "ranged", "capture": True, "dist": 1, "hp": 100}]}
+    assert about_to_fall(guangzhou)
+    now = {**FIXTURE, "cities": [{**beijing, "name": "Beijing"}]}
+    reasons = urgent_changes(FIXTURE, now)
+    assert any(u == "city falling: Beijing (garrison 0/200, no walls, an enemy within 2 tiles)" for u in reasons), reasons
+    assert "ABOUT TO FALL" in briefing_text(now, INDEX)

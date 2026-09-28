@@ -450,6 +450,10 @@ Rules:
 - Time constants are in turns (`[time]` in `corpora/civ6/pillars.toml`): event reviews at most one per 5
   turns, but a new war or a lost city always reviews; milestone projections and outcome scoring over 12
   turns (postmortem-fixes design, rulings 15 and 19).
+- A city is about to fall with a capturer next to it, no walls and the garrison at half or less (or a
+  burst that takes the rest), or with garrison 0 and walls 0 and an enemy within 2 tiles; a capturer is
+  melee, cavalry, or any unit the game lets capture that is not ranged or siege by class (the Giant
+  Death Robot; postmortem-fixes design, ruling 26; `CanCapture` by class is unverified live).
 - The scripted last stand for a city about to fall (`PILOT_LAST_STAND=1`; off by default) sends
   unit and city actions: `civ6 last-stand-step`, `ls-state`, `finish-moves`, `turn-ready` (numeric
   IDs, never model orders). Its first live use follows the L6 checklist of

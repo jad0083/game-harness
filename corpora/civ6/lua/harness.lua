@@ -201,13 +201,23 @@ local function is_military(row)
 end
 
 -- A unit's kind for defence: siege, cavalry (light or heavy), ranged, or melee. Melee includes
--- anti-cavalry (the Spearman) and recon; melee and cavalry are the kinds that can capture a city.
+-- anti-cavalry (the Spearman) and recon; `can_capture` says which units can take a city.
 local CAVALRY = { PROMOTION_CLASS_LIGHT_CAVALRY = true, PROMOTION_CLASS_HEAVY_CAVALRY = true }
 local function unit_kind(row)
   if row.PromotionClass == 'PROMOTION_CLASS_SIEGE' then return 'siege' end
   if CAVALRY[row.PromotionClass] then return 'cavalry' end
   if (row.RangedCombat or 0) > 0 or (row.Bombard or 0) > 0 then return 'ranged' end
   return 'melee'
+end
+
+-- Whether an enemy next to a city can take it (docs/design/2026-09-27-postmortem-fixes-design.md,
+-- ruling 26): melee or cavalry, or a unit the game lets capture (CanCapture) with a melee strength
+-- whose class is not ranged or siege. The Giant Death Robot (Combat 130, RangedCombat 120) reads as
+-- ranged and took Guangzhou at T565 unseen. CanCapture's values by class are unverified live.
+local function can_capture(row, kind)
+  if kind == 'melee' or kind == 'cavalry' then return true end
+  return (row.CanCapture == true or row.CanCapture == 1) and (row.Combat or 0) > 0
+    and row.PromotionClass ~= 'PROMOTION_CLASS_RANGED' and row.PromotionClass ~= 'PROMOTION_CLASS_SIEGE'
 end
 
 -- Land units that defend a city (pillars.toml [actions.purchase] defender_classes, as promotion classes).
@@ -398,9 +408,10 @@ local function danger_detail(me, c, info, hostile)
     for _, e in ipairs(hostile) do
       local kind = unit_kind(e.row)
       local hp = e.u:GetMaxDamage() - e.u:GetDamage()
+      local captures = can_capture(e.row, kind)
       enemies[#enemies + 1] = { id = e.u:GetID(), owner = e.u:GetOwner(), type = e.row.UnitType, kind = kind,
-                                x = e.x, y = e.y, dist = e.dist, hp = hp }
-      if e.dist == 1 and (kind == 'melee' or kind == 'cavalry') then capture = capture + 1 end
+                                capture = captures, x = e.x, y = e.y, dist = e.dist, hp = hp }
+      if e.dist == 1 and captures then capture = capture + 1 end
       local reach = 1
       if kind == 'ranged' or kind == 'siege' then pcall(function() reach = e.u:GetRange() end) end
       if d and e.dist >= 1 and e.dist <= reach then
@@ -1036,7 +1047,7 @@ end
 -- Target priority (ruling 23), weakest first within a class.
 local function priority(e)
   local p = 50
-  if e.dist == 1 and (e.kind == 'melee' or e.kind == 'cavalry') then p = 300
+  if e.dist == 1 and e.capture then p = 300
   elseif e.kind == 'siege' and e.dist <= 2 then p = 250
   elseif e.dist == 1 then p = 200
   elseif e.dist == 2 then p = 100 end
@@ -1081,8 +1092,9 @@ local function gather(me, c, damage)
         for _, h in ipairs(hostiles_at(me, x, y)) do
           local u = h.u
           local dmg = damage[u:GetOwner() .. ':' .. u:GetID()] or u:GetDamage()
-          local e = { u = u, id = u:GetID(), owner = u:GetOwner(), type = h.row.UnitType, kind = unit_kind(h.row),
-                      x = x, y = y, dist = dist, hp = u:GetMaxDamage() - dmg,
+          local kind = unit_kind(h.row)
+          local e = { u = u, id = u:GetID(), owner = u:GetOwner(), type = h.row.UnitType, kind = kind,
+                      capture = can_capture(h.row, kind), x = x, y = y, dist = dist, hp = u:GetMaxDamage() - dmg,
                       target = not foreign_district(me, x, y) }
           e.score = priority(e)
           enemies[#enemies + 1] = e
@@ -1230,7 +1242,7 @@ function H.last_stand_step(city_id, damage, skip)
     if not o.garrison and o.moves > 0 and o.hp * 100 <= RETREAT_HP * o.max and not skip['unit:' .. o.id] then
       local pressed = false
       for _, e in ipairs(enemies) do
-        if (e.kind == 'melee' or e.kind == 'cavalry') and Map.GetPlotDistance(o.x, o.y, e.x, e.y) == 1 then pressed = true end
+        if e.capture and Map.GetPlotDistance(o.x, o.y, e.x, e.y) == 1 then pressed = true end
       end
       local dest = pressed and best_retreat(me, o, c, enemies)
       if dest and war_safe(o.u:GetComponentID(), dest.x, dest.y) then

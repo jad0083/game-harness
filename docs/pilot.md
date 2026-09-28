@@ -273,9 +273,14 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   whose city offers fewer than 3 other plots to compare with is not rateable and left out (its gain
   of 0 would measure a full city). No placement order exists yet.
 - **Last stand** (rulings 22-27, off unless `PILOT_LAST_STAND=1`): a city is *about to fall* when a
-  unit that can capture it (melee or cavalry) stands next to it, no walls stand, and its garrison is
-  at half its hit points or less, or one attack from each enemy in range would take the rest
-  (`about_to_fall`). The change to falling is urgent ("city falling: X"), so the model decides first
+  unit that can capture it stands next to it, no walls stand, and its garrison is at half its hit
+  points or less, or one attack from each enemy in range would take the rest; or when nothing is
+  left, garrison 0 and walls 0 with an enemy within 2 tiles (`about_to_fall`; postmortem-fixes
+  design, ruling 26). A capturer is a melee or cavalry unit, or any unit the game lets capture
+  (`CanCapture`) with a melee strength whose class is not ranged or siege: the Giant Death Robot
+  (ranged 120, melee 130) took Guangzhou at T565 unseen, and Beijing fell at T545 with no garrison,
+  no walls and no capturer next to it. `CanCapture`'s values by class are unverified live; the
+  stand itself stays off. The change to falling is urgent ("city falling: X"), so the model decides first
   and its purchases are read back. Then, at the hand-back, the governor runs scripted actions before
   the AI plays the turn, one per call: a city strike (only with walls), ranged and siege attacks on
   hostile units within 3 tiles (a sure kill first, by the weakest shooter that kills), and the

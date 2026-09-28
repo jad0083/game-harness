@@ -60,8 +60,8 @@ Rules:
   an ungarrisoned city in danger is bought instead. One land unit fits on a city tile. Walls cannot
   be bought: they come from production after Masonry, and a city without walls cannot strike. Never
   buy what the city finishes within 2 turns anyway; `price` gives the live gold and faith prices.
-- A city ABOUT TO FALL (a unit that can take it next to it, no walls, the garrison at half or less)
-  is urgent: buy what defends it now. When the harness runs a scripted last stand, it acts after
+- A city ABOUT TO FALL (a unit that can take it next to it, no walls, the garrison at half or less;
+  or no garrison and no walls left with an enemy within 2 tiles) is urgent: buy what defends it now. When the harness runs a scripted last stand, it acts after
   your orders (city strike, ranged attacks, hurt units pulled back) and the AI plays the rest.
 - Tools: `consult` (records and docs: techs, civics, policies, units, districts, leaders…),
   `get_doc`, `price`, `remember_rule`. Call them only for a fact the briefing lacks.
