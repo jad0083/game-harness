@@ -909,7 +909,8 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
             url = await proxy.url()
             if not url:
                 raise web.HTTPServiceUnavailable(text="no live pilot run")
-            resp = web.StreamResponse(headers={"Content-Type": "text/event-stream", "Cache-Control": "no-cache"})
+            resp = web.StreamResponse(headers={"Content-Type": "text/event-stream", "Cache-Control": "no-cache",
+                                            "X-Accel-Buffering": "no"})
             await resp.prepare(request)
             loop = asyncio.get_running_loop()
             pending: asyncio.Future | None = None
@@ -960,7 +961,8 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
         return web.json_response(list(log.recent)[-n:], dumps=lambda o: json.dumps(o, default=str))
 
     async def events(request):
-        resp = web.StreamResponse(headers={"Content-Type": "text/event-stream", "Cache-Control": "no-cache"})
+        resp = web.StreamResponse(headers={"Content-Type": "text/event-stream", "Cache-Control": "no-cache",
+                                            "X-Accel-Buffering": "no"})
         await resp.prepare(request)
         q = log.subscribe(asyncio.get_running_loop())
         try:

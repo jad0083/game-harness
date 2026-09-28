@@ -52,6 +52,7 @@ it prints "not restarted: the running civ6 pilot is unaffected; the change appli
 | `PILOT_DASHBOARD_KEY` | the dashboard's service key (default: generated once into `runs/dashboard.key`); a header from the controller only |
 | `PILOT_LIVE_HOST`, `PILOT_VIEW_HOST` | bind addresses of the live pilot's dashboard (default `127.0.0.1`) and of the viewer (default `0.0.0.0`; `view --host`) |
 | `PILOT_PUBLIC_URL`, `PILOT_DASHBOARD_HOSTS` | the viewer's canonical address for links and QR codes (page loads on other names are redirected there), and extra host names it answers to (comma list) |
+| `PILOT_TRUSTED_PROXIES`, `PILOT_PROXY_SECRET` | the reverse proxy's address(es) and the secret it sends in `X-Pilot-Proxy`; with both, its `Remote-User` (Authelia) is the signed-in user |
 | `PILOT_NOTIFY_URL` | an ntfy topic's full URL (e.g. a self-hosted server or a long random topic): the live pilot posts a notice when the run has needed you for 5 min, 30 min and 2 h, and once when it no longer does; unset = off (the default) |
 | `PILOT_AUTH_DB`, `PILOT_ADD_DEVICE`, `PILOT_KEY_SIGNIN` | the sign-in store (default `runs/auth.sqlite`); `cli` limits adding devices to the controller; `1` turns the recovery-key form on (default off) |
 
@@ -858,6 +859,15 @@ The dashboard listens on the LAN, so every request needs a principal (design:
   `.local` and its FQDN), a name in `PILOT_DASHBOARD_HOSTS` (comma list) or the host of
   `PILOT_PUBLIC_URL`; anything else gets 421 (no DNS rebinding). With `PILOT_PUBLIC_URL` set, page
   loads on another host are redirected there (308).
+- **Behind nginx-proxy-manager and Authelia** (`https://gamepilot.saczone.com`, set up like
+  `code.saczone.com`): the proxy host forwards to `http://192.168.1.76:8780` after Authelia's
+  forward-auth, passes Authelia's `Remote-User`, and adds `X-Pilot-Proxy` with a shared secret. A
+  request from an address in `PILOT_TRUSTED_PROXIES` that carries `PILOT_PROXY_SECRET` and a
+  `Remote-User` is that Authelia user (principal `proxy`, full control, changes still need a matching
+  `Origin`); both settings are needed, since an address alone would trust every container on the
+  proxy's host. `X-Forwarded-Proto: https` from that address marks cookies `Secure`, and the event
+  streams send `X-Accel-Buffering: no`. Anything else signs in as before. Port 8780 accepts only the
+  proxy and localhost (`npm-only-guard.sh` in the komodo repo), so on the LAN use the https name.
 - Changes (`POST`) must be `application/json`; a browser's change must carry an `Origin` equal to
   the dashboard's host (`Origin: null`, another site or `Sec-Fetch-Site: cross-site` get 403),
   so other web pages cannot drive the pilot through your browser. Every response is `no-store`,

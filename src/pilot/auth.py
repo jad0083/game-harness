@@ -46,6 +46,8 @@ log = logging.getLogger(__name__)
 SESSION_COOKIE = "pilot_session"
 LEGACY_COOKIE = "pilot_key"              # the retired cookie whose value was K itself
 KEY_HEADER = "X-Pilot-Key"
+PROXY_SECRET_HEADER = "X-Pilot-Proxy"    # nginx-proxy-manager -> viewer: the shared proxy secret
+PROXY_USER_HEADER = "Remote-User"        # set by the proxy from Authelia's forward-auth answer
 DEVICE_HEADER = "X-Pilot-Device"         # viewer -> live pilot: the device behind a request (with K only)
 DEVICE_NAME_HEADER = "X-Pilot-Device-Name"   # its name, percent-encoded (headers are latin-1)
 KEY_ENV, KEY_FILE = "PILOT_DASHBOARD_KEY", "dashboard.key"
@@ -1029,17 +1031,19 @@ def cross_site(request: web.Request) -> web.Response | None:
 
 @dataclass
 class Principal:
-    kind: str                         # service | browser | script | legacy
+    kind: str                         # service | browser | script | legacy | proxy (an Authelia user)
     id: str                           # the device id; "service" or "legacy" otherwise
     name: str
     scope: str = "control"
-    via: str = ""                     # service | cookie | header | legacy_cookie
+    via: str = ""                     # service | cookie | header | legacy_cookie | proxy
     row: dict | None = None
     recheck: Callable[[], bool] = field(default=lambda: True, repr=False)
 
     @property
     def by_cookie(self) -> bool:
-        return self.via in ("cookie", "legacy_cookie")
+        """Sent by a browser on its own (a cookie, or Authelia's session cookie behind the proxy):
+        changes need a matching Origin."""
+        return self.via in ("cookie", "legacy_cookie", "proxy")
 
 
 REASONS = {
@@ -1066,6 +1070,9 @@ def _config_from_env(public_url: str | None = None) -> dict:
     if public:
         hosts.add(host_name(urlsplit(public).netloc))
     return {"public_url": public, "extra_hosts": frozenset(hosts),
+            # behind nginx-proxy-manager + Authelia: the proxy's address(es) and the secret it sends
+            "trusted_proxies": frozenset(a.strip() for a in env.get("PILOT_TRUSTED_PROXIES", "").split(",") if a.strip()),
+            "proxy_secret": env.get("PILOT_PROXY_SECRET", "").strip(),
             "key_signin": env.get("PILOT_KEY_SIGNIN", "0").strip().lower() in ("1", "true", "yes", "on"),
             "add_device": "cli" if env.get("PILOT_ADD_DEVICE", "").strip().lower() == "cli" else "any"}
 
@@ -1075,8 +1082,12 @@ class Auth:
 
     def __init__(self, keys: KeySource, store: AuthStore, *, clock: Callable[[], float] = time.time,
                  keepalive_s: float = KEEPALIVE_S, public_url: str = "", extra_hosts: frozenset[str] = frozenset(),
-                 key_signin: bool = False, add_device: str = "any"):
+                 key_signin: bool = False, add_device: str = "any", trusted_proxies: frozenset[str] = frozenset(),
+                 proxy_secret: str = ""):
         self.keys, self.store, self.now = keys, store, clock
+        # both are needed: an address alone is any container on the proxy's host, a secret alone any address
+        self.trusted_proxies = trusted_proxies if proxy_secret else frozenset()
+        self.proxy_secret = proxy_secret
         self.throttle = Throttle(clock)
         self.keepalive_s = keepalive_s
         self.public_url, self.extra_hosts = public_url, extra_hosts
@@ -1136,7 +1147,22 @@ class Auth:
         security_headers(response)
         # the hook runs after aiohttp has turned response.cookies into headers: add them as headers
         for op, name, value in request.get(COOKIES, []):
-            response.headers.add("Set-Cookie", cookie_header(name, value, secure=request.secure, delete=op == "del"))
+            response.headers.add("Set-Cookie", cookie_header(name, value, secure=self.is_secure(request),
+                                                             delete=op == "del"))
+
+    # -- behind the proxy (nginx-proxy-manager + Authelia)
+    def from_proxy(self, request: web.Request) -> bool:
+        """The request came through the trusted proxy: its address and its shared secret."""
+        given = request.headers.get(PROXY_SECRET_HEADER, "")
+        return (request.remote in self.trusted_proxies and bool(self.proxy_secret)
+                and hmac.compare_digest(given.encode(), self.proxy_secret.encode()))
+
+    def is_secure(self, request: web.Request) -> bool:
+        """HTTPS as the browser used it: TLS ends at the proxy, which says so in X-Forwarded-Proto."""
+        if request.secure:
+            return True
+        return (request.remote in self.trusted_proxies
+                and request.headers.get("X-Forwarded-Proto", "").lower() == "https")
 
     # -- the principal
     def _unauthorized(self, request: web.Request, error: str, row: dict | None = None) -> web.Response:
@@ -1177,6 +1203,11 @@ class Auth:
             if not is_loopback(ip):
                 self.throttle.fail(bucket_of(ip))
             return None, json_error(401, "bad_token", *REASONS["bad_token"])
+        # Authelia's user, set by the proxy after its forward-auth (never taken from anyone else)
+        user = request.headers.get(PROXY_USER_HEADER, "").strip()
+        if user and self.from_proxy(request):
+            name = clip_name(user, "an Authelia user")
+            return Principal("proxy", f"proxy:{name}", name, "control", "proxy"), None
         cookie = request.cookies.get(SESSION_COOKIE)
         old = request.cookies.get(LEGACY_COOKIE)
         if cookie:
