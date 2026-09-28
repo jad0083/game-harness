@@ -292,7 +292,9 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   resource, within the defender cap, past its 5-turn cooldown, whose upkeep leaves gold per turn at 0 or
   more; the strongest by corpus max(combat, ranged), then the cheaper, faith tried first. It goes through
   the order checks and the read-back like any order (`by: governor`, "bought before autoplay (military
-  weakness: ...)", a `rule_buy` event and a journal line), at most one per stretch. At war with a major
+  weakness: ...)", a `rule_buy` event and a journal line), at most one per stretch and tried once per
+  hand-back turn whatever came of it (a purchase lost twice makes an urgent decision; the hand-back after
+  it starts autoplay rather than sending it a third time). At war with a major
   the chunk is already one turn and the hand-back decides instead ("city still in danger"). Under
   weakness an ungarrisoned city with an empty queue also gets its strongest resource-free defender as a
   production order, at that step and at each decision whose answer leaves the queue empty. A fill stays

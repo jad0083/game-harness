@@ -2722,6 +2722,19 @@ def test_under_weakness_every_city_shows_the_defenders_it_can_buy():
     assert "defenders to buy" not in calm, "no weakness: only cities in danger list them"
 
 
+def test_a_rule_buy_whose_replies_are_lost_is_not_sent_a_third_time_and_autoplay_starts(setup):
+    """Every purchase reply lost: the rule buy, its one re-send, then the urgent "order lost twice"
+    decision; the hand-back after it must not try the rule buy again at the same turn (it did: 10
+    purchases, 6 decisions and no autoplay at T496)."""
+    game = FakeCiv6(_t496(), index=INDEX, prices={("Rockhampton", "unit:modern_at", "faith"): 1160}, lost_orders=1000)
+    g = _stretch_governor(setup, game)
+    g.run(max_decisions=4)
+    sent = _purchases(game)
+    assert any(a[0] == "autoplay" for a in game.actions), "the turn advances"
+    assert [played for _o, played in sent].count(0) == 2, "at T496: the rule buy and one re-send, never a third"
+    assert traces(setup)[1]["trigger"] == "urgent: order lost twice: purchase unit:modern_at in Rockhampton"
+
+
 # ---- postmortem-fixes design, ruling 5: re-send a lost purchase only with proof ---------------------
 
 AT_ORDER = {"kind": "purchase", "city": "Longxi", "id": "unit:modern_at"}

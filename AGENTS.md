@@ -404,7 +404,8 @@ Rules:
   turn at a time and only reads or orders between turns; never repeat an order blindly after a timeout.
   The one exception is the governor's own: a purchase whose lost reply the same turn's read-back proves
   spent nothing (balance within 1, the item's count unchanged) is sent once more before the next
-  autoplay, and a second loss is an urgent decision (postmortem-fixes design, ruling 5).
+  autoplay, and a second loss is an urgent decision (postmortem-fixes design, ruling 5); the rule-based
+  defender (ruling 3) is tried once per hand-back turn, so it is never sent a third time.
 - Tutorial advisor popups hold an autoplay turn forever (seen at T17, cleared by clicking OK):
   `Harness.autoplay` sets `UserConfiguration` `TutorialLevel` to -1 for the session.
 - Wonder movies and four other popups hold the game's engine event until closed

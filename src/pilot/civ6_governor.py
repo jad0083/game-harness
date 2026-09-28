@@ -271,6 +271,7 @@ class Civ6Governor(Governor):
         # purchases whose reply was lost and whose read-back proved nothing was spent, sent once more
         # before the next autoplay (postmortem-fixes ruling 5): [{"order": wire order, "turn"}]
         self._resend: list[dict] = []
+        self._rule_buy_turn: int | None = None    # the hand-back turn of the last rule buy tried (ruling 3)
         self._overrun = False                     # the last autoplay passed more turns than requested (ruling 27)
         self._prices: dict | None = None          # the last decision's defender prices (ruling 6)
         log.state.info["directives"] = []
@@ -627,7 +628,10 @@ class Civ6Governor(Governor):
         """Ruling 3, before an autoplay stretch of 2+ turns: while the weakness test holds and no defender
         was bought at this hand-back, the governor buys one defender itself (`rule_buy_order`) and fills
         empty queues of ungarrisoned cities, with no model call, through the same checks and read-back
-        as any order (`by: governor`). Returns the read-back snapshot, or None when nothing was sent."""
+        as any order (`by: governor`). Tried once per hand-back turn, whatever came of it: a purchase
+        whose reply is lost twice makes an urgent decision at the same turn, and a second try after it
+        would send it a third time and never start autoplay. Returns the read-back snapshot, or None
+        when nothing was sent."""
         buy = self._buy_limits()
         if buy is None or not buy.rule_buy:
             return None
@@ -635,6 +639,9 @@ class Civ6Governor(Governor):
         if not weak:
             return None
         turn = last.get("turn")
+        if turn == self._rule_buy_turn:
+            return None
+        self._rule_buy_turn = turn
         if any(r.get("order_kind") == "purchase" and r.get("result") == "completed" and r.get("turn") == turn
                and is_defender(r.get("id"), self.index, buy) for r in self._order_rows):
             return None
