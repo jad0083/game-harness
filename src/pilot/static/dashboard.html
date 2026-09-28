@@ -133,9 +133,11 @@
             display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
   .banner p { margin: 0; flex: 1 1 320px; font-size: 15px; }
   .banner.locked { border-left-color: var(--bad); background: color-mix(in srgb, var(--bad) 8%, var(--surface)); }
-  .banner.notices { border-left-color: var(--warn); display: grid; gap: 8px; }
+  /* not a filled block: the attention card is the page's one (principle 1); a rule and the words */
+  .banner.notices { background: transparent; border-left-color: var(--warn); display: grid; gap: 8px; padding: 6px 0 6px 14px; }
   .banner.notices .notice { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
   .banner.notices .notice p { flex: 1 1 280px; }
+  .banner.notices .notice.bad p { color: var(--bad); }
 
   /* ---- layout: sections with hairlines, no card kit ---- */
   main { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(360px, 1fr); gap: 0 32px; padding: 4px 24px 32px; align-items: start; }
@@ -679,7 +681,6 @@
 </div>
 <div class="toast" id="toast" role="status" hidden></div>
 <div class="banner locked" id="locked" role="alert" hidden><p id="locked-text"></p><a class="btn primary" id="locked-link" href="/pair">Sign in again</a></div>
-<div class="banner notices" id="notices" role="status" hidden></div>
 <!-- The campaign list (ruling 4): one row per campaign with its game, state, last date, decisions and
      runs; empty ones folded away. A full-screen sheet on a phone. -->
 <dialog id="camp-dialog" class="camps sheet" aria-labelledby="camp-title">
@@ -781,6 +782,8 @@
   </div>
   <div class="gov-actions" id="gov-actions"></div>
 </section>
+<!-- device notices come after the governor line (the hero), folded into one line (ruling 44) -->
+<div class="banner notices" id="notices" role="status" hidden></div>
 <dialog id="stop-dialog" aria-labelledby="stop-title">
   <form method="dialog">
     <h2 id="stop-title">Stop the run?</h2>
@@ -967,6 +970,9 @@ function rememberNotice(id) {
   seenNotices.add(id);
   try { localStorage.setItem("notices:seen", JSON.stringify([...seenNotices].slice(-200))); } catch { /* private window */ }
 }
+// several notices in one line: what each says, in a few words
+const NOTICE_WORDS = { carried_over: () => "this browser now has its own sign-in", new_device: (n) => `${n.device} signed in`,
+                       two_addresses: (n) => `${n.device} was used from two addresses` };
 async function loadNotices() {
   if (signedOut) return;
   let me;
@@ -974,12 +980,19 @@ async function loadNotices() {
   S.me = me;
   const show = (me.notices || []).filter((n) => !seenNotices.has(n.id));
   const box = $("notices");
-  box.innerHTML = show.map((n) => `<div class="notice" data-id="${esc(n.id)}"><p>${esc(n.text.replace(/ (Review devices|See Devices)\.$/, ""))}</p><button class="btn" type="button" data-review>Review devices</button><button class="btn" type="button" data-dismiss>Dismiss</button></div>`).join("");
+  // a used code tried again (ruling 42) stands alone; the rest fold into one line with one Review and
+  // one Dismiss, so several devices on deploy day never push the page down
+  const strip = (t) => String(t || "").replace(/ (Review devices|See Devices)\.$/, "");
+  const line = (ns, text) => `<div class="notice${ns[0].kind === "conflict" ? " bad" : ""}" data-ids="${esc(ns.map((n) => n.id).join(" "))}"><p>${esc(text)}</p><button class="btn" type="button" data-review>Review devices</button><button class="btn" type="button" data-dismiss>${ns.length > 1 ? "Dismiss all" : "Dismiss"}</button></div>`;
+  const rest = show.filter((n) => n.kind !== "conflict");
+  box.innerHTML = show.filter((n) => n.kind === "conflict").map((n) => line([n], strip(n.text))).join("")
+    + (rest.length === 1 ? line(rest, strip(rest[0].text))
+       : rest.length ? line(rest, `${sentence(rest.map((n) => (NOTICE_WORDS[n.kind] || (() => strip(n.text)))(n)).join("; "))}.`) : "");
   box.hidden = !show.length;
   show.filter((n) => n.kind === "carried_over").forEach((n) => rememberNotice(n.id));
   box.querySelectorAll(".notice button").forEach((b) => b.addEventListener("click", () => {
     const n = b.closest(".notice");
-    rememberNotice(n.dataset.id); n.remove();
+    n.dataset.ids.split(" ").forEach(rememberNotice); n.remove();
     box.hidden = !box.children.length;
     if (b.hasAttribute("data-review")) openSettings("devices");
   }));

@@ -1295,27 +1295,29 @@ class Auth:
         now = self.now()
         out = []
         if me.kind == "browser" and me.row and me.row.get("legacy") and now - me.row["created_at"] < NOTICE_S:
-            out.append({"kind": "carried_over", "id": f"carried:{me.id}", "at": me.row["created_at"],
+            out.append({"kind": "carried_over", "id": f"carried:{me.id}", "at": me.row["created_at"], "device": me.name,
                         "text": "This browser now has its own sign-in. See Devices."})
         for d in self.store.list_devices():
             if d["kind"] != "browser":
                 continue
-            if d["id"] != me.id and now - d["created_at"] < NOTICE_S:
+            # a browser carried over from the old cookie is told itself (above); the others are not told
+            # about it as a new device: on deploy day that is every browser the user already had (flow 1)
+            if d["id"] != me.id and now - d["created_at"] < NOTICE_S and d.get("created_via") != "legacy_cookie":
                 how = ("carried over from the old link" if d.get("created_via") == "legacy_cookie"
                        else "signed in with the recovery key" if d.get("created_via") == "recovery_key"
                        else f"added {HOW_WORDS['cli']}" if d.get("created_by") == "cli"
                        else f"added from {self.who(d.get('created_by')) or 'a sign-in code'}")
-                out.append({"kind": "new_device", "id": f"new:{d['id']}", "at": d["created_at"],
+                out.append({"kind": "new_device", "id": f"new:{d['id']}", "at": d["created_at"], "device": d["name"],
                             "text": f"New device signed in: {d['name']}, {how} at {_ago(d['created_at'], now)}"
                                     f"{', ' + d['created_ip'] if d.get('created_ip') else ''}. Review devices."})
             if self.store.two_addresses(d) and now - d["last_seen_at"] < NOTICE_S:
                 out.append({"kind": "two_addresses", "id": f"two:{d['id']}:{int(d['last_seen_at'])}",
-                            "at": d["last_seen_at"],
+                            "at": d["last_seen_at"], "device": d["name"],
                             "text": f"{d['name']} was used from two addresses ({d['prev_ip']} and {d['last_ip']}) "
                                     "within 10 minutes. Review devices."})
         for e in self.store.audit_since("grant_conflict", now - NOTICE_S):   # 24 h, however much else was logged
             detail = json.loads(e["detail"] or "{}")
-            out.append({"kind": "conflict", "id": f"conflict:{e['id']}", "at": e["t"],
+            out.append({"kind": "conflict", "id": f"conflict:{e['id']}", "at": e["t"], "device": detail.get("device"),
                         "text": f"A used sign-in code was tried again from {e['ip'] or 'an unknown address'}. "
                                 f"The browser it had signed in ({detail.get('device') or 'unknown'}) was signed out. "
                                 "Review devices."})

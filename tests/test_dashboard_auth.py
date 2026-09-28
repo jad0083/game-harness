@@ -906,3 +906,24 @@ def test_one_address_cannot_flood_the_audit(tmp_path, clock, monkeypatch):
     left = store.audit_rows(10_000)
     assert len(left) <= 10
     assert {"signin", "grant_conflict"} <= {r["event"] for r in left}
+
+
+def test_a_carried_over_browser_is_no_new_device_to_the_others(tmp_path, clock):
+    """Flow 1: on deploy day Chrome and the phone carry over, and each is told once about its own sign-in;
+    neither is announced to the other as "New device signed in" (only devices signed in with a code are).
+    Notices name their device, so the page can fold several into one line."""
+    app, auth = viewer(tmp_path, clock)
+    store = auth.store
+    chrome, _ = store.create_device("browser", name="Chrome on Windows", created_via="legacy_cookie",
+                                    created_by="legacy_link", ip="192.168.1.77", legacy=True)
+    _, phone_cookie = store.create_device("browser", name="Chrome on Android", created_via="legacy_cookie",
+                                         created_by="legacy_link", ip="127.0.0.1", legacy=True)
+    g = store.create_grant(chrome["id"], words=True)
+    store.redeem("words", g["words"], ip="192.168.1.77", name="Brave on Windows")
+
+    async def go():
+        async with client(app, phone_cookie) as c:
+            return (await (await c.get("/api/auth/me")).json())["notices"]
+    notices = asyncio.run(go())
+    assert [n["kind"] for n in notices] == ["carried_over", "new_device"], notices
+    assert notices[1]["device"] == "Brave on Windows" and notices[0]["device"] == "Chrome on Android"

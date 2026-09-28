@@ -170,3 +170,39 @@ def test_pick_campaign_helper_and_desktop_bar(browser, live_servers):
     pick_campaign(page, "stellaris/theia")
     assert page.get_attribute("#campaign", "data-cid") == "stellaris/theia"
     w.context.close()
+
+
+@pytest.mark.parametrize("scenario", ["needs"])
+@pytest.mark.parametrize("name", ["phone-dark", "phone-light"])
+def test_on_deploy_day_the_notices_leave_the_governor_line_first(browser, live_servers, name, tmp_path):
+    """Deploy day as the runbook has it: Chrome and the phone carried over, Brave added from Chrome, and
+    the run needs you. The governor line stays the first thing under the bar and Resume is on the first
+    screen; the device notices come after it, folded into one line with one Review and one Dismiss."""
+    from uikit import CONTEXTS
+    auth = live_servers["auth"]
+    chrome, _ = auth.store.create_device("browser", name="Chrome on Windows", created_via="legacy_cookie",
+                                         created_by="legacy_link", ip="192.168.1.77", legacy=True)
+    g = auth.store.create_grant(chrome["id"], words=True)
+    auth.store.redeem("words", g["words"], ip="192.168.1.77", name="Brave on Windows")
+    _, cred = auth.store.create_device("browser", name="Chrome on Android", created_via="legacy_cookie",
+                                       created_by="legacy_link", ip="127.0.0.1", legacy=True)
+    w = open_context(browser, name, live_servers, signed_in=False)
+    w.context.add_cookies([{"name": "pilot_session", "value": cred, "url": w.base, "httpOnly": True, "sameSite": "Lax"}])
+    w.page.goto(w.base + "/", wait_until="domcontentloaded")
+    w.page.wait_for_selector("#notices:not([hidden])", timeout=15000)
+    w.page.wait_for_timeout(800)
+    page = w.page
+    w.page.screenshot(path=str(tmp_path / f"deployday-{name}.png"))
+    gov, notes = page.locator("#gov").bounding_box(), page.locator("#notices").bounding_box()
+    assert gov["y"] < 120, gov                                       # directly under the bar
+    assert notes["y"] >= gov["y"] + gov["height"] - 1, (gov, notes)  # the notices come after the hero
+    resume = page.locator("#gov-resume").bounding_box()
+    nav = CONTEXTS[name]["viewport"]["height"] - 56
+    assert resume["y"] + resume["height"] <= nav, (resume, nav)      # Resume on the first screen, above the nav
+    assert page.locator("#notices .notice").count() == 1             # folded
+    text = page.text_content("#notices")
+    assert "own sign-in" in text and "Brave on Windows" in text and "Chrome on Windows signed in" not in text
+    assert page.locator("#notices [data-dismiss]").count() == 1
+    page.click("#notices [data-dismiss]")
+    assert page.is_hidden("#notices")
+    w.context.close()

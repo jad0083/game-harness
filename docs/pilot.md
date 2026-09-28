@@ -689,7 +689,9 @@ The dashboard listens on the LAN, so every request needs a principal (design:
   what each device did through the viewer (paused, stopped or started a run, changed the settings,
   captured the screen, talked to the governor), so a lost session's doings stay on record; the
   saved settings name the device that saved them (`changed_by`). Other signed-in
-  pages show a notice for 24 h after a new device signs in. From the controller:
+  pages show a notice for 24 h after a new device signs in with a code (a browser carried over from
+  the old link is told only itself); notices sit under the governor line, several folded into one
+  line with one Review devices and one Dismiss all. From the controller:
   `python -m pilot dashboard-devices [list | rename ID NAME | revoke ID | revoke-all [--except ID] |
   log [-n N] | unlock]`.
 - **Recovery key form** (off; `PILOT_KEY_SIGNIN=1` turns it on): a password-manager-friendly form on
