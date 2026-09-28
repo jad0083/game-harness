@@ -107,6 +107,10 @@ def test_on_a_phone_the_crisis_mark_leaves_the_campaign_its_name(browser, live_s
     page = w.page
     assert page.is_visible("#bar-crisis") and page.text_content("#bar-crisis").strip() == "War crisis"
     assert page.eval_on_selector("#camp-name", "e => e.scrollWidth <= e.clientWidth"), page.text_content("#camp-name")
+    # ruling 31: a word and a shape, not only a colour; the crisis mark is not the state dot's ▲
+    mark = page.evaluate("getComputedStyle(document.getElementById('bar-crisis'), '::before').content")
+    dot = page.text_content("#state-dot")
+    assert "▲" not in mark and dot not in mark, (mark, dot)
     assert page.evaluate("document.documentElement.scrollWidth <= document.documentElement.clientWidth")
     w.context.close()
 

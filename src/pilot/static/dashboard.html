@@ -76,7 +76,7 @@
   .camp-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--good);
               box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 22%, transparent); }
   .bar-crisis { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--bad); white-space: nowrap; }
-  .bar-crisis::before { content: "▲"; font-size: 11px; }
+  .bar-crisis::before { content: "\2694\FE0E"; font-size: 13px; }   /* crossed swords: not the state dot's ▲ */
   .state-dot { display: none; width: 24px; justify-content: center; font-size: 13px; line-height: 1; color: var(--st, var(--muted)); }
   .pc, .fresh { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .pc { display: inline-flex; align-items: center; gap: 6px; }
@@ -590,7 +590,7 @@
     .camp-btn { flex: 1 1 auto; max-width: none; border-color: transparent; padding: 6px 4px; font-size: 15px; }
     .state-dot { display: inline-flex; }
     .bar-crisis .crisis-words { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }  /* the mark only; the words stay for screen readers */
-    .bar-crisis::before { font-size: 13px; }
+    .bar-crisis::before { font-size: 15px; }
     .bottom-nav { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); position: fixed; left: 0; right: 0; bottom: 0;
                   z-index: 8; height: calc(56px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom);
                   background: var(--surface); border-top: 1px solid var(--hair); }

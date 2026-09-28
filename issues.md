@@ -2,6 +2,7 @@
 
 ## Open
 
+- [ ] Dashboard v2 review (2026-09-27): on the phone bar the war-crisis mark was the same ▲ as the needs-you state dot, told apart only by colour (two ▲ side by side during a crisis stop), against ruling 31. Fixed on branch feat/dashboard-v2: the crisis mark is crossed swords
 - [ ] Dashboard v2 review (2026-09-27): light-mode chart series failed ruling 33's 3:1 against the plot (--s4 1.78, --s5 2.22, --s3 2.32, --s2 2.64 on #ece9e1), so gold per turn and alloys lines were faint; the contrast test covered text only. Fixed on branch feat/dashboard-v2: darker light-mode series (3.8-4.3:1), and a browser test measures every series in both themes
 - [ ] Dashboard v2 review (2026-09-27): renaming this browser in Settings > Devices and pressing Enter closed Settings and threw the name away (the field sits in the dialog's form, whose first submit button is Done). Fixed on branch feat/dashboard-v2: Enter saves the name, Escape cancels the rename and keeps the sheet open
 - [ ] Dashboard v2 review (2026-09-27): focus fell to <body> when a sheet opened from the ⋯ menu closed (Stop, Add a device, Devices, Start run, and Settings on a phone), against ruling 31, since the menu item that had focus was hidden before the dialog opened. Fixed on branch feat/dashboard-v2: ⋯ takes focus before the sheet opens, so the sheet gives it back
