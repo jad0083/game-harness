@@ -58,8 +58,10 @@ from .civ6 import (
     order_record_text,
     order_situation,
     order_window,
+    purchase_cap,
     read_back,
     record_key,
+    resource_key,
     stand_verdict,
     standing_danger,
     top3_hits,
@@ -100,6 +102,8 @@ briefing says what held). Orders name corpus ids exactly as the briefing shows t
 The prompt already holds the briefing, the strategy frame (each pillar's share of effort), what your
 last orders did, and the limits. Call a tool only for a specific missing fact (consult: game records;
 price: the live price of an item in a city), at most twice; then answer.
+A defender the briefing lists as buyable that you choose not to buy: cite this decision's price for it (the
+city, the unit, its cost and currency, and the purchase limit now) in your reason.
 Human instructions, when present, override the rules below."""
 
 CHAT_INSTRUCTIONS = """You are the governor of a Civilization VI civilization, talking with the human who
@@ -959,8 +963,9 @@ class Civ6Governor(Governor):
                         if buy.gold_reserve_per_deficit else "")
                      + f" and {faith} faith" + (f" ({why.removeprefix('keeps ')})" if why and faith else "")
                      + f" in reserve and cost at most {buy.treasury_share:.0%} of the balance"
-                     + (f" ({buy.threatened_share:.0%} for a city IN DANGER, down to the reserve)" if buy.threatened_share else "")
-                     + ".")
+                     + (f" ({buy.threatened_share:.0%} for a defender in a city IN DANGER or under military weakness, "
+                        "down to the reserve)" if buy.threatened_share else "")
+                     + ". " + self._purchase_limits_line(b))
             rules = []
             if buy.skip_turns_left:
                 rules.append(f"never what the city finishes within {buy.skip_turns_left} turns anyway (refused)")
@@ -973,9 +978,52 @@ class Civ6Governor(Governor):
             rules.append("one land unit per city tile (a second one is refused)")
             if buy.defence_cooldown_turns:
                 rules.append(f"one defender purchase per city per {buy.defence_cooldown_turns} turns")
+            if buy.threatened_share:
+                rules.append("under military weakness defender purchases in different cities do not count toward the "
+                             f"{buy.max_orders} purchases per decision (one defender per city)")
             rules.append("a known price over the cap is refused before it is sent; walls cannot be bought")
             text += " Purchase rules: " + "; ".join(rules) + "."
         return text
+
+    def _purchase_limits_line(self, b: dict) -> str:
+        """What one purchase may cost now (postmortem-fixes design, rulings 2 and 8): the cap was in the
+        instructions but never computed for the model, which planned "Buy 2 mechanized_infantry" (2,600
+        faith) on 1,833 and wrote "we cannot buy land units with faith" with an 800-faith AT Crew in
+        reach. E.g. "Purchase limits now: a defender may cost up to 1,961 faith / 798 gold in any city
+        (military weakness: war, last; down to the reserve); anything else up to 980 faith / 414 gold."."""
+        buy = self._buy_limits()
+        if buy is None:
+            return ""
+        weak = weakness(b, buy)
+        cap = lambda cur, defender, city: purchase_cap(b, city, cur, buy, defender=defender, weak=weak)
+        other = f"{cap('faith', False, {}):,} faith / {cap('gold', False, {}):,} gold"
+        if weak and buy.threatened_share:
+            return (f"Purchase limits now: a defender may cost up to {cap('faith', True, {}):,} faith / "
+                    f"{cap('gold', True, {}):,} gold in any city (military weakness: "
+                    f"{', '.join(c['clause'] for c in weak)}; down to the reserve); anything else up to {other}.")
+        danger = {"under_siege": True}
+        return (f"Purchase limits now: up to {other}; a defender for a city in danger up to "
+                f"{cap('faith', True, danger):,} faith / {cap('gold', True, danger):,} gold (down to the reserve).")
+
+    def _review_notes(self, b: dict) -> list[str]:
+        """The Strategist's review sees the purchase limits too (ruling 8); the stock is in the briefing."""
+        line = self._purchase_limits_line(b)
+        return [line] if line else []
+
+    def _unavailable(self, b: dict):
+        """Ruling 8's check for the Strategist: a unit id whose corpus `resource_cost` our latest stock
+        cannot pay ("unit:mechanized_infantry needs 1 Oil; we have 0"); None without a stock read."""
+        stock = b.get("resources")
+        if not isinstance(stock, dict):
+            return None
+
+        def check(uid: str) -> str | None:
+            need = self.index.resource_cost.get(uid)
+            if not need:
+                return None
+            have = stock.get(resource_key(need[1]), 0)
+            return None if have >= need[0] else f"{uid} needs {need[0]} {need[1]}; we have {have:g}"
+        return check
 
     # ---- the order record (docs/design/2026-09-27-civ6-levers-design.md, rulings 12-16) -------------
 
@@ -1134,6 +1182,7 @@ class Civ6Governor(Governor):
         self.log.state.episodes += 1
         self.log.state.game_date = b["date"]
         self.log.emit("metrics", **self._row(b))
+        self.log.state.info["weakness"] = weakness(b, self._buy_limits())   # ruling 1, for the dashboard
         if self.log.telemetry is not None and self.log.campaign_id:
             try:
                 self.log.telemetry.score(self.log.campaign_id, after_months=self._time().score_horizon)

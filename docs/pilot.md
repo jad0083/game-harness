@@ -205,8 +205,19 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   decision so it sorts among the runs by time, and the database, so `rebuild-telemetry` keeps the rows).
 - **Buy-outs** (rulings 17-21): a city is *in danger* (not merely threatened) when it is under siege,
   its garrison is damaged, two enemies that can capture it stand next to it, or two enemies are
-  near an empty city tile; only then does a purchase there get the threatened share, and one-turn
-  autoplay chunks follow it too (with war against a major and a city about to fall). The gold reserve is `gold_reserve` plus
+  near an empty city tile; one-turn autoplay chunks follow it (with war against a major and a city
+  about to fall). A defender purchase gets the threatened share (down to the reserve) in a city in
+  danger and, while the weakness test holds (postmortem-fixes design, rulings 1-2), in every city;
+  buildings and other units (a Rock Band, a Settler) keep the treasury share everywhere. Under
+  weakness defender purchases in different cities do not count toward `max_orders` (one per city per
+  decision), and a refusal by the cap names the clause ("a defender may spend down to the reserve: at
+  war with CIVILIZATION_AUSTRALIA"). Every decision prompt and the Strategist's review carry "Purchase
+  limits now" (e.g. "a defender may cost up to 1,961 faith / 798 gold in any city (military weakness:
+  war, last; down to the reserve); anything else up to 980 faith / 414 gold"), the briefing the
+  "Military weakness" line and "Strategic stock: Oil 0, ...", and the instructions ask a decision that
+  leaves a buyable defender unbought to cite its price. A Strategist answer that prefers or quotes a
+  unit whose corpus `resource_cost` our stock cannot pay is sent back once ("unit:mechanized_infantry
+  needs 1 Oil; we have 0"; ruling 8; pinned pillars exempt); `info.weakness` lists the clauses. The gold reserve is `gold_reserve` plus
   `gold_reserve_per_deficit` per gold of deficit; faith keeps the pantheon's live price until one is
   founded. Purchases are checked after the other orders, a defender for a city in danger first; while
   such a city has no unit on its tile, other purchases are refused, unless a defender for it was

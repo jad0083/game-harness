@@ -2515,7 +2515,8 @@ class Governor:
                       "Directive changes and what followed:\n" + self._past_outcomes_text(),
                       *[x for x in (self._action_record_section(b, noops), self._planet_record_section()) if x],
                       self._records_section(),
-                      "Latest briefing:\n" + (self.last_briefing or self.game.briefing_text())]
+                      "Latest briefing:\n" + (self.last_briefing or self.game.briefing_text()),
+                      *self._review_notes(b)]
             sp_name, sp_traits = species_terms(b)
             if sp_name or sp_traits:
                 prompt.insert(1, f"Our species: {sp_name}; traits: {', '.join(sp_traits) or 'none listed'}. "
@@ -2561,7 +2562,8 @@ class Governor:
             elif r.change and r.strategy is not None:
                 new = keep_pinned(to_strategy(r.strategy, self.pillars), self.strategy)
                 errs = validate(new, self.pillars, previous=self.strategy, tech_ids=self._tech_ids(), ids=self._action_ids(),
-                                idle=idle_resources(b), income=b.get("net", {}), standing=self._standing(b))
+                                idle=idle_resources(b), income=b.get("net", {}), standing=self._standing(b),
+                                unavailable=self._unavailable(b))
             else:
                 errs = []
             if r.change or trigger in IDENTITY_TRIGGERS:     # a new strategy, or one the human asked for
@@ -2609,6 +2611,15 @@ class Governor:
             return
         if retry_errors is not None:
             self._review_strategy(b, trigger, retried=True, errors=retry_errors, rejected=retry_rejected)
+
+    def _review_notes(self, b: dict) -> list[str]:
+        """Extra lines for the Strategist's review prompt (a game with its own limits gives them)."""
+        return []
+
+    def _unavailable(self, b: dict):
+        """A check naming an id the game cannot use now (Civ VI: a unit whose strategic resource we
+        lack; ruling 8), or None."""
+        return
 
     def _standing(self, b: dict) -> dict | None:
         """Our military against the peers for `[strategy] relative_military` (ruling 18); None here: a

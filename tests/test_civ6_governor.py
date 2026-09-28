@@ -209,7 +209,9 @@ def test_purchases_respect_the_reserve_and_the_treasury_share(setup):
     rich = {**FIXTURE, "gold": 400}
     assert purchase_cap(rich, city, "gold", buy) == 200                     # half the treasury
     assert purchase_cap(rich, {**city, "threatened": True}, "gold", buy) == 200, "merely threatened: half"
-    assert purchase_cap(rich, {**city, "under_siege": True}, "gold", buy) == 400 - buy.gold_reserve
+    assert purchase_cap(rich, {**city, "under_siege": True}, "gold", buy, defender=True) == 400 - buy.gold_reserve
+    assert purchase_cap(rich, {**city, "under_siege": True}, "gold", buy) == 200, \
+        "only a defender spends down to the reserve (postmortem-fixes ruling 2)"
     assert purchase_cap({**FIXTURE, "gold": buy.gold_reserve}, city, "gold", buy) == 0
 
     game = FakeCiv6({**FIXTURE, "gold": 400}, index=INDEX, prices={("Beijing", "unit:slinger"): 280})
@@ -1022,7 +1024,7 @@ def test_danger_needs_more_than_an_enemy_nearby():
     assert in_danger(_city0(threatened=True, enemies_near=2)), "old snapshot: two enemies near"
     rich = {**FIXTURE, "gold": 400}
     assert purchase_cap(rich, lone, "gold", BUY) == 200
-    assert purchase_cap(rich, danger_city(), "gold", BUY) == 400 - 30
+    assert purchase_cap(rich, danger_city(), "gold", BUY, defender=True) == 400 - 30
 
 
 def test_the_gold_reserve_grows_with_a_deficit():
@@ -1052,7 +1054,8 @@ def test_faith_keeps_the_pantheon_price_until_one_is_founded():
     out = buy({"kind": "purchase", "city": "Beijing", "id": "unit:warrior", "currency": "faith"},
               faith=83, religion=rel)
     assert out[0].wire is None, "refused before sending"
-    assert out[0].error == "unit:warrior costs 80 faith in Beijing, over the 58 allowed: keeps 25 faith for the pantheon"
+    assert out[0].error == ("unit:warrior costs 80 faith in Beijing, over the 58 allowed: keeps 25 faith for the pantheon "
+                            "(a defender may spend down to the reserve: the city is in danger)")
     ok = buy({"kind": "purchase", "city": "Beijing", "id": "unit:warrior", "currency": "faith"},
              faith=83, religion={**rel, "pantheon": "BELIEF_INITIATION_RITES", "can_create_pantheon": False})
     assert ok[0].wire["max_cost"] == 83
@@ -1162,7 +1165,8 @@ def test_a_price_read_in_the_decision_refuses_a_purchase_over_the_cap(setup):
     assert all(a[1]["kind"] == "price" for a in game.actions if a[0] == "order"), "the purchase is never sent"
     assert traces(setup)[0]["orders"][0]["outcome"] == ("refused: unit:slinger costs 280 gold in Beijing, over the "
                                                         "200 allowed: one purchase takes at most 50% of the gold "
-                                                        "balance (100% for a city in danger)")
+                                                        "balance (a defender: 100% in a city in danger or under "
+                                                        "military weakness)")
 
 
 def test_the_briefing_shows_a_city_in_danger_with_its_defence_and_prices():
@@ -1200,7 +1204,8 @@ def test_with_known_prices_a_defender_and_another_purchase_both_fit():
               city=danger_city(defence_prices=[{**ARCHER, "faith_allowed": False}]))
     monument, archer = out
     assert archer.wire["currency"] == "gold" and archer.wire["max_cost"] == 370
-    assert monument.wire["max_cost"] == 130, "400 less the Archer's known 240, above the reserve of 30"
+    assert monument.wire["max_cost"] == 80, ("half of the 160 left after the Archer's 240: a building keeps the "
+                                             "treasury share in a city in danger (postmortem-fixes ruling 2)")
 
 
 # ---- backfill of apply-time outcomes (ruling 13, check L4) -----------------------------------------
@@ -2367,3 +2372,96 @@ def test_a_hand_back_that_falls_behind_in_military_is_urgent(setup):
     lagging = {**FIXTURE, "military": 300, "majors": LATE_MAJORS}
     assert g._threat_reasons(ahead, lagging) == ["falling behind in military: 300 against a median of 1,491, last of 4"]
     assert "military" in g._row(lagging)["behind"] and "military" not in g._row(ahead)["behind"]
+
+
+# ---- postmortem-fixes design, rulings 1, 2 and 8: defenders may spend down to the reserve -------------
+
+WEAK_MAJORS = [{"id": 2, "civ": "CIVILIZATION_MAYA", "military": 1491, "score": 1, "cities": 9, "techs": 70},
+               {"id": 3, "civ": "CIVILIZATION_AUSTRALIA", "military": 1106, "score": 1, "cities": 9, "techs": 70}]
+
+
+def _calm_city(name: str, prices: list) -> dict:
+    """A city that is not in danger (no enemy near), with its listed defenders."""
+    return {**FIXTURE["cities"][0], "name": name, "garrison": None, "capture_adjacent": 0, "enemies_near": 0,
+            "defense": {"garrison_hp": 200, "garrison_max": 200, "walls_hp": 0, "walls_max": 0},
+            "defence_prices": prices}
+
+
+def _weak(gold, faith, cities, military=471, wars=()) -> dict:
+    return {**FIXTURE, "gold": gold, "faith": faith, "military": military, "majors": WEAK_MAJORS,
+            "wars": list(wars), "cities": cities}
+
+
+@pytest.mark.parametrize("turn, city, unit, currency, cost, balance", [
+    (496, "Rockhampton", "unit:modern_at", "faith", 1160, 1833),
+    (538, "Guangzhou", "unit:machine_gun", "faith", 1080, 1222),
+    (541, "Jiaodong", "unit:modern_at", "faith", 1160, 1961),
+    (553, "Taiyuan", "unit:machine_gun", "gold", 1080, 1630),
+    (555, "Taiyuan", "unit:modern_at", "gold", 1160, 1911),
+])
+def test_the_post_mortems_refused_defenders_pass_under_weakness(turn, city, unit, currency, cost, balance):
+    """Treasury-2, treasury-6, war-5: each was allowed by the game and refused (or held) by the 50% cap."""
+    key = INDEX.key_of[unit]
+    price = {"unit": key, "gold": cost if currency == "gold" else 2 * cost, "gold_allowed": currency == "gold",
+             "faith": cost if currency == "faith" else 2 * cost, "faith_allowed": currency == "faith"}
+    s = _weak(balance if currency == "gold" else 100, balance if currency == "faith" else 100, [_calm_city(city, [price])])
+    out = check_orders([Civ6Order(kind="purchase", city=city, id=unit, currency=currency)], s, SPEC, INDEX)
+    assert out[0].error == "" and out[0].wire["currency"] == currency and out[0].wire["max_cost"] >= cost, out[0].error
+    old = {**s, "majors": [], "military": 5000}
+    refused = check_orders([Civ6Order(kind="purchase", city=city, id=unit, currency=currency)], old, SPEC, INDEX)
+    assert "over the" in refused[0].error and "at most 50%" in refused[0].error, "no clause: the old rules apply"
+
+
+def test_buildings_and_rock_bands_keep_the_treasury_share_under_weakness():
+    s = _weak(1000, 1900, [_calm_city("Rockhampton", [])])
+    out = check_orders([Civ6Order(kind="purchase", city="Rockhampton", id="building:monument"),
+                        Civ6Order(kind="purchase", city="Rockhampton", id="unit:rock_band", currency="faith")], s, SPEC, INDEX)
+    assert out[0].wire["max_cost"] == 500, "a T465-like building: 50% of the gold"
+    assert out[1].wire["max_cost"] == 950, "a Rock Band is no defender: 50% of the faith"
+
+
+def test_under_weakness_defenders_in_different_cities_are_outside_the_quota_one_per_city():
+    at = {"unit": "UNIT_MODERN_AT", "gold": 1160, "gold_allowed": True, "faith": 1160, "faith_allowed": False}
+    mg = {"unit": "UNIT_MACHINE_GUN", "gold": 1080, "gold_allowed": True, "faith": 1080, "faith_allowed": False}
+    cities = [_calm_city(n, [at, mg]) for n in ("Rockhampton", "Taiyuan", "Longxi")]
+    s = _weak(9000, 100, cities)
+    orders = [Civ6Order(kind="purchase", city=n, id="unit:modern_at") for n in ("Rockhampton", "Taiyuan", "Longxi")]
+    out = check_orders([*orders, Civ6Order(kind="purchase", city="Longxi", id="unit:machine_gun"),
+                        Civ6Order(kind="purchase", city="Rockhampton", id="building:monument"),
+                        Civ6Order(kind="purchase", city="Taiyuan", id="building:monument"),
+                        Civ6Order(kind="purchase", city="Longxi", id="building:monument")], s, SPEC, INDEX)
+    assert [c.error for c in out[:3]] == ["", "", ""], "three defenders in three cities"
+    assert "second land unit" in out[3].error or "one per city" in out[3].error
+    assert [bool(c.error) for c in out[4:]] == [False, False, True], "the other purchases keep the quota of 2"
+    calm = check_orders(orders, {**s, "majors": [], "military": 5000}, SPEC, INDEX)
+    assert "at most 2 purchase order(s) per decision" in calm[2].error, "no clause: the quota counts them"
+
+
+def test_a_cap_refusal_names_the_clause_and_the_limits_line_reads_t541():
+    price = {"unit": "UNIT_MODERN_AT", "gold": 2320, "gold_allowed": True, "faith": 2100, "faith_allowed": True}
+    s = _weak(900, 1961, [_calm_city("Jiaodong", [price])],
+              wars=[{"id": 3, "civ": "CIVILIZATION_AUSTRALIA", "major": True}])
+    out = check_orders([Civ6Order(kind="purchase", city="Jiaodong", id="unit:modern_at", currency="faith")], s, SPEC, INDEX)
+    assert out[0].error == ("unit:modern_at costs 2100 faith in Jiaodong, over the 1961 allowed: keeps 0 faith in reserve "
+                            "(a defender may spend down to the reserve: at war with CIVILIZATION_AUSTRALIA; "
+                            "last of 3; 471 is 0.36 x the median 1,298; CIVILIZATION_MAYA 1,491 (3.2x), CIVILIZATION_AUSTRALIA "
+                            "1,106 (2.3x))")
+
+
+def test_every_prompt_carries_the_purchase_limits_the_weakness_and_the_stock(setup):
+    g = governor(setup, FakeCiv6(FIXTURE, index=INDEX), orders_model([]))
+    s = {**_weak(828, 1961, [_calm_city("Jiaodong", [])], wars=[{"id": 3, "civ": "CIVILIZATION_AUSTRALIA", "major": True}]),
+         "resources": {"RESOURCE_ALUMINUM": 3, "RESOURCE_OIL": 0, "RESOURCE_URANIUM": 0}}
+    line = g._purchase_limits_line(s)
+    assert line == ("Purchase limits now: a defender may cost up to 1,961 faith / 798 gold in any city (military "
+                    "weakness: war, last, low, outgunned; down to the reserve); anything else up to 980 faith / 414 gold.")
+    assert line in g._limits_text(s) and g._review_notes(s) == [line]
+    calm = g._purchase_limits_line({**s, "majors": [], "wars": [], "military": 5000})
+    assert calm == ("Purchase limits now: up to 980 faith / 414 gold; a defender for a city in danger up to 1,961 faith "
+                    "/ 798 gold (down to the reserve).")
+    text = briefing_text(s, INDEX, limits=BUY)
+    assert "Strategic stock: Aluminum 3, Oil 0, Uranium 0 (units that need a resource we lack cannot be bought or built)." in text
+    assert "Military weakness: at war with CIVILIZATION_AUSTRALIA; last of 3; 471 is 0.36 x the median 1,298;" in text
+    assert "Strategic stock: unknown" in briefing_text(FIXTURE, INDEX, limits=BUY)
+    from pilot.civ6_governor import INSTRUCTIONS
+    assert "cite this decision's price for it" in INSTRUCTIONS

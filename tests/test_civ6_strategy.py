@@ -184,3 +184,26 @@ def test_pinned_pillars_and_human_edits_are_exempt_and_the_strategist_is_told():
     text = strategist_instructions(SPEC)
     assert "military_vs_median or military_vs_strongest with a target of at least 0.5" in text
     assert "military_vs_median" in text.split("exactly these names: ")[1]
+
+
+def test_a_plan_on_a_unit_whose_resource_we_lack_is_sent_back():
+    """T496: "Buy 2 mechanized_infantry" with no Oil (postmortem-fixes design, ruling 8)."""
+    from pilot.civ6 import CorpusIndex, resource_key
+    from pilot.config import REPO
+    index = CorpusIndex.load(REPO / "corpora/civ6")
+    stock = {"RESOURCE_OIL": 0}
+
+    def unavailable(uid):
+        need = index.resource_cost.get(uid)
+        return None if not need or stock.get(resource_key(need[1]), 0) >= need[0] else \
+            f"{uid} needs {need[0]} {need[1]}; we have {stock.get(resource_key(need[1]), 0)}"
+    ids = {**IDS, "purchase": {*IDS["purchase"], "unit:mechanized_infantry", "unit:modern_at"}}
+    s = civ_strategy(military={"prefer_purchases": ["unit:mechanized_infantry"],
+                               "goals": ["buy 2 unit:mechanized_infantry for Rockhampton", "hold 2"]})
+    errs = validate(s, SPEC, previous=None, tech_ids=set(), idle=set(), income={}, ids=ids, unavailable=unavailable)
+    assert errs == ["military: unit:mechanized_infantry needs 1 Oil; we have 0"]
+    ok = civ_strategy(military={"prefer_purchases": ["unit:modern_at"]})
+    assert validate(ok, SPEC, previous=None, tech_ids=set(), idle=set(), income={}, ids=ids, unavailable=unavailable) == []
+    pinned = civ_strategy(military={"prefer_purchases": ["unit:mechanized_infantry"], "pinned": True})
+    assert validate(pinned, SPEC, previous=None, tech_ids=set(), idle=set(), income={}, ids=ids,
+                    unavailable=unavailable) == [], "a pinned pillar is exempt"

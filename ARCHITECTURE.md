@@ -420,6 +420,11 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   non-ally at the ratio; `[actions.purchase] weak_median_share`, `strong_neighbour_ratio`) and military
   relative to the met majors (`relative_military`), for the Civ VI rows, briefing and the Strategist's
   `relative_military` rules in `strategy.validate` (`standing`; postmortem-fixes design, rulings 1, 18);
+  `civ6.purchase_cap`/`cap_binding` give a defender (`defender=True`) the threatened share in a city in
+  danger or while `weakness` holds (`defender_spends_down`; ruling 2), `check_orders` keeps such
+  defenders outside the quota, one per city; the Civ VI governor's `_purchase_limits_line` (decision and
+  review prompts), the briefing's weakness and stock lines, and `strategy.validate(unavailable=...)` for a
+  unit whose strategic resource we lack (ruling 8);
   the triggers' tests: `behind` (`[peers] behind`), `buildup` (`[time] buildup_window`, once per
   neighbour per window; Stellaris too, over its rows' absolute `military`, skipping alliance and
   federation partners, urgent only), `loyalty_falls`; `civ6.standing_danger` (a hand-back decision at war) and the

@@ -430,6 +430,11 @@ Rules:
   `[strategy] relative_military`): while weak (under 0.6 x the median or last) the military pillar needs
   one at 0.5 or more, an absolute target under half the median is sent back, and a rank milestone needs 3
   majors met (postmortem-fixes design, ruling 18).
+- Buy-outs (postmortem-fixes design, rulings 1, 2, 8): a defender may spend down to the reserve in a city
+  in danger and, under military weakness (war with a major, last, under 0.6 x the median, a non-ally at
+  2 x ours), in every city, outside the order quota (one per city); everything else keeps 50%. Prompts
+  carry the purchase limits, the weakness line and the strategic stock; a strategy on a unit whose
+  resource we lack is sent back.
 - Triggers (postmortem-fixes design, rulings 10-14): falling behind the met majors (`[peers] behind`),
   a neighbour's buildup (2 x ours, +50% in 20 turns), gold per turn negative, loyalty falling toward a
   flip, and at war a decision at every hand-back while a city in danger has no unit on its tile and a

@@ -23,7 +23,7 @@ from pydantic import BaseModel, Field
 
 from .record import EXCLUDED, FAILED, JUDGED, SUCCEEDED  # noqa: F401 - re-exported
 from .record import order_record as _order_record
-from .threat import relative_military
+from .threat import relative_military, weakness, weakness_line
 
 # ---- game access ---------------------------------------------------------------------------------
 
@@ -569,26 +569,53 @@ def _reserve(snapshot: dict, currency: str, limits) -> tuple[int, str]:
     return r, (f"keeps {r} gold in reserve" + (f" ({limits.gold_reserve} + {extra} for the deficit)" if extra else ""))
 
 
-def purchase_cap(snapshot: dict, city: dict, currency: str, limits, committed: float = 0.0) -> int:
+def defender_spends_down(snapshot: dict, city: dict, limits, weak: list[dict] | None = None) -> str:
+    """Why a defender purchase in `city` may spend down to the reserve (the threatened share;
+    postmortem-fixes design, ruling 2), or "": the city is in danger, or the weakness test (ruling 1)
+    holds, in every city. The cap was the only block on a defender the game allowed at T365, T475,
+    T496, T504 and T538, and refused T544 and T553 in the war."""
+    if limits is None or not limits.threatened_share:
+        return ""
+    if in_danger(city):
+        return "the city is in danger"
+    clauses = weakness(snapshot, limits) if weak is None else weak
+    return "; ".join(c["text"] for c in clauses) if clauses else ""
+
+
+def _share(snapshot: dict, city: dict, limits, defender: bool, weak: list[dict] | None) -> float:
+    if defender and defender_spends_down(snapshot, city, limits, weak):
+        return limits.threatened_share
+    return limits.treasury_share or 1.0
+
+
+def purchase_cap(snapshot: dict, city: dict, currency: str, limits, committed: float = 0.0, *,
+                 defender: bool = False, weak: list[dict] | None = None) -> int:
     """The most one purchase may cost: the balance above the reserve, and at most the treasury share
-    of the balance (the threatened share when the city is in danger). `committed` is what earlier
-    purchases of the same decision may already spend, so together they never go below the reserve."""
+    of the balance; a defender (`defender`) gets the threatened share (down to the reserve) in a city
+    in danger or while the weakness test holds (ruling 2; `weak`: its clauses when already computed).
+    Buildings and other units (a Rock Band, a Settler) keep the treasury share everywhere. `committed`
+    is what earlier purchases of the same decision may already spend, so together they never go below
+    the reserve."""
     balance = float(snapshot.get("faith" if currency == "faith" else "gold") or 0) - committed
     reserve = _reserve(snapshot, currency, limits)[0]
-    share = (limits.threatened_share if in_danger(city) and limits.threatened_share else limits.treasury_share) or 1.0
+    share = _share(snapshot, city, limits, defender, weak)
     return int(max(0.0, min(balance - reserve, share * balance)))
 
 
-def cap_binding(snapshot: dict, city: dict, currency: str, limits, committed: float = 0.0) -> str:
-    """Which limit sets `purchase_cap`: the reserve (named) or the share of the balance."""
+def cap_binding(snapshot: dict, city: dict, currency: str, limits, committed: float = 0.0, *,
+                defender: bool = False, weak: list[dict] | None = None) -> str:
+    """Which limit sets `purchase_cap`: the reserve (named, with the clause that let a defender spend
+    down to it) or the share of the balance."""
     balance = float(snapshot.get("faith" if currency == "faith" else "gold") or 0) - committed
     reserve, why = _reserve(snapshot, currency, limits)
-    danger = in_danger(city)
-    share = (limits.threatened_share if danger and limits.threatened_share else limits.treasury_share) or 1.0
+    down = defender_spends_down(snapshot, city, limits, weak) if defender else ""
+    share = limits.threatened_share if down else (limits.treasury_share or 1.0)
     if balance - reserve <= share * balance:
-        return why or f"keeps {reserve} {currency} in reserve"
+        text = why or f"keeps {reserve} {currency} in reserve"
+        return f"{text} (a defender may spend down to the reserve: {down})" if down else text
     return (f"one purchase takes at most {share:.0%} of the {currency} balance"
-            + ("" if danger or not limits.threatened_share else f" ({limits.threatened_share:.0%} for a city in danger)"))
+            + ("" if down or not limits.threatened_share
+               else f" (a defender: {limits.threatened_share:.0%} in a city in danger or under military weakness)"))
 
 
 def is_defender(item: str | None, index: CorpusIndex, limits) -> bool:
@@ -662,6 +689,7 @@ class _Checks:
     defence_tried: set[str] = field(default_factory=set)       # cities a defender purchase was checked for
     known: dict = field(default_factory=dict)
     defender_buys: dict[str, int] = field(default_factory=dict)
+    weak: list[dict] = field(default_factory=list)             # the weakness test's clauses (ruling 1)
 
 
 def check_orders(orders: list[Civ6Order], snapshot: dict, spec, index: CorpusIndex,
@@ -675,8 +703,9 @@ def check_orders(orders: list[Civ6Order], snapshot: dict, spec, index: CorpusInd
     a purchase when a known price fits (ruling 20). `prices`: the `price` tool's answers in this
     decision; `defender_buys`: the turn of each city's last defender purchase (lowercased name)."""
     out = [Checked(order=o.model_dump()) for o in orders]
-    st = _Checks(known=known_prices(snapshot, index, prices), defender_buys=dict(defender_buys or {}))
     buy = spec.actions.get("purchase") if spec else None
+    st = _Checks(known=known_prices(snapshot, index, prices), defender_buys=dict(defender_buys or {}),
+                 weak=weakness(snapshot, buy) if buy is not None else [])
     purchases: list[tuple[Civ6Order, Checked, Civ6Order | None]] = []
     for o, c in zip(orders, out, strict=True):
         if o.kind == "purchase":
@@ -718,7 +747,8 @@ def _must_have(o: Civ6Order, snapshot: dict, index: CorpusIndex, buy, st: _Check
         return None
     for currency in ("faith", "gold"):
         p = st.known.get((city["name"].lower(), o.id, currency))
-        if p and p.get("allowed") and p["cost"] <= purchase_cap(snapshot, city, currency, buy, st.committed[currency]):
+        if p and p.get("allowed") and p["cost"] <= purchase_cap(snapshot, city, currency, buy, st.committed[currency],
+                                                                 defender=True, weak=st.weak):
             return Civ6Order(kind="purchase", id=o.id, city=city["name"], currency=currency)
     return None
 
@@ -733,7 +763,10 @@ def _check(c: Checked, o: Civ6Order, snapshot: dict, spec, index: CorpusIndex, f
         c.error = "purchases need the limits of pillars.toml, which did not load"
         return False
     quota = limits.max_orders if limits is not None else 1
-    if st.counts.get(action, 0) >= quota:
+    # ruling 2: while the weakness test holds, defender purchases in different cities do not count
+    # toward the quota (one defender per city per decision still holds)
+    free = o.kind == "purchase" and bool(st.weak) and is_defender(o.id, index, limits)
+    if not free and st.counts.get(action, 0) >= quota:
         c.error = f"at most {quota} {o.kind} order(s) per decision"
         return False
     if failed_last and order_key(c.order) in failed_last:
@@ -741,7 +774,8 @@ def _check(c: Checked, o: Civ6Order, snapshot: dict, spec, index: CorpusIndex, f
         return False
     if not _check_one(c, o, snapshot, index, limits, snapshot.get("options") or {}, st):
         return False
-    st.counts[action] = st.counts.get(action, 0) + 1      # only valid orders use the quota
+    if not free:
+        st.counts[action] = st.counts.get(action, 0) + 1  # only valid orders use the quota
     return True
 
 
@@ -772,7 +806,7 @@ def _needs_defender_first(city: dict, snapshot: dict, index: CorpusIndex, limits
     if city.get("defence_prices") is None:
         return True                                 # prices unknown: the model can price one
     return any(p.get(f"{cur}_allowed") and isinstance(p.get(cur), (int, float))
-               and p[cur] <= purchase_cap(snapshot, city, cur, limits, st.committed[cur])
+               and p[cur] <= purchase_cap(snapshot, city, cur, limits, st.committed[cur], defender=True, weak=st.weak)
                for p in city["defence_prices"] if is_defender(index.cid(p.get("unit")), index, limits)
                for cur in ("gold", "faith"))
 
@@ -853,6 +887,9 @@ def _check_purchase(c: Checked, o: Civ6Order, key: str, city: dict, snapshot: di
         holder = index.cid(city["garrison"]) if city.get("garrison") else "the unit bought before this one"
         c.error = f"{name} already has {holder} on its tile: the game refuses a second land unit there"
         return False
+    if defender and st.weak and name in st.defended:     # ruling 2: outside the quota, one per city
+        c.error = f"{name} already gets a defender in this decision (one per city)"
+        return False
     if limits.defence_first and not defender:
         for other in snapshot.get("cities") or []:
             if _needs_defender_first(other, snapshot, index, limits, st):
@@ -866,11 +903,12 @@ def _check_purchase(c: Checked, o: Civ6Order, key: str, city: dict, snapshot: di
     if defender and currency == "gold":
         faith, gold = st.known.get((name.lower(), o.id, "faith")), st.known.get((name.lower(), o.id, "gold"))
         if faith and faith.get("allowed") and faith["cost"] <= purchase_cap(snapshot, city, "faith", limits,
-                                                                           st.committed["faith"]):
+                                                                           st.committed["faith"], defender=True,
+                                                                           weak=st.weak):
             currency = "faith"
             c.note = f"bought with faith instead of gold: {faith['cost']} faith" + (
                 f" rather than {gold['cost']} gold" if gold else "")
-    cap = purchase_cap(snapshot, city, currency, limits, st.committed[currency])
+    cap = purchase_cap(snapshot, city, currency, limits, st.committed[currency], defender=defender, weak=st.weak)
     if cap <= 0:
         reserve, why = _reserve(snapshot, currency, limits)
         c.error = (f"{currency} {snapshot.get(currency)} (less {st.committed[currency]:.0f} for earlier purchases"
@@ -880,7 +918,7 @@ def _check_purchase(c: Checked, o: Civ6Order, key: str, city: dict, snapshot: di
     price = st.known.get((name.lower(), o.id, currency))
     if price and isinstance(price.get("cost"), (int, float)) and price["cost"] > cap:
         c.error = (f"{o.id} costs {price['cost']:g} {currency} in {name}, over the {cap} allowed: "
-                   + cap_binding(snapshot, city, currency, limits, st.committed[currency]))
+                   + cap_binding(snapshot, city, currency, limits, st.committed[currency], defender=defender, weak=st.weak))
         return False
     st.committed[currency] += price["cost"] if price and isinstance(price.get("cost"), (int, float)) else cap
     if defender:
@@ -1388,7 +1426,7 @@ def standing_danger(snapshot: dict, index: CorpusIndex, limits, defender_buys: d
         offers = sorted(((cur != "faith", p[cur], cur, p) for p in defender_entries(c, index, limits)
                          for cur in ("faith", "gold")
                          if p.get(f"{cur}_allowed") and isinstance(p.get(cur), (int, float))
-                         and p[cur] <= purchase_cap(snapshot, c, cur, limits)), key=lambda x: x[:2])
+                         and p[cur] <= purchase_cap(snapshot, c, cur, limits, defender=True)), key=lambda x: x[:2])
         if offers:
             d = c.get("defense") or {}
             share = (d.get("garrison_hp") or 0) / (d.get("garrison_max") or 1)
@@ -1616,6 +1654,14 @@ def briefing_text(s: dict, index: CorpusIndex, gold_reserve: int = 0, limits=Non
                      + (f" and {rel['military_vs_strongest']:g} x the strongest that is not our ally"
                         if rel["military_vs_strongest"] is not None else "")
                      + f"; rank {1 + sum(1 for v in mil if v > s['military'])} of {len(majors) + 1}.")
+    if limits is not None:
+        weak = weakness_line(s, limits)
+        if weak:
+            lines.append(weak + " (defenders may spend down to the reserve in any city).")
+    stock = s.get("resources")
+    lines.append("Strategic stock: " + (", ".join(f"{k.removeprefix('RESOURCE_').replace('_', ' ').title()} {_n(v)}"
+                                                  for k, v in stock.items()) if isinstance(stock, dict) else "unknown")
+                 + " (units that need a resource we lack cannot be bought or built).")
     if majors:
         lines.append("Civilizations met: " + "; ".join(
             f"{cid(m.get('civ'))} score {m.get('score')}, military {m.get('military')}, cities {m.get('cities')}, "

@@ -292,10 +292,26 @@ def _relative_errors(s: Strategy, spec: PillarSpec, standing: Mapping) -> list[s
     return errs
 
 
+_UNIT_ID_RE = re.compile(r"\bunit:[a-z0-9_]+")
+
+
+def _unavailable_errors(s: Strategy, unavailable) -> list[str]:
+    """Ids a model's answer plans on that the game cannot use now (ruling 8): each preferred purchase
+    or production id and each `unit:` id quoted in a goal that `unavailable(id)` names; pinned pillars
+    are exempt."""
+    errs: list[str] = []
+    for name, pl in s.sorted_pillars():
+        if pl.pinned:
+            continue
+        ids = [*pl.prefer_purchases, *pl.prefer_production, *(m for g in pl.goals for m in _UNIT_ID_RE.findall(g))]
+        errs.extend(f"{name}: {why}" for i in dict.fromkeys(ids) if (why := unavailable(i)))
+    return errs
+
+
 def validate(s: Strategy, spec: PillarSpec, *, previous: Strategy | None, tech_ids: set[str], idle: set[str],
              income: dict[str, float], briefing_checked: set[str] | None = None,
              require_milestones: bool = True, ids: Mapping[str, set[str]] | None = None,
-             standing: Mapping | None = None) -> list[str]:
+             standing: Mapping | None = None, unavailable=None) -> list[str]:
     """Reasons the strategy cannot be used under the game's spec (empty = valid).
 
     Structural checks (pillars, priorities, sizes, metrics, dates, action ownership and limits) apply
@@ -307,7 +323,8 @@ def validate(s: Strategy, spec: PillarSpec, *, previous: Strategy | None, tech_i
     `ids` holds the known ids per id-list action kind (tech, civic, policy, production, purchase); a
     kind missing from it is checked for size only (tech falls back to `tech_ids`). `standing` (our
     military against the majors met; a game with `[strategy] relative_military`) turns on ruling 18's
-    rules for a model's answer."""
+    rules for a model's answer; `unavailable(id)` (a reason, or None) sends back ids the game cannot use
+    now, e.g. a unit whose strategic resource we lack (ruling 8)."""
     checked = _briefing_checked(s, previous) if briefing_checked is None else briefing_checked
     errs: list[str] = []
     errs.extend(f"missing pillar {p}" for p in spec.pillars if p not in s.pillars)
@@ -352,6 +369,8 @@ def validate(s: Strategy, spec: PillarSpec, *, previous: Strategy | None, tech_i
         errs.extend(_detail_errors(s, spec))
         if standing is not None:
             errs.extend(_relative_errors(s, spec, standing))
+        if unavailable is not None:
+            errs.extend(_unavailable_errors(s, unavailable))
     if previous is not None:
         for name, pl in previous.pillars.items():
             if pl.pinned and name in s.pillars and _content(s.pillars[name]) != _content(pl):
