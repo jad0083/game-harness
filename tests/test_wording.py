@@ -137,3 +137,15 @@ def test_the_pages_tidy_leaves_addresses_alone():
     js = tidy + '\nprocess.stdout.write(tidy("agent http://192.168.1.77:8765/x took 12.34567 s, 0.123 left"));'
     out = subprocess.run(["node", "-e", js], capture_output=True, text=True, check=True).stdout
     assert out == "agent http://192.168.1.77:8765/x took 12.3 s, 0.1 left"
+
+
+def test_trigger_metric_ids_read_as_the_views_words():
+    """Ruling 30: ids become names; a metric id in a trigger reads as the view's label, else in words."""
+    from pilot.wording import trigger
+    labels = {"military_power": "Military", "net.energy": "Energy"}.get
+    t = trigger("urgent: falling behind other empires in military_power (5,200 vs median 9,000)", label=labels)
+    assert t["text"] == "Falling behind in military"
+    assert trigger("urgent: consumer_goods net turned negative (-3.0/month)")["text"] == "Consumer goods income negative"
+    assert trigger("urgent: energy net turned negative (-3.0/month)", label=lambda k: labels(f"net.{k}"))["text"] \
+        == "Energy income negative"
+    assert trigger("urgent: city threatened: Xi'an (2 enemy units near)")["text"] == "City threatened: Xi'an"

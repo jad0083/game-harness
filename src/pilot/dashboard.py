@@ -390,7 +390,9 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
         for r in rows:
             game = game_of_campaign(r.get("campaign_id") or "")
             name = lambda i, game=game: names.name(game, i)
-            r["trigger_label"] = trigger(r.get("trigger"), name)
+            labels = views.get(game).get("labels") or {}
+            label = lambda k, labels=labels: labels.get(k) or labels.get(f"rank:{k}") or labels.get(f"net.{k}")
+            r["trigger_label"] = trigger(r.get("trigger"), name, label)
             if r.get("error"):
                 r["cause"] = cause(r["error"])
             before = [e for e in by_run.get(r["run_id"], []) if prev_t.get(r["run_id"], 0) < e["t"] <= (r["t"] or 0)]

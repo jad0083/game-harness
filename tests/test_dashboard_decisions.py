@@ -124,7 +124,8 @@ def test_a_directives_policy_report_reaches_the_page(tmp_path):
     log.save_trace(1, {"episode": 1, "date": "2291.03.01", "decision": "defend", "outcome": "applied", "reason": "Hold.",
                        "steps": []})
     log.emit("order_followed", ref=a["ref"], action=a)
-    log.save_trace(2, {"episode": 2, "date": "2292.03.01", "decision": "keep", "outcome": "kept", "reason": "Hold.", "steps": []})
+    log.save_trace(2, {"episode": 2, "date": "2292.03.01", "decision": "keep", "outcome": "kept", "reason": "Hold.", "steps": [],
+                       "trigger": "urgent: falling behind other empires in military_power (5,200 vs median 9,000)"})
     want = {"set": {"economic_policy": "economic_policy_militarist"},
             "locked": {"diplomatic_stance": "diplo_stance_belligerent"}, "in_force": {}}
 
@@ -132,6 +133,7 @@ def test_a_directives_policy_report_reaches_the_page(tmp_path):
         async with TestClient(TestServer(make_app(None, runs, tel, corpora=CORPORA))) as c:
             rows = await (await c.get("/api/decisions?campaign=stellaris/gaea")).json()
             assert rows[0]["applied"] == want and rows[1]["applied"] is None
+            assert rows[1]["trigger_label"]["text"] == "Falling behind in military"      # the view's label, not the id
             d = await (await c.get("/api/decision?run=20260927-120000&episode=1")).json()
             assert d["applied"] == want                                   # Reasoning has it too
     asyncio.run(go())

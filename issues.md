@@ -2,6 +2,7 @@
 
 ## Open
 
+- [ ] Dashboard v2 review (2026-09-27): trigger labels showed raw metric ids ("Falling behind in military_power", "Consumer_goods income negative"), against ruling 30. Fixed on branch feat/dashboard-v2: a metric id reads as the view's label, else in words
 - [ ] Dashboard v2 review (2026-09-27): cause() and the page's tidy() rounded "192.168" in an address as a decimal, so the needs-you card and Activity named the agent 192.2.1.77. Fixed on branch feat/dashboard-v2: only a decimal that is not part of a dotted sequence is rounded
 - [ ] Dashboard v2 review (2026-09-27): model retries of Talk answers and strategy reviews were counted as the next decision's attempts ("Answered by X, after 3.8 Flash was overloaded (503) x3"), since model_retry carried no role, and they moved the Deciding countdown. Fixed on branch feat/dashboard-v2: model_retry names its role; attempts() and the countdown take only the decision's
 - [ ] Dashboard v2 review (2026-09-27): orders from traces written before the order record read "⋯ in force" for ever (98 on the live Kublai campaign, 96 of them from T43-T302, while /api/orders listed 2 open), since a stuck order with no outcome row was taken as open. Fixed on branch feat/dashboard-v2: an order is in force only while the record follows it (an unresolved order_followed); older ones read "took, not followed"

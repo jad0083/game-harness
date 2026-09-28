@@ -101,10 +101,11 @@ _TRIGGERS = [  # (pattern on one urgent reason, category, words; {1} = the first
 ]
 
 
-def trigger(raw, name=None) -> dict:
+def trigger(raw, name=None, label=None) -> dict:
     """{category, text, urgent, more}: "urgent: city threatened: Chengdu (2 enemy units near); gold
     below the reserve: 12 < 30" -> city threatened, "City threatened: Chengdu, and 1 more". `name`
-    turns an id into its name (GREAT_PERSON_CLASS_SCIENTIST -> Great Scientist)."""
+    turns an id into its name (GREAT_PERSON_CLASS_SCIENTIST -> Great Scientist); `label` a metric id
+    into the view's word (military_power -> Military), else its words (consumer_goods -> consumer goods)."""
     from .view import fallback_name
     text = str(raw or "").strip()
     urgent = text.startswith("urgent:")
@@ -127,6 +128,9 @@ def trigger(raw, name=None) -> dict:
                 arg = m.group(1).strip() if m.groups() else ""
                 if re.fullmatch(r"[A-Z][A-Z0-9_]+", arg):
                     arg = (name(arg) if name else None) or fallback_name(arg)
+                elif re.fullmatch(r"[a-z][a-z0-9_]*", arg):          # a metric id: the view's word
+                    lab = (label(arg) if label else None) or arg.replace("_", " ")
+                    arg = lab if w.startswith("{1}") else lab[:1].lower() + lab[1:]
                 words = w.replace("{1}", arg)
                 words = words[:1].upper() + words[1:]
                 cat = c
