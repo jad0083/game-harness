@@ -470,6 +470,9 @@ Rules:
   not known" when the read fails, never a guess); the Strategist's goals may not name peace, ceasefire,
   alliance, friendship or denounce (`[strategy] unpursuable`): no order pursues them (postmortem-fixes
   design, rulings 24-25; the log's live layout is unverified).
+- A defender's price that moved 25% or more since the last decision (one era) is a prompt line, with
+  the World Congress resolution named from one `log-tail World_Congress.csv` read ("gold unit prices halved
+  since T543 ...; this may end at the next World Congress session"; postmortem-fixes design, ruling 6).
 - Each `turn` event logs the turns that passed and those requested; an autoplay that passed more emits
   `turn_overrun` and the next snapshot checks for the end first; traces keep whole prompts up to 100,000
   characters (postmortem-fixes design, ruling 27).

@@ -32,6 +32,8 @@ from .civ6 import (
     ORDER_ACTION,
     STAND_KEYS,
     UNKNOWN,
+    WC_LOOKBACK,
+    WORLD_CONGRESS_LOG,
     Checked,
     Civ6Decision,
     Civ6Order,
@@ -47,6 +49,7 @@ from .civ6 import (
     briefing_text,
     check_orders,
     defender_entries,
+    defender_prices,
     defender_to_build,
     diplomacy_answered,
     diplomacy_key,
@@ -67,6 +70,7 @@ from .civ6 import (
     order_record_text,
     order_situation,
     order_window,
+    price_change_text,
     purchase_cap,
     purchase_counts,
     purchase_refusal,
@@ -82,6 +86,7 @@ from .civ6 import (
     urgent_changes,
     war_declarations,
     war_text,
+    world_congress_decided,
 )
 from .claude_code import resolve_model
 from .governor import (
@@ -267,6 +272,7 @@ class Civ6Governor(Governor):
         # before the next autoplay (postmortem-fixes ruling 5): [{"order": wire order, "turn"}]
         self._resend: list[dict] = []
         self._overrun = False                     # the last autoplay passed more turns than requested (ruling 27)
+        self._prices: dict | None = None          # the last decision's defender prices (ruling 6)
         log.state.info["directives"] = []
         log.state.info["decide_turns"] = settings.decide_every_turns
         log.state.info["controls"] = [c for c in log.state.info.get("controls", []) if c not in ("override", "set_speed")]
@@ -759,6 +765,23 @@ class Civ6Governor(Governor):
             return ""
         self._read_ai_buys(b)
         return ai_spent_text(sp["since"], spent, sp["yield"], self._bought_between(sp["since"], int(b.get("turn") or 0)))
+
+    def _price_change_line(self, b: dict) -> str:
+        """Ruling 6: a defender's price that moved 25% or more since the last decision, within one era,
+        with its World Congress cause from one read of World_Congress.csv (only when a change is seen).
+        Advisory: a failed read leaves the cause out."""
+        now = defender_prices(b)
+        before, self._prices = self._prices, now
+        if not price_change_text(before and before.get("turn"), before, now, self.index, None):
+            return ""
+        decided, read = None, getattr(self.game, "log_tail", None)
+        if read is not None:
+            try:
+                turn = int(b.get("turn") or 0)
+                decided = world_congress_decided(read(WORLD_CONGRESS_LOG).get("lines") or [], turn - WC_LOOKBACK, turn)
+            except Exception as e:  # noqa: BLE001 - naming the cause is advisory
+                self.log.emit("briefing_error", error=f"{WORLD_CONGRESS_LOG}: {e}"[:200])
+        return price_change_text(before.get("turn"), before, now, self.index, decided)
 
     # ---- the end of the campaign (postmortem-fixes design, rulings 21-23) --------------------------
 
@@ -1448,7 +1471,8 @@ class Civ6Governor(Governor):
         prompt = [f"Decision point: {reason}.",
                   (frame_text(self.strategy, self.pillars, self._milestones_text(), press) if self.pillars else "")
                   or "No strategy yet.",
-                  "Briefing (live snapshot):", self.last_briefing, self._ai_spend_line(b), self._limits_text(b)]
+                  "Briefing (live snapshot):", self.last_briefing, self._ai_spend_line(b), self._price_change_line(b),
+                  self._limits_text(b)]
         if self._report or held:
             prompt.append("What your last orders did:\n" + "\n".join(f"- {x}" for x in self._report + held))
         record = self._record_text()

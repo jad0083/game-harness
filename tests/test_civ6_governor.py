@@ -2992,3 +2992,50 @@ def test_a_normal_stretch_logs_the_turns_that_passed(setup):
     turn = next(e for e in g.log.recent if e["kind"] == "turn")
     assert (turn["turns"], turn["requested"]) == (3, 3)
     assert not any(e["kind"] == "turn_overrun" for e in g.log.recent)
+
+
+# ---- postmortem-fixes design, ruling 6: price changes are shown ------------------------------------------
+
+WC_LOG = ["Game Turn, Event, Resolution, Target, A, B",
+          "512, RESOLUTION DECIDED, WC_RES_LUXURY, , 1, 1",
+          "542, RESOLUTION DECIDED, WC_RES_MERCENARY_COMPANIES, , 2, 2"]
+
+
+def _priced(turn: int, gold_at: int, era: str = "ERA_FUTURE") -> dict:
+    city = _calm_city("Taiyuan", [{**MODERN_AT, "gold": gold_at, "faith": 1160}])
+    return {**FIXTURE, "turn": turn, "era": era, "cities": [city], "majors": [], "wars": []}
+
+
+def test_a_defender_price_that_halves_within_an_era_is_named_with_its_cause():
+    """Treasury-8: Mercenary Companies halved gold unit prices T544-T571; 1,626-1,676 gold was stranded when
+    it ended at T572, and nothing told the model the discount was there or could end."""
+    from pilot.civ6 import defender_prices, price_change_text, world_congress_decided
+    before, now = defender_prices(_priced(543, 2320)), defender_prices(_priced(546, 1160))
+    decided = world_congress_decided(WC_LOG, 516, 546)
+    assert decided == [{"turn": 542, "resolution": "WC_RES_MERCENARY_COMPANIES"}]
+    text = price_change_text(543, before, now, INDEX, decided)
+    assert text == ("Price change: gold unit prices halved since T543 (unit:modern_at 2,320 → 1,160); World Congress: "
+                    "WC_RES_MERCENARY_COMPANIES (T542); this may end at the next World Congress session.")
+    assert price_change_text(543, before, defender_prices(_priced(546, 2100)), INDEX, []) == "", "a 10% change"
+    rose = price_change_text(543, before, defender_prices(_priced(546, 3000)), INDEX, None)
+    assert rose == "Price change: gold unit prices rose 29% since T543 (unit:modern_at 2,320 → 3,000)."
+
+
+def test_a_price_change_reaches_the_next_decision_after_one_congress_log_read(setup):
+    seen: list[str] = []
+
+    def discount(state):
+        state["cities"][0]["defence_prices"][0]["gold"] = 1160
+    game = FakeCiv6(_priced(543, 2320), index=INDEX, events={544: discount}, logs={"World_Congress.csv": WC_LOG})
+    g = governor(setup, game, orders_model([], seen=seen))
+    g.run(max_decisions=2)
+    assert "Price change" not in seen[0]
+    assert ("Price change: gold unit prices halved since T543 (unit:modern_at 2,320 → 1,160); World Congress: "
+            "WC_RES_MERCENARY_COMPANIES (T542)") in seen[1]
+    assert [a[1] for a in game.actions if a[0] == "log_tail"] == ["World_Congress.csv"], "one read, only on a change"
+    other_era = FakeCiv6(_priced(543, 2320), index=INDEX, logs={"World_Congress.csv": WC_LOG},
+                         events={544: lambda st: (discount(st), st.update(era="ERA_INFORMATION"))})
+    s, _ = setup
+    seen2: list[str] = []
+    governor((s, EventLog(s.runs_dir, "civ2", s.model)), other_era, orders_model([], seen=seen2)).run(max_decisions=2)
+    assert "Price change" not in seen2[1], "compared within one era only"

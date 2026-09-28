@@ -1132,6 +1132,78 @@ def ai_spent_text(since: int, spent: dict[str, float], yields: dict[str, float],
             "yield x turns - balance now; the game's AI buys with our treasury while it plays).")
 
 
+# ---- price changes between decisions (postmortem-fixes design, ruling 6) ------------------------------
+
+WORLD_CONGRESS_LOG = "World_Congress.csv"
+PRICE_CHANGE = 0.25          # a defender's price that moved this much between decisions, within one era
+WC_LOOKBACK = 30             # turns of World Congress decisions named as a cause (sessions come about every 30)
+_WC_RES_RE = re.compile(r"^WC_RES_[A-Z0-9_]+$")
+
+
+def defender_prices(s: dict) -> dict:
+    """The snapshot's defender prices by (unit type key, currency), the lowest over the cities listing
+    it, with the era and turn they were read in."""
+    out: dict[tuple[str, str], float] = {}
+    for c in s.get("cities") or []:
+        for p in c.get("defence_prices") or []:
+            for cur in ("gold", "faith"):
+                v = p.get(cur)
+                if isinstance(v, (int, float)) and v > 0 and p.get("unit"):
+                    k = (p["unit"], cur)
+                    out[k] = min(out.get(k, v), v)
+    return {"era": s.get("era"), "turn": s.get("turn"), "prices": out}
+
+
+def world_congress_decided(lines: list[str], after: int, upto: int) -> list[dict]:
+    """World_Congress.csv rows "542, RESOLUTION DECIDED, WC_RES_MERCENARY_COMPANIES, , 2, 2" (read offline
+    for the post-mortem; the live layout is unverified: a row that does not parse names nothing) with
+    after < turn <= upto: [{"turn", "resolution"}], oldest first."""
+    out = []
+    for line in lines:
+        f = [x.strip() for x in str(line).split(",")]
+        if not f or not f[0].isdigit() or not any(x.upper() == "RESOLUTION DECIDED" for x in f[1:]):
+            continue
+        res = next((x for x in f[1:] if _WC_RES_RE.match(x)), None)
+        if res and after < int(f[0]) <= upto:
+            out.append({"turn": int(f[0]), "resolution": res})
+    return out
+
+
+def _moved(old: float, new: float) -> str:
+    r = new / old
+    if 0.45 <= r <= 0.55:
+        return "halved"
+    if 1.8 <= r <= 2.2:
+        return "doubled"
+    return f"fell {1 - r:.0%}" if r < 1 else f"rose {r - 1:.0%}"
+
+
+def price_change_text(since, before: dict | None, now: dict, index: CorpusIndex, decided: list[dict] | None) -> str:
+    """Ruling 6's prompt line, "" without a change of `PRICE_CHANGE` or more within one era: e.g.
+    "Price change: gold unit prices halved since T543 (unit:modern_at 2,320 → 1,160); World Congress:
+    WC_RES_MERCENARY_COMPANIES (T542); this may end at the next World Congress session." `decided`: the
+    World Congress decisions of the window (None: not read); the session calendar is not read
+    (unverified), hence "may end". Mercenary Companies halved gold unit prices T544-T571, and 1,626-1,676
+    gold was stranded when it ended at T572 (treasury-8)."""
+    if not before or before.get("era") != now.get("era"):
+        return ""
+    parts = []
+    for cur in ("gold", "faith"):
+        moved = sorted(((abs(new / old - 1), k[0], old, new) for k, new in now["prices"].items()
+                        if k[1] == cur and (old := before["prices"].get(k)) and abs(new / old - 1) >= PRICE_CHANGE),
+                       reverse=True)
+        if moved:
+            examples = ", ".join(f"{index.cid(u)} {old:,.0f} → {new:,.0f}" for _, u, old, new in moved[:2])
+            parts.append(f"{cur} unit prices {_moved(moved[0][2], moved[0][3])} since T{since} ({examples})")
+    if not parts:
+        return ""
+    text = "Price change: " + "; ".join(parts)
+    if decided:
+        text += "; World Congress: " + ", ".join(f"{d['resolution']} (T{d['turn']})" for d in decided[-3:]) \
+            + "; this may end at the next World Congress session"
+    return text + "."
+
+
 # ---- the order record (docs/design/2026-09-27-civ6-levers-design.md, rulings 12-16) --------------
 #
 # Acceptance is not the outcome: an order that took may still be replaced by the AI during autoplay.

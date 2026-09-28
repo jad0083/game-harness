@@ -227,6 +227,14 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   an `order_resend` event and a journal line record each re-send. At T570 Longxi's Modern AT (1,160
   gold, allowed) was lost this way and nothing ran until the discount ended at T572. Last-stand
   actions are never sent again.
+- **Price changes** (postmortem-fixes design, ruling 6): when a defender's gold or faith price in
+  `defence_prices` moved 25% or more since the last decision, within one era, the decision prompt
+  says so, with its World Congress cause from one `civ6 log-tail World_Congress.csv` read (only when a
+  change is seen; its `RESOLUTION DECIDED` rows of the last 30 turns): "Price change: gold unit prices
+  halved since T543 (unit:modern_at 2,320 → 1,160); World Congress: WC_RES_MERCENARY_COMPANIES (T542);
+  this may end at the next World Congress session." The session calendar is not read (unverified), nor
+  is the log's live layout; a row that does not parse names nothing. Mercenary Companies halved gold
+  unit prices T544-T571, and 1,626-1,676 gold was stranded when it ended at T572.
 - **Order record** (spec `docs/design/2026-09-27-civ6-levers-design.md`, rulings 12-16): every order
   that took is followed on each snapshot until it resolves: `completed` (a tech or civic left the
   options, a unit's count rose, a building appeared), `held` (still current when its window of
