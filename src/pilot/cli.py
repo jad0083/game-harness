@@ -180,16 +180,23 @@ def rebuild(s: Settings) -> int:
 
 
 def view(s: Settings, port: int, host: str | None = None) -> int:
+    import logging
+
     from aiohttp import web
 
-    from .auth import RUNNER_KWARGS
+    from . import auth
     from .dashboard import link_host, make_app
     from .telemetry import Telemetry
     app = make_app(None, s.runs_dir, Telemetry(s.telemetry_db))       # the key never reaches this line or the log
     host = host or s.view_host
     print(f"dashboard on http://{link_host(host)}:{port}/ (to sign in a browser: "
           "python -m pilot dashboard-link)", flush=True)
-    web.run_app(app, host=host, port=port, print=None, **RUNNER_KWARGS)
+    if not auth.qr_available():             # said loudly: the Add sheet then has no QR code for a phone
+        msg = (f"QR codes are off: segno is not installed in {sys.executable} (fix: {Path(sys.executable).parent}/pip "
+               "install segno, then restart); Add a device shows the link and the words only")
+        print(msg, flush=True)
+        logging.getLogger("pilot.view").warning(msg)
+    web.run_app(app, host=host, port=port, print=None, **auth.RUNNER_KWARGS)
     return 0
 
 

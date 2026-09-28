@@ -17,7 +17,10 @@ echo 'GEMINI_API_KEY=…' >> .env                  # or OPENAI_API_KEY / ANTHROP
 ```
 
 As services: `deploy/game-pilot.service` (the pilot) and `deploy/game-pilot-view.service` (the
-dashboard, always on), both systemd user units installed by `scripts/install-services.sh`. A drop-in
+dashboard, always on), both systemd user units installed by `scripts/install-services.sh`. Before the
+first deploy of the sign-in change, install `segno` into the `.venv` the units run
+(`.venv/bin/pip install segno`; it is in `pyproject.toml`): without it Add a device shows no QR code
+(the pages then never mention one), and `view` and `install-services.sh` say so. A drop-in
 (`systemctl --user edit game-pilot.service`) sets `GAME_AGENT_URL` and `GAME_RESOLUTION` for the
 PC in use.
 

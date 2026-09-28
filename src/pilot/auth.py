@@ -314,6 +314,12 @@ def lan_address() -> str:
         return socket.gethostname()
 
 
+def qr_available() -> bool:
+    """Whether QR codes can be drawn (segno in this Python). Without it the pages never mention one."""
+    import importlib.util
+    return importlib.util.find_spec("segno") is not None
+
+
 def qr_svg(url: str) -> str | None:
     """The link as an inline SVG QR code (dark on white, quiet zone), or None without segno."""
     try:
@@ -1433,7 +1439,8 @@ class Auth:
                        'and crosses it unencrypted.</p></details>')
         page = (STATIC / "pair.html").read_text(encoding="utf-8")
         values = {"state": html.escape(state), "wait": str(int(wait)), "next": html.escape(nxt), "message": message,
-                  "inapp": inapp, "keyform": keyform, "name": html.escape(device_name(ua))}
+                  "inapp": inapp, "keyform": keyform, "name": html.escape(device_name(ua)),
+                  "qr_hint": " On a phone, scan the QR code there with the camera." if qr_available() else ""}
         for k, v in values.items():
             page = page.replace("{{" + k + "}}", v)
         headers = {"Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; "

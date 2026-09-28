@@ -248,3 +248,35 @@ def test_a_fresh_link_pasted_into_the_same_tab_works(browser, live_servers, name
     assert w2.page.is_hidden("#v-signin")
     w.context.close()
     w2.context.close()
+
+
+def test_without_qr_codes_nothing_says_to_scan_one(browser, live_servers, monkeypatch):
+    """Without segno the Add sheet has no QR code, so its hint and the sign-in page never send anyone
+    looking for one (production ran without it)."""
+    from pilot import auth as A
+    monkeypatch.setattr(A, "qr_svg", lambda url: None)
+    monkeypatch.setattr(A, "qr_available", lambda: False)
+    a = open_context(browser, "desktop-light", live_servers)
+    page = open_add_sheet(a)
+    hint = page.text_content("#add-hint")
+    assert "QR" not in hint and "scan" not in hint and "type the words" in hint
+    assert page.is_hidden("#add-qr") and page.is_hidden("#add-qr-show")
+    b = open_context(browser, "phone-light", live_servers, signed_in=False)
+    b.page.goto(b.base + "/pair")
+    assert "scan" not in b.page.text_content("main") and "QR" not in b.page.text_content("main")
+    a.context.close()
+    b.context.close()
+
+
+def test_with_qr_codes_the_hint_says_to_scan(browser, live_servers, monkeypatch):
+    from pilot import auth as A
+    monkeypatch.setattr(A, "qr_svg", lambda url: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8"><rect width="8" height="8"/></svg>')
+    monkeypatch.setattr(A, "qr_available", lambda: True)
+    a = open_context(browser, "desktop-light", live_servers)
+    page = open_add_sheet(a)
+    assert "scan the QR code" in page.text_content("#add-hint") and page.is_visible("#add-qr")
+    b = open_context(browser, "phone-light", live_servers, signed_in=False)
+    b.page.goto(b.base + "/pair")
+    assert "scan the QR code" in b.page.text_content("main")
+    a.context.close()
+    b.context.close()

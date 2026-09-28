@@ -727,7 +727,7 @@
   <form method="dialog">
     <h2 id="add-title">Add a device</h2>
     <div id="add-body">
-      <p class="hint">On the other device, open the link or scan the QR code. Or open the dashboard there and type the words.</p>
+      <p class="hint" id="add-hint">On the other device, open the link, or open the dashboard there and type the words.</p>
       <div class="add-qr" id="add-qr" role="img" aria-label="QR code of the sign-in link" hidden></div>
       <button type="button" class="btn" id="add-qr-show" hidden>Show QR code</button>
       <p class="add-words" id="add-words"></p>
@@ -3341,6 +3341,9 @@ async function newCode() {
   $("add-words").textContent = j.words.split(" ").join("\u00a0· ");     // lines break after a dot, never before
   $("add-link").value = j.link;
   const small = matchMedia("(max-width: 600px)").matches;      // a phone rarely scans its own screen
+  // no QR code without segno on the server: then nothing asks anyone to scan one
+  $("add-hint").textContent = j.qr_svg ? "On the other device, open the link or scan the QR code. Or open the dashboard there and type the words."
+                                       : "On the other device, open the link, or open the dashboard there and type the words.";
   $("add-qr").innerHTML = j.qr_svg || "";
   $("add-qr").hidden = !j.qr_svg || small;
   $("add-qr-show").hidden = !j.qr_svg || !small;

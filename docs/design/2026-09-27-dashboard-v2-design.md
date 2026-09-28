@@ -1395,7 +1395,9 @@ which a deploy may do (ruling 36). Every page change must still work against a p
 **Auth deploy runbook.** A1 and A2 deploy together with one viewer restart, so every security graft (ruling 34)
 is live from the first deploy. A3 reaches the live pilot with the same deploy (both services restart together); A4 is used after that.
 0. **Before the first deploy:** ask for a DHCP reservation for 192.168.1.76 (optional) and set
-   `PILOT_PUBLIC_URL=http://192.168.1.76:8780` in `game-pilot-view.service` (ruling 37).
+   `PILOT_PUBLIC_URL=http://192.168.1.76:8780` in `game-pilot-view.service` (ruling 37). Install `segno`
+   into the `.venv` the units run (`.venv/bin/pip install segno`), or Add a device has no QR code for the
+   phone (ruling 44); `view` and `scripts/install-services.sh` say so when it is missing.
 1. Merge A1-A2 after `scripts/ci.sh` prints CI OK and a code review. Restart `game-pilot-view.service` and
    `game-pilot.service` together (ruling 36). The new viewer forwards to the old live pilot with the unchanged K over loopback, so
    Pause, Stop and Talk keep working.

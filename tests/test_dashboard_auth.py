@@ -927,3 +927,19 @@ def test_a_carried_over_browser_is_no_new_device_to_the_others(tmp_path, clock):
     notices = asyncio.run(go())
     assert [n["kind"] for n in notices] == ["carried_over", "new_device"], notices
     assert notices[1]["device"] == "Brave on Windows" and notices[0]["device"] == "Chrome on Android"
+
+
+@pytest.mark.parametrize("has_qr", [True, False])
+def test_viewer_startup_says_when_qr_codes_are_off(tmp_path, monkeypatch, capsys, caplog, has_qr):
+    """segno missing from the deployed Python means no QR code in Add a device: `view` says so loudly at
+    start (stdout for the journal, and a warning in the log), with the fix."""
+    from aiohttp import web as aioweb
+
+    from pilot import cli
+    monkeypatch.setenv("PILOT_RUNS_DIR", str(tmp_path / "runs"))
+    monkeypatch.setattr(aioweb, "run_app", lambda *a, **kw: None)
+    monkeypatch.setattr(A, "qr_available", lambda: has_qr)
+    with caplog.at_level(logging.WARNING):
+        assert cli.main(["view", "--port", "8781"]) == 0
+    out = capsys.readouterr().out
+    assert ("segno" in out and "pip install segno" in out and "QR" in caplog.text) is (not has_qr)
