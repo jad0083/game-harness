@@ -2597,6 +2597,80 @@ def test_the_ai_spend_is_urgent_named_by_one_log_read_and_shown_to_the_next_deci
     assert not any(e["kind"] == "needs_attention" for e in g.log.recent), "never stops the hands-off run"
 
 
+# ---- a stretch starts from a snapshot taken after our orders (post-mortem fixes review) --------------------
+
+def _accrue(state):
+    """Each turn the AI plays adds the snapshot's gold and faith per turn, as the game does."""
+    state.update(gold=state["gold"] + state["yields"]["gold"], faith=state["faith"] + state["yields"]["faith"])
+
+
+def test_our_purchase_is_not_the_ai_spend_when_the_read_back_fails(setup):
+    """T525: the decision buys a Modern AT for 1,160 faith and the read-back after it fails. The stretch's
+    spend was taken from the snapshot before the purchase: "urgent: the AI spent 1,160 faith (not named)"
+    and "Since T525 the AI spent 1,160 faith" in the next prompt, for our own purchase."""
+    seen: list[str] = []
+    city = {**_calm_city("Guangzhou", [MODERN_AT]), "capital": False}
+    start = {**_t525(), "faith": 2500, "majors": [], "military": 5000, "cities": [city]}
+    game = FakeCiv6(start, index=INDEX, ai=_accrue, readback_fails=True,
+                    prices={("Guangzhou", "unit:modern_at", "faith"): 1160})
+    s, _ = setup
+    s.autoplay_chunk, s.decide_every_turns = 3, 5
+    g = governor(setup, game, orders_model([{"kind": "purchase", "city": "Guangzhou", "id": "unit:modern_at",
+                                             "currency": "faith"}], [], seen=seen))
+    g.run(max_decisions=2)
+    assert _sent(game, "purchase") and game.state["faith"] < 2500, "the purchase ran; its read-back failed"
+    row = next(e for e in g.log.recent if e["kind"] == "metrics" and e.get("turn") == 528)
+    assert abs(row["ai_spent"]["faith"]) < 1, row["ai_spent"]
+    assert traces(setup)[1]["trigger"] == "scheduled (5 turns)"
+    assert "the AI spent" not in seen[1]
+
+
+def test_a_rule_buy_whose_read_back_fails_is_not_the_ai_spend(setup):
+    game = FakeCiv6(_t496(), index=INDEX, ai=_accrue, readback_fails=True,
+                    prices={("Rockhampton", "unit:modern_at", "faith"): 1160})
+    g = _stretch_governor(setup, game)
+    g.run(max_decisions=2)
+    assert len(_sent(game, "purchase")) == 1
+    row = next(e for e in g.log.recent if e["kind"] == "metrics" and e.get("turn") == 499)
+    assert abs(row["ai_spent"]["faith"]) < 1, row["ai_spent"]
+    assert not traces(setup)[1]["trigger"].startswith("urgent: the AI spent")
+
+
+def test_the_rule_buy_prices_from_the_balance_after_our_orders_when_their_read_back_fails(setup):
+    """T496 with 1,065 gold and no faith: the model buys a Settler for 500 gold and the read-back fails.
+    The rule buy then priced a Machine Gun (1,000 gold) against the 1,065 before the Settler (max_cost
+    1,035) and took gold below the 30 reserve."""
+    mg = {"unit": "UNIT_MACHINE_GUN", "gold": 1000, "gold_allowed": True, "faith": 1080, "faith_allowed": True}
+    rock = {**_t496()["cities"][1], "defence_prices": [mg]}
+    game = FakeCiv6(_t496(faith=0, cities=[_t496()["cities"][0], rock]), index=INDEX, readback_fails=True,
+                    prices={("Beijing", "unit:settler", "gold"): 500, ("Rockhampton", "unit:machine_gun", "gold"): 1000})
+    s, _ = setup
+    s.autoplay_chunk, s.decide_every_turns = 3, 3
+    g = governor(setup, game, orders_model([{"kind": "purchase", "city": "Beijing", "id": "unit:settler",
+                                             "currency": "gold"}], []))
+    g.run(max_decisions=2)
+    assert [o["id"] for o in _sent(game, "purchase")] == ["unit:settler"], "1,000 gold does not fit 565 - 30"
+    assert game.state["gold"] >= 30
+    note = next(e for e in g.log.recent if e["kind"] == "rule_buy")["note"]
+    assert note.startswith("nothing bought"), note
+
+
+def test_a_stretch_after_a_pause_starts_from_a_fresh_snapshot(setup):
+    """A pause (or a Resume after needs attention) goes on with the snapshot from before it, while the
+    game may have been played meanwhile: the stretch reads it afresh before pricing or measuring."""
+    game = FakeCiv6({**FIXTURE, "gold": 1000, "majors": [], "wars": []}, index=INDEX, ai=_accrue)
+    g = governor(setup, game, orders_model([]))
+    old = game.snapshot()
+    g.control.paused = True
+    assert g._run_until_next_decision(old) == (old, "")
+    game.state["gold"] -= 300                              # spent while the run was paused
+    g.control.paused = False
+    _b, reason = g._run_until_next_decision(old)
+    assert reason.startswith("scheduled")
+    rows = [e for e in g.log.recent if e["kind"] == "metrics"]
+    assert rows and all(abs(r["ai_spent"]["gold"]) < 1 for r in rows), [r["ai_spent"] for r in rows]
+
+
 # ---- postmortem-fixes design, ruling 26: the capture test ---------------------------------------------
 
 def test_beijing_at_t545_and_guangzhou_at_t565_read_as_about_to_fall():

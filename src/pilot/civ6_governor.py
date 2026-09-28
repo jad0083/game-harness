@@ -249,6 +249,9 @@ class Civ6Governor(Governor):
         self._seen_idle: dict[int, list[str]] = {}   # turn -> kinds with nothing in progress (ruling 16)
         self._tracked_turn: int | None = None
         self._after_orders: dict | None = None    # the snapshot read back after the last orders
+        # the snapshot the loop would go on with may predate our orders (their read-back failed) or a
+        # pause (the AI may have played on): a fresh one is read before anything is priced or measured
+        self._stale = False
         self._stand_streak: dict[str, int] = {}   # city -> last stands in a row (ruling 22)
         self._stand_capped: set[str] = set()      # cities whose cap the journal already noted
         self._stand_first_fails = 0               # stands whose first action did not take (ruling 26)
@@ -463,6 +466,17 @@ class Civ6Governor(Governor):
         except Exception as e:  # noqa: BLE001 - one-turn stretches end by themselves
             self.log.emit("briefing_error", error=f"autoplay stop: {e}"[:200])
 
+    def _fresh(self, last: dict) -> dict:
+        """`last`, or a fresh snapshot when `last` may be out of date (`_stale`): orders were sent and
+        their read-back failed, or the loop stopped for a pause or the human. A stale snapshot priced the
+        rule buy from a balance before the model's own purchase (below the reserve) and counted our
+        purchase as the AI's spend (a false urgent decision). Raises Civ6Stuck when none can be read."""
+        if not self._stale:
+            return last
+        b = self._snapshot_between_turns()
+        self._stale = False
+        return b
+
     def _run_until_next_decision(self, last: dict) -> tuple[dict | None, str]:
         """The AI plays one turn at a time (or `autoplay_chunk` turns) until `decide_every_turns` have
         passed or something urgent happened. Between turns the game is idle and answers at once: the
@@ -471,12 +485,18 @@ class Civ6Governor(Governor):
         stops answering between turns, waits for the human (needs attention)."""
         last = self._after_orders or last
         self._after_orders = None
+        try:
+            last = self._fresh(last)
+        except Civ6Stuck as e:
+            self._needs_attention(f"{e}. Check the game (a dialog, a crash, the main menu), then press Resume.")
+            return last, ""
         target = last["turn"] + self.s.decide_every_turns
         self._status("playing")
         while True:
             if self.control.stopping:
                 return None, "stop"
             if self.control.paused:
+                self._stale = True                             # the game may be played by hand meanwhile
                 return last, ""
             if not self.requests.empty():
                 return last, "request"
@@ -497,6 +517,7 @@ class Civ6Governor(Governor):
                     self._play_turns(last["turn"], n)
                 b = self._snapshot_between_turns()
             except Civ6Stuck as e:
+                self._stale = True                             # the AI may have played part of the stretch
                 self._needs_attention(f"{e}. Check the game (a dialog, a crash, the main menu), then press Resume.")
                 return last, ""
             if self._overrun:
@@ -507,12 +528,14 @@ class Civ6Governor(Governor):
                 if b is None:
                     return None, "ended"
             if getattr(self, "_campaign_key", None) and (b.get("leader"), b.get("map_seed")) != self._campaign_key:
+                self._stale = True
                 self._needs_attention(f"the game changed: {b.get('leader')} on map {b.get('map_seed')}, this run governs "
                                       f"{self._campaign_key[0]} on map {self._campaign_key[1]}. Load that game again and "
                                       "press Resume, or start a new run.")
                 return last, ""
             mine = getattr(self, "_player_id", None)
             if isinstance(mine, int) and isinstance(b.get("player"), int) and b["player"] != mine:
+                self._stale = True
                 self._needs_attention(f"the snapshot is for player {b['player']}, this run governs player {mine} "
                                       "(ruling 21: the player id is never derived again). Check the game, then press "
                                       "Resume, or start a new run.")
@@ -659,7 +682,7 @@ class Civ6Governor(Governor):
         self.log.emit("rule_buy", turn=turn, orders=outcomes, note=note, by="governor")
         self.journal.note(f"The governor, {note}: {summary}", last.get("date", ""))
         after, self._after_orders = self._after_orders, None
-        return after
+        return after if after is not None else self._fresh(last)
 
     # ---- a lost purchase sent again (postmortem-fixes design, ruling 5) ------------------------------
 
@@ -708,7 +731,7 @@ class Civ6Governor(Governor):
         self.journal.note(f"Purchase {RESEND_NOTE}: " + "; ".join(f"{o['order']}: {o['outcome']}" for o in outcomes),
                           fresh.get("date", ""))
         after, self._after_orders = self._after_orders, None
-        return after or fresh, urgent
+        return (after if after is not None else self._fresh(fresh)), urgent
 
     def _read_ai_buys(self, b: dict) -> None:
         """One read of AI_CityBuild.csv (at most once per hand-back turn) from where the last one ended,
@@ -1630,6 +1653,7 @@ class Civ6Governor(Governor):
                 after = self.game.snapshot()
             except Exception as e:  # noqa: BLE001
                 self.log.emit("briefing_error", error=f"read-back: {e}"[:200])
+            self._stale = after is None             # what goes on next is read afresh (`_fresh`)
         for c, reply in sent:
             if after is None:
                 results.append((c, f"{UNKNOWN}: not read back (no snapshot)", False))

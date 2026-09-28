@@ -304,7 +304,9 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   Guangzhou costs 6 gold a turn and gold per turn is +5").
 - **What the AI spent** (ruling 4): at each hand-back, per currency, balance before + the start
   snapshot's yield x the turns played - balance now (our own purchases are already in the read-back the
-  stretch starts from; E10: 2,278 + 226 x 3 - 958 = 1,998 faith, the Rock Band the game logged at T526);
+  stretch starts from; when that read-back failed, or after a pause or a Resume, the stretch starts from
+  a fresh snapshot instead, so our purchase never reads as the AI's and the rule buy never prices from a
+  balance before it; E10: 2,278 + 226 x 3 - 958 = 1,998 faith, the Rock Band the game logged at T526);
   rows carry it as `ai_spent`. The next decision's prompt says "Since T525 the AI spent 1,998 faith
   (UNIT_ROCK_BAND, T526) and 1,717 gold (not named)" when a currency's spend since the last decision is at
   least max(50, 10% of its yield over those turns); the items come from the game's

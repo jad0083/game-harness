@@ -1090,7 +1090,7 @@ _ITEM_RE = re.compile(r"^(?:UNIT|BUILDING|DISTRICT|PROJECT)_[A-Z0-9_]+$")
 def ai_spent(before: dict, now: dict) -> dict[str, float]:
     """Per currency, what the game's AI spent between two snapshots (ruling 4): the balance before +
     the start snapshot's yield x the turns played - the balance now. Our own purchases are already in
-    `before` (the read-back after our orders). T525 -> T528: 2,278 + 226 x 3 - 958 = 1,998 faith, the
+    `before` (the read-back after our orders, or a fresh snapshot when that read-back failed). T525 -> T528: 2,278 + 226 x 3 - 958 = 1,998 faith, the
     Rock Band the game logged at T526 (E10). A yield change inside the stretch reads as spending."""
     turns = max(0, int(now.get("turn") or 0) - int(before.get("turn") or 0))
     out = {}
