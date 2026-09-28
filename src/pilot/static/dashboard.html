@@ -3244,7 +3244,7 @@ $("more-menu").addEventListener("keydown", (e) => {
 });
 $("more-menu").addEventListener("click", (e) => {
   const b = e.target.closest("button[data-act]"); if (!b) return;
-  closeMenu(false);
+  closeMenu(true);          // focus on ⋯ first: a sheet opened now gives focus back to it when it closes
   if (b.dataset.act === "add") openAdd();
   else if (b.dataset.act === "devices") openSettings("devices");
   else if (b.dataset.act === "signout") signOutHere();

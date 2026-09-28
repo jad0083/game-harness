@@ -2,6 +2,7 @@
 
 ## Open
 
+- [ ] Dashboard v2 review (2026-09-27): focus fell to <body> when a sheet opened from the ⋯ menu closed (Stop, Add a device, Devices, Start run, and Settings on a phone), against ruling 31, since the menu item that had focus was hidden before the dialog opened. Fixed on branch feat/dashboard-v2: ⋯ takes focus before the sheet opens, so the sheet gives it back
 - [ ] Dashboard v2 review (2026-09-27): after a streamed turn the Civ VI rivals table showed CIVILIZATION_GERMANY until the next decision reloaded the campaign, since the stream's metrics rows skip the API's readable names. Fixed on branch feat/dashboard-v2: a streamed row triggers a debounced reload of /api/metrics
 - [ ] Dashboard v2 review (2026-09-27): after looking at a past campaign and switching back to the live one, Actions lately (Stellaris) and Blockers cleared lately (GalCiv) kept the past campaign's list with live pushes mixed in. Fixed on branch feat/dashboard-v2: the live campaign's list is loaded from the live run's own events
 - [ ] Dashboard v2 review (2026-09-27): the Deciding timer restarted on every render ("Deciding T57: 0 s ... 2 s" over and over) for GalCiv and older pilots, which publish no info.deciding. Fixed on branch feat/dashboard-v2: the GalCiv pilot publishes info.deciding, and the page falls back to the deciding status event's time, then to when it first saw the state
