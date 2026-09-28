@@ -986,17 +986,18 @@ class Governor:
         self._next_probe = time.time() + self.recover_every_s
         self.control.paused = True
         self.log.state.status = "needs_attention"
-        frame = ""
+        # the card first: the screenshot can take 30-90 s (the agent down), and until then the page would
+        # show the previous stop's reason and age
+        card = attention(why, category, list(self.log.recent), date=self.log.state.game_date,
+                         auto_recover=auto_recover, next_probe_at=round(self._next_probe, 1) if auto_recover else None)
+        self.log.state.info["attention"] = card
+        self.log.emit("needs_attention", reason=why[:500], category=category)
         try:
             shot = self.game.screenshot()
             if getattr(shot, "image", None):
-                frame = self.log.frame(shot.image)
+                card["frame"] = self.log.frame(shot.image)
         except Exception:  # noqa: BLE001, S110 - the frame is only a convenience here
             pass
-        self.log.state.info["attention"] = attention(why, category, list(self.log.recent), date=self.log.state.game_date,
-                                                     auto_recover=auto_recover, frame=frame,
-                                                     next_probe_at=round(self._next_probe, 1) if auto_recover else None)
-        self.log.emit("needs_attention", reason=why[:500], category=category)
 
     def _probe_recovered(self) -> bool:
         """While waiting after a transient failure: try to pause the game; if the agent answers, the

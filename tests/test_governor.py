@@ -5166,3 +5166,25 @@ def test_the_metrics_row_carries_the_crisis_market_and_postures_for_the_dashboar
     assert rows["2256.02.01"]["postures"] == ["naval_cap"]
     from pilot.governor import metrics as row_of
     assert "market" not in row_of({"date": "2256.01.01"}) and row_of({"date": "2256.01.01"})["postures"] == []
+
+
+def test_a_stop_is_on_the_card_before_the_screenshot_is_taken(setup):
+    """The screenshot behind a stop can take 30-90 s (the agent down, a controller subprocess): the
+    card's reason, category and age, and the needs_attention event, are published first, and the
+    frame joins the card once the capture returns."""
+    s, log = setup
+    seen: dict = {}
+
+    class Slow(FakeStellaris):
+        def screenshot(self):
+            seen["attention"] = dict(log.state.info.get("attention") or {})
+            seen["event"] = [e for e in log.recent if e["kind"] == "needs_attention"]
+            return type("Shot", (), {"image": b"\xff\xd8jpeg"})()
+
+    log.state.info["attention"] = {"reason": "an older stop", "category": "transient", "since": 1.0}
+    g = Governor(s, Slow([briefing("2256.01.01")]), log, model=decisions("keep"))
+    g._needs_attention("the agent does not answer", category="unreachable")
+    assert seen["attention"]["reason"] == "the agent does not answer" and seen["attention"]["category"] == "unreachable"
+    assert seen["attention"]["since"] > 1.0 and seen["attention"].get("frame", "") == ""
+    assert [e["reason"] for e in seen["event"]] == ["the agent does not answer"]
+    assert log.state.info["attention"]["frame"].startswith("frames/")
