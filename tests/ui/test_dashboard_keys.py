@@ -1,5 +1,5 @@
 """Keyboard behaviour of the dashboard's sheets (ruling 31): focus returns to the opener when a dialog
-opened from the ⋯ menu closes."""
+opened from the ⋯ menu closes, and Enter in the rename field saves the name instead of closing Settings."""
 
 from __future__ import annotations
 
@@ -47,4 +47,26 @@ def test_focus_returns_to_the_menu_button_when_a_sheet_closes(browser, live_serv
         page.keyboard.press(close)
     page.wait_for_selector(f"{dialog}:not([open])", state="attached")
     assert page.evaluate("document.activeElement && document.activeElement.id") == "b-more"
+    w.context.close()
+
+
+@pytest.mark.parametrize("name", ["desktop-light", "phone-dark"])
+def test_enter_in_the_rename_field_saves_the_name(browser, live_servers, name):
+    w = open_context(browser, name, live_servers, device="Chrome on Windows")
+    load(w)
+    page = w.page
+    from_menu(page, "devices")
+    page.wait_for_selector("#dev-rename")
+    page.click("#dev-rename")
+    page.fill("#dev-name", "Office Chrome")
+    page.keyboard.press("Enter")
+    page.wait_for_function("() => (document.getElementById('dev-this-name') || {}).textContent === 'Office Chrome'", timeout=5000)
+    assert page.evaluate("document.getElementById('settings-dialog').open")
+    assert live_servers["auth"].store.device(w.device)["name"] == "Office Chrome"
+    page.click("#dev-rename")
+    page.fill("#dev-name", "Throwaway")
+    page.keyboard.press("Escape")                       # cancels the rename, the sheet stays
+    assert page.evaluate("document.getElementById('settings-dialog').open")
+    assert page.text_content("#dev-this-name") == "Office Chrome"
+    assert live_servers["auth"].store.device(w.device)["name"] == "Office Chrome"
     w.context.close()

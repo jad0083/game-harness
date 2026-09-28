@@ -3371,9 +3371,15 @@ async function loadDevices() {
     $("dev-rename").addEventListener("click", () => {
       $("dev-this-name").innerHTML = `<input id="dev-name" maxlength="60" value="${esc(me.name)}" aria-label="Name of this browser"> <button type="button" class="btn" id="dev-name-save">Save</button>`;
       $("dev-name").focus();
-      $("dev-name-save").addEventListener("click", async () => {
+      const save = async () => {
         const r = await postJson("/api/auth/devices", { action: "rename", id: me.id, name: $("dev-name").value });
         if (r.ok) loadDevices();
+      };
+      $("dev-name-save").addEventListener("click", save);
+      // inside the settings form, Enter would submit it (Done) and close the sheet; Escape would close it
+      $("dev-name").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); save(); }
+        else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); $("dev-this-name").textContent = me.name; $("dev-rename").focus(); }
       });
     });
   }
