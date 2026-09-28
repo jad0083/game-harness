@@ -5188,3 +5188,26 @@ def test_a_stop_is_on_the_card_before_the_screenshot_is_taken(setup):
     assert seen["attention"]["since"] > 1.0 and seen["attention"].get("frame", "") == ""
     assert [e["reason"] for e in seen["event"]] == ["the agent does not answer"]
     assert log.state.info["attention"]["frame"].startswith("frames/")
+
+
+def test_a_chat_or_review_retry_says_its_role(setup):
+    """Governor._call retries chat and strategy calls through the same path as decisions: their
+    model_retry events say their role, and only a decision's retry moves the Deciding countdown."""
+    from pydantic_ai.exceptions import ModelHTTPError
+    s, log = setup
+    s.retry_delays = (0, 0)
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+    log.state.info["deciding"] = {"since": 1.0}
+    n = {"n": 0}
+
+    def ask(agent):
+        n["n"] += 1
+        if n["n"] % 2:
+            raise ModelHTTPError(status_code=503, model_name="gemini-3.8-flash", body={"error": "high demand"})
+        return "ok"
+    assert g._call("chat", ask)[0] == "ok"
+    retry = [e for e in log.recent if e["kind"] == "model_retry"][-1]
+    assert retry["role"] == "chat" and "retry_at" not in log.state.info["deciding"]
+    assert g._call("decisions", ask)[0] == "ok"
+    assert [e for e in log.recent if e["kind"] == "model_retry"][-1]["role"] == "decisions"
+    assert "retry_at" in log.state.info["deciding"]

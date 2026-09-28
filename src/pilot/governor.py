@@ -711,7 +711,8 @@ class Governor:
                                 after=list(tried), skipped=[e["model"] for e in order[i + 1:] if cooling(e)])
             agent = self._agent_for(entry, role)
             try:
-                result = (run_with_retry(lambda agent=agent: ask(agent), self.s.retry_delays, self._on_retry)
+                result = (run_with_retry(lambda agent=agent: ask(agent), self.s.retry_delays,
+                                         lambda e, d, a, role=role: self._on_retry(e, d, a, role))
                           if i == 0 and not cooling(entry) else ask(agent))
                 failed.pop(entry["model"], None)
                 if role == "decisions":
@@ -959,13 +960,13 @@ class Governor:
         self.log.state.status = status
         self.log.emit("status", status=status)
 
-    def _on_retry(self, e, delay, attempt) -> None:
+    def _on_retry(self, e, delay, attempt, role: str = "decisions") -> None:
         what = (f"model {e.model_name} answered {e.status_code}" if hasattr(e, "status_code")
                 else f"model request timed out after {self.s.model_timeout_s:.0f} s ({type(e).__name__})")
-        d = self.log.state.info.get("deciding")
+        d = self.log.state.info.get("deciding") if role == "decisions" else None
         if d is not None:                       # the dashboard counts down to the next try
             d.update(retry_at=round(time.time() + delay, 1), retries=attempt, waiting=cause(what))
-        self.log.emit("model_retry", error=what, delay=delay, attempt=attempt)
+        self.log.emit("model_retry", error=what, delay=delay, attempt=attempt, role=role)   # chat and reviews retry too
 
     recover_every_s: float = 30.0     # how often a transient failure probes the agent again
 

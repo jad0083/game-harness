@@ -207,7 +207,7 @@ def attempts(events: list[dict]) -> list[dict]:
     times}] in order ("Gemini 3.8 Flash overloaded (503) x3, then 3.7 Flash overloaded")."""
     out: list[dict] = []
     for e in events:
-        if e.get("kind") == "model_retry":
+        if e.get("kind") == "model_retry" and e.get("role", "decisions") == "decisions":   # not chat's or a review's
             m = _RETRY_MODEL.search(str(e.get("error") or ""))
             model, why = (m.group(1), cause(e.get("error"))) if m else ("", cause(e.get("error")))
         elif e.get("kind") == "model_fallback" and e.get("role", "decisions") == "decisions":

@@ -104,3 +104,15 @@ def test_stellaris_action_record_keys_read_as_words():
         "Directive: Defend", "Directive: Diplomacy first", "Market: buy alloys", "Market: sell consumer goods",
         "Posture: naval capacity", "War crisis: defend", "Tech picks"]
     assert record_label("production replace") == "Production, replace the AI's choice"
+
+
+def test_attempts_count_only_the_decisions_own_calls():
+    """Chat and strategy reviews retry through the same path: their model_retry events carry their role
+    and are not the next decision's attempts (an event without a role is from an older pilot: counted)."""
+    from pilot.wording import attempts
+    evs = [{"kind": "model_retry", "error": "model gemini-3.8-flash answered 503", "role": "chat"},
+           {"kind": "model_retry", "error": "model gemini-3.8-flash answered 503", "role": "strategy"},
+           {"kind": "model_retry", "error": "model gemini-3.8-flash answered 503", "role": "decisions"},
+           {"kind": "model_retry", "error": "model gemini-3.8-flash answered 503"},
+           {"kind": "model_fallback", "role": "chat", "model": "google:gemini-3.8-flash", "error": "503"}]
+    assert attempts(evs) == [{"model": "gemini-3.8-flash", "cause": "overloaded (503)", "times": 2}]

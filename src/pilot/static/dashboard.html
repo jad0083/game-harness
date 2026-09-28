@@ -2752,7 +2752,7 @@ function describe(ev) {
     case "strategy_mismatch": return "The stored strategy does not fit the game's pillars; the next review writes a new one";
     case "strategy_disabled": return `Strategy layer off: ${clip(tidy(ev.error))}`;
     case "model_fallback": return `${modelName(ev.model)} ${errorCause(ev.error)}; used ${modelName(ev.fallback)}${ev.role && ev.role !== "decisions" ? ` (${human(ev.role)})` : ""}`;
-    case "model_retry": return `${sentence(errorCause(ev.error))}; trying again in ${ev.delay} s`;
+    case "model_retry": return `${sentence(errorCause(ev.error))}; trying again in ${ev.delay} s${ev.role && ev.role !== "decisions" ? ` (${human(ev.role)})` : ""}`;
     case "model": return `Now using ${modelName(ev.model)}${ev.thinking ? ` (${ev.thinking} thinking)` : ""}${byWho(ev)}`;
     case "models": return `Models changed${ev.by && ev.by !== "the controller" ? ` by ${ev.by}` : ""}: ${(ev.models || []).map((m) => modelName(m.model)).join(", ")}${ev.rotate ? ", taking turns" : ""}`;
     case "roles": return `Models per role changed${ev.by && ev.by !== "the controller" ? ` by ${ev.by}` : ""}`;
