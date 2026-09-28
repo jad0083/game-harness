@@ -2949,3 +2949,46 @@ def test_a_failed_log_read_says_the_declarer_is_not_known(setup):
     g = governor(setup, game, orders_model([]))
     g.run(max_decisions=2)
     assert traces(setup)[1]["trigger"] == "urgent: new war: at war with CIVILIZATION_AUSTRALIA (who declared is not known)"
+
+
+# ---- postmortem-fixes design, ruling 27: turns advanced against those requested ------------------------
+
+class Overrun(FakeCiv6):
+    """Autoplay that plays `extra` more turns than asked (T583 -> T612 on a 3-turn call)."""
+    extra = 26
+
+    def autoplay(self, turns: int) -> dict:
+        reply = super().autoplay(turns)
+        self.remaining += self.extra
+        return reply
+
+
+def test_an_autoplay_that_plays_more_turns_than_asked_is_logged_and_checked_for_the_end_first(setup, tmp_path):
+    """Reliability-3: 18 of 25 autoplay calls after T579 passed more turns than requested, while the log
+    showed the numbers requested. Here our civilization dies during the overrun and the game then reads
+    another player: the end check runs before the player check."""
+    _tel, log = _telemetry_log(setup, tmp_path, "civ5")
+    s, _ = setup
+    s.autoplay_chunk, s.decide_every_turns = 3, 3
+    t0 = FIXTURE["turn"]
+    game = Overrun(FIXTURE, index=INDEX, events={t0 + 29: lambda st: st.update(alive=False, player=3)})
+    g = Civ6Governor(s, game, log, model=_counting_model([]))
+    g.status_poll_s, g.start_grace_s, g.turn_deadline_s, g.end_watch_s = 0, 0.05, 0.5, 0
+    g.run(max_decisions=3)
+    turn = next(e for e in log.recent if e["kind"] == "turn")
+    assert (turn["turns"], turn["requested"]) == (29, 3)
+    over = next(e for e in log.recent if e["kind"] == "turn_overrun")
+    assert (over["requested"], over["actual"], over["turn"]) == (3, 29, t0 + 29)
+    assert any(e["kind"] == "campaign_end" for e in log.recent), "the end check ran first"
+    assert not any(e["kind"] == "needs_attention" for e in log.recent)
+
+
+def test_a_normal_stretch_logs_the_turns_that_passed(setup):
+    s, _ = setup
+    s.autoplay_chunk = 3
+    game = FakeCiv6(FIXTURE, index=INDEX)
+    g = governor(setup, game, orders_model([]))
+    g.run(max_decisions=2)
+    turn = next(e for e in g.log.recent if e["kind"] == "turn")
+    assert (turn["turns"], turn["requested"]) == (3, 3)
+    assert not any(e["kind"] == "turn_overrun" for e in g.log.recent)

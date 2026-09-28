@@ -88,7 +88,7 @@ from .strategy import (
     validate,
 )
 from .threat import buildup, buildup_text
-from .trace import serialize
+from .trace import prompt_step, serialize
 
 DIRECTIVES = ("expand", "consolidate_economy", "tech_rush", "prepare_war", "defend", "diplomacy_first")
 NEEDS_HUMAN = {"prepare_war"}      # strategy.md: only after the human confirmed the target
@@ -1665,8 +1665,18 @@ class Governor:
                 return b, "urgent: " + "; ".join(urgent)
             if months(b["date"]) >= start + self.s.decide_every_months:
                 self.game.set_paused(True)
+                self._interval(months(b["date"]) - start, b["date"])
                 return b, f"scheduled ({self.s.decide_every_months} months)"
             last = b
+
+    def _interval(self, passed: int, date: str) -> None:
+        """A scheduled interval's months that passed against `decide_every_months` (postmortem-fixes
+        design, ruling 27); more than one month over emits `pace_overrun`, for information only (the
+        autosave comes monthly, so a fast game can pass a save or two)."""
+        every = self.s.decide_every_months
+        self.log.emit("interval", months=passed, requested=every, date=date)
+        if passed > every + 1:
+            self.log.emit("pace_overrun", requested=every, actual=passed, date=date)
 
     # ---- the end of a campaign (postmortem-fixes design, rulings 21-23) ------------------------------
 
@@ -1911,7 +1921,7 @@ class Governor:
             self.log.emit("episode_error", error=f"{type(e).__name__}: {e}"[:500])
             self.log.save_trace(n, {**base, "outcome": "error", "error": f"{type(e).__name__}: {e}"[:2000],
                                     "seconds": round(time.time() - started, 1),
-                                    "steps": [{"type": "prompt", "text": "\n".join(prompt)}]})
+                                    "steps": [prompt_step("\n".join(prompt))]})
             self._crisis_without_answer(b, current, ladder)   # the ladder is the harness's, not the model's
             return
         d, usage = result.output, result.usage

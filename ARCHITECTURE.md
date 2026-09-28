@@ -361,7 +361,9 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
    └ dashboard :8790 (live)          pilot view :8780 (always on) ──► forwards /status /events /control
 ```
 - `trace.py` turns a model run's messages into steps (prompt, thinking, text, tool call, tool
-  result, retry, answer, usage); images become placeholders, long texts are cut at 6,000 chars.
+  result, retry, answer, usage); images become placeholders; a prompt is kept whole up to 100,000
+  chars (the briefing's per-city danger lines; postmortem-fixes design, ruling 27), other texts are
+  cut at 6,000 chars.
 - `telemetry.py`: SQLite (WAL) with a lock; `record()` maps events to rows; `score()` joins each
   decision to the metric point 12 months later; `past_outcomes()` renders them for the model;
   `rebuild()` replays every `events.jsonl`. Write failures are logged and never stop play.

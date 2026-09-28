@@ -105,7 +105,7 @@ from .threat import (
     majors_military,
     weakness,
 )
-from .trace import serialize
+from .trace import prompt_step, serialize
 
 ORDER_RECORD_HEADING = "Order record in this campaign (held until done / replaced by the AI):"
 RESEND_NOTE = "sent again after a lost reply (nothing spent, proved)"
@@ -266,6 +266,7 @@ class Civ6Governor(Governor):
         # purchases whose reply was lost and whose read-back proved nothing was spent, sent once more
         # before the next autoplay (postmortem-fixes ruling 5): [{"order": wire order, "turn"}]
         self._resend: list[dict] = []
+        self._overrun = False                     # the last autoplay passed more turns than requested (ruling 27)
         log.state.info["directives"] = []
         log.state.info["decide_turns"] = settings.decide_every_turns
         log.state.info["controls"] = [c for c in log.state.info.get("controls", []) if c not in ("override", "set_speed")]
@@ -491,6 +492,13 @@ class Civ6Governor(Governor):
             except Civ6Stuck as e:
                 self._needs_attention(f"{e}. Check the game (a dialog, a crash, the main menu), then press Resume.")
                 return last, ""
+            if self._overrun:
+                # ruling 27: more turns passed than requested (18 of 25 calls after T579): the end check
+                # runs before anything else, since a civilization gone reads as another player
+                self._overrun = False
+                b = self._end_check(b)
+                if b is None:
+                    return None, "ended"
             if getattr(self, "_campaign_key", None) and (b.get("leader"), b.get("map_seed")) != self._campaign_key:
                 self._needs_attention(f"the game changed: {b.get('leader')} on map {b.get('map_seed')}, this run governs "
                                       f"{self._campaign_key[0]} on map {self._campaign_key[1]}. Load that game again and "
@@ -836,8 +844,7 @@ class Civ6Governor(Governor):
                     raise
                 state, seen = self._after_lost_start(turn)
                 if isinstance(state, int):
-                    self.log.emit("turn", turn=state, turns=state - turn, seconds=round(time.time() - started, 1),
-                                  note="read by turn-ready after a lost start reply")
+                    self._turns_passed(turn, state, n, started, note="read by turn-ready after a lost start reply")
                     return
                 if state == "wait":
                     self.log.emit("briefing_error", error=f"{e}; its reply was lost and turn-ready reads {seen}: it may "
@@ -850,8 +857,7 @@ class Civ6Governor(Governor):
                     except _NotStarted:
                         state, seen = self._after_lost_start(turn)
                     if isinstance(state, int):
-                        self.log.emit("turn", turn=state, turns=state - turn, seconds=round(time.time() - started, 1),
-                                      note="read by turn-ready after a lost start reply")
+                        self._turns_passed(turn, state, n, started, note="read by turn-ready after a lost start reply")
                         return
                     if state == "wait":
                         raise Civ6Stuck(f"autoplay did not start at T{turn}: its reply was lost and turn-ready still "
@@ -859,6 +865,15 @@ class Civ6Governor(Governor):
                 self.log.emit("briefing_error", error=f"{e}; its reply was lost and turn-ready reads the game idle at "
                                                       f"T{turn}, so it is sent again ({attempt + 1} of "
                                                       f"{self.start_retries})"[:300])
+
+    def _turns_passed(self, turn: int, now: int, n: int, started: float, **extra) -> None:
+        """The `turn` event with the turns that passed and those requested (ruling 27: the log showed the
+        numbers requested while 18 of 25 calls after T579 overran, T583 -> T612 on a 3-turn call); more
+        than requested emits `turn_overrun` and makes the hand-back check for the end first."""
+        self.log.emit("turn", turn=now, turns=now - turn, requested=n, seconds=round(time.time() - started, 1), **extra)
+        if now - turn > n:
+            self._overrun = True
+            self.log.emit("turn_overrun", requested=n, actual=now - turn, turn=now)
 
     def _after_lost_start(self, turn: int) -> tuple[str | int, str]:
         """After a start whose reply was lost reads as not started: 'resend' only when turn-ready reads
@@ -905,7 +920,7 @@ class Civ6Governor(Governor):
             elapsed = time.time() - started
             if st is not None:
                 if st.get("turn", turn) >= turn + n and not st.get("active"):
-                    self.log.emit("turn", turn=st["turn"], turns=n, seconds=round(elapsed, 1), unanswered_polls=misses)
+                    self._turns_passed(turn, st["turn"], n, started, unanswered_polls=misses)
                     return
                 seen_active = seen_active or bool(st.get("active")) or st.get("turn", turn) > turn
                 if not seen_active and elapsed > grace:
@@ -916,8 +931,8 @@ class Civ6Governor(Governor):
                     if idle_since is None or idle_since[1] != st.get("turn"):
                         idle_since = (time.time(), st.get("turn"))
                     elif time.time() - idle_since[0] > self.start_grace_s:
-                        self.log.emit("turn", turn=st["turn"], turns=st["turn"] - turn, seconds=round(elapsed, 1),
-                                      unanswered_polls=misses, note="autoplay ended early")
+                        self._turns_passed(turn, st["turn"], n, started, unanswered_polls=misses,
+                                           note="autoplay ended early")
                         return
                 else:
                     idle_since = None
@@ -1473,7 +1488,7 @@ class Civ6Governor(Governor):
                 self.log.save_trace(n, {**base, "outcome": "error", "error": error[:2000],
                                         "seconds": round(time.time() - started, 1),
                                         **({"orders": filled} if filled else {}),
-                                        "steps": [{"type": "prompt", "text": "\n".join(prompt)}]})
+                                        "steps": [prompt_step("\n".join(prompt))]})
                 return
             result, retry_entry = got
             base.update(model=retry_entry["model"], thinking_level=retry_entry["thinking"])

@@ -85,7 +85,9 @@ happens (a war starts or ends, a resource turns negative, we newly fall below ha
 measure, a milestone is missed, or a neighbour builds up: one that is not an alliance or federation
 partner, at 2 x our military power or more, grew 50% within `[time] buildup_window` (24 months), once
 per neighbour per window, a decision only, never a review or a war-crisis entry; postmortem-fixes
-design, ruling 11) → pause → decide again. The game is paused whenever a model
+design, ruling 11) → pause → decide again. Each scheduled interval logs the months that passed
+(`interval {months, requested, date}`); more than one month over `decide_every_months` emits
+`pace_overrun`, for information only (ruling 27). The game is paused whenever a model
 thinks, so any speed is safe. `prepare_war` needs a human "yes" on the dashboard.
 
 The briefing (about 2 KB) covers the empire, resources and deficits, power, research options,
@@ -157,7 +159,12 @@ taken as its player's id): "new war: CIVILIZATION_AUSTRALIA declared a surprise 
 CIVILIZATION_AUSTRALIA (a surprise war)", "new war: CIVILIZATION_MALI joined through its defensive
 pact", or, when the read fails or finds no row, "new war: at war with CIVILIZATION_X (who declared is
 not known)", never a guess. China's own autoplay AI declared the T121 war, which the model recorded as
-Australia's. The log's live layout is unverified. The tuner does not answer while the
+Australia's. The log's live layout is unverified. Each `turn` event logs the turns that passed
+(`turns`) and those requested (`requested`); more turns than requested emits `turn_overrun
+{requested, actual, turn}` and the hand-back's snapshot checks for the end of the campaign before
+anything else (ruling 27: 18 of 25 autoplay calls after T579 overran, T583 to T612 on a 3-turn call,
+while the log showed the numbers requested). Traces keep a decision's whole prompt, up to 100,000
+characters (other texts keep the 6,000 cut), so the per-city danger lines can be audited. The tuner does not answer while the
 AI plays its turn, so unanswered status polls are expected; only the turn's deadline counts (10
 minutes, for long late-game turns). A turn that does not start (20 s) or end in time, or a game that
 gives no snapshot three times between turns, stops the run until the human presses Resume (an

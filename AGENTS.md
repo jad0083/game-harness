@@ -305,6 +305,8 @@ Rules:
 - **The end**: a save with no planet of ours gets no decision; two in a row (or a date stall after one)
   end the run as lost with a report and no model call (`campaign_end`, journal, `info.end`, status
   `ended`; postmortem-fixes design, ruling 22).
+- **Pace**: each scheduled interval logs `interval {months, requested, date}`; more than one month over
+  `decide_every_months` emits `pace_overrun`, for information only (postmortem-fixes design, ruling 27).
 - **Time constants** (`[time]` in pillars.toml, in months here): event reviews at most one per 12 months
   except a new war, which always reviews; milestone projections over 12 months; outcomes scored 12
   months after a decision (postmortem-fixes design, rulings 15 and 19).
@@ -459,6 +461,9 @@ Rules:
   not known" when the read fails, never a guess); the Strategist's goals may not name peace, ceasefire,
   alliance, friendship or denounce (`[strategy] unpursuable`): no order pursues them (postmortem-fixes
   design, rulings 24-25; the log's live layout is unverified).
+- Each `turn` event logs the turns that passed and those requested; an autoplay that passed more emits
+  `turn_overrun` and the next snapshot checks for the end first; traces keep whole prompts up to 100,000
+  characters (postmortem-fixes design, ruling 27).
 - Triggers (postmortem-fixes design, rulings 10-14): falling behind the met majors (`[peers] behind`),
   a neighbour's buildup (2 x ours, +50% in 20 turns), gold per turn negative, loyalty falling toward a
   flip, and at war a decision at every hand-back while a city in danger has no unit on its tile and a

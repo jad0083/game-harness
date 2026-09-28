@@ -91,6 +91,23 @@ def test_helpers():
     assert not any("falling behind" in r for r in urgent_changes(lag, lag))
 
 
+def test_each_scheduled_interval_logs_the_months_that_passed_and_an_overrun(setup):
+    """Postmortem-fixes ruling 27 (T6): the months that passed against decide_every_months; more than
+    one month over is a pace_overrun, for information only."""
+    s, log = setup
+    Governor(s, FakeStellaris([briefing("2200.01.01"), briefing("2201.01.01")]), log,
+             model=decisions("keep")).run(max_decisions=2)
+    iv = next(e for e in log.recent if e["kind"] == "interval")
+    assert (iv["months"], iv["requested"], iv["date"]) == (12, 12, "2201.01.01")
+    assert not any(e["kind"] == "pace_overrun" for e in log.recent)
+    log2 = EventLog(s.runs_dir, "run2", s.model)
+    Governor(s, FakeStellaris([briefing("2200.01.01"), briefing("2202.03.01")]), log2,
+             model=decisions("keep")).run(max_decisions=2)
+    over = next(e for e in log2.recent if e["kind"] == "pace_overrun")
+    assert (over["requested"], over["actual"], over["date"]) == (12, 26, "2202.03.01")
+    assert log2.state.status != "needs_attention", "information only"
+
+
 def test_governor_decides_on_schedule_and_pauses_while_deciding(setup):
     s, log = setup
     game = FakeStellaris([briefing("2200.01.01"), briefing("2200.06.01"), briefing("2201.01.01")])
@@ -181,6 +198,21 @@ def test_trace_serializer_handles_thinking_images_and_retries():
     assert res["text"].endswith("[10 more chars]")
     assert any(st["type"] == "retry" for st in steps)
     assert steps[-2] == {"type": "output", "tool": "final_result", "args": {"resolved": True}}
+
+
+def test_a_decision_prompt_is_stored_whole_up_to_its_own_limit():
+    """Postmortem-fixes ruling 27 (H14): traces cut every text at 6,000 characters, so most per-city danger
+    lines were missing from the stored prompts; a prompt now keeps up to 100,000."""
+    from pydantic_ai.messages import ModelRequest, ToolReturnPart, UserPromptPart
+
+    from pilot.trace import MAX_PROMPT, MAX_TEXT, prompt_step, serialize
+    cities = "Cities (8):\n" + "\n".join(f"- City{i}: IN DANGER: {'x' * 2000}" for i in range(8))
+    steps = serialize([ModelRequest(parts=[UserPromptPart(cities), ToolReturnPart("price", "y" * (MAX_TEXT + 5))])])
+    assert steps[0] == {"type": "prompt", "text": cities}, "the whole Cities block"
+    assert steps[1]["text"].endswith("[5 more chars]"), "other texts keep the 6,000 cut"
+    huge = "z" * (MAX_PROMPT + 7)
+    assert serialize([ModelRequest(parts=[UserPromptPart(huge)])])[0]["text"].endswith("[7 more chars]")
+    assert prompt_step(cities) == {"type": "prompt", "text": cities}
 
 
 def test_history_endpoints_serve_runs_traces_and_metrics(setup):

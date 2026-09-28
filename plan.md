@@ -148,7 +148,7 @@
 - [ ] Directive read-back: check each directive's policies in the next save and report the ones that did not change; every directive sets all its policies
 - [ ] Two shipyards in different systems and alloys on two or more planets before any war (strategy rule and mod budget nudge)
 - [ ] Monthly fleet snapshot in telemetry to find what destroys ships in peacetime
-- [ ] Full decision prompts in traces (no 6,000-character cut)
+- [ ] Full decision prompts in traces (no 6,000-character cut); on branch feat/postmortem-fixes (up to 100,000 characters, ruling 27), not deployed
 - [x] CI skips the Rust stages for commits with no Rust, Cargo or corpus files (`scripts/ci-needs-rust.sh`)
 - [x] Game pillars: each game defines its strategy pillars, metrics and actions in `corpora/<game>/pillars.toml`; the strategy layer, decisions, actions and dashboard use them as guardrails (spec docs/design/2026-09-26-game-pillars-design.md; deployed 31e3481 on mini-rig2, two live reviews accepted with milestones and trait-based identity)
 - [x] Civilization VI integration (after game pillars) — governor live on mini-rig2 since 2026-09-26 (China, Kublai Khan, from T41)
@@ -186,7 +186,7 @@
 - [ ] Civ VI relative military milestones (military ÷ median, ÷ strongest non-ally) (ruling 18); on branch feat/postmortem-fixes, not deployed
 - [ ] Civ VI: name who declared each war; no diplomacy goals until an order exists (rulings 24, 25); on branch feat/postmortem-fixes, not deployed (the `DiplomacySummary.csv` layout is unverified live)
 - [ ] End the run when the empire is gone (Civ VI: not alive, or 0 cities and 0 settlers twice; Stellaris: 0 planets twice), with a report and a "lost" state (rulings 21-23); on branch feat/postmortem-fixes, not deployed (the dashboard's "lost" rendering is feat/dashboard-v2's)
-- [ ] Turns advanced logged against those requested; full decision prompts in traces (ruling 27)
+- [ ] Turns advanced logged against those requested; full decision prompts in traces (ruling 27); on branch feat/postmortem-fixes, not deployed
 - [ ] Civ VI price changes in the briefing (World Congress discounts) (ruling 6)
 - [ ] Known-false learned rules refused; the listed rules corrected at deploy (ruling 29)
 - [ ] A deploy restarts only the pilot of the game it affects (ruling 28)
