@@ -158,3 +158,11 @@ def test_a_real_run_pauses_through_the_dashboard_and_restarts_nothing_else(tmp_p
     assert "cargo build --release -p game-controller" in calls
     assert any(c.startswith("curl") and '"resume"' in c for c in calls)
     assert not any(c.startswith("systemctl --user restart") for c in calls)
+
+
+def test_the_script_finds_cargo_in_the_users_toolchain():
+    """First live deploy (2026-09-27): a service shell has no ~/.cargo/bin on PATH, so a Rust change
+    failed with "cargo: command not found"; ci.sh adds it, and so must the deploy script."""
+    text = (Path(__file__).resolve().parent.parent / "scripts" / "deploy-pilot.sh").read_text()
+    assert 'export PATH="$HOME/.cargo/bin:$PATH"' in text
+    assert text.index('export PATH="$HOME/.cargo/bin:$PATH"') < text.index("cargo build")

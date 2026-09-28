@@ -12,6 +12,7 @@
 # so it is restarted instead. game-pilot.service restarts when its game's files or shared code changed;
 # game-pilot-view.service restarts for the dashboard's static files and any src/pilot/*.py.
 set -euo pipefail
+export PATH="$HOME/.cargo/bin:$PATH"                 # cargo, as in scripts/ci.sh
 cd "$(dirname "$0")/.."
 [ $# -ge 2 ] || { echo "usage: $0 <from> <to> [--dry-run]" >&2; exit 2; }
 from="$1" to="$2" dry=0
