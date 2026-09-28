@@ -2283,3 +2283,28 @@ def test_a_snapshot_for_another_player_waits_for_the_human(setup):
     run_until_attention(g)
     assert any(e["kind"] == "needs_attention" and "player 3, this run governs player 0" in e["reason"]
                for e in g.log.recent)
+
+
+# ---- postmortem-fixes design, ruling 18 -----------------------------------------------------------
+
+LATE_MAJORS = [{"id": 1, "civ": "CIVILIZATION_MALI", "military": 2428, "allied": True, "score": 1, "cities": 4, "techs": 70},
+               {"id": 2, "civ": "CIVILIZATION_MAYA", "military": 1491, "score": 1, "cities": 9, "techs": 70},
+               {"id": 3, "civ": "CIVILIZATION_AUSTRALIA", "military": 1106, "score": 1, "cities": 9, "techs": 70}]
+
+
+def test_rows_and_the_briefing_carry_military_relative_to_the_majors_met():
+    s = {**FIXTURE, "military": 471, "majors": LATE_MAJORS}
+    row = metrics(s)
+    assert (row["military_vs_median"], row["military_vs_strongest"]) == (round(471 / 1491, 3), round(471 / 1491, 3))
+    assert row["neighbours"][0]["allied"] is True and "allied" not in row["neighbours"][1]
+    text = briefing_text(s, INDEX, limits=BUY)
+    assert ("Military standing (peers are the 3 majors we have met): ours 471 is 0.316 x their median 1491 and 0.316 x "
+            "the strongest that is not our ally; rank 4 of 4.") in text
+    assert "civ:mali score 1, military 2428, cities 4, techs 70, ALLIED" in text
+
+
+def test_the_governor_gives_the_strategist_its_military_standing(setup):
+    g = governor(setup, FakeCiv6(FIXTURE, index=INDEX), orders_model([]))
+    st = g._standing({**FIXTURE, "military": 471, "majors": LATE_MAJORS})
+    assert st == {"military": 471, "median": 1491.0, "peers": 3, "weak": True}
+    assert g._standing({**FIXTURE, "majors": []}) is None

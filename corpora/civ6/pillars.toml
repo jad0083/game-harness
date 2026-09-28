@@ -12,6 +12,9 @@ min_goals_top = 3
 stance_needs_figure = true      # each stance quotes a number from the snapshot
 date_format = "turns"           # milestone dates are turns: T60
 identity = "Build on our civilization and leader: fill `identity` with how their abilities and unique units, buildings and districts (the snapshot names the civ and leader; `consult` has their records) shape this strategy and which pillars each one affects, and weigh a neighbour's agenda when dealing with or fighting it."
+# Military targets relative to the majors we have met (docs/design/2026-09-27-postmortem-fixes-design.md,
+# ruling 18): targets set 10-28% above our own strength stood at 0.44-0.56 of the median on their dates.
+relative_military = { pillar = "military", metric = "military", relative = ["military_vs_median", "military_vs_strongest"], min_target = 0.5, absolute_share = 0.5, rank_min_peers = 3 }
 metric_aliases = { population = "pop", techs = "techs_known", civics = "civics_known", military_strength = "military", faith_per_turn = "faith_yield", gold_per_turn = "gold_yield", treasury = "gold", "rank:military_strength" = "rank:military", "rank:techs_known" = "rank:techs", "rank:civics_known" = "rank:civics" }
 instructions = """Everything must be achievable through orders: research and civic choices, policy cards, city production (units, buildings, projects; a district only once it is placed) and purchases with gold or faith. The game's AI moves units, places districts and wonders, founds cities with the settlers it has, and handles diplomacy, trade and World Congress.
 Milestone dates are turns written T<turn>, e.g. T60 (the snapshot shows the current turn). Expansion benchmarks (strategy.md): 2 cities by T40, 3 by T60, 4 by T80.
@@ -52,7 +55,8 @@ open_grace_turns = 3
 # majors we have met, 1 = best
 names = ["science", "culture", "faith_yield", "gold_yield", "production", "food", "gold", "faith",
          "cities", "pop", "techs_known", "civics_known", "military", "score", "era_score",
-         "rank:score", "rank:military", "rank:techs", "rank:civics", "rank:cities"]
+         "rank:score", "rank:military", "rank:techs", "rank:civics", "rank:cities",
+         "military_vs_median", "military_vs_strongest"]   # ours / the met majors' median; / the strongest non-ally
 # Balances are measured but never milestones: a milestone on stored gold or faith paid the Strategist
 # for hoarding (faith 38 -> 402 unspent, T41-T85); milestones use faith_yield and gold_yield.
 milestone_exclude = ["gold", "faith"]
@@ -136,4 +140,8 @@ skip_turns_left = 2     # never buy what the city finishes within 2 turns anyway
 defence_first = true    # a city in danger with no defender on its tile: its defender before anything else
 defender_classes = ["Melee", "Ranged", "Anti Cavalry", "Light Cavalry", "Heavy Cavalry"]
 defence_cooldown_turns = 5      # at most one defender purchase per city per 5 turns
+# The weakness test (docs/design/2026-09-27-postmortem-fixes-design.md, ruling 1): at war with a major,
+# military last of the met majors (2+ met), under 0.6 x their median, or a met non-ally at 2 x ours.
+weak_median_share = 0.6
+strong_neighbour_ratio = 2.0
 note = "Buy only what saves several turns; never what the city finishes within 2 turns anyway. Prices are read live, in gold and in faith: faith buys defenders at about half the gold price. Walls, castles and star forts cannot be bought: they come from production."

@@ -297,6 +297,18 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   feat/dashboard-v2; until then the run reads as not running with the event in Activity.
 - **Strategy**: `corpora/civ6/pillars.toml` in share mode (science, culture, faith, economy,
   military, expansion, diplomacy) with milestones on turns (`T60`); reviews as for Stellaris.
+  Military targets are relative to the majors we have met (postmortem-fixes design, ruling 18;
+  `[strategy] relative_military`): the metrics rows and `[metrics] names` gain `military_vs_median`
+  (ours ÷ their median) and `military_vs_strongest` (ours ÷ the strongest that is not our ally), the
+  briefing says "peers are the N majors we have met" with both ratios and our rank, and a Strategist
+  answer is sent back once when, while our military is weak (ruling 1's `low` or `last`), the military
+  pillar holds no milestone on one of them at 0.5 or more, when an absolute `military` target is under
+  0.5 x the median, or when a `rank:*` milestone ranks us among fewer than 3 majors (pinned pillars and
+  human edits are exempt). **Weakness** (ruling 1, `src/pilot/threat.py`): at war with a major, our
+  military last of the met majors (2+ met), under `weak_median_share` (0.6) x their median, or a met
+  major that is not our ally at `strong_neighbour_ratio` (2.0) x ours (both in `[actions.purchase]`;
+  a major without the snapshot's `allied` field counts as not allied). Replayed on the Kublai rows it
+  holds in every row from T380 to T540 (the design's E1).
 - **Campaign** `civ6/<leader>_<map seed>`; metrics rows per turn (`date` `T<turn>`), so telemetry,
   milestones and the dashboard work as for Stellaris. The dashboard's pace control sets the turns
   between decisions; directives, overrides and speed do not apply.

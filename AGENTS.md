@@ -423,6 +423,10 @@ Rules:
   false, or 0 cities and 0 settlers on 2 reads in a row (never the local player id -1). No decision or
   review runs after it: autoplay stops, `campaign_end` with a report, a journal line, the run `lost` in
   telemetry, status `ended`. If the game keeps playing all-AI turns, exit to the main menu by hand.
+- Military milestones are relative to the majors met (`military_vs_median`, `military_vs_strongest`;
+  `[strategy] relative_military`): while weak (under 0.6 x the median or last) the military pillar needs
+  one at 0.5 or more, an absolute target under half the median is sent back, and a rank milestone needs 3
+  majors met (postmortem-fixes design, ruling 18).
 - Time constants are in turns (`[time]` in `corpora/civ6/pillars.toml`): event reviews at most one per 5
   turns, but a new war or a lost city always reviews; milestone projections and outcome scoring over 12
   turns (postmortem-fixes design, rulings 15 and 19).

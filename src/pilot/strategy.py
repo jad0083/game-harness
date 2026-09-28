@@ -264,9 +264,38 @@ def _detail_errors(s: Strategy, spec: PillarSpec) -> list[str]:
     return errs
 
 
+def _relative_errors(s: Strategy, spec: PillarSpec, standing: Mapping) -> list[str]:
+    """`[strategy] relative_military` (postmortem-fixes design, ruling 18) against today's standing
+    ({"military", "median", "peers": majors met, "weak": ruling 1's low or last}). Pinned pillars are
+    exempt, as for every rule of the Strategist's answer."""
+    rel = spec.relative
+    if rel is None:
+        return []
+    errs: list[str] = []
+    peers, med = standing.get("peers"), standing.get("median")
+    for name, pl in s.sorted_pillars():
+        if pl.pinned:
+            continue
+        for m in pl.milestones:
+            if m.metric.startswith("rank:") and isinstance(peers, int) and peers < rel.rank_min_peers:
+                errs.append(f"{name}: {m.metric} ranks us among only {peers} majors met; a rank milestone needs "
+                            f"{rel.rank_min_peers} or more (use {' or '.join(rel.relative)})")
+            if (m.metric == rel.metric and m.op == ">=" and isinstance(med, (int, float)) and med > 0
+                    and m.target < rel.absolute_share * med):
+                errs.append(f"{name}: {m.metric} >= {m.target:g} by {m.by} is under {rel.absolute_share:g} x the median "
+                            f"of the majors we have met ({med:,.0f}); set it relative: {' or '.join(rel.relative)}")
+    owner = s.pillars.get(rel.pillar)
+    if standing.get("weak") and owner is not None and not owner.pinned and not any(
+            m.metric in rel.relative and m.op == ">=" and m.target >= rel.min_target for m in owner.milestones):
+        errs.append(f"{rel.pillar}: our military is weak against the majors we have met (under the median share, or "
+                    f"last): hold a milestone on {' or '.join(rel.relative)} >= {rel.min_target:g}")
+    return errs
+
+
 def validate(s: Strategy, spec: PillarSpec, *, previous: Strategy | None, tech_ids: set[str], idle: set[str],
              income: dict[str, float], briefing_checked: set[str] | None = None,
-             require_milestones: bool = True, ids: Mapping[str, set[str]] | None = None) -> list[str]:
+             require_milestones: bool = True, ids: Mapping[str, set[str]] | None = None,
+             standing: Mapping | None = None) -> list[str]:
     """Reasons the strategy cannot be used under the game's spec (empty = valid).
 
     Structural checks (pillars, priorities, sizes, metrics, dates, action ownership and limits) apply
@@ -276,7 +305,9 @@ def validate(s: Strategy, spec: PillarSpec, *, previous: Strategy | None, tech_i
     briefing never blocks a review (see `pinned_misfits`). With `require_milestones`, each unpinned
     pillar among the top `spec.min_milestones_top` by priority needs a milestone (human edits pass False).
     `ids` holds the known ids per id-list action kind (tech, civic, policy, production, purchase); a
-    kind missing from it is checked for size only (tech falls back to `tech_ids`)."""
+    kind missing from it is checked for size only (tech falls back to `tech_ids`). `standing` (our
+    military against the majors met; a game with `[strategy] relative_military`) turns on ruling 18's
+    rules for a model's answer."""
     checked = _briefing_checked(s, previous) if briefing_checked is None else briefing_checked
     errs: list[str] = []
     errs.extend(f"missing pillar {p}" for p in spec.pillars if p not in s.pillars)
@@ -319,6 +350,8 @@ def validate(s: Strategy, spec: PillarSpec, *, previous: Strategy | None, tech_i
                             "and needs at least one milestone")
     if require_milestones:
         errs.extend(_detail_errors(s, spec))
+        if standing is not None:
+            errs.extend(_relative_errors(s, spec, standing))
     if previous is not None:
         for name, pl in previous.pillars.items():
             if pl.pinned and name in s.pillars and _content(s.pillars[name]) != _content(pl):
@@ -546,6 +579,13 @@ def strategist_instructions(spec: PillarSpec) -> str:
     if spec.stance_needs_figure:
         lines.append("Each stance cites at least one figure from the briefing (a stock, a monthly net, a ratio "
                      "or a count), so it is checkable.")
+    rel = spec.relative
+    if rel is not None:
+        lines.append(f"Military targets are relative to the majors we have met: while our military is under the "
+                     f"median share or last among them, the {rel.pillar} pillar holds a milestone on "
+                     f"{' or '.join(rel.relative)} with a target of at least {rel.min_target:g}; an absolute "
+                     f"{rel.metric} target under {rel.absolute_share:g} x their median is sent back; a rank milestone "
+                     f"needs at least {rel.rank_min_peers} majors met.")
     for kind, a in spec.actions.items():
         owners = spec.owners(kind)
         if not owners:

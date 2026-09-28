@@ -508,3 +508,32 @@ def test_a_file_without_a_time_table_keeps_the_old_numbers_in_its_dates_unit(tmp
 def test_bad_time_constants_are_rejected(tmp_path, table, where):
     with pytest.raises(PillarsError, match=re.escape(where)):
         load_pillars(corpus(tmp_path, MINI + f"\n[time]\n{table}\n"))
+
+
+def test_the_civ6_weakness_thresholds_and_relative_military_rules_load():
+    spec = load_pillars(REPO / "corpora/civ6")
+    buy = spec.actions["purchase"]
+    assert (buy.weak_median_share, buy.strong_neighbour_ratio) == (0.6, 2.0)
+    assert buy.treasury_share <= 0.5, "ruling 2 changes who gets the threatened share, not the treasury share"
+    rel = spec.relative
+    assert (rel.pillar, rel.metric, rel.relative, rel.min_target, rel.absolute_share, rel.rank_min_peers) == \
+        ("military", "military", ("military_vs_median", "military_vs_strongest"), 0.5, 0.5, 3)
+    assert load_pillars(REPO / "corpora/stellaris").relative is None
+
+
+@pytest.mark.parametrize("old, new, where", [
+    ("weak_median_share = 0.6", "weak_median_share = 1.5", "actions.purchase.weak_median_share"),
+    ("strong_neighbour_ratio = 2.0", "strong_neighbour_ratio = 0.5", "actions.purchase.strong_neighbour_ratio"),
+    ('relative = ["military_vs_median", "military_vs_strongest"]', 'relative = ["navy"]', "strategy.relative_military.relative"),
+    ('pillar = "military"', 'pillar = "navy"', "strategy.relative_military.pillar"),
+    ("min_target = 0.5", "min_target = 0", "strategy.relative_military.min_target"),
+    ("rank_min_peers = 3", "rank_min_peers = 0", "strategy.relative_military.rank_min_peers"),
+])
+def test_bad_weakness_or_relative_rules_name_their_key(tmp_path, old, new, where):
+    d = tmp_path / "civ6"
+    shutil.copytree(REPO / "corpora/civ6", d, ignore=shutil.ignore_patterns("data", "lua", "learned", "docs"))
+    text = (d / "pillars.toml").read_text(encoding="utf-8")
+    assert old in text
+    (d / "pillars.toml").write_text(text.replace(old, new, 1), encoding="utf-8")
+    with pytest.raises(PillarsError, match=re.escape(where)):
+        load_pillars(d)

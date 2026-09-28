@@ -23,6 +23,7 @@ from pydantic import BaseModel, Field
 
 from .record import EXCLUDED, FAILED, JUDGED, SUCCEEDED  # noqa: F401 - re-exported
 from .record import order_record as _order_record
+from .threat import relative_military
 
 # ---- game access ---------------------------------------------------------------------------------
 
@@ -1313,8 +1314,10 @@ def metrics(s: dict) -> dict:
             "era_score": s.get("era_score"), "era": s.get("era"), "wars": len(s.get("wars") or []),
             "idle": [k for k in ("research", "civic") if not s.get(k)],      # nothing in progress (ruling 16)
             "peers": peers, "peer_count": len(majors),
+            **relative_military(s),       # ours / the met majors' median and / the strongest non-ally (ruling 18)
             "neighbours": [{"name": m.get("civ"), "military": m.get("military"), "score": m.get("score"),
-                            "cities": m.get("cities"), "at_war": m.get("at_war")} for m in majors]}
+                            "cities": m.get("cities"), "at_war": m.get("at_war"),
+                            **({"allied": m["allied"]} if "allied" in m else {})} for m in majors]}
 
 
 def urgent_changes(before: dict, now: dict, gold_reserve: int = 0, wonders: frozenset[str] | set[str] = frozenset()) -> list[str]:
@@ -1567,10 +1570,19 @@ def briefing_text(s: dict, index: CorpusIndex, gold_reserve: int = 0, limits=Non
     u = s.get("units") or {}
     lines.append(f"Units {u.get('total', 0)}: " + ", ".join(f"{cid(k)} {v}" for k, v in sorted((u.get("by_type") or {}).items())) + ".")
     majors = s.get("majors") or []
+    rel = relative_military(s)
+    if majors and rel["military_vs_median"] is not None:
+        mil = [m.get("military") for m in majors if isinstance(m.get("military"), (int, float))]
+        lines.append(f"Military standing (peers are the {len(majors)} majors we have met): ours {_n(s.get('military'))} "
+                     f"is {rel['military_vs_median']:g} x their median {_n(float(median(mil)))}"
+                     + (f" and {rel['military_vs_strongest']:g} x the strongest that is not our ally"
+                        if rel["military_vs_strongest"] is not None else "")
+                     + f"; rank {1 + sum(1 for v in mil if v > s['military'])} of {len(majors) + 1}.")
     if majors:
         lines.append("Civilizations met: " + "; ".join(
             f"{cid(m.get('civ'))} score {m.get('score')}, military {m.get('military')}, cities {m.get('cities')}, "
-            f"techs {m.get('techs')}{', AT WAR' if m.get('at_war') else ''}" for m in majors) + ".")
+            f"techs {m.get('techs')}{', AT WAR' if m.get('at_war') else ''}{', ALLIED' if m.get('allied') else ''}"
+            for m in majors) + ".")
     else:
         lines.append("Civilizations met: none yet.")
     wars = s.get("wars") or []

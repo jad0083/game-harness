@@ -416,6 +416,10 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   design, rulings 1, 7, 21). The controller installs the library with every full-line comment blanked
   but the license notice (`blank_comment_lines`; line numbers kept): the agent takes at most 64 KiB of
   tuner code, and the file with its comments is over that.
+- `threat.py` (pure): the weakness test (`weakness`: war with a major, last, under the median share, a
+  non-ally at the ratio; `[actions.purchase] weak_median_share`, `strong_neighbour_ratio`) and military
+  relative to the met majors (`relative_military`), for the Civ VI rows, briefing and the Strategist's
+  `relative_military` rules in `strategy.validate` (`standing`; postmortem-fixes design, rulings 1, 18).
 - Strategy layer: `strategy.py` is pure (Pillar, Milestone, MarketOrder, Strategy with
   `ranking()`; `validate` — structural checks on all pillars, briefing checks (idle, income) only on
   changed unpinned pillars; `keep_pinned`; `milestone_status` from metrics rows, judged on the latest

@@ -2543,7 +2543,7 @@ class Governor:
             elif r.change and r.strategy is not None:
                 new = keep_pinned(to_strategy(r.strategy, self.pillars), self.strategy)
                 errs = validate(new, self.pillars, previous=self.strategy, tech_ids=self._tech_ids(), ids=self._action_ids(),
-                                idle=idle_resources(b), income=b.get("net", {}))
+                                idle=idle_resources(b), income=b.get("net", {}), standing=self._standing(b))
             else:
                 errs = []
             if r.change or trigger in IDENTITY_TRIGGERS:     # a new strategy, or one the human asked for
@@ -2591,6 +2591,11 @@ class Governor:
             return
         if retry_errors is not None:
             self._review_strategy(b, trigger, retried=True, errors=retry_errors, rejected=retry_rejected)
+
+    def _standing(self, b: dict) -> dict | None:
+        """Our military against the peers for `[strategy] relative_military` (ruling 18); None here: a
+        game that keeps the rules gives its own (Civ VI)."""
+        return None
 
     def _set_strategy(self, s: Strategy, date: str, trigger: str, model: str) -> None:
         with self._strategy_lock:

@@ -15,6 +15,7 @@ import re
 import time
 import uuid
 from dataclasses import dataclass, replace
+from statistics import median
 
 from pydantic_ai import Agent, RunContext, Tool
 from pydantic_ai.exceptions import UsageLimitExceeded
@@ -75,6 +76,7 @@ from .governor import (
     remember_rule,
     served_model,
 )
+from .threat import majors_military, weakness
 from .trace import serialize
 
 ORDER_RECORD_HEADING = "Order record in this campaign (held until done / replaced by the AI):"
@@ -256,6 +258,16 @@ class Civ6Governor(Governor):
 
     def _buy_limits(self):
         return self.pillars.actions.get("purchase") if self.pillars else None
+
+    def _standing(self, b: dict) -> dict | None:
+        """Our military against the majors we have met, for the Strategist's relative-military rules
+        (ruling 18): `weak` is ruling 1's low or last clause."""
+        majors = majors_military(b)
+        if not majors or not isinstance(b.get("military"), (int, float)):
+            return None
+        clauses = {c["clause"] for c in weakness(b, self._buy_limits())}
+        return {"military": b["military"], "median": float(median(m["military"] for m in majors)),
+                "peers": len(b.get("majors") or []), "weak": bool(clauses & {"low", "last"})}
 
     def _gold_reserve(self, b: dict) -> int:
         """Today's gold reserve (ruling 18): it grows with a deficit."""
