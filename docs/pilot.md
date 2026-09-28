@@ -567,7 +567,8 @@ running pilot (whose own dashboard is on `PILOT_PORT`, 8790, on 127.0.0.1). It r
   the campaign and its date, a state dot and ⋯ (which then also holds Pause/Resume, Settings and the
   PC chip); a bottom nav Now · Decisions · the levers tab · Strategy · Talk (the current one is the
   tab stop, arrow keys move); Now leads with the governor line and the last decision, then the
-  figures, the chart and the rivals, and ends with the last 5 problems and *All activity*. Off Now
+  figures, the chart and the rivals (each a two-line card), and ends with the last 5 problems and
+  *All activity*. Every control is at least 44 px to tap (the sign-in page's too). Off Now
   the governor line shows only when the run needs you (its sentence, not the card). A decision opens
   Reasoning as a full-screen sheet (Back, a swipe down on its head, Escape or the browser's back
   close it, and focus returns to the row); the campaign list, Settings and Add a device are

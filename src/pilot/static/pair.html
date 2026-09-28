@@ -67,6 +67,9 @@
   .count { font-variant-numeric: tabular-nums; font-weight: 600; }
   [hidden] { display: none !important; }
   @media (forced-colors: active) { .card, .err, .warn { border: 1px solid CanvasText; } }
+  /* a phone's fingers: every control at least 44 px to tap */
+  summary { min-height: 44px; display: list-item; padding: 12px 0; box-sizing: border-box; }
+  .plain, #type-instead { display: inline-block; min-height: 44px; padding: 12px 0; box-sizing: border-box; }
 </style>
 </head>
 <body data-state="{{state}}" data-wait="{{wait}}">

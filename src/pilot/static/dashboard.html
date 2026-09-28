@@ -660,6 +660,16 @@
     .fcounts { display: flex; }
     .t-pairs div { grid-template-columns: 96px minmax(0, 1fr); }
   }
+  /* a phone's fingers: every control at least 44 px to tap (ruling 31); an inline link grows its hit
+     area with padding that takes no room from the line */
+  @media (max-width: 700px) {
+    .btn, .btn.small, .seg button, .stabs button, .roles button, .menu button, .camp-btn, #b-more, select { min-height: 44px; }
+    .btn, .seg button, #b-more { min-width: 44px; }
+    .panel > header .collapse { min-height: 44px; }
+    details > summary { padding: 12px 0; }
+    .linkish, .gov-facts .linkish { padding: 12px 0; margin: -12px 0; }
+    label.check { min-height: 44px; display: inline-flex; align-items: center; gap: 8px; }
+  }
 </style>
 </head>
 <body>

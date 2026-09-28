@@ -225,3 +225,49 @@ def test_rivals_are_two_line_cards_on_a_phone(browser, live_servers, name):
     cells = first.locator("td[data-label]").evaluate_all("ts => ts.filter(t => t.offsetParent).map(t => getComputedStyle(t, '::before').content)")
     assert any("Cities" in c for c in cells) and any("Score" in c for c in cells), cells
     w.context.close()
+
+
+SMALL_TARGETS_JS = r"""
+(root) => [...(root || document).querySelectorAll("button, summary, a[href], [role=tab], [role=menuitem], select, input[type=checkbox]")]
+  .filter((e) => e.offsetParent && !e.closest("[hidden], .sr, svg") && getComputedStyle(e).visibility !== "hidden")
+  .map((e) => e.type === "checkbox" && e.closest("label") ? e.closest("label") : e)        // its label is the target
+  .map((e) => { const r = e.getBoundingClientRect(); return [e.id || e.className || e.tagName, (e.textContent || "").trim().slice(0, 24), Math.round(r.width), Math.round(r.height)]; })
+  .filter(([, , w, h]) => h < 44 || w < 44)
+"""
+
+
+@pytest.mark.parametrize("scenario", ["needs"])
+@pytest.mark.parametrize("name", ["phone-dark", "phone-light"])
+def test_every_tap_target_is_at_least_44px_on_a_phone(browser, live_servers, name):
+    """Ruling 31: collapsible headers (and every other control) are at least 44 px to tap on a phone:
+    the Now view with the needs-you card, Orders with its filters, the ⋯ menu and Settings."""
+    w = open_context(browser, name, live_servers)
+    load(w)
+    page = w.page
+    assert page.evaluate(SMALL_TARGETS_JS) == []
+    page.click('#bottom-nav a[data-view="levers"]')
+    page.wait_for_timeout(500)
+    assert page.evaluate(SMALL_TARGETS_JS) == []
+    page.click('#bottom-nav a[data-view="now"]')
+    page.click("#b-more")
+    page.wait_for_selector("#more-menu:not([hidden])")
+    assert page.evaluate(SMALL_TARGETS_JS, page.query_selector("#more-menu")) == []
+    page.click('#more-menu [data-act="settings"]')
+    page.wait_for_selector("#settings-dialog[open]")
+    for tab in ("models", "game", "devices"):
+        page.click(f'[data-stab="{tab}"]')
+        page.wait_for_timeout(300)
+        assert page.evaluate(SMALL_TARGETS_JS, page.query_selector("#settings-dialog")) == [], tab
+    w.context.close()
+
+
+@pytest.mark.parametrize("name", ["phone-dark", "phone-light"])
+def test_the_sign_in_page_targets_are_at_least_44px(browser, live_servers, name):
+    grant = live_servers["auth"].store.create_grant("cli", words=True)
+    w = open_context(browser, name, live_servers, signed_in=False)
+    w.page.goto(w.base + "/pair")
+    assert w.page.evaluate(SMALL_TARGETS_JS) == []
+    w.page.goto(f"{w.base}/pair#c={grant['link']}")
+    w.page.wait_for_selector("#v-confirm:not([hidden])")
+    assert w.page.evaluate(SMALL_TARGETS_JS) == []
+    w.context.close()
