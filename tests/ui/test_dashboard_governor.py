@@ -183,7 +183,7 @@ def test_an_older_pilot_without_attention_still_shows_the_card(browser, live_ser
     load(w)
     page = w.page
     assert page.text_content("#gov-line") == "Needs you at T57."
-    assert page.text_content("#gov-cost").startswith("Game control failed: RuntimeError: the tuner is off.")
+    assert page.text_content("#gov-cost").startswith("Game control failed: the tuner is off.")     # no exception name
     assert page.text_content("#gov-age").startswith("waiting ")
     assert page.eval_on_selector_all("#gov-steps li", "ls => ls.length") == 2
     assert w.errors == []

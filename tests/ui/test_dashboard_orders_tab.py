@@ -80,7 +80,8 @@ def test_game_health_and_the_last_stand_are_said_on_now(browser, live_servers):
     page = w.page
     line = page.text_content("#game-health")
     assert page.is_visible("#game-health") and "warn" in page.get_attribute("#game-health", "class")
-    assert "Popups quieted 5 of 6 at T50 (not: ProjectBuiltPopup.OnProjectComplete)" in line
+    assert "Popups quieted 5 of 6 at T50 (not: the project built popup)" in line      # ids become names
+    assert "OnProjectComplete" not in line
     assert "tuner 3 timeouts in the last 40 calls" in line and "last turn 42 s" in line
     assert "Last stand armed (at most 3 in a row)." in page.text_content("#gov-facts")
     w.context.close()

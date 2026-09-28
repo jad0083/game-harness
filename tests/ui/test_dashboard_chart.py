@@ -135,3 +135,19 @@ def test_every_last_stand_is_marked_on_the_chart(browser, live_servers):
     marks = w.page.eval_on_selector_all("#chartwrap .lsmark title", "ts => ts.map(t => t.textContent)")
     assert len(marks) == 5 and "Last stand in Xian, T50" in marks, marks
     w.context.close()
+
+
+def test_on_a_phone_the_line_names_wrap_instead_of_being_cut(browser, live_servers):
+    """Each series is named at its line's end: on a phone a long name wraps to two lines, never
+    "Gold per t…"."""
+    w = open_context(browser, "phone-light", live_servers)
+    load(w)
+    names = w.page.eval_on_selector_all("#chartwrap text.end-label",
+                                        "ts => ts.map(t => [...t.querySelectorAll('tspan')].map(s => s.textContent).join(' ') || t.textContent)")
+    assert "Gold per turn" in names and "Faith per turn" in names, names
+    assert not any("…" in n for n in names), names
+    # no two names overlap: each starts a line (13 px) below the previous one's last line
+    ys = sorted(w.page.eval_on_selector_all("#chartwrap text.end-label",
+                                            "ts => ts.map(t => [+t.getAttribute('y'), t.querySelectorAll('tspan').length])"))
+    assert all(b[0] >= a[0] + 13 * a[1] - 0.5 for a, b in pairwise(ys)), ys
+    w.context.close()
