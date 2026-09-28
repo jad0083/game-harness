@@ -406,7 +406,9 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   limits and aliases to unknown metrics fail with the key named. `strategy.py` takes the spec in every
   rule and generates the Strategist's output model (one named optional field per pillar, action fields
   only where declared; `to_strategy`, `strategy_for_prompt`, `strategist_instructions`). The governor
-  loads it per game (`Settings.pillars_file`); failure → layer off; action kinds run through a hook
+  loads it per game (`Settings.pillars_file`); failure → layer off; `[time]` (`TimeSpec`) names the
+  shared code's time constants in the game's unit (event-review cap and exempt triggers, milestone
+  look-back, scoring horizon); action kinds run through a hook
   table (`tech` → `pick_tech`, `market` → `market_sync`).
 - Strategy layer: `strategy.py` is pure (Pillar, Milestone, MarketOrder, Strategy with
   `ranking()`; `validate` — structural checks on all pillars, briefing checks (idle, income) only on

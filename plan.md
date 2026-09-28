@@ -173,7 +173,7 @@
 
 ## Post-mortem fixes (Civ VI Kublai campaign; design docs/design/2026-09-27-postmortem-fixes-design.md)
 - [ ] Milestones judged on the current value, not "ever met" (shared, so Stellaris too; ruling 17); on branch feat/postmortem-fixes, not deployed
-- [ ] Time constants per game in `[time]` of pillars.toml; Civ VI event-review cap 5 turns; "new war" and "city lost" always review (rulings 15, 19)
+- [ ] Time constants per game in `[time]` of pillars.toml; Civ VI event-review cap 5 turns; "new war" and "city lost" always review (rulings 15, 19); on branch feat/postmortem-fixes, not deployed
 - [ ] Civ VI snapshot: `allied`, `alive`, strategic stock, defender prices for every city with the reason for each refusal (rulings 1, 7, 21)
 - [ ] Civ VI capture test counts every capturer class (Giant Death Robot); the last stand stays off (ruling 26)
 - [ ] Civ VI defenders may spend down to the reserve in war or military weakness; purchase limits and strategic stock in every prompt (rulings 1, 2, 8)

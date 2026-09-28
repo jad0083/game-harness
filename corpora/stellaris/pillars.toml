@@ -16,6 +16,15 @@ metric_aliases = { military = "military_power", economy = "economy_power", tech 
 instructions = """Everything must be achievable through directives, tech picks or market orders: the game's AI builds, designs ships and moves fleets.
 While at war, the defence stance must name its exit condition (peace, war exhaustion, or planets retaken). When a hostile neighbour's military is twice ours or more, a defence goal is two shipyards in different systems and alloy production on two or more planets; never reason from a naval-capacity cap the briefing does not show."""
 
+# The shared code's time constants, in months here (docs/design/2026-09-27-postmortem-fixes-design.md,
+# rulings 15 and 19).
+[time]
+unit = "months"
+review_cap = 12                 # event reviews: at most one per 12 months...
+review_exempt = ["new war"]     # ...but a new war always reviews (a colony lost at war enters the war crisis)
+milestone_lookback = 12         # a milestone's projection: its value against a row 12 months older
+score_horizon = 12              # outcome scoring: the metrics 12 months after a decision
+
 [weights]
 # Pillars carry weights (sum 100) instead of ranks; each decision scores a directive by its pillar's
 # pressure = weight x need, need from the pillar's milestones (the largest multiplier among them;

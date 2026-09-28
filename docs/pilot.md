@@ -317,7 +317,12 @@ effort instead.
 **Reviews** run at the start of a campaign without a strategy, every `PILOT_RETRO_EVERY`
 decisions, on big events (war, crisis, colony lost, boxed in, military fell by half, a milestone
 missed, an off-frame decision, a planet crisis or a planet losing pops, a war going badly or a war
-crisis over; at most one per 12 in-game months) and on *Review strategy now*. An
+crisis over; at most one per `[time] review_cap` steps of the game's clock: 12 months in Stellaris, 5
+turns in Civ VI, where a new war or a lost city always reviews and a new war does in Stellaris too,
+restarting the count) and on *Review strategy now*. Every time constant the shared code uses is named
+in the game's own unit in `[time]` of its `pillars.toml` (`unit`, `review_cap`, `review_exempt`,
+`milestone_lookback`, `score_horizon`; postmortem-fixes design, rulings 15 and 19), and log and prompt
+text print the unit ("within 5 turns of the last event review"). An
 answer is validated; an invalid one gets one corrective retry with its errors and the rejected
 answer, then the strategy stays. Reviews started at the beginning of a run or by you must name the
 species traits the strategy builds on. A review may add up to 3 rules to

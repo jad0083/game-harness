@@ -238,16 +238,17 @@ class Telemetry:
         return [json.loads(r["data"]) for r in
                 self.query("SELECT data FROM metrics WHERE campaign_id=? AND month IS NOT NULL ORDER BY month", (campaign_id,))]
 
-    def past_outcomes(self, campaign_id: str, limit: int = 12) -> str:
-        """Text table of this campaign's earlier directive changes and what followed, for the model.
-        Excludes strategy review rows: they are not a directive change (Task 9 shows them separately).
-        Errored decisions (decision NULL) are excluded on purpose too: they changed nothing."""
+    def past_outcomes(self, campaign_id: str, limit: int = 12, later: str = "12 months") -> str:
+        """Text table of this campaign's earlier directive changes and what followed, for the model;
+        `later` names the scoring horizon in the game's unit ("12 turns" in Civ VI). Excludes strategy
+        review rows: they are not a directive change (Task 9 shows them separately). Errored decisions
+        (decision NULL) are excluded on purpose too: they changed nothing."""
         rows = self.query(
             "SELECT date, decision, current, trigger, result FROM decisions WHERE campaign_id=? AND decision IS NOT NULL"
             " AND decision != 'keep' AND decision != 'strategy_review' ORDER BY month DESC LIMIT ?", (campaign_id, limit))
         if not rows:
             return "No earlier directive changes in this campaign."
-        out = ["date | directive (from) | trigger | 12 months later"]
+        out = [f"date | directive (from) | trigger | {later} later"]
         for r in rows:
             res = json.loads(r["result"]) if r["result"] else None
             after = ("not yet known" if not res else

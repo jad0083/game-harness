@@ -299,6 +299,9 @@ Rules:
   space (none surveyed in reach, influence 950+ for 12 months). A milestone is judged on the latest
   value since it was set (its `set` stamp), never on a past high: met, missed once due, else on track
   or at risk (both games; postmortem-fixes design, ruling 17).
+- **Time constants** (`[time]` in pillars.toml, in months here): event reviews at most one per 12 months
+  except a new war, which always reviews; milestone projections over 12 months; outcomes scored 12
+  months after a decision (postmortem-fixes design, rulings 15 and 19).
 - **Strategy detail** (`[strategy]` in pillars.toml): every pillar needs a milestone, the heaviest two
   on different dates (a checkpoint and an end target), the top 3 two goals, and each stance a figure from
   the briefing; a Strategist answer that misses one is sent back once with its errors. Pinned pillars
@@ -407,6 +410,9 @@ Rules:
 - Menus, when the screen must be used: the UI ignores a click without a preceding hover (move the
   mouse onto the button, then click), and the "Continue" screen after loading needs a key press.
 - Throwaway games only: the tuner turns achievements off.
+- Time constants are in turns (`[time]` in `corpora/civ6/pillars.toml`): event reviews at most one per 5
+  turns, but a new war or a lost city always reviews; milestone projections and outcome scoring over 12
+  turns (postmortem-fixes design, rulings 15 and 19).
 - The scripted last stand for a city about to fall (`PILOT_LAST_STAND=1`; off by default) sends
   unit and city actions: `civ6 last-stand-step`, `ls-state`, `finish-moves`, `turn-ready` (numeric
   IDs, never model orders). Its first live use follows the L6 checklist of

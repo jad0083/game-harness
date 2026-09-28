@@ -18,6 +18,15 @@ Milestone dates are turns written T<turn>, e.g. T60 (the snapshot shows the curr
 While at war, the military stance names its exit condition (peace, a city retaken, or the enemy's strength below ours).
 Plan with the levers that stick: the order record shows which kinds of order held until done and which the AI replaced; where `production replace` does not stick, buy what must exist now and queue production only into empty queues."""
 
+# The shared code's time constants, in turns here (docs/design/2026-09-27-postmortem-fixes-design.md,
+# rulings 15 and 19): "12 in-game months" had silently become 12 turns.
+[time]
+unit = "turns"
+review_cap = 5                  # event reviews: at most one per 5 turns (one default decision interval)...
+review_exempt = ["new war", "city lost"]   # ...but these always review (and restart the 5 turns)
+milestone_lookback = 12         # a milestone's projection: its value against a row 12 turns older
+score_horizon = 12              # outcome scoring: the metrics 12 turns after a decision
+
 [weights]
 mode = "share"          # each pillar's share of effort (weight x milestone need)
 min = 5

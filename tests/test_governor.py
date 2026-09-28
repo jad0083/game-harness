@@ -5186,3 +5186,20 @@ def test_milestone_missed_fires_once_per_run_even_if_it_recovers_and_falls_again
         log.emit("metrics", **{**metrics(briefing(d)), "pops": pops})
         fired += g._newly_missed_milestones(before, d)
     assert fired == ["milestone missed: economy pops"], "missed at 2200.03, met at 2200.04, missed again: once"
+
+
+# ---- postmortem-fixes design, rulings 15 and 19 --------------------------------------------------
+
+def test_stellaris_keeps_its_12_month_cap_and_a_new_war_always_reviews(setup):
+    s, log = setup
+    calls = []
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": _strategist(calls)})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    assert g._maybe_event_review(briefing("2201.01.01"), "urgent: crisis: Prethoryn appeared") is True
+    assert g._maybe_event_review(briefing("2201.03.01"), "urgent: new war: Border War (we are defender)") is True, \
+        "a new war reviews within the cap"
+    assert g._last_event_review_month == months("2201.03.01"), "and restarts the cap's clock"
+    assert g._maybe_event_review(briefing("2202.01.01"), "urgent: colony lost: 5 -> 4") is False
+    skip = [e for e in log.recent if e["kind"] == "strategy_review_skipped"][-1]
+    assert skip["reason"] == "within 12 months of the last event review"

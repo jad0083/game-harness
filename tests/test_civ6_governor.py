@@ -2066,3 +2066,37 @@ def test_a_restarted_run_keeps_the_diplomacy_in_its_order_record(setup, tmp_path
     second.run(max_decisions=1)
     assert _T240_RECORD in second._records_section()
     assert [r["subtype"] for r in second.log.state.info["diplomacy_record"]] == ["NONE", "POSITIVE"]
+
+
+# ---- postmortem-fixes design, rulings 15 and 19 --------------------------------------------------
+
+def test_civ6_event_reviews_are_capped_at_5_turns_and_a_new_war_always_reviews(setup):
+    """War-7 and H7: the T541 new war came 3 turns after the T538 review and was skipped (12 steps =
+    12 turns). Now a new war and a lost city always review; other events wait 5 turns."""
+    from pilot.strategy import Pillar, Strategy
+    game = FakeCiv6(FIXTURE, index=INDEX)
+    g = governor(setup, game, orders_model([]))
+    g.strategy = Strategy(pillars={p: Pillar(weight=w, stance="s 1") for p, w in
+                                   zip(SPEC.ids, (20, 15, 10, 15, 20, 10, 10), strict=True)}, focus="hold")
+    assert g._maybe_event_review({**FIXTURE, "date": "T538"}, "urgent: city threatened: Beijing") is True
+    assert g._maybe_event_review({**FIXTURE, "date": "T541"},
+                                 "urgent: new war: CIVILIZATION_AUSTRALIA is at war with us") is True
+    assert g._maybe_event_review({**FIXTURE, "date": "T542"}, "urgent: city threatened: Taiyuan") is False
+    skip = [e for e in g.log.recent if e["kind"] == "strategy_review_skipped"][-1]
+    assert skip["reason"] == "within 5 turns of the last event review"
+    assert g._maybe_event_review({**FIXTURE, "date": "T543"}, "urgent: city lost: Beijing") is True
+    assert g._maybe_event_review({**FIXTURE, "date": "T548"}, "urgent: city threatened: Taiyuan") is True, \
+        "5 turns after the last review, city lost included"
+
+
+def test_the_civ6_outcome_scoring_and_past_outcomes_speak_turns(setup, tmp_path):
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(s.runs_dir, "civt", s.model, telemetry=tel)
+    g = Civ6Governor(s, FakeCiv6(FIXTURE, index=INDEX), log, model=orders_model([]))
+    log.emit("run_start", game="civ6", model=s.model)
+    log.set_campaign("civ6", "kublai", "China")
+    assert g._past_outcomes_text().startswith("No earlier")
+    log.save_trace(1, {"date": "T12", "decision": "orders", "trigger": "x", "reason": "r", "steps": []})
+    assert "| 12 turns later" in g._past_outcomes_text()

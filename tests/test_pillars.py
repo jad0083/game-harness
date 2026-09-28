@@ -475,3 +475,36 @@ _BUY = "\n[actions.market.buy]\nbase_amount = { energy = 100, alloys = 25 }\n"
 def test_bad_buy_rules_are_rejected(tmp_path, table, where):
     with pytest.raises(PillarsError, match=re.escape(where)):
         load_pillars(corpus(tmp_path, MINI + table))
+
+
+# ---- postmortem-fixes design, rulings 15 and 19: time constants in the game's unit ---------------
+
+def test_each_game_names_its_time_constants_in_its_own_unit():
+    civ6, stellaris = load_pillars(REPO / "corpora/civ6").time, load_pillars(REPO / "corpora/stellaris").time
+    assert (civ6.unit, civ6.review_cap, civ6.review_exempt, civ6.milestone_lookback, civ6.score_horizon) == \
+        ("turns", 5, ("new war", "city lost"), 12, 12)
+    assert (stellaris.unit, stellaris.review_cap, stellaris.review_exempt, stellaris.milestone_lookback,
+            stellaris.score_horizon) == ("months", 12, ("new war",), 12, 12)
+    assert (civ6.steps(5), civ6.steps(1), stellaris.steps(12)) == ("5 turns", "1 turn", "12 months")
+    assert civ6.exempt("urgent: city lost: Beijing; city threatened: Xi'an") and not civ6.exempt("city threatened: X")
+    assert load_pillars(REPO / "corpora/civ6").public()["time"]["review_cap"] == 5
+
+
+def test_a_file_without_a_time_table_keeps_the_old_numbers_in_its_dates_unit(tmp_path):
+    t = load_pillars(corpus(tmp_path)).time
+    assert (t.unit, t.review_cap, t.review_exempt, t.milestone_lookback, t.score_horizon) == ("months", 12, (), 12, 12)
+    assert load_pillars(civ_corpus(tmp_path)).time.unit == "turns"
+
+
+@pytest.mark.parametrize("table, where", [
+    ('unit = "days"', "time.unit: must be one of months, turns"),
+    ('unit = "turns"', "time.unit: must be 'months' with strategy.date_format 'calendar'"),
+    ("review_cap = 0", "time.review_cap: must be a whole number of months >= 1"),
+    ("milestone_lookback = 1.5", "time.milestone_lookback"),
+    ("score_horizon = -3", "time.score_horizon"),
+    ("review_exempt = [1]", "time.review_exempt: must be a list of trigger texts"),
+    ("window = 3", "time.window: unknown key"),
+])
+def test_bad_time_constants_are_rejected(tmp_path, table, where):
+    with pytest.raises(PillarsError, match=re.escape(where)):
+        load_pillars(corpus(tmp_path, MINI + f"\n[time]\n{table}\n"))

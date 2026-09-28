@@ -36,7 +36,7 @@ from .claude_code import resolve_model
 from .config import Settings
 from .events import EventLog
 from .learning import Journal, LearnedStore, LearningRejected
-from .pillars import ACTION_KINDS, OrdersSpec, PillarsError, PillarSpec, load_pillars, load_postures
+from .pillars import ACTION_KINDS, OrdersSpec, PillarsError, PillarSpec, TimeSpec, load_pillars, load_postures
 from .stellaris_crisis import CRISIS_PACE, POSTURE_GAP_MONTHS, boost_pressures, crisis_alloys, crisis_step, status_quo
 from .stellaris_market import buy_errors, idle_fill, keep_placed, price_note
 from .stellaris_planets import (
@@ -93,8 +93,9 @@ NEEDS_HUMAN = {"prepare_war"}      # strategy.md: only after the human confirmed
 
 # Big-event triggers: an urgent decision whose reason contains one of these, or a pending
 # review_requested (an off-frame decision, or a failed review awaiting retry), starts a strategy
-# review, capped at one per 12 in-game months; only a failed review's own retry, or a review while
-# no strategy exists yet, bypasses that cap.
+# review, capped at one per `[time] review_cap` steps of the game's clock (12 months in Stellaris, 5
+# turns in Civ VI); a failed review's own retry, a review while no strategy exists yet, and a trigger
+# in `[time] review_exempt` ("new war"; Civ VI also "city lost") bypass that cap.
 EVENT_TRIGGERS = ("new war", "war ended", "crisis", "colony lost", "boxed in", "milestone missed",
                   "off-frame", "military fell")
 # Stellaris's own (levers design): the planet check's urgent reasons (ruling 22) and the war crisis's
@@ -899,7 +900,7 @@ class Governor:
 
     def request_review(self) -> None:
         """Run a strategy review now (between scheduled decisions, like decide_now). A human request
-        is never held back by the 12-month event-review cap and does not count toward it."""
+        is never held back by the event-review cap (`[time] review_cap`) and does not count toward it."""
         self._spec()
         self.requests.put(("review", "requested from the dashboard"))
         self.log.emit("instruction", text="Strategy review requested")
@@ -1023,7 +1024,10 @@ class Governor:
                         still_pending = pending and self.review_requested is not None
                         event = reason.startswith("urgent:") and any(t in reason for t in self.event_triggers)
                         if self._reviews_run == reviews_before and (still_pending or event) and self.pillars is not None:
-                            self._maybe_event_review(b, self.review_requested or reason, retry=self._review_retry)
+                            # a trigger that always reviews (ruling 15) is named over a pending one
+                            exempt = event and self._time().exempt(reason)
+                            self._maybe_event_review(b, reason if exempt else self.review_requested or reason,
+                                                     retry=self._review_retry)
                 except Exception as e:  # noqa: BLE001 - any game-control failure (agent down, focus lost, a panel open)
                     transient = self._transient(e)
                     self._needs_attention(f"game control failed: {type(e).__name__}: {e}. "
@@ -1339,7 +1343,7 @@ class Governor:
             return
         ran = self._maybe_event_review(b, trigger)
         self._crisis_row("review", "done" if ran else "no_op", "strategy review ran" if ran
-                         else "skipped: within 12 months of the last event review", b["date"])
+                         else f"skipped: {self._review_cap_text()}", b["date"])
 
     def _crisis_boost_row(self, b: dict) -> None:
         """Step 2's row: which pillar the need boost raises in the frame (`_need_boost`), or why none."""
@@ -1683,7 +1687,7 @@ class Governor:
         self._follow(b)
         if self.log.telemetry is not None and self.log.campaign_id:
             try:
-                self.log.telemetry.score(self.log.campaign_id)
+                self.log.telemetry.score(self.log.campaign_id, after_months=self._time().score_horizon)
             except Exception as e:  # noqa: BLE001 - scoring is advisory; never stop play for it
                 self.log.emit("briefing_error", error=f"outcome scoring: {e}"[:200])
         try:
@@ -2201,17 +2205,29 @@ class Governor:
         return (f"- tech picks: {noops} tech syncs since the last review found none of the preferred techs where it "
                 f"could pick; offered now: {offers}. Name at least one of them in prefer_techs.")
 
+    def _time(self) -> TimeSpec:
+        """The game's time constants (`[time]` of pillars.toml; the old numbers in months without one)."""
+        return self.pillars.time if self.pillars is not None else TimeSpec()
+
+    def _review_cap_text(self) -> str:
+        return f"within {self._time().steps(self._time().review_cap)} of the last event review"
+
     def _maybe_event_review(self, b: dict, trigger: str, retry: bool = False) -> bool:
-        """Run a strategy review for a big event, at most once per 12 in-game months. `retry`
-        (a failed review pending retry) and having no strategy yet both bypass the cap and never
-        move its last-review month: only event-triggered and off-frame reviews count toward it.
-        A refused request is logged and, if it was a pending one (off-frame), dropped
-        (review_requested cleared) so it does not keep re-firing every decision until the cap opens."""
+        """Run a strategy review for a big event, at most once per `[time] review_cap` steps of the
+        game's clock (12 months in Stellaris, 5 turns in Civ VI; postmortem-fixes design, ruling 15).
+        `retry` (a failed review pending retry) and having no strategy yet both bypass the cap and
+        never move its last-review step: only event-triggered and off-frame reviews count toward it. A
+        trigger in `[time] review_exempt` ("new war"; Civ VI also "city lost") always reviews and does
+        restart the cap's clock. A refused request is logged and, if it was a pending one (off-frame),
+        dropped (review_requested cleared) so it does not keep re-firing every decision until the cap
+        opens."""
+        t = self._time()
         bypass = retry or self.strategy is None
+        exempt = not bypass and t.exempt(trigger)
         last = getattr(self, "_last_event_review_month", None)
         now = months(b["date"])
-        if not bypass and last is not None and now - last < 12:
-            self.log.emit("strategy_review_skipped", trigger=trigger, reason="within 12 months of the last event review")
+        if not bypass and not exempt and last is not None and now - last < t.review_cap:
+            self.log.emit("strategy_review_skipped", trigger=trigger, reason=self._review_cap_text())
             if self.review_requested == trigger:
                 self.review_requested = None
             return False
@@ -2327,13 +2343,14 @@ class Governor:
             return []
 
     def _milestone_status(self, m, rows: list[dict], today: str) -> str:
-        return milestone_status(m, rows, today, self.pillars.row_keys)
+        return milestone_status(m, rows, today, self.pillars.row_keys, lookback=self._time().milestone_lookback)
 
     def _past_outcomes_text(self) -> str:
         if self.log.telemetry is None or not self.log.campaign_id:
             return "(none)"
         try:
-            return self.log.telemetry.past_outcomes(self.log.campaign_id)
+            t = self._time()
+            return self.log.telemetry.past_outcomes(self.log.campaign_id, later=t.steps(t.score_horizon))
         except Exception as e:  # noqa: BLE001 - telemetry is advisory; never block a review
             self.log.emit("briefing_error", error=f"strategy review outcomes: {e}"[:200])
             return "(none)"

@@ -6,7 +6,7 @@
 - [ ] Civ VI 50% per-purchase cap bound defenders in war and weakness (2026-09-27, post-mortem H1): outside `in_danger` cities it was the only block on a defender the game allowed at T365, T475, T496, T504 and T538, and refused T544 and T553 (postmortem-fixes design, ruling 2)
 - [ ] Civ VI "defenders to buy" listed only Oil-locked units as "not allowed", never the buyable Modern AT or Machine Gun, and switched defence-first off (post-mortem H5; ruling 7)
 - [ ] Milestones read "met" when any past row met the target ("military >= 170 by T350" met with 124); shared `strategy.py`, so Stellaris too (post-mortem H3; ruling 17). Fixed on branch feat/postmortem-fixes (judged on the latest value since the milestone's `set`; "milestone missed" once per run); closes when deployed
-- [ ] The event-review cap is 12 steps, so 12 turns in Civ VI: 15 of 18 war triggers skipped T541-T570 (post-mortem H7; rulings 15, 19)
+- [ ] The event-review cap is 12 steps, so 12 turns in Civ VI: 15 of 18 war triggers skipped T541-T570 (post-mortem H7; rulings 15, 19). Fixed on branch feat/postmortem-fixes (`[time]` per game: Civ VI 5 turns with "new war" and "city lost" exempt, Stellaris 12 months with "new war" exempt); closes when deployed
 - [ ] Civ VI urgent checks fire only on a change (no decision T559-T562, T571-T574, T576-T582 while cities stayed in danger) and lack falling-behind, neighbour-buildup, negative-income and loyalty triggers (post-mortem H4, H6; rulings 10-14)
 - [ ] The game's AI spent our stock between decisions unseen: 16 Rock Bands (about 21,600 faith) and unnamed gold (1,717 in T525-T528) (post-mortem H2; rulings 3, 4)
 - [ ] A lost Civ VI purchase reply is never re-sent, even when the read-back proves nothing ran (T570 Longxi) (post-mortem H8; ruling 5)

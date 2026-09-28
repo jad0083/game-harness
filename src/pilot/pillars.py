@@ -36,7 +36,9 @@ MARKET_KINDS = ("internal", "galactic")
 _ACTION_REQUIRED = {**dict.fromkeys(ID_LIST_KINDS, ("max_items", "ids_from_corpus")),
                     "purchase": ("max_items", "ids_from_corpus", "gold_reserve", "treasury_share"),
                     "market": ("max_items", "resources_from_manifest", "amount_max")}
-_TOP_KEYS = {"strategy", "metrics", "pillars", "actions", "weights", "orders"}
+_TOP_KEYS = {"strategy", "metrics", "pillars", "actions", "weights", "orders", "time"}
+_TIME_KEYS = {"unit", "review_cap", "review_exempt", "milestone_lookback", "score_horizon"}
+TIME_UNITS = ("months", "turns")      # one step of the game's clock (postmortem-fixes design, ruling 19)
 _ORDERS_KEYS = {"window_turns", "min_resolved", "min_samples", "weak_rate", "open_cap_turns", "open_grace_turns"}
 ORDER_SAMPLE_GROUPS = ("production", "purchase", "other")
 _WEIGHTS_KEYS = {"mode", "min", "max", "spread", "switch_margin", "need", "stall_years", "stall_factor"}
@@ -154,6 +156,25 @@ class OrdersSpec:
 
 
 @dataclass(frozen=True)
+class TimeSpec:
+    """The shared code's time constants in the game's own unit (`[time]`; postmortem-fixes design,
+    rulings 15 and 19): "12 in-game months" silently became 12 turns in Civ VI. The defaults are the
+    numbers the shared code used before, in months."""
+    unit: str = "months"             # "months" (Stellaris) or "turns" (Civ VI): one step of the clock
+    review_cap: int = 12             # event reviews: at most one per this many steps...
+    review_exempt: tuple[str, ...] = ()   # ...except these triggers, which always review (and reset the clock)
+    milestone_lookback: int = 12     # a milestone's projection needs a row at least this many steps older
+    score_horizon: int = 12          # outcome scoring compares the metrics this many steps after a decision
+
+    def steps(self, n: int) -> str:
+        """`n` steps in words: "5 turns", "1 month"."""
+        return f"{n} {self.unit[:-1] if n == 1 else self.unit}"
+
+    def exempt(self, trigger: str) -> bool:
+        return any(t in trigger for t in self.review_exempt)
+
+
+@dataclass(frozen=True)
 class PillarSpec:
     game: str
     pillars: dict[str, PillarDef]
@@ -175,6 +196,7 @@ class PillarSpec:
     identity: str = ""                 # the Strategist's `identity` instruction (default: our species)
     orders: OrdersSpec | None = None   # the order record's settings ([orders]); None: no record
     milestone_exclude: tuple[str, ...] = ()   # metrics never used as milestones ([metrics] milestone_exclude)
+    time: TimeSpec = field(default_factory=TimeSpec)   # [time]: the clock's constants in the game's unit
 
     @property
     def ids(self) -> tuple[str, ...]:
@@ -217,6 +239,9 @@ class PillarSpec:
                                     "base_amount": dict(a.buy.base_amount), "volume": dict(a.buy.volume),
                                     "strategic": list(a.buy.strategic)}}
                             for k, a in self.actions.items()},
+                "time": {"unit": self.time.unit, "review_cap": self.time.review_cap,
+                         "review_exempt": list(self.time.review_exempt),
+                         "milestone_lookback": self.time.milestone_lookback, "score_horizon": self.time.score_horizon},
                 "orders": None if self.orders is None else {
                     "window_turns": self.orders.window_turns, "min_resolved": self.orders.min_resolved,
                     "min_samples": dict(self.orders.min_samples), "weak_rate": self.orders.weak_rate,
@@ -534,6 +559,31 @@ def _orders(path: Path, t) -> OrdersSpec:
     return OrdersSpec(min_samples=types.MappingProxyType(samples), weak_rate=float(rate), **ints)
 
 
+def _time(path: Path, t, date_format: str) -> TimeSpec:
+    """`[time]`: the unit matches the milestone dates (months for calendar dates, turns for T<turn>);
+    every constant is a whole number of steps >= 1; `review_exempt` lists trigger texts."""
+    unit_default = "turns" if date_format == "turns" else "months"
+    if not isinstance(t, dict):
+        raise _err(path, "time", "must be a table")
+    _unknown(path, "time", t, _TIME_KEYS)
+    unit = t.get("unit", unit_default)
+    if unit not in TIME_UNITS:
+        raise _err(path, "time.unit", f"must be one of {', '.join(TIME_UNITS)}")
+    if unit != unit_default:
+        raise _err(path, "time.unit", f"must be {unit_default!r} with strategy.date_format {date_format!r}")
+    d = TimeSpec()
+    ints = {}
+    for key in ("review_cap", "milestone_lookback", "score_horizon"):
+        v = t.get(key, getattr(d, key))
+        if not _int(v) or v < 1:
+            raise _err(path, f"time.{key}", f"must be a whole number of {unit} >= 1")
+        ints[key] = v
+    exempt = t.get("review_exempt", [])
+    if not isinstance(exempt, list) or not all(isinstance(x, str) and x.strip() for x in exempt):
+        raise _err(path, "time.review_exempt", "must be a list of trigger texts")
+    return TimeSpec(unit=unit, review_exempt=tuple(x.strip() for x in exempt), **ints)
+
+
 def _parse(path: Path, corpus: Path) -> PillarSpec:
     try:
         raw = tomllib.loads(path.read_text(encoding="utf-8"))
@@ -619,7 +669,9 @@ def _parse(path: Path, corpus: Path) -> PillarSpec:
         raise _err(path, "strategy.date_format", f"must be one of {', '.join(DATE_FORMATS)}")
     weights = _weights(path, raw.get("weights", {}), len(pillars))
     orders = _orders(path, raw["orders"]) if "orders" in raw else None
-    return PillarSpec(game=corpus.name, weights=weights, orders=orders, milestone_exclude=tuple(exclude), pillars=types.MappingProxyType(pillars), metrics=tuple(names),
+    time = _time(path, raw.get("time", {}), date_format)
+    return PillarSpec(game=corpus.name, weights=weights, orders=orders, milestone_exclude=tuple(exclude), time=time,
+                      pillars=types.MappingProxyType(pillars), metrics=tuple(names),
                       metric_aliases=types.MappingProxyType(aliases), row_keys=types.MappingProxyType(row_keys),
                       peer_keys=types.MappingProxyType(peer_keys),
                       actions=types.MappingProxyType(actions), min_milestones_top=top, stance_needs_figure=figure,

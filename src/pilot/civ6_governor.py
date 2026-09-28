@@ -986,7 +986,7 @@ class Civ6Governor(Governor):
         self.log.emit("metrics", **metrics(b))
         if self.log.telemetry is not None and self.log.campaign_id:
             try:
-                self.log.telemetry.score(self.log.campaign_id)
+                self.log.telemetry.score(self.log.campaign_id, after_months=self._time().score_horizon)
             except Exception as e:  # noqa: BLE001 - advisory
                 self.log.emit("briefing_error", error=f"outcome scoring: {e}"[:200])
         self._track(b)
