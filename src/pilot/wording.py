@@ -201,7 +201,8 @@ def order_parts(o: dict) -> dict:
     if kind == "policies" and not o.get("id"):
         ident = parsed.get("id") or ""
     return {"kind": kind, "id": ident, "city": o.get("city") or parsed.get("city") or "",
-            "currency": parsed.get("currency") or ("faith" if " with faith" in text else "gold" if kind == "purchase" else ""),
+            # the currency when the order names it; never assumed (a purchase with no currency says none)
+            "currency": parsed.get("currency") or ("faith" if " with faith" in text else "gold" if " with gold" in text else ""),
             "filled": o.get("by") == "governor" or "(filled by the governor)" in text}
 
 

@@ -149,3 +149,10 @@ def test_trigger_metric_ids_read_as_the_views_words():
     assert trigger("urgent: energy net turned negative (-3.0/month)", label=lambda k: labels(f"net.{k}"))["text"] \
         == "Energy income negative"
     assert trigger("urgent: city threatened: Xi'an (2 enemy units near)")["text"] == "City threatened: Xi'an"
+
+
+def test_a_purchase_names_its_currency_only_when_known():
+    from pilot.wording import order_parts
+    assert order_parts({"order": "purchase unit:warrior in Xian", "outcome": "stuck"})["currency"] == ""
+    assert order_parts({"order": "purchase building:gurdwara in Beijing with faith"})["currency"] == "faith"
+    assert order_parts({"order": "purchase unit:slinger in Chengdu with gold", "kind": "purchase"})["currency"] == "gold"

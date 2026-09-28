@@ -2312,7 +2312,10 @@ function renderTrace(d) {
   const orders = d.orders || [];
   if (orders.length) {
     h += `<h3 class="t-sub">${esc(sentence(S.spec.game.decision_noun || "Orders"))}</h3><ul class="t-orders">` + orders.map((o) => {
-      const badges = [o.filled ? "filled by the governor" : "", o.kind === "purchase" ? `bought with ${o.currency || "gold"}` : ""].filter(Boolean);
+      // a purchase says "bought" only when it went through; otherwise just which currency it was for
+      const bought = o.fate && o.fate.key === "held";
+      const buy = o.kind !== "purchase" ? "" : bought ? `bought${o.currency ? ` with ${o.currency}` : ""}` : o.currency ? `${o.currency} purchase` : "";
+      const badges = [o.filled ? "filled by the governor" : "", buy].filter(Boolean);
       return `<li>${fateChip(o)} <span class="t-fate">${esc(o.fate.word)}${o.fate.why ? `: ${esc(o.fate.why)}` : ""}</span>${badges.map((b) => `<span class="tag">${esc(b)}</span>`).join("")}</li>`;
     }).join("") + `</ul>`;
     if (d.retried_for && d.retried_for.length) h += `<p class="hint">Asked again: ${esc(d.retried_for.map((k) => `${k} left idle`).join(", "))}.</p>`;
@@ -2623,7 +2626,7 @@ function ordersHtml() {
     <div class="ofilters" role="group" aria-label="Fate">${FATE_FILTERS.map(([k, l]) => `<button type="button" class="btn small" data-ofate="${k}" aria-pressed="${f.fate === k}">${l}</button>`).join("")}</div>
     <ul class="olog">${rows.slice(0, 80).map((x, i) => {
       const note = x.followed ? `in force, ${x.followed.turns} of ${x.followed.window} turns followed` : "";
-      const tags = [x.backfilled ? `<span class="tag">backfilled</span>` : "", x.order_kind === "purchase" ? `<span class="tag">${esc(x.currency || "gold")}</span>` : ""].join("");
+      const tags = [x.backfilled ? `<span class="tag">backfilled</span>` : "", x.order_kind === "purchase" && x.currency ? `<span class="tag">${esc(x.currency)}</span>` : ""].join("");
       return `<li><button type="button" data-olog="${i}"${x.decision ? "" : " disabled"} title="${x.decision ? "Show the decision it came from" : ""}">
         <span class="odate">${esc(gdate(x.date || x.ordered))}</span>
         <span class="owhat"><span class="okind">${esc(human(x.order_kind || ""))}</span>${esc(x.name || x.id)}${x.city ? `, ${esc(x.city)}` : ""} ${tags}</span>

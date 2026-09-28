@@ -61,8 +61,11 @@ def test_reasoning_leads_with_the_decision_then_why_then_evidence(browser, live_
     assert pairs["Trigger"] == "Scheduled" and pairs["Answered by"] == "Gemini 3.1 Pro, medium thinking"
     assert pairs["Took"] == "63 s · 41.0k tokens in, 1,200 out"
     orders = page.eval_on_selector_all("#tab-reasoning .t-orders li", "ls => ls.map(l => l.textContent.replace(/\\s+/g, ' ').trim())")
-    assert any("bought with faith" in o and "refused: 380 faith" in o for o in orders)
-    assert any(o.startswith("✓") and "Xian: Warrior" in o and "completed" in o for o in orders)
+    # a badge never claims a result: a refused purchase is a faith purchase, not "bought"
+    gurdwara = next(o for o in orders if "Gurdwara" in o)
+    assert "refused: 380 faith" in gurdwara and "faith purchase" in gurdwara and "bought" not in gurdwara
+    warrior = next(o for o in orders if "Xian: Warrior" in o)
+    assert warrior.startswith("✓") and "completed" in warrior and warrior.endswith("bought")     # currency unknown
     page.click('#decisions button[data-i="1"]')
     page.wait_for_selector("#tab-reasoning .t-error")
     assert page.text_content("#tab-reasoning .t-error").startswith("No decision: overloaded (503).")
