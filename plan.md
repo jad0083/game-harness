@@ -189,7 +189,7 @@
 - [ ] Turns advanced logged against those requested; full decision prompts in traces (ruling 27); on branch feat/postmortem-fixes, not deployed
 - [ ] Civ VI price changes in the briefing (World Congress discounts) (ruling 6)
 - [ ] Known-false learned rules refused; the listed rules corrected at deploy (ruling 29)
-- [ ] A deploy restarts only the pilot of the game it affects (ruling 28)
+- [ ] A deploy restarts only the pilot of the game it affects (ruling 28); on branch feat/postmortem-fixes (`scripts/deploy-pilot.sh`, `scripts/pilot-affected.py`, AGENTS.md §8), not deployed
 
 ## Hosts
 - [x] Second game host mini-rig2 (2560x1440): agent 1.4.0 installed and reachable with the shared token (2026-09-26)

@@ -216,6 +216,15 @@ attribution** anywhere (no "Co-Authored-By", no "generated with", no model names
 commit messages). One logical change per commit. Never commit `.agent_token`, `play/`,
 screenshots, or the game's raw XML (`incoming/`).
 
+**Deploying to the running services**: never restart `game-pilot.service` by hand for a merge. After
+merging and pulling on the controller, run `scripts/deploy-pilot.sh <from> <to>` (the commit deployed
+before, and the new one; `--dry-run` first shows what it will do). It restarts the pilot only when the
+running game's files or shared code changed, restarts the viewer for the dashboard's static files and
+shared code, and for a Rust change pauses the pilot through its dashboard, builds the controller and
+resumes it; otherwise it prints "not restarted: the running civ6 pilot is unaffected; the change
+applies at its next start". `scripts/pilot-affected.py <from> <to>` shows the classification alone
+(a Stellaris-only merge once restarted the live Civ VI run at T462; postmortem-fixes design, ruling 28).
+
 ## 9. Working on the code
 
 - `crates/game-controller/src/`: `autopilot.rs` (turn loop, known screens, classification),

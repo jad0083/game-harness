@@ -19,7 +19,17 @@ echo 'GEMINI_API_KEY=…' >> .env                  # or OPENAI_API_KEY / ANTHROP
 As services: `deploy/game-pilot.service` (the pilot) and `deploy/game-pilot-view.service` (the
 dashboard, always on), both systemd user units installed by `scripts/install-services.sh`. A drop-in
 (`systemctl --user edit game-pilot.service`) sets `GAME_AGENT_URL` and `GAME_RESOLUTION` for the
-PC in use.
+PC in use. One pilot unit runs whichever game `runs/pilot-settings.json` names, so a deploy goes through
+`scripts/deploy-pilot.sh <from> <to>` (`--dry-run` to preview; postmortem-fixes design, ruling 28):
+`scripts/pilot-affected.py` classifies each changed path (civ6: `src/pilot/civ6*.py` and
+`corpora/civ6/**`; stellaris and galciv4 alike, galciv4 with `src/pilot/controller.py`; view:
+`src/pilot/static/**`; rust: `crates/**`, `Cargo.*`; none: docs, games, tests, other `.md` files,
+`corpora/*/learned/**`, `scripts/ci*`; shared: every other `src/pilot/*.py` and `pyproject.toml`, and any
+path not listed). The running pilot (its game read from its own `/status`, else the settings file)
+restarts only when its game's class or shared changed; the viewer restarts for view and shared (it
+imports the shared modules); a Rust change pauses the pilot through its dashboard, builds the
+controller and resumes it (a pilot paused by the human or waiting for one is left as it is). Otherwise
+it prints "not restarted: the running civ6 pilot is unaffected; the change applies at its next start".
 
 | Variable | Meaning |
 |---|---|
