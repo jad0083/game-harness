@@ -262,6 +262,7 @@ class Civ6Governor(Governor):
         self._ai_log_next = 0                     # where the next read of the AI's strategy log starts (ruling 29)
         self._ai_rows: list = []                  # our player's rows of that log: [turn, strategy, status]
         self._recent_rows: list[dict] = []        # this campaign's latest metrics rows (neighbour buildup)
+        self._last_row: dict | None = None        # the metrics row emitted last (`_emit_metrics`)
         # what the game's AI spent between our decisions (postmortem-fixes ruling 4): since the last
         # decision's turn, per currency, with the yield over those turns; the AI_CityBuild.csv purchases
         # read (at most one read per decision, only when there is a spend to name)
@@ -543,9 +544,8 @@ class Civ6Governor(Governor):
                                       "(ruling 21: the player id is never derived again). Check the game, then press "
                                       "Resume, or start a new run.")
                 return last, ""
-            row = self._row(b)
-            spent = row["ai_spent"] = ai_spent(last, b)
-            self.log.emit("metrics", **row)
+            spent = ai_spent(last, b)
+            self._emit_metrics(b, spent)
             b = self._end_check(b)
             if b is None:
                 return None, "ended"            # ruling 21: no decision and no review after the end
@@ -597,6 +597,19 @@ class Civ6Governor(Governor):
         if isinstance(row.get("turn"), int) and (not self._recent_rows or self._recent_rows[-1].get("date") != row["date"]):
             self._recent_rows = [*self._recent_rows, row][-200:]
         return row
+
+    def _emit_metrics(self, b: dict, spent: dict[str, float] | None = None) -> None:
+        """The snapshot's metrics row, with the stretch's `ai_spent` at a hand-back (ruling 4). Telemetry
+        keeps one row per run and date, so a row emitted again for the same date (the decision at that
+        hand-back, the end check's second read) keeps the spend: it overwrote it, and every stretch that
+        became a decision (the urgent T525-T528 one among them) lost it."""
+        row = self._row(b)
+        if spent is not None:
+            row["ai_spent"] = spent
+        elif self._last_row and self._last_row.get("date") == row.get("date") and "ai_spent" in self._last_row:
+            row["ai_spent"] = self._last_row["ai_spent"]
+        self._last_row = row
+        self.log.emit("metrics", **row)
 
     def _threat_reasons(self, last: dict, b: dict) -> list[str]:
         """The urgent reasons of rulings 10, 11, 13 and 14 at a hand-back: falling behind (on entry),
@@ -858,7 +871,7 @@ class Civ6Governor(Governor):
             except Civ6Stuck as e:
                 self.log.emit("briefing_error", error=f"end check: {e}"[:200])
                 return b                        # one read never ends the run
-            self.log.emit("metrics", **self._row(again))
+            self._emit_metrics(again)
             if civ6_read(again) is None:
                 self.log.emit("journal", text=f"one read at T{b.get('turn')} showed 0 cities and 0 settlers; the next "
                                               "did not, so the run goes on")
@@ -1516,7 +1529,7 @@ class Civ6Governor(Governor):
         self._last_b = b
         self.log.state.episodes += 1
         self.log.state.game_date = b["date"]
-        self.log.emit("metrics", **self._row(b))
+        self._emit_metrics(b)
         self.log.state.info["weakness"] = weakness(b, self._buy_limits())   # ruling 1, for the dashboard
         if self.log.telemetry is not None and self.log.campaign_id:
             try:

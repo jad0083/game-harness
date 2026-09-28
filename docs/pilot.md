@@ -307,7 +307,8 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   stretch starts from; when that read-back failed, or after a pause or a Resume, the stretch starts from
   a fresh snapshot instead, so our purchase never reads as the AI's and the rule buy never prices from a
   balance before it; E10: 2,278 + 226 x 3 - 958 = 1,998 faith, the Rock Band the game logged at T526);
-  rows carry it as `ai_spent`. The next decision's prompt says "Since T525 the AI spent 1,998 faith
+  rows carry it as `ai_spent` (telemetry keeps one row per date, so the decision's own row at that
+  hand-back and the end check's second read keep it). The next decision's prompt says "Since T525 the AI spent 1,998 faith
   (UNIT_ROCK_BAND, T526) and 1,717 gold (not named)" when a currency's spend since the last decision is at
   least max(50, 10% of its yield over those turns); the items come from the game's
   `Logs/AI_CityBuild.csv` (`FAITH PURCHASE` and `PURCHASE` rows of our player, read by `civ6 log-tail` at most

@@ -2574,7 +2574,7 @@ def test_e10_the_ai_spend_reproduces_the_logged_rock_band_and_the_unnamed_gold()
     assert ai_spent_text(525, {"faith": 30.0, "gold": 0.0}, y, []) == "", "a 30-faith drift gives nothing"
 
 
-def test_the_ai_spend_is_urgent_named_by_one_log_read_and_shown_to_the_next_decision(setup):
+def test_the_ai_spend_is_urgent_named_by_one_log_read_and_shown_to_the_next_decision(setup, tmp_path):
     seen: list[str] = []
     city = {**_calm_city("Beijing", [AT_FAITH]), "capital": True}
     start = {**FIXTURE, **_row_snapshot(525), "cities": [city], "majors": [], "wars": []}
@@ -2586,7 +2586,8 @@ def test_the_ai_spend_is_urgent_named_by_one_log_read_and_shown_to_the_next_deci
                     logs={"AI_CityBuild.csv": ["526, 0, Beijing, FAITH PURCHASE, UNIT_ROCK_BAND"]})
     s, _ = setup
     s.autoplay_chunk, s.decide_every_turns = 3, 5
-    g = governor(setup, game, orders_model([], seen=seen))
+    tel, log = _telemetry_log(setup, tmp_path)
+    g = governor((s, log), game, orders_model([], seen=seen))
     g.run(max_decisions=2)
     second = traces(setup)[1]
     assert second["trigger"] == "urgent: the AI spent 1,998 faith on UNIT_ROCK_BAND in T525-T528"
@@ -2594,7 +2595,21 @@ def test_the_ai_spend_is_urgent_named_by_one_log_read_and_shown_to_the_next_deci
     assert sum(1 for a in game.actions if a[0] == "log_tail") == 1, "one read, only when there is a spend to name"
     rows = [e for e in g.log.recent if e["kind"] == "metrics" and e.get("turn") == 528]
     assert round(rows[0]["ai_spent"]["faith"]) == 1998
+    stored = [r for r in tel.metrics_rows(log.campaign_id) if r.get("turn") == 528]
+    assert len(stored) == 1 and round(stored[0]["ai_spent"]["faith"]) == 1998, \
+        "the decision's own metrics row for T528 kept the stretch's spend (one row per date in telemetry)"
     assert not any(e["kind"] == "needs_attention" for e in g.log.recent), "never stops the hands-off run"
+
+
+def test_a_metrics_row_emitted_again_for_its_date_keeps_the_stretch_spend(setup):
+    """The end check's second read and the decision at a hand-back emit the same date's row again."""
+    g = governor(setup, FakeCiv6(FIXTURE, index=INDEX), orders_model([]))
+    t528 = {**FIXTURE, **_row_snapshot(528), "date": "T528"}
+    g._emit_metrics(t528, {"gold": 1717.4, "faith": 1998.1})
+    g._emit_metrics(t528)
+    g._emit_metrics({**t528, "turn": 529, "date": "T529"})
+    rows = [e for e in g.log.recent if e["kind"] == "metrics"]
+    assert [r.get("ai_spent") for r in rows] == [{"gold": 1717.4, "faith": 1998.1}] * 2 + [None]
 
 
 # ---- a stretch starts from a snapshot taken after our orders (post-mortem fixes review) --------------------
