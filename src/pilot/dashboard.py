@@ -69,6 +69,7 @@ from .auth import (
     page_policy,
 )
 from .events import acting
+from .telemetry import month_index
 from .view import Names, Views
 
 if TYPE_CHECKING:
@@ -416,6 +417,21 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
             r["orders"] = out
         return rows
 
+    async def policy_reports(rows: list[dict]) -> None:
+        """A Stellaris directive's policy report (ruling 23): the policies its reply said the game set,
+        locked and already in force, from the action the governor follows for it (order_followed)."""
+        cids = sorted({r["campaign_id"] for r in rows if r.get("campaign_id", "").startswith("stellaris/")})
+        found: dict[tuple, dict] = {}
+        for c in cids:
+            for f in await asyncio.to_thread(need_tel().campaign_events, c, "order_followed"):
+                a = f.get("action") if isinstance(f.get("action"), dict) else {}
+                if a.get("kind") == "directive":
+                    e = a.get("expect") or {}
+                    found[(c, a.get("ordered"), a.get("id"))] = {k: e.get(k) or {} for k in ("set", "locked", "in_force")}
+        for r in rows:
+            if r.get("applied") is None and str(r.get("outcome") or "").startswith("applied"):
+                r["applied"] = found.get((r.get("campaign_id"), r.get("date"), r.get("decision")))
+
     async def decision_context(rows: list[dict]) -> tuple[list[dict], list[dict]]:
         """The order record rows of the decisions' campaigns and the model-call events of their runs."""
         cids = sorted({r["campaign_id"] for r in rows if r.get("campaign_id")})
@@ -444,6 +460,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
             r["result"] = json.loads(r["result"]) if r["result"] else None
             r["retried_for"] = json.loads(r["retried_for"]) if r["retried_for"] else None
             r["applied"] = json.loads(r["applied"]) if r["applied"] else None    # a directive's policy report
+        await policy_reports(rows)
         order_rows, calls = await decision_context(rows)
         return web.json_response(await asyncio.to_thread(decorate, rows, order_rows, calls))
 
@@ -461,6 +478,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
         r["orders_json"] = json.dumps((r["trace"] or {}).get("orders")) if (r["trace"] or {}).get("orders") else None
         r["error"] = (r["trace"] or {}).get("error")
         r["applied"] = (r["trace"] or {}).get("applied")
+        await policy_reports([r])
         prev = await q("SELECT MAX(t) AS t FROM decisions WHERE run_id=? AND t < ?", (run, r["t"] or 0))
         order_rows, calls = await decision_context([r])
         calls = [e for e in calls if e["t"] > ((prev[0]["t"] if prev else None) or 0)]
@@ -512,11 +530,29 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
         spec, _ = campaign_spec(cid)
         orders_spec = getattr(spec, "orders", None)
         now_turn = max([m.get("turn") for m in mets if isinstance(m.get("turn"), int)]
+                       + [month_index(m.get("date")) or 0 for m in mets if game == "stellaris"]
                        + [r.get("turn") for r in rows if isinstance(r.get("turn"), int)] + [0])
+
+        def record_of() -> dict:
+            if not orders_spec:
+                return {}
+            if game != "stellaris":
+                return order_record(rows, now_turn, orders_spec)
+            # Stellaris: its own outcomes (researched, did_not_stick, locked, ...), in months, and a market
+            # order suspended after two did_not_take on today's [ui.market] calibration (levers ruling 6)
+            from .governor import market_calibration
+            from .stellaris_record import action_record, market_suspended
+            rec = action_record(rows, now_turn, orders_spec)
+            cal = market_calibration(corpora / "stellaris")
+            for k, r in rec.items():
+                parts = k.split(" ")
+                if parts[0] == "market" and len(parts) == 3 and market_suspended(rows, parts[1], parts[2], cal):
+                    r["suspended"] = True
+            return rec
 
         def build() -> dict:
             nm = lambda i: names.name(game, i)
-            rec = order_record(rows, now_turn, orders_spec) if orders_spec else {}
+            rec = record_of()
             for k, r in rec.items():
                 r["label"] = record_label(k)
                 if r.get("last_override"):

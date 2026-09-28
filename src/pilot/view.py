@@ -127,6 +127,18 @@ def parse_view(game: str, raw: dict) -> dict[str, Any]:
     return view
 
 
+def postures_of(corpus: Path) -> dict[str, dict]:
+    """The Governor Bridge postures of `<corpus>/directives.toml` (Stellaris): name -> {enabled, the
+    directives that switch it}; {} for a game without them (ruling 26)."""
+    try:
+        raw = tomllib.loads((corpus / "directives.toml").read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return {}
+    dirs = {n: d.get("postures") or [] for n, d in (raw.get("directive") or {}).items() if isinstance(d, dict)}
+    return {name: {"enabled": d.get("enabled") is True, "directives": sorted(k for k, v in dirs.items() if name in v)}
+            for name, d in (raw.get("posture") or {}).items() if isinstance(d, dict)}
+
+
 def load_view(corpora: Path, game: str) -> dict[str, Any]:
     """The game's view, or `default_view` with the error when its file is missing or invalid."""
     if not re.fullmatch(r"[a-z0-9_]+", game or ""):
@@ -135,9 +147,11 @@ def load_view(corpora: Path, game: str) -> dict[str, Any]:
     if not path.exists():
         return default_view(game)
     try:
-        return parse_view(game, tomllib.loads(path.read_text(encoding="utf-8")))
+        view = parse_view(game, tomllib.loads(path.read_text(encoding="utf-8")))
     except (ViewError, tomllib.TOMLDecodeError) as e:
         return default_view(game, f"{path.name}: {e}")
+    view["postures"] = postures_of(corpora / game)
+    return view
 
 
 class Views:

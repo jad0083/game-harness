@@ -5147,3 +5147,22 @@ def test_a_restart_before_the_entry_ladder_runs_it_then(setup, tmp_path):
     assert ("directive", "defend") in game.actions and g.s.decide_every_months == 3
     assert g._crisis["pace_prior"] == 12, "the earlier pace, not the crisis's own"
     assert any(e["kind"] == "crisis" and e["event"] == "ladder" for e in log.recent)
+
+
+def test_the_metrics_row_carries_the_crisis_market_and_postures_for_the_dashboard(setup):
+    """The dashboard's crisis band, market block and posture chips (rulings 24-26) read the campaign's
+    metrics rows: each save's row says whether a war crisis was on, the market's kind, price
+    fluctuations and last month's trades, and the postures set in the save."""
+    s, log = setup
+    saves = _crisis_saves()[:3]
+    saves[1] = {**saves[1], "market": {"kind": "galactic", "fluct": {"alloys": 14.0}, "bought": {}, "sold": {},
+                                       "trades_net": {"alloys": 5.0}}}
+    game = FakeStellaris(saves)
+    game.flags = ["governor_posture_naval_cap"]
+    Governor(s, game, log, model=decisions("expand", "keep")).run(max_decisions=2)
+    rows = {e["date"]: e for e in log.recent if e["kind"] == "metrics"}
+    assert not rows["2256.01.01"].get("crisis") and rows["2256.02.01"]["crisis"] is True
+    assert rows["2256.02.01"]["market"] == {"kind": "galactic", "fluct": {"alloys": 14.0}, "trades_net": {"alloys": 5.0}}
+    assert rows["2256.02.01"]["postures"] == ["naval_cap"]
+    from pilot.governor import metrics as row_of
+    assert "market" not in row_of({"date": "2256.01.01"}) and row_of({"date": "2256.01.01"})["postures"] == []

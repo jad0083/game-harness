@@ -144,25 +144,9 @@ def seed_runs(runs: Path) -> dict:
     return {"runs": runs, "tel": tel, "log": log, "pilot": FakePilot(log)}
 
 
-# The Stellaris levers' data as docs/design/2026-09-27-stellaris-levers-design.md shapes it (rulings 2-6,
-# 13, 18; dashboard rulings 23-26): the pilot does not publish it yet, so the page renders it only when
-# it is there. Order-record rows are the Civ VI shape with Stellaris keys and fates.
-STELLARIS_RECORD = {
-    "directive defend": {"judged": 3, "took": 2, "held": 0, "overridden": 1, "failed": 0, "min_samples": 3, "rate": 0.67,
-                         "weak": False, "excluded": {"superseded": 1, "locked": 1},
-                         "last_override": {"id": "economic_policy", "by": "civilian_economy", "date": "2291.01.01"}},
-    "market buy alloys": {"judged": 2, "took": 0, "did_not_take": 2, "min_samples": 3, "rate": None, "weak": False,
-                          "excluded": {}, "suspended": True},
-    "tech": {"judged": 5, "researched": 3, "held": 1, "did_not_stick": 1, "min_samples": 3, "rate": 0.8, "weak": False,
-             "excluded": {"no_op": 53}},
-    "posture naval_cap": {"judged": 1, "took": 1, "min_samples": 3, "rate": None, "weak": False, "excluded": {}},
-}
-STELLARIS_CRISIS = {"since": "2291.03.01", "reasons": ["a colony occupied (Arnvoss)", "lost 2 systems"],
-                    "step": {"n": 2, "of": 4, "text": "defensive stance"}, "boost": {"pillar": "defence", "need": 2.0}}
-STELLARIS_POSTURES = [{"name": "naval_cap", "label": "naval capacity", "on": True, "enabled": True},
-                      {"name": "ship_upgrades", "label": "ship upgrades", "on": False, "enabled": False}]
-STELLARIS_MARKET = {"kind": "galactic", "fluct": {"alloys": 14.0, "energy": -8.0}, "bought": {"alloys": 20}, "sold": {"energy": 100},
-                    "trades_net": {"alloys": 5, "energy": -10}}
+# The Stellaris levers' data is built by the governor's own functions (governor.metrics, the war crisis's
+# _publish_crisis, stellaris_record's actions and record) in _seed_stellaris, so a change of shape there
+# breaks these browser tests instead of leaving the page reading fields nobody publishes.
 STELLARIS_STRATEGY = {"focus": "Hold the core until the war ends", "identity": "A fortress empire.", "reason": "war crisis",
                       "pillars": {name: {"weight": w, "priority": i + 1, "stance": f"{name} stance (military 5,200).", "goals": [],
                                          "milestones": [], **({"market": [{"side": "buy", "resource": "alloys", "amount": 5}]}
@@ -173,7 +157,26 @@ STELLARIS_STRATEGY = {"focus": "Hold the core until the war ends", "identity": "
 
 
 def _seed_stellaris(runs: Path, out: dict) -> dict:
-    """The live run is a Stellaris campaign in a war crisis, with the levers' data (the Civ VI run ended)."""
+    """The live run is a Stellaris campaign in a war crisis (the Civ VI run ended), with the levers' data
+    as the governor publishes it: metrics rows from `governor.metrics` of briefings with a market block
+    and a posture flag (crisis marked as `_observe` marks it), `info.crisis` from `_publish_crisis`, the
+    action record from `stellaris_record` outcome rows, and a directive's policy report in the action
+    it follows."""
+    import types
+    from types import SimpleNamespace
+
+    from pilot.governor import Governor, market_calibration, metrics
+    from pilot.pillars import load_pillars
+    from pilot.stellaris_record import (
+        action_record,
+        directive_action,
+        market_action,
+        outcome_row,
+        parse_directive_reply,
+        posture_action,
+        tech_action,
+    )
+    corpus = Path(__file__).resolve().parents[2] / "corpora" / "stellaris"
     old, tel = out["log"], out["tel"]
     old.state.status = "stopped"
     old.emit("run_end")
@@ -182,20 +185,55 @@ def _seed_stellaris(runs: Path, out: dict) -> dict:
     log.emit("run_start", game="stellaris", model="google:gemini-3.8-flash", speed="fast")
     log.set_campaign("stellaris", "gaea", "Blooms of Gaea")
     for i, mo in enumerate(range(1, 8)):
-        log.emit("metrics", date=f"2291.{mo:02d}.01", systems=30 - (2 if mo >= 3 else 0), planets=9, pops=120, techs_known=200 + i,
-                 net={"energy": 40, "minerals": 30, "food": 10, "alloys": 12, "influence": 2, "unity": 8},
-                 stockpile={"energy": 900, "minerals": 800, "food": 500, "alloys": 300, "influence": 100, "unity": 400},
-                 military_power=5200 - 300 * i, economy_power=3000, tech_power=2000, directive="defend", wars=1,
-                 crisis=mo >= 3, market=STELLARIS_MARKET, postures=STELLARIS_POSTURES,
-                 peers={"systems": {"rank": 3, "median": 28}}, peer_count=8)
+        b = {"date": f"2291.{mo:02d}.01", "systems": 30 - (2 if mo >= 3 else 0), "planets": [{}] * 9, "pops": 120,
+             "techs_known": 200 + i, "military_power": 5200 - 300 * i, "economy_power": 3000, "tech_power": 2000,
+             "net": {"energy": 40, "minerals": 30, "food": 10, "alloys": 12, "influence": 2, "unity": 8},
+             "stockpile": {"energy": 900, "minerals": 800, "food": 500, "alloys": 300, "influence": 100, "unity": 400},
+             "peers": {"stats": {"systems": {"rank": 3, "median": 28}}, "empires": 8}, "wars": [{"id": "w1"}],
+             "flags": ["governor_directive_defend", "governor_posture_naval_cap"],
+             "market": {"kind": "galactic", "fluct": {"alloys": 14.0, "energy": -8.0}, "bought": {}, "sold": {},
+                        "trades_net": {"alloys": 5, "energy": -10}}}
+        row = metrics(b)
+        if mo >= 3:
+            row["crisis"] = True                   # as Governor._observe marks a save during a war crisis
+        log.emit("metrics", **row)
+    conds = ["a colony occupied (Arnvoss)", "lost 2 systems in 12 months"]
+    state = {"active": True, "since": "2291.03.01", "conditions": [["C1", conds[0]], ["C2", conds[1]]], "quiet": 0,
+             "entries": {"w1": 2291 * 12 + 2}, "wars": ["w1"], "seen": "2291.07.01"}
+    log.emit("crisis", event="enter", date="2291.03.01", state=state, conditions=conds)
     log.emit("strategy", date="2291.03.01", trigger="war going badly: C1, C2", model="google:gemini-3.1-pro-preview",
              reason=STELLARIS_STRATEGY["reason"], strategy={k: v for k, v in STELLARIS_STRATEGY.items() if k != "reason"})
     _trace(log, 1, game="stellaris", date="2291.03.01", trigger="urgent: war going badly: a colony occupied (Arnvoss)",
-           decision="defend", reason="Arnvoss is occupied; hold the chokepoints.", outcome="applied", current="expand",
-           applied={"set": ["economic_policy"], "locked": [{"policy": "diplomatic_stance", "why": "at war"}], "in_force": []})
-    log.state.info.update(game="stellaris", every_months=12, speed="fast", directive="defend", directives=["expand", "defend"],
+           decision="defend", reason="Arnvoss is occupied; hold the chokepoints.", outcome="applied", current="expand")
+    reply = ("Policies set: economic_policy=economic_policy_militarist. Policies locked (not set: the 10-year policy "
+             "lock, a rule such as no stance change at war, or the option is not valid now): "
+             "diplomatic_stance=diplo_stance_belligerent.")
+    applied = directive_action("defend", "2291.03.01", parse_directive_reply(reply))
+    log.emit("order_followed", ref=applied["ref"], action=applied)
+    cal = market_calibration(corpus)
+    alloys = {"side": "buy", "resource": "alloys", "amount": 5}
+    rows = [outcome_row(directive_action("defend", "2290.01.01", {}), "took", None, "flag in the next save", "2290.02.01"),
+            outcome_row(directive_action("defend", "2290.06.01", {}), "took", None, "flag in the next save", "2290.07.01"),
+            outcome_row(directive_action("defend", "2290.10.01", {}), "overridden", "economic_policy_civilian",
+                        "economic_policy → economic_policy_civilian on 2291.01.01", "2291.01.01"),
+            outcome_row(directive_action("defend", "2291.02.01", {}), "superseded", None, "", "2291.02.01"),
+            outcome_row(directive_action("defend", "2291.02.15", {}), "locked", None, "no policy set", "2291.02.15"),
+            outcome_row(market_action(alloys, "2291.03.01", cal), "did_not_take", None, "the next save differs", "2291.04.01"),
+            outcome_row(market_action(alloys, "2291.04.01", cal), "did_not_take", None, "the next save differs", "2291.05.01"),
+            outcome_row(posture_action("naval_cap", True, "2291.03.01"), "took", None, "flag in the next save", "2291.04.01")]
+    rows += [outcome_row(tech_action(f"tech_{i}", "physics", "2290.01.01"), res, None, "", f"2290.{i + 2:02d}.01")
+             for i, res in enumerate(("researched", "researched", "researched", "held", "did_not_stick"))]
+    rows += [outcome_row(tech_action("tech_none", "physics", "2291.05.01"), "no_op", None, "nothing to pick", "2291.05.01")]
+    for r in rows:
+        log.emit("order_outcome", **r)
+    spec = load_pillars(corpus)
+    stub = SimpleNamespace(_crisis=state, s=SimpleNamespace(war_crisis=True, decide_every_months=3), pillars=spec, log=log)
+    stub._crisis_on = types.MethodType(Governor._crisis_on, stub)
+    stub._need_boost = types.MethodType(Governor._need_boost, stub)
+    Governor._publish_crisis(stub)
+    log.state.info.update(game="stellaris", every_months=3, speed="fast", directive="defend", directives=["expand", "defend"],
                           controls=["instruct", "chat", "decide_now", "override", "order_add", "order_remove"],
-                          order_record=STELLARIS_RECORD, crisis=STELLARIS_CRISIS, postures=STELLARIS_POSTURES)
+                          order_record=action_record(rows, 2291 * 12 + 6, spec.orders))
     log.state.game_date = "2291.07.01"
     log.state.status = "playing"
     return {**out, "log": log, "pilot": FakePilot(log)}

@@ -524,14 +524,17 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   40 calls, the last turn's time) and emits `popups_quieted` once per library install (the
   controller's reply field, kept by `ControllerCiv6` until read); `info.last_stand` (armed or off,
   its limit, the streak, why it turned off, the stand running) is always there.
-- The Stellaris Actions tab (rulings 23-26) reads the levers design's shapes, none of which the pilot
-  publishes yet: `info.order_record` (Civ VI row shape, Stellaris keys, `suspended` on a market key;
-  `wording.record_label` names them), `info.crisis` `{since, reasons, step {n, of, text}, boost
-  {pillar, need}}`, `info.postures` `[{name, label, on, enabled}]` (or a metrics row's `postures`), a
-  metrics row's `market` `{kind, fluct, bought, sold, trades_net}` and `crisis`, and the decision
-  trace's `applied` `{set, locked [{policy, why}], in_force}` (`/api/decisions` and `/api/decision`
-  pass it through). The record block (`recordHtml`) is shared with Civ VI's Orders tab; `/api/orders`
-  loads for Stellaris too and its record wins once the pillars file has `[orders]`.
+- The Stellaris Actions tab (rulings 23-26) reads what the Stellaris governor publishes: `info.crisis`
+  `{active, since, conditions [text], quiet_saves, wars, boost {pillar: "missed"}, every_months}`
+  (`_publish_crisis`), each metrics row's `market` `{kind, fluct, trades_net}` and `postures` (names
+  set in the save; `governor.metrics`) and `crisis` (marked by `_observe`), the record from
+  `/api/orders` (`stellaris_record.action_record` over the campaign's `order_outcome` rows, with
+  `suspended` from `market_suspended` on the corpus's `[ui.market]` calibration; `info.order_record`
+  live), the view's `postures` (`view.postures_of`: enabled and the directives that switch each), and
+  a decision's policy report (`/api/decisions` and `/api/decision` take `applied` `{set, locked,
+  in_force}` from the directive's `order_followed` action). The browser tests build these with the
+  governor's own functions (`tests/ui/uikit._seed_stellaris`). The record block (`recordHtml`) is
+  shared with Civ VI's Orders tab.
 - `notify.py` (ruling 8): `Notifier.check(state)` posts to `PILOT_NOTIFY_URL` (ntfy) at the 5 min, 30 min
   and 2 h marks of a stop (`status == "needs_attention"`, keyed by `info.attention.since`, else first
   seen) and once after it, with the view's recovery title as the words and `PILOT_PUBLIC_URL` as the

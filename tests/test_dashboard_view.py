@@ -177,3 +177,13 @@ def test_api_strategy_lists_the_latest_review_results(tmp_path):
                 ("strategy_review_skipped", 64), ("strategy_review", None)]
     asyncio.run(go())
     log.close()
+
+
+def test_the_stellaris_view_knows_the_postures_and_their_directives():
+    """Ruling 26: the Directive figure names the postures on (from the save's flags) and greys the
+    directive's postures that are not enabled; the view carries directives.toml's postures for that."""
+    view = load_view(CORPORA, "stellaris")
+    assert set(view["postures"]) == {"naval_cap", "research_focus", "ship_upgrades", "war_crisis"}
+    assert view["postures"]["naval_cap"]["enabled"] is False
+    assert "defend" in view["postures"]["naval_cap"]["directives"] and view["postures"]["war_crisis"]["directives"] == []
+    assert load_view(CORPORA, "civ6").get("postures", {}) == {}

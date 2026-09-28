@@ -105,24 +105,31 @@ def test_outcome_scoring_labels_its_window_in_the_games_unit(tmp_path):
 
 
 def test_a_directives_policy_report_reaches_the_page(tmp_path):
-    """Stellaris levers ruling 3 / dashboard ruling 23: a directive's `applied` report (policies set,
-    locked with why, already in force) rides along with its decision, and is absent when the pilot
-    does not publish it."""
+    """Stellaris levers ruling 3 / dashboard ruling 23: the policies a directive's reply reported set,
+    locked and already in force ride along with its decision, taken from the action the governor
+    follows for it (its `order_followed` event, as main's governor writes it); a decision with no
+    directive applied has none."""
+    from pilot.stellaris_record import directive_action, parse_directive_reply
     runs = tmp_path / "runs"
     tel = Telemetry(runs / "telemetry.sqlite")
     log = EventLog(runs, "20260927-120000", "m", telemetry=tel)
     log.emit("run_start", game="stellaris", model="m")
     log.set_campaign("stellaris", "gaea", "Blooms of Gaea")
-    applied = {"set": ["economic_policy"], "locked": [{"policy": "diplomatic_stance", "why": "at war"}], "in_force": []}
+    reply = ("Policies set: economic_policy=economic_policy_militarist. Policies locked (not set: the 10-year policy lock, a "
+             "rule such as no stance change at war, or the option is not valid now): diplomatic_stance=diplo_stance_belligerent.")
+    a = directive_action("defend", "2291.03.01", parse_directive_reply(reply))
     log.save_trace(1, {"episode": 1, "date": "2291.03.01", "decision": "defend", "outcome": "applied", "reason": "Hold.",
-                       "steps": [], "applied": applied})
+                       "steps": []})
+    log.emit("order_followed", ref=a["ref"], action=a)
     log.save_trace(2, {"episode": 2, "date": "2292.03.01", "decision": "keep", "outcome": "kept", "reason": "Hold.", "steps": []})
+    want = {"set": {"economic_policy": "economic_policy_militarist"},
+            "locked": {"diplomatic_stance": "diplo_stance_belligerent"}, "in_force": {}}
 
     async def go():
         async with TestClient(TestServer(make_app(None, runs, tel, corpora=CORPORA))) as c:
             rows = await (await c.get("/api/decisions?campaign=stellaris/gaea")).json()
-            assert rows[0]["applied"] == applied and rows[1]["applied"] is None
+            assert rows[0]["applied"] == want and rows[1]["applied"] is None
             d = await (await c.get("/api/decision?run=20260927-120000&episode=1")).json()
-            assert d["applied"] == applied
+            assert d["applied"] == want                                   # Reasoning has it too
     asyncio.run(go())
     log.close()

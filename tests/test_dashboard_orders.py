@@ -119,3 +119,45 @@ def test_the_live_record_and_the_campaign_record_agree(setup):  # noqa: F811
         assert got == json.loads(json.dumps(live)) and live
     asyncio.run(go())
     tel.close()
+
+
+def test_stellaris_orders_are_the_action_record(tmp_path):
+    """/api/orders for a Stellaris campaign computes stellaris_record.action_record (its outcomes:
+    researched, did_not_take, failed, did_not_stick, removed; locked and no_op not judged), with a
+    market order suspended after two did_not_take on today's calibration, and fates in words."""
+    from pilot.governor import market_calibration
+    from pilot.stellaris_record import directive_action, market_action, outcome_row, tech_action
+    runs = tmp_path / "runs"
+    tel = Telemetry(runs / "telemetry.sqlite")
+    log = EventLog(runs, "20260927-120000", "m", telemetry=tel)
+    log.emit("run_start", game="stellaris", model="m")
+    log.set_campaign("stellaris", "gaea", "Blooms of Gaea")
+    cal = market_calibration(CORPORA / "stellaris")
+    rows = [outcome_row(tech_action(f"tech_{i}", "physics", "2290.01.01"), "researched", None, "", f"2290.0{i + 2}.01")
+            for i in range(3)]
+    rows.append(outcome_row(tech_action("tech_x", "society", "2290.01.01"), "did_not_stick", None, "still offered", "2290.06.01"))
+    for d in ("2290.07.01", "2290.08.01"):
+        rows.append(outcome_row(market_action({"side": "buy", "resource": "alloys", "amount": 5}, "2290.06.01", cal),
+                                "did_not_take", None, "the next save differs", d))
+    rows.append(outcome_row(directive_action("defend", "2290.01.01", {}), "overridden", "economic_policy_civilian",
+                            "economic_policy -> economic_policy_civilian on 2290.03.01", "2290.04.01"))
+    rows.append(outcome_row(directive_action("expand", "2290.05.01", {}), "locked", None, "no policy set", "2290.05.01"))
+    for r in rows:
+        log.emit("order_outcome", **r)
+    log.emit("metrics", date="2290.09.01", systems=10)
+
+    async def go():
+        async with TestClient(TestServer(make_app(None, runs, tel, corpora=CORPORA))) as c:
+            return await (await c.get("/api/orders?campaign=stellaris/gaea")).json()
+    j = asyncio.run(go())
+    rec = j["record"]
+    assert rec["tech"]["researched"] == 3 and rec["tech"]["did_not_stick"] == 1 and rec["tech"]["judged"] == 4
+    assert rec["tech"]["rate"] == 0.75
+    assert rec["market buy alloys"]["suspended"] is True and rec["market buy alloys"]["did_not_take"] == 2
+    assert rec["directive expand"]["excluded"]["locked"] == 1
+    assert rec["directive defend"]["last_failure"]["result"] == "overridden"
+    assert j["spec"]["window_turns"] == 120
+    fates = {(x["key"], x["fate"]["word"]) for x in j["log"]}
+    assert ("tech", "researched") in fates and ("tech", "did not stick") in fates
+    assert ("market buy alloys", "did not take") in fates and ("directive expand", "locked by the game") in fates
+    log.close()

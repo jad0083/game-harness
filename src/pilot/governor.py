@@ -259,7 +259,12 @@ def metrics(b: dict) -> dict:
             "techs_known": b.get("techs_known"), "wars": len(b.get("wars", [])), "directive": current_directive(b),
             "neighbours": [{"name": n.get("name"), "military": n.get("military"), "economy": n.get("economy"),
                             "tech": n.get("tech"), "systems": n.get("systems"), "opinion": n.get("opinion_theirs"),
-                            "status": n.get("status", [])} for n in b.get("neighbours", [])]}
+                            "status": n.get("status", [])} for n in b.get("neighbours", [])],
+            # the dashboard's market block and posture chips (dashboard rulings 24, 26)
+            **({"market": {k: m[k] for k in ("kind", "fluct", "trades_net") if k in m}}
+               if isinstance(m := b.get("market"), dict) else {}),
+            "postures": [f.removeprefix("governor_posture_") for f in b.get("flags") or []
+                         if str(f).startswith("governor_posture_")]}
 
 
 def served_model(result) -> str:
@@ -1248,6 +1253,8 @@ class Governor:
                 urgent += self._crisis_update(b, before, low_stability(b, before))
             except Exception as e:  # noqa: BLE001 - a malformed save never stops play
                 self.log.emit("briefing_error", error=f"war crisis: {type(e).__name__}: {e}"[:200])
+            if self._crisis_on():
+                row["crisis"] = True                    # the dashboard's crisis band (ruling 25)
             self.log.state.info["planet_check"] = self._planet_line
             self._rows = [r for r in before if months(date) - months(r["date"]) <= self.rows_months] + [row]
         self._observed, self._observed_b = row, b

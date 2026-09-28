@@ -143,7 +143,11 @@ FATES = {  # key: (symbol, word)
 _RESULT = {"completed": ("held", "completed"), "held": ("held", "held"), "took": ("held", "took"),
            "overridden": ("replaced", "replaced by the AI"), "did_not_take": ("refused", "did not take"),
            "refused": ("refused", "refused"), "lost": ("noreply", "no reply"), "unknown": ("noreply", "cannot tell"),
-           "invalidated": ("gone", "no longer available"), "superseded": ("gone", "replaced by our own order")}
+           "invalidated": ("gone", "no longer available"), "superseded": ("gone", "replaced by our own order"),
+           # Stellaris's action record (stellaris_record.py)
+           "researched": ("held", "researched"), "did_not_stick": ("refused", "did not stick"),
+           "failed": ("refused", "failed"), "removed": ("replaced", "removed by the AI"),
+           "locked": ("gone", "locked by the game"), "no_op": ("gone", "nothing to do"), "done": ("held", "done")}
 
 
 def fate(apply_outcome, result=None, *, kind: str = "", by: str = "", detail: str = "") -> dict:

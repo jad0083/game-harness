@@ -1,7 +1,9 @@
 """The Stellaris Actions tab and its levers (U10: rulings 23-26), rendered only when the pilot publishes
-the data: the action record in the Civ VI shape with Stellaris keys (a suspended market resource), the
-market per resource against its base price with the strategy's order, the war crisis in the bar, the
-governor line, Strategy and the chart, the directive's postures, and a directive's policy report."""
+the data, in the shapes the governor publishes (uikit._seed_stellaris builds them with its own
+functions): the action record with Stellaris keys and outcomes (a suspended market resource, the last
+failure with its detail), the market per resource against its base price with the strategy's order,
+the war crisis with its conditions in the bar, the governor line, Strategy and the chart, the
+directive's postures, and a directive's policy report."""
 
 from __future__ import annotations
 
@@ -10,7 +12,7 @@ from uikit import CONTEXTS, contrast_failures, open_context, pick_campaign, show
 
 pytestmark = pytest.mark.ui
 
-CRISIS = "War crisis since 2291.03: a colony occupied (Arnvoss), lost 2 systems. Step 2 of 4: defensive stance."
+CRISIS = "War crisis since 2291.03: a colony occupied (Arnvoss); lost 2 systems in 12 months."
 
 
 def load(w):
@@ -31,7 +33,8 @@ def test_the_actions_tab_shows_the_record_market_and_crisis(browser, live_server
     assert CRISIS in text
     rec = page.eval_on_selector_all("#levers .rec li", "ls => ls.map(l => l.textContent.replace(/\\s+/g, ' ').trim())")
     assert any(r.startswith("Directive: Defend") and "67%" in r and "1 locked" in r
-               and "last: the AI set economic policy to civilian economy, 2291.01" in r for r in rec), rec
+               and "last: overridden by the AI (economic policy → economic policy civilian on 2291.01.01), 2291.01" in r
+               for r in rec), rec
     assert any(r.startswith("Market: buy alloys") and "Suspended until recalibrated" in r and "0 held of 2" in r for r in rec), rec
     assert any(r.startswith("Tech picks") and "80%" in r for r in rec), rec
     fill = page.eval_on_selector("#levers .rrate .meter", "m => m.querySelector('i').getBoundingClientRect().width / m.getBoundingClientRect().width")
@@ -57,21 +60,21 @@ def test_the_crisis_postures_and_policy_report_show_where_they_belong(browser, l
     assert CRISIS in page.text_content("#gov-facts")
     fig = page.locator("#figures .fig").first
     assert fig.locator("b").text_content() == "Defend"
-    assert "postures: naval capacity on" in fig.text_content()
-    off = fig.locator(".posture.off")
+    assert "postures: naval capacity on" in fig.text_content()             # set in the save
+    off = fig.locator(".posture.off")                                       # defend's other posture, not enabled
     assert off.text_content().startswith("ship upgrades") and off.get_attribute("tabindex") == "0"
     off.focus()
     assert "not enabled" in page.evaluate("getComputedStyle(document.activeElement, '::after').content")
     row = page.text_content('#decisions button[data-i="0"]')
-    assert "Applied; 1 policy locked (diplomatic stance: at war)" in row
+    assert "Applied; 1 policy locked (diplomatic stance)" in row
     page.click('#decisions button[data-i="0"]')
     page.wait_for_selector("#reasoning .t-pairs")
     pairs = dict(page.eval_on_selector_all("#reasoning .t-pairs div", "ds => ds.map(d => [d.querySelector('dt').textContent, d.querySelector('dd').textContent])"))
-    assert pairs["Applied"] == "Applied; 1 policy locked (diplomatic stance: at war)"
+    assert pairs["Applied"] == "Applied; 1 policy locked (diplomatic stance)"
     show(page, "strategy")
     page.wait_for_selector("#strategy .pillar")
     assert CRISIS in page.text_content("#strategy")
-    assert "need boosted ×2 (crisis)" in page.text_content('#strategy article[data-pillar="defence"]')
+    assert "need counted as missed while the war crisis lasts" in page.text_content('#strategy article[data-pillar="defence"]')
     bands = page.eval_on_selector_all("#chartwrap rect.crisis title", "ts => ts.map(t => t.textContent)")
     assert bands == ["War crisis"], bands
     assert "war crisis" in page.text_content("#legend")

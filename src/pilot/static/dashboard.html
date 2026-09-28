@@ -1223,8 +1223,8 @@ function weightLine(pl, p, total, share, weightTotal) {
 
 // A war crisis boosts the defence pillar's need while it lasts (ruling 25, levers ruling 13).
 function boostLine(name) {
-  const b = (liveInfoHere().crisis || {}).boost;
-  return b && b.pillar === name ? `<div class="p-weight"><span class="p-need bad">need boosted ×${esc(fmt(b.need))} (crisis)</span></div>` : "";
+  const b = (liveInfoHere().crisis || {}).boost || {};      // {pillar: "missed"} while a war crisis is on
+  return b[name] ? `<div class="p-weight"><span class="p-need bad">need counted as ${esc(human(b[name]))} while the war crisis lasts</span></div>` : "";
 }
 function pillarCard(name, pl, ms, byId, p, total, share, weightTotal, names) {
   const def = byId[name] || {};
@@ -1547,7 +1547,7 @@ function renderFigures(last) {
       value = sentence(human(dir)); word = true;
       const since = [...S.decisions].reverse().find((d) => d.outcome === "applied" && d.decision === dir);
       sub = since ? `since ${gdate(since.date)}` : "";
-      extra = posturesHtml((info && info.postures) || (last && last.postures));
+      extra = posturesHtml(posturesList(last && last.postures, dir));
     } else if (f.kind === "standing") {
       const p = peer(f.rank);
       if (!p || p.rank == null || !n) continue;
@@ -1578,6 +1578,13 @@ function renderFigures(last) {
 
 // The directive's postures (Stellaris levers ruling 18): on or off; one not enabled yet is greyed and
 // says so on hover or focus.
+// The postures to name next to the directive (ruling 26): those set in the save, then the directive's
+// own postures from directives.toml (greyed while not enabled); none without either.
+function posturesList(on, directive) {
+  const spec = S.spec.postures || {}, set = Array.isArray(on) ? on.filter((x) => typeof x === "string") : [];
+  const names = [...new Set([...set, ...Object.keys(spec).filter((n) => (spec[n].directives || []).includes(directive))])];
+  return names.map((n) => ({ name: n, on: set.includes(n), enabled: set.includes(n) || !spec[n] || spec[n].enabled }));
+}
 function posturesHtml(list) {
   if (!Array.isArray(list) || !list.length) return "";
   const word = (p) => p.label || POSTURE_WORDS[p.name] || human(p.name);
@@ -2184,10 +2191,12 @@ function directiveLabel(d) {
 // "Applied; 1 policy locked (diplomatic stance: at war)" (Stellaris levers ruling 3)
 function appliedText(a) {
   const n = (k) => `${k} ${k === 1 ? "policy" : "policies"}`;
-  const locked = (a.locked || []).map((x) => typeof x === "string" ? { policy: x } : x);
+  const list = (x) => Array.isArray(x) ? x.map((y) => typeof y === "string" ? { policy: y } : y)
+                                       : Object.keys(x || {}).map((k) => ({ policy: k }));
+  const locked = list(a.locked), inForce = list(a.in_force);
   const parts = ["Applied"];
   if (locked.length) parts.push(`${n(locked.length)} locked (${locked.map((x) => `${human(x.policy)}${x.why ? `: ${x.why}` : ""}`).join("; ")})`);
-  if ((a.in_force || []).length) parts.push(`${n(a.in_force.length)} already in force`);
+  if (inForce.length) parts.push(`${n(inForce.length)} already in force`);
   return parts.join("; ");
 }
 const isProblem = (d) => d.outcome === "error" || String(d.outcome || "").startsWith("FAILED")
@@ -2541,7 +2550,9 @@ function renderLeversTab() {
 const FATE_FILTERS = [["", "All"], ["held", "Held"], ["replaced", "Replaced"], ["refused", "Refused"], ["noreply", "No reply"], ["open", "Open"]];
 const KIND_FILTERS = [["", "All kinds"], ["research", "Research"], ["civic", "Civics"], ["policies", "Policies"], ["production", "Production"], ["purchase", "Purchases"], ["stand", "Last stands"]];
 const EXCLUDED_WORDS = { refused: "refused", lost: "lost", unknown: "no reply", invalidated: "no longer available", superseded: "replaced by our own order",
-                         locked: "locked", no_op: "nothing to pick" };
+                         locked: "locked", no_op: "nothing to pick", done: "done" };
+const FAIL_WORDS = { overridden: "overridden by the AI", did_not_take: "did not take", failed: "failed", did_not_stick: "did not stick",
+                     removed: "removed by the AI" };
 // A record key in words (wording.record_label's table, for a live record that carries no labels).
 const POSTURE_WORDS = { naval_cap: "naval capacity", research_focus: "research focus", ship_upgrades: "ship upgrades", war_crisis: "war crisis" };
 function recordLabel(key) {
@@ -2568,9 +2579,11 @@ function recordHtml(title, record, spec) {
       : `<span class="rcounts">${x.judged ? `${held} held of ${x.judged}, too few to judge` : "none judged yet"}</span>`;
     const other = Object.entries(x.excluded || {}).filter(([, n]) => n).map(([k, n]) =>
       `${n} ${k === "superseded" && key.startsWith("directive") ? "replaced by our next directive" : EXCLUDED_WORDS[k] || human(k)}`).join(", ");
-    const lo = x.last_override;
-    const last = !lo ? "" : key.startsWith("directive") ? `last: the AI set ${esc(human(lo.id))} to ${esc(human(lo.by))}, ${esc(gdate(lo.date))}`
-      : `last: AI replaced ${esc(lo.name || lo.id)} with ${esc(lo.by_name || lo.by || "nothing")}${lo.city ? ` in ${esc(lo.city)}` : ""}, ${esc(gdate(lo.date))}`;
+    const lo = x.last_override, lf = x.last_failure;
+    // Stellaris names its last failure of any kind with the governor's detail; Civ VI the AI's replacement
+    const last = S.spec.game.levers === "actions"
+      ? (!lf ? "" : `last: ${esc(FAIL_WORDS[lf.result] || human(lf.result))}${lf.detail ? ` (${esc(human(tidy(lf.detail)))})` : ""}, ${esc(gdate(lf.date))}`)
+      : !lo ? "" : `last: AI replaced ${esc(lo.name || lo.id)} with ${esc(lo.by_name || lo.by || "nothing")}${lo.city ? ` in ${esc(lo.city)}` : ""}, ${esc(gdate(lo.date))}`;
     const more = [x.suspended ? `<span class="weakflag">Suspended until recalibrated</span>` : "", x.rate != null ? `${held} held of ${x.judged}` : "",
                   x.weak ? `<span class="weakflag">Does not stick here</span>` : "", other ? esc(other) : "", last].filter(Boolean);
     return `<li><span class="rname">${esc(x.label || recordLabel(key))}</span>${rate}<span class="rmore">${more.join("; ")}</span></li>`;
@@ -2644,8 +2657,9 @@ const liveInfoHere = () => (S.live && S.campaign === (S.status.info || {}).campa
 const signedN = (v) => `${v > 0 ? "+" : v < 0 ? "−" : ""}${fmt(Math.abs(v))}`;
 // "War crisis since 2291.03: a colony occupied (Arnvoss), lost 2 systems. Step 2 of 4: defensive stance."
 function crisisText(c) {
-  const step = !c.step ? "" : typeof c.step === "string" ? c.step : `Step ${c.step.n} of ${c.step.of}${c.step.text ? `: ${c.step.text}` : ""}`;
-  return `War crisis since ${gdate(c.since)}${(c.reasons || []).length ? `: ${c.reasons.join(", ")}` : ""}.${step ? ` ${sentence(step)}.` : ""}`;
+  const conds = (c.conditions || []).map((x) => tidy(x));
+  const quiet = c.quiet_saves ? ` Quiet for ${plural(c.quiet_saves, "save")}; it ends at peace or after 6.` : "";
+  return `War crisis since ${gdate(c.since)}${conds.length ? `: ${conds.join("; ")}` : ""}.${quiet}`;
 }
 // The market (ruling 24): each traded resource's price against its base, its net trade a month, the
 // strategy's order for it and a suspension, from the newest metrics row's `market`.
