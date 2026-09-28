@@ -40,7 +40,7 @@ def test_civ6_figures_chart_and_rivals_come_from_its_view(browser, live_servers)
     rows = page.eval_on_selector_all("#nb tbody tr", "rs => rs.map(r => r.querySelector('.who b').textContent)")
     assert rows == ["Germany", "Netherlands", "Australia"]
     assert "CIVILIZATION_" not in page.text_content("main")
-    assert page.text_content("#nb tbody tr:first-child") .count("at war") == 1
+    assert page.inner_text("#nb tbody tr:first-child").count("at war") == 1        # once as shown (a phone moves it)
     assert w.errors == []
     w.context.close()
 

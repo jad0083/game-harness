@@ -208,6 +208,18 @@
   .tag { font-size: 11.5px; line-height: 18px; padding: 0 7px; border-radius: 999px; border: 1px solid var(--hair); color: var(--ink-2);
          white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
   .nbwrap { overflow-x: auto; }
+  .nb .flag-s { display: none; }
+  @media (max-width: 700px) {        /* each rival a two-line card: name and tags, then labelled pairs */
+    .nbwrap { overflow: visible; }
+    .nb thead { display: none; }
+    .nb tr { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; padding: 10px 0; border-top: 1px solid var(--grid); }
+    .nb td { display: block; border: 0; padding: 0; text-align: left; }
+    .nb td.who { flex: 1 0 100%; min-width: 0; }
+    .nb td.who .tags { display: inline-flex; margin: 0 0 0 8px; vertical-align: 1px; }
+    .nb td[data-label]::before { content: attr(data-label) " "; color: var(--muted); font-size: 13px; }
+    .nb td.flag, .nb .hide-s { display: none; }
+    .nb .flag-s { display: inline-flex; }
+  }
   .nb td.who { min-width: 190px; }
   .tag.bad { border-color: color-mix(in srgb, var(--bad) 60%, transparent); color: var(--ink); background: color-mix(in srgb, var(--bad) 14%, transparent); }
   .tag.good { border-color: color-mix(in srgb, var(--good) 60%, transparent); color: var(--ink); background: color-mix(in srgb, var(--good) 12%, transparent); }
@@ -2163,10 +2175,13 @@ function renderRivals(ms) {
   };
   // a column no rival has a value for is left out (absent means hidden)
   const cols = spec.columns.filter((c) => c.kind === "trend" || last.neighbours.some((n) => n[c.key] != null && n[c.key] !== false));
+  // on a phone each rival is a two-line card (ruling 32): the name with its tags, a flag such as "at war"
+  // among them, then the other columns as labelled pairs (data-label)
   const rows = last.neighbours.map((n) => {
-    const tags = spec.tags ? (n[spec.tags] || []).map((t) => `<span class="tag${NB_BAD.includes(t) ? " bad" : NB_GOOD.includes(t) ? " good" : ""}">${esc(t)}</span>`).join("") : "";
+    const tags = (spec.tags ? (n[spec.tags] || []).map((t) => `<span class="tag${NB_BAD.includes(t) ? " bad" : NB_GOOD.includes(t) ? " good" : ""}">${esc(t)}</span>`).join("") : "")
+      + cols.filter((c) => c.kind === "flag" && n[c.key]).map((c) => `<span class="tag bad flag-s">${esc(c.label.toLowerCase())}</span>`).join("");
     return `<tr><td class="who"><b>${esc(n.name)}</b>${tags ? `<div class="tags">${tags}</div>` : ""}</td>` +
-      cols.map((c) => `<td${c.wide_only ? ' class="hide-s"' : ""}>${cell(n, c)}</td>`).join("") + `</tr>`;
+      cols.map((c) => `<td class="${[c.wide_only ? "hide-s" : "", c.kind === "flag" ? "flag" : ""].filter(Boolean).join(" ")}"${c.kind === "flag" ? "" : ` data-label="${esc(c.label)}"`}>${cell(n, c)}</td>`).join("") + `</tr>`;
   }).join("");
   $("nb").innerHTML = `<div class="nbwrap"><table class="nb"><thead><tr><th>${esc(S.spec.game.time_unit === "turn" ? "Civilization" : "Empire")}</th>` +
     cols.map((c) => `<th${c.wide_only ? ' class="hide-s"' : ""}${c.title ? ` title="${esc(c.title)}"` : ""}>${esc(c.label)}</th>`).join("") +

@@ -206,3 +206,22 @@ def test_on_deploy_day_the_notices_leave_the_governor_line_first(browser, live_s
     page.click("#notices [data-dismiss]")
     assert page.is_hidden("#notices")
     w.context.close()
+
+
+@pytest.mark.parametrize("name", ["phone-light", "phone-dark"])
+def test_rivals_are_two_line_cards_on_a_phone(browser, live_servers, name):
+    """Ruling 32: tables become two-line cards on a phone. Civilizations met: the name with its tags (at
+    war) on the first line, the other columns as labelled pairs on the second, all inside the screen; no
+    sideways scroll inside the box (a phone shows no scrollbar to tell)."""
+    w = open_context(browser, name, live_servers)
+    load(w)
+    page = w.page
+    page.eval_on_selector("#p-nb", "e => e.scrollIntoView()")
+    assert page.eval_on_selector(".nbwrap", "e => e.scrollWidth <= e.clientWidth + 1")
+    right = page.evaluate("Math.max(...[...document.querySelectorAll('#nb td')].filter(t => t.offsetParent).map(t => t.getBoundingClientRect().right))")
+    assert right <= 390 - 16 + 1, right
+    first = page.locator("#nb tbody tr").first
+    assert first.locator(".who").is_visible() and "at war" in first.locator(".who").text_content()
+    cells = first.locator("td[data-label]").evaluate_all("ts => ts.filter(t => t.offsetParent).map(t => getComputedStyle(t, '::before').content)")
+    assert any("Cities" in c for c in cells) and any("Score" in c for c in cells), cells
+    w.context.close()
