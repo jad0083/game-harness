@@ -884,8 +884,8 @@
             <div class="inline"><select id="override-dir"></select><button class="btn" id="override">Apply directive</button></div>
           </div>
         </div>
-        <div id="talk-off" hidden><p class="hint">No run is active, so there is no model to talk to. Start a run and the model is available here: ask it questions, give it notes and standing orders, or override its decisions.</p>
-          <button class="btn primary" id="b-start-2">Start run</button></div>
+        <div id="talk-off" hidden><p class="hint" id="talk-off-text">No run is active, so there is no model to talk to. Start a run and the model is available here: ask it questions, give it notes and standing orders, or override its decisions.</p>
+          <button class="btn primary" id="b-start-2">Start run</button><button class="btn" id="talk-live" type="button" hidden>Go to the live campaign</button></div>
       </div>
       <div class="tabpanel" id="tab-strategy" role="tabpanel" aria-labelledby="tb-strategy" hidden><div id="strategy"></div></div>
       <div class="tabpanel" id="tab-activity" role="tabpanel" aria-labelledby="tb-activity" hidden>
@@ -1025,7 +1025,6 @@ async function loadStatus() {
   catch { S.status = { status: "offline", live: S.live }; S.ok = false; return; }   // keep the page as it is
   S.live = !!S.status.live;
   const st = S.status.status || "viewer";
-  document.querySelectorAll(".live-only").forEach((b) => (b.hidden = !S.live));
   const info = S.status.info || {};
   $("b-start").hidden = S.live || !S.ok;
   renderPace();
@@ -1034,8 +1033,7 @@ async function loadStatus() {
   $("b-toggle").textContent = $("m-toggle").textContent = paused ? "Resume" : "Pause";
   renderCampaignButton();
   const controls = info.controls || [];
-  $("talk-controls").hidden = !S.live;
-  $("talk-off").hidden = S.live;
+  applyLiveControls();
   document.querySelector('[data-mode="chat"]').hidden = !controls.includes("chat");
   document.querySelector('[data-mode="decide_now"]').hidden = !controls.includes("decide_now");
   $("orders-section").hidden = !controls.includes("order_add");
@@ -1050,6 +1048,20 @@ async function loadStatus() {
     `<span>Tokens <b>${fmt(S.status.tokens_in)}</b> in, <b>${fmt(S.status.tokens_out)}</b> out</span>`,
     `<span>Model calls <b>${esc(S.status.requests)}</b></span>`,
     `<span>Running <b>${esc(Math.floor(S.status.uptime_s / 3600))}h ${esc(Math.floor(S.status.uptime_s % 3600 / 60))}m</b></span>`].join("") : "";
+}
+
+// The live run's controls (Pause, Stop, Talk) act on the live run: shown only while the page shows
+// the live campaign (ruling 4), never worded for another game.
+function applyLiveControls() {
+  const here = S.live && !!S.campaign && S.campaign === (S.status.info || {}).campaign;
+  document.querySelectorAll(".live-only").forEach((b) => (b.hidden = !here));
+  $("talk-controls").hidden = !here;
+  $("talk-off").hidden = here;
+  $("talk-off-text").textContent = S.live
+    ? "You are viewing a past campaign. The governor of the live run answers on its own campaign."
+    : "No run is active, so there is no model to talk to. Start a run and the model is available here: ask it questions, give it notes and standing orders, or override its decisions.";
+  $("b-start-2").hidden = S.live;
+  $("talk-live").hidden = !S.live;
 }
 
 async function loadCampaigns() {
@@ -1117,10 +1129,12 @@ async function pickCampaign(cid) {
   S.campaign = cid; clearReasoning();
   S.pinned = cid !== (S.status.info || {}).campaign;     // a deliberate look at another campaign
   renderCampaignButton();
+  applyLiveControls();
   await loadCampaignData();
   renderGovernor();
 }
 $("campaign").addEventListener("click", openCampaigns);
+$("talk-live").addEventListener("click", () => pickCampaign((S.status.info || {}).campaign));
 $("camp-close").addEventListener("click", () => $("camp-dialog").close());
 $("camp-dialog").addEventListener("click", (e) => {
   const b = e.target.closest("button[data-cid]");

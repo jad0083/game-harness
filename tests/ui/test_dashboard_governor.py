@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import pytest
-from uikit import CONTEXTS, contrast_failures, open_context, pick_campaign
+from uikit import CONTEXTS, contrast_failures, open_context, pick_campaign, show
 
 pytestmark = pytest.mark.ui
 
@@ -124,9 +124,16 @@ def test_a_past_campaign_says_so_and_links_to_the_live_one(browser, live_servers
     assert page.text_content("#gov-line").startswith("Viewing a past campaign: last played 2288.06")
     assert "Live now: Civ VI T57, Kublai Khan, China." in page.text_content("#gov-facts")
     assert page.title() == "Game Pilot"
+    # ruling 4: the live run's controls are not offered for a past campaign (they would act on Civ VI
+    # with Stellaris's words)
+    assert page.is_hidden("#b-toggle") and page.is_hidden("#b-stop") and page.is_hidden("#m-toggle")
+    show(page, "talk")
+    assert page.is_hidden("#talk-controls") and page.is_visible("#talk-off")
+    assert "past campaign" in page.text_content("#talk-off")
     page.click("#gov-facts [data-live]")
     page.wait_for_function("() => document.getElementById('gov').dataset.state === 'playing'")
     assert page.get_attribute("#campaign", "data-cid") == "civ6/kublai"
+    assert page.is_visible("#b-toggle") and page.is_visible("#talk-controls") and page.is_hidden("#talk-off")
     w.context.close()
 
 
