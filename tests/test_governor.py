@@ -5314,3 +5314,12 @@ def test_a_neighbour_buildup_is_urgent_once_and_never_for_an_ally(setup):
     assert len(fired) == 1 and "Rihi Nar Consciousness" in fired[0][1], fired
     assert fired[0][1] == "neighbour buildup: Rihi Nar Consciousness 4,600 military (+53% in 12 months), 2.3x ours (2,000)"
     assert not any(t in fired[0][1] for t in STELLARIS_TRIGGERS), "an urgent decision, never a review or crisis entry"
+
+
+def test_a_run_that_starts_on_a_save_with_no_planet_decides_nothing_until_the_next(setup):
+    s, log = setup
+    calls: list = []
+    game = FakeStellaris([_planets("2200.02.01", 0), _planets("2200.03.01", 0)])
+    g = Governor(s, game, log, model=_recording("decide", calls), role_models={"strategy": _strategist(calls)})
+    g.run(max_decisions=3)
+    assert calls == [] and [e["kind"] for e in log.recent].count("campaign_end") == 1

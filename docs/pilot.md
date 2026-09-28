@@ -104,7 +104,7 @@ If the game stops answering pause and resume (for example a text box holds the k
 governor stops acting and flags *needs attention* until you press Resume.
 
 **The end of a campaign** (postmortem-fixes design, rulings 22-23): a save in which we own no planet
-gets no decision and no review; a second one in a row ends the run as lost, with no model call: the
+gets no decision and no review (also the first save of a run); a second one in a row ends the run as lost, with no model call: the
 game stays paused, a `campaign_end` event (`result` lost, the last date we held a planet, the date
 the loss was seen, the signal, the report: colonies lost, our military against the strongest enemy,
 the stocks left, decisions after the loss was seen), a journal line, the run's `lost` status in

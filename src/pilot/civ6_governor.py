@@ -701,7 +701,7 @@ class Civ6Governor(Governor):
         if isinstance(first, int) and isinstance(second, int) and second > first:
             note = (f"The game keeps playing all-AI turns by itself (T{first} to T{second} in {self.end_watch_s:.0f} s); "
                     "exit to the main menu to stop it.")
-        rows = self._campaign_rows()
+        rows = self._campaign_rows() or list(self._recent_rows)
         if not rows or rows[-1].get("date") != b.get("date"):
             rows = [*rows, metrics(b)]
         last = last_held(rows, "cities")

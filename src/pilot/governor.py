@@ -1084,6 +1084,10 @@ class Governor:
                 self._set_campaign(b)
                 if self._stellaris_end_check(b, at_start=True):
                     return None                     # ruling 22: the campaign is over; no decision
+                if self._zero_saves:                # one save with no planet: the next save decides first
+                    self.log.emit("journal", text=f"{b['date']}: no planet of ours in the newest save; no decision "
+                                                  "until the next one shows whether the campaign is lost")
+                    return b
                 reviewed = self.strategy is None and self.pillars is not None
                 if reviewed:
                     self._review_strategy(b, "start of run")
