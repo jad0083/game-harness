@@ -171,6 +171,26 @@
 - [ ] Civ VI option 4 probe (levers design, ruling 28): a mod strategy for player 0 steered by a player property, gates G1-G4 in a maintenance window with fork and reload; pillar postures only if it passes
 - [x] Dashboard access key: `PILOT_DASHBOARD_KEY` or `runs/dashboard.key`, one link per browser (`python -m pilot dashboard-link`), JSON-only same-origin changes
 
+## Post-mortem fixes (Civ VI Kublai campaign; design docs/design/2026-09-27-postmortem-fixes-design.md)
+- [ ] Milestones judged on the current value, not "ever met" (shared, so Stellaris too; ruling 17)
+- [ ] Time constants per game in `[time]` of pillars.toml; Civ VI event-review cap 5 turns; "new war" and "city lost" always review (rulings 15, 19)
+- [ ] Civ VI snapshot: `allied`, `alive`, strategic stock, defender prices for every city with the reason for each refusal (rulings 1, 7, 21)
+- [ ] Civ VI capture test counts every capturer class (Giant Death Robot); the last stand stays off (ruling 26)
+- [ ] Civ VI defenders may spend down to the reserve in war or military weakness; purchase limits and strategic stock in every prompt (rulings 1, 2, 8)
+- [ ] Civ VI order record split by item class, with refusal counts (ruling 9)
+- [ ] Civ VI triggers: falling behind, neighbour buildup, negative income, loyalty; decide every hand-back while a city stays in danger (rulings 10-14)
+- [ ] Stellaris neighbour-buildup trigger (ruling 11)
+- [ ] Civ VI rule-based defender buy before each multi-turn stretch; what the AI spent between decisions (rulings 3, 4)
+- [ ] Civ VI re-send of a lost purchase only when the read-back proves nothing was spent (ruling 5)
+- [ ] A failed decision retries with the strategy model, then acts by rule before autoplay (ruling 20)
+- [ ] Civ VI relative military milestones (military ÷ median, ÷ strongest non-ally) (ruling 18)
+- [ ] Civ VI: name who declared each war; no diplomacy goals until an order exists (rulings 24, 25)
+- [ ] End the run when the empire is gone (Civ VI: not alive, or 0 cities and 0 settlers twice; Stellaris: 0 planets twice), with a report and a "lost" state (rulings 21-23)
+- [ ] Turns advanced logged against those requested; full decision prompts in traces (ruling 27)
+- [ ] Civ VI price changes in the briefing (World Congress discounts) (ruling 6)
+- [ ] Known-false learned rules refused; the listed rules corrected at deploy (ruling 29)
+- [ ] A deploy restarts only the pilot of the game it affects (ruling 28)
+
 ## Hosts
 - [x] Second game host mini-rig2 (2560x1440): agent 1.4.0 installed and reachable with the shared token (2026-09-26)
 - [ ] Host registry (`hosts.toml`: name, agent URL, screen) and one governor service per host (own dashboard port, `GAME_AGENT_URL`); dashboard lists live runs of every host
