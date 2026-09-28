@@ -490,8 +490,8 @@ answer is validated; an invalid one gets one corrective retry with its errors an
 answer, then the strategy stays. Reviews started at the beginning of a run or by you must name the
 species traits the strategy builds on. A review may add up to 3 rules to
 `corpora/stellaris/learned/strategy.md`, read by later decisions. A rule (from a review or the
-`remember_rule` tool) that matches a pattern of `[learned] refuse` in the game's `pillars.toml` is
-refused and the model gets the reason (postmortem-fixes design, ruling 29). Civ VI refuses the false
+`remember_rule` tool) whose text or why matches a pattern of `[learned] refuse` in the game's `pillars.toml`
+(both are written to the file) is refused and the model gets the reason (postmortem-fixes design, ruling 29). Civ VI refuses the false
 rules the Kublai campaign learned: saving until the balance is double the unit cost (a defender may
 spend down to the reserve), "cannot buy land units with faith", and "not allowed" in cities in danger
 (the refusals were Oil units; a Modern AT or Machine Gun was buyable). The rules already in the live

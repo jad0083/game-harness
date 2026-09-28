@@ -3082,6 +3082,23 @@ def test_known_false_learned_rules_are_refused_with_their_reason(tmp_path):
                           "T566").startswith("rule recorded"), "the refusal's reason is a true rule"
 
 
+def test_a_refused_phrase_in_the_why_is_refused_too(tmp_path):
+    """The why is written to learned/strategy.md beside the rule, so a false premise there reaches the
+    file the model reads (and the phrase test below then fails every commit on main)."""
+    import re
+
+    from pilot.learning import LearnedStore, LearningRejected
+    store = LearnedStore(tmp_path / "civ6", "m", "r")
+    store.refuse = SPEC.learned_refuse
+    for why in ("at T563 the briefing said Infantry was 'not allowed' in danger cities",
+                "save faith until the balance is double the unit cost"):
+        with pytest.raises(LearningRejected, match="^refused:"):
+            store.add_rule("When a city is in danger, buy the cheapest allowed defender at once", why)
+    learned = tmp_path / "civ6" / "learned" / "strategy.md"
+    text = learned.read_text(encoding="utf-8") if learned.exists() else ""
+    assert not [p for p, _ in SPEC.learned_refuse if re.search(p, text, re.IGNORECASE)]
+
+
 def test_the_governor_refuses_them_and_no_learned_file_holds_one(setup):
     import re
     g = governor(setup, FakeCiv6(FIXTURE, index=INDEX), orders_model([]))

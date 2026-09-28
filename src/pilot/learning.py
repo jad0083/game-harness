@@ -209,7 +209,8 @@ class LearnedStore:
         if len(rule) < 15:
             raise LearningRejected("state the rule as a full sentence (situation -> choice)")
         for pattern, reason in self.refuse:          # postmortem-fixes design, ruling 29
-            if re.search(pattern, rule, re.IGNORECASE):
+            # the why is written beside the rule, so a false premise there is refused too
+            if re.search(pattern, f"{rule}\n{why}", re.IGNORECASE):
                 raise LearningRejected(f"refused: {reason}")
         self._append_note("strategy.md", "Learned strategy rules", rule, why)
         self._ledger("rule", rule[:60], why=why)

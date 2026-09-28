@@ -804,7 +804,8 @@ balance before + yield × turns − our spends − balance now.
 
 29. **Known-false learned rules are refused, and the existing ones are corrected at deploy.** This is L12.
     - **Decision.**
-      - **Refusals.** `add_rule` checks `[learned] refuse = [{pattern, why}]` from the game's `pillars.toml`.
+      - **Refusals.** `add_rule` checks `[learned] refuse = [{pattern, why}]` from the game's `pillars.toml`
+        against the rule and its why together, since both are written to the file.
         The Civ VI list:
         - "double the unit cost" and "save … until the balance is double" (ruling 2);
         - "cannot buy land units with faith" (faith bought units at T35, T384 and T544);
