@@ -3052,6 +3052,7 @@ LIVE_FALSE_RULES = [       # corpora/civ6/learned/strategy.md of the Kublai camp
      "nearest safe cities"),
     "A city IN DANGER where purchases are not allowed -> buy defenders with gold in the neighbouring safe cities",
     "Defenders are not allowed in endangered cities -> buy them next door",
+    "Defender purchases read 'not allowed' in every city IN DANGER -> buy them in the safe cities",
     "We cannot buy land units with faith, so faith goes to buildings and Rock Bands",
 ]
 
