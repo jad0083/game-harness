@@ -121,7 +121,13 @@ OWN_EVENT = {"instruct", "chat", "answer", "order_add", "order_remove", "decide_
              "set_speed", "set_months", "set_model"}
 ACTION_KEY = web.RequestKey("pilot_action", str)
 SERVICE = "game-pilot.service"      # deploy/game-pilot.service, started by the dashboard's Start run
-LIVE_STATES = {"starting", "playing", "deciding", "paused", "needs_attention"}
+LIVE_STATES = {"starting", "playing", "deciding", "paused", "needs_attention", "last stand"}   # known ones
+
+
+def live_status(status: str | None) -> bool:
+    """A running pilot's status: every state it reports (Civ VI's `last stand` too, and any new one)
+    but `stopped`; a missing status is not live."""
+    return bool(status) and status not in ("stopped", "viewer")
 
 
 class LiveProxy:
@@ -171,7 +177,7 @@ class LiveProxy:
         for run in list_runs(self.runs_dir):
             st = run.get("_status") or {}
             port = (st.get("info") or {}).get("port")
-            if not port or st.get("status") not in LIVE_STATES:
+            if not port or not live_status(st.get("status")):
                 continue
             url = f"http://127.0.0.1:{int(port)}"
             try:
@@ -361,13 +367,13 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
             " FROM campaigns c ORDER BY c.created DESC")
         # the campaign list (ruling 4): empty campaigns fold away; the live one says its state
         if log is not None:
-            live_cid, live_status = log.campaign_id, log.state.status
+            live_cid, status_now = log.campaign_id, log.state.status
         else:
-            live_cid, live_status = await live_run() if live_run else (None, None)
+            live_cid, status_now = await live_run() if live_run else (None, None)
         for r in rows:
             r["empty"] = not r["decisions"] and not r["metrics"]
-            r["state"] = ({"paused": "paused", "needs_attention": "needs_you"}.get(live_status or "", "live")
-                          if live_cid and r["id"] == live_cid and live_status in LIVE_STATES else "stopped")
+            r["state"] = ({"paused": "paused", "needs_attention": "needs_you"}.get(status_now or "", "live")
+                          if live_cid and r["id"] == live_cid and live_status(status_now) else "stopped")
         return web.json_response(rows)
 
     def decorate(rows: list[dict], order_rows: list[dict], calls: list[dict]) -> list[dict]:

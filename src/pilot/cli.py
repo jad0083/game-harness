@@ -274,12 +274,12 @@ def live_pilots(s: Settings, key: str) -> list[tuple[str, int | None]]:
     import urllib.error
     import urllib.request
 
-    from .dashboard import LIVE_STATES, list_runs
+    from .dashboard import list_runs, live_status
     out = []
     for run in list_runs(s.runs_dir):
         st = run.get("_status") or {}
         port = (st.get("info") or {}).get("port")
-        if not port or st.get("status") not in LIVE_STATES:
+        if not port or not live_status(st.get("status")):
             continue
         req = urllib.request.Request(f"http://127.0.0.1:{int(port)}/status", headers={"X-Pilot-Key": key})
         try:

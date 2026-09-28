@@ -2,6 +2,7 @@
 
 ## Open
 
+- [ ] Dashboard v2 review (2026-09-27): during a Civ VI last stand the viewer reported that no run was live (`last stand` was not in LIVE_STATES): /status fell back to the viewer, /events answered 503 and the page showed "No run is playing" with Start run instead of the ruling-22 alarm; the CLI's live_pilots skipped the run too. Fixed on branch feat/dashboard-v2: every status but stopped is live
 - [ ] Dashboard v2 review (2026-09-27): viewing a past campaign kept the live run's Pause, Stop and Talk controls, worded for the viewed game (Stop on a Stellaris view said "the game is paused" and stopped the live Civ VI run). Fixed on branch feat/dashboard-v2: those controls show only while the page shows the live campaign; Talk offers a way back to it
 - [ ] Dashboard v2 review (2026-09-27): the campaign list counted backfill runs (e.g. 20260926-223910-backfill), so the live Kublai campaign said one run more than it had, against ruling 20. Fixed on branch feat/dashboard-v2: /api/campaigns leaves backfill runs out of the count and the last-played time
 - [ ] Dashboard v2 review (2026-09-27): with no run live the hero never said "No run is playing" and offered no Start run: it read "Viewing a past campaign" as if the reader had chosen history, and after a failed start it opened on the empty GalCiv campaign. Fixed on branch feat/dashboard-v2: "No run is playing. Last: ..., stopped ..." with Start run unless a past campaign was picked, and the default campaign is the one played last that recorded anything

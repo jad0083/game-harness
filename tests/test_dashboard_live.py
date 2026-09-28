@@ -409,3 +409,31 @@ def test_what_a_device_changes_is_in_the_sign_in_log(tmp_path, clock, monkeypatc
     assert "Pixel phone" in text and "paused the run" in text.lower() and "started a run" in text.lower()
     assert json.loads((runs / "pilot-settings.json").read_text())["changed_by"] == "Pixel phone"
     log.close()
+
+
+def test_a_last_stand_is_a_live_run_to_the_viewer_and_the_cli(tmp_path, clock, monkeypatch):
+    """Civ6Governor's `last stand` status (ruling 22) is live: the viewer keeps forwarding /status and
+    the stream (the red alarm shows) and the CLI's live_pilots finds the run; only stopped is not live."""
+    from pilot.dashboard import live_status
+    live, log = live_app(tmp_path)
+    assert all(live_status(s) for s in ("starting", "playing", "deciding", "paused", "needs_attention", "last stand"))
+    assert not any(live_status(s) for s in ("stopped", "", None))
+
+    async def go():
+        server = TestServer(live)
+        await server.start_server()
+        log.state.info["port"] = server.port
+        log.state.status = "last stand"
+        log.emit("status")
+        app, _ = viewer(tmp_path, clock)
+        async with client(app, headers={"X-Pilot-Key": KEY}) as c:
+            st = await (await c.get("/status")).json()
+            assert (await c.get("/events.json")).status == 200
+        found = await asyncio.to_thread(cli.live_pilots, Settings.from_env(), KEY)
+        await server.close()
+        return st, found
+    monkeypatch.setenv("PILOT_RUNS_DIR", str(tmp_path / "runs"))
+    st, found = asyncio.run(go())
+    assert st["live"] is True and st["status"] == "last stand"
+    assert [r for r, _v in found] == ["run1"]
+    log.close()
