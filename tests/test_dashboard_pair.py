@@ -744,3 +744,43 @@ def test_link_base_uses_public_url_else_the_host_the_browser_used(tmp_path, cloc
             g = await (await c.post("/api/auth/grants", json={}, headers=origin(c))).json()      # loopback host
             assert not g["link"].startswith("http://127.0.0.1")
     asyncio.run(go())
+
+
+# ---- security re-check follow-ups (2026-09-27) ---------------------------------------------------
+
+def test_a_rename_is_audited_and_the_log_keeps_the_name_at_the_time(tmp_path):
+    store = A.AuthStore(tmp_path / "auth.sqlite")
+    a, _ = store.create_device("browser", name="Pixel phone", created_via="cli", created_by="cli")
+    store.audit("control", "192.168.1.140", a["id"], {"action": "set_models"})
+    assert store.rename(a["id"], "Chrome on Windows", by=a["id"], ip="192.168.1.140")
+    rows = store.audit_rows()
+    ren = [r for r in rows if r["event"] == "renamed"]
+    assert ren and json.loads(ren[0]["detail"])["from"] == "Pixel phone"
+    texts = [e["text"] for e in A.audit_sentences(store)]
+    assert any(t.startswith("Pixel phone changed the models") for t in texts), texts
+    assert any("renamed" in t and "Pixel phone" in t and "Chrome on Windows" in t for t in texts), texts
+
+
+def test_the_pair_page_fills_placeholders_once(tmp_path):
+    page = "<p>{{message}}</p><input value=\"{{next}}\">{{inapp}}"
+    values = {"message": "<p>hi</p>", "next": "/{{message}}{{inapp}}", "inapp": ""}
+    out = A.fill_placeholders(page, values)
+    assert 'value="/{{message}}{{inapp}}"' in out and out.count("<p>hi</p>") == 1
+
+
+def test_recovery_key_devices_are_listed_at_rotation(tmp_path):
+    store = A.AuthStore(tmp_path / "auth.sqlite")
+    r, _ = store.create_device("browser", name="Firefox", created_via="recovery_key", created_by="recovery_key")
+    child, _ = store.create_device("browser", name="Pixel phone", created_via="link", created_by=r["id"])
+    other, _ = store.create_device("browser", name="Chrome", created_via="cli", created_by="cli")
+    family, _ = store.legacy_family()
+    ids = [d["id"] for d in family]
+    assert r["id"] in ids and child["id"] in ids and other["id"] not in ids
+
+
+def test_revoke_all_cancels_waiting_codes_from_the_command_line(tmp_path, monkeypatch):
+    monkeypatch.setenv("PILOT_RUNS_DIR", str(tmp_path / "runs"))
+    store = A.AuthStore(tmp_path / "auth-store" / "auth.sqlite")
+    g = store.create_grant("cli", words=True)
+    assert run_cli("dashboard-devices", "revoke-all")[0] == 0
+    assert store.redeem("link", g["link"], ip="192.168.1.140", user_agent=UA_CHROME)[0] != "ok"

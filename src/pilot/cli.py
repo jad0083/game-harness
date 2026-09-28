@@ -434,7 +434,7 @@ def dashboard_devices(s: Settings, a) -> int:
                   f"{name_of(store, d['created_by']) or d['created_via'].replace('_', ' ')}{'; ' + badges if badges else ''}")
         return 0
     if act == "rename":
-        ok = store.rename(a.id, a.name)
+        ok = store.rename(a.id, a.name, by="cli")
         print("Renamed." if ok else f"No signed-in device {a.id}.")
         return 0 if ok else 1
     if act == "revoke":
@@ -443,6 +443,7 @@ def dashboard_devices(s: Settings, a) -> int:
         return 0 if ok else 1
     if act == "revoke-all":
         n = sum(store.revoke(d["id"], "revoked", by="cli") for d in store.list_devices() if d["id"] != a.keep)
+        store.cancel_waiting_grants()          # a leaked code from the command line must not outlive it either
         print(f"Signed out {n} device{'s' if n != 1 else ''} and script token{'s' if n != 1 else ''}"
               f"{', kept ' + a.keep if a.keep else ''}.")
         return 0

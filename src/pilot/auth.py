@@ -517,6 +517,10 @@ class AuthStore:
         count, so a flood cannot push real events out of the table."""
         now = self.now()
         minute = int(now // 60) * 60
+        if device_id and ID_RE.fullmatch(device_id) and "name" not in (detail or {}):
+            row = self.device(device_id)          # the name at the time: a later rename cannot rewrite the log
+            if row:
+                detail = {**(detail or {}), "name": row["name"]}
         text = json.dumps(detail, default=str) if detail else None
         with self._lock:
             # a control row counts repeats of the same action only (pause then resume are two rows)
@@ -631,6 +635,10 @@ class AuthStore:
         return self._x("UPDATE grants SET state='cancelled' WHERE state='waiting' AND created_by IN "
                        "(SELECT id FROM devices WHERE revoked_at IS NOT NULL)").rowcount
 
+    def cancel_waiting_grants(self) -> int:
+        """Every code still waiting, including the command line's: the compromise procedure."""
+        return self._x("UPDATE grants SET state='cancelled' WHERE state='waiting'").rowcount
+
     def end_carry_over(self) -> None:
         """The old key cookie stops working at once (a rotation ends the 72-hour window), and so do the
         one-time links old ?key= bookmarks made."""
@@ -642,7 +650,7 @@ class AuthStore:
         (directly or through another), roots first with each one's additions after it; and the
         maker of each addition. A rotation keeps only the ones the user names and their additions."""
         rows = [d for d in self.list_devices() if d["kind"] == "browser"]
-        members = {d["id"] for d in rows if d["legacy"]}
+        members = {d["id"] for d in rows if d["legacy"] or d.get("created_via") == "recovery_key"}
         grown = True
         while grown:
             new = {d["id"] for d in rows if d["created_by"] in members and d["id"] not in members}
@@ -666,8 +674,14 @@ class AuthStore:
         self.audit("revoke_others", ip, keep, {"count": cur.rowcount})
         return cur.rowcount
 
-    def rename(self, ident: str, name: str) -> bool:
-        return bool(self._x("UPDATE devices SET name=? WHERE id=? AND revoked_at IS NULL", (clip_name(name), ident)).rowcount)
+    def rename(self, ident: str, name: str, by: str | None = None, ip: str | None = None) -> bool:
+        """Renamed and audited with the old and new name (a rename cannot rewrite who did what)."""
+        row = self.device(ident)
+        new = clip_name(name)
+        ok = bool(self._x("UPDATE devices SET name=? WHERE id=? AND revoked_at IS NULL", (new, ident)).rowcount)
+        if ok and row:
+            self.audit("renamed", ip, ident, {"from": row["name"], "to": new, "by": by})
+        return ok
 
     def list_devices(self, include_revoked: bool = False) -> list[dict]:
         rows = self._rows("SELECT * FROM devices" + ("" if include_revoked else " WHERE revoked_at IS NULL")
@@ -852,6 +866,11 @@ BAD_EVENTS = {"signin_failed", "throttled", "words_switched_off", "grant_conflic
               "host_refused"}
 
 
+def fill_placeholders(page: str, values: dict[str, str]) -> str:
+    """`{{name}}` replaced in one pass: a value that itself holds `{{…}}` (a `next` path) stays text."""
+    return re.sub(r"\{\{(\w+)\}\}", lambda m: values.get(m.group(1), m.group(0)), page)
+
+
 HERE = "the computer that runs Game Pilot"     # how pages name the controller (never "controller" or "cli")
 HOW_WORDS = {"words": "with typed words", "link": "with a link", "cli": f"with a code from {HERE}",
              "legacy_cookie": "carried over from the old link", "legacy_link": "with an old key link",
@@ -872,7 +891,7 @@ def name_of(store: AuthStore, ident: str | None) -> str:
 DEVICE_VERBS = {"signin": "signed in", "signed_out": "signed out", "revoked": "was signed out",
                 "idle": "was signed out after 180 days unused", "revoke_others": "signed out all other devices",
                 "legacy_kept": "was kept at the key rotation", "legacy_revoked": "was signed out at the key rotation",
-                "token_revoked": "was revoked", "grant_created": "made a sign-in code"}
+                "token_revoked": "was revoked", "grant_created": "made a sign-in code", "renamed": "was renamed"}
 
 
 def audit_sentences(store: AuthStore, n: int = 20) -> list[dict]:
@@ -882,7 +901,7 @@ def audit_sentences(store: AuthStore, n: int = 20) -> list[dict]:
     out = []
     for e in store.audit_rows(n):
         detail = json.loads(e["detail"] or "{}")
-        who = name_of(store, e["device_id"])
+        who = (detail.get("from") if e["event"] == "renamed" else detail.get("name")) or name_of(store, e["device_id"])
         verb = DEVICE_VERBS.get(e["event"])
         if e["event"] == "signin":
             by = detail.get("by")
@@ -892,6 +911,8 @@ def audit_sentences(store: AuthStore, n: int = 20) -> list[dict]:
             elif by == "cli" and detail.get("how") in ("words", "link"):
                 verb = "signed in " + HOW_WORDS["cli"]
             verb = verb.strip()
+        if e["event"] == "renamed":
+            verb = f"was renamed {detail.get('to')!r}" + (f" by {name_of(store, detail['by'])}" if detail.get("by") else "")
         if e["event"] == "control" and detail.get("action"):
             verb = CONTROL_AUDIT.get(detail["action"], f"used {str(detail['action']).replace('_', ' ')}")
         if e["event"] in ("revoked", "signed_out") and detail.get("by") and detail["by"] != e["device_id"]:
@@ -1441,8 +1462,7 @@ class Auth:
         values = {"state": html.escape(state), "wait": str(int(wait)), "next": html.escape(nxt), "message": message,
                   "inapp": inapp, "keyform": keyform, "name": html.escape(device_name(ua)),
                   "qr_hint": " On a phone, scan the QR code there with the camera." if qr_available() else ""}
-        for k, v in values.items():
-            page = page.replace("{{" + k + "}}", v)
+        page = fill_placeholders(page, values)
         headers = {"Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; "
                    "img-src 'self' data:; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
                    # same-origin, not no-referrer: under no-referrer browsers send "Origin: null" on the page's own
@@ -1622,7 +1642,8 @@ class Auth:
                 n = await asyncio.to_thread(self.store.revoke_others, p.id, p.id, ip)
                 return web.json_response({"ok": True, "count": n})
             if act == "rename":
-                ok = await asyncio.to_thread(self.store.rename, ident or p.id, str(body.get("name", "")))
+                ok = await asyncio.to_thread(self.store.rename, ident or p.id, str(body.get("name", "")), p.id,
+                                             request.remote)
                 return web.json_response({"ok": ok})
             return json_error(400, "bad_action", "action must be signout, revoke, revoke_others or rename.")
 
