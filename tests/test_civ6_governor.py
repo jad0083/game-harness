@@ -1511,6 +1511,9 @@ def test_a_falling_city_gets_its_stand_between_the_urgent_decision_and_a_one_tur
     stand = next(e for e in _events(setup) if e["kind"] == "last_stand")
     assert stand["stopped"] == "done: nothing left to do" and stand["pins"] == [{"id": 5, "x": 22, "y": 22}]
     assert [a["action"] for a in stand["actions"]] == ["ranged_attack", "pin"]
+    # the dashboard's fixture has the report's shape
+    from tests.ui.uikit import STAND_ACTION
+    assert set(stand["actions"][0]) == set(STAND_ACTION) and "incoming" not in stand
     assert sum(1 for a in game.actions if a[0] == "stand") == 2, "one stand: the city recovered at T0+2"
     s, _ = setup
     assert "Last stand for Beijing (stand 1 in a row): ranged_attack took" in s.journal.read_text()

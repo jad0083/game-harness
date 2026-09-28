@@ -55,7 +55,9 @@ def campaign(tmp_path):
              base={"turn": 46}, window=8)
     log.emit("metrics", date="T49", turn=49, score=100)
     log.emit("last_stand", city="Chengdu", turn=44, date="T44", in_a_row=1, ran=True, stopped="done",
-             actions=[{"action": "city_strike", "result": "took", "detail": "predicted 28", "predicted": 28}], pins=[])
+             actions=[{"action": "city_strike", "actor": 65536, "unit": None, "target": 131073, "to": None,
+                       "predicted_damage": 28, "predicted_kill": False, "result": "took", "detail": "the target lost 28",
+                       "first": True}], pins=[])                                  # Civ6Governor._stand_row's shape
     return runs, tel, log
 
 

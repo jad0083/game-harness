@@ -2,6 +2,7 @@
 
 ## Open
 
+- [ ] Dashboard v2 review (2026-09-27): the last-stand report card read `predicted` and `incoming`, fields the governor never writes (it writes predicted_damage and predicted_kill), so a real stand never showed its predicted damage; the tests passed on invented fixtures. Fixed on branch feat/dashboard-v2: the card reads the governor's fields, and the fixtures take the report's shape (a governor test checks it)
 - [ ] Dashboard v2 review (2026-09-27): a refused purchase read "✕ Beijing: Gurdwara refused: 380 faith, over the 283 allowed [bought with faith]", and a purchase with no currency in its order was labelled gold. Fixed on branch feat/dashboard-v2: "bought" only when it went through, otherwise "faith purchase"; an unknown currency is not named
 - [ ] Dashboard v2 review (2026-09-27): a failed decision ("No decision: overloaded (503)") still showed "Gemini 3.1 Pro · 63 s" in its row, and the facts line said "Answered by Gemini 3.1 Pro." while the newest decision had no answer. Fixed on branch feat/dashboard-v2: an error row shows only its time, and the facts say "No answer at T55." until a later call answers
 - [ ] Dashboard v2 review (2026-09-27): one save in Settings > Models wrote four Activity rows ("Models changed by Pixel phone", "Models changed, from Pixel phone", and the same for roles): set_models, set_roles, set_fallback, edit_pillar and unpin_pillar leave their own event, and the live pilot added a control event too. Fixed on branch feat/dashboard-v2: no control event for them

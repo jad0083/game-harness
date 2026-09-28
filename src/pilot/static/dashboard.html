@@ -2636,8 +2636,9 @@ function ordersHtml() {
   S.orderRows = rows;
   const stands = o.stands || [];
   if (stands.length) {       // the last stands, and what the pins did (ruling 22)
-    h += `<section class="o-block"><h3>Last stands</h3>` + stands.map((x) => `<div class="stand"><b>${esc(x.city)}, ${esc(gdate(x.date))}</b>${x.incoming ? `: about ${fmt(x.incoming)} damage incoming` : ""}
-      <ul>${(x.actions || []).map((a) => `<li>${esc(sentence(human(a.action)))}${a.predicted != null ? `, predicted ${fmt(a.predicted)}` : ""}: ${esc(human(a.result || ""))}${a.detail ? ` (${esc(a.detail)})` : ""}</li>`).join("")}</ul>
+    // each action as Civ6Governor._stand_row reports it: what the game predicted, then the read-back
+    h += `<section class="o-block"><h3>Last stands</h3>` + stands.map((x) => `<div class="stand"><b>${esc(x.city)}, ${esc(gdate(x.date))}</b>
+      <ul>${(x.actions || []).map((a) => `<li>${esc(sentence(human(a.action)))}${a.predicted_damage != null ? `, predicted ${fmt(a.predicted_damage)}${a.predicted_kill ? " (a kill)" : ""}` : ""}: ${esc(human(a.result || ""))}${a.detail ? ` (${esc(a.detail)})` : ""}</li>`).join("")}</ul>
       <span class="hint">Stopped: ${esc(x.stopped || "")}</span></div>`).join("")
       + (o.stand_checks || []).slice(0, 1).map((c) => `<p class="hint">Last check: ${esc((c.pins || []).map((p) => p.result || p.status || "").join(", "))}</p>`).join("") + `</section>`;
   }

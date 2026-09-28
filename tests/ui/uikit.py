@@ -60,6 +60,11 @@ CIV6_STRATEGY = {"focus": "Hold Chengdu, then out-tech Germany", "identity": "Ku
                                            "goals": [], "milestones": []}}}
 
 
+# one action of a last-stand report, in the shape Civ6Governor._stand_row writes
+STAND_ACTION = {"action": "city_strike", "actor": 65536, "unit": None, "target": 131073, "to": None,
+                "predicted_damage": 28, "predicted_kill": False, "result": "took", "detail": "the target lost 28", "first": True}
+
+
 def _trace(log: EventLog, n: int, **fields) -> None:
     log.state.episodes = n
     log.save_trace(n, {"episode": n, "model": "google:gemini-3.1-pro-preview", "thinking_level": "medium",
@@ -129,7 +134,7 @@ def seed_runs(runs: Path) -> dict:
                                               "ordered": "T52", "ref": "f1"},
              order={"kind": "civic", "id": "civic:foreign_trade"}, wire=None, expect={}, base={"turn": 52}, window=8)
     log.emit("last_stand", city="Chengdu", turn=54, date="T54", in_a_row=1, ran=True, stopped="done: nothing left to do",
-             actions=[{"action": "city_strike", "result": "took", "detail": "the target lost 28", "predicted": 28}], pins=[])
+             actions=[STAND_ACTION], pins=[])
     info = log.state.info
     info.update(game="civ6", decide_turns=5, directives=[], controls=["instruct", "chat", "order_add", "order_remove",
                                                                         "decide_now", "set_models", "set_months"],
