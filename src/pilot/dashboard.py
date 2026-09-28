@@ -597,7 +597,9 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
                     "spec": ({"window_turns": orders_spec.window_turns, "weak_rate": orders_spec.weak_rate,
                               "min_samples": dict(orders_spec.min_samples)} if orders_spec else None),
                     "log": shown[:limit], "purchases": [it for it in items if it.get("order_kind") == "purchase"][:20],
-                    "stands": list(reversed(stands))[:3], "stand_checks": list(reversed(checks))[:3]}
+                    "stands": list(reversed(stands))[:3], "stand_checks": list(reversed(checks))[:3],
+                    # every stand, for the chart's marks (the cards above show the newest three)
+                    "stand_marks": [{"date": x.get("date"), "city": x.get("city")} for x in stands]}
         return web.json_response(await asyncio.to_thread(build))
 
     async def api_events(request):

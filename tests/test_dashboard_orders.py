@@ -163,3 +163,20 @@ def test_stellaris_orders_are_the_action_record(tmp_path):
     assert ("tech", "researched") in fates and ("tech", "did not stick") in fates
     assert ("market buy alloys", "did not take") in fates and ("directive expand", "locked by the game") in fates
     log.close()
+
+
+def test_the_chart_gets_every_last_stand_and_the_tab_the_newest_three(tmp_path):
+    """/api/orders: `stands` holds the three newest reports for the Orders tab; `stand_marks` the date
+    and city of every stand, for the chart's marks (a campaign with ten stands shows ten)."""
+    runs, tel, log = campaign(tmp_path)
+    for turn in range(60, 70):
+        log.emit("last_stand", city="Xian", turn=turn, date=f"T{turn}", in_a_row=1, ran=True, stopped="done",
+                 actions=[], pins=[])
+
+    async def go():
+        async with TestClient(TestServer(make_app(None, runs, tel, corpora=CORPORA))) as c:
+            return await (await c.get("/api/orders?campaign=civ6/kublai")).json()
+    o = asyncio.run(go())
+    assert [x["date"] for x in o["stands"]] == ["T69", "T68", "T67"]
+    assert len(o["stand_marks"]) == 11 and o["stand_marks"][0] == {"date": "T44", "city": "Chengdu"}
+    log.close()

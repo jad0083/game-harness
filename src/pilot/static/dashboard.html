@@ -1974,7 +1974,7 @@ function renderChart() {
   const order = series.map(([, lbl]) => ends.find((e) => e.lbl === lbl)).filter(Boolean);
   for (const e of order) svg += `<text class="end-label" x="${W - R + 8}" y="${e.y.toFixed(1)}">${esc(clip(e.lbl, small ? 11 : 16))}</text>`;
   // last stands (Civ VI): --bad marks on the axis
-  const stands = ((S.orders && S.orders.stands) || []).filter((x) => monthOf(x.date) != null && monthOf(x.date) >= x0 && monthOf(x.date) <= x1);
+  const stands = ((S.orders && (S.orders.stand_marks || S.orders.stands)) || []).filter((x) => monthOf(x.date) != null && monthOf(x.date) >= x0 && monthOf(x.date) <= x1);
   stands.forEach((x) => {
     const sx = X(monthOf(x.date));
     svg += `<g class="lsmark"><title>Last stand in ${esc(x.city)}, ${esc(gdate(x.date))}</title>

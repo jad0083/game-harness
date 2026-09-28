@@ -120,3 +120,18 @@ def test_civ6_reviews_sit_above_the_plot_and_the_chart_fits(browser, live_server
     assert page.evaluate("document.documentElement.scrollWidth <= document.documentElement.clientWidth")
     assert w.errors == []
     w.context.close()
+
+
+def test_every_last_stand_is_marked_on_the_chart(browser, live_servers):
+    """The Orders tab shows the newest three stands; the chart marks all of them."""
+    log = live_servers["log"]
+    for turn in (50, 51, 52, 53):
+        log.emit("last_stand", city="Xian", turn=turn, date=f"T{turn}", in_a_row=1, ran=True, stopped="done",
+                 actions=[], pins=[])
+    w = open_context(browser, "desktop-light", live_servers)
+    w.page.goto(w.base + "/", wait_until="domcontentloaded")
+    w.page.wait_for_selector("#chartwrap .lsmark", state="attached", timeout=15000)
+    w.page.wait_for_timeout(500)
+    marks = w.page.eval_on_selector_all("#chartwrap .lsmark title", "ts => ts.map(t => t.textContent)")
+    assert len(marks) == 5 and "Last stand in Xian, T50" in marks, marks
+    w.context.close()
