@@ -21,6 +21,7 @@ from pydantic_ai.exceptions import UsageLimitExceeded
 from pydantic_ai.messages import ToolCallPart, ToolReturnPart
 from pydantic_ai.usage import UsageLimits
 
+from .campaign_end import civ6_read, civ6_signal, enemy_ratio, first_zero_after, last_held, losses
 from .civ6 import (
     DIPLOMACY_RECORD,
     DIPLOMACY_RECORD_HEADING,
@@ -184,6 +185,7 @@ class Civ6Governor(Governor):
     stand_pause_s = 1.5              # between an action and its GameCore read-back
     stand_idle_polls = 5             # turn-ready polls before the hand-back...
     stand_idle_poll_s = 1.0          # ...this far apart
+    end_watch_s = 60.0               # after the end (ruling 21): two autoplay-status reads this far apart
 
     def __init__(self, settings, game, log, **kw):
         super().__init__(settings, game, log, **kw)
@@ -279,10 +281,12 @@ class Civ6Governor(Governor):
         self._ai_log_next = int(r.get("next") or 0)
 
     def _set_campaign(self, b: dict) -> None:
-        """Campaign = civ6/<leader>_<map seed> (ruling 7), or PILOT_CAMPAIGN."""
+        """Campaign = civ6/<leader>_<map seed> (ruling 7), or PILOT_CAMPAIGN. The run's player id is
+        its first snapshot's and is never derived again (postmortem-fixes ruling 21)."""
         leader = re.sub(r"^LEADER_", "", str(b.get("leader") or "unknown")).lower()
         name = self.s.campaign or f"{leader}_{b.get('map_seed') or 'noseed'}"
         self._campaign_key = (b.get("leader"), b.get("map_seed"))
+        self._player_id = b.get("player")
         self.log.set_campaign(self.s.game, name, f"{b.get('civ_name') or ''} — {b.get('leader_name') or ''}")
         self._load_campaign_state()
         self._load_order_record()
@@ -357,6 +361,9 @@ class Civ6Governor(Governor):
                 if (b.get("autoplay") or {}).get("active"):
                     raise Civ6Stuck("autoplay is still running and did not stop")
                 self._set_campaign(b)
+                b = self._end_check(b)
+                if b is None:
+                    return None                 # ruling 21: the campaign is over; no decision, no review
                 self._note_diplomacy(b)
                 self.last_briefing = self._briefing(b)
                 self.log.state.game_date = b["date"]
@@ -418,7 +425,16 @@ class Civ6Governor(Governor):
                                       f"{self._campaign_key[0]} on map {self._campaign_key[1]}. Load that game again and "
                                       "press Resume, or start a new run.")
                 return last, ""
+            mine = getattr(self, "_player_id", None)
+            if isinstance(mine, int) and isinstance(b.get("player"), int) and b["player"] != mine:
+                self._needs_attention(f"the snapshot is for player {b['player']}, this run governs player {mine} "
+                                      "(ruling 21: the player id is never derived again). Check the game, then press "
+                                      "Resume, or start a new run.")
+                return last, ""
             self.log.emit("metrics", **metrics(b))
+            b = self._end_check(b)
+            if b is None:
+                return None, "ended"            # ruling 21: no decision and no review after the end
             self._note_diplomacy(b)
             self._track(b)
             self._check_pins(b)
@@ -431,6 +447,62 @@ class Civ6Governor(Governor):
             if b["turn"] >= target:
                 return b, f"scheduled ({self.s.decide_every_turns} turns)"
             last = b
+
+    # ---- the end of the campaign (postmortem-fixes design, rulings 21-23) --------------------------
+
+    def _end_check(self, b: dict) -> dict | None:
+        """Ruling 21 on a fresh snapshot: `alive` false ends the run at once; 0 cities and 0 settlers
+        is read again at once, and ends it when the second read agrees. Returns the snapshot to go on
+        with (the second read, when one was taken), or None when the run ended."""
+        read = civ6_read(b)
+        if read == "no cities":
+            try:
+                again = self._snapshot_between_turns()
+            except Civ6Stuck as e:
+                self.log.emit("briefing_error", error=f"end check: {e}"[:200])
+                return b                        # one read never ends the run
+            self.log.emit("metrics", **metrics(again))
+            if civ6_read(again) is None:
+                self.log.emit("journal", text=f"one read at T{b.get('turn')} showed 0 cities and 0 settlers; the next "
+                                              "did not, so the run goes on")
+                return again
+            b, read = again, civ6_read(again)
+        if read is None:
+            return b
+        self._end_civ6(b, civ6_signal(read))
+        return None
+
+    def _end_civ6(self, b: dict, signal: str) -> None:
+        """Ruling 21's actions, with no model call: stop autoplay, the report, `campaign_end`, the
+        journal, telemetry's `lost`, the "ended" state. Two autoplay-status reads `end_watch_s` apart
+        tell whether the game keeps playing all-AI turns by itself (nothing is sent to stop it)."""
+        self._stop_autoplay()
+        first = self._status_turn()
+        time.sleep(self.end_watch_s)
+        second = self._status_turn()
+        note = ""
+        if isinstance(first, int) and isinstance(second, int) and second > first:
+            note = (f"The game keeps playing all-AI turns by itself (T{first} to T{second} in {self.end_watch_s:.0f} s); "
+                    "exit to the main menu to stop it.")
+        rows = self._campaign_rows()
+        if not rows or rows[-1].get("date") != b.get("date"):
+            rows = [*rows, metrics(b)]
+        last = last_held(rows, "cities")
+        seen = first_zero_after(rows, "cities", last, lambda d: int(d[1:])) or b.get("date")
+        rep = {"game": "civ6", "turn": last, "seen": seen, "signal": signal,
+               "lost": losses(self._campaign_events("episode")), "ratio": enemy_ratio(rows, "military"),
+               "stranded": {"gold": b.get("gold"), "faith": b.get("faith")},
+               "after": self._decisions_since(seen), "note": note, "player": getattr(self, "_player_id", None)}
+        name = f"{b.get('civ_name') or b.get('civ') or 'our civilization'} ({b.get('leader_name') or b.get('leader')})"
+        self._end_campaign(rep, name, str(b.get("date") or ""))
+
+    def _status_turn(self) -> int | None:
+        try:
+            turn = (self.game.autoplay_status() or {}).get("turn")
+        except Exception as e:  # noqa: BLE001 - the game may be busy playing turns: unknown
+            self.log.emit("briefing_error", error=f"autoplay-status after the end: {e}"[:200])
+            return None
+        return turn if isinstance(turn, int) else None
 
     def _play_turns(self, turn: int, n: int) -> None:
         """Autoplay `n` turns (the chunk; 1 by default) and wait until the game hands them back (turn

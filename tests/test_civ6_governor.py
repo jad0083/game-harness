@@ -79,6 +79,7 @@ def governor(setup, game, model) -> Civ6Governor:
     g.start_grace_s = 0.05
     g.turn_deadline_s = 0.5
     g.recover_every_s = 0
+    g.end_watch_s = 0
     return g
 
 
@@ -416,7 +417,7 @@ def test_a_lost_reply_is_read_back_before_judging(setup):
 
 def test_civ6_urgent_events_start_a_strategy_review(setup):
     def lose(state):
-        state["cities"] = []
+        state["cities"] = state["cities"][:1]          # Xian falls (losing every city is the end: ruling 21)
 
     game = FakeCiv6({**FIXTURE, "cities": [*FIXTURE["cities"], {**FIXTURE["cities"][0], "name": "Xian"}]},
                     index=INDEX, events={FIXTURE["turn"] + 1: lose})
@@ -2141,3 +2142,144 @@ def test_a_city_with_nothing_to_buy_says_so_with_each_reason():
                         "cities": [danger_city(defence_prices=[INFANTRY, MACHINE_GUN])]}, INDEX, limits=BUY)
     assert ("defenders to buy: unit:infantry 860 gold (refused: needs 1 Oil, have 0) / 860 faith (refused: needs 1 "
             "Oil, have 0), unit:machine_gun 1080 gold / 1080 faith") in ok
+
+
+# ---- postmortem-fixes design, rulings 21-23: the run ends when our civilization is gone ----------
+
+def _telemetry_log(setup, tmp_path, run="civ1"):
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    return tel, EventLog(s.runs_dir, run, s.model, telemetry=tel)
+
+
+def _lost(state):
+    """Our last city falls; no settler left (T583: 0 cities, 0 units)."""
+    state["cities"] = []
+    state["units"] = {"total": 0, "by_class": {}, "by_type": {}}
+
+
+def _counting_model(calls: list):
+    def respond(messages, info):
+        calls.append("review" if is_review(info) else "decide")
+        if is_review(info):
+            return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name,
+                                                     {"change": False, "assessment": "n/a", "rules": []})])
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"orders": [], "reason": "r"})])
+    return FunctionModel(respond)
+
+
+def test_zero_cities_and_settlers_read_twice_ends_the_run_with_no_model_call(setup, tmp_path):
+    tel, log = _telemetry_log(setup, tmp_path)
+    s, _ = setup
+    calls: list = []
+    game = FakeCiv6(FIXTURE, index=INDEX, events={FIXTURE["turn"] + 1: _lost})
+    g = Civ6Governor(s, game, log, model=_counting_model(calls))
+    g.status_poll_s, g.start_grace_s, g.turn_deadline_s, g.end_watch_s = 0, 0.05, 0.5, 0
+    g.run(max_decisions=5)
+    assert calls == ["review", "decide"], "the start only: no decision and no review after the end"
+    end = [e for e in log.recent if e["kind"] == "campaign_end"]
+    assert len(end) == 1 and end[0]["result"] == "lost" and end[0]["signal"] == "0 cities and 0 settlers on 2 reads in a row"
+    assert (end[0]["last_city_turn"], end[0]["seen"]) == ("T12", "T13")
+    assert end[0]["report"]["stranded"] == {"gold": FIXTURE["gold"], "faith": FIXTURE["faith"]}
+    assert end[0]["report"]["after"] == {"decisions": 0, "reviews": 0}
+    assert log.state.status == "ended" and log.state.info["end"]["result"] == "lost"
+    assert tel.query("SELECT status FROM runs WHERE id='civ1'")[0]["status"] == "lost", "run_end keeps it"
+    assert "Campaign lost: China (Kublai Khan (China)) was eliminated in T12, seen at T13" in s.journal.read_text()
+    assert ("autoplay_stop",) in game.actions
+
+
+def test_one_zero_city_read_does_not_end_the_run():
+    class Glitch(FakeCiv6):
+        blank = 1
+
+        def snapshot(self):
+            s = super().snapshot()
+            if s["turn"] > FIXTURE["turn"] and self.blank:
+                self.blank -= 1
+                s = {**s, "cities": [], "units": {"by_type": {}}}
+            return s
+    from pilot.civ6_governor import Civ6Governor as G
+    g = G.__new__(G)          # only the end check: no loop
+    game = Glitch(FIXTURE, index=INDEX)
+    g.game, g.snapshot_tries, g.status_poll_s = game, 1, 0
+    g.log = type("L", (), {"emit": lambda *a, **k: None})()
+    game.state["turn"] += 1
+    first = game.snapshot()
+    assert first["cities"] == []
+    assert G._end_check(g, first)["cities"], "the second read shows the city again: the run goes on"
+
+
+def test_alive_false_ends_it_at_once_and_a_settler_or_player_minus_one_does_not(setup, tmp_path):
+    from pilot.campaign_end import civ6_read
+    assert civ6_read({**FIXTURE, "alive": False}) == "not alive"
+    settler = {**FIXTURE, "cities": [], "units": {"by_type": {"UNIT_SETTLER": 1}}}
+    assert civ6_read(settler) is None, "a settler can found a city again"
+    assert civ6_read({**FIXTURE, "local_player": -1, "alive": None}) is None, "the local player id is never used"
+    _tel, log = _telemetry_log(setup, tmp_path, "civ2")
+    s, _ = setup
+    game = FakeCiv6(FIXTURE, index=INDEX, events={FIXTURE["turn"] + 1: lambda st: st.update(alive=False)})
+    g = Civ6Governor(s, game, log, model=_counting_model([]))
+    g.status_poll_s, g.start_grace_s, g.turn_deadline_s, g.end_watch_s = 0, 0.05, 0.5, 0
+    g.run(max_decisions=5)
+    end = next(e for e in log.recent if e["kind"] == "campaign_end")
+    assert end["signal"] == "the game reports our civilization is not alive"
+    assert sum(1 for a in game.actions if a[0] == "autoplay") == 1
+
+
+def test_a_second_run_on_a_lost_campaign_ends_at_its_start(setup, tmp_path):
+    _tel, log = _telemetry_log(setup, tmp_path, "civ3")
+    s, _ = setup
+    calls: list = []
+    dead = {**FIXTURE, "turn": 763, "cities": [], "units": {"total": 0, "by_class": {}, "by_type": {}}}
+    game = FakeCiv6(dead, index=INDEX)
+    g = Civ6Governor(s, game, log, model=_counting_model(calls))
+    g.end_watch_s = 0
+    g.run(max_decisions=5)
+    assert calls == [] and [e["kind"] for e in log.recent].count("campaign_end") == 1
+    assert log.state.status == "ended" and not any(a[0] == "autoplay" for a in game.actions)
+
+
+def test_the_end_report_lists_the_cities_lost_the_enemy_ratio_and_the_stranded_treasury():
+    from pilot.campaign_end import enemy_ratio, losses, report_text
+    episodes = [{"date": "T475", "situation": "urgent: city lost: Shanghai"},
+                {"date": "T546", "situation": "urgent: city lost: Beijing; city threatened: Longxi (3 enemy units near)"},
+                {"date": "T583", "situation": "urgent: city lost: Longxi"}]
+    rows = [r for r in json.loads((REPO / "tests/fixtures/civ6_kublai_rows.json").read_text()) if r["turn"] <= 583]
+    ratio = enemy_ratio(rows, "military")
+    assert (ratio["date"], ratio["ours"], ratio["enemy"], ratio["theirs"], ratio["ratio"]) == \
+        ("T579", 139, "CIVILIZATION_AUSTRALIA", 1561, 0.09)
+    rep = {"game": "civ6", "turn": "T579", "seen": "T583", "signal": "0 cities and 0 settlers on 2 reads in a row",
+           "lost": losses(episodes), "ratio": ratio, "stranded": {"gold": 1675.77, "faith": 994.97},
+           "after": {"decisions": 0, "reviews": 0}}
+    text = report_text("China (Kublai Khan)", rep)
+    assert text.startswith("Campaign lost: China (Kublai Khan) was eliminated in T579, seen at T583 (0 cities and 0 "
+                           "settlers on 2 reads in a row). Cities lost: Shanghai T475, Beijing T546, Longxi T583.")
+    assert "139 vs CIVILIZATION_AUSTRALIA 1,561 (0.09x)" in text and "Stranded: 1,676 gold, 995 faith." in text
+    assert "Decisions after the loss was first seen: 0 (strategy reviews 0)." in text
+
+
+def test_the_report_notes_a_game_that_keeps_playing_by_itself(setup, tmp_path):
+    class PlaysOn(FakeCiv6):
+        def autoplay_status(self):
+            reply = super().autoplay_status()
+            if not self.state.get("cities"):
+                self.state["turn"] += 1              # all-AI turns after the elimination (T763 -> T1290)
+            return reply
+    _tel, log = _telemetry_log(setup, tmp_path, "civ4")
+    s, _ = setup
+    game = PlaysOn(FIXTURE, index=INDEX, events={FIXTURE["turn"] + 1: _lost})
+    g = Civ6Governor(s, game, log, model=_counting_model([]))
+    g.status_poll_s, g.start_grace_s, g.turn_deadline_s, g.end_watch_s = 0, 0.05, 0.5, 0
+    g.run(max_decisions=5)
+    end = next(e for e in log.recent if e["kind"] == "campaign_end")
+    assert "keeps playing all-AI turns by itself" in end["report"]["note"]
+    assert "exit to the main menu to stop it" in end["text"]
+
+
+def test_a_snapshot_for_another_player_waits_for_the_human(setup):
+    game = FakeCiv6(FIXTURE, index=INDEX, events={FIXTURE["turn"] + 1: lambda st: st.update(player=3)})
+    g = governor(setup, game, orders_model([]))
+    run_until_attention(g)
+    assert any(e["kind"] == "needs_attention" and "player 3, this run governs player 0" in e["reason"]
+               for e in g.log.recent)

@@ -31,6 +31,7 @@ from pydantic_ai.exceptions import UsageLimitExceeded
 from pydantic_ai.messages import ModelResponse
 from pydantic_ai.usage import UsageLimits
 
+from . import campaign_end
 from .agent import HumanChannel, model_settings, run_with_retry
 from .claude_code import resolve_model
 from .config import Settings
@@ -603,6 +604,8 @@ class Governor:
         self._crisis_pending: str | None = None
         self._crisis_saved: dict | None = None    # the state as the last `crisis` event wrote it
         self._since_retro = 0
+        self._ended = False                       # the campaign ended (rulings 21-23): the run loop is left
+        self._zero_saves = 0                      # Stellaris: saves in a row with no planet of ours (ruling 22)
         self._strategy_trace_n = 0                # negative episode ids for strategy review traces (see _review_strategy)
         self._clock: Callable[[], float] = time.monotonic   # the watchdog's wall clock (tests inject one)
         self._month_secs: deque[float] = deque(maxlen=self.stall_months)   # real seconds per in-game month
@@ -1040,7 +1043,8 @@ class Governor:
                 self.game.set_paused(True)
             except Exception as e:  # noqa: BLE001 - best effort on the way out
                 self.log.emit("episode_error", error=f"could not pause on exit: {e}"[:300])
-            self._status("stopped")
+            if not self._ended:                  # an ended campaign keeps "ended" while the process lives
+                self._status("stopped")
             self.log.emit("run_end", decisions=self.log.state.episodes)
 
     def _fresh_briefing(self) -> dict:
@@ -1076,6 +1080,8 @@ class Governor:
                 self.log.emit("journal", text="taking control: " + self.game.take_control().replace("\n", "; "))
                 b = self._fresh_briefing()
                 self._set_campaign(b)
+                if self._stellaris_end_check(b, at_start=True):
+                    return None                     # ruling 22: the campaign is over; no decision
                 reviewed = self.strategy is None and self.pillars is not None
                 if reviewed:
                     self._review_strategy(b, "start of run")
@@ -1578,15 +1584,24 @@ class Governor:
                 self._date_moved(months(b["date"]) - months(last["date"]))
                 row, observed = self._observe(b)
                 self.log.emit("metrics", **row)
-                self._follow(b)
                 self.log.state.game_date = b["date"]
+                if self._stellaris_end_check(b):
+                    return None, "ended"            # ruling 22: 0 planets in 2 saves in a row
+                self._follow(b)
                 self.log.state.turns_advanced = months(b["date"]) - months(last["date"]) + self.log.state.turns_advanced
+                if self._zero_saves:
+                    # no decision and no review on a save with no planet of ours: the next save either
+                    # ends the run or shows a planet again (ruling 22, as ruling 21's second read)
+                    self.log.emit("journal", text=f"{b['date']}: no planet of ours in this save; the next one decides "
+                                                  "whether the campaign is lost")
+                    last = b
+                    continue
             else:
                 if unread_since is not None:
                     # the time without a reading proves no stall (the PC may have slept): left out
                     self._date_seen_at += self._clock() - unread_since
                 if self._stalled(b["date"]):
-                    return last, ""
+                    return (None, "ended") if self._ended else (last, "")
             unread_since = None
             urgent = urgent_changes(last, b) + observed
             if b["date"] != last["date"]:
@@ -1601,6 +1616,95 @@ class Governor:
                 self.game.set_paused(True)
                 return b, f"scheduled ({self.s.decide_every_months} months)"
             last = b
+
+    # ---- the end of a campaign (postmortem-fixes design, rulings 21-23) ------------------------------
+
+    def _stellaris_end_check(self, b: dict, at_start: bool = False) -> bool:
+        """Ruling 22: once per save date, count the saves in a row with no planet of ours; the second
+        ends the run as lost (at the start of a run the campaign's earlier rows count, so a new run on a
+        lost campaign ends at once). A Civ VI governor has its own check. True when the run ended."""
+        if str(b.get("date") or "")[:1] == "T":
+            return False
+        if not campaign_end.stellaris_zero(b):
+            self._zero_saves = 0
+            return False
+        if at_start:
+            before = [r for r in self._rows if months(r["date"]) < months(b["date"])]
+            trailing = 0
+            for r in reversed(before):
+                if not campaign_end.stellaris_zero_row(r):
+                    break
+                trailing += 1
+            self._zero_saves = trailing + 1
+        else:
+            self._zero_saves += 1
+        if self._zero_saves < 2:
+            return False
+        self._end_stellaris(b, f"0 planets in {self._zero_saves} saves in a row")
+        return True
+
+    def _end_stellaris(self, b: dict, signal: str) -> None:
+        """Ruling 22's end: the game stays paused; the report and the end state (ruling 21's steps)."""
+        try:
+            self.game.set_paused(True)
+        except Exception as e:  # noqa: BLE001 - the end is recorded either way
+            self.log.emit("briefing_error", error=f"pause at the end: {e}"[:200])
+        rows = self._campaign_rows()
+        last = campaign_end.last_held(rows, "planets")
+        seen = campaign_end.first_zero_after(rows, "planets", last, months) or b.get("date")
+        stock = b.get("stockpile") or {}
+        rep = {"game": "stellaris", "turn": last, "seen": seen, "signal": signal,
+               "lost": campaign_end.losses(self._campaign_events("episode")),
+               "ratio": campaign_end.enemy_ratio(rows, "military_power"),
+               "stranded": {k: stock[k] for k in ("energy", "minerals", "alloys", "influence") if k in stock},
+               "after": self._decisions_since(seen)}
+        self._end_campaign(rep, b.get("name") or self.log.campaign_id or "our empire", str(b.get("date") or ""))
+
+    def _campaign_rows(self) -> list[dict]:
+        """Every metrics row of the campaign (oldest first), or the rows in memory without telemetry."""
+        tel, cid = self.log.telemetry, self.log.campaign_id
+        if tel is not None and cid:
+            try:
+                return tel.metrics_rows(cid)
+            except Exception as e:  # noqa: BLE001 - the report is advisory
+                self.log.emit("briefing_error", error=f"end report rows: {e}"[:200])
+        return list(self._rows)
+
+    def _campaign_events(self, kind: str) -> list[dict]:
+        tel, cid = self.log.telemetry, self.log.campaign_id
+        if tel is None or not cid:
+            return []
+        try:
+            return tel.campaign_events(cid, kind)
+        except Exception as e:  # noqa: BLE001 - the report is advisory
+            self.log.emit("briefing_error", error=f"end report {kind}: {e}"[:200])
+            return []
+
+    def _decisions_since(self, seen: str | None) -> dict:
+        """Decisions and strategy reviews of the campaign dated at or after `seen` (should be 0 now)."""
+        tel, cid = self.log.telemetry, self.log.campaign_id
+        if tel is None or not cid or not seen:
+            return {"decisions": 0, "reviews": 0}
+        try:
+            rows = tel.query("SELECT decision FROM decisions WHERE campaign_id=? AND month >= ?", (cid, months(seen)))
+        except Exception as e:  # noqa: BLE001 - the report is advisory
+            self.log.emit("briefing_error", error=f"end report decisions: {e}"[:200])
+            return {"decisions": 0, "reviews": 0}
+        reviews = sum(1 for r in rows if r.get("decision") == "strategy_review")
+        return {"decisions": len(rows) - reviews, "reviews": reviews}
+
+    def _end_campaign(self, rep: dict, name: str, date: str) -> None:
+        """Ruling 21's end, with no model call: the `campaign_end` event (telemetry marks the run
+        lost), the journal line, `info.end` and the status "ended"; the run loop is then left."""
+        text = campaign_end.report_text(name, rep)
+        end = {"result": campaign_end.RESULT_LOST, "turn": rep.get("turn"), "seen": rep.get("seen"),
+               "signal": rep.get("signal"), "report": rep, "text": text}
+        extra = {"last_city_turn": rep.get("turn")} if rep.get("game") == "civ6" else {"last_planet_date": rep.get("turn")}
+        self.log.emit("campaign_end", **end, **extra)
+        self.journal.note(text, date)
+        self._ended = True
+        self.log.state.info["end"] = end
+        self._status("ended")
 
     def _date_moved(self, n: int) -> None:
         """The autosave date moved `n` months: record the real time per month, restart the stall timer."""
@@ -1631,6 +1735,11 @@ class Governor:
             return False
         frame = self._frame()
         self.log.emit("stall", date=date, seconds=round(held), limit=round(limit), frame=frame)
+        if self._zero_saves >= 1 and self._observed_b is not None:
+            # ruling 22: the game may stop saving once the empire falls; a stall after a save with no
+            # planet of ours ends the run as lost instead of waiting for the human
+            self._end_stellaris(self._observed_b, f"the date stalled for {round(held)} s after a save with 0 planets")
+            return True
         self._needs_attention(f"the game date has not advanced for {round(held)} s (still {date}): a popup that paused "
                               "the game, another game loaded, the launcher or a crash may hold it. Nothing was sent to "
                               f"the game. Screenshot at the stall: {frame or 'none'}. Check the PC, then press Resume.")

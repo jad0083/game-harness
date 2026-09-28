@@ -158,8 +158,11 @@ class Telemetry:
             self.start_run(run_id, data.get("game", ""), data.get("model", ""), data, t)
         elif kind == "campaign":
             self.set_campaign(run_id, data.get("game", ""), data.get("name", ""), t, data.get("title") or "")
-        elif kind == "run_end":
-            self._exec("UPDATE runs SET ended=?, status='ended' WHERE id=?", (t, run_id))
+        elif kind == "run_end":      # a campaign that ended (lost) keeps that status
+            self._exec("UPDATE runs SET ended=?, status=CASE WHEN status='lost' THEN status ELSE 'ended' END WHERE id=?",
+                       (t, run_id))
+        elif kind == "campaign_end":    # postmortem-fixes design, ruling 21
+            self._exec("UPDATE runs SET status=? WHERE id=?", (data.get("result") or "lost", run_id))
         elif kind == "metrics":
             self._exec("INSERT OR REPLACE INTO metrics(run_id, campaign_id, t, date, month, data) VALUES (?,?,?,?,?,?)",
                        (run_id, self._campaign_of(run_id), t, data.get("date"), month_index(data.get("date")),

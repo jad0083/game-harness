@@ -100,6 +100,16 @@ The prompt adds a 12-month trend line and what earlier directive changes led to.
 If the game stops answering pause and resume (for example a text box holds the keyboard), the
 governor stops acting and flags *needs attention* until you press Resume.
 
+**The end of a campaign** (postmortem-fixes design, rulings 22-23): a save in which we own no planet
+gets no decision and no review; a second one in a row ends the run as lost, with no model call: the
+game stays paused, a `campaign_end` event (`result` lost, the last date we held a planet, the date
+the loss was seen, the signal, the report: colonies lost, our military against the strongest enemy,
+the stocks left, decisions after the loss was seen), a journal line, the run's `lost` status in
+telemetry, `info.end` and the status `ended`. A date stall after a save with no planet ends it the
+same way (the game may stop saving once the empire falls; unverified). A new run on such a campaign
+ends at its start. A lost capital stays the "colony lost" trigger, and a briefing that cannot find our
+country still waits for the human (another game's save reads the same way).
+
 If the autosave date stops moving while the game should be running (a popup that pauses the game,
 the launcher in front, a crash), the governor waits max(300 s, 10 x the median real time of a month
 in this run's last 24 months), then saves a screenshot, logs `stall` and flags *needs attention*
@@ -272,6 +282,19 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   (published as `diplomacy_record` beside `order_record`, reloaded from telemetry after a restart),
   and the dashboard's activity feed shows each answer. Until the game is loaded
   again, a human at the PC sees no AI statement and cannot use the leader screen's conversations.
+- **The end of the campaign** (postmortem-fixes design, rulings 21-23): the snapshot's `alive` false
+  ends the run at once; 0 cities and 0 settlers is read again at once and ends it when the second read
+  agrees (one glitched read never does). The local player id is never used (China was alive again at
+  T913 while it read -1 at T916), and the run keeps the player id of its first snapshot: a snapshot for
+  another player waits for the human. The end runs no model call and no review: autoplay is stopped,
+  two `autoplay-status` reads 60 s apart tell whether the game keeps playing all-AI turns by itself
+  (the report then says to exit to the main menu; nothing is sent), then a `campaign_end` event
+  (`result` lost, `last_city_turn`, `seen`, the signal and the report: the cities lost with their
+  turns, our military against the strongest enemy at war, the gold and faith stranded, the decisions
+  made after the loss was seen), a journal line, the run's `lost` status in telemetry, `info.end`
+  (`result`, `turn`, `seen`, `signal`, `report`) and the status `ended` while the process lives. A new
+  run on the campaign ends at its start while the signal holds. The dashboard shows it through
+  feat/dashboard-v2; until then the run reads as not running with the event in Activity.
 - **Strategy**: `corpora/civ6/pillars.toml` in share mode (science, culture, faith, economy,
   military, expansion, diplomacy) with milestones on turns (`T60`); reviews as for Stellaris.
 - **Campaign** `civ6/<leader>_<map seed>`; metrics rows per turn (`date` `T<turn>`), so telemetry,
@@ -509,8 +532,9 @@ stream, the frame, `/control`, `/status` and everything else except the short "h
 
 `runs/telemetry.sqlite` (local, gitignored) holds every event, decision with its full trace, and
 monthly metric point, grouped by **campaign** (the Stellaris save folder or the GC4 journal
-directory; `PILOT_CAMPAIGN` overrides). Each decision is scored against the empire 12 in-game
-months later. The JSONL logs in `runs/<id>/` are the raw record; `python -m pilot
+directory; `PILOT_CAMPAIGN` overrides). Each decision is scored against the empire `[time]
+score_horizon` steps later (12 months in Stellaris, 12 turns in Civ VI). A run whose campaign ended
+(`campaign_end`) keeps the status `lost` in `runs` after it stops. The JSONL logs in `runs/<id>/` are the raw record; `python -m pilot
 rebuild-telemetry` recreates the database. Curated knowledge (`learned/`, strategy, journals) is
 committed.
 

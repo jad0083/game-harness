@@ -5203,3 +5203,91 @@ def test_stellaris_keeps_its_12_month_cap_and_a_new_war_always_reviews(setup):
     assert g._maybe_event_review(briefing("2202.01.01"), "urgent: colony lost: 5 -> 4") is False
     skip = [e for e in log.recent if e["kind"] == "strategy_review_skipped"][-1]
     assert skip["reason"] == "within 12 months of the last event review"
+
+
+# ---- postmortem-fixes design, rulings 22-23: the run ends with no planet of ours -----------------
+
+def _planets(date: str, n: int, **extra) -> dict:
+    return {**briefing(date), "source": "save games/gone_1/x.sav", "name": "United Nations of Earth",
+            "planets": [{"name": f"p{i}"} for i in range(n)], "stockpile": {"energy": 900, "alloys": 300}, **extra}
+
+
+def test_two_saves_with_no_planet_end_the_stellaris_run(setup, tmp_path):
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(s.runs_dir, "rune1", s.model, telemetry=tel)
+    game = FakeStellaris([_planets("2200.01.01", 2), _planets("2200.02.01", 0), _planets("2200.03.01", 0),
+                          _planets("2200.04.01", 0)])
+    calls: list = []
+    g = Governor(s, game, log, model=_recording("decide", calls), role_models={"strategy": _strategist(calls)})
+    g.run(max_decisions=5)
+    assert calls.count("decide") == 1, "no decision after the first save with no planet"
+    end = [e for e in log.recent if e["kind"] == "campaign_end"]
+    assert len(end) == 1 and end[0]["signal"] == "0 planets in 2 saves in a row"
+    assert (end[0]["last_planet_date"], end[0]["seen"]) == ("2200.01.01", "2200.02.01")
+    assert end[0]["report"]["stranded"] == {"energy": 900, "alloys": 300}
+    assert log.state.status == "ended" and game.paused is True
+    assert tel.query("SELECT status FROM runs WHERE id='rune1'")[0]["status"] == "lost"
+
+
+def test_one_save_with_no_planet_does_not_end_it_and_holds_its_decision(setup):
+    s, log = setup
+    war = [{"name": "Border War", "attacker": False}]
+    game = FakeStellaris([_planets("2200.01.01", 2), _planets("2200.02.01", 0), _planets("2200.03.01", 1, wars=war)])
+    g = Governor(s, game, log, model=decisions("keep"), role_models={"strategy": _strategist([])})
+    g.run(max_decisions=2)
+    assert not any(e["kind"] == "campaign_end" for e in log.recent) and not g._ended
+    eps = [e for e in log.recent if e["kind"] == "episode"]
+    assert [e["date"] for e in eps] == ["2200.01.01", "2200.03.01"], "no decision on the save with no planet"
+
+
+def test_a_stall_after_a_save_with_no_planet_ends_the_run_as_lost(setup):
+    s, log = setup
+    clock = {"t": 0.0}
+    game = FakeStellaris([_planets("2200.01.01", 1), _planets("2200.02.01", 0)])
+    g = Governor(s, game, log, model=decisions("keep"), role_models={"strategy": _strategist([])})
+    g._clock = lambda: clock.__setitem__("t", clock["t"] + 400.0) or clock["t"]
+    g.run(max_decisions=3)
+    end = [e for e in log.recent if e["kind"] == "campaign_end"]
+    assert end and "the date stalled" in end[0]["signal"] and "after a save with 0 planets" in end[0]["signal"]
+    assert not any(e["kind"] == "needs_attention" for e in log.recent)
+
+
+def test_a_new_run_on_a_campaign_with_no_planet_ends_at_its_start(setup, tmp_path):
+    from pilot.governor import metrics
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    old = EventLog(s.runs_dir, "old", s.model, telemetry=tel)
+    old.emit("run_start", game="stellaris", model=s.model)
+    old.set_campaign("stellaris", "gone_1", "UNE")
+    old.emit("metrics", **metrics(_planets("2200.02.01", 0)))
+    log = EventLog(s.runs_dir, "new", s.model, telemetry=tel)
+    calls: list = []
+    game = FakeStellaris([_planets("2200.03.01", 0)])
+    g = Governor(s, game, log, model=_recording("decide", calls), role_models={"strategy": _strategist(calls)})
+    g.run(max_decisions=3)
+    assert calls == [] and [e["kind"] for e in log.recent].count("campaign_end") == 1
+
+
+def test_a_briefing_that_cannot_find_our_country_waits_for_the_human(setup):
+    s, log = setup
+
+    class NoCountry(FakeStellaris):
+        def briefing(self):
+            raise RuntimeError("stellaris brief: player country 5 not found")
+
+    g = Governor(s, NoCountry([briefing("2200.01.01")]), log, model=decisions("keep"))
+    g.recover_every_s = 0
+    import threading
+    t = threading.Thread(target=g.run, daemon=True)
+    t.start()
+    import time as _t
+    end = _t.time() + 5
+    while log.state.status != "needs_attention" and _t.time() < end:
+        _t.sleep(0.01)
+    g.stop()
+    t.join(5)
+    assert log.state.status in ("needs_attention", "stopped") and not g._ended
+    assert any(e["kind"] == "needs_attention" and "player country 5 not found" in e["reason"] for e in log.recent)

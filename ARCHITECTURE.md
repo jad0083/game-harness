@@ -429,8 +429,12 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   `rebalance` for a human weight edit). `governor.py`:
   `_review_strategy` (role `strategy`, `StrategyReview` output, one corrective retry, `strategy` and
   `strategy_review` events, saved as a decision row with `decision = "strategy_review"` and a
-  negative episode, excluded wherever directive decisions are meant), `_maybe_event_review` (12-month
-  cap; failure retries, no-strategy and dashboard requests bypass it), `frame_text` + off-frame
+  negative episode, excluded wherever directive decisions are meant), `_maybe_event_review` (`[time]
+  review_cap` in the game's unit, `review_exempt` triggers always review; failure retries, no-strategy
+  and dashboard requests bypass it), the end of a campaign (`campaign_end.py`, pure: `civ6_read`,
+  `stellaris_zero`, the report; `_end_campaign` emits `campaign_end`, writes the journal, sets
+  `info.end` and the status `ended`, and the run loop is left; telemetry marks the run `lost`),
+  `frame_text` + off-frame
   tagging in `_decide`, `_carry_out_actions` (once per save date, verified in a later save),
   the action record (`stellaris_record.py`, pure: an action dict per directive, tech pick, market
   change and posture sent; `judge` on each new save in `_follow`, called from the wait loop after

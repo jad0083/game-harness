@@ -17,7 +17,7 @@ from typing import Any
 class RunState:
     run_id: str
     model: str
-    status: str = "starting"           # starting | playing | deciding | paused | stopped | needs_attention
+    status: str = "starting"           # starting | playing | deciding | paused | stopped | needs_attention | ended
     turns_advanced: int = 0
     episodes: int = 0
     last_stop: str = ""

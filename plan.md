@@ -185,7 +185,7 @@
 - [ ] A failed decision retries with the strategy model, then acts by rule before autoplay (ruling 20)
 - [ ] Civ VI relative military milestones (military ÷ median, ÷ strongest non-ally) (ruling 18)
 - [ ] Civ VI: name who declared each war; no diplomacy goals until an order exists (rulings 24, 25)
-- [ ] End the run when the empire is gone (Civ VI: not alive, or 0 cities and 0 settlers twice; Stellaris: 0 planets twice), with a report and a "lost" state (rulings 21-23)
+- [ ] End the run when the empire is gone (Civ VI: not alive, or 0 cities and 0 settlers twice; Stellaris: 0 planets twice), with a report and a "lost" state (rulings 21-23); on branch feat/postmortem-fixes, not deployed (the dashboard's "lost" rendering is feat/dashboard-v2's)
 - [ ] Turns advanced logged against those requested; full decision prompts in traces (ruling 27)
 - [ ] Civ VI price changes in the briefing (World Congress discounts) (ruling 6)
 - [ ] Known-false learned rules refused; the listed rules corrected at deploy (ruling 29)

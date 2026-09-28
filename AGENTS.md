@@ -299,6 +299,9 @@ Rules:
   space (none surveyed in reach, influence 950+ for 12 months). A milestone is judged on the latest
   value since it was set (its `set` stamp), never on a past high: met, missed once due, else on track
   or at risk (both games; postmortem-fixes design, ruling 17).
+- **The end**: a save with no planet of ours gets no decision; two in a row (or a date stall after one)
+  end the run as lost with a report and no model call (`campaign_end`, journal, `info.end`, status
+  `ended`; postmortem-fixes design, ruling 22).
 - **Time constants** (`[time]` in pillars.toml, in months here): event reviews at most one per 12 months
   except a new war, which always reviews; milestone projections over 12 months; outcomes scored 12
   months after a decision (postmortem-fixes design, rulings 15 and 19).
@@ -416,6 +419,10 @@ Rules:
   The library file is now over the agent's 64 KiB code limit: the controller blanks its full-line
   comments when it installs it (line numbers kept), so rebuild the controller with this corpus before
   the governor runs it (pause the governor across the merge and the build).
+- The run ends when our civilization is gone (postmortem-fixes design, ruling 21): the snapshot's `alive`
+  false, or 0 cities and 0 settlers on 2 reads in a row (never the local player id -1). No decision or
+  review runs after it: autoplay stops, `campaign_end` with a report, a journal line, the run `lost` in
+  telemetry, status `ended`. If the game keeps playing all-AI turns, exit to the main menu by hand.
 - Time constants are in turns (`[time]` in `corpora/civ6/pillars.toml`): event reviews at most one per 5
   turns, but a new war or a lost city always reviews; milestone projections and outcome scoring over 12
   turns (postmortem-fixes design, rulings 15 and 19).
