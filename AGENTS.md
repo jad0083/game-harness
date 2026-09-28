@@ -454,6 +454,11 @@ Rules:
   most 3 tool calls."), then the governor acts by rule before any autoplay: idle research and civic,
   empty queues of ungarrisoned cities, and under military weakness one rule-based defender
   (postmortem-fixes design, ruling 20). Give the Strategy role a model of its own from another provider.
+- A new war names who declared it from one `log-tail DiplomacySummary.csv` read ("CIVILIZATION_X declared a
+  surprise war on us", "our AI declared war on X", "... joined through its defensive pact"; "who declared is
+  not known" when the read fails, never a guess); the Strategist's goals may not name peace, ceasefire,
+  alliance, friendship or denounce (`[strategy] unpursuable`): no order pursues them (postmortem-fixes
+  design, rulings 24-25; the log's live layout is unverified).
 - Triggers (postmortem-fixes design, rulings 10-14): falling behind the met majors (`[peers] behind`),
   a neighbour's buildup (2 x ours, +50% in 20 turns), gold per turn negative, loyalty falling toward a
   flip, and at war a decision at every hand-back while a city in danger has no unit on its tile and a

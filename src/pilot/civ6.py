@@ -1673,13 +1673,73 @@ def metrics(s: dict) -> dict:
                             **({"allied": m["allied"]} if "allied" in m else {})} for m in majors]}
 
 
-def urgent_changes(before: dict, now: dict, gold_reserve: int = 0, wonders: frozenset[str] | set[str] = frozenset()) -> list[str]:
-    """Reasons to stop autoplay and decide now (ruling 4). `wonders`: the wonders' type keys."""
+# ---- who declared a war (postmortem-fixes design, ruling 24) -------------------------------------------
+
+DIPLOMACY_LOG = "DiplomacySummary.csv"
+_TEAM_RE = re.compile(r"^Team (\d+)$")
+
+
+def new_wars(before: dict, now: dict) -> list[dict]:
+    old = {w.get("id") for w in before.get("wars") or []}
+    return [w for w in now.get("wars") or [] if w.get("id") not in old]
+
+
+def war_declarations(lines: list[str]) -> list[dict]:
+    """The war declarations in DiplomacySummary.csv lines: [{"turn", "player" (who declared), "team"
+    (on whom), "kind" (the casus belli: Surprise, Formal, Defensive Pact...)}]. The rows look like
+    "539, 5, Team 0, Individual Declaring War on Team START, Surprise" (read offline for the
+    post-mortem; the live layout is unverified): a row that does not parse is skipped, so a changed
+    layout names nobody, never a wrong declarer. A team is taken as its player's id."""
     out = []
-    old_wars = {w.get("id") for w in before.get("wars") or []}
-    for w in now.get("wars") or []:
-        if w.get("id") not in old_wars:
-            out.append(f"new war: {w.get('civ')} is at war with us")
+    for line in lines:
+        f = [x.strip() for x in str(line).split(",")]
+        if len(f) < 5 or not f[0].isdigit() or not f[1].isdigit() or "Declaring War" not in f[3]:
+            continue
+        team = _TEAM_RE.match(f[2])
+        if team:
+            out.append({"turn": int(f[0]), "player": int(f[1]), "team": int(team.group(1)), "kind": f[-1]})
+    return out
+
+
+def _war_kind(kind: str) -> str:
+    k = kind.strip().lower()
+    return {"surprise": "a surprise war", "formal": "a formal war"}.get(k, f"war ({kind.strip()})")
+
+
+def war_text(war: dict, me, declarations: list[dict], majors: list[dict] | None = None) -> str:
+    """The "new war" reason naming who declared (ruling 24), from the declarations of this stretch:
+    "new war: CIVILIZATION_AUSTRALIA declared a surprise war on us", "new war: our AI declared war on
+    CIVILIZATION_AUSTRALIA (a surprise war)", "new war: CIVILIZATION_MALI joined through its defensive
+    pact"; a major that joined the enemy's side against it by its defensive pact is named after it.
+    With no declaration found: "(who declared is not known)"; it never guesses. China's own autoplay
+    AI declared the T121 war, and the model recorded it as Australia's."""
+    civ, enemy = war.get("civ"), war.get("id")
+    name = {m.get("id"): m.get("civ") for m in majors or []}
+    theirs = [d for d in declarations if d["player"] == enemy and d["team"] == me]
+    ours = [d for d in declarations if d["player"] == me and d["team"] == enemy]
+    if theirs:
+        kind = theirs[-1]["kind"]
+        text = (f"new war: {civ} joined through its defensive pact" if "defensive pact" in kind.lower()
+                else f"new war: {civ} declared {_war_kind(kind)} on us")
+    elif ours:
+        text = f"new war: our AI declared war on {civ} ({_war_kind(ours[-1]['kind'])})"
+    else:
+        return f"new war: at war with {civ} (who declared is not known)"
+    joined = [name.get(d["player"], f"player {d['player']}") for d in declarations
+              if d["team"] == enemy and d["player"] not in (me, enemy) and "defensive pact" in d["kind"].lower()]
+    if joined:
+        text += " (" + ", ".join(f"{j} joined against it through its defensive pact" for j in dict.fromkeys(joined)) + ")"
+    return text
+
+
+def urgent_changes(before: dict, now: dict, gold_reserve: int = 0, wonders: frozenset[str] | set[str] = frozenset(),
+                   declared: dict | None = None) -> list[str]:
+    """Reasons to stop autoplay and decide now (ruling 4). `wonders`: the wonders' type keys;
+    `declared`: each new war's reason by the enemy's player id (`war_text`), else who declared is not
+    known (postmortem-fixes ruling 24)."""
+    out = []
+    for w in new_wars(before, now):
+        out.append((declared or {}).get(w.get("id")) or f"new war: at war with {w.get('civ')} (who declared is not known)")
     old_cities = {c["name"] for c in before.get("cities") or []}
     new_cities = {c["name"] for c in now.get("cities") or []}
     for name in sorted(old_cities - new_cities):

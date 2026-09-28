@@ -207,3 +207,35 @@ def test_a_plan_on_a_unit_whose_resource_we_lack_is_sent_back():
     pinned = civ_strategy(military={"prefer_purchases": ["unit:mechanized_infantry"], "pinned": True})
     assert validate(pinned, SPEC, previous=None, tech_ids=set(), idle=set(), income={}, ids=ids,
                     unavailable=unavailable) == [], "a pinned pillar is exempt"
+
+
+# ---- postmortem-fixes design, ruling 25: no diplomacy goals until a diplomacy order exists ------------
+
+def test_a_goal_no_order_can_pursue_is_sent_back_and_pins_are_exempt():
+    """War-11: "Get peace with Australia" was the goal at T563, T565 and T575 with no order kind that
+    could pursue it; the game's AI handles diplomacy during autoplay."""
+    assert SPEC.unpursuable == ("peace", "ceasefire", "alliance", "friendship", "denounce")
+    errs = errors(civ_strategy(diplomacy={"goals": ["Get peace with Australia", "Keep 2 delegations"]}))
+    assert ("diplomacy: goal 'Get peace with Australia' names 'peace': no order can pursue it: the game's AI "
+            "handles diplomacy during autoplay") in errs
+    assert any("'alliances'" in e or "'alliance'" in e for e in errors(civ_strategy(diplomacy={"goals": ["Renew our Alliances"]})))
+    assert errors(civ_strategy(diplomacy={"goals": ["Peaceful expansion to 6 cities", "hold 2"]})) == [], "a word, not a prefix"
+    pinned = civ_strategy(diplomacy={"goals": ["Get peace with Australia", "hold 2"], "pinned": True})
+    assert errors(pinned) == []
+    human = validate(civ_strategy(diplomacy={"goals": ["Get peace with Australia", "hold 2"]}), SPEC, previous=None,
+                     tech_ids=set(), idle=set(), income={}, ids=IDS, require_milestones=False)
+    assert human == [], "a human edit is exempt"
+    assert "the war ending" in SPEC.instructions and "(peace," not in SPEC.instructions
+
+
+def test_a_bad_unpursuable_list_names_its_key(tmp_path):
+    import shutil
+
+    from pilot.pillars import PillarsError
+    corpus = tmp_path / "civ6"
+    shutil.copytree(REPO / "corpora/civ6", corpus, ignore=shutil.ignore_patterns("data", "learned", "lua"))
+    shutil.copytree(REPO / "corpora/civ6/data", corpus / "data")
+    text = (corpus / "pillars.toml").read_text()
+    (corpus / "pillars.toml").write_text(text.replace('unpursuable = ["peace",', 'unpursuable = [3, "peace",'))
+    with pytest.raises(PillarsError, match="strategy.unpursuable"):
+        load_pillars(corpus)

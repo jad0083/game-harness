@@ -180,7 +180,7 @@ def test_an_urgent_change_stops_autoplay(setup):
     g.run(max_decisions=2)
     assert [a for a in game.actions if a[0] == "autoplay"] == [("autoplay", 1, False)], "no next turn after it"
     second = traces(setup)[1]
-    assert second["trigger"].startswith("urgent: new war: CIVILIZATION_ROME")
+    assert second["trigger"].startswith("urgent: new war: at war with CIVILIZATION_ROME (who declared is not known)")
     assert game.state["turn"] == FIXTURE["turn"] + 1
 
 
@@ -2086,7 +2086,7 @@ def test_civ6_event_reviews_are_capped_at_5_turns_and_a_new_war_always_reviews(s
                                    zip(SPEC.ids, (20, 15, 10, 15, 20, 10, 10), strict=True)}, focus="hold")
     assert g._maybe_event_review({**FIXTURE, "date": "T538"}, "urgent: city threatened: Beijing") is True
     assert g._maybe_event_review({**FIXTURE, "date": "T541"},
-                                 "urgent: new war: CIVILIZATION_AUSTRALIA is at war with us") is True
+                                 "urgent: new war: CIVILIZATION_AUSTRALIA declared a surprise war on us") is True
     assert g._maybe_event_review({**FIXTURE, "date": "T542"}, "urgent: city threatened: Taiyuan") is False
     skip = [e for e in g.log.recent if e["kind"] == "strategy_review_skipped"][-1]
     assert skip["reason"] == "within 5 turns of the last event review"
@@ -2895,3 +2895,57 @@ def test_without_strategy_models_the_failed_models_are_not_tried_again(setup):
     g2 = _resilience_governor((s, EventLog(s.runs_dir, "civ2", s.model)), calm, [])
     g2.run(max_decisions=1)
     assert not any(a[0] == "order" and a[1]["kind"] == "purchase" for a in calm.actions), "no weakness: no rule buy"
+
+
+# ---- postmortem-fixes design, ruling 24: who declared each war -------------------------------------------
+
+DIPLO_LOG = ["Game Turn, Player, Team, Action, Detail",
+             "121, 0, Team 5, Individual Declaring War on Team START, Surprise",
+             "539, 5, Team 0, Individual Declaring War on Team START, Surprise",
+             "539, 3, Team 5, Individual Declaring War on Team START, Defensive Pact",
+             "539, 5, Team 0, City Capture, Hunza"]
+AUSTRALIA = {"id": 5, "civ": "CIVILIZATION_AUSTRALIA", "major": True}
+MAJORS_T539 = [{"id": 5, "civ": "CIVILIZATION_AUSTRALIA", "military": 1106}, {"id": 3, "civ": "CIVILIZATION_MALI",
+                                                                                "military": 2428, "allied": True}]
+
+
+def test_the_declarer_is_read_from_the_diplomacy_log():
+    """Diplomacy-5: China's own autoplay AI declared the T121 war ("121, 0, Team 5, ... Surprise") and the
+    model recorded it as Australia's; a learned rule followed from the wrong premise."""
+    from pilot.civ6 import war_declarations, war_text
+    rows = war_declarations(DIPLO_LOG)
+    assert [(r["turn"], r["player"], r["team"], r["kind"]) for r in rows] == \
+        [(121, 0, 5, "Surprise"), (539, 5, 0, "Surprise"), (539, 3, 5, "Defensive Pact")]
+    ours = war_text(AUSTRALIA, 0, [r for r in rows if 120 <= r["turn"] <= 121], MAJORS_T539)
+    assert ours == "new war: our AI declared war on CIVILIZATION_AUSTRALIA (a surprise war)"
+    theirs = war_text(AUSTRALIA, 0, [r for r in rows if 538 <= r["turn"] <= 540], MAJORS_T539)
+    assert theirs == ("new war: CIVILIZATION_AUSTRALIA declared a surprise war on us (CIVILIZATION_MALI joined against "
+                      "it through its defensive pact)")
+    pact = war_text({"id": 3, "civ": "CIVILIZATION_MALI"}, 5,
+                    [{"turn": 539, "player": 3, "team": 5, "kind": "Defensive Pact"}], MAJORS_T539)
+    assert pact == "new war: CIVILIZATION_MALI joined through its defensive pact"
+    assert war_text(AUSTRALIA, 0, [], MAJORS_T539) == "new war: at war with CIVILIZATION_AUSTRALIA (who declared is not known)"
+
+
+def test_a_new_war_names_its_declarer_after_one_log_read(setup):
+    def war(state):
+        state["wars"] = [AUSTRALIA]
+    base = {**FIXTURE, "turn": 538, "majors": MAJORS_T539}
+    game = FakeCiv6(base, index=INDEX, events={539: war}, logs={"DiplomacySummary.csv": DIPLO_LOG})
+    g = governor(setup, game, orders_model([]))
+    g.run(max_decisions=2)
+    assert traces(setup)[1]["trigger"].startswith("urgent: new war: CIVILIZATION_AUSTRALIA declared a surprise war on us")
+    assert [a[1] for a in game.actions if a[0] == "log_tail"] == ["DiplomacySummary.csv"], "one read, at the new war"
+
+
+def test_a_failed_log_read_says_the_declarer_is_not_known(setup):
+    class NoLog(FakeCiv6):
+        def log_tail(self, file, offset=None):
+            raise TimeoutError("log-tail: no reply")
+
+    def war(state):
+        state["wars"] = [AUSTRALIA]
+    game = NoLog({**FIXTURE, "turn": 538, "majors": MAJORS_T539}, index=INDEX, events={539: war})
+    g = governor(setup, game, orders_model([]))
+    g.run(max_decisions=2)
+    assert traces(setup)[1]["trigger"] == "urgent: new war: at war with CIVILIZATION_AUSTRALIA (who declared is not known)"

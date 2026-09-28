@@ -47,7 +47,7 @@ _WEIGHTS_KEYS = {"mode", "min", "max", "spread", "switch_margin", "need", "stall
 NEED_STATUSES = ("met", "on_track", "at_risk", "missed")
 _STRATEGY_KEYS = {"min_milestones_top", "min_milestones_each", "min_milestones_first", "min_goals", "min_goals_top",
                   "stance_needs_figure", "metric_aliases", "instructions", "date_format", "identity",
-                  "relative_military"}
+                  "relative_military", "unpursuable"}
 _RELATIVE_KEYS = {"pillar", "metric", "relative", "min_target", "absolute_share", "rank_min_peers"}
 DATE_FORMATS = ("calendar", "turns")     # milestone dates: YYYY.MM.DD, or T<turn> (turn-based games)
 _METRICS_KEYS = {"names", "row_keys", "milestone_exclude", "peer_keys"}
@@ -233,6 +233,9 @@ class PillarSpec:
     time: TimeSpec = field(default_factory=TimeSpec)   # [time]: the clock's constants in the game's unit
     relative: RelativeSpec | None = None       # [strategy] relative_military; None: the rules are off
     peers: PeersSpec | None = None             # [peers]; None: no falling-behind trigger from the governor
+    # words a goal may not name because no order can pursue them ([strategy] unpursuable; Civ VI:
+    # diplomacy, which the game's AI handles during autoplay; postmortem-fixes design, ruling 25)
+    unpursuable: tuple[str, ...] = ()
 
     @property
     def ids(self) -> tuple[str, ...]:
@@ -758,9 +761,13 @@ def _parse(path: Path, corpus: Path) -> PillarSpec:
     orders = _orders(path, raw["orders"]) if "orders" in raw else None
     time = _time(path, raw.get("time", {}), date_format)
     relative = _relative(path, strat["relative_military"], names, pillars) if "relative_military" in strat else None
+    unpursuable = strat.get("unpursuable", [])
+    if not isinstance(unpursuable, list) or not all(isinstance(w, str) and re.fullmatch(r"[a-z][a-z -]*", w)
+                                                     for w in unpursuable):
+        raise _err(path, "strategy.unpursuable", "must be a list of lowercase words")
     peers = _peers(path, raw["peers"]) if "peers" in raw else None
     return PillarSpec(game=corpus.name, weights=weights, orders=orders, milestone_exclude=tuple(exclude), time=time,
-                      relative=relative, peers=peers,
+                      relative=relative, peers=peers, unpursuable=tuple(unpursuable),
                       pillars=types.MappingProxyType(pillars), metrics=tuple(names),
                       metric_aliases=types.MappingProxyType(aliases), row_keys=types.MappingProxyType(row_keys),
                       peer_keys=types.MappingProxyType(peer_keys),

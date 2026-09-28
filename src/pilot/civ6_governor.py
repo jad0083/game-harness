@@ -25,6 +25,7 @@ from pydantic_ai.usage import UsageLimits
 from .campaign_end import civ6_read, civ6_signal, enemy_ratio, first_zero_after, last_held, losses
 from .civ6 import (
     AI_BUILD_LOG,
+    DIPLOMACY_LOG,
     DIPLOMACY_RECORD,
     DIPLOMACY_RECORD_HEADING,
     DIPLOMACY_RECORD_KEYS,
@@ -59,6 +60,7 @@ from .civ6 import (
     is_defender,
     lost_proof,
     metrics,
+    new_wars,
     order_base,
     order_key,
     order_record,
@@ -78,6 +80,8 @@ from .civ6 import (
     standing_danger,
     top3_hits,
     urgent_changes,
+    war_declarations,
+    war_text,
 )
 from .claude_code import resolve_model
 from .governor import (
@@ -509,7 +513,7 @@ class Civ6Governor(Governor):
             self._check_pins(b)
             self.log.state.game_date = b["date"]
             self.log.state.turns_advanced += b["turn"] - last["turn"]
-            urgent = urgent_changes(last, b, self._gold_reserve(b), self._wonders)
+            urgent = urgent_changes(last, b, self._gold_reserve(b), self._wonders, self._declarers(last, b))
             urgent += self._newly_missed_milestones(last["date"], b["date"])
             urgent += self._threat_reasons(last, b)
             urgent += self._ai_spend(last, b, spent)
@@ -518,6 +522,24 @@ class Civ6Governor(Governor):
             if b["turn"] >= target:
                 return b, f"scheduled ({self.s.decide_every_turns} turns)"
             last = b
+
+    def _declarers(self, last: dict, b: dict) -> dict:
+        """Who declared each new war (ruling 24): one read of DiplomacySummary.csv's tail when a
+        snapshot shows a new war, its declarations between the two snapshots' turns. Advisory: a
+        failed read names nobody ("who declared is not known")."""
+        wars = new_wars(last, b)
+        read = getattr(self.game, "log_tail", None)
+        if not wars or read is None:
+            return {}
+        try:
+            lines = read(DIPLOMACY_LOG).get("lines") or []
+        except Exception as e:  # noqa: BLE001 - naming is advisory
+            self.log.emit("briefing_error", error=f"{DIPLOMACY_LOG}: {e}"[:200])
+            return {}
+        lo, hi = int(last.get("turn") or 0), int(b.get("turn") or 0)
+        rows = [d for d in war_declarations(lines) if lo <= d["turn"] <= hi]
+        me = b.get("player") if isinstance(b.get("player"), int) else getattr(self, "_player_id", 0)
+        return {w.get("id"): war_text(w, me, rows, b.get("majors")) for w in wars}
 
     # ---- threat triggers (postmortem-fixes design, rulings 10-14) ------------------------------------
 

@@ -148,7 +148,16 @@ negative, a city's loyalty falling below 50 or to 5 times its drop per turn or l
 it rises; rows count `low_loyalty`), and, at every hand-back while at war with a major, a city in danger
 with no unit on its tile whose `defence_prices` list a defender the game allows within the cap and whose
 defender cooldown has run out, "city still in danger: ..."; falling behind in military, a buildup and
-negative income also start a review); stopping early is simply not starting the next turn. The tuner does not answer while the
+negative income also start a review); stopping early is simply not starting the next turn. A new war
+names who declared it (postmortem-fixes design, ruling 24): one `civ6 log-tail DiplomacySummary.csv`
+read (under `civ6_appdata`, Logs/) when a snapshot shows a new war, its "Declaring War" rows between
+the two snapshots' turns ("539, 5, Team 0, Individual Declaring War on Team START, Surprise"; a team is
+taken as its player's id): "new war: CIVILIZATION_AUSTRALIA declared a surprise war on us
+(CIVILIZATION_MALI joined against it through its defensive pact)", "new war: our AI declared war on
+CIVILIZATION_AUSTRALIA (a surprise war)", "new war: CIVILIZATION_MALI joined through its defensive
+pact", or, when the read fails or finds no row, "new war: at war with CIVILIZATION_X (who declared is
+not known)", never a guess. China's own autoplay AI declared the T121 war, which the model recorded as
+Australia's. The log's live layout is unverified. The tuner does not answer while the
 AI plays its turn, so unanswered status polls are expected; only the turn's deadline counts (10
 minutes, for long late-game turns). A turn that does not start (20 s) or end in time, or a game that
 gives no snapshot three times between turns, stops the run until the human presses Resume (an
@@ -385,7 +394,11 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   answer is sent back once when, while our military is weak (ruling 1's `low` or `last`), the military
   pillar holds no milestone on one of them at 0.5 or more, when an absolute `military` target is under
   0.5 x the median, or when a `rank:*` milestone ranks us among fewer than 3 majors (pinned pillars and
-  human edits are exempt). **Weakness** (ruling 1, `src/pilot/threat.py`): at war with a major, our
+  human edits are exempt). A goal that names a word of `[strategy] unpursuable` (peace, ceasefire,
+  alliance, friendship, denounce; plurals too) is sent back once, "no order can pursue it: the game's AI
+  handles diplomacy during autoplay" (ruling 25: "Get peace with Australia" was the goal at T563, T565
+  and T575), and the military stance's exit condition at war is a city retaken, the enemy's strength
+  below ours, or the war ending (to watch, not a goal). **Weakness** (ruling 1, `src/pilot/threat.py`): at war with a major, our
   military last of the met majors (2+ met), under `weak_median_share` (0.6) x their median, or a met
   major that is not our ally at `strong_neighbour_ratio` (2.0) x ours (both in `[actions.purchase]`;
   a major without the snapshot's `allied` field counts as not allied). Replayed on the Kublai rows it

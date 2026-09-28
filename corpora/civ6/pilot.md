@@ -16,7 +16,9 @@
   met with score and military strength, wars and great person points.
 - Diplomacy answered for us: an AI leader's statement is answered by the harness while the AI plays
   (a promise to a warning, Goodbye to proposals such as friendship, alliance or peace, deals and
-  demands refused; never war). You cannot order diplomacy; the line tells you what was said.
+  demands refused; never war). You cannot order diplomacy; the line tells you what was said. A new
+  war names who declared it, read from the game's diplomacy log: our own AI may be the one that
+  declared (it did at T121), so never draw a rule from a war without that line.
 - The AI's own plan: each city's top 3 builds as the game's AI ranks them, and the strategies it
   follows for us (e.g. science victory). An order against that plan is more likely to be replaced;
   the order record says how often the AI's replacement was in its own top 3.

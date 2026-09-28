@@ -308,6 +308,23 @@ def _unavailable_errors(s: Strategy, unavailable) -> list[str]:
     return errs
 
 
+def _unpursuable_errors(s: Strategy, spec: PillarSpec) -> list[str]:
+    """Goals that name a word of `[strategy] unpursuable` (ruling 25): no order kind can pursue them
+    ("Get peace with Australia" at T563, T565 and T575; the game's AI handles diplomacy during
+    autoplay). Whole words, plurals included; pinned pillars are exempt."""
+    errs: list[str] = []
+    for name, pl in s.sorted_pillars():
+        if pl.pinned:
+            continue
+        for g in pl.goals:
+            hit = next((w for w in spec.unpursuable
+                        if re.search(rf"\b{re.escape(w)}(?:s|es|d|ed)?\b", g, re.IGNORECASE)), None)
+            if hit:
+                errs.append(f"{name}: goal {g!r} names {hit!r}: no order can pursue it: the game's AI handles "
+                            "diplomacy during autoplay")
+    return errs
+
+
 def validate(s: Strategy, spec: PillarSpec, *, previous: Strategy | None, tech_ids: set[str], idle: set[str],
              income: dict[str, float], briefing_checked: set[str] | None = None,
              require_milestones: bool = True, ids: Mapping[str, set[str]] | None = None,
@@ -371,6 +388,8 @@ def validate(s: Strategy, spec: PillarSpec, *, previous: Strategy | None, tech_i
             errs.extend(_relative_errors(s, spec, standing))
         if unavailable is not None:
             errs.extend(_unavailable_errors(s, unavailable))
+        if spec.unpursuable:
+            errs.extend(_unpursuable_errors(s, spec))
     if previous is not None:
         for name, pl in previous.pillars.items():
             if pl.pinned and name in s.pillars and _content(s.pillars[name]) != _content(pl):
