@@ -537,3 +537,22 @@ def test_bad_weakness_or_relative_rules_name_their_key(tmp_path, old, new, where
     (d / "pillars.toml").write_text(text.replace(old, new, 1), encoding="utf-8")
     with pytest.raises(PillarsError, match=re.escape(where)):
         load_pillars(d)
+
+
+def test_the_civ6_falling_behind_factors_and_buildup_window_load():
+    spec = load_pillars(REPO / "corpora/civ6")
+    assert dict(spec.peers.behind) == {"military": 0.6, "techs": 0.85, "civics": 0.85, "score": 0.8, "cities": 0.8}
+    assert spec.peers.last_min_peers == 3 and spec.time.buildup_window == 20
+    assert load_pillars(REPO / "corpora/stellaris").peers is None
+
+
+@pytest.mark.parametrize("table, where", [
+    ("[peers]\nbehind = { military = 1.5 }", "peers.behind.military: must be a number in (0, 1]"),
+    ("[peers]\nlast_min_peers = 3", "peers.behind: required"),
+    ("[peers]\nbehind = { military = 0.6 }\nlast_min_peers = 0", "peers.last_min_peers"),
+    ("[peers]\nbehind = { military = 0.6 }\nrank = 1", "peers.rank: unknown key"),
+    ("[time]\nbuildup_window = -1", "time.buildup_window"),
+])
+def test_bad_peer_factors_or_windows_are_rejected(tmp_path, table, where):
+    with pytest.raises(PillarsError, match=re.escape(where)):
+        load_pillars(corpus(tmp_path, MINI + f"\n{table}\n"))

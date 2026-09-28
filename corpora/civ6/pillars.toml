@@ -29,6 +29,15 @@ review_cap = 5                  # event reviews: at most one per 5 turns (one de
 review_exempt = ["new war", "city lost"]   # ...but these always review (and restart the 5 turns)
 milestone_lookback = 12         # a milestone's projection: its value against a row 12 turns older
 score_horizon = 12              # outcome scoring: the metrics 12 turns after a decision
+buildup_window = 20             # neighbour buildup: +50% within 20 turns at 2 x ours (ruling 11)
+
+# Falling behind the majors we have met (docs/design/2026-09-27-postmortem-fixes-design.md, ruling 10):
+# ours under factor x their median, military also while last with 3+ met. Replayed on the Kublai rows
+# (E4) this enters "behind" 10 times for military, 9 for techs, 0 for civics, 2 for score and cities;
+# Stellaris's 0.5 never fires for techs, the gap the post-mortem names.
+[peers]
+behind = { military = 0.6, techs = 0.85, civics = 0.85, score = 0.8, cities = 0.8 }
+last_min_peers = 3
 
 [weights]
 mode = "share"          # each pillar's share of effort (weight x milestone need)

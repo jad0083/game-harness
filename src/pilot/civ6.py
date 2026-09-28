@@ -1360,7 +1360,45 @@ def urgent_changes(before: dict, now: dict, gold_reserve: int = 0, wonders: froz
                 out.append(f"great person race lost: {g.get('class')}")
     if gold_reserve and (now.get("gold") or 0) < gold_reserve <= (before.get("gold") or 0):
         out.append(f"gold below the reserve: {now.get('gold')} < {gold_reserve}")
+    g0, g1 = (before.get("yields") or {}).get("gold"), (now.get("yields") or {}).get("gold")
+    if isinstance(g0, (int, float)) and isinstance(g1, (int, float)) and g1 < 0 <= g0:
+        # postmortem-fixes ruling 12: -6.8 to -12.6 a turn over T289-T304 while the stance said +12.4
+        out.append(f"gold per turn negative: {g1:.1f}")
     return out
+
+
+def standing_danger(snapshot: dict, index: CorpusIndex, limits, defender_buys: dict[str, int] | None = None) -> str:
+    """Ruling 14 of the postmortem-fixes design: while at war with a major, a hand-back decides when a
+    city is in danger, has no unit on its tile and its `defence_prices` list a defender the game allows
+    within the purchase cap (faith first, then the cheaper), and its defender cooldown has run out:
+    urgent checks fire only on a change, so T559-T562, T571-T574 and T576-T582 had no decision while
+    cities stayed in danger. The most worn-down such city, e.g. "city still in danger: Longxi (walls
+    0/400, garrison 80/200; unit:modern_at 1160 faith allowed)"; "" when none (as in T576-T582, when
+    nothing could be bought)."""
+    if limits is None or not any(w.get("major", True) for w in snapshot.get("wars") or []):
+        return ""
+    turn, wait = snapshot.get("turn"), limits.defence_cooldown_turns
+    found = []
+    for c in snapshot.get("cities") or []:
+        if not (in_danger(c) and "garrison" in c and not c.get("garrison")):
+            continue
+        last = (defender_buys or {}).get(str(c.get("name", "")).lower())
+        if wait and isinstance(last, int) and isinstance(turn, int) and turn - last < wait:
+            continue
+        offers = sorted(((cur != "faith", p[cur], cur, p) for p in defender_entries(c, index, limits)
+                         for cur in ("faith", "gold")
+                         if p.get(f"{cur}_allowed") and isinstance(p.get(cur), (int, float))
+                         and p[cur] <= purchase_cap(snapshot, c, cur, limits)), key=lambda x: x[:2])
+        if offers:
+            d = c.get("defense") or {}
+            share = (d.get("garrison_hp") or 0) / (d.get("garrison_max") or 1)
+            found.append((share, c, offers[0]))
+    if not found:
+        return ""
+    _, c, (_f, cost, cur, p) = min(found, key=lambda x: x[0])
+    d = c.get("defense") or {}
+    return (f"city still in danger: {c.get('name')} (walls {d.get('walls_hp')}/{d.get('walls_max')}, garrison "
+            f"{d.get('garrison_hp')}/{d.get('garrison_max')}; {index.cid(p.get('unit'))} {_n(cost)} {cur} allowed)")
 
 
 def _n(v) -> str:

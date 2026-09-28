@@ -137,7 +137,15 @@ The loop: snapshot → decide → apply orders → read back → then N times: a
 the cheap `autoplay-status` every second until the game hands the turn back, take a snapshot while
 the game is idle → decide again after N turns or as soon as something urgent happens (a new war, a
 city lost, threatened or about to fall, a new era, a great person or wonder race lost, gold below the purchase
-reserve); stopping early is simply not starting the next turn. The tuner does not answer while the
+reserve; postmortem-fixes design, rulings 10-14: falling behind the met majors in a measure (on entry;
+`[peers] behind`: military under 0.6 x their median or last with 3+ met, techs and civics under 0.85,
+score and cities under 0.8), a neighbour's buildup (a met non-ally at 2 x our military that grew 50% or
+more within `[time] buildup_window`, 20 turns; once per neighbour per window), gold per turn turning
+negative, a city's loyalty falling below 50 or to 5 times its drop per turn or less (once per city until
+it rises; rows count `low_loyalty`), and, at every hand-back while at war with a major, a city in danger
+with no unit on its tile whose `defence_prices` list a defender the game allows within the cap and whose
+defender cooldown has run out, "city still in danger: ..."; falling behind in military, a buildup and
+negative income also start a review); stopping early is simply not starting the next turn. The tuner does not answer while the
 AI plays its turn, so unanswered status polls are expected; only the turn's deadline counts (10
 minutes, for long late-game turns). A turn that does not start (20 s) or end in time, or a game that
 gives no snapshot three times between turns, stops the run until the human presses Resume (an

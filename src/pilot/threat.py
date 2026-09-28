@@ -92,3 +92,106 @@ def relative_military(snapshot: dict) -> dict:
     top = max(others) if others else None
     return {"military_vs_median": round(ours / med, 3) if med else None,
             "military_vs_strongest": round(ours / top, 3) if top else None}
+
+
+# ---- falling behind, neighbour buildup, loyalty (rulings 10, 11, 13) -----------------------------
+
+def behind(row: dict, factors: dict[str, float], last_min_peers: int = 3) -> list[str]:
+    """The measures of a Civ VI metrics row where ours is under factor x the median of the met majors
+    (`[peers] behind`; ruling 10); military also while it ranks last with `last_min_peers` or more
+    majors met. Replayed on the Kublai rows (E4), Stellaris's 0.5 never fires for techs, whose gap RC1
+    names, so each measure has its own factor."""
+    out = []
+    peers = row.get("peers") or {}
+    n = row.get("peer_count") or 0
+    for m, f in factors.items():
+        st = peers.get(m) or {}
+        ours, med = st.get("ours"), st.get("median")
+        if not isinstance(ours, (int, float)) or not isinstance(med, (int, float)):
+            continue
+        last = m == "military" and n >= last_min_peers and st.get("rank") == n + 1
+        if ours < f * med or last:
+            out.append(m)
+    return out
+
+
+def behind_text(row: dict, measure: str) -> str:
+    """"falling behind in military: 318 against a median of 1,094, last of 6"."""
+    st = (row.get("peers") or {}).get(measure) or {}
+    n = row.get("peer_count") or 0
+    last = f", last of {n + 1}" if n and st.get("rank") == n + 1 else ""
+    return f"falling behind in {measure}: {_num(st.get('ours'))} against a median of {_num(st.get('median'))}{last}"
+
+
+def _allied(n: dict) -> bool:
+    """A neighbour we are allied with: Civ VI's `allied`, Stellaris's alliance or federation status."""
+    return bool(n.get("allied")) or any("alliance" in s or "federation" in s for s in n.get("status") or [])
+
+
+def buildup(rows: list[dict], window: int, step, *, ours_key: str = "military", ratio: float = 2.0,
+            growth: float = 0.5, fired: dict[str, int] | None = None) -> list[dict]:
+    """Neighbour buildup on the newest of `rows` (oldest first; ruling 11): a met neighbour, not our
+    ally, with at least `ratio` x our military that grew by `growth` or more since the oldest row of the
+    last `window` steps (`step(date)`: turns or months). At most once per neighbour per window:
+    `fired` (name -> step of its last fire) is updated. Replayed on the Kublai rows with 20 turns it
+    fires 18 times in T344-T561, Australia first at T478 (345 -> 598 against our 295), not at T512
+    (+33% over T496-T512); Maya at T510."""
+    if not rows or not rows[-1].get("date"):
+        return []
+    fired = {} if fired is None else fired
+    now = rows[-1]
+    t = step(now["date"])
+    ours = now.get(ours_key)
+    if not isinstance(ours, (int, float)) or ours <= 0:
+        return []
+    earlier = [r for r in rows[:-1] if r.get("date") and t - window <= step(r["date"]) < t]
+    out = []
+    for n in now.get("neighbours") or []:
+        name, mil = n.get("name"), n.get("military")
+        if not isinstance(mil, (int, float)) or mil < ratio * ours or _allied(n):
+            continue
+        if name in fired and t - fired[name] < window:
+            continue
+        past = [(r, next((x.get("military") for x in r.get("neighbours") or [] if x.get("name") == name), None))
+                for r in earlier]
+        past = [(r, v) for r, v in past if isinstance(v, (int, float)) and v > 0]
+        if not past:
+            continue
+        base_row, base = past[0]
+        if mil >= (1 + growth) * base:
+            fired[name] = t
+            out.append({"name": name, "military": mil, "base": base, "since": base_row["date"],
+                        "span": t - step(base_row["date"]), "ours": ours, "ratio": mil / ours})
+    return out
+
+
+def buildup_text(fire: dict, unit: str) -> str:
+    """"neighbour buildup: CIVILIZATION_AUSTRALIA 598 military (+73% in 20 turns), 2.0x ours (295)"."""
+    return (f"neighbour buildup: {fire['name']} {_num(fire['military'])} military "
+            f"(+{fire['military'] / fire['base'] - 1:.0%} in {fire['span']} {unit}), {fire['ratio']:.1f}x ours "
+            f"({_num(fire['ours'])})")
+
+
+def loyalty_falls(before: dict, now: dict, flip_turns: int = 5) -> list[dict]:
+    """Cities whose loyalty fell since `before` (ruling 13) and is under 50, or at most `flip_turns` x
+    its drop per turn (a flip within about 5 turns): Haarlem 95 -> 77 at T547 (18 a turn) fires there,
+    where "under 50" alone waits until T549. [{"name", "loyalty", "drop"}] (drop per turn)."""
+    turns = max(1, (now.get("turn") or 0) - (before.get("turn") or 0))
+    was = {c.get("name"): c.get("loyalty") for c in before.get("cities") or []}
+    out = []
+    for c in now.get("cities") or []:
+        prev, cur = was.get(c.get("name")), c.get("loyalty")
+        if not isinstance(prev, (int, float)) or not isinstance(cur, (int, float)) or cur >= prev:
+            continue
+        drop = (prev - cur) / turns
+        if cur < 50 or cur <= flip_turns * drop:
+            out.append({"name": c.get("name"), "loyalty": cur, "drop": drop})
+    return out
+
+
+def loyalty_rose(before: dict, now: dict) -> set[str]:
+    """Cities whose loyalty rose since `before` (their loyalty trigger may fire again)."""
+    was = {c.get("name"): c.get("loyalty") for c in before.get("cities") or []}
+    return {c.get("name") for c in now.get("cities") or []
+            if isinstance(was.get(c.get("name")), (int, float)) and isinstance(c.get("loyalty"), (int, float))
+            and c["loyalty"] > was[c.get("name")]}

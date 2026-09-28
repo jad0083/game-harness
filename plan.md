@@ -178,7 +178,7 @@
 - [ ] Civ VI capture test counts every capturer class (Giant Death Robot); the last stand stays off (ruling 26)
 - [ ] Civ VI defenders may spend down to the reserve in war or military weakness; purchase limits and strategic stock in every prompt (rulings 1, 2, 8)
 - [ ] Civ VI order record split by item class, with refusal counts (ruling 9)
-- [ ] Civ VI triggers: falling behind, neighbour buildup, negative income, loyalty; decide every hand-back while a city stays in danger (rulings 10-14)
+- [ ] Civ VI triggers: falling behind, neighbour buildup, negative income, loyalty; decide every hand-back while a city stays in danger (rulings 10-14); on branch feat/postmortem-fixes, not deployed
 - [ ] Stellaris neighbour-buildup trigger (ruling 11)
 - [ ] Civ VI rule-based defender buy before each multi-turn stretch; what the AI spent between decisions (rulings 3, 4)
 - [ ] Civ VI re-send of a lost purchase only when the read-back proves nothing was spent (ruling 5)

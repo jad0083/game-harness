@@ -1,6 +1,7 @@
 """The military threat tests (docs/design/2026-09-27-postmortem-fixes-design.md, rulings 1 and 18),
 replayed on the Kublai campaign's metrics rows (tests/fixtures/civ6_kublai_rows.json, T41-T583)."""
 
+import itertools
 import json
 
 from pilot.config import REPO
@@ -56,3 +57,86 @@ def test_military_relative_to_the_median_and_the_strongest_non_ally():
                                      {"civ": "C", "military": 1491}]}
     assert relative_military(s) == {"military_vs_median": round(318 / 1491, 3), "military_vs_strongest": round(318 / 1491, 3)}
     assert relative_military({"military": 10, "majors": []}) == {"military_vs_median": None, "military_vs_strongest": None}
+
+
+# ---- rulings 10-13: falling behind, neighbour buildup, gold per turn, loyalty --------------------
+
+SPEC = load_pillars(REPO / "corpora/civ6")
+
+
+def test_e4_falling_behind_counts_reproduce_with_per_measure_factors():
+    from pilot.threat import behind
+    factors = dict(SPEC.peers.behind)
+    counts = dict.fromkeys(factors, 0)
+    was: set = set()
+    for r in ROWS:
+        now = set(behind(r, factors, SPEC.peers.last_min_peers))
+        for m in now - was:
+            counts[m] += 1
+        was = now
+    assert counts == {"military": 10, "techs": 9, "civics": 0, "score": 2, "cities": 2}
+    t457 = next(r for r in ROWS if r["turn"] == 457)
+    from pilot.threat import behind_text
+    assert behind_text(t457, "military").startswith("falling behind in military: ")
+
+
+def test_e3_neighbour_buildup_fires_18_times_australia_first_at_t478():
+    from pilot.threat import buildup, buildup_text
+    fired: dict = {}
+    fires = []
+    for i, r in enumerate(ROWS):
+        rows = [{**x, "neighbours": [{**n, "allied": n["name"] == "CIVILIZATION_MALI" and x["turn"] >= 511}
+                                     for n in x["neighbours"]]} for x in ROWS[max(0, i - 40):i + 1]]
+        fires += [(r["turn"], f) for f in buildup(rows, 20, lambda d: int(d[1:]), fired=fired)]
+    assert len(fires) == 18 and (fires[0][0], fires[-1][0]) == (344, 561)
+    aus = [(t, f) for t, f in fires if f["name"] == "CIVILIZATION_AUSTRALIA"]
+    assert aus[0][0] == 478 and (aus[0][1]["base"], aus[0][1]["military"], aus[0][1]["ours"]) == (345, 598, 295)
+    assert 512 not in [t for t, _ in aus], "718 -> 955 over T496-T512 is +33%"
+    assert (510, "CIVILIZATION_MAYA") in [(t, f["name"]) for t, f in fires]
+    assert buildup_text(aus[0][1], "turns").startswith("neighbour buildup: CIVILIZATION_AUSTRALIA 598 military (+73% in ")
+    assert buildup_text(aus[0][1], "turns").endswith("), 2.0x ours (295)")
+    names = [(t, f["name"]) for t, f in fires]
+    for t, name in names:
+        assert not any(name == n and t < t2 < t + 20 for t2, n in names), "at most once per neighbour per window"
+
+
+def test_an_ally_never_fires():
+    from pilot.threat import buildup
+    rows = [{"date": "T10", "military": 100, "neighbours": [{"name": "MALI", "military": 200, "allied": True}]},
+            {"date": "T20", "military": 100, "neighbours": [{"name": "MALI", "military": 400, "allied": True}]}]
+    assert buildup(rows, 20, lambda d: int(d[1:])) == []
+    rows[1]["neighbours"][0]["allied"] = False
+    assert [f["name"] for f in buildup(rows, 20, lambda d: int(d[1:]))] == ["MALI"]
+
+
+def test_e5_gold_per_turn_turns_negative_five_times():
+    from pilot.civ6 import urgent_changes
+    fires = []
+    for a, b in itertools.pairwise(ROWS):
+        reasons = urgent_changes({"yields": {"gold": a["gold_yield"]}}, {"yields": {"gold": b["gold_yield"]}})
+        fires += [(b["turn"], x) for x in reasons if x.startswith("gold per turn negative")]
+    assert [t for t, _ in fires] == [77, 84, 123, 291, 583]
+    assert next(x for t, x in fires if t == 291) == "gold per turn negative: " + format(
+        next(r["gold_yield"] for r in ROWS if r["turn"] == 291), ".1f")
+
+
+def _loyal(turn: int, **cities) -> dict:
+    return {"turn": turn, "cities": [{"name": n, "loyalty": v} for n, v in cities.items()]}
+
+
+def test_loyalty_falling_fires_for_haarlem_at_t547_and_rockhampton_once():
+    from pilot.threat import loyalty_falls, loyalty_rose
+    assert loyalty_falls(_loyal(546, Haarlem=95), _loyal(547, Haarlem=77)) == [{"name": "Haarlem", "loyalty": 77, "drop": 18.0}]
+    assert loyalty_falls(_loyal(546, Haarlem=95), _loyal(547, Haarlem=90)) == [], "90 > 5 x 5 and over 50"
+    fired: set = set()
+    series = {552 + i: round(93 - 90 * i / 16) for i in range(17)}         # 93 at T552 to 3 at T568
+    snaps = [_loyal(t, Rockhampton=v) for t, v in series.items()]
+    count = 0
+    for a, b in itertools.pairwise(snaps):
+        fired -= loyalty_rose(a, b)
+        for f in loyalty_falls(a, b):
+            if f["name"] not in fired:
+                fired.add(f["name"])
+                count += 1
+    assert count == 1
+    assert loyalty_rose(_loyal(1, A=40), _loyal(2, A=45)) == {"A"}, "a rise re-arms it"

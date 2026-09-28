@@ -1030,7 +1030,7 @@ def test_the_gold_reserve_grows_with_a_deficit():
     at = lambda g: gold_reserve_now({**FIXTURE, "yields": {**FIXTURE["yields"], "gold": g}}, BUY)
     assert (at(1.4), at(-1.6), at(0), at(-0.6)) == (30, 46, 30, 36)
     assert urgent_changes({**FIXTURE, "gold": 50}, {**FIXTURE, "gold": 40, "yields": {**FIXTURE["yields"], "gold": -1.6}},
-                          gold_reserve=at(-1.6)) == ["gold below the reserve: 40 < 46"]
+                          gold_reserve=at(-1.6)) == ["gold below the reserve: 40 < 46", "gold per turn negative: -1.6"]
 
 
 def test_what_the_city_finishes_anyway_is_not_bought():
@@ -2189,7 +2189,7 @@ def test_zero_cities_and_settlers_read_twice_ends_the_run_with_no_model_call(set
     assert ("autoplay_stop",) in game.actions
 
 
-def test_one_zero_city_read_does_not_end_the_run():
+def test_one_zero_city_read_does_not_end_the_run(setup):
     class Glitch(FakeCiv6):
         blank = 1
 
@@ -2199,15 +2199,13 @@ def test_one_zero_city_read_does_not_end_the_run():
                 self.blank -= 1
                 s = {**s, "cities": [], "units": {"by_type": {}}}
             return s
-    from pilot.civ6_governor import Civ6Governor as G
-    g = G.__new__(G)          # only the end check: no loop
     game = Glitch(FIXTURE, index=INDEX)
-    g.game, g.snapshot_tries, g.status_poll_s = game, 1, 0
-    g.log = type("L", (), {"emit": lambda *a, **k: None})()
+    g = governor(setup, game, orders_model([]))
     game.state["turn"] += 1
     first = game.snapshot()
     assert first["cities"] == []
-    assert G._end_check(g, first)["cities"], "the second read shows the city again: the run goes on"
+    assert g._end_check(first)["cities"], "the second read shows the city again: the run goes on"
+    assert not g._ended
 
 
 def test_alive_false_ends_it_at_once_and_a_settler_or_player_minus_one_does_not(setup, tmp_path):
@@ -2308,3 +2306,64 @@ def test_the_governor_gives_the_strategist_its_military_standing(setup):
     st = g._standing({**FIXTURE, "military": 471, "majors": LATE_MAJORS})
     assert st == {"military": 471, "median": 1491.0, "peers": 3, "weak": True}
     assert g._standing({**FIXTURE, "majors": []}) is None
+
+
+# ---- postmortem-fixes design, rulings 10-14: the triggers -------------------------------------------
+
+def _longxi(prices, turn=570) -> dict:
+    """T570: at war with Australia; Longxi in danger with no unit on its tile."""
+    city = danger_city(name="Longxi", defense={"garrison_hp": 80, "garrison_max": 200, "walls_hp": 0, "walls_max": 400},
+                       defence_prices=prices)
+    return {**FIXTURE, "turn": turn, "gold": 1407.6, "faith": 755.8, "cities": [city], "military": 329,
+            "wars": [{"id": 3, "civ": "CIVILIZATION_AUSTRALIA", "major": True}], "majors": LATE_MAJORS}
+
+
+def test_a_city_that_stays_in_danger_at_war_decides_at_every_hand_back(setup):
+    """War-8, H6: T571-T574 had no decision while Longxi stayed in danger with a Modern AT allowed."""
+    game = FakeCiv6(_longxi([MODERN_AT]), index=INDEX)
+    g = governor(setup, game, orders_model([]))
+    g.run(max_decisions=4)
+    triggers = [t["trigger"] for t in traces(setup)]
+    assert triggers[0] == "start of run"
+    assert all(t.startswith("urgent: city still in danger: Longxi (walls 0/400, garrison 80/200; unit:modern_at 1160 "
+                            "gold allowed)") for t in triggers[1:4]), triggers
+    assert [a[1] for a in game.actions if a[0] == "autoplay"] == [1, 1, 1], "one turn at a time, a decision each"
+
+
+def test_nothing_to_buy_gives_no_standing_danger_decision(setup):
+    """T576-T582: nothing could be bought, so no decision each turn."""
+    refused = {**MODERN_AT, "gold_allowed": False, "gold_why": "stacking", "faith_allowed": False, "faith_why": "stacking"}
+    game = FakeCiv6(_longxi([refused]), index=INDEX)
+    g = governor(setup, game, orders_model([]))
+    g.run(max_decisions=2)
+    assert traces(setup)[1]["trigger"] == "scheduled (3 turns)"
+    from pilot.civ6 import standing_danger
+    peace = {**_longxi([MODERN_AT]), "wars": []}
+    assert standing_danger(peace, INDEX, BUY) == "", "only while at war with a major"
+    assert standing_danger(_longxi([MODERN_AT]), INDEX, BUY, {"longxi": 568}) == "", "the defender cooldown runs"
+
+
+def test_falling_behind_buildup_and_income_review_and_loyalty_only_decides(setup):
+    from pilot.civ6_governor import EVENT_TRIGGERS_CIV6
+    reviews = ("falling behind in military: 318 against a median of 1,094, last of 6",
+               "neighbour buildup: CIVILIZATION_AUSTRALIA 598 military (+73% in 20 turns), 2.0x ours (295)",
+               "gold per turn negative: -6.8")
+    assert all(any(t in r for t in EVENT_TRIGGERS_CIV6) for r in reviews)
+    assert not any(t in "loyalty falling: Haarlem 77 (-18 a turn)" for t in EVENT_TRIGGERS_CIV6)
+    assert not any(t in "falling behind in techs: 57 against a median of 69" for t in EVENT_TRIGGERS_CIV6)
+    assert not any(t in "city still in danger: Longxi (...)" for t in EVENT_TRIGGERS_CIV6)
+    g = governor(setup, FakeCiv6(FIXTURE, index=INDEX), orders_model([]))
+    last = {**FIXTURE, "turn": 546, "cities": [{**FIXTURE["cities"][0], "name": "Haarlem", "loyalty": 95}]}
+    now = {**FIXTURE, "turn": 547, "cities": [{**FIXTURE["cities"][0], "name": "Haarlem", "loyalty": 77}]}
+    assert g._threat_reasons(last, now) == ["loyalty falling: Haarlem 77 (-18 a turn)"]
+    later = {**now, "turn": 548, "cities": [{**now["cities"][0], "loyalty": 59}]}
+    assert g._threat_reasons(now, later) == [], "once until it rises"
+    assert g._row(later)["low_loyalty"] == 0 and g._row({**later, "cities": [{**later["cities"][0], "loyalty": 41}]})["low_loyalty"] == 1
+
+
+def test_a_hand_back_that_falls_behind_in_military_is_urgent(setup):
+    g = governor(setup, FakeCiv6(FIXTURE, index=INDEX), orders_model([]))
+    ahead = {**FIXTURE, "military": 1500, "majors": LATE_MAJORS}
+    lagging = {**FIXTURE, "military": 300, "majors": LATE_MAJORS}
+    assert g._threat_reasons(ahead, lagging) == ["falling behind in military: 300 against a median of 1,491, last of 4"]
+    assert "military" in g._row(lagging)["behind"] and "military" not in g._row(ahead)["behind"]

@@ -427,6 +427,10 @@ Rules:
   `[strategy] relative_military`): while weak (under 0.6 x the median or last) the military pillar needs
   one at 0.5 or more, an absolute target under half the median is sent back, and a rank milestone needs 3
   majors met (postmortem-fixes design, ruling 18).
+- Triggers (postmortem-fixes design, rulings 10-14): falling behind the met majors (`[peers] behind`),
+  a neighbour's buildup (2 x ours, +50% in 20 turns), gold per turn negative, loyalty falling toward a
+  flip, and at war a decision at every hand-back while a city in danger has no unit on its tile and a
+  defender it can buy ("city still in danger").
 - Time constants are in turns (`[time]` in `corpora/civ6/pillars.toml`): event reviews at most one per 5
   turns, but a new war or a lost city always reviews; milestone projections and outcome scoring over 12
   turns (postmortem-fixes design, rulings 15 and 19).

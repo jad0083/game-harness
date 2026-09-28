@@ -61,6 +61,7 @@ from .civ6 import (
     read_back,
     record_key,
     stand_verdict,
+    standing_danger,
     top3_hits,
     urgent_changes,
 )
@@ -76,7 +77,16 @@ from .governor import (
     remember_rule,
     served_model,
 )
-from .threat import majors_military, weakness
+from .threat import (
+    behind,
+    behind_text,
+    buildup,
+    buildup_text,
+    loyalty_falls,
+    loyalty_rose,
+    majors_military,
+    weakness,
+)
 from .trace import serialize
 
 ORDER_RECORD_HEADING = "Order record in this campaign (held until done / replaced by the AI):"
@@ -110,7 +120,10 @@ def autoplay_turns(snapshot: dict, *, chunk: int, left: int) -> int:
     return max(1, min(1 if danger else chunk, left))
 
 
-EVENT_TRIGGERS_CIV6 = (*EVENT_TRIGGERS, "city lost", "city threatened", "new era", "race lost")
+# postmortem-fixes design, rulings 10-12: falling behind in military, a neighbour's buildup and gold per
+# turn turning negative also review (the other measures, loyalty and a city still in danger decide only)
+EVENT_TRIGGERS_CIV6 = (*EVENT_TRIGGERS, "city lost", "city threatened", "new era", "race lost",
+                       "falling behind in military", "neighbour buildup", "gold per turn negative")
 
 
 def price(ctx: RunContext[GovDeps], city: str, item: str, currency: str = "both") -> str:
@@ -215,6 +228,9 @@ class Civ6Governor(Governor):
         self._pinned: list[dict] = []             # units the last stand pinned, checked at the next snapshot
         self._ai_log_next = 0                     # where the next read of the AI's strategy log starts (ruling 29)
         self._ai_rows: list = []                  # our player's rows of that log: [turn, strategy, status]
+        self._recent_rows: list[dict] = []        # this campaign's latest metrics rows (neighbour buildup)
+        self._buildup_fired: dict[str, int] = {}  # neighbour -> turn of its last buildup trigger (ruling 11)
+        self._loyalty_fired: set[str] = set()     # cities whose loyalty trigger fired and did not rise since (13)
         self._dipl_seen: set[str] = set()         # diplomacy answers already reported (`diplomacy_key`)
         self._dipl_rows: list[dict] = []          # the campaign's diplomacy_reply rows, oldest first (order record)
         log.state.info["directives"] = []
@@ -354,8 +370,10 @@ class Civ6Governor(Governor):
                     c = Checked(order=f["order"], wire=f.get("wire"), expect=f["expect"])
                     self._tracking.append(Tracked(c, {**f["row"], "ref": f["ref"]}, f["base"], int(f["window"])))
                     mine.add(f["ref"])
-            self._seen_idle = {int(r["turn"]): list(r["idle"]) for r in tel.metrics_rows(cid)
+            rows = tel.metrics_rows(cid)
+            self._seen_idle = {int(r["turn"]): list(r["idle"]) for r in rows
                                if isinstance(r.get("turn"), int) and isinstance(r.get("idle"), list)}
+            self._recent_rows = [r for r in rows if isinstance(r.get("turn"), int)][-200:]
         except Exception as e:  # noqa: BLE001 - the record is advisory
             self.log.emit("briefing_error", error=f"loading the order record: {e}"[:200])
         self._publish_record()
@@ -443,7 +461,8 @@ class Civ6Governor(Governor):
                                       "(ruling 21: the player id is never derived again). Check the game, then press "
                                       "Resume, or start a new run.")
                 return last, ""
-            self.log.emit("metrics", **metrics(b))
+            row = self._row(b)
+            self.log.emit("metrics", **row)
             b = self._end_check(b)
             if b is None:
                 return None, "ended"            # ruling 21: no decision and no review after the end
@@ -454,11 +473,58 @@ class Civ6Governor(Governor):
             self.log.state.turns_advanced += b["turn"] - last["turn"]
             urgent = urgent_changes(last, b, self._gold_reserve(b), self._wonders)
             urgent += self._newly_missed_milestones(last["date"], b["date"])
+            urgent += self._threat_reasons(last, b)
             if urgent:
                 return b, "urgent: " + "; ".join(urgent)
             if b["turn"] >= target:
                 return b, f"scheduled ({self.s.decide_every_turns} turns)"
             last = b
+
+    # ---- threat triggers (postmortem-fixes design, rulings 10-14) ------------------------------------
+
+    def _row(self, b: dict) -> dict:
+        """The snapshot's metrics row with the measures we are behind in (ruling 10) and the cities
+        under 50 loyalty (ruling 13, so the trigger's frequency can be measured); kept in memory for
+        the neighbour-buildup window."""
+        row = metrics(b)
+        peers = self.pillars.peers if self.pillars else None
+        if peers is not None:
+            row["behind"] = behind(row, dict(peers.behind), peers.last_min_peers)
+        row["low_loyalty"] = sum(1 for c in b.get("cities") or []
+                                 if isinstance(c.get("loyalty"), (int, float)) and c["loyalty"] < 50)
+        if isinstance(row.get("turn"), int) and (not self._recent_rows or self._recent_rows[-1].get("date") != row["date"]):
+            self._recent_rows = [*self._recent_rows, row][-200:]
+        return row
+
+    def _threat_reasons(self, last: dict, b: dict) -> list[str]:
+        """The urgent reasons of rulings 10, 11, 13 and 14 at a hand-back: falling behind (on entry),
+        a neighbour's buildup, loyalty falling toward a flip, and a city still in danger at war.
+        Advisory: an error is logged and gives none."""
+        try:
+            out = []
+            peers = self.pillars.peers if self.pillars else None
+            if peers is not None:
+                was = set(behind(metrics(last), dict(peers.behind), peers.last_min_peers))
+                row = metrics(b)
+                out += [behind_text(row, m) for m in behind(row, dict(peers.behind), peers.last_min_peers) if m not in was]
+            window = self._time().buildup_window
+            if window and self._recent_rows and self._recent_rows[-1].get("date") == b.get("date"):
+                limits = self._buy_limits()
+                fires = buildup(self._recent_rows, window, lambda d: int(str(d)[1:]), ours_key="military",
+                                ratio=getattr(limits, "strong_neighbour_ratio", 0) or 2.0, fired=self._buildup_fired)
+                out += [buildup_text(f, "turns") for f in fires]
+            self._loyalty_fired -= loyalty_rose(last, b)
+            for f in loyalty_falls(last, b):
+                if f["name"] not in self._loyalty_fired:
+                    self._loyalty_fired.add(f["name"])
+                    out.append(f"loyalty falling: {f['name']} {f['loyalty']:.0f} (-{f['drop']:.0f} a turn)")
+            danger = standing_danger(b, self.index, self._buy_limits(), self._defender_buys())
+            if danger:
+                out.append(danger)
+            return out
+        except Exception as e:  # noqa: BLE001 - runs between turns; never stops play
+            self.log.emit("briefing_error", error=f"threat triggers: {type(e).__name__}: {e}"[:200])
+            return []
 
     # ---- the end of the campaign (postmortem-fixes design, rulings 21-23) --------------------------
 
@@ -473,7 +539,7 @@ class Civ6Governor(Governor):
             except Civ6Stuck as e:
                 self.log.emit("briefing_error", error=f"end check: {e}"[:200])
                 return b                        # one read never ends the run
-            self.log.emit("metrics", **metrics(again))
+            self.log.emit("metrics", **self._row(again))
             if civ6_read(again) is None:
                 self.log.emit("journal", text=f"one read at T{b.get('turn')} showed 0 cities and 0 settlers; the next "
                                               "did not, so the run goes on")
@@ -1067,7 +1133,7 @@ class Civ6Governor(Governor):
         self._last_b = b
         self.log.state.episodes += 1
         self.log.state.game_date = b["date"]
-        self.log.emit("metrics", **metrics(b))
+        self.log.emit("metrics", **self._row(b))
         if self.log.telemetry is not None and self.log.campaign_id:
             try:
                 self.log.telemetry.score(self.log.campaign_id, after_months=self._time().score_horizon)

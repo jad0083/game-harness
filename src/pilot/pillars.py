@@ -37,8 +37,9 @@ MARKET_KINDS = ("internal", "galactic")
 _ACTION_REQUIRED = {**dict.fromkeys(ID_LIST_KINDS, ("max_items", "ids_from_corpus")),
                     "purchase": ("max_items", "ids_from_corpus", "gold_reserve", "treasury_share"),
                     "market": ("max_items", "resources_from_manifest", "amount_max")}
-_TOP_KEYS = {"strategy", "metrics", "pillars", "actions", "weights", "orders", "time"}
-_TIME_KEYS = {"unit", "review_cap", "review_exempt", "milestone_lookback", "score_horizon"}
+_TOP_KEYS = {"strategy", "metrics", "pillars", "actions", "weights", "orders", "time", "peers"}
+_TIME_KEYS = {"unit", "review_cap", "review_exempt", "milestone_lookback", "score_horizon", "buildup_window"}
+_PEERS_KEYS = {"behind", "last_min_peers"}
 TIME_UNITS = ("months", "turns")      # one step of the game's clock (postmortem-fixes design, ruling 19)
 _ORDERS_KEYS = {"window_turns", "min_resolved", "min_samples", "weak_rate", "open_cap_turns", "open_grace_turns"}
 ORDER_SAMPLE_GROUPS = ("production", "purchase", "other")
@@ -162,6 +163,15 @@ class OrdersSpec:
 
 
 @dataclass(frozen=True)
+class PeersSpec:
+    """`[peers]`: the falling-behind trigger of a game whose metrics rows carry the met majors' medians
+    (Civ VI; postmortem-fixes design, ruling 10): a measure is behind while ours is under its factor x
+    the median, military also while last with `last_min_peers` or more majors met."""
+    behind: types.MappingProxyType
+    last_min_peers: int = 3
+
+
+@dataclass(frozen=True)
 class RelativeSpec:
     """Military targets relative to the majors we have met (`[strategy] relative_military`;
     postmortem-fixes design, ruling 18): targets 10-28% above our own strength stood at 0.44-0.56 of
@@ -187,6 +197,7 @@ class TimeSpec:
     review_exempt: tuple[str, ...] = ()   # ...except these triggers, which always review (and reset the clock)
     milestone_lookback: int = 12     # a milestone's projection needs a row at least this many steps older
     score_horizon: int = 12          # outcome scoring compares the metrics this many steps after a decision
+    buildup_window: int = 0          # the neighbour-buildup trigger's window (ruling 11); 0: the trigger is off
 
     def steps(self, n: int) -> str:
         """`n` steps in words: "5 turns", "1 month"."""
@@ -220,6 +231,7 @@ class PillarSpec:
     milestone_exclude: tuple[str, ...] = ()   # metrics never used as milestones ([metrics] milestone_exclude)
     time: TimeSpec = field(default_factory=TimeSpec)   # [time]: the clock's constants in the game's unit
     relative: RelativeSpec | None = None       # [strategy] relative_military; None: the rules are off
+    peers: PeersSpec | None = None             # [peers]; None: no falling-behind trigger from the governor
 
     @property
     def ids(self) -> tuple[str, ...]:
@@ -266,7 +278,8 @@ class PillarSpec:
                             for k, a in self.actions.items()},
                 "time": {"unit": self.time.unit, "review_cap": self.time.review_cap,
                          "review_exempt": list(self.time.review_exempt),
-                         "milestone_lookback": self.time.milestone_lookback, "score_horizon": self.time.score_horizon},
+                         "milestone_lookback": self.time.milestone_lookback, "score_horizon": self.time.score_horizon,
+                         "buildup_window": self.time.buildup_window},
                 "orders": None if self.orders is None else {
                     "window_turns": self.orders.window_turns, "min_resolved": self.orders.min_resolved,
                     "min_samples": dict(self.orders.min_samples), "weak_rate": self.orders.weak_rate,
@@ -605,15 +618,31 @@ def _time(path: Path, t, date_format: str) -> TimeSpec:
         raise _err(path, "time.unit", f"must be {unit_default!r} with strategy.date_format {date_format!r}")
     d = TimeSpec()
     ints = {}
-    for key in ("review_cap", "milestone_lookback", "score_horizon"):
+    for key in ("review_cap", "milestone_lookback", "score_horizon", "buildup_window"):
         v = t.get(key, getattr(d, key))
-        if not _int(v) or v < 1:
-            raise _err(path, f"time.{key}", f"must be a whole number of {unit} >= 1")
+        if not _int(v) or v < (0 if key == "buildup_window" else 1):
+            raise _err(path, f"time.{key}", f"must be a whole number of {unit} >= {0 if key == 'buildup_window' else 1}")
         ints[key] = v
     exempt = t.get("review_exempt", [])
     if not isinstance(exempt, list) or not all(isinstance(x, str) and x.strip() for x in exempt):
         raise _err(path, "time.review_exempt", "must be a list of trigger texts")
     return TimeSpec(unit=unit, review_exempt=tuple(x.strip() for x in exempt), **ints)
+
+
+def _peers(path: Path, t) -> PeersSpec:
+    if not isinstance(t, dict):
+        raise _err(path, "peers", "must be a table")
+    _unknown(path, "peers", t, _PEERS_KEYS)
+    raw = t.get("behind")
+    if not isinstance(raw, dict) or not raw:
+        raise _err(path, "peers.behind", "required: a table of measure = factor")
+    for m, f in raw.items():
+        if not _num(f) or not 0 < f <= 1:
+            raise _err(path, f"peers.behind.{m}", "must be a number in (0, 1]")
+    n = t.get("last_min_peers", 3)
+    if not _int(n) or n < 1:
+        raise _err(path, "peers.last_min_peers", "must be an integer >= 1")
+    return PeersSpec(behind=types.MappingProxyType({m: float(f) for m, f in raw.items()}), last_min_peers=n)
 
 
 def _relative(path: Path, t, names: list[str], pillars: dict) -> RelativeSpec:
@@ -728,8 +757,9 @@ def _parse(path: Path, corpus: Path) -> PillarSpec:
     orders = _orders(path, raw["orders"]) if "orders" in raw else None
     time = _time(path, raw.get("time", {}), date_format)
     relative = _relative(path, strat["relative_military"], names, pillars) if "relative_military" in strat else None
+    peers = _peers(path, raw["peers"]) if "peers" in raw else None
     return PillarSpec(game=corpus.name, weights=weights, orders=orders, milestone_exclude=tuple(exclude), time=time,
-                      relative=relative,
+                      relative=relative, peers=peers,
                       pillars=types.MappingProxyType(pillars), metrics=tuple(names),
                       metric_aliases=types.MappingProxyType(aliases), row_keys=types.MappingProxyType(row_keys),
                       peer_keys=types.MappingProxyType(peer_keys),
