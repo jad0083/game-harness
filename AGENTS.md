@@ -299,6 +299,9 @@ Rules:
   space (none surveyed in reach, influence 950+ for 12 months). A milestone is judged on the latest
   value since it was set (its `set` stamp), never on a past high: met, missed once due, else on track
   or at risk (both games; postmortem-fixes design, ruling 17).
+- **Neighbour buildup** (postmortem-fixes design, ruling 11): a neighbour that is not an alliance or
+  federation partner, at 2 x our military power, that grew 50% within 24 months is an urgent decision
+  (once per neighbour per window; no review, never a war-crisis entry).
 - **The end**: a save with no planet of ours gets no decision; two in a row (or a date stall after one)
   end the run as lost with a report and no model call (`campaign_end`, journal, `info.end`, status
   `ended`; postmortem-fixes design, ruling 22).

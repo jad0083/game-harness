@@ -24,6 +24,7 @@ review_cap = 12                 # event reviews: at most one per 12 months...
 review_exempt = ["new war"]     # ...but a new war always reviews (a colony lost at war enters the war crisis)
 milestone_lookback = 12         # a milestone's projection: its value against a row 12 months older
 score_horizon = 12              # outcome scoring: the metrics 12 months after a decision
+buildup_window = 24             # neighbour buildup: 2 x ours and +50% within 24 months, urgent only (ruling 11)
 
 [weights]
 # Pillars carry weights (sum 100) instead of ranks; each decision scores a directive by its pillar's

@@ -544,6 +544,7 @@ def test_the_civ6_falling_behind_factors_and_buildup_window_load():
     assert dict(spec.peers.behind) == {"military": 0.6, "techs": 0.85, "civics": 0.85, "score": 0.8, "cities": 0.8}
     assert spec.peers.last_min_peers == 3 and spec.time.buildup_window == 20
     assert load_pillars(REPO / "corpora/stellaris").peers is None
+    assert load_pillars(REPO / "corpora/stellaris").time.buildup_window == 24, "months"
 
 
 @pytest.mark.parametrize("table, where", [

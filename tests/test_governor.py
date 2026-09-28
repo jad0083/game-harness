@@ -5291,3 +5291,26 @@ def test_a_briefing_that_cannot_find_our_country_waits_for_the_human(setup):
     t.join(5)
     assert log.state.status in ("needs_attention", "stopped") and not g._ended
     assert any(e["kind"] == "needs_attention" and "player country 5 not found" in e["reason"] for e in log.recent)
+
+
+# ---- postmortem-fixes design, ruling 11: neighbour buildup (Stellaris) ----------------------------
+
+def _neighbours_save(date: str, ours: float, rival: float, ally: float) -> dict:
+    return {**briefing(date), "military_power": ours,
+            "neighbours": [{"name": "Rihi Nar Consciousness", "military": rival, "status": ["rival"]},
+                           {"name": "United Oklarr Union", "military": ally, "status": ["alliance", "embassy"]}]}
+
+
+def test_a_neighbour_buildup_is_urgent_once_and_never_for_an_ally(setup):
+    from pilot.governor import STELLARIS_TRIGGERS
+    s, log = setup
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+    fired = []
+    for i, (rival, ally) in enumerate([(3000, 3000), (3300, 3300), (3900, 3900), (4600, 4600), (5000, 5200),
+                                       (5600, 6000), (6200, 7000)]):
+        date = f"22{(i * 4) // 12 + 0:02d}.{(i * 4) % 12 + 1:02d}.01"
+        _row, urgent = g._observe(_neighbours_save(date, 2000, rival, ally))
+        fired += [(date, u) for u in urgent if u.startswith("neighbour buildup")]
+    assert len(fired) == 1 and "Rihi Nar Consciousness" in fired[0][1], fired
+    assert fired[0][1] == "neighbour buildup: Rihi Nar Consciousness 4,600 military (+53% in 12 months), 2.3x ours (2,000)"
+    assert not any(t in fired[0][1] for t in STELLARIS_TRIGGERS), "an urgent decision, never a review or crisis entry"

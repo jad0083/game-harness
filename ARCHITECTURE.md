@@ -421,7 +421,8 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   relative to the met majors (`relative_military`), for the Civ VI rows, briefing and the Strategist's
   `relative_military` rules in `strategy.validate` (`standing`; postmortem-fixes design, rulings 1, 18);
   the triggers' tests: `behind` (`[peers] behind`), `buildup` (`[time] buildup_window`, once per
-  neighbour per window), `loyalty_falls`; `civ6.standing_danger` (a hand-back decision at war) and the
+  neighbour per window; Stellaris too, over its rows' absolute `military`, skipping alliance and
+  federation partners, urgent only), `loyalty_falls`; `civ6.standing_danger` (a hand-back decision at war) and the
   negative-income reason in `civ6.urgent_changes` (rulings 10-14; `Civ6Governor._threat_reasons`).
 - Strategy layer: `strategy.py` is pure (Pillar, Milestone, MarketOrder, Strategy with
   `ranking()`; `validate` — structural checks on all pillars, briefing checks (idle, income) only on

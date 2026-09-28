@@ -87,6 +87,7 @@ from .strategy import (
     to_strategy,
     validate,
 )
+from .threat import buildup, buildup_text
 from .trace import serialize
 
 DIRECTIVES = ("expand", "consolidate_economy", "tech_rush", "prepare_war", "defend", "diplomacy_first")
@@ -605,6 +606,7 @@ class Governor:
         self._crisis_saved: dict | None = None    # the state as the last `crisis` event wrote it
         self._since_retro = 0
         self._ended = False                       # the campaign ended (rulings 21-23): the run loop is left
+        self._buildup_fired: dict[str, int] = {}  # neighbour -> month of its last buildup trigger (ruling 11)
         self._zero_saves = 0                      # Stellaris: saves in a row with no planet of ours (ruling 22)
         self._strategy_trace_n = 0                # negative episode ids for strategy review traces (see _review_strategy)
         self._clock: Callable[[], float] = time.monotonic   # the watchdog's wall clock (tests inject one)
@@ -1228,8 +1230,24 @@ class Governor:
                 self.log.emit("briefing_error", error=f"war crisis: {type(e).__name__}: {e}"[:200])
             self.log.state.info["planet_check"] = self._planet_line
             self._rows = [r for r in before if months(date) - months(r["date"]) <= self.rows_months] + [row]
+            urgent += self._buildup_reasons()
         self._observed, self._observed_b = row, b
         return row, urgent
+
+    def _buildup_reasons(self) -> list[str]:
+        """Ruling 11 on the newest save: a neighbour (not an alliance or federation partner) at 2 x our
+        military power or more that grew 50% within `[time] buildup_window` months, once per neighbour
+        per window. An urgent decision only: no review, and never a war-crisis entry (Stellaris levers
+        ruling 12 keeps ratios out of it). About one a decade in the three campaigns (E3). Advisory."""
+        window = self._time().buildup_window
+        if not window:
+            return []
+        try:
+            return [buildup_text(f, "months") for f in
+                    buildup(self._rows, window, months, ours_key="military_power", fired=self._buildup_fired)]
+        except Exception as e:  # noqa: BLE001 - a malformed save never stops play
+            self.log.emit("briefing_error", error=f"neighbour buildup: {type(e).__name__}: {e}"[:200])
+            return []
 
     def _planet_record_section(self) -> str:
         """The Strategist's planet record (ruling 22): per directive, the amenity change per planet-year on

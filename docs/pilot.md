@@ -82,7 +82,10 @@ without the mod keeps the last export, which the briefing calls stale (`governor
 The loop: pause → briefing from the newest autosave → the model returns a directive or `keep` →
 apply → resume → poll autosaves until the decision interval has passed or something urgent
 happens (a war starts or ends, a resource turns negative, we newly fall below half the median in a
-measure, a milestone is missed) → pause → decide again. The game is paused whenever a model
+measure, a milestone is missed, or a neighbour builds up: one that is not an alliance or federation
+partner, at 2 x our military power or more, grew 50% within `[time] buildup_window` (24 months), once
+per neighbour per window, a decision only, never a review or a war-crisis entry; postmortem-fixes
+design, ruling 11) → pause → decide again. The game is paused whenever a model
 thinks, so any speed is safe. `prepare_war` needs a human "yes" on the dashboard.
 
 The briefing (about 2 KB) covers the empire, resources and deficits, power, research options,
