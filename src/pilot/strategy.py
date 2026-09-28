@@ -13,6 +13,7 @@ from collections.abc import Mapping
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, create_model, model_validator
+from pydantic.json_schema import SkipJsonSchema
 
 from .pillars import ACTION_KINDS, ID_LIST_KINDS, ActionLimits, PillarSpec
 
@@ -39,14 +40,23 @@ class Milestone(BaseModel):
     op: Literal[">=", "<="]
     target: float
     by: str = Field(description="in-game date YYYY.MM.DD, or T<turn> in a turn-based game")
+    # when the milestone was set (postmortem-fixes design, ruling 17): stamped by the governor when it
+    # publishes a strategy, never written by the model (left out of the Strategist's schema); only
+    # rows from then on are judged. None (stored before the stamp): no row filter.
+    set: SkipJsonSchema[str | None] = None
 
     def __init__(self, **data):
         if isinstance(data.get("metric"), str):     # aliases are the game's: apply_aliases(s, spec)
             data["metric"] = data["metric"].strip()
-        by = data.get("by")
-        if by and not _valid_date(by):
-            raise ValueError(f"by {by!r} is not a date YYYY.MM.DD or a turn T<turn>")
+        for key in ("by", "set"):
+            v = data.get(key)
+            if v and not _valid_date(v):
+                raise ValueError(f"{key} {v!r} is not a date YYYY.MM.DD or a turn T<turn>")
         super().__init__(**data)
+
+    def key(self) -> tuple:
+        """What makes two milestones the same one (its `set` is not part of it)."""
+        return (self.metric, self.op, self.target, self.by)
 
 
 class MarketOrder(BaseModel):
@@ -169,8 +179,12 @@ def market_briefing_errors(o: MarketOrder, limits: ActionLimits, idle: set[str],
 
 
 def _content(pl: Pillar, *, ignore_weight: bool = False) -> dict:
-    """What a pillar says (the derived rank never counts; the weight optionally)."""
-    return pl.model_dump(exclude={"pinned", "edited_by", "priority"} | ({"weight"} if ignore_weight else set()))
+    """What a pillar says (the derived rank and the milestones' `set` stamps never count; the weight
+    optionally)."""
+    exclude: dict = {"pinned": True, "edited_by": True, "priority": True, "milestones": {"__all__": {"set"}}}
+    if ignore_weight:
+        exclude["weight"] = True
+    return pl.model_dump(exclude=exclude)
 
 
 def _briefing_checked(s: Strategy, previous: Strategy | None) -> set[str]:
@@ -250,9 +264,71 @@ def _detail_errors(s: Strategy, spec: PillarSpec) -> list[str]:
     return errs
 
 
+def _relative_errors(s: Strategy, spec: PillarSpec, standing: Mapping) -> list[str]:
+    """`[strategy] relative_military` (postmortem-fixes design, ruling 18) against today's standing
+    ({"military", "median", "peers": majors met, "weak": ruling 1's low or last}). Pinned pillars are
+    exempt, as for every rule of the Strategist's answer."""
+    rel = spec.relative
+    if rel is None:
+        return []
+    errs: list[str] = []
+    peers, med = standing.get("peers"), standing.get("median")
+    for name, pl in s.sorted_pillars():
+        if pl.pinned:
+            continue
+        for m in pl.milestones:
+            if m.metric.startswith("rank:") and isinstance(peers, int) and peers < rel.rank_min_peers:
+                errs.append(f"{name}: {m.metric} ranks us among only {peers} majors met; a rank milestone needs "
+                            f"{rel.rank_min_peers} or more (use {' or '.join(rel.relative)})")
+            if (m.metric == rel.metric and m.op == ">=" and isinstance(med, (int, float)) and med > 0
+                    and m.target < rel.absolute_share * med):
+                errs.append(f"{name}: {m.metric} >= {m.target:g} by {m.by} is under {rel.absolute_share:g} x the median "
+                            f"of the majors we have met ({med:,.0f}); set it relative: {' or '.join(rel.relative)}")
+    owner = s.pillars.get(rel.pillar)
+    if standing.get("weak") and owner is not None and not owner.pinned and not any(
+            m.metric in rel.relative and m.op == ">=" and m.target >= rel.min_target for m in owner.milestones):
+        errs.append(f"{rel.pillar}: our military is weak against the majors we have met (under the median share, or "
+                    f"last): hold a milestone on {' or '.join(rel.relative)} >= {rel.min_target:g}")
+    return errs
+
+
+_UNIT_ID_RE = re.compile(r"\bunit:[a-z0-9_]+")
+
+
+def _unavailable_errors(s: Strategy, unavailable) -> list[str]:
+    """Ids a model's answer plans on that the game cannot use now (ruling 8): each preferred purchase
+    or production id and each `unit:` id quoted in a goal that `unavailable(id)` names; pinned pillars
+    are exempt."""
+    errs: list[str] = []
+    for name, pl in s.sorted_pillars():
+        if pl.pinned:
+            continue
+        ids = [*pl.prefer_purchases, *pl.prefer_production, *(m for g in pl.goals for m in _UNIT_ID_RE.findall(g))]
+        errs.extend(f"{name}: {why}" for i in dict.fromkeys(ids) if (why := unavailable(i)))
+    return errs
+
+
+def _unpursuable_errors(s: Strategy, spec: PillarSpec) -> list[str]:
+    """Goals that name a word of `[strategy] unpursuable` (ruling 25): no order kind can pursue them
+    ("Get peace with Australia" at T563, T565 and T575; the game's AI handles diplomacy during
+    autoplay). Whole words, plurals included; pinned pillars are exempt."""
+    errs: list[str] = []
+    for name, pl in s.sorted_pillars():
+        if pl.pinned:
+            continue
+        for g in pl.goals:
+            hit = next((w for w in spec.unpursuable
+                        if re.search(rf"\b{re.escape(w)}(?:s|es|d|ed)?\b", g, re.IGNORECASE)), None)
+            if hit:
+                errs.append(f"{name}: goal {g!r} names {hit!r}: no order can pursue it: the game's AI handles "
+                            "diplomacy during autoplay")
+    return errs
+
+
 def validate(s: Strategy, spec: PillarSpec, *, previous: Strategy | None, tech_ids: set[str], idle: set[str],
              income: dict[str, float], briefing_checked: set[str] | None = None,
-             require_milestones: bool = True, ids: Mapping[str, set[str]] | None = None) -> list[str]:
+             require_milestones: bool = True, ids: Mapping[str, set[str]] | None = None,
+             standing: Mapping | None = None, unavailable=None) -> list[str]:
     """Reasons the strategy cannot be used under the game's spec (empty = valid).
 
     Structural checks (pillars, priorities, sizes, metrics, dates, action ownership and limits) apply
@@ -262,7 +338,10 @@ def validate(s: Strategy, spec: PillarSpec, *, previous: Strategy | None, tech_i
     briefing never blocks a review (see `pinned_misfits`). With `require_milestones`, each unpinned
     pillar among the top `spec.min_milestones_top` by priority needs a milestone (human edits pass False).
     `ids` holds the known ids per id-list action kind (tech, civic, policy, production, purchase); a
-    kind missing from it is checked for size only (tech falls back to `tech_ids`)."""
+    kind missing from it is checked for size only (tech falls back to `tech_ids`). `standing` (our
+    military against the majors met; a game with `[strategy] relative_military`) turns on ruling 18's
+    rules for a model's answer; `unavailable(id)` (a reason, or None) sends back ids the game cannot use
+    now, e.g. a unit whose strategic resource we lack (ruling 8)."""
     checked = _briefing_checked(s, previous) if briefing_checked is None else briefing_checked
     errs: list[str] = []
     errs.extend(f"missing pillar {p}" for p in spec.pillars if p not in s.pillars)
@@ -305,6 +384,12 @@ def validate(s: Strategy, spec: PillarSpec, *, previous: Strategy | None, tech_i
                             "and needs at least one milestone")
     if require_milestones:
         errs.extend(_detail_errors(s, spec))
+        if standing is not None:
+            errs.extend(_relative_errors(s, spec, standing))
+        if unavailable is not None:
+            errs.extend(_unavailable_errors(s, unavailable))
+        if spec.unpursuable:
+            errs.extend(_unpursuable_errors(s, spec))
     if previous is not None:
         for name, pl in previous.pillars.items():
             if pl.pinned and name in s.pillars and _content(s.pillars[name]) != _content(pl):
@@ -353,24 +438,54 @@ def metric_value(row: dict, metric: str, row_keys: Mapping[str, str] | None = No
     return float(v) if isinstance(v, (int, float)) else None
 
 
-def milestone_status(m: Milestone, rows: list[dict], today: str, row_keys: Mapping[str, str] | None = None) -> str:
-    """met / on_track / at_risk / missed, from metrics rows (oldest first) up to `today`."""
+def milestone_status(m: Milestone, rows: list[dict], today: str, row_keys: Mapping[str, str] | None = None,
+                     lookback: int = 12) -> str:
+    """met / on_track / at_risk / missed, from metrics rows (oldest first) up to `today`, judged on one
+    value (postmortem-fixes design, ruling 17): the latest row at or before `today` and not before the
+    milestone's `set`; once `today` is past `by`, the latest such row at or before `by` (its check date:
+    a target met on its date stays met after a later dip, and does not fire "milestone missed"). met: it
+    meets the target; missed: otherwise, once `today` is past `by`; else on_track or at_risk from the
+    projection (that value against a row at least `lookback` steps older, months or turns: any row of
+    the campaign, since a trend needs history). A milestone with no reading since it was set is at_risk
+    (missed once `by` has passed: nothing shows it met). A value met before the latest row no longer
+    counts ("military >= 170 by T350" read met at T350 with 124)."""
     series = [(_months(r["date"]), metric_value(r, m.metric, row_keys)) for r in rows if r.get("date")]
     series = [(mo, v) for mo, v in series if v is not None and mo <= _months(today)]
+    since = _months(m.set) if m.set else None
+    past_due = _months(today) > _months(m.by)
+    upto = _months(m.by) if past_due else _months(today)
+    judged = [(mo, v) for mo, v in series if (since is None or mo >= since) and mo <= upto]
     ok = (lambda v: v >= m.target) if m.op == ">=" else (lambda v: v <= m.target)
-    if any(ok(v) for _, v in series):
+    if not judged:
+        return "missed" if past_due else "at_risk"
+    now_mo, now = judged[-1]
+    if ok(now):
         return "met"
-    if _months(today) > _months(m.by):
+    if past_due:
         return "missed"
-    if len(series) < 2:
-        return "at_risk"
-    now_mo, now = series[-1]
-    past = next(((mo, v) for mo, v in reversed(series) if now_mo - mo >= 12), None)
+    past = next(((mo, v) for mo, v in reversed(series) if now_mo - mo >= lookback), None)
     if past is None:
         return "at_risk"
     span = max(now_mo - past[0], 1)
     projected = now + (now - past[1]) / span * (_months(m.by) - now_mo)
     return "on_track" if ok(projected) else "at_risk"
+
+
+def stamp_milestones(new: Strategy, previous: Strategy | None, date: str | None) -> Strategy:
+    """`new` with each milestone's `set` stamped (ruling 17): a milestone with the same metric, op,
+    target and `by` as one of the same pillar in `previous` keeps that one's `set` (None stays None:
+    a strategy stored before the stamp); any other gets `date` (None when the date is unknown). A
+    `set` the model or a request wrote is never kept."""
+    stamp = date if date and _valid_date(date) else None
+    pillars = {}
+    changed = False
+    for name, pl in new.pillars.items():
+        old = {m.key(): m.set for m in (previous.pillars[name].milestones
+                                         if previous is not None and name in previous.pillars else [])}
+        ms = [m.model_copy(update={"set": old.get(m.key(), stamp)}) for m in pl.milestones]
+        changed = changed or any(a.set != b.set for a, b in zip(ms, pl.milestones, strict=True))
+        pillars[name] = pl.model_copy(update={"milestones": ms})
+    return new.model_copy(update={"pillars": pillars}) if changed else new
 
 
 # ---- the Strategist's output: generated from the spec ---------------------------------------------
@@ -456,7 +571,7 @@ def strategy_for_prompt(s: Strategy, spec: PillarSpec) -> str:
     for name, pl in s.sorted_pillars():
         declared = spec.pillars[name].actions if name in spec.pillars else ()
         keep = {"weight", "stance", "goals", "milestones"} | {ACTION_KINDS[k] for k in declared if k in ACTION_KINDS}
-        out[name] = pl.model_dump(include=keep)
+        out[name] = pl.model_dump(include=keep, exclude={"milestones": {"__all__": {"set"}}})   # `set` is the governor's
     out.update(focus=s.focus, reason=s.reason)
     return json.dumps(out, indent=1, ensure_ascii=False)
 
@@ -505,6 +620,13 @@ def strategist_instructions(spec: PillarSpec) -> str:
     if spec.stance_needs_figure:
         lines.append("Each stance cites at least one figure from the briefing (a stock, a monthly net, a ratio "
                      "or a count), so it is checkable.")
+    rel = spec.relative
+    if rel is not None:
+        lines.append(f"Military targets are relative to the majors we have met: while our military is under the "
+                     f"median share or last among them, the {rel.pillar} pillar holds a milestone on "
+                     f"{' or '.join(rel.relative)} with a target of at least {rel.min_target:g}; an absolute "
+                     f"{rel.metric} target under {rel.absolute_share:g} x their median is sent back; a rank milestone "
+                     f"needs at least {rel.rank_min_peers} majors met.")
     for kind, a in spec.actions.items():
         owners = spec.owners(kind)
         if not owners:

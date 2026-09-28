@@ -2839,6 +2839,15 @@ function describe(ev) {
       return /^could not /.test(e) ? sentence(clip(tidy(e))) : `No decision: ${errorCause(e)}`;
     }
     case "recover_probe": return `Still not answering: ${errorCause(ev.error)}`;
+    case "campaign_end": return `Campaign lost${ev.seen ? ` (seen at ${gdate(ev.seen)})` : ev.turn != null ? ` at ${gdate(String(ev.turn))}` : ""}: ${clip(tidy(ev.text || ev.signal || "our empire is gone"), 200)}; the run ended`;
+    case "decision_retry": return `Decision retried on ${modelName(ev.model)}${ev.date ? ` at ${gdate(ev.date)}` : ""}: ${errorCause(ev.error)}`;
+    case "interval": return `${plural(ev.months, "step")} passed since the last decision (every ${ev.requested} asked)`;
+    case "pace_overrun": return `Decided late: ${plural(ev.actual, "step")} passed where ${ev.requested} were asked${ev.date ? ` (${gdate(ev.date)})` : ""}`;
+    case "turn_overrun": return `Autoplay ran ${plural(ev.actual, "turn")} where ${ev.requested} were asked (now T${ev.turn})`;
+    case "order_resend": return `Lost purchase sent again${ev.turn != null ? ` at T${ev.turn}` : ""}: ${clip(tidy((ev.orders || []).map((o) => `${o.order}: ${o.outcome}`).join("; ")))}${ev.lost_twice ? "; lost twice, a decision follows" : ""}`;
+    case "rule_buy": return (ev.orders || []).length
+      ? `The governor bought by rule${ev.turn != null ? ` at T${ev.turn}` : ""}: ${clip(tidy((ev.orders || []).map((o) => `${o.order}: ${o.outcome}`).join("; ")))}`
+      : `No rule buy${ev.turn != null ? ` at T${ev.turn}` : ""}: ${clip(tidy(ev.note))}`;
     case "recovered": return `Answering again; carried on by itself${ev.reason ? ` (${ev.reason})` : ""}`;
     case "needs_attention": return `Needs you: ${clip(tidy(ev.reason), 200)}`;
     case "stall": return `Game date stuck at ${gdate(ev.date)} for ${dur(ev.seconds)}; nothing was sent to the game`;

@@ -25,7 +25,8 @@ _ACTION_KEYS = {
     **dict.fromkeys(ID_LIST_KINDS, _ID_LIST_KEYS),
     "purchase": _ID_LIST_KEYS | {"gold_reserve", "faith_reserve", "treasury_share", "threatened_share",
                                  "gold_reserve_per_deficit", "pantheon_reserve", "prophet_faith_reserve",
-                                 "skip_turns_left", "defence_first", "defender_classes", "defence_cooldown_turns"},
+                                 "skip_turns_left", "defence_first", "defender_classes", "defence_cooldown_turns",
+                                 "weak_median_share", "strong_neighbour_ratio", "rule_buy"},
     "market": {"field", "max_items", "resources_from_manifest", "amount_min", "amount_max",
                "sell_income_share", "sell_requires_idle", "note", "buy"},
 }
@@ -36,13 +37,18 @@ MARKET_KINDS = ("internal", "galactic")
 _ACTION_REQUIRED = {**dict.fromkeys(ID_LIST_KINDS, ("max_items", "ids_from_corpus")),
                     "purchase": ("max_items", "ids_from_corpus", "gold_reserve", "treasury_share"),
                     "market": ("max_items", "resources_from_manifest", "amount_max")}
-_TOP_KEYS = {"strategy", "metrics", "pillars", "actions", "weights", "orders"}
+_TOP_KEYS = {"strategy", "metrics", "pillars", "actions", "weights", "orders", "time", "peers", "learned"}
+_TIME_KEYS = {"unit", "review_cap", "review_exempt", "milestone_lookback", "score_horizon", "buildup_window"}
+_PEERS_KEYS = {"behind", "last_min_peers"}
+TIME_UNITS = ("months", "turns")      # one step of the game's clock (postmortem-fixes design, ruling 19)
 _ORDERS_KEYS = {"window_turns", "min_resolved", "min_samples", "weak_rate", "open_cap_turns", "open_grace_turns"}
 ORDER_SAMPLE_GROUPS = ("production", "purchase", "other")
 _WEIGHTS_KEYS = {"mode", "min", "max", "spread", "switch_margin", "need", "stall_years", "stall_factor"}
 NEED_STATUSES = ("met", "on_track", "at_risk", "missed")
 _STRATEGY_KEYS = {"min_milestones_top", "min_milestones_each", "min_milestones_first", "min_goals", "min_goals_top",
-                  "stance_needs_figure", "metric_aliases", "instructions", "date_format", "identity"}
+                  "stance_needs_figure", "metric_aliases", "instructions", "date_format", "identity",
+                  "relative_military", "unpursuable"}
+_RELATIVE_KEYS = {"pillar", "metric", "relative", "min_target", "absolute_share", "rank_min_peers"}
 DATE_FORMATS = ("calendar", "turns")     # milestone dates: YYYY.MM.DD, or T<turn> (turn-based games)
 _METRICS_KEYS = {"names", "row_keys", "milestone_exclude", "peer_keys"}
 _PILLAR_KEYS = {"label", "description", "directive", "actions"}
@@ -114,6 +120,10 @@ class ActionLimits:
     defence_first: bool = False          # a city in danger with no defender on its tile gets one first
     defender_classes: tuple[str, ...] = ()   # unit classes (data/unit.json fields.class) that defend a city
     defence_cooldown_turns: int = 0      # at most one defender purchase per city per this many turns
+    # the weakness test (docs/design/2026-09-27-postmortem-fixes-design.md, ruling 1); 0: the default
+    weak_median_share: float = 0.0       # our military under this x the median of the met majors: weak
+    strong_neighbour_ratio: float = 0.0  # a met major, not our ally, at this x our military: outgunned
+    rule_buy: bool = False               # the governor's own defender buy before a multi-turn stretch (ruling 3)
     buy: BuyRules | None = None          # market: the buy rules ([actions.market.buy]); None: buys unchecked
 
     @property
@@ -154,6 +164,51 @@ class OrdersSpec:
 
 
 @dataclass(frozen=True)
+class PeersSpec:
+    """`[peers]`: the falling-behind trigger of a game whose metrics rows carry the met majors' medians
+    (Civ VI; postmortem-fixes design, ruling 10): a measure is behind while ours is under its factor x
+    the median, military also while last with `last_min_peers` or more majors met."""
+    behind: types.MappingProxyType
+    last_min_peers: int = 3
+
+
+@dataclass(frozen=True)
+class RelativeSpec:
+    """Military targets relative to the majors we have met (`[strategy] relative_military`;
+    postmortem-fixes design, ruling 18): targets 10-28% above our own strength stood at 0.44-0.56 of
+    the median on their due dates. While our military is weak (under the median share, or last: the
+    governor's weakness test), `pillar` must hold a milestone on one of `relative` with a target of at
+    least `min_target`; an absolute `metric` target under `absolute_share` x the median is sent back;
+    rank milestones need `rank_min_peers` majors met."""
+    pillar: str
+    metric: str
+    relative: tuple[str, ...]
+    min_target: float = 0.5
+    absolute_share: float = 0.5
+    rank_min_peers: int = 3
+
+
+@dataclass(frozen=True)
+class TimeSpec:
+    """The shared code's time constants in the game's own unit (`[time]`; postmortem-fixes design,
+    rulings 15 and 19): "12 in-game months" silently became 12 turns in Civ VI. The defaults are the
+    numbers the shared code used before, in months."""
+    unit: str = "months"             # "months" (Stellaris) or "turns" (Civ VI): one step of the clock
+    review_cap: int = 12             # event reviews: at most one per this many steps...
+    review_exempt: tuple[str, ...] = ()   # ...except these triggers, which always review (and reset the clock)
+    milestone_lookback: int = 12     # a milestone's projection needs a row at least this many steps older
+    score_horizon: int = 12          # outcome scoring compares the metrics this many steps after a decision
+    buildup_window: int = 0          # the neighbour-buildup trigger's window (ruling 11); 0: the trigger is off
+
+    def steps(self, n: int) -> str:
+        """`n` steps in words: "5 turns", "1 month"."""
+        return f"{n} {self.unit[:-1] if n == 1 else self.unit}"
+
+    def exempt(self, trigger: str) -> bool:
+        return any(t in trigger for t in self.review_exempt)
+
+
+@dataclass(frozen=True)
 class PillarSpec:
     game: str
     pillars: dict[str, PillarDef]
@@ -175,6 +230,15 @@ class PillarSpec:
     identity: str = ""                 # the Strategist's `identity` instruction (default: our species)
     orders: OrdersSpec | None = None   # the order record's settings ([orders]); None: no record
     milestone_exclude: tuple[str, ...] = ()   # metrics never used as milestones ([metrics] milestone_exclude)
+    time: TimeSpec = field(default_factory=TimeSpec)   # [time]: the clock's constants in the game's unit
+    relative: RelativeSpec | None = None       # [strategy] relative_military; None: the rules are off
+    peers: PeersSpec | None = None             # [peers]; None: no falling-behind trigger from the governor
+    # words a goal may not name because no order can pursue them ([strategy] unpursuable; Civ VI:
+    # diplomacy, which the game's AI handles during autoplay; postmortem-fixes design, ruling 25)
+    unpursuable: tuple[str, ...] = ()
+    # known-false learned rules ([learned] refuse: (regex, why); postmortem-fixes design, ruling 29): a
+    # rule that matches one is refused and the model gets the reason
+    learned_refuse: tuple[tuple[str, str], ...] = ()
 
     @property
     def ids(self) -> tuple[str, ...]:
@@ -211,12 +275,18 @@ class PillarSpec:
                                 "skip_turns_left": a.skip_turns_left, "defence_first": a.defence_first,
                                 "defender_classes": list(a.defender_classes),
                                 "defence_cooldown_turns": a.defence_cooldown_turns,
+                                "weak_median_share": a.weak_median_share,
+                                "strong_neighbour_ratio": a.strong_neighbour_ratio, "rule_buy": a.rule_buy,
                                 "buy": None if a.buy is None else {
                                     **{k: getattr(a.buy, k) for k in sorted(_BUY_KEYS)
                                        if k not in ("base_amount", "volume", "strategic")},
                                     "base_amount": dict(a.buy.base_amount), "volume": dict(a.buy.volume),
                                     "strategic": list(a.buy.strategic)}}
                             for k, a in self.actions.items()},
+                "time": {"unit": self.time.unit, "review_cap": self.time.review_cap,
+                         "review_exempt": list(self.time.review_exempt),
+                         "milestone_lookback": self.time.milestone_lookback, "score_horizon": self.time.score_horizon,
+                         "buildup_window": self.time.buildup_window},
                 "orders": None if self.orders is None else {
                     "window_turns": self.orders.window_turns, "min_resolved": self.orders.min_resolved,
                     "min_samples": dict(self.orders.min_samples), "weak_rate": self.orders.weak_rate,
@@ -383,7 +453,7 @@ def _action(path: Path, corpus: Path, kind: str, t) -> ActionLimits:
     if not _num(per) or per < 0:
         raise _err(path, f"{where}.gold_reserve_per_deficit", "must be a number >= 0")
     buyout["gold_reserve_per_deficit"] = float(per)
-    for key in ("pantheon_reserve", "defence_first"):
+    for key in ("pantheon_reserve", "defence_first", "rule_buy"):
         v = t.get(key, False)
         if not isinstance(v, bool):
             raise _err(path, f"{where}.{key}", "must be true or false")
@@ -399,6 +469,13 @@ def _action(path: Path, corpus: Path, kind: str, t) -> ActionLimits:
     if buyout["defence_first"] and not classes:
         raise _err(path, f"{where}.defender_classes", "defence_first needs the unit classes that defend a city")
     buyout["defender_classes"] = tuple(c.strip() for c in classes)
+    weak = t.get("weak_median_share", 0.0)
+    if not _num(weak) or not 0 <= weak <= 1:
+        raise _err(path, f"{where}.weak_median_share", "must be a number in [0, 1]")
+    strong = t.get("strong_neighbour_ratio", 0.0)
+    if not _num(strong) or (strong and strong < 1):
+        raise _err(path, f"{where}.strong_neighbour_ratio", "must be a number >= 1 (0: the default)")
+    buyout["weak_median_share"], buyout["strong_neighbour_ratio"] = float(weak), float(strong)
     buy = _buy_rules(path, f"{where}.buy", t["buy"], resources) if "buy" in t else None
     return ActionLimits(kind=kind, field=fld, max_items=t["max_items"], ids_from_corpus=ids, resources=resources,
                         amount_min=lo, amount_max=hi, sell_income_share=None if share is None else float(share),
@@ -534,6 +611,97 @@ def _orders(path: Path, t) -> OrdersSpec:
     return OrdersSpec(min_samples=types.MappingProxyType(samples), weak_rate=float(rate), **ints)
 
 
+def _time(path: Path, t, date_format: str) -> TimeSpec:
+    """`[time]`: the unit matches the milestone dates (months for calendar dates, turns for T<turn>);
+    every constant is a whole number of steps >= 1; `review_exempt` lists trigger texts."""
+    unit_default = "turns" if date_format == "turns" else "months"
+    if not isinstance(t, dict):
+        raise _err(path, "time", "must be a table")
+    _unknown(path, "time", t, _TIME_KEYS)
+    unit = t.get("unit", unit_default)
+    if unit not in TIME_UNITS:
+        raise _err(path, "time.unit", f"must be one of {', '.join(TIME_UNITS)}")
+    if unit != unit_default:
+        raise _err(path, "time.unit", f"must be {unit_default!r} with strategy.date_format {date_format!r}")
+    d = TimeSpec()
+    ints = {}
+    for key in ("review_cap", "milestone_lookback", "score_horizon", "buildup_window"):
+        v = t.get(key, getattr(d, key))
+        if not _int(v) or v < (0 if key == "buildup_window" else 1):
+            raise _err(path, f"time.{key}", f"must be a whole number of {unit} >= {0 if key == 'buildup_window' else 1}")
+        ints[key] = v
+    exempt = t.get("review_exempt", [])
+    if not isinstance(exempt, list) or not all(isinstance(x, str) and x.strip() for x in exempt):
+        raise _err(path, "time.review_exempt", "must be a list of trigger texts")
+    return TimeSpec(unit=unit, review_exempt=tuple(x.strip() for x in exempt), **ints)
+
+
+def _peers(path: Path, t) -> PeersSpec:
+    if not isinstance(t, dict):
+        raise _err(path, "peers", "must be a table")
+    _unknown(path, "peers", t, _PEERS_KEYS)
+    raw = t.get("behind")
+    if not isinstance(raw, dict) or not raw:
+        raise _err(path, "peers.behind", "required: a table of measure = factor")
+    for m, f in raw.items():
+        if not _num(f) or not 0 < f <= 1:
+            raise _err(path, f"peers.behind.{m}", "must be a number in (0, 1]")
+    n = t.get("last_min_peers", 3)
+    if not _int(n) or n < 1:
+        raise _err(path, "peers.last_min_peers", "must be an integer >= 1")
+    return PeersSpec(behind=types.MappingProxyType({m: float(f) for m, f in raw.items()}), last_min_peers=n)
+
+
+def _relative(path: Path, t, names: list[str], pillars: dict) -> RelativeSpec:
+    where = "strategy.relative_military"
+    if not isinstance(t, dict):
+        raise _err(path, where, "must be a table")
+    _unknown(path, where, t, _RELATIVE_KEYS)
+    if t.get("pillar") not in pillars:
+        raise _err(path, f"{where}.pillar", "must name a pillar")
+    if t.get("metric") not in names:
+        raise _err(path, f"{where}.metric", "must be a metric in metrics.names")
+    rel = t.get("relative")
+    if not isinstance(rel, list) or not rel or not all(isinstance(m, str) and m in names for m in rel):
+        raise _err(path, f"{where}.relative", "must list metrics from metrics.names")
+    d = RelativeSpec(pillar="", metric="", relative=())
+    vals = {}
+    for key in ("min_target", "absolute_share"):
+        v = t.get(key, getattr(d, key))
+        if not _num(v) or v <= 0:
+            raise _err(path, f"{where}.{key}", "must be a number > 0")
+        vals[key] = float(v)
+    peers = t.get("rank_min_peers", d.rank_min_peers)
+    if not _int(peers) or peers < 1:
+        raise _err(path, f"{where}.rank_min_peers", "must be an integer >= 1")
+    return RelativeSpec(pillar=t["pillar"], metric=t["metric"], relative=tuple(rel), rank_min_peers=peers, **vals)
+
+
+def _learned(path: Path, t) -> tuple[tuple[str, str], ...]:
+    """`[learned] refuse = [{pattern, why}]`: case-insensitive regular expressions and their reasons."""
+    if not isinstance(t, dict):
+        raise _err(path, "learned", "must be a table")
+    _unknown(path, "learned", t, {"refuse"})
+    raw = t.get("refuse", [])
+    if not isinstance(raw, list):
+        raise _err(path, "learned.refuse", "must be a list of {pattern, why} tables")
+    out = []
+    for i, e in enumerate(raw):
+        where = f"learned.refuse[{i}]"
+        if not isinstance(e, dict):
+            raise _err(path, where, "must be a {pattern, why} table")
+        _unknown(path, where, e, {"pattern", "why"})
+        for k in ("pattern", "why"):
+            if not isinstance(e.get(k), str) or not e[k].strip():
+                raise _err(path, f"{where}.{k}", "required text")
+        try:
+            re.compile(e["pattern"], re.IGNORECASE)
+        except re.error as err:
+            raise _err(path, f"{where}.pattern", f"not a regular expression: {err}") from None
+        out.append((e["pattern"], e["why"].strip()))
+    return tuple(out)
+
+
 def _parse(path: Path, corpus: Path) -> PillarSpec:
     try:
         raw = tomllib.loads(path.read_text(encoding="utf-8"))
@@ -619,7 +787,17 @@ def _parse(path: Path, corpus: Path) -> PillarSpec:
         raise _err(path, "strategy.date_format", f"must be one of {', '.join(DATE_FORMATS)}")
     weights = _weights(path, raw.get("weights", {}), len(pillars))
     orders = _orders(path, raw["orders"]) if "orders" in raw else None
-    return PillarSpec(game=corpus.name, weights=weights, orders=orders, milestone_exclude=tuple(exclude), pillars=types.MappingProxyType(pillars), metrics=tuple(names),
+    time = _time(path, raw.get("time", {}), date_format)
+    relative = _relative(path, strat["relative_military"], names, pillars) if "relative_military" in strat else None
+    unpursuable = strat.get("unpursuable", [])
+    if not isinstance(unpursuable, list) or not all(isinstance(w, str) and re.fullmatch(r"[a-z][a-z -]*", w)
+                                                     for w in unpursuable):
+        raise _err(path, "strategy.unpursuable", "must be a list of lowercase words")
+    peers = _peers(path, raw["peers"]) if "peers" in raw else None
+    learned = _learned(path, raw["learned"]) if "learned" in raw else ()
+    return PillarSpec(game=corpus.name, weights=weights, orders=orders, milestone_exclude=tuple(exclude), time=time,
+                      relative=relative, peers=peers, unpursuable=tuple(unpursuable), learned_refuse=learned,
+                      pillars=types.MappingProxyType(pillars), metrics=tuple(names),
                       metric_aliases=types.MappingProxyType(aliases), row_keys=types.MappingProxyType(row_keys),
                       peer_keys=types.MappingProxyType(peer_keys),
                       actions=types.MappingProxyType(actions), min_milestones_top=top, stance_needs_figure=figure,

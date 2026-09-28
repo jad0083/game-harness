@@ -292,6 +292,40 @@ pub fn ai_strategies_reply(chunk: &[u8], offset: u64, size: u64, player: u32) ->
     serde_json::json!({"ok": true, "size": size, "offset": offset, "next": offset + end as u64, "restarted": false, "rows": rows})
 }
 
+/// The game logs `civ6 log-tail` may read (docs/design/2026-09-27-postmortem-fixes-design.md, rulings
+/// 4, 6 and 24), under `Logs/` of the `civ6_appdata` root: what the AI bought for us, the World
+/// Congress's resolutions and who declared each war. Any other name is refused.
+pub const LOG_TAIL_FILES: &[&str] = &["AI_CityBuild.csv", "World_Congress.csv", "DiplomacySummary.csv"];
+/// Without an offset, this much of the file's end is read (the whole-game logs grow to megabytes).
+pub const LOG_TAIL_DEFAULT: u64 = 16 * 1024;
+
+/// The log's path under `civ6_appdata`, or why it may not be read.
+pub fn log_tail_path(file: &str) -> Result<String> {
+    if !LOG_TAIL_FILES.contains(&file) {
+        bail!("log-tail reads only {}", LOG_TAIL_FILES.join(", "));
+    }
+    Ok(format!("Logs/{file}"))
+}
+
+/// The reply of `civ6 log-tail`: the complete lines of `chunk`, read at `offset` of a file of `size`
+/// bytes, and the offset to read from next (a partial last line waits for it). `from_end`: the chunk
+/// was read from inside the file, so its first line may be cut and is dropped. A file smaller than
+/// `offset` was started again (a new game session): no lines, read again from 0.
+pub fn log_tail_reply(file: &str, chunk: &[u8], offset: u64, size: u64, from_end: bool) -> serde_json::Value {
+    if offset > size {
+        return serde_json::json!({"ok": true, "file": file, "size": size, "offset": offset, "next": 0,
+                                  "restarted": true, "lines": []});
+    }
+    let end = chunk.iter().rposition(|&b| b == b'\n').map_or(0, |i| i + 1);
+    let text = String::from_utf8_lossy(&chunk[..end]);
+    let mut lines: Vec<&str> = text.lines().collect();
+    if from_end && offset > 0 && !lines.is_empty() {
+        lines.remove(0);
+    }
+    serde_json::json!({"ok": true, "file": file, "size": size, "offset": offset, "next": offset + end as u64,
+                       "restarted": false, "lines": lines})
+}
+
 /// `Harness.run(Harness.autoplay, n)`.
 pub fn autoplay_call(turns: u32) -> Result<String> {
     if !(1..=MAX_AUTOPLAY_TURNS).contains(&turns) {
@@ -375,12 +409,26 @@ pub fn parse_popups(text: &str) -> Result<Vec<QuietPopup>> {
 pub const INSTALL_HEADER: &str = "local HARNESS_VERSION = {version}\nlocal HARNESS_STATE = {state}\n";
 
 /// The library file and its version (FNV-1a of the install header's template and the text: any edit
-/// of either re-installs it), with the popups to quiet after installing it into `InGame`.
+/// of either re-installs it), with the popups to quiet after installing it into `InGame`. `body` is
+/// the text as sent: every full-line comment blanked (the agent takes at most 64 KiB of code, and the
+/// file's comments are a fifth of it), so line numbers in the game's errors still match the file.
 pub struct Library {
     pub path: PathBuf,
+    #[cfg_attr(not(test), allow(dead_code))] // the file as read (hashed into `version`; the tests check its guards)
     pub source: String,
+    pub body: String,
     pub version: String,
     pub popups: Vec<QuietPopup>,
+}
+
+/// `source` with each line that is only a comment made empty (its newline kept), except the license
+/// and copyright notice, which every copy keeps. The library has no block comments or long strings (a
+/// test checks), so no line inside one can start with `--`.
+pub fn blank_comment_lines(source: &str) -> String {
+    let notice = |l: &str| l.contains("License") || l.contains("Copyright");
+    source.split_inclusive('\n')
+        .map(|l| if l.trim_start().starts_with("--") && !notice(l) { if l.ends_with('\n') { "\n" } else { "" } } else { l })
+        .collect()
 }
 
 impl Library {
@@ -395,13 +443,14 @@ impl Library {
         let table = corpus.join("popups.toml");
         let text = std::fs::read_to_string(&table).with_context(|| format!("reading {}", table.display()))?;
         let popups = parse_popups(&text).with_context(|| format!("in {}", table.display()))?;
-        Ok(Self { path, source, version: format!("{h:016x}"), popups })
+        let body = blank_comment_lines(&source);
+        Ok(Self { path, source, body, version: format!("{h:016x}"), popups })
     }
 
     /// The chunk that installs the library into `state` (a no-op when this version is already
     /// there). The library learns its state from it: the diplomacy handler is registered in InGame only.
     pub fn install_code(&self, state: &str) -> String {
-        INSTALL_HEADER.replace("{version}", &lua_str(&self.version)).replace("{state}", &lua_str(state)) + &self.source
+        INSTALL_HEADER.replace("{version}", &lua_str(&self.version)).replace("{state}", &lua_str(state)) + &self.body
     }
 
     /// `call` run only when this version is installed; otherwise it prints the missing marker.
@@ -701,6 +750,18 @@ mod tests {
     }
 
     #[test]
+    fn log_tail_reads_only_its_three_logs_and_complete_lines() {
+        assert_eq!(log_tail_path("AI_CityBuild.csv").unwrap(), "Logs/AI_CityBuild.csv");
+        assert!(log_tail_path("../Saves/x.Civ6Save").is_err() && log_tail_path("AI_Victories.csv").is_err());
+        let r = log_tail_reply("AI_CityBuild.csv", b"526, 0, Beijing, FAITH PURCHASE, UNIT_ROCK_BAND\n527, 0, Xi", 100, 200, false);
+        assert_eq!(r["lines"], serde_json::json!(["526, 0, Beijing, FAITH PURCHASE, UNIT_ROCK_BAND"]));
+        assert_eq!(r["next"], 100 + 48, "the partial line waits for the next read");
+        let tail = log_tail_reply("AI_CityBuild.csv", b"ING\n526, 0, a\n", 180, 194, true);
+        assert_eq!(tail["lines"], serde_json::json!(["526, 0, a"]), "a read from inside the file drops its cut first line");
+        assert_eq!(log_tail_reply("World_Congress.csv", b"", 900, 100, false)["restarted"], true);
+    }
+
+    #[test]
     fn ai_strategies_keep_one_players_complete_rows() {
         let log = b"Game Turn, Player, Strategy, Status\n1, 0, STRATEGY_EARLY_EXPLORATION, Following\n\
                     1, 1, STRATEGY_EARLY_EXPLORATION, Following\n56, 0, VICTORY_STRATEGY_SCIENCE_VICTORY, Following\n76, 0, VICT";
@@ -745,6 +806,19 @@ mod tests {
         assert!(lib.source.contains("MIT License"), "civ6-mcp attribution");
         // the agent refuses tuner code over 64 KiB (crates/game-agent/src/tuner.rs MAX_CODE)
         assert!(lib.install_code(STATE_UI).len() < 64 * 1024, "the install chunk is {} bytes", lib.install_code(STATE_UI).len());
+        // comment lines are blanked in what is sent, never code: no block comment or long string
+        assert!(!lib.source.contains("[[") && !lib.source.contains("--[") && !lib.source.contains("\\\n"),
+                "a block comment or long string would let a blanked line cut it");
+        assert_eq!(lib.body.lines().count(), lib.source.lines().count(), "line numbers match the file");
+        assert!(lib.body.contains("MIT License") && lib.body.contains("Copyright (c) 2026 Liam Wilkinson"),
+                "the civ6-mcp notice is kept in what is sent");
+        assert!(lib.body.contains("function H.snapshot()") && !lib.body.contains("-- ---- JSON"));
+    }
+
+    #[test]
+    fn only_whole_comment_lines_are_blanked() {
+        let src = "-- head\nlocal a = 1 -- tail\n  -- indented\n-- MIT License\nprint('--x')\n--";
+        assert_eq!(blank_comment_lines(src), "\nlocal a = 1 -- tail\n\n-- MIT License\nprint('--x')\n");
     }
 
     #[test]
@@ -757,7 +831,7 @@ mod tests {
         let lib = Library::load(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpora/civ6")).unwrap();
         assert_ne!(lib.version, fnv(lib.source.as_bytes()), "an install by the older controller would be kept");
         let chunk = lib.install_code(STATE_UI);
-        let header = &chunk[..chunk.len() - lib.source.len()];
+        let header = &chunk[..chunk.len() - lib.body.len()];
         assert_eq!(header.replace(&lib.version, "").replace(STATE_UI, ""), "local HARNESS_VERSION = \"\"\nlocal HARNESS_STATE = \"\"\n");
         // the header's template is hashed with the text, so changing either installs the library again
         assert_eq!(lib.version, fnv(format!("{INSTALL_HEADER}{}", lib.source).as_bytes()));

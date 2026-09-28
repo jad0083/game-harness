@@ -124,3 +124,118 @@ def test_balance_milestones_bind_the_strategist_not_pins_or_human_edits():
     human = civ_strategy(economy={"milestones": [Milestone(metric="gold", op=">=", target=60, by="T130")]})
     assert validate(human, SPEC, previous=None, tech_ids=set(), idle=set(), income={}, ids=IDS,
                     briefing_checked={"science"}, require_milestones=False) == [], "a human edit elsewhere"
+
+
+def test_the_t350_military_milestone_is_at_risk_then_missed_not_met():
+    """Post-mortem strategy-1 (postmortem-fixes design, ruling 17): "military >= 170 by T350", set at
+    T342 with 123, read met at T350 with 124 because T326 and T329 were above 170. Judged on the
+    current value it reads at_risk T342-T350 and missed from T351."""
+    import json
+
+    from pilot.config import REPO
+    rows = [r for r in json.loads((REPO / "tests/fixtures/civ6_kublai_rows.json").read_text(encoding="utf-8"))
+            if 326 <= r["turn"] <= 352]
+    m = Milestone(metric="military", op=">=", target=170, by="T350", set="T342")
+    for t in (342, 344, 345, 347, 350):
+        assert milestone_status(m, rows, f"T{t}") == "at_risk", t
+    assert milestone_status(m, rows, "T351") == "missed"
+    assert milestone_status(m.model_copy(update={"set": None}), rows, "T350") == "at_risk", \
+        "without the stamp the old rows above 170 no longer read met either"
+
+
+# ---- postmortem-fixes design, ruling 18: military targets relative to the majors met -------------
+
+def _military(*milestones, pinned=False):
+    return civ_strategy(military={"milestones": list(milestones), "pinned": pinned})
+
+
+def _check(s, standing):
+    return validate(s, SPEC, previous=None, tech_ids=set(), idle=set(), income={}, ids=IDS, standing=standing)
+
+
+def test_the_t525_absolute_military_targets_are_sent_back():
+    """Strategy-7: the T525 targets 520 and 580 against a median of 1,106 (0.47 and 0.52 x)."""
+    s = _military(Milestone(metric="military", op=">=", target=520, by="T540"),
+                  Milestone(metric="military", op=">=", target=580, by="T560"))
+    errs = _check(s, {"military": 471, "median": 1106.0, "peers": 5, "weak": True})
+    assert any("military >= 520 by T540 is under 0.5 x the median of the majors we have met (1,106)" in e for e in errs)
+    assert not any("580" in e for e in errs), "580 is 0.52 x the median"
+    assert any("military: our military is weak" in e and "military_vs_median or military_vs_strongest >= 0.5" in e
+               for e in errs)
+
+
+def test_a_relative_milestone_satisfies_the_rule_and_ranks_need_three_majors():
+    ok = _military(Milestone(metric="military_vs_median", op=">=", target=0.6, by="T560"))
+    assert _check(ok, {"military": 471, "median": 1106.0, "peers": 5, "weak": True}) == []
+    low = _military(Milestone(metric="military_vs_strongest", op=">=", target=0.3, by="T560"))
+    assert any("weak" in e for e in _check(low, {"military": 471, "median": 1106.0, "peers": 5, "weak": True}))
+    rank = _military(Milestone(metric="rank:military", op="<=", target=1, by="T350"))
+    errs = _check(rank, {"military": 200, "median": 180.0, "peers": 2, "weak": False})
+    assert any("rank:military ranks us among only 2 majors met; a rank milestone needs 3 or more" in e for e in errs)
+    assert _check(rank, {"military": 200, "median": 180.0, "peers": 3, "weak": False}) == []
+
+
+def test_pinned_pillars_and_human_edits_are_exempt_and_the_strategist_is_told():
+    pinned = _military(Milestone(metric="military", op=">=", target=100, by="T540"), pinned=True)
+    assert _check(pinned, {"military": 471, "median": 1106.0, "peers": 5, "weak": True}) == []
+    human = _military(Milestone(metric="military", op=">=", target=100, by="T540"))
+    assert validate(human, SPEC, previous=None, tech_ids=set(), idle=set(), income={}, ids=IDS, require_milestones=False,
+                    briefing_checked={"military"}, standing={"military": 471, "median": 1106.0, "peers": 5, "weak": True}) == []
+    text = strategist_instructions(SPEC)
+    assert "military_vs_median or military_vs_strongest with a target of at least 0.5" in text
+    assert "military_vs_median" in text.split("exactly these names: ")[1]
+
+
+def test_a_plan_on_a_unit_whose_resource_we_lack_is_sent_back():
+    """T496: "Buy 2 mechanized_infantry" with no Oil (postmortem-fixes design, ruling 8)."""
+    from pilot.civ6 import CorpusIndex, resource_key
+    from pilot.config import REPO
+    index = CorpusIndex.load(REPO / "corpora/civ6")
+    stock = {"RESOURCE_OIL": 0}
+
+    def unavailable(uid):
+        need = index.resource_cost.get(uid)
+        return None if not need or stock.get(resource_key(need[1]), 0) >= need[0] else \
+            f"{uid} needs {need[0]} {need[1]}; we have {stock.get(resource_key(need[1]), 0)}"
+    ids = {**IDS, "purchase": {*IDS["purchase"], "unit:mechanized_infantry", "unit:modern_at"}}
+    s = civ_strategy(military={"prefer_purchases": ["unit:mechanized_infantry"],
+                               "goals": ["buy 2 unit:mechanized_infantry for Rockhampton", "hold 2"]})
+    errs = validate(s, SPEC, previous=None, tech_ids=set(), idle=set(), income={}, ids=ids, unavailable=unavailable)
+    assert errs == ["military: unit:mechanized_infantry needs 1 Oil; we have 0"]
+    ok = civ_strategy(military={"prefer_purchases": ["unit:modern_at"]})
+    assert validate(ok, SPEC, previous=None, tech_ids=set(), idle=set(), income={}, ids=ids, unavailable=unavailable) == []
+    pinned = civ_strategy(military={"prefer_purchases": ["unit:mechanized_infantry"], "pinned": True})
+    assert validate(pinned, SPEC, previous=None, tech_ids=set(), idle=set(), income={}, ids=ids,
+                    unavailable=unavailable) == [], "a pinned pillar is exempt"
+
+
+# ---- postmortem-fixes design, ruling 25: no diplomacy goals until a diplomacy order exists ------------
+
+def test_a_goal_no_order_can_pursue_is_sent_back_and_pins_are_exempt():
+    """War-11: "Get peace with Australia" was the goal at T563, T565 and T575 with no order kind that
+    could pursue it; the game's AI handles diplomacy during autoplay."""
+    assert SPEC.unpursuable == ("peace", "ceasefire", "alliance", "friendship", "denounce")
+    errs = errors(civ_strategy(diplomacy={"goals": ["Get peace with Australia", "Keep 2 delegations"]}))
+    assert ("diplomacy: goal 'Get peace with Australia' names 'peace': no order can pursue it: the game's AI "
+            "handles diplomacy during autoplay") in errs
+    assert any("'alliances'" in e or "'alliance'" in e for e in errors(civ_strategy(diplomacy={"goals": ["Renew our Alliances"]})))
+    assert errors(civ_strategy(diplomacy={"goals": ["Peaceful expansion to 6 cities", "hold 2"]})) == [], "a word, not a prefix"
+    pinned = civ_strategy(diplomacy={"goals": ["Get peace with Australia", "hold 2"], "pinned": True})
+    assert errors(pinned) == []
+    human = validate(civ_strategy(diplomacy={"goals": ["Get peace with Australia", "hold 2"]}), SPEC, previous=None,
+                     tech_ids=set(), idle=set(), income={}, ids=IDS, require_milestones=False)
+    assert human == [], "a human edit is exempt"
+    assert "the war ending" in SPEC.instructions and "(peace," not in SPEC.instructions
+
+
+def test_a_bad_unpursuable_list_names_its_key(tmp_path):
+    import shutil
+
+    from pilot.pillars import PillarsError
+    corpus = tmp_path / "civ6"
+    shutil.copytree(REPO / "corpora/civ6", corpus, ignore=shutil.ignore_patterns("data", "learned", "lua"))
+    shutil.copytree(REPO / "corpora/civ6/data", corpus / "data")
+    text = (corpus / "pillars.toml").read_text()
+    (corpus / "pillars.toml").write_text(text.replace('unpursuable = ["peace",', 'unpursuable = [3, "peace",'))
+    with pytest.raises(PillarsError, match="strategy.unpursuable"):
+        load_pillars(corpus)

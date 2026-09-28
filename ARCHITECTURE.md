@@ -289,7 +289,11 @@ last-stand-step` requests one action in `InGame`, `civ6 ls-state` reads the resu
 one-turn autoplay hands the turn back; these commands take numeric IDs only and stay out of the
 model-facing `order` JSON. The briefing also carries the AI's own plan: each city's top 3 builds
 from the snapshot and our player's strategies from the game's `Logs/AI_Victories.csv`, which `civ6
-ai-strategies` reads through the agent's file API in one bounded read per decision. District
+ai-strategies` reads through the agent's file API in one bounded read per decision; `civ6 log-tail`
+reads the complete lines of one of three game logs the same way (an allowlist: `AI_CityBuild.csv`,
+`World_Congress.csv`, `DiplomacySummary.csv`; a 64 KiB page from an offset, or the file's last `--tail`
+bytes, 16 KiB by default), for what the AI bought with our treasury (postmortem-fixes design, ruling 4:
+the governor pages on from its last offset, or takes a tail sized to the turns it needs). District
 placement is read-only so far: `civ6 district-plots` returns where each district may go (the game's
 own check) and the facts of the plots around each city, and `src/pilot/civ6_placement.py` scores
 them with the adjacency rules the extractor writes as data (`data/_adjacency.json`). One part of the
@@ -358,7 +362,9 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
    └ dashboard 127.0.0.1:8790 (live)  pilot view :8780 (always on) ──► forwards /status /events /control
 ```
 - `trace.py` turns a model run's messages into steps (prompt, thinking, text, tool call, tool
-  result, retry, answer, usage); images become placeholders, long texts are cut at 6,000 chars.
+  result, retry, answer, usage); images become placeholders; a prompt is kept whole up to 100,000
+  chars (the briefing's per-city danger lines; postmortem-fixes design, ruling 27), other texts are
+  cut at 6,000 chars.
 - `telemetry.py`: SQLite (WAL) with a lock; `record()` maps events to rows; `score()` joins each
   decision to the metric point 12 months later; `past_outcomes()` renders them for the model;
   `rebuild()` replays every `events.jsonl`. Write failures are logged and never stop play.
@@ -442,11 +448,33 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   limits and aliases to unknown metrics fail with the key named. `strategy.py` takes the spec in every
   rule and generates the Strategist's output model (one named optional field per pillar, action fields
   only where declared; `to_strategy`, `strategy_for_prompt`, `strategist_instructions`). The governor
-  loads it per game (`Settings.pillars_file`); failure → layer off; action kinds run through a hook
+  loads it per game (`Settings.pillars_file`); failure → layer off; `[time]` (`TimeSpec`) names the
+  shared code's time constants in the game's unit (event-review cap and exempt triggers, milestone
+  look-back, scoring horizon); action kinds run through a hook
   table (`tech` → `pick_tech`, `market` → `market_sync`).
+- Civ VI snapshot (`corpora/civ6/lua/harness.lua`): `alive`, `resources` (strategic stock), `allied`
+  per major and every city's `defence_prices` with the game's refusal (`stacking`, `balance`, `game`);
+  `civ6.refusal` adds a missing strategic resource from the corpus `resource_cost` (postmortem-fixes
+  design, rulings 1, 7, 21). The controller installs the library with every full-line comment blanked
+  but the license notice (`blank_comment_lines`; line numbers kept): the agent takes at most 64 KiB of
+  tuner code, and the file with its comments is over that.
+- `threat.py` (pure): the weakness test (`weakness`: war with a major, last, under the median share, a
+  non-ally at the ratio; `[actions.purchase] weak_median_share`, `strong_neighbour_ratio`) and military
+  relative to the met majors (`relative_military`), for the Civ VI rows, briefing and the Strategist's
+  `relative_military` rules in `strategy.validate` (`standing`; postmortem-fixes design, rulings 1, 18);
+  `civ6.purchase_cap`/`cap_binding` give a defender (`defender=True`) the threatened share in a city in
+  danger or while `weakness` holds (`defender_spends_down`; ruling 2), `check_orders` keeps such
+  defenders outside the quota, one per city; the Civ VI governor's `_purchase_limits_line` (decision and
+  review prompts), the briefing's weakness and stock lines, and `strategy.validate(unavailable=...)` for a
+  unit whose strategic resource we lack (ruling 8);
+  the triggers' tests: `behind` (`[peers] behind`), `buildup` (`[time] buildup_window`, once per
+  neighbour per window; Stellaris too, over its rows' absolute `military`, skipping alliance and
+  federation partners, urgent only), `loyalty_falls`; `civ6.standing_danger` (a hand-back decision at war) and the
+  negative-income reason in `civ6.urgent_changes` (rulings 10-14; `Civ6Governor._threat_reasons`).
 - Strategy layer: `strategy.py` is pure (Pillar, Milestone, MarketOrder, Strategy with
   `ranking()`; `validate` — structural checks on all pillars, briefing checks (idle, income) only on
-  changed unpinned pillars; `keep_pinned`; `milestone_status` from metrics rows; weights: `Strategy`
+  changed unpinned pillars; `keep_pinned`; `milestone_status` from metrics rows, judged on the latest
+  value since the milestone's `set` (past `by`, the latest at or before `by`) (stamped by `stamp_milestones` when a version is published); weights: `Strategy`
   derives each pillar's rank from its weight and converts a ranked strategy to weights on load
   (`default_weights`), `pressures` = weight x `[weights.need]` of the pillar's worst milestone status,
   `directive_pressure` / `suggestion` (exclusive mode) or `shares` (share mode) for `frame_text`;
@@ -456,8 +484,12 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   `rebalance` for a human weight edit). `governor.py`:
   `_review_strategy` (role `strategy`, `StrategyReview` output, one corrective retry, `strategy` and
   `strategy_review` events, saved as a decision row with `decision = "strategy_review"` and a
-  negative episode, excluded wherever directive decisions are meant), `_maybe_event_review` (12-month
-  cap; failure retries, no-strategy and dashboard requests bypass it), `frame_text` + off-frame
+  negative episode, excluded wherever directive decisions are meant), `_maybe_event_review` (`[time]
+  review_cap` in the game's unit, `review_exempt` triggers always review; failure retries, no-strategy
+  and dashboard requests bypass it), the end of a campaign (`campaign_end.py`, pure: `civ6_read`,
+  `stellaris_zero`, the report; `_end_campaign` emits `campaign_end`, writes the journal, sets
+  `info.end` and the status `ended`, and the run loop is left; telemetry marks the run `lost`),
+  `frame_text` + off-frame
   tagging in `_decide`, `_carry_out_actions` (once per save date, verified in a later save),
   the action record (`stellaris_record.py`, pure: an action dict per directive, tech pick, market
   change and posture sent; `judge` on each new save in `_follow`, called from the wait loop after

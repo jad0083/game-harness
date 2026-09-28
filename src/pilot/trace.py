@@ -1,6 +1,8 @@
 """Decision traces: a model run's messages as plain JSON steps for the dashboard
 (prompt, thinking, text, tool calls with arguments, tool results, retries, final answer).
-Images are replaced by a placeholder; long texts are cut."""
+Images are replaced by a placeholder; long texts are cut: a prompt at `MAX_PROMPT` characters (kept whole in
+practice: the briefing's per-city danger lines are what an audit needs; postmortem-fixes design, ruling 27),
+every other text at `MAX_TEXT`."""
 
 from __future__ import annotations
 
@@ -21,10 +23,11 @@ from pydantic_ai.messages import (
 )
 
 MAX_TEXT = 6000
+MAX_PROMPT = 100_000
 OUTPUT_TOOL_PREFIX = "final_result"
 
 
-def _text(content: Any) -> str:
+def _text(content: Any, limit: int = MAX_TEXT) -> str:
     if isinstance(content, str):
         s = content
     elif isinstance(content, BinaryContent):
@@ -36,7 +39,12 @@ def _text(content: Any) -> str:
             s = json.dumps(content, ensure_ascii=False, default=str, indent=1)
         except (TypeError, ValueError):
             s = str(content)
-    return s if len(s) <= MAX_TEXT else s[:MAX_TEXT] + f"… [{len(s) - MAX_TEXT} more chars]"
+    return s if len(s) <= limit else s[:limit] + f"… [{len(s) - limit} more chars]"
+
+
+def prompt_step(text: str) -> dict:
+    """A trace's prompt step (a decision that got no answer stores its prompt this way)."""
+    return {"type": "prompt", "text": _text(text, MAX_PROMPT)}
 
 
 def serialize(messages: list[ModelMessage]) -> list[dict]:
@@ -45,7 +53,7 @@ def serialize(messages: list[ModelMessage]) -> list[dict]:
         if isinstance(m, ModelRequest):
             for p in m.parts:
                 if isinstance(p, UserPromptPart):
-                    steps.append({"type": "prompt", "text": _text(p.content)})
+                    steps.append({"type": "prompt", "text": _text(p.content, MAX_PROMPT)})
                 elif isinstance(p, ToolReturnPart):
                     steps.append({"type": "tool_result", "tool": p.tool_name, "text": _text(p.content)})
                 elif isinstance(p, RetryPromptPart):

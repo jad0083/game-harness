@@ -475,3 +475,86 @@ _BUY = "\n[actions.market.buy]\nbase_amount = { energy = 100, alloys = 25 }\n"
 def test_bad_buy_rules_are_rejected(tmp_path, table, where):
     with pytest.raises(PillarsError, match=re.escape(where)):
         load_pillars(corpus(tmp_path, MINI + table))
+
+
+# ---- postmortem-fixes design, rulings 15 and 19: time constants in the game's unit ---------------
+
+def test_each_game_names_its_time_constants_in_its_own_unit():
+    civ6, stellaris = load_pillars(REPO / "corpora/civ6").time, load_pillars(REPO / "corpora/stellaris").time
+    assert (civ6.unit, civ6.review_cap, civ6.review_exempt, civ6.milestone_lookback, civ6.score_horizon) == \
+        ("turns", 5, ("new war", "city lost"), 12, 12)
+    assert (stellaris.unit, stellaris.review_cap, stellaris.review_exempt, stellaris.milestone_lookback,
+            stellaris.score_horizon) == ("months", 12, ("new war",), 12, 12)
+    assert (civ6.steps(5), civ6.steps(1), stellaris.steps(12)) == ("5 turns", "1 turn", "12 months")
+    assert civ6.exempt("urgent: city lost: Beijing; city threatened: Xi'an") and not civ6.exempt("city threatened: X")
+    assert load_pillars(REPO / "corpora/civ6").public()["time"]["review_cap"] == 5
+
+
+def test_a_file_without_a_time_table_keeps_the_old_numbers_in_its_dates_unit(tmp_path):
+    t = load_pillars(corpus(tmp_path)).time
+    assert (t.unit, t.review_cap, t.review_exempt, t.milestone_lookback, t.score_horizon) == ("months", 12, (), 12, 12)
+    assert load_pillars(civ_corpus(tmp_path)).time.unit == "turns"
+
+
+@pytest.mark.parametrize("table, where", [
+    ('unit = "days"', "time.unit: must be one of months, turns"),
+    ('unit = "turns"', "time.unit: must be 'months' with strategy.date_format 'calendar'"),
+    ("review_cap = 0", "time.review_cap: must be a whole number of months >= 1"),
+    ("milestone_lookback = 1.5", "time.milestone_lookback"),
+    ("score_horizon = -3", "time.score_horizon"),
+    ("review_exempt = [1]", "time.review_exempt: must be a list of trigger texts"),
+    ("window = 3", "time.window: unknown key"),
+])
+def test_bad_time_constants_are_rejected(tmp_path, table, where):
+    with pytest.raises(PillarsError, match=re.escape(where)):
+        load_pillars(corpus(tmp_path, MINI + f"\n[time]\n{table}\n"))
+
+
+def test_the_civ6_weakness_thresholds_and_relative_military_rules_load():
+    spec = load_pillars(REPO / "corpora/civ6")
+    buy = spec.actions["purchase"]
+    assert (buy.weak_median_share, buy.strong_neighbour_ratio, buy.rule_buy) == (0.6, 2.0, True)
+    assert buy.treasury_share <= 0.5, "ruling 2 changes who gets the threatened share, not the treasury share"
+    rel = spec.relative
+    assert (rel.pillar, rel.metric, rel.relative, rel.min_target, rel.absolute_share, rel.rank_min_peers) == \
+        ("military", "military", ("military_vs_median", "military_vs_strongest"), 0.5, 0.5, 3)
+    assert load_pillars(REPO / "corpora/stellaris").relative is None
+
+
+@pytest.mark.parametrize("old, new, where", [
+    ("weak_median_share = 0.6", "weak_median_share = 1.5", "actions.purchase.weak_median_share"),
+    ("strong_neighbour_ratio = 2.0", "strong_neighbour_ratio = 0.5", "actions.purchase.strong_neighbour_ratio"),
+    ("rule_buy = true", 'rule_buy = "yes"', "actions.purchase.rule_buy"),
+    ('relative = ["military_vs_median", "military_vs_strongest"]', 'relative = ["navy"]', "strategy.relative_military.relative"),
+    ('pillar = "military"', 'pillar = "navy"', "strategy.relative_military.pillar"),
+    ("min_target = 0.5", "min_target = 0", "strategy.relative_military.min_target"),
+    ("rank_min_peers = 3", "rank_min_peers = 0", "strategy.relative_military.rank_min_peers"),
+])
+def test_bad_weakness_or_relative_rules_name_their_key(tmp_path, old, new, where):
+    d = tmp_path / "civ6"
+    shutil.copytree(REPO / "corpora/civ6", d, ignore=shutil.ignore_patterns("data", "lua", "learned", "docs"))
+    text = (d / "pillars.toml").read_text(encoding="utf-8")
+    assert old in text
+    (d / "pillars.toml").write_text(text.replace(old, new, 1), encoding="utf-8")
+    with pytest.raises(PillarsError, match=re.escape(where)):
+        load_pillars(d)
+
+
+def test_the_civ6_falling_behind_factors_and_buildup_window_load():
+    spec = load_pillars(REPO / "corpora/civ6")
+    assert dict(spec.peers.behind) == {"military": 0.6, "techs": 0.85, "civics": 0.85, "score": 0.8, "cities": 0.8}
+    assert spec.peers.last_min_peers == 3 and spec.time.buildup_window == 20
+    assert load_pillars(REPO / "corpora/stellaris").peers is None
+    assert load_pillars(REPO / "corpora/stellaris").time.buildup_window == 24, "months"
+
+
+@pytest.mark.parametrize("table, where", [
+    ("[peers]\nbehind = { military = 1.5 }", "peers.behind.military: must be a number in (0, 1]"),
+    ("[peers]\nlast_min_peers = 3", "peers.behind: required"),
+    ("[peers]\nbehind = { military = 0.6 }\nlast_min_peers = 0", "peers.last_min_peers"),
+    ("[peers]\nbehind = { military = 0.6 }\nrank = 1", "peers.rank: unknown key"),
+    ("[time]\nbuildup_window = -1", "time.buildup_window"),
+])
+def test_bad_peer_factors_or_windows_are_rejected(tmp_path, table, where):
+    with pytest.raises(PillarsError, match=re.escape(where)):
+        load_pillars(corpus(tmp_path, MINI + f"\n{table}\n"))

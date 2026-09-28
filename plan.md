@@ -163,7 +163,7 @@
 - [ ] Directive read-back: check each directive's policies in the next save and report the ones that did not change; every directive sets all its policies
 - [ ] Two shipyards in different systems and alloys on two or more planets before any war (strategy rule and mod budget nudge)
 - [ ] Monthly fleet snapshot in telemetry to find what destroys ships in peacetime
-- [ ] Full decision prompts in traces (no 6,000-character cut)
+- [ ] Full decision prompts in traces (no 6,000-character cut); on branch feat/postmortem-fixes (up to 100,000 characters, ruling 27), not deployed
 - [x] CI skips the Rust stages for commits with no Rust, Cargo or corpus files (`scripts/ci-needs-rust.sh`)
 - [x] Game pillars: each game defines its strategy pillars, metrics and actions in `corpora/<game>/pillars.toml`; the strategy layer, decisions, actions and dashboard use them as guardrails (spec docs/design/2026-09-26-game-pillars-design.md; deployed 31e3481 on mini-rig2, two live reviews accepted with milestones and trait-based identity)
 - [x] Civilization VI integration (after game pillars) — governor live on mini-rig2 since 2026-09-26 (China, Kublai Khan, from T41)
@@ -186,6 +186,26 @@
 - [x] Civ VI option 2 stage A, read-only (levers design, ruling 30): the extractor writes the adjacency rules as data (`data/_adjacency.json`), `civ6 district-plots` reads the plots each district may use, `scripts/civ6-placement.py` scores them and the AI's placements and prints stage B's go / no-go (L3 at T202: go, +1.00 over the 5 rateable districts, a thin margin; districts with fewer than 3 other plots to compare with are left out)
 - [ ] Civ VI option 4 probe (levers design, ruling 28): a mod strategy for player 0 steered by a player property, gates G1-G4 in a maintenance window with fork and reload; pillar postures only if it passes
 - [x] Dashboard access key: `PILOT_DASHBOARD_KEY` or `runs/dashboard.key`, one link per browser (`python -m pilot dashboard-link`), JSON-only same-origin changes
+
+## Post-mortem fixes (Civ VI Kublai campaign; design docs/design/2026-09-27-postmortem-fixes-design.md)
+- [ ] Milestones judged on the current value, not "ever met" (shared, so Stellaris too; ruling 17); on branch feat/postmortem-fixes, not deployed
+- [ ] Time constants per game in `[time]` of pillars.toml; Civ VI event-review cap 5 turns; "new war" and "city lost" always review (rulings 15, 19); on branch feat/postmortem-fixes, not deployed
+- [ ] Civ VI snapshot: `allied`, `alive`, strategic stock, defender prices for every city with the reason for each refusal (rulings 1, 7, 21); on branch feat/postmortem-fixes, not deployed (the live read of `allied` and the stock is unverified)
+- [ ] Civ VI capture test counts every capturer class (Giant Death Robot); the last stand stays off (ruling 26); on branch feat/postmortem-fixes, not deployed (`CanCapture` by class is unverified live)
+- [ ] Civ VI defenders may spend down to the reserve in war or military weakness; purchase limits and strategic stock in every prompt (rulings 1, 2, 8); on branch feat/postmortem-fixes, not deployed
+- [ ] Civ VI order record split by item class, with refusal counts (ruling 9); on branch feat/postmortem-fixes, not deployed
+- [ ] Civ VI triggers: falling behind, neighbour buildup, negative income, loyalty; decide every hand-back while a city stays in danger (rulings 10-14); on branch feat/postmortem-fixes, not deployed
+- [ ] Stellaris neighbour-buildup trigger (ruling 11); on branch feat/postmortem-fixes, not deployed
+- [ ] Civ VI rule-based defender buy before each multi-turn stretch; what the AI spent between decisions (rulings 3, 4); on branch feat/postmortem-fixes, not deployed (the `AI_CityBuild.csv` layout is unverified live)
+- [ ] Civ VI re-send of a lost purchase only when the read-back proves nothing was spent (ruling 5); on branch feat/postmortem-fixes, not deployed
+- [ ] A failed decision retries with the strategy model, then acts by rule before autoplay (ruling 20); on branch feat/postmortem-fixes, not deployed (Civ VI; Stellaris keeps its directive)
+- [ ] Civ VI relative military milestones (military ÷ median, ÷ strongest non-ally) (ruling 18); on branch feat/postmortem-fixes, not deployed
+- [ ] Civ VI: name who declared each war; no diplomacy goals until an order exists (rulings 24, 25); on branch feat/postmortem-fixes, not deployed (the `DiplomacySummary.csv` layout is unverified live)
+- [ ] End the run when the empire is gone (Civ VI: not alive, or 0 cities and 0 settlers twice; Stellaris: 0 planets twice), with a report and a "lost" state (rulings 21-23); on branch feat/postmortem-fixes, not deployed (the dashboard's "lost" rendering is feat/dashboard-v2's)
+- [ ] Turns advanced logged against those requested; full decision prompts in traces (ruling 27); on branch feat/postmortem-fixes, not deployed
+- [ ] Civ VI price changes in the briefing (World Congress discounts) (ruling 6); on branch feat/postmortem-fixes, not deployed (the `World_Congress.csv` layout and the session calendar are unverified live)
+- [ ] Known-false learned rules refused; the listed rules corrected at deploy (ruling 29); refusal code and list on branch feat/postmortem-fixes, not deployed; the live file's corrections are made on `main` before the merge
+- [ ] A deploy restarts only the pilot of the game it affects (ruling 28); on branch feat/postmortem-fixes (`scripts/deploy-pilot.sh`, `scripts/pilot-affected.py`, AGENTS.md §8), not deployed
 
 ## Hosts
 - [x] Second game host mini-rig2 (2560x1440): agent 1.4.0 installed and reachable with the shared token (2026-09-26)

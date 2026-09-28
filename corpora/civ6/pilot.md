@@ -16,7 +16,9 @@
   met with score and military strength, wars and great person points.
 - Diplomacy answered for us: an AI leader's statement is answered by the harness while the AI plays
   (a promise to a warning, Goodbye to proposals such as friendship, alliance or peace, deals and
-  demands refused; never war). You cannot order diplomacy; the line tells you what was said.
+  demands refused; never war). You cannot order diplomacy; the line tells you what was said. A new
+  war names who declared it, read from the game's diplomacy log: our own AI may be the one that
+  declared (it did at T121), so never draw a rule from a war without that line.
 - The AI's own plan: each city's top 3 builds as the game's AI ranks them, and the strategies it
   follows for us (e.g. science victory). An order against that plan is more likely to be replaced;
   the order record says how often the AI's replacement was in its own top 3.
@@ -25,9 +27,12 @@
 - What your last orders did: carried out, refused (with the reason), and since then completed,
   replaced by the AI (with what), or still in force.
 - The order record in this campaign: per kind of order (research, civic, policies, production that
-  filled an empty queue or replaced the AI's choice, purchases with gold or faith) how many
-  completed or held and how many the AI replaced; a kind marked "does not stick here" is one the
-  AI keeps undoing, so use another lever for it.
+  filled an empty queue or replaced the AI's choice) how many completed or held and how many the AI
+  replaced; a kind marked "does not stick here" is one the AI keeps undoing, so use another lever for
+  it. Purchases are counted by item class (units, buildings) over the last 30 turns: bought per
+  currency, refused by the harness (the cap, the reserve, a unit on the tile...) or by the game (a
+  missing resource, a unit on the tile), lost. A purchase that reads back is bought at once, so a
+  count of buildings bought says nothing about units: read the unit line.
 
 ## What you answer
 
@@ -49,15 +54,20 @@ Rules:
 - Never leave research or civic idle: when nothing is in progress, give an order for it. If you do
   not, you are asked once more, then the governor picks the strategy's first preferred item.
 - Purchases keep the gold reserve (larger with a gold deficit) and, until a pantheon is founded, its
-  faith price; one purchase takes at most the treasury share. A city IN DANGER (enemies next to it
-  that can take it, a damaged garrison, or enemies near an empty tile) may spend down to the reserve:
-  buy a defender there at once. Faith buys defenders at about half the gold price: a defender ordered
+  faith price; one purchase takes at most the treasury share. A defender may spend down to the reserve
+  in a city IN DANGER (enemies next to it that can take it, a damaged garrison, or enemies near an
+  empty tile) and, while the briefing shows a "Military weakness" line, in every city; the prompt's
+  "Purchase limits now" line gives the numbers. Under weakness, defenders in different cities do not
+  count toward the purchases per decision (one per city). Buildings and other units (a Rock Band, a
+  Settler) keep the treasury share everywhere. A unit whose strategic resource we lack cannot be bought
+  or built ("Strategic stock"); the defender list shows what the game sells now and why not (a city
+  IN DANGER always; under military weakness every city: the unit on its tile, or its defenders to buy). Faith buys defenders at about half the gold price: a defender ordered
   with gold is bought with faith when the game allows it, and a production order for a defender in
   an ungarrisoned city in danger is bought instead. One land unit fits on a city tile. Walls cannot
   be bought: they come from production after Masonry, and a city without walls cannot strike. Never
   buy what the city finishes within 2 turns anyway; `price` gives the live gold and faith prices.
-- A city ABOUT TO FALL (a unit that can take it next to it, no walls, the garrison at half or less)
-  is urgent: buy what defends it now. When the harness runs a scripted last stand, it acts after
+- A city ABOUT TO FALL (a unit that can take it next to it, no walls, the garrison at half or less;
+  or no garrison and no walls left with an enemy within 2 tiles) is urgent: buy what defends it now. When the harness runs a scripted last stand, it acts after
   your orders (city strike, ranged attacks, hurt units pulled back) and the AI plays the rest.
 - Tools: `consult` (records and docs: techs, civics, policies, units, districts, leaders…),
   `get_doc`, `price`, `remember_rule`. Call them only for a fact the briefing lacks.

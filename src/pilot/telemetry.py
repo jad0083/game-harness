@@ -158,8 +158,11 @@ class Telemetry:
             self.start_run(run_id, data.get("game", ""), data.get("model", ""), data, t)
         elif kind == "campaign":
             self.set_campaign(run_id, data.get("game", ""), data.get("name", ""), t, data.get("title") or "")
-        elif kind == "run_end":
-            self._exec("UPDATE runs SET ended=?, status='ended' WHERE id=?", (t, run_id))
+        elif kind == "run_end":      # a campaign that ended (lost) keeps that status
+            self._exec("UPDATE runs SET ended=?, status=CASE WHEN status='lost' THEN status ELSE 'ended' END WHERE id=?",
+                       (t, run_id))
+        elif kind == "campaign_end":    # postmortem-fixes design, ruling 21
+            self._exec("UPDATE runs SET status=? WHERE id=?", (data.get("result") or "lost", run_id))
         elif kind == "metrics":
             self._exec("INSERT OR REPLACE INTO metrics(run_id, campaign_id, t, date, month, data) VALUES (?,?,?,?,?,?)",
                        (run_id, self._campaign_of(run_id), t, data.get("date"), month_index(data.get("date")),
@@ -239,16 +242,17 @@ class Telemetry:
         return [json.loads(r["data"]) for r in
                 self.query("SELECT data FROM metrics WHERE campaign_id=? AND month IS NOT NULL ORDER BY month", (campaign_id,))]
 
-    def past_outcomes(self, campaign_id: str, limit: int = 12) -> str:
-        """Text table of this campaign's earlier directive changes and what followed, for the model.
-        Excludes strategy review rows: they are not a directive change (Task 9 shows them separately).
-        Errored decisions (decision NULL) are excluded on purpose too: they changed nothing."""
+    def past_outcomes(self, campaign_id: str, limit: int = 12, later: str = "12 months") -> str:
+        """Text table of this campaign's earlier directive changes and what followed, for the model;
+        `later` names the scoring horizon in the game's unit ("12 turns" in Civ VI). Excludes strategy
+        review rows: they are not a directive change (Task 9 shows them separately). Errored decisions
+        (decision NULL) are excluded on purpose too: they changed nothing."""
         rows = self.query(
             "SELECT date, decision, current, trigger, result FROM decisions WHERE campaign_id=? AND decision IS NOT NULL"
             " AND decision != 'keep' AND decision != 'strategy_review' ORDER BY month DESC LIMIT ?", (campaign_id, limit))
         if not rows:
             return "No earlier directive changes in this campaign."
-        out = ["date | directive (from) | trigger | 12 months later"]
+        out = [f"date | directive (from) | trigger | {later} later"]
         for r in rows:
             res = json.loads(r["result"]) if r["result"] else None
             after = ("not yet known" if not res else

@@ -201,13 +201,23 @@ local function is_military(row)
 end
 
 -- A unit's kind for defence: siege, cavalry (light or heavy), ranged, or melee. Melee includes
--- anti-cavalry (the Spearman) and recon; melee and cavalry are the kinds that can capture a city.
+-- anti-cavalry (the Spearman) and recon; `can_capture` says which units can take a city.
 local CAVALRY = { PROMOTION_CLASS_LIGHT_CAVALRY = true, PROMOTION_CLASS_HEAVY_CAVALRY = true }
 local function unit_kind(row)
   if row.PromotionClass == 'PROMOTION_CLASS_SIEGE' then return 'siege' end
   if CAVALRY[row.PromotionClass] then return 'cavalry' end
   if (row.RangedCombat or 0) > 0 or (row.Bombard or 0) > 0 then return 'ranged' end
   return 'melee'
+end
+
+-- Whether an enemy next to a city can take it (docs/design/2026-09-27-postmortem-fixes-design.md,
+-- ruling 26): melee or cavalry, or a unit the game lets capture (CanCapture) with a melee strength
+-- whose class is not ranged or siege. The Giant Death Robot (Combat 130, RangedCombat 120) reads as
+-- ranged and took Guangzhou at T565 unseen. CanCapture's values by class are unverified live.
+local function can_capture(row, kind)
+  if kind == 'melee' or kind == 'cavalry' then return true end
+  return (row.CanCapture == true or row.CanCapture == 1) and (row.Combat or 0) > 0
+    and row.PromotionClass ~= 'PROMOTION_CLASS_RANGED' and row.PromotionClass ~= 'PROMOTION_CLASS_SIEGE'
 end
 
 -- Land units that defend a city (pillars.toml [actions.purchase] defender_classes, as promotion classes).
@@ -311,11 +321,34 @@ local function capped(list)
   return out
 end
 
--- The two cheapest defenders the city can build, with their live gold and faith prices and whether
--- the game allows each purchase now.
+-- Whether our land combat unit stands on the city tile (the game refuses a second one there).
+local function tile_taken(me, c)
+  local units = Map.GetUnitsAt(c:GetX(), c:GetY())
+  if units then
+    for u in units:Units() do
+      local row = GameInfo.Units[u:GetType()]
+      if u:GetOwner() == me and row and row.FormationClass == 'FORMATION_CLASS_LAND_COMBAT' then return true end
+    end
+  end
+  return false
+end
+
+local function strength(row) return math.max(row.Combat or 0, row.RangedCombat or 0) end
+
+-- The defenders the city can buy (docs/design/2026-09-27-postmortem-fixes-design.md, ruling 7), for
+-- every city: per currency the two cheapest the game allows now, and the strongest ranged unit that
+-- needs no strategic resource and the strongest anti-cavalry unit the city can produce, allowed or
+-- not; each with its live gold and faith prices, whether the game allows the purchase and, when it
+-- does not, why (`<currency>_why`): `stacking` (our land unit on the tile), `balance` (the price is
+-- over the balance) or `game` (the game's own check; a strategic resource we lack is named from the
+-- corpus by the governor). CanProduce ignores strategic resources, so a unit listed "not allowed"
+-- may lack one: the list shows first what can be bought.
 local function defence_prices(c)
+  local me = H.me()
   local bq = c:GetBuildQueue()
-  local out = {}
+  local taken = tile_taken(me, c)
+  local balance = { gold = Players[me]:GetTreasury():GetGoldBalance(), faith = Players[me]:GetReligion():GetFaithBalance() }
+  local all = {}
   for row in GameInfo.Units() do
     if DEFENDER[row.PromotionClass] and row.Domain == 'DOMAIN_LAND' and bq:CanProduce(row.Hash, true) then
       local e = { unit = row.UnitType }
@@ -323,16 +356,43 @@ local function defence_prices(c)
         local params, _, cost = purchase_params(c, row.UnitType, currency)
         if params then
           e[currency] = cost
-          e[currency .. '_allowed'] = purchase_allowed(c, params)
+          local ok = purchase_allowed(c, params)
+          e[currency .. '_allowed'] = ok
+          if not ok then
+            e[currency .. '_why'] = taken and 'stacking' or ((cost or 0) > (balance[currency] or 0) and 'balance' or 'game')
+          end
         end
       end
-      out[#out + 1] = e
+      all[#all + 1] = { e = e, row = row }
     end
   end
-  table.sort(out, function(a, b) return (a.gold or math.huge) < (b.gold or math.huge) end)
-  local top = H.array()
-  for i = 1, math.min(2, #out) do top[i] = out[i] end
-  return top
+  local keep, seen = {}, {}
+  local function add(x)
+    if x and not seen[x.e.unit] then seen[x.e.unit] = true keep[#keep + 1] = x.e end
+  end
+  for _, currency in ipairs({ 'gold', 'faith' }) do
+    local allowed = {}
+    for _, x in ipairs(all) do
+      if x.e[currency .. '_allowed'] and x.e[currency] then allowed[#allowed + 1] = x end
+    end
+    table.sort(allowed, function(a, b) return a.e[currency] < b.e[currency] end)
+    add(allowed[1])
+    add(allowed[2])
+  end
+  local best = {}
+  for _, x in ipairs(all) do
+    local class = x.row.PromotionClass
+    local free = x.row.StrategicResource == nil or x.row.StrategicResource == ''
+    local kind = (class == 'PROMOTION_CLASS_RANGED' and free and 'ranged') or (class == 'PROMOTION_CLASS_ANTI_CAVALRY' and 'anti')
+    if kind and (best[kind] == nil or strength(x.row) > strength(best[kind].row)
+                 or (strength(x.row) == strength(best[kind].row) and (x.e.gold or math.huge) < (best[kind].e.gold or math.huge))) then
+      best[kind] = x
+    end
+  end
+  add(best.ranged)
+  add(best.anti)
+  table.sort(keep, function(a, b) return (a.gold or math.huge) < (b.gold or math.huge) end)
+  return H.array(keep)
 end
 
 -- For a threatened city: the enemies near it, our units near it, what can capture it, the damage
@@ -348,9 +408,10 @@ local function danger_detail(me, c, info, hostile)
     for _, e in ipairs(hostile) do
       local kind = unit_kind(e.row)
       local hp = e.u:GetMaxDamage() - e.u:GetDamage()
+      local captures = can_capture(e.row, kind)
       enemies[#enemies + 1] = { id = e.u:GetID(), owner = e.u:GetOwner(), type = e.row.UnitType, kind = kind,
-                                x = e.x, y = e.y, dist = e.dist, hp = hp }
-      if e.dist == 1 and (kind == 'melee' or kind == 'cavalry') then capture = capture + 1 end
+                                capture = captures, x = e.x, y = e.y, dist = e.dist, hp = hp }
+      if e.dist == 1 and captures then capture = capture + 1 end
       local reach = 1
       if kind == 'ranged' or kind == 'siege' then pcall(function() reach = e.u:GetRange() end) end
       if d and e.dist >= 1 and e.dist <= reach then
@@ -390,8 +451,6 @@ local function danger_detail(me, c, info, hostile)
     end
     info.can_strike = n > 0
   end)
-  local ok, prices = pcall(defence_prices, c)
-  if ok then info.defence_prices = prices end
 end
 
 -- ---- snapshot ----------------------------------------------------------------------------------
@@ -447,6 +506,8 @@ local function city_info(me, c)
     info.recommend = top
   end)
   if info.threatened then danger_detail(me, c, info, hostile) end
+  local ok, prices = pcall(defence_prices, c)        -- every city (ruling 7), not only threatened ones
+  if ok then info.defence_prices = prices end
   return info
 end
 
@@ -459,12 +520,19 @@ local function majors(me)
       local cfg = PlayerConfigurations[i]
       local cities = 0
       for _ in p:GetCities():Members() do cities = cities + 1 end
-      out[#out + 1] = {
+      local e = {
         id = i, civ = cfg:GetCivilizationTypeName(), leader = cfg:GetLeaderTypeName(),
         score = p:GetScore(), military = p:GetStats():GetMilitaryStrength(), cities = cities,
         techs = p:GetStats():GetNumTechsResearched(), civics = p:GetStats():GetNumCivicsCompleted(),
         at_war = at_war_with(me, i),
       }
+      -- an alliance with us in force (ruling 1): GetAllianceType is -1 without one (unverified live);
+      -- left out when unreadable, and the governor then counts the major as not allied
+      pcall(function()
+        local t = diplo:GetAllianceType(i)
+        if type(t) == 'number' then e.allied = t >= 0 elseif type(t) == 'boolean' then e.allied = t end
+      end)
+      out[#out + 1] = e
     end
   end
   return out
@@ -612,6 +680,19 @@ local function can_build(c)
   return out
 end
 
+-- Our stock of each strategic resource (ruling 7): RESOURCE_OIL -> amount (unverified live; the
+-- snapshot leaves `resources` out when it fails).
+local function strategic_stock(p)
+  local res = p:GetResources()
+  local out = {}
+  for row in GameInfo.Resources() do
+    if row.ResourceClassType == 'RESOURCECLASS_STRATEGIC' then
+      out[row.ResourceType] = res:GetResourceAmount(row.Index)
+    end
+  end
+  return out
+end
+
 function H.snapshot()
   local me = H.me()
   local p = Players[me]
@@ -669,8 +750,14 @@ function H.snapshot()
   local we_ok, we = pcall(wonders_elsewhere, me)
   local rel_ok, rel = pcall(religion_info, me)
   local bl_ok, bl = pcall(blockers_all, me)
+  local res_ok, res = pcall(strategic_stock, p)
+  local alive_ok, alive = pcall(function() return p:IsAlive() end)
+  if not alive_ok or type(alive) ~= 'boolean' then alive = NULL end     -- (a false must stay false)
   return {
     turn = Game.GetCurrentGameTurn(), player = me,
+    -- whether our civilization is still alive (ruling 21); null when unreadable
+    alive = alive,
+    resources = res_ok and res or nil,
     civ = cfg:GetCivilizationTypeName(), leader = cfg:GetLeaderTypeName(),
     civ_name = name_of(cfg:GetCivilizationShortDescription()), leader_name = name_of(cfg:GetLeaderName()),
     map_seed = seed and tostring(seed) or nil,
@@ -960,7 +1047,7 @@ end
 -- Target priority (ruling 23), weakest first within a class.
 local function priority(e)
   local p = 50
-  if e.dist == 1 and (e.kind == 'melee' or e.kind == 'cavalry') then p = 300
+  if e.dist == 1 and e.capture then p = 300
   elseif e.kind == 'siege' and e.dist <= 2 then p = 250
   elseif e.dist == 1 then p = 200
   elseif e.dist == 2 then p = 100 end
@@ -1005,8 +1092,9 @@ local function gather(me, c, damage)
         for _, h in ipairs(hostiles_at(me, x, y)) do
           local u = h.u
           local dmg = damage[u:GetOwner() .. ':' .. u:GetID()] or u:GetDamage()
-          local e = { u = u, id = u:GetID(), owner = u:GetOwner(), type = h.row.UnitType, kind = unit_kind(h.row),
-                      x = x, y = y, dist = dist, hp = u:GetMaxDamage() - dmg,
+          local kind = unit_kind(h.row)
+          local e = { u = u, id = u:GetID(), owner = u:GetOwner(), type = h.row.UnitType, kind = kind,
+                      capture = can_capture(h.row, kind), x = x, y = y, dist = dist, hp = u:GetMaxDamage() - dmg,
                       target = not foreign_district(me, x, y) }
           e.score = priority(e)
           enemies[#enemies + 1] = e
@@ -1154,7 +1242,7 @@ function H.last_stand_step(city_id, damage, skip)
     if not o.garrison and o.moves > 0 and o.hp * 100 <= RETREAT_HP * o.max and not skip['unit:' .. o.id] then
       local pressed = false
       for _, e in ipairs(enemies) do
-        if (e.kind == 'melee' or e.kind == 'cavalry') and Map.GetPlotDistance(o.x, o.y, e.x, e.y) == 1 then pressed = true end
+        if e.capture and Map.GetPlotDistance(o.x, o.y, e.x, e.y) == 1 then pressed = true end
       end
       local dest = pressed and best_retreat(me, o, c, enemies)
       if dest and war_safe(o.u:GetComponentID(), dest.x, dest.y) then

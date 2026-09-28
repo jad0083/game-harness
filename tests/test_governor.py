@@ -91,6 +91,23 @@ def test_helpers():
     assert not any("falling behind" in r for r in urgent_changes(lag, lag))
 
 
+def test_each_scheduled_interval_logs_the_months_that_passed_and_an_overrun(setup):
+    """Postmortem-fixes ruling 27 (T6): the months that passed against decide_every_months; more than
+    one month over is a pace_overrun, for information only."""
+    s, log = setup
+    Governor(s, FakeStellaris([briefing("2200.01.01"), briefing("2201.01.01")]), log,
+             model=decisions("keep")).run(max_decisions=2)
+    iv = next(e for e in log.recent if e["kind"] == "interval")
+    assert (iv["months"], iv["requested"], iv["date"]) == (12, 12, "2201.01.01")
+    assert not any(e["kind"] == "pace_overrun" for e in log.recent)
+    log2 = EventLog(s.runs_dir, "run2", s.model)
+    Governor(s, FakeStellaris([briefing("2200.01.01"), briefing("2202.03.01")]), log2,
+             model=decisions("keep")).run(max_decisions=2)
+    over = next(e for e in log2.recent if e["kind"] == "pace_overrun")
+    assert (over["requested"], over["actual"], over["date"]) == (12, 26, "2202.03.01")
+    assert log2.state.status != "needs_attention", "information only"
+
+
 def test_governor_decides_on_schedule_and_pauses_while_deciding(setup):
     s, log = setup
     game = FakeStellaris([briefing("2200.01.01"), briefing("2200.06.01"), briefing("2201.01.01")])
@@ -181,6 +198,21 @@ def test_trace_serializer_handles_thinking_images_and_retries():
     assert res["text"].endswith("[10 more chars]")
     assert any(st["type"] == "retry" for st in steps)
     assert steps[-2] == {"type": "output", "tool": "final_result", "args": {"resolved": True}}
+
+
+def test_a_decision_prompt_is_stored_whole_up_to_its_own_limit():
+    """Postmortem-fixes ruling 27 (H14): traces cut every text at 6,000 characters, so most per-city danger
+    lines were missing from the stored prompts; a prompt now keeps up to 100,000."""
+    from pydantic_ai.messages import ModelRequest, ToolReturnPart, UserPromptPart
+
+    from pilot.trace import MAX_PROMPT, MAX_TEXT, prompt_step, serialize
+    cities = "Cities (8):\n" + "\n".join(f"- City{i}: IN DANGER: {'x' * 2000}" for i in range(8))
+    steps = serialize([ModelRequest(parts=[UserPromptPart(cities), ToolReturnPart("price", "y" * (MAX_TEXT + 5))])])
+    assert steps[0] == {"type": "prompt", "text": cities}, "the whole Cities block"
+    assert steps[1]["text"].endswith("[5 more chars]"), "other texts keep the 6,000 cut"
+    huge = "z" * (MAX_PROMPT + 7)
+    assert serialize([ModelRequest(parts=[UserPromptPart(huge)])])[0]["text"].endswith("[7 more chars]")
+    assert prompt_step(cities) == {"type": "prompt", "text": cities}
 
 
 def test_history_endpoints_serve_runs_traces_and_metrics(setup):
@@ -5211,3 +5243,213 @@ def test_a_chat_or_review_retry_says_its_role(setup):
     assert g._call("decisions", ask)[0] == "ok"
     assert [e for e in log.recent if e["kind"] == "model_retry"][-1]["role"] == "decisions"
     assert "retry_at" in log.state.info["deciding"]
+# ---- postmortem-fixes design, ruling 17 ----------------------------------------------------------
+
+def test_a_published_strategy_stamps_each_milestone_with_the_date_it_was_set(setup):
+    s, log = setup
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": _strategist([])})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    assert {m.set for _, pl in g.strategy.sorted_pillars() for m in pl.milestones} == {"2200.01.01"}
+    stored = [e for e in log.recent if e["kind"] == "strategy"][-1]["strategy"]
+    assert stored["pillars"]["economy"]["milestones"][0]["set"] == "2200.01.01", "kept with the version"
+    g._review_strategy(briefing("2203.01.01"), "requested from the dashboard")      # the same answer again
+    assert {m.set for _, pl in g.strategy.sorted_pillars() for m in pl.milestones} == {"2200.01.01"}, \
+        "an unchanged milestone keeps its earlier set"
+    log.state.game_date = "2204.01.01"
+    g.edit_pillar("economy", {"milestones": [{"metric": "pops", "op": ">=", "target": 80, "by": "2210.01.01"}]})
+    assert g.strategy.pillars["economy"].milestones[0].set == "2204.01.01", "a human edit is stamped too"
+
+
+def test_milestone_missed_fires_once_per_run_even_if_it_recovers_and_falls_again(setup, tmp_path):
+    from pilot.governor import metrics
+    from pilot.strategy import Milestone
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(s.runs_dir, "runm3", s.model, telemetry=tel)
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": _strategist([])})
+    log.set_campaign("stellaris", "mile_3", "Test")
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    g.strategy.pillars["economy"].milestones = [Milestone(metric="pops", op=">=", target=60, by="2200.02.01",
+                                                          set="2200.01.01")]
+    fired = []
+    for d, pops, before in (("2200.02.01", 50, "2200.01.01"), ("2200.03.01", 50, "2200.02.01"),
+                            ("2200.04.01", 70, "2200.03.01"), ("2200.05.01", 40, "2200.04.01")):
+        log.emit("metrics", **{**metrics(briefing(d)), "pops": pops})
+        fired += g._newly_missed_milestones(before, d)
+    assert fired == ["milestone missed: economy pops"], "missed at 2200.03, met at 2200.04, missed again: once"
+
+
+# ---- postmortem-fixes design, rulings 15 and 19 --------------------------------------------------
+
+def test_stellaris_keeps_its_12_month_cap_and_a_new_war_always_reviews(setup):
+    s, log = setup
+    calls = []
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": _strategist(calls)})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    assert g._maybe_event_review(briefing("2201.01.01"), "urgent: crisis: Prethoryn appeared") is True
+    assert g._maybe_event_review(briefing("2201.03.01"), "urgent: new war: Border War (we are defender)") is True, \
+        "a new war reviews within the cap"
+    assert g._last_event_review_month == months("2201.03.01"), "and restarts the cap's clock"
+    assert g._maybe_event_review(briefing("2202.01.01"), "urgent: colony lost: 5 -> 4") is False
+    skip = [e for e in log.recent if e["kind"] == "strategy_review_skipped"][-1]
+    assert skip["reason"] == "within 12 months of the last event review"
+
+
+# ---- postmortem-fixes design, rulings 22-23: the run ends with no planet of ours -----------------
+
+def _planets(date: str, n: int, **extra) -> dict:
+    return {**briefing(date), "source": "save games/gone_1/x.sav", "name": "United Nations of Earth",
+            "planets": [{"name": f"p{i}"} for i in range(n)], "stockpile": {"energy": 900, "alloys": 300}, **extra}
+
+
+def test_two_saves_with_no_planet_end_the_stellaris_run(setup, tmp_path):
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(s.runs_dir, "rune1", s.model, telemetry=tel)
+    game = FakeStellaris([_planets("2200.01.01", 2), _planets("2200.02.01", 0), _planets("2200.03.01", 0),
+                          _planets("2200.04.01", 0)])
+    calls: list = []
+    g = Governor(s, game, log, model=_recording("decide", calls), role_models={"strategy": _strategist(calls)})
+    g.run(max_decisions=5)
+    assert calls.count("decide") == 1, "no decision after the first save with no planet"
+    end = [e for e in log.recent if e["kind"] == "campaign_end"]
+    assert len(end) == 1 and end[0]["signal"] == "0 planets in 2 saves in a row"
+    assert (end[0]["last_planet_date"], end[0]["seen"]) == ("2200.01.01", "2200.02.01")
+    assert end[0]["report"]["stranded"] == {"energy": 900, "alloys": 300}
+    assert log.state.status == "ended" and game.paused is True
+    assert tel.query("SELECT status FROM runs WHERE id='rune1'")[0]["status"] == "lost"
+
+
+def test_one_save_with_no_planet_does_not_end_it_and_holds_its_decision(setup):
+    s, log = setup
+    war = [{"name": "Border War", "attacker": False}]
+    game = FakeStellaris([_planets("2200.01.01", 2), _planets("2200.02.01", 0), _planets("2200.03.01", 1, wars=war)])
+    g = Governor(s, game, log, model=decisions("keep"), role_models={"strategy": _strategist([])})
+    g.run(max_decisions=2)
+    assert not any(e["kind"] == "campaign_end" for e in log.recent) and not g._ended
+    eps = [e for e in log.recent if e["kind"] == "episode"]
+    assert [e["date"] for e in eps] == ["2200.01.01", "2200.03.01"], "no decision on the save with no planet"
+
+
+def test_a_stall_after_a_save_with_no_planet_ends_the_run_as_lost(setup):
+    s, log = setup
+    clock = {"t": 0.0}
+    game = FakeStellaris([_planets("2200.01.01", 1), _planets("2200.02.01", 0)])
+    g = Governor(s, game, log, model=decisions("keep"), role_models={"strategy": _strategist([])})
+    g._clock = lambda: clock.__setitem__("t", clock["t"] + 400.0) or clock["t"]
+    g.run(max_decisions=3)
+    end = [e for e in log.recent if e["kind"] == "campaign_end"]
+    assert end and "the date stalled" in end[0]["signal"] and "after a save with 0 planets" in end[0]["signal"]
+    assert not any(e["kind"] == "needs_attention" for e in log.recent)
+
+
+def test_a_run_that_starts_on_a_save_with_no_planet_and_then_stalls_ends_as_lost(setup):
+    """Ruling 22's case where the game stops saving once the empire falls, with the one save with no
+    planet read at the start of the run: the stall ends the run, it does not wait for a human."""
+    s, log = setup
+    clock = {"t": 0.0}
+    calls: list = []
+    game = FakeStellaris([_planets("2200.02.01", 0)])
+    g = Governor(s, game, log, model=_recording("decide", calls), role_models={"strategy": _strategist(calls)})
+    g._clock = lambda: clock.__setitem__("t", clock["t"] + 400.0) or clock["t"]
+    g.run(max_decisions=3)
+    end = [e for e in log.recent if e["kind"] == "campaign_end"]
+    assert calls == [] and len(end) == 1 and "after a save with 0 planets" in end[0]["signal"], end
+    assert not any(e["kind"] == "needs_attention" for e in log.recent) and g._ended
+    assert any(e["kind"] == "metrics" and e.get("date") == "2200.02.01" for e in log.recent), "the save is recorded"
+
+
+def test_a_neighbour_buildup_at_the_start_of_a_run_reaches_its_first_decision(setup, tmp_path):
+    """The start decision observes the save first: a buildup that grew during downtime is in its
+    reason, not marked fired and dropped for the next 24 months."""
+    from pilot.governor import metrics
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    src = {"source": "save games/rihi_1/x.sav"}
+    old = EventLog(s.runs_dir, "old", s.model, telemetry=tel)
+    old.emit("run_start", game="stellaris", model=s.model)
+    old.set_campaign("stellaris", "rihi_1", "UNE")
+    old.emit("metrics", **metrics({**_neighbours_save("2201.01.01", 2000, 3000, 500), **src}))
+    log = EventLog(s.runs_dir, "new", s.model, telemetry=tel)
+    game = FakeStellaris([{**_neighbours_save("2203.01.01", 2000, 4600, 500), **src}])
+    g = Governor(s, game, log, model=decisions("keep"), role_models={"strategy": _strategist([])})
+    g.run(max_decisions=1)
+    ep = next(e for e in log.recent if e["kind"] == "episode")
+    assert ep["situation"].startswith("start of run; urgent: neighbour buildup: Rihi Nar Consciousness 4,600"), ep
+
+
+def test_a_new_run_on_a_campaign_with_no_planet_ends_at_its_start(setup, tmp_path):
+    from pilot.governor import metrics
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    old = EventLog(s.runs_dir, "old", s.model, telemetry=tel)
+    old.emit("run_start", game="stellaris", model=s.model)
+    old.set_campaign("stellaris", "gone_1", "UNE")
+    old.emit("metrics", **metrics(_planets("2200.02.01", 0)))
+    log = EventLog(s.runs_dir, "new", s.model, telemetry=tel)
+    calls: list = []
+    game = FakeStellaris([_planets("2200.03.01", 0)])
+    g = Governor(s, game, log, model=_recording("decide", calls), role_models={"strategy": _strategist(calls)})
+    g.run(max_decisions=3)
+    assert calls == [] and [e["kind"] for e in log.recent].count("campaign_end") == 1
+
+
+def test_a_briefing_that_cannot_find_our_country_waits_for_the_human(setup):
+    s, log = setup
+
+    class NoCountry(FakeStellaris):
+        def briefing(self):
+            raise RuntimeError("stellaris brief: player country 5 not found")
+
+    g = Governor(s, NoCountry([briefing("2200.01.01")]), log, model=decisions("keep"))
+    g.recover_every_s = 0
+    import threading
+    t = threading.Thread(target=g.run, daemon=True)
+    t.start()
+    import time as _t
+    end = _t.time() + 5
+    while log.state.status != "needs_attention" and _t.time() < end:
+        _t.sleep(0.01)
+    g.stop()
+    t.join(5)
+    assert log.state.status in ("needs_attention", "stopped") and not g._ended
+    assert any(e["kind"] == "needs_attention" and "player country 5 not found" in e["reason"] for e in log.recent)
+
+
+# ---- postmortem-fixes design, ruling 11: neighbour buildup (Stellaris) ----------------------------
+
+def _neighbours_save(date: str, ours: float, rival: float, ally: float) -> dict:
+    return {**briefing(date), "military_power": ours,
+            "neighbours": [{"name": "Rihi Nar Consciousness", "military": rival, "status": ["rival"]},
+                           {"name": "United Oklarr Union", "military": ally, "status": ["alliance", "embassy"]}]}
+
+
+def test_a_neighbour_buildup_is_urgent_once_and_never_for_an_ally(setup):
+    from pilot.governor import STELLARIS_TRIGGERS
+    s, log = setup
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+    fired = []
+    for i, (rival, ally) in enumerate([(3000, 3000), (3300, 3300), (3900, 3900), (4600, 4600), (5000, 5200),
+                                       (5600, 6000), (6200, 7000)]):
+        date = f"22{(i * 4) // 12 + 0:02d}.{(i * 4) % 12 + 1:02d}.01"
+        _row, urgent = g._observe(_neighbours_save(date, 2000, rival, ally))
+        fired += [(date, u) for u in urgent if u.startswith("neighbour buildup")]
+    assert len(fired) == 1 and "Rihi Nar Consciousness" in fired[0][1], fired
+    assert fired[0][1] == "neighbour buildup: Rihi Nar Consciousness 4,600 military (+53% in 12 months), 2.3x ours (2,000)"
+    assert not any(t in fired[0][1] for t in STELLARIS_TRIGGERS), "an urgent decision, never a review or crisis entry"
+
+
+def test_a_run_that_starts_on_a_save_with_no_planet_decides_nothing_until_the_next(setup):
+    s, log = setup
+    calls: list = []
+    game = FakeStellaris([_planets("2200.02.01", 0), _planets("2200.03.01", 0)])
+    g = Governor(s, game, log, model=_recording("decide", calls), role_models={"strategy": _strategist(calls)})
+    g.run(max_decisions=3)
+    assert calls == [] and [e["kind"] for e in log.recent].count("campaign_end") == 1

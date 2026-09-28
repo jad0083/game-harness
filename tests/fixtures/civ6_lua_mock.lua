@@ -48,6 +48,13 @@ GameInfo = {
     { UnitType = 'UNIT_CATAPULT', FormationClass = 'FORMATION_CLASS_LAND_COMBAT', PromotionClass = 'PROMOTION_CLASS_SIEGE', Domain = 'DOMAIN_LAND', Combat = 25, RangedCombat = 0, Bombard = 35 },
     { UnitType = 'UNIT_SETTLER', FormationClass = 'FORMATION_CLASS_CIVILIAN', Domain = 'DOMAIN_LAND', Combat = 0, RangedCombat = 0, Bombard = 0 },
     { UnitType = 'UNIT_GALLEY', FormationClass = 'FORMATION_CLASS_NAVAL', PromotionClass = 'PROMOTION_CLASS_NAVAL_MELEE', Domain = 'DOMAIN_SEA', Combat = 30, RangedCombat = 0, Bombard = 0 },
+    -- late-game defenders (a Guangzhou-like city at T563): Infantry needs Oil, the others nothing
+    { UnitType = 'UNIT_INFANTRY', FormationClass = 'FORMATION_CLASS_LAND_COMBAT', PromotionClass = 'PROMOTION_CLASS_MELEE', Domain = 'DOMAIN_LAND', Combat = 75, RangedCombat = 0, Bombard = 0, StrategicResource = 'RESOURCE_OIL' },
+    { UnitType = 'UNIT_MACHINE_GUN', FormationClass = 'FORMATION_CLASS_LAND_COMBAT', PromotionClass = 'PROMOTION_CLASS_RANGED', Domain = 'DOMAIN_LAND', Combat = 70, RangedCombat = 85, Bombard = 0 },
+    { UnitType = 'UNIT_MODERN_AT', FormationClass = 'FORMATION_CLASS_LAND_COMBAT', PromotionClass = 'PROMOTION_CLASS_ANTI_CAVALRY', Domain = 'DOMAIN_LAND', Combat = 85, RangedCombat = 0, Bombard = 0 },
+    -- a unit that can take a city while it reads as ranged (post-mortem war-12: Guangzhou at T565)
+    { UnitType = 'UNIT_GIANT_DEATH_ROBOT', FormationClass = 'FORMATION_CLASS_LAND_COMBAT', PromotionClass = 'PROMOTION_CLASS_GIANT_DEATH_ROBOT', Domain = 'DOMAIN_LAND', Combat = 130, RangedCombat = 120, Bombard = 0, CanCapture = true },
+    { UnitType = 'UNIT_CROSSBOWMAN', FormationClass = 'FORMATION_CLASS_LAND_COMBAT', PromotionClass = 'PROMOTION_CLASS_RANGED', Domain = 'DOMAIN_LAND', Combat = 30, RangedCombat = 40, Bombard = 0, CanCapture = true },
   }, 'UnitType'),
   Buildings = tbl({
     { BuildingType = 'BUILDING_MONUMENT', IsWonder = false },
@@ -60,7 +67,9 @@ GameInfo = {
   Terrains = tbl({ { TerrainType = 'TERRAIN_GRASS' }, { TerrainType = 'TERRAIN_GRASS_HILLS' },
                    { TerrainType = 'TERRAIN_GRASS_MOUNTAIN' }, { TerrainType = 'TERRAIN_COAST' } }, 'TerrainType'),
   Features = tbl({ { FeatureType = 'FEATURE_JUNGLE' }, { FeatureType = 'FEATURE_FOREST' } }, 'FeatureType'),
-  Resources = tbl({ { ResourceType = 'RESOURCE_IRON' }, { ResourceType = 'RESOURCE_WHEAT' } }, 'ResourceType'),
+  Resources = tbl({ { ResourceType = 'RESOURCE_IRON', ResourceClassType = 'RESOURCECLASS_STRATEGIC' },
+                    { ResourceType = 'RESOURCE_WHEAT', ResourceClassType = 'RESOURCECLASS_BONUS' },
+                    { ResourceType = 'RESOURCE_OIL', ResourceClassType = 'RESOURCECLASS_STRATEGIC' } }, 'ResourceType'),
   Improvements = tbl({ { ImprovementType = 'IMPROVEMENT_MINE' } }, 'ImprovementType'),
   Projects = tbl({ { ProjectType = 'PROJECT_ENHANCE_DISTRICT_HOLY_SITE' } }, 'ProjectType'),
   Technologies = tbl({ { TechnologyType = 'TECH_POTTERY' }, { TechnologyType = 'TECH_WRITING' } }, 'TechnologyType'),
@@ -209,7 +218,8 @@ local function city(t)
       return { GetPurchaseCost = function(_, y, h)
         for row in GameInfo.Units() do
           if row.Hash == h then
-            local gold = ({ UNIT_WARRIOR = 160, UNIT_ARCHER = 240, UNIT_SPEARMAN = 260, UNIT_HORSEMAN = 320 })[row.UnitType] or 999
+            local gold = ({ UNIT_WARRIOR = 160, UNIT_ARCHER = 240, UNIT_SPEARMAN = 260, UNIT_HORSEMAN = 320,
+                            UNIT_INFANTRY = 860, UNIT_MACHINE_GUN = 1080, UNIT_MODERN_AT = 1160 })[row.UnitType] or 999
             return y == GameInfo.Yields.YIELD_FAITH.Index and gold / 2 or gold
           end
         end
@@ -237,6 +247,8 @@ local function city(t)
   }
 end
 
+new_city = city        -- tests add cities: CITIES[#CITIES + 1] = new_city { ... }
+
 CITIES = {
   city { id = 65536, name = 'LOC_CITY_BEIJING', x = 22, y = 21, capital = true, producing = 'UNIT_WARRIOR',
          can_build = { 'UNIT_WARRIOR', 'UNIT_ARCHER', 'UNIT_SPEARMAN', 'UNIT_SETTLER', 'BUILDING_GRANARY' },
@@ -254,12 +266,25 @@ Players = {}
 local function player(id, major)
   local p = {}
   function p:IsBarbarian() return id == BARB end
-  function p:IsAlive() return true end
+  function p:IsAlive()
+    if id == 0 and MOCK.alive_fails then error('no such player') end
+    return not (id == 0 and MOCK.dead)
+  end
   function p:IsMajor() return major end
   function p:IsFreeCities() return false end
   function p:IsTurnActive() return not MOCK.not_our_turn end
   function p:GetDiplomacy()
-    return { IsAtWarWith = function(_, other) return MOCK.wars[other] or false end, HasMet = function() return true end }
+    return { IsAtWarWith = function(_, other) return MOCK.wars[other] or false end, HasMet = function() return true end,
+             -- the alliance type with another player, -1 without one; MOCK.allies[other]: allied
+             GetAllianceType = function(_, other)
+               if MOCK.alliance_fails then error('no alliances here') end
+               return (MOCK.allies or {})[other] and 0 or -1
+             end }
+  end
+  -- our strategic stock: MOCK.stock[RESOURCE_*] (0 when unlisted); MOCK.stock_fails: the call fails
+  function p:GetResources()
+    if MOCK.stock_fails then error('no resources here') end
+    return { GetResourceAmount = function(_, i) return (MOCK.stock or {})[GameInfo.Resources[i].ResourceType] or 0 end }
   end
   function p:GetUnits()
     local l = {}
@@ -284,14 +309,14 @@ local function player(id, major)
              GetCultureYield = function() return 5 end }
   end
   function p:GetTreasury()
-    return { GetGoldBalance = function() return 280 end, GetGoldYield = function() return 8 end,
+    return { GetGoldBalance = function() return MOCK.gold or 280 end, GetGoldYield = function() return 8 end,
              GetTotalMaintenance = function() return 9.6 end }
   end
   function p:GetReligion()
     if MOCK.religion_fails then
-      return { GetFaithYield = function() return 4 end, GetFaithBalance = function() return 388 end }
+      return { GetFaithYield = function() return 4 end, GetFaithBalance = function() return MOCK.faith or 388 end }
     end
-    return { GetFaithYield = function() return 4 end, GetFaithBalance = function() return 388 end,
+    return { GetFaithYield = function() return 4 end, GetFaithBalance = function() return MOCK.faith or 388 end,
              GetPantheon = function() return -1 end, CanCreatePantheon = function() return true end,
              GetReligionTypeCreated = function() return -1 end }
   end
@@ -369,6 +394,15 @@ CityManager = {
     if units then
       for u in units:Units() do
         if u:GetOwner() == 0 and GameInfo.Units[u:GetType()].FormationClass == 'FORMATION_CLASS_LAND_COMBAT' then return false end
+      end
+    end
+    -- the game also refuses a unit whose strategic resource we lack, and a price over the balance
+    for row in GameInfo.Units() do
+      if row.Hash == params[CityCommandTypes.PARAM_UNIT_TYPE] then
+        if row.StrategicResource and ((MOCK.stock or {})[row.StrategicResource] or 0) < 1 then return false end
+        local faith = params[CityCommandTypes.PARAM_YIELD_TYPE] == GameInfo.Yields.YIELD_FAITH.Index
+        local cost = c:GetGold():GetPurchaseCost(params[CityCommandTypes.PARAM_YIELD_TYPE], row.Hash, 0)
+        if cost > (faith and (MOCK.faith or 388) or (MOCK.gold or 280)) then return false end
       end
     end
     return params[CityCommandTypes.PARAM_YIELD_TYPE] ~= nil

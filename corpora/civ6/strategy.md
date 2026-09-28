@@ -107,10 +107,14 @@ CivBench A.6):
   (tile purchases for districts and luxuries, unit upgrades, great person patronage). Gold above
   about 500 with no named purchase is usually better spent (CivBench A.6).
 - Keep a small gold reserve (30, more with a deficit) and, until a pantheon is founded, its faith
-  price; one purchase at most half the balance unless a city is in danger (enemies next to it that
-  can take it, a damaged garrison, or enemies near an empty tile), in which case buy a defender
-  there at once, with faith when the game allows it (about half the gold price). Walls cannot be
-  bought: they come from production after Masonry, and only a city with walls can strike.
+  price; one purchase at most half the balance, except a defender: in a city in danger (enemies next
+  to it that can take it, a damaged garrison, or enemies near an empty tile), and in every city while
+  our military is weak (at war with a major, last of the majors met, under 0.6 x their median, or a
+  non-ally at twice ours), a defender may spend down to the reserve. Buy it at once, with faith when
+  the game allows it (about half the gold price). In the Kublai campaign the half-balance cap was the
+  only block on a Modern AT the game allowed at T496, T504 and T538; every city that got one late still
+  fell. Walls cannot be bought: they come from production after Masonry, and only a city with walls
+  can strike.
 - Faith is a currency, not a score: in the Kublai campaign it sat unspent from 38 to 402 while a
   Warrior was bought with 160 gold. Balances are never milestones; faith and gold per turn are.
 - Never buy what finishes in 2 turns or less. Always read the **live** price in the game; never

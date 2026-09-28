@@ -248,6 +248,16 @@ enum Civ6Action {
     /// Remove the handlers of the popups that hold an autoplay turn (corpora/civ6/popups.toml);
     /// done automatically when the library is installed into InGame
     QuietPopups,
+    /// Read-only: the complete lines of one game log (AI_CityBuild.csv, World_Congress.csv or
+    /// DiplomacySummary.csv under Logs/ of civ6_appdata) from --offset (the previous reply's `next`,
+    /// at most 64 KiB), or its last --tail bytes when no offset is given
+    LogTail {
+        file: String,
+        #[arg(long)]
+        offset: Option<u64>,
+        #[arg(long, default_value_t = civ6::LOG_TAIL_DEFAULT)]
+        tail: u64,
+    },
 }
 
 #[derive(Subcommand)]
@@ -510,6 +520,19 @@ async fn main() -> Result<()> {
         Commands::Civ6 { action: Civ6Action::AiStrategies { offset, player } } => {
             let (chunk, size) = client.files_read_page(civ6::AI_LOG_ROOT, civ6::AI_LOG_PATH, offset, Some(civ6::AI_LOG_MAX)).await?;
             println!("{}", serde_json::to_string(&civ6::ai_strategies_reply(&chunk, offset, size, player))?);
+        }
+        Commands::Civ6 { action: Civ6Action::LogTail { file, offset, tail } } => {
+            let path = civ6::log_tail_path(&file)?;
+            let (start, from_end) = match offset {
+                Some(o) => (o, false),
+                None => {
+                    // the size first (an empty read), then the file's last `tail` bytes
+                    let (_, size) = client.files_read_page(civ6::AI_LOG_ROOT, &path, 0, Some(0)).await?;
+                    (size.saturating_sub(tail.min(civ6::AI_LOG_MAX)), true)
+                }
+            };
+            let (chunk, size) = client.files_read_page(civ6::AI_LOG_ROOT, &path, start, Some(civ6::AI_LOG_MAX)).await?;
+            println!("{}", serde_json::to_string(&civ6::log_tail_reply(&file, &chunk, start, size, from_end))?);
         }
         Commands::Corpus { action } => {
             if let Some(c) = corpus {
@@ -774,6 +797,9 @@ mod tests {
         assert!(matches!(civ6(&["ai-strategies", "--offset", "9723", "--player", "0"]).unwrap(),
                          Civ6Action::AiStrategies { offset: 9723, player: 0 }));
         assert!(matches!(civ6(&["ai-strategies"]).unwrap(), Civ6Action::AiStrategies { offset: 0, player: 0 }));
+        assert!(matches!(civ6(&["log-tail", "AI_CityBuild.csv", "--offset", "120"]).unwrap(),
+                         Civ6Action::LogTail { offset: Some(120), tail: 16384, .. }));
+        assert!(matches!(civ6(&["log-tail", "World_Congress.csv"]).unwrap(), Civ6Action::LogTail { offset: None, .. }));
         assert!(matches!(civ6(&["district-plots"]).unwrap(), Civ6Action::DistrictPlots { city: None }));
         assert!(matches!(civ6(&["district-plots", "--city", "65536"]).unwrap(),
                          Civ6Action::DistrictPlots { city: Some(c) } if c == "65536"));

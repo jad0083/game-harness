@@ -359,9 +359,6 @@ Written by the pilot app during play; promote proven items into the main corpus.
 - Two cities lost within 5 turns to a neighbour at 3x or more our strength -> military becomes the heaviest pillar and idle gold and faith (over 700) go into defenders that same review, not buildings  
   _why:_ strategy review T546 _(google:gemini-3.8-flash, 2026-09-27)_
 
-- A city IN DANGER shows its defender purchase as 'not allowed' -> buy defenders in the nearest cities that allow it and rely on the endangered city's full walls; never let the gold sit  
-  _why:_ strategy review T546 _(google:gemini-3.8-flash, 2026-09-27)_
-
 - After losing cities, reset every milestone from the current figures (cities, pop, science, production) instead of keeping targets set for the larger empire  
   _why:_ strategy review T546 _(google:gemini-3.8-flash, 2026-09-27)_
 
@@ -371,20 +368,11 @@ Written by the pilot app during play; promote proven items into the main corpus.
 - When military strength drops heavily but gold per turn is high, rebuild the army with modern units in the best production city instead of relying on the AI's district plan.  
   _why:_ strategy review T552 _(google:gemini-3.8-flash, 2026-09-27)_
 
-- When a city is lost, check if the remaining cities are IN DANGER; if they are only THREATENED, the 50% treasury cap applies to gold purchases, so save gold until the balance is double the unit cost rather than interrupting current defensive production.  
-  _why:_ T555: Jiaodong was lost, leaving Rockhampton and Guangzhou THREATENED but not IN DANGER. The 1911 gold balance capped purchases at 955, preventing the purchase of a 1080g Machine Gun or 1160g Modern AT. We saved gold and kept production focused on Modern ATs. _(google:gemini-3.8-flash, 2026-09-27)_
-
-- A city is IN DANGER but purchases there are 'not allowed now' -> spend gold and faith the same review on defenders in the nearest safe cities (Taiyuan, Longxi) instead of saving for a later price.  
-  _why:_ strategy review T563 _(google:gemini-3.8-flash, 2026-09-27)_
-
 - An army of no land units while at war (only a Battleship) -> every city with a queue of 20+ turns switches to the cheapest modern defender, and the full faith stock is spent on defenders before any building.  
   _why:_ strategy review T563 _(google:gemini-3.8-flash, 2026-09-27)_
 
 - Cities are lost and the old milestones fall far below the old targets -> rebase every milestone on the current count the same review, rather than keeping targets that are no longer reachable.  
   _why:_ strategy review T563 _(google:gemini-3.8-flash, 2026-09-27)_
-
-- A city IN DANGER where purchases are not allowed -> buy defenders with gold in the neighbouring safe cities the same review and fill any idle queue there with a defender, rather than holding the gold.  
-  _why:_ strategy review T565 _(google:gemini-3.8-flash, 2026-09-27)_
 
 - Gold above 2000 while at war and military under half the enemy's -> spend at least half of it on modern defenders that review; the treasury share is the only lever that acts at once.  
   _why:_ strategy review T565 _(google:gemini-3.8-flash, 2026-09-27)_

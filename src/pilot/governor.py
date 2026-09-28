@@ -23,7 +23,7 @@ from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import ClassVar, Literal, Protocol
+from typing import Any, ClassVar, Literal, Protocol
 
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent, RunContext, Tool
@@ -31,12 +31,13 @@ from pydantic_ai.exceptions import UsageLimitExceeded
 from pydantic_ai.messages import ModelResponse
 from pydantic_ai.usage import UsageLimits
 
+from . import campaign_end
 from .agent import HumanChannel, model_settings, run_with_retry
 from .claude_code import resolve_model
 from .config import Settings
 from .events import EventLog
 from .learning import Journal, LearnedStore, LearningRejected
-from .pillars import ACTION_KINDS, OrdersSpec, PillarsError, PillarSpec, load_pillars, load_postures
+from .pillars import ACTION_KINDS, OrdersSpec, PillarsError, PillarSpec, TimeSpec, load_pillars, load_postures
 from .stellaris_crisis import CRISIS_PACE, POSTURE_GAP_MONTHS, boost_pressures, crisis_alloys, crisis_step, status_quo
 from .stellaris_market import buy_errors, idle_fill, keep_placed, price_note
 from .stellaris_planets import (
@@ -79,13 +80,15 @@ from .strategy import (
     rebalance,
     review_model,
     shares,
+    stamp_milestones,
     strategist_instructions,
     strategy_for_prompt,
     suggestion,
     to_strategy,
     validate,
 )
-from .trace import serialize
+from .threat import buildup, buildup_text
+from .trace import prompt_step, serialize
 from .wording import attention, cause
 
 DIRECTIVES = ("expand", "consolidate_economy", "tech_rush", "prepare_war", "defend", "diplomacy_first")
@@ -93,8 +96,9 @@ NEEDS_HUMAN = {"prepare_war"}      # strategy.md: only after the human confirmed
 
 # Big-event triggers: an urgent decision whose reason contains one of these, or a pending
 # review_requested (an off-frame decision, or a failed review awaiting retry), starts a strategy
-# review, capped at one per 12 in-game months; only a failed review's own retry, or a review while
-# no strategy exists yet, bypasses that cap.
+# review, capped at one per `[time] review_cap` steps of the game's clock (12 months in Stellaris, 5
+# turns in Civ VI); a failed review's own retry, a review while no strategy exists yet, and a trigger
+# in `[time] review_exempt` ("new war"; Civ VI also "city lost") bypass that cap.
 EVENT_TRIGGERS = ("new war", "war ended", "crisis", "colony lost", "boxed in", "milestone missed",
                   "off-frame", "military fell")
 # Stellaris's own (levers design): the planet check's urgent reasons (ruling 22) and the war crisis's
@@ -557,6 +561,7 @@ class Governor:
             self.pillars_error = str(e) if isinstance(e, PillarsError) else f"{type(e).__name__}: {e}"
             log.emit("strategy_disabled", error=self.pillars_error[:500])
         log.state.info["pillars"] = self.pillars.public() if self.pillars else None
+        self.store.refuse = self.pillars.learned_refuse if self.pillars else ()   # known-false rules (ruling 29)
         self._unsupported: set[str] = set()       # action kinds already logged as "not supported"
         text = (settings.corpus_dir / "pilot.md").read_text(encoding="utf-8")
         text += "\n\n" + strategy_core((settings.corpus_dir / "strategy.md").read_text(encoding="utf-8"))
@@ -607,6 +612,9 @@ class Governor:
         self._crisis_pending: str | None = None
         self._crisis_saved: dict | None = None    # the state as the last `crisis` event wrote it
         self._since_retro = 0
+        self._ended = False                       # the campaign ended (rulings 21-23): the run loop is left
+        self._buildup_fired: dict[str, int] = {}  # neighbour -> month of its last buildup trigger (ruling 11)
+        self._zero_saves = 0                      # Stellaris: saves in a row with no planet of ours (ruling 22)
         self._strategy_trace_n = 0                # negative episode ids for strategy review traces (see _review_strategy)
         self._clock: Callable[[], float] = time.monotonic   # the watchdog's wall clock (tests inject one)
         self._month_secs: deque[float] = deque(maxlen=self.stall_months)   # real seconds per in-game month
@@ -727,6 +735,35 @@ class Governor:
                 self.log.emit("model_fallback", role=role, model=entry["model"],
                               error=f"{type(e).__name__}: {e}"[:300], fallback=order[i + 1]["model"])
         raise RuntimeError(f"no models for {role}")
+
+    def _retry_models(self) -> list[dict]:
+        """The models a failed decision is retried on, once (postmortem-fixes design, ruling 20): the
+        strategy role's own, not cooling down. None when the role has no models of its own: the
+        decision models that just failed are not tried again."""
+        own = "strategy" in self._role_objs or bool(((self.s.roles or {}).get("strategy") or {}).get("models"))
+        if not own:
+            return []
+        failed, now = self.__dict__.setdefault("_failed_at", {}), time.time()
+        return [e for e in self._pool("strategy") if now - failed.get(e["model"], 0) >= self.s.model_cooldown_s]
+
+    def _retry_decision(self, ask) -> tuple[Any, dict] | None:
+        """Ruling 20's retry of a decision every decisions model failed (an outage, the request limit):
+        `ask(agent)` with the decisions agent on each `_retry_models` entry in turn, each tried once
+        (no overload waits). (result, entry), or None when none answered. T512, T522 and T525 failed on
+        503s and the request limit, and nothing retried: a retry on another model tells a provider
+        outage from a model that spends its budget on tool calls."""
+        failed = self.__dict__.setdefault("_failed_at", {})
+        for entry in self._retry_models():
+            try:
+                result = ask(self._agent_for(entry, "decisions"))
+            except Exception as e:  # noqa: BLE001 - the next model, then the caller's rules
+                failed[entry["model"]] = time.time()
+                self.log.emit("model_fallback", role="decisions retry", model=entry["model"],
+                              error=f"{type(e).__name__}: {e}"[:300], fallback=None)
+                continue
+            failed.pop(entry["model"], None)
+            return result, entry
+        return None
 
     def set_roles(self, roles: dict) -> None:
         """Give roles their own models ({role: {"models", "rotate"}}); None = use the decision models."""
@@ -900,6 +937,7 @@ class Governor:
                             income=(b or {}).get("net", {}), briefing_checked={name}, require_milestones=False)
             if errs:
                 raise ValueError("; ".join(errs))
+            s = stamp_milestones(s, self.strategy, self.log.state.game_date)
             self.strategy = s
         self._publish_strategy(s, self.log.state.game_date or "", trigger, "human")
 
@@ -915,7 +953,7 @@ class Governor:
 
     def request_review(self) -> None:
         """Run a strategy review now (between scheduled decisions, like decide_now). A human request
-        is never held back by the 12-month event-review cap and does not count toward it."""
+        is never held back by the event-review cap (`[time] review_cap`) and does not count toward it."""
         self._spec()
         self.requests.put(("review", "requested from the dashboard"))
         self.log.emit("instruction", text="Strategy review requested")
@@ -1061,7 +1099,10 @@ class Governor:
                         still_pending = pending and self.review_requested is not None
                         event = reason.startswith("urgent:") and any(t in reason for t in self.event_triggers)
                         if self._reviews_run == reviews_before and (still_pending or event) and self.pillars is not None:
-                            self._maybe_event_review(b, self.review_requested or reason, retry=self._review_retry)
+                            # a trigger that always reviews (ruling 15) is named over a pending one
+                            exempt = event and self._time().exempt(reason)
+                            self._maybe_event_review(b, reason if exempt else self.review_requested or reason,
+                                                     retry=self._review_retry)
                 except Exception as e:  # noqa: BLE001 - any game-control failure (agent down, focus lost, a panel open)
                     transient = self._transient(e)
                     self._needs_attention(f"game control failed: {type(e).__name__}: {e}. "
@@ -1074,7 +1115,8 @@ class Governor:
                 self.game.set_paused(True)
             except Exception as e:  # noqa: BLE001 - best effort on the way out
                 self.log.emit("episode_error", error=f"could not pause on exit: {e}"[:300])
-            self._status("stopped")
+            if not self._ended:                  # an ended campaign keeps "ended" while the process lives
+                self._status("stopped")
             self.log.emit("run_end", decisions=self.log.state.episodes)
 
     def _fresh_briefing(self) -> dict:
@@ -1110,6 +1152,14 @@ class Governor:
                 self.log.emit("journal", text="taking control: " + self.game.take_control().replace("\n", "; "))
                 b = self._fresh_briefing()
                 self._set_campaign(b)
+                if self._stellaris_end_check(b, at_start=True):
+                    return None                     # ruling 22: the campaign is over; no decision
+                if self._zero_saves:                # one save with no planet: the next save decides first
+                    # recorded as in the wait, so a stall after it ends the run (ruling 22)
+                    self.log.emit("metrics", **self._observe(b)[0])
+                    self.log.emit("journal", text=f"{b['date']}: no planet of ours in the newest save; no decision "
+                                                  "until the next one shows whether the campaign is lost")
+                    return b
                 reviewed = self.strategy is None and self.pillars is not None
                 if reviewed:
                     self._review_strategy(b, "start of run")
@@ -1259,8 +1309,24 @@ class Governor:
                 row["crisis"] = True                    # the dashboard's crisis band (ruling 25)
             self.log.state.info["planet_check"] = self._planet_line
             self._rows = [r for r in before if months(date) - months(r["date"]) <= self.rows_months] + [row]
+            urgent += self._buildup_reasons()
         self._observed, self._observed_b = row, b
         return row, urgent
+
+    def _buildup_reasons(self) -> list[str]:
+        """Ruling 11 on the newest save: a neighbour (not an alliance or federation partner) at 2 x our
+        military power or more that grew 50% within `[time] buildup_window` months, once per neighbour
+        per window. An urgent decision only: no review, and never a war-crisis entry (Stellaris levers
+        ruling 12 keeps ratios out of it). About one a decade in the three campaigns (E3). Advisory."""
+        window = self._time().buildup_window
+        if not window:
+            return []
+        try:
+            return [buildup_text(f, "months") for f in
+                    buildup(self._rows, window, months, ours_key="military_power", fired=self._buildup_fired)]
+        except Exception as e:  # noqa: BLE001 - a malformed save never stops play
+            self.log.emit("briefing_error", error=f"neighbour buildup: {type(e).__name__}: {e}"[:200])
+            return []
 
     def _planet_record_section(self) -> str:
         """The Strategist's planet record (ruling 22): per directive, the amenity change per planet-year on
@@ -1380,7 +1446,7 @@ class Governor:
             return
         ran = self._maybe_event_review(b, trigger)
         self._crisis_row("review", "done" if ran else "no_op", "strategy review ran" if ran
-                         else "skipped: within 12 months of the last event review", b["date"])
+                         else f"skipped: {self._review_cap_text()}", b["date"])
 
     def _crisis_boost_row(self, b: dict) -> None:
         """Step 2's row: which pillar the need boost raises in the frame (`_need_boost`), or why none."""
@@ -1615,15 +1681,24 @@ class Governor:
                 self._date_moved(months(b["date"]) - months(last["date"]))
                 row, observed = self._observe(b)
                 self.log.emit("metrics", **row)
-                self._follow(b)
                 self.log.state.game_date = b["date"]
+                if self._stellaris_end_check(b):
+                    return None, "ended"            # ruling 22: 0 planets in 2 saves in a row
+                self._follow(b)
                 self.log.state.turns_advanced = months(b["date"]) - months(last["date"]) + self.log.state.turns_advanced
+                if self._zero_saves:
+                    # no decision and no review on a save with no planet of ours: the next save either
+                    # ends the run or shows a planet again (ruling 22, as ruling 21's second read)
+                    self.log.emit("journal", text=f"{b['date']}: no planet of ours in this save; the next one decides "
+                                                  "whether the campaign is lost")
+                    last = b
+                    continue
             else:
                 if unread_since is not None:
                     # the time without a reading proves no stall (the PC may have slept): left out
                     self._date_seen_at += self._clock() - unread_since
                 if self._stalled(b["date"]):
-                    return last, ""
+                    return (None, "ended") if self._ended else (last, "")
             unread_since = None
             urgent = urgent_changes(last, b) + observed
             if b["date"] != last["date"]:
@@ -1636,8 +1711,107 @@ class Governor:
                 return b, "urgent: " + "; ".join(urgent)
             if months(b["date"]) >= start + self.s.decide_every_months:
                 self.game.set_paused(True)
+                self._interval(months(b["date"]) - start, b["date"])
                 return b, f"scheduled ({self.s.decide_every_months} months)"
             last = b
+
+    def _interval(self, passed: int, date: str) -> None:
+        """A scheduled interval's months that passed against `decide_every_months` (postmortem-fixes
+        design, ruling 27); more than one month over emits `pace_overrun`, for information only (the
+        autosave comes monthly, so a fast game can pass a save or two)."""
+        every = self.s.decide_every_months
+        self.log.emit("interval", months=passed, requested=every, date=date)
+        if passed > every + 1:
+            self.log.emit("pace_overrun", requested=every, actual=passed, date=date)
+
+    # ---- the end of a campaign (postmortem-fixes design, rulings 21-23) ------------------------------
+
+    def _stellaris_end_check(self, b: dict, at_start: bool = False) -> bool:
+        """Ruling 22: once per save date, count the saves in a row with no planet of ours; the second
+        ends the run as lost (at the start of a run the campaign's earlier rows count, so a new run on a
+        lost campaign ends at once). A Civ VI governor has its own check. True when the run ended."""
+        if str(b.get("date") or "")[:1] == "T":
+            return False
+        if not campaign_end.stellaris_zero(b):
+            self._zero_saves = 0
+            return False
+        if at_start:
+            before = [r for r in self._rows if months(r["date"]) < months(b["date"])]
+            trailing = 0
+            for r in reversed(before):
+                if not campaign_end.stellaris_zero_row(r):
+                    break
+                trailing += 1
+            self._zero_saves = trailing + 1
+        else:
+            self._zero_saves += 1
+        if self._zero_saves < 2:
+            return False
+        self._end_stellaris(b, f"0 planets in {self._zero_saves} saves in a row")
+        return True
+
+    def _end_stellaris(self, b: dict, signal: str) -> None:
+        """Ruling 22's end: the game stays paused; the report and the end state (ruling 21's steps)."""
+        try:
+            self.game.set_paused(True)
+        except Exception as e:  # noqa: BLE001 - the end is recorded either way
+            self.log.emit("briefing_error", error=f"pause at the end: {e}"[:200])
+        rows = self._campaign_rows()
+        last = campaign_end.last_held(rows, "planets")
+        seen = campaign_end.first_zero_after(rows, "planets", last, months) or b.get("date")
+        stock = b.get("stockpile") or {}
+        rep = {"game": "stellaris", "turn": last, "seen": seen, "signal": signal,
+               "lost": campaign_end.losses(self._campaign_events("episode")),
+               "ratio": campaign_end.enemy_ratio(rows, "military_power"),
+               "stranded": {k: stock[k] for k in ("energy", "minerals", "alloys", "influence") if k in stock},
+               "after": self._decisions_since(seen)}
+        self._end_campaign(rep, b.get("name") or self.log.campaign_id or "our empire", str(b.get("date") or ""))
+
+    def _campaign_rows(self) -> list[dict]:
+        """Every metrics row of the campaign (oldest first), or the rows in memory without telemetry."""
+        tel, cid = self.log.telemetry, self.log.campaign_id
+        if tel is not None and cid:
+            try:
+                return tel.metrics_rows(cid)
+            except Exception as e:  # noqa: BLE001 - the report is advisory
+                self.log.emit("briefing_error", error=f"end report rows: {e}"[:200])
+        return list(self._rows)
+
+    def _campaign_events(self, kind: str) -> list[dict]:
+        tel, cid = self.log.telemetry, self.log.campaign_id
+        if tel is None or not cid:
+            return []
+        try:
+            return tel.campaign_events(cid, kind)
+        except Exception as e:  # noqa: BLE001 - the report is advisory
+            self.log.emit("briefing_error", error=f"end report {kind}: {e}"[:200])
+            return []
+
+    def _decisions_since(self, seen: str | None) -> dict:
+        """Decisions and strategy reviews of the campaign dated at or after `seen` (should be 0 now)."""
+        tel, cid = self.log.telemetry, self.log.campaign_id
+        if tel is None or not cid or not seen:
+            return {"decisions": 0, "reviews": 0}
+        try:
+            rows = tel.query("SELECT decision FROM decisions WHERE campaign_id=? AND month >= ?", (cid, months(seen)))
+        except Exception as e:  # noqa: BLE001 - the report is advisory
+            self.log.emit("briefing_error", error=f"end report decisions: {e}"[:200])
+            return {"decisions": 0, "reviews": 0}
+        reviews = sum(1 for r in rows if r.get("decision") == "strategy_review")
+        return {"decisions": len(rows) - reviews, "reviews": reviews}
+
+    def _end_campaign(self, rep: dict, name: str, date: str) -> None:
+        """Ruling 21's end, with no model call: the `campaign_end` event (telemetry marks the run
+        lost), the journal line, `info.end` and the status "ended"; the run loop is then left."""
+        text = campaign_end.report_text(name, rep)
+        end = {"result": campaign_end.RESULT_LOST, "turn": rep.get("turn"), "seen": rep.get("seen"),
+               "signal": rep.get("signal"), "report": rep, "text": text}
+        extra = {"last_city_turn": rep.get("turn")} if rep.get("game") == "civ6" else {"last_planet_date": rep.get("turn")}
+        self.log.emit("campaign_end", **end, **extra)
+        self.journal.note(text, date)
+        self._ended = True
+        self.log.state.info["end"] = end
+        self._status("ended")
 
     def _date_moved(self, n: int) -> None:
         """The autosave date moved `n` months: record the real time per month, restart the stall timer."""
@@ -1668,6 +1842,11 @@ class Governor:
             return False
         frame = self._frame()
         self.log.emit("stall", date=date, seconds=round(held), limit=round(limit), frame=frame)
+        if self._zero_saves >= 1 and self._observed_b is not None:
+            # ruling 22: the game may stop saving once the empire falls; a stall after a save with no
+            # planet of ours ends the run as lost instead of waiting for the human
+            self._end_stellaris(self._observed_b, f"the date stalled for {round(held)} s after a save with 0 planets")
+            return True
         self._needs_attention(f"the game date has not advanced for {round(held)} s (still {date}): a popup that paused "
                               "the game, another game loaded, the launcher or a crash may hold it. Nothing was sent to "
                               f"the game. Screenshot at the stall: {frame or 'none'}. Check the PC, then press Resume.",
@@ -1723,11 +1902,15 @@ class Governor:
         self._decision_military = b.get("military_power")   # baseline for "military fell" until the next decision
         self.log.state.episodes += 1
         self.log.state.game_date = b["date"]
-        self.log.emit("metrics", **self._observe(b)[0])
+        row, fresh = self._observe(b)
+        self.log.emit("metrics", **row)
+        start = reason == "start of run"
+        if fresh:   # a save first read here (the start, a human request): its triggers reach this decision
+            reason += "; urgent: " + "; ".join(fresh)
         self._follow(b)
         if self.log.telemetry is not None and self.log.campaign_id:
             try:
-                self.log.telemetry.score(self.log.campaign_id)
+                self.log.telemetry.score(self.log.campaign_id, after_months=self._time().score_horizon)
             except Exception as e:  # noqa: BLE001 - scoring is advisory; never stop play for it
                 self.log.emit("briefing_error", error=f"outcome scoring: {e}"[:200])
         try:
@@ -1791,7 +1974,7 @@ class Governor:
             self.log.emit("episode_error", error=f"{type(e).__name__}: {e}"[:500])
             self.log.save_trace(n, {**base, "outcome": "error", "error": f"{type(e).__name__}: {e}"[:2000],
                                     "seconds": round(time.time() - started, 1),
-                                    "steps": [{"type": "prompt", "text": "\n".join(prompt)}]})
+                                    "steps": [prompt_step("\n".join(prompt))]})
             self._crisis_without_answer(b, current, ladder)   # the ladder is the harness's, not the model's
             return
         d, usage = result.output, result.usage
@@ -1851,7 +2034,7 @@ class Governor:
         self._crisis_posture_step(b, ladder)              # step 4, between the directive and the market
         self._carry_out_actions(b)                        # the market: step 5 takes the slot
         self._crisis_finish(b, ladder)                    # steps 6-7
-        if not (reason == "start of run" and reviewed_at_start):   # a review just ran for this decision point
+        if not (start and reviewed_at_start):   # a review just ran for this decision point
             self._since_retro += 1
             if self.s.retro_every and self._since_retro >= self.s.retro_every and self.pillars is not None:
                 self._review_strategy(b, f"scheduled after {self.s.retro_every} decisions")
@@ -2246,18 +2429,30 @@ class Governor:
         return (f"- tech picks: {noops} tech syncs since the last review found none of the preferred techs where it "
                 f"could pick; offered now: {offers}. Name at least one of them in prefer_techs.")
 
+    def _time(self) -> TimeSpec:
+        """The game's time constants (`[time]` of pillars.toml; the old numbers in months without one)."""
+        return self.pillars.time if self.pillars is not None else TimeSpec()
+
+    def _review_cap_text(self) -> str:
+        return f"within {self._time().steps(self._time().review_cap)} of the last event review"
+
     def _maybe_event_review(self, b: dict, trigger: str, retry: bool = False) -> bool:
-        """Run a strategy review for a big event, at most once per 12 in-game months. `retry`
-        (a failed review pending retry) and having no strategy yet both bypass the cap and never
-        move its last-review month: only event-triggered and off-frame reviews count toward it.
-        A refused request is logged and, if it was a pending one (off-frame), dropped
-        (review_requested cleared) so it does not keep re-firing every decision until the cap opens."""
+        """Run a strategy review for a big event, at most once per `[time] review_cap` steps of the
+        game's clock (12 months in Stellaris, 5 turns in Civ VI; postmortem-fixes design, ruling 15).
+        `retry` (a failed review pending retry) and having no strategy yet both bypass the cap and
+        never move its last-review step: only event-triggered and off-frame reviews count toward it. A
+        trigger in `[time] review_exempt` ("new war"; Civ VI also "city lost") always reviews and does
+        restart the cap's clock. A refused request is logged and, if it was a pending one (off-frame),
+        dropped (review_requested cleared) so it does not keep re-firing every decision until the cap
+        opens."""
+        t = self._time()
         bypass = retry or self.strategy is None
+        exempt = not bypass and t.exempt(trigger)
         last = getattr(self, "_last_event_review_month", None)
         now = months(b["date"])
-        if not bypass and last is not None and now - last < 12:
-            self.log.emit("strategy_review_skipped", trigger=trigger, reason="within 12 months of the last event review",
-                          date=b["date"], next_after=last + 12)
+        if not bypass and not exempt and last is not None and now - last < t.review_cap:
+            self.log.emit("strategy_review_skipped", trigger=trigger, reason=self._review_cap_text(),
+                          date=b["date"], next_after=last + t.review_cap)
             if self.review_requested == trigger:
                 self.review_requested = None
             return False
@@ -2294,7 +2489,7 @@ class Governor:
             spec = self.pillars
             if rows:
                 today = rows[-1]["date"]
-                press = pressures(self.strategy, spec, lambda _n, m: milestone_status(m, rows, today, spec.row_keys),
+                press = pressures(self.strategy, spec, lambda _n, m: self._milestone_status(m, rows, today),
                                   record_of=lambda name, metric: (directive_record(rows, d, metric, spec.row_keys, spec.peer_keys)
                                                                   if (d := spec.directive_of(name)) else None))
                 hint = expand_blocked(rows)
@@ -2346,28 +2541,41 @@ class Governor:
         for name, pl in self.strategy.sorted_pillars():
             for m in pl.milestones:
                 out.append(f"- {name}: {m.metric} {m.op} {m.target:g} by {m.by}: "
-                          f"{milestone_status(m, rows, today, self.pillars.row_keys)}")
+                          f"{self._milestone_status(m, rows, today)}")
         return "\n".join(out) or "(none)"
 
     def _newly_missed_milestones(self, before: str, today: str) -> list[str]:
         """Urgent reasons for milestones that are `missed` on `today` but were not on `before` (the
-        previous check's save date): each fires once, when its date passes unmet."""
+        previous check's save date): each fires once per run (ruling 17: past its date a milestone is
+        judged on its value at `by`, so it fires once, when that date passes unmet)."""
         strategy, rows = self.strategy, self._metrics_rows()
         if strategy is None or rows is None:
             return []
+        fired = self.__dict__.setdefault("_missed_fired", set())
         try:
-            return [f"milestone missed: {name} {m.metric}" for name, pl in strategy.sorted_pillars() for m in pl.milestones
-                    if milestone_status(m, rows, today, self.pillars.row_keys) == "missed"
-                    and milestone_status(m, rows, before, self.pillars.row_keys) != "missed"]
+            out = []
+            for name, pl in strategy.sorted_pillars():
+                for m in pl.milestones:
+                    key = (name, *m.key())
+                    if key in fired or self._milestone_status(m, rows, today) != "missed" \
+                            or self._milestone_status(m, rows, before) == "missed":
+                        continue
+                    fired.add(key)
+                    out.append(f"milestone missed: {name} {m.metric}")
+            return out
         except Exception as e:  # noqa: BLE001 - runs in the poll loop; raising would pause the governor
             self.log.emit("briefing_error", error=f"milestone check: {type(e).__name__}: {e}"[:200])
             return []
+
+    def _milestone_status(self, m, rows: list[dict], today: str) -> str:
+        return milestone_status(m, rows, today, self.pillars.row_keys, lookback=self._time().milestone_lookback)
 
     def _past_outcomes_text(self) -> str:
         if self.log.telemetry is None or not self.log.campaign_id:
             return "(none)"
         try:
-            return self.log.telemetry.past_outcomes(self.log.campaign_id)
+            t = self._time()
+            return self.log.telemetry.past_outcomes(self.log.campaign_id, later=t.steps(t.score_horizon))
         except Exception as e:  # noqa: BLE001 - telemetry is advisory; never block a review
             self.log.emit("briefing_error", error=f"strategy review outcomes: {e}"[:200])
             return "(none)"
@@ -2405,7 +2613,8 @@ class Governor:
                       "Directive changes and what followed:\n" + self._past_outcomes_text(),
                       *[x for x in (self._action_record_section(b, noops), self._planet_record_section()) if x],
                       self._records_section(),
-                      "Latest briefing:\n" + (self.last_briefing or self.game.briefing_text())]
+                      "Latest briefing:\n" + (self.last_briefing or self.game.briefing_text()),
+                      *self._review_notes(b)]
             sp_name, sp_traits = species_terms(b)
             if sp_name or sp_traits:
                 prompt.insert(1, f"Our species: {sp_name}; traits: {', '.join(sp_traits) or 'none listed'}. "
@@ -2451,7 +2660,8 @@ class Governor:
             elif r.change and r.strategy is not None:
                 new = keep_pinned(to_strategy(r.strategy, self.pillars), self.strategy)
                 errs = validate(new, self.pillars, previous=self.strategy, tech_ids=self._tech_ids(), ids=self._action_ids(),
-                                idle=idle_resources(b), income=b.get("net", {}))
+                                idle=idle_resources(b), income=b.get("net", {}), standing=self._standing(b),
+                                unavailable=self._unavailable(b))
             else:
                 errs = []
             if r.change or trigger in IDENTITY_TRIGGERS:     # a new strategy, or one the human asked for
@@ -2487,7 +2697,7 @@ class Governor:
                 # human edit or pin landed via the dashboard in that window must not be discarded,
                 # so it is re-applied against the *live* strategy atomically with the commit.
                 with self._strategy_lock:
-                    new = keep_pinned(new, self.strategy)
+                    new = stamp_milestones(keep_pinned(new, self.strategy), self.strategy, b["date"])
                     self.strategy = new
                 self._publish_strategy(new, b["date"], trigger, base.get("model", ""))
         except Exception as e:  # noqa: BLE001 - a failed review never stops play or pauses the game; retried at the next decision
@@ -2500,8 +2710,23 @@ class Governor:
         if retry_errors is not None:
             self._review_strategy(b, trigger, retried=True, errors=retry_errors, rejected=retry_rejected)
 
+    def _review_notes(self, b: dict) -> list[str]:
+        """Extra lines for the Strategist's review prompt (a game with its own limits gives them)."""
+        return []
+
+    def _unavailable(self, b: dict):
+        """A check naming an id the game cannot use now (Civ VI: a unit whose strategic resource we
+        lack; ruling 8), or None."""
+        return
+
+    def _standing(self, b: dict) -> dict | None:
+        """Our military against the peers for `[strategy] relative_military` (ruling 18); None here: a
+        game that keeps the rules gives its own (Civ VI)."""
+        return None
+
     def _set_strategy(self, s: Strategy, date: str, trigger: str, model: str) -> None:
         with self._strategy_lock:
+            s = stamp_milestones(s, self.strategy, date)
             self.strategy = s
         self._publish_strategy(s, date, trigger, model)
 

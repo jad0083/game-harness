@@ -79,6 +79,7 @@ def governor(setup, game, model) -> Civ6Governor:
     g.start_grace_s = 0.05
     g.turn_deadline_s = 0.5
     g.recover_every_s = 0
+    g.end_watch_s = 0
     return g
 
 
@@ -179,7 +180,7 @@ def test_an_urgent_change_stops_autoplay(setup):
     g.run(max_decisions=2)
     assert [a for a in game.actions if a[0] == "autoplay"] == [("autoplay", 1, False)], "no next turn after it"
     second = traces(setup)[1]
-    assert second["trigger"].startswith("urgent: new war: CIVILIZATION_ROME")
+    assert second["trigger"].startswith("urgent: new war: at war with CIVILIZATION_ROME (who declared is not known)")
     assert game.state["turn"] == FIXTURE["turn"] + 1
 
 
@@ -208,7 +209,9 @@ def test_purchases_respect_the_reserve_and_the_treasury_share(setup):
     rich = {**FIXTURE, "gold": 400}
     assert purchase_cap(rich, city, "gold", buy) == 200                     # half the treasury
     assert purchase_cap(rich, {**city, "threatened": True}, "gold", buy) == 200, "merely threatened: half"
-    assert purchase_cap(rich, {**city, "under_siege": True}, "gold", buy) == 400 - buy.gold_reserve
+    assert purchase_cap(rich, {**city, "under_siege": True}, "gold", buy, defender=True) == 400 - buy.gold_reserve
+    assert purchase_cap(rich, {**city, "under_siege": True}, "gold", buy) == 200, \
+        "only a defender spends down to the reserve (postmortem-fixes ruling 2)"
     assert purchase_cap({**FIXTURE, "gold": buy.gold_reserve}, city, "gold", buy) == 0
 
     game = FakeCiv6({**FIXTURE, "gold": 400}, index=INDEX, prices={("Beijing", "unit:slinger"): 280})
@@ -416,7 +419,7 @@ def test_a_lost_reply_is_read_back_before_judging(setup):
 
 def test_civ6_urgent_events_start_a_strategy_review(setup):
     def lose(state):
-        state["cities"] = []
+        state["cities"] = state["cities"][:1]          # Xian falls (losing every city is the end: ruling 21)
 
     game = FakeCiv6({**FIXTURE, "cities": [*FIXTURE["cities"], {**FIXTURE["cities"][0], "name": "Xian"}]},
                     index=INDEX, events={FIXTURE["turn"] + 1: lose})
@@ -875,7 +878,7 @@ def test_a_purchase_is_completed_at_once_and_refused_orders_get_a_row(setup):
                                             {"kind": "research", "id": "tech:warp"}]))
     g.run(max_decisions=1)
     rows = [(e["key"], e["result"]) for e in _events(setup) if e["kind"] == "order_outcome"]
-    assert rows == [("purchase gold", "completed"), ("research", "refused")]
+    assert rows == [("purchase unit gold", "completed"), ("research", "refused")]
     assert game.state["units"]["by_type"]["UNIT_WARRIOR"] == 2
 
 
@@ -1021,7 +1024,7 @@ def test_danger_needs_more_than_an_enemy_nearby():
     assert in_danger(_city0(threatened=True, enemies_near=2)), "old snapshot: two enemies near"
     rich = {**FIXTURE, "gold": 400}
     assert purchase_cap(rich, lone, "gold", BUY) == 200
-    assert purchase_cap(rich, danger_city(), "gold", BUY) == 400 - 30
+    assert purchase_cap(rich, danger_city(), "gold", BUY, defender=True) == 400 - 30
 
 
 def test_the_gold_reserve_grows_with_a_deficit():
@@ -1029,7 +1032,7 @@ def test_the_gold_reserve_grows_with_a_deficit():
     at = lambda g: gold_reserve_now({**FIXTURE, "yields": {**FIXTURE["yields"], "gold": g}}, BUY)
     assert (at(1.4), at(-1.6), at(0), at(-0.6)) == (30, 46, 30, 36)
     assert urgent_changes({**FIXTURE, "gold": 50}, {**FIXTURE, "gold": 40, "yields": {**FIXTURE["yields"], "gold": -1.6}},
-                          gold_reserve=at(-1.6)) == ["gold below the reserve: 40 < 46"]
+                          gold_reserve=at(-1.6)) == ["gold below the reserve: 40 < 46", "gold per turn negative: -1.6"]
 
 
 def test_what_the_city_finishes_anyway_is_not_bought():
@@ -1051,7 +1054,8 @@ def test_faith_keeps_the_pantheon_price_until_one_is_founded():
     out = buy({"kind": "purchase", "city": "Beijing", "id": "unit:warrior", "currency": "faith"},
               faith=83, religion=rel)
     assert out[0].wire is None, "refused before sending"
-    assert out[0].error == "unit:warrior costs 80 faith in Beijing, over the 58 allowed: keeps 25 faith for the pantheon"
+    assert out[0].error == ("unit:warrior costs 80 faith in Beijing, over the 58 allowed: keeps 25 faith for the pantheon "
+                            "(a defender may spend down to the reserve: the city is in danger)")
     ok = buy({"kind": "purchase", "city": "Beijing", "id": "unit:warrior", "currency": "faith"},
              faith=83, religion={**rel, "pantheon": "BELIEF_INITIATION_RITES", "can_create_pantheon": False})
     assert ok[0].wire["max_cost"] == 83
@@ -1137,7 +1141,7 @@ def test_t83_replay_a_gold_warrior_is_bought_with_faith(setup):
     first = traces(setup)[0]["orders"][0]
     assert first["outcome"] == "stuck" and "bought with faith instead of gold: 80 faith rather than 160 gold" in first["order"]
     rows = [(e["key"], e["result"], e["id"]) for e in _events(setup) if e["kind"] == "order_outcome"]
-    assert rows == [("purchase faith", "completed", "unit:warrior")]
+    assert rows == [("purchase unit faith", "completed", "unit:warrior")]
 
 
 def test_a_price_read_in_the_decision_refuses_a_purchase_over_the_cap(setup):
@@ -1161,7 +1165,8 @@ def test_a_price_read_in_the_decision_refuses_a_purchase_over_the_cap(setup):
     assert all(a[1]["kind"] == "price" for a in game.actions if a[0] == "order"), "the purchase is never sent"
     assert traces(setup)[0]["orders"][0]["outcome"] == ("refused: unit:slinger costs 280 gold in Beijing, over the "
                                                         "200 allowed: one purchase takes at most 50% of the gold "
-                                                        "balance (100% for a city in danger)")
+                                                        "balance (a defender: 100% in a city in danger or under "
+                                                        "military weakness)")
 
 
 def test_the_briefing_shows_a_city_in_danger_with_its_defence_and_prices():
@@ -1199,7 +1204,8 @@ def test_with_known_prices_a_defender_and_another_purchase_both_fit():
               city=danger_city(defence_prices=[{**ARCHER, "faith_allowed": False}]))
     monument, archer = out
     assert archer.wire["currency"] == "gold" and archer.wire["max_cost"] == 370
-    assert monument.wire["max_cost"] == 130, "400 less the Archer's known 240, above the reserve of 30"
+    assert monument.wire["max_cost"] == 80, ("half of the 160 left after the Archer's 240: a building keeps the "
+                                             "treasury share in a city in danger (postmortem-fixes ruling 2)")
 
 
 # ---- backfill of apply-time outcomes (ruling 13, check L4) -----------------------------------------
@@ -1224,14 +1230,14 @@ def test_the_backfill_recovers_apply_time_outcomes_only():
     got = [(r["date"], r["key"], r["id"], r["city"], r["result"]) for r in rows]
     assert got == [("T51", "research", "tech:writing", "", "refused"),
                    ("T73", "civic", "civic:drama_poetry", "", "lost"),
-                   ("T83", "purchase gold", "unit:warrior", "Xi’an", "completed"),
+                   ("T83", "purchase unit gold", "unit:warrior", "Xi’an", "completed"),
                    ("T85", "production unknown", "district:holy_site", "Beijing", "unknown"),
                    ("T90", "civic", "", "", "refused"),
                    ("T104", "production unknown", "unit:trader", "Chengdu", "refused"),
-                   ("T104", "purchase faith", "building:shrine", "Beijing", "completed")]
+                   ("T104", "purchase building faith", "building:shrine", "Beijing", "completed")]
     assert all(r["backfilled"] and r["turn"] == int(r["date"][1:]) for r in rows)
     rec = order_record(rows, 110, ORDERS)
-    assert rec["purchase gold"]["completed"] == 1 and rec["civic"]["excluded"]["refused"] == 1
+    assert rec["purchase unit gold"]["completed"] == 1 and rec["civic"]["excluded"]["refused"] == 1
     assert "production unknown" in rec, "shown while its rows are in the window"
     assert "research" not in rec, "refused at T51, outside the last 30 turns: nothing left to say"
     assert order_record(rows, 60, ORDERS)["research"]["excluded"]["refused"] == 1
@@ -2069,3 +2075,1312 @@ def test_a_restarted_run_keeps_the_diplomacy_in_its_order_record(setup, tmp_path
     second.run(max_decisions=1)
     assert _T240_RECORD in second._records_section()
     assert [r["subtype"] for r in second.log.state.info["diplomacy_record"]] == ["NONE", "POSITIVE"]
+
+
+# ---- postmortem-fixes design, rulings 15 and 19 --------------------------------------------------
+
+def test_civ6_event_reviews_are_capped_at_5_turns_and_a_new_war_always_reviews(setup):
+    """War-7 and H7: the T541 new war came 3 turns after the T538 review and was skipped (12 steps =
+    12 turns). Now a new war and a lost city always review; other events wait 5 turns."""
+    from pilot.strategy import Pillar, Strategy
+    game = FakeCiv6(FIXTURE, index=INDEX)
+    g = governor(setup, game, orders_model([]))
+    g.strategy = Strategy(pillars={p: Pillar(weight=w, stance="s 1") for p, w in
+                                   zip(SPEC.ids, (20, 15, 10, 15, 20, 10, 10), strict=True)}, focus="hold")
+    assert g._maybe_event_review({**FIXTURE, "date": "T538"}, "urgent: city threatened: Beijing") is True
+    assert g._maybe_event_review({**FIXTURE, "date": "T541"},
+                                 "urgent: new war: CIVILIZATION_AUSTRALIA declared a surprise war on us") is True
+    assert g._maybe_event_review({**FIXTURE, "date": "T542"}, "urgent: city threatened: Taiyuan") is False
+    skip = [e for e in g.log.recent if e["kind"] == "strategy_review_skipped"][-1]
+    assert skip["reason"] == "within 5 turns of the last event review"
+    assert g._maybe_event_review({**FIXTURE, "date": "T543"}, "urgent: city lost: Beijing") is True
+    assert g._maybe_event_review({**FIXTURE, "date": "T548"}, "urgent: city threatened: Taiyuan") is True, \
+        "5 turns after the last review, city lost included"
+
+
+def test_the_civ6_outcome_scoring_and_past_outcomes_speak_turns(setup, tmp_path):
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(s.runs_dir, "civt", s.model, telemetry=tel)
+    g = Civ6Governor(s, FakeCiv6(FIXTURE, index=INDEX), log, model=orders_model([]))
+    log.emit("run_start", game="civ6", model=s.model)
+    log.set_campaign("civ6", "kublai", "China")
+    assert g._past_outcomes_text().startswith("No earlier")
+    log.save_trace(1, {"date": "T12", "decision": "orders", "trigger": "x", "reason": "r", "steps": []})
+    assert "| 12 turns later" in g._past_outcomes_text()
+
+
+# ---- postmortem-fixes design, ruling 7: what the game will sell, and why not ---------------------
+
+MODERN_AT = {"unit": "UNIT_MODERN_AT", "gold": 1160, "gold_allowed": True, "faith": 1160, "faith_allowed": True}
+MACHINE_GUN = {"unit": "UNIT_MACHINE_GUN", "gold": 1080, "gold_allowed": True, "faith": 1080, "faith_allowed": True}
+INFANTRY = {"unit": "UNIT_INFANTRY", "gold": 860, "gold_allowed": False, "gold_why": "game", "faith": 860,
+            "faith_allowed": False, "faith_why": "game"}
+
+
+def test_the_corpus_gives_each_units_resource_cost_upkeep_and_strength():
+    assert INDEX.resource_cost["unit:infantry"] == (1, "Oil") and "unit:modern_at" not in INDEX.resource_cost
+    assert INDEX.maintenance["unit:modern_at"] == 8 and INDEX.strength["unit:machine_gun"] == 85
+
+
+def test_each_refusal_is_named_from_the_corpus_and_the_library():
+    from pilot.civ6 import refusal
+    stock = {**FIXTURE, "gold": 1630, "faith": 1961, "resources": {"RESOURCE_OIL": 0, "RESOURCE_ALUMINUM": 3}}
+    assert refusal(MODERN_AT, "gold", stock, INDEX) is None
+    assert refusal(INFANTRY, "gold", stock, INDEX) == ("resource", "needs 1 Oil, have 0")
+    assert refusal(INFANTRY, "gold", {**stock, "resources": None}, INDEX) == ("resource", "needs 1 Oil, stock unknown")
+    taken = {**MODERN_AT, "gold_allowed": False, "gold_why": "stacking"}
+    assert refusal(taken, "gold", stock, INDEX) == ("stacking", "a unit is on the tile")
+    poor = {**MODERN_AT, "gold_allowed": False, "gold_why": "balance"}
+    assert refusal(poor, "gold", {**stock, "gold": 900}, INDEX) == ("balance", "costs 1160 gold, over the balance of 900")
+    assert refusal({**MODERN_AT, "faith_allowed": False}, "faith", stock, INDEX) == ("game", "the game refuses it")
+
+
+def test_a_city_with_nothing_to_buy_says_so_with_each_reason():
+    """Post-mortem H5: "No gold or faith purchases are available" (T548) while Modern AT and Machine
+    Gun were buyable elsewhere; each city now says what it can buy and why not."""
+    taken = {**MODERN_AT, "gold_allowed": False, "gold_why": "stacking", "faith_allowed": False, "faith_why": "stacking"}
+    city = danger_city(name="Guangzhou", defence_prices=[INFANTRY, taken])
+    text = briefing_text({**FIXTURE, "gold": 1630, "faith": 1961, "resources": {"RESOURCE_OIL": 0},
+                          "cities": [city]}, INDEX, limits=BUY)
+    assert ("no defender can be bought now (unit:infantry: needs 1 Oil, have 0; unit:modern_at: a unit is on the "
+            "tile)") in text
+    ok = briefing_text({**FIXTURE, "gold": 1630, "faith": 1961, "resources": {"RESOURCE_OIL": 0},
+                        "cities": [danger_city(defence_prices=[INFANTRY, MACHINE_GUN])]}, INDEX, limits=BUY)
+    assert ("defenders to buy: unit:infantry 860 gold (refused: needs 1 Oil, have 0) / 860 faith (refused: needs 1 "
+            "Oil, have 0), unit:machine_gun 1080 gold / 1080 faith") in ok
+
+
+# ---- postmortem-fixes design, rulings 21-23: the run ends when our civilization is gone ----------
+
+def _telemetry_log(setup, tmp_path, run="civ1"):
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    return tel, EventLog(s.runs_dir, run, s.model, telemetry=tel)
+
+
+def _lost(state):
+    """Our last city falls; no settler left (T583: 0 cities, 0 units)."""
+    state["cities"] = []
+    state["units"] = {"total": 0, "by_class": {}, "by_type": {}}
+
+
+def _counting_model(calls: list):
+    def respond(messages, info):
+        calls.append("review" if is_review(info) else "decide")
+        if is_review(info):
+            return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name,
+                                                     {"change": False, "assessment": "n/a", "rules": []})])
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"orders": [], "reason": "r"})])
+    return FunctionModel(respond)
+
+
+def test_zero_cities_and_settlers_read_twice_ends_the_run_with_no_model_call(setup, tmp_path):
+    tel, log = _telemetry_log(setup, tmp_path)
+    s, _ = setup
+    calls: list = []
+    game = FakeCiv6(FIXTURE, index=INDEX, events={FIXTURE["turn"] + 1: _lost})
+    g = Civ6Governor(s, game, log, model=_counting_model(calls))
+    g.status_poll_s, g.start_grace_s, g.turn_deadline_s, g.end_watch_s = 0, 0.05, 0.5, 0
+    g.run(max_decisions=5)
+    assert calls == ["review", "decide"], "the start only: no decision and no review after the end"
+    end = [e for e in log.recent if e["kind"] == "campaign_end"]
+    assert len(end) == 1 and end[0]["result"] == "lost" and end[0]["signal"] == "0 cities and 0 settlers on 2 reads in a row"
+    assert (end[0]["last_city_turn"], end[0]["seen"]) == ("T12", "T13")
+    assert end[0]["report"]["stranded"] == {"gold": FIXTURE["gold"], "faith": FIXTURE["faith"]}
+    assert end[0]["report"]["after"] == {"decisions": 0, "reviews": 0}
+    assert log.state.status == "ended" and log.state.info["end"]["result"] == "lost"
+    assert tel.query("SELECT status FROM runs WHERE id='civ1'")[0]["status"] == "lost", "run_end keeps it"
+    assert "Campaign lost: China (Kublai Khan (China)) was eliminated in T12, seen at T13" in s.journal.read_text()
+    assert ("autoplay_stop",) in game.actions
+
+
+def test_one_zero_city_read_does_not_end_the_run(setup):
+    class Glitch(FakeCiv6):
+        blank = 1
+
+        def snapshot(self):
+            s = super().snapshot()
+            if s["turn"] > FIXTURE["turn"] and self.blank:
+                self.blank -= 1
+                s = {**s, "cities": [], "units": {"by_type": {}}}
+            return s
+    game = Glitch(FIXTURE, index=INDEX)
+    g = governor(setup, game, orders_model([]))
+    game.state["turn"] += 1
+    first = game.snapshot()
+    assert first["cities"] == []
+    assert g._end_check(first)["cities"], "the second read shows the city again: the run goes on"
+    assert not g._ended
+
+
+def test_a_zero_city_read_whose_second_read_fails_goes_to_no_decision(setup):
+    """After elimination the tuner is silent while the game plays all-AI turns: the re-read times out.
+    That lone 0-city read runs no decision and no 'city lost' review (ruling 21)."""
+    class SilentAfterZero(FakeCiv6):
+        zero_reads = 0
+
+        def snapshot(self):
+            s = super().snapshot()
+            if not s["cities"]:
+                self.zero_reads += 1
+                if self.zero_reads > 1:
+                    raise TimeoutError("snapshot: no reply")
+            return s
+    game = SilentAfterZero(FIXTURE, index=INDEX, events={FIXTURE["turn"] + 1: _lost})
+    g = governor(setup, game, orders_model([]))
+    start = game.snapshot()
+    b, reason = g._run_until_next_decision(start)
+    assert (b, reason) == (start, ""), reason
+    assert g._stale and not g._ended, "the next stretch starts from a fresh snapshot"
+    _s, log = setup
+    assert any(e["kind"] == "briefing_error" and "second read failed" in e["error"] for e in log.recent)
+
+
+def test_alive_false_ends_it_at_once_and_a_settler_or_player_minus_one_does_not(setup, tmp_path):
+    from pilot.campaign_end import civ6_read
+    assert civ6_read({**FIXTURE, "alive": False}) == "not alive"
+    settler = {**FIXTURE, "cities": [], "units": {"by_type": {"UNIT_SETTLER": 1}}}
+    assert civ6_read(settler) is None, "a settler can found a city again"
+    assert civ6_read({**FIXTURE, "local_player": -1, "alive": None}) is None, "the local player id is never used"
+    _tel, log = _telemetry_log(setup, tmp_path, "civ2")
+    s, _ = setup
+    game = FakeCiv6(FIXTURE, index=INDEX, events={FIXTURE["turn"] + 1: lambda st: st.update(alive=False)})
+    g = Civ6Governor(s, game, log, model=_counting_model([]))
+    g.status_poll_s, g.start_grace_s, g.turn_deadline_s, g.end_watch_s = 0, 0.05, 0.5, 0
+    g.run(max_decisions=5)
+    end = next(e for e in log.recent if e["kind"] == "campaign_end")
+    assert end["signal"] == "the game reports our civilization is not alive"
+    assert sum(1 for a in game.actions if a[0] == "autoplay") == 1
+
+
+def test_a_second_run_on_a_lost_campaign_ends_at_its_start(setup, tmp_path):
+    _tel, log = _telemetry_log(setup, tmp_path, "civ3")
+    s, _ = setup
+    calls: list = []
+    dead = {**FIXTURE, "turn": 763, "cities": [], "units": {"total": 0, "by_class": {}, "by_type": {}}}
+    game = FakeCiv6(dead, index=INDEX)
+    g = Civ6Governor(s, game, log, model=_counting_model(calls))
+    g.end_watch_s = 0
+    g.run(max_decisions=5)
+    assert calls == [] and [e["kind"] for e in log.recent].count("campaign_end") == 1
+    assert log.state.status == "ended" and not any(a[0] == "autoplay" for a in game.actions)
+
+
+def test_the_end_report_lists_the_cities_lost_the_enemy_ratio_and_the_stranded_treasury():
+    from pilot.campaign_end import enemy_ratio, losses, report_text
+    episodes = [{"date": "T475", "situation": "urgent: city lost: Shanghai"},
+                {"date": "T546", "situation": "urgent: city lost: Beijing; city threatened: Longxi (3 enemy units near)"},
+                {"date": "T583", "situation": "urgent: city lost: Longxi"}]
+    rows = [r for r in json.loads((REPO / "tests/fixtures/civ6_kublai_rows.json").read_text()) if r["turn"] <= 583]
+    ratio = enemy_ratio(rows, "military")
+    assert (ratio["date"], ratio["ours"], ratio["enemy"], ratio["theirs"], ratio["ratio"]) == \
+        ("T579", 139, "CIVILIZATION_AUSTRALIA", 1561, 0.09)
+    rep = {"game": "civ6", "turn": "T579", "seen": "T583", "signal": "0 cities and 0 settlers on 2 reads in a row",
+           "lost": losses(episodes), "ratio": ratio, "stranded": {"gold": 1675.77, "faith": 994.97},
+           "after": {"decisions": 0, "reviews": 0}}
+    text = report_text("China (Kublai Khan)", rep)
+    assert text.startswith("Campaign lost: China (Kublai Khan) was eliminated in T579, seen at T583 (0 cities and 0 "
+                           "settlers on 2 reads in a row). Cities lost: Shanghai T475, Beijing T546, Longxi T583.")
+    assert "139 vs CIVILIZATION_AUSTRALIA 1,561 (0.09x)" in text and "Stranded: 1,676 gold, 995 faith." in text
+    assert "Decisions after the loss was first seen: 0 (strategy reviews 0)." in text
+
+
+def test_the_report_notes_a_game_that_keeps_playing_by_itself(setup, tmp_path):
+    class PlaysOn(FakeCiv6):
+        def autoplay_status(self):
+            reply = super().autoplay_status()
+            if not self.state.get("cities"):
+                self.state["turn"] += 1              # all-AI turns after the elimination (T763 -> T1290)
+            return reply
+    _tel, log = _telemetry_log(setup, tmp_path, "civ4")
+    s, _ = setup
+    game = PlaysOn(FIXTURE, index=INDEX, events={FIXTURE["turn"] + 1: _lost})
+    g = Civ6Governor(s, game, log, model=_counting_model([]))
+    g.status_poll_s, g.start_grace_s, g.turn_deadline_s, g.end_watch_s = 0, 0.05, 0.5, 0
+    g.run(max_decisions=5)
+    end = next(e for e in log.recent if e["kind"] == "campaign_end")
+    assert "keeps playing all-AI turns by itself" in end["report"]["note"]
+    assert "exit to the main menu to stop it" in end["text"]
+
+
+def test_a_snapshot_for_another_player_waits_for_the_human(setup):
+    game = FakeCiv6(FIXTURE, index=INDEX, events={FIXTURE["turn"] + 1: lambda st: st.update(player=3)})
+    g = governor(setup, game, orders_model([]))
+    run_until_attention(g)
+    assert any(e["kind"] == "needs_attention" and "player 3, this run governs player 0" in e["reason"]
+               for e in g.log.recent)
+
+
+# ---- postmortem-fixes design, ruling 18 -----------------------------------------------------------
+
+LATE_MAJORS = [{"id": 1, "civ": "CIVILIZATION_MALI", "military": 2428, "allied": True, "score": 1, "cities": 4, "techs": 70},
+               {"id": 2, "civ": "CIVILIZATION_MAYA", "military": 1491, "score": 1, "cities": 9, "techs": 70},
+               {"id": 3, "civ": "CIVILIZATION_AUSTRALIA", "military": 1106, "score": 1, "cities": 9, "techs": 70}]
+
+
+def test_rows_and_the_briefing_carry_military_relative_to_the_majors_met():
+    s = {**FIXTURE, "military": 471, "majors": LATE_MAJORS}
+    row = metrics(s)
+    assert (row["military_vs_median"], row["military_vs_strongest"]) == (round(471 / 1491, 3), round(471 / 1491, 3))
+    assert row["neighbours"][0]["allied"] is True and "allied" not in row["neighbours"][1]
+    text = briefing_text(s, INDEX, limits=BUY)
+    assert ("Military standing (peers are the 3 majors we have met): ours 471 is 0.316 x their median 1491 and 0.316 x "
+            "the strongest that is not our ally; rank 4 of 4.") in text
+    assert "civ:mali score 1, military 2428, cities 4, techs 70, ALLIED" in text
+
+
+def test_the_governor_gives_the_strategist_its_military_standing(setup):
+    g = governor(setup, FakeCiv6(FIXTURE, index=INDEX), orders_model([]))
+    st = g._standing({**FIXTURE, "military": 471, "majors": LATE_MAJORS})
+    assert st == {"military": 471, "median": 1491.0, "peers": 3, "weak": True}
+    assert g._standing({**FIXTURE, "majors": []}) is None
+
+
+# ---- postmortem-fixes design, rulings 10-14: the triggers -------------------------------------------
+
+def _longxi(prices, turn=570) -> dict:
+    """T570: at war with Australia; Longxi in danger with no unit on its tile."""
+    city = danger_city(name="Longxi", defense={"garrison_hp": 80, "garrison_max": 200, "walls_hp": 0, "walls_max": 400},
+                       defence_prices=prices)
+    return {**FIXTURE, "turn": turn, "gold": 1407.6, "faith": 755.8, "cities": [city], "military": 329,
+            "wars": [{"id": 3, "civ": "CIVILIZATION_AUSTRALIA", "major": True}], "majors": LATE_MAJORS}
+
+
+def test_a_city_that_stays_in_danger_at_war_decides_at_every_hand_back(setup):
+    """War-8, H6: T571-T574 had no decision while Longxi stayed in danger with a Modern AT allowed."""
+    game = FakeCiv6(_longxi([MODERN_AT]), index=INDEX)
+    g = governor(setup, game, orders_model([]))
+    g.run(max_decisions=4)
+    triggers = [t["trigger"] for t in traces(setup)]
+    assert triggers[0] == "start of run"
+    assert all(t.startswith("urgent: city still in danger: Longxi (walls 0/400, garrison 80/200; unit:modern_at 1160 "
+                            "gold allowed)") for t in triggers[1:4]), triggers
+    assert [a[1] for a in game.actions if a[0] == "autoplay"] == [1, 1, 1], "one turn at a time, a decision each"
+
+
+def test_nothing_to_buy_gives_no_standing_danger_decision(setup):
+    """T576-T582: nothing could be bought, so no decision each turn."""
+    refused = {**MODERN_AT, "gold_allowed": False, "gold_why": "stacking", "faith_allowed": False, "faith_why": "stacking"}
+    game = FakeCiv6(_longxi([refused]), index=INDEX)
+    g = governor(setup, game, orders_model([]))
+    g.run(max_decisions=2)
+    assert traces(setup)[1]["trigger"] == "scheduled (3 turns)"
+    from pilot.civ6 import standing_danger
+    peace = {**_longxi([MODERN_AT]), "wars": []}
+    assert standing_danger(peace, INDEX, BUY) == "", "only while at war with a major"
+    assert standing_danger(_longxi([MODERN_AT]), INDEX, BUY, {"longxi": 568}) == "", "the defender cooldown runs"
+
+
+def test_falling_behind_buildup_and_income_review_and_loyalty_only_decides(setup):
+    from pilot.civ6_governor import EVENT_TRIGGERS_CIV6
+    reviews = ("falling behind in military: 318 against a median of 1,094, last of 6",
+               "neighbour buildup: CIVILIZATION_AUSTRALIA 598 military (+73% in 20 turns), 2.0x ours (295)",
+               "gold per turn negative: -6.8")
+    assert all(any(t in r for t in EVENT_TRIGGERS_CIV6) for r in reviews)
+    assert not any(t in "loyalty falling: Haarlem 77 (-18 a turn)" for t in EVENT_TRIGGERS_CIV6)
+    assert not any(t in "falling behind in techs: 57 against a median of 69" for t in EVENT_TRIGGERS_CIV6)
+    assert not any(t in "city still in danger: Longxi (...)" for t in EVENT_TRIGGERS_CIV6)
+    g = governor(setup, FakeCiv6(FIXTURE, index=INDEX), orders_model([]))
+    last = {**FIXTURE, "turn": 546, "cities": [{**FIXTURE["cities"][0], "name": "Haarlem", "loyalty": 95}]}
+    now = {**FIXTURE, "turn": 547, "cities": [{**FIXTURE["cities"][0], "name": "Haarlem", "loyalty": 77}]}
+    assert g._threat_reasons(last, now) == ["loyalty falling: Haarlem 77 (-18 a turn)"]
+    later = {**now, "turn": 548, "cities": [{**now["cities"][0], "loyalty": 59}]}
+    assert g._threat_reasons(now, later) == [], "once until it rises"
+    assert g._row(later)["low_loyalty"] == 0 and g._row({**later, "cities": [{**later["cities"][0], "loyalty": 41}]})["low_loyalty"] == 1
+
+
+def test_a_hand_back_that_falls_behind_in_military_is_urgent(setup):
+    g = governor(setup, FakeCiv6(FIXTURE, index=INDEX), orders_model([]))
+    ahead = {**FIXTURE, "military": 1500, "majors": LATE_MAJORS}
+    lagging = {**FIXTURE, "military": 300, "majors": LATE_MAJORS}
+    assert g._threat_reasons(ahead, lagging) == ["falling behind in military: 300 against a median of 1,491, last of 4"]
+    assert "military" in g._row(lagging)["behind"] and "military" not in g._row(ahead)["behind"]
+
+
+# ---- postmortem-fixes design, rulings 1, 2 and 8: defenders may spend down to the reserve -------------
+
+WEAK_MAJORS = [{"id": 2, "civ": "CIVILIZATION_MAYA", "military": 1491, "score": 1, "cities": 9, "techs": 70},
+               {"id": 3, "civ": "CIVILIZATION_AUSTRALIA", "military": 1106, "score": 1, "cities": 9, "techs": 70}]
+
+
+def _calm_city(name: str, prices: list) -> dict:
+    """A city that is not in danger (no enemy near), with its listed defenders."""
+    return {**FIXTURE["cities"][0], "name": name, "garrison": None, "capture_adjacent": 0, "enemies_near": 0,
+            "defense": {"garrison_hp": 200, "garrison_max": 200, "walls_hp": 0, "walls_max": 0},
+            "defence_prices": prices}
+
+
+def _weak(gold, faith, cities, military=471, wars=()) -> dict:
+    return {**FIXTURE, "gold": gold, "faith": faith, "military": military, "majors": WEAK_MAJORS,
+            "wars": list(wars), "cities": cities}
+
+
+@pytest.mark.parametrize("turn, city, unit, currency, cost, balance", [
+    (496, "Rockhampton", "unit:modern_at", "faith", 1160, 1833),
+    (538, "Guangzhou", "unit:machine_gun", "faith", 1080, 1222),
+    (541, "Jiaodong", "unit:modern_at", "faith", 1160, 1961),
+    (553, "Taiyuan", "unit:machine_gun", "gold", 1080, 1630),
+    (555, "Taiyuan", "unit:modern_at", "gold", 1160, 1911),
+])
+def test_the_post_mortems_refused_defenders_pass_under_weakness(turn, city, unit, currency, cost, balance):
+    """Treasury-2, treasury-6, war-5: each was allowed by the game and refused (or held) by the 50% cap."""
+    key = INDEX.key_of[unit]
+    price = {"unit": key, "gold": cost if currency == "gold" else 2 * cost, "gold_allowed": currency == "gold",
+             "faith": cost if currency == "faith" else 2 * cost, "faith_allowed": currency == "faith"}
+    s = _weak(balance if currency == "gold" else 100, balance if currency == "faith" else 100, [_calm_city(city, [price])])
+    out = check_orders([Civ6Order(kind="purchase", city=city, id=unit, currency=currency)], s, SPEC, INDEX)
+    assert out[0].error == "" and out[0].wire["currency"] == currency and out[0].wire["max_cost"] >= cost, out[0].error
+    old = {**s, "majors": [], "military": 5000}
+    refused = check_orders([Civ6Order(kind="purchase", city=city, id=unit, currency=currency)], old, SPEC, INDEX)
+    assert "over the" in refused[0].error and "at most 50%" in refused[0].error, "no clause: the old rules apply"
+
+
+def test_buildings_and_rock_bands_keep_the_treasury_share_under_weakness():
+    s = _weak(1000, 1900, [_calm_city("Rockhampton", [])])
+    out = check_orders([Civ6Order(kind="purchase", city="Rockhampton", id="building:monument"),
+                        Civ6Order(kind="purchase", city="Rockhampton", id="unit:rock_band", currency="faith")], s, SPEC, INDEX)
+    assert out[0].wire["max_cost"] == 500, "a T465-like building: 50% of the gold"
+    assert out[1].wire["max_cost"] == 950, "a Rock Band is no defender: 50% of the faith"
+
+
+def test_under_weakness_defenders_in_different_cities_are_outside_the_quota_one_per_city():
+    at = {"unit": "UNIT_MODERN_AT", "gold": 1160, "gold_allowed": True, "faith": 1160, "faith_allowed": False}
+    mg = {"unit": "UNIT_MACHINE_GUN", "gold": 1080, "gold_allowed": True, "faith": 1080, "faith_allowed": False}
+    cities = [_calm_city(n, [at, mg]) for n in ("Rockhampton", "Taiyuan", "Longxi")]
+    s = _weak(9000, 100, cities)
+    orders = [Civ6Order(kind="purchase", city=n, id="unit:modern_at") for n in ("Rockhampton", "Taiyuan", "Longxi")]
+    out = check_orders([*orders, Civ6Order(kind="purchase", city="Longxi", id="unit:machine_gun"),
+                        Civ6Order(kind="purchase", city="Rockhampton", id="building:monument"),
+                        Civ6Order(kind="purchase", city="Taiyuan", id="building:monument"),
+                        Civ6Order(kind="purchase", city="Longxi", id="building:monument")], s, SPEC, INDEX)
+    assert [c.error for c in out[:3]] == ["", "", ""], "three defenders in three cities"
+    assert "second land unit" in out[3].error or "one per city" in out[3].error
+    assert [bool(c.error) for c in out[4:]] == [False, False, True], "the other purchases keep the quota of 2"
+    calm = check_orders(orders, {**s, "majors": [], "military": 5000}, SPEC, INDEX)
+    assert "at most 2 purchase order(s) per decision" in calm[2].error, "no clause: the quota counts them"
+
+
+def test_a_cap_refusal_names_the_clause_and_the_limits_line_reads_t541():
+    price = {"unit": "UNIT_MODERN_AT", "gold": 2320, "gold_allowed": True, "faith": 2100, "faith_allowed": True}
+    s = _weak(900, 1961, [_calm_city("Jiaodong", [price])],
+              wars=[{"id": 3, "civ": "CIVILIZATION_AUSTRALIA", "major": True}])
+    out = check_orders([Civ6Order(kind="purchase", city="Jiaodong", id="unit:modern_at", currency="faith")], s, SPEC, INDEX)
+    assert out[0].error == ("unit:modern_at costs 2100 faith in Jiaodong, over the 1961 allowed: keeps 0 faith in reserve "
+                            "(a defender may spend down to the reserve: at war with CIVILIZATION_AUSTRALIA; "
+                            "last of 3; 471 is 0.36 x the median 1,298; CIVILIZATION_MAYA 1,491 (3.2x), CIVILIZATION_AUSTRALIA "
+                            "1,106 (2.3x))")
+
+
+def test_every_prompt_carries_the_purchase_limits_the_weakness_and_the_stock(setup):
+    g = governor(setup, FakeCiv6(FIXTURE, index=INDEX), orders_model([]))
+    s = {**_weak(828, 1961, [_calm_city("Jiaodong", [])], wars=[{"id": 3, "civ": "CIVILIZATION_AUSTRALIA", "major": True}]),
+         "resources": {"RESOURCE_ALUMINUM": 3, "RESOURCE_OIL": 0, "RESOURCE_URANIUM": 0}}
+    line = g._purchase_limits_line(s)
+    assert line == ("Purchase limits now: a defender may cost up to 1,961 faith / 798 gold in any city (military "
+                    "weakness: war, last, low, outgunned; down to the reserve); anything else up to 980 faith / 414 gold.")
+    assert line in g._limits_text(s) and g._review_notes(s) == [line]
+    calm = g._purchase_limits_line({**s, "majors": [], "wars": [], "military": 5000})
+    assert calm == ("Purchase limits now: up to 980 faith / 414 gold; a defender for a city in danger up to 1,961 faith "
+                    "/ 798 gold (down to the reserve).")
+    text = briefing_text(s, INDEX, limits=BUY)
+    assert "Strategic stock: Aluminum 3, Oil 0, Uranium 0 (units that need a resource we lack cannot be bought or built)." in text
+    assert "Military weakness: at war with CIVILIZATION_AUSTRALIA; last of 3; 471 is 0.36 x the median 1,298;" in text
+    assert "Strategic stock: unknown" in briefing_text(FIXTURE, INDEX, limits=BUY)
+    from pilot.civ6_governor import INSTRUCTIONS
+    assert "cite this decision's price for it" in INSTRUCTIONS
+
+
+# ---- postmortem-fixes design, ruling 3: the governor's own defender before a stretch ----------------
+
+AT_FAITH = {"unit": "UNIT_MODERN_AT", "gold": 2320, "gold_allowed": True, "faith": 1160, "faith_allowed": True}
+MG_BOTH = {"unit": "UNIT_MACHINE_GUN", "gold": 2160, "gold_allowed": True, "faith": 1080, "faith_allowed": True}
+INF_OIL = {"unit": "UNIT_INFANTRY", "gold": 1720, "gold_allowed": True, "faith": 860, "faith_allowed": True}
+
+
+def _t496(**over) -> dict:
+    """T496: at peace, military 295 against Australia 598 and Maya 1,084 (outgunned, low); Rockhampton
+    (no walls) and Beijing (the capital, walls) without a unit on their tiles; 1,833 faith."""
+    rock = {**_calm_city("Rockhampton", [AT_FAITH, INF_OIL]), "capital": False, "producing": "BUILDING_LIBRARY",
+            "can_build": ["UNIT_MODERN_AT", "UNIT_INFANTRY"]}
+    beijing = {**_calm_city("Beijing", [AT_FAITH]), "capital": True, "producing": "BUILDING_UNIVERSITY",
+               "defense": {"garrison_hp": 200, "garrison_max": 200, "walls_hp": 400, "walls_max": 400}}
+    s = {**FIXTURE, "turn": 496, "gold": 1065, "faith": 1833, "military": 295,
+         "yields": {**FIXTURE["yields"], "gold": 172, "faith": 184},
+         "majors": [{"id": 3, "civ": "CIVILIZATION_AUSTRALIA", "military": 598},
+                    {"id": 2, "civ": "CIVILIZATION_MAYA", "military": 1084}],
+         "wars": [], "cities": [beijing, rock], "resources": {"RESOURCE_OIL": 0}}
+    return {**s, **over}
+
+
+def _stretch_governor(setup, game, chunk=3):
+    s, _ = setup
+    s.autoplay_chunk, s.decide_every_turns = chunk, 3
+    return governor(setup, game, orders_model([]))
+
+
+def test_before_a_three_turn_stretch_the_governor_buys_one_faith_modern_at(setup):
+    game = FakeCiv6(_t496(), index=INDEX, prices={("Rockhampton", "unit:modern_at", "faith"): 1160})
+    g = _stretch_governor(setup, game)
+    g.run(max_decisions=2)
+    sent = [(a[1], a[2]) for a in game.actions if a[0] == "order" and a[1]["kind"] == "purchase"]
+    assert len(sent) == 1, sent
+    order, active = sent[0]
+    assert (order["city"], order["id"], order["currency"], active) == ("Rockhampton", "unit:modern_at", "faith", False), \
+        "the first ungarrisoned city without walls; faith first; before autoplay starts"
+    first_autoplay = next(i for i, a in enumerate(game.actions) if a[0] == "autoplay")
+    buy_at = next(i for i, a in enumerate(game.actions) if a[0] == "order" and a[1]["kind"] == "purchase")
+    assert buy_at < first_autoplay
+    ev = next(e for e in g.log.recent if e["kind"] == "rule_buy")
+    assert ev["by"] == "governor" and ev["note"] == "bought before autoplay (military weakness: last, low, outgunned)"
+    assert ev["orders"][0]["by"] == "governor" and ev["orders"][0]["outcome"] == "stuck"
+    s, _ = setup
+    assert "The governor, bought before autoplay (military weakness: last, low, outgunned): purchase unit:modern_at in " \
+           "Rockhampton with faith (filled by the governor): stuck" in s.journal.read_text()
+    assert not any(a[0] == "order" and a[1]["kind"] == "purchase" for a in game.actions[first_autoplay:]), \
+        "at most one purchase per stretch"
+
+
+@pytest.mark.parametrize("over, chunk, why", [
+    ({}, 1, "a one-turn chunk"),
+    ({"majors": [{"id": 3, "civ": "CIVILIZATION_AUSTRALIA", "military": 300}], "military": 295}, 3, "no weakness"),
+    ({"yields": {**FIXTURE["yields"], "gold": 5, "faith": 184}}, 3, "upkeep 8 would take gold per turn below 0"),
+])
+def test_no_rule_buy(setup, over, chunk, why):
+    game = FakeCiv6(_t496(**over), index=INDEX, prices={("Rockhampton", "unit:modern_at", "faith"): 1160})
+    g = _stretch_governor(setup, game, chunk=chunk)
+    g.run(max_decisions=2)
+    assert any(a[0] == "autoplay" for a in game.actions), "a stretch was played"
+    assert not any(a[0] == "order" and a[1]["kind"] == "purchase" for a in game.actions), why
+
+
+def test_an_empty_queue_in_an_ungarrisoned_city_under_weakness_gets_a_defender(setup):
+    from pilot.civ6 import rule_buy_order
+    s = _t496()
+    s["cities"][1] = {**s["cities"][1], "producing": None, "turns_left": None}
+    game = FakeCiv6(s, index=INDEX, prices={("Rockhampton", "unit:modern_at", "faith"): 1160})
+    g = _stretch_governor(setup, game)
+    g.run(max_decisions=1)
+    prod = [a[1] for a in game.actions if a[0] == "order" and a[1]["kind"] == "production"]
+    assert prod == [{"kind": "production", "city": "Rockhampton", "id": "unit:modern_at"}], \
+        "the strongest resource-free defender it can build (not the Oil-bound Infantry)"
+    assert next(o for o in traces(setup)[0]["orders"] if o["kind"] == "production")["by"] == "governor"
+    from pilot.civ6 import defender_to_build
+    both = {**s["cities"][1], "can_build": ["UNIT_MODERN_AT", "UNIT_MACHINE_GUN"]}
+    assert defender_to_build(both, INDEX, BUY) == "unit:machine_gun", "equal strength (85): the cheaper to build"
+    tie = rule_buy_order(_t496(cities=[{**_t496()["cities"][1], "defence_prices": [AT_FAITH, MG_BOTH]}]), INDEX, BUY)[0]
+    assert (tie.id, tie.currency) == ("unit:machine_gun", "faith"), "equal strength: the cheaper (1,080 faith)"
+    order, _ = rule_buy_order(_t496(), INDEX, BUY, {"rockhampton": 494})
+    assert order.city == "Beijing", "Rockhampton's cooldown runs: the next city"
+
+
+# ---- postmortem-fixes design, ruling 4: what the AI spent between decisions ------------------------
+
+def _row_snapshot(turn: int) -> dict:
+    r = next(x for x in json.loads((REPO / "tests/fixtures/civ6_kublai_rows.json").read_text()) if x["turn"] == turn)
+    return {"turn": turn, "gold": r["gold"], "faith": r["faith"],
+            "yields": {"gold": r["gold_yield"], "faith": r["faith_yield"]}}
+
+
+def test_e10_the_ai_spend_reproduces_the_logged_rock_band_and_the_unnamed_gold():
+    from pilot.civ6 import ai_purchases, ai_spent, ai_spent_text
+    spent = ai_spent(_row_snapshot(525), _row_snapshot(528))
+    assert (round(spent["faith"]), round(spent["gold"])) == (1998, 1717)
+    assert round(ai_spent(_row_snapshot(496), _row_snapshot(499))["faith"]) == 1687
+    bought = ai_purchases(["Game Turn, Player, City, Order, Item",           # the header is skipped
+                           "526, 0, Beijing, FAITH PURCHASE, UNIT_ROCK_BAND, 1998",
+                           "526, 3, Sydney, PURCHASE, UNIT_TANK",             # another player
+                           "527, 0, Taiyuan, BUILD, BUILDING_LIBRARY"], 0)
+    assert bought == [{"turn": 526, "currency": "faith", "item": "UNIT_ROCK_BAND"}]
+    y = {"faith": 226.2 * 3, "gold": 272.2 * 3}
+    assert ai_spent_text(525, spent, y, bought).startswith(
+        "Since T525 the AI spent 1,998 faith (UNIT_ROCK_BAND, T526) and 1,717 gold (not named) between our decisions")
+    assert ai_spent_text(525, {"faith": 30.0, "gold": 0.0}, y, []) == "", "a 30-faith drift gives nothing"
+
+
+def test_the_ai_spend_is_urgent_named_by_one_log_read_and_shown_to_the_next_decision(setup, tmp_path):
+    seen: list[str] = []
+    city = {**_calm_city("Beijing", [AT_FAITH]), "capital": True}
+    start = {**FIXTURE, **_row_snapshot(525), "cities": [city], "majors": [], "wars": []}
+    t528 = _row_snapshot(528)
+
+    def spend(state):
+        state.update(gold=t528["gold"], faith=t528["faith"])
+    game = FakeCiv6(start, index=INDEX, events={528: spend},
+                    logs={"AI_CityBuild.csv": ["526, 0, Beijing, FAITH PURCHASE, UNIT_ROCK_BAND"]})
+    s, _ = setup
+    s.autoplay_chunk, s.decide_every_turns = 3, 5
+    tel, log = _telemetry_log(setup, tmp_path)
+    g = governor((s, log), game, orders_model([], seen=seen))
+    g.run(max_decisions=2)
+    second = traces(setup)[1]
+    assert second["trigger"] == "urgent: the AI spent 1,998 faith on UNIT_ROCK_BAND in T525-T528"
+    assert "Since T525 the AI spent 1,998 faith (UNIT_ROCK_BAND, T526) and 1,717 gold (not named)" in seen[1]
+    assert sum(1 for a in game.actions if a[0] == "log_tail") == 1, "one read, only when there is a spend to name"
+    rows = [e for e in g.log.recent if e["kind"] == "metrics" and e.get("turn") == 528]
+    assert round(rows[0]["ai_spent"]["faith"]) == 1998
+    stored = [r for r in tel.metrics_rows(log.campaign_id) if r.get("turn") == 528]
+    assert len(stored) == 1 and round(stored[0]["ai_spent"]["faith"]) == 1998, \
+        "the decision's own metrics row for T528 kept the stretch's spend (one row per date in telemetry)"
+    assert not any(e["kind"] == "needs_attention" for e in g.log.recent), "never stops the hands-off run"
+
+
+def test_a_metrics_row_emitted_again_for_its_date_keeps_the_stretch_spend(setup):
+    """The end check's second read and the decision at a hand-back emit the same date's row again."""
+    g = governor(setup, FakeCiv6(FIXTURE, index=INDEX), orders_model([]))
+    t528 = {**FIXTURE, **_row_snapshot(528), "date": "T528"}
+    g._emit_metrics(t528, {"gold": 1717.4, "faith": 1998.1})
+    g._emit_metrics(t528)
+    g._emit_metrics({**t528, "turn": 529, "date": "T529"})
+    rows = [e for e in g.log.recent if e["kind"] == "metrics"]
+    assert [r.get("ai_spent") for r in rows] == [{"gold": 1717.4, "faith": 1998.1}] * 2 + [None]
+
+
+# ---- a stretch starts from a snapshot taken after our orders (post-mortem fixes review) --------------------
+
+def _accrue(state):
+    """Each turn the AI plays adds the snapshot's gold and faith per turn, as the game does."""
+    state.update(gold=state["gold"] + state["yields"]["gold"], faith=state["faith"] + state["yields"]["faith"])
+
+
+def test_our_purchase_is_not_the_ai_spend_when_the_read_back_fails(setup):
+    """T525: the decision buys a Modern AT for 1,160 faith and the read-back after it fails. The stretch's
+    spend was taken from the snapshot before the purchase: "urgent: the AI spent 1,160 faith (not named)"
+    and "Since T525 the AI spent 1,160 faith" in the next prompt, for our own purchase."""
+    seen: list[str] = []
+    city = {**_calm_city("Guangzhou", [MODERN_AT]), "capital": False}
+    start = {**_t525(), "faith": 2500, "majors": [], "military": 5000, "cities": [city]}
+    game = FakeCiv6(start, index=INDEX, ai=_accrue, readback_fails=True,
+                    prices={("Guangzhou", "unit:modern_at", "faith"): 1160})
+    s, _ = setup
+    s.autoplay_chunk, s.decide_every_turns = 3, 5
+    g = governor(setup, game, orders_model([{"kind": "purchase", "city": "Guangzhou", "id": "unit:modern_at",
+                                             "currency": "faith"}], [], seen=seen))
+    g.run(max_decisions=2)
+    assert _sent(game, "purchase") and game.state["faith"] < 2500, "the purchase ran; its read-back failed"
+    row = next(e for e in g.log.recent if e["kind"] == "metrics" and e.get("turn") == 528)
+    assert abs(row["ai_spent"]["faith"]) < 1, row["ai_spent"]
+    assert traces(setup)[1]["trigger"] == "scheduled (5 turns)"
+    assert "the AI spent" not in seen[1]
+
+
+def test_a_rule_buy_whose_read_back_fails_is_not_the_ai_spend(setup):
+    game = FakeCiv6(_t496(), index=INDEX, ai=_accrue, readback_fails=True,
+                    prices={("Rockhampton", "unit:modern_at", "faith"): 1160})
+    g = _stretch_governor(setup, game)
+    g.run(max_decisions=2)
+    assert len(_sent(game, "purchase")) == 1
+    row = next(e for e in g.log.recent if e["kind"] == "metrics" and e.get("turn") == 499)
+    assert abs(row["ai_spent"]["faith"]) < 1, row["ai_spent"]
+    assert not traces(setup)[1]["trigger"].startswith("urgent: the AI spent")
+
+
+def test_the_rule_buy_prices_from_the_balance_after_our_orders_when_their_read_back_fails(setup):
+    """T496 with 1,065 gold and no faith: the model buys a Settler for 500 gold and the read-back fails.
+    The rule buy then priced a Machine Gun (1,000 gold) against the 1,065 before the Settler (max_cost
+    1,035) and took gold below the 30 reserve."""
+    mg = {"unit": "UNIT_MACHINE_GUN", "gold": 1000, "gold_allowed": True, "faith": 1080, "faith_allowed": True}
+    rock = {**_t496()["cities"][1], "defence_prices": [mg]}
+    game = FakeCiv6(_t496(faith=0, cities=[_t496()["cities"][0], rock]), index=INDEX, readback_fails=True,
+                    prices={("Beijing", "unit:settler", "gold"): 500, ("Rockhampton", "unit:machine_gun", "gold"): 1000})
+    s, _ = setup
+    s.autoplay_chunk, s.decide_every_turns = 3, 3
+    g = governor(setup, game, orders_model([{"kind": "purchase", "city": "Beijing", "id": "unit:settler",
+                                             "currency": "gold"}], []))
+    g.run(max_decisions=2)
+    assert [o["id"] for o in _sent(game, "purchase")] == ["unit:settler"], "1,000 gold does not fit 565 - 30"
+    assert game.state["gold"] >= 30
+    note = next(e for e in g.log.recent if e["kind"] == "rule_buy")["note"]
+    assert note.startswith("nothing bought"), note
+
+
+def test_a_stretch_after_a_pause_starts_from_a_fresh_snapshot(setup):
+    """A pause (or a Resume after needs attention) goes on with the snapshot from before it, while the
+    game may have been played meanwhile: the stretch reads it afresh before pricing or measuring."""
+    game = FakeCiv6({**FIXTURE, "gold": 1000, "majors": [], "wars": []}, index=INDEX, ai=_accrue)
+    g = governor(setup, game, orders_model([]))
+    old = game.snapshot()
+    g.control.paused = True
+    assert g._run_until_next_decision(old) == (old, "")
+    game.state["gold"] -= 300                              # spent while the run was paused
+    g.control.paused = False
+    _b, reason = g._run_until_next_decision(old)
+    assert reason.startswith("scheduled")
+    rows = [e for e in g.log.recent if e["kind"] == "metrics"]
+    assert rows and all(abs(r["ai_spent"]["gold"]) < 1 for r in rows), [r["ai_spent"] for r in rows]
+
+
+def _city_build_log(first: int, last: int, ours: dict[int, str] | None = None, per_turn: int = 12_000) -> list[str]:
+    """AI_CityBuild.csv rows for turns first..last as late in the Kublai campaign (about 12 KB a turn, other
+    players' build rows); `ours[turn]` is a purchase row of our player (player 0) in the middle of that turn."""
+    out = ["Game Turn, Player, City, Food Adv., Prod. Adv., Construct, Order Source"]
+    for turn in range(first, last + 1):
+        rows = [f"{turn}, {1 + i % 5}, LOC_CITY_NAME_SYDNEY, , , UNIT_SCOUT, Default Specialization, , , Value 71.9"
+                for i in range(per_turn // 90)]
+        if turn in (ours or {}):
+            rows.insert(len(rows) // 2, f"{turn}, 0, {ours[turn]}, Unknown, CONTRACT 13393")
+        out += rows
+    return out
+
+
+ROCK_BAND = "FAITH PURCHASE, , , UNIT_ROCK_BAND"
+
+
+def test_the_t528_rock_band_is_named_from_a_log_that_grows_12_kb_a_turn(setup):
+    """E10 live: at the T528 hand-back the "526, 0, FAITH PURCHASE, , , UNIT_ROCK_BAND" row lay about 22 KB
+    from the end of the log, past the controller's default 16 KiB tail, so it read "(not named)"."""
+    city = {**_calm_city("Beijing", [AT_FAITH]), "capital": True}
+    start = {**FIXTURE, **_row_snapshot(525), "cities": [city], "majors": [], "wars": []}
+    t528 = _row_snapshot(528)
+    game = FakeCiv6(start, index=INDEX, events={528: lambda st: st.update(gold=t528["gold"], faith=t528["faith"])},
+                    logs={"AI_CityBuild.csv": _city_build_log(500, 527, {526: ROCK_BAND})})
+    log = "\n".join(game.logs["AI_CityBuild.csv"]) + "\n"
+    assert len(log) - log.index("526, 0, FAITH PURCHASE") > 16 * 1024
+    s, _ = setup
+    s.autoplay_chunk, s.decide_every_turns = 3, 5
+    g = governor(setup, game, orders_model([]))
+    g.run(max_decisions=2)
+    assert traces(setup)[1]["trigger"] == "urgent: the AI spent 1,998 faith on UNIT_ROCK_BAND in T525-T528"
+
+
+def test_ai_buy_reads_go_on_from_their_offset_and_drop_one_a_page_behind(setup):
+    game = FakeCiv6(FIXTURE, index=INDEX, logs={"AI_CityBuild.csv": _city_build_log(500, 527, {526: ROCK_BAND})})
+    g = governor(setup, game, orders_model([]))
+    reads = lambda: [a for a in game.actions if a[0] == "log_tail"]
+    g._read_ai_buys({"turn": 528, "player": 0}, 525)
+    assert [x["item"] for x in g._bought_between(525, 528)] == ["UNIT_ROCK_BAND"]
+    assert [(r[2], r[4]) for r in reads()] == [(None, 64 * 1024)], "one tail read sized to the interval"
+    end = g._build_log_next
+    game.logs["AI_CityBuild.csv"] += _city_build_log(528, 529, {529: "PURCHASE, , , BUILDING_SHRINE"})[1:]
+    g._read_ai_buys({"turn": 530, "player": 0}, 528)
+    assert [r[2] for r in reads()[1:]] == [end], "two turns on: from where the last read ended"
+    assert [x["item"] for x in g._bought_between(528, 530)] == ["BUILDING_SHRINE"]
+    assert [x["item"] for x in g._ai_buys] == ["UNIT_ROCK_BAND", "BUILDING_SHRINE"], "no row read twice"
+    game.logs["AI_CityBuild.csv"] += _city_build_log(530, 544, {544: ROCK_BAND})[1:]
+    n = len(reads())
+    g._read_ai_buys({"turn": 545, "player": 0}, 542)
+    assert [r[2] for r in reads()[n:]] == [None], "15 turns (180 KB) on: the tail, not a page of old rows"
+    assert [(x["turn"], x["item"]) for x in g._bought_between(542, 545)] == [(544, "UNIT_ROCK_BAND")]
+
+
+# ---- postmortem-fixes design, ruling 26: the capture test ---------------------------------------------
+
+def test_beijing_at_t545_and_guangzhou_at_t565_read_as_about_to_fall():
+    """War-12: both met the walls and garrison tests and fell in the next AI turn without tripping
+    about_to_fall. Beijing had no garrison left and no walls with enemies 2 tiles out; Guangzhou had a
+    Giant Death Robot next to it, which the library now counts as a capturer."""
+    from pilot.civ6 import about_to_fall
+    beijing = {**_city0(), "threatened": True, "enemies_near": 3, "capture_adjacent": 0, "garrison": None,
+               "defense": {"garrison_hp": 0, "garrison_max": 200, "walls_hp": 0, "walls_max": 400},
+               "enemies": [{"type": "UNIT_ARTILLERY", "kind": "siege", "capture": False, "dist": 2, "hp": 100}]}
+    assert about_to_fall(beijing), "garrison 0 and walls 0 with an enemy within 2"
+    far = {**beijing, "enemies": [{**beijing["enemies"][0], "dist": 3}]}
+    assert not about_to_fall(far), "the nearest enemy 3 tiles out"
+    walls = {**beijing, "defense": {**beijing["defense"], "walls_hp": 50}}
+    assert not about_to_fall(walls), "walls still stand"
+    guangzhou = {**_city0(), "threatened": True, "enemies_near": 2, "capture_adjacent": 1, "garrison": None,
+                 "defense": {"garrison_hp": 80, "garrison_max": 200, "walls_hp": 0, "walls_max": 400},
+                 "enemies": [{"type": "UNIT_GIANT_DEATH_ROBOT", "kind": "ranged", "capture": True, "dist": 1, "hp": 100}]}
+    assert about_to_fall(guangzhou)
+    now = {**FIXTURE, "cities": [{**beijing, "name": "Beijing"}]}
+    reasons = urgent_changes(FIXTURE, now)
+    assert any(u == "city falling: Beijing (garrison 0/200, no walls, an enemy within 2 tiles)" for u in reasons), reasons
+    assert "ABOUT TO FALL" in briefing_text(now, INDEX)
+
+
+# ---- postmortem-fixes design, ruling 9: the order record by item class ---------------------------------
+
+def _purchase_row(turn: int, item: str, currency: str, result: str = "completed", **extra) -> dict:
+    from pilot.civ6 import record_key
+    return {"order_kind": "purchase", "key": record_key({"kind": "purchase", "id": item, "currency": currency}),
+            "id": item, "city": "Rockhampton", "currency": currency, "result": result, "turn": turn,
+            "date": f"T{turn}", **extra}
+
+
+def test_t512_the_record_shows_no_unit_purchase_beside_the_buildings_bought():
+    """H11, strategy-6: "faith purchases held 8 of 8" came from cheap buildings while no faith unit
+    purchase was sent from T385 to T541. Purchase keys split by item class and show counts only."""
+    from pilot.civ6 import purchase_counts
+    rows = [_purchase_row(484 + 3 * i, "building:shrine" if i % 2 else "building:temple", "faith") for i in range(8)]
+    rows.append(_purchase_row(496, "unit:modern_at", "faith", "refused", refusal="cap", refused_by="harness",
+                              detail="refused: unit:modern_at costs 1160 faith in Rockhampton, over the 916 allowed"))
+    rec = order_record(rows, 512, ORDERS)
+    assert list(rec) == ["purchase unit faith", "purchase building faith"]
+    assert rec["purchase building faith"]["rate"] is None and rec["purchase building faith"]["counts_only"]
+    text = order_record_text(rec, purchases=purchase_counts(rows, 512, 30), window=30)
+    assert ("- purchases in the last 30 turns (counts only: a purchase read back as done is bought at once):\n"
+            "  - unit purchases: 0 sent; 1 refused by the harness (cap 1)\n"
+            "  - building purchases: 8 bought (faith 8)") in text
+    assert "held 100%" not in text and "purchase building faith:" not in text
+
+
+def test_purchase_counts_name_who_refused_and_why():
+    from pilot.civ6 import purchase_counts, purchase_counts_text
+    rows = [_purchase_row(100, "unit:machine_gun", "faith"), _purchase_row(101, "unit:modern_at", "gold"),
+            _purchase_row(102, "unit:modern_at", "faith", "refused", refusal="stacking", refused_by="game"),
+            _purchase_row(103, "unit:infantry", "gold", "refused", refusal="resource", refused_by="game", resource="Oil"),
+            _purchase_row(104, "unit:modern_at", "gold", "refused", refusal="cap", refused_by="harness"),
+            _purchase_row(105, "unit:modern_at", "gold", "lost"),
+            _purchase_row(106, "unit:modern_at", "gold", "refused", detail="refused: Longxi got a defender at T104: "
+                          "the next defender purchase there waits until T109"),           # an older row: from its text
+            _purchase_row(60, "unit:warrior", "gold")]                                  # outside the window
+    text = purchase_counts_text(purchase_counts(rows, 110, 30), 30)
+    assert ("  - unit purchases: 2 bought (faith 1, gold 1), 2 refused by the harness (cap 1, cooldown 1), 2 refused "
+            "by the game (Oil 1, stacking 1), 1 lost") in text
+    assert "  - building purchases: 0 sent" in text
+    assert purchase_counts([_purchase_row(1, "unit:warrior", "gold")], 200, 30) is not None, "shown once any purchase exists"
+    assert purchase_counts([], 200, 30) is None
+
+
+def test_each_purchase_refusal_gets_its_class():
+    from pilot.civ6 import purchase_refusal
+    s = {**FIXTURE, "resources": {"RESOURCE_OIL": 0}, "cities": [{**_city0(), "garrison": "UNIT_WARRIOR"}]}
+    inf = {"kind": "purchase", "id": "unit:infantry", "city": "Beijing", "currency": "gold"}
+    at = {"kind": "purchase", "id": "unit:modern_at", "city": "Beijing", "currency": "gold"}
+    cases = [
+        ("refused: unit:x costs 280 gold in Beijing, over the 200 allowed: one purchase takes at most 50%", at, ("harness", "cap")),
+        ("refused: gold 40 (less 0 for earlier purchases) is at or below the reserve 30", at, ("harness", "reserve")),
+        ("refused: Beijing already has unit:warrior on its tile: the game refuses a second land unit there", at, ("harness", "stacking")),
+        ("refused: Beijing got a defender at T10: the next defender purchase there waits until T15", at, ("harness", "cooldown")),
+        ("refused: Beijing finishes unit:warrior in 1 turn anyway", at, ("harness", "skip")),
+        ("refused: Xi'an is in danger with no defender on its tile: buy a defender there first", at, ("harness", "defence_first")),
+        ("refused: at most 2 purchase order(s) per decision", at, ("harness", "quota")),
+        ("refused: unknown id 'unit:nope'", at, ("harness", "other")),
+        ("refused by the game: unit:modern_at costs 1200 gold, over the allowed 1100", at, ("harness", "cap")),
+        ("refused by the game: the game refuses to buy UNIT_INFANTRY in Beijing for 860 gold", inf, ("game", "resource")),
+        ("refused by the game: the game refuses to buy UNIT_MODERN_AT in Beijing for 1160 gold", at, ("game", "stacking")),
+    ]
+    for status, order, want in cases:
+        r = purchase_refusal(status, order, s, INDEX)
+        assert (r["refused_by"], r["refusal"]) == want, status
+    assert purchase_refusal(cases[9][0], inf, s, INDEX)["resource"] == "Oil"
+    calm = {**s, "cities": [{**_city0(), "garrison": None}]}
+    assert purchase_refusal(cases[10][0], at, calm, INDEX)["refusal"] == "game"
+
+
+def test_older_purchase_rows_load_into_the_class_keys_and_a_cap_refusal_is_classed(setup, tmp_path):
+    from pilot.civ6 import backfill_rows, rekey_purchases
+    old = [{"key": "purchase faith", "id": "unit:warrior", "result": "completed", "turn": 5},
+           {"key": "purchase gold", "id": "building:shrine", "result": "completed", "turn": 6},
+           {"key": "research", "id": "tech:pottery", "result": "completed", "turn": 7}]
+    assert [r["key"] for r in rekey_purchases(old, INDEX)] == ["purchase unit faith", "purchase building gold", "research"]
+    assert [r["key"] for r in backfill_rows(LIVE_TRACE_ORDERS) if r["order_kind"] == "purchase"] == \
+        ["purchase unit gold", "purchase building faith"]
+    game = FakeCiv6({**FIXTURE, "gold": 400}, index=INDEX, prices={("Beijing", "unit:slinger", "gold"): 280})
+    g = governor(setup, game, orders_model([{"kind": "purchase", "city": "Beijing", "id": "unit:slinger"}]))
+    g.run(max_decisions=1)
+    row = next(e for e in _events(setup) if e["kind"] == "order_outcome")
+    assert (row["key"], row["result"], row["refusal"], row["refused_by"]) == ("purchase unit gold", "refused", "cap", "harness")
+
+
+def test_under_weakness_every_city_shows_the_defenders_it_can_buy():
+    """Ruling 7 in the briefing: under military weakness a defender may be bought in any city (ruling 2),
+    so each city, not only one in danger, says what the game sells it now (T496: Rockhampton could buy a
+    Modern AT for 1,160 faith; the briefing listed defenders only for cities in danger)."""
+    s = _t496()
+    s["cities"][0] = {**s["cities"][0], "garrison": "UNIT_MUSKETMAN"}
+    text = briefing_text(s, INDEX, limits=BUY)
+    rock = next(ln for ln in text.splitlines() if ln.startswith("- Rockhampton"))
+    assert "; on its tile: no unit; defenders to buy: unit:modern_at 2320 gold / 1160 faith, unit:infantry" in rock, rock
+    beijing = next(ln for ln in text.splitlines() if ln.startswith("- Beijing"))
+    assert "on its tile: unit:musketman" in beijing and "defenders to buy" not in beijing
+    calm = briefing_text({**s, "majors": [{"id": 3, "civ": "CIVILIZATION_AUSTRALIA", "military": 300}]}, INDEX, limits=BUY)
+    assert "defenders to buy" not in calm, "no weakness: only cities in danger list them"
+
+
+def test_a_rule_buy_whose_replies_are_lost_is_not_sent_a_third_time_and_autoplay_starts(setup):
+    """Every purchase reply lost: the rule buy, its one re-send, then the urgent "order lost twice"
+    decision; the hand-back after it must not try the rule buy again at the same turn (it did: 10
+    purchases, 6 decisions and no autoplay at T496)."""
+    game = FakeCiv6(_t496(), index=INDEX, prices={("Rockhampton", "unit:modern_at", "faith"): 1160}, lost_orders=1000)
+    g = _stretch_governor(setup, game)
+    g.run(max_decisions=4)
+    sent = _purchases(game)
+    assert any(a[0] == "autoplay" for a in game.actions), "the turn advances"
+    assert [played for _o, played in sent].count(0) == 2, "at T496: the rule buy and one re-send, never a third"
+    assert traces(setup)[1]["trigger"] == "urgent: order lost twice: purchase unit:modern_at in Rockhampton"
+
+
+# ---- postmortem-fixes design, ruling 5: re-send a lost purchase only with proof ---------------------
+
+AT_ORDER = {"kind": "purchase", "city": "Longxi", "id": "unit:modern_at"}
+
+
+def _lost_game(**kw) -> FakeCiv6:
+    """T570: Longxi's Modern AT (1,160 gold, allowed); the first purchase's reply is lost."""
+    return FakeCiv6(_longxi([MODERN_AT]), index=INDEX, prices={("Longxi", "unit:modern_at", "gold"): 1160}, **kw)
+
+
+def _purchases(game: FakeCiv6) -> list[tuple[dict, int]]:
+    """Each purchase sent, with the number of autoplay calls made before it."""
+    out, played = [], 0
+    for a in game.actions:
+        if a[0] == "autoplay":
+            played += 1
+        elif a[0] == "order" and a[1]["kind"] == "purchase":
+            out.append((a[1], played))
+    return out
+
+
+def test_a_lost_purchase_that_spent_nothing_is_sent_once_more_before_autoplay(setup):
+    """War-9, treasury-9: at T570 the reply was lost and "gold went from 1407.6484375 to 1407.6484375";
+    nothing was re-sent and the discount ended at T572."""
+    game = _lost_game(lost_orders=1)
+    g = governor(setup, game, orders_model([AT_ORDER], []))
+    g.run(max_decisions=2)
+    sent = _purchases(game)
+    assert [(o["id"], o["currency"], played) for o, played in sent] == [("unit:modern_at", "gold", 0)] * 2, \
+        "exactly one re-send, before the next autoplay starts"
+    assert game.state["units"]["by_type"]["UNIT_MODERN_AT"] == 1 and round(game.state["gold"], 1) == 247.6
+    rows = [(e["key"], e["result"], e.get("detail", "")) for e in _events(setup) if e["kind"] == "order_outcome"]
+    assert rows[0][:2] == ("purchase unit gold", "lost") and "nothing spent (proved)" in rows[0][2]
+    assert rows[1][:2] == ("purchase unit gold", "completed")
+    ev = next(e for e in g.log.recent if e["kind"] == "order_resend")
+    assert ev["orders"][0]["outcome"] == "stuck" and ev["turn"] == 570
+    s, _ = setup
+    assert "sent again after a lost reply (nothing spent, proved)" in s.journal.read_text()
+
+
+@pytest.mark.parametrize("kw, why", [
+    ({"transport": True}, "the reply was lost but the gold dropped: it ran"),
+    ({"lost_orders": 1, "readback_fails": True}, "no read-back: it may have run"),
+])
+def test_no_re_send_without_proof(setup, kw, why):
+    game = _lost_game(**kw)
+    g = governor(setup, game, orders_model([AT_ORDER], []))
+    g.run(max_decisions=1)
+    assert len(_purchases(game)) == 1, why
+    assert g._resend == []
+
+
+def test_a_second_lost_reply_is_an_urgent_decision(setup):
+    game = _lost_game(lost_orders=2)
+    g = governor(setup, game, orders_model([AT_ORDER], []))
+    g.run(max_decisions=2)
+    assert len(_purchases(game)) == 2, "one re-send only"
+    assert traces(setup)[1]["trigger"] == "urgent: order lost twice: purchase unit:modern_at in Longxi"
+    assert not any(a[0] == "autoplay" for a in game.actions), "decided before any autoplay"
+
+
+def test_a_re_send_waits_for_the_engine_and_goes_through_the_checks_again(setup):
+    from pilot.civ6 import lost_proof
+    game = _lost_game(lost_orders=1)
+    g = governor(setup, game, orders_model([AT_ORDER], []))
+    before = _longxi([MODERN_AT])
+    c = check_orders([Civ6Order(**AT_ORDER)], before, SPEC, INDEX)[0]
+    assert lost_proof(c, before, before, INDEX) == "nothing spent (proved)"
+    assert lost_proof(c, before, {**before, "gold": before["gold"] - 1160}, INDEX) is None, "the balance moved"
+    more = {**before, "units": {**before["units"], "by_type": {**before["units"]["by_type"], "UNIT_MODERN_AT": 1}}}
+    assert lost_proof(c, before, more, INDEX) is None, "a new unit of its type"
+    assert lost_proof(c, before, {**before, "turn": 571}, INDEX) is None, "another turn"
+    assert lost_proof(c, before, None, INDEX) is None
+    g._resend = [{"order": {**AT_ORDER, "currency": "gold"}, "turn": 570}]
+    game.state["cities"][0]["garrison"] = "UNIT_INFANTRY"          # a unit reached the tile meanwhile
+    _after, urgent = g._resend_lost(_longxi([MODERN_AT]))
+    assert urgent == [] and _purchases(game) == [] and g._resend == []
+    out = next(e for e in g.log.recent if e["kind"] == "order_resend")["orders"][0]["outcome"]
+    assert "already has unit:infantry on its tile" in out
+
+
+# ---- postmortem-fixes design, ruling 20: a failed decision retries, then acts by rule ------------------
+
+def _t525() -> dict:
+    """T525 (treasury-4): at peace under military weakness, 2,278 faith, a Machine Gun at 1,080 faith
+    allowed in Guangzhou (no unit on its tile); the decision failed on 503s and nothing was bought."""
+    gz = {**_calm_city("Guangzhou", [MG_BOTH]), "capital": False}
+    return {**FIXTURE, "turn": 525, "gold": 1630, "faith": 2278, "military": 471, "majors": WEAK_MAJORS, "wars": [],
+            "yields": {**FIXTURE["yields"], "gold": 272, "faith": 226}, "cities": [gz], "resources": {"RESOURCE_OIL": 0}}
+
+
+def _overloaded(calls: list):
+    from pydantic_ai.exceptions import ModelHTTPError
+
+    def respond(messages, info):
+        if is_review(info):
+            return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name,
+                                                     {"change": False, "assessment": "n/a", "rules": []})])
+        calls.append("decide")
+        raise ModelHTTPError(503, "gemini-flash", "high demand")
+    return FunctionModel(respond)
+
+
+def _strategist_model(calls: list, answer: dict | None):
+    """The strategy role's model: reviews answer 'no change'; a decision is answered with `answer` (the
+    retry of ruling 20), or fails with a 503 when None."""
+    from pydantic_ai.exceptions import ModelHTTPError
+
+    def strategist(messages, info):
+        if is_review(info):
+            calls.append("review")
+            return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name,
+                                                     {"change": False, "assessment": "n/a", "rules": []})])
+        calls.append("retry: " + str(getattr(messages[-1].parts[-1], "content", ""))[-40:])
+        if answer is None:
+            raise ModelHTTPError(503, "gemini-pro", "high demand")
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, answer)])
+    return FunctionModel(strategist)
+
+
+def _resilience_governor(setup, game, decide_calls, strategist=None) -> Civ6Governor:
+    s, log = setup
+    s.retry_delays, s.autoplay_chunk = (0, 0), 3
+    g = Civ6Governor(s, game, log, model=_overloaded(decide_calls),
+                     role_models={"strategy": strategist} if strategist else None)
+    g.status_poll_s, g.start_grace_s, g.turn_deadline_s, g.end_watch_s = 0, 0.05, 0.5, 0
+    return g
+
+
+def test_t525_a_failed_decision_retries_on_the_strategy_model_then_buys_by_rule_before_autoplay(setup):
+    decide, strat = [], []
+    game = FakeCiv6(_t525(), index=INDEX, prices={("Guangzhou", "unit:machine_gun", "faith"): 1080})
+    g = _resilience_governor(setup, game, decide, _strategist_model(strat, None))
+    g.run(max_decisions=1)
+    assert decide == ["decide"] * 3, "the decision models: one call and two overload retries"
+    retries = [c for c in strat if c.startswith("retry")]
+    assert len(retries) == 1 and retries[0].endswith("Answer now, with at most 3 tool calls."), strat
+    purchases = [(a[1], i) for i, a in enumerate(game.actions) if a[0] == "order" and a[1]["kind"] == "purchase"]
+    assert [(o["city"], o["id"], o["currency"]) for o, _ in purchases] == [("Guangzhou", "unit:machine_gun", "faith")]
+    first_autoplay = next((i for i, a in enumerate(game.actions) if a[0] == "autoplay"), len(game.actions))
+    assert purchases[0][1] < first_autoplay, "bought before any autoplay"
+    first = traces(setup)[0]
+    assert first["outcome"] == "error" and first["orders"][0]["by"] == "governor"
+    assert "no answer from the model: the governor acted by rule" in g.log.state.last_decision
+    s, _ = setup
+    assert "the governor acted by rule" in s.journal.read_text()
+
+
+def test_a_retry_that_answers_is_the_decision(setup):
+    decide, strat = [], []
+    answer = {"orders": [{"kind": "purchase", "city": "Guangzhou", "id": "unit:machine_gun", "currency": "faith"}],
+              "reason": "the strategy model answered"}
+    game = FakeCiv6(_t525(), index=INDEX, prices={("Guangzhou", "unit:machine_gun", "faith"): 1080})
+    g = _resilience_governor(setup, game, decide, _strategist_model(strat, answer))
+    g.run(max_decisions=1)
+    first = traces(setup)[0]
+    assert first["reason"] == "the strategy model answered" and first["orders"][0]["outcome"] == "stuck"
+    assert first["retried_on"] and "503" in first["first_error"]
+    assert not any(o.get("by") == "governor" for o in first["orders"])
+
+
+def test_without_strategy_models_the_failed_models_are_not_tried_again(setup):
+    decide: list = []
+    game = FakeCiv6(_t525(), index=INDEX, prices={("Guangzhou", "unit:machine_gun", "faith"): 1080})
+    g = _resilience_governor(setup, game, decide)
+    g.run(max_decisions=1)
+    assert decide == ["decide"] * 3, "no retry on the models that just failed"
+    assert [a[1]["id"] for a in game.actions if a[0] == "order" and a[1]["kind"] == "purchase"] == ["unit:machine_gun"]
+    calm = FakeCiv6({**_t525(), "majors": [], "military": 5000}, index=INDEX)
+    s, _ = setup
+    g2 = _resilience_governor((s, EventLog(s.runs_dir, "civ2", s.model)), calm, [])
+    g2.run(max_decisions=1)
+    assert not any(a[0] == "order" and a[1]["kind"] == "purchase" for a in calm.actions), "no weakness: no rule buy"
+
+
+# ---- governor fills stay production orders (post-mortem fixes review) ----------------------------------
+
+AT_WAR = [{"id": 3, "civ": "CIVILIZATION_AUSTRALIA", "major": True}]
+
+
+def _besieged(city: dict, can_build: list[str]) -> dict:
+    """The city under siege (in danger), with no unit on its tile and an empty queue."""
+    return {**city, "under_siege": True, "producing": None, "turns_left": None, "can_build": can_build}
+
+
+def _sent(game: FakeCiv6, kind: str) -> list[dict]:
+    return [a[1] for a in game.actions if a[0] == "order" and a[1]["kind"] == kind]
+
+
+def test_a_governor_fill_in_a_city_in_danger_is_queued_never_bought(setup):
+    """Ruling 3's fill of an empty queue is a production order; levers ruling 20's conversion (a defender
+    production order for an ungarrisoned city in danger is bought when a price fits) is for the model's
+    orders. Answered "keep" at war, the governor sent purchase unit:modern_at in Rockhampton (1,160 faith)."""
+    rock = _besieged(_t496()["cities"][1], ["UNIT_MODERN_AT", "UNIT_INFANTRY"])
+    game = FakeCiv6(_t496(wars=AT_WAR, cities=[rock]), index=INDEX,
+                    prices={("Rockhampton", "unit:modern_at", "faith"): 1160})
+    g = governor(setup, game, orders_model([]))
+    g.run(max_decisions=1)
+    assert _sent(game, "purchase") == [], "the model kept everything: nothing is bought"
+    assert _sent(game, "production") == [{"kind": "production", "city": "Rockhampton", "id": "unit:modern_at"}]
+    fill = next(o for o in traces(setup)[0]["orders"] if o["kind"] == "production")
+    assert fill["by"] == "governor" and fill["outcome"] == "stuck" and "bought instead" not in fill["order"]
+
+
+def test_the_fallback_buys_one_defender_however_many_cities_are_in_danger(setup):
+    """Ruling 20 allows one rule-based buy "for the city most in need"; the fills of the other cities in
+    danger were bought too (3 purchases, 3,480 faith)."""
+    cities = [_besieged({**_calm_city(n, [AT_FAITH]), "capital": False}, ["UNIT_MODERN_AT"])
+              for n in ("Rockhampton", "Guangzhou", "Taiyuan")]
+    game = FakeCiv6({**_t525(), "faith": 5000, "cities": cities}, index=INDEX,
+                    prices={(n, "unit:modern_at", "faith"): 1160 for n in ("Rockhampton", "Guangzhou", "Taiyuan")})
+    g = _resilience_governor(setup, game, [])
+    g.run(max_decisions=1)
+    assert [(o["city"], o["id"]) for o in _sent(game, "purchase")] == [("Guangzhou", "unit:modern_at")], \
+        "one rule buy (the first city in danger by name), whatever the fills"
+    assert sorted(o["city"] for o in _sent(game, "production")) == ["Guangzhou", "Rockhampton", "Taiyuan"]
+
+
+def test_the_fallback_buys_nothing_when_upkeep_blocks_the_rule_buy_and_says_so(setup):
+    """T525 with gold per turn +5: the Machine Gun's upkeep (6) refuses the rule buy, and the fill of
+    Guangzhou's empty queue was then bought anyway ("bought instead of queued (in danger): 1080 faith")."""
+    gz = _besieged(_t525()["cities"][0], ["UNIT_MACHINE_GUN"])
+    game = FakeCiv6({**_t525(), "yields": {**_t525()["yields"], "gold": 5}, "cities": [gz]}, index=INDEX,
+                    prices={("Guangzhou", "unit:machine_gun", "faith"): 1080})
+    g = _resilience_governor(setup, game, [])
+    g.run(max_decisions=1)
+    assert _sent(game, "purchase") == []
+    assert _sent(game, "production") == [{"kind": "production", "city": "Guangzhou", "id": "unit:machine_gun"}]
+    note = next(e for e in g.log.recent if e["kind"] == "rule_buy")["note"]
+    assert "upkeep" in note and "unit:machine_gun" in note and "+5" in note, note
+
+
+# ---- postmortem-fixes design, ruling 24: who declared each war -------------------------------------------
+
+DIPLO_LOG = [   # DiplomacySummary.csv of the Kublai campaign, as the game writes it (the Mayhem column last)
+    "Game Turn, Initiator, Recipient, Action, Details, Mayhem, Visibility",
+    "121, 0, Team 5, Individual Declaring War on Team START, Surprise,  368.0",
+    "121, 0, Team 5, Individual Declaring War on Team END, Surprise,  372.0",
+    "539, 5, Team 0, Individual Declaring War on Team START, Surprise, 2950.5",
+    "539, 3, Team 5, Individual Declaring War on Team START, Defensive Pact, 2954.5",
+    "539, 14, Team 5, Individual Declaring War on Team START, Suzerain War, 2956.5",
+    "539, 3, Team 5, Individual Declaring War on Team END, Defensive Pact, 2958.5",
+    "539, 5, Team 0, Individual Declaring War on Team END, Surprise, 2958.5",
+    "539, 5, Team 0, City Capture, Hunza, 2960.0"]
+AUSTRALIA = {"id": 5, "civ": "CIVILIZATION_AUSTRALIA", "major": True}
+MAJORS_T539 = [{"id": 5, "civ": "CIVILIZATION_AUSTRALIA", "military": 1106}, {"id": 3, "civ": "CIVILIZATION_MALI",
+                                                                                "military": 2428, "allied": True}]
+
+
+def test_the_declarer_is_read_from_the_diplomacy_log():
+    """Diplomacy-5: China's own autoplay AI declared the T121 war ("121, 0, Team 5, ... Surprise") and the
+    model recorded it as Australia's; a learned rule followed from the wrong premise."""
+    from pilot.civ6 import war_declarations, war_text
+    rows = war_declarations(DIPLO_LOG)
+    assert [(r["turn"], r["player"], r["team"], r["kind"]) for r in rows] == \
+        [(121, 0, 5, "Surprise"), (121, 0, 5, "Surprise"), (539, 5, 0, "Surprise"), (539, 3, 5, "Defensive Pact"),
+         (539, 14, 5, "Suzerain War"), (539, 3, 5, "Defensive Pact"), (539, 5, 0, "Surprise")], \
+        "the casus belli is the Details column, never the Mayhem number after it"
+    ours = war_text(AUSTRALIA, 0, [r for r in rows if 120 <= r["turn"] <= 121], MAJORS_T539)
+    assert ours == "new war: our AI declared war on CIVILIZATION_AUSTRALIA (a surprise war)"
+    theirs = war_text(AUSTRALIA, 0, [r for r in rows if 538 <= r["turn"] <= 540], MAJORS_T539)
+    assert theirs == ("new war: CIVILIZATION_AUSTRALIA declared a surprise war on us (CIVILIZATION_MALI joined against "
+                      "it through its defensive pact)")
+    pact = war_text({"id": 3, "civ": "CIVILIZATION_MALI"}, 5,
+                    [{"turn": 539, "player": 3, "team": 5, "kind": "Defensive Pact"}], MAJORS_T539)
+    assert pact == "new war: CIVILIZATION_MALI joined through its defensive pact"
+    assert war_text(AUSTRALIA, 0, [], MAJORS_T539) == "new war: at war with CIVILIZATION_AUSTRALIA (who declared is not known)"
+
+
+def test_a_new_war_names_its_declarer_after_one_log_read(setup):
+    def war(state):
+        state["wars"] = [AUSTRALIA]
+    base = {**FIXTURE, "turn": 538, "majors": MAJORS_T539}
+    game = FakeCiv6(base, index=INDEX, events={539: war}, logs={"DiplomacySummary.csv": DIPLO_LOG})
+    g = governor(setup, game, orders_model([]))
+    g.run(max_decisions=2)
+    assert traces(setup)[1]["trigger"] == ("urgent: new war: CIVILIZATION_AUSTRALIA declared a surprise war on us "
+                                           "(CIVILIZATION_MALI joined against it through its defensive pact)")
+    assert [a[1] for a in game.actions if a[0] == "log_tail"] == ["DiplomacySummary.csv"], "one read, at the new war"
+
+
+def test_a_failed_log_read_says_the_declarer_is_not_known(setup):
+    class NoLog(FakeCiv6):
+        def log_tail(self, file, offset=None):
+            raise TimeoutError("log-tail: no reply")
+
+    def war(state):
+        state["wars"] = [AUSTRALIA]
+    game = NoLog({**FIXTURE, "turn": 538, "majors": MAJORS_T539}, index=INDEX, events={539: war})
+    g = governor(setup, game, orders_model([]))
+    g.run(max_decisions=2)
+    assert traces(setup)[1]["trigger"] == "urgent: new war: at war with CIVILIZATION_AUSTRALIA (who declared is not known)"
+
+
+# ---- postmortem-fixes design, ruling 27: turns advanced against those requested ------------------------
+
+class Overrun(FakeCiv6):
+    """Autoplay that plays `extra` more turns than asked (T583 -> T612 on a 3-turn call)."""
+    extra = 26
+
+    def autoplay(self, turns: int) -> dict:
+        reply = super().autoplay(turns)
+        self.remaining += self.extra
+        return reply
+
+
+def test_an_autoplay_that_plays_more_turns_than_asked_is_logged_and_checked_for_the_end_first(setup, tmp_path):
+    """Reliability-3: 18 of 25 autoplay calls after T579 passed more turns than requested, while the log
+    showed the numbers requested. Here our civilization dies during the overrun and the game then reads
+    another player: the end check runs before the player check."""
+    _tel, log = _telemetry_log(setup, tmp_path, "civ5")
+    s, _ = setup
+    s.autoplay_chunk, s.decide_every_turns = 3, 3
+    t0 = FIXTURE["turn"]
+    game = Overrun(FIXTURE, index=INDEX, events={t0 + 29: lambda st: st.update(alive=False, player=3)})
+    g = Civ6Governor(s, game, log, model=_counting_model([]))
+    g.status_poll_s, g.start_grace_s, g.turn_deadline_s, g.end_watch_s = 0, 0.05, 0.5, 0
+    g.run(max_decisions=3)
+    turn = next(e for e in log.recent if e["kind"] == "turn")
+    assert (turn["turns"], turn["requested"]) == (29, 3)
+    over = next(e for e in log.recent if e["kind"] == "turn_overrun")
+    assert (over["requested"], over["actual"], over["turn"]) == (3, 29, t0 + 29)
+    assert any(e["kind"] == "campaign_end" for e in log.recent), "the end check ran first"
+    assert not any(e["kind"] == "needs_attention" for e in log.recent)
+
+
+def test_a_normal_stretch_logs_the_turns_that_passed(setup):
+    s, _ = setup
+    s.autoplay_chunk = 3
+    game = FakeCiv6(FIXTURE, index=INDEX)
+    g = governor(setup, game, orders_model([]))
+    g.run(max_decisions=2)
+    turn = next(e for e in g.log.recent if e["kind"] == "turn")
+    assert (turn["turns"], turn["requested"]) == (3, 3)
+    assert not any(e["kind"] == "turn_overrun" for e in g.log.recent)
+
+
+# ---- postmortem-fixes design, ruling 6: price changes are shown ------------------------------------------
+
+WC_LOG = ["Game Turn, Event, Resolution, Target, A, B",
+          "512, RESOLUTION DECIDED, WC_RES_LUXURY, , 1, 1",
+          "542, RESOLUTION DECIDED, WC_RES_MERCENARY_COMPANIES, , 2, 2"]
+
+
+def _priced(turn: int, gold_at: int, era: str = "ERA_FUTURE") -> dict:
+    city = _calm_city("Taiyuan", [{**MODERN_AT, "gold": gold_at, "faith": 1160}])
+    return {**FIXTURE, "turn": turn, "era": era, "cities": [city], "majors": [], "wars": []}
+
+
+def test_a_defender_price_that_halves_within_an_era_is_named_with_its_cause():
+    """Treasury-8: Mercenary Companies halved gold unit prices T544-T571; 1,626-1,676 gold was stranded when
+    it ended at T572, and nothing told the model the discount was there or could end."""
+    from pilot.civ6 import defender_prices, price_change_text, world_congress_decided
+    before, now = defender_prices(_priced(543, 2320)), defender_prices(_priced(546, 1160))
+    decided = world_congress_decided(WC_LOG, 516, 546)
+    assert decided == [{"turn": 542, "resolution": "WC_RES_MERCENARY_COMPANIES"}]
+    text = price_change_text(543, before, now, INDEX, decided)
+    assert text == ("Price change: gold unit prices halved since T543 (unit:modern_at 2,320 → 1,160); World Congress: "
+                    "WC_RES_MERCENARY_COMPANIES (T542); this may end at the next World Congress session.")
+    assert price_change_text(543, before, defender_prices(_priced(546, 2100)), INDEX, []) == "", "a 10% change"
+    rose = price_change_text(543, before, defender_prices(_priced(546, 3000)), INDEX, None)
+    assert rose == "Price change: gold unit prices rose 29% since T543 (unit:modern_at 2,320 → 3,000)."
+
+
+def test_a_price_change_reaches_the_next_decision_after_one_congress_log_read(setup):
+    seen: list[str] = []
+
+    def discount(state):
+        state["cities"][0]["defence_prices"][0]["gold"] = 1160
+    game = FakeCiv6(_priced(543, 2320), index=INDEX, events={544: discount}, logs={"World_Congress.csv": WC_LOG})
+    g = governor(setup, game, orders_model([], seen=seen))
+    g.run(max_decisions=2)
+    assert "Price change" not in seen[0]
+    assert ("Price change: gold unit prices halved since T543 (unit:modern_at 2,320 → 1,160); World Congress: "
+            "WC_RES_MERCENARY_COMPANIES (T542)") in seen[1]
+    assert [a[1] for a in game.actions if a[0] == "log_tail"] == ["World_Congress.csv"], "one read, only on a change"
+    other_era = FakeCiv6(_priced(543, 2320), index=INDEX, logs={"World_Congress.csv": WC_LOG},
+                         events={544: lambda st: (discount(st), st.update(era="ERA_INFORMATION"))})
+    s, _ = setup
+    seen2: list[str] = []
+    governor((s, EventLog(s.runs_dir, "civ2", s.model)), other_era, orders_model([], seen=seen2)).run(max_decisions=2)
+    assert "Price change" not in seen2[1], "compared within one era only"
+
+
+# ---- postmortem-fixes design, ruling 29: known-false learned rules are refused ---------------------------
+
+LIVE_FALSE_RULES = [       # corpora/civ6/learned/strategy.md of the Kublai campaign (T546-T565), as the model wrote them
+    ("When a city is lost, check if the remaining cities are IN DANGER; if they are only THREATENED, the 50% treasury "
+     "cap applies to gold purchases, so save gold until the balance is double the unit cost rather than interrupting "
+     "current defensive production."),
+    "A city IN DANGER shows its defender purchase as 'not allowed' -> buy defenders in the nearest cities that allow it",
+    ("A city is IN DANGER but purchases there are 'not allowed now' -> spend gold and faith on defenders in the "
+     "nearest safe cities"),
+    "A city IN DANGER where purchases are not allowed -> buy defenders with gold in the neighbouring safe cities",
+    "Defenders are not allowed in endangered cities -> buy them next door",
+    "Defender purchases read 'not allowed' in every city IN DANGER -> buy them in the safe cities",
+    "We cannot buy land units with faith, so faith goes to buildings and Rock Bands",
+]
+
+
+def test_known_false_learned_rules_are_refused_with_their_reason(tmp_path):
+    """S6: four learned rules codified the defender-list misreading and one codified the cap as a saving
+    rule, which the model then followed (T556)."""
+    from pilot.learning import LearnedStore, LearningRejected
+    store = LearnedStore(tmp_path / "civ6", "m", "r")
+    store.refuse = SPEC.learned_refuse
+    for rule in LIVE_FALSE_RULES:
+        with pytest.raises(LearningRejected, match="^refused:"):
+            store.add_rule(rule, "strategy review")
+    with pytest.raises(LearningRejected, match="spend down to the reserve"):
+        store.add_rule("save gold until the balance is double the unit cost", "T555")
+    assert store.add_rule("A city in danger with a Modern AT allowed at 1,160 faith -> buy it at once", "T541").startswith(
+        "rule recorded")
+    assert store.add_rule("A defender that is not allowed for lack of Oil -> buy a Machine Gun, which needs none",
+                          "T566").startswith("rule recorded"), "the refusal's reason is a true rule"
+
+
+def test_a_refused_phrase_in_the_why_is_refused_too(tmp_path):
+    """The why is written to learned/strategy.md beside the rule, so a false premise there reaches the
+    file the model reads (and the phrase test below then fails every commit on main)."""
+    import re
+
+    from pilot.learning import LearnedStore, LearningRejected
+    store = LearnedStore(tmp_path / "civ6", "m", "r")
+    store.refuse = SPEC.learned_refuse
+    for why in ("at T563 the briefing said Infantry was 'not allowed' in danger cities",
+                "save faith until the balance is double the unit cost"):
+        with pytest.raises(LearningRejected, match="^refused:"):
+            store.add_rule("When a city is in danger, buy the cheapest allowed defender at once", why)
+    learned = tmp_path / "civ6" / "learned" / "strategy.md"
+    text = learned.read_text(encoding="utf-8") if learned.exists() else ""
+    assert not [p for p, _ in SPEC.learned_refuse if re.search(p, text, re.IGNORECASE)]
+
+
+def test_the_governor_refuses_them_and_no_learned_file_holds_one(setup):
+    import re
+    g = governor(setup, FakeCiv6(FIXTURE, index=INDEX), orders_model([]))
+    assert g.store.refuse == SPEC.learned_refuse and len(SPEC.learned_refuse) == 5
+    for game in ("civ6", "stellaris", "galciv4"):
+        spec = load_pillars(REPO / "corpora" / game) if (REPO / "corpora" / game / "pillars.toml").exists() else None
+        for f in (REPO / "corpora" / game / "learned").glob("*.md") if spec else ():
+            text = f.read_text(encoding="utf-8")
+            hits = [p for p, _ in spec.learned_refuse if re.search(p, text, re.IGNORECASE)]
+            assert not hits, f"{f.relative_to(REPO)} holds a refused rule: {hits}"
+
+
+def test_a_bad_refusal_list_names_its_key(tmp_path):
+    from pilot.pillars import PillarsError
+    corpus = tmp_path / "civ6"
+    shutil.copytree(REPO / "corpora/civ6", corpus, ignore=shutil.ignore_patterns("learned", "lua"))
+    text = (corpus / "pillars.toml").read_text()
+    (corpus / "pillars.toml").write_text(text.replace('pattern = "double the unit cost"', 'pattern = "double (the"'))
+    with pytest.raises(PillarsError, match=r"learned.refuse\[0\].pattern"):
+        load_pillars(corpus)
+
+
+def test_the_fallback_buys_at_most_once_per_hand_back_turn(setup):
+    """Re-review of fix 7: the failed-decision fallback had no once-per-turn gate, so a lost purchase
+    could be bought again by every later failed decision at the same turn."""
+    cities = [_besieged({**_calm_city("Rockhampton", [AT_FAITH]), "capital": False}, ["UNIT_MODERN_AT"])]
+    game = FakeCiv6({**_t525(), "faith": 5000, "cities": cities}, index=INDEX, transport=True,
+                    prices={("Rockhampton", "unit:modern_at", "faith"): 1160})
+    g = _resilience_governor(setup, game, [])
+    g.run(max_decisions=1)
+    assert len(_sent(game, "purchase")) == 1, "the purchase went out; its reply was lost"
+    g._fill_without_answer(game.snapshot(), "models down again")
+    assert len(_sent(game, "purchase")) == 1, "no second rule buy at the same turn"
+
+
+def test_a_pause_or_a_stop_marks_the_snapshot_stale(setup):
+    """Re-review of fix 8: a pause seen by the base run loop left the pre-pause snapshot in use, so the
+    rule buy could price from a balance spent by hand meanwhile and break the gold reserve."""
+    game = FakeCiv6(FIXTURE, index=INDEX)
+    g = governor(setup, game, orders_model([]))
+    g._stale = False
+    g.pause()
+    g.resume()
+    assert g._stale is True
+    g._stale = False
+    g._needs_attention("agent timed out")
+    assert g._stale is True

@@ -22,7 +22,19 @@ first deploy of the sign-in change, install `segno` into the `.venv` the units r
 (`.venv/bin/pip install segno`; it is in `pyproject.toml`): without it Add a device shows no QR code
 (the pages then never mention one), and `view` and `install-services.sh` say so. A drop-in
 (`systemctl --user edit game-pilot.service`) sets `GAME_AGENT_URL` and `GAME_RESOLUTION` for the
-PC in use.
+PC in use. One pilot unit runs whichever game `runs/pilot-settings.json` names, so a deploy goes through
+`scripts/deploy-pilot.sh <from> <to>` (`--dry-run` to preview; postmortem-fixes design, ruling 28):
+`scripts/pilot-affected.py` classifies each changed path (civ6: `src/pilot/civ6*.py` and
+`corpora/civ6/**`; stellaris and galciv4 alike, galciv4 with `src/pilot/controller.py`; view:
+`src/pilot/static/**`; rust: `crates/**`, `Cargo.*`; none: docs, games, tests, other `.md` files,
+`corpora/*/learned/**`, `scripts/ci*`; shared: every other `src/pilot/*.py` and `pyproject.toml`, and any
+path not listed). The running pilot (its game read from its own `/status`, else the settings file)
+restarts only when its game's class or shared changed; the viewer restarts for view, shared and any
+`src/pilot/*.py` of a game's class (it imports game modules too, such as `stellaris_record` and `civ6`); a Rust change pauses the pilot through its dashboard, builds the
+controller and resumes a Civ VI pilot, which runs the binary afresh for each call (a pilot paused by the
+human or waiting for one is left as it is); a Stellaris or GalCiv IV pilot keeps one `game-controller
+mcp` child for its whole run, so a Rust change restarts it after the build. Otherwise
+it prints "not restarted: the running civ6 pilot is unaffected; the change applies at its next start".
 
 | Variable | Meaning |
 |---|---|
@@ -89,7 +101,13 @@ without the mod keeps the last export, which the briefing calls stale (`governor
 The loop: pause → briefing from the newest autosave → the model returns a directive or `keep` →
 apply → resume → poll autosaves until the decision interval has passed or something urgent
 happens (a war starts or ends, a resource turns negative, we newly fall below half the median in a
-measure, a milestone is missed) → pause → decide again. The game is paused whenever a model
+measure, a milestone is missed, or a neighbour builds up: one that is not an alliance or federation
+partner, at 2 x our military power or more, grew 50% within `[time] buildup_window` (24 months), once
+per neighbour per window, a decision only, never a review or a war-crisis entry; one seen by the
+start of a run or a human request goes into that decision's reason; postmortem-fixes design, ruling 11)
+→ pause → decide again. Each scheduled interval logs the months that passed
+(`interval {months, requested, date}`); more than one month over `decide_every_months` emits
+`pace_overrun`, for information only (ruling 27). The game is paused whenever a model
 thinks, so any speed is safe. `prepare_war` needs a human "yes" on the dashboard.
 
 The briefing (about 2 KB) covers the empire, resources and deficits, power, research options,
@@ -106,6 +124,17 @@ The prompt adds a 12-month trend line and what earlier directive changes led to.
 
 If the game stops answering pause and resume (for example a text box holds the keyboard), the
 governor stops acting and flags *needs attention* until you press Resume.
+
+**The end of a campaign** (postmortem-fixes design, rulings 22-23): a save in which we own no planet
+gets no decision and no review (also the first save of a run); a second one in a row ends the run as lost, with no model call: the
+game stays paused, a `campaign_end` event (`result` lost, the last date we held a planet, the date
+the loss was seen, the signal, the report: colonies lost, our military against the strongest enemy,
+the stocks left, decisions after the loss was seen), a journal line, the run's `lost` status in
+telemetry, `info.end` and the status `ended`. A date stall after a save with no planet ends it the
+same way, also when that save was the first of the run (the game may stop saving once the empire
+falls; unverified). A new run on such a campaign
+ends at its start. A lost capital stays the "colony lost" trigger, and a briefing that cannot find our
+country still waits for the human (another game's save reads the same way).
 
 If the autosave date stops moving while the game should be running (a popup that pauses the game,
 the launcher in front, a crash), the governor waits max(300 s, 10 x the median real time of a month
@@ -134,7 +163,29 @@ The loop: snapshot → decide → apply orders → read back → then N times: a
 the cheap `autoplay-status` every second until the game hands the turn back, take a snapshot while
 the game is idle → decide again after N turns or as soon as something urgent happens (a new war, a
 city lost, threatened or about to fall, a new era, a great person or wonder race lost, gold below the purchase
-reserve); stopping early is simply not starting the next turn. The tuner does not answer while the
+reserve; postmortem-fixes design, rulings 10-14: falling behind the met majors in a measure (on entry;
+`[peers] behind`: military under 0.6 x their median or last with 3+ met, techs and civics under 0.85,
+score and cities under 0.8), a neighbour's buildup (a met non-ally at 2 x our military that grew 50% or
+more within `[time] buildup_window`, 20 turns; once per neighbour per window), gold per turn turning
+negative, a city's loyalty falling below 50 or to 5 times its drop per turn or less (once per city until
+it rises; rows count `low_loyalty`), and, at every hand-back while at war with a major, a city in danger
+with no unit on its tile whose `defence_prices` list a defender the game allows within the cap and whose
+defender cooldown has run out, "city still in danger: ..."; falling behind in military, a buildup and
+negative income also start a review); stopping early is simply not starting the next turn. A new war
+names who declared it (postmortem-fixes design, ruling 24): one `civ6 log-tail DiplomacySummary.csv`
+read (under `civ6_appdata`, Logs/) when a snapshot shows a new war, its "Declaring War" rows between
+the two snapshots' turns ("539, 5, Team 0, Individual Declaring War on Team START, Surprise"; a team is
+taken as its player's id): "new war: CIVILIZATION_AUSTRALIA declared a surprise war on us
+(CIVILIZATION_MALI joined against it through its defensive pact)", "new war: our AI declared war on
+CIVILIZATION_AUSTRALIA (a surprise war)", "new war: CIVILIZATION_MALI joined through its defensive
+pact", or, when the read fails or finds no row, "new war: at war with CIVILIZATION_X (who declared is
+not known)", never a guess. China's own autoplay AI declared the T121 war, which the model recorded as
+Australia's. The log's live layout is unverified. Each `turn` event logs the turns that passed
+(`turns`) and those requested (`requested`); more turns than requested emits `turn_overrun
+{requested, actual, turn}` and the hand-back's snapshot checks for the end of the campaign before
+anything else (ruling 27: 18 of 25 autoplay calls after T579 overran, T583 to T612 on a 3-turn call,
+while the log showed the numbers requested). Traces keep a decision's whole prompt, up to 100,000
+characters (other texts keep the 6,000 cut), so the per-city danger lines can be audited. The tuner does not answer while the
 AI plays its turn, so unanswered status polls are expected; only the turn's deadline counts (10
 minutes, for long late-game turns). A turn that does not start (20 s) or end in time, or a game that
 gives no snapshot three times between turns, stops the run until the human presses Resume (an
@@ -151,10 +202,22 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   (position, population, production and turns left, districts, buildings, the land unit on its tile,
   garrison and walls HP, threats, what it can build, the AI's own top 3 builds with their scores
   (`recommend`); for a threatened city also its enemies and
-  defenders, capture threats, incoming damage, whether it can strike and what a defender costs in
-  gold and faith), units by type, the majors met with score and military strength, wars, great
+  defenders, capture threats, incoming damage and whether it can strike), units by type, the majors met
+  with score and military strength (and `allied` while an alliance with us is in force), wars, great
   person points, pantheon and religion, every end-turn blocker, and the diplomacy the library answered
-  for us (below). The briefing names every item by
+  for us (below). Postmortem-fixes design, rulings 1, 7 and 21: `alive` (our civilization,
+  `IsAlive`; null when unreadable), `resources` (our stock of each strategic resource, e.g.
+  `RESOURCE_OIL`; left out when the call fails) and, for **every** city, `defence_prices`: per currency
+  the two cheapest defenders the game allows now, plus the strongest ranged unit that needs no
+  strategic resource and the strongest anti-cavalry unit the city can produce, allowed or not, each
+  with its live gold and faith price and, when refused, why (`stacking`, `balance` or `game`; the
+  governor names a strategic resource we lack from the corpus `resource_cost`, "needs 1 Oil, have
+  0"). A city in danger with nothing to buy says so with each reason ("no defender can be bought now
+  (unit:infantry: needs 1 Oil, have 0; unit:modern_at: a unit is on the tile)"). While the weakness
+  test holds (a defender may be bought in any city), every other city's line says the unit on its tile
+  or, with none, its defenders to buy and why each is refused (T496: Rockhampton could buy a Modern AT
+  for 1,160 faith and the briefing did not say so). `allied`, `resources`
+  and the refusal table are unverified live (read under `pcall`). The briefing names every item by
   its corpus id (`tech:pottery`, `unit:settler`).
 - **Orders** are structured, never Lua: `research`, `civic`, `policies`, `production`, `purchase`
   (see `corpora/civ6/pilot.md`). The governor checks each against the corpus, the snapshot (options,
@@ -164,7 +227,25 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   districts need a tile and are refused (placement is not supported yet). `price` (a tool) reads a
   live purchase price.
 - **Read-back**: a fresh snapshot right after the orders shows which took; one that did not is
-  reported to the next decision and refused if it is repeated unchanged.
+  reported to the next decision and refused if it is repeated unchanged. An order whose reply was
+  lost is never sent again blindly (it may have run), with one exception (postmortem-fixes design,
+  ruling 5): a purchase whose read-back of the same turn shows the balance within 1 of its value
+  before and the item's count unchanged (`units.by_type`, or the city's buildings) is proved not to
+  have run; its row is `lost` ("nothing spent (proved)") and it is sent once more before the next
+  autoplay, once `turn-ready` reads the engine idle (else at the next hand-back), through the checks
+  again on a fresh snapshot (a new price, a unit now on the tile or the cooldown refuses it). A
+  second lost reply is an urgent decision ("order lost twice: purchase unit:modern_at in Longxi");
+  an `order_resend` event and a journal line record each re-send. At T570 Longxi's Modern AT (1,160
+  gold, allowed) was lost this way and nothing ran until the discount ended at T572. Last-stand
+  actions are never sent again.
+- **Price changes** (postmortem-fixes design, ruling 6): when a defender's gold or faith price in
+  `defence_prices` moved 25% or more since the last decision, within one era, the decision prompt
+  says so, with its World Congress cause from one `civ6 log-tail World_Congress.csv` read (only when a
+  change is seen; its `RESOLUTION DECIDED` rows of the last 30 turns): "Price change: gold unit prices
+  halved since T543 (unit:modern_at 2,320 → 1,160); World Congress: WC_RES_MERCENARY_COMPANIES (T542);
+  this may end at the next World Congress session." The session calendar is not read (unverified), nor
+  is the log's live layout; a row that does not parse names nothing. Mercenary Companies halved gold
+  unit prices T544-T571, and 1,626-1,676 gold was stranded when it ended at T572.
 - **Order record** (spec `docs/design/2026-09-27-civ6-levers-design.md`, rulings 12-16): every order
   that took is followed on each snapshot until it resolves: `completed` (a tech or civic left the
   options, a unit's count rose, a building appeared), `held` (still current when its window of
@@ -173,17 +254,36 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   order emits an `order_outcome` event and each order still followed an `order_followed` event;
   telemetry keeps both, so the record and the open orders survive restarts. The
   decision prompt and the Strategist get one line per kind (research, civic, policies, production
-  fill or replace, purchase gold or faith) with its stick rate over the last 30 turns (`[orders]` in
+  fill or replace) with its stick rate over the last 30 turns (`[orders]` in
   `pillars.toml`), flagged "does not stick here" at 50% or less (a production order for what the
   city already builds changes nothing and stays out of the record); the dashboard gets
-  `info.order_record`. `scripts/civ6-backfill-orders.py` recovers the apply-time outcomes (refused,
+  `info.order_record`. Purchases are keyed by item class and currency (`purchase unit gold`, `purchase
+  unit faith`, `purchase building gold`, `purchase building faith`; older `purchase gold|faith` rows
+  are keyed by their id's corpus kind when loaded) and shown as counts only, since a purchase read
+  back as done is completed by construction (postmortem-fixes design, ruling 9: "faith purchases held
+  8 of 8" came from cheap buildings while no faith unit purchase was sent from T385 to T541), e.g.
+  "unit purchases: 7 bought (faith 5, gold 2), 2 refused by the harness (cap 2), 2 refused by the game
+  (Oil 1, stacking 1), 2 lost", or "unit purchases: 0 sent". Refused purchase rows carry `refusal`
+  (`cap`, `reserve`, `stacking`, `cooldown`, `skip`, `defence_first`, `quota`, `other`; the game's own:
+  `resource` naming the resource, `stacking`, `game`) and `refused_by` (harness or game). `scripts/civ6-backfill-orders.py` recovers the apply-time outcomes (refused,
   lost, purchases) of traces written before the record: read-only by default, `--write` once when
   deploying (a run of its own, `runs/<time>-backfill/events.jsonl` named by the earliest backfilled
   decision so it sorts among the runs by time, and the database, so `rebuild-telemetry` keeps the rows).
 - **Buy-outs** (rulings 17-21): a city is *in danger* (not merely threatened) when it is under siege,
   its garrison is damaged, two enemies that can capture it stand next to it, or two enemies are
-  near an empty city tile; only then does a purchase there get the threatened share, and one-turn
-  autoplay chunks follow it too (with war against a major and a city about to fall). The gold reserve is `gold_reserve` plus
+  near an empty city tile; one-turn autoplay chunks follow it (with war against a major and a city
+  about to fall). A defender purchase gets the threatened share (down to the reserve) in a city in
+  danger and, while the weakness test holds (postmortem-fixes design, rulings 1-2), in every city;
+  buildings and other units (a Rock Band, a Settler) keep the treasury share everywhere. Under
+  weakness defender purchases in different cities do not count toward `max_orders` (one per city per
+  decision), and a refusal by the cap names the clause ("a defender may spend down to the reserve: at
+  war with CIVILIZATION_AUSTRALIA"). Every decision prompt and the Strategist's review carry "Purchase
+  limits now" (e.g. "a defender may cost up to 1,961 faith / 798 gold in any city (military weakness:
+  war, last; down to the reserve); anything else up to 980 faith / 414 gold"), the briefing the
+  "Military weakness" line and "Strategic stock: Oil 0, ...", and the instructions ask a decision that
+  leaves a buyable defender unbought to cite its price. A Strategist answer that prefers or quotes a
+  unit whose corpus `resource_cost` our stock cannot pay is sent back once ("unit:mechanized_infantry
+  needs 1 Oil; we have 0"; ruling 8; pinned pillars exempt); `info.weakness` lists the clauses. The gold reserve is `gold_reserve` plus
   `gold_reserve_per_deficit` per gold of deficit; faith keeps the pantheon's live price until one is
   founded. Purchases are checked after the other orders, a defender for a city in danger first; while
   such a city has no unit on its tile, other purchases are refused, unless a defender for it was
@@ -193,6 +293,42 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   land unit on a city tile, a defender bought in the same city within 5 turns, what the city
   finishes within 2 turns anyway and a known price over the cap are refused before sending. `gold`
   and `faith` balances cannot be milestone metrics (`[metrics] milestone_exclude`).
+- **The governor's own defender** (postmortem-fixes design, ruling 3; `rule_buy = true` in
+  `[actions.purchase]`): before an autoplay call of 2 or more turns, while the weakness test holds and no
+  defender was bought at this hand-back, the governor orders one purchase itself, with no model call: the
+  first ungarrisoned city (in danger, then threatened, then without walls, then the capital, then by
+  name) whose `defence_prices` list a defender the game allows, of a defender class, needing no strategic
+  resource, within the defender cap, past its 5-turn cooldown, whose upkeep leaves gold per turn at 0 or
+  more; the strongest by corpus max(combat, ranged), then the cheaper, faith tried first. It goes through
+  the order checks and the read-back like any order (`by: governor`, "bought before autoplay (military
+  weakness: ...)", a `rule_buy` event and a journal line), at most one per stretch and tried once per
+  hand-back turn whatever came of it (a purchase lost twice makes an urgent decision; the hand-back after
+  it starts autoplay rather than sending it a third time). At war with a major
+  the chunk is already one turn and the hand-back decides instead ("city still in danger"). Under
+  weakness an ungarrisoned city with an empty queue also gets its strongest resource-free defender as a
+  production order, at that step and at each decision whose answer leaves the queue empty. A fill stays
+  a production order even in a city in danger: only the model's own production order for a defender is
+  bought instead (levers ruling 20), so the governor never buys past ruling 3's one purchase, its upkeep
+  check or the model's "keep". A rule buy refused for upkeep says so ("upkeep: unit:machine_gun in
+  Guangzhou costs 6 gold a turn and gold per turn is +5").
+- **What the AI spent** (ruling 4): at each hand-back, per currency, balance before + the start
+  snapshot's yield x the turns played - balance now (our own purchases are already in the read-back the
+  stretch starts from; when that read-back failed, or after a pause or a Resume, the stretch starts from
+  a fresh snapshot instead, so our purchase never reads as the AI's and the rule buy never prices from a
+  balance before it; E10: 2,278 + 226 x 3 - 958 = 1,998 faith, the Rock Band the game logged at T526);
+  rows carry it as `ai_spent` (telemetry keeps one row per date, so the decision's own row at that
+  hand-back and the end check's second read keep it). The next decision's prompt says "Since T525 the AI spent 1,998 faith
+  (UNIT_ROCK_BAND, T526) and 1,717 gold (not named)" when a currency's spend since the last decision is at
+  least max(50, 10% of its yield over those turns); the items come from the game's
+  `Logs/AI_CityBuild.csv` (`FAITH PURCHASE` and `PURCHASE` rows of our player, read by `civ6 log-tail` at most
+  once per hand-back, only when there is a spend to name; a row whose layout does not match is "not named").
+  The log grows 10-15 KB a turn late in a game, so a read goes on from where the last one ended, page by
+  page to the end, while that is at most a page (64 KiB, about 4 turns) behind; otherwise it takes the
+  file's tail sized to the turns since the last decision (16 KiB a turn, at most a page, `--tail`), and
+  rows of turns an earlier read covered are not counted twice.
+  A stretch whose spend in a currency reaches the cheapest defender the game allows in it is an urgent
+  decision ("the AI spent 1,998 faith on UNIT_ROCK_BAND in T525-T528"); it never stops the run for a
+  human.
 - **The AI's own plan** (ruling 29): the briefing shows each city's top 3 builds from the game's AI
   (`GetBuildRecommendations`, the Production panel's call) and our player's strategies from the
   game's log `Logs/AI_Victories.csv` (e.g. "science victory (since T56, stopped T76)"; of the era
@@ -216,9 +352,14 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   whose city offers fewer than 3 other plots to compare with is not rateable and left out (its gain
   of 0 would measure a full city). No placement order exists yet.
 - **Last stand** (rulings 22-27, off unless `PILOT_LAST_STAND=1`): a city is *about to fall* when a
-  unit that can capture it (melee or cavalry) stands next to it, no walls stand, and its garrison is
-  at half its hit points or less, or one attack from each enemy in range would take the rest
-  (`about_to_fall`). The change to falling is urgent ("city falling: X"), so the model decides first
+  unit that can capture it stands next to it, no walls stand, and its garrison is at half its hit
+  points or less, or one attack from each enemy in range would take the rest; or when nothing is
+  left, garrison 0 and walls 0 with an enemy within 2 tiles (`about_to_fall`; postmortem-fixes
+  design, ruling 26). A capturer is a melee or cavalry unit, or any unit the game lets capture
+  (`CanCapture`) with a melee strength whose class is not ranged or siege: the Giant Death Robot
+  (ranged 120, melee 130) took Guangzhou at T565 unseen, and Beijing fell at T545 with no garrison,
+  no walls and no capturer next to it. `CanCapture`'s values by class are unverified live; the
+  stand itself stays off. The change to falling is urgent ("city falling: X"), so the model decides first
   and its purchases are read back. Then, at the hand-back, the governor runs scripted actions before
   the AI plays the turn, one per call: a city strike (only with walls), ranged and siege attacks on
   hostile units within 3 tiles (a sure kill first, by the weakest shooter that kills), and the
@@ -239,8 +380,18 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   (`last_stand_off`).
 - **Blockers**: with no research or no civic in progress and no valid order for it, the governor asks
   the model once more; if the answer still has none, it orders the strategy's first preferred item
-  the game offers (else the first offered) and reports it "filled by the governor". A decision whose
-  model call fails (an outage, the usage limit, every model of the pool) fills them the same way.
+  the game offers (else the first offered) and reports it "filled by the governor".
+- **A decision with no answer** (postmortem-fixes design, ruling 20): when every decisions model
+  fails (an outage, the usage limit; an `episode_error`), the same hand-back retries once, before any
+  autoplay, with the decisions agent on the Strategy role's own models (those not cooling down), the
+  same prompt plus "Answer now, with at most 3 tool calls." (a `decision_retry` event; the trace names
+  `retried_on` and `first_error`). A Strategy role without models of its own gets no retry: the models
+  that just failed are not tried again. When the retry fails too, the governor acts by rule, with no
+  model: it fills an idle research or civic, fills empty queues of ungarrisoned cities with a
+  defender under military weakness (queued, never bought), and, while the weakness test holds, buys ruling 3's defender for
+  the city most in need (in danger first; `rule_buy`), reported "no answer from the model: the
+  governor acted by rule". T512, T522 and T525 failed on 503s and the request limit; T525 was the
+  only pre-war window, with 2,278 faith and a Machine Gun at 1,080.
 - **Diplomacy auto-reply** (issues.md T240, T342): an AI leader's statement to us (a warning, a
   proposal, a deal, a declaration) opens the game's leader screen (`DiplomacyActionView`), which holds
   the engine until a human answers, so the autoplay turn never ends and the tuner goes silent.
@@ -270,8 +421,38 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   (published as `diplomacy_record` beside `order_record`, reloaded from telemetry after a restart),
   and the dashboard's activity feed shows each answer. Until the game is loaded
   again, a human at the PC sees no AI statement and cannot use the leader screen's conversations.
+- **The end of the campaign** (postmortem-fixes design, rulings 21-23): the snapshot's `alive` false
+  ends the run at once; 0 cities and 0 settlers is read again at once and ends it when the second read
+  agrees (one glitched read never does; a second read that fails runs no decision either: the next
+  stretch starts from a fresh snapshot and the next hand-back checks again). The local player id is never used (China was alive again at
+  T913 while it read -1 at T916), and the run keeps the player id of its first snapshot: a snapshot for
+  another player waits for the human. The end runs no model call and no review: autoplay is stopped,
+  two `autoplay-status` reads 60 s apart tell whether the game keeps playing all-AI turns by itself
+  (the report then says to exit to the main menu; nothing is sent), then a `campaign_end` event
+  (`result` lost, `last_city_turn`, `seen`, the signal and the report: the cities lost with their
+  turns, our military against the strongest enemy at war, the gold and faith stranded, the decisions
+  made after the loss was seen), a journal line, the run's `lost` status in telemetry, `info.end`
+  (`result`, `turn`, `seen`, `signal`, `report`) and the status `ended` while the process lives. A new
+  run on the campaign ends at its start while the signal holds. The dashboard shows it through
+  feat/dashboard-v2; until then the run reads as not running with the event in Activity.
 - **Strategy**: `corpora/civ6/pillars.toml` in share mode (science, culture, faith, economy,
   military, expansion, diplomacy) with milestones on turns (`T60`); reviews as for Stellaris.
+  Military targets are relative to the majors we have met (postmortem-fixes design, ruling 18;
+  `[strategy] relative_military`): the metrics rows and `[metrics] names` gain `military_vs_median`
+  (ours ÷ their median) and `military_vs_strongest` (ours ÷ the strongest that is not our ally), the
+  briefing says "peers are the N majors we have met" with both ratios and our rank, and a Strategist
+  answer is sent back once when, while our military is weak (ruling 1's `low` or `last`), the military
+  pillar holds no milestone on one of them at 0.5 or more, when an absolute `military` target is under
+  0.5 x the median, or when a `rank:*` milestone ranks us among fewer than 3 majors (pinned pillars and
+  human edits are exempt). A goal that names a word of `[strategy] unpursuable` (peace, ceasefire,
+  alliance, friendship, denounce; plurals too) is sent back once, "no order can pursue it: the game's AI
+  handles diplomacy during autoplay" (ruling 25: "Get peace with Australia" was the goal at T563, T565
+  and T575), and the military stance's exit condition at war is a city retaken, the enemy's strength
+  below ours, or the war ending (to watch, not a goal). **Weakness** (ruling 1, `src/pilot/threat.py`): at war with a major, our
+  military last of the met majors (2+ met), under `weak_median_share` (0.6) x their median, or a met
+  major that is not our ally at `strong_neighbour_ratio` (2.0) x ours (both in `[actions.purchase]`;
+  a major without the snapshot's `allied` field counts as not allied). Replayed on the Kublai rows it
+  holds in every row from T380 to T540 (the design's E1).
 - **Campaign** `civ6/<leader>_<map seed>`; metrics rows per turn (`date` `T<turn>`), so telemetry,
   milestones and the dashboard work as for Stellaris. The dashboard's pace control sets the turns
   between decisions; directives, overrides and speed do not apply.
@@ -290,7 +471,15 @@ Each pillar has:
 - a **weight** (all pillars sum to 100; Stellaris: 5..50, the heaviest at least twice the lightest);
 - a stance that cites figures from the briefing, and concrete goals;
 - **milestones** `{metric, op, target, by}` (every pillar has one; the heaviest has a checkpoint and
-  an end target), whose status (met, on track, at risk, missed) comes from telemetry;
+  an end target), whose status (met, on track, at risk, missed) comes from telemetry. A milestone is
+  judged on one value (postmortem-fixes design, ruling 17): the latest metrics row at or before today
+  and not before its `set`, the date the governor stamped when it published the strategy (a milestone
+  with the same metric, op, target and `by` as in the previous version keeps its earlier `set`; the
+  Strategist neither sees nor writes it); once `by` has passed, the latest such row at or before `by`
+  (a target met on its date stays met after a later dip). That value meeting the target is *met*;
+  otherwise *missed* once `by` has passed, else *on track* or *at risk* from its projection over the last 12 steps; no
+  reading since `set` is *at risk*. A value met in the past no longer counts ("military >= 170 by
+  T350" read met at T350 with 124 before). "milestone missed" fires once per milestone per run;
 - actions: preferred techs (technology) and one small monthly market order (economy; a sell only of
   an idle resource, at most 25 and 20% of its income; a buy under the buy rules below).
 
@@ -317,11 +506,23 @@ effort instead.
 **Reviews** run at the start of a campaign without a strategy, every `PILOT_RETRO_EVERY`
 decisions, on big events (war, crisis, colony lost, boxed in, military fell by half, a milestone
 missed, an off-frame decision, a planet crisis or a planet losing pops, a war going badly or a war
-crisis over; at most one per 12 in-game months) and on *Review strategy now*. An
+crisis over; at most one per `[time] review_cap` steps of the game's clock: 12 months in Stellaris, 5
+turns in Civ VI, where a new war or a lost city always reviews and a new war does in Stellaris too,
+restarting the count) and on *Review strategy now*. Every time constant the shared code uses is named
+in the game's own unit in `[time]` of its `pillars.toml` (`unit`, `review_cap`, `review_exempt`,
+`milestone_lookback`, `score_horizon`; postmortem-fixes design, rulings 15 and 19), and log and prompt
+text print the unit ("within 5 turns of the last event review"). An
 answer is validated; an invalid one gets one corrective retry with its errors and the rejected
 answer, then the strategy stays. Reviews started at the beginning of a run or by you must name the
 species traits the strategy builds on. A review may add up to 3 rules to
-`corpora/stellaris/learned/strategy.md`, read by later decisions.
+`corpora/stellaris/learned/strategy.md`, read by later decisions. A rule (from a review or the
+`remember_rule` tool) whose text or why matches a pattern of `[learned] refuse` in the game's `pillars.toml`
+(both are written to the file) is refused and the model gets the reason (postmortem-fixes design, ruling 29). Civ VI refuses the false
+rules the Kublai campaign learned: saving until the balance is double the unit cost (a defender may
+spend down to the reserve), "cannot buy land units with faith", and "not allowed" in cities in danger
+(the refusals were Oil units; a Modern AT or Machine Gun was buyable). The rules already in the live
+learned file are corrected on `main` at deploy, each with its post-mortem evidence (the file is the
+campaign's history); a test keeps every refused phrase out of the learned files.
 
 **Actions** are carried out through the game's screens after a decision, at most once per
 autosave, and checked in a later save: `stellaris_pick_tech` (only in a research field under 10%
@@ -724,8 +925,9 @@ The dashboard listens on the LAN, so every request needs a principal (design:
 
 `runs/telemetry.sqlite` (local, gitignored) holds every event, decision with its full trace, and
 monthly metric point, grouped by **campaign** (the Stellaris save folder or the GC4 journal
-directory; `PILOT_CAMPAIGN` overrides). Each decision is scored against the empire 12 in-game
-months later. The JSONL logs in `runs/<id>/` are the raw record; `python -m pilot
+directory; `PILOT_CAMPAIGN` overrides). Each decision is scored against the empire `[time]
+score_horizon` steps later (12 months in Stellaris, 12 turns in Civ VI). A run whose campaign ended
+(`campaign_end`) keeps the status `lost` in `runs` after it stops. The JSONL logs in `runs/<id>/` are the raw record; `python -m pilot
 rebuild-telemetry` recreates the database. Curated knowledge (`learned/`, strategy, journals) is
 committed.
 

@@ -218,6 +218,16 @@ while they were skipped (`scripts/ci-ui-gate.sh`). Conventional commits (`feat` 
 commit messages). One logical change per commit. Never commit `.agent_token`, `play/`,
 screenshots, or the game's raw XML (`incoming/`).
 
+**Deploying to the running services**: never restart `game-pilot.service` by hand for a merge. After
+merging and pulling on the controller, run `scripts/deploy-pilot.sh <from> <to>` (the commit deployed
+before, and the new one; `--dry-run` first shows what it will do). It restarts the pilot only when the
+running game's files or shared code changed, restarts the viewer for the dashboard's static files and
+any `src/pilot/*.py` (it imports game modules too), and for a Rust change pauses the pilot through its dashboard, builds the controller and
+resumes a Civ VI pilot (it runs the binary afresh for each call) but restarts a Stellaris or GalCiv IV one
+(it keeps one `game-controller mcp` process for its run); otherwise it prints "not restarted: the running civ6 pilot is unaffected; the change
+applies at its next start". `scripts/pilot-affected.py <from> <to>` shows the classification alone
+(a Stellaris-only merge once restarted the live Civ VI run at T462; postmortem-fixes design, ruling 28).
+
 ## 9. Working on the code
 
 - `crates/game-controller/src/`: `autopilot.rs` (turn loop, known screens, classification),
@@ -298,7 +308,21 @@ Rules:
   suggestion (the top one, or keep within a 1.25 switch margin); decisions name what they `serve`.
   A directive held 2+ years whose pillar metric grew no faster, as ours ÷ the peer median per year,
   than while not held has its pressure halved; the frame says when expand is held back by unsurveyed
-  space (none surveyed in reach, influence 950+ for 12 months).
+  space (none surveyed in reach, influence 950+ for 12 months). A milestone is judged on the latest
+  value since it was set (its `set` stamp; once due, the value on its due date), never on a past high:
+  met, missed once due, else on track or at risk (both games; postmortem-fixes design, ruling 17).
+- **Neighbour buildup** (postmortem-fixes design, ruling 11): a neighbour that is not an alliance or
+  federation partner, at 2 x our military power, that grew 50% within 24 months is an urgent decision
+  (once per neighbour per window; no review, never a war-crisis entry; one seen at the start of a run
+  or on a human request is in that decision's reason).
+- **The end**: a save with no planet of ours gets no decision; two in a row (or a date stall after one,
+  also the first save of a run) end the run as lost with a report and no model call (`campaign_end`,
+  journal, `info.end`, status `ended`; postmortem-fixes design, ruling 22).
+- **Pace**: each scheduled interval logs `interval {months, requested, date}`; more than one month over
+  `decide_every_months` emits `pace_overrun`, for information only (postmortem-fixes design, ruling 27).
+- **Time constants** (`[time]` in pillars.toml, in months here): event reviews at most one per 12 months
+  except a new war, which always reviews; milestone projections over 12 months; outcomes scored 12
+  months after a decision (postmortem-fixes design, rulings 15 and 19).
 - **Strategy detail** (`[strategy]` in pillars.toml): every pillar needs a milestone, the heaviest two
   on different dates (a checkpoint and an end target), the top 3 two goals, and each stance a figure from
   the briefing; a Strategist answer that misses one is sent back once with its errors. Pinned pillars
@@ -367,6 +391,7 @@ $C civ6 autoplay 5                    # the AI plays 5 turns, then hands the civ
 $C civ6 autoplay-status               # / autoplay-stop
 $C civ6 quiet-popups                  # remove the engine-locking popup handlers (automatic on library install)
 $C civ6 lua --state InGame "print(Game.GetCurrentGameTurn())"   # raw Lua, for investigation only
+$C civ6 log-tail AI_CityBuild.csv --offset 0   # read-only: one game log's lines (3 logs allowed)
 .venv/bin/python -m pilot run --game civ6 --decide-turns 5        # the governor loop (docs/pilot.md)
 ```
 Rules:
@@ -380,6 +405,10 @@ Rules:
   wonders and new districts need a tile, which is not supported yet.
 - The tuner does not answer while the AI plays its turn (calls time out): the governor autoplays one
   turn at a time and only reads or orders between turns; never repeat an order blindly after a timeout.
+  The one exception is the governor's own: a purchase whose lost reply the same turn's read-back proves
+  spent nothing (balance within 1, the item's count unchanged) is sent once more before the next
+  autoplay, and a second loss is an urgent decision (postmortem-fixes design, ruling 5); the rule-based
+  defender (ruling 3) is tried once per hand-back turn, so it is never sent a third time.
 - Tutorial advisor popups hold an autoplay turn forever (seen at T17, cleared by clicking OK):
   `Harness.autoplay` sets `UserConfiguration` `TutorialLevel` to -1 for the session.
 - Wonder movies and four other popups hold the game's engine event until closed
@@ -410,6 +439,69 @@ Rules:
 - Throwaway games only: the tuner turns achievements off.
 - The dashboard's *Capture the game screen* (and the frame on its needs-you card) is the agent's
   screenshot (`game-controller screenshot`): read-only, no input and no focus change.
+- The snapshot carries `alive`, the strategic stock (`resources`), `allied` per major, and every city's
+  `defence_prices` (what the game will sell now, and why not: `stacking`, `balance`, `game`; the governor
+  names a missing strategic resource from the corpus). `allied` and the stock read are unverified live.
+  The library file is now over the agent's 64 KiB code limit: the controller blanks its full-line
+  comments when it installs it (line numbers kept), so rebuild the controller with this corpus before
+  the governor runs it (pause the governor across the merge and the build).
+- The run ends when our civilization is gone (postmortem-fixes design, ruling 21): the snapshot's `alive`
+  false, or 0 cities and 0 settlers on 2 reads in a row (never the local player id -1; a second read
+  that fails runs no decision, and the next hand-back checks again). No decision or review runs after
+  it: autoplay stops, `campaign_end` with a report, a journal line, the run `lost` in telemetry, status
+  `ended`. If the game keeps playing all-AI turns, exit to the main menu by hand.
+- Military milestones are relative to the majors met (`military_vs_median`, `military_vs_strongest`;
+  `[strategy] relative_military`): while weak (under 0.6 x the median or last) the military pillar needs
+  one at 0.5 or more, an absolute target under half the median is sent back, and a rank milestone needs 3
+  majors met (postmortem-fixes design, ruling 18).
+- Buy-outs (postmortem-fixes design, rulings 1, 2, 8): a defender may spend down to the reserve in a city
+  in danger and, under military weakness (war with a major, last, under 0.6 x the median, a non-ally at
+  2 x ours), in every city, outside the order quota (one per city); everything else keeps 50%. Prompts
+  carry the purchase limits, the weakness line and the strategic stock; a strategy on a unit whose
+  resource we lack is sent back. Under weakness every city's briefing line names the unit on its tile or
+  the defenders it can buy, with why each is refused.
+- Before an autoplay stretch of 2+ turns under military weakness the governor buys one defender itself
+  (no model call; the first ungarrisoned city, resource-free, faith first, within the cap and upkeep;
+  `rule_buy` in `[actions.purchase]`) and fills empty queues of ungarrisoned cities with one (a production
+  order, never bought instead, so one purchase at most); each
+  decision's prompt says what the game's AI spent from our treasury since the last one ("Since T525 the
+  AI spent 1,998 faith (UNIT_ROCK_BAND, T526) ..."), named from `AI_CityBuild.csv` (`log-tail` at most once
+  per hand-back, only when there is a spend to name: on from the last read's offset to the end while it is
+  at most 64 KiB behind, else a `--tail` of 16 KiB per turn since the last decision), and a stretch's spend at a defender's price is urgent
+  (postmortem-fixes design, rulings 3-4). The log's layout is unverified live: an unreadable row is "not named".
+- The order record keys purchases by item class and currency (`purchase unit faith`...) and shows them
+  as counts only ("unit purchases: 0 sent; 1 refused by the harness (cap 1)"); refused purchase rows
+  carry `refusal` and `refused_by` (postmortem-fixes design, ruling 9).
+- A decision whose models all fail retries once on the Strategy role's own models ("Answer now, with at
+  most 3 tool calls."), then the governor acts by rule before any autoplay: idle research and civic,
+  empty queues of ungarrisoned cities, and under military weakness one rule-based defender
+  (postmortem-fixes design, ruling 20). Give the Strategy role a model of its own from another provider.
+- A new war names who declared it from one `log-tail DiplomacySummary.csv` read ("CIVILIZATION_X declared a
+  surprise war on us", "our AI declared war on X", "... joined through its defensive pact"; "who declared is
+  not known" when the read fails, never a guess); the Strategist's goals may not name peace, ceasefire,
+  alliance, friendship or denounce (`[strategy] unpursuable`): no order pursues them (postmortem-fixes
+  design, rulings 24-25; the log's live layout is unverified).
+- A defender's price that moved 25% or more since the last decision (one era) is a prompt line, with
+  the World Congress resolution named from one `log-tail World_Congress.csv` read ("gold unit prices halved
+  since T543 ...; this may end at the next World Congress session"; postmortem-fixes design, ruling 6).
+- Learned rules whose text or why matches `[learned] refuse` in `corpora/civ6/pillars.toml` are refused with
+  their reason (saving to double the unit cost, "cannot buy land units with faith", "not allowed" in cities in danger);
+  a test keeps those phrases out of `corpora/*/learned/*.md`, so correct such a rule before committing the
+  live learned file (postmortem-fixes design, ruling 29).
+- Each `turn` event logs the turns that passed and those requested; an autoplay that passed more emits
+  `turn_overrun` and the next snapshot checks for the end first; traces keep whole prompts up to 100,000
+  characters (postmortem-fixes design, ruling 27).
+- Triggers (postmortem-fixes design, rulings 10-14): falling behind the met majors (`[peers] behind`),
+  a neighbour's buildup (2 x ours, +50% in 20 turns), gold per turn negative, loyalty falling toward a
+  flip, and at war a decision at every hand-back while a city in danger has no unit on its tile and a
+  defender it can buy ("city still in danger").
+- Time constants are in turns (`[time]` in `corpora/civ6/pillars.toml`): event reviews at most one per 5
+  turns, but a new war or a lost city always reviews; milestone projections and outcome scoring over 12
+  turns (postmortem-fixes design, rulings 15 and 19).
+- A city is about to fall with a capturer next to it, no walls and the garrison at half or less (or a
+  burst that takes the rest), or with garrison 0 and walls 0 and an enemy within 2 tiles; a capturer is
+  melee, cavalry, or any unit the game lets capture that is not ranged or siege by class (the Giant
+  Death Robot; postmortem-fixes design, ruling 26; `CanCapture` by class is unverified live).
 - The scripted last stand for a city about to fall (`PILOT_LAST_STAND=1`; off by default) sends
   unit and city actions: `civ6 last-stand-step`, `ls-state`, `finish-moves`, `turn-ready` (numeric
   IDs, never model orders). Its first live use follows the L6 checklist of

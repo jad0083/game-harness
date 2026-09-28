@@ -97,6 +97,10 @@ The compiled controller binary provides full programmatic access to all agent fu
 # The AI's own strategies (read-only; one agent read of civ6_appdata:Logs/AI_Victories.csv, at most 64 KB):
 ./target/release/game-controller civ6 ai-strategies --offset 0 --player 0
 #     {"rows": [[turn, strategy, "Following"|"Stopped"], …], "next": <offset for the next read>, "restarted": …}
+# One game log's complete lines (read-only; AI_CityBuild.csv, World_Congress.csv or DiplomacySummary.csv
+# under civ6_appdata:Logs/ only; from --offset, at most 64 KB, or the last --tail bytes, 16 KB by default):
+./target/release/game-controller civ6 log-tail AI_CityBuild.csv [--offset N] [--tail 16384]
+#     {"file", "lines": [...], "size", "offset", "next": <offset for the next read>, "restarted": …}
 
 # 13. Launch Stdio MCP Server (Claude Code / Gemini / Antigravity)
 ./target/release/game-controller mcp
