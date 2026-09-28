@@ -2706,3 +2706,17 @@ def test_older_purchase_rows_load_into_the_class_keys_and_a_cap_refusal_is_class
     row = next(e for e in _events(setup) if e["kind"] == "order_outcome")
     assert (row["key"], row["result"], row["refusal"], row["refused_by"]) == ("purchase unit gold", "refused", "cap", "harness")
 
+
+def test_under_weakness_every_city_shows_the_defenders_it_can_buy():
+    """Ruling 7 in the briefing: under military weakness a defender may be bought in any city (ruling 2),
+    so each city, not only one in danger, says what the game sells it now (T496: Rockhampton could buy a
+    Modern AT for 1,160 faith; the briefing listed defenders only for cities in danger)."""
+    s = _t496()
+    s["cities"][0] = {**s["cities"][0], "garrison": "UNIT_MUSKETMAN"}
+    text = briefing_text(s, INDEX, limits=BUY)
+    rock = next(ln for ln in text.splitlines() if ln.startswith("- Rockhampton"))
+    assert "; on its tile: no unit; defenders to buy: unit:modern_at 2320 gold / 1160 faith, unit:infantry" in rock, rock
+    beijing = next(ln for ln in text.splitlines() if ln.startswith("- Beijing"))
+    assert "on its tile: unit:musketman" in beijing and "defenders to buy" not in beijing
+    calm = briefing_text({**s, "majors": [{"id": 3, "civ": "CIVILIZATION_AUSTRALIA", "military": 300}]}, INDEX, limits=BUY)
+    assert "defenders to buy" not in calm, "no weakness: only cities in danger list them"

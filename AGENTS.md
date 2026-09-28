@@ -435,7 +435,8 @@ Rules:
   in danger and, under military weakness (war with a major, last, under 0.6 x the median, a non-ally at
   2 x ours), in every city, outside the order quota (one per city); everything else keeps 50%. Prompts
   carry the purchase limits, the weakness line and the strategic stock; a strategy on a unit whose
-  resource we lack is sent back.
+  resource we lack is sent back. Under weakness every city's briefing line names the unit on its tile or
+  the defenders it can buy, with why each is refused.
 - Before an autoplay stretch of 2+ turns under military weakness the governor buys one defender itself
   (no model call; the first ungarrisoned city, resource-free, faith first, within the cap and upkeep;
   `rule_buy` in `[actions.purchase]`) and fills empty queues of ungarrisoned cities with one; each

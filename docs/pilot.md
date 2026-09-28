@@ -176,7 +176,10 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   with its live gold and faith price and, when refused, why (`stacking`, `balance` or `game`; the
   governor names a strategic resource we lack from the corpus `resource_cost`, "needs 1 Oil, have
   0"). A city in danger with nothing to buy says so with each reason ("no defender can be bought now
-  (unit:infantry: needs 1 Oil, have 0; unit:modern_at: a unit is on the tile)"). `allied`, `resources`
+  (unit:infantry: needs 1 Oil, have 0; unit:modern_at: a unit is on the tile)"). While the weakness
+  test holds (a defender may be bought in any city), every other city's line says the unit on its tile
+  or, with none, its defenders to buy and why each is refused (T496: Rockhampton could buy a Modern AT
+  for 1,160 faith and the briefing did not say so). `allied`, `resources`
   and the refusal table are unverified live (read under `pcall`). The briefing names every item by
   its corpus id (`tech:pottery`, `unit:settler`).
 - **Orders** are structured, never Lua: `research`, `civic`, `policies`, `production`, `purchase`

@@ -1751,6 +1751,15 @@ def _danger_text(x: dict, cid, index: CorpusIndex | None = None, limits=None, sn
     return "; ".join(parts)
 
 
+def _tile_text(x: dict, cid, index: CorpusIndex, limits, snapshot: dict) -> str:
+    """A city not in danger under military weakness: the unit on its tile, or what defender it can buy
+    (ruling 7); a unit on the tile blocks any other, so its prices are left out."""
+    if x.get("garrison"):
+        return f"on its tile: {cid(x['garrison'])}"
+    prices = defender_entries(x, index, limits)
+    return "on its tile: no unit" + (f"; {defenders_text(x, prices, index, snapshot)}" if prices else "")
+
+
 def defenders_text(city: dict, prices: list[dict], index: CorpusIndex, snapshot: dict) -> str:
     """What the city can buy for its defence (ruling 7): each listed defender's prices, a refused one
     with why; a city with nothing to buy says so, e.g. "no defender can be bought now (unit:modern_at:
@@ -1909,6 +1918,9 @@ def briefing_text(s: dict, index: CorpusIndex, gold_reserve: int = 0, limits=Non
                     " (can be changed now)") + ".")
     cities = s.get("cities") or []
     lines.append(f"Cities ({len(cities)}):")
+    # under military weakness a defender may be bought in any city (postmortem-fixes rulings 2 and 7), so
+    # every city says what the game sells it now, not only a city in danger
+    weak = bool(weakness(s, limits)) if limits is not None else False
     for x in cities:
         threat = []
         if (in_danger(x) or about_to_fall(x)) and has_defence_fields(x):
@@ -1916,6 +1928,8 @@ def briefing_text(s: dict, index: CorpusIndex, gold_reserve: int = 0, limits=Non
         elif x.get("threatened"):
             threat = [f"THREATENED: {x.get('enemies_near', 0)} enemy units within 3 tiles"
                       + (", under siege" if x.get("under_siege") else "") + (", damaged" if x.get("damaged") else "")]
+        if weak and not (in_danger(x) or about_to_fall(x)) and "garrison" in x:
+            threat.append(_tile_text(x, cid, index, limits, s))
         dist = ", ".join(cid(d.split(" ")[0]) + (" (building)" if "(building)" in d else "") for d in x.get("districts") or [])
         lines.append(f"- {x.get('name')}{' (capital)' if x.get('capital') else ''}: pop {x.get('pop')}, "
                      f"builds {cid(x.get('producing')) if x.get('producing') else 'NOTHING'}"

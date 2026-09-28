@@ -58,7 +58,8 @@ Rules:
   "Purchase limits now" line gives the numbers. Under weakness, defenders in different cities do not
   count toward the purchases per decision (one per city). Buildings and other units (a Rock Band, a
   Settler) keep the treasury share everywhere. A unit whose strategic resource we lack cannot be bought
-  or built ("Strategic stock"); the defender list shows what the game sells now and why not. Faith buys defenders at about half the gold price: a defender ordered
+  or built ("Strategic stock"); the defender list shows what the game sells now and why not (a city
+  IN DANGER always; under military weakness every city: the unit on its tile, or its defenders to buy). Faith buys defenders at about half the gold price: a defender ordered
   with gold is bought with faith when the game allows it, and a production order for a defender in
   an ungarrisoned city in danger is bought instead. One land unit fits on a city tile. Walls cannot
   be bought: they come from production after Masonry, and a city without walls cannot strike. Never
