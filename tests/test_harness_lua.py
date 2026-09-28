@@ -81,10 +81,14 @@ def test_a_threatened_city_lists_enemies_defenders_incoming_and_prices():
                                                    "dist": 2, "hp": 50, "moves": 1, "attacks": 1, "range": 0}
     assert beijing["defence_prices"] == [
         {"unit": "UNIT_WARRIOR", "gold": 160, "gold_allowed": True, "faith": 80, "faith_allowed": True},
-        {"unit": "UNIT_ARCHER", "gold": 240, "gold_allowed": True, "faith": 120, "faith_allowed": True}]
+        {"unit": "UNIT_ARCHER", "gold": 240, "gold_allowed": True, "faith": 120, "faith_allowed": True},
+        {"unit": "UNIT_SPEARMAN", "gold": 260, "gold_allowed": True, "faith": 130, "faith_allowed": True}], \
+        "the two cheapest allowed, the best ranged and the best anti-cavalry unit"
     xian = s["cities"][1]
     assert xian["capture_adjacent"] == 0 and xian["enemies"] == []
-    assert all(not p["gold_allowed"] and not p["faith_allowed"] for p in xian["defence_prices"]), "stacking"
+    assert xian["defence_prices"] == [{"unit": "UNIT_ARCHER", "gold": 240, "gold_allowed": False, "gold_why": "stacking",
+                                       "faith": 120, "faith_allowed": False, "faith_why": "stacking"}], \
+        "nothing allowed (an Archer on the tile): the best ranged unit, with why"
 
 
 @pytest.mark.parametrize("setup", ["MOCK.simulate_fails = true", "MOCK.simulate_zero = true"])
@@ -652,3 +656,58 @@ def test_a_sweep_retried_after_a_reinstall_is_still_one_entry():
     call(rt, out, "Harness.autoplay, 1")
     sweeps = [e for e in diplo_log(rt, out) if e["why"] == "sweep"]
     assert len(sweeps) == 1 and "err" not in sweeps[0], sweeps
+
+
+# ---- postmortem-fixes design, rulings 1, 7 and 21: the snapshot fields ---------------------------
+
+GUANGZHOU = """CITIES[#CITIES + 1] = new_city { id = 393216, name = 'Guangzhou', x = 10, y = 10,
+  can_build = { 'UNIT_WARRIOR', 'UNIT_INFANTRY', 'UNIT_MACHINE_GUN', 'UNIT_MODERN_AT' }, buildings = {} }
+MOCK.gold = 1630 MOCK.faith = 1961"""
+
+
+def test_a_guangzhou_like_city_lists_what_it_can_buy_even_when_nothing_threatens_it():
+    """Post-mortem H5: the list showed Infantry and Tank "not allowed now" for lack of Oil, never the
+    buyable Modern AT (1,160) or Machine Gun (1,080). Every city now gets it, threatened or not."""
+    s = snapshot(*runtime(), GUANGZHOU)
+    gz = s["cities"][2]
+    assert gz["threatened"] is False
+    units = {p["unit"]: p for p in gz["defence_prices"]}
+    assert units["UNIT_MODERN_AT"] | {} == {"unit": "UNIT_MODERN_AT", "gold": 1160, "gold_allowed": True,
+                                             "faith": 580, "faith_allowed": True}
+    assert units["UNIT_MACHINE_GUN"]["gold_allowed"] is True
+    assert "UNIT_INFANTRY" not in units or units["UNIT_INFANTRY"].get("gold_why") == "game", \
+        "Infantry (no Oil) is not what the city can buy"
+    assert [p["unit"] for p in gz["defence_prices"]] == ["UNIT_WARRIOR", "UNIT_MACHINE_GUN", "UNIT_MODERN_AT"]
+
+
+def test_a_refusal_names_the_balance_or_the_game():
+    s = snapshot(*runtime(), GUANGZHOU + " MOCK.gold = 1100")
+    at = {p["unit"]: p for p in s["cities"][2]["defence_prices"]}["UNIT_MODERN_AT"]
+    assert (at["gold_allowed"], at["gold_why"], at["faith_allowed"]) == (False, "balance", True), \
+        "still listed: the best anti-cavalry unit, allowed or not"
+
+
+def test_the_snapshot_reads_alive_the_strategic_stock_and_alliances():
+    s = snapshot(*runtime(), "MOCK.stock = { RESOURCE_IRON = 3 } MOCK.allies = { [2] = true }")
+    assert s["alive"] is True
+    assert s["resources"] == {"RESOURCE_IRON": 3, "RESOURCE_OIL": 0}, "strategic resources only"
+    allied = {m["id"]: m.get("allied") for m in s["majors"]}
+    assert allied[2] is True and allied[1] is False
+    assert snapshot(*runtime(), "MOCK.dead = true")["alive"] is False, "false stays false"
+
+
+def test_unreadable_new_fields_are_left_out_or_null():
+    s = snapshot(*runtime(), "MOCK.alive_fails = true MOCK.stock_fails = true MOCK.alliance_fails = true")
+    assert s["ok"] is True and s["alive"] is None and "resources" not in s
+    assert all("allied" not in m for m in s["majors"]), "no field: the governor counts every major as not allied"
+
+
+def test_the_library_as_sent_with_comment_lines_blanked_still_runs():
+    """The controller blanks every full-line comment but the license notice (civ6.rs
+    blank_comment_lines): the agent takes at most 64 KiB of code and the file is over that."""
+    body = "".join("\n" if ln.lstrip().startswith("--") and "License" not in ln and "Copyright" not in ln else ln
+                   for ln in HARNESS.splitlines(True))
+    assert len(body) < 64 * 1024
+    rt, out = bare_runtime()
+    rt.execute('local HARNESS_VERSION = "sent" local HARNESS_STATE = "InGame"\n' + body)
+    assert snapshot(rt, out)["ok"] is True

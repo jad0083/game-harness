@@ -417,6 +417,9 @@ class CorpusIndex:
     purchase: dict[str, str] = field(default_factory=dict)     # corpus id -> gold | faith | none
     unit_class: dict[str, str] = field(default_factory=dict)   # unit id -> class (Melee, Ranged, Siege...)
     unit_domain: dict[str, str] = field(default_factory=dict)  # unit id -> land | sea | air
+    resource_cost: dict[str, tuple[int, str]] = field(default_factory=dict)   # unit id -> (1, "Oil")
+    maintenance: dict[str, float] = field(default_factory=dict)  # unit id -> gold per turn
+    strength: dict[str, float] = field(default_factory=dict)     # unit id -> max(combat, ranged)
 
     @classmethod
     def load(cls, corpus: Path) -> CorpusIndex:
@@ -439,6 +442,13 @@ class CorpusIndex:
                 if kind == "unit" and f.get("class"):
                     idx.unit_class[r["id"]] = f["class"]
                     idx.unit_domain[r["id"]] = f.get("domain") or "land"
+                if kind == "unit":
+                    need = re.fullmatch(r"\s*(\d+)\s+(.+?)\s*", str(f.get("resource_cost") or ""))
+                    if need:
+                        idx.resource_cost[r["id"]] = (int(need.group(1)), need.group(2))
+                    if isinstance(f.get("maintenance"), (int, float)):
+                        idx.maintenance[r["id"]] = float(f["maintenance"])
+                    idx.strength[r["id"]] = float(max(f.get("combat") or 0, f.get("ranged") or 0))
         return idx
 
     def cid(self, key: str | None) -> str:
@@ -584,6 +594,42 @@ def is_defender(item: str | None, index: CorpusIndex, limits) -> bool:
     """A unit whose class (data/unit.json fields.class) is one of the pillars' defender classes."""
     return bool(item and limits is not None and index.kind_of.get(item) == "unit"
                 and index.unit_class.get(item) in limits.defender_classes and index.unit_domain.get(item) == "land")
+
+
+def resource_key(name: str) -> str:
+    """The snapshot's key for a strategic resource the corpus names: "Oil" -> RESOURCE_OIL."""
+    return "RESOURCE_" + re.sub(r"\W+", "_", name.strip()).upper()
+
+
+def refusal(p: dict, currency: str, snapshot: dict, index: CorpusIndex) -> tuple[str, str] | None:
+    """Why the game refuses to sell a `defence_prices` entry in `currency` (postmortem-fixes design,
+    ruling 7), as (class, text), or None when it sells it. `resource`: the corpus `resource_cost`
+    against the snapshot's strategic stock ("needs 1 Oil, have 0"; "stock unknown" without one, unless
+    the library named another cause); `stacking`: a unit is on the tile; `balance`: the price is over
+    the balance; `game`: any other refusal of the game."""
+    if p.get(f"{currency}_allowed"):
+        return None
+    why = p.get(f"{currency}_why")
+    need = index.resource_cost.get(index.cid(p.get("unit")))
+    if need:
+        stock = snapshot.get("resources")
+        have = stock.get(resource_key(need[1]), 0) if isinstance(stock, dict) else None
+        if have is not None and have < need[0]:
+            return "resource", f"needs {need[0]} {need[1]}, have {_n(have)}"
+        if have is None and why not in ("stacking", "balance"):
+            return "resource", f"needs {need[0]} {need[1]}, stock unknown"
+    if why == "stacking":
+        return "stacking", "a unit is on the tile"
+    if why == "balance":
+        return "balance", f"costs {_n(p.get(currency))} {currency}, over the balance of {_n(snapshot.get(currency))}"
+    return "game", "the game refuses it"
+
+
+def defender_entries(city: dict, index: CorpusIndex, limits) -> list[dict]:
+    """The city's `defence_prices` entries for units of the pillars' defender classes (all of them
+    without limits)."""
+    return [p for p in city.get("defence_prices") or []
+            if limits is None or is_defender(index.cid(p.get("unit")), index, limits)]
 
 
 def is_land_combat(item: str | None, index: CorpusIndex) -> bool:
@@ -1320,9 +1366,10 @@ def _n(v) -> str:
     return str(v)
 
 
-def _danger_text(x: dict, cid, index: CorpusIndex | None = None, limits=None) -> str:
+def _danger_text(x: dict, cid, index: CorpusIndex | None = None, limits=None, snapshot: dict | None = None) -> str:
     """A city in danger (ruling 17): what can take it, its defence, the unit on its tile and what a
-    defender costs (ruling 19); without walls it cannot strike (ruling 21)."""
+    defender costs (ruling 19), with why the game refuses one (postmortem-fixes ruling 7); without
+    walls it cannot strike (ruling 21)."""
     d = x.get("defense") or {}
     parts = [f"{'ABOUT TO FALL' if about_to_fall(x) else 'IN DANGER'}: {x.get('enemies_near', 0)} enemy units within 3 tiles"
              + (f", {x['capture_adjacent']} next to it that can take it" if x.get("capture_adjacent") else "")
@@ -1336,11 +1383,27 @@ def _danger_text(x: dict, cid, index: CorpusIndex | None = None, limits=None) ->
         parts.append(f"on its tile: {cid(x['garrison']) if x.get('garrison') else 'no unit'}")
     prices = [p for p in x.get("defence_prices") or []
               if limits is None or index is None or is_defender(cid(p.get("unit")), index, limits)]
-    if prices:
-        parts.append("defenders to buy: " + ", ".join(
-            f"{cid(p.get('unit'))} {p.get('gold')} gold{'' if p.get('gold_allowed') else ' (not allowed now)'} / "
-            f"{p.get('faith')} faith{'' if p.get('faith_allowed') else ' (not allowed now)'}" for p in prices))
+    if prices and index is not None:
+        parts.append(defenders_text(x, prices, index, snapshot or {}))
     return "; ".join(parts)
+
+
+def defenders_text(city: dict, prices: list[dict], index: CorpusIndex, snapshot: dict) -> str:
+    """What the city can buy for its defence (ruling 7): each listed defender's prices, a refused one
+    with why; a city with nothing to buy says so, e.g. "no defender can be bought now (unit:modern_at:
+    a unit is on the tile; unit:infantry: needs 1 Oil, have 0)"."""
+    cid = index.cid
+
+    def price(p, cur):
+        why = refusal(p, cur, snapshot, index)
+        return f"{_n(p.get(cur))} {cur}" + (f" (refused: {why[1]})" if why else "")
+    if not any(p.get("gold_allowed") or p.get("faith_allowed") for p in prices):
+        reasons = []
+        for p in prices:
+            texts = list(dict.fromkeys(w[1] for cur in ("gold", "faith") if (w := refusal(p, cur, snapshot, index))))
+            reasons.append(f"{cid(p.get('unit'))}: {' / '.join(texts)}")
+        return f"no defender can be bought now ({'; '.join(reasons)})"
+    return "defenders to buy: " + ", ".join(f"{cid(p.get('unit'))} {price(p, 'gold')} / {price(p, 'faith')}" for p in prices)
 
 
 def _religion_text(s: dict, cid, limits) -> str:
@@ -1486,7 +1549,7 @@ def briefing_text(s: dict, index: CorpusIndex, gold_reserve: int = 0, limits=Non
     for x in cities:
         threat = []
         if (in_danger(x) or about_to_fall(x)) and has_defence_fields(x):
-            threat = [_danger_text(x, cid, index, limits)]
+            threat = [_danger_text(x, cid, index, limits, s)]
         elif x.get("threatened"):
             threat = [f"THREATENED: {x.get('enemies_near', 0)} enemy units within 3 tiles"
                       + (", under siege" if x.get("under_siege") else "") + (", damaged" if x.get("damaged") else "")]

@@ -410,6 +410,12 @@ Rules:
 - Menus, when the screen must be used: the UI ignores a click without a preceding hover (move the
   mouse onto the button, then click), and the "Continue" screen after loading needs a key press.
 - Throwaway games only: the tuner turns achievements off.
+- The snapshot carries `alive`, the strategic stock (`resources`), `allied` per major, and every city's
+  `defence_prices` (what the game will sell now, and why not: `stacking`, `balance`, `game`; the governor
+  names a missing strategic resource from the corpus). `allied` and the stock read are unverified live.
+  The library file is now over the agent's 64 KiB code limit: the controller blanks its full-line
+  comments when it installs it (line numbers kept), so rebuild the controller with this corpus before
+  the governor runs it (pause the governor across the merge and the build).
 - Time constants are in turns (`[time]` in `corpora/civ6/pillars.toml`): event reviews at most one per 5
   turns, but a new war or a lost city always reviews; milestone projections and outcome scoring over 12
   turns (postmortem-fixes design, rulings 15 and 19).

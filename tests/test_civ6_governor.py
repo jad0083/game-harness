@@ -2100,3 +2100,44 @@ def test_the_civ6_outcome_scoring_and_past_outcomes_speak_turns(setup, tmp_path)
     assert g._past_outcomes_text().startswith("No earlier")
     log.save_trace(1, {"date": "T12", "decision": "orders", "trigger": "x", "reason": "r", "steps": []})
     assert "| 12 turns later" in g._past_outcomes_text()
+
+
+# ---- postmortem-fixes design, ruling 7: what the game will sell, and why not ---------------------
+
+MODERN_AT = {"unit": "UNIT_MODERN_AT", "gold": 1160, "gold_allowed": True, "faith": 1160, "faith_allowed": True}
+MACHINE_GUN = {"unit": "UNIT_MACHINE_GUN", "gold": 1080, "gold_allowed": True, "faith": 1080, "faith_allowed": True}
+INFANTRY = {"unit": "UNIT_INFANTRY", "gold": 860, "gold_allowed": False, "gold_why": "game", "faith": 860,
+            "faith_allowed": False, "faith_why": "game"}
+
+
+def test_the_corpus_gives_each_units_resource_cost_upkeep_and_strength():
+    assert INDEX.resource_cost["unit:infantry"] == (1, "Oil") and "unit:modern_at" not in INDEX.resource_cost
+    assert INDEX.maintenance["unit:modern_at"] == 8 and INDEX.strength["unit:machine_gun"] == 85
+
+
+def test_each_refusal_is_named_from_the_corpus_and_the_library():
+    from pilot.civ6 import refusal
+    stock = {**FIXTURE, "gold": 1630, "faith": 1961, "resources": {"RESOURCE_OIL": 0, "RESOURCE_ALUMINUM": 3}}
+    assert refusal(MODERN_AT, "gold", stock, INDEX) is None
+    assert refusal(INFANTRY, "gold", stock, INDEX) == ("resource", "needs 1 Oil, have 0")
+    assert refusal(INFANTRY, "gold", {**stock, "resources": None}, INDEX) == ("resource", "needs 1 Oil, stock unknown")
+    taken = {**MODERN_AT, "gold_allowed": False, "gold_why": "stacking"}
+    assert refusal(taken, "gold", stock, INDEX) == ("stacking", "a unit is on the tile")
+    poor = {**MODERN_AT, "gold_allowed": False, "gold_why": "balance"}
+    assert refusal(poor, "gold", {**stock, "gold": 900}, INDEX) == ("balance", "costs 1160 gold, over the balance of 900")
+    assert refusal({**MODERN_AT, "faith_allowed": False}, "faith", stock, INDEX) == ("game", "the game refuses it")
+
+
+def test_a_city_with_nothing_to_buy_says_so_with_each_reason():
+    """Post-mortem H5: "No gold or faith purchases are available" (T548) while Modern AT and Machine
+    Gun were buyable elsewhere; each city now says what it can buy and why not."""
+    taken = {**MODERN_AT, "gold_allowed": False, "gold_why": "stacking", "faith_allowed": False, "faith_why": "stacking"}
+    city = danger_city(name="Guangzhou", defence_prices=[INFANTRY, taken])
+    text = briefing_text({**FIXTURE, "gold": 1630, "faith": 1961, "resources": {"RESOURCE_OIL": 0},
+                          "cities": [city]}, INDEX, limits=BUY)
+    assert ("no defender can be bought now (unit:infantry: needs 1 Oil, have 0; unit:modern_at: a unit is on the "
+            "tile)") in text
+    ok = briefing_text({**FIXTURE, "gold": 1630, "faith": 1961, "resources": {"RESOURCE_OIL": 0},
+                        "cities": [danger_city(defence_prices=[INFANTRY, MACHINE_GUN])]}, INDEX, limits=BUY)
+    assert ("defenders to buy: unit:infantry 860 gold (refused: needs 1 Oil, have 0) / 860 faith (refused: needs 1 "
+            "Oil, have 0), unit:machine_gun 1080 gold / 1080 faith") in ok

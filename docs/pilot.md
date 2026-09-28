@@ -144,10 +144,19 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   (position, population, production and turns left, districts, buildings, the land unit on its tile,
   garrison and walls HP, threats, what it can build, the AI's own top 3 builds with their scores
   (`recommend`); for a threatened city also its enemies and
-  defenders, capture threats, incoming damage, whether it can strike and what a defender costs in
-  gold and faith), units by type, the majors met with score and military strength, wars, great
+  defenders, capture threats, incoming damage and whether it can strike), units by type, the majors met
+  with score and military strength (and `allied` while an alliance with us is in force), wars, great
   person points, pantheon and religion, every end-turn blocker, and the diplomacy the library answered
-  for us (below). The briefing names every item by
+  for us (below). Postmortem-fixes design, rulings 1, 7 and 21: `alive` (our civilization,
+  `IsAlive`; null when unreadable), `resources` (our stock of each strategic resource, e.g.
+  `RESOURCE_OIL`; left out when the call fails) and, for **every** city, `defence_prices`: per currency
+  the two cheapest defenders the game allows now, plus the strongest ranged unit that needs no
+  strategic resource and the strongest anti-cavalry unit the city can produce, allowed or not, each
+  with its live gold and faith price and, when refused, why (`stacking`, `balance` or `game`; the
+  governor names a strategic resource we lack from the corpus `resource_cost`, "needs 1 Oil, have
+  0"). A city in danger with nothing to buy says so with each reason ("no defender can be bought now
+  (unit:infantry: needs 1 Oil, have 0; unit:modern_at: a unit is on the tile)"). `allied`, `resources`
+  and the refusal table are unverified live (read under `pcall`). The briefing names every item by
   its corpus id (`tech:pottery`, `unit:settler`).
 - **Orders** are structured, never Lua: `research`, `civic`, `policies`, `production`, `purchase`
   (see `corpora/civ6/pilot.md`). The governor checks each against the corpus, the snapshot (options,

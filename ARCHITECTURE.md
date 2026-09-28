@@ -410,6 +410,12 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   shared code's time constants in the game's unit (event-review cap and exempt triggers, milestone
   look-back, scoring horizon); action kinds run through a hook
   table (`tech` → `pick_tech`, `market` → `market_sync`).
+- Civ VI snapshot (`corpora/civ6/lua/harness.lua`): `alive`, `resources` (strategic stock), `allied`
+  per major and every city's `defence_prices` with the game's refusal (`stacking`, `balance`, `game`);
+  `civ6.refusal` adds a missing strategic resource from the corpus `resource_cost` (postmortem-fixes
+  design, rulings 1, 7, 21). The controller installs the library with every full-line comment blanked
+  but the license notice (`blank_comment_lines`; line numbers kept): the agent takes at most 64 KiB of
+  tuner code, and the file with its comments is over that.
 - Strategy layer: `strategy.py` is pure (Pillar, Milestone, MarketOrder, Strategy with
   `ranking()`; `validate` — structural checks on all pillars, briefing checks (idle, income) only on
   changed unpinned pillars; `keep_pinned`; `milestone_status` from metrics rows, judged on the latest

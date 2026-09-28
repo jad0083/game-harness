@@ -375,12 +375,26 @@ pub fn parse_popups(text: &str) -> Result<Vec<QuietPopup>> {
 pub const INSTALL_HEADER: &str = "local HARNESS_VERSION = {version}\nlocal HARNESS_STATE = {state}\n";
 
 /// The library file and its version (FNV-1a of the install header's template and the text: any edit
-/// of either re-installs it), with the popups to quiet after installing it into `InGame`.
+/// of either re-installs it), with the popups to quiet after installing it into `InGame`. `body` is
+/// the text as sent: every full-line comment blanked (the agent takes at most 64 KiB of code, and the
+/// file's comments are a fifth of it), so line numbers in the game's errors still match the file.
 pub struct Library {
     pub path: PathBuf,
+    #[cfg_attr(not(test), allow(dead_code))] // the file as read (hashed into `version`; the tests check its guards)
     pub source: String,
+    pub body: String,
     pub version: String,
     pub popups: Vec<QuietPopup>,
+}
+
+/// `source` with each line that is only a comment made empty (its newline kept), except the license
+/// and copyright notice, which every copy keeps. The library has no block comments or long strings (a
+/// test checks), so no line inside one can start with `--`.
+pub fn blank_comment_lines(source: &str) -> String {
+    let notice = |l: &str| l.contains("License") || l.contains("Copyright");
+    source.split_inclusive('\n')
+        .map(|l| if l.trim_start().starts_with("--") && !notice(l) { if l.ends_with('\n') { "\n" } else { "" } } else { l })
+        .collect()
 }
 
 impl Library {
@@ -395,13 +409,14 @@ impl Library {
         let table = corpus.join("popups.toml");
         let text = std::fs::read_to_string(&table).with_context(|| format!("reading {}", table.display()))?;
         let popups = parse_popups(&text).with_context(|| format!("in {}", table.display()))?;
-        Ok(Self { path, source, version: format!("{h:016x}"), popups })
+        let body = blank_comment_lines(&source);
+        Ok(Self { path, source, body, version: format!("{h:016x}"), popups })
     }
 
     /// The chunk that installs the library into `state` (a no-op when this version is already
     /// there). The library learns its state from it: the diplomacy handler is registered in InGame only.
     pub fn install_code(&self, state: &str) -> String {
-        INSTALL_HEADER.replace("{version}", &lua_str(&self.version)).replace("{state}", &lua_str(state)) + &self.source
+        INSTALL_HEADER.replace("{version}", &lua_str(&self.version)).replace("{state}", &lua_str(state)) + &self.body
     }
 
     /// `call` run only when this version is installed; otherwise it prints the missing marker.
@@ -745,6 +760,19 @@ mod tests {
         assert!(lib.source.contains("MIT License"), "civ6-mcp attribution");
         // the agent refuses tuner code over 64 KiB (crates/game-agent/src/tuner.rs MAX_CODE)
         assert!(lib.install_code(STATE_UI).len() < 64 * 1024, "the install chunk is {} bytes", lib.install_code(STATE_UI).len());
+        // comment lines are blanked in what is sent, never code: no block comment or long string
+        assert!(!lib.source.contains("[[") && !lib.source.contains("--[") && !lib.source.contains("\\\n"),
+                "a block comment or long string would let a blanked line cut it");
+        assert_eq!(lib.body.lines().count(), lib.source.lines().count(), "line numbers match the file");
+        assert!(lib.body.contains("MIT License") && lib.body.contains("Copyright (c) 2026 Liam Wilkinson"),
+                "the civ6-mcp notice is kept in what is sent");
+        assert!(lib.body.contains("function H.snapshot()") && !lib.body.contains("-- ---- JSON"));
+    }
+
+    #[test]
+    fn only_whole_comment_lines_are_blanked() {
+        let src = "-- head\nlocal a = 1 -- tail\n  -- indented\n-- MIT License\nprint('--x')\n--";
+        assert_eq!(blank_comment_lines(src), "\nlocal a = 1 -- tail\n\n-- MIT License\nprint('--x')\n");
     }
 
     #[test]
@@ -757,7 +785,7 @@ mod tests {
         let lib = Library::load(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpora/civ6")).unwrap();
         assert_ne!(lib.version, fnv(lib.source.as_bytes()), "an install by the older controller would be kept");
         let chunk = lib.install_code(STATE_UI);
-        let header = &chunk[..chunk.len() - lib.source.len()];
+        let header = &chunk[..chunk.len() - lib.body.len()];
         assert_eq!(header.replace(&lib.version, "").replace(STATE_UI, ""), "local HARNESS_VERSION = \"\"\nlocal HARNESS_STATE = \"\"\n");
         // the header's template is hashed with the text, so changing either installs the library again
         assert_eq!(lib.version, fnv(format!("{INSTALL_HEADER}{}", lib.source).as_bytes()));
