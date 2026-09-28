@@ -5147,3 +5147,42 @@ def test_a_restart_before_the_entry_ladder_runs_it_then(setup, tmp_path):
     assert ("directive", "defend") in game.actions and g.s.decide_every_months == 3
     assert g._crisis["pace_prior"] == 12, "the earlier pace, not the crisis's own"
     assert any(e["kind"] == "crisis" and e["event"] == "ladder" for e in log.recent)
+
+
+# ---- postmortem-fixes design, ruling 17 ----------------------------------------------------------
+
+def test_a_published_strategy_stamps_each_milestone_with_the_date_it_was_set(setup):
+    s, log = setup
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": _strategist([])})
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    assert {m.set for _, pl in g.strategy.sorted_pillars() for m in pl.milestones} == {"2200.01.01"}
+    stored = [e for e in log.recent if e["kind"] == "strategy"][-1]["strategy"]
+    assert stored["pillars"]["economy"]["milestones"][0]["set"] == "2200.01.01", "kept with the version"
+    g._review_strategy(briefing("2203.01.01"), "requested from the dashboard")      # the same answer again
+    assert {m.set for _, pl in g.strategy.sorted_pillars() for m in pl.milestones} == {"2200.01.01"}, \
+        "an unchanged milestone keeps its earlier set"
+    log.state.game_date = "2204.01.01"
+    g.edit_pillar("economy", {"milestones": [{"metric": "pops", "op": ">=", "target": 80, "by": "2210.01.01"}]})
+    assert g.strategy.pillars["economy"].milestones[0].set == "2204.01.01", "a human edit is stamped too"
+
+
+def test_milestone_missed_fires_once_per_run_even_if_it_recovers_and_falls_again(setup, tmp_path):
+    from pilot.governor import metrics
+    from pilot.strategy import Milestone
+    from pilot.telemetry import Telemetry
+    s, _ = setup
+    tel = Telemetry(tmp_path / "t.sqlite")
+    log = EventLog(s.runs_dir, "runm3", s.model, telemetry=tel)
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": _strategist([])})
+    log.set_campaign("stellaris", "mile_3", "Test")
+    g._review_strategy(briefing("2200.01.01"), "start of run")
+    g.strategy.pillars["economy"].milestones = [Milestone(metric="pops", op=">=", target=60, by="2200.02.01",
+                                                          set="2200.01.01")]
+    fired = []
+    for d, pops, before in (("2200.02.01", 50, "2200.01.01"), ("2200.03.01", 50, "2200.02.01"),
+                            ("2200.04.01", 70, "2200.03.01"), ("2200.05.01", 40, "2200.04.01")):
+        log.emit("metrics", **{**metrics(briefing(d)), "pops": pops})
+        fired += g._newly_missed_milestones(before, d)
+    assert fired == ["milestone missed: economy pops"], "missed at 2200.03, met at 2200.04, missed again: once"

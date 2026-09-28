@@ -283,7 +283,14 @@ Each pillar has:
 - a **weight** (all pillars sum to 100; Stellaris: 5..50, the heaviest at least twice the lightest);
 - a stance that cites figures from the briefing, and concrete goals;
 - **milestones** `{metric, op, target, by}` (every pillar has one; the heaviest has a checkpoint and
-  an end target), whose status (met, on track, at risk, missed) comes from telemetry;
+  an end target), whose status (met, on track, at risk, missed) comes from telemetry. A milestone is
+  judged on one value (postmortem-fixes design, ruling 17): the latest metrics row at or before today
+  and not before its `set`, the date the governor stamped when it published the strategy (a milestone
+  with the same metric, op, target and `by` as in the previous version keeps its earlier `set`; the
+  Strategist neither sees nor writes it). That value meeting the target is *met*; otherwise *missed*
+  once `by` has passed, else *on track* or *at risk* from its projection over the last 12 steps; no
+  reading since `set` is *at risk*. A value met in the past no longer counts ("military >= 170 by
+  T350" read met at T350 with 124 before). "milestone missed" fires once per milestone per run;
 - actions: preferred techs (technology) and one small monthly market order (economy; a sell only of
   an idle resource, at most 25 and 20% of its income; a buy under the buy rules below).
 

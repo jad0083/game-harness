@@ -172,7 +172,7 @@
 - [x] Dashboard access key: `PILOT_DASHBOARD_KEY` or `runs/dashboard.key`, one link per browser (`python -m pilot dashboard-link`), JSON-only same-origin changes
 
 ## Post-mortem fixes (Civ VI Kublai campaign; design docs/design/2026-09-27-postmortem-fixes-design.md)
-- [ ] Milestones judged on the current value, not "ever met" (shared, so Stellaris too; ruling 17)
+- [ ] Milestones judged on the current value, not "ever met" (shared, so Stellaris too; ruling 17); on branch feat/postmortem-fixes, not deployed
 - [ ] Time constants per game in `[time]` of pillars.toml; Civ VI event-review cap 5 turns; "new war" and "city lost" always review (rulings 15, 19)
 - [ ] Civ VI snapshot: `allied`, `alive`, strategic stock, defender prices for every city with the reason for each refusal (rulings 1, 7, 21)
 - [ ] Civ VI capture test counts every capturer class (Giant Death Robot); the last stand stays off (ruling 26)

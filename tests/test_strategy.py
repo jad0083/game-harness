@@ -865,3 +865,60 @@ def test_a_metric_without_a_median_and_rank_metrics_stay_absolute():
     assert "relative" not in r and r["held_rate"] == 1.0
     techs = _series([("expand", 3, 1, 1), ("tech_rush", 3, 2, 1)], "techs_known", "techs", (50, 50))
     assert "relative" not in directive_record(techs, "tech_rush", "techs_known"), "techs_known's median is under techs"
+
+
+# ---- postmortem-fixes design, ruling 17: a milestone is judged on the current value -----------------
+
+def test_a_milestone_is_judged_on_the_current_value_not_a_past_high():
+    """A Stellaris milestone set below a past high reads by today's value: colonies 9 two years ago,
+    6 now, target 8, not yet due."""
+    rows = [{"date": "2238.01.01", "planets": 9}, {"date": "2239.01.01", "planets": 7},
+            {"date": "2240.01.01", "planets": 6}]
+    m = Milestone(metric="colonies", op=">=", target=8, by="2245.01.01")
+    assert milestone_status(m, rows, "2240.01.01", SPEC.row_keys) == "at_risk", "9 in 2238 no longer counts"
+    assert milestone_status(m.model_copy(update={"by": "2239.06.01"}), rows, "2240.01.01", SPEC.row_keys) == "missed"
+    assert milestone_status(m, [*rows, {"date": "2240.06.01", "planets": 8}], "2240.06.01", SPEC.row_keys) == "met"
+    rank = Milestone(metric="rank:military_power", op="<=", target=3, by="2245.01.01")
+    ranks = [{"date": "2239.01.01", "peers": {"military_power": {"rank": 2}}},
+             {"date": "2240.01.01", "peers": {"military_power": {"rank": 6}}}]
+    assert milestone_status(rank, ranks, "2240.01.01") == "at_risk", "a rank milestone can fall again"
+
+
+def test_only_rows_since_the_milestone_was_set_are_judged():
+    rows = [{"date": "2239.01.01", "planets": 9}, {"date": "2240.01.01", "planets": 6}]
+    m = Milestone(metric="colonies", op=">=", target=8, by="2245.01.01", set="2240.02.01")
+    assert milestone_status(m, rows, "2240.02.01", SPEC.row_keys) == "at_risk", "no reading since it was set"
+    assert milestone_status(m.model_copy(update={"by": "2240.01.01"}), rows, "2240.02.01", SPEC.row_keys) == "missed"
+    later = [*rows, {"date": "2240.03.01", "planets": 8}]
+    assert milestone_status(m, later, "2240.03.01", SPEC.row_keys) == "met"
+    old = Milestone(metric="colonies", op=">=", target=5, by="2245.01.01")      # stored before the stamp
+    assert milestone_status(old, rows, "2240.01.01", SPEC.row_keys) == "met", "no filter: the current value decides"
+    with pytest.raises(ValueError):
+        Milestone(metric="colonies", op=">=", target=5, by="2245.01.01", set="soon")
+
+
+def test_the_strategist_never_sees_or_writes_the_set_stamp():
+    from pilot.strategy import review_model, stamp_milestones, strategy_for_prompt
+    s = stamp_milestones(strat(), None, "2240.01.01")
+    assert all(m.set == "2240.01.01" for _, pl in s.sorted_pillars() for m in pl.milestones)
+    assert '"set"' not in strategy_for_prompt(s, SPEC)
+    schema = review_model(SPEC).model_json_schema()
+    assert '"set"' not in __import__("json").dumps(schema), "the stamp is not in the answer's schema"
+
+
+def test_a_milestone_keeps_its_set_while_unchanged_and_a_new_one_is_stamped():
+    from pilot.strategy import stamp_milestones
+    first = stamp_milestones(strat(), None, "2240.01.01")
+    moved = Milestone(metric="systems", op=">=", target=12, by="2250.01.01")
+    second = strat(economy=first.pillars["economy"].model_copy(update={"milestones": [_M, moved]}))
+    out = stamp_milestones(second, first, "2242.01.01")
+    kept, new = out.pillars["economy"].milestones
+    assert (kept.set, new.set) == ("2240.01.01", "2242.01.01")
+    assert out.pillars["defence"].milestones[0].set == "2240.01.01", "the same metric, op, target and by"
+    stored = strat()                                       # a strategy stored before the stamp: no set
+    assert stamp_milestones(stored, stored, "2242.01.01").pillars["economy"].milestones[0].set is None
+    echoed = strat(economy=Pillar(priority=2, stance="s 1", goals=["g"],
+                                  milestones=[_M.model_copy(update={"set": "2100.01.01"})]))
+    assert stamp_milestones(echoed, None, "2242.01.01").pillars["economy"].milestones[0].set == "2242.01.01", \
+        "a set written by the model is never kept"
+    assert stamp_milestones(strat(), None, "").pillars["economy"].milestones[0].set is None

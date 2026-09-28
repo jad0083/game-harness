@@ -296,7 +296,9 @@ Rules:
   suggestion (the top one, or keep within a 1.25 switch margin); decisions name what they `serve`.
   A directive held 2+ years whose pillar metric grew no faster, as ours ÷ the peer median per year,
   than while not held has its pressure halved; the frame says when expand is held back by unsurveyed
-  space (none surveyed in reach, influence 950+ for 12 months).
+  space (none surveyed in reach, influence 950+ for 12 months). A milestone is judged on the latest
+  value since it was set (its `set` stamp), never on a past high: met, missed once due, else on track
+  or at risk (both games; postmortem-fixes design, ruling 17).
 - **Strategy detail** (`[strategy]` in pillars.toml): every pillar needs a milestone, the heaviest two
   on different dates (a checkpoint and an end target), the top 3 two goals, and each stance a figure from
   the briefing; a Strategist answer that misses one is sent back once with its errors. Pinned pillars

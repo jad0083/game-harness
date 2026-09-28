@@ -13,6 +13,7 @@ from collections.abc import Mapping
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, create_model, model_validator
+from pydantic.json_schema import SkipJsonSchema
 
 from .pillars import ACTION_KINDS, ID_LIST_KINDS, ActionLimits, PillarSpec
 
@@ -39,14 +40,23 @@ class Milestone(BaseModel):
     op: Literal[">=", "<="]
     target: float
     by: str = Field(description="in-game date YYYY.MM.DD, or T<turn> in a turn-based game")
+    # when the milestone was set (postmortem-fixes design, ruling 17): stamped by the governor when it
+    # publishes a strategy, never written by the model (left out of the Strategist's schema); only
+    # rows from then on are judged. None (stored before the stamp): no row filter.
+    set: SkipJsonSchema[str | None] = None
 
     def __init__(self, **data):
         if isinstance(data.get("metric"), str):     # aliases are the game's: apply_aliases(s, spec)
             data["metric"] = data["metric"].strip()
-        by = data.get("by")
-        if by and not _valid_date(by):
-            raise ValueError(f"by {by!r} is not a date YYYY.MM.DD or a turn T<turn>")
+        for key in ("by", "set"):
+            v = data.get(key)
+            if v and not _valid_date(v):
+                raise ValueError(f"{key} {v!r} is not a date YYYY.MM.DD or a turn T<turn>")
         super().__init__(**data)
+
+    def key(self) -> tuple:
+        """What makes two milestones the same one (its `set` is not part of it)."""
+        return (self.metric, self.op, self.target, self.by)
 
 
 class MarketOrder(BaseModel):
@@ -169,8 +179,12 @@ def market_briefing_errors(o: MarketOrder, limits: ActionLimits, idle: set[str],
 
 
 def _content(pl: Pillar, *, ignore_weight: bool = False) -> dict:
-    """What a pillar says (the derived rank never counts; the weight optionally)."""
-    return pl.model_dump(exclude={"pinned", "edited_by", "priority"} | ({"weight"} if ignore_weight else set()))
+    """What a pillar says (the derived rank and the milestones' `set` stamps never count; the weight
+    optionally)."""
+    exclude: dict = {"pinned": True, "edited_by": True, "priority": True, "milestones": {"__all__": {"set"}}}
+    if ignore_weight:
+        exclude["weight"] = True
+    return pl.model_dump(exclude=exclude)
 
 
 def _briefing_checked(s: Strategy, previous: Strategy | None) -> set[str]:
@@ -353,24 +367,51 @@ def metric_value(row: dict, metric: str, row_keys: Mapping[str, str] | None = No
     return float(v) if isinstance(v, (int, float)) else None
 
 
-def milestone_status(m: Milestone, rows: list[dict], today: str, row_keys: Mapping[str, str] | None = None) -> str:
-    """met / on_track / at_risk / missed, from metrics rows (oldest first) up to `today`."""
+def milestone_status(m: Milestone, rows: list[dict], today: str, row_keys: Mapping[str, str] | None = None,
+                     lookback: int = 12) -> str:
+    """met / on_track / at_risk / missed, from metrics rows (oldest first) up to `today`, judged on one
+    value (postmortem-fixes design, ruling 17): the latest row at or before `today` and not before the
+    milestone's `set`. met: it meets the target; missed: otherwise, once `today` is past `by`; else
+    on_track or at_risk from the projection (that value against a row at least `lookback` steps older,
+    months or turns: any row of the campaign, since a trend needs history). A milestone with no reading
+    since it was set is at_risk (missed once `by` has passed: nothing shows it met). A value met in the
+    past no longer counts ("military >= 170 by T350" read met at T350 with 124)."""
     series = [(_months(r["date"]), metric_value(r, m.metric, row_keys)) for r in rows if r.get("date")]
     series = [(mo, v) for mo, v in series if v is not None and mo <= _months(today)]
+    since = _months(m.set) if m.set else None
+    judged = [(mo, v) for mo, v in series if since is None or mo >= since]
     ok = (lambda v: v >= m.target) if m.op == ">=" else (lambda v: v <= m.target)
-    if any(ok(v) for _, v in series):
+    past_due = _months(today) > _months(m.by)
+    if not judged:
+        return "missed" if past_due else "at_risk"
+    now_mo, now = judged[-1]
+    if ok(now):
         return "met"
-    if _months(today) > _months(m.by):
+    if past_due:
         return "missed"
-    if len(series) < 2:
-        return "at_risk"
-    now_mo, now = series[-1]
-    past = next(((mo, v) for mo, v in reversed(series) if now_mo - mo >= 12), None)
+    past = next(((mo, v) for mo, v in reversed(series) if now_mo - mo >= lookback), None)
     if past is None:
         return "at_risk"
     span = max(now_mo - past[0], 1)
     projected = now + (now - past[1]) / span * (_months(m.by) - now_mo)
     return "on_track" if ok(projected) else "at_risk"
+
+
+def stamp_milestones(new: Strategy, previous: Strategy | None, date: str | None) -> Strategy:
+    """`new` with each milestone's `set` stamped (ruling 17): a milestone with the same metric, op,
+    target and `by` as one of the same pillar in `previous` keeps that one's `set` (None stays None:
+    a strategy stored before the stamp); any other gets `date` (None when the date is unknown). A
+    `set` the model or a request wrote is never kept."""
+    stamp = date if date and _valid_date(date) else None
+    pillars = {}
+    changed = False
+    for name, pl in new.pillars.items():
+        old = {m.key(): m.set for m in (previous.pillars[name].milestones
+                                         if previous is not None and name in previous.pillars else [])}
+        ms = [m.model_copy(update={"set": old.get(m.key(), stamp)}) for m in pl.milestones]
+        changed = changed or any(a.set != b.set for a, b in zip(ms, pl.milestones, strict=True))
+        pillars[name] = pl.model_copy(update={"milestones": ms})
+    return new.model_copy(update={"pillars": pillars}) if changed else new
 
 
 # ---- the Strategist's output: generated from the spec ---------------------------------------------
@@ -456,7 +497,7 @@ def strategy_for_prompt(s: Strategy, spec: PillarSpec) -> str:
     for name, pl in s.sorted_pillars():
         declared = spec.pillars[name].actions if name in spec.pillars else ()
         keep = {"weight", "stance", "goals", "milestones"} | {ACTION_KINDS[k] for k in declared if k in ACTION_KINDS}
-        out[name] = pl.model_dump(include=keep)
+        out[name] = pl.model_dump(include=keep, exclude={"milestones": {"__all__": {"set"}}})   # `set` is the governor's
     out.update(focus=s.focus, reason=s.reason)
     return json.dumps(out, indent=1, ensure_ascii=False)
 

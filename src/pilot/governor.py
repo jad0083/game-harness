@@ -79,6 +79,7 @@ from .strategy import (
     rebalance,
     review_model,
     shares,
+    stamp_milestones,
     strategist_instructions,
     strategy_for_prompt,
     suggestion,
@@ -882,6 +883,7 @@ class Governor:
                             income=(b or {}).get("net", {}), briefing_checked={name}, require_milestones=False)
             if errs:
                 raise ValueError("; ".join(errs))
+            s = stamp_milestones(s, self.strategy, self.log.state.game_date)
             self.strategy = s
         self._publish_strategy(s, self.log.state.game_date or "", trigger, "human")
 
@@ -2246,7 +2248,7 @@ class Governor:
             spec = self.pillars
             if rows:
                 today = rows[-1]["date"]
-                press = pressures(self.strategy, spec, lambda _n, m: milestone_status(m, rows, today, spec.row_keys),
+                press = pressures(self.strategy, spec, lambda _n, m: self._milestone_status(m, rows, today),
                                   record_of=lambda name, metric: (directive_record(rows, d, metric, spec.row_keys, spec.peer_keys)
                                                                   if (d := spec.directive_of(name)) else None))
                 hint = expand_blocked(rows)
@@ -2298,22 +2300,34 @@ class Governor:
         for name, pl in self.strategy.sorted_pillars():
             for m in pl.milestones:
                 out.append(f"- {name}: {m.metric} {m.op} {m.target:g} by {m.by}: "
-                          f"{milestone_status(m, rows, today, self.pillars.row_keys)}")
+                          f"{self._milestone_status(m, rows, today)}")
         return "\n".join(out) or "(none)"
 
     def _newly_missed_milestones(self, before: str, today: str) -> list[str]:
         """Urgent reasons for milestones that are `missed` on `today` but were not on `before` (the
-        previous check's save date): each fires once, when its date passes unmet."""
+        previous check's save date): each fires once per run (ruling 17: judged on the current value, a
+        milestone past its date can read met again and then missed; it does not fire twice)."""
         strategy, rows = self.strategy, self._metrics_rows()
         if strategy is None or rows is None:
             return []
+        fired = self.__dict__.setdefault("_missed_fired", set())
         try:
-            return [f"milestone missed: {name} {m.metric}" for name, pl in strategy.sorted_pillars() for m in pl.milestones
-                    if milestone_status(m, rows, today, self.pillars.row_keys) == "missed"
-                    and milestone_status(m, rows, before, self.pillars.row_keys) != "missed"]
+            out = []
+            for name, pl in strategy.sorted_pillars():
+                for m in pl.milestones:
+                    key = (name, *m.key())
+                    if key in fired or self._milestone_status(m, rows, today) != "missed" \
+                            or self._milestone_status(m, rows, before) == "missed":
+                        continue
+                    fired.add(key)
+                    out.append(f"milestone missed: {name} {m.metric}")
+            return out
         except Exception as e:  # noqa: BLE001 - runs in the poll loop; raising would pause the governor
             self.log.emit("briefing_error", error=f"milestone check: {type(e).__name__}: {e}"[:200])
             return []
+
+    def _milestone_status(self, m, rows: list[dict], today: str) -> str:
+        return milestone_status(m, rows, today, self.pillars.row_keys)
 
     def _past_outcomes_text(self) -> str:
         if self.log.telemetry is None or not self.log.campaign_id:
@@ -2439,7 +2453,7 @@ class Governor:
                 # human edit or pin landed via the dashboard in that window must not be discarded,
                 # so it is re-applied against the *live* strategy atomically with the commit.
                 with self._strategy_lock:
-                    new = keep_pinned(new, self.strategy)
+                    new = stamp_milestones(keep_pinned(new, self.strategy), self.strategy, b["date"])
                     self.strategy = new
                 self._publish_strategy(new, b["date"], trigger, base.get("model", ""))
         except Exception as e:  # noqa: BLE001 - a failed review never stops play or pauses the game; retried at the next decision
@@ -2454,6 +2468,7 @@ class Governor:
 
     def _set_strategy(self, s: Strategy, date: str, trigger: str, model: str) -> None:
         with self._strategy_lock:
+            s = stamp_milestones(s, self.strategy, date)
             self.strategy = s
         self._publish_strategy(s, date, trigger, model)
 

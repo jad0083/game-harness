@@ -124,3 +124,20 @@ def test_balance_milestones_bind_the_strategist_not_pins_or_human_edits():
     human = civ_strategy(economy={"milestones": [Milestone(metric="gold", op=">=", target=60, by="T130")]})
     assert validate(human, SPEC, previous=None, tech_ids=set(), idle=set(), income={}, ids=IDS,
                     briefing_checked={"science"}, require_milestones=False) == [], "a human edit elsewhere"
+
+
+def test_the_t350_military_milestone_is_at_risk_then_missed_not_met():
+    """Post-mortem strategy-1 (postmortem-fixes design, ruling 17): "military >= 170 by T350", set at
+    T342 with 123, read met at T350 with 124 because T326 and T329 were above 170. Judged on the
+    current value it reads at_risk T342-T350 and missed from T351."""
+    import json
+
+    from pilot.config import REPO
+    rows = [r for r in json.loads((REPO / "tests/fixtures/civ6_kublai_rows.json").read_text(encoding="utf-8"))
+            if 326 <= r["turn"] <= 352]
+    m = Milestone(metric="military", op=">=", target=170, by="T350", set="T342")
+    for t in (342, 344, 345, 347, 350):
+        assert milestone_status(m, rows, f"T{t}") == "at_risk", t
+    assert milestone_status(m, rows, "T351") == "missed"
+    assert milestone_status(m.model_copy(update={"set": None}), rows, "T350") == "at_risk", \
+        "without the stamp the old rows above 170 no longer read met either"
