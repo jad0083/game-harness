@@ -2,6 +2,7 @@
 
 ## Open
 
+- [ ] Dashboard v2 review (2026-09-27): cause() and the page's tidy() rounded "192.168" in an address as a decimal, so the needs-you card and Activity named the agent 192.2.1.77. Fixed on branch feat/dashboard-v2: only a decimal that is not part of a dotted sequence is rounded
 - [ ] Dashboard v2 review (2026-09-27): model retries of Talk answers and strategy reviews were counted as the next decision's attempts ("Answered by X, after 3.8 Flash was overloaded (503) x3"), since model_retry carried no role, and they moved the Deciding countdown. Fixed on branch feat/dashboard-v2: model_retry names its role; attempts() and the countdown take only the decision's
 - [ ] Dashboard v2 review (2026-09-27): orders from traces written before the order record read "⋯ in force" for ever (98 on the live Kublai campaign, 96 of them from T43-T302, while /api/orders listed 2 open), since a stuck order with no outcome row was taken as open. Fixed on branch feat/dashboard-v2: an order is in force only while the record follows it (an unresolved order_followed); older ones read "took, not followed"
 - [ ] Dashboard v2 review (2026-09-27): a governor stop set needs_attention and then took its screenshot (for Civ VI a controller subprocess, up to 30-90 s with the agent down) before publishing the card, so the needs-you card showed the previous stop's reason and age meanwhile. Fixed on branch feat/dashboard-v2: the card and the event go out first, the frame joins the card when the capture returns

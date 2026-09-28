@@ -116,3 +116,24 @@ def test_attempts_count_only_the_decisions_own_calls():
            {"kind": "model_retry", "error": "model gemini-3.8-flash answered 503"},
            {"kind": "model_fallback", "role": "chat", "model": "google:gemini-3.8-flash", "error": "503"}]
     assert attempts(evs) == [{"model": "gemini-3.8-flash", "cause": "overloaded (503)", "times": 2}]
+
+
+def test_addresses_and_versions_are_not_rounded_as_numbers():
+    """cause() rounds long decimals (12.34567 -> 12.3) but never a dotted address or version: the card
+    and the feed named the agent 192.2.1.77."""
+    raw = "HTTP status client error (401 Unauthorized) for url (http://192.168.1.77:8765/files/read)"
+    assert "192.168.1.77:8765" in cause(raw)
+    assert cause("RuntimeError: waited 12.34567 s for agent 1.6.1") == "waited 12.3 s for agent 1.6.1"
+
+
+@pytest.mark.skipif(__import__("shutil").which("node") is None, reason="node not installed")
+def test_the_pages_tidy_leaves_addresses_alone():
+    import re
+    import subprocess
+
+    from pilot.config import REPO
+    page = (REPO / "src/pilot/static/dashboard.html").read_text(encoding="utf-8")
+    tidy = re.search(r"^const tidy = .*?;$", page, re.MULTILINE).group(0)
+    js = tidy + '\nprocess.stdout.write(tidy("agent http://192.168.1.77:8765/x took 12.34567 s, 0.123 left"));'
+    out = subprocess.run(["node", "-e", js], capture_output=True, text=True, check=True).stdout
+    assert out == "agent http://192.168.1.77:8765/x took 12.3 s, 0.1 left"

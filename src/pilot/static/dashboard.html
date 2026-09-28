@@ -917,8 +917,9 @@ const gameNow = () => (S.live && S.campaign === (S.status.info || {}).campaign &
   || String(S.campaign || "").split("/")[0] || (S.status.info || {}).game || "";
 // Turn-based games (Civ VI, GalCiv IV) count turns; Stellaris counts in-game months.
 const turnBased = () => S.spec.known ? S.spec.game.time_unit === "turn" : ["civ6", "galciv4"].includes(gameNow());
-// long floats from older records (405.92577500000004) read as one decimal
-const tidy = (s) => String(s ?? "").replace(/-?\d+\.\d{3,}/g, (m) => (+m).toFixed(1));
+// long floats from older records (405.92577500000004) read as one decimal; never part of a dotted
+// address or version (192.168.1.77)
+const tidy = (s) => String(s ?? "").replace(/(?<![\d.])-?\d+\.\d{3,}(?![.\d])/g, (m) => (+m).toFixed(1));
 // the model writes light markdown: bold and italic only, applied after escaping
 const md = (s) => esc(s).replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>").replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, "$1<em>$2</em>");
 // Each browser signs in once and holds its own session. A 401 means this browser is signed out

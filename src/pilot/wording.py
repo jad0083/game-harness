@@ -9,12 +9,14 @@ import re
 _TYPE = re.compile(r"^(?:[\w.]+\.)?[A-Z]\w*(?:Error|Exception|Stuck|Timeout|Refused|Busy|Limit\w*)\s*:\s*")
 _STATUS = re.compile(r"(?:status_code|status|answered|HTTP)\W{0,3}(\d{3})\b", re.IGNORECASE)
 _CAUSED = re.compile(r"^\s*\d+:\s*(.+?)\s*$", re.MULTILINE)
+# a long decimal to round (12.34567 -> 12.3), never part of a dotted address or version (192.168.1.77)
+_LONG_DECIMAL = re.compile(r"(?<![\d.])-?\d+\.\d{3,}(?![.\d])")
 
 
 def _first_line(text: str) -> str:
     line = next((x.strip() for x in text.splitlines() if x.strip()), "")
     line = _TYPE.sub("", line)
-    line = re.sub(r"-?\d+\.\d{3,}", lambda m: f"{float(m.group()):.1f}", line)
+    line = _LONG_DECIMAL.sub(lambda m: f"{float(m.group()):.1f}", line)
     return line[:160].rstrip(" .;:,")
 
 
