@@ -3354,3 +3354,30 @@ def test_a_bad_refusal_list_names_its_key(tmp_path):
     (corpus / "pillars.toml").write_text(text.replace('pattern = "double the unit cost"', 'pattern = "double (the"'))
     with pytest.raises(PillarsError, match=r"learned.refuse\[0\].pattern"):
         load_pillars(corpus)
+
+
+def test_the_fallback_buys_at_most_once_per_hand_back_turn(setup):
+    """Re-review of fix 7: the failed-decision fallback had no once-per-turn gate, so a lost purchase
+    could be bought again by every later failed decision at the same turn."""
+    cities = [_besieged({**_calm_city("Rockhampton", [AT_FAITH]), "capital": False}, ["UNIT_MODERN_AT"])]
+    game = FakeCiv6({**_t525(), "faith": 5000, "cities": cities}, index=INDEX, transport=True,
+                    prices={("Rockhampton", "unit:modern_at", "faith"): 1160})
+    g = _resilience_governor(setup, game, [])
+    g.run(max_decisions=1)
+    assert len(_sent(game, "purchase")) == 1, "the purchase went out; its reply was lost"
+    g._fill_without_answer(game.snapshot(), "models down again")
+    assert len(_sent(game, "purchase")) == 1, "no second rule buy at the same turn"
+
+
+def test_a_pause_or_a_stop_marks_the_snapshot_stale(setup):
+    """Re-review of fix 8: a pause seen by the base run loop left the pre-pause snapshot in use, so the
+    rule buy could price from a balance spent by hand meanwhile and break the gold reserve."""
+    game = FakeCiv6(FIXTURE, index=INDEX)
+    g = governor(setup, game, orders_model([]))
+    g._stale = False
+    g.pause()
+    g.resume()
+    assert g._stale is True
+    g._stale = False
+    g._needs_attention("agent timed out")
+    assert g._stale is True

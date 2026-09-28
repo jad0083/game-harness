@@ -1497,6 +1497,14 @@ class Civ6Governor(Governor):
                  if not c.error}
         return [kind for kind in self._idle_kinds(b) if kind not in valid]
 
+    def resume(self) -> None:
+        self._stale = True          # the game may have been played, or its treasury spent, by hand meanwhile
+        super().resume()
+
+    def _needs_attention(self, why: str, *, auto_recover: bool = False) -> None:
+        self._stale = True          # whatever comes next reads the game afresh (`_fresh`)
+        super()._needs_attention(why, auto_recover=auto_recover)
+
     def _fill_without_answer(self, b: dict, error: str) -> list[dict]:
         """The fallback when the decision got no answer, its retry included (an outage, the usage limit,
         every model failing; postmortem-fixes ruling 20): it needs no model, so an idle research or
@@ -1509,7 +1517,9 @@ class Civ6Governor(Governor):
         orders = [o for kind in self._idle_kinds(b) if (o := self._fill(b, kind)) is not None]
         orders += self._production_fills(b, set())             # ruling 3 (L15): empty queues under weakness
         buy, weak = self._buy_limits(), self._weak_now(b)
-        if buy is not None and buy.rule_buy and weak:
+        # once per hand-back turn, like the pre-autoplay buy: a purchase whose reply was lost counts as tried
+        if buy is not None and buy.rule_buy and weak and b.get("turn") != self._rule_buy_turn:
+            self._rule_buy_turn = b.get("turn")
             order, why = rule_buy_order(b, self.index, buy, self._defender_buys(), weak)
             if order is not None:
                 orders.append(order)
