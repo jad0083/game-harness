@@ -65,8 +65,11 @@ from .civ6 import (
     order_situation,
     order_window,
     purchase_cap,
+    purchase_counts,
+    purchase_refusal,
     read_back,
     record_key,
+    rekey_purchases,
     resource_key,
     rule_buy_order,
     spend_shown,
@@ -381,7 +384,7 @@ class Civ6Governor(Governor):
         if tel is None or not cid:
             return
         try:
-            self._order_rows = tel.campaign_events(cid, "order_outcome")
+            self._order_rows = rekey_purchases(tel.campaign_events(cid, "order_outcome"), self.index)
             done = {r.get("ref") for r in self._order_rows if r.get("ref")}
             mine = {t.row.get("ref") for t in self._tracking}
             for f in tel.campaign_events(cid, "order_followed"):
@@ -1233,7 +1236,8 @@ class Civ6Governor(Governor):
         if spec is None:
             return ""
         return order_record_text(self._record(), idle_counts(self._seen_idle, self._now_turn(), spec.window_turns),
-                                 spec.window_turns, top3_hits(self._order_rows))
+                                 spec.window_turns, top3_hits(self._order_rows),
+                                 purchases=purchase_counts(self._order_rows, self._now_turn(), spec.window_turns))
 
     def _publish_record(self) -> None:
         self.log.state.info["order_record"] = self._record()
@@ -1544,6 +1548,8 @@ class Civ6Governor(Governor):
             result, detail = "unknown", status
         else:
             result, detail = "refused", status
+            if o.get("kind") == "purchase":        # why, by item class (ruling 9)
+                row.update(purchase_refusal(status, o, b, self.index))
         self._emit_row({**row, "result": result, "by": None, "turns": 0, "date": now.get("date") or f"T{now.get('turn')}",
                         "turn": now.get("turn"), "detail": detail[:300]})
 

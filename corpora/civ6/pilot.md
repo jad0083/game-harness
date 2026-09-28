@@ -25,9 +25,12 @@
 - What your last orders did: carried out, refused (with the reason), and since then completed,
   replaced by the AI (with what), or still in force.
 - The order record in this campaign: per kind of order (research, civic, policies, production that
-  filled an empty queue or replaced the AI's choice, purchases with gold or faith) how many
-  completed or held and how many the AI replaced; a kind marked "does not stick here" is one the
-  AI keeps undoing, so use another lever for it.
+  filled an empty queue or replaced the AI's choice) how many completed or held and how many the AI
+  replaced; a kind marked "does not stick here" is one the AI keeps undoing, so use another lever for
+  it. Purchases are counted by item class (units, buildings) over the last 30 turns: bought per
+  currency, refused by the harness (the cap, the reserve, a unit on the tile...) or by the game (a
+  missing resource, a unit on the tile), lost. A purchase that reads back is bought at once, so a
+  count of buildings bought says nothing about units: read the unit line.
 
 ## What you answer
 

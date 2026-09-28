@@ -177,7 +177,7 @@
 - [ ] Civ VI snapshot: `allied`, `alive`, strategic stock, defender prices for every city with the reason for each refusal (rulings 1, 7, 21); on branch feat/postmortem-fixes, not deployed (the live read of `allied` and the stock is unverified)
 - [ ] Civ VI capture test counts every capturer class (Giant Death Robot); the last stand stays off (ruling 26); on branch feat/postmortem-fixes, not deployed (`CanCapture` by class is unverified live)
 - [ ] Civ VI defenders may spend down to the reserve in war or military weakness; purchase limits and strategic stock in every prompt (rulings 1, 2, 8); on branch feat/postmortem-fixes, not deployed
-- [ ] Civ VI order record split by item class, with refusal counts (ruling 9)
+- [ ] Civ VI order record split by item class, with refusal counts (ruling 9); on branch feat/postmortem-fixes, not deployed
 - [ ] Civ VI triggers: falling behind, neighbour buildup, negative income, loyalty; decide every hand-back while a city stays in danger (rulings 10-14); on branch feat/postmortem-fixes, not deployed
 - [ ] Stellaris neighbour-buildup trigger (ruling 11); on branch feat/postmortem-fixes, not deployed
 - [ ] Civ VI rule-based defender buy before each multi-turn stretch; what the AI spent between decisions (rulings 3, 4); on branch feat/postmortem-fixes, not deployed (the `AI_CityBuild.csv` layout is unverified live)

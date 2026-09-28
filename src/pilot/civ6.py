@@ -1110,8 +1110,12 @@ def ai_spent_text(since: int, spent: dict[str, float], yields: dict[str, float],
 # last-stand actions (ruling 26): the step's action name -> the record's key
 STAND_KEYS = {"city_strike": "stand city_strike", "ranged_attack": "stand ranged", "retreat": "stand retreat",
               "pin": "stand pin"}
-RECORD_KEYS = ("research", "civic", "policies", "production fill", "production replace", "purchase gold",
-               "purchase faith", *STAND_KEYS.values())
+# purchases by item class and currency (postmortem-fixes design, ruling 9): "faith purchases held 8 of 8"
+# came from cheap buildings while no faith unit purchase was sent from T385 to T541
+PURCHASE_CLASSES = ("unit", "building")
+RECORD_KEYS = ("research", "civic", "policies", "production fill", "production replace",
+               *(f"purchase {k} {cur}" for k in PURCHASE_CLASSES for cur in ("gold", "faith")), *STAND_KEYS.values())
+LEGACY_PURCHASE_KEYS = {"purchase gold": "gold", "purchase faith": "faith"}     # rows written before ruling 9
 
 
 def order_situation(before: dict, key: str, city_name: str) -> str:
@@ -1127,14 +1131,137 @@ def order_situation(before: dict, key: str, city_name: str) -> str:
     return "replace"
 
 
+def purchase_class(item: str | None) -> str:
+    """A purchase's item class from its corpus id: unit, else building (the only other kind bought)."""
+    return "unit" if str(item or "").startswith("unit:") else "building"
+
+
 def record_key(order: dict, situation: str | None = None) -> str:
-    """The order record's key: research, civic, policies, production fill|replace, purchase gold|faith."""
+    """The order record's key: research, civic, policies, production fill|replace, purchase
+    unit|building gold|faith (ruling 9)."""
     kind = order.get("kind")
     if kind == "production":
         return f"production {situation or 'replace'}"
     if kind == "purchase":
-        return f"purchase {order.get('currency') or 'gold'}"
+        return f"purchase {purchase_class(order.get('id'))} {order.get('currency') or 'gold'}"
     return str(kind)
+
+
+def rekey_purchases(rows: list[dict], index: CorpusIndex) -> list[dict]:
+    """Rows written before ruling 9 (`purchase gold`, `purchase faith`) keyed by the corpus kind of
+    their id, so a campaign's record spans the change."""
+    out = []
+    for r in rows:
+        cur = LEGACY_PURCHASE_KEYS.get(r.get("key"))
+        if cur:
+            kind = index.kind_of.get(r.get("id") or "") or purchase_class(r.get("id"))
+            r = {**r, "key": f"purchase {'unit' if kind == 'unit' else 'building'} {cur}"}
+        out.append(r)
+    return out
+
+
+# Why a purchase was refused (ruling 9): (text in the harness's refusal, class). The game's own
+# refusals are `game`, or `resource` / `stacking` when the snapshot shows the cause.
+_HARNESS_REFUSALS = (("allowed:", "cap"), ("at or below the reserve", "reserve"),
+                     ("buy a defender there first", "defence_first"), ("on its tile", "stacking"),
+                     ("purchase there waits", "cooldown"), ("anyway", "skip"), ("per decision", "quota"),
+                     ("one per city", "quota"))
+REFUSAL_LABELS = {"defence_first": "defence first"}
+
+
+def purchase_refusal(status: str, order: dict, snapshot: dict | None, index: CorpusIndex) -> dict:
+    """A refused purchase's class (ruling 9): {"refusal", "refused_by": harness | game[, "resource"]}.
+    The harness refuses by the cap, the reserve, a unit on the tile, the defender cooldown, the skip rule,
+    defence first, the order quota (or `other`: an unknown id or city, a repeat); a price over our cap
+    that the library refused is the cap too. The game's refusal is `resource` when the unit needs a
+    strategic resource our stock lacks (or the stock is unknown), `stacking` when our land unit stands
+    on the tile, else `game`."""
+    text = str(status)
+    if text.startswith("refused by the game"):
+        if "over the allowed" in text:
+            return {"refusal": "cap", "refused_by": "harness"}       # the library checked our cap on the live price
+        item = str(order.get("id") or "")
+        need = index.resource_cost.get(item)
+        stock = (snapshot or {}).get("resources")
+        have = stock.get(resource_key(need[1]), 0) if need and isinstance(stock, dict) else None
+        if need and (have is None or have < need[0]):
+            return {"refusal": "resource", "refused_by": "game", "resource": need[1]}
+        city = _city(snapshot or {}, str(order.get("city") or "")) or {}
+        if city.get("garrison") and is_land_combat(item, index):
+            return {"refusal": "stacking", "refused_by": "game"}
+        return {"refusal": "game", "refused_by": "game"}
+    cls = next((c for needle, c in _HARNESS_REFUSALS if needle in text), "other")
+    return {"refusal": cls, "refused_by": "harness"}
+
+
+def _refusal_of(r: dict) -> tuple[str, str]:
+    """(who, label) of a refused row: its `refusal`, or (rows before ruling 9) its detail's text."""
+    if r.get("refusal"):
+        by, cls = r.get("refused_by") or "harness", r["refusal"]
+    else:
+        got = purchase_refusal(str(r.get("detail") or ""), {}, None, CorpusIndex())
+        by, cls = got["refused_by"], "game" if got["refused_by"] == "game" else got["refusal"]
+    if cls == "resource":
+        return by, str(r.get("resource") or "resource")
+    return by, REFUSAL_LABELS.get(cls, cls)
+
+
+def purchase_counts(rows: list[dict], now_turn: int, window: int) -> dict[str, dict] | None:
+    """Purchases of the last `window` turns by item class (ruling 9): bought per currency, refused by
+    the harness and by the game (by class), lost and unknown. Counts only: a purchase read back as done
+    is completed by construction, so a rate would say nothing. None before the campaign's first purchase."""
+    mine = [r for r in rows if str(r.get("key") or "").startswith("purchase ")]
+    if not mine:
+        return None
+    recent = [r for r in mine if isinstance(r.get("turn"), int) and now_turn - window < r["turn"] <= now_turn]
+    out: dict[str, dict] = {}
+    for cls in PURCHASE_CLASSES:
+        rs = [r for r in recent if r["key"].split(" ")[1] == cls]
+        c = {"bought": {}, "harness": {}, "game": {}, "lost": 0, "unknown": 0}
+        for r in rs:
+            res = r.get("result")
+            if res == "completed":
+                cur = r["key"].split(" ")[-1]
+                c["bought"][cur] = c["bought"].get(cur, 0) + 1
+            elif res == "refused":
+                by, label = _refusal_of(r)
+                c[by][label] = c[by].get(label, 0) + 1
+            elif res in ("lost", "unknown"):
+                c[res] += 1
+        out[cls] = c
+    return out
+
+
+def _counted(d: dict[str, int]) -> str:
+    return ", ".join(f"{k} {n}" for k, n in sorted(d.items()))
+
+
+def purchase_counts_text(counts: dict[str, dict] | None, window: int) -> str:
+    """The record's purchase block (ruling 9), e.g. "  - unit purchases: 7 bought (faith 5, gold 2), 2
+    refused by the harness (cap 2), 2 refused by the game (Oil 1, stacking 1), 2 lost"."""
+    if not counts:
+        return ""
+    lines = [f"- purchases in the last {window} turns (counts only: a purchase read back as done is bought at once):"]
+    for cls in PURCHASE_CLASSES:
+        c = counts.get(cls) or {"bought": {}, "harness": {}, "game": {}, "lost": 0, "unknown": 0}
+        bought, harness, game = sum(c["bought"].values()), sum(c["harness"].values()), sum(c["game"].values())
+        sent = bought + game + c["lost"] + c["unknown"]
+        parts = [f"{bought} bought ({_counted(c['bought'])})" if bought else ""]
+        if game:
+            parts.append(f"{game} refused by the game ({_counted(c['game'])})")
+        for res in ("lost", "unknown"):
+            if c[res]:
+                parts.append(f"{c[res]} {res}")
+        refused = f"{harness} refused by the harness ({_counted(c['harness'])})" if harness else ""
+        if not sent:
+            text = "0 sent" + (f"; {refused}" if refused else "")
+        else:
+            shown = [p for p in parts if p]
+            if refused:
+                shown.insert(1 if bought else 0, refused)
+            text = ", ".join(shown)
+        lines.append(f"  - {cls} purchases: {text}")
+    return "\n".join(lines)
 
 
 def order_window(kind: str, turns_left, cap: int = 20, grace: int = 3) -> int:
@@ -1235,8 +1362,13 @@ def held_outcome(c: Checked, base: dict, now: dict, window: int) -> tuple[str, s
 
 
 def order_record(rows: list[dict], now_turn: int, spec) -> dict[str, dict]:
-    """`record.order_record` with Civ VI's keys in their fixed order (RECORD_KEYS)."""
-    return _order_record(rows, now_turn, spec, key_order=RECORD_KEYS)
+    """`record.order_record` with Civ VI's keys in their fixed order (RECORD_KEYS). Purchase keys are
+    counts only (ruling 9): a purchase read back as done is completed by construction."""
+    rec = _order_record(rows, now_turn, spec, key_order=RECORD_KEYS)
+    for key, r in rec.items():
+        if key.startswith("purchase "):
+            r.update(rate=None, weak=False, counts_only=True)
+    return rec
 
 
 _DESCRIBED = re.compile(r"^(?P<kind>research|civic|production|purchase) (?P<id>\S*)(?: in (?P<city>.+?))?"
@@ -1276,7 +1408,7 @@ def backfill_rows(decisions: list[dict]) -> list[dict]:
             else:
                 result = "refused"
             situation = "unknown" if kind == "production" else None
-            order = {"kind": kind, "currency": currency or "gold"}
+            order = {"kind": kind, "id": oid, "currency": currency or "gold"}
             rows.append({"order_kind": kind, "key": record_key(order, situation), "item_kind": None, "id": oid,
                          "city": city, "currency": currency if kind == "purchase" else None, "situation": situation,
                          "ordered": date, "top3_hit": None, "result": result, "by": None, "turns": 0, "date": date,
@@ -1299,13 +1431,17 @@ def top3_hits(rows: list[dict]) -> tuple[int, int]:
 
 
 def order_record_text(rec: dict[str, dict], idle: dict[str, tuple[int, int]] | None = None,
-                      window: int = 30, top3: tuple[int, int] | None = None) -> str:
+                      window: int = 30, top3: tuple[int, int] | None = None, *,
+                      purchases: dict[str, dict] | None = None) -> str:
     """One line per key for the decision prompt and the Strategist, e.g. `- production replace: 5
     judged; 2 completed, 3 replaced by the AI (last: unit:slinger → unit:trader in Chengdu, T41);
     held 40% — does not stick here`; `top3` (`top3_hits`) adds how often the AI's replacement was in
-    the city's own top 3."""
+    the city's own top 3. Purchases show as counts by item class (`purchase_counts`, ruling 9)
+    instead of their keys' lines."""
     lines = []
     for key, r in rec.items():
+        if key.startswith("purchase "):
+            continue
         parts = [f"{r['completed']} completed"] if r["completed"] else []
         if r["held"]:
             parts.append(f"{r['held']} held through their window")
@@ -1328,6 +1464,9 @@ def order_record_text(rec: dict[str, dict], idle: dict[str, tuple[int, int]] | N
         elif r["judged"]:
             line += f" (a rate needs {r['min_samples']})"
         lines.append(line)
+    block = purchase_counts_text(purchases, window)
+    if block:
+        lines.append(block)
     for kind, (n, of) in (idle or {}).items():
         if n:
             lines.append(f"- {kind} idle at {n} of {of} snapshots in the last {window} turns")

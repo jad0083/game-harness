@@ -196,10 +196,18 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   order emits an `order_outcome` event and each order still followed an `order_followed` event;
   telemetry keeps both, so the record and the open orders survive restarts. The
   decision prompt and the Strategist get one line per kind (research, civic, policies, production
-  fill or replace, purchase gold or faith) with its stick rate over the last 30 turns (`[orders]` in
+  fill or replace) with its stick rate over the last 30 turns (`[orders]` in
   `pillars.toml`), flagged "does not stick here" at 50% or less (a production order for what the
   city already builds changes nothing and stays out of the record); the dashboard gets
-  `info.order_record`. `scripts/civ6-backfill-orders.py` recovers the apply-time outcomes (refused,
+  `info.order_record`. Purchases are keyed by item class and currency (`purchase unit gold`, `purchase
+  unit faith`, `purchase building gold`, `purchase building faith`; older `purchase gold|faith` rows
+  are keyed by their id's corpus kind when loaded) and shown as counts only, since a purchase read
+  back as done is completed by construction (postmortem-fixes design, ruling 9: "faith purchases held
+  8 of 8" came from cheap buildings while no faith unit purchase was sent from T385 to T541), e.g.
+  "unit purchases: 7 bought (faith 5, gold 2), 2 refused by the harness (cap 2), 2 refused by the game
+  (Oil 1, stacking 1), 2 lost", or "unit purchases: 0 sent". Refused purchase rows carry `refusal`
+  (`cap`, `reserve`, `stacking`, `cooldown`, `skip`, `defence_first`, `quota`, `other`; the game's own:
+  `resource` naming the resource, `stacking`, `game`) and `refused_by` (harness or game). `scripts/civ6-backfill-orders.py` recovers the apply-time outcomes (refused,
   lost, purchases) of traces written before the record: read-only by default, `--write` once when
   deploying (a run of its own, `runs/<time>-backfill/events.jsonl` named by the earliest backfilled
   decision so it sorts among the runs by time, and the database, so `rebuild-telemetry` keeps the rows).

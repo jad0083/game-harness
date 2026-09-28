@@ -878,7 +878,7 @@ def test_a_purchase_is_completed_at_once_and_refused_orders_get_a_row(setup):
                                             {"kind": "research", "id": "tech:warp"}]))
     g.run(max_decisions=1)
     rows = [(e["key"], e["result"]) for e in _events(setup) if e["kind"] == "order_outcome"]
-    assert rows == [("purchase gold", "completed"), ("research", "refused")]
+    assert rows == [("purchase unit gold", "completed"), ("research", "refused")]
     assert game.state["units"]["by_type"]["UNIT_WARRIOR"] == 2
 
 
@@ -1141,7 +1141,7 @@ def test_t83_replay_a_gold_warrior_is_bought_with_faith(setup):
     first = traces(setup)[0]["orders"][0]
     assert first["outcome"] == "stuck" and "bought with faith instead of gold: 80 faith rather than 160 gold" in first["order"]
     rows = [(e["key"], e["result"], e["id"]) for e in _events(setup) if e["kind"] == "order_outcome"]
-    assert rows == [("purchase faith", "completed", "unit:warrior")]
+    assert rows == [("purchase unit faith", "completed", "unit:warrior")]
 
 
 def test_a_price_read_in_the_decision_refuses_a_purchase_over_the_cap(setup):
@@ -1230,14 +1230,14 @@ def test_the_backfill_recovers_apply_time_outcomes_only():
     got = [(r["date"], r["key"], r["id"], r["city"], r["result"]) for r in rows]
     assert got == [("T51", "research", "tech:writing", "", "refused"),
                    ("T73", "civic", "civic:drama_poetry", "", "lost"),
-                   ("T83", "purchase gold", "unit:warrior", "Xi’an", "completed"),
+                   ("T83", "purchase unit gold", "unit:warrior", "Xi’an", "completed"),
                    ("T85", "production unknown", "district:holy_site", "Beijing", "unknown"),
                    ("T90", "civic", "", "", "refused"),
                    ("T104", "production unknown", "unit:trader", "Chengdu", "refused"),
-                   ("T104", "purchase faith", "building:shrine", "Beijing", "completed")]
+                   ("T104", "purchase building faith", "building:shrine", "Beijing", "completed")]
     assert all(r["backfilled"] and r["turn"] == int(r["date"][1:]) for r in rows)
     rec = order_record(rows, 110, ORDERS)
-    assert rec["purchase gold"]["completed"] == 1 and rec["civic"]["excluded"]["refused"] == 1
+    assert rec["purchase unit gold"]["completed"] == 1 and rec["civic"]["excluded"]["refused"] == 1
     assert "production unknown" in rec, "shown while its rows are in the window"
     assert "research" not in rec, "refused at T51, outside the last 30 turns: nothing left to say"
     assert order_record(rows, 60, ORDERS)["research"]["excluded"]["refused"] == 1
@@ -2620,3 +2620,89 @@ def test_beijing_at_t545_and_guangzhou_at_t565_read_as_about_to_fall():
     reasons = urgent_changes(FIXTURE, now)
     assert any(u == "city falling: Beijing (garrison 0/200, no walls, an enemy within 2 tiles)" for u in reasons), reasons
     assert "ABOUT TO FALL" in briefing_text(now, INDEX)
+
+
+# ---- postmortem-fixes design, ruling 9: the order record by item class ---------------------------------
+
+def _purchase_row(turn: int, item: str, currency: str, result: str = "completed", **extra) -> dict:
+    from pilot.civ6 import record_key
+    return {"order_kind": "purchase", "key": record_key({"kind": "purchase", "id": item, "currency": currency}),
+            "id": item, "city": "Rockhampton", "currency": currency, "result": result, "turn": turn,
+            "date": f"T{turn}", **extra}
+
+
+def test_t512_the_record_shows_no_unit_purchase_beside_the_buildings_bought():
+    """H11, strategy-6: "faith purchases held 8 of 8" came from cheap buildings while no faith unit
+    purchase was sent from T385 to T541. Purchase keys split by item class and show counts only."""
+    from pilot.civ6 import purchase_counts
+    rows = [_purchase_row(484 + 3 * i, "building:shrine" if i % 2 else "building:temple", "faith") for i in range(8)]
+    rows.append(_purchase_row(496, "unit:modern_at", "faith", "refused", refusal="cap", refused_by="harness",
+                              detail="refused: unit:modern_at costs 1160 faith in Rockhampton, over the 916 allowed"))
+    rec = order_record(rows, 512, ORDERS)
+    assert list(rec) == ["purchase unit faith", "purchase building faith"]
+    assert rec["purchase building faith"]["rate"] is None and rec["purchase building faith"]["counts_only"]
+    text = order_record_text(rec, purchases=purchase_counts(rows, 512, 30), window=30)
+    assert ("- purchases in the last 30 turns (counts only: a purchase read back as done is bought at once):\n"
+            "  - unit purchases: 0 sent; 1 refused by the harness (cap 1)\n"
+            "  - building purchases: 8 bought (faith 8)") in text
+    assert "held 100%" not in text and "purchase building faith:" not in text
+
+
+def test_purchase_counts_name_who_refused_and_why():
+    from pilot.civ6 import purchase_counts, purchase_counts_text
+    rows = [_purchase_row(100, "unit:machine_gun", "faith"), _purchase_row(101, "unit:modern_at", "gold"),
+            _purchase_row(102, "unit:modern_at", "faith", "refused", refusal="stacking", refused_by="game"),
+            _purchase_row(103, "unit:infantry", "gold", "refused", refusal="resource", refused_by="game", resource="Oil"),
+            _purchase_row(104, "unit:modern_at", "gold", "refused", refusal="cap", refused_by="harness"),
+            _purchase_row(105, "unit:modern_at", "gold", "lost"),
+            _purchase_row(106, "unit:modern_at", "gold", "refused", detail="refused: Longxi got a defender at T104: "
+                          "the next defender purchase there waits until T109"),           # an older row: from its text
+            _purchase_row(60, "unit:warrior", "gold")]                                  # outside the window
+    text = purchase_counts_text(purchase_counts(rows, 110, 30), 30)
+    assert ("  - unit purchases: 2 bought (faith 1, gold 1), 2 refused by the harness (cap 1, cooldown 1), 2 refused "
+            "by the game (Oil 1, stacking 1), 1 lost") in text
+    assert "  - building purchases: 0 sent" in text
+    assert purchase_counts([_purchase_row(1, "unit:warrior", "gold")], 200, 30) is not None, "shown once any purchase exists"
+    assert purchase_counts([], 200, 30) is None
+
+
+def test_each_purchase_refusal_gets_its_class():
+    from pilot.civ6 import purchase_refusal
+    s = {**FIXTURE, "resources": {"RESOURCE_OIL": 0}, "cities": [{**_city0(), "garrison": "UNIT_WARRIOR"}]}
+    inf = {"kind": "purchase", "id": "unit:infantry", "city": "Beijing", "currency": "gold"}
+    at = {"kind": "purchase", "id": "unit:modern_at", "city": "Beijing", "currency": "gold"}
+    cases = [
+        ("refused: unit:x costs 280 gold in Beijing, over the 200 allowed: one purchase takes at most 50%", at, ("harness", "cap")),
+        ("refused: gold 40 (less 0 for earlier purchases) is at or below the reserve 30", at, ("harness", "reserve")),
+        ("refused: Beijing already has unit:warrior on its tile: the game refuses a second land unit there", at, ("harness", "stacking")),
+        ("refused: Beijing got a defender at T10: the next defender purchase there waits until T15", at, ("harness", "cooldown")),
+        ("refused: Beijing finishes unit:warrior in 1 turn anyway", at, ("harness", "skip")),
+        ("refused: Xi'an is in danger with no defender on its tile: buy a defender there first", at, ("harness", "defence_first")),
+        ("refused: at most 2 purchase order(s) per decision", at, ("harness", "quota")),
+        ("refused: unknown id 'unit:nope'", at, ("harness", "other")),
+        ("refused by the game: unit:modern_at costs 1200 gold, over the allowed 1100", at, ("harness", "cap")),
+        ("refused by the game: the game refuses to buy UNIT_INFANTRY in Beijing for 860 gold", inf, ("game", "resource")),
+        ("refused by the game: the game refuses to buy UNIT_MODERN_AT in Beijing for 1160 gold", at, ("game", "stacking")),
+    ]
+    for status, order, want in cases:
+        r = purchase_refusal(status, order, s, INDEX)
+        assert (r["refused_by"], r["refusal"]) == want, status
+    assert purchase_refusal(cases[9][0], inf, s, INDEX)["resource"] == "Oil"
+    calm = {**s, "cities": [{**_city0(), "garrison": None}]}
+    assert purchase_refusal(cases[10][0], at, calm, INDEX)["refusal"] == "game"
+
+
+def test_older_purchase_rows_load_into_the_class_keys_and_a_cap_refusal_is_classed(setup, tmp_path):
+    from pilot.civ6 import backfill_rows, rekey_purchases
+    old = [{"key": "purchase faith", "id": "unit:warrior", "result": "completed", "turn": 5},
+           {"key": "purchase gold", "id": "building:shrine", "result": "completed", "turn": 6},
+           {"key": "research", "id": "tech:pottery", "result": "completed", "turn": 7}]
+    assert [r["key"] for r in rekey_purchases(old, INDEX)] == ["purchase unit faith", "purchase building gold", "research"]
+    assert [r["key"] for r in backfill_rows(LIVE_TRACE_ORDERS) if r["order_kind"] == "purchase"] == \
+        ["purchase unit gold", "purchase building faith"]
+    game = FakeCiv6({**FIXTURE, "gold": 400}, index=INDEX, prices={("Beijing", "unit:slinger", "gold"): 280})
+    g = governor(setup, game, orders_model([{"kind": "purchase", "city": "Beijing", "id": "unit:slinger"}]))
+    g.run(max_decisions=1)
+    row = next(e for e in _events(setup) if e["kind"] == "order_outcome")
+    assert (row["key"], row["result"], row["refusal"], row["refused_by"]) == ("purchase unit gold", "refused", "cap", "harness")
+

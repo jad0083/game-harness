@@ -443,6 +443,9 @@ Rules:
   AI spent 1,998 faith (UNIT_ROCK_BAND, T526) ..."), named from `AI_CityBuild.csv` (one `log-tail` read,
   only when there is a spend to name), and a stretch's spend at a defender's price is urgent
   (postmortem-fixes design, rulings 3-4). The log's layout is unverified live: an unreadable row is "not named".
+- The order record keys purchases by item class and currency (`purchase unit faith`...) and shows them
+  as counts only ("unit purchases: 0 sent; 1 refused by the harness (cap 1)"); refused purchase rows
+  carry `refusal` and `refused_by` (postmortem-fixes design, ruling 9).
 - Triggers (postmortem-fixes design, rulings 10-14): falling behind the met majors (`[peers] behind`),
   a neighbour's buildup (2 x ours, +50% in 20 turns), gold per turn negative, loyalty falling toward a
   flip, and at war a decision at every hand-back while a city in danger has no unit on its tile and a
