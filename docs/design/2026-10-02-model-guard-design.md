@@ -180,7 +180,7 @@ setting). These remain future options.
 
 21. **Existing events keep their names and fields.** `model_retry` keeps `error` ("model X answered 503"),
     `delay` and `attempt`; `model_fallback` keeps `role`, `model`, `error` and `fallback`. Both gain
-    `kind` (ruling 6), `family` and `request` (the request's number in the run). The dashboard's decision
+    `failure` (ruling 6; `kind` is the event's own type), `family` and `request` (the request's number in the run). The dashboard's decision
     attempts (`dashboard.py:385`, `wording.py:213`) keep working unchanged.
 22. **New events.** `model_breaker` {model, family, state: open | half_open | closed | broken, until,
     reason, openings} on every state change; `model_pace` {model, waited_s} only for waits of 1 s or more;
@@ -217,7 +217,7 @@ setting). These remain future options.
 
 26. **Deploy** with `scripts/deploy-pilot.sh <from> <to>` after merging; no pilot runs now, so the viewer
     restarts for the dashboard and the next campaign starts on the guard.
-27. **Verify live** on the first overload: `model_retry` with `kind` overloaded, `model_breaker` open,
+27. **Verify live** on the first overload: `model_retry` with `failure` overloaded, `model_breaker` open,
     the same run answered by another family, and the order record free of repeated actions. Then the
     success criteria over 100 decisions; the numbers go into the campaign journal and this design's status.
 

@@ -445,12 +445,12 @@ def event_hooks(emit, role: str, family: Callable[[str], str], extra: Hooks | No
     def on_retry(name, failure, delay, attempt, request):
         x.on_retry(name=name, failure=failure, delay=delay, attempt=attempt, request=request)
         emit("model_retry", error=event_error(name, failure), delay=delay, attempt=attempt, role=role, model=name,
-             kind=failure.kind, family=family(name), request=request)
+             failure=failure.kind, family=family(name), request=request)
 
     def on_fallback(name, failure, next, request):
         x.on_fallback(name=name, failure=failure, next=next, request=request)
         emit("model_fallback", role=role, model=name, error=event_error(name, failure), fallback=next,
-             kind=failure.kind, family=family(name), request=request)
+             failure=failure.kind, family=family(name), request=request)
 
     def on_pace(name, waited):
         x.on_pace(name=name, waited=waited)

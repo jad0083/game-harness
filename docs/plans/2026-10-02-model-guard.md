@@ -16,7 +16,7 @@
 - Starting values (ruling 15): `overload_retry_s` (1.0, 2.0); `rate_retry_max_s` 10; `breaker_open_s` 60; `breaker_max_s` 600; `pool_max_wait_s` 60; `min_call_interval_s` `{"google": 0.5}`; `model_limits` `{}`; `model_families` `{}`; `model_timeout_s` stays 120.
 - Environment (ruling 15): `PILOT_MODEL_GUARD` (default 1; 0 runs the code as at 8c80134), `PILOT_MIN_CALL_INTERVAL`, `PILOT_MODEL_LIMITS`, `PILOT_MODEL_FAMILIES` (JSON objects).
 - Daily counts by America/Los_Angeles date in `runs/model-usage.json`, 7 days kept (ruling 14).
-- Event names `model_retry` and `model_fallback` keep every existing field (`error`, `delay`, `attempt`, `role`, `model`, `fallback`); new fields `kind`, `family`, `request`; new kinds `model_breaker`, `model_pace`, `pool_exhausted` (rulings 21-22).
+- Event names `model_retry` and `model_fallback` keep every existing field (`error`, `delay`, `attempt`, `role`, `model`, `fallback`); new fields `failure`, `family`, `request`; new kinds `model_breaker`, `model_pace`, `pool_exhausted` (rulings 21-22).
 - google-genai `retry_options` stays None; Anthropic clients are built with `max_retries=0` (ruling 16).
 - Commits only through `scripts/ci-commit.sh "type(scope): subject" "body"`; conventional commits; no AI or assistant attribution anywhere (no Co-Authored-By, no model names in commit messages); never stage `runs/`, `.env`, `.agent_token*`, `play/`, or the live learned files `corpora/*/learned/*` and `games/*/journal.md` that the running pilot changes.
 - A commit that stages `src/pilot/static/dashboard.html` needs the Playwright UI tests to have run (`scripts/ci-ui-gate.sh`); run `.venv/bin/pytest -m ui tests/ui` before such a commit.
@@ -1606,10 +1606,10 @@ def test_a_decision_continues_on_the_fallback_and_consults_once(setup):  # noqa:
     assert sum(e["kind"] == "consult" for e in log.recent) == 1, "the tool ran once"
     assert "governor_directive_expand" in game.flags
     fb = [e for e in log.recent if e["kind"] == "model_fallback"][-1]
-    assert fb["kind"] == "overloaded" and fb["request"] == 2 and fb["family"] == "gemini-flash"
+    assert fb["failure"] == "overloaded" and fb["request"] == 2 and fb["family"] == "gemini-flash"
     assert fb["error"] == "model gemini-3.8-flash answered 503"
     retry = [e for e in log.recent if e["kind"] == "model_retry"][-1]
-    assert retry["kind"] == "overloaded" and retry["delay"] == 1.0 and retry["role"] == "decisions"
+    assert retry["failure"] == "overloaded" and retry["delay"] == 1.0 and retry["role"] == "decisions"
     breaker = [e for e in log.recent if e["kind"] == "model_breaker"][-1]
     assert breaker["state"] == "open" and breaker["model"] == "google:gemini-3.8-flash"
     health = log.state.info["model_health"]["models"]["google:gemini-3.8-flash"]
@@ -1655,7 +1655,7 @@ def test_an_unusable_answer_runs_again_on_the_next_model(setup):  # noqa: F811
              fallback=decisions("expand")).run(max_decisions=1)
     assert "governor_directive_expand" in game.flags
     fb = [e for e in log.recent if e["kind"] == "model_fallback"][-1]
-    assert fb["kind"] == "answer" and "UsageLimitExceeded" in fb["error"]
+    assert fb["failure"] == "answer" and "UsageLimitExceeded" in fb["error"]
 
 
 def test_the_kill_switch_keeps_whole_run_retries(setup):  # noqa: F811
@@ -1766,7 +1766,7 @@ def build_governor(s: Settings, briefing: str, model=None, agent_settings=None) 
                         if k == len(configured) - 1:
                             raise
                         self.log.emit("model_fallback", role=role, model=used, error=f"{type(e).__name__}: {e}"[:300],
-                                      fallback=configured[(first + 1) % len(configured)]["model"], kind="answer",
+                                      fallback=configured[(first + 1) % len(configured)]["model"], failure="answer",
                                       family=self.health.family(used), request=pool.requests)
                         before.append({"model": used, "error": cause(f"{type(e).__name__}: {e}")})
                         continue
@@ -1972,7 +1972,7 @@ def test_an_episode_continues_on_the_fallback_and_notes_once(corpus, tmp_path): 
     pilot._episode("a dialog is up", None)
     assert (tmp_path / "journal.md").read_text().count("Saw the event") == 1, "the note tool ran once"
     fb = [e for e in log.recent if e["kind"] == "model_fallback"][-1]
-    assert fb["role"] == "episodes" and fb["kind"] == "overloaded" and fb["request"] == 2
+    assert fb["role"] == "episodes" and fb["failure"] == "overloaded" and fb["request"] == 2
     assert pilot.health.status("google:gemini-3.8-flash") == "open"
     assert any(e["kind"] == "model_breaker" for e in log.recent)
     assert log.state.info["model_health"]["models"]["google:gemini-3.8-flash"]["state"] == "open"

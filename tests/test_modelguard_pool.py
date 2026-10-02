@@ -300,20 +300,20 @@ def test_sdk_retries_are_off(monkeypatch):
 
 def test_event_hooks_write_the_events():
     events = []
-    hooks = G.event_hooks(lambda kind, /, **d: events.append((kind, d)), "chat", G.family)
+    hooks = G.event_hooks(lambda kind, **d: events.append((kind, d)), "chat", G.family)
     f = G.Failure(G.OVERLOADED, 503)
     hooks.on_retry(name="google:gemini-3.8-flash", failure=f, delay=1.0, attempt=1, request=2)
     hooks.on_fallback(name="google:gemini-3.8-flash", failure=f, next="claude-code:opus", request=2)
     hooks.on_pace(name="google:gemini-3.8-flash", waited=1.5)
     assert events[0] == ("model_retry", {"error": "model gemini-3.8-flash answered 503", "delay": 1.0, "attempt": 1,
-                                         "role": "chat", "model": "google:gemini-3.8-flash", "kind": "overloaded",
+                                         "role": "chat", "model": "google:gemini-3.8-flash", "failure": "overloaded",
                                          "family": "gemini-flash", "request": 2})
     assert events[1] == ("model_fallback", {"role": "chat", "model": "google:gemini-3.8-flash",
                                             "error": "model gemini-3.8-flash answered 503", "fallback": "claude-code:opus",
-                                            "kind": "overloaded", "family": "gemini-flash", "request": 2})
+                                            "failure": "overloaded", "family": "gemini-flash", "request": 2})
     assert events[2] == ("model_pace", {"model": "google:gemini-3.8-flash", "waited_s": 1.5, "role": "chat"})
     out = []
-    G.emit_breaker(lambda kind, /, **d: out.append((kind, d)), "google:gemini-3.8-flash",
+    G.emit_breaker(lambda kind, **d: out.append((kind, d)), "google:gemini-3.8-flash",
                    {"state": "open", "until": 5.0, "reason": "overloaded (503)", "openings": 1, "family": "gemini-flash",
                     "caution": False})
     assert out == [("model_breaker", {"model": "google:gemini-3.8-flash", "family": "gemini-flash", "state": "open",
