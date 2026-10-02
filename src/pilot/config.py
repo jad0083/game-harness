@@ -28,7 +28,8 @@ def default_journal(game: str) -> Path:
 
 
 def _json_map(env, name: str, default: dict) -> dict:
-    """A JSON object from the environment (the model guard's maps); anything else is an error naming it."""
+    """A JSON object from the environment (the model guard's maps); anything else is an error naming it.
+    Its values are checked by modelguard.check_guard_settings."""
     raw = env.get(name)
     if raw is None or not raw.strip():
         return default
@@ -194,6 +195,12 @@ class Settings:
         s.min_call_interval_s = _json_map(env, "PILOT_MIN_CALL_INTERVAL", s.min_call_interval_s)
         s.model_limits = _json_map(env, "PILOT_MODEL_LIMITS", s.model_limits)
         s.model_families = _json_map(env, "PILOT_MODEL_FAMILIES", s.model_families)
+        # their values are checked only when one is set (the defaults are valid), so the CLI's other
+        # commands, which read the settings too, do not import the model guard
+        if any(env.get(v) for v in ("PILOT_MIN_CALL_INTERVAL", "PILOT_MODEL_LIMITS", "PILOT_MODEL_FAMILIES")):
+            from .modelguard import check_guard_settings
+
+            check_guard_settings(s.min_call_interval_s, s.model_limits, s.model_families)
         if "PILOT_RUNS_DIR" in env:
             s.runs_dir = Path(env["PILOT_RUNS_DIR"])
         s.journal = default_journal(s.game)

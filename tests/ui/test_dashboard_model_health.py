@@ -33,3 +33,25 @@ def test_activity_says_what_the_guard_did(browser, live_servers):
     assert "No model could answer (chat): Gemini 3.8 Flash overloaded (503)" in text
     assert "no other model was left" in text and "used the model" not in text
     w.context.close()
+
+
+@pytest.mark.parametrize("scenario", ["deciding"])
+def test_only_open_and_broken_breakers_are_problems(browser, live_servers):
+    """A trial, a model that answers again and a cleared broken mark are under Model, not Problems."""
+    w = open_context(browser, "desktop-light", live_servers)
+    page = w.page
+    page.goto(w.base + "/", wait_until="domcontentloaded")
+    show(page, "activity")
+    page.wait_for_selector("#feed li")
+    calm = ("Sonnet 5 (API) may be tried again", "Trying Gemini 3.1 Pro again", "Gemini 3.1 Pro answers again")
+    text = page.text_content("#feed")
+    assert all(s in text for s in calm), text
+    assert "Sonnet 5 (API) answers again" not in text, "a cleared mark is not an answer"
+    page.click('#feed-filters [data-filter="problems"]')
+    problems = page.text_content("#feed")
+    assert "Gemini 3.8 Flash skipped until" in problems and "Sonnet 5 (API) cannot be used (unusable (404))" in problems
+    assert not any(s in problems for s in calm), problems
+    page.click('#feed-filters [data-filter="model"]')
+    model = page.text_content("#feed")
+    assert all(s in model for s in calm) and "Gemini 3.8 Flash skipped until" in model
+    w.context.close()

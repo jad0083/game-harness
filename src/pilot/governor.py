@@ -888,9 +888,11 @@ class Governor:
     def _retry_decision(self, ask) -> tuple[Any, dict] | None:
         """Ruling 20's retry of a decision every decisions model failed (an outage, the request limit):
         `ask(agent)` with the decisions agent on each `_retry_models` entry in turn, each run once.
-        With the model guard each entry is a pool of its own: its request gets the guard's one retry on
-        overload, an open model is waited for up to `pool_max_wait_s`, the pool's events say what failed
-        (role "decisions retry") and a pool that gives up logs `pool_exhausted`; with PILOT_MODEL_GUARD=0
+        With the model guard each entry is a pool of its own, and only entries whose breaker is closed or
+        due for its trial are tried (an open one is passed over, not waited for): a request gets the guard's
+        one retry on overload; a model that fails during the retry opens, and its pool waits once for that
+        window when it ends within `pool_max_wait_s`, then sends the trial; the pool's events say what
+        failed (role "decisions retry") and a pool that gives up logs `pool_exhausted`; with PILOT_MODEL_GUARD=0
         there are no overload waits and each failure is a `model_fallback`. (result, entry), or None
         when none answered. T512, T522 and T525 failed on 503s and the request limit, and nothing
         retried: a retry on another model tells a provider outage from a model that spends its budget

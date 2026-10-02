@@ -2830,6 +2830,7 @@ function breakerSentence(ev) {
   if (ev.state === "open") return `${m} skipped until ${hhmm(ev.until)} (${ev.reason}${ev.openings > 1 ? `, ${nth(ev.openings)} time` : ""})`;
   if (ev.state === "half_open") return `Trying ${m} again`;
   if (ev.state === "broken") return `${m} cannot be used (${ev.reason}); skipped until the models change`;
+  if (ev.reason === "cleared") return `${m} may be tried again`;   // a broken mark cleared by a model change
   return `${m} answers again`;
 }
 function describe(ev) {
@@ -2932,14 +2933,15 @@ const CONTROL_WORDS = { pause: "Paused", resume: "Resumed", stop: "Stop requeste
 // Which filters an event belongs to (it may be in more than one).
 const PROBLEM_KINDS = new Set(["briefing_error", "episode_error", "needs_attention", "model_retry", "model_fallback", "recover_probe",
                                "stall", "self_paused", "learn_rejected", "strategy_rejected", "strategy_mismatch", "strategy_disabled", "last_stand_off",
-                               "model_breaker", "pool_exhausted"]);
+                               "pool_exhausted"]);
 const ORDER_KINDS = new Set(["episode", "strategy_action", "last_stand", "last_stand_check", "autopilot", "action", "turn", "popups_quieted", "capture"]);
 const MODEL_KINDS = new Set(["model", "models", "roles", "model_retry", "model_fallback", "model_breaker", "model_pace", "pool_exhausted", "episode_error", "consult", "learned", "learn_rejected",
                              "learned_disabled", "strategy", "strategy_review", "strategy_review_skipped", "strategy_rejected", "journal", "question"]);
 function feedCats(ev) {
   const c = new Set();
   if (PROBLEM_KINDS.has(ev.kind) || (ev.kind === "commit" && !ev.ok) || (ev.kind === "action" && ev.error)
-      || (ev.kind === "turn" && ev.note) || (ev.kind === "popups_quieted" && popupsFailed(ev).length)) c.add("problems");
+      || (ev.kind === "turn" && ev.note) || (ev.kind === "popups_quieted" && popupsFailed(ev).length)
+      || (ev.kind === "model_breaker" && (ev.state === "open" || ev.state === "broken"))) c.add("problems");   // not a trial or a recovery
   if (ORDER_KINDS.has(ev.kind)) c.add("orders");
   if (MODEL_KINDS.has(ev.kind)) c.add("model");
   if ((ev.by && ev.by !== "the controller") || ["control", "instruction", "answer", "orders"].includes(ev.kind)) c.add("you");

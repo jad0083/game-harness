@@ -51,6 +51,27 @@ def test_a_decision_continues_on_the_fallback_and_consults_once(setup):  # noqa:
     assert ans["fallback"] is True and ans["after"] == [{"model": "google:gemini-3.8-flash", "error": "overloaded (503)"}]
 
 
+def test_the_decision_record_names_the_model_that_answered_after_a_failover(setup):  # noqa: F811
+    """Ruling 25: the saved trace (and its `trace` event) names the fallback entry and its thinking level."""
+    import json
+    s, log = setup
+    first, _ = consult_then_503()
+    game = FakeStellaris([briefing("2200.01.01")])
+    g = Governor(s, game, log, model=first, fallback=decisions("expand"))
+    configured = g._pool
+
+    def pool(role="decisions"):          # the two entries think differently, so the record shows whose it is
+        return [{**e, "thinking": t} for e, t in zip(configured(role), ("low", "high"))]
+    g._pool = pool
+    g.run(max_decisions=1)
+    fallback = pool()[1]
+    assert fallback["model"] != "google:gemini-3.8-flash"
+    ev = [e for e in log.recent if e["kind"] == "trace" and e.get("decision") == "expand"][-1]
+    assert (ev["model"], ev["thinking_level"]) == (fallback["model"], "high")
+    saved = json.loads((log.dir / ev["file"]).read_text(encoding="utf-8"))
+    assert (saved["model"], saved["thinking_level"], saved["decision"]) == (fallback["model"], "high", "expand")
+
+
 def test_an_open_model_is_skipped_by_the_next_call(setup):  # noqa: F811
     s, log = setup
     first, calls = consult_then_503()

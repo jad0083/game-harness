@@ -292,6 +292,11 @@ def seed_scenario(runs: Path, scenario: str = "playing") -> dict:
                                         "family": "gemini-flash", "caution": True, "today": 12},
             "google:gemini-3.1-pro-preview": {"state": "closed", "until": None, "reason": "", "openings": 0,
                                               "family": "gemini-pro", "caution": False, "today": 7}}}
+        for model, state, reason in (("anthropic:claude-sonnet-5", "broken", "unusable (404)"),
+                                     ("anthropic:claude-sonnet-5", "closed", "cleared"),     # the models changed
+                                     ("google:gemini-3.1-pro-preview", "half_open", "overloaded (503)"),
+                                     ("google:gemini-3.1-pro-preview", "closed", "")):
+            log.emit("model_breaker", model=model, family="x", state=state, until=None, reason=reason, openings=1)
         log.emit("model_breaker", model="google:gemini-3.8-flash", family="gemini-flash", state="open",
                  until=now + 300, reason="overloaded (503)", openings=3)
         log.emit("pool_exhausted", role="chat", causes=[{"model": "google:gemini-3.8-flash", "error": "overloaded (503)"}])

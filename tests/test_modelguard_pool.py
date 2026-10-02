@@ -333,3 +333,90 @@ def test_a_trial_that_is_rejected_is_due_again():
     assert h.status("google:gemini-3.8-flash") == "trial", "a rejected trial gives no verdict: not left half-open"
     result, _ = run(pool)
     assert result.output == "a answers" and h.status("google:gemini-3.8-flash") == "closed"
+
+
+@pytest.mark.parametrize("method", ["reserve", "count"])
+def test_a_guard_error_before_sending_fails_over_inside_the_run(method):
+    """Limits that slipped past check_guard_settings make reserve() or count() raise: that model fails
+    over within the run like any failure (its breaker opens), never the whole decision."""
+    h, _ = make_health()
+    real, seen = getattr(h, method), []
+
+    def broken(model):
+        seen.append(model)
+        if model == "google:gemini-3.8-flash" and seen.count(model) == 2:
+            raise ValueError("could not convert string to float: 'fast'")
+        return real(model)
+    setattr(h, method, broken)
+    a, b = Script("tool", "a never answers this"), Script("done by b")
+    rec = Recorder()
+    result, bumps = run(pool_of(h, ("google:gemini-3.8-flash", a), ("anthropic:claude-sonnet-5", b)), rec)
+    assert result.output == "done by b" and bumps == 1, "the tool ran once"
+    assert a.calls == 1 and b.calls == 1
+    fb = next(kw for k, kw in rec.events if k == "fallback")
+    assert fb["failure"].kind == G.OTHER and "ValueError" in fb["failure"].cause
+    assert fb["next"] == "anthropic:claude-sonnet-5"
+    assert h.status("google:gemini-3.8-flash") == "open", "an `other` failure opens the breaker"
+
+
+def test_malformed_limits_in_a_config_built_in_code_fail_over():
+    h, _ = make_health(model_limits={"google:gemini-3.8-flash": {"rpm": "fast"}})
+    a, b = Script("a"), Script("b answered")
+    result, _ = run(pool_of(h, ("google:gemini-3.8-flash", a), ("anthropic:claude-sonnet-5", b)))
+    assert result.output == "b answered" and a.calls == 0
+
+
+def test_a_trial_taken_by_another_request_is_skipped():
+    """Two requests saw the same trial due (another role's pool shares the health): the one that lost
+    begin_trial moves on, without counting a request or changing the breaker."""
+    clock = Clock()
+    h, changes = make_health(clock)
+    name = "google:gemini-3.8-flash"
+    h.failed(name, G.Failure(G.OVERLOADED, 503))
+    clock.t += 60
+    a, b = Script("a"), Script("b answered")
+    pool = pool_of(h, (name, a), ("anthropic:claude-sonnet-5", b))
+    other = G.GuardedModel(FunctionModel(Script("other")), name, h)      # another role's entry for the model
+    real_ordered, taken = pool.ordered, []
+
+    def ordered(exclude=frozenset()):
+        out = real_ordered(exclude)
+        if not taken:                       # between this request's order and its send, the other takes it
+            taken.append(other.health.begin_trial(name))
+        return out
+    pool.ordered = ordered
+    rec = Recorder()
+    result, _ = run(pool, rec)
+    assert taken == [True] and result.output == "b answered" and a.calls == 0
+    assert h.status(name) == "half_open", "the other request's trial is untouched"
+    assert h.today(name) == 0 and changes[-1][1]["state"] == "half_open"
+    fb = next(kw for k, kw in rec.events if k == "fallback")
+    assert fb["failure"].kind == G.OTHER and fb["failure"].cause == "its trial is running"
+
+
+@pytest.mark.parametrize("raised,kind,calls", [("connect", G.OVERLOADED, 2), ("timeout", G.TIMEOUT, 1)])
+def test_anthropic_transport_errors_reach_the_guard_classified(raised, kind, calls):
+    """The Anthropic SDK raises APIConnectionError / APITimeoutError from its httpx2 transport and
+    pydantic-ai wraps them in ModelAPIError: the guard still sees an overload or a timeout."""
+    import httpx2
+    from anthropic import AsyncAnthropic
+    from pydantic_ai.models.anthropic import AnthropicModel
+    from pydantic_ai.providers.anthropic import AnthropicProvider
+    sent = []
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        sent.append(1)
+        if raised == "connect":
+            raise httpx2.ConnectError("refused", request=request)
+        raise httpx2.ReadTimeout("slow", request=request)
+    client = AsyncAnthropic(api_key="test", max_retries=0,
+                            http_client=httpx2.AsyncClient(transport=httpx2.MockTransport(handler)))
+    claude = AnthropicModel("claude-sonnet-5", provider=AnthropicProvider(anthropic_client=client))
+    h, _ = make_health()
+    b = Script("gemini answered")
+    rec = Recorder()
+    pool = G.PoolModel("decisions", [G.GuardedModel(claude, "anthropic:claude-sonnet-5", h),
+                                     G.GuardedModel(FunctionModel(b), "google:gemini-3.1-pro-preview", h)], h)
+    result, _ = run(pool, rec)
+    assert result.output == "gemini answered" and len(sent) == calls, "an overload gets its one retry"
+    assert [kw["failure"].kind for k, kw in rec.events if k == "fallback"] == [kind]

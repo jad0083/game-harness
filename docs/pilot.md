@@ -97,11 +97,13 @@ model, as before the guard. When no model of the pool can be reached the call fa
 current directive; Civilization VI retries once on the Strategy models (through the same guard: those
 whose breaker is closed or due for its trial), then acts by rule.
 
-Each failure is classified: `overloaded` (HTTP 500, 502, 503, 504, 529, a connection error),
-`timeout` (past `model_timeout_s`), `rate_limited` (429 without a daily quota; Gemini's `RetryInfo`
-gives the wait), `daily_quota` (429 whose quota id contains `PerDay`), `broken` (401, 403, 404, or a
-model that cannot be built, such as a missing key), `rejected` (400, 422) and `other`. The kind
-decides what happens:
+Each failure is classified: `overloaded` (HTTP 500, 502, 503, 504, 529, a connection error: any
+transport error of httpx, or the Anthropic SDK's `APIConnectionError`), `timeout` (past
+`model_timeout_s`, an httpx timeout or the Anthropic SDK's `APITimeoutError`), `rate_limited` (429
+without a daily quota; Gemini's `RetryInfo` gives the wait; also a claude-code CLI error saying the
+subscription's usage limit was reached, which waits an hour), `daily_quota` (429 whose quota id contains
+`PerDay`), `broken` (401, 403, 404, or a model that cannot be built, such as a missing key), `rejected`
+(400, 422) and `other`. The kind decides what happens:
 
 | Kind | Retry on the same model | Breaker |
 |---|---|---|
@@ -157,8 +159,12 @@ is logged as `model_pace`.
 | `pool_max_wait_s` | 60 s | |
 | `model_timeout_s` | 120 s per request | |
 
-Settings without a variable are changed in `src/pilot/config.py`. A variable that is not a JSON object
-stops the pilot at start with its name.
+Settings without a variable are changed in `src/pilot/config.py`. A malformed variable stops the pilot at
+start with an error that begins with its name and says what is wrong: not a JSON object; in
+`PILOT_MIN_CALL_INTERVAL` a value that is not a number of seconds, 0 or more; in `PILOT_MODEL_LIMITS` a
+value that is not an object, a key other than `rpm`, `tpm` and `daily_requests`, an `rpm` or `tpm` that is
+not a number above 0, or a `daily_requests` that is not a whole number above 0; in `PILOT_MODEL_FAMILIES`
+a family that is not a non-empty string.
 
 **Daily counts.** Requests per model per Pacific date are counted before each request is sent and
 written to `runs/model-usage.json` (atomically; 7 days kept), so a daily budget holds across restarts.
@@ -173,15 +179,18 @@ every breaker change (state, until, reason, openings), `model_pace` for waits of
 model logs these with the role "decisions retry". Deciding on Now follows the pool: the
 model being tried, the attempt, the models already tried and why, those skipped, a retry's countdown.
 `info.model_health` in `/status` holds every model's breaker, its family's caution and today's request
-count.
+count; the governors publish it after every model call and the GalCiv pilot after every episode, and both
+on every breaker change.
 
 **On the dashboard.** Now shows one model-health line (hidden when nothing is wrong, and for a pilot
 that publishes no `info.model_health`): "Skipped: Gemini 3.8 Flash until 14:32 (overloaded (503), 3rd
 time)" names each model whose breaker is open or broken, and "Gemini 3.7 Flash after other families"
 a model whose family is waiting after a rate limit or overload. The role editor lists "N requests
 today" under each model of the pool. Activity words the guard's events: "Gemini 3.8 Flash skipped
-until 14:32 (...)", "Trying Gemini 3.8 Flash again", "Waited 2 s before calling ... , to keep requests
-apart" and "No model could answer (chat): ...".
+until 14:32 (...)", "Trying Gemini 3.8 Flash again", "Gemini 3.8 Flash answers again", "Gemini 3.8
+Flash may be tried again" (its broken mark cleared by a model change), "Waited 2 s before calling ... ,
+to keep requests apart" and "No model could answer (chat): ...". Of the breaker changes only a model
+opening or found unusable is listed under Problems; all of them are under Model.
 
 **The kill switch.** `PILOT_MODEL_GUARD=0` runs the calls as before the guard: whole runs retried on
 the first model after 5, 15 and 45 s (`retry_delays`), any other failure moving the whole run to the

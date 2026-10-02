@@ -49,7 +49,11 @@ def gemini_429(quota_id="GenerateRequestsPerMinutePerProjectPerModel", delay="37
     (httpx.ConnectError("refused"), G.OVERLOADED, None),
     (httpx.RemoteProtocolError("Server disconnected without sending a response."), G.OVERLOADED, None),
     (httpx.ReadTimeout("slow"), G.TIMEOUT, None),
+    (httpx.PoolTimeout("no connection free"), G.TIMEOUT, None),
     (TimeoutError(), G.TIMEOUT, None),
+    (httpx.ReadError("connection reset"), G.OVERLOADED, None),
+    (httpx.WriteError("broken pipe"), G.OVERLOADED, None),
+    (httpx.ProxyError("proxy down"), G.OVERLOADED, None),
     (ModelHTTPError(404, "gemini-3.8-flash-high"), G.BROKEN, 404),
     (ModelHTTPError(403, "m"), G.BROKEN, 403),
     (ModelHTTPError(401, "m"), G.BROKEN, 401),
@@ -60,6 +64,45 @@ def gemini_429(quota_id="GenerateRequestsPerMinutePerProjectPerModel", delay="37
 def test_classify(exc, kind, status):
     f = G.classify(exc)
     assert (f.kind, f.status) == (kind, status)
+
+
+def _anthropic_errors():
+    """The Anthropic SDK's transport errors (raised from its own httpx2 layer, so not httpx classes), bare
+    and as pydantic-ai raises them: a ModelAPIError whose cause is the SDK's error."""
+    import anthropic
+    import httpx2
+    from pydantic_ai.exceptions import ModelAPIError
+    req = httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
+    timeout, conn = anthropic.APITimeoutError(request=req), anthropic.APIConnectionError(request=req)
+
+    def wrapped(cause):
+        e = ModelAPIError(model_name="claude-sonnet-5", message=cause.message)
+        e.__cause__ = cause
+        return e
+    return [(timeout, G.TIMEOUT), (conn, G.OVERLOADED), (wrapped(timeout), G.TIMEOUT), (wrapped(conn), G.OVERLOADED)]
+
+
+def test_anthropic_transport_errors_are_matched_by_class_name():
+    for exc, kind in _anthropic_errors():
+        f = G.classify(exc)
+        assert (f.kind, f.status) == (kind, None), repr(exc)
+    assert G.classify(_anthropic_errors()[0][0]).cause == "timed out (APITimeoutError)"
+    assert G.classify(_anthropic_errors()[3][0]).cause == "connection failed (APIConnectionError)"
+    from pydantic_ai.exceptions import ModelAPIError
+    assert G.classify(ModelAPIError(model_name="m", message="odd")).kind == G.OTHER, "no cause: other"
+
+
+def test_a_claude_code_usage_limit_is_rate_limited_for_an_hour():
+    from pilot.claude_code import ClaudeCodeError
+    clock = Clock()
+    h, changes, _ = health(clock=clock)
+    f = G.classify(ClaudeCodeError("claude-code:opus error, exit 1: Claude AI usage limit reached|1760000000"))
+    assert (f.kind, f.status, f.retry_after) == (G.RATE_LIMITED, None, 3600.0)
+    assert G.retry_delay(f, False, h.cfg, lambda a, b: a) is None, "no retry: the wait is over rate_retry_max_s"
+    h.failed("claude-code:opus", f)
+    assert changes[-1][1]["until"] == round(clock.t + 3600, 1), "an hour, over the 60 s window"
+    assert G.classify(ClaudeCodeError("claude-code:opus exit 2: unknown option")).kind == G.OTHER
+    assert G.classify(RuntimeError("usage limit reached")).kind == G.OTHER, "only the CLI's error"
 
 
 def test_a_429_reads_retry_info_and_the_daily_quota():
@@ -188,6 +231,8 @@ def test_rate_limits_daily_quota_broken_and_rejected():
     assert h.status("a:z") == "closed" and len(changes) == n
     h.clear_broken(["google:gemini-3.8-flash-high"])
     assert h.status("google:gemini-3.8-flash-high") == "closed" and changes[-1][1]["state"] == "closed"
+    assert changes[-1][1]["reason"] == "cleared", "Activity: may be tried again, not answers again"
+    assert h.snapshot()["models"].get("google:gemini-3.8-flash-high", {}).get("reason", "") == ""
 
 
 def test_a_family_under_caution_and_the_earliest_reopen():
@@ -302,3 +347,40 @@ def test_settings_and_environment(monkeypatch, tmp_path):
         Settings.from_env()
     cfg = G.GuardConfig.from_settings(Settings(runs_dir=tmp_path))
     assert cfg.usage_file == tmp_path / "model-usage.json" and cfg.breaker_max_s == 600.0
+
+
+@pytest.mark.parametrize("var,value,words", [
+    ("PILOT_MODEL_LIMITS", '{"google:x": {"rpm": "fast"}}', "rpm"),
+    ("PILOT_MODEL_LIMITS", '{"google:x": {"rpm": 30, "burst": 5}}', "burst"),
+    ("PILOT_MODEL_LIMITS", '{"google:x": {"daily_requests": 0}}', "daily_requests"),
+    ("PILOT_MODEL_LIMITS", '{"google:x": {"daily_requests": 2.5}}', "daily_requests"),
+    ("PILOT_MODEL_LIMITS", '{"google:x": {"tpm": true}}', "tpm"),
+    ("PILOT_MODEL_LIMITS", '{"google:x": {"rpm": -2}}', "rpm"),
+    ("PILOT_MODEL_LIMITS", '{"google:x": 30}', "object"),
+    ("PILOT_MIN_CALL_INTERVAL", '{"google": -1}', "google"),
+    ("PILOT_MIN_CALL_INTERVAL", '{"google": "0.5"}', "google"),
+    ("PILOT_MIN_CALL_INTERVAL", '{"google": NaN}', "google"),
+    ("PILOT_MODEL_FAMILIES", '{"m": 3}', '"m"'),
+    ("PILOT_MODEL_FAMILIES", '{"m": " "}', '"m"'),
+])
+def test_malformed_guard_settings_stop_the_start_with_the_variable(monkeypatch, var, value, words):
+    for name in ("PILOT_MODEL_LIMITS", "PILOT_MIN_CALL_INTERVAL", "PILOT_MODEL_FAMILIES"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv(var, value)
+    with pytest.raises(ValueError, match=f"^{var}") as e:
+        Settings.from_env()
+    assert words in str(e.value)
+
+
+def test_guard_settings_built_in_code_are_checked_too(monkeypatch, tmp_path):
+    with pytest.raises(ValueError, match="^PILOT_MODEL_LIMITS"):
+        G.GuardConfig.from_settings(Settings(runs_dir=tmp_path, model_limits={"google:x": {"rpm": 0}}))
+    with pytest.raises(ValueError, match="^PILOT_MIN_CALL_INTERVAL"):
+        G.GuardConfig.from_settings(Settings(runs_dir=tmp_path, min_call_interval_s={"google": True}))
+    good = {"google:gemini-3.1-pro-preview": {"rpm": 25, "tpm": 1_000_000.0, "daily_requests": 1000}}
+    cfg = G.GuardConfig.from_settings(Settings(runs_dir=tmp_path, model_limits=good,
+                                               min_call_interval_s={"google": 0, "anthropic": 0.2},
+                                               model_families={"google:gemini-4-argon": "gemini-pro"}))
+    assert cfg.model_limits == good
+    monkeypatch.setenv("PILOT_MODEL_LIMITS", '{"google:gemini-3.1-pro-preview": {"rpm": 25, "daily_requests": 1000}}')
+    assert Settings.from_env().model_limits["google:gemini-3.1-pro-preview"]["rpm"] == 25

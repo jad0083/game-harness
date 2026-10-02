@@ -17,6 +17,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any
 from zoneinfo import ZoneInfo
 
 import anyio
@@ -35,6 +36,10 @@ CAUTION = frozenset({OVERLOADED, TIMEOUT})       # kinds that put the model's fa
 LABEL = {OVERLOADED: "overloaded", TIMEOUT: "timed out", RATE_LIMITED: "rate limited", DAILY_QUOTA: "daily quota",
          BROKEN: "unusable", REJECTED: "request rejected", OTHER: "failed"}
 USAGE_DAYS = 7                                   # days of request counts kept in the usage file (ruling 14)
+# a claude-code CLI error saying the subscription's usage limit was reached ("Claude AI usage limit
+# reached|<epoch>"; newer CLIs: "You've hit your limit", "5-hour limit reached"): rate limited for an hour
+USAGE_LIMIT = re.compile(r"usage limit|hit your (?:usage )?limit|(?:5-hour|weekly|session) limit", re.IGNORECASE)
+CLAUDE_CODE_LIMIT_S = 3600.0
 
 _sleep = anyio.sleep                             # the guard's waits; tests replace both (tests/conftest.py)
 _uniform = random.uniform
@@ -111,11 +116,26 @@ def classify(e: BaseException) -> Failure:
         if st in (400, 422):
             return Failure(REJECTED, st, None, cause)
         return Failure(OTHER, st, None, cause)
-    if isinstance(e, (httpx.TimeoutException, TimeoutError)):
-        return Failure(TIMEOUT, None, None, f"timed out ({type(e).__name__})")
-    if isinstance(e, (httpx.ConnectError, httpx.RemoteProtocolError, ConnectionError)):
-        return Failure(OVERLOADED, None, None, f"connection failed ({type(e).__name__})")
+    # the exception, then what caused it: pydantic-ai raises the Anthropic SDK's APIConnectionError and
+    # APITimeoutError (from its own httpx2 layer, so not httpx classes) as a ModelAPIError from them
+    for x in _causes(e):
+        names = {c.__name__ for c in type(x).__mro__}
+        if isinstance(x, (httpx.TimeoutException, TimeoutError)) or "APITimeoutError" in names:
+            return Failure(TIMEOUT, None, None, f"timed out ({type(x).__name__})")
+        if isinstance(x, (httpx.TransportError, ConnectionError)) or "APIConnectionError" in names:
+            return Failure(OVERLOADED, None, None, f"connection failed ({type(x).__name__})")
+        if "ClaudeCodeError" in names and USAGE_LIMIT.search(str(x)):
+            # the subscription's usage limit: an hour's window (its reset time is not in a reliable form)
+            return Failure(RATE_LIMITED, None, CLAUDE_CODE_LIMIT_S, f"usage limit reached ({type(x).__name__})")
     return Failure(OTHER, None, None, f"{type(e).__name__}: {e}"[:200])
+
+
+def _causes(e: BaseException, depth: int = 4) -> list[BaseException]:
+    out: list[BaseException] = []
+    while e is not None and len(out) < depth and all(e is not o for o in out):
+        out.append(e)
+        e = e.__cause__
+    return out
 
 
 def provider(model: str) -> str:
@@ -147,6 +167,37 @@ def next_pacific_midnight(now: float) -> float:
     return datetime(d.year, d.month, d.day, tzinfo=PACIFIC).timestamp()
 
 
+LIMIT_KEYS = ("rpm", "tpm", "daily_requests")
+
+
+def _number(v) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
+
+
+def check_guard_settings(min_call_interval_s: Mapping, model_limits: Mapping, model_families: Mapping) -> None:
+    """Ruling 15's maps, checked once at start: a ValueError naming the variable and what is wrong, so a
+    malformed value stops the pilot instead of failing every request."""
+    def bad(var: str, key, what: str, value) -> ValueError:
+        return ValueError(f"{var}: {json.dumps(str(key))} {what}, got {json.dumps(value, default=str)}")
+    for prov, v in min_call_interval_s.items():
+        if not _number(v) or v < 0:
+            raise bad("PILOT_MIN_CALL_INTERVAL", prov, "must be a number of seconds, 0 or more", v)
+    for model, lim in model_limits.items():
+        if not isinstance(lim, Mapping):
+            raise bad("PILOT_MODEL_LIMITS", model, "must be an object of rpm, tpm, daily_requests", lim)
+        for k, v in lim.items():
+            if k not in LIMIT_KEYS:
+                raise bad("PILOT_MODEL_LIMITS", model, f"has the unknown key {json.dumps(str(k))} "
+                                                       f"(only {', '.join(LIMIT_KEYS)})", lim)
+            if k == "daily_requests" and not (isinstance(v, int) and not isinstance(v, bool) and v > 0):
+                raise bad("PILOT_MODEL_LIMITS", model, "daily_requests must be a whole number above 0", v)
+            if k != "daily_requests" and not (_number(v) and v > 0):
+                raise bad("PILOT_MODEL_LIMITS", model, f"{k} must be a number above 0", v)
+    for model, fam in model_families.items():
+        if not isinstance(fam, str) or not fam.strip():
+            raise bad("PILOT_MODEL_FAMILIES", model, "must name a family (a non-empty string)", fam)
+
+
 @dataclass
 class GuardConfig:
     """Ruling 15's settings, as the guard uses them."""
@@ -162,6 +213,7 @@ class GuardConfig:
 
     @classmethod
     def from_settings(cls, s) -> GuardConfig:
+        check_guard_settings(s.min_call_interval_s, s.model_limits, s.model_families)
         return cls(overload_retry_s=tuple(s.overload_retry_s), rate_retry_max_s=s.rate_retry_max_s,
                    breaker_open_s=s.breaker_open_s, breaker_max_s=s.breaker_max_s, pool_max_wait_s=s.pool_max_wait_s,
                    min_call_interval_s=dict(s.min_call_interval_s), model_limits=dict(s.model_limits),
@@ -287,12 +339,14 @@ class ModelHealth:
         return min(ends) if ends else None
 
     def clear_broken(self, models: Iterable[str]) -> None:
+        """Plan ruling P2: a pool rebuild lets its broken models be tried again; each one's change carries
+        the reason "cleared" (Activity: "may be tried again", not "answers again")."""
         changed = []
         with self._lock:
             for m in set(models):
                 if m in self._b and self._b[m].state == "broken":
                     del self._b[m]
-                    changed.append((m, self._snap(m, self.clock())))
+                    changed.append((m, {**self._snap(m, self.clock()), "reason": "cleared"}))
         for m, snap in changed:
             self._notify(m, snap)
 
@@ -488,8 +542,9 @@ def build_model(name: str) -> Model:
 
 
 class GuardedModel(WrapperModel):
-    """Ruling 4: one pool entry. It is built on first use, so a model that cannot be built (a missing key,
-    an unknown provider) is marked broken instead of breaking its role."""
+    """Ruling 4: one pool entry. It is built when a run enters its pool (the pool enters every entry, as
+    FallbackModel does) or at its first request, not when the pool is made, so a model that cannot be built
+    (a missing key, an unknown provider) is marked broken instead of breaking its role."""
 
     def __init__(self, model: Model | str, name: str, health: ModelHealth, settings=None):
         Model.__init__(self)                     # not WrapperModel's, which builds the model at once
@@ -548,15 +603,18 @@ class GuardedModel(WrapperModel):
         self.ensure_built()
         settings = merge_model_settings(model_settings, self.entry_settings)
         trial = self.health.begin_trial(self.name)
+        if not trial and self.health.status(self.name) == "half_open":
+            # the pool saw the trial due, but another request took it meanwhile: move on, as the pool would
+            raise ModelUnavailable(self.name, Failure(OTHER, None, None, "its trial is running"))
         retried = resolved = False               # resolved: succeeded() or failed() recorded the trial's verdict
         try:
             while True:
-                wait = self.health.reserve(self.name)
+                wait = self._guard(self.health.reserve)
                 if wait >= 1.0:
                     self.hooks.on_pace(name=self.name, waited=round(wait, 1))
                 if wait > 0:
                     await _sleep(wait)
-                over = self.health.count(self.name)
+                over = self._guard(self.health.count)
                 if over is not None:
                     raise ModelUnavailable(self.name, over)
                 try:
@@ -581,6 +639,17 @@ class GuardedModel(WrapperModel):
         finally:
             if trial and not resolved:
                 self.health.abandon_trial(self.name)     # no verdict (rejected, cancelled, raised): due again
+
+    def _guard(self, step: Callable[[str], Any]):
+        """reserve() or count() for this model. One that raises (limits built in code that bypassed
+        check_guard_settings) is this model's `other` failure: its breaker opens and the pool moves the
+        request on inside the run, instead of the caller running the whole decision again."""
+        try:
+            return step(self.name)
+        except Exception as e:
+            f = Failure(OTHER, None, None, f"guard settings: {type(e).__name__}: {e}"[:200])
+            self.health.failed(self.name, f)
+            raise ModelUnavailable(self.name, f) from e
 
     @asynccontextmanager
     async def request_stream(self, *args, **kwargs):

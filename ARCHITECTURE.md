@@ -404,10 +404,14 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   game-specific): `ModelHealth`, one per pilot process and shared by every role and thread under one
   lock, keeps each model's circuit breaker (closed, open for a doubling window, half-open for its one
   trial, broken), its family's caution, the pacing slots and the daily request counts
-  (`runs/model-usage.json`); `classify` turns an exception into a failure kind. `GuardedModel` (a
-  pydantic-ai `WrapperModel`, built on first use, so a model that cannot be built is marked broken)
-  wraps one pool entry with its thinking settings: it waits for its slot, sends, retries once where the
-  kind allows and raises `ModelUnavailable`. `PoolModel` (after `FallbackModel`) holds a role's entries
+  (`runs/model-usage.json`); `classify` turns an exception (or the SDK error that caused it) into a
+  failure kind; `check_guard_settings` stops the start on a malformed `PILOT_MIN_CALL_INTERVAL`,
+  `PILOT_MODEL_LIMITS` or `PILOT_MODEL_FAMILIES` (from `Settings.from_env` and
+  `GuardConfig.from_settings`). `GuardedModel` (a pydantic-ai `WrapperModel`, built when a run enters
+  its pool or at its first request, not when the pool is made, so a model that cannot be built is
+  marked broken) wraps one pool entry with its thinking settings: it waits for its slot, sends, retries
+  once where the kind allows and raises `ModelUnavailable` (also when another request holds its trial,
+  or its slot or count cannot be taken). `PoolModel` (after `FallbackModel`) holds a role's entries
   and sends each request of a run to the first that can take it; a failed request moves with the run's
   history to the next, so tools are not run again, and `PoolExhausted` names each model's cause when
   none can answer. `Governor._call` runs each role's one agent on its pool under a per-role lock, with

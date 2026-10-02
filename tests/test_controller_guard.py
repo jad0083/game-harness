@@ -49,6 +49,40 @@ def test_an_episode_continues_on_the_fallback_and_notes_once(corpus, tmp_path): 
     assert log.state.info["model_health"]["models"]["google:gemini-3.8-flash"]["state"] == "open"
 
 
+def test_each_episode_publishes_todays_counts(corpus, tmp_path):  # noqa: F811
+    """The pool editor's "N requests today" follows GalCiv too: published after every episode's run,
+    whether it answered or failed, not only on a breaker change."""
+    s, log = make(corpus, tmp_path, pool_max_wait_s=0)
+    pilot = Pilot(s, FakeGame([]), log, model=finisher())
+    pilot._episode("a dialog is up", None)
+    assert log.state.info["model_health"]["models"]["google:gemini-3.8-flash"]["today"] == 1
+    assert not any(e["kind"] == "model_breaker" for e in log.recent), "no breaker change published it"
+
+    def rejected(messages, info):
+        raise ModelHTTPError(400, "gemini-3.8-flash", "bad request")    # a rejected request opens nothing
+    pilot = Pilot(s, FakeGame([]), log, model=FunctionModel(rejected, model_name="gemini-3.8-flash"))
+    pilot._episode("a dialog is up", None)
+    assert any(e["kind"] == "episode_error" for e in log.recent)
+    assert log.state.info["model_health"]["models"]["google:gemini-3.8-flash"]["today"] == 2
+
+
+def test_changing_the_model_clears_its_broken_mark(corpus, tmp_path):  # noqa: F811
+    """Plan ruling P2 for GalCiv: a pool rebuild lets the new pool's broken models be tried again."""
+    from pilot.modelguard import BROKEN, Failure
+    s, log = make(corpus, tmp_path)
+    pilot = Pilot(s, FakeGame([]), log, model=finisher())
+    pilot.health.failed("google:gemini-3.7-flash", Failure(BROKEN, 404))
+    pilot.health.failed("google:gemini-3.1-pro-preview", Failure(BROKEN, 404))
+    pilot.set_model("google:gemini-3.7-flash")
+    assert pilot.health.status("google:gemini-3.7-flash") == "closed"
+    assert pilot.health.status("google:gemini-3.1-pro-preview") == "broken", "not in the new pool"
+    cleared = [e for e in log.recent if e["kind"] == "model_breaker"][-1]
+    assert (cleared["model"], cleared["state"], cleared["reason"]) == ("google:gemini-3.7-flash", "closed", "cleared")
+    published = log.state.info["model_health"]["models"]
+    assert "google:gemini-3.7-flash" not in published, "no breaker and no request today: nothing to show"
+    assert published["google:gemini-3.1-pro-preview"]["state"] == "broken"
+
+
 def test_without_the_guard_the_episode_replays_as_before(corpus, tmp_path):  # noqa: F811
     s, log = make(corpus, tmp_path, model_guard=False, retry_delays=(0,))
     pilot = Pilot(s, FakeGame([]), log, model=note_then_503(), fallback=finisher())
@@ -57,3 +91,5 @@ def test_without_the_guard_the_episode_replays_as_before(corpus, tmp_path):  # n
     assert not any(e["kind"] == "model_breaker" for e in log.recent)
     assert pilot.pool is None and "model_health" not in log.state.info
     assert not (tmp_path / "runs" / "model-usage.json").exists()
+    pilot.set_model("google:gemini-3.7-flash")
+    assert pilot.pool is None and "model_health" not in log.state.info, "a model change publishes nothing either"

@@ -60,6 +60,11 @@ class Pilot:
 
     def _on_breaker(self, model: str, snap: dict) -> None:
         emit_breaker(self.log.emit, model, snap)
+        self._publish_health()
+
+    def _publish_health(self) -> None:
+        """Now's model-health line and the pool editor's counts read this (ruling 23): after every breaker
+        change and every episode's model run; nothing with PILOT_MODEL_GUARD=0."""
         if self.s.model_guard:
             self.log.state.info["model_health"] = self.health.snapshot()
 
@@ -106,6 +111,9 @@ class Pilot:
         self.s = replace(self.s, model=model, thinking=thinking or self.s.thinking)
         self._model_obj = None
         self.agent = self._make_agent()
+        if self.s.model_guard and self.pool is not None:     # plan ruling P2: the new pool's models may be tried again
+            self.health.clear_broken(gm.name for gm in self.pool.guarded)
+            self._publish_health()
         self.log.state.model = model
         self.log.state.info["thinking"] = self.s.thinking
         self.log.emit("model", model=model, thinking=self.s.thinking)
@@ -183,6 +191,8 @@ class Pilot:
             self.log.emit("episode_error", error=f"{type(e).__name__}: {e}"[:500])
             self._status("playing")
             return False
+        finally:
+            self._publish_health()          # today's counts, answered or not
         st = self.log.state
         st.tokens_in += getattr(usage, "input_tokens", 0) or 0
         st.tokens_out += getattr(usage, "output_tokens", 0) or 0
