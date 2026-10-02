@@ -70,7 +70,7 @@ the controller directly: `.mcp.json`, `.gemini/settings.json`.
 |---|---|
 | [AGENTS.md](AGENTS.md) | The operating guide for any model working here: play loop, decisions, recoveries, how to record what it learns |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Components, turn verification, known screens, coordinate scaling, agent API |
-| [docs/pilot.md](docs/pilot.md) | The pilot app: models, the Stellaris and Civilization VI governors, the strategy layer, dashboard, telemetry |
+| [docs/pilot.md](docs/pilot.md) | The pilot app: models, model calls (pacing, retries, failover; `PILOT_MODEL_GUARD`, `PILOT_MIN_CALL_INTERVAL`, `PILOT_MODEL_LIMITS`, `PILOT_MODEL_FAMILIES`), the Stellaris and Civilization VI governors, the strategy layer, dashboard, telemetry |
 | [docs/cli.md](docs/cli.md) | Controller CLI and MCP tools |
 | [docs/corpus.md](docs/corpus.md) | Game corpora, generated records, other screen sizes |
 | [PLAYING.md](PLAYING.md) | Verified controls for Galactic Civilizations IV |

@@ -830,6 +830,7 @@ def test_an_idle_civic_and_research_are_filled_when_the_model_gives_no_answer(se
 def test_a_resolved_order_is_reported_to_the_next_model_that_answers(setup):
     """A decision whose model call fails has shown nobody what became of earlier orders: those
     lines wait for the next decision that gets an answer."""
+    from pydantic_ai.exceptions import ModelHTTPError
     prompts: list[str] = []
     calls = {"n": 0}
 
@@ -841,8 +842,8 @@ def test_a_resolved_order_is_reported_to_the_next_model_that_answers(setup):
             return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name,
                                                      {"change": False, "assessment": "n/a", "rules": []})])
         calls["n"] += 1
-        if calls["n"] == 2:
-            raise RuntimeError("model unavailable")
+        if calls["n"] == 2:     # a rejected request: the model's breaker stays closed for the next decision (model guard ruling 7)
+            raise ModelHTTPError(400, "gemini-3.8-flash", "request rejected")
         prompts.append("\n".join(str(getattr(p, "content", "")) for m in messages for p in getattr(m, "parts", [])))
         orders = [{"kind": "production", "city": "Beijing", "id": "unit:slinger"}] if calls["n"] == 1 else []
         return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"orders": orders, "reason": "test"})])
@@ -3033,6 +3034,7 @@ def _resilience_governor(setup, game, decide_calls, strategist=None) -> Civ6Gove
 
 
 def test_t525_a_failed_decision_retries_on_the_strategy_model_then_buys_by_rule_before_autoplay(setup):
+    setup[0].model_guard = False    # the whole-run path (PILOT_MODEL_GUARD=0, model guard ruling 19)
     decide, strat = [], []
     game = FakeCiv6(_t525(), index=INDEX, prices={("Guangzhou", "unit:machine_gun", "faith"): 1080})
     g = _resilience_governor(setup, game, decide, _strategist_model(strat, None))
@@ -3065,6 +3067,7 @@ def test_a_retry_that_answers_is_the_decision(setup):
 
 
 def test_without_strategy_models_the_failed_models_are_not_tried_again(setup):
+    setup[0].model_guard = False    # the whole-run path (PILOT_MODEL_GUARD=0, model guard ruling 19)
     decide: list = []
     game = FakeCiv6(_t525(), index=INDEX, prices={("Guangzhou", "unit:machine_gun", "faith"): 1080})
     g = _resilience_governor(setup, game, decide)
@@ -3076,6 +3079,25 @@ def test_without_strategy_models_the_failed_models_are_not_tried_again(setup):
     g2 = _resilience_governor((s, EventLog(s.runs_dir, "civ2", s.model)), calm, [])
     g2.run(max_decisions=1)
     assert not any(a[0] == "order" and a[1]["kind"] == "purchase" for a in calm.actions), "no weakness: no rule buy"
+
+
+def test_t525_on_the_model_guard_the_pool_gives_up_then_the_retry_and_the_rule_buy_run(setup):
+    """Model guard ruling 11: when no decision model can answer, the pool gives up at once and ruling 20
+    follows as before: one retry on the Strategy models (through the same guard), then the rule buy."""
+    decide, strat = [], []
+    game = FakeCiv6(_t525(), index=INDEX, prices={("Guangzhou", "unit:machine_gun", "faith"): 1080})
+    g = _resilience_governor(setup, game, decide, _strategist_model(strat, None))
+    g.run(max_decisions=1)
+    assert decide == ["decide"] * 2, "the decision model: one call and the guard's one retry"
+    events = g.log.recent
+    assert [e["role"] for e in events if e["kind"] == "pool_exhausted"] == ["decisions"]
+    retries = [c for c in strat if c.startswith("retry")]
+    assert len(retries) == 2 and all(r.endswith("Answer now, with at most 3 tool calls.") for r in retries), strat
+    assert any(e["kind"] == "model_retry" and e["role"] == "decisions retry" for e in events)
+    purchases = [i for i, a in enumerate(game.actions) if a[0] == "order" and a[1]["kind"] == "purchase"]
+    first_autoplay = next((i for i, a in enumerate(game.actions) if a[0] == "autoplay"), len(game.actions))
+    assert len(purchases) == 1 and purchases[0] < first_autoplay, "bought by rule before any autoplay"
+    assert traces(setup)[0]["orders"][0]["by"] == "governor"
 
 
 # ---- governor fills stay production orders (post-mortem fixes review) ----------------------------------

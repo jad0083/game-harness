@@ -47,6 +47,7 @@ it prints "not restarted: the running civ6 pilot is unaffected; the change appli
 | `PILOT_LAST_STAND`, `PILOT_LAST_STAND_MAX` | Civilization VI: scripted actions for a city about to fall (default `0`, off until the live checklist L6 passes); at most this many stands in a row per city (default 3) |
 | `PILOT_WAR_CRISIS` | Stellaris: the war crisis overlay (default `1`; `0` turns it off for a run) |
 | `PILOT_THINKING`, `PILOT_GOVERNOR_THINKING` | thinking level for GC4 episodes / Stellaris decisions (default `medium`) |
+| `PILOT_MODEL_GUARD`, `PILOT_MIN_CALL_INTERVAL`, `PILOT_MODEL_LIMITS`, `PILOT_MODEL_FAMILIES` | the governors' model guard (default `1`; `0` runs the whole-run retries), the gap between requests per provider, per-model limits and families (JSON objects); see [Model calls](#model-calls-pacing-retries-and-failover) |
 | `PILOT_RETRO_EVERY` | strategy review every N decisions (default 5) |
 | `PILOT_PORT`, `PILOT_RUNS_DIR`, `PILOT_CAMPAIGN`, `PILOT_COMMIT`, `PILOT_JOURNAL` | live dashboard port, run folder, campaign id, commit learned knowledge, journal file |
 | `PILOT_DASHBOARD_KEY` | the dashboard's service key (default: generated once into `runs/dashboard.key`); a header from the controller only |
@@ -60,10 +61,10 @@ it prints "not restarted: the running civ6 pilot is unaffected; the change appli
 
 Settings → Models sets a list of models per role: **Decisions**, **Strategy**, **Talk** and
 **GC4 blockers** (a role without its own list uses the decision models). Each entry is a provider,
-a model and a thinking level. The first model answers; on a failure the next one is tried, and a
-model that just failed goes to the back for 10 minutes. With "take turns" each decision starts at
-the next model. Every decision records the model release that answered (aliases resolve) and the
-thinking level; the Decisions list shows it on each row.
+a model and a thinking level. The first model answers; when it cannot, the governors move the run
+on to the next one ([Model calls](#model-calls-pacing-retries-and-failover)). With "take turns" each
+decision starts at the next model. Every decision records the model release that answered (aliases
+resolve) and the thinking level; the Decisions list shows it on each row.
 
 | Provider | Needs | Notes |
 |---|---|---|
@@ -80,6 +81,108 @@ set, every versioned id from the Anthropic model listing (listing needs no credi
 single-shot and text-only (no tools, no screenshots); the thinking level becomes `--effort`, and
 the CLI does not return the thinking text. It suits the Strategy role, with a Google model after it
 as the fallback.
+
+## Model calls: pacing, retries and failover
+
+The Stellaris and Civilization VI governors call their models through the model guard
+(`src/pilot/modelguard.py`; [design](design/2026-10-02-model-guard-design.md)). A role's list of models
+is its **pool**, and each role runs one agent on it. Every request of a run goes to the first model of
+the pool that can take it; when that model cannot answer, the same request, with the run's history so
+far, goes to the next model, and the run continues there. A tool that already ran (a consult, an
+order, a purchase) is not run again. With "take turns" a run starts one model further on and keeps
+that order for all its requests. A run that ends without a usable answer (the request cap spent on
+tool calls, an answer that does not validate) is not a model failure: it runs again from the next
+model, as before the guard. When no model of the pool can be reached the call fails at once
+(`pool_exhausted`) and the governor carries on as after any failed decision: Stellaris keeps the
+current directive; Civilization VI retries once on the Strategy models (through the same guard: those
+whose breaker is closed or due for its trial), then acts by rule.
+
+Each failure is classified: `overloaded` (HTTP 500, 502, 503, 504, 529, a connection error),
+`timeout` (past `model_timeout_s`), `rate_limited` (429 without a daily quota; Gemini's `RetryInfo`
+gives the wait), `daily_quota` (429 whose quota id contains `PerDay`), `broken` (401, 403, 404, or a
+model that cannot be built, such as a missing key), `rejected` (400, 422) and `other`. The kind
+decides what happens:
+
+| Kind | Retry on the same model | Breaker |
+|---|---|---|
+| overloaded | once, after a uniform random 1-2 s, unless this request is the model's half-open trial | opens |
+| timeout | no | opens |
+| rate_limited, `retry_after` <= 10 s | once, after `retry_after` plus up to 1 s of jitter | stays closed if the retry answers, else opens |
+| rate_limited, longer or none | no | opens for max(`retry_after`, 60 s) |
+| daily_quota | no | opens until the next midnight in America/Los_Angeles |
+| broken | never | `broken` until the pool is rebuilt (a model or role change) or the pilot restarts |
+| rejected | never | unchanged |
+| other | no | opens |
+
+After the retry (or without one) the request moves to the next model.
+
+**Breaker windows.** An opening lasts 60 s (`breaker_open_s`), doubled for each opening in a row, up
+to 600 s (`breaker_max_s`). An open model is skipped. When its window ends, the next request that
+would use it is its single trial (half-open: other requests skip it meanwhile): an answer closes the
+breaker and resets the count, a failure opens it again with the next window. A model that answers
+outside a trial also resets the count. Saving the models or roles on the dashboard rebuilds the pools
+and clears the broken marks of their models, so re-saving the same list after fixing a key tries the
+model again. When every model of a pool is open, the pool waits for the earliest window if it ends
+within 60 s (`pool_max_wait_s`), then tries that model; otherwise it gives up at once.
+
+**Family caution.** Models that share capacity fail together (Gemini 3.8 Flash and 3.7 Flash were
+overloaded together in 31 of 45 fallbacks, while 3.1 Pro answered 58 of 60), so each model has a
+family: Gemini names containing `flash-lite`, `flash` or `pro` are `gemini-flash-lite`,
+`gemini-flash` and `gemini-pro`, other Gemini models `gemini`, `anthropic:*` and `claude-code:*`
+`claude`, anything else its provider. `PILOT_MODEL_FAMILIES` overrides it per model. While a model is
+open after an overload or a timeout, the other models of its family are tried after every other
+family's (not skipped).
+
+**Pacing.** Requests to one provider start at least `min_call_interval_s` apart (Google 0.5 s, others
+0). `model_limits` can give a model `rpm`, `tpm` and `daily_requests`; the gap before each request to it
+is then the larger of the provider's floor and
+
+    interval >= W x max(60 / RPM, 60 x tokens per request / TPM)
+
+with W = 1, since one pilot process makes the calls, and the input tokens of the model's last answered
+request. When `daily_requests` is reached, the model's breaker opens until midnight Pacific (reason
+"daily budget"), when Gemini's daily quotas reset. No limits are set by default. A wait of 1 s or more
+is logged as `model_pace`.
+
+| Setting | Default | Environment |
+|---|---|---|
+| `model_guard` | on | `PILOT_MODEL_GUARD` (`0` turns it off) |
+| `min_call_interval_s` | `{"google": 0.5}` | `PILOT_MIN_CALL_INTERVAL` (JSON object: provider to seconds) |
+| `model_limits` | `{}` | `PILOT_MODEL_LIMITS` (JSON object: model to `{"rpm", "tpm", "daily_requests"}`) |
+| `model_families` | `{}` | `PILOT_MODEL_FAMILIES` (JSON object: model to family) |
+| `overload_retry_s` | 1.0-2.0 s | |
+| `rate_retry_max_s` | 10 s | |
+| `breaker_open_s` | 60 s | |
+| `breaker_max_s` | 600 s | |
+| `pool_max_wait_s` | 60 s | |
+| `model_timeout_s` | 120 s per request | |
+
+Settings without a variable are changed in `src/pilot/config.py`. A variable that is not a JSON object
+stops the pilot at start with its name.
+
+**Daily counts.** Requests per model per Pacific date are counted before each request is sent and
+written to `runs/model-usage.json` (atomically; 7 days kept), so a daily budget holds across restarts.
+A missing or unreadable file starts the day's counts at 0, and one that cannot be written leaves the
+counts in memory; either problem puts one `briefing_error` "model guard: ..." in the feed.
+
+**What it reports.** `model_retry` and `model_fallback` keep their fields (`error`, `delay`, `attempt`,
+`role`, `model`, `fallback`) and add `failure` (the kind above; `answer` for a run that ended without a
+usable answer), `family` and `request` (the request's number in its run). `model_breaker` is logged on
+every breaker change (state, until, reason, openings), `model_pace` for waits of 1 s or more and
+`pool_exhausted` (role, each model's cause) when a pool gives up. Deciding on Now follows the pool: the
+model being tried, the attempt, the models already tried and why, those skipped, a retry's countdown.
+`info.model_health` in `/status` holds every model's breaker, its family's caution and today's request
+count.
+
+**The kill switch.** `PILOT_MODEL_GUARD=0` runs the calls as before the guard: whole runs retried on
+the first model after 5, 15 and 45 s (`retry_delays`), any other failure moving the whole run to the
+next model, and a model that failed going behind the others for 10 minutes (`model_cooldown_s`). It is
+kept for one campaign; after a campaign on the guard meets the design's success criteria, it is
+removed with those settings.
+
+**One place for retries.** Retries happen only in the guard: google-genai's own retries stay off
+(pydantic-ai leaves its `retry_options` unset), Anthropic models are built with a client whose
+`max_retries` is 0, and claude-code has no retry of its own.
 
 ## Stellaris governor
 
@@ -384,7 +487,8 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   the game offers (else the first offered) and reports it "filled by the governor".
 - **A decision with no answer** (postmortem-fixes design, ruling 20): when every decisions model
   fails (an outage, the usage limit; an `episode_error`), the same hand-back retries once, before any
-  autoplay, with the decisions agent on the Strategy role's own models (those not cooling down), the
+  autoplay, with the decisions agent on the Strategy role's own models (those whose breaker is closed
+  or due for its trial; with `PILOT_MODEL_GUARD=0`, those not cooling down), the
   same prompt plus "Answer now, with at most 3 tool calls." (a `decision_retry` event; the trace names
   `retried_on` and `first_error`). A Strategy role without models of its own gets no retry: the models
   that just failed are not tried again. When the retry fails too, the governor acts by rule, with no

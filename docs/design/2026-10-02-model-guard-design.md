@@ -101,8 +101,9 @@ setting). These remain future options.
    - `broken`: HTTP 401, 403, 404 (key, permission, or model name).
    - `rejected`: HTTP 400 and 422 (this request).
    - `other`: anything else from the model.
-   pydantic-ai's own `UsageLimitExceeded` (the per-decision request cap) is not a model failure and passes
-   through untouched, as today.
+   pydantic-ai's own `UsageLimitExceeded` (the per-decision request cap) is not a model failure: it passes
+   through the pool untouched, and the governor's `_call` then runs the decision again from the next
+   model, as before the guard (plan ruling P1).
 7. **What each kind does** (starting values; all are settings, ruling 15):
 
    | Kind | Retry on the same model | Breaker |

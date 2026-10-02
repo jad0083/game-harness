@@ -250,6 +250,7 @@ class Civ6Governor(Governor):
             text += "\n\n## Rules learned in play\n" + learned.read_text(encoding="utf-8")
         self._text = text
         self.__dict__.pop("_agents", None)
+        self._reset_pools()
         self._failed_last: set[str] = set()      # order keys that did not take at the last decision
         self._report: list[str] = []             # what the last decision's orders did, for the next prompt
         self._tracking: list[Tracked] = []       # orders that took and have not resolved yet (ruling 13)
@@ -300,16 +301,17 @@ class Civ6Governor(Governor):
         """Agents are built per role on first use (`_build`)."""
         self.agent = None
 
-    def _build(self, role: str, settings, model):
+    def _build(self, role: str, settings, model, agent_settings=None):
         if role in ("strategy",):
-            return super()._build(role, settings, model)
+            return super()._build(role, settings, model, agent_settings)
         model = resolve_model(model)
         if role == "chat":
             return Agent(model, deps_type=GovDeps, output_type=str, instructions=CHAT_INSTRUCTIONS + "\n\n" + self._text,
-                         tools=[Tool(f) for f in (consult, get_doc)], model_settings=governor_settings(settings), retries=2)
+                         tools=[Tool(f) for f in (consult, get_doc)],
+                         model_settings=agent_settings or governor_settings(settings), retries=2)
         return Agent(model, deps_type=GovDeps, output_type=Civ6Decision, instructions=INSTRUCTIONS + "\n\n" + self._text,
                      tools=[Tool(f) for f in (consult, get_doc, price, remember_rule)],
-                     model_settings=governor_settings(settings), retries=2)
+                     model_settings=agent_settings or governor_settings(settings), retries=2)
 
     # ---- dashboard controls that differ ----------------------------------------------------------
 

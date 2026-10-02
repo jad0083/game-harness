@@ -414,8 +414,12 @@ class PoolExhausted(Exception):
 
     def __init__(self, role: str, tried: list[ModelUnavailable], skipped: list[str]):
         self.role, self.tried, self.skipped = role, list(tried), list(skipped)
+
+        def part(u: ModelUnavailable) -> str:    # a failure without an HTTP status adds its own text
+            f = u.failure
+            return f"{u.model} {describe(f)}" + (f": {f.cause}" if f.cause and not f.status else "")
         super().__init__(f"no model could answer ({role}): " + "; ".join(
-            [f"{u.model} {describe(u.failure)}" for u in self.tried] + [f"{m} skipped" for m in self.skipped]))
+            [part(u) for u in self.tried] + [f"{m} skipped" for m in self.skipped]))
 
     def causes(self) -> list[dict]:
         return ([{"model": u.model, "error": describe(u.failure)} for u in self.tried]

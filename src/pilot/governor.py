@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Any, ClassVar, Literal, Protocol
 
 from pydantic import BaseModel, Field
-from pydantic_ai import Agent, RunContext, Tool
+from pydantic_ai import Agent, ModelSettings, RunContext, Tool
 from pydantic_ai.exceptions import UsageLimitExceeded
 from pydantic_ai.messages import ModelResponse
 from pydantic_ai.usage import UsageLimits
@@ -37,6 +37,17 @@ from .claude_code import resolve_model
 from .config import Settings
 from .events import EventLog
 from .learning import Journal, LearnedStore, LearningRejected
+from .modelguard import (
+    GuardConfig,
+    GuardedModel,
+    Hooks,
+    ModelHealth,
+    PoolExhausted,
+    PoolModel,
+    describe,
+    emit_breaker,
+    event_hooks,
+)
 from .pillars import ACTION_KINDS, OrdersSpec, PillarsError, PillarSpec, TimeSpec, load_pillars, load_postures
 from .stellaris_crisis import CRISIS_PACE, POSTURE_GAP_MONTHS, boost_pressures, crisis_alloys, crisis_step, status_quo
 from .stellaris_market import buy_errors, idle_fill, keep_placed, price_note
@@ -506,11 +517,11 @@ def strategy_core(strategy: str) -> str:
     return out + "\n\n" + "\n".join(core)
 
 
-def build_governor(s: Settings, briefing: str, model=None) -> Agent[GovDeps, GovernorDecision]:
+def build_governor(s: Settings, briefing: str, model=None, agent_settings=None) -> Agent[GovDeps, GovernorDecision]:
     return Agent(resolve_model(model or s.model), deps_type=GovDeps, output_type=GovernorDecision,
                  instructions=INSTRUCTIONS + "\n\n" + briefing,
                  tools=[Tool(f) for f in (consult, get_doc, recent_log, remember_rule)],   # outcomes are in the prompt
-                 model_settings=governor_settings(s), retries=2)
+                 model_settings=agent_settings or governor_settings(s), retries=2)
 
 
 # -- loop -------------------------------------------------------------------------------------
@@ -545,6 +556,9 @@ class Governor:
         self._role_objs = dict(role_models or {})     # role -> Model instance (tests)
         self.game = game
         self.log = log
+        # the model guard (docs/design/2026-10-02-model-guard-design.md): one per process, every role
+        self.health = ModelHealth(GuardConfig.from_settings(settings), on_change=self._on_breaker,
+                                  on_note=lambda text: log.emit("briefing_error", error=f"model guard: {text}"[:300]))
         self.control = Control()
         self.human = HumanChannel()
         self.store = LearnedStore(settings.corpus_dir, settings.model, log.state.run_id)
@@ -662,43 +676,160 @@ class Governor:
         own = (self.s.roles or {}).get(role) if role != "decisions" else None
         return bool(own["rotate"]) if own and own.get("models") else bool(self.s.rotate)
 
-    def _build(self, role: str, settings: Settings, model):
+    def _build(self, role: str, settings: Settings, model, agent_settings=None):
         text = self._text
         model = resolve_model(model)
         if role == "strategy":
             return Agent(model, deps_type=GovDeps, output_type=self._review_type,
                          instructions=strategist_instructions(self.pillars) + "\n\n" + text,
-                         tools=[Tool(f) for f in (consult, get_doc)], model_settings=governor_settings(settings), retries=2)
+                         tools=[Tool(f) for f in (consult, get_doc)],
+                         model_settings=agent_settings or governor_settings(settings), retries=2)
         if role == "chat":
             return Agent(model, deps_type=GovDeps, output_type=str, instructions=CHAT_INSTRUCTIONS + "\n\n" + text,
                          tools=[Tool(f) for f in (consult, get_doc, recent_log, past_outcomes)],   # read-only
-                         model_settings=governor_settings(settings), retries=2)
-        return build_governor(settings, text, model=model)
+                         model_settings=agent_settings or governor_settings(settings), retries=2)
+        return build_governor(settings, text, model=model, agent_settings=agent_settings)
 
     def _agent_for(self, entry: dict, role: str = "decisions"):
         """The agent for one role and model entry, built once per (role, model, thinking)."""
         key = (role, entry.get("obj") and id(entry["obj"]), entry["model"], entry["thinking"])
         cache = self.__dict__.setdefault("_agents", {})
         if key not in cache:
+            if self.s.model_guard:          # one entry, still guarded (ruling 17)
+                cache[key] = self._build(role, self.s, PoolModel(role, [self._guarded(entry)], self.health),
+                                         agent_settings=self._agent_settings())
+                return cache[key]
             model = entry.get("obj") or entry["model"]
             settings = replace(self.s, governor_thinking=entry["thinking"],
                                model=entry["model"] if isinstance(model, str) else self.s.model)
             cache[key] = self._build(role, settings, model)
         return cache[key]
 
-    def _order(self, role: str = "decisions") -> list[dict]:
-        """This call's models: the role's list as given, or one further on each time (take turns)."""
+    def _rotation(self, role: str = "decisions") -> int:
+        """Where this call starts in the role's list: 0, or one further each time (take turns)."""
         pool = self._pool(role)
         if not self._rotates(role) or len(pool) < 2:
-            return pool
+            return 0
         turns = self.__dict__.setdefault("_turns", {})
         turn = turns.get(role, 0)
         turns[role] = turn + 1
-        i = turn % len(pool)
+        return turn % len(pool)
+
+    def _order(self, role: str = "decisions") -> list[dict]:
+        """This call's models: the role's list as given, or one further on each time (take turns)."""
+        pool = self._pool(role)
+        i = self._rotation(role)
         return pool[i:] + pool[:i]
 
     def _call(self, role: str, ask, on_try=None):
-        """Run `ask(agent)` on the role's models in order. Overload (503/429/timeouts) is retried on
+        """Run `ask(agent)` on the role's models; returns (result, entry used).
+
+        With the model guard (docs/design/2026-10-02-model-guard-design.md, ruling 17) the role's one agent
+        runs on its pool: a request that cannot reach a model moves to the next model inside the same run,
+        so no tool runs twice, and PoolExhausted (no model could be reached) is raised at once. A run that
+        ends without a usable answer (the request cap, an invalid output) runs again from the next model,
+        as before the guard (plan ruling P1). PILOT_MODEL_GUARD=0: `_call_unguarded`."""
+        if not self.s.model_guard:
+            return self._call_unguarded(role, ask, on_try)
+        configured = self._pool(role)
+        start = self._rotation(role)
+        pool, agent = self._pool_model(role), self._role_agent(role)
+        lock = self.__dict__.setdefault("_pool_locks", {}).setdefault(role, threading.Lock())
+        before: list[dict] = []          # whole runs that ended without a usable answer
+        track: dict = {}
+        with lock:
+            try:
+                for k in range(len(configured)):
+                    first = (start + k) % len(configured)
+                    pool.begin_run(first, self._hooks(role, configured, on_try, before, track))
+                    try:
+                        result = ask(agent)
+                    except PoolExhausted as e:
+                        self.log.emit("pool_exhausted", role=role, causes=e.causes())
+                        raise
+                    except Exception as e:      # an unusable answer: the next model runs it again
+                        used = configured[pool.last_answered if pool.last_answered is not None else first]["model"]
+                        if k == len(configured) - 1:
+                            raise
+                        self.log.emit("model_fallback", role=role, model=used, error=f"{type(e).__name__}: {e}"[:300],
+                                      fallback=configured[(first + 1) % len(configured)]["model"], failure="answer",
+                                      family=self.health.family(used), request=pool.requests)
+                        before.append({"model": used, "error": cause(f"{type(e).__name__}: {e}")})
+                        continue
+                    entry = configured[pool.last_answered]
+                    if role == "decisions":
+                        self.log.state.info["answered"] = {"model": entry["model"], "after": track.get("after", before),
+                                                           "t": round(time.time(), 1),
+                                                           "fallback": entry["model"] != configured[start]["model"]}
+                    return result, entry
+            finally:
+                self._publish_health()
+        raise RuntimeError(f"no models for {role}")
+
+    def _hooks(self, role: str, entries: list[dict], on_try, before: list[dict], track: dict) -> Hooks:
+        """The pool's reports: Deciding's progress and the caller's on_try, then the events (rulings 17,
+        21-22). `track["after"]` keeps what failed before the latest try."""
+        deciding = self.log.state.info.get("deciding") if role == "decisions" else None
+        by_name = {e["model"]: e for e in entries}
+
+        def tried(name, attempt, of, after, skipped):
+            track["after"] = before + [{"model": m, "error": describe(f)} for m, f in after]
+            if on_try and name in by_name:
+                on_try(by_name[name])
+            if deciding is not None:
+                deciding.update(model=name, attempt=len(before) + attempt, max_attempts=of, retry_at=None,
+                                after=track["after"], skipped=skipped)
+
+        def retried(name, failure, delay, attempt, request):
+            if deciding is not None:
+                deciding.update(retry_at=round(time.time() + delay, 1), retries=attempt, waiting=describe(failure))
+        return event_hooks(self.log.emit, role, self.health.family, Hooks(on_try=tried, on_retry=retried))
+
+    def _guarded(self, entry: dict) -> GuardedModel:
+        """One pool entry with its own thinking settings (ruling 4)."""
+        settings = governor_settings(replace(self.s, governor_thinking=entry["thinking"], model=entry["model"]))
+        return GuardedModel(entry.get("obj") or entry["model"], entry["model"], self.health, settings=settings)
+
+    def _pool_model(self, role: str) -> PoolModel:
+        """The role's pool, kept while its list (models, thinking, model objects) stays the same."""
+        entries = self._pool(role)
+        key = tuple((e["model"], e["thinking"], id(e.get("obj"))) for e in entries)
+        cache = self.__dict__.setdefault("_pool_models", {})
+        if role not in cache or cache[role][0] != key:
+            cache[role] = (key, PoolModel(role, [self._guarded(e) for e in entries], self.health))
+        return cache[role][1]
+
+    def _agent_settings(self) -> ModelSettings:
+        """A pool agent's own settings: the timeout; each model carries its thinking (ruling 4)."""
+        return ModelSettings(timeout=self.s.model_timeout_s)
+
+    def _role_agent(self, role: str):
+        """The role's one agent, on its current pool."""
+        pool = self._pool_model(role)
+        cache = self.__dict__.setdefault("_pool_agents", {})
+        if role not in cache or cache[role][0] is not pool:
+            cache[role] = (pool, self._build(role, self.s, pool, agent_settings=self._agent_settings()))
+        return cache[role][1]
+
+    def _on_breaker(self, model: str, snap: dict) -> None:
+        emit_breaker(self.log.emit, model, snap)
+        self._publish_health()
+
+    def _publish_health(self) -> None:
+        """Now's model-health line and the pool editor's counts read this (ruling 23)."""
+        self.log.state.info["model_health"] = self.health.snapshot()
+
+    def _reset_pools(self) -> None:
+        """New models: rebuild the pools and their agents; the new pools' models lose broken marks (plan
+        ruling P2)."""
+        for k in ("_pool_models", "_pool_agents"):
+            self.__dict__.pop(k, None)
+        self.health.clear_broken({e["model"] for role in ("decisions", "strategy", "chat") for e in self._pool(role)})
+        self._publish_health()
+
+    def _call_unguarded(self, role: str, ask, on_try=None):
+        """The calls as before the model guard (PILOT_MODEL_GUARD=0, ruling 19): run `ask(agent)` on
+        the role's models in order. Overload (503/429/timeouts) is retried on
         the first model; any failure (overload after the retries, a bad key, a missing model, an
         unusable answer) moves on to the next model. A model that failed sits behind the others for
         `model_cooldown_s`, so a sustained outage does not cost the retry waits every time.
@@ -743,6 +874,8 @@ class Governor:
         own = "strategy" in self._role_objs or bool(((self.s.roles or {}).get("strategy") or {}).get("models"))
         if not own:
             return []
+        if self.s.model_guard:
+            return [e for e in self._pool("strategy") if self.health.status(e["model"]) in ("closed", "trial")]
         failed, now = self.__dict__.setdefault("_failed_at", {}), time.time()
         return [e for e in self._pool("strategy") if now - failed.get(e["model"], 0) >= self.s.model_cooldown_s]
 
@@ -754,8 +887,11 @@ class Governor:
         outage from a model that spends its budget on tool calls."""
         failed = self.__dict__.setdefault("_failed_at", {})
         for entry in self._retry_models():
+            agent = self._agent_for(entry, "decisions")
+            if self.s.model_guard and isinstance(getattr(agent, "model", None), PoolModel):
+                agent.model.begin_run(0, event_hooks(self.log.emit, "decisions retry", self.health.family))
             try:
-                result = ask(self._agent_for(entry, "decisions"))
+                result = ask(agent)
             except Exception as e:  # noqa: BLE001 - the next model, then the caller's rules
                 failed[entry["model"]] = time.time()
                 self.log.emit("model_fallback", role="decisions retry", model=entry["model"],
@@ -773,6 +909,7 @@ class Governor:
         check_roles({k: v for k, v in roles.items() if v})      # reject unknown roles in the request
         self.s = replace(self.s, roles=clean)
         self.__dict__.pop("_agents", None)
+        self._reset_pools()
         self.log.state.info["roles"] = clean
         self.log.emit("roles", roles=clean)
 
@@ -784,6 +921,7 @@ class Governor:
                          rotate=self.s.rotate if rotate is None else bool(rotate))
         self._model_obj = self._fallback_obj = None
         self.__dict__.pop("_agents", None)
+        self._reset_pools()
         self._build_agents()
         self.log.state.model = pool[0]["model"]
         self.log.state.info.update(pool=pool, rotate=self.s.rotate, thinking=pool[0]["thinking"])

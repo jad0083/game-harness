@@ -400,6 +400,19 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   output tool call and its `usage` the request usage; a non-zero exit, `is_error`, missing
   structured output, bad JSON or a timeout raises `ClaudeCodeError` (never retried there), and the
   governor falls back to the role's next model.
+- `modelguard.py` (the model guard, [design](docs/design/2026-10-02-model-guard-design.md); nothing
+  game-specific): `ModelHealth`, one per pilot process and shared by every role and thread under one
+  lock, keeps each model's circuit breaker (closed, open for a doubling window, half-open for its one
+  trial, broken), its family's caution, the pacing slots and the daily request counts
+  (`runs/model-usage.json`); `classify` turns an exception into a failure kind. `GuardedModel` (a
+  pydantic-ai `WrapperModel`, built on first use, so a model that cannot be built is marked broken)
+  wraps one pool entry with its thinking settings: it waits for its slot, sends, retries once where the
+  kind allows and raises `ModelUnavailable`. `PoolModel` (after `FallbackModel`) holds a role's entries
+  and sends each request of a run to the first that can take it; a failed request moves with the run's
+  history to the next, so tools are not run again, and `PoolExhausted` names each model's cause when
+  none can answer. `Governor._call` runs each role's one agent on its pool under a per-role lock, with
+  the run's rotation, publishes `info.model_health`, and runs a run that ended without a usable answer
+  again from the next model; `_call_unguarded` is the path before the guard (`PILOT_MODEL_GUARD=0`).
 - `dashboard.py` API: `/api/campaigns`, `/api/decisions`, `/api/decision`, `/api/metrics`,
   `/runs/*`; the viewer's `LiveProxy` finds the live run by the dashboard port recorded in its
   `status.json` and checks that it answers with the same run id. The live pilot's own app binds

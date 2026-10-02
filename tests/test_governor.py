@@ -1808,6 +1808,8 @@ def test_a_failed_reviews_retry_bypasses_the_event_cap_and_a_success_clears_it(s
     review_requested. The failed start review is retried at the next (scheduled) decision."""
     from dataclasses import replace
 
+    from pydantic_ai.exceptions import ModelHTTPError
+
     s, log = setup
     s2 = replace(s, decide_every_months=1)
     s2.__class__ = s.__class__
@@ -1816,8 +1818,8 @@ def test_a_failed_reviews_retry_bypasses_the_event_cap_and_a_success_clears_it(s
 
     def respond(messages, info):
         n["count"] += 1
-        if n["count"] == 1:
-            raise RuntimeError("boom")
+        if n["count"] == 1:     # a rejected request: the model's breaker stays closed for the retry (model guard ruling 7)
+            raise ModelHTTPError(400, "strategist", "boom")
         pillars = _pillars_body(prios)
         body = {"change": True, "assessment": "ok", "rules": [],
                 "strategy": {"pillars": pillars, "focus": "grow", "reason": "retry"}}
@@ -3640,7 +3642,7 @@ def test_a_failing_claude_code_strategist_falls_back_to_the_next_model(setup, mo
     import subprocess
     from dataclasses import replace
 
-    from pilot import claude_code, governor
+    from pilot import claude_code, governor, modelguard
 
     s, log = setup
     s2 = replace(s, roles={"strategy": {"models": [{"model": "claude-code:opus", "thinking": "high"},
@@ -3651,9 +3653,12 @@ def test_a_failing_claude_code_strategist_falls_back_to_the_next_model(setup, mo
     monkeypatch.setattr(claude_code, "find_claude", lambda: "/usr/bin/claude-test")
     monkeypatch.setattr(claude_code.subprocess, "run", lambda cmd, **kw: (calls.append("cli"), subprocess.CompletedProcess(
         cmd, 1, '{"type":"result","is_error":true,"result":"Claude AI usage limit reached"}', ""))[1])
-    real = governor.resolve_model
+    real, real_build = governor.resolve_model, modelguard.build_model
     monkeypatch.setattr(governor, "resolve_model",
                         lambda m: _strategist(calls) if isinstance(m, str) and m.startswith("google:") else real(m))
+    # the model guard builds each pool entry itself
+    monkeypatch.setattr(modelguard, "build_model",
+                        lambda m: _strategist(calls) if m.startswith("google:") else real_build(m))
     game = FakeStellaris([briefing("2200.01.01")])
     g = Governor(s2, game, log, model=_recording("decide", calls))
     g.run(max_decisions=1)
@@ -4468,14 +4473,16 @@ def test_the_corrective_retry_of_a_review_keeps_the_tech_offers(setup):
 
 
 def test_a_review_whose_model_call_fails_keeps_the_tech_offers_for_its_retry(setup):
+    from pydantic_ai.exceptions import ModelHTTPError
+
     from pilot.strategy import Pillar
     s, log = setup
     prompts: list[str] = []
 
     def review(messages, info):
         prompts.append("\n".join(str(getattr(p, "content", "")) for m in messages for p in getattr(m, "parts", [])))
-        if len(prompts) == 1:
-            raise RuntimeError("503 provider unavailable")
+        if len(prompts) == 1:   # a rejected request: the model's breaker stays closed for the retry (model guard ruling 7)
+            raise ModelHTTPError(400, "strategist", "request rejected")
         return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"change": False, "assessment": "x", "rules": []})])
 
     class NothingToPick(FakeStellaris):
@@ -5228,6 +5235,7 @@ def test_a_chat_or_review_retry_says_its_role(setup):
     from pydantic_ai.exceptions import ModelHTTPError
     s, log = setup
     s.retry_delays = (0, 0)
+    s.model_guard = False       # the whole-run path (PILOT_MODEL_GUARD=0, model guard ruling 19)
     g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
     log.state.info["deciding"] = {"since": 1.0}
     n = {"n": 0}
