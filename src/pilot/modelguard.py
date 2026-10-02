@@ -544,7 +544,7 @@ class GuardedModel(WrapperModel):
         self.ensure_built()
         settings = merge_model_settings(model_settings, self.entry_settings)
         trial = self.health.begin_trial(self.name)
-        retried = False
+        retried = resolved = False               # resolved: succeeded() or failed() recorded the trial's verdict
         try:
             while True:
                 wait = self.health.reserve(self.name)
@@ -564,6 +564,7 @@ class GuardedModel(WrapperModel):
                     delay = None if retried else retry_delay(f, trial, self.health.cfg, _uniform)
                     if delay is None:
                         self.health.failed(self.name, f)
+                        resolved = f.kind != REJECTED
                         raise ModelUnavailable(self.name, f) from e
                     retried = True
                     self.hooks.on_retry(name=self.name, failure=f, delay=round(delay, 1), attempt=1,
@@ -571,11 +572,11 @@ class GuardedModel(WrapperModel):
                     await _sleep(delay)
                     continue
                 self.health.succeeded(self.name, response.usage.input_tokens)
+                resolved = True
                 return response
-        except BaseException as e:
-            if trial and not isinstance(e, (Exception,)):
-                self.health.abandon_trial(self.name)     # cancelled: the trial is due again
-            raise
+        finally:
+            if trial and not resolved:
+                self.health.abandon_trial(self.name)     # no verdict (rejected, cancelled, raised): due again
 
     @asynccontextmanager
     async def request_stream(self, *args, **kwargs):

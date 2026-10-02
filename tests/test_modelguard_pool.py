@@ -318,3 +318,18 @@ def test_event_hooks_write_the_events():
                     "caution": False})
     assert out == [("model_breaker", {"model": "google:gemini-3.8-flash", "family": "gemini-flash", "state": "open",
                                       "until": 5.0, "reason": "overloaded (503)", "openings": 1})]
+
+
+def test_a_trial_that_is_rejected_is_due_again():
+    clock = Clock()
+    h, _ = make_health(clock)
+    a = Script(E503, E503, ModelHTTPError(400, "m"), "a answers")
+    b = Script("b")
+    pool = pool_of(h, ("google:gemini-3.8-flash", a), ("anthropic:claude-sonnet-5", b))
+    run(pool)
+    assert h.status("google:gemini-3.8-flash") == "open"
+    clock.t += 60
+    run(pool)
+    assert h.status("google:gemini-3.8-flash") == "trial", "a rejected trial gives no verdict: not left half-open"
+    result, _ = run(pool)
+    assert result.output == "a answers" and h.status("google:gemini-3.8-flash") == "closed"
