@@ -2806,6 +2806,15 @@ const popupsFailed = (ev) => (ev.entries || []).filter((e) => !/ QUIET(_ABSENT)?
 // a popup's handler id (ProjectBuiltPopup.OnProjectComplete) as people read it: "the project built popup"
 const popupName = (id) => `the ${String(id).split(".")[0].replace(/Popup$/, "").replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase()} popup`;
 const ACTION_WORDS = { tech: "Tech pick", market: "Market orders" };
+// the model guard's breakers (docs/design/2026-10-02-model-guard-design.md, rulings 8 and 22)
+const nth = (n) => n === 2 ? "2nd" : n === 3 ? "3rd" : `${n}th`;
+function breakerSentence(ev) {
+  const m = modelName(ev.model);
+  if (ev.state === "open") return `${m} skipped until ${hhmm(ev.until)} (${ev.reason}${ev.openings > 1 ? `, ${nth(ev.openings)} time` : ""})`;
+  if (ev.state === "half_open") return `Trying ${m} again`;
+  if (ev.state === "broken") return `${m} cannot be used (${ev.reason}); skipped until the models change`;
+  return `${m} answers again`;
+}
 function describe(ev) {
   switch (ev.kind) {
     case "turn": {
@@ -2827,6 +2836,9 @@ function describe(ev) {
     case "strategy_disabled": return `Strategy layer off: ${clip(tidy(ev.error))}`;
     case "model_fallback": return `${modelName(ev.model)} ${errorCause(ev.error)}; used ${modelName(ev.fallback)}${ev.role && ev.role !== "decisions" ? ` (${human(ev.role)})` : ""}`;
     case "model_retry": return `${sentence(errorCause(ev.error))}; trying again in ${ev.delay} s${ev.role && ev.role !== "decisions" ? ` (${human(ev.role)})` : ""}`;
+    case "model_breaker": return breakerSentence(ev);
+    case "model_pace": return `Waited ${dur(ev.waited_s)} before calling ${modelName(ev.model)}, to keep requests apart`;
+    case "pool_exhausted": return `No model could answer${ev.role && ev.role !== "decisions" ? ` (${human(ev.role)})` : ""}: ${(ev.causes || []).map((c) => `${modelName(c.model)} ${c.error}`).join("; ")}`;
     case "model": return `Now using ${modelName(ev.model)}${ev.thinking ? ` (${ev.thinking} thinking)` : ""}${byWho(ev)}`;
     case "models": return `Models changed${ev.by && ev.by !== "the controller" ? ` by ${ev.by}` : ""}: ${(ev.models || []).map((m) => modelName(m.model)).join(", ")}${ev.rotate ? ", taking turns" : ""}`;
     case "roles": return `Models per role changed${ev.by && ev.by !== "the controller" ? ` by ${ev.by}` : ""}`;
@@ -2902,9 +2914,10 @@ const CONTROL_WORDS = { pause: "Paused", resume: "Resumed", stop: "Stop requeste
                         edit_pillar: "Pillar edited", unpin_pillar: "Pillar unpinned" };
 // Which filters an event belongs to (it may be in more than one).
 const PROBLEM_KINDS = new Set(["briefing_error", "episode_error", "needs_attention", "model_retry", "model_fallback", "recover_probe",
-                               "stall", "self_paused", "learn_rejected", "strategy_rejected", "strategy_mismatch", "strategy_disabled", "last_stand_off"]);
+                               "stall", "self_paused", "learn_rejected", "strategy_rejected", "strategy_mismatch", "strategy_disabled", "last_stand_off",
+                               "model_breaker", "pool_exhausted"]);
 const ORDER_KINDS = new Set(["episode", "strategy_action", "last_stand", "last_stand_check", "autopilot", "action", "turn", "popups_quieted", "capture"]);
-const MODEL_KINDS = new Set(["model", "models", "roles", "model_retry", "model_fallback", "episode_error", "consult", "learned", "learn_rejected",
+const MODEL_KINDS = new Set(["model", "models", "roles", "model_retry", "model_fallback", "model_breaker", "model_pace", "pool_exhausted", "episode_error", "consult", "learned", "learn_rejected",
                              "learned_disabled", "strategy", "strategy_review", "strategy_review_skipped", "strategy_rejected", "journal", "question"]);
 function feedCats(ev) {
   const c = new Set();

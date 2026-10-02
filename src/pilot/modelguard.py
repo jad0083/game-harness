@@ -13,6 +13,7 @@ import re
 import threading
 import time
 from collections.abc import Callable, Iterable, Mapping
+from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -20,6 +21,11 @@ from zoneinfo import ZoneInfo
 
 import anyio
 import httpx
+from pydantic_ai.exceptions import UsageLimitExceeded
+from pydantic_ai.models import Model
+from pydantic_ai.models.fallback import FallbackModel
+from pydantic_ai.models.wrapper import WrapperModel
+from pydantic_ai.settings import merge_model_settings
 
 PACIFIC = ZoneInfo("America/Los_Angeles")        # Gemini daily quotas reset at midnight Pacific
 
@@ -391,3 +397,270 @@ class ModelHealth:
     def _note(self, text: str) -> None:
         if self.on_note:
             self.on_note(text)
+
+
+# ---- models (rulings 4-5, 10-11, 16) ------------------------------------------------------------
+
+class ModelUnavailable(Exception):
+    """A model could not answer this request (ruling 4); the pool moves the request on."""
+
+    def __init__(self, model: str, failure: Failure):
+        super().__init__(f"{model}: {failure.cause or describe(failure)}")
+        self.model, self.failure = model, failure
+
+
+class PoolExhausted(Exception):
+    """No model of a pool could answer a request (ruling 11)."""
+
+    def __init__(self, role: str, tried: list[ModelUnavailable], skipped: list[str]):
+        self.role, self.tried, self.skipped = role, list(tried), list(skipped)
+        super().__init__(f"no model could answer ({role}): " + "; ".join(
+            [f"{u.model} {describe(u.failure)}" for u in self.tried] + [f"{m} skipped" for m in self.skipped]))
+
+    def causes(self) -> list[dict]:
+        return ([{"model": u.model, "error": describe(u.failure)} for u in self.tried]
+                + [{"model": m, "error": "skipped"} for m in self.skipped])
+
+
+def _noop(**_kw) -> None:
+    return None
+
+
+@dataclass
+class Hooks:
+    """What a pool reports to its owner, which writes the events (rulings 17, 21-22). All take keyword
+    arguments: on_try(name, attempt, of, after=[(name, Failure)], skipped=[name]); on_retry(name, failure,
+    delay, attempt, request); on_fallback(name, failure, next, request); on_pace(name, waited)."""
+    on_try: Callable[..., None] = _noop
+    on_retry: Callable[..., None] = _noop
+    on_fallback: Callable[..., None] = _noop
+    on_pace: Callable[..., None] = _noop
+
+
+def event_hooks(emit, role: str, family: Callable[[str], str], extra: Hooks | None = None) -> Hooks:
+    """Hooks that write model_retry, model_fallback and model_pace through `emit(kind, **data)` (rulings
+    21-22), after calling `extra`'s."""
+    x = extra or Hooks()
+
+    def on_retry(name, failure, delay, attempt, request):
+        x.on_retry(name=name, failure=failure, delay=delay, attempt=attempt, request=request)
+        emit("model_retry", error=event_error(name, failure), delay=delay, attempt=attempt, role=role, model=name,
+             kind=failure.kind, family=family(name), request=request)
+
+    def on_fallback(name, failure, next, request):
+        x.on_fallback(name=name, failure=failure, next=next, request=request)
+        emit("model_fallback", role=role, model=name, error=event_error(name, failure), fallback=next,
+             kind=failure.kind, family=family(name), request=request)
+
+    def on_pace(name, waited):
+        x.on_pace(name=name, waited=waited)
+        emit("model_pace", model=name, waited_s=waited, role=role)
+    return Hooks(on_try=x.on_try, on_retry=on_retry, on_fallback=on_fallback, on_pace=on_pace)
+
+
+def emit_breaker(emit, model: str, snap: dict) -> None:
+    """The model_breaker event for one breaker change (ruling 22)."""
+    emit("model_breaker", model=model, family=snap["family"], state=snap["state"], until=snap["until"],
+         reason=snap["reason"], openings=snap["openings"])
+
+
+def build_model(name: str) -> Model:
+    """A pool entry's provider model with the SDK's own retries off (ruling 16): google-genai never
+    retries without retry_options, which pydantic-ai leaves unset; Anthropic's client gets max_retries=0."""
+    from pydantic_ai.models import infer_model
+
+    from .claude_code import resolve_model
+    m = resolve_model(name)
+    if not isinstance(m, str):
+        return m
+    prov, _, model_name = name.partition(":")
+    if prov == "anthropic":
+        from anthropic import AsyncAnthropic
+        from pydantic_ai.models.anthropic import AnthropicModel
+        from pydantic_ai.providers.anthropic import AnthropicProvider
+        return AnthropicModel(model_name, provider=AnthropicProvider(
+            anthropic_client=AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"), max_retries=0)))
+    return infer_model(name)
+
+
+class GuardedModel(WrapperModel):
+    """Ruling 4: one pool entry. It is built on first use, so a model that cannot be built (a missing key,
+    an unknown provider) is marked broken instead of breaking its role."""
+
+    def __init__(self, model: Model | str, name: str, health: ModelHealth, settings=None):
+        Model.__init__(self)                     # not WrapperModel's, which builds the model at once
+        self._source = model
+        self._built: Model | None = model if isinstance(model, Model) else None
+        self._entered = False
+        self.name, self.health, self.entry_settings = name, health, settings
+        self.hooks = Hooks()
+        self.request_no = 0                      # set by the pool: the request's number in its run
+
+    @property
+    def wrapped(self) -> Model:  # type: ignore[override]
+        if self._built is None:
+            self._built = build_model(self._source)
+        return self._built
+
+    def __repr__(self) -> str:
+        return f"GuardedModel({self.name!r})"
+
+    @property
+    def model_name(self) -> str:
+        return self._built.model_name if self._built is not None else self.name.split(":", 1)[-1]
+
+    @property
+    def system(self) -> str:
+        return self._built.system if self._built is not None else provider(self.name)
+
+    @property
+    def model_id(self) -> str:
+        return self._built.model_id if self._built is not None else self.name
+
+    def ensure_built(self) -> None:
+        try:
+            _ = self.wrapped
+        except Exception as e:
+            f = Failure(BROKEN, None, None, f"cannot be built: {type(e).__name__}: {e}"[:200])
+            self.health.failed(self.name, f)
+            raise ModelUnavailable(self.name, f) from e
+
+    async def __aenter__(self):
+        try:
+            self.ensure_built()
+            await self.wrapped.__aenter__()
+            self._entered = True
+        except ModelUnavailable:
+            pass                                 # marked broken; the pool skips it
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        if self._entered:
+            self._entered = False
+            return await self.wrapped.__aexit__(exc_type, exc_val, exc_tb)
+        return None
+
+    async def request(self, messages, model_settings, model_request_parameters):
+        self.ensure_built()
+        settings = merge_model_settings(model_settings, self.entry_settings)
+        trial = self.health.begin_trial(self.name)
+        retried = False
+        try:
+            while True:
+                wait = self.health.reserve(self.name)
+                if wait >= 1.0:
+                    self.hooks.on_pace(name=self.name, waited=round(wait, 1))
+                if wait > 0:
+                    await _sleep(wait)
+                over = self.health.count(self.name)
+                if over is not None:
+                    raise ModelUnavailable(self.name, over)
+                try:
+                    response = await self.wrapped.request(messages, settings, model_request_parameters)
+                except UsageLimitExceeded:
+                    raise
+                except Exception as e:
+                    f = classify(e)
+                    delay = None if retried else retry_delay(f, trial, self.health.cfg, _uniform)
+                    if delay is None:
+                        self.health.failed(self.name, f)
+                        raise ModelUnavailable(self.name, f) from e
+                    retried = True
+                    self.hooks.on_retry(name=self.name, failure=f, delay=round(delay, 1), attempt=1,
+                                        request=self.request_no)
+                    await _sleep(delay)
+                    continue
+                self.health.succeeded(self.name, response.usage.input_tokens)
+                return response
+        except BaseException as e:
+            if trial and not isinstance(e, (Exception,)):
+                self.health.abandon_trial(self.name)     # cancelled: the trial is due again
+            raise
+
+    @asynccontextmanager
+    async def request_stream(self, *args, **kwargs):
+        raise NotImplementedError("the pilot does not stream model responses")
+        yield  # pragma: no cover
+
+
+class PoolModel(FallbackModel):
+    """Ruling 5: a role's models. Each request goes to the first model that can take it, in ruling 10's
+    order; a ModelUnavailable moves the same messages (the run's history so far) to the next model, so
+    the run continues and tools that already ran are not run again."""
+
+    def __init__(self, role: str, models: list[GuardedModel], health: ModelHealth):
+        super().__init__(models[0], *models[1:], fallback_on=(ModelUnavailable,))
+        self.role, self.guarded, self.health = role, list(models), health
+        self.hooks = Hooks()
+        self._order = list(range(len(models)))
+        self.requests = 0
+        self.last_answered: int | None = None    # the entry that answered the run's latest request
+
+    def begin_run(self, start: int = 0, hooks: Hooks | None = None) -> None:
+        """A new run: the configured order from entry `start` (the rotation), kept for every request of
+        the run (ruling 10), and the hooks that report it."""
+        n = len(self.guarded)
+        self._order = [(start + i) % n for i in range(n)]
+        self.requests, self.last_answered = 0, None
+        if hooks is not None:
+            self.hooks = hooks
+            for gm in self.guarded:
+                gm.hooks = hooks
+
+    def ordered(self, exclude=frozenset()) -> tuple[list[int], list[str]]:
+        """This request's entries (ruling 10): the run's order without open, half-open and broken models,
+        and closed models of a family under caution after the others; plus the names skipped."""
+        first, later, skipped = [], [], []
+        for i in self._order:
+            if i in exclude:
+                continue
+            name = self.guarded[i].name
+            state = self.health.status(name)
+            if state in ("open", "half_open", "broken"):
+                skipped.append(name)
+            elif state == "closed" and self.health.cautioned(name):
+                later.append(i)
+            else:
+                first.append(i)
+        return first + later, skipped
+
+    async def request(self, messages, model_settings, model_request_parameters):
+        self.requests += 1
+        tried: list[ModelUnavailable] = []
+        done: set[int] = set()
+        waited = False
+        while True:
+            order, skipped = self.ordered(done)     # again after every failure: a failed family moves back (ruling 9)
+            if not order:
+                rest = [self.guarded[i].name for i in self._order if i not in done]
+                reopen = self.health.earliest_reopen(rest + [u.model for u in tried])
+                now = self.health.clock()
+                if waited or reopen is None or reopen - now > self.health.cfg.pool_max_wait_s:
+                    raise PoolExhausted(self.role, tried, rest)
+                waited = True                       # ruling 11: wait for the earliest window, once
+                await _sleep(max(0.0, reopen - now))
+                done = {i for i in done if self.health.status(self.guarded[i].name) != "trial"}
+                continue
+            i = order[0]
+            gm = self.guarded[i]
+            done.add(i)
+            self.hooks.on_try(name=gm.name, attempt=len(tried) + 1, of=len(self.guarded),
+                              after=[(u.model, u.failure) for u in tried], skipped=skipped)
+            gm.request_no = self.requests
+            try:
+                gm.ensure_built()
+                prepared = gm.prepare_messages(messages, model_request_parameters)
+                response = await gm.request(prepared, model_settings, model_request_parameters)
+            except ModelUnavailable as u:
+                tried.append(u)
+                nxt, _ = self.ordered(done)
+                self.hooks.on_fallback(name=gm.name, failure=u.failure,
+                                       next=self.guarded[nxt[0]].name if nxt else None, request=self.requests)
+                continue
+            self.last_answered = i
+            return response
+
+    @asynccontextmanager
+    async def request_stream(self, *args, **kwargs):
+        raise NotImplementedError("the pilot does not stream model responses")
+        yield  # pragma: no cover
