@@ -169,14 +169,16 @@ counts in memory; either problem puts one `briefing_error` "model guard: ..." in
 `role`, `model`, `fallback`) and add `failure` (the kind above; `answer` for a run that ended without a
 usable answer), `family` and `request` (the request's number in its run). `model_breaker` is logged on
 every breaker change (state, until, reason, openings), `model_pace` for waits of 1 s or more and
-`pool_exhausted` (role, each model's cause) when a pool gives up. Deciding on Now follows the pool: the
+`pool_exhausted` (role, each model's cause) when a pool gives up; Civilization VI's retry on a Strategy
+model logs these with the role "decisions retry". Deciding on Now follows the pool: the
 model being tried, the attempt, the models already tried and why, those skipped, a retry's countdown.
 `info.model_health` in `/status` holds every model's breaker, its family's caution and today's request
 count.
 
 **The kill switch.** `PILOT_MODEL_GUARD=0` runs the calls as before the guard: whole runs retried on
 the first model after 5, 15 and 45 s (`retry_delays`), any other failure moving the whole run to the
-next model, and a model that failed going behind the others for 10 minutes (`model_cooldown_s`). It is
+next model, and a model that failed going behind the others for 10 minutes (`model_cooldown_s`).
+`runs/model-usage.json` is then neither read nor written and `info.model_health` is not published. It is
 kept for one campaign; after a campaign on the guard meets the design's success criteria, it is
 removed with those settings.
 

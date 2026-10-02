@@ -165,11 +165,12 @@ setting). These remain future options.
 17. **The governor's `_call`** (`governor.py:700`) runs the role's single pool agent once (no
     `run_with_retry`), with the run's rotation set on the role's pool under a per-role lock held for the
     run (two runs of one role never overlap today; the lock makes it explicit). The entry that answered is
-    found from the response's model name, so decisions keep `model`, `model_version` and `thinking`, and
-    the dashboard's "deciding" information (model, attempt, already tried, skipped) is updated from the
-    pool's callback on each try. `_retry_decision` (post-mortem ruling 20) runs the decisions agent with the Strategy
-    pool passed as the run's `model`. `set_models`, `set_roles` and `set_fallback` rebuild the pools; a
-    rebuild clears `broken` marks of the models it changes.
+    found from the pool (the index of the model that answered the run's last request), so decisions keep
+    `model`, `model_version` and `thinking`, and the dashboard's "deciding" information (model, attempt,
+    already tried, skipped) is updated from the pool's callback on each try. `_retry_decision` (post-mortem
+    ruling 20) runs the decisions agent on one single-entry pool per Strategy model, tried in turn.
+    `set_models`, `set_roles` and `set_fallback` rebuild the pools; a rebuild clears `broken` marks of the
+    models it changes.
 18. **The GC4 episode path** (`agent.py:320`) runs its agent with a pool of `model` and `fallback_model`
     instead of `run_with_retry`.
 19. **Kill switch.** With `model_guard` 0 the code runs exactly as at 8c80134 (whole-run retries,

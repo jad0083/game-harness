@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+import pytest
 from pydantic_ai.exceptions import ModelHTTPError
 from pydantic_ai.messages import ModelResponse, ToolCallPart
 from pydantic_ai.models.function import FunctionModel
@@ -94,10 +95,36 @@ def test_the_kill_switch_keeps_whole_run_retries(setup):  # noqa: F811
     s, log = setup
     s = replace(s, model_guard=False, retry_delays=(0,))
     s.__class__ = setup[0].__class__
+    usage = s.runs_dir / "model-usage.json"
+    usage.parent.mkdir(parents=True, exist_ok=True)
+    usage.write_text("not json", encoding="utf-8")
     first, _ = consult_then_503()
-    Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=first, fallback=decisions("expand")).run(max_decisions=1)
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=first, fallback=decisions("expand"))
+    g.run(max_decisions=1)
+    g.set_models([{"model": "google:gemini-3.7-flash", "thinking": "high"}])
     assert sum(e["kind"] == "consult" for e in log.recent) == 2, "the old path replays the run"
     assert not any(e["kind"] == "model_breaker" for e in log.recent)
+    assert "model_health" not in log.state.info, "nothing of the guard is published"
+    assert usage.read_text(encoding="utf-8") == "not json", "the usage file is neither read nor written"
+    assert not any("model guard" in str(e.get("error", "")) for e in log.recent)
+
+
+@pytest.mark.parametrize("guard", [True, False])
+def test_a_retry_model_whose_agent_cannot_be_built_is_passed_over(setup, guard):  # noqa: F811
+    """Ruling 20's retry goes on to the next Strategy model when one's agent cannot be built, on both
+    paths (the agent is built inside the retry's own error handling, as before the guard)."""
+    s, log = setup
+    entries = [{"model": "google:gemini-a", "thinking": "high"}, {"model": "google:gemini-b", "thinking": "high"}]
+    s = replace(s, model_guard=guard, roles={"strategy": {"models": entries, "rotate": False}})
+    s.__class__ = setup[0].__class__
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+
+    def agent_for(entry, role="decisions"):
+        if entry["model"] == "google:gemini-a":
+            raise RuntimeError("cannot build")
+        return "agent b"
+    g._agent_for = agent_for
+    assert g._retry_decision(lambda agent: agent) == ("agent b", entries[1])
 
 
 def test_changing_models_clears_broken_marks(setup):  # noqa: F811

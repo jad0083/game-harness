@@ -3082,18 +3082,22 @@ def test_without_strategy_models_the_failed_models_are_not_tried_again(setup):
 
 
 def test_t525_on_the_model_guard_the_pool_gives_up_then_the_retry_and_the_rule_buy_run(setup):
-    """Model guard ruling 11: when no decision model can answer, the pool gives up at once and ruling 20
-    follows as before: one retry on the Strategy models (through the same guard), then the rule buy."""
+    """Model guard ruling 11 with no wait for an open model (pool_max_wait_s 0): the 503 and the guard's
+    one retry open the decision model's breaker and its pool gives up; ruling 20 follows as before: one
+    retry on the Strategy model through the same guard (a 503, its one retry, the pool gives up: logged as
+    pool_exhausted "decisions retry", with no model_fallback of its own), then the rule buy."""
+    setup[0].pool_max_wait_s = 0
     decide, strat = [], []
     game = FakeCiv6(_t525(), index=INDEX, prices={("Guangzhou", "unit:machine_gun", "faith"): 1080})
     g = _resilience_governor(setup, game, decide, _strategist_model(strat, None))
     g.run(max_decisions=1)
-    assert decide == ["decide"] * 2, "the decision model: one call and the guard's one retry"
+    assert decide == ["decide"] * 2, "the decision model: one call and the guard's one retry, then no wait"
     events = g.log.recent
-    assert [e["role"] for e in events if e["kind"] == "pool_exhausted"] == ["decisions"]
+    assert [e["role"] for e in events if e["kind"] == "pool_exhausted"] == ["decisions", "decisions retry"]
     retries = [c for c in strat if c.startswith("retry")]
     assert len(retries) == 2 and all(r.endswith("Answer now, with at most 3 tool calls.") for r in retries), strat
     assert any(e["kind"] == "model_retry" and e["role"] == "decisions retry" for e in events)
+    assert all("failure" in e for e in events if e["kind"] == "model_fallback"), "the pool's own events only"
     purchases = [i for i, a in enumerate(game.actions) if a[0] == "order" and a[1]["kind"] == "purchase"]
     first_autoplay = next((i for i, a in enumerate(game.actions) if a[0] == "autoplay"), len(game.actions))
     assert len(purchases) == 1 and purchases[0] < first_autoplay, "bought by rule before any autoplay"

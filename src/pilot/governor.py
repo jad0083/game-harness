@@ -556,8 +556,11 @@ class Governor:
         self._role_objs = dict(role_models or {})     # role -> Model instance (tests)
         self.game = game
         self.log = log
-        # the model guard (docs/design/2026-10-02-model-guard-design.md): one per process, every role
-        self.health = ModelHealth(GuardConfig.from_settings(settings), on_change=self._on_breaker,
+        # the model guard (docs/design/2026-10-02-model-guard-design.md): one per process, every role;
+        # with PILOT_MODEL_GUARD=0 it is never asked, and its usage file is neither read nor written
+        guard = GuardConfig.from_settings(settings)
+        self.health = ModelHealth(guard if settings.model_guard else replace(guard, usage_file=None),
+                                  on_change=self._on_breaker,
                                   on_note=lambda text: log.emit("briefing_error", error=f"model guard: {text}"[:300]))
         self.control = Control()
         self.human = HumanChannel()
@@ -816,8 +819,10 @@ class Governor:
         self._publish_health()
 
     def _publish_health(self) -> None:
-        """Now's model-health line and the pool editor's counts read this (ruling 23)."""
-        self.log.state.info["model_health"] = self.health.snapshot()
+        """Now's model-health line and the pool editor's counts read this (ruling 23); nothing with
+        PILOT_MODEL_GUARD=0."""
+        if self.s.model_guard:
+            self.log.state.info["model_health"] = self.health.snapshot()
 
     def _reset_pools(self) -> None:
         """New models: rebuild the pools and their agents; the new pools' models lose broken marks (plan
@@ -869,8 +874,9 @@ class Governor:
 
     def _retry_models(self) -> list[dict]:
         """The models a failed decision is retried on, once (postmortem-fixes design, ruling 20): the
-        strategy role's own, not cooling down. None when the role has no models of its own: the
-        decision models that just failed are not tried again."""
+        strategy role's own whose breaker is closed or due for its trial (model guard), or not cooling
+        down (PILOT_MODEL_GUARD=0). None when the role has no models of its own: the decision models
+        that just failed are not tried again."""
         own = "strategy" in self._role_objs or bool(((self.s.roles or {}).get("strategy") or {}).get("models"))
         if not own:
             return []
@@ -881,21 +887,34 @@ class Governor:
 
     def _retry_decision(self, ask) -> tuple[Any, dict] | None:
         """Ruling 20's retry of a decision every decisions model failed (an outage, the request limit):
-        `ask(agent)` with the decisions agent on each `_retry_models` entry in turn, each tried once
-        (no overload waits). (result, entry), or None when none answered. T512, T522 and T525 failed on
-        503s and the request limit, and nothing retried: a retry on another model tells a provider
-        outage from a model that spends its budget on tool calls."""
+        `ask(agent)` with the decisions agent on each `_retry_models` entry in turn, each run once.
+        With the model guard each entry is a pool of its own: its request gets the guard's one retry on
+        overload, an open model is waited for up to `pool_max_wait_s`, the pool's events say what failed
+        (role "decisions retry") and a pool that gives up logs `pool_exhausted`; with PILOT_MODEL_GUARD=0
+        there are no overload waits and each failure is a `model_fallback`. (result, entry), or None
+        when none answered. T512, T522 and T525 failed on 503s and the request limit, and nothing
+        retried: a retry on another model tells a provider outage from a model that spends its budget
+        on tool calls."""
         failed = self.__dict__.setdefault("_failed_at", {})
         for entry in self._retry_models():
-            agent = self._agent_for(entry, "decisions")
-            if self.s.model_guard and isinstance(getattr(agent, "model", None), PoolModel):
-                agent.model.begin_run(0, event_hooks(self.log.emit, "decisions retry", self.health.family))
+            agent = None
             try:
+                agent = self._agent_for(entry, "decisions")
+                if self.s.model_guard and isinstance(getattr(agent, "model", None), PoolModel):
+                    agent.model.begin_run(0, event_hooks(self.log.emit, "decisions retry", self.health.family))
                 result = ask(agent)
             except Exception as e:  # noqa: BLE001 - the next model, then the caller's rules
                 failed[entry["model"]] = time.time()
-                self.log.emit("model_fallback", role="decisions retry", model=entry["model"],
-                              error=f"{type(e).__name__}: {e}"[:300], fallback=None)
+                if not self.s.model_guard:
+                    self.log.emit("model_fallback", role="decisions retry", model=entry["model"],
+                                  error=f"{type(e).__name__}: {e}"[:300], fallback=None)
+                elif isinstance(e, PoolExhausted):      # the pool's own events named each failure
+                    self.log.emit("pool_exhausted", role="decisions retry", causes=e.causes())
+                else:                                   # no usable answer (the request cap, an invalid output)
+                    self.log.emit("model_fallback", role="decisions retry", model=entry["model"],
+                                  error=f"{type(e).__name__}: {e}"[:300], fallback=None, failure="answer",
+                                  family=self.health.family(entry["model"]),
+                                  request=getattr(getattr(agent, "model", None), "requests", None))
                 continue
             failed.pop(entry["model"], None)
             return result, entry
