@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -24,6 +25,20 @@ def load_dotenv(path: Path = REPO / ".env") -> None:
 def default_journal(game: str) -> Path:
     return {"stellaris": REPO / "games/stellaris/journal.md",
             "civ6": REPO / "games/civ6/journal.md"}.get(game, REPO / "games/terran-2329/journal.md")
+
+
+def _json_map(env, name: str, default: dict) -> dict:
+    """A JSON object from the environment (the model guard's maps); anything else is an error naming it."""
+    raw = env.get(name)
+    if raw is None or not raw.strip():
+        return default
+    try:
+        value = json.loads(raw)
+    except ValueError as e:
+        raise ValueError(f"{name} is not valid JSON: {e}") from None
+    if not isinstance(value, dict):
+        raise ValueError(f"{name} must be a JSON object, got {type(value).__name__}")  # noqa: TRY004
+    return value
 
 
 @dataclass
@@ -54,7 +69,18 @@ class Settings:
     fresh_save_wait_s: float = 600.0
     model_cooldown_s: float = 600.0                  # a model that just failed goes behind the others this long
     model_timeout_s: float = 120.0                    # per model request; decisions take ~20-30 s
-    retry_delays: tuple[float, ...] = (5, 15, 45)      # model calls per governor decision (1 answer + up to 3 tool rounds)
+    retry_delays: tuple[float, ...] = (5, 15, 45)      # waits between whole-run retries on the first model (PILOT_MODEL_GUARD=0 only)
+    # the model guard (docs/design/2026-10-02-model-guard-design.md, ruling 15): pacing, one short retry,
+    # a breaker per model and failover inside a run; PILOT_MODEL_GUARD=0 runs the whole-run retries above
+    model_guard: bool = True
+    overload_retry_s: tuple[float, float] = (1.0, 2.0)
+    rate_retry_max_s: float = 10.0
+    breaker_open_s: float = 60.0
+    breaker_max_s: float = 600.0
+    pool_max_wait_s: float = 60.0
+    min_call_interval_s: dict = field(default_factory=lambda: {"google": 0.5})
+    model_limits: dict = field(default_factory=dict)          # model -> {rpm, tpm, daily_requests}
+    model_families: dict = field(default_factory=dict)        # model -> family, over the name rule
     retro_every: int = 5                # Stellaris: a retrospective after every N model decisions (0 = never)
     image_detail: str = "medium"       # low | medium | high (Gemini media resolution)
     images_in_context: int = 2         # older screenshots in an episode become text stubs
@@ -164,6 +190,10 @@ class Settings:
         s.war_crisis = env.get("PILOT_WAR_CRISIS", "1").strip().lower() not in ("0", "false", "no", "off")
         s.campaign = env.get("PILOT_CAMPAIGN", s.campaign)
         s.retro_every = int(env.get("PILOT_RETRO_EVERY", s.retro_every))
+        s.model_guard = env.get("PILOT_MODEL_GUARD", "1").strip().lower() not in ("0", "false", "no", "off")
+        s.min_call_interval_s = _json_map(env, "PILOT_MIN_CALL_INTERVAL", s.min_call_interval_s)
+        s.model_limits = _json_map(env, "PILOT_MODEL_LIMITS", s.model_limits)
+        s.model_families = _json_map(env, "PILOT_MODEL_FAMILIES", s.model_families)
         if "PILOT_RUNS_DIR" in env:
             s.runs_dir = Path(env["PILOT_RUNS_DIR"])
         s.journal = default_journal(s.game)

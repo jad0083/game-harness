@@ -124,3 +124,17 @@ def agent_server(request):
     yield f"http://127.0.0.1:{srv.server_address[1]}", backend
     srv.shutdown()
     srv.server_close()
+
+
+@pytest.fixture(autouse=True)
+def guard_waits(monkeypatch):
+    """The model guard's retry and pacing waits take no real time in tests; each wait is recorded, and
+    retry jitter takes its lower bound."""
+    from pilot import modelguard
+    waits: list[float] = []
+
+    async def sleep(seconds):
+        waits.append(seconds)
+    monkeypatch.setattr(modelguard, "_sleep", sleep)
+    monkeypatch.setattr(modelguard, "_uniform", lambda lo, hi: lo)
+    return waits
