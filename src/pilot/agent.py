@@ -45,6 +45,7 @@ from .config import Settings
 from .events import EventLog
 from .game import Game, ToolResult
 from .learning import Journal, LearnedStore, LearningRejected, ScreenAction, is_forbidden_key
+from .modelguard import PoolExhausted, PoolModel, event_hooks
 
 GENERIC_INSTRUCTIONS = """You are an autonomous player of a turn-based strategy game, acting only through tools.
 A verified autopilot plays routine turns; you are called when it stops on something that needs judgement.
@@ -308,12 +309,12 @@ def model_settings(s: Settings) -> ModelSettings:
     return ModelSettings(**base, thinking=s.thinking)  # type: ignore[typeddict-unknown-key]
 
 
-def build_agent(s: Settings, game_briefing: str, model=None) -> Agent[Deps, EpisodeResult]:
+def build_agent(s: Settings, game_briefing: str, model=None, agent_settings=None) -> Agent[Deps, EpisodeResult]:
     instructions = GENERIC_INSTRUCTIONS.format(coord_rule=coords.describe(s.coord_space)) + "\n\n" + game_briefing
     tools = [Tool(f) for f in (look, click, drag, key, hover, consult, get_record, note,
                                remember_rule, remember_control, learn_screen, ask_human)]
     return Agent(resolve_model(model or s.model), deps_type=Deps, output_type=EpisodeResult, instructions=instructions,
-                 tools=tools, model_settings=model_settings(s), retries=2,
+                 tools=tools, model_settings=agent_settings or model_settings(s), retries=2,
                  capabilities=[ProcessHistory(trim_images(s.images_in_context))])
 
 
@@ -331,7 +332,17 @@ def run_episode(agent: Agent[Deps, EpisodeResult], deps: Deps, stop_text: str, f
     def on_retry(e, delay, attempt):
         deps.log.emit("model_retry", error=f"model {e.model_name} answered {e.status_code}", delay=delay, attempt=attempt)
 
-    result = run_with_retry(lambda: agent.run_sync(content, deps=deps,
-                                                   usage_limits=UsageLimits(request_limit=deps.settings.max_requests_per_episode)),
-                            deps.settings.retry_delays, on_retry)
+    limits = UsageLimits(request_limit=deps.settings.max_requests_per_episode)
+    pool = getattr(agent, "model", None)
+    if deps.settings.model_guard and isinstance(pool, PoolModel):
+        # the model guard (docs/design/2026-10-02-model-guard-design.md, ruling 18): failover inside the run
+        pool.begin_run(0, event_hooks(deps.log.emit, "episodes", pool.health.family))
+        try:
+            result = agent.run_sync(content, deps=deps, usage_limits=limits)
+        except PoolExhausted as e:
+            deps.log.emit("pool_exhausted", role="episodes", causes=e.causes())
+            raise
+    else:
+        result = run_with_retry(lambda: agent.run_sync(content, deps=deps, usage_limits=limits),
+                                deps.settings.retry_delays, on_retry)
     return result.output, result.usage, result.all_messages()

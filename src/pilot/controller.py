@@ -7,13 +7,16 @@ import re
 import subprocess
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
-from .agent import Deps, HumanChannel, build_agent, run_episode
+from pydantic_ai import ModelSettings
+
+from .agent import Deps, HumanChannel, build_agent, model_settings, run_episode
 from .config import REPO, Settings
 from .events import EventLog
 from .game import Game
 from .learning import Journal, LearnedStore
+from .modelguard import GuardConfig, GuardedModel, ModelHealth, PoolModel, emit_breaker
 from .trace import serialize
 from .wording import attention
 
@@ -30,7 +33,7 @@ class Control:
 
 
 class Pilot:
-    def __init__(self, settings: Settings, game: Game, log: EventLog, model=None):
+    def __init__(self, settings: Settings, game: Game, log: EventLog, model=None, fallback=None):
         self.s = settings
         self.game = game
         self.log = log
@@ -43,9 +46,37 @@ class Pilot:
         if learned_rules.exists():
             briefing += "\n\n## Rules learned in play\n" + learned_rules.read_text(encoding="utf-8")
         self._briefing = briefing
-        self.agent = build_agent(settings, briefing, model=model)
+        # the model guard (docs/design/2026-10-02-model-guard-design.md): with PILOT_MODEL_GUARD=0 its usage
+        # file is neither read nor written and no model health is published
+        guard = GuardConfig.from_settings(settings)
+        self.health = ModelHealth(guard if settings.model_guard else replace(guard, usage_file=None),
+                                  on_change=self._on_breaker,
+                                  on_note=lambda text: log.emit("briefing_error", error=f"model guard: {text}"[:300]))
+        self._model_obj, self._fallback_obj = model, fallback
+        self.pool: PoolModel | None = None
+        self.agent = self._make_agent()
         self._learned_since_commit = 0
         self._commit_lock = threading.Lock()
+
+    def _on_breaker(self, model: str, snap: dict) -> None:
+        emit_breaker(self.log.emit, model, snap)
+        if self.s.model_guard:
+            self.log.state.info["model_health"] = self.health.snapshot()
+
+    def _make_agent(self):
+        """The episode agent: with the model guard, on a pool of the model and the fallback model (ruling 18)."""
+        if not self.s.model_guard:
+            return build_agent(self.s, self._briefing, model=self._model_obj)
+        entries = [(self._model_obj or self.s.model, self.s.model)]
+        if self._fallback_obj is not None:
+            entries.append((self._fallback_obj, getattr(self._fallback_obj, "model_name", "fallback")))
+        elif self.s.fallback_model and self.s.fallback_model != self.s.model:
+            entries.append((self.s.fallback_model, self.s.fallback_model))
+        self.pool = PoolModel("episodes", [GuardedModel(obj, name, self.health,
+                                                        settings=model_settings(replace(self.s, model=name)))
+                                           for obj, name in entries], self.health)
+        return build_agent(self.s, self._briefing, model=self.pool,
+                           agent_settings=ModelSettings(timeout=self.s.model_timeout_s))
 
     # -- control (called from the dashboard thread) ----------------------------------------------
 
@@ -67,15 +98,14 @@ class Pilot:
 
     def set_model(self, model: str, thinking: str | None = None) -> None:
         """Switch model (and thinking level) from the next episode on."""
-        from dataclasses import replace
-
         from .models import THINKING, valid_model
         if not valid_model(model):
             raise ValueError(f"not a model name: {model!r} (expected provider:name)")
         if thinking is not None and thinking not in THINKING:
             raise ValueError(f"thinking must be one of {', '.join(THINKING)}")
         self.s = replace(self.s, model=model, thinking=thinking or self.s.thinking)
-        self.agent = build_agent(self.s, self._briefing)
+        self._model_obj = None
+        self.agent = self._make_agent()
         self.log.state.model = model
         self.log.state.info["thinking"] = self.s.thinking
         self.log.emit("model", model=model, thinking=self.s.thinking)
