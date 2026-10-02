@@ -490,6 +490,7 @@
   .pool li select { min-width: 0; width: 100%; }
   .pool li .rm { background: none; border: 1px solid var(--hair); border-radius: 6px; color: var(--ink-2); height: 30px; cursor: pointer; }
   .pool li .rm:disabled { opacity: .35; cursor: default; }
+  .pool li .usage { grid-column: 2 / -1; font-size: 12px; color: var(--muted); }
   .pool li .note { grid-column: 2 / -1; font-size: 12px; color: var(--warn); margin-top: -2px; }
   @media (max-width: 520px) {
     /* the name on its own line; provider, thinking and a 44 px × under it */
@@ -640,7 +641,7 @@
     .fig-label, .fig-sub, .legend, .tag, .fchip, .d-who, .d-urgent, .after, .t-meta, .t-when, .usage, .hint, .ev-time, .ev-raw summary,
     .seg button, .rec .rmore, .olog .onote, .nb th, .nb-note, table.data, .stats, details summary, .args-list, .add-meta,
     .p-weight, .ms-list li, .pillar .actions, .effort-label, .rescale, .gov-age, .review-result, .msg .who, .s-summary-label,
-    .btn.small, .fcounts, .reason.sys, .dmeta, .devlog, .pool li .note, .roles button, .tip, .health-line, .fresh,
+    .btn.small, .fcounts, .reason.sys, .dmeta, .devlog, .pool li .note, .pool li .usage, .roles button, .tip, .health-line, .fresh,
     .o-block > h3 span, .rec .rcounts, .olog .okind, .stand, .danger, .ms-metric { font-size: 13px; }
     svg.chart text { font-size: 13px; }
     code, pre { font-size: 13px; }
@@ -825,6 +826,7 @@
     <section class="panel" id="p-figures" aria-label="Figures" hidden>
       <div class="figures" id="figures"></div>
       <p class="health-line" id="game-health" hidden></p>
+      <p class="health-line" id="model-health" hidden></p>
     </section>
 
     <section class="panel" id="p-chart" aria-labelledby="h-chart">
@@ -1498,7 +1500,7 @@ async function loadCampaignData() {
     S.strategyKey = skey;
   }
   renderStrategy(strategy);
-  renderChart(); renderDecisions(); renderGovernor(); renderLeversTab(); renderGameHealth();
+  renderChart(); renderDecisions(); renderGovernor(); renderLeversTab(); renderGameHealth(); renderModelHealth();
   loadHealth();
   const newest = S.decisions[S.decisions.length - 1];
   // follow the newest decision unless the reader picked an older one
@@ -1775,7 +1777,7 @@ function renderGovernor() {
     facts.push(ls.off_reason ? `<span class="bad-text">Last stand off for this run: ${esc(ls.off_reason)}.</span>`
                              : ls.on ? `Last stand armed (at most ${ls.max} in a row).` : "Last stand: off.");
   if (!S.ok) { line = "The dashboard does not answer."; facts = ["Reconnecting…"]; }
-  renderGameHealth();
+  renderGameHealth(); renderModelHealth();
   renderLeversTab();
   const gov = $("gov");
   gov.dataset.state = state;
@@ -2782,6 +2784,21 @@ function renderGameHealth() {
   el.hidden = !off || !parts.length;
   if (!el.hidden) $("p-figures").hidden = false;
 }
+// Model health (model guard design, ruling 23): one line while a model is skipped or its family waits.
+// A pilot without the guard, or before its first model call, publishes nothing and the line stays hidden.
+function renderModelHealth() {
+  const el = $("model-health"), live = S.live && S.campaign === (S.status.info || {}).campaign;
+  const models = live ? ((S.status.info || {}).model_health || {}).models || {} : {};
+  const skipped = Object.entries(models).filter(([, h]) => h.state === "open" || h.state === "broken")
+    .map(([m, h]) => h.state === "broken" ? `${modelName(m)} (${h.reason}, until the models change)`
+      : `${modelName(m)} until ${hhmm(h.until)} (${h.reason}${h.openings > 1 ? `, ${nth(h.openings)} time` : ""})`);
+  const later = Object.entries(models).filter(([, h]) => h.state === "closed" && h.caution).map(([m]) => `${modelName(m)} after other families`);
+  const parts = [skipped.length ? `Skipped: ${skipped.join(", ")}` : "", ...later].filter(Boolean);
+  el.textContent = parts.length ? parts.join("; ") + "." : "";
+  el.className = "health-line" + (skipped.length ? " warn" : "");
+  el.hidden = !parts.length;
+  if (!el.hidden) $("p-figures").hidden = false;
+}
 
 // ---------- activity (rulings 18, 29) ----------
 // Every kind reads as a sentence in the game's words; repeats in a row group ("Learned 3 rules",
@@ -2834,7 +2851,7 @@ function describe(ev) {
     case "strategy_rejected": return `Strategy review sent back: ${clip((ev.errors || []).slice(0, 2).map(tidy).join("; "))}`;
     case "strategy_mismatch": return "The stored strategy does not fit the game's pillars; the next review writes a new one";
     case "strategy_disabled": return `Strategy layer off: ${clip(tidy(ev.error))}`;
-    case "model_fallback": return `${modelName(ev.model)} ${errorCause(ev.error)}; used ${modelName(ev.fallback)}${ev.role && ev.role !== "decisions" ? ` (${human(ev.role)})` : ""}`;
+    case "model_fallback": return `${modelName(ev.model)} ${errorCause(ev.error)}; ${ev.fallback ? `used ${modelName(ev.fallback)}` : "no other model was left"}${ev.role && ev.role !== "decisions" ? ` (${human(ev.role)})` : ""}`;
     case "model_retry": return `${sentence(errorCause(ev.error))}; trying again in ${ev.delay} s${ev.role && ev.role !== "decisions" ? ` (${human(ev.role)})` : ""}`;
     case "model_breaker": return breakerSentence(ev);
     case "model_pace": return `Waited ${dur(ev.waited_s)} before calling ${modelName(ev.model)}, to keep requests apart`;
@@ -3191,9 +3208,10 @@ function renderPool() {
   const byId = Object.fromEntries(provs.map((p) => [p.id, p]));
   const pool = poolFor(S.edit), rotate = !!S.rotates[S.edit];
   $("rotate").checked = rotate;
+  const usage = (((S.status || {}).info || {}).model_health || {}).models || {};
   $("pool-hint").textContent = rotate
-    ? "Each call starts with the next model in the list; if a model fails, the next one is tried."
-    : "The first model is used; if it fails (overloaded, bad key, no answer), the next one is tried, and so on.";
+    ? "Each call starts with the next model in the list; a request that fails moves to the next model within the same call."
+    : "The first model is used; a request that fails (overloaded, bad key, no answer) moves to the next model within the same call.";
   $("pool").innerHTML = pool.map((e, i) => {
     const pid = e.model.split(":")[0], prov = byId[pid] || { models: [], configured: false, label: pid };
     const models = [...new Set([...(prov.models || []), e.model])].sort();
@@ -3207,6 +3225,7 @@ function renderPool() {
       <select class="md" aria-label="Model ${i + 1}">${models.map((m) => `<option value="${esc(m)}"${m === e.model ? " selected" : ""}>${esc(shortName(m))}</option>`).join("")}</select>
       <select class="th" aria-label="Thinking for model ${i + 1}">${THINK.map((t) => `<option${t === e.thinking ? " selected" : ""}>${t}</option>`).join("")}</select>
       <button type="button" class="rm" aria-label="Remove model ${i + 1}"${pool.length < 2 ? " disabled" : ""}>×</button>
+      ${usage[e.model] ? `<span class="usage">${usage[e.model].today} requests today</span>` : ""}
       ${note ? `<span class="note">${esc(note)}${bill && pool.length > 1 ? ` <button type="button" class="linkish rm-bill">Remove from list</button>` : ""}</span>` : ""}</li>`;
   }).join("");
   $("pool-add").disabled = pool.length >= 6;

@@ -285,6 +285,17 @@ def seed_scenario(runs: Path, scenario: str = "playing") -> dict:
         st.info["deciding"] = {"since": now - 72, "trigger": "urgent: city threatened: Chengdu (2 enemy units near)",
                                "model": "google:gemini-3.1-pro-preview", "attempt": 2, "max_attempts": 2, "retry_at": None,
                                "retries": 0, "after": [{"model": "google:gemini-3.8-flash", "error": "overloaded (503)"}]}
+        st.info["model_health"] = {"day": "2026-10-02", "models": {
+            "google:gemini-3.8-flash": {"state": "open", "until": now + 300, "reason": "overloaded (503)", "openings": 3,
+                                        "family": "gemini-flash", "caution": False, "today": 41},
+            "google:gemini-3.7-flash": {"state": "closed", "until": None, "reason": "", "openings": 0,
+                                        "family": "gemini-flash", "caution": True, "today": 12},
+            "google:gemini-3.1-pro-preview": {"state": "closed", "until": None, "reason": "", "openings": 0,
+                                              "family": "gemini-pro", "caution": False, "today": 7}}}
+        log.emit("model_breaker", model="google:gemini-3.8-flash", family="gemini-flash", state="open",
+                 until=now + 300, reason="overloaded (503)", openings=3)
+        log.emit("pool_exhausted", role="chat", causes=[{"model": "google:gemini-3.8-flash", "error": "overloaded (503)"}])
+        log.emit("model_fallback", model="google:gemini-3.8-flash", error="overloaded (503)", fallback=None, role="decisions")
     elif scenario == "deciding_old":       # a pilot that publishes no info.deciding (GalCiv, older ones)
         st.status = "deciding"
     elif scenario == "paused":

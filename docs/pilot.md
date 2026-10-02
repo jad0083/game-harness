@@ -175,6 +175,14 @@ model being tried, the attempt, the models already tried and why, those skipped,
 `info.model_health` in `/status` holds every model's breaker, its family's caution and today's request
 count.
 
+**On the dashboard.** Now shows one model-health line (hidden when nothing is wrong, and for a pilot
+that publishes no `info.model_health`): "Skipped: Gemini 3.8 Flash until 14:32 (overloaded (503), 3rd
+time)" names each model whose breaker is open or broken, and "Gemini 3.7 Flash after other families"
+a model whose family is waiting after a rate limit or overload. The role editor lists "N requests
+today" under each model of the pool. Activity words the guard's events: "Gemini 3.8 Flash skipped
+until 14:32 (...)", "Trying Gemini 3.8 Flash again", "Waited 2 s before calling ... , to keep requests
+apart" and "No model could answer (chat): ...".
+
 **The kill switch.** `PILOT_MODEL_GUARD=0` runs the calls as before the guard: whole runs retried on
 the first model after 5, 15 and 45 s (`retry_delays`), any other failure moving the whole run to the
 next model, and a model that failed going behind the others for 10 minutes (`model_cooldown_s`).
