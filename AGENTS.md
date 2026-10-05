@@ -442,8 +442,9 @@ Rules:
   through a one-off task as the signed-in user running `d:\steam\steam.exe -applaunch 289070` (a
   process started over WinRM lands in session 0 and shows nothing). Then `esc` skips the intro;
   Single Player > Play Now starts a new game with the remembered setup and a random leader (Resume
-  Game loads the newest save). Map generation takes about 3 minutes; the tuner lists `GameCore_Tuner`
-  when it is done, and only then does Begin/Continue Game answer a hover and click. Act only while
+  Game loads the newest save). A new game's map takes about 3 minutes and the tuner lists `GameCore_Tuner`
+  before Begin Game answers a hover and click. A loaded save starts its tuner only after Continue Game
+  is clicked; a click about 4 minutes after Resume Game worked, one within 2 minutes did not. Act only while
   the foreground window is the game: a Steam chat window can sit in front after an unlock.
 - Throwaway games only: the tuner turns achievements off.
 - The dashboard's *Capture the game screen* (and the frame on its needs-you card) is the agent's
