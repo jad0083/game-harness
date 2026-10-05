@@ -203,6 +203,23 @@ removed with those settings.
 (pydantic-ai leaves its `retry_options` unset), Anthropic models are built with a client whose
 `max_retries` is 0, and claude-code has no retry of its own.
 
+**Does pacing prevent the 503s? Measured: no.** On 2026-10-05 (07:45-08:15 Pacific, the pilot
+paused) 251 small requests at thinking "high" were sent open-loop at fixed spacings of 60, 20, 5, 1
+and 0.2 s (0.02 to 5 requests a second), the spacings shuffled and cycled three times per model:
+
+| Model | 503 share at 60 s / 20 s / 5 s / 1 s / 0.2 s spacing | 429s |
+|---|---|---|
+| gemini-3.8-flash | 54% / 50% / 57% / 60% / 57% | 0 |
+| gemini-3.1-pro-preview | 10% / 12% / 3% / 7% / 0% (plus three 504 DEADLINE_EXCEEDED at 0.2 s) | 0 |
+
+The 503 share did not depend on our rate: 3.8 Flash refused about half of all requests even at one
+a minute, and its share swung between 13% and 67% from one five-minute window to the next whatever
+the spacing. No rate produced a 429, bursts of ten requests in two seconds included, so the project's
+quota was nowhere near. The pilot's own rate (about 1.3 requests a minute in a Civ VI run) is far
+below any limit. So `min_call_interval_s` stays a small guard against bursts. A larger interval or an
+`rpm` would only slow decisions without avoiding a single 503. What decides availability is the choice
+of model and a pool that has another family to fail over to.
+
 ## Stellaris governor
 
 `src/pilot/governor.py`. The empire is played by the game's own AI (`human_ai`); the governor only
