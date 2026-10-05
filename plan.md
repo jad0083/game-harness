@@ -104,6 +104,10 @@
 - [ ] GalCiv IV levers from the Civ VI and Stellaris lessons (2026-09-27): whether the game's own AI can play our faction (governor model instead of screen play), a record per action kind, rush-buys with credits, crisis response, AI steering through data mods, planet tile placement, and stall/hang recovery; research → design with rulings → build → review → deploy (live checks when GalCiv IV is the running game)
 
 ## Pilot app: observability and control
+- [ ] Portability 1, data platform (design docs/design/2026-10-05-data-platform-design.md): one SQLite store (`pilot.db`) in a data directory, code and corpora read-only, learned knowledge, journals, traces and settings in the store, `pilot export` instead of runtime git, frame retention, `pilot data import`/`check`
+- [ ] Portability 2, appliance image and estate stack: one multi-stage image, the dashboard supervising the pilot, Litestream when configured, a Komodo stack with OpenBao secrets
+- [ ] Portability 3, agent release and pairing: a versioned Windows installer, a pairing code, PCs registered in the store
+- [ ] Portability 4, public distribution: CI-built multi-arch images, releases, compose and .env template, setup docs for a server and for one PC
 - [x] Model guard (design docs/design/2026-10-02-model-guard-design.md): every model request paced and classified (503, 429 RetryInfo, daily quota, timeout, 4xx), one 1-2 s jittered retry, a circuit breaker per model, failover to another family that continues the same run (no tool runs twice), optional rpm/tpm/daily limits, SDK retries off, model health on the dashboard — deployed 3236765 (2026-10-02): viewer restarted; the pilot applies it at its next start
 - [ ] Model guard live check (design ruling 27) on the next campaign: first overload logs model_retry (failure overloaded), model_breaker open and the same run answered by another family; then 100 decisions with no repeated tool call, zero 429s, decision p90 under 60 s (baseline 100 s)
 - [ ] Model guard cleanup (design ruling 20) after one campaign meets the criteria: remove PILOT_MODEL_GUARD, run_with_retry, retry_delays and model_cooldown_s
