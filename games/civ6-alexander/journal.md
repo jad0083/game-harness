@@ -21,3 +21,18 @@ speed, Continents, Small map; the leader was random). First campaign with the mo
   holds the campaign.
 - State at T60: 1 city (Pella), population 3, science 3.5, culture 3.9, gold 168, military 64, score
   35, at peace; 2nd of the met majors in score, military, techs and civics.
+
+## 2026-10-05 (afternoon) — T60 → T174, stopped by the user
+
+- Resumed from the T60 autosave (Resume Game; Continue Game answered about 4 minutes after loading)
+  after two Gemini probes (docs/pilot.md): the decision pool became gemini-pro-latest first and
+  gemini-3.8-flash second, no rotation; at the user's request the Strategy role's Claude Opus fallback
+  was replaced by gemini-3.8-flash during the run ("no claude"), so the pools are Gemini only.
+- 47 decisions in 86 minutes: median 36 s, p90 285 s, max 440 s; 41 answered by gemini-pro-latest.
+  The guard logged 23 retries, 14 failovers and 32 breaker changes. The long tail is gemini-pro-latest
+  requests that hang about 2 minutes before a 504 or a read timeout, then the wait for a trial.
+- One strategy review failed after the Claude removal with every Gemini model overloaded
+  (`pool_exhausted`, role strategy); the run carried on with the strategy it had.
+- Stopped at T174 at the user's request (pilot stopped through its control; the game exited through
+  `OnExitGame`). State at T174: 4 cities, population 19, science 15.2, culture 14.3, military 93,
+  score 168, 3 wars; 3rd of the met majors in score (median 402).
