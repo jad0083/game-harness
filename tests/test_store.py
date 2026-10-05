@@ -30,16 +30,127 @@ def test_open_store_is_cached_per_path(tmp_path):
     assert S.open_store(tmp_path / "other") is not S.open_store(tmp_path)
 
 
+# an old runs/telemetry.sqlite: no meta table, campaigns without title, decisions without the model columns
+OLD_TELEMETRY = """
+CREATE TABLE campaigns (id TEXT PRIMARY KEY, game TEXT NOT NULL, name TEXT NOT NULL, created REAL NOT NULL);
+CREATE TABLE events (run_id TEXT NOT NULL, t REAL NOT NULL, kind TEXT NOT NULL, data TEXT NOT NULL);
+CREATE TABLE decisions (run_id TEXT NOT NULL, episode INTEGER NOT NULL, campaign_id TEXT, t REAL, date TEXT,
+    month INTEGER, trigger TEXT, decision TEXT, reason TEXT, outcome TEXT, current TEXT, tokens_in INTEGER,
+    tokens_out INTEGER, seconds REAL, trace TEXT, result TEXT, PRIMARY KEY (run_id, episode));
+INSERT INTO campaigns VALUES ('stellaris/c', 'stellaris', 'c', 1.0);
+INSERT INTO decisions(run_id, episode, campaign_id, decision) VALUES ('r', 1, 'stellaris/c', 'expand');
+"""
+
+
+def _old_telemetry(path):
+    db = sqlite3.connect(path)
+    db.executescript(OLD_TELEMETRY)
+    db.close()
+
+
+def _version(st) -> str:
+    return st.query("SELECT value FROM meta WHERE key='schema_version'")[0]["value"]
+
+
 def test_a_version_1_database_is_migrated_forward(tmp_path):
     db = sqlite3.connect(tmp_path / "pilot.db")
-    db.executescript("CREATE TABLE meta(key TEXT PRIMARY KEY, value TEXT);"
-                     "INSERT INTO meta VALUES ('schema_version', '1');"
-                     "CREATE TABLE campaigns(id TEXT PRIMARY KEY, game TEXT NOT NULL, name TEXT NOT NULL, created REAL NOT NULL);")
-    db.commit()
+    db.executescript(S.TELEMETRY_TABLES + "INSERT INTO meta VALUES ('schema_version', '1');"
+                     "INSERT INTO campaigns(id, game, name, created) VALUES ('civ6/k', 'civ6', 'k', 1.0);")
     db.close()
     st = S.Store(tmp_path / "pilot.db")
-    assert int(st.query("SELECT value FROM meta WHERE key='schema_version'")[0]["value"]) == S.SCHEMA_VERSION
+    assert int(_version(st)) == S.SCHEMA_VERSION
     assert "title" in {r["name"] for r in st.query("PRAGMA table_info(campaigns)")}
+    assert st.query("SELECT name FROM sqlite_master WHERE name IN ('settings', 'events_kind') ORDER BY name") == [
+        {"name": "events_kind"}, {"name": "settings"}], "step 2"
+    assert st.query("SELECT id FROM campaigns") == [{"id": "civ6/k"}]
+
+
+def test_an_old_telemetry_database_without_meta_is_migrated_with_its_rows(tmp_path):
+    _old_telemetry(tmp_path / "pilot.db")
+    st = S.Store(tmp_path / "pilot.db")
+    assert _version(st) == str(S.SCHEMA_VERSION)
+    assert "title" in {r["name"] for r in st.query("PRAGMA table_info(campaigns)")}
+    assert {"model", "model_version", "thinking"} <= {r["name"] for r in st.query("PRAGMA table_info(decisions)")}
+    assert st.query("SELECT name FROM sqlite_master WHERE name='settings'"), "step 2's tables"
+    assert st.query("SELECT decision FROM decisions") == [{"decision": "expand"}]
+
+
+def test_a_database_at_the_current_version_is_not_migrated_again(tmp_path):
+    S.Store(tmp_path / "pilot.db").close()
+    db = sqlite3.connect(tmp_path / "pilot.db")
+    db.executescript("DROP TABLE run_state; CREATE TABLE sentinel(x); INSERT INTO sentinel VALUES (1);")
+    db.close()
+    st = S.Store(tmp_path / "pilot.db")
+    assert _version(st) == str(S.SCHEMA_VERSION)
+    assert not st.query("SELECT name FROM sqlite_master WHERE name='run_state'"), "no schema script ran"
+    assert st.query("SELECT x FROM sentinel") == [{"x": 1}]
+
+
+def test_a_newer_database_keeps_its_version(tmp_path):
+    S.Store(tmp_path / "pilot.db").close()
+    db = sqlite3.connect(tmp_path / "pilot.db")
+    db.executescript(f"UPDATE meta SET value='{S.SCHEMA_VERSION + 1}' WHERE key='schema_version'; DROP TABLE run_state;")
+    db.close()
+    st = S.Store(tmp_path / "pilot.db")              # opens without migrating, and without an error
+    assert _version(st) == str(S.SCHEMA_VERSION + 1), "a stored version is never lowered"
+    assert not st.query("SELECT name FROM sqlite_master WHERE name='run_state'")
+
+
+def _open_at_once(path, barrier, opened, errors):
+    barrier.wait()
+    try:
+        opened.append(S.Store(path))
+    except Exception as e:  # noqa: BLE001 - collected for the assertion
+        errors.append(e)
+
+
+@pytest.mark.parametrize("start", ["empty", "old telemetry"])
+def test_two_processes_migrating_at_once_both_succeed(tmp_path, start):
+    """The pilot and the viewer open the same file at the same moment; the second waits for the first's
+    migration instead of repeating it (a repeated ALTER TABLE fails with 'duplicate column name')."""
+    for i in range(10):
+        path = tmp_path / str(i) / "pilot.db"
+        path.parent.mkdir()
+        if start == "old telemetry":
+            _old_telemetry(path)
+        barrier, opened, errors = threading.Barrier(2), [], []
+        ts = [threading.Thread(target=_open_at_once, args=(path, barrier, opened, errors)) for _ in range(2)]
+        for t in ts:
+            t.start()
+        for t in ts:
+            t.join()
+        assert errors == [] and len(opened) == 2
+        assert {_version(st) for st in opened} == {str(S.SCHEMA_VERSION)}
+        assert [r["name"] for r in opened[0].query("PRAGMA table_info(campaigns)")].count("title") == 1
+        for st in opened:
+            st.close()
+
+
+def test_a_corrupt_database_is_not_called_an_unwritable_directory(tmp_path):
+    (tmp_path / "pilot.db").write_bytes(bytes(range(256)) * 16)
+    with pytest.raises(sqlite3.DatabaseError) as e:
+        S.Store(tmp_path / "pilot.db")
+    assert not isinstance(e.value, S.DataDirError)
+
+
+def test_a_locked_database_at_open_is_not_called_an_unwritable_directory(tmp_path, monkeypatch):
+    def locked(db):
+        raise sqlite3.OperationalError("database is locked")
+    monkeypatch.setattr(S, "_migrate", locked)
+    with pytest.raises(sqlite3.OperationalError, match="database is locked") as e:
+        S.Store(tmp_path / "pilot.db")
+    assert not isinstance(e.value, S.DataDirError)
+
+
+def test_campaign_events_of_the_same_millisecond_come_back_in_the_order_written(tmp_path):
+    st = S.open_store(tmp_path)
+    st.record("b", {"t": 1.0, "kind": "run_start", "game": "civ6", "model": "m"})
+    st.record("a", {"t": 1.0, "kind": "run_start", "game": "civ6", "model": "m"})
+    st.record("b", {"t": 1.0, "kind": "campaign", "game": "civ6", "name": "k"})
+    st.record("a", {"t": 1.0, "kind": "campaign", "game": "civ6", "name": "k"})
+    for run, n in (("b", 1), ("a", 2), ("b", 3), ("a", 4)):
+        st.record(run, {"t": 5.0, "kind": "order_outcome", "n": n})
+    assert [e["n"] for e in st.campaign_events("civ6/k", "order_outcome")] == [1, 2, 3, 4]
 
 
 def test_two_stores_write_concurrently(tmp_path):

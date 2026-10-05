@@ -454,7 +454,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
             marks = ",".join("?" * len(run_ids))
             calls = [{"run_id": e["run_id"], "t": e["t"], "kind": e["kind"], **json.loads(e["data"])} for e in await q(
                 f"SELECT run_id, t, kind, data FROM events WHERE kind IN ('model_retry', 'model_fallback')"
-                f" AND run_id IN ({marks}) ORDER BY t", tuple(run_ids))]
+                f" AND run_id IN ({marks}) ORDER BY t, rowid", tuple(run_ids))]
         return order_rows, calls
 
     async def api_decisions(request):

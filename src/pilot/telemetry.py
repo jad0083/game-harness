@@ -154,7 +154,7 @@ class Telemetry(Store):
         """Every event of one kind in this campaign, across its runs, oldest first (read-only; e.g. the
         Civ VI order record's `order_outcome` rows)."""
         rows = self.query("SELECT e.data FROM events e JOIN runs r ON r.id = e.run_id WHERE r.campaign_id=? AND e.kind=?"
-                          " ORDER BY e.t", (campaign_id, kind))
+                          " ORDER BY e.t, e.rowid", (campaign_id, kind))
         return [json.loads(r["data"]) for r in rows]
 
     def metrics_rows(self, campaign_id: str) -> list[dict]:
