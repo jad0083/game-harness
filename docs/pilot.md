@@ -220,6 +220,23 @@ below any limit. So `min_call_interval_s` stays a small guard against bursts. A 
 `rpm` would only slow decisions without avoiding a single 503. What decides availability is the choice
 of model and a pool that has another family to fail over to.
 
+A second probe the same day (13:15-13:30 Pacific, 270 requests, spacings 20 s and 2 s, five models
+side by side) compared the models directly:
+
+| Model (version served) | Answered | p50 / p90 seconds |
+|---|---|---|
+| gemini-pro-latest (gemini-3.1-pro-preview) | 54/54 (100%) | 6.9 / 21.9 |
+| gemini-3.1-pro-preview | 51/54 (94%) | 7.0 / 26.3 |
+| gemini-3.8-flash | 41/54 (76%) | 2.9 / 10.6 |
+| gemini-flash-latest (gemini-3.8-flash) | 39/54 (72%) | 2.8 / 22.1 |
+| gemini-3.7-flash | 27/54 (50%) | 5.8 / 63.7 |
+
+The spacing again made no difference. 3.8 Flash answered 76% in the afternoon against 45% in the
+morning, so the hour matters more than the rate. 3.7 Flash was the least available and the slowest.
+The `-latest` aliases served the same models as their pinned names. The pool was set to
+gemini-pro-latest first and 3.8 Flash second, without rotation. The Strategy role uses pro-latest,
+then Claude Opus through claude-code.
+
 ## Stellaris governor
 
 `src/pilot/governor.py`. The empire is played by the game's own AI (`human_ai`); the governor only
