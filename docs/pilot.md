@@ -234,8 +234,8 @@ side by side) compared the models directly:
 The spacing again made no difference. 3.8 Flash answered 76% in the afternoon against 45% in the
 morning, so the hour matters more than the rate. 3.7 Flash was the least available and the slowest.
 The `-latest` aliases served the same models as their pinned names. The pool was set to
-gemini-pro-latest first and 3.8 Flash second, without rotation. The Strategy role uses pro-latest,
-then Claude Opus through claude-code.
+gemini-pro-latest first and 3.8 Flash second, without rotation, for decisions and the Strategy role
+alike (Gemini only, by the user's choice).
 
 ## Stellaris governor
 
