@@ -313,15 +313,6 @@ def test_a_revoke_by_the_cli_applies_on_the_next_request(tmp_path, clock):
     asyncio.run(go())
 
 
-def test_telemetry_rebuild_leaves_the_auth_store_alone(tmp_path, clock):
-    from pilot.telemetry import Telemetry
-    runs = tmp_path / "runs"
-    store = A.AuthStore(runs / "auth.sqlite", clock=clock)
-    store.create_device("browser", name="x", created_via="cli", created_by="cli")
-    Telemetry(runs / "telemetry.sqlite").rebuild(runs)
-    assert len(A.AuthStore(runs / "auth.sqlite", clock=clock).list_devices()) == 1
-
-
 # ---------- sessions ----------
 
 def test_revoke_answers_401_revoked_with_who_and_when(tmp_path, clock):

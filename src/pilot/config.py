@@ -89,7 +89,11 @@ class Settings:
     turns_per_autopilot: int = 20
     game: str = "galciv4"
     journal: Path = REPO / "games/terran-2329/journal.md"
-    runs_dir: Path = REPO / "runs"
+    runs_dir: Path = REPO / "runs"          # the data directory (PILOT_DATA_DIR; PILOT_RUNS_DIR is its alias)
+    corpora_dir: Path = REPO / "corpora"
+    controller_path: Path = REPO / "target/release/game-controller"
+    frames_keep: int = 200                  # frames kept per run (newest first)
+    export_dir: Path | None = None          # where every run exports its learned files and journal when it ends
     agent_url: str = field(default_factory=lambda: os.environ.get("GAME_AGENT_URL") or "http://127.0.0.1:8765")
     dashboard_host: str = "0.0.0.0"        # the viewer's bind address (PILOT_VIEW_HOST, `view --host`)
     dashboard_port: int = 8790             # the live pilot's own dashboard (PILOT_PORT)
@@ -124,7 +128,7 @@ class Settings:
 
     @property
     def corpus_dir(self) -> Path:
-        return REPO / "corpora" / self.game
+        return self.corpora_dir / self.game
 
     @property
     def pillars_file(self) -> Path:
@@ -132,8 +136,20 @@ class Settings:
         return self.corpus_dir / "pillars.toml"
 
     @property
-    def telemetry_db(self) -> Path:
-        return self.runs_dir / "telemetry.sqlite"
+    def db_path(self) -> Path:
+        return self.runs_dir / "pilot.db"
+
+    @property
+    def frames_dir(self) -> Path:
+        return self.runs_dir / "frames"
+
+    @property
+    def learned_dir(self) -> Path:
+        return self.runs_dir / "learned" / self.game
+
+    @property
+    def secrets_dir(self) -> Path:
+        return self.runs_dir / "secrets"
 
     @property
     def window_title(self) -> str:
@@ -141,7 +157,7 @@ class Settings:
 
     @property
     def controller_bin(self) -> Path:
-        return REPO / "target/release/game-controller"
+        return self.controller_path
 
     def pool(self) -> list[dict]:
         """The governor's models in order, each with its thinking level."""
@@ -201,8 +217,16 @@ class Settings:
             from .modelguard import check_guard_settings
 
             check_guard_settings(s.min_call_interval_s, s.model_limits, s.model_families)
-        if "PILOT_RUNS_DIR" in env:
-            s.runs_dir = Path(env["PILOT_RUNS_DIR"])
+        data_dir = env.get("PILOT_DATA_DIR") or env.get("PILOT_RUNS_DIR")
+        if data_dir:
+            s.runs_dir = Path(data_dir)
+        if env.get("PILOT_CORPORA_DIR"):
+            s.corpora_dir = Path(env["PILOT_CORPORA_DIR"])
+        if env.get("PILOT_CONTROLLER_BIN"):
+            s.controller_path = Path(env["PILOT_CONTROLLER_BIN"])
+        s.frames_keep = max(1, int(env.get("PILOT_FRAMES_KEEP", s.frames_keep)))
+        if env.get("PILOT_EXPORT_DIR"):
+            s.export_dir = Path(env["PILOT_EXPORT_DIR"])
         s.journal = default_journal(s.game)
         if "PILOT_JOURNAL" in env:
             s.journal = Path(env["PILOT_JOURNAL"])

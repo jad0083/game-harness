@@ -1,68 +1,15 @@
-"""Telemetry store: every pilot run's events, decisions (with full traces) and game metrics in one
-SQLite file (`runs/telemetry.sqlite`), grouped by campaign (one save/playthrough across many runs
-and models). The JSONL logs in `runs/<id>/` stay the raw record; `rebuild()` recreates the
-database from them at any time.
-
-Outcome scoring joins each decision to the empire's metrics some in-game months later, so the
-model (and the human) can see whether a directive actually worked.
+"""Telemetry tables in the pilot's store (pilot.db). Outcome scoring joins each decision to the
+empire's metrics some in-game months later, so the model (and the human) can see whether a directive
+actually worked. Runs, events, decisions (with full traces) and game metrics are grouped by campaign
+(one save/playthrough across many runs and models).
 """
 
 from __future__ import annotations
 
 import json
 import re
-import sqlite3
-import threading
-from pathlib import Path
-from typing import Any
 
-SCHEMA = """
-CREATE TABLE IF NOT EXISTS campaigns (
-    id TEXT PRIMARY KEY,            -- '<game>/<save or journal name>'
-    game TEXT NOT NULL,
-    name TEXT NOT NULL,
-    created REAL NOT NULL
-);
-CREATE TABLE IF NOT EXISTS runs (
-    id TEXT PRIMARY KEY,
-    campaign_id TEXT REFERENCES campaigns(id),
-    game TEXT, model TEXT,
-    settings TEXT,                  -- JSON
-    started REAL, ended REAL,
-    status TEXT
-);
-CREATE TABLE IF NOT EXISTS events (
-    run_id TEXT NOT NULL, t REAL NOT NULL, kind TEXT NOT NULL, data TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS events_run ON events(run_id, t);
-CREATE TABLE IF NOT EXISTS decisions (
-    run_id TEXT NOT NULL, episode INTEGER NOT NULL,
-    campaign_id TEXT, t REAL,
-    date TEXT, month INTEGER,       -- in-game date and months since year 0 (Stellaris)
-    trigger TEXT, decision TEXT, reason TEXT, outcome TEXT, current TEXT,
-    tokens_in INTEGER, tokens_out INTEGER, seconds REAL,
-    trace TEXT,                     -- JSON: prompt, thinking, tool calls, answer
-    result TEXT,                    -- JSON: metric deltas N months later (outcome scoring)
-    PRIMARY KEY (run_id, episode)
-);
-CREATE INDEX IF NOT EXISTS decisions_campaign ON decisions(campaign_id, month);
-CREATE TABLE IF NOT EXISTS metrics (
-    run_id TEXT NOT NULL, campaign_id TEXT, t REAL,
-    date TEXT, month INTEGER, data TEXT NOT NULL,
-    PRIMARY KEY (run_id, date)
-);
-CREATE INDEX IF NOT EXISTS metrics_campaign ON metrics(campaign_id, month);
-CREATE TABLE IF NOT EXISTS plans (
-    campaign_id TEXT, run_id TEXT NOT NULL, t REAL NOT NULL,
-    date TEXT, source TEXT,         -- 'decision'
-    text TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS plans_campaign ON plans(campaign_id, t);
-CREATE TABLE IF NOT EXISTS strategies (
-    campaign_id TEXT, run_id TEXT NOT NULL, t REAL, date TEXT, trigger TEXT, model TEXT, data TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS strategies_campaign ON strategies(campaign_id, t);
-"""
+from .store import Store
 
 # Numbers compared N months after a decision (from the governor's metrics events).
 SCORED = ("systems", "planets", "pops", "techs_known", "military_power", "economy_power", "tech_power",
@@ -82,35 +29,7 @@ def month_index(date: str | None) -> int | None:
         return None
 
 
-class Telemetry:
-    def __init__(self, path: Path):
-        path.parent.mkdir(parents=True, exist_ok=True)
-        self.path = path
-        self._lock = threading.Lock()
-        self.db = sqlite3.connect(path, check_same_thread=False, isolation_level=None)
-        self.db.row_factory = sqlite3.Row
-        self.db.execute("PRAGMA journal_mode=WAL")
-        self.db.executescript(SCHEMA)
-        if "title" not in {r[1] for r in self.db.execute("PRAGMA table_info(campaigns)")}:
-            self.db.execute("ALTER TABLE campaigns ADD COLUMN title TEXT")     # the empire's name, for people
-        cols = {r[1] for r in self.db.execute("PRAGMA table_info(decisions)")}
-        if "model" not in cols:       # added later: the model that made each decision (it can change mid-run)
-            self.db.execute("ALTER TABLE decisions ADD COLUMN model TEXT")
-        for col in ("model_version", "thinking"):   # the release that answered (aliases resolve), thinking level
-            if col not in cols:
-                self.db.execute(f"ALTER TABLE decisions ADD COLUMN {col} TEXT")
-
-    def close(self) -> None:
-        self.db.close()
-
-    def _exec(self, sql: str, args: tuple = ()) -> None:
-        with self._lock:
-            self.db.execute(sql, args)
-
-    def query(self, sql: str, args: tuple = ()) -> list[dict]:
-        with self._lock:
-            return [dict(r) for r in self.db.execute(sql, args).fetchall()]
-
+class Telemetry(Store):
     # -- writing ----------------------------------------------------------------------------------
 
     def start_run(self, run_id: str, game: str, model: str, settings: dict, t: float) -> None:
@@ -260,39 +179,3 @@ class Telemetry:
                      + (f"; deficits: {', '.join(res['deficits_after'])}" if res.get("deficits_after") else ""))
             out.append(f"{r['date']} | {r['decision']} (from {r['current'] or 'none'}) | {r['trigger']} | {after}")
         return "\n".join(out)
-
-    # -- rebuild ------------------------------------------------------------------------------
-
-    def rebuild(self, runs_dir: Path) -> int:
-        """Recreate every table from runs/<id>/events.jsonl and traces/. Returns the runs loaded."""
-        n = 0
-        with self._lock:
-            self.db.execute("BEGIN")
-        try:
-            with self._lock:
-                for table in ("events", "decisions", "metrics", "plans", "strategies", "runs", "campaigns"):
-                    self.db.execute(f"DELETE FROM {table}")  # fixed table names
-            for d in sorted(p for p in runs_dir.iterdir() if (p / "events.jsonl").exists()):
-                with open(d / "events.jsonl", encoding="utf-8") as f:
-                    for line in f:
-                        try:
-                            ev: dict[str, Any] = json.loads(line)
-                        except ValueError:
-                            continue
-                        trace = None
-                        if ev.get("kind") == "trace" and ev.get("file") and (d / ev["file"]).exists():
-                            try:
-                                trace = json.loads((d / ev["file"]).read_text(encoding="utf-8"))
-                            except ValueError:
-                                trace = None           # a corrupt trace file: keep the decision row
-                        self.record(d.name, ev, trace)
-                n += 1
-            for c in self.query("SELECT id FROM campaigns"):
-                self.score(c["id"])
-            with self._lock:
-                self.db.execute("COMMIT")
-        except BaseException:
-            with self._lock:
-                self.db.execute("ROLLBACK")
-            raise
-        return n

@@ -276,12 +276,6 @@ def test_telemetry_records_campaign_decisions_and_scores_outcomes(setup, tmp_pat
     text = tel.past_outcomes(cid)
     assert "2200.01.01 | expand (from none) | start of run | " in text and "planets +1" in text
 
-    # the database can be recreated from the JSONL logs alone
-    tel2 = Telemetry(tmp_path / "t2.sqlite")
-    assert tel2.rebuild(s.runs_dir) >= 1
-    ds2 = tel2.query("SELECT decision, result FROM decisions WHERE campaign_id=? AND decision != 'strategy_review' ORDER BY episode", (cid,))
-    assert [d["decision"] for d in ds2] == ["expand", "keep", "keep"] and ds2[0]["result"] == ds[0]["result"]
-
 
 def test_telemetry_failure_never_stops_play(setup):
     s, _ = setup
@@ -665,16 +659,6 @@ def test_scoring_uses_the_same_run_and_a_nearby_end_point(tmp_path):
     assert tel.score("stellaris/c") == 1
     res = json.loads(tel.query("SELECT result FROM decisions")[0]["result"])
     assert res["planets"] == 1
-
-
-def test_rebuild_survives_a_corrupt_trace_file(setup, tmp_path):
-    from pilot.telemetry import Telemetry
-    s, log = setup
-    Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("expand")).run(max_decisions=1)
-    (log.dir / "traces/0001.json").write_text("{ not json")
-    tel = Telemetry(tmp_path / "r.sqlite")
-    assert tel.rebuild(s.runs_dir) == 1
-    assert tel.query("SELECT decision, trace FROM decisions WHERE decision='expand'")[0] == {"decision": "expand", "trace": None}
 
 
 def planner_model(retro_rules=("Survey before expanding: expand stalls when few reachable systems are surveyed.",)):

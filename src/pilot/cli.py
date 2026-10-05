@@ -13,7 +13,6 @@
     python -m pilot dashboard-key --rotate [--keep all|none|ID,…] [--force]   # a new service key; carried-over
                                               # devices are kept only if named
     python -m pilot dashboard-token create --name N --scope read|control [--expires 90d] | list | revoke ID
-    python -m pilot rebuild-telemetry         # recreate runs/telemetry.sqlite from the run logs
 """
 
 from __future__ import annotations
@@ -91,8 +90,8 @@ def run(s: Settings, episodes: int | None) -> int:
     from .game import McpGame
 
     run_id = time.strftime("%Y%m%d-%H%M%S")
-    from .telemetry import Telemetry
-    log = EventLog(s.runs_dir, run_id, s.model, telemetry=Telemetry(s.telemetry_db))
+    from .store import open_store
+    log = EventLog(s.runs_dir, run_id, s.model, telemetry=open_store(s.runs_dir))
     if s.game == "civ6":
         from .civ6 import ControllerCiv6
         game = ControllerCiv6(s.controller_bin, s.corpus_dir, s.agent_url, REPO)
@@ -170,15 +169,6 @@ def game_for_roles(a, prefs: dict) -> str:
     return a.game or prefs.get("game") or "stellaris"
 
 
-def rebuild(s: Settings) -> int:
-    from .telemetry import Telemetry
-    tel = Telemetry(s.telemetry_db)
-    n = tel.rebuild(s.runs_dir)
-    counts = {t: tel.query(f"SELECT COUNT(*) AS n FROM {t}")[0]["n"] for t in ("campaigns", "runs", "decisions", "metrics")}
-    print(f"rebuilt {s.telemetry_db} from {n} runs: {counts}")
-    return 0
-
-
 def view(s: Settings, port: int, host: str | None = None) -> int:
     import logging
 
@@ -186,8 +176,8 @@ def view(s: Settings, port: int, host: str | None = None) -> int:
 
     from . import auth
     from .dashboard import link_host, make_app
-    from .telemetry import Telemetry
-    app = make_app(None, s.runs_dir, Telemetry(s.telemetry_db))       # the key never reaches this line or the log
+    from .store import open_store
+    app = make_app(None, s.runs_dir, open_store(s.runs_dir))       # the key never reaches this line or the log
     host = host or s.view_host
     print(f"dashboard on http://{link_host(host)}:{port}/ (to sign in a browser: "
           "python -m pilot dashboard-link)", flush=True)
@@ -478,7 +468,6 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument("--model", help="pydantic-ai model string, e.g. google:gemini-3.8-flash")
         p.add_argument("--coords", choices=["auto", "norm1000", "pixels"])
         p.add_argument("--thinking", choices=["off", "low", "medium", "high"])
-    sub.add_parser("rebuild-telemetry", help="recreate runs/telemetry.sqlite from the run logs")
     view_p = sub.add_parser("view", help="read-only dashboard over recorded runs")
     view_p.add_argument("--port", type=int, default=8780)
     view_p.add_argument("--host", help="bind address (default PILOT_VIEW_HOST or 0.0.0.0)")
@@ -541,8 +530,6 @@ def main(argv: list[str] | None = None) -> int:
         return dashboard_key_cmd(s, a)
     if a.cmd == "dashboard-token":
         return dashboard_token(s, a)
-    if a.cmd == "rebuild-telemetry":
-        return rebuild(s)
     # the dashboard's model choice beats the environment; command-line options beat both
     from .models import load_prefs
     prefs = load_prefs(s.runs_dir)

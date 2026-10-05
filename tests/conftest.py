@@ -45,6 +45,17 @@ def _auth_db(tmp_path, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _fresh_stores():
+    """Each test opens its own pilot.db stores (open_store caches one per path per process)."""
+    yield
+    from pilot import store
+    with store._OPEN_LOCK:
+        for st in store._OPEN.values():
+            st.close()
+        store._OPEN.clear()
+
+
+@pytest.fixture(autouse=True)
 def _dashboard_key(monkeypatch):
     """Dashboards in tests use a fixed access key (never runs/dashboard.key), and aiohttp test
     clients send it unless a test passes its own `headers` (the security tests pass `{}`)."""

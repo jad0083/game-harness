@@ -12,7 +12,7 @@ Recorded runs (live or finished; also served by `python -m pilot view` without a
     GET  /runs/<id>/trace/<n>           decision n: prompt, thinking, tool calls, answer
     GET  /runs/<id>/frame.jpg           the run's latest frame
 
-Telemetry (runs/telemetry.sqlite, across runs and models):
+Telemetry (pilot.db in the data directory, across runs and models):
     GET  /api/campaigns                         campaigns: decision and run counts, latest date, last run's end (last_t), empty, state
     GET  /api/decisions?campaign=<id>|run=<id>  decisions (summary + outcome 12 months later)
     GET  /api/decision?run=<id>&episode=<n>     one decision with its full trace
@@ -686,9 +686,10 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
         ids = {i for pl in ((cur or {}).get("pillars") or {}).values() if isinstance(pl, dict)
                for v in pl.values() if isinstance(v, list) for i in v if isinstance(i, str)}
         # the latest review results (accepted, rejected, skipped), newest first, for the Review button
+        # (events of the same millisecond: the one written last first)
         reviews = await q("SELECT e.t, e.kind, e.data FROM events e JOIN runs r ON r.id = e.run_id WHERE r.campaign_id=?"
                           " AND e.kind IN ('strategy_review', 'strategy_rejected', 'strategy_review_skipped')"
-                          " ORDER BY e.t DESC LIMIT 8", (cid,))
+                          " ORDER BY e.t DESC, e.rowid DESC LIMIT 8", (cid,))
         return web.json_response({"current": cur, "milestones": ms, "history": hist, "spec": public, "error": error,
                                   "pressure": press,
                                   "names": await asyncio.to_thread(names.names, game_of_campaign(cid), sorted(ids)),
