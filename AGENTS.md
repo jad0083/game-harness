@@ -436,6 +436,15 @@ Rules:
   4-turn stretch settled and chose one at once): `PILOT_AUTOPLAY_CHUNK` sets turns per call.
 - Menus, when the screen must be used: the UI ignores a click without a preceding hover (move the
   mouse onto the button, then click), and the "Continue" screen after loading needs a key press.
+- Starting a game on mini-rig2 without touching the desk (verified 2026-10-05): a locked console
+  session is unlocked by a one-off SYSTEM scheduled task running `cmd /c tsdiscon 1 & tscon 1
+  /dest:console` (plain `tscon` fails while the session is still on the console); the game starts
+  through a one-off task as the signed-in user running `d:\steam\steam.exe -applaunch 289070` (a
+  process started over WinRM lands in session 0 and shows nothing). Then `esc` skips the intro;
+  Single Player > Play Now starts a new game with the remembered setup and a random leader (Resume
+  Game loads the newest save). Map generation takes about 3 minutes; the tuner lists `GameCore_Tuner`
+  when it is done, and only then does Begin/Continue Game answer a hover and click. Act only while
+  the foreground window is the game: a Steam chat window can sit in front after an unlock.
 - Throwaway games only: the tuner turns achievements off.
 - The dashboard's *Capture the game screen* (and the frame on its needs-you card) is the agent's
   screenshot (`game-controller screenshot`): read-only, no input and no focus change.
