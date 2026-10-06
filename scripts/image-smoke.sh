@@ -10,7 +10,9 @@ DATA="$(mktemp -d)"
 chmod 0700 "$DATA"
 cleanup() {
   docker rm -f "$NAME" >/dev/null 2>&1 || true
-  docker run --rm -v "$DATA:/d" --entrypoint sh "$IMAGE" -c 'rm -rf /d/* /d/.[!.]*' >/dev/null 2>&1 || true
+  # empty it as the container's user, then hand the folder back so the host-side rm can remove it
+  docker run --rm -u 0 -v "$DATA:/d" --entrypoint sh "$IMAGE" \
+    -c "rm -rf /d/* /d/.[!.]*; chown $(id -u):$(id -g) /d" >/dev/null 2>&1 || true
   rm -rf "$DATA" 2>/dev/null || true
 }
 trap cleanup EXIT

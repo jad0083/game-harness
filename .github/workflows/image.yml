@@ -15,6 +15,9 @@ concurrency:
   group: image-${{ github.ref }}
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 env:
   IMAGE: ghcr.io/jad0083/game-pilot
 
@@ -82,7 +85,9 @@ jobs:
       - name: Smoke test
         run: scripts/image-smoke.sh game-pilot:ci
 
+      # Only main publishes. A manual run from another branch builds and smoke-tests, and pushes nothing.
       - uses: docker/login-action@v3
+        if: github.ref == 'refs/heads/main'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -91,10 +96,13 @@ jobs:
       # Push the exact image that passed the smoke test, not a rebuild. A version tag never moves: once
       # :<version> exists, a rebuild gets only :sha-<short> and :latest.
       - name: Tag and push
+        if: github.ref == 'refs/heads/main'
         run: |
           short="${GITHUB_SHA::7}"
           tags=("sha-${short}" latest)
-          if docker manifest inspect "${IMAGE}:${VERSION}" >/dev/null 2>&1; then
+          # fails the job on any registry error other than "not found"
+          published=$(scripts/image-version-published.sh "${IMAGE}:${VERSION}")
+          if [ "$published" = yes ]; then
             echo "::notice::${VERSION} already published; not moving that tag"
           else
             tags+=("${VERSION}")
