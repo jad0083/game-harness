@@ -616,7 +616,8 @@ def _main(argv: list[str] | None) -> int:
     s = Settings.from_env()
     if a.cmd == "prefs":
         from .models import load_prefs
-        v = load_prefs(s.runs_dir).get(a.get, "")
+        # a read for scripts: no store yet means no prefs, and opening one would create it
+        v = load_prefs(s.runs_dir).get(a.get, "") if s.db_path.is_file() else ""
         print(v if isinstance(v, str) else json.dumps(v))
         return 0
     if a.cmd == "data":

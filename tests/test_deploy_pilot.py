@@ -218,6 +218,20 @@ def test_the_script_finds_the_data_directory_in_the_order_config_does(tmp_path, 
     assert status and all(f"X-Pilot-Key: {used} " in c for c in status), calls
 
 
+def test_a_stopped_pilot_reads_its_game_from_the_scripts_data_directory(tmp_path):
+    """No pilot runs: the game comes from the saved prefs in the data directory the script found (here from
+    .env), never from another checkout's runs/ (rollout 2026-10-06: this test's run created the repo's
+    runs/pilot.db through the shared .venv)."""
+    from pilot.models import save_prefs
+    store = tmp_path / "store"
+    save_prefs(store, game="civ6")
+    out, _ = deploy(tmp_path / "a", "docs/x.md", None, dotenv=f"PILOT_DATA_DIR={store}\n")
+    assert "game: civ6" in out, out
+    out, _ = deploy(tmp_path / "b", "docs/x.md", None)
+    assert "game: unknown" in out, out
+    assert not (tmp_path / "b" / "repo" / "runs").exists(), "a read made a store"
+
+
 def test_the_script_finds_cargo_in_the_users_toolchain():
     """First live deploy (2026-09-27): a service shell has no ~/.cargo/bin on PATH, so a Rust change
     failed with "cargo: command not found"; ci.sh adds it, and so must the deploy script."""

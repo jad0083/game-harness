@@ -242,7 +242,7 @@ def test_unwritable_data_dir_fails_at_start_with_its_name(tmp_path):
 
 
 @pytest.mark.skipif(os.geteuid() == 0, reason="root writes whatever the mode")
-@pytest.mark.parametrize("argv", [["prefs", "--get", "game"], ["run", "--game", "civ6"], ["export", "--to", "out"]])
+@pytest.mark.parametrize("argv", [["run", "--game", "civ6"], ["export", "--to", "out"]])   # prefs --get only reads
 def test_an_unwritable_data_dir_ends_the_cli_with_its_name_not_a_traceback(monkeypatch, tmp_path, capsys, argv):
     from pilot import cli
     ro = tmp_path / "ro"

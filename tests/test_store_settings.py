@@ -36,6 +36,19 @@ def test_prefs_get_prints_only_the_value(tmp_path, monkeypatch, capsys):
     assert capsys.readouterr().out == "civ6\n"
 
 
+def test_prefs_get_without_a_store_prints_nothing_and_creates_none(tmp_path, monkeypatch, capsys):
+    """A read for scripts: deploy-pilot.sh asks before any store exists, and a test once made the repo's runs/pilot.db."""
+    monkeypatch.delenv("PILOT_RUNS_DIR", raising=False)
+    for data in (tmp_path / "absent", tmp_path / "empty"):
+        if data.name == "empty":
+            data.mkdir()
+        monkeypatch.setenv("PILOT_DATA_DIR", str(data))
+        assert main(["prefs", "--get", "game"]) == 0
+        assert capsys.readouterr().out == "\n"
+        assert not (data / "pilot.db").exists()
+    assert not (tmp_path / "absent").exists()
+
+
 def test_model_usage_counts_live_in_the_store(tmp_path):
     st = open_store(tmp_path)
     h = G.ModelHealth(G.GuardConfig(usage_store=st))

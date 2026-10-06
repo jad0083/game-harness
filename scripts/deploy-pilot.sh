@@ -54,9 +54,11 @@ if [ "$running" -eq 1 ]; then
   # a pilot paused by the human or waiting for one is left as it is: never paused or resumed here
   case "${run_status:-}" in paused|needs_attention) held=yes ;; esac
 else
-  game="$("$py" -m pilot prefs --get game 2>/dev/null || true)"
+  # the data directory found above, so the store read is this checkout's (the .venv may be shared)
+  game="$(PILOT_DATA_DIR="$data" "$py" -m pilot prefs --get game 2>/dev/null || true)"
 fi
 game="${game:-unknown}"
+echo "game: $game"
 
 eval "$("$py" scripts/pilot-affected.py "$from" "$to" --game "$game" --running "$running" --format env)"
 echo "changed: ${CLASSES:-nothing}"
