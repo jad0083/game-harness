@@ -61,3 +61,33 @@ def test_a_failed_run_end_export_is_reported_not_raised(tmp_path):
     cli._export_at_end(log, Settings(runs_dir=tmp_path / "data", game="civ6", export_dir=blocker / "sub"))
     errs = [e for e in log.recent if e["kind"] == "briefing_error"]
     assert errs and "export failed" in errs[0]["error"]
+
+
+def test_colliding_campaign_names_keep_separate_files(tmp_path):
+    st = open_store(tmp_path / "data")
+    Journal(st, "civ6", "m", campaign=lambda: "civ6/a").note("first", "T1")
+    Journal(st, "civ6", "m", campaign=lambda: "civ6__a").note("second", "T2")
+    export(st, tmp_path / "out")
+    files = sorted((tmp_path / "out/journals").glob("*.md"))
+    assert len(files) == 2
+    by_id = {f.read_text().splitlines()[0]: f.read_text() for f in files}
+    assert "first" in by_id["# Journal: civ6/a"] and "second" not in by_id["# Journal: civ6/a"]
+    assert "second" in by_id["# Journal: civ6__a"] and "first" not in by_id["# Journal: civ6__a"]
+
+
+def test_multi_line_journal_entries_stay_in_their_list_item(tmp_path):
+    st = open_store(tmp_path / "data")
+    Journal(st, "civ6", "m", campaign=lambda: "civ6/b").note("line1  \nline2\n", "T3")
+    export(st, tmp_path / "out")
+    assert "- **T3**: line1\n  line2\n" in (tmp_path / "out/journals/civ6__b.md").read_text()
+
+
+def test_export_removes_stale_templates_only(tmp_path):
+    st = _seed(tmp_path)
+    export(st, tmp_path / "out")
+    tpl = tmp_path / "out/civ6/learned/templates"
+    tpl.mkdir(exist_ok=True)
+    (tpl / "gone.png").write_bytes(b"x")
+    (tpl / "keep.txt").write_text("x")
+    export(st, tmp_path / "out")
+    assert not (tpl / "gone.png").exists() and (tpl / "keep.txt").exists()
