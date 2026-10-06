@@ -284,20 +284,35 @@ def test_telemetry_records_campaign_decisions_and_scores_outcomes(setup, tmp_pat
     assert "2200.01.01 | expand (from none) | start of run | " in text and "planets +1" in text
 
 
-def test_telemetry_failure_never_stops_play(setup, monkeypatch):
-    """An event the store cannot record never stops play (learned knowledge and the journal, in the same
-    store, are written as usual)."""
+def test_telemetry_failure_never_stops_play_until_it_lasts(setup, monkeypatch):
+    """An event the store cannot record never stops play while the failures pass (fewer than
+    STORE_FAILURES_TO_STOP in a row; learned knowledge and the journal are written as usual); a store that
+    keeps failing (a full disk) ends the run loudly."""
+    from pilot.events import STORE_FAILURES_TO_STOP
     from pilot.store import open_store
     s, _ = setup
     store = open_store(s.runs_dir)
+    real = store.record
+    calls = {"n": 0}
+
+    def flaky(*a, **k):
+        calls["n"] += 1
+        if calls["n"] % STORE_FAILURES_TO_STOP:          # nine of every ten fail
+            raise RuntimeError("disk full")
+        return real(*a, **k)
+
+    monkeypatch.setattr(store, "record", flaky)
+    log = EventLog(s.runs_dir, "run8", s.model, telemetry=store)
+    Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("expand")).run(max_decisions=1)
+    assert log.state.episodes == 1 and calls["n"] > STORE_FAILURES_TO_STOP
 
     def broken(*a, **k):
         raise RuntimeError("disk full")
 
     monkeypatch.setattr(store, "record", broken)
-    log = EventLog(s.runs_dir, "run8", s.model, telemetry=store)
-    Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("expand")).run(max_decisions=1)
-    assert log.state.episodes == 1
+    log = EventLog(s.runs_dir, "run8b", s.model, telemetry=store)
+    with pytest.raises(RuntimeError, match="disk full"):
+        Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("expand")).run(max_decisions=1)
 
 
 def test_telemetry_api(setup, tmp_path):

@@ -17,6 +17,11 @@ from typing import Any
 
 from .store import open_store
 
+# A store write that fails is printed and play goes on, but this many failures in a row (a full disk, an
+# unwritable data directory) raise from emit, so the run stops loudly as a failed journal or learned write
+# does; a successful write starts the count again.
+STORE_FAILURES_TO_STOP = 10
+
 # Who asked for what is running now (a device named by the viewer, or "the controller"): events
 # emitted while a dashboard control runs carry it as `by` (and `by_id`).
 ACTOR: contextvars.ContextVar[tuple[str, str | None] | None] = contextvars.ContextVar("pilot_actor", default=None)
@@ -75,6 +80,7 @@ class EventLog:
         self._lock = threading.Lock()
         self._subscribers: list[tuple[asyncio.AbstractEventLoop, asyncio.Queue]] = []
         self._frame_n = 0
+        self._store_failures = 0            # failed store writes in a row (STORE_FAILURES_TO_STOP)
         self.campaign_id: str | None = None
 
     def frame(self, jpeg: bytes | None, keep: bool = False) -> str:
@@ -121,8 +127,17 @@ class EventLog:
             self.store._exec("INSERT INTO run_state(run_id, data, updated) VALUES (?,?,?) ON CONFLICT(run_id)"
                              " DO UPDATE SET data=excluded.data, updated=excluded.updated",
                              (self.state.run_id, json.dumps(self.state.as_dict(), default=str), time.time()))
-        except Exception as e:  # noqa: BLE001 - a store write must never stop play
+        except Exception as e:      # a transient store failure never stops play; a lasting one does (re-raised)
+            with self._lock:
+                self._store_failures += 1
+                failures = self._store_failures
             print(f"store write failed: {e}", flush=True)
+            if failures >= STORE_FAILURES_TO_STOP:
+                print(f"{failures} store writes failed in a row; the run stops", flush=True)
+                raise
+        else:
+            with self._lock:
+                self._store_failures = 0
         for loop, q in subs:
             loop.call_soon_threadsafe(q.put_nowait, ev)
         return ev

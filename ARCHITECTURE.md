@@ -371,10 +371,12 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   the process's one `Telemetry` for a directory, and nothing else opens the file. It holds events,
   decisions with their traces (`decisions.trace`), metrics, strategies, a live run's state
   (`run_state`), learned notes and screens, journal lines, standing orders, prefs and model usage.
-  A data directory it cannot write stops the start with its name (`DataDirError`).
+  A data directory it cannot write stops the start with its name (`DataDirError`; the CLI prints one
+  line on stderr and exits 1).
 - `telemetry.py`: `Telemetry`, a `Store` subclass; `record()` maps events to rows; `score()` joins each
-  decision to the metric point 12 months later; `past_outcomes()` renders them for the model. Write
-  failures are logged and never stop play.
+  decision to the metric point 12 months later; `past_outcomes()` renders them for the model. An event
+  write that fails (`EventLog.emit`) is printed and play goes on, but `STORE_FAILURES_TO_STOP` (10)
+  failures in a row, a full disk, raise and end the run, as a failed journal or learned write does.
 - `learned_files.py`: renders `<data>/learned/<game>/` (`manifest.toml`, `strategy.md`, `controls.md`,
   `templates/`) from the store's learned rows, when a run starts (before `cli.run` starts the game's
   controller) and after every change; an unrenderable screen row is skipped and named in a

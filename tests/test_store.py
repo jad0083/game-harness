@@ -206,6 +206,24 @@ def test_unwritable_data_dir_fails_at_start_with_its_name(tmp_path):
         os.chmod(ro, 0o700)
 
 
+@pytest.mark.skipif(os.geteuid() == 0, reason="root writes whatever the mode")
+@pytest.mark.parametrize("argv", [["prefs", "--get", "game"], ["run", "--game", "civ6"], ["export", "--to", "out"]])
+def test_an_unwritable_data_dir_ends_the_cli_with_its_name_not_a_traceback(monkeypatch, tmp_path, capsys, argv):
+    from pilot import cli
+    ro = tmp_path / "ro"
+    ro.mkdir()
+    os.chmod(ro, 0o500)
+    monkeypatch.setenv("PILOT_DATA_DIR", str(ro / "data"))
+    monkeypatch.chdir(tmp_path)
+    try:
+        assert cli.main(argv) == 1
+    finally:
+        os.chmod(ro, 0o700)
+    out = capsys.readouterr()
+    assert f"cannot write the data directory {ro / 'data'}" in out.err and out.err.count("\n") == 1, out.err
+    assert "Traceback" not in out.err + out.out
+
+
 def test_a_relative_data_dir_becomes_absolute(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("PILOT_DATA_DIR", "runs")

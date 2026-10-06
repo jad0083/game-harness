@@ -532,6 +532,16 @@ def dashboard_devices(s: Settings, a) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """The command line; a data directory that cannot be written ends it with one line naming it (exit 1)."""
+    from .store import DataDirError
+    try:
+        return _main(argv)
+    except DataDirError as e:
+        print(f"pilot: {e}", file=sys.stderr)
+        return 1
+
+
+def _main(argv: list[str] | None) -> int:
     os.environ.setdefault("PYDANTIC_AI_NO_BANNER", "1")
     ap = argparse.ArgumentParser(prog="pilot", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)

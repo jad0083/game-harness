@@ -5,7 +5,11 @@ retention."""
 from __future__ import annotations
 
 import json
+import sqlite3
 
+import pytest
+
+from pilot import events
 from pilot.dashboard import list_runs, read_events
 from pilot.events import EventLog
 from pilot.store import open_store
@@ -55,3 +59,48 @@ def test_list_runs_reads_the_store(tmp_path):
     rows = list_runs(open_store(tmp_path), live_id="20261005-120000")
     assert rows[0]["id"] == "20261005-120000" and rows[0]["live"] and rows[0]["game"] == "civ6"
     assert rows[0]["decisions"] == 2 and rows[0]["frame"] is True
+
+
+class _FullDisk:
+    """A store whose writes fail while `full` is set (a full disk), and succeed after."""
+
+    def __init__(self, store):
+        self.store, self.full = store, True
+
+    def record(self, *a):
+        if self.full:
+            raise sqlite3.OperationalError("database or disk is full")
+        return self.store.record(*a)
+
+    def _exec(self, *a):
+        if self.full:
+            raise sqlite3.OperationalError("database or disk is full")
+        return self.store._exec(*a)
+
+
+def test_a_store_that_keeps_failing_ends_the_run_on_the_tenth_write(tmp_path, capsys):
+    """One policy for a full disk: emit swallows a transient store failure, but the 10th failed write in a
+    row raises (as the journal and the learned writes always did), so the run stops loudly."""
+    assert events.STORE_FAILURES_TO_STOP == 10
+    store = _FullDisk(open_store(tmp_path))
+    log = EventLog(tmp_path, "r1", "m", telemetry=store)
+    for _ in range(9):
+        log.emit("status", status="playing")                   # swallowed, printed
+    assert capsys.readouterr().out.count("store write failed") == 9
+    with pytest.raises(sqlite3.OperationalError, match="disk is full"):
+        log.emit("status", status="playing")
+    assert "10 store writes failed in a row" in capsys.readouterr().out
+
+
+def test_a_successful_store_write_resets_the_failure_count(tmp_path):
+    store = _FullDisk(open_store(tmp_path))
+    log = EventLog(tmp_path, "r1", "m", telemetry=store)
+    for _ in range(9):
+        log.emit("status", status="playing")
+    store.full = False
+    log.emit("status", status="playing")                       # a success: the count starts again
+    store.full = True
+    for _ in range(9):
+        log.emit("status", status="playing")
+    with pytest.raises(sqlite3.OperationalError):
+        log.emit("status", status="playing")

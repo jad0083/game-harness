@@ -1113,7 +1113,9 @@ group runs (the Stellaris save folder or the GC4 journal directory; `PILOT_CAMPA
 decision is scored against the empire `[time] score_horizon` steps later (12 months in Stellaris, 12
 turns in Civ VI). A run whose campaign ended (`campaign_end`) keeps the status `lost` in `runs` after it
 stops. Events are the `events` table, traces are the `decisions.trace` column and a live run's state
-is its `run_state` row. The pilot stops at start, naming the directory, when it cannot write it.
+is its `run_state` row. The pilot stops at start, naming the directory in one line, when it cannot
+write it. During a run an event the store fails to record is printed and play goes on; ten such
+failures in a row (a full disk) end the run, as a failed journal or learned-knowledge write does.
 
 **Frames.** Each run keeps its newest `PILOT_FRAMES_KEEP` frames (default 200); frames saved with
 "keep" are exempt, and `latest.jpg` is always the newest.
