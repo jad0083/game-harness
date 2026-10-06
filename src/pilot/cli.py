@@ -94,8 +94,12 @@ def run(s: Settings, episodes: int | None) -> int:
     from .game import McpGame
 
     run_id = time.strftime("%Y%m%d-%H%M%S")
+    from .learned_files import write_learned_dir
     from .store import open_store
-    log = EventLog(s.runs_dir, run_id, s.model, telemetry=open_store(s.runs_dir), frames_keep=s.frames_keep)
+    store = open_store(s.runs_dir)
+    log = EventLog(s.runs_dir, run_id, s.model, telemetry=store, frames_keep=s.frames_keep)
+    # the game's first controller (McpGame starts `game-controller mcp` at once) reads the current overlay
+    write_learned_dir(store, s.game, s.learned_dir)
     if s.game == "civ6":
         from .civ6 import ControllerCiv6
         game = ControllerCiv6(s.controller_bin, s.corpus_dir, s.agent_url, REPO, learned=s.learned_dir)

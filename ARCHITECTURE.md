@@ -376,7 +376,8 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   decision to the metric point 12 months later; `past_outcomes()` renders them for the model. Write
   failures are logged and never stop play.
 - `learned_files.py`: renders `<data>/learned/<game>/` (`manifest.toml`, `strategy.md`, `controls.md`,
-  `templates/`) from the store's learned rows; an unrenderable screen row is skipped and named in a
+  `templates/`) from the store's learned rows, when a run starts (before `cli.run` starts the game's
+  controller) and after every change; an unrenderable screen row is skipped and named in a
   manifest comment. The controller reads it with `--learned <dir>`, so nothing writes into `corpora/`
   at run time. Without `--learned` it reads `<corpus>/learned/`; a template path there resolves in that
   folder when the file is there (an exported `templates/<name>.png`), else against the corpus (the older
