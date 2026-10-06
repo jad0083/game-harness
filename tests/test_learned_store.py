@@ -157,19 +157,35 @@ def test_a_reader_never_sees_a_missing_or_dangling_manifest_during_rewrites(tmp_
     assert problems == []
 
 
-def test_a_malformed_row_keeps_the_previous_manifest_and_names_the_game(tmp_path):
-    import pytest
+def test_unrenderable_rows_are_skipped_not_fatal(tmp_path, capsys):
+    st, ls = make(tmp_path)
+    ls.remember_frame(jpeg((10, 20, 30)))
+    ls.add_screen("good_one", jpeg(title="x"), (576, 290, 992, 330), ScreenAction(key="c"), "d", "e")
+    ls.add_screen("ctl_one", jpeg(title="x"), (576, 290, 992, 330), ScreenAction(key="c"), "d", "e")
+    ls.add_screen("null_one", jpeg(title="x"), (576, 290, 992, 330), ScreenAction(key="c"), "d", "e")
+    st._exec("UPDATE learned_screens SET description=? WHERE name='ctl_one'", ("bad \x7f char \x00",))
+    st._exec("UPDATE learned_screens SET threshold=NULL WHERE name='null_one'")
+    out = tmp_path / "data/learned/galciv4"
+    write_learned_dir(st, "galciv4", out)
+    text = (out / "manifest.toml").read_text()
+    man = tomllib.loads(text)
+    assert set(man["screens"]) == {"good_one", "ctl_one"}
+    assert man["screens"]["ctl_one"]["description"] == "bad \x7f char \x00"
+    assert "# skipped (cannot be rendered): null_one" in text
+    again = LearnedStore(st, "galciv4", tmp_path / "corpora/galciv4", out, "google:m", "run2")
+    assert set(again.screens()) == {"good_one", "ctl_one"}
+
+
+def test_a_manifest_that_fails_as_a_whole_keeps_the_previous_one_and_logs(tmp_path, capsys, monkeypatch):
+    import pilot.learned_files as lf
     st, ls = make(tmp_path)
     ls.add_control("Key n puts a warship on Sentry.", "tooltip")
-    ls.remember_frame(jpeg((10, 20, 30)))
-    ls.add_screen("colony_prompt", jpeg(title="x"), (576, 290, 992, 330), ScreenAction(key="c"), "d", "e")
     out = tmp_path / "data/learned/galciv4"
     before = (out / "manifest.toml").read_bytes()
-    st._exec("UPDATE learned_screens SET threshold=NULL WHERE game='galciv4'")
-    with pytest.raises(ValueError, match="galciv4"):
-        write_learned_dir(st, "galciv4", out)
-    assert (out / "manifest.toml").read_bytes() == before
-    assert "Sentry" in (out / "controls.md").read_text() and (out / "templates/colony_prompt.png").exists()
+    real = lf.render
+    monkeypatch.setattr(lf, "render", lambda s, g: {**real(s, g), "manifest.toml": b"[broken"})
+    write_learned_dir(st, "galciv4", out)
+    assert (out / "manifest.toml").read_bytes() == before and "galciv4" in capsys.readouterr().err
 
 
 def test_files_the_render_no_longer_produces_are_removed_and_others_left_alone(tmp_path):

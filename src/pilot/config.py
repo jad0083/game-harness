@@ -213,7 +213,7 @@ class Settings:
             check_guard_settings(s.min_call_interval_s, s.model_limits, s.model_families)
         data_dir = env.get("PILOT_DATA_DIR") or env.get("PILOT_RUNS_DIR")
         if data_dir:
-            s.runs_dir = Path(data_dir)
+            s.runs_dir = Path(data_dir).resolve()      # absolute: the controller and the service differ in cwd
         if env.get("PILOT_CORPORA_DIR"):
             s.corpora_dir = Path(env["PILOT_CORPORA_DIR"])
         if env.get("PILOT_CONTROLLER_BIN"):

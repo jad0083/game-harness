@@ -204,3 +204,11 @@ def test_unwritable_data_dir_fails_at_start_with_its_name(tmp_path):
             S.open_store(ro)
     finally:
         os.chmod(ro, 0o700)
+
+
+def test_a_relative_data_dir_becomes_absolute(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("PILOT_DATA_DIR", "runs")
+    s = Settings.from_env()
+    assert s.runs_dir.is_absolute() and s.runs_dir == (tmp_path / "runs").resolve()
+    assert s.learned_dir.is_absolute()

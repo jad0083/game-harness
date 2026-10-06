@@ -6,6 +6,7 @@ from __future__ import annotations
 import fcntl
 import json
 import os
+import sys
 import tempfile
 import threading
 import tomllib
@@ -18,7 +19,8 @@ _WRITE_LOCK = threading.Lock()      # one write of a learned directory at a time
 
 
 def _toml_str(s: str) -> str:
-    return json.dumps(s, ensure_ascii=False)  # JSON string syntax is valid TOML basic string
+    # JSON escapes U+0000-U+001F as TOML does; U+007F is the one other control character TOML rejects
+    return json.dumps(s, ensure_ascii=False).replace("\x7f", "\\u007f")
 
 
 def notes_markdown(store, game: str, kind: str) -> str:
@@ -31,23 +33,37 @@ def notes_markdown(store, game: str, kind: str) -> str:
     return "".join(out)
 
 
+def _screen_block(r: dict) -> str:
+    action = json.loads(r["action"] or "{}")
+    lines = [f"\n[screens.{r['name']}]", f"description = {_toml_str(r['description'] or '')}",
+             f"template = {_toml_str('templates/' + r['name'] + '.png')}",
+             f"template_roi = {r['roi']}", f"template_threshold = {r['threshold']}",
+             f"auto_dismiss = {'true' if r['auto_dismiss'] else 'false'}"]
+    if r["disabled_reason"]:
+        lines.append(f"disabled_reason = {_toml_str(r['disabled_reason'])}")
+    if action.get("click"):
+        lines.append(f"dismiss_click = [{action['click'][0]}, {action['click'][1]}]")
+    else:
+        lines.append(f"dismiss_key = {_toml_str(action.get('key') or '')}")
+    lines += [f"learned_by = {_toml_str(r['learned_by'] or '')}", f"learned_run = {_toml_str(r['run_id'] or '')}"]
+    return "\n".join(lines) + "\n"
+
+
 def manifest_toml(store, game: str) -> str:
-    """The learned screens as the overlay manifest; template paths are relative to the learned directory."""
-    out = ["# Known screens learned during play (pilot app). Main manifest wins on name clashes.\n"]
+    """The learned screens as the overlay manifest; template paths are relative to the learned directory.
+    A row that cannot be rendered as valid TOML (a NULL region or threshold, a damaged action) is left out
+    and named in one comment line, so one bad row never costs the controller the others."""
+    out, skipped = ["# Known screens learned during play (pilot app). Main manifest wins on name clashes.\n"], []
     for r in store.query("SELECT * FROM learned_screens WHERE game=? ORDER BY rowid", (game,)):
-        action = json.loads(r["action"] or "{}")
-        lines = [f"\n[screens.{r['name']}]", f"description = {_toml_str(r['description'] or '')}",
-                 f"template = {_toml_str('templates/' + r['name'] + '.png')}",
-                 f"template_roi = {r['roi']}", f"template_threshold = {r['threshold']}",
-                 f"auto_dismiss = {'true' if r['auto_dismiss'] else 'false'}"]
-        if r["disabled_reason"]:
-            lines.append(f"disabled_reason = {_toml_str(r['disabled_reason'])}")
-        if action.get("click"):
-            lines.append(f"dismiss_click = [{action['click'][0]}, {action['click'][1]}]")
-        else:
-            lines.append(f"dismiss_key = {_toml_str(action.get('key') or '')}")
-        lines += [f"learned_by = {_toml_str(r['learned_by'] or '')}", f"learned_run = {_toml_str(r['run_id'] or '')}"]
-        out.append("\n".join(lines) + "\n")
+        try:
+            block = _screen_block(r)
+            tomllib.loads(block)
+        except (ValueError, TypeError, KeyError, IndexError):     # TOMLDecodeError, bad JSON action, ...
+            skipped.append(str(r["name"]))
+            continue
+        out.append(block)
+    if skipped:
+        out.insert(1, "# skipped (cannot be rendered): " + ", ".join(n.replace("\n", " ") for n in skipped) + "\n")
     return "".join(out)
 
 
@@ -77,8 +93,8 @@ def write_learned_dir(store, game: str, out_dir: Path) -> None:
     """Write the generated files into `out_dir` in place, so that every state a running controller can
     read is consistent (ruling 7): templates first, `manifest.toml` last (it names the templates), then
     files the render no longer produces are removed. The directory itself is never removed or renamed.
-    A manifest that is not valid TOML is never written: the previous files stay and ValueError names the
-    game. Writers are serialised across processes by an exclusive lock on `<data>/learned/.lock`.
+    A manifest that is not valid TOML as a whole is never written: the previous files stay and one line
+    on stderr names the game (a single bad screen row is already left out of the manifest). Writers are serialised across processes by an exclusive lock on `<data>/learned/.lock`.
     Each write renders the store as it is then, so the last of several writers leaves the latest state."""
     out_dir = Path(out_dir)
     out_dir.parent.mkdir(parents=True, exist_ok=True)
@@ -88,8 +104,9 @@ def write_learned_dir(store, game: str, out_dir: Path) -> None:
         try:
             tomllib.loads(files["manifest.toml"].decode())
         except tomllib.TOMLDecodeError as e:
-            raise ValueError(f"learned manifest for {game} is not valid TOML ({e}); "
-                             f"the previous files in {out_dir} are kept") from e
+            print(f"learned manifest for {game} is not valid TOML ({e}); the previous files in {out_dir} are kept",
+                  file=sys.stderr)
+            return
         (out_dir / "templates").mkdir(parents=True, exist_ok=True)
         order = [r for r in files if r.startswith("templates/")] + [r for r in files if r != "manifest.toml"
                                                                     and not r.startswith("templates/")]

@@ -24,14 +24,20 @@ static LEARNED: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
 /// Read the learned overlay (manifest, templates, notes) from `dir` instead of `<corpus>/learned`
 /// (the pilot's data directory, `--learned`). Set once at start; later calls are ignored.
 pub fn set_learned_dir(dir: PathBuf) {
-    let _ = LEARNED.set(dir);
+    let _ = LEARNED.set(absolute(dir));
+}
+
+/// An absolute path: template paths from the overlay are joined onto the corpus directory later, which
+/// would misplace a relative one.
+fn absolute(dir: PathBuf) -> PathBuf {
+    std::path::absolute(&dir).unwrap_or(dir)
 }
 
 /// The learned directory for a corpus: the explicit one (argument, else the one set at start) with
 /// `true`, or `<corpus>/learned` with `false`.
 fn learned_dir(corpus_dir: &Path, explicit: Option<&Path>) -> (PathBuf, bool) {
     match explicit.map(Path::to_path_buf).or_else(|| LEARNED.get().cloned()) {
-        Some(d) => (d, true),
+        Some(d) => (absolute(d), true),
         None => (corpus_dir.join(LEARNED_DIR), false),
     }
 }
@@ -916,6 +922,23 @@ dismiss_key = "esc"
         let tpl = c.manifest.screens["fresh"].template.clone().unwrap();
         assert_eq!(PathBuf::from(&tpl), learned.join("templates/fresh.png"));
         assert!(c.search("artifact", 5).iter().any(|h| h.id.starts_with("learned:strategy#")));
+    }
+
+    #[test]
+    fn a_relative_learned_dir_gives_absolute_templates() {
+        let f = Fixture::new("learned_relative");
+        let rel = PathBuf::from("runs/learned/galciv4");
+        let abs = absolute(rel.clone());
+        assert!(abs.is_absolute() && abs.ends_with(&rel));
+        let mut m = GameManifest::load_with_learned(f.0.join("manifest.toml"), None, None).unwrap();
+        let dir = f.0.join("rel");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("manifest.toml"), "[screens.x]\ndescription = \"d\"\ntemplate = \"templates/x.png\"\n")
+            .unwrap();
+        m.merge_learned(&absolute(dir.clone()), true).unwrap();
+        assert!(PathBuf::from(m.screens["x"].template.clone().unwrap()).is_absolute());
+        let (d, explicit) = learned_dir(&f.0, Some(&rel));
+        assert!(explicit && d.is_absolute());
     }
 
     #[test]
