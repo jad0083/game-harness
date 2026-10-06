@@ -1,0 +1,16 @@
+.env
+.env.*
+.agent_token*
+runs/
+play/
+incoming/
+.git
+.venv
+target/
+.claude/
+**/__pycache__
+tests/
+docs/
+games/
+windows_agent/
+src/harness/
