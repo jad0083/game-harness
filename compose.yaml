@@ -1,0 +1,8 @@
+services:
+  game-pilot:
+    image: ghcr.io/jad0083/game-pilot:${GAME_PILOT_VERSION:-latest}
+    ports: ["${GAME_PILOT_PORT:-8780}:8780"]
+    env_file: .env
+    volumes: ["${GAME_PILOT_DATA:-./data}:/data"]
+    stop_grace_period: 40s
+    restart: unless-stopped

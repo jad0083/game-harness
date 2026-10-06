@@ -81,6 +81,38 @@ started it and when, and how the last one ended (`last_exit`: exit code, time, l
 The service unit uses `KillMode=mixed` and `TimeoutStopSec=60`, so a stop reaches the dashboard only
 and it stops the run itself.
 
+### Container
+
+The image `ghcr.io/jad0083/game-pilot` (amd64) runs the dashboard under `tini`; a run is its child
+process. The portable install is `compose.yaml` plus a `.env` made from `.env.example` (README, "Run it
+with Docker").
+
+- **Settings.** The settings table above lists the variables; `.env.example` has every one the app
+  reads, in the groups Required, Common, Optional and Set by the image. The required three are a model
+  key, `GAME_AGENT_URL` and `GAME_AGENT_TOKEN`; the dashboard starts without them and refuses *Start
+  run* until they are set. Optional settings stay commented out, since an empty value is read as set.
+  The compose file's own `GAME_PILOT_VERSION` (image tag, default `latest`), `GAME_PILOT_PORT` (default
+  8780) and `GAME_PILOT_DATA` (default `./data`) are read by compose. The image sets `PILOT_DATA_DIR=/data`,
+  `PILOT_CORPORA_DIR=/app/corpora` and `PILOT_CONTROLLER_BIN=/app/bin/game-controller`; do not set them.
+  A change to `.env` takes effect on `docker compose up -d`; a live run stops and resumes with it.
+- **Data folder.** The host folder mounted at `/data` must be writable by uid and gid 10010 (`chown
+  10010:10010 data`). If it is not, the container exits with one line naming `/data`, the uid and the
+  `chown`. It holds the store `pilot.db`, `auth.sqlite`, frames, the learned overlay and `secrets/`
+  ([Data directory](#data-directory)).
+- **Signing in.** `docker compose exec game-pilot pilot dashboard-link` prints a one-time sign-in link
+  (see [Signing in](#signing-in)).
+- **Litestream.** Off unless `LITESTREAM_REPLICA_URL` is set (an S3-compatible URL, with
+  `LITESTREAM_ACCESS_KEY_ID` and `LITESTREAM_SECRET_ACCESS_KEY`). Then the container replicates
+  `pilot.db` continuously. To restore, start the container on an empty data folder: when `/data/pilot.db`
+  does not exist and the replica holds a backup, it is restored before the dashboard starts; existing
+  data is never overwritten. `auth.sqlite` is not replicated, so after a restore sign in again with
+  `pilot dashboard-link`.
+- **Upgrading.** `docker compose pull && docker compose up -d` (or set `GAME_PILOT_VERSION` to a
+  version tag first). The old container's dashboard stops the live run as for any stop and keeps it
+  marked live; the new one resumes it after 10 s in the same campaign. `docker compose stop` allows 40 s
+  for that; a run you stopped yourself, or one that ended, does not resume.
+- **Health.** `GET /healthz` answers `ok` without signing in; the image's health check uses it.
+
 ## Models
 
 Settings → Models sets a list of models per role: **Decisions**, **Strategy**, **Talk** and

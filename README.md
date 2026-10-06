@@ -34,7 +34,28 @@ The model plays each game the way that game allows:
 | **Stellaris** | The game's own AI plays the empire; the model is a **governor** that picks one standing directive (expand, consolidate economy, tech rush, defend, …) from the monthly autosave, within a strategy of weighted pillars and milestones, and places tech picks and market trades (buys under a trade reserve, price and volume rules; idle trade buys deficit cover); each is followed in the saves until it resolves (a stick rate per kind), a read-only planet check names colonies in lasting trouble, and a war crisis overlay holds defend and decides every 3 months while a war is being lost. | Played live |
 | **Civilization VI** | The game's own AI plays a few turns at a time (autoplay); the model is a **governor** that reads a Lua snapshot through the game's tuner and gives structured orders between stretches (research, civic, policies, production, purchases), within weighted pillars in share mode. | Governor (first live runs) |
 
-## Quick start
+## Run it with Docker
+
+The pilot and its dashboard ship as one image (`ghcr.io/jad0083/game-pilot`, amd64). It needs a Windows PC
+on the network running the game and the game agent (see "Run it from a checkout" for the agent's
+installer), and a model key.
+
+```bash
+curl -O https://raw.githubusercontent.com/jad0083/game-harness/main/compose.yaml
+curl -O https://raw.githubusercontent.com/jad0083/game-harness/main/.env.example    # or clone the repository
+cp .env.example .env          # fill in GEMINI_API_KEY, GAME_AGENT_URL and GAME_AGENT_TOKEN
+mkdir data && sudo chown 10010:10010 data    # the container runs as uid 10010; its data lives in ./data
+docker compose up -d
+docker compose exec game-pilot pilot dashboard-link          # prints the link that signs you in
+```
+
+The dashboard is on port 8780 (`GAME_PILOT_PORT` changes the published port, `GAME_PILOT_DATA` the data
+folder, `GAME_PILOT_VERSION` the image tag). Without the three required values it still starts, for
+sign-in and history; *Start run* is refused, naming what is missing. Every setting is in
+`.env.example`; see [docs/pilot.md](docs/pilot.md#container) for the data folder, Litestream backup and
+upgrading.
+
+## Run it from a checkout
 
 Requirements: Linux with Rust (stable) and Python 3.13; a Windows 10/11 PC on the same network
 running the game in borderless or windowed mode.
@@ -59,6 +80,9 @@ echo 'GAME_AGENT_URL=http://<pc-address>:8765' >> .env   # the PC's agent; .env 
 .venv/bin/python -m pilot run --game stellaris --months 12
 .venv/bin/python -m pilot view                  # dashboard on port 8780
 ```
+
+One systemd user unit runs the dashboard, which supervises the pilot: `scripts/install-services.sh`
+installs `deploy/game-pilot-view.service`.
 
 Settings that move paths (environment or `.env`):
 
