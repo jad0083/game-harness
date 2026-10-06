@@ -31,6 +31,7 @@ import os
 import re
 import shutil
 import sqlite3
+import stat
 import subprocess
 import tempfile
 import time
@@ -47,11 +48,11 @@ from .learned_files import NOTE_FILES, _screen_block, write_learned_dir
 PLATFORM_DIRS = frozenset({"frames", "learned", "secrets"})   # the data directory's own (when it is <root>/runs)
 OLD_DIRS = frozenset({"orders"})                               # old runs/ directories that are not runs
 RUN_TOP_FILES = frozenset({"events.jsonl", "status.json", "latest.jpg"})   # what the old EventLog wrote,
-TRACE_NAME = re.compile(r"-?\d+\.json")                                    # with frames/*.jpg and traces/
+TRACE_NAME = re.compile(r"-?[0-9]+\.json")      # with frames/*.jpg and traces/{episode:04d}.json (ASCII)
 JOURNALS = {"stellaris": "stellaris", "civ6": "civ6", "terran-2329": "galciv4"}   # games/<dir> -> its game
 SECRET_FILES = (KEY_FILE, CARRY_FILE)
-OLD_FILES = ("telemetry.sqlite", "telemetry.sqlite-wal", "telemetry.sqlite-shm", "pilot-settings.json",
-             "model-usage.json")
+OLD_DB_FILES = ("telemetry.sqlite", "telemetry.sqlite-wal", "telemetry.sqlite-shm")
+OLD_SETTINGS = ("pilot-settings.json", "model-usage.json")
 TABLES = ("campaigns", "runs", "events", "decisions", "metrics", "plans", "strategies", "run_state", "learned_notes",
           "learned_screens", "episodes", "ledger", "journal", "settings", "model_usage", "standing_orders")
 # telemetry tables copied from the old file: (key, columns); a column the old file lacks is read as NULL
@@ -120,15 +121,35 @@ def _text(v):
     return v if v is None or isinstance(v, str) else json.dumps(v, ensure_ascii=False, default=str)
 
 
-def _load_json(path: Path, root: Path, skipped: list[str]):
-    """A JSON file's value, or None (with the reason in `skipped`) when it cannot be read."""
+def _unstorable(value) -> str:
+    """Why a parsed JSON value cannot be stored as UTF-8 text ('' when it can)."""
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        json.dumps(value, ensure_ascii=False).encode("utf-8")
+    except UnicodeEncodeError:
+        return "holds text that cannot be stored (an unpaired surrogate)"
+    except RecursionError:
+        return "nested too deeply"
+    return ""
+
+
+def _load_json(path: Path, root: Path, skipped: list[str]):
+    """A JSON file's value, or None (with the reason in `skipped`) when it cannot be read or stored."""
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError) as e:
         skipped.append(f"{_rel(root, path)}: cannot be read ({e})")
+        return None
+    except RecursionError:
+        skipped.append(f"{_rel(root, path)}: nested too deeply")
+        return None
     except ValueError as e:
         skipped.append(f"{_rel(root, path)}: not valid JSON ({e})")
-    return None
+        return None
+    why = _unstorable(value)
+    if why:
+        skipped.append(f"{_rel(root, path)}: {why}")
+        return None
+    return value
 
 
 def _jsonl(path: Path, root: Path, skipped: list[str]) -> Iterator[tuple[int, dict]]:
@@ -151,13 +172,31 @@ def _jsonl(path: Path, root: Path, skipped: list[str]) -> Iterator[tuple[int, di
             continue
         try:
             obj = json.loads(line)
+        except RecursionError:
+            skipped.append(f"{_rel(root, path)} line {n}: nested too deeply")
+            continue
         except ValueError as e:
             skipped.append(f"{_rel(root, path)} line {n}: not valid JSON ({e})")
             continue
-        if not isinstance(obj, dict):
-            skipped.append(f"{_rel(root, path)} line {n}: not a JSON object")
+        why = "" if isinstance(obj, dict) else "not a JSON object"
+        why = why or _unstorable(obj)
+        if why:
+            skipped.append(f"{_rel(root, path)} line {n}: {why}")
             continue
         yield n, obj
+
+
+def _scan(d: Path, root: Path, skipped: list[str]) -> list[os.DirEntry] | None:
+    """A directory's entries by name: [] when it does not exist (or is not a directory); None, named in
+    `skipped`, when it cannot be listed (pathlib's glob would pass over it in silence)."""
+    try:
+        with os.scandir(d) as it:
+            return sorted(it, key=lambda e: e.name)
+    except (FileNotFoundError, NotADirectoryError):
+        return []
+    except OSError as e:
+        skipped.append(f"{_rel(root, d)}: cannot be listed ({e.strerror or e})")
+        return None
 
 
 @contextlib.contextmanager
@@ -210,7 +249,7 @@ def _old_events(db: sqlite3.Connection, skipped: list[str]) -> dict[str, list[tu
     for rid, t, kind, data in _old_table(db, "events", ("run_id", "t", "kind", "data"), skipped):
         try:
             ok = isinstance(json.loads(data), dict)
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, RecursionError):
             ok = False
         why = "" if ok else "data is not a JSON object"
         why = why or ("" if _number(t) and isinstance(kind, str) else "no t or kind")
@@ -227,15 +266,20 @@ def _is_run(d: Path) -> bool:
 
 def _run_dirs(root: Path, data_dir: Path, skipped: list[str]) -> list[Path]:
     """The run directories under root/runs; other directories are named in `skipped`, except the data
-    directory's own (frames/, learned/, secrets/ when it is root/runs) and the old orders/."""
+    directory's own (frames/, learned/, secrets/ when it is root/runs) and the old orders/. A symbolic link
+    is never a run."""
     runs = root / "runs"
-    if not runs.is_dir():
-        return []
+    in_place = runs.resolve() == data_dir.resolve()
     out = []
-    for d in sorted(runs.iterdir()):
-        if not d.is_dir() or d.name in OLD_DIRS or d.resolve() == data_dir.resolve():
+    for e in _scan(runs, root, skipped) or []:
+        d = Path(e.path)
+        if e.is_symlink():
+            if e.is_dir():
+                skipped.append(f"{_rel(root, d)}: not a run directory (a symbolic link)")
             continue
-        if d.name in PLATFORM_DIRS and runs.resolve() == data_dir.resolve():
+        if not e.is_dir(follow_symlinks=False) or e.name in OLD_DIRS or d.resolve() == data_dir.resolve():
+            continue
+        if e.name in PLATFORM_DIRS and in_place:
             continue
         if _is_run(d):
             out.append(d)
@@ -244,24 +288,40 @@ def _run_dirs(root: Path, data_dir: Path, skipped: list[str]) -> list[Path]:
     return out
 
 
-def _foreign(d: Path) -> list[str]:
-    """Paths under a run directory the old pilot never wrote there (anything but events.jsonl, status.json
-    and latest.jpg at the top, frames/*.jpg and traces/<episode>.json; a symbolic link is foreign too)."""
-    out = []
-    for p in sorted(d.rglob("*")):
-        parts = p.relative_to(d).parts
-        if p.is_symlink():
-            ok = False
-        elif len(parts) == 1:
-            ok = parts[0] in RUN_TOP_FILES and p.is_file() or parts[0] in ("frames", "traces") and p.is_dir()
-        elif len(parts) == 2 and parts[0] == "frames":
-            ok = p.is_file() and p.suffix == ".jpg"
-        elif len(parts) == 2 and parts[0] == "traces":
-            ok = p.is_file() and bool(TRACE_NAME.fullmatch(parts[1]))
-        else:
-            ok = False
-        if not ok:
-            out.append(p.relative_to(d).as_posix())
+def _trace_episode(name: str) -> int | None:
+    """The episode of a trace file the old pilot wrote (`{episode:04d}.json`, ASCII digits, negative for a
+    strategy review); None for any other name (1.json beside 0001.json would replace the real trace)."""
+    if not TRACE_NAME.fullmatch(name):
+        return None
+    episode = int(name[:-5])
+    return episode if name == f"{episode:04d}.json" else None
+
+
+def _foreign(d: Path, root: Path, skipped: list[str]) -> list[tuple[str, str]]:
+    """(path in the run directory, why) for what the old pilot never wrote there: anything but events.jsonl,
+    status.json and latest.jpg at the top, frames/*.jpg and traces/{episode:04d}.json, all regular files.
+    A directory that cannot be listed is named in `skipped` and returned with an empty why."""
+    out: list[tuple[str, str]] = []
+
+    def walk(sub: Path, prefix: str) -> None:
+        entries = _scan(sub, root, skipped)
+        if entries is None:
+            out.append((prefix.rstrip("/") or ".", ""))
+            return
+        for e in entries:
+            rel = prefix + e.name
+            if e.is_symlink():
+                out.append((rel, "a symbolic link the old pilot did not write"))
+            elif e.is_dir(follow_symlinks=False):
+                if not prefix and e.name in ("frames", "traces"):
+                    walk(Path(e.path), rel + "/")
+                else:
+                    out.append((rel, "a directory the old pilot did not write"))
+            elif not (e.is_file(follow_symlinks=False) and (
+                    (not prefix and e.name in RUN_TOP_FILES) or (prefix == "frames/" and e.name.endswith(".jpg"))
+                    or (prefix == "traces/" and _trace_episode(e.name) is not None))):
+                out.append((rel, "a file the old pilot did not write"))
+    walk(d, "")
     return out
 
 
@@ -279,14 +339,14 @@ def _run_events(d: Path, root: Path, skipped: list[str]) -> list[tuple[int, dict
 
 
 def _run_traces(d: Path, root: Path, skipped: list[str]) -> dict[int, dict]:
-    """traces/NNNN.json by episode (a strategy review's is negative: -001.json)."""
+    """traces/{episode:04d}.json by episode (a strategy review's is negative: -001.json). Other names are
+    left to _foreign, which names them."""
     out = {}
-    for p in sorted((d / "traces").glob("*.json")):
-        try:
-            episode = int(p.stem)
-        except ValueError:
-            skipped.append(f"{_rel(root, p)}: not a trace file name")
+    for e in _scan(d / "traces", root, skipped) or []:
+        episode = _trace_episode(e.name)
+        if episode is None or not e.is_file(follow_symlinks=False):
             continue
+        p = Path(e.path)
         tr = _load_json(p, root, skipped)
         if tr is None:
             continue
@@ -308,16 +368,38 @@ def _run_status(d: Path, root: Path, skipped: list[str]) -> dict | None:
     return st
 
 
-def _run_frames(d: Path) -> list[tuple[str, Path]]:
-    """(name, file) of the run's frames: latest.jpg beside the log (as the old EventLog wrote it), then
-    frames/*.jpg (a frames/latest.jpg only when there is no other)."""
-    found: dict[str, Path] = {}
-    if (d / "latest.jpg").is_file():
-        found["latest.jpg"] = d / "latest.jpg"
-    for p in sorted((d / "frames").glob("*.jpg")):
-        if p.is_file():
-            found.setdefault(p.name, p)
-    return sorted(found.items())
+def _same(a: Path, b: Path) -> bool:
+    """Whether two files hold the same bytes (read in chunks)."""
+    if a.stat().st_size != b.stat().st_size:
+        return False
+    with open(a, "rb") as fa, open(b, "rb") as fb:
+        while True:
+            x, y = fa.read(1 << 20), fb.read(1 << 20)
+            if x != y:
+                return False
+            if not x:
+                return True
+
+
+def _run_frames(d: Path, root: Path, skipped: list[str]) -> list[tuple[str, Path]]:
+    """(name, file) of the run's frames: latest.jpg beside the log (as the old EventLog wrote it) first, then
+    frames/*.jpg, frames/latest.jpg included. The first file of a name is the one copied; a frames/latest.jpg
+    that differs from the latest.jpg beside the log cannot be copied too, and is named."""
+    out = []
+    top = d / "latest.jpg"
+    if top.is_file() and not top.is_symlink():
+        out.append(("latest.jpg", top))
+    for e in _scan(d / "frames", root, skipped) or []:
+        if e.is_file(follow_symlinks=False) and e.name.endswith(".jpg"):
+            out.append((e.name, Path(e.path)))
+    inner = d / "frames/latest.jpg"
+    if out and out[0][1] == top and ("latest.jpg", inner) in out:
+        try:
+            if not _same(top, inner):
+                skipped.append(f"{_rel(root, inner)}: differs from {_rel(root, top)} (only that one is copied)")
+        except OSError as e:
+            skipped.append(f"{_rel(root, inner)}: cannot be read ({e.strerror or e})")
+    return out
 
 
 def _notes(path: Path, root: Path, skipped: list[str]) -> list[dict]:
@@ -398,6 +480,9 @@ def _screens(ld: Path, root: Path, skipped: list[str]) -> list[dict]:
         doc = tomllib.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError) as e:
         skipped.append(f"{rel}: cannot be read ({e})")
+        return []
+    except RecursionError:
+        skipped.append(f"{rel}: nested too deeply")
         return []
     except tomllib.TOMLDecodeError as e:
         skipped.append(f"{rel}: not valid TOML ({e})")
@@ -522,17 +607,30 @@ def _usage(root: Path, skipped: list[str]) -> list[tuple[str, str, int]]:
     return rows
 
 
+def _orders_files(root: Path, skipped: list[str]) -> list[Path]:
+    """The regular runs/orders/*.json files; anything else there is named (prune never deletes it unread)."""
+    files = []
+    for e in _scan(root / "runs/orders", root, skipped) or []:
+        if e.is_file(follow_symlinks=False) and e.name.endswith(".json"):
+            files.append(Path(e.path))
+        else:
+            skipped.append(f"runs/orders/{e.name}: not an orders file the old pilot wrote")
+    return files
+
+
 def _orders(root: Path, store, skipped: list[str]) -> dict[str, list[str]]:
     """runs/orders/<campaign>.json by campaign id: the file name is the id with [^A-Za-z0-9_.-] made '_',
-    mapped back through the campaigns the store knows (the file stem when none matches)."""
-    files = sorted((root / "runs/orders").glob("*.json"))
+    mapped back through the campaigns the store knows (the file stem when none matches). A second file for
+    one campaign is named and left out."""
+    files = _orders_files(root, skipped)
     if not files:
         return {}
     ids = [r["id"] for r in store.query("SELECT id FROM campaigns ORDER BY id")] + ["no-campaign"]
     by_name: dict[str, str] = {}
     for cid in ids:
         by_name.setdefault(re.sub(r"[^A-Za-z0-9_.-]", "_", cid), cid)
-    out = {}
+    out: dict[str, list[str]] = {}
+    first: dict[str, Path] = {}
     for p in files:
         orders = _load_json(p, root, skipped)
         if orders is None:
@@ -540,7 +638,11 @@ def _orders(root: Path, store, skipped: list[str]) -> dict[str, list[str]]:
         if not (isinstance(orders, list) and all(isinstance(o, str) for o in orders)):
             skipped.append(f"{_rel(root, p)}: not a list of orders")
             continue
-        out[by_name.get(p.stem, p.stem)] = orders
+        cid = by_name.get(p.stem, p.stem)
+        if cid in first:
+            skipped.append(f'{_rel(root, p)}: the same campaign "{cid}" as {_rel(root, first[cid])}')
+            continue
+        first[cid], out[cid] = p, orders
     return out
 
 
@@ -645,68 +747,88 @@ def _copy(src: Path, dst: Path) -> bool:
         Path(tmp).unlink(missing_ok=True)
 
 
+@contextlib.contextmanager
+def _guard(report: Report, what: str):
+    """One unit of the import (a run, a game's learned files, a source file): an error nobody foresaw is
+    reported and the import goes on; check then finds what is missing, so prune waits."""
+    try:
+        yield
+    except Exception as e:  # noqa: BLE001 - reported; the rest of the import still runs
+        report.skipped.append(f"{what}: not imported ({type(e).__name__}: {e})")
+
+
 def _runs(root: Path, store, data_dir: Path, report: Report) -> None:
     for d in _run_dirs(root, data_dir, report.skipped):
-        rid, log = d.name, _rel(root, d / "events.jsonl")
-        events = _run_events(d, root, report.skipped)
-        traces = _run_traces(d, root, report.skipped)
-        status = _run_status(d, root, report.skipped)
-        with store.transaction():
-            have, seen = _event_counts(store, rid), Counter()     # loaded once per run
-            for n, ev in events:
-                k = (ev["t"], ev["kind"])
-                seen[k] += 1
-                if seen[k] <= have[k]:
-                    continue
-                store._exec("SAVEPOINT import_event")         # an event that fails leaves nothing behind
-                try:
-                    _record(store, rid, ev, traces.get(ev["episode"]) if ev["kind"] == "trace" else None)
-                except Exception as e:  # noqa: BLE001 - one damaged event is reported; the import goes on
-                    store._exec("ROLLBACK TO import_event")
-                    report.skipped.append(f"{log} line {n}: not recorded ({type(e).__name__}: {e})")
-                store._exec("RELEASE import_event")
-            decided = _keys(store, "decisions", ("episode",), "WHERE run_id=?", (rid,))
-            for episode, tr in traces.items():
-                if (episode,) not in decided:
-                    report.skipped.append(f"{_rel(root, d)}/traces/{episode:04d}.json: no decision {episode} in the run")
-                    continue
-                store._exec(FILL_TRACE, (json.dumps(tr, ensure_ascii=False, default=str), rid, episode))
-            if status is not None:
-                store._exec("INSERT OR IGNORE INTO run_state(run_id, data, updated) VALUES (?,?,?)",
-                            (rid, json.dumps(status, default=str), (d / "status.json").stat().st_mtime))
-        for name, src in _run_frames(d):
+        with _guard(report, _rel(root, d)):
+            _run(root, store, data_dir, report, d)
+
+
+def _run(root: Path, store, data_dir: Path, report: Report, d: Path) -> None:
+    rid, log = d.name, _rel(root, d / "events.jsonl")
+    report.skipped += [f"{_rel(root, d)}/{f}: {why}" for f, why in _foreign(d, root, report.skipped) if why]
+    events = _run_events(d, root, report.skipped)
+    traces = _run_traces(d, root, report.skipped)
+    status = _run_status(d, root, report.skipped)
+    with store.transaction():
+        have, seen = _event_counts(store, rid), Counter()     # loaded once per run
+        for n, ev in events:
+            k = (ev["t"], ev["kind"])
+            seen[k] += 1
+            if seen[k] <= have[k]:
+                continue
+            store._exec("SAVEPOINT import_event")         # an event that fails leaves nothing behind
             try:
-                report.frames += _copy(src, data_dir / "frames" / rid / name)
-            except OSError as e:
-                report.skipped.append(f"{_rel(root, src)}: cannot be copied ({e})")
+                _record(store, rid, ev, traces.get(ev["episode"]) if ev["kind"] == "trace" else None)
+            except Exception as e:  # noqa: BLE001 - one damaged event is reported; the import goes on
+                store._exec("ROLLBACK TO import_event")
+                report.skipped.append(f"{log} line {n}: not recorded ({type(e).__name__}: {e})")
+            store._exec("RELEASE import_event")
+        decided = _keys(store, "decisions", ("episode",), "WHERE run_id=?", (rid,))
+        for episode, tr in traces.items():
+            if (episode,) not in decided:
+                report.skipped.append(f"{_rel(root, d)}/traces/{episode:04d}.json: no decision {episode} in the run")
+                continue
+            store._exec(FILL_TRACE, (json.dumps(tr, ensure_ascii=False, default=str), rid, episode))
+        if status is not None:
+            store._exec("INSERT OR IGNORE INTO run_state(run_id, data, updated) VALUES (?,?,?)",
+                        (rid, json.dumps(status, default=str), (d / "status.json").stat().st_mtime))
+    for name, src in _run_frames(d, root, report.skipped):
+        try:
+            report.frames += _copy(src, data_dir / "frames" / rid / name)
+        except OSError as e:
+            report.skipped.append(f"{_rel(root, src)}: cannot be copied ({e})")
 
 
 def _learned(root: Path, store, data_dir: Path, report: Report) -> None:
     for ld in sorted((root / "corpora").glob("*/learned")):
-        if not ld.is_dir():
-            continue
-        game = ld.parent.name
-        notes = [(kind, n) for kind, (fname, _) in NOTE_FILES.items() for n in _notes(ld / fname, root, report.skipped)]
-        screens = _screens(ld, root, report.skipped)
-        episodes = _episodes(ld, root, report.skipped)
-        ledger = _ledger(ld, root, report.skipped)
-        with store.transaction():
-            store.executemany("INSERT OR IGNORE INTO learned_notes(game, kind, text, why, model, run_id, t)"
-                              " VALUES (?,?,?,?,?,NULL,?)",
-                              [(game, kind, n["text"], n["why"], n["model"], n["t"]) for kind, n in notes])
-            store.executemany("INSERT OR IGNORE INTO learned_screens(game, name, description, roi, threshold, auto_dismiss,"
-                              " action, png, learned_by, run_id, t, disabled_reason) VALUES (?,?,?,?,?,?,?,?,?,?,NULL,?)",
-                              [(game, s["name"], s["description"], s["roi"], s["threshold"], s["auto_dismiss"],
-                                s["action"], s["png"], s["learned_by"], s["run_id"], s["disabled_reason"])
-                               for s in screens])
-            have = _keys(store, "episodes", ("t", "situation"), "WHERE game=?", (game,))
-            store.executemany("INSERT OR IGNORE INTO episodes(game, t, date, situation, decision, outcome, model,"
-                              " run_id) VALUES (?,?,?,?,?,?,?,?)",
-                              [(game, *e) for e in episodes if (e[0], e[2]) not in have])
-            have = _keys(store, "ledger", ("t", "kind", "data"), "WHERE game=?", (game,))
-            store.executemany("INSERT INTO ledger(game, t, kind, data) VALUES (?,?,?,?)",
-                              [(game, *r) for r in ledger if r not in have])
-        write_learned_dir(store, game, data_dir / "learned" / game)
+        if ld.is_dir():
+            with _guard(report, _rel(root, ld)):
+                _learned_game(root, store, data_dir, report, ld)
+
+
+def _learned_game(root: Path, store, data_dir: Path, report: Report, ld: Path) -> None:
+    game = ld.parent.name
+    notes = [(kind, n) for kind, (fname, _) in NOTE_FILES.items() for n in _notes(ld / fname, root, report.skipped)]
+    screens = _screens(ld, root, report.skipped)
+    episodes = _episodes(ld, root, report.skipped)
+    ledger = _ledger(ld, root, report.skipped)
+    with store.transaction():
+        store.executemany("INSERT OR IGNORE INTO learned_notes(game, kind, text, why, model, run_id, t)"
+                          " VALUES (?,?,?,?,?,NULL,?)",
+                          [(game, kind, n["text"], n["why"], n["model"], n["t"]) for kind, n in notes])
+        store.executemany("INSERT OR IGNORE INTO learned_screens(game, name, description, roi, threshold, auto_dismiss,"
+                          " action, png, learned_by, run_id, t, disabled_reason) VALUES (?,?,?,?,?,?,?,?,?,?,NULL,?)",
+                          [(game, s["name"], s["description"], s["roi"], s["threshold"], s["auto_dismiss"],
+                            s["action"], s["png"], s["learned_by"], s["run_id"], s["disabled_reason"])
+                           for s in screens])
+        have = _keys(store, "episodes", ("t", "situation"), "WHERE game=?", (game,))
+        store.executemany("INSERT OR IGNORE INTO episodes(game, t, date, situation, decision, outcome, model,"
+                          " run_id) VALUES (?,?,?,?,?,?,?,?)",
+                          [(game, *e) for e in episodes if (e[0], e[2]) not in have])
+        have = _keys(store, "ledger", ("t", "kind", "data"), "WHERE game=?", (game,))
+        store.executemany("INSERT INTO ledger(game, t, kind, data) VALUES (?,?,?,?)",
+                          [(game, *r) for r in ledger if r not in have])
+    write_learned_dir(store, game, data_dir / "learned" / game)
 
 
 def _settings(root: Path, store, report: Report) -> None:
@@ -760,14 +882,20 @@ def import_install(root: Path, store, data_dir: Path) -> Report:
     root, data_dir = Path(root), Path(data_dir)
     report = Report()
     before = _counts(store)
-    _telemetry(root, store, report)
+    with _guard(report, OLD_DB):
+        _telemetry(root, store, report)
     _runs(root, store, data_dir, report)
     _learned(root, store, data_dir, report)
-    rows = _journals(root, report.skipped)
-    with store.transaction():
-        store.executemany("INSERT OR IGNORE INTO journal(campaign_id, game, t, date, text) VALUES (?,?,?,?,?)", rows)
-    _settings(root, store, report)
-    secrets_copied = _secrets(root, data_dir, report)
+    with _guard(report, "games/*/journal.md"):
+        rows = _journals(root, report.skipped)
+        with store.transaction():
+            store.executemany("INSERT OR IGNORE INTO journal(campaign_id, game, t, date, text) VALUES (?,?,?,?,?)",
+                              rows)
+    with _guard(report, "runs/pilot-settings.json, model-usage.json, orders/"):
+        _settings(root, store, report)
+    secrets_copied = 0
+    with _guard(report, "runs/dashboard.key, dashboard.carryover"):
+        secrets_copied = _secrets(root, data_dir, report)
     after = _counts(store)
     report.added = {**{k: after[k] - before[k] for k in after}, "secrets": secrets_copied}
     return report
@@ -831,6 +959,10 @@ def check(root: Path, store, data_dir: Path) -> list[str]:
                 old_events[rid] = Counter((t, kind) for _, t, kind, _ in rows)
     logged: dict[str, dict[tuple, list[int]]] = {}
     want_states, frames = set(), []
+    runs = root / "runs"
+    if not (runs / "telemetry.sqlite").exists() and (runs / "telemetry.sqlite-wal").exists():
+        problems.append(f"{OLD_DB}-wal: a WAL file without its database")
+    _scan(runs, root, problems)                    # runs/ itself must be listable; what is not a run never blocks
     for d in _run_dirs(root, data_dir, ignored):
         rid = d.name
         events = _run_events(d, root, problems)
@@ -844,9 +976,8 @@ def check(root: Path, store, data_dir: Path) -> list[str]:
                 problems.append(f"{_rel(root, d)}/traces/{episode:04d}.json: no decision {episode} in the run's records")
         if _run_status(d, root, problems) is not None:
             want_states.add(rid)
-        frames += [(rid, name, src) for name, src in _run_frames(d)]
-        problems += [f"{_rel(root, d)}/{f}: a file the old pilot did not write" for f in _foreign(d)
-                     if not (f.startswith("traces/") and f.endswith(".json"))]     # the trace reader names those
+        frames += [(rid, name, src) for name, src in _run_frames(d, root, problems)]
+        problems += [f"{_rel(root, d)}/{f}: {why}" for f, why in _foreign(d, root, problems) if why]
     for rid in sorted(old_events.keys() | logged.keys()):
         line = _missing_events(rid, old_events.get(rid, Counter()), logged.get(rid, {}), _event_counts(store, rid))
         if line:
@@ -857,12 +988,16 @@ def check(root: Path, store, data_dir: Path) -> list[str]:
     diffs += [f"trace {rid}#{ep} missing" for rid, ep in sorted((want_traces & have) - traced, key=str)]
     states = {r for (r,) in _keys(store, "run_state", ("run_id",))}
     diffs += [f"run state {rid} missing" for rid in sorted(want_states - states)]
-    for rid, name, src in frames:
+    for rid, name, src in frames:                  # compared byte for byte, as the secrets are
         dst = data_dir / "frames" / rid / name
         if not dst.is_file():
             diffs.append(f"frame {rid}/{name} missing")
-        elif src.is_file() and os.access(src, os.R_OK) and dst.stat().st_size != src.stat().st_size:
-            diffs.append(f"frame {rid}/{name} differs")
+            continue
+        try:
+            if not _same(src, dst):
+                diffs.append(f"frame {rid}/{name} differs")
+        except OSError as e:
+            problems.append(f"{_rel(root, src)}: cannot be read ({e.strerror or e})")
     for ld in sorted((root / "corpora").glob("*/learned")):
         if not ld.is_dir():
             continue
@@ -892,9 +1027,18 @@ def check(root: Path, store, data_dir: Path) -> list[str]:
     have_o = {c for (c,) in _keys(store, "standing_orders", ("campaign_id",))}
     diffs += [f"standing orders {cid} missing" for cid, texts in _orders(root, store, problems).items()
               if texts and cid not in have_o]
-    diffs += [f"secret {name} missing" for name in SECRET_FILES
-              if (root / "runs" / name).is_file() and not (data_dir / SECRETS_DIR / name).exists()]
-    return diffs + [f"{p}; {HINT}" for p in dict.fromkeys(problems)]
+    for name in SECRET_FILES:
+        src, dst = runs / name, data_dir / SECRETS_DIR / name
+        if not src.is_file():
+            continue
+        if not dst.exists():
+            diffs.append(f"secret {name} missing")
+            continue
+        try:                                        # prune compares them before deleting the old one
+            src.read_bytes(), dst.read_bytes()
+        except OSError as e:
+            problems.append(f"runs/{name}: cannot be read ({e.strerror or e})")
+    return list(dict.fromkeys(diffs)) + [f"{p}; {HINT}" for p in dict.fromkeys(problems)]
 
 
 # ---------------------------------------------------------------- prune
@@ -920,30 +1064,43 @@ def _tracked(root: Path, paths: list[Path]) -> list[str]:
     return [f for f in r.stdout.split("\0") if f]
 
 
-def prune_source(root: Path, store, kept: list[str] | None = None) -> list[Path]:
-    """Delete the imported runtime files of the install at `root` (plan ruling P5) and return them:
-    runs/telemetry.sqlite (and -wal, -shm), runs/<id>/ of each run the store holds, pilot-settings.json,
-    model-usage.json, orders/, and the old dashboard.key/dashboard.carryover once <data>/secrets/ holds the
-    same bytes. Never anything else (frames/, learned/, secrets/, pilot.db, auth.sqlite, unknown files, a
-    run directory holding a file the old pilot did not write). Nothing at all while check() lists anything
-    or a path is tracked by git (PruneRefused). What stays for another reason is named in `kept`. A target
-    that cannot be deleted does not stop the others: PruneIncomplete then names both."""
-    root = Path(root)
+def _stamp(p: Path):
+    """What a prune target looked like: a file's mode, size, modification time and inode; a directory's
+    every entry the same way. A target that cannot be read is never equal to an earlier stamp. SQLite's
+    -shm file is an index readers rewrite (no data of its own), so only its name counts."""
+    if p.name.endswith("-shm"):
+        return "shm"
+    try:
+        st = os.lstat(p)
+        if not stat.S_ISDIR(st.st_mode):
+            return (st.st_mode, st.st_size, st.st_mtime_ns, st.st_ino)
+        entries = []
+
+        def fail(e: OSError) -> None:
+            raise e
+        for dirpath, dirnames, filenames in os.walk(p, onerror=fail):
+            for n in dirnames + filenames:
+                q = os.path.join(dirpath, n)
+                s = os.lstat(q)
+                entries.append((os.path.relpath(q, p), s.st_mode, s.st_size, s.st_mtime_ns, s.st_ino))
+        return (st.st_mode, tuple(sorted(entries)))
+    except OSError:
+        return object()
+
+
+def _targets(root: Path, store, data_dir: Path, kept: list[str]) -> list[Path]:
+    """What prune may delete (plan ruling P5): the telemetry file (with its -wal and -shm, never without
+    it), the two settings files, each regular runs/orders/*.json, each run directory the store holds a run
+    for and that holds only what the old pilot wrote, and an old secret once secrets/ holds the same bytes."""
     runs = root / "runs"
-    data_dir = Path(store.path).parent
-    kept = [] if kept is None else kept
-    if not runs.is_dir():
-        return []
-    diffs = check(root, store, data_dir)
-    if diffs:
-        raise PruneRefused(f"check lists {len(diffs)} item{'s' if len(diffs) != 1 else ''} not in the data "
-                           f"directory or not imported in full (pilot data check); nothing was deleted")
+    targets = []
+    if (runs / OLD_DB_FILES[0]).is_file():
+        targets += [runs / n for n in OLD_DB_FILES if (runs / n).is_file()]
+    targets += [runs / n for n in OLD_SETTINGS if (runs / n).is_file()]
+    targets += _orders_files(root, [])
     known = {r["id"] for r in store.query("SELECT id FROM runs")}
-    targets = [runs / n for n in OLD_FILES if (runs / n).is_file()]
-    if (runs / "orders").is_dir():
-        targets.append(runs / "orders")
     for d in _run_dirs(root, data_dir, []):
-        foreign = _foreign(d)
+        foreign = [f for f, _ in _foreign(d, root, [])]
         if d.name not in known:
             kept.append(f"{_rel(root, d)}: no run of that id in the store")
         elif foreign:
@@ -954,26 +1111,70 @@ def prune_source(root: Path, store, kept: list[str] | None = None) -> list[Path]
         old, new = runs / name, data_dir / SECRETS_DIR / name
         if not old.is_file() or old.resolve() == new.resolve():
             continue
-        if new.is_file() and old.read_bytes() == new.read_bytes():
+        try:
+            same = new.is_file() and old.read_bytes() == new.read_bytes()
+        except OSError as e:
+            kept.append(f"{_rel(root, old)}: cannot be read ({e.strerror or e})")
+            continue
+        if same:
             targets.append(old)
         else:
             kept.append(f"{_rel(root, old)}: {SECRETS_DIR}/{name} does not hold the same bytes")
     data = data_dir.resolve()
-    targets = [p for p in targets if not data.is_relative_to(p.resolve())]     # never the data directory itself
+    return [p for p in targets if not data.is_relative_to(p.resolve())]     # never the data directory itself
+
+
+def prune_source(root: Path, store, kept: list[str] | None = None) -> list[Path]:
+    """Delete the imported runtime files of the install at `root` (plan ruling P5; see _targets) and return
+    them, then runs/orders/ once it is empty. Never anything else (frames/, learned/, secrets/, pilot.db,
+    auth.sqlite, unknown files, a run directory holding a file the old pilot did not write).
+
+    The targets are listed and stamped first; then check() must list nothing and git must track none of them
+    (else PruneRefused, nothing deleted); then each target is stamped again just before it is deleted, and
+    one that changed since check is kept. A kept or failed target raises PruneIncomplete after all the others
+    were tried. What stays for another reason is named in `kept`."""
+    root = Path(root)
+    runs = root / "runs"
+    data_dir = Path(store.path).parent
+    kept = [] if kept is None else kept
+    if not runs.is_dir():
+        return []
+    with _old_db(root, []):         # a read-only open may create -wal and -shm: before the stamps, not after
+        pass
+    targets = _targets(root, store, data_dir, kept)
+    stamps = {p: _stamp(p) for p in targets}
+    diffs = check(root, store, data_dir)
+    if diffs:
+        raise PruneRefused(f"check lists {len(diffs)} item{'s' if len(diffs) != 1 else ''} not in the data "
+                           f"directory or not imported in full (pilot data check); nothing was deleted")
     tracked = _tracked(root, targets)
     if tracked:
         raise PruneRefused(f"refused: git tracks {', '.join(tracked[:5])}{' ...' if len(tracked) > 5 else ''} "
                            f"in {root}; nothing was deleted")
     deleted, failed = [], []
     for p in targets:
+        if _stamp(p) != stamps[p]:
+            failed.append(f"{p}: changed since check, kept (import and prune again)")
+            continue
         try:
             if p.is_dir() and not p.is_symlink():
-                shutil.rmtree(p)
+                try:
+                    shutil.rmtree(p)
+                except OSError as e:
+                    failed.append(f"{p}: stopped at {e.filename} ({e.strerror or e}); files before it are gone")
+                    continue
             else:
                 p.unlink(missing_ok=True)
             deleted.append(p)
         except OSError as e:
-            failed.append(f"{p}: {e}")
+            failed.append(f"{p}: {e.strerror or e}")
+    orders = runs / "orders"
+    if orders.is_dir() and not orders.is_symlink():
+        try:
+            orders.rmdir()
+            deleted.append(orders)
+        except OSError as e:
+            failed.append(f"{orders}: not removed ({e.strerror or e}); its other files were never examined")
     if failed:
         raise PruneIncomplete(deleted, failed)
     return deleted

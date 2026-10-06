@@ -647,6 +647,31 @@ def test_a_decision_stored_without_a_trace_takes_the_old_files(old_install, tmp_
 
 # ---------------------------------------------------------------- fix round 1: prune fails closed (R11)
 
+def _orders_subdir(root: Path) -> None:
+    (root / "runs/orders/archive").mkdir()
+    (root / "runs/orders/archive/civ6_old.json").write_text('["an old order"]')
+
+
+def _orders_twice(root: Path) -> None:
+    """Two files for campaign "civ6 x": its sanitised name and its id (the id is not sanitised away)."""
+    db = sqlite3.connect(root / "runs/telemetry.sqlite")
+    db.execute("INSERT INTO campaigns(id, game, name, created) VALUES ('civ6 x', 'civ6', 'x', 1.0)")
+    db.commit()
+    db.close()
+    (root / "runs/orders/civ6 x.json").write_text('["first"]')
+    (root / "runs/orders/civ6_x.json").write_text('["second"]')
+
+
+def _deep_line(root: Path) -> None:
+    with open(root / "runs" / RUN / "events.jsonl", "a", encoding="utf-8") as f:
+        f.write('{"t": 1011.0, "kind": "chat", "x": ' + "[" * 100000 + "]" * 100000 + "}\n")
+
+
+def _orphan_wal(root: Path) -> None:
+    (root / "runs/telemetry.sqlite").unlink()
+    (root / "runs/telemetry.sqlite-wal").write_bytes(b"WAL frames of a database that is gone")
+
+
 def _bad_telemetry(root: Path) -> None:
     p = root / "runs/telemetry.sqlite"
     p.write_bytes(b"not a database, " * 8 + p.read_bytes()[128:])
@@ -678,7 +703,36 @@ DAMAGE = {
                                f"runs/{RUN}/frames/clip.png: a file the old pilot did not write",
                                f"runs/{RUN}/frames/clip.png"),
     "bad trace name": (lambda r: (r / "runs" / RUN / "traces/notes.json").write_text("{}"),
-                       f"runs/{RUN}/traces/notes.json: not a trace file name", f"runs/{RUN}/traces/notes.json"),
+                       f"runs/{RUN}/traces/notes.json: a file the old pilot did not write",
+                       f"runs/{RUN}/traces/notes.json"),
+    # fix round 2
+    "orders: another file": (lambda r: (r / "runs/orders/README.txt").write_text("notes\n"),
+                             "runs/orders/README.txt: not an orders file the old pilot wrote", "runs/orders/README.txt"),
+    "orders: a subdirectory": (_orders_subdir, "runs/orders/archive: not an orders file the old pilot wrote",
+                               "runs/orders/archive/civ6_old.json"),
+    "orders: two files, one campaign": (_orders_twice,
+                                        'runs/orders/civ6_x.json: the same campaign "civ6 x" as runs/orders/civ6 x.json',
+                                        "runs/orders/civ6_x.json"),
+    "trace 1.json beside 0001.json": (lambda r: (r / "runs" / RUN / "traces/1.json").write_text('{"steps": []}'),
+                                      f"runs/{RUN}/traces/1.json: a file the old pilot did not write",
+                                      f"runs/{RUN}/traces/1.json"),
+    "trace with non-ASCII digits": (lambda r: (r / "runs" / RUN / "traces/\u0661.json").write_text('{"steps": []}'),
+                                    f"runs/{RUN}/traces/\u0661.json: a file the old pilot did not write",
+                                    f"runs/{RUN}/traces/\u0661.json"),
+    "trace with a padded name": (lambda r: (r / "runs" / RUN / "traces/00001.json").write_text('{"steps": []}'),
+                                 f"runs/{RUN}/traces/00001.json: a file the old pilot did not write",
+                                 f"runs/{RUN}/traces/00001.json"),
+    "frames/latest.jpg differs": (lambda r: (r / "runs" / RUN / "frames/latest.jpg").write_bytes(b"\xff\xd8other"),
+                                  f"runs/{RUN}/frames/latest.jpg: differs from runs/{RUN}/latest.jpg",
+                                  f"runs/{RUN}/frames/latest.jpg"),
+    "WAL without its database": (_orphan_wal, "runs/telemetry.sqlite-wal: a WAL file without its database",
+                                 "runs/telemetry.sqlite-wal"),
+    "trace with an unpaired surrogate": (lambda r: (r / "runs" / RUN / "traces/0001.json").write_text(
+                                             '{"steps": [], "text": "\\ud800"}'),
+                                         f"runs/{RUN}/traces/0001.json: holds text that cannot be stored",
+                                         f"runs/{RUN}/traces/0001.json"),
+    "events line nested too deeply": (_deep_line, f"runs/{RUN}/events.jsonl line 5: nested too deeply",
+                                      f"runs/{RUN}/events.jsonl"),
 }
 
 
@@ -693,7 +747,7 @@ def test_a_source_not_imported_in_full_blocks_prune(old_install, tmp_path, monke
     assert cli.main(["data", "import", "--from", str(old_install), "--prune-source"]) == 1
     out = capsys.readouterr().out
     assert "not pruned" in out and item in out, out
-    assert (old_install / survivor).exists() and (old_install / "runs/telemetry.sqlite").exists()
+    assert (old_install / survivor).exists()
     store = open_store(data)
     diffs = dataimport.check(old_install, store, data)
     assert [d for d in diffs if d.startswith(item) and d.endswith(HINT)], diffs
@@ -841,3 +895,122 @@ def test_a_deletion_error_is_reported_with_what_was_deleted(old_install, tmp_pat
         assert e.value.deleted == [] and [f for f in e.value.failed if f.startswith(f"{run}:")], e.value.failed
     finally:
         run.chmod(0o755)
+
+
+# ---------------------------------------------------------------- fix round 2: prune deletes only what check examined
+
+def test_a_trace_named_1_beside_0001_never_replaces_it(old_install, tmp_path):
+    (old_install / "runs" / RUN / "traces/1.json").write_text('{"steps": [], "impostor": true}')
+    store, report = do_import(old_install, tmp_path / "data")
+    assert json.loads(store.query("SELECT trace FROM decisions WHERE episode=1")[0]["trace"]) == TRACE
+    assert f"runs/{RUN}/traces/1.json: a file the old pilot did not write" in report.skipped
+
+
+def test_a_strategy_review_trace_with_a_negative_episode_is_imported(old_install, tmp_path):
+    """The old governors numbered strategy reviews -1, -2, ...: traces/-001.json (f"{-1:04d}")."""
+    with open(old_install / "runs" / RUN / "events.jsonl", "a", encoding="utf-8") as f:
+        f.write(jsonl([{"t": 1012.0, "kind": "trace", "episode": -1, "decision": "strategy_review"}]))
+    (old_install / "runs" / RUN / "traces/-001.json").write_text(json.dumps({"steps": [], "review": True}))
+    data = tmp_path / "data"
+    store, _ = do_import(old_install, data)
+    assert json.loads(store.query("SELECT trace FROM decisions WHERE episode=-1")[0]["trace"])["review"] is True
+    assert dataimport.check(old_install, store, data) == []
+
+
+def test_only_frames_latest_is_copied_and_checked(old_install, tmp_path):
+    run = old_install / "runs" / RUN
+    (run / "latest.jpg").rename(run / "frames/latest.jpg")
+    data = tmp_path / "data"
+    store, report = do_import(old_install, data)
+    assert report.frames == 2 and (data / f"frames/{RUN}/latest.jpg").read_bytes() == b"\xff\xd8frame-latest"
+    assert dataimport.check(old_install, store, data) == []
+    (data / f"frames/{RUN}/latest.jpg").write_bytes(b"\xff\xd8frame-LATEST")       # same size, other bytes
+    assert f"frame {RUN}/latest.jpg differs" in dataimport.check(old_install, store, data)
+
+
+def test_frames_are_compared_by_their_bytes(old_install, tmp_path):
+    data = tmp_path / "data"
+    store, _ = do_import(old_install, data)
+    (data / f"frames/{RUN}/00001.jpg").write_bytes(b"\xff\xd8FRAME-1")              # same size, other bytes
+    assert dataimport.check(old_install, store, data) == [f"frame {RUN}/00001.jpg differs"]
+    with pytest.raises(dataimport.PruneRefused):
+        dataimport.prune_source(old_install, store)
+    assert (old_install / "runs" / RUN / "frames/00001.jpg").exists()
+
+
+def test_prune_deletes_the_orders_files_then_the_empty_directory(old_install, tmp_path):
+    store, _ = do_import(old_install, tmp_path / "data")
+    deleted = dataimport.prune_source(old_install, store)
+    assert old_install / "runs/orders/civ6_kublai.json" in deleted and old_install / "runs/orders" in deleted
+    assert not (old_install / "runs/orders").exists()
+
+
+def test_prune_keeps_what_changed_since_check(old_install, tmp_path, monkeypatch):
+    """Ruling C: targets are listed and stamped before check, and each is stamped again just before it is
+    deleted; a run log that grew meanwhile (data check never read) is kept."""
+    data = tmp_path / "data"
+    store, _ = do_import(old_install, data)
+    real = dataimport.check
+
+    def check_then_a_new_line(root, st, data_dir):
+        out = real(root, st, data_dir)
+        with open(old_install / "runs" / RUN / "events.jsonl", "a", encoding="utf-8") as f:
+            f.write(jsonl([{"t": 1013.0, "kind": "chat", "text": "arrived after check"}]))
+        return out
+    monkeypatch.setattr(dataimport, "check", check_then_a_new_line)
+    with pytest.raises(dataimport.PruneIncomplete) as e:
+        dataimport.prune_source(old_install, store)
+    assert (old_install / "runs" / RUN / "events.jsonl").exists()
+    assert [f for f in e.value.failed if f.startswith(f"{old_install / 'runs' / RUN}: changed since check")]
+    assert old_install / "runs/telemetry.sqlite" in e.value.deleted
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason="root lists and reads whatever the mode")
+def test_an_unlistable_directory_blocks_prune(old_install, tmp_path):
+    data = tmp_path / "data"
+    store, _ = do_import(old_install, data)
+    traces = old_install / "runs" / RUN / "traces"
+    traces.chmod(0o300)                                     # can be entered, not listed
+    try:
+        diffs = dataimport.check(old_install, store, data)
+        assert [d for d in diffs if d.startswith(f"runs/{RUN}/traces: cannot be listed") and d.endswith(HINT)], diffs
+        with pytest.raises(dataimport.PruneRefused):
+            dataimport.prune_source(old_install, store)
+    finally:
+        traces.chmod(0o755)
+    assert (traces / "0001.json").exists()
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason="root reads whatever the mode")
+def test_an_unreadable_old_secret_blocks_prune_without_a_traceback(old_install, tmp_path):
+    data = tmp_path / "data"
+    store, _ = do_import(old_install, data)
+    key = old_install / "runs/dashboard.key"
+    key.chmod(0o000)
+    try:
+        assert [d for d in dataimport.check(old_install, store, data) if d.startswith("runs/dashboard.key: cannot be read")]
+        with pytest.raises(dataimport.PruneRefused):
+            dataimport.prune_source(old_install, store)
+    finally:
+        key.chmod(0o600)
+    assert key.exists()
+
+
+def test_damage_that_cannot_be_stored_never_stops_the_import(old_install, tmp_path):
+    """An unpaired surrogate in a trace, an episode and an order, and a line nested too deeply: each is
+    reported, and the import still reaches the secrets at its end."""
+    run = old_install / "runs" / RUN
+    (run / "traces/0001.json").write_text('{"steps": [], "text": "\\ud800"}')
+    with open(run / "events.jsonl", "a", encoding="utf-8") as f:
+        f.write('{"t": 1011.0, "kind": "chat", "x": ' + "[" * 100000 + "]" * 100000 + "}\n")
+    with open(old_install / "corpora/civ6/learned/episodes.jsonl", "a", encoding="utf-8") as f:
+        f.write('{"t": "2026-10-02T00:00:00", "situation": "\\udfff"}\n')
+    (old_install / "runs/orders/civ6_kublai.json").write_text('["\\ud800"]')
+    data = tmp_path / "data"
+    _, report = do_import(old_install, data)
+    text = "\n".join(report.skipped)
+    assert f"runs/{RUN}/traces/0001.json: holds text that cannot be stored" in text
+    assert f"runs/{RUN}/events.jsonl line 5: nested too deeply" in text
+    assert "corpora/civ6/learned/episodes.jsonl line 3: holds text that cannot be stored" in text
+    assert "runs/orders/civ6_kublai.json: holds text that cannot be stored" in text
+    assert (data / "secrets/dashboard.key").exists() and report.added["episodes"] == 2
