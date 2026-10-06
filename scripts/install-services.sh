@@ -16,5 +16,5 @@ if [ -x "$ROOT/.venv/bin/python" ] && ! "$ROOT/.venv/bin/python" -c "import segn
 fi
 if [ -z "${SYSTEMD_USER_DIR:-}" ]; then
   systemctl --user daemon-reload
-  echo "per-PC settings (GAME_AGENT_URL, GAME_RESOLUTION) go in a drop-in: systemctl --user edit game-pilot-view.service"
+  echo "per-PC settings (GAME_AGENT_URL, GAME_AGENT_TOKEN, GAME_RESOLUTION) go in a drop-in: systemctl --user edit game-pilot-view.service"
 fi

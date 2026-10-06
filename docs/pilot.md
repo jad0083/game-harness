@@ -114,6 +114,10 @@ with Docker").
   version tag first). The old container's dashboard stops the live run as for any stop and keeps it
   marked live; the new one resumes it after 10 s in the same campaign. `docker compose stop` allows 40 s
   for that; a run you stopped yourself, or one that ended, does not resume.
+- **Requests from the Docker host.** Inside the container, a request from the Docker host itself
+  arrives from the bridge gateway (e.g. 172.17.0.1), not from loopback. An HTML `GET` to
+  `http://127.0.0.1:8780/` on the host is therefore redirected to `PILOT_PUBLIC_URL`; API and JSON calls
+  are unaffected. Scripts on the host should use the API or `docker compose exec`.
 - **Health.** `GET /healthz` answers `ok` without signing in; the image's health check uses it.
 
 ## Models
@@ -1215,7 +1219,10 @@ the dashboard after the first import come back from the old files, for a campaig
 
 1. Stop `game-pilot-view.service`, and the install's old pilot unit if it has one:
    `systemctl --user disable --now game-pilot.service`, then delete `~/.config/systemd/user/game-pilot.service`
-   (the dashboard starts runs itself now).
+   (the dashboard starts runs itself now). Move any `Environment=` lines from
+   `~/.config/systemd/user/game-pilot.service.d/` into the viewer's drop-in
+   (`systemctl --user edit game-pilot-view.service`): the run now inherits the dashboard's environment,
+   so settings left in the old unit's drop-in no longer reach it.
 2. `git pull`, then `scripts/install-services.sh` (the viewer unit gains `KillMode=mixed`).
 3. `cargo build --release -p game-controller`. `data import` and `data check` never run the controller;
    the build comes before step 6 because from then on the viewer is up, and a run started from the
