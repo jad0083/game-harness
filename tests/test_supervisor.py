@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import os
 import signal
+import sqlite3
 import subprocess
 import sys
 import textwrap
@@ -14,6 +16,7 @@ from pathlib import Path
 
 import pytest
 
+from pilot import supervisor as supervisor_mod
 from pilot.store import open_store
 from pilot.supervisor import MissingSettings, Supervisor, SupervisorBusy, resume_enabled, run_requirements
 
@@ -24,17 +27,31 @@ SRC = Path(__file__).resolve().parents[1] / "src"
 CHILD = textwrap.dedent("""
     import os, signal, sys, time
     mode = os.environ.get("FAKE_MODE", "run")
-    print("started", flush=True)
+    print("started", os.getpid(), flush=True)
     if mode == "crash":
         print("bad key", flush=True); sys.exit(3)
     if mode == "end":
         print("campaign over", flush=True); sys.exit(0)
     def bye(*_):
         print("stopping", flush=True); sys.exit(0)
-    signal.signal(signal.SIGTERM, bye)
+    def count(*_):                       # "stubborn": one line per SIGTERM, and it keeps running
+        print("sigterm", flush=True)
+    signal.signal(signal.SIGTERM, count if mode == "stubborn" else bye)
     while True:
         time.sleep(0.05)
 """)
+STARTED: list[Supervisor] = []            # every supervisor a test makes, so its child never outlives the test
+
+
+@pytest.fixture(autouse=True)
+def _reap_children():
+    """A fake child runs in its own session: a test that fails before stopping it would leave it running."""
+    yield
+    while STARTED:
+        proc = STARTED.pop()._proc
+        if proc is not None and proc.returncode is None:
+            with contextlib.suppress(ProcessLookupError, PermissionError):
+                os.killpg(proc.pid, signal.SIGKILL)
 
 
 @pytest.fixture
@@ -53,7 +70,8 @@ def sup(tmp_path, child, mode="run", **kw):
     out = []
     s = Supervisor(open_store(tmp_path / "data"), argv=child, env={**os.environ, "FAKE_MODE": mode},
                    out=type("W", (), {"write": lambda self, t: out.append(t), "flush": lambda self: None})(),
-                   stop_wait_s=2, **kw)
+                   stop_wait_s=kw.pop("stop_wait_s", 2), **kw)
+    STARTED.append(s)
     return s, out
 
 
@@ -128,6 +146,88 @@ async def test_a_run_that_ends_by_itself_does_not_resume(tmp_path, child):
     assert s.state()["live"] is False and s.state()["last_exit"]["code"] == 0
 
 
+async def test_a_page_stop_is_never_resumed_and_gets_no_second_sigterm(tmp_path, child):
+    """Stop on the page goes to the live pilot; the viewer then notes it. A dashboard stop meanwhile sends the
+    stopping run no SIGTERM (the pilot takes a second signal as "leave now", without pausing the game): it
+    waits, then kills. The row is not live, so nothing resumes."""
+    exits = []
+    s, out = sup(tmp_path, child, mode="stubborn", stop_wait_s=0.5,
+                 emit_exit=lambda code, lines: exits.append(code))
+    await s.start("me")
+    await wait_for(lambda: any("pilot: started" in t for t in out))
+    s.note_stop()
+    assert s.running and s.state()["live"] is False
+    await s.stop(keep_live=True)                       # a deploy right after the Stop
+    assert not s.running and s.state()["live"] is False and s.state()["last_exit"]["code"] == -signal.SIGKILL
+    assert not any("sigterm" in t for t in out), out
+    assert exits == [-signal.SIGKILL]                   # the run's own exit, for its run_exit event
+    again, _ = sup(tmp_path, child)
+    assert await again.resume_if_wanted(enabled=True, delay_s=0) is False
+
+
+async def test_a_page_stop_then_the_runs_own_exit(tmp_path, child):
+    s, out = sup(tmp_path, child)
+    await s.start("me")
+    await wait_for(lambda: any("pilot: started" in t for t in out))
+    s.note_stop()
+    os.kill(s._proc.pid, signal.SIGTERM)               # stands in for the pilot leaving after the page's Stop
+    await wait_for(lambda: not s.running)
+    assert s.state()["live"] is False and s.state()["last_exit"]["code"] == 0
+
+
+async def test_a_child_that_ignores_sigterm_is_killed(tmp_path, child):
+    s, out = sup(tmp_path, child, mode="stubborn", stop_wait_s=0.3)
+    await s.start("me")
+    await wait_for(lambda: any("pilot: started" in t for t in out))
+    t0 = time.monotonic()
+    await s.stop(keep_live=False)
+    assert time.monotonic() - t0 < 5
+    assert any("pilot: sigterm" in t for t in out), out
+    st = s.state()
+    assert not s.running and st["live"] is False and st["last_exit"]["code"] == -signal.SIGKILL
+
+
+async def test_stop_with_no_child(tmp_path, child):
+    s, _ = sup(tmp_path, child)
+    s._write(live=True, since=1.0, by="me")            # a run live before this dashboard started
+    await s.stop(keep_live=True)
+    assert s.state()["live"] is True
+    await s.stop(keep_live=False)
+    assert s.state()["live"] is False and not s.running
+
+
+async def test_an_exit_just_before_a_dashboard_stop_stays_the_runs_own(tmp_path, child, monkeypatch):
+    """A child that crashed a moment before the dashboard stopped (its watcher not yet round) is a crash:
+    not live, its exit recorded on its run, and no resume."""
+    monkeypatch.setattr(supervisor_mod, "EXIT_POLL_S", 1.0)       # the watcher looks once a second
+    exits = []
+    s, _ = sup(tmp_path, child, mode="crash", emit_exit=lambda code, lines: exits.append(code))
+    await s.start("me")
+    await wait_for(lambda: s._proc.returncode is not None)
+    assert s.running                                    # exited, the watcher not yet round
+    await s.stop(keep_live=True)
+    assert s.state()["live"] is False and s.state()["last_exit"]["code"] == 3 and exits == [3]
+    again, _ = sup(tmp_path, child)
+    assert await again.resume_if_wanted(enabled=True, delay_s=0) is False
+
+
+async def test_a_failed_row_write_at_start_stops_the_child(tmp_path, child):
+    s, _ = sup(tmp_path, child, stop_wait_s=2)
+    write = s._write
+    calls = []
+
+    def failing(**changes):
+        calls.append(changes)
+        if len(calls) == 1:
+            raise sqlite3.OperationalError("disk I/O error")
+        return write(**changes)
+    s._write = failing
+    with pytest.raises(sqlite3.OperationalError):
+        await s.start("me")
+    assert not s.running and s._proc.returncode is not None
+    assert s.state()["live"] is False
+
+
 def test_start_refused_names_missing_settings(tmp_path):
     absent = tmp_path / "absent"                   # never the checkout's own .agent_token
     prefs = {"models": [{"model": "google:gemini-pro-latest", "thinking": "high"}]}
@@ -141,6 +241,10 @@ def test_start_refused_names_missing_settings(tmp_path):
     assert run_requirements({"GAME_AGENT_URL": "http://pc:8765", "OPENAI_API_KEY": "x"},
                             {"models": [{"model": "openai:gpt-x"}]}, token_file=token) == []
     assert "GAME_AGENT_URL" in str(MissingSettings(["GAME_AGENT_URL"]))
+    # prefs saved before the model list name one model; PILOT_MODEL only when the prefs name none
+    assert run_requirements({**env, "PILOT_MODEL": "google:x"}, {"model": "anthropic:claude-x"},
+                            token_file=absent) == ["ANTHROPIC_API_KEY"]
+    assert run_requirements({**env, "PILOT_MODEL": "openai:gpt-x"}, {}, token_file=absent) == ["OPENAI_API_KEY"]
 
 
 def test_sigterm_to_the_viewer_stops_the_child_and_keeps_live(tmp_path, child):
@@ -176,6 +280,11 @@ def test_sigterm_to_the_viewer_stops_the_child_and_keeps_live(tmp_path, child):
     finally:
         if p.poll() is None:
             p.kill()
+        reader.join(timeout=5)
+        for ln in lines:                 # the fake child runs in its own session: it must not outlive the test
+            if ln.startswith("pilot: started "):
+                with contextlib.suppress(ProcessLookupError, PermissionError, ValueError):
+                    os.killpg(int(ln.split()[-1]), signal.SIGKILL)
 
 
 # ---- the dashboard's side: Start run, /status and the exit record (ruling P3) ----------------------------
@@ -190,6 +299,10 @@ CRASHER = textwrap.dedent("""
     print("model key refused", flush=True)
     sys.exit(3)
 """)
+
+
+MARKER = "import os, pathlib, time\npathlib.Path(os.environ['FAKE_MARKER']).write_text('started')\n" \
+         "while True:\n    time.sleep(0.05)\n"
 
 
 def run_settings(monkeypatch, script: Path) -> None:
@@ -210,6 +323,7 @@ def test_the_dashboard_starts_the_run_through_the_supervisor(tmp_path, monkeypat
     run_settings(monkeypatch, script)
     app = dashboard.make_app(None, tmp_path / "data")
     sup = app[dashboard.SUPERVISOR]
+    STARTED.append(sup)
 
     async def go():
         async with TestClient(TestServer(app)) as c:
@@ -244,6 +358,7 @@ def test_a_crash_is_on_status_and_on_the_run_it_started(tmp_path, monkeypatch):
     monkeypatch.setenv("FAKE_DB", str(tel.path))
     app = dashboard.make_app(None, data, tel)
     sup = app[dashboard.SUPERVISOR]
+    STARTED.append(sup)
 
     async def go():
         async with TestClient(TestServer(app)) as c:
@@ -257,3 +372,64 @@ def test_a_crash_is_on_status_and_on_the_run_it_started(tmp_path, monkeypatch):
     exits = read_events(tel, "r9", {"run_exit"})
     assert [(e["code"], "model key refused" in e["lines"]) for e in exits] == [(3, True)]
     assert read_events(tel, "r1", {"run_exit"}) == []
+
+
+def viewer_with_a_live_row(tmp_path, monkeypatch, **env):
+    """A viewer app over a data directory whose supervisor row says a run was live; its child would leave
+    a marker file."""
+    from pilot import dashboard
+    script = tmp_path / "marker.py"
+    script.write_text(MARKER)
+    run_settings(monkeypatch, script)
+    monkeypatch.setenv("FAKE_MARKER", str(tmp_path / "started"))
+    for k, v in env.items():
+        monkeypatch.setenv(k, v)
+    data = tmp_path / "data"
+    open_store(data)._exec("INSERT INTO settings(key, value, changed_by, t) VALUES ('supervisor', ?, NULL, 0)",
+                           (json.dumps({"live": True, "since": 0, "by": "test", "last_exit": None}),))
+    app = dashboard.make_app(None, data)
+    STARTED.append(app[dashboard.SUPERVISOR])
+    return app, app[dashboard.SUPERVISOR]
+
+
+def test_resume_off_at_startup_marks_the_run_not_live(tmp_path, monkeypatch, capsys):
+    from aiohttp.test_utils import TestClient, TestServer
+    app, sup = viewer_with_a_live_row(tmp_path, monkeypatch, PILOT_RESUME="0", PILOT_RESUME_DELAY_S="0")
+
+    async def go():
+        async with TestClient(TestServer(app)) as c:
+            await asyncio.sleep(0.3)
+            assert (await c.get("/status")).status == 200
+    asyncio.run(go())
+    assert sup.state()["live"] is False and not (tmp_path / "started").exists()
+    assert "not resumed: PILOT_RESUME is off" in capsys.readouterr().out
+
+
+def test_a_dashboard_stop_cancels_a_pending_resume(tmp_path, monkeypatch):
+    """Stopped within the resume delay, the dashboard starts nothing (and the run stays live for the next start)."""
+    from aiohttp.test_utils import TestClient, TestServer
+    app, sup = viewer_with_a_live_row(tmp_path, monkeypatch, PILOT_RESUME_DELAY_S="1")
+
+    async def go():
+        async with TestClient(TestServer(app)) as c:
+            assert (await c.get("/status")).status == 200
+        await asyncio.sleep(1.5)                       # past the delay, in the same loop
+    asyncio.run(go())
+    assert not (tmp_path / "started").exists() and not sup.running and sup.state()["live"] is True
+
+
+def test_a_failed_resume_is_said(tmp_path, monkeypatch, capsys):
+    from aiohttp.test_utils import TestClient, TestServer
+    app, sup = viewer_with_a_live_row(tmp_path, monkeypatch, PILOT_RESUME_DELAY_S="soon")
+
+    async def go():
+        async with TestClient(TestServer(app)):
+            end = time.monotonic() + 3
+            seen = ""
+            while "not resumed" not in seen and time.monotonic() < end:
+                await asyncio.sleep(0.05)
+                seen += capsys.readouterr().out
+            return seen
+    seen = asyncio.run(go())
+    assert "the pilot run was not resumed" in seen and "soon" in seen, seen
+    assert not sup.running

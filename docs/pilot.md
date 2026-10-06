@@ -66,9 +66,14 @@ started it and when, and how the last one ended (`last_exit`: exit code, time, l
 - **The dashboard stops** (a container or service stop, a restart for a deploy): it sends the run
   SIGTERM (the game is paused, as for any stop; SIGKILL after 25 s) and keeps the run marked live. The
   next dashboard start resumes it once, 10 s later (`PILOT_RESUME`), unless a run already answers on
-  its port.
-- **The run ends any other way** (Stop on the page, the campaign's end, a crash): it is marked not
-  live and does not resume, so a run that fails at start (a refused key) is never restarted in a loop.
+  its port. With `PILOT_RESUME` off, the dashboard's start marks such a run not live instead and says
+  so in its output.
+- **Stop on the page** reaches the pilot through the dashboard, which marks the run not live as soon as
+  the pilot accepts it. A dashboard stop while that run is still stopping sends it no second SIGTERM
+  (the pilot would take it as "leave now", without pausing the game): it waits 25 s, then kills it.
+- **The run ends any other way** (the campaign's end, a crash, also a crash a moment before a dashboard
+  stop): it is marked not live and does not resume, so a run that fails at start (a refused key) is
+  never restarted in a loop.
   Its exit code and last lines are kept, also on the run as a `run_exit` event when it got as far as
   its `run_start`, and with no run live the page says "The last run stopped with exit code N" with its
   last 3 lines one click away.

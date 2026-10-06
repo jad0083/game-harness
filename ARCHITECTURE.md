@@ -366,8 +366,11 @@ pilot view ── Supervisor ──► pilot run (its child; Start run, resume a
   ruling 5). The store's settings row `supervisor` (`live`, `since`, `by`, `last_exit`) says whether a
   run was live: a dashboard stop (SIGTERM; `stop(keep_live=True)`) stops the child (SIGTERM, then
   SIGKILL after `STOP_GRACE_S + 5`) and keeps it live, and the next start resumes it once after
-  `RESUME_DELAY_S` (`PILOT_RESUME`); any other exit writes live false and `last_exit` (code, last 20
-  lines), plus a `run_exit` event on the run it started, if any. `run_requirements` names the settings a
+  `RESUME_DELAY_S` (`PILOT_RESUME`; off, `decline_resume` writes live false). A Stop the viewer forwards
+  and the pilot accepts calls `note_stop`: live false at once, and a dashboard stop meanwhile sends no
+  SIGTERM (waits, then SIGKILL). Any other exit, also one that came just before a dashboard stop, writes
+  live false and `last_exit` (code, last 20 lines), plus a `run_exit` event on the run it started, if
+  any; a failed row write at start stops the child again. `run_requirements` names the settings a
   run lacks, so Start run is refused with them. The child runs in its own session with its output
   prefixed `pilot: ` on the dashboard's.
 - `trace.py` turns a model run's messages into steps (prompt, thinking, text, tool call, tool

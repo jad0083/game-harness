@@ -49,6 +49,7 @@ import json
 import logging
 import os
 import re
+import sqlite3
 import threading
 import time
 from pathlib import Path
@@ -788,7 +789,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
             await sup.start(actor_name(request) or "the dashboard", live_elsewhere=bool(await live_url()))
         except SupervisorBusy as e:
             raise web.HTTPConflict(text="a pilot run is already live") from e
-        except OSError as e:
+        except (OSError, sqlite3.Error) as e:          # the spawn, or the row (the child is stopped then)
             raise web.HTTPInternalServerError(text=f"could not start the pilot run: {e}") from e
         await audit_control(request, "run")
         return web.json_response({"ok": True, "started": "pilot run", **load_prefs(runs_dir)})
@@ -924,6 +925,8 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
                         action = str(json.loads(body or b"{}").get("action") or "control")
                     except (ValueError, AttributeError):
                         pass
+                if request.path == "/control" and action == "stop" and 200 <= code < 300:
+                    sup.note_stop()              # a stopped run is not live: never resumed, never signalled again
                 await audit_control(request, action)
             return web.Response(body=data, status=code, content_type=ctype)
 
@@ -974,11 +977,23 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
         resume: dict[str, asyncio.Task] = {}
 
         async def resume_run(_app) -> None:
-            """A run that was live when the dashboard last stopped resumes once, RESUME_DELAY_S after the start."""
+            """A run that was live when the dashboard last stopped resumes once, RESUME_DELAY_S after the start;
+            with PILOT_RESUME off it is marked not live, and said."""
+            if not resume_enabled(os.environ):
+                if sup.decline_resume():
+                    print("a pilot run was live when the dashboard stopped; not resumed: PILOT_RESUME is off",
+                          flush=True)
+                return
+
             async def elsewhere() -> bool:
                 return bool(await proxy.url())
-            resume["task"] = asyncio.create_task(sup.resume_if_wanted(enabled=resume_enabled(os.environ),
-                                                                      live_elsewhere=elsewhere))
+
+            async def resume_once() -> None:
+                try:
+                    await sup.resume_if_wanted(enabled=True, live_elsewhere=elsewhere)
+                except Exception as e:  # noqa: BLE001 - said in one line; the dashboard keeps serving
+                    print(f"the pilot run was not resumed: {type(e).__name__}: {e}", flush=True)
+            resume["task"] = asyncio.create_task(resume_once())
 
         async def stop_run(_app) -> None:
             """A dashboard stop (container or service) stops the run and keeps it live, to resume at the next start."""

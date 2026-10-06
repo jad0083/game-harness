@@ -5,13 +5,17 @@ The row is {"live": bool, "since": float, "by": str, "last_exit": {"code", "t", 
 - a start writes live true (who started it, when);
 - a stop for a container or service stop (`stop(keep_live=True)`) leaves live true, so the next
   dashboard start resumes the run once, after RESUME_DELAY_S;
-- any other exit (a human Stop forwarded to the pilot, the campaign's end, a crash) writes live false,
-  so nothing restarts in a loop. Every exit records its code and last lines in `last_exit` (ruling P3:
-  a child that dies before its run_start has no run to carry them)."""
+- a human Stop the dashboard forwarded to the pilot (`note_stop`) writes live false at once, and a
+  dashboard stop while that run is still stopping sends it no second SIGTERM (the pilot takes a
+  second signal as "leave now", without pausing the game): it waits, then kills;
+- any other exit (the campaign's end, a crash, also one just before a dashboard stop) writes live
+  false, so nothing restarts in a loop. Every exit records its code and last lines in `last_exit`
+  (ruling P3: a child that dies before its run_start has no run to carry them)."""
 
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import os
@@ -56,7 +60,8 @@ def resume_enabled(env: Mapping[str, str]) -> bool:
 def run_requirements(env: Mapping[str, str], prefs: dict, token_file: Path | None = None) -> list[str]:
     """Names of the settings a run needs that are missing: GAME_AGENT_URL, GAME_AGENT_TOKEN (unless
     `token_file`, default <repo>/.agent_token, exists), and the model key for the provider of the first
-    model in prefs["models"] (else PILOT_MODEL, else Google): google -> GEMINI_API_KEY or GOOGLE_API_KEY,
+    model in prefs["models"] (else prefs["model"], from before the model list, else PILOT_MODEL, else
+    Google): google -> GEMINI_API_KEY or GOOGLE_API_KEY,
     anthropic -> ANTHROPIC_API_KEY, openai -> OPENAI_API_KEY, claude-code -> the `claude` CLI."""
     from .config import REPO
     token_file = token_file if token_file is not None else REPO / ".agent_token"
@@ -66,7 +71,8 @@ def run_requirements(env: Mapping[str, str], prefs: dict, token_file: Path | Non
     if not env.get("GAME_AGENT_TOKEN", "").strip() and not token_file.exists():
         missing.append("GAME_AGENT_TOKEN")
     models = prefs.get("models") or []
-    model = (models[0].get("model") if models else None) or env.get("PILOT_MODEL", "") or "google:"
+    model = ((models[0].get("model") if models else None) or prefs.get("model") or env.get("PILOT_MODEL", "")
+             or "google:")
     provider = model.split(":", 1)[0]
     if provider == "claude-code":
         from .claude_code import find_claude  # where the run looks for it: PATH, then ~/.local/bin
@@ -97,6 +103,7 @@ class Supervisor:
         self._tail: deque[str] = deque(maxlen=TAIL_LINES)
         self._stop_requested = False
         self._keep_live = False
+        self._human_stop = False                # a Stop from the page reached the run (note_stop)
         self._resume_tried = False
         self._lock = asyncio.Lock()
 
@@ -144,10 +151,20 @@ class Supervisor:
             proc = await asyncio.create_subprocess_exec(
                 *self.argv, env=env, stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT, limit=LINE_LIMIT, start_new_session=True)
-            self._proc, self._stop_requested, self._keep_live = proc, False, False
+            self._proc, self._stop_requested, self._keep_live, self._human_stop = proc, False, False, False
             self._tail.clear()
             self._watch = asyncio.create_task(self._watch_child(proc), name="pilot-run")
-            self._write(changed_by=by, live=True, since=self.clock(), by=by)     # last_exit is kept
+            try:
+                self._write(changed_by=by, live=True, since=self.clock(), by=by)     # last_exit is kept
+            except Exception:
+                # the start is answered with an error, and a run the row does not show as live would
+                # not resume after a deploy: stop it rather than leave it running unrecorded
+                log_.exception("recording the pilot run's start failed; stopping it")
+                self._stop_requested = True
+                with contextlib.suppress(ProcessLookupError):
+                    proc.send_signal(signal.SIGTERM)
+                await self._wait_or_kill(proc, self._watch)
+                raise
 
     async def _read_output(self, stream: asyncio.StreamReader) -> None:
         while True:
@@ -184,40 +201,60 @@ class Supervisor:
         lines = list(self._tail)
         last = {"code": code, "t": self.clock(), "lines": lines}
         try:
-            if requested and self._keep_live:
+            if requested and self._keep_live and not self._human_stop:
                 self._write(last_exit=last)             # a container stop: the run resumes at the next start
             else:
                 self._write(live=False, last_exit=last)
         except Exception:
             log_.exception("recording the pilot run's exit (code %s) failed", code)
-        if not requested and self.emit_exit is not None:
+        if (not requested or self._human_stop) and self.emit_exit is not None:     # the run's own exit
             try:
                 self.emit_exit(code, lines)
             except Exception:
                 log_.exception("recording the pilot run's exit (code %s) on its run failed", code)
 
+    def note_stop(self) -> None:
+        """A Stop from the page that the live run accepted (the dashboard forwards it to the pilot): the run
+        is not live from now on, whatever ends it, and a dashboard stop meanwhile sends it no SIGTERM."""
+        self._human_stop = True
+        self._write(live=False)
+
+    def decline_resume(self) -> bool:
+        """Resume is off: a row still live from the last dashboard stop is written not live. True when it was."""
+        if self.running or not self.state()["live"]:
+            return False
+        self._write(live=False)
+        return True
+
     async def stop(self, *, keep_live: bool) -> None:
         """SIGTERM, wait stop_wait_s, then SIGKILL. keep_live=True (a container or service stop) leaves
-        live true; False (a human stop) writes live false."""
+        live true; False (a human stop) writes live false. A run that already exited by itself keeps its
+        own exit (a crash stays a crash), and one stopping for a page Stop gets no SIGTERM."""
         async with self._lock:                      # a start in progress spawns first, then is stopped
             proc, watch = self._proc, self._watch
             if proc is None or watch is None or watch.done():
                 if not keep_live:
                     self._write(live=False)
                 return
-            self._stop_requested, self._keep_live = True, keep_live
-            try:
-                proc.send_signal(signal.SIGTERM)
-            except ProcessLookupError:
-                pass
+            await asyncio.sleep(0)                  # an exit already signalled reaches proc.returncode
+            exited = proc.returncode is not None
+            if not exited:
+                self._stop_requested, self._keep_live = True, keep_live
+                if not self._human_stop:
+                    with contextlib.suppress(ProcessLookupError):
+                        proc.send_signal(signal.SIGTERM)
+        if exited:
+            await watch                             # its watcher records it as the run's own exit
+        else:
+            await self._wait_or_kill(proc, watch)
+
+    async def _wait_or_kill(self, proc: asyncio.subprocess.Process, watch: asyncio.Task) -> None:
         try:
             await asyncio.wait_for(asyncio.shield(watch), self.stop_wait_s)
         except TimeoutError:
             log_.warning("the pilot run did not stop within %.0f s; killing it", self.stop_wait_s)
-            try:
+            with contextlib.suppress(ProcessLookupError):
                 proc.kill()
-            except ProcessLookupError:
-                pass
             await watch
 
     async def resume_if_wanted(self, *, enabled: bool, delay_s: float | None = None,

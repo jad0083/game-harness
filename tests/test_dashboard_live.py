@@ -364,6 +364,41 @@ def test_a_browser_behind_the_viewer_is_named_on_the_live_pilot(tmp_path, clock)
     log.close()
 
 
+def test_a_stop_the_live_pilot_accepts_is_noted_by_the_supervisor(tmp_path, clock, monkeypatch):
+    """The page's Stop goes to the live pilot through the viewer. Once the pilot accepts it, the viewer's
+    supervisor marks the run not live (a stopped run never resumes, and a dashboard stop meanwhile sends it
+    no second SIGTERM); a refused stop or another action does not."""
+    from pilot import dashboard
+    live, log = live_app(tmp_path)
+    stops = []
+
+    def stop(self):
+        stops.append(1)
+        if len(stops) == 1:
+            raise RuntimeError("the pilot refused")
+    monkeypatch.setattr(FakePilot, "stop", stop)
+
+    async def go():
+        server = TestServer(live)
+        await server.start_server()
+        log.state.info["port"] = server.port
+        log.state.status = "playing"
+        log.emit("status")
+        app, auth = viewer(tmp_path, clock)
+        noted = []
+        monkeypatch.setattr(app[dashboard.SUPERVISOR], "note_stop", lambda: noted.append(1))
+        _, cookie = browser_cookie(auth, name="Pixel phone")
+        async with client(app, cookie) as c:
+            assert (await c.post("/control", json={"action": "pause"}, headers=origin(c))).status == 200
+            assert (await c.post("/control", json={"action": "stop"}, headers=origin(c))).status == 500
+            assert noted == []
+            assert (await c.post("/control", json={"action": "stop"}, headers=origin(c))).status == 200
+            assert noted == [1]
+        await server.close()
+    asyncio.run(go())
+    log.close()
+
+
 def test_what_a_device_changes_is_in_the_sign_in_log(tmp_path, clock, monkeypatch):
     """Rulings 49.6 and 50: /control, /api/settings, /api/run and /api/capture through the viewer each
     leave a `control` audit row naming the action and the device, so a revoked session's doings show
