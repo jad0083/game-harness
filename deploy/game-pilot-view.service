@@ -1,8 +1,10 @@
-# Install with scripts/install-services.sh (fills in @REPO@ with this checkout).
-# Always-on dashboard over recorded pilot runs, on the LAN (http://<this machine>:8780/).
-# Forwards live controls to a running pilot (its own dashboard on 8790). Install:
-#   cp deploy/game-pilot-view.service ~/.config/systemd/user/ && systemctl --user daemon-reload
+# Install with scripts/install-services.sh (fills in @REPO@ with this checkout), then
 #   systemctl --user enable --now game-pilot-view.service
+# Always-on dashboard over recorded pilot runs, on the LAN (http://<this machine>:8780/). Its Start run
+# starts `pilot run` as its child process and forwards live controls to it (its own dashboard on 8790).
+# Stopping the service stops that run (the game is paused) and keeps it marked live, so the next start
+# resumes it after 10 s (PILOT_RESUME=0 turns that off); a run stopped from the page does not resume.
+# Settings come from the repo's .env and a drop-in (systemctl --user edit game-pilot-view.service).
 [Unit]
 Description=Game Pilot dashboard (history + live controls)
 After=network-online.target
@@ -12,6 +14,10 @@ Type=simple
 WorkingDirectory=@REPO@
 Environment=PYDANTIC_AI_NO_BANNER=1
 ExecStart=@REPO@/.venv/bin/python -m pilot view --port 8780
+# SIGTERM to the dashboard only: it stops the run itself (SIGTERM, 25 s, then SIGKILL), and the run
+# still needs its controller subprocess to pause the game on exit
+KillMode=mixed
+TimeoutStopSec=60
 Restart=on-failure
 RestartSec=5
 

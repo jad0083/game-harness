@@ -37,7 +37,7 @@ def test_prefs_get_prints_only_the_value(tmp_path, monkeypatch, capsys):
 
 
 def test_prefs_get_without_a_store_prints_nothing_and_creates_none(tmp_path, monkeypatch, capsys):
-    """A read for scripts: deploy-pilot.sh asks before any store exists, and a test once made the repo's runs/pilot.db."""
+    """A read for scripts: a deploy script asked before any store existed, and a test once made the repo's runs/pilot.db."""
     monkeypatch.delenv("PILOT_RUNS_DIR", raising=False)
     for data in (tmp_path / "absent", tmp_path / "empty"):
         if data.name == "empty":

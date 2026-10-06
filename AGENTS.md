@@ -222,15 +222,13 @@ while they were skipped (`scripts/ci-ui-gate.sh`). Conventional commits (`feat` 
 commit messages). One logical change per commit. Never commit `.agent_token`, `play/`,
 screenshots, or the game's raw XML (`incoming/`).
 
-**Deploying to the running services**: never restart `game-pilot.service` by hand for a merge. After
-merging and pulling on the controller, run `scripts/deploy-pilot.sh <from> <to>` (the commit deployed
-before, and the new one; `--dry-run` first shows what it will do). It restarts the pilot only when the
-running game's files or shared code changed, restarts the viewer for the dashboard's static files and
-any `src/pilot/*.py` (it imports game modules too), and for a Rust change pauses the pilot through its dashboard, builds the controller and
-resumes a Civ VI pilot (it runs the binary afresh for each call) but restarts a Stellaris or GalCiv IV one
-(it keeps one `game-controller mcp` process for its run); otherwise it prints "not restarted: the running civ6 pilot is unaffected; the change
-applies at its next start". `scripts/pilot-affected.py <from> <to>` shows the classification alone
-(a Stellaris-only merge once restarted the live Civ VI run at T462; postmortem-fixes design, ruling 28).
+**Deploying to the running services**: the dashboard (`pilot view`, `game-pilot-view.service`) runs the
+pilot as its own child process, so there is one service. To deploy a merge, merge the image pin, or on
+a host install pull, build the controller when Rust changed (`cargo build --release -p game-controller`)
+and restart the viewer (`systemctl --user restart game-pilot-view.service`). The run resumes: stopping
+the dashboard stops a live run (the game is paused) and keeps it marked live, and the next dashboard start
+resumes it once, 10 s later (`PILOT_RESUME=0` turns that off). A run stopped from the page, one that ended
+and one that crashed do not resume (docs/pilot.md, "Supervisor and resume"; appliance image design, ruling 5).
 
 ## 9. Working on the code
 

@@ -16,25 +16,16 @@ echo 'GEMINI_API_KEY=…' >> .env                  # or OPENAI_API_KEY / ANTHROP
 .venv/bin/python -m pilot dashboard-link          # sign a browser in: one-time link, three words, QR code
 ```
 
-As services: `deploy/game-pilot.service` (the pilot) and `deploy/game-pilot-view.service` (the
-dashboard, always on), both systemd user units installed by `scripts/install-services.sh`. Before the
-first deploy of the sign-in change, install `segno` into the `.venv` the units run
+As a service: `deploy/game-pilot-view.service` (the dashboard, always on), a systemd user unit
+installed by `scripts/install-services.sh`. There is no unit for the pilot: the dashboard starts
+`pilot run` as its own child process ([Supervisor and resume](#supervisor-and-resume)). Before the
+first deploy of the sign-in change, install `segno` into the `.venv` the unit runs
 (`.venv/bin/pip install segno`; it is in `pyproject.toml`): without it Add a device shows no QR code
 (the pages then never mention one), and `view` and `install-services.sh` say so. A drop-in
-(`systemctl --user edit game-pilot.service`) sets `GAME_AGENT_URL` and `GAME_RESOLUTION` for the
-PC in use. One pilot unit runs whichever game the store's saved prefs name, so a deploy goes through
-`scripts/deploy-pilot.sh <from> <to>` (`--dry-run` to preview; postmortem-fixes design, ruling 28):
-`scripts/pilot-affected.py` classifies each changed path (civ6: `src/pilot/civ6*.py` and
-`corpora/civ6/**`; stellaris and galciv4 alike, galciv4 with `src/pilot/controller.py`; view:
-`src/pilot/static/**`; rust: `crates/**`, `Cargo.*`; none: docs, games, tests, other `.md` files,
-`corpora/*/learned/**`, `scripts/ci*`; shared: every other `src/pilot/*.py` and `pyproject.toml`, and any
-path not listed). The running pilot (its game read from its own `/status`, else the store's prefs, `pilot prefs --get game`)
-restarts only when its game's class or shared changed; the viewer restarts for view, shared and any
-`src/pilot/*.py` of a game's class (it imports game modules too, such as `stellaris_record` and `civ6`); a Rust change pauses the pilot through its dashboard, builds the
-controller and resumes a Civ VI pilot, which runs the binary afresh for each call (a pilot paused by the
-human or waiting for one is left as it is); a Stellaris or GalCiv IV pilot keeps one `game-controller
-mcp` child for its whole run, so a Rust change restarts it after the build. Otherwise
-it prints "not restarted: the running civ6 pilot is unaffected; the change applies at its next start".
+(`systemctl --user edit game-pilot-view.service`) sets `GAME_AGENT_URL` and `GAME_RESOLUTION` for the
+PC in use; the run inherits the dashboard's environment. To deploy a merge, merge the image pin; on a
+host install, build the controller when Rust changed (`cargo build --release -p game-controller`) and
+restart the viewer (`systemctl --user restart game-pilot-view.service`). The run resumes.
 
 | Variable | Meaning |
 |---|---|
@@ -60,6 +51,30 @@ it prints "not restarted: the running civ6 pilot is unaffected; the change appli
 | `PILOT_TRUSTED_PROXIES`, `PILOT_PROXY_SECRET` | the reverse proxy's address(es) and the secret it sends in `X-Pilot-Proxy`; with both, its `Remote-User` (Authelia) is the signed-in user |
 | `PILOT_NOTIFY_URL` | an ntfy topic's full URL (e.g. a self-hosted server or a long random topic): the live pilot posts a notice when the run has needed you for 5 min, 30 min and 2 h, and once when it no longer does; unset = off (the default) |
 | `PILOT_AUTH_DB`, `PILOT_ADD_DEVICE`, `PILOT_KEY_SIGNIN` | the sign-in store (default `runs/auth.sqlite`); `cli` limits adding devices to the controller; `1` turns the recovery-key form on (default off) |
+| `PILOT_RESUME` | the dashboard resumes a run that was live when it stopped, 10 s after it starts ([Supervisor and resume](#supervisor-and-resume); default on; `0`, `false`, `no` or `off` turns it off) |
+
+### Supervisor and resume
+
+The dashboard (`pilot view`) supervises one pilot run as its child process (`src/pilot/supervisor.py`;
+appliance image design, ruling 5). *Start run* saves the game, speed and interval, then starts
+`pilot run`; it is refused, naming them, while settings a run needs are missing (`GAME_AGENT_URL`;
+`GAME_AGENT_TOKEN` unless `.agent_token` exists; the key of the first model's provider, or the `claude`
+CLI for `claude-code:*`), and while a run is live. The run's output reaches the dashboard's own output
+with a `pilot: ` prefix. The store's settings row `supervisor` records whether a run is live, who
+started it and when, and how the last one ended (`last_exit`: exit code, time, last 20 lines):
+
+- **The dashboard stops** (a container or service stop, a restart for a deploy): it sends the run
+  SIGTERM (the game is paused, as for any stop; SIGKILL after 25 s) and keeps the run marked live. The
+  next dashboard start resumes it once, 10 s later (`PILOT_RESUME`), unless a run already answers on
+  its port.
+- **The run ends any other way** (Stop on the page, the campaign's end, a crash): it is marked not
+  live and does not resume, so a run that fails at start (a refused key) is never restarted in a loop.
+  Its exit code and last lines are kept, also on the run as a `run_exit` event when it got as far as
+  its `run_start`, and with no run live the page says "The last run stopped with exit code N" with its
+  last 3 lines one click away.
+
+The service unit uses `KillMode=mixed` and `TimeoutStopSec=60`, so a stop reaches the dashboard only
+and it stops the run itself.
 
 ## Models
 
@@ -960,10 +975,10 @@ running pilot (whose own dashboard is on `PILOT_PORT`, 8790, on 127.0.0.1). It r
   the version history.
 - **Settings**: models per role (the decisions role's help is the game's; the GC4 blockers role only
   for GalCiv); Game: a speed only where the game has one, the interval bound to the game's cadence
-  field (Civ VI's turns only while its run is live). With no run active, *Start run* starts
-  `game-pilot.service`, with the game in front on the PC preselected, a warning only when the chosen
-  game is not in front, only that game's fields, and a toast naming the game and campaign that
-  started.
+  field (Civ VI's turns only while its run is live). With no run active, *Start run* starts the run
+  as the dashboard's child ([Supervisor and resume](#supervisor-and-resume)), with the game in front on
+  the PC preselected, a warning only when the chosen game is not in front, only that game's fields,
+  and a toast naming the game and campaign that started (or the settings a run still needs).
   Changes save at once, and each field says "Saved" (or why not) next to itself.
 - A refused action (the live pilot answers 400, a change the dashboard refuses) is said in a toast
   with the server's reason; the page never blocks on a dialog box. Light mode's text colours pass
@@ -1158,19 +1173,17 @@ the dashboard after the first import come back from the old files, for a campaig
 
 **Upgrading an existing install.**
 
-1. Stop `game-pilot.service` and `game-pilot-view.service`.
-2. Note the deployed commit: `git rev-parse HEAD` (this is `<from>`).
-3. `git pull`.
-4. `cargo build --release -p game-controller`. `data import` and `data check` never run the controller;
-   the build comes before step 7 because from then on the viewer is up, and a run started from the
+1. Stop `game-pilot-view.service`, and the install's old pilot unit if it has one:
+   `systemctl --user disable --now game-pilot.service`, then delete `~/.config/systemd/user/game-pilot.service`
+   (the dashboard starts runs itself now).
+2. `git pull`, then `scripts/install-services.sh` (the viewer unit gains `KillMode=mixed`).
+3. `cargo build --release -p game-controller`. `data import` and `data check` never run the controller;
+   the build comes before step 6 because from then on the viewer is up, and a run started from the
    dashboard plays and captures the game screen with the controller.
-5. `.venv/bin/python -m pilot data import --from <repo>`.
-6. `.venv/bin/python -m pilot data check --from <repo>` (it should list nothing).
-7. Start `game-pilot-view.service`.
-8. `scripts/deploy-pilot.sh <from> HEAD`. With the pilot stopped it builds the controller if Rust
-   changed (nothing is paused) and restarts the viewer when its files changed; it starts no pilot.
-9. `systemctl --user start game-pilot.service`, only if a run should continue.
-10. Later, once the dashboard shows the history, `.venv/bin/python -m pilot data import --from <repo> --prune-source`.
+4. `.venv/bin/python -m pilot data import --from <repo>`.
+5. `.venv/bin/python -m pilot data check --from <repo>` (it should list nothing).
+6. Start `game-pilot-view.service`. A run continues with *Start run* on the dashboard.
+7. Later, once the dashboard shows the history, `.venv/bin/python -m pilot data import --from <repo> --prune-source`.
 
 Curated knowledge reaches the repo only through `pilot export`. A damaged or lost `pilot.db` is not
 recreated from run folders any more: the way back is `pilot data import` from an older install (or a
