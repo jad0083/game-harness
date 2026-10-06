@@ -1311,3 +1311,23 @@ def test_a_run_directory_swapped_for_a_link_before_delete_is_kept_as_changed(old
     line = next(f for f in e.value.failed if f.startswith(f"{run}:"))
     assert "changed since check" in line and "symbolic link" in line and "files before it are gone" not in line, line
     assert run.is_symlink() and (aside / "events.jsonl").exists() and (aside / "traces/0001.json").exists()
+
+
+# ---------------------------------------------------------------- final fix wave: a member that cannot be stamped
+
+@pytest.mark.parametrize("member", ["telemetry.sqlite-wal", "telemetry.sqlite-shm", "telemetry.sqlite"])
+def test_a_database_member_that_cannot_be_stamped_keeps_the_unit_without_a_traceback(old_install, tmp_path,
+                                                                                    monkeypatch, member):
+    """lstat failing with something other than ENOENT (EACCES) gives a bare stamp that is no tuple; prune
+    keeps the whole database unit and names the member, never a TypeError."""
+    runs = old_install / "runs"
+    data = tmp_path / "data"
+    store, _ = do_import(old_install, data)
+    real_stamp = dataimport._stamp
+    monkeypatch.setattr(dataimport, "_stamp", lambda q: object() if q == runs / member else real_stamp(q))
+    with pytest.raises(dataimport.PruneIncomplete) as e:
+        dataimport.prune_source(old_install, store)
+    line = next(f for f in e.value.failed if f.startswith(f"{runs / 'telemetry.sqlite'}:"))
+    assert f"{member} could not be read" in line and "kept with its -wal and -shm" in line, line
+    assert (runs / "telemetry.sqlite").exists()
+    assert not (runs / "pilot-settings.json").exists(), "the other targets are still deleted"

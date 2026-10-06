@@ -1253,7 +1253,7 @@ def prune_source(root: Path, store, kept: list[str] | None = None) -> list[Path]
 
     The targets are listed and stamped first; then check() must list nothing and git must track none of them
     (else PruneRefused, nothing deleted); then each target is stamped again just before it is deleted, and
-    one that changed since check is kept. A kept or failed target raises PruneIncomplete after all the others
+    one that changed since check, or could not be stamped (lstat failed), is kept with the rest of its unit. A kept or failed target raises PruneIncomplete after all the others
     were tried. What stays for another reason is named in `kept`."""
     root = Path(root)
     runs = root / "runs"
@@ -1277,9 +1277,12 @@ def prune_source(root: Path, store, kept: list[str] | None = None) -> list[Path]
     deleted, failed, outcome = [], [], {}
     for unit in units:
         changed = any(_stamp(q) != stamps[q] for q in unit)
-        odd = [q.name for q in unit if len(unit) > 1 and stamps[q] is not None and stamps[q][0] != "file"]
-        if changed or odd:                                      # one unit: all of it stays
-            why = "changed since check" if changed else f"{odd[0]} is not a regular file"
+        # a stamp that is not a tuple is one lstat could not take (EACCES): never judged, the unit stays
+        unread = [q.name for q in unit if stamps[q] is not None and not isinstance(stamps[q], tuple)]
+        odd = [q.name for q in unit if len(unit) > 1 and isinstance(stamps[q], tuple) and stamps[q][0] != "file"]
+        if changed or unread or odd:                            # one unit: all of it stays
+            why = (f"{unread[0]} could not be read" if unread else "changed since check" if changed
+                   else f"{odd[0]} is not a regular file")
             with_wal = " with its -wal and -shm" if len(unit) > 1 else ""
             failed.append(f"{unit[-1]}: {why}, kept{with_wal} (import and prune again)")
             outcome.update(dict.fromkeys(unit, why))
