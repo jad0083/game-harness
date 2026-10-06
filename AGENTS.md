@@ -20,7 +20,7 @@ Everything below was verified in live play on 2026-09-25 unless marked **unverif
 | Stellaris | `corpora/stellaris/`, `crates/game-controller/src/stellaris.rs`, `src/pilot/governor.py` | Governor over the native AI: autosave briefing, console directives, speed and pause. See §10. |
 | Civilization VI | `corpora/civ6/` (with `lua/harness.lua`), `crates/game-controller/src/civ6.rs`, `src/pilot/civ6_governor.py` | Governor over the native AI: Lua snapshot and structured orders through the tuner, autoplay stretches. See §11. |
 | Pilot app | `src/pilot/` (`python -m pilot`) | Autonomous player with any LLM API key (README → "Pilot app"). |
-| Dashboard | `https://gamepilot.saczone.com` (nginx-proxy-manager host 54 on truenas, Authelia two-factor; port 8780 on this host answers only NPM and localhost, so scripts here use `http://127.0.0.1:8780`) (`deploy/game-pilot-view.service`; proxy settings in its drop-in, secret at `secret/apps/game-pilot/PROXY_SECRET`) | Decision traces (thinking, tool calls), campaign charts, and talking to / directing the live model. Telemetry is in the store `runs/pilot.db`. Each game's words, figures, chart views and recovery steps: `corpora/<game>/dashboard.toml`. To sign the user in, run `python -m pilot dashboard-link`; never print the key `runs/secrets/dashboard.key`. An ntfy notice when a stop lasts is opt-in (`PILOT_NOTIFY_URL`, off). |
+| Dashboard | `https://gamepilot.saczone.com` (nginx-proxy-manager host 54 on truenas, Authelia two-factor) served by the `game-pilot` container on **deb-dock1** (192.168.1.53; Komodo stack `apps/personal/game-pilot` in jad0083/stacks, image pinned by digest; port 8780 there answers only NPM, `game-pilot-guard`; secrets `secret/apps/game-pilot/*` rendered by Periphery) | Decision traces (thinking, tool calls), campaign charts, and talking to / directing the live model. The dashboard supervises the pilot run and resumes it after a restart. Data (`pilot.db`, devices, frames, keys) is `/mnt/dockervol/game-pilot/data` on deb-dock1. Each game's words, figures, chart views and recovery steps: `corpora/<game>/dashboard.toml`. To sign the user in: `ssh deb-dock1 docker exec game-pilot pilot dashboard-link`; never print the key `data/secrets/dashboard.key`. deb-mini2's `game-pilot-view.service` and `runs/` are the disabled rollback install. mini-rig2's agent firewall rule admits the controller hosts (192.168.1.76 and .53). An ntfy notice when a stop lasts is opt-in (`PILOT_NOTIFY_URL`, off). |
 | Image | `ghcr.io/jad0083/game-pilot` (tags `:<version>`, `:sha-<short>`, `:latest`) | The dashboard and its supervised pilot as one container; built, smoke-tested (`scripts/image-smoke.sh`) and pushed by `.github/workflows/image.yml`. See ARCHITECTURE.md "Image and supervisor". |
 
 Hard facts:
@@ -224,7 +224,8 @@ commit messages). One logical change per commit. Never commit `.agent_token`, `p
 screenshots, or the game's raw XML (`incoming/`).
 
 **Deploying to the running services**: the dashboard (`pilot view`, `game-pilot-view.service`) runs the
-pilot as its own child process, so there is one service. To deploy a merge, merge the image pin, or on
+pilot as its own child process, so there is one service. To deploy a merge, let `.github/workflows/image.yml` publish the image, then bump the pin in
+jad0083/stacks `apps/personal/game-pilot/compose.yaml` (Renovate opens that PR; Komodo redeploys on merge); or on
 a host install pull, build the controller when Rust changed (`cargo build --release -p game-controller`)
 and restart the viewer (`systemctl --user restart game-pilot-view.service`). The run resumes: stopping
 the dashboard stops a live run (the game is paused) and keeps it marked live, and the next dashboard start
