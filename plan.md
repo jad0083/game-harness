@@ -104,7 +104,7 @@
 - [ ] GalCiv IV levers from the Civ VI and Stellaris lessons (2026-09-27): whether the game's own AI can play our faction (governor model instead of screen play), a record per action kind, rush-buys with credits, crisis response, AI steering through data mods, planet tile placement, and stall/hang recovery; research → design with rulings → build → review → deploy (live checks when GalCiv IV is the running game)
 
 ## Pilot app: observability and control
-- [ ] Portability 1, data platform (design docs/design/2026-10-05-data-platform-design.md): one SQLite store (`pilot.db`) in a data directory, code and corpora read-only, learned knowledge, journals, traces and settings in the store, `pilot export` instead of runtime git, frame retention, `pilot data import`/`check`
+- [x] Portability 1, data platform (design docs/design/2026-10-05-data-platform-design.md): one SQLite store (`pilot.db`) in a data directory, code and corpora read-only, learned knowledge, journals, traces and settings in the store, `pilot export` instead of runtime git, frame retention, `pilot data import`/`check` (deployed 8c06d08 on deb-mini2 2026-10-06: live install imported in place, check clean; `--prune-source` left for the user)
 - [ ] Portability 2, appliance image and estate stack: one multi-stage image, the dashboard supervising the pilot, Litestream when configured, a Komodo stack with OpenBao secrets
 - [ ] Portability 3, agent release and pairing: a versioned Windows installer, a pairing code, PCs registered in the store
 - [ ] Portability 4, public distribution: CI-built multi-arch images, releases, compose and .env template, setup docs for a server and for one PC

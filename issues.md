@@ -2,6 +2,14 @@
 
 ## Open
 
+- [x] `pilot prefs --get` created `runs/pilot.db` when no store existed, and `tests/test_deploy_pilot.py` ran `deploy-pilot.sh` through the shared `.venv`, so a CI run on the data-platform merge made an empty store in the live `runs/` (2026-10-06; harmless, the import filled it). Fix: `prefs --get` only reads; the deploy script passes the data directory it found and prints the game (tests); deployed ae105c2
+- [ ] Data platform: dashboard history views other than the run list and run events still parse `events.data` without a guard (`dashboard.py` ~476, 532, 641/645, 655, 717), so one damaged row fails that view (every writer stores `json.dumps` of a dict; 2026-10-06 final review)
+- [ ] Data platform: `config.load_dotenv` has no direct test (quote stripping, environment over `.env`) (2026-10-06 final review)
+- [ ] Data platform: `pilot data import --prune-source` re-runs the import first, so standing orders a human cleared after the first import come back for a campaign with no rows (documented; no `orders/` on the live host)
+- [ ] Data platform: `pilot export` writes the generated learned files only; `episodes.jsonl` and `ledger.jsonl` in `corpora/*/learned/` stay at their last committed copy (documented)
+- [ ] Data platform: the daily request budget reads this process's in-memory count, so a second process counting the same model can overshoot it (as before the store)
+- [ ] Data platform: the GC4 controller card's frame and the stall screenshot named in a card are not kept from frame pruning; GC4 reads template BLOBs (`SELECT *`) on every turn (2026-10-05 task reviews)
+- [ ] Data platform: an export at run end (`PILOT_EXPORT_DIR`) is not bounded by the 20 s stop grace (theoretical on a slow export directory)
 - [ ] Dashboard: while a run makes its opening strategy (6 min on Gemini 3.1 Pro at T1, 2026-10-05) the campaign shows only status "starting" with no card or Activity row saying the Strategist is working, so the page looks empty
 - [x] A model error on a later request of a decision retries the whole agent run (`run_with_retry` around `run_sync`), so tools that already sent game actions can run again; Gemini 503 overloads also cost up to 65 s of waits on one model while sibling Flash models fail together (2026-10-02, telemetry Sep 25-28: 389 retries, 164 fallbacks, no 429). Design: docs/design/2026-10-02-model-guard-design.md Fixed by the model guard (failover inside the run, one 1-2 s retry, breakers, family order); deployed 3236765
 - [ ] Model guard: a claude-code CLI timeout (subprocess.TimeoutExpired) classifies as `other`, not `timeout` (breaker opens, no family caution) (2026-10-02, final review)
