@@ -1253,8 +1253,9 @@ def prune_source(root: Path, store, kept: list[str] | None = None) -> list[Path]
 
     The targets are listed and stamped first; then check() must list nothing and git must track none of them
     (else PruneRefused, nothing deleted); then each target is stamped again just before it is deleted, and
-    one that changed since check, or could not be stamped (lstat failed), is kept with the rest of its unit. A kept or failed target raises PruneIncomplete after all the others
-    were tried. What stays for another reason is named in `kept`."""
+    one that changed since check, or could not be stamped (lstat failed), is kept with the rest of its unit.
+    A kept or failed target raises PruneIncomplete after all the others were tried. What stays for another
+    reason is named in `kept`."""
     root = Path(root)
     runs = root / "runs"
     data_dir = Path(store.path).parent
