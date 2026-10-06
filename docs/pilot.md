@@ -1153,15 +1153,17 @@ runtime files (the old database and its logs, run folders, settings, usage and s
 the old key) only when check is empty, and keeps anything changed since check. It refuses to prune
 at all when git tracks any file it would delete. It never touches `corpora/` or `games/` (so
 `corpora/*/learned/` and `games/*/journal.md` stay as the last committed copy), unknown files or
-symlinks.
+symlinks. `--prune-source` runs the whole import again first, so standing orders a person cleared on
+the dashboard after the first import come back from the old files, for a campaign left with none.
 
 **Upgrading an existing install.**
 
 1. Stop `game-pilot.service` and `game-pilot-view.service`.
 2. Note the deployed commit: `git rev-parse HEAD` (this is `<from>`).
 3. `git pull`.
-4. `cargo build --release -p game-controller`. This comes before the deploy script because `data import`
-   and `data check` run first and need the current controller binary.
+4. `cargo build --release -p game-controller`. `data import` and `data check` never run the controller;
+   the build comes before step 7 because from then on the viewer is up, and a run started from the
+   dashboard plays and captures the game screen with the controller.
 5. `.venv/bin/python -m pilot data import --from <repo>`.
 6. `.venv/bin/python -m pilot data check --from <repo>` (it should list nothing).
 7. Start `game-pilot-view.service`.

@@ -1,5 +1,6 @@
-"""The pilot loop: autopilot for routine turns, an LLM episode for each blocker, learning and
-journal updates, CI-gated commits of what was learned, and pause/resume/stop control."""
+"""The pilot loop: autopilot for routine turns, an LLM episode for each blocker, learned knowledge
+and journal lines kept in the store (the controller reloads newly learned screens), and
+pause/resume/stop control."""
 
 from __future__ import annotations
 

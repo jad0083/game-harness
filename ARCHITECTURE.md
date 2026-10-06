@@ -366,9 +366,10 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   chars (the briefing's per-city danger lines; postmortem-fixes design, ruling 27), other texts are
   cut at 6,000 chars.
 - `store.py`: the one SQLite database, `<data>/pilot.db` (data directory: `PILOT_DATA_DIR`, default
-  `runs/`). `Store` holds one connection under a lock (WAL, `synchronous=NORMAL`, busy timeout 5 s) and
-  runs forward migrations keyed by `meta.schema_version` when it opens; `open_store(data_dir)` returns
-  the process's one `Telemetry` for a directory, and nothing else opens the file. It holds events,
+  `runs/`). A process keeps one connection to it: `open_store(data_dir)` returns the process's one
+  `Telemetry` (a `Store`) for a directory, whose connection all the process's threads share under a
+  re-entrant lock (WAL, `synchronous=NORMAL`, busy timeout 5 s); it runs forward migrations keyed by
+  `meta.schema_version` when it opens, and nothing else opens the file. It holds events,
   decisions with their traces (`decisions.trace`), metrics, strategies, a live run's state
   (`run_state`), learned notes and screens, journal lines, standing orders, prefs and model usage.
   A data directory it cannot write stops the start with its name (`DataDirError`; the CLI prints one
