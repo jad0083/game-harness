@@ -5,7 +5,8 @@
 #   scripts/deploy-pilot.sh <from> <to>             e.g. the commit deployed before and HEAD
 #   scripts/deploy-pilot.sh <from> <to> --dry-run   print what it would do; change nothing
 # scripts/pilot-affected.py classifies the changed paths. The running pilot's game comes from its own
-# dashboard's /status (info.game; PILOT_PORT, the key from PILOT_DASHBOARD_KEY or runs/dashboard.key), or
+# dashboard's /status (info.game; PILOT_PORT, the key from PILOT_DASHBOARD_KEY, else the data directory's
+# secrets/dashboard.key, else its dashboard.key from before the data platform), or
 # from the store's prefs when no pilot runs. A Rust change pauses the pilot through its dashboard,
 # builds the controller and resumes a Civ VI pilot (each call runs the binary afresh; a pilot the human had
 # paused stays paused); a Stellaris or GalCiv IV pilot keeps one `game-controller mcp` child for the run,
@@ -21,7 +22,8 @@ py=.venv/bin/python
 run() { if [ "$dry" -eq 1 ]; then echo "would run: $*"; else echo "+ $*"; "$@"; fi; }
 
 port="${PILOT_PORT:-8790}"
-key="${PILOT_DASHBOARD_KEY:-$(cat runs/dashboard.key 2>/dev/null || true)}"
+data="${PILOT_DATA_DIR:-${PILOT_RUNS_DIR:-runs}}"
+key="${PILOT_DASHBOARD_KEY:-$(cat "$data/secrets/dashboard.key" 2>/dev/null || cat "$data/dashboard.key" 2>/dev/null || true)}"
 status() { curl -fsS -m 3 -H "X-Pilot-Key: $key" "http://127.0.0.1:$port/status" 2>/dev/null || true; }
 control() {
   curl -fsS -m 10 -H "X-Pilot-Key: $key" -H "Content-Type: application/json" \

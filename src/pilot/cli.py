@@ -14,6 +14,9 @@
     python -m pilot dashboard-key --rotate [--keep all|none|ID,…] [--force]   # a new service key; carried-over
                                               # devices are kept only if named
     python -m pilot dashboard-token create --name N --scope read|control [--expires 90d] | list | revoke ID
+    python -m pilot data import --from ROOT [--prune-source]   # copy an install from before the data
+                                              # platform into the data directory (PILOT_DATA_DIR)
+    python -m pilot data check --from ROOT     # what the data directory lacks of it (exit 1 when anything)
 """
 
 from __future__ import annotations
@@ -308,7 +311,7 @@ def live_pilots(s: Settings, key: str) -> list[tuple[str, int | None]]:
 
 
 def dashboard_key_cmd(s: Settings, a) -> int:
-    """Rotate the service key: a new runs/dashboard.key (0600, atomic) that both new-code processes
+    """Rotate the service key: a new <data>/secrets/dashboard.key (0600, atomic) that both new-code processes
     read within 2 s; the carried-over devices (the old key cookie) are kept only if named, and the
     carry-over ends. Other browsers and script tokens are untouched. The key is never printed."""
     from .auth import KEY_ENV, KeySource, write_carry_over
@@ -375,6 +378,52 @@ def dashboard_key_cmd(s: Settings, a) -> int:
     print(f"New service key written to {keys.path} (0600); both services read it within 2 s. The old key no "
           f"longer works anywhere, and old key cookies and ?key= links stop at once. Carried-over devices: kept "
           f"{len(kept)}, signed out {signed_out}. Scripts on the controller read the file again on their next call.")
+    return 0
+
+
+def data_cmd(s: Settings, a) -> int:
+    """`data import` copies the install at --from into the data directory and prints what it added and
+    skipped; with --prune-source it then checks, and deletes the imported old files only when nothing is
+    missing. `data check` prints one difference per line and exits 1 when there is any."""
+    from .dataimport import PruneRefused, check, import_install, prune_source
+    from .store import open_store
+    root = Path(a.source)
+    if not root.is_dir():
+        print(f"{root} is not a directory")
+        return 2
+    store = open_store(s.runs_dir)
+    if a.action == "check":
+        diffs = check(root, store, s.runs_dir)
+        print("\n".join(diffs) if diffs else f"nothing missing: {s.runs_dir} holds everything imported from {root}")
+        return 1 if diffs else 0
+    report = import_install(root, store, s.runs_dir)
+    print(f"imported {root} into {s.runs_dir}:")
+    for name, n in report.added.items():
+        print(f"  {name}: {n} {'copied' if name == 'secrets' else 'added'}")
+    print(f"  frames: {report.frames} copied")
+    if report.skipped:
+        print(f"skipped ({len(report.skipped)}):")
+        for item in report.skipped:
+            print(f"  {item}")
+    if not a.prune_source:
+        return 0
+    diffs = check(root, store, s.runs_dir)
+    if diffs:
+        print(f"not pruned: {len(diffs)} item{'s' if len(diffs) != 1 else ''} missing from the data directory:")
+        print("\n".join(diffs))
+        return 1
+    kept: list[str] = []
+    try:
+        deleted = prune_source(root, store, kept)
+    except PruneRefused as e:
+        print(f"not pruned: {e}")
+        return 1
+    for p in deleted:
+        print(f"deleted {p}")
+    if not deleted:
+        print("nothing to delete")
+    for item in kept:
+        print(f"kept {item}")
     return 0
 
 
@@ -524,6 +573,14 @@ def main(argv: list[str] | None = None) -> int:
     tok_sub.add_parser("list")
     r = tok_sub.add_parser("revoke")
     r.add_argument("id")
+    data_p = sub.add_parser("data", help="import an install from before the data platform, or check the import")
+    data_sub = data_p.add_subparsers(dest="action", required=True)
+    r = data_sub.add_parser("import", help="copy runs/, corpora/*/learned/, the pilot journals and settings")
+    r.add_argument("--from", dest="source", required=True, metavar="ROOT", help="the old install (a repo checkout)")
+    r.add_argument("--prune-source", action="store_true",
+                   help="then delete the imported old runtime files, only when check finds nothing missing")
+    r = data_sub.add_parser("check", help="list what the data directory lacks of the old install")
+    r.add_argument("--from", dest="source", required=True, metavar="ROOT")
     r = sub.add_parser("export", help="write the store's learned files and journals to a directory")
     r.add_argument("--to", required=True)
     r.add_argument("--game")
@@ -543,6 +600,8 @@ def main(argv: list[str] | None = None) -> int:
         v = load_prefs(s.runs_dir).get(a.get, "")
         print(v if isinstance(v, str) else json.dumps(v))
         return 0
+    if a.cmd == "data":
+        return data_cmd(s, a)
     if a.cmd == "export":
         from .export import export
         from .store import open_store

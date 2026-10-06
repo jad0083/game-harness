@@ -63,7 +63,7 @@ def journal_text(data_dir) -> str:
 
 @pytest.fixture(autouse=True)
 def _dashboard_key(monkeypatch):
-    """Dashboards in tests use a fixed access key (never runs/dashboard.key), and aiohttp test
+    """Dashboards in tests use a fixed access key (never runs/secrets/dashboard.key), and aiohttp test
     clients send it unless a test passes its own `headers` (the security tests pass `{}`)."""
     from aiohttp import test_utils
     monkeypatch.setenv("PILOT_DASHBOARD_KEY", DASHBOARD_TEST_KEY)

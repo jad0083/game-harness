@@ -11,6 +11,7 @@ from contextlib import redirect_stdout
 import pytest
 from aiohttp.test_utils import TestClient, TestServer
 
+from pilot import auth as A
 from pilot import dashboard
 from pilot.dashboard import make_app
 from pilot.events import EventLog
@@ -40,16 +41,48 @@ def viewer(tmp_path, key=KEY):
 def test_key_comes_from_the_environment(tmp_path, monkeypatch):
     monkeypatch.setenv("PILOT_DASHBOARD_KEY", "from-env")
     assert dashboard.dashboard_key(tmp_path) == "from-env"
-    assert not (tmp_path / "dashboard.key").exists()
+    assert not (tmp_path / "secrets").exists() and not (tmp_path / "dashboard.key").exists()
 
 
 def test_key_is_generated_once_and_stored_private(tmp_path, monkeypatch):
+    """A new key is made in <data>/secrets/ (the file 0600, the directory 0700)."""
     monkeypatch.delenv("PILOT_DASHBOARD_KEY", raising=False)
     k1 = dashboard.dashboard_key(tmp_path / "runs")
-    path = tmp_path / "runs" / "dashboard.key"
+    path = tmp_path / "runs" / "secrets" / "dashboard.key"
     assert len(k1) >= 40 and path.read_text().strip() == k1
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
+    assert stat.S_IMODE(path.parent.stat().st_mode) == 0o700
+    assert not (tmp_path / "runs" / "dashboard.key").exists()
     assert dashboard.dashboard_key(tmp_path / "runs") == k1
+
+
+def test_a_key_from_before_the_data_platform_is_still_read(tmp_path, monkeypatch):
+    """Until `pilot data import` copies it into secrets/, the old <data>/dashboard.key is the key: nothing
+    new is made beside it; once secrets/ holds a key, that one wins."""
+    monkeypatch.delenv("PILOT_DASHBOARD_KEY", raising=False)
+    runs = tmp_path / "runs"
+    runs.mkdir()
+    (runs / "dashboard.key").write_text("old-key\n")
+    assert dashboard.dashboard_key(runs) == "old-key"
+    keys = A.KeySource(runs)
+    assert keys.get() == "old-key" and keys.path == runs / "dashboard.key"
+    assert not (runs / "secrets").exists()
+    (runs / "secrets").mkdir(mode=0o700)
+    (runs / "secrets" / "dashboard.key").write_text("new-key\n")
+    assert dashboard.dashboard_key(runs) == "new-key"
+    keys.reload()
+    assert keys.get() == "new-key" and keys.path == runs / "secrets" / "dashboard.key"
+
+
+def test_the_carry_over_record_is_read_from_the_old_place_and_written_to_secrets(tmp_path):
+    runs = tmp_path / "runs"
+    runs.mkdir()
+    (runs / "dashboard.carryover").write_text(json.dumps({"fp": "abc", "until": 5.0}))
+    assert A.carry_over_record(runs) == {"fp": "abc", "until": 5.0}
+    A.write_carry_over(runs, "def", 7.0)
+    new = runs / "secrets" / "dashboard.carryover"
+    assert stat.S_IMODE(new.stat().st_mode) == 0o600 and stat.S_IMODE(new.parent.stat().st_mode) == 0o700
+    assert A.carry_over_record(runs) == {"fp": "def", "until": 7.0}
 
 
 def test_dashboard_link_cli_prints_the_link(tmp_path, monkeypatch):

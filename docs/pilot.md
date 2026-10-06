@@ -50,7 +50,7 @@ it prints "not restarted: the running civ6 pilot is unaffected; the change appli
 | `PILOT_MODEL_GUARD`, `PILOT_MIN_CALL_INTERVAL`, `PILOT_MODEL_LIMITS`, `PILOT_MODEL_FAMILIES` | the governors' model guard (default `1`; `0` runs the whole-run retries), the gap between requests per provider, per-model limits and families (JSON objects); see [Model calls](#model-calls-pacing-retries-and-failover) |
 | `PILOT_RETRO_EVERY` | strategy review every N decisions (default 5) |
 | `PILOT_PORT`, `PILOT_RUNS_DIR`, `PILOT_CAMPAIGN` | live dashboard port, run folder, campaign id |
-| `PILOT_DASHBOARD_KEY` | the dashboard's service key (default: generated once into `runs/dashboard.key`); a header from the controller only |
+| `PILOT_DASHBOARD_KEY` | the dashboard's service key (default: generated once into `runs/secrets/dashboard.key`); a header from the controller only |
 | `PILOT_LIVE_HOST`, `PILOT_VIEW_HOST` | bind addresses of the live pilot's dashboard (default `127.0.0.1`) and of the viewer (default `0.0.0.0`; `view --host`) |
 | `PILOT_PUBLIC_URL`, `PILOT_DASHBOARD_HOSTS` | the viewer's canonical address for links and QR codes (page loads on other names are redirected there), and extra host names it answers to (comma list) |
 | `PILOT_TRUSTED_PROXIES`, `PILOT_PROXY_SECRET` | the reverse proxy's address(es) and the secret it sends in `X-Pilot-Proxy`; with both, its `Remote-User` (Authelia) is the signed-in user |
@@ -978,7 +978,7 @@ The dashboard listens on the LAN, so every request needs a principal (design:
   stream, and links to sign in again; an open event stream closes within 15 s of a sign-out. A
   sign-in code the signed-out browser had made (⋯ > Add a device) is cancelled with it, and a code
   whose maker is signed out never signs anyone in.
-- **The service key** (`PILOT_DASHBOARD_KEY`, else `runs/dashboard.key`, 0600) works only as the
+- **The service key** (`PILOT_DASHBOARD_KEY`, else `runs/secrets/dashboard.key`, 0600) works only as the
   `X-Pilot-Key` or `Authorization: Bearer` header from the controller itself (127.0.0.1 / ::1),
   never through `Forwarded` / `X-Forwarded-For`, never as a cookie or in a URL, and it is no
   longer printed at startup. From another address it gets 401 `service_key_loopback_only` and an
@@ -991,7 +991,7 @@ The dashboard listens on the LAN, so every request needs a principal (design:
   controller, shown once: `python -m pilot dashboard-token create --name "laptop watch" --scope read
   [--expires 90d]`, `dashboard-token list`, `dashboard-token revoke ID` (or Revoke in Devices).
 - **Rotating the service key**: `python -m pilot dashboard-key --rotate --keep <ids>|all|none
-  [--force]` writes a new `runs/dashboard.key` (atomic, 0600) that both services read within 2 s,
+  [--force]` writes a new `runs/secrets/dashboard.key` (atomic, 0600) that both services read within 2 s,
   so nobody is signed out and nothing restarts. It lists the devices carried over from the old key
   cookie (name, first address, last use), each with the browsers added from it (a device added from a
   carried-over one, or through an old `?key=` link, is carried over too), and keeps only those named
@@ -1009,7 +1009,7 @@ The dashboard listens on the LAN, so every request needs a principal (design:
   while still holding the old cookie) loses the old cookie on its next request, and once that
   session is signed out the old cookie never lets it back in. Afterwards the old cookie is deleted
   wherever it is seen and `?key=` values are never read. The window's deadline is also kept next to the key
-  (`runs/dashboard.carryover`, 0600), so a new sign-in store (a corrupt one moved aside, a deleted
+  (`runs/secrets/dashboard.carryover`, 0600), so a new sign-in store (a corrupt one moved aside, a deleted
   file, another `PILOT_AUTH_DB`) neither reopens nor extends it; a store recreated after corruption
   with no such record keeps it shut.
 - **Host names**: the `Host` must be an IP literal, `localhost`, this machine's host name (also
@@ -1083,7 +1083,7 @@ The dashboard listens on the LAN, so every request needs a principal (design:
 - **Scripts** on the controller: `python -m pilot control pause|resume|stop|instruct|chat|… [--text T]
   [--index N] [--port 8780]` posts JSON to the viewer over loopback with the key (read on each call),
   prints the reply and exits non-zero with the server's error on any refusal; or send the key
-  yourself with `curl -fsS -H "X-Pilot-Key: $(cat runs/dashboard.key)" …` (read it on every call,
+  yourself with `curl -fsS -H "X-Pilot-Key: $(cat runs/secrets/dashboard.key)" …` (read it on every call,
   so a rotation does not break a long loop).
 - `/api/pc` reports only whether the agent is online, its version, which known games are open and
   whether one is in front, never window titles.

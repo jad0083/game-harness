@@ -165,8 +165,8 @@ def test_live_pilot_records_which_device_asked(tmp_path):
 def test_the_live_stream_closes_when_the_key_changes(tmp_path, monkeypatch):
     monkeypatch.delenv("PILOT_DASHBOARD_KEY", raising=False)
     runs = tmp_path / "runs"
-    runs.mkdir()
-    (runs / "dashboard.key").write_text(KEY + "\n")
+    (runs / "secrets").mkdir(parents=True, mode=0o700)
+    (runs / "secrets/dashboard.key").write_text(KEY + "\n")
     log = EventLog(runs, "run1", "m")
     app = make_app(FakePilot(log), keepalive_s=0.1)
 
@@ -176,7 +176,7 @@ def test_the_live_stream_closes_when_the_key_changes(tmp_path, monkeypatch):
             assert r.status == 200
             await r.content.readany()
             app[A.AUTH_KEY].keys.reload()
-            (runs / "dashboard.key").write_text("n" * 43 + "\n")
+            (runs / "secrets/dashboard.key").write_text("n" * 43 + "\n")
             app[A.AUTH_KEY].keys.reload()
             loop = asyncio.get_running_loop()
             t0 = loop.time()

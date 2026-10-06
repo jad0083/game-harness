@@ -1,7 +1,7 @@
 """Dashboard sign-in (docs/design/2026-09-27-dashboard-v2-design.md, rulings 34-52).
 
 Every browser holds its own named, revocable session (cookie `pilot_session=s1.<id>.<secret>`). The
-service key K (`PILOT_DASHBOARD_KEY` or `runs/dashboard.key`) works only as a header from the
+service key K (`PILOT_DASHBOARD_KEY` or `<data>/secrets/dashboard.key`) works only as a header from the
 controller itself (127.0.0.1 / ::1), never as a cookie, in a URL or in a log line. Scripts on other
 machines use scoped tokens (`pgt_<id>.<secret>`, made by the CLI). The Host header must be one of
 this machine's names or an IP literal (no DNS rebinding). The old key cookie (`pilot_key`) carries
@@ -52,6 +52,7 @@ DEVICE_HEADER = "X-Pilot-Device"         # viewer -> live pilot: the device behi
 DEVICE_NAME_HEADER = "X-Pilot-Device-Name"   # its name, percent-encoded (headers are latin-1)
 KEY_ENV, KEY_FILE = "PILOT_DASHBOARD_KEY", "dashboard.key"
 CARRY_FILE = "dashboard.carryover"       # the carry-over window, next to the key: outlives a new store
+SECRETS_DIR = "secrets"                  # <data>/secrets/ (0700) holds both files (0600)
 PRINCIPAL = web.RequestKey("pilot_principal", object)     # the Principal of a request
 COOKIES = web.RequestKey("pilot_cookies", list)          # cookie writes for on_response_prepare
 AUTH_KEY = web.AppKey("pilot_auth", object)
@@ -343,8 +344,23 @@ def qr_text(url: str) -> str | None:
 
 # ---------------------------------------------------------------- the service key
 
+def _secret_path(runs_dir: Path, name: str) -> Path:
+    """Where a secret file of the data directory is: <data>/secrets/<name>; else, until `pilot data import`
+    copies it there, <data>/<name> of an install from before the data platform; with neither, the secrets/
+    path, where it is made."""
+    new, old = Path(runs_dir) / SECRETS_DIR / name, Path(runs_dir) / name
+    return old if not new.exists() and old.exists() else new
+
+
+def _private_dir(path: Path) -> None:
+    """Make a secrets directory (0700) and its parents."""
+    path.mkdir(mode=0o700, parents=True, exist_ok=True)
+
+
 def _write_private(path: Path, text: str) -> None:
-    """Atomic 0600 write: temp file, then os.replace (a new inode, so readers notice)."""
+    """Atomic 0600 write: temp file, then os.replace (a new inode, so readers notice). The directory is
+    made 0700 when it does not exist."""
+    _private_dir(path.parent)
     tmp = path.with_name(path.name + f".tmp-{os.getpid()}")
     fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "w") as f:
@@ -353,12 +369,13 @@ def _write_private(path: Path, text: str) -> None:
 
 
 def dashboard_key(runs_dir: Path) -> str:
-    """K: $PILOT_DASHBOARD_KEY, else runs/dashboard.key (created once, mode 0600)."""
+    """K: $PILOT_DASHBOARD_KEY, else <data>/secrets/dashboard.key (created once, mode 0600, in a 0700
+    directory); an install from before the data platform has it at <data>/dashboard.key until imported."""
     env = os.environ.get(KEY_ENV, "").strip()
     if env:
         return env
-    path = Path(runs_dir) / KEY_FILE
-    path.parent.mkdir(parents=True, exist_ok=True)
+    path = _secret_path(runs_dir, KEY_FILE)
+    _private_dir(path.parent)
     try:
         fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     except FileExistsError:
@@ -378,7 +395,7 @@ def carry_over_record(runs_dir: Path | None) -> dict | None:
     if runs_dir is None:
         return None
     try:
-        rec = json.loads((Path(runs_dir) / CARRY_FILE).read_text())
+        rec = json.loads(_secret_path(runs_dir, CARRY_FILE).read_text())
         return {"fp": str(rec["fp"]), "until": float(rec["until"])}
     except (OSError, ValueError, KeyError, TypeError):
         return None
@@ -386,8 +403,7 @@ def carry_over_record(runs_dir: Path | None) -> dict | None:
 
 def write_carry_over(runs_dir: Path | None, fp: str, until: float) -> None:
     if runs_dir is not None:
-        Path(runs_dir).mkdir(parents=True, exist_ok=True)
-        _write_private(Path(runs_dir) / CARRY_FILE, json.dumps({"fp": fp, "until": until}) + "\n")
+        _write_private(Path(runs_dir) / SECRETS_DIR / CARRY_FILE, json.dumps({"fp": fp, "until": until}) + "\n")
 
 
 class KeySource:
@@ -410,7 +426,8 @@ class KeySource:
 
     @property
     def path(self) -> Path | None:
-        return self.runs_dir / KEY_FILE if self.runs_dir is not None else None
+        """The key file in force (secrets/, else the old place; see _secret_path)."""
+        return _secret_path(self.runs_dir, KEY_FILE) if self.runs_dir is not None else None
 
     def reload(self) -> None:
         """Read the file again on the next call, even when its stat looks unchanged (mtime has
@@ -443,12 +460,14 @@ class KeySource:
         return bool(given) and hmac.compare_digest(given.encode(), self.get().encode())
 
     def rotate(self) -> str:
-        """A new K, written atomically (0600). Refused when K comes from the environment."""
+        """A new K, written atomically (0600) into secrets/. A key left at the old place (an install from
+        before the data platform) is removed, so a lost secrets/ file never brings the old K back. Refused
+        when K comes from the environment."""
         if self.fixed or self.from_env:
             raise RuntimeError(f"the key comes from {KEY_ENV}: change the variable and restart both services")
         key = secrets.token_urlsafe(32)
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        _write_private(self.path, key + "\n")
+        _write_private(self.runs_dir / SECRETS_DIR / KEY_FILE, key + "\n")
+        (self.runs_dir / KEY_FILE).unlink(missing_ok=True)
         self.reload()
         return key
 
@@ -1107,7 +1126,7 @@ class Auth:
 
     def start(self) -> None:
         """First start of this code: open the 72-hour carry-over window for the current K, once. The
-        window is also kept next to the key (runs/dashboard.carryover), so a new store (a corrupt one
+        window is also kept next to the key (<data>/secrets/dashboard.carryover), so a new store (a corrupt one
         moved aside, a deleted file, another PILOT_AUTH_DB) takes it from there instead of opening a
         new one; a store recreated after corruption with no such record keeps the window shut."""
         runs = self.keys.runs_dir

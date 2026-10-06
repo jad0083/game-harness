@@ -312,7 +312,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
     """Dashboard for a live `pilot` (Pilot or Governor), or read-only over the data directory `runs_dir`
     when pilot is None. `telemetry` is the store (default: the live run's, else `open_store(runs_dir)`).
     `corpora` is where each game's pillars file is read (default: the repo's corpora/). `key` fixes
-    the service key (default: `PILOT_DASHBOARD_KEY` or runs/dashboard.key, re-read when it changes);
+    the service key (default: `PILOT_DASHBOARD_KEY` or <data>/secrets/dashboard.key, re-read when it changes);
     `auth` is the viewer's sign-in state (default: `Auth.from_env`)."""
     from .config import REPO
     log = pilot.log if pilot else None

@@ -428,12 +428,12 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   K (read through `KeySource` on every call, re-read once after a 401) with `X-Pilot-Device` /
   `X-Pilot-Device-Name` from the request's principal; a 401 from the live pilot becomes a 502, never
   a browser sign-out; the forwarded `/events` re-checks the principal every keepalive and closes.
-- `auth.py` (the viewer's sign-in): `KeySource` (K from env, a fixed key or `runs/dashboard.key`,
+- `auth.py` (the viewer's sign-in): `KeySource` (K from env, a fixed key or `runs/secrets/dashboard.key`,
   re-stat at most every 2 s, re-read on mtime/inode/size or after a refusal), `AuthStore`
   (`runs/auth.sqlite`, 0600 before SQLite opens it, WAL, busy_timeout; `devices` for browsers and
   scripts with only `sha256(secret)`, `grants`, `auth_events` aggregated per event/IP/minute
   (an address's network-caused failures add at most 10 rows an hour, and are pruned first past 10,000),
-  `meta` with the carry-over window, which `runs/dashboard.carryover` keeps too so a new store
+  `meta` with the carry-over window, which `runs/secrets/dashboard.carryover` keeps too so a new store
   neither reopens nor extends it; a corrupt file is moved aside; housekeeping at start and
   hourly), `Throttle` (in memory, per IPv4 address or IPv6 /64 and overall, reserve-before-await),
   and `Auth.middleware`, the request pipeline of ruling 49: host allowlist (421) and canonical host

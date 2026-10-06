@@ -24,12 +24,15 @@ def _toml_str(s: str) -> str:
 
 
 def notes_markdown(store, game: str, kind: str) -> str:
-    """One kind of note ('rule' or 'control') as the markdown file it had: a title, then one item per note."""
+    """One kind of note ('rule' or 'control') as the markdown file it had: a title, then one item per note.
+    A note with no model (a rule corrected by hand, imported without the `_(model, date)_` suffix) is
+    written without that suffix, as its file had it."""
     title = NOTE_FILES[kind][1]
     out = [f"# {title}\n\nWritten by the pilot app during play; promote proven items into the main corpus.\n"]
     for r in store.query("SELECT text, why, model, t FROM learned_notes WHERE game=? AND kind=? ORDER BY rowid",
                          (game, kind)):
-        out.append(f"\n- {r['text'].strip()}  \n  _why:_ {r['why'].strip()} _({r['model']}, {(r['t'] or '')[:10]})_\n")
+        by = f" _({r['model']}, {(r['t'] or '')[:10]})_" if r["model"] is not None else ""
+        out.append(f"\n- {r['text'].strip()}  \n  _why:_ {r['why'].strip()}{by}\n")
     return "".join(out)
 
 

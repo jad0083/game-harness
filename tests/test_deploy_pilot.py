@@ -9,6 +9,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
+import pytest
+
 REPO = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("pilot_affected", REPO / "scripts/pilot-affected.py")
 pa = importlib.util.module_from_spec(spec)
@@ -79,15 +81,20 @@ exit 0
 """
 
 
-def deploy(tmp_path: Path, changed: str, status: dict | None, dry: bool = True) -> tuple[str, list[str]]:
+def deploy(tmp_path: Path, changed: str, status: dict | None, dry: bool = True,
+           key_files: dict[str, str] | None = None) -> tuple[str, list[str]]:
     """Run the script in a new repository whose last commit changes `changed`; the pilot runs when
-    `status` is given (its /status JSON)."""
+    `status` is given (its /status JSON). With `key_files` (path in the repo -> key) the dashboard key
+    comes from those files instead of PILOT_DASHBOARD_KEY."""
     repo = tmp_path / "repo"
     (repo / "scripts").mkdir(parents=True)
     for f in ("deploy-pilot.sh", "pilot-affected.py"):
         shutil.copy(REPO / "scripts" / f, repo / "scripts" / f)
     (repo / ".venv").symlink_to(REPO / ".venv")
-    (repo / ".gitignore").write_text(".venv\n")
+    (repo / ".gitignore").write_text(".venv\nruns/\n")
+    for rel, key in (key_files or {}).items():
+        (repo / rel).parent.mkdir(parents=True, exist_ok=True)
+        (repo / rel).write_text(key + "\n")
 
     def commit(message: str) -> None:
         for args in (["add", "-A", "."], ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "-m", message]):
@@ -107,8 +114,12 @@ def deploy(tmp_path: Path, changed: str, status: dict | None, dry: bool = True) 
     env = {"PATH": f"{stubs}:/usr/bin:/bin", "STUB_LOG": str(log), "HOME": str(tmp_path),
            "PILOT_ACTIVE": "0" if status is not None else "3", "STATUS_JSON": json.dumps(status or {}),
            "PILOT_DASHBOARD_KEY": "k"}
+    base = {k: v for k, v in os.environ.items() if k not in ("PILOT_DATA_DIR", "PILOT_RUNS_DIR")}
+    if key_files is not None:
+        del env["PILOT_DASHBOARD_KEY"]
+        base.pop("PILOT_DASHBOARD_KEY", None)
     r = subprocess.run(["bash", str(repo / "scripts/deploy-pilot.sh"), "HEAD~1", "HEAD", *(["--dry-run"] if dry else [])],
-                       capture_output=True, text=True, env={**os.environ, **env}, timeout=60, check=False)
+                       capture_output=True, text=True, env={**base, **env}, timeout=60, check=False)
     assert r.returncode == 0, r.stderr
     return r.stdout, log.read_text().splitlines() if log.exists() else []
 
@@ -158,6 +169,17 @@ def test_a_real_run_pauses_through_the_dashboard_and_restarts_nothing_else(tmp_p
     assert "cargo build --release -p game-controller" in calls
     assert any(c.startswith("curl") and '"resume"' in c for c in calls)
     assert not any(c.startswith("systemctl --user restart") for c in calls)
+
+
+@pytest.mark.parametrize(("files", "used"), [
+    ({"runs/secrets/dashboard.key": "new-key", "runs/dashboard.key": "old-key"}, "new-key"),
+    ({"runs/dashboard.key": "old-key"}, "old-key"),
+])
+def test_the_script_reads_the_key_from_secrets_then_the_old_place(tmp_path, files, used):
+    """The data platform keeps the key in runs/secrets/; an install not yet imported has runs/dashboard.key."""
+    _out, calls = deploy(tmp_path, "crates/game-controller/src/civ6.rs", CIV6, dry=False, key_files=files)
+    status = [c for c in calls if c.startswith("curl") and c.endswith("/status")]
+    assert status and all(f"X-Pilot-Key: {used}" in c for c in status), calls
 
 
 def test_the_script_finds_cargo_in_the_users_toolchain():

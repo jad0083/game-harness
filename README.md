@@ -110,7 +110,7 @@ This is a tool for a home network, not the internet.
   game's own Lua sandbox; it connects only to 127.0.0.1 and sits behind the same token.
 - The dashboard can start runs and steer the game, so every request needs a principal: each
   browser holds its own revocable session (`runs/auth.sqlite`, hashes only), the service key
-  (`PILOT_DASHBOARD_KEY` or `runs/dashboard.key`, 0600) works only as a header from the controller
+  (`PILOT_DASHBOARD_KEY` or `runs/secrets/dashboard.key`, 0600) works only as a header from the controller
   itself, and scripts elsewhere use scoped tokens. A browser signs in once with a one-time code
   from a signed-in browser (⋯ > Add a device: QR code, link or three words) or from
   `python -m pilot dashboard-link` on the controller. Host names are allow-listed (no DNS

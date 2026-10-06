@@ -37,14 +37,14 @@ def run_cli(*argv: str, stdin: str | None = None, monkeypatch=None) -> tuple[int
 
 @pytest.fixture
 def runs(tmp_path, monkeypatch):
-    """runs/ with the old key in its file (no PILOT_DASHBOARD_KEY), and a store that has carried over
-    two old-cookie browsers, one signed-in browser and a script token."""
+    """runs/ with the old key in its file, secrets/dashboard.key (no PILOT_DASHBOARD_KEY), and a store that has
+    carried over two old-cookie browsers, one signed-in browser and a script token."""
     monkeypatch.delenv("PILOT_DASHBOARD_KEY", raising=False)
     monkeypatch.setenv("PILOT_RUNS_DIR", str(tmp_path / "runs"))
     r = tmp_path / "runs"
-    r.mkdir()
-    (r / "dashboard.key").write_text(OLD + "\n")
-    (r / "dashboard.key").chmod(0o600)
+    (r / "secrets").mkdir(parents=True, mode=0o700)
+    (r / "secrets/dashboard.key").write_text(OLD + "\n")
+    (r / "secrets/dashboard.key").chmod(0o600)
     auth = A.Auth.from_env(r)                       # the viewer's first start: the 72-hour window opens
     store = auth.store
     chrome = store.create_device("browser", name="Chrome on Windows", created_via="legacy_cookie",
@@ -70,9 +70,9 @@ def test_rotate_keeps_the_named_carried_over_devices_and_signs_out_the_rest(runs
     assert revoked(store, runs["chrome"]) is None
     assert revoked(store, runs["phone"]) == "rotate_unkept"
     assert revoked(store, runs["brave"]) is None and revoked(store, runs["token"]) is None     # nobody else
-    key = (runs["dir"] / "dashboard.key").read_text().strip()
+    key = (runs["dir"] / "secrets/dashboard.key").read_text().strip()
     assert key != OLD and len(key) >= 40 and OLD not in out and key not in out
-    assert stat.S_IMODE((runs["dir"] / "dashboard.key").stat().st_mode) == 0o600
+    assert stat.S_IMODE((runs["dir"] / "secrets/dashboard.key").stat().st_mode) == 0o600
     auth = A.Auth.from_env(runs["dir"])
     assert not auth.legacy_open()
     events = {r["event"] for r in store.audit_rows()}
@@ -98,13 +98,13 @@ def test_rotate_refuses_without_an_answer_when_not_at_a_terminal(runs, monkeypat
     monkeypatch.setattr(cli, "_interactive", lambda: False)
     code, out = run_cli("dashboard-key", "--rotate")
     assert code != 0 and "--keep" in out
-    assert (runs["dir"] / "dashboard.key").read_text().strip() == OLD
+    assert (runs["dir"] / "secrets/dashboard.key").read_text().strip() == OLD
 
 
 def test_rotate_refuses_unknown_ids(runs):
     code, out = run_cli("dashboard-key", "--rotate", "--keep", "0000000000")
     assert code != 0 and "0000000000" in out
-    assert (runs["dir"] / "dashboard.key").read_text().strip() == OLD
+    assert (runs["dir"] / "secrets/dashboard.key").read_text().strip() == OLD
 
 
 def _pair(app, *bodies: dict) -> list[int]:
@@ -186,7 +186,7 @@ def test_rotate_refuses_while_the_key_comes_from_the_environment(runs, monkeypat
     monkeypatch.setenv("PILOT_DASHBOARD_KEY", OLD)
     code, out = run_cli("dashboard-key", "--rotate", "--keep", "all")
     assert code != 0 and "PILOT_DASHBOARD_KEY" in out and "restart both services" in out
-    assert (runs["dir"] / "dashboard.key").read_text().strip() == OLD
+    assert (runs["dir"] / "secrets/dashboard.key").read_text().strip() == OLD
 
 
 def fake_live_pilot(runs_dir, status: dict):
@@ -218,9 +218,9 @@ def test_rotate_refuses_while_a_pre_change_live_pilot_runs(runs):
     try:
         code, out = run_cli("dashboard-key", "--rotate", "--keep", "all")
         assert code != 0 and "reads the key only at startup" in out
-        assert (runs["dir"] / "dashboard.key").read_text().strip() == OLD
+        assert (runs["dir"] / "secrets/dashboard.key").read_text().strip() == OLD
         code, _ = run_cli("dashboard-key", "--rotate", "--keep", "all", "--force")
-        assert code == 0 and (runs["dir"] / "dashboard.key").read_text().strip() != OLD
+        assert code == 0 and (runs["dir"] / "secrets/dashboard.key").read_text().strip() != OLD
     finally:
         srv.shutdown()
 
@@ -231,6 +231,22 @@ def test_rotate_goes_ahead_with_a_new_live_pilot(runs):
         assert run_cli("dashboard-key", "--rotate", "--keep", "all")[0] == 0
     finally:
         srv.shutdown()
+
+
+def test_rotate_moves_a_key_from_before_the_data_platform_into_secrets(runs):
+    """An install not yet imported keeps its key at <data>/dashboard.key (read as a fallback); the rotated
+    key goes to secrets/ (0600, the directory 0700) and the old file goes, so it can never come back."""
+    for name in ("dashboard.key", "dashboard.carryover"):
+        (runs["dir"] / "secrets" / name).rename(runs["dir"] / name)
+    (runs["dir"] / "secrets").rmdir()
+    assert A.KeySource(runs["dir"]).get() == OLD
+    code, out = run_cli("dashboard-key", "--rotate", "--keep", "all")
+    assert code == 0, out
+    key = runs["dir"] / "secrets/dashboard.key"
+    assert key.read_text().strip() not in ("", OLD) and str(key) in out
+    assert stat.S_IMODE(key.stat().st_mode) == 0o600 and stat.S_IMODE(key.parent.stat().st_mode) == 0o700
+    assert not (runs["dir"] / "dashboard.key").exists()
+    assert (runs["dir"] / "secrets/dashboard.carryover").exists()
 
 
 def test_dashboard_key_without_rotate_explains_itself(runs):
@@ -255,7 +271,7 @@ def test_a_running_viewer_and_live_pilot_take_the_new_key(runs):
             assert (await c.get("/status", headers={"X-Pilot-Key": OLD})).status == 200
             assert run_cli("dashboard-key", "--rotate", "--keep", "all")[0] == 0
             keys.reload()                          # (the 2-second stat window, collapsed for the test)
-            new = (runs["dir"] / "dashboard.key").read_text().strip()
+            new = (runs["dir"] / "secrets/dashboard.key").read_text().strip()
             assert (await c.get("/status", headers={"X-Pilot-Key": OLD})).status == 401
             assert (await c.get("/status", headers={"X-Pilot-Key": new})).status == 200
     asyncio.run(go())

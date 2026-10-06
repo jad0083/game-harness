@@ -88,17 +88,17 @@ def test_key_rotation_is_picked_up_through_mtime_and_inode(tmp_path, clock, monk
     ticks = [0.0]
     keys = A.KeySource(runs, monotonic=lambda: ticks[0])
     old = keys.get()
-    assert stat.S_IMODE((runs / "dashboard.key").stat().st_mode) == 0o600
+    assert stat.S_IMODE((runs / "secrets/dashboard.key").stat().st_mode) == 0o600
     auth = A.Auth(keys, A.AuthStore(runs / "auth.sqlite", clock=clock), clock=clock)
     app = make_app(None, runs, auth=auth)
 
     async def go():
         async with client(app) as c:
             assert (await c.get("/status", headers={"X-Pilot-Key": old})).status == 200
-            tmp = runs / "dashboard.key.new"
+            tmp = runs / "secrets/dashboard.key.new"
             tmp.write_text("n" * 43 + "\n")
             os.chmod(tmp, 0o600)
-            os.replace(tmp, runs / "dashboard.key")          # a new inode, as `dashboard-key --rotate` writes it
+            os.replace(tmp, runs / "secrets/dashboard.key")          # a new inode, as `dashboard-key --rotate` writes it
             assert (await c.get("/status", headers={"X-Pilot-Key": old})).status == 200   # stat at most every 2 s
             ticks[0] += 2.1
             assert (await c.get("/status", headers={"X-Pilot-Key": old})).status == 401
@@ -127,10 +127,11 @@ def test_live_proxy_reloads_the_key_once_after_a_401(tmp_path, clock, monkeypatc
         log.state.info["port"] = server.port
         log.state.status = "playing"
         log.emit("status")
-        (runs / "dashboard.key").write_text("old" * 11 + "\n")
+        (runs / "secrets").mkdir(mode=0o700)
+        (runs / "secrets/dashboard.key").write_text("old" * 11 + "\n")
         keys = A.KeySource(runs, monotonic=lambda: 0.0)
         assert keys.get() == "old" * 11
-        (runs / "dashboard.key").write_text("new" * 11 + "\n")      # rotated; the 2 s stat window has not passed
+        (runs / "secrets/dashboard.key").write_text("new" * 11 + "\n")      # rotated; the 2 s stat window has not passed
         proxy = LiveProxy(runs, keys)
         assert await proxy.url() == f"http://127.0.0.1:{server.port}"
         assert seen == ["old" * 11, "new" * 11]
@@ -815,13 +816,13 @@ def test_the_dashboard_page_runs_only_its_own_inline_script(tmp_path, clock):
 def test_the_carry_over_window_survives_a_new_store(tmp_path, clock, monkeypatch, how):
     """The 72 hours are counted from the first start of this code, not of this store: a store moved
     aside as corrupt, deleted or pointed elsewhere (PILOT_AUTH_DB) neither reopens a closed window
-    nor extends an open one (runs/dashboard.carryover keeps the deadline)."""
+    nor extends an open one (runs/secrets/dashboard.carryover keeps the deadline)."""
     monkeypatch.delenv("PILOT_AUTH_DB", raising=False)
     runs = tmp_path / "runs"
     runs.mkdir()
     a1 = A.Auth.from_env(runs, key=KEY, clock=clock)
     until = float(a1.store.meta("legacy_until"))
-    assert stat.S_IMODE((runs / "dashboard.carryover").stat().st_mode) == 0o600
+    assert stat.S_IMODE((runs / "secrets/dashboard.carryover").stat().st_mode) == 0o600
 
     def new_store():
         a1.store.db.close()
@@ -851,7 +852,7 @@ def test_a_recreated_store_without_a_record_of_the_window_keeps_it_shut(tmp_path
     runs.mkdir()
     a1 = A.Auth.from_env(runs, key=KEY, clock=clock)
     a1.store.db.close()
-    (runs / "dashboard.carryover").unlink()
+    (runs / "secrets/dashboard.carryover").unlink()
     (runs / "auth.sqlite").write_bytes(b"this is not a database" * 100)
     for p in runs.glob("auth.sqlite-*"):
         p.unlink()
