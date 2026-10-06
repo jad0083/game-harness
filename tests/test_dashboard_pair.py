@@ -655,6 +655,19 @@ def test_dashboard_link_prints_a_one_time_link_and_words_never_the_key(tmp_path,
     assert store.grant(m.group(1))["created_by"] == "cli"
 
 
+def test_dashboard_link_says_to_set_the_public_url_on_a_bridge_address(tmp_path, monkeypatch):
+    monkeypatch.setenv("PILOT_RUNS_DIR", str(tmp_path / "runs"))
+    monkeypatch.delenv("PILOT_PUBLIC_URL", raising=False)
+    monkeypatch.setattr(A, "lan_address", lambda: "172.21.0.2")
+    code, out = run_cli("dashboard-link", "--no-qr")
+    assert code == 0 and "set PILOT_PUBLIC_URL" in out and "http://172.21.0.2:8780/pair#c=" in out
+    monkeypatch.setattr(A, "lan_address", lambda: "192.168.1.76")
+    assert "PILOT_PUBLIC_URL" not in run_cli("dashboard-link", "--no-qr")[1]
+    monkeypatch.setattr(A, "lan_address", lambda: "172.21.0.2")
+    monkeypatch.setenv("PILOT_PUBLIC_URL", "http://nas:8780")
+    assert "PILOT_PUBLIC_URL" not in run_cli("dashboard-link", "--no-qr")[1]
+
+
 def test_dashboard_link_prints_a_qr_code_when_segno_is_installed(tmp_path, monkeypatch):
     pytest.importorskip("segno")
     monkeypatch.setenv("PILOT_RUNS_DIR", str(tmp_path / "runs"))

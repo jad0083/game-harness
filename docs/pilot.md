@@ -100,7 +100,10 @@ with Docker").
   `chown`. It holds the store `pilot.db`, `auth.sqlite`, frames, the learned overlay and `secrets/`
   ([Data directory](#data-directory)).
 - **Signing in.** `docker compose exec game-pilot pilot dashboard-link` prints a one-time sign-in link
-  (see [Signing in](#signing-in)).
+  (see [Signing in](#signing-in)). Set `PILOT_PUBLIC_URL` to the address people open
+  (`http://<the host's LAN address>:8780`, or the https name behind a proxy): the link is built from it,
+  and without it holds the container's bridge address (172.x), which no other machine can reach (the
+  command then prints a note saying so). It also redirects page loads on other host names to it.
 - **Litestream.** Off unless `LITESTREAM_REPLICA_URL` is set (an S3-compatible URL, with
   `LITESTREAM_ACCESS_KEY_ID` and `LITESTREAM_SECRET_ACCESS_KEY`). Then the container replicates
   `pilot.db` continuously. To restore, start the container on an empty data folder: when `/data/pilot.db`

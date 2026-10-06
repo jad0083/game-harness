@@ -220,17 +220,31 @@ def auth_store(s: Settings):
     return AuthStore(Path(os.environ.get("PILOT_AUTH_DB") or s.runs_dir / "auth.sqlite"))
 
 
+def _in_docker_bridge_range(addr: str) -> bool:
+    """Whether addr is in 172.16.0.0/12, where Docker's bridge networks live."""
+    import ipaddress
+    try:
+        return ipaddress.ip_address(addr) in ipaddress.ip_network("172.16.0.0/12")
+    except ValueError:
+        return False
+
+
 def dashboard_link(s: Settings, port: int, qr: bool = True, wait: bool = False) -> int:
     """A one-time sign-in (10 minutes): a link with the code in its fragment, three words to type and
     a QR code. Safe to print and to run by an agent: whoever uses it shows up in Devices; never K."""
     from .auth import lan_address, qr_text
     store = auth_store(s)
     g = store.create_grant("cli", words=True)
-    base = os.environ.get("PILOT_PUBLIC_URL", "").strip().rstrip("/") or f"http://{lan_address()}:{port}"
+    public = os.environ.get("PILOT_PUBLIC_URL", "").strip().rstrip("/")
+    lan = lan_address()
+    base = public or f"http://{lan}:{port}"
     url = f"{base}/pair#c={g['link']}"
     print("Sign in a browser (works once, for 10 minutes):")
     print(f"  {url}")
     print(f"or open {base}/ and type: {g['words']}")
+    if not public and _in_docker_bridge_range(lan):
+        print(f"note: {lan} looks like a container's address, which other machines cannot reach; "
+              "set PILOT_PUBLIC_URL to the address people open (http://<this machine's LAN address>:8780)")
     if qr:
         text = qr_text(url)
         print(text if text else "(no QR code: segno is not installed; .venv/bin/pip install segno)")

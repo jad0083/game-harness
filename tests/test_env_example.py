@@ -6,8 +6,8 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-# read in tests only, or internal hooks; never set by a user
-INTERNAL = {"PILOT_SUPERVISOR_ARGV", "PILOT_RESUME_DELAY_S", "PILOT_RUNS_DIR",
+# test-only hooks, never set by a user (PILOT_RUNS_DIR, an alias of PILOT_DATA_DIR, is mentioned there)
+INTERNAL = {"PILOT_SUPERVISOR_ARGV", "PILOT_RESUME_DELAY_S",
             # constants of the code that only look like settings (not environment variables)
             "GAME_KEYS", "GAME_TITLE", "GAME_WINDOWS"}
 
@@ -31,7 +31,9 @@ def test_every_setting_the_code_reads_is_in_env_example():
 
 def test_env_example_holds_no_values_for_secrets():
     text = (ROOT / ".env.example").read_text()
-    for key in ("GEMINI_API_KEY", "GAME_AGENT_TOKEN", "PILOT_PROXY_SECRET", "PILOT_DASHBOARD_KEY"):
+    for key in ("GEMINI_API_KEY", "GOOGLE_API_KEY", "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GAME_AGENT_TOKEN",
+                "PILOT_PROXY_SECRET", "PILOT_DASHBOARD_KEY", "LITESTREAM_ACCESS_KEY_ID",
+                "LITESTREAM_SECRET_ACCESS_KEY"):
         assert re.search(rf"^#?\s*{key}=\s*$", text, re.MULTILINE), key
 
 

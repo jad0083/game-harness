@@ -43,11 +43,17 @@ installer), and a model key.
 ```bash
 curl -O https://raw.githubusercontent.com/jad0083/game-harness/main/compose.yaml
 curl -O https://raw.githubusercontent.com/jad0083/game-harness/main/.env.example    # or clone the repository
-cp .env.example .env          # fill in GEMINI_API_KEY, GAME_AGENT_URL and GAME_AGENT_TOKEN
+cp .env.example .env          # fill in GEMINI_API_KEY, GAME_AGENT_URL and GAME_AGENT_TOKEN, and set
+                              # PILOT_PUBLIC_URL=http://<this machine's LAN address>:8780
 mkdir data && sudo chown 10010:10010 data    # the container runs as uid 10010; its data lives in ./data
 docker compose up -d
 docker compose exec game-pilot pilot dashboard-link          # prints the link that signs you in
 ```
+
+`PILOT_PUBLIC_URL` is the address people open (or the https name behind a proxy). Set it before
+`docker compose up -d`: the sign-in link is built from it, and without it the link holds the
+container's own address, which other machines cannot reach. It also makes the dashboard redirect page
+loads on other host names to it.
 
 The dashboard is on port 8780 (`GAME_PILOT_PORT` changes the published port, `GAME_PILOT_DATA` the data
 folder, `GAME_PILOT_VERSION` the image tag). Without the three required values it still starts, for
