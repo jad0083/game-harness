@@ -2,6 +2,7 @@
 
 ## Open
 
+- [x] gamepilot.saczone.com answered 502 after the move to deb-dock1 (2026-10-06): NPM host 54's advanced config carries its own `set $upstream_app http://<host>:8780` (beside the Authelia block and the X-Pilot-Proxy header), so changing the host's forward_host left traffic on deb-mini2. The check after the repoint saw only the unauthenticated Authelia redirect. Fixed by pointing that upstream at 192.168.1.53:8780; verified from inside the NPM container with the proxy secret (`/api/auth/me` via proxy 200, page 200). A future move must change both forward_host and the advanced config, and check a request that passes Authelia
 - [ ] Game agent traffic is plain HTTP on the LAN, so the bearer token (`GAME_AGENT_TOKEN`) crosses the network in cleartext (pre-existing; flagged again by a security review of the game-pilot stack, 2026-10-06). TLS or pairing belongs to Portability 3
 - [ ] The agent installer limits mini-rig2's firewall rule to the host that served it; the controller now runs on deb-dock1, so the rule was edited by hand to admit 192.168.1.76 and .53 (2026-10-06). A reinstall resets it: the installer should take the controller address(es)
 - [ ] pydantic-ai-slim 2.54 / anthropic 1.11 fail `test_a_run_from_gemini_with_thoughts_continues_on_anthropic` ("Streamed response ended without content or tool calls"); the image and CI are pinned to the tested 2.51 / 1.8 through `constraints.txt` (2026-10-06). Investigate before bumping the pins
