@@ -1156,3 +1156,158 @@ def test_the_orders_directory_names_files_that_arrived_after_check(old_install, 
     assert (orders / "civ6_new.json").exists() and not (orders / "civ6_kublai.json").exists()
     line = next(f for f in e.value.failed if f.startswith(f"{orders}:"))
     assert "civ6_new.json" in line and "arrived after check" in line, line
+
+
+# ---------------------------------------------------------------- fix round 4: the WAL index header; no directory in the unit
+
+def _journal_mode(runs: Path, mode: str) -> None:
+    db = sqlite3.connect(runs / "telemetry.sqlite", isolation_level=None)
+    db.execute(f"PRAGMA journal_mode={mode}")
+    db.close()
+    for n in ("telemetry.sqlite-wal", "telemetry.sqlite-shm"):
+        (runs / n).unlink(missing_ok=True)
+
+
+@pytest.mark.parametrize("mode", ["DELETE", "WAL"])
+@pytest.mark.parametrize("member", ["telemetry.sqlite-shm", "telemetry.sqlite-wal"])
+def test_a_directory_in_the_database_unit_is_never_deleted(old_install, tmp_path, mode, member):
+    """A directory where SQLite keeps the -wal or -shm was never examined: the database is no prune target
+    while it is there, and check names it."""
+    runs = old_install / "runs"
+    _journal_mode(runs, mode)
+    (runs / member).mkdir()
+    (runs / member / "precious.txt").write_text("never examined")
+    data = tmp_path / "data"
+    store, _ = do_import(old_install, data)
+    diffs = dataimport.check(old_install, store, data)
+    assert [d for d in diffs if d.startswith(f"runs/{member}: a directory") and d.endswith(HINT)], diffs
+    with pytest.raises(dataimport.PruneRefused):
+        dataimport.prune_source(old_install, store)
+    assert (runs / member / "precious.txt").exists() and (runs / "telemetry.sqlite").exists()
+
+
+def test_the_command_in_place_keeps_a_directory_where_the_shm_was(old_install, monkeypatch, capsys):
+    """The live install prunes in place (the data directory is <root>/runs), through the command."""
+    runs = old_install / "runs"
+    _journal_mode(runs, "DELETE")
+    (runs / "telemetry.sqlite-shm").mkdir()
+    (runs / "telemetry.sqlite-shm/precious.txt").write_text("never examined")
+    monkeypatch.setenv("PILOT_DATA_DIR", str(runs))
+    monkeypatch.delenv("PILOT_RUNS_DIR", raising=False)
+    assert cli.main(["data", "import", "--from", str(old_install), "--prune-source"]) == 1
+    out = capsys.readouterr().out
+    assert "not pruned" in out and "runs/telemetry.sqlite-shm: a directory" in out, out
+    assert (runs / "telemetry.sqlite-shm/precious.txt").exists() and (runs / "telemetry.sqlite").exists()
+    assert (runs / RUN / "events.jsonl").exists(), "nothing at all is deleted while check lists the directory"
+
+
+def test_a_unit_member_not_stamped_as_a_file_is_never_deleted(old_install, tmp_path, monkeypatch):
+    """The second guard: were the database unit listed with a directory in it, prune would still refuse to
+    delete that member, and the unit stays whole."""
+    runs = old_install / "runs"
+    _journal_mode(runs, "DELETE")                           # the database opens without its -shm
+    (runs / "telemetry.sqlite-shm").mkdir()
+    (runs / "telemetry.sqlite-shm/precious.txt").write_text("never examined")
+    data = tmp_path / "data"
+    monkeypatch.setattr(dataimport, "_db_unit_problems", lambda root: [])     # the first guard switched off
+    store, _ = do_import(old_install, data)
+    assert dataimport.check(old_install, store, data) == []
+    with pytest.raises(dataimport.PruneIncomplete) as e:
+        dataimport.prune_source(old_install, store)
+    line = next(f for f in e.value.failed if f.startswith(f"{runs / 'telemetry.sqlite'}:"))
+    assert "not a regular file" in line and "-shm" in line, line
+    assert (runs / "telemetry.sqlite-shm/precious.txt").exists() and (runs / "telemetry.sqlite").exists()
+    assert not (runs / "pilot-settings.json").exists(), "the other targets are still deleted"
+
+
+def test_a_commit_through_a_wal_restart_after_check_keeps_the_database(old_install, tmp_path, monkeypatch):
+    """After a checkpoint the next commit rewinds the WAL to its start: the -wal keeps its size, the main file
+    is not written, and the -shm's modification time is not stamped (every reader moves it). When that commit
+    lands in the clock tick of the WAL's last write, only the wal-index header in -shm (frame count, checksums,
+    salts) tells it from what check read; the modification times are made to collide here with os.utime."""
+    runs = old_install / "runs"
+    data = tmp_path / "data"
+    store, _ = do_import(old_install, data)
+    w = sqlite3.connect(runs / "telemetry.sqlite", isolation_level=None)
+    w.execute("PRAGMA journal_mode=WAL")
+    w.execute("PRAGMA wal_autocheckpoint=0")
+    w.execute("CREATE TABLE filler(a)")                      # a table check never reads; a WAL of 30+ frames
+    for _ in range(30):
+        w.execute("INSERT INTO filler VALUES (?)", (os.urandom(2000).hex(),))
+    busy, log, done = w.execute("PRAGMA wal_checkpoint(PASSIVE)").fetchone()
+    assert busy == 0 and log == done, "the whole WAL is checkpointed: the next commit restarts it"
+    real = dataimport.check
+    wal = runs / "telemetry.sqlite-wal"
+
+    def check_then_restart_commit(root, st, data_dir):
+        before = {n: (runs / n).stat() for n in dataimport.OLD_DB_UNIT}
+        out = real(root, st, data_dir)
+        w.execute("INSERT INTO campaigns(id, game, name, created) VALUES ('civ6/late', 'civ6', 'late', 9.0)")
+        assert wal.stat().st_size == before["telemetry.sqlite-wal"].st_size, "the WAL restarted at its start"
+        assert (runs / "telemetry.sqlite").stat().st_mtime_ns == before["telemetry.sqlite"].st_mtime_ns
+        for n, s in before.items():                          # the same filesystem clock tick
+            os.utime(runs / n, ns=(s.st_atime_ns, s.st_mtime_ns))
+        return out
+    monkeypatch.setattr(dataimport, "check", check_then_restart_commit)
+    try:
+        with pytest.raises(dataimport.PruneIncomplete) as e:
+            dataimport.prune_source(old_install, store)
+        assert all((runs / n).exists() for n in dataimport.OLD_DB_UNIT), "kept together"
+    finally:
+        w.close()                                            # the old pilot's clean close checkpoints the WAL
+    assert [f for f in e.value.failed if f.startswith(f"{runs / 'telemetry.sqlite'}: changed since check")], e.value.failed
+    assert runs / "pilot-settings.json" in e.value.deleted
+    monkeypatch.setattr(dataimport, "check", real)
+    assert "campaign civ6/late missing" in dataimport.check(old_install, store, data), "the row is still readable"
+
+
+@pytest.mark.parametrize("writer_open", [False, True])
+def test_a_clean_install_prunes_fully_and_checks_reads_leave_the_shm_header(old_install, tmp_path, writer_open):
+    """No false "changed since check": check's own read-only opens (and an idle old connection) leave the
+    wal-index header as the stamp read it, and the database goes with its -wal and -shm."""
+    runs = old_install / "runs"
+    data = tmp_path / "data"
+    store, _ = do_import(old_install, data)
+    w = sqlite3.connect(runs / "telemetry.sqlite") if writer_open else None
+    try:
+        if w is not None:
+            w.execute("SELECT 1 FROM runs").fetchall()
+        with dataimport._old_db(old_install, []):            # the settle open, as prune does
+            pass
+        shm = runs / "telemetry.sqlite-shm"
+        assert shm.is_file()
+        first = dataimport._stamp(shm)
+        for _ in range(3):
+            assert dataimport.check(old_install, store, data) == []
+        assert dataimport._stamp(shm) == first
+        deleted = dataimport.prune_source(old_install, store)
+    finally:
+        if w is not None:
+            w.close()
+    assert runs / "telemetry.sqlite" in deleted and runs / "telemetry.sqlite-wal" in deleted and shm in deleted
+    assert not any((runs / n).exists() for n in dataimport.OLD_DB_UNIT)
+
+
+def test_a_run_directory_swapped_for_a_link_before_delete_is_kept_as_changed(old_install, tmp_path, monkeypatch):
+    """The directory becomes a symbolic link right after its second stamp: nothing is removed, and the
+    message says so rather than "files before it are gone"."""
+    data = tmp_path / "data"
+    store, _ = do_import(old_install, data)
+    real_stamp = dataimport._stamp
+    run, aside = old_install / "runs" / RUN, tmp_path / "aside"
+    seen = {"n": 0}
+
+    def stamp(q):
+        out = real_stamp(q)
+        if q == run:
+            seen["n"] += 1
+            if seen["n"] == 2:
+                run.rename(aside)
+                run.symlink_to(aside, target_is_directory=True)
+        return out
+    monkeypatch.setattr(dataimport, "_stamp", stamp)
+    with pytest.raises(dataimport.PruneIncomplete) as e:
+        dataimport.prune_source(old_install, store)
+    line = next(f for f in e.value.failed if f.startswith(f"{run}:"))
+    assert "changed since check" in line and "symbolic link" in line and "files before it are gone" not in line, line
+    assert run.is_symlink() and (aside / "events.jsonl").exists() and (aside / "traces/0001.json").exists()

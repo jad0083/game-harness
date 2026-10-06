@@ -56,6 +56,8 @@ JOURNALS = {"stellaris": "stellaris", "civ6": "civ6", "terran-2329": "galciv4"} 
 SECRET_FILES = (KEY_FILE, CARRY_FILE)
 OLD_DB_UNIT = ("telemetry.sqlite-wal", "telemetry.sqlite-shm", "telemetry.sqlite")   # one prune target, deleted
                                                                                      # in this order
+SHM_HEADER = 96      # the wal-index header at the start of -shm: both copies of version, frame count, page count,
+                     # frame checksum and salts; rewritten by every commit, never by a reader
 OLD_SETTINGS = ("pilot-settings.json", "model-usage.json")
 TABLES = ("campaigns", "runs", "events", "decisions", "metrics", "plans", "strategies", "run_state", "learned_notes",
           "learned_screens", "episodes", "ledger", "journal", "settings", "model_usage", "standing_orders")
@@ -204,14 +206,35 @@ def _scan(d: Path, root: Path, skipped: list[str]) -> list[os.DirEntry] | None:
         return None
 
 
+def _db_unit_problems(root: Path) -> list[str]:
+    """Why the telemetry database with its -wal and -shm is not a unit of plain files: each member present
+    that is a symbolic link (never followed) or not a regular file (a directory there was never examined)."""
+    out = []
+    for q in (root / "runs" / n for n in OLD_DB_UNIT):
+        try:
+            st = os.lstat(q)
+        except FileNotFoundError:
+            continue
+        except OSError as e:
+            out.append(f"{_rel(root, q)}: cannot be examined ({e.strerror or e})")
+            continue
+        if stat.S_ISLNK(st.st_mode):
+            out.append(f"{_rel(root, q)}: {LINK}")
+        elif not stat.S_ISREG(st.st_mode):
+            what = "a directory" if stat.S_ISDIR(st.st_mode) else "not a regular file"
+            out.append(f"{_rel(root, q)}: {what} where the old pilot kept a file (never examined)")
+    return out
+
+
 @contextlib.contextmanager
 def _old_db(root: Path, skipped: list[str]):
     """runs/telemetry.sqlite opened read-only (never written; SQLite may leave empty -wal/-shm files
-    beside a WAL file), or None when there is none or it cannot be read."""
+    beside a WAL file), or None when there is none, it cannot be read, or one of the three is a symbolic
+    link or not a regular file."""
     path = root / OLD_DB
-    links = [q for q in (root / "runs" / n for n in OLD_DB_UNIT) if q.is_symlink()]
-    skipped += [f"{_rel(root, q)}: {LINK}" for q in links]
-    if links or not path.is_file():
+    problems = _db_unit_problems(root)
+    skipped += problems
+    if problems or not path.is_file():
         yield None
         return
     db = None
@@ -1114,11 +1137,23 @@ def _tracked(root: Path, paths: list[Path]) -> list[str]:
     return [f for f in r.stdout.split("\0") if f]
 
 
+def _shm_header(p: Path):
+    """The first SHM_HEADER bytes of SQLite's -shm index (fewer when it is shorter), read plainly, with no
+    lock; something never equal to another stamp when it cannot be read."""
+    try:
+        with open(p, "rb") as f:
+            return f.read(SHM_HEADER)
+    except OSError:
+        return object()
+
+
 def _stamp(p: Path):
     """What a prune target looked like, its type first: a file's mode, size, modification time and inode; a
     directory's every entry the same way; None when it is absent. One that cannot be read is never equal to
-    an earlier stamp. SQLite's -shm index is stamped without its modification time: every reader (check's
-    own read-only open too) rewrites its read marks; a writer's commit shows in the -wal."""
+    an earlier stamp. SQLite's -shm index is stamped with its wal-index header instead of its modification
+    time: every reader (check's own read-only open too) rewrites its read marks, while every commit rewrites
+    the header, and a commit that restarts the WAL after a checkpoint shows nowhere else (the -wal keeps
+    its size, the main file is not written)."""
     try:
         st = os.lstat(p)
     except FileNotFoundError:
@@ -1128,7 +1163,8 @@ def _stamp(p: Path):
     kind = ("dir" if stat.S_ISDIR(st.st_mode) else "file" if stat.S_ISREG(st.st_mode)
             else "link" if stat.S_ISLNK(st.st_mode) else "other")
     if kind != "dir":
-        return (kind, st.st_mode, st.st_size, st.st_ino, None if p.name.endswith("-shm") else st.st_mtime_ns)
+        shm = kind == "file" and p.name.endswith("-shm")
+        return (kind, st.st_mode, st.st_size, st.st_ino, _shm_header(p) if shm else st.st_mtime_ns)
     entries = []
 
     def fail(e: OSError) -> None:
@@ -1144,18 +1180,23 @@ def _stamp(p: Path):
     return ("dir", st.st_mode, tuple(sorted(entries)))
 
 
-def _delete(p: Path, stamp) -> None:
+def _delete(p: Path, stamp, file_only: bool = False) -> None:
     """Delete a target as the type it was stamped with: a file is never removed as a directory (it would be
-    one nobody examined), a directory never through a link; anything else is never deleted."""
+    one nobody examined), a directory never through a link; anything else is never deleted. A member of the
+    database unit (`file_only`) is deleted only as a file."""
     if stamp[0] == "file":
         p.unlink()                          # a directory there now: IsADirectoryError
-    elif stamp[0] == "dir":
+    elif stamp[0] == "dir" and not file_only:
+        now = os.lstat(p).st_mode           # gone: FileNotFoundError
+        if not stat.S_ISDIR(now):           # a link or a file there now: nothing is removed
+            what = "a symbolic link" if stat.S_ISLNK(now) else "a file" if stat.S_ISREG(now) else "not a directory"
+            raise OSError(f"changed since check, kept (now {what}; import and prune again)")
         try:
-            shutil.rmtree(p)                # a file or a link there now: an error, nothing removed
+            shutil.rmtree(p)
         except OSError as e:
             raise OSError(e.errno, f"stopped at {e.filename} ({e.strerror or e}); files before it are gone") from e
     else:
-        raise OSError(f"not a regular file or directory ({stamp[0]})")
+        raise OSError(f"not a regular file{'' if file_only else ' or directory'} ({stamp[0]})")
 
 
 def _targets(root: Path, store, data_dir: Path, kept: list[str]) -> list[tuple[Path, ...]]:
@@ -1163,11 +1204,12 @@ def _targets(root: Path, store, data_dir: Path, kept: list[str]) -> list[tuple[P
     with its -wal and -shm (one unit: a row committed to the WAL after check must not lose its database),
     the two settings files, each regular runs/orders/*.json, each run directory the store holds a run for and
     whose layout holds nothing foreign, and an old secret once secrets/ holds the same bytes. A symbolic link
-    at any of these places is never a target."""
+    at any of these places is never a target, and the database is one only while each of its three names
+    that exists is a regular file (check names what is not)."""
     runs = root / "runs"
     units: list[tuple[Path, ...]] = []
     db = tuple(runs / n for n in OLD_DB_UNIT)
-    if not any(q.is_symlink() for q in db) and db[-1].is_file():
+    if not _db_unit_problems(root) and db[-1].is_file():
         units.append(db)
     units += [(runs / n,) for n in OLD_SETTINGS if not (runs / n).is_symlink() and (runs / n).is_file()]
     units += [(q,) for q in _orders_files(root, [])]
@@ -1234,16 +1276,19 @@ def prune_source(root: Path, store, kept: list[str] | None = None) -> list[Path]
                            f"in {root}; nothing was deleted")
     deleted, failed, outcome = [], [], {}
     for unit in units:
-        if any(_stamp(q) != stamps[q] for q in unit):          # one unit: all of it stays
+        changed = any(_stamp(q) != stamps[q] for q in unit)
+        odd = [q.name for q in unit if len(unit) > 1 and stamps[q] is not None and stamps[q][0] != "file"]
+        if changed or odd:                                      # one unit: all of it stays
+            why = "changed since check" if changed else f"{odd[0]} is not a regular file"
             with_wal = " with its -wal and -shm" if len(unit) > 1 else ""
-            failed.append(f"{unit[-1]}: changed since check, kept{with_wal} (import and prune again)")
-            outcome.update(dict.fromkeys(unit, "changed since check"))
+            failed.append(f"{unit[-1]}: {why}, kept{with_wal} (import and prune again)")
+            outcome.update(dict.fromkeys(unit, why))
             continue
         for q in unit:
             if stamps[q] is None:
                 continue                        # absent when stamped and still absent
             try:
-                _delete(q, stamps[q])
+                _delete(q, stamps[q], file_only=len(unit) > 1)
                 deleted.append(q)
             except OSError as e:
                 failed.append(f"{q}: {e.strerror or e}")
