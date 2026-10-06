@@ -385,7 +385,7 @@ def data_cmd(s: Settings, a) -> int:
     """`data import` copies the install at --from into the data directory and prints what it added and
     skipped; with --prune-source it then checks, and deletes the imported old files only when nothing is
     missing. `data check` prints one difference per line and exits 1 when there is any."""
-    from .dataimport import PruneRefused, check, import_install, prune_source
+    from .dataimport import PruneIncomplete, PruneRefused, check, import_install, prune_source
     from .store import open_store
     root = Path(a.source)
     if not root.is_dir():
@@ -413,18 +413,23 @@ def data_cmd(s: Settings, a) -> int:
         print("\n".join(diffs))
         return 1
     kept: list[str] = []
+    failed: list[str] = []
     try:
         deleted = prune_source(root, store, kept)
     except PruneRefused as e:
         print(f"not pruned: {e}")
         return 1
+    except PruneIncomplete as e:
+        deleted, failed = e.deleted, e.failed
     for p in deleted:
         print(f"deleted {p}")
-    if not deleted:
+    if not deleted and not failed:
         print("nothing to delete")
+    for item in failed:
+        print(f"not deleted {item}")
     for item in kept:
         print(f"kept {item}")
-    return 0
+    return 1 if failed else 0
 
 
 DURATION = {"m": 60, "h": 3600, "d": 86400}

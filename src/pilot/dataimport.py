@@ -3,7 +3,7 @@ an install from before the data platform, copied into the store and the data dir
 
     runs/telemetry.sqlite            campaigns, runs, events, decisions, metrics, plans, strategies
                                      (opened read-only; never written)
-    runs/<id>/events.jsonl           events the telemetry file lacks, by (run_id, t, kind)
+    runs/<id>/events.jsonl           events the telemetry file lacks, counted by (run_id, t, kind)
     runs/<id>/traces/NNNN.json       decisions.trace where it is empty
     runs/<id>/status.json            run_state
     runs/<id>/latest.jpg, frames/    <data>/frames/<id>/ (never over an existing file)
@@ -14,10 +14,13 @@ an install from before the data platform, copied into the store and the data dir
     runs/dashboard.key, dashboard.carryover                     <data>/secrets/ (0600; the directory 0700)
 
 The import is idempotent: what the store already holds is skipped by key, so it can run again after new
-runs were recorded. A damaged item (a truncated JSONL line, an unparseable file, a learned screen the store
-cannot hold) is named in Report.skipped and the import goes on. `check` reads the source the same way and
-lists what the store or the data directory lacks. `prune_source` deletes the imported runtime files and
-nothing else. The data directory may be <root>/runs itself (the default install imports in place).
+runs were recorded. A damaged item (an undecodable or truncated JSONL line, an unparseable file, an
+unreadable table, an event that cannot be recorded, a learned screen the store cannot hold) is named in
+Report.skipped and the import goes on. `check` reads the source the same way and lists what the store or
+the data directory lacks, and every source prune could delete that was not imported in full (ruling R11:
+prune fails closed). `prune_source` deletes the imported runtime files, nothing else, and nothing at all
+while check lists anything. The data directory may be <root>/runs itself (the default install imports in
+place).
 """
 
 from __future__ import annotations
@@ -32,6 +35,7 @@ import subprocess
 import tempfile
 import time
 import tomllib
+from collections import Counter
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from datetime import date, timedelta
@@ -42,7 +46,8 @@ from .learned_files import NOTE_FILES, _screen_block, write_learned_dir
 
 PLATFORM_DIRS = frozenset({"frames", "learned", "secrets"})   # the data directory's own (when it is <root>/runs)
 OLD_DIRS = frozenset({"orders"})                               # old runs/ directories that are not runs
-RUN_FILES = frozenset({"events.jsonl", "status.json", "traces", "frames", "latest.jpg"})   # all a run dir held
+RUN_TOP_FILES = frozenset({"events.jsonl", "status.json", "latest.jpg"})   # what the old EventLog wrote,
+TRACE_NAME = re.compile(r"-?\d+\.json")                                    # with frames/*.jpg and traces/
 JOURNALS = {"stellaris": "stellaris", "civ6": "civ6", "terran-2329": "galciv4"}   # games/<dir> -> its game
 SECRET_FILES = (KEY_FILE, CARRY_FILE)
 OLD_FILES = ("telemetry.sqlite", "telemetry.sqlite-wal", "telemetry.sqlite-shm", "pilot-settings.json",
@@ -72,17 +77,29 @@ SECTION_END = re.compile(r"#{1,2} ")       # the next level-1 or level-2 heading
 STAMP = re.compile(r"\*\*(.+?)\*\*: ")
 BATCH = 500
 FILL_TRACE = "UPDATE decisions SET trace=? WHERE run_id=? AND episode=? AND trace IS NULL"
+HINT = "fix or remove it by hand, then prune"
+OLD_DB = "runs/telemetry.sqlite"
 
 
 @dataclass
 class Report:
-    added: dict[str, int] = field(default_factory=dict)    # rows added per table, traces filled, secrets copied
+    added: dict[str, int] = field(default_factory=dict)    # rows added per table, traces, secrets copied
     skipped: list[str] = field(default_factory=list)       # damaged or unimportable items, with the reason
     frames: int = 0                                        # frame files copied
 
 
 class PruneRefused(RuntimeError):
-    """prune_source would delete a git-tracked path, or cannot tell."""
+    """prune_source would delete something not imported in full or tracked by git, or cannot tell; nothing
+    was deleted."""
+
+
+class PruneIncomplete(RuntimeError):
+    """Some prune targets could not be deleted; `deleted` lists those that were, `failed` the others with
+    the reason."""
+
+    def __init__(self, deleted: list[Path], failed: list[str]):
+        super().__init__(f"{len(failed)} path{'s' if len(failed) != 1 else ''} could not be deleted")
+        self.deleted, self.failed = deleted, failed
 
 
 # ---------------------------------------------------------------- reading the source
@@ -115,15 +132,21 @@ def _load_json(path: Path, root: Path, skipped: list[str]):
 
 
 def _jsonl(path: Path, root: Path, skipped: list[str]) -> Iterator[tuple[int, dict]]:
-    """(line number, object) for each line that is a JSON object; blank lines are passed over."""
+    """(line number, object) for each line that is a JSON object; blank lines are passed over. Lines are
+    decoded one by one, so a bad byte costs its own line only."""
     if not path.is_file():
         return
     try:
-        lines = path.read_text(encoding="utf-8").split("\n")
-    except (OSError, UnicodeDecodeError) as e:
+        raw = path.read_bytes()
+    except OSError as e:
         skipped.append(f"{_rel(root, path)}: cannot be read ({e})")
         return
-    for n, line in enumerate(lines, 1):
+    for n, data in enumerate(raw.split(b"\n"), 1):
+        try:
+            line = data.decode("utf-8")
+        except UnicodeDecodeError:
+            skipped.append(f"{_rel(root, path)} line {n}: not UTF-8")
+            continue
         if not line.strip():
             continue
         try:
@@ -141,7 +164,7 @@ def _jsonl(path: Path, root: Path, skipped: list[str]) -> Iterator[tuple[int, di
 def _old_db(root: Path, skipped: list[str]):
     """runs/telemetry.sqlite opened read-only (never written; SQLite may leave empty -wal/-shm files
     beside a WAL file), or None when there is none or it cannot be read."""
-    path = root / "runs" / "telemetry.sqlite"
+    path = root / OLD_DB
     if not path.is_file():
         yield None
         return
@@ -152,7 +175,7 @@ def _old_db(root: Path, skipped: list[str]):
     except sqlite3.Error as e:
         if db is not None:
             db.close()
-        skipped.append(f"{_rel(root, path)}: cannot be read ({e})")
+        skipped.append(f"{OLD_DB}: cannot be read ({e})")
         yield None
         return
     try:
@@ -165,23 +188,26 @@ def _quoted(cols: tuple[str, ...]) -> str:
     return ", ".join(f'"{c}"' for c in cols)          # fixed column names only ("trigger" is a keyword)
 
 
-def _columns(db: sqlite3.Connection, table: str) -> set[str]:
-    return {r[1] for r in db.execute(f"PRAGMA table_info({table})")}     # fixed table names only
+def _old_table(db: sqlite3.Connection, table: str, cols: tuple[str, ...], skipped: list[str],
+               where: str = "") -> Iterator[tuple]:
+    """The old table's rows in `cols` order (NULL for a column the file lacks; none when the table is
+    missing). A table that cannot be read to its end (a damaged page) is named in `skipped`; the rows
+    before the damage are yielded."""
+    try:
+        have = {r[1] for r in db.execute(f"PRAGMA table_info({table})")}     # fixed table names only
+        if not have:
+            return
+        sel = ", ".join(f'"{c}"' if c in have else "NULL" for c in cols)
+        for row in db.execute(f"SELECT {sel} FROM {table} {where} ORDER BY rowid"):
+            yield tuple(row)
+    except sqlite3.DatabaseError as e:
+        skipped.append(f"{OLD_DB} table {table}: cannot be read ({e})")
 
 
-def _old_rows(db: sqlite3.Connection, table: str, cols: tuple[str, ...]):
-    """The old table's rows in `cols` order (NULL for a column the file lacks); none when the table is missing."""
-    have = _columns(db, table)
-    if not have:
-        return iter(())
-    sel = ", ".join(f'"{c}"' if c in have else "NULL" for c in cols)
-    return db.execute(f"SELECT {sel} FROM {table} ORDER BY rowid")
-
-
-def _old_events(db: sqlite3.Connection, root: Path, skipped: list[str]) -> dict[str, list[tuple]]:
+def _old_events(db: sqlite3.Connection, skipped: list[str]) -> dict[str, list[tuple]]:
     """The old file's events per run, (run_id, t, kind, data) with data a JSON object, in recorded order."""
     out: dict[str, list[tuple]] = {}
-    for rid, t, kind, data in _old_rows(db, "events", ("run_id", "t", "kind", "data")):
+    for rid, t, kind, data in _old_table(db, "events", ("run_id", "t", "kind", "data"), skipped):
         try:
             ok = isinstance(json.loads(data), dict)
         except (TypeError, ValueError):
@@ -189,7 +215,7 @@ def _old_events(db: sqlite3.Connection, root: Path, skipped: list[str]) -> dict[
         why = "" if ok else "data is not a JSON object"
         why = why or ("" if _number(t) and isinstance(kind, str) else "no t or kind")
         if why:
-            skipped.append(f"runs/telemetry.sqlite event {rid} t={t} {kind}: {why}")
+            skipped.append(f"{OLD_DB} event {rid} t={t} {kind}: {why}")
             continue
         out.setdefault(rid, []).append((rid, t, kind, data))
     return out
@@ -215,6 +241,27 @@ def _run_dirs(root: Path, data_dir: Path, skipped: list[str]) -> list[Path]:
             out.append(d)
         else:
             skipped.append(f"{_rel(root, d)}: not a run directory")
+    return out
+
+
+def _foreign(d: Path) -> list[str]:
+    """Paths under a run directory the old pilot never wrote there (anything but events.jsonl, status.json
+    and latest.jpg at the top, frames/*.jpg and traces/<episode>.json; a symbolic link is foreign too)."""
+    out = []
+    for p in sorted(d.rglob("*")):
+        parts = p.relative_to(d).parts
+        if p.is_symlink():
+            ok = False
+        elif len(parts) == 1:
+            ok = parts[0] in RUN_TOP_FILES and p.is_file() or parts[0] in ("frames", "traces") and p.is_dir()
+        elif len(parts) == 2 and parts[0] == "frames":
+            ok = p.is_file() and p.suffix == ".jpg"
+        elif len(parts) == 2 and parts[0] == "traces":
+            ok = p.is_file() and bool(TRACE_NAME.fullmatch(parts[1]))
+        else:
+            ok = False
+        if not ok:
+            out.append(p.relative_to(d).as_posix())
     return out
 
 
@@ -504,6 +551,11 @@ def _keys(store, table: str, key: tuple[str, ...], where: str = "", args: tuple 
     return {tuple(r[c] for c in key) for r in store.query(f"SELECT {_quoted(key)} FROM {table} {where}", args)}
 
 
+def _event_counts(store, rid: str) -> Counter:
+    """How many events the store holds for each (t, kind) of a run (two events may share both)."""
+    return Counter((r["t"], r["kind"]) for r in store.query("SELECT t, kind FROM events WHERE run_id=?", (rid,)))
+
+
 def _counts(store) -> dict[str, int]:
     out = {t: store.query(f"SELECT COUNT(*) AS n FROM {t}")[0]["n"] for t in TABLES}
     out["traces"] = store.query("SELECT COUNT(*) AS n FROM decisions WHERE trace IS NOT NULL")[0]["n"]
@@ -512,7 +564,7 @@ def _counts(store) -> dict[str, int]:
 
 def _telemetry(root: Path, store, report: Report) -> None:
     """The old telemetry tables, row by row: what the store has by key is left as it is, except that a
-    decision stored without a trace takes the old file's."""
+    decision stored without a trace takes the old file's. Events are counted per (t, kind)."""
     with _old_db(root, report.skipped) as db:
         if db is None:
             return
@@ -522,10 +574,10 @@ def _telemetry(root: Path, store, report: Report) -> None:
                 at = [cols.index(k) for k in key]
                 sql = f"INSERT OR IGNORE INTO {table}({_quoted(cols)}) VALUES ({', '.join('?' * len(cols))})"
                 batch, traces = [], []
-                for row in _old_rows(db, table, cols):
+                for row in _old_table(db, table, cols, report.skipped):
                     k = tuple(row[i] for i in at)
                     if k not in have:
-                        batch.append(tuple(row))
+                        batch.append(row)
                     elif table == "decisions" and row[cols.index("trace")] is not None:
                         traces.append((row[cols.index("trace")], *k))
                     if len(batch) >= BATCH:
@@ -536,10 +588,13 @@ def _telemetry(root: Path, store, report: Report) -> None:
                         traces = []
                 store.executemany(sql, batch)
                 store.executemany(FILL_TRACE, traces)
-            for rid, rows in _old_events(db, root, report.skipped).items():
-                have = _keys(store, "events", ("t", "kind"), "WHERE run_id=?", (rid,))
-                store.executemany("INSERT INTO events(run_id, t, kind, data) VALUES (?,?,?,?)",
-                                  [r for r in rows if (r[1], r[2]) not in have])
+            for rid, rows in _old_events(db, report.skipped).items():
+                have, seen, new = _event_counts(store, rid), Counter(), []
+                for r in rows:
+                    seen[r[1], r[2]] += 1
+                    if seen[r[1], r[2]] > have[r[1], r[2]]:
+                        new.append(r)
+                store.executemany("INSERT INTO events(run_id, t, kind, data) VALUES (?,?,?,?)", new)
 
 
 # rows an event derives in Telemetry.record that may exist already (from the telemetry file): then only the
@@ -592,19 +647,24 @@ def _copy(src: Path, dst: Path) -> bool:
 
 def _runs(root: Path, store, data_dir: Path, report: Report) -> None:
     for d in _run_dirs(root, data_dir, report.skipped):
-        rid = d.name
+        rid, log = d.name, _rel(root, d / "events.jsonl")
         events = _run_events(d, root, report.skipped)
         traces = _run_traces(d, root, report.skipped)
         status = _run_status(d, root, report.skipped)
         with store.transaction():
-            have = _keys(store, "events", ("t", "kind"), "WHERE run_id=?", (rid,))     # once per run
+            have, seen = _event_counts(store, rid), Counter()     # loaded once per run
             for n, ev in events:
-                if (ev["t"], ev["kind"]) in have:
+                k = (ev["t"], ev["kind"])
+                seen[k] += 1
+                if seen[k] <= have[k]:
                     continue
+                store._exec("SAVEPOINT import_event")         # an event that fails leaves nothing behind
                 try:
                     _record(store, rid, ev, traces.get(ev["episode"]) if ev["kind"] == "trace" else None)
-                except sqlite3.Error as e:       # one statement failed; the run's transaction goes on
-                    report.skipped.append(f"{_rel(root, d / 'events.jsonl')} line {n}: not recorded ({e})")
+                except Exception as e:  # noqa: BLE001 - one damaged event is reported; the import goes on
+                    store._exec("ROLLBACK TO import_event")
+                    report.skipped.append(f"{log} line {n}: not recorded ({type(e).__name__}: {e})")
+                store._exec("RELEASE import_event")
             decided = _keys(store, "decisions", ("episode",), "WHERE run_id=?", (rid,))
             for episode, tr in traces.items():
                 if (episode,) not in decided:
@@ -674,19 +734,23 @@ def _secrets(root: Path, data_dir: Path, report: Report) -> int:
         src, dst = root / "runs" / name, data_dir / SECRETS_DIR / name
         if not src.is_file():
             continue
-        if dst.exists():
-            if dst.read_bytes() != src.read_bytes():
-                report.skipped.append(f"runs/{name}: {SECRETS_DIR}/{name} exists and differs; the one in "
-                                      f"{SECRETS_DIR}/ is kept and the old file stays")
-            continue
-        _private_dir(dst.parent)
-        fd, tmp = tempfile.mkstemp(prefix=f".{name}-", suffix=".tmp", dir=dst.parent)   # mode 0600
         try:
-            with os.fdopen(fd, "wb") as f:
-                f.write(src.read_bytes())
-            copied += _place(tmp, dst)
-        finally:
-            Path(tmp).unlink(missing_ok=True)
+            data = src.read_bytes()
+            if dst.exists():
+                if dst.read_bytes() != data:
+                    report.skipped.append(f"runs/{name}: {SECRETS_DIR}/{name} exists and differs; the one in "
+                                          f"{SECRETS_DIR}/ is kept and the old file stays")
+                continue
+            _private_dir(dst.parent)
+            fd, tmp = tempfile.mkstemp(prefix=f".{name}-", suffix=".tmp", dir=dst.parent)   # mode 0600
+            try:
+                with os.fdopen(fd, "wb") as f:
+                    f.write(data)
+                copied += _place(tmp, dst)
+            finally:
+                Path(tmp).unlink(missing_ok=True)
+        except OSError as e:
+            report.skipped.append(f"runs/{name}: cannot be copied ({e})")
     return copied
 
 
@@ -721,43 +785,72 @@ def _fmt(key: tuple) -> str:
     return " ".join(str(k) for k in key)
 
 
+def _missing_events(rid: str, old: Counter, logged: dict[tuple, list[int]], have: Counter) -> str | None:
+    """The line for a run's events the store lacks: per (t, kind) the larger of the telemetry file's and the
+    run log's count is wanted; the run log lines beyond what the store holds are named."""
+    missing, lines = 0, []
+    for k in old.keys() | logged.keys():
+        log = logged.get(k, [])
+        missing += max(0, max(old[k], len(log)) - have[k])
+        unlogged = max(0, len(log) - have[k])          # the log's lines beyond what the store holds
+        lines += log[len(log) - unlogged:] if unlogged else []
+    if not missing:
+        return None
+    lines.sort()
+    where = f" (events.jsonl line{'s' if len(lines) > 1 else ''} {', '.join(map(str, lines))})" if lines else ""
+    return f"events {rid}: {missing} missing{where}"
+
+
 def check(root: Path, store, data_dir: Path) -> list[str]:
     """What the store and the data directory lack of the install at `root`, one line per item; [] when the
-    copy is complete. Items the import skips as damaged are not differences (the import names them)."""
+    copy is complete. Ruling R11: it also names, with a hint, every source prune could delete that was not
+    imported in full (an unreadable file or table, an undecodable or damaged line, an orphan trace, a file
+    the old pilot did not write in a run directory), so prune waits until it is fixed or removed by hand.
+    Damage in the learned files and journals (never pruned) and directories that are not runs are left to
+    the import's report."""
     root, data_dir = Path(root), Path(data_dir)
     diffs: list[str] = []
-    ignored: list[str] = []
+    problems: list[str] = []            # prunable sources not imported in full
+    ignored: list[str] = []             # what never blocks prune
     want_decisions: set[tuple] = set()
     want_traces: set[tuple] = set()
-    want_events: dict[str, set] = {}
-    with _old_db(root, ignored) as db:
+    old_events: dict[str, Counter] = {}
+    with _old_db(root, problems) as db:
         if db is not None:
             for table, (key, _) in TELEMETRY.items():
-                want = {tuple(r) for r in _old_rows(db, table, key)}
+                want = set(_old_table(db, table, key, problems))
                 if table == "decisions":            # with the decisions of the run logs, below
                     want_decisions |= want
                     continue
                 diffs += [f"{LABEL[table]} {_fmt(k)} missing" for k in sorted(want - _keys(store, table, key), key=str)]
-            if "trace" in _columns(db, "decisions"):
-                want_traces |= {tuple(r) for r in db.execute("SELECT run_id, episode FROM decisions WHERE trace IS NOT NULL")}
-            for rid, rows in _old_events(db, root, ignored).items():
-                want_events.setdefault(rid, set()).update((t, kind) for _, t, kind, _ in rows)
+            with contextlib.suppress(sqlite3.DatabaseError):        # an unreadable table is named above
+                if "trace" in {r[1] for r in db.execute("PRAGMA table_info(decisions)")}:
+                    want_traces |= set(_old_table(db, "decisions", ("run_id", "episode"), problems,
+                                                  "WHERE trace IS NOT NULL"))
+            for rid, rows in _old_events(db, problems).items():
+                old_events[rid] = Counter((t, kind) for _, t, kind, _ in rows)
+    logged: dict[str, dict[tuple, list[int]]] = {}
     want_states, frames = set(), []
     for d in _run_dirs(root, data_dir, ignored):
         rid = d.name
-        events = [ev for _, ev in _run_events(d, root, ignored)]
-        want_events.setdefault(rid, set()).update((ev["t"], ev["kind"]) for ev in events)
-        want_decisions |= {(rid, ev["episode"]) for ev in events if ev["kind"] == "trace"}
-        for episode in _run_traces(d, root, ignored):
+        events = _run_events(d, root, problems)
+        for n, ev in events:
+            logged.setdefault(rid, {}).setdefault((ev["t"], ev["kind"]), []).append(n)
+        want_decisions |= {(rid, ev["episode"]) for _, ev in events if ev["kind"] == "trace"}
+        for episode in _run_traces(d, root, problems):
             if (rid, episode) in want_decisions:
                 want_traces.add((rid, episode))
-        if _run_status(d, root, ignored) is not None:
+            else:
+                problems.append(f"{_rel(root, d)}/traces/{episode:04d}.json: no decision {episode} in the run's records")
+        if _run_status(d, root, problems) is not None:
             want_states.add(rid)
         frames += [(rid, name, src) for name, src in _run_frames(d)]
-    for rid in sorted(want_events):
-        missing = len(want_events[rid] - _keys(store, "events", ("t", "kind"), "WHERE run_id=?", (rid,)))
-        if missing:
-            diffs.append(f"events {rid}: {missing} missing")
+        problems += [f"{_rel(root, d)}/{f}: a file the old pilot did not write" for f in _foreign(d)
+                     if not (f.startswith("traces/") and f.endswith(".json"))]     # the trace reader names those
+    for rid in sorted(old_events.keys() | logged.keys()):
+        line = _missing_events(rid, old_events.get(rid, Counter()), logged.get(rid, {}), _event_counts(store, rid))
+        if line:
+            diffs.append(line)
     have = _keys(store, "decisions", ("run_id", "episode"))
     diffs += [f"decision {rid}#{ep} missing" for rid, ep in sorted(want_decisions - have, key=str)]
     traced = _keys(store, "decisions", ("run_id", "episode"), "WHERE trace IS NOT NULL")
@@ -791,40 +884,39 @@ def check(root: Path, store, data_dir: Path) -> list[str]:
     have_j = _keys(store, "journal", ("campaign_id", "t", "text"))
     diffs += [f"journal {cid} #{int(t)} missing" for cid, _, t, _, text in _journals(root, ignored)
               if (cid, t, text) not in have_j]
-    if _prefs(root, ignored) is not None and not store.query("SELECT 1 FROM settings WHERE key='prefs'"):
+    if _prefs(root, problems) is not None and not store.query("SELECT 1 FROM settings WHERE key='prefs'"):
         diffs.append("prefs missing")
     kept_from, have_u = _usage_kept_from(), _keys(store, "model_usage", ("day", "model"))
-    diffs += [f"model usage {day} {model} missing" for day, model, _ in _usage(root, ignored)
+    diffs += [f"model usage {day} {model} missing" for day, model, _ in _usage(root, problems)
               if day >= kept_from and (day, model) not in have_u]
     have_o = {c for (c,) in _keys(store, "standing_orders", ("campaign_id",))}
-    diffs += [f"standing orders {cid} missing" for cid, texts in _orders(root, store, ignored).items()
+    diffs += [f"standing orders {cid} missing" for cid, texts in _orders(root, store, problems).items()
               if texts and cid not in have_o]
     diffs += [f"secret {name} missing" for name in SECRET_FILES
               if (root / "runs" / name).is_file() and not (data_dir / SECRETS_DIR / name).exists()]
-    return diffs
+    return diffs + [f"{p}; {HINT}" for p in dict.fromkeys(problems)]
 
 
 # ---------------------------------------------------------------- prune
 
+def _in_repo(root: Path) -> bool:
+    """Whether root is inside a git work tree: a .git (directory, or file of a worktree) in it or a parent."""
+    return any((d / ".git").exists() for d in (root.resolve(), *root.resolve().parents))
+
+
 def _tracked(root: Path, paths: list[Path]) -> list[str]:
-    """The git-tracked files under `paths` (none when root is not in a git work tree)."""
-    if not paths:
+    """The git-tracked files under `paths`; none outside a repository. Inside one, a git that cannot be run
+    or cannot answer (missing, dubious ownership, ...) refuses the prune."""
+    if not paths or not _in_repo(root):
         return []
     try:
-        inside = subprocess.run(["git", "-C", str(root), "rev-parse", "--is-inside-work-tree"],
-                                capture_output=True, text=True, check=False)
+        r = subprocess.run(["git", "--literal-pathspecs", "-C", str(root), "ls-files", "-z", "--",
+                            *(_rel(root, p) for p in paths)], capture_output=True, text=True, check=False)
     except OSError as e:
-        if (root / ".git").exists():
-            raise PruneRefused(f"cannot ask git which files are tracked in {root}: {e}") from e
-        return []
-    if inside.returncode != 0 or inside.stdout.strip() != "true":
-        if (root / ".git").exists():
-            raise PruneRefused(f"cannot ask git which files are tracked in {root}: {inside.stderr.strip()}")
-        return []
-    r = subprocess.run(["git", "-C", str(root), "ls-files", "-z", "--", *(_rel(root, p) for p in paths)],
-                       capture_output=True, text=True, check=False)
+        raise PruneRefused(f"{root} is in a git repository, but git cannot be run ({e}); nothing was deleted") from e
     if r.returncode != 0:
-        raise PruneRefused(f"git ls-files failed in {root}: {r.stderr.strip()}")
+        raise PruneRefused(f"{root} is in a git repository, but git cannot say which files are tracked "
+                           f"({r.stderr.strip() or f'exit {r.returncode}'}); nothing was deleted")
     return [f for f in r.stdout.split("\0") if f]
 
 
@@ -833,24 +925,29 @@ def prune_source(root: Path, store, kept: list[str] | None = None) -> list[Path]
     runs/telemetry.sqlite (and -wal, -shm), runs/<id>/ of each run the store holds, pilot-settings.json,
     model-usage.json, orders/, and the old dashboard.key/dashboard.carryover once <data>/secrets/ holds the
     same bytes. Never anything else (frames/, learned/, secrets/, pilot.db, auth.sqlite, unknown files, a
-    run directory holding a file the old pilot did not write), and nothing at all when a path is tracked
-    by git. What stays for another reason is named in `kept`. Run it only after check() returned []."""
+    run directory holding a file the old pilot did not write). Nothing at all while check() lists anything
+    or a path is tracked by git (PruneRefused). What stays for another reason is named in `kept`. A target
+    that cannot be deleted does not stop the others: PruneIncomplete then names both."""
     root = Path(root)
     runs = root / "runs"
     data_dir = Path(store.path).parent
     kept = [] if kept is None else kept
     if not runs.is_dir():
         return []
+    diffs = check(root, store, data_dir)
+    if diffs:
+        raise PruneRefused(f"check lists {len(diffs)} item{'s' if len(diffs) != 1 else ''} not in the data "
+                           f"directory or not imported in full (pilot data check); nothing was deleted")
     known = {r["id"] for r in store.query("SELECT id FROM runs")}
     targets = [runs / n for n in OLD_FILES if (runs / n).is_file()]
     if (runs / "orders").is_dir():
         targets.append(runs / "orders")
     for d in _run_dirs(root, data_dir, []):
-        extra = sorted(p.name for p in d.iterdir() if p.name not in RUN_FILES)
+        foreign = _foreign(d)
         if d.name not in known:
             kept.append(f"{_rel(root, d)}: no run of that id in the store")
-        elif extra:
-            kept.append(f"{_rel(root, d)}: holds {', '.join(extra[:5])}, which the import does not copy")
+        elif foreign:
+            kept.append(f"{_rel(root, d)}: holds {', '.join(foreign[:5])}, which the old pilot did not write")
         else:
             targets.append(d)
     for name in SECRET_FILES:
@@ -867,9 +964,16 @@ def prune_source(root: Path, store, kept: list[str] | None = None) -> list[Path]
     if tracked:
         raise PruneRefused(f"refused: git tracks {', '.join(tracked[:5])}{' ...' if len(tracked) > 5 else ''} "
                            f"in {root}; nothing was deleted")
+    deleted, failed = [], []
     for p in targets:
-        if p.is_dir() and not p.is_symlink():
-            shutil.rmtree(p)
-        else:
-            p.unlink(missing_ok=True)
-    return targets
+        try:
+            if p.is_dir() and not p.is_symlink():
+                shutil.rmtree(p)
+            else:
+                p.unlink(missing_ok=True)
+            deleted.append(p)
+        except OSError as e:
+            failed.append(f"{p}: {e}")
+    if failed:
+        raise PruneIncomplete(deleted, failed)
+    return deleted
