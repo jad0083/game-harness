@@ -124,7 +124,7 @@ def test_runs_say_whether_they_have_a_frame(tmp_path):
     runs = tmp_path / "runs"
     with_frame, without = EventLog(runs, "20260927-100000", "m"), EventLog(runs, "20260927-110000", "m")
     with_frame.frame(b"\xff\xd8jpeg")
-    with_frame.emit("status"), without.emit("status")
+    with_frame.emit("run_start", model="m"), without.emit("run_start", model="m")   # their rows in the store
 
     async def go():
         async with TestClient(TestServer(make_app(None, runs))) as c:

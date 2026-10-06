@@ -148,6 +148,7 @@ def test_live_pilot_needs_the_key_and_json(tmp_path):
 def test_viewer_passes_the_key_to_the_live_pilot(tmp_path):
     runs = tmp_path / "runs"
     log = EventLog(runs, "run1", "m")
+    log.emit("run_start", model="m")         # the run's row in the store, as a real run records it
     pilot = FakePilot(log)
 
     async def go():

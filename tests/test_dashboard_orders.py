@@ -98,8 +98,7 @@ def test_orders_api_gives_the_record_log_purchases_and_open_orders(tmp_path):
 
 def test_the_live_record_and_the_campaign_record_agree(setup):  # noqa: F811
     s, log = setup
-    tel = Telemetry(s.runs_dir / "telemetry.sqlite")
-    log.telemetry = tel
+    tel = log.store                          # the run's store, open_store(s.runs_dir)
     log.emit("run_start", game="civ6", model="m")
 
     def ai(state):
@@ -120,7 +119,6 @@ def test_the_live_record_and_the_campaign_record_agree(setup):  # noqa: F811
                 r["last_override"].pop("name", None)
         assert got == json.loads(json.dumps(live)) and live
     asyncio.run(go())
-    tel.close()
 
 
 def test_stellaris_orders_are_the_action_record(tmp_path):

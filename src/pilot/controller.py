@@ -124,7 +124,9 @@ class Pilot:
 
     def _status(self, status: str) -> None:
         if status != "needs_attention":
-            self.log.state.info.pop("attention", None)       # the dashboard's card goes with the stop
+            card = self.log.state.info.pop("attention", None)    # the dashboard's card goes with the stop
+            if isinstance(card, dict) and card.get("frame"):
+                self.log.release(card["frame"])                  # a frame captured for it (kept) may go
         if status == "deciding":                             # the dashboard's Deciding timer counts from here
             self.log.state.info["deciding"] = {"since": round(time.time(), 1)}
         else:

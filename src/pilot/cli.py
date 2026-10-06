@@ -91,7 +91,7 @@ def run(s: Settings, episodes: int | None) -> int:
 
     run_id = time.strftime("%Y%m%d-%H%M%S")
     from .store import open_store
-    log = EventLog(s.runs_dir, run_id, s.model, telemetry=open_store(s.runs_dir))
+    log = EventLog(s.runs_dir, run_id, s.model, telemetry=open_store(s.runs_dir), frames_keep=s.frames_keep)
     if s.game == "civ6":
         from .civ6 import ControllerCiv6
         game = ControllerCiv6(s.controller_bin, s.corpus_dir, s.agent_url, REPO)
@@ -116,7 +116,7 @@ def run(s: Settings, episodes: int | None) -> int:
     from .notify import start_notifier
     start_notifier(log)          # an ntfy notice when a stop lasts (PILOT_NOTIFY_URL; off by default)
     print(f"pilot {run_id}: model {s.model}; live dashboard on {s.live_host}:{s.dashboard_port} (reached through "
-          f"the viewer); log {log.dir / 'events.jsonl'}", flush=True)
+          f"the viewer); store {s.db_path}", flush=True)
 
     done = threading.Event()
 
@@ -272,8 +272,9 @@ def live_pilots(s: Settings, key: str) -> list[tuple[str, int | None]]:
     import urllib.request
 
     from .dashboard import list_runs, live_status
+    from .store import open_store
     out = []
-    for run in list_runs(s.runs_dir):
+    for run in list_runs(open_store(s.runs_dir)):
         st = run.get("_status") or {}
         port = (st.get("info") or {}).get("port")
         if not port or not live_status(st.get("status")):

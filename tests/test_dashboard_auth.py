@@ -110,6 +110,7 @@ def test_live_proxy_reloads_the_key_once_after_a_401(tmp_path, clock, monkeypatc
     monkeypatch.delenv("PILOT_DASHBOARD_KEY", raising=False)
     runs = tmp_path / "runs"
     log = EventLog(runs, "run1", "m")
+    log.emit("run_start", model="m")         # the run's row in the store, as a real run records it
     seen: list = []
 
     async def status(request):
@@ -142,6 +143,7 @@ def test_live_proxy_reloads_the_key_once_after_a_401(tmp_path, clock, monkeypatc
 def test_device_header_is_set_by_the_viewer_never_passed_through_from_a_browser(tmp_path, clock):
     runs = tmp_path / "runs"
     log = EventLog(runs, "run1", "m")
+    log.emit("run_start", model="m")         # the run's row in the store, as a real run records it
     got: list = []
 
     async def control(request):
@@ -423,6 +425,7 @@ def test_two_addresses_within_10_minutes_get_a_badge_and_a_notice(tmp_path, cloc
 def test_forwarded_stream_closes_within_one_keepalive_after_a_revoke(tmp_path, clock):
     runs = tmp_path / "runs"
     log = EventLog(runs, "run1", "m")
+    log.emit("run_start", model="m")         # the run's row in the store, as a real run records it
 
     async def status(_):
         return web.json_response({"run_id": "run1", "status": "playing"})

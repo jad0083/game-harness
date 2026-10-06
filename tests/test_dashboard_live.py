@@ -19,7 +19,7 @@ from authkit import KEY, NO_KEY, browser_cookie, client, lan_request, origin, th
 from pilot import auth as A
 from pilot import cli
 from pilot.config import Settings
-from pilot.dashboard import make_app
+from pilot.dashboard import make_app, read_events
 from pilot.events import EventLog
 
 
@@ -48,12 +48,12 @@ class FakePilot:
 
 def live_app(tmp_path, **kw):
     log = EventLog(tmp_path / "runs", "run1", "m")
+    log.emit("run_start", model="m")         # the run's row in the store, as a real run records it
     return make_app(FakePilot(log), key=KEY, **kw), log
 
 
 def events_of(log, kind):
-    return [json.loads(line) for line in (log.dir / "events.jsonl").read_text().splitlines()
-            if json.loads(line)["kind"] == kind]
+    return read_events(log.store, log.state.run_id, {kind})
 
 
 # ---------- config ----------
@@ -221,6 +221,7 @@ def old_live_app(log) -> web.Application:
 def test_new_viewer_drives_an_old_live_pilot(tmp_path, clock):
     runs = tmp_path / "runs"
     log = EventLog(runs, "run1", "m")
+    log.emit("run_start", model="m")         # the run's row in the store, as a real run records it
     old = old_live_app(log)
 
     async def go():

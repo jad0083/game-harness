@@ -28,8 +28,10 @@ from pilot.civ6 import (
 )
 from pilot.civ6_governor import Civ6Governor
 from pilot.config import REPO, Settings
+from pilot.dashboard import read_events
 from pilot.events import EventLog
 from pilot.pillars import load_pillars
+from pilot.store import open_store
 
 FIXTURE = json.loads((REPO / "crates/game-controller/tests/fixtures/civ6_snapshot.json").read_text(encoding="utf-8"))
 INDEX = CorpusIndex.load(REPO / "corpora/civ6")
@@ -114,8 +116,26 @@ def run_briefly(g: Civ6Governor, max_decisions: int = 2, limit_s: float = 10.0) 
 
 
 def traces(setup) -> list[dict]:
+    """The run's decision traces (decisions.trace), strategy reviews (negative episodes) aside."""
     s, _ = setup
-    return [json.loads(p.read_text()) for p in sorted((s.runs_dir / "civ1" / "traces").glob("0*.json"))]
+    return [json.loads(r["trace"]) for r in open_store(s.runs_dir).query(
+        "SELECT trace FROM decisions WHERE run_id='civ1' AND episode > 0 ORDER BY episode")]
+
+
+def events_text(setup) -> str:
+    """The run's recorded events as JSON lines."""
+    return "\n".join(json.dumps(e, ensure_ascii=False) for e in _events(setup))
+
+
+def earlier_run(setup, *events: tuple[str, dict]) -> None:
+    """An earlier run of the fixture's campaign, its `events` in the store: what the next run loads at
+    its start (strategy, order record)."""
+    s, _ = setup
+    log = EventLog(s.runs_dir, "civ0", s.model)
+    log.emit("run_start", game="civ6", model=s.model)
+    log.set_campaign("civ6", "kublai_khan_china_702403662")
+    for kind, data in events:
+        log.emit(kind, **data)
 
 
 def orders_sent(game: FakeCiv6) -> list[dict]:
@@ -353,7 +373,7 @@ def test_autoplay_that_fails_to_start_waits_for_the_human(setup):
     game = FakeCiv6(FIXTURE, index=INDEX, start_fails=True)
     g = governor(setup, game, orders_model([]))
     run_until_attention(g)
-    events = (setup[0].runs_dir / "civ1" / "events.jsonl").read_text()
+    events = events_text(setup)
     assert "autoplay did not start at T12" in events and '"needs_attention"' in events
     assert [a[0] for a in game.actions].count("autoplay") == 1, "no retry loop burning decisions"
     assert len(traces(setup)) == 1
@@ -363,7 +383,7 @@ def test_autoplay_that_never_runs_waits_for_the_human(setup):
     game = FakeCiv6(FIXTURE, index=INDEX, never_starts=True)
     g = governor(setup, game, orders_model([]))
     run_until_attention(g)
-    events = (setup[0].runs_dir / "civ1" / "events.jsonl").read_text()
+    events = events_text(setup)
     assert "still inactive" in events and len(traces(setup)) == 1
 
 
@@ -386,7 +406,7 @@ def test_the_loop_works_when_the_game_is_silent_during_ai_turns(setup):
     assert game.state["turn"] == FIXTURE["turn"] + 3
     assert traces(setup)[1]["trigger"] == "scheduled (3 turns)"
     assert all(not a[2] for a in game.actions if a[0] == "order")
-    events = (setup[0].runs_dir / "civ1" / "events.jsonl").read_text()
+    events = events_text(setup)
     assert '"unanswered_polls": 1' in events and '"needs_attention"' not in events
 
 
@@ -395,7 +415,7 @@ def test_a_turn_that_never_ends_waits_for_the_human(setup):
     game.autoplay_status = lambda: {"ok": True, "active": True, "turn": FIXTURE["turn"]}   # stuck mid-turn
     g = governor(setup, game, orders_model([]))
     run_until_attention(g)
-    events = (setup[0].runs_dir / "civ1" / "events.jsonl").read_text()
+    events = events_text(setup)
     assert "T12 did not end within" in events
 
 
@@ -657,7 +677,7 @@ def _replace_fixture() -> dict:
 
 def _events(setup) -> list[dict]:
     s, _ = setup
-    return [json.loads(line) for line in (s.runs_dir / "civ1" / "events.jsonl").read_text().splitlines()]
+    return read_events(open_store(s.runs_dir), "civ1", set())
 
 
 def test_an_order_the_ai_replaces_is_in_the_record_and_the_next_prompt(setup):
@@ -789,9 +809,10 @@ def test_an_idle_civic_is_asked_again_then_filled_by_the_governor(setup):
     game = FakeCiv6(idle, index=INDEX)
     g = governor(setup, game, orders_model([], seen=seen))
     weights = {"science": 25, "expansion": 20, "economy": 15, "culture": 12, "military": 12, "faith": 8, "diplomacy": 8}
-    g.strategy = Strategy(pillars={n: Pillar(weight=w, stance="s") for n, w in weights.items()}, focus="f")
-    g.strategy.pillars["culture"] = g.strategy.pillars["culture"].model_copy(
+    strategy = Strategy(pillars={n: Pillar(weight=w, stance="s") for n, w in weights.items()}, focus="f")
+    strategy.pillars["culture"] = strategy.pillars["culture"].model_copy(
         update={"prefer_civics": ["civic:code_of_laws", "civic:foreign_trade"]})
+    earlier_run(setup, ("strategy", {"strategy": strategy.model_dump(), "reason": "earlier"}))
     g.run(max_decisions=1)
     assert len(seen) == 2 and "Your answer was incomplete: nothing is being progressed" in seen[1], "one retry"
     assert orders_sent(game) == [{"kind": "civic", "id": "civic:foreign_trade"}], "the first preferred civic offered"
@@ -899,7 +920,7 @@ def test_a_timed_out_autoplay_start_is_sent_again(setup):
     g.run(max_decisions=2)
     assert [a[0] for a in game.actions].count("autoplay") >= 3
     assert traces(setup)[1]["trigger"] == "scheduled (3 turns)"
-    events = (setup[0].runs_dir / "civ1" / "events.jsonl").read_text()
+    events = events_text(setup)
     assert "sent again (1 of 2)" in events and "sent again (2 of 2)" in events and '"needs_attention"' not in events
 
 
@@ -910,7 +931,7 @@ def test_a_lost_start_is_sent_again_when_turn_ready_shows_only_a_popup_and_some_
     g = governor(setup, game, orders_model([]))
     g.status_poll_s, g.start_grace_s, g.turn_deadline_s = 0.01, 0.05, 30.0
     assert not run_briefly(g), "waited for the human"
-    events = (setup[0].runs_dir / "civ1" / "events.jsonl").read_text()
+    events = events_text(setup)
     assert "sent again (1 of 2)" in events
     assert game.state["turn"] >= FIXTURE["turn"] + 3
 
@@ -1191,9 +1212,9 @@ def test_a_weak_production_replace_record_adds_the_buy_guidance(setup):
     seen: list[str] = []
     game = FakeCiv6(FIXTURE, index=INDEX)
     g = governor(setup, game, orders_model([], seen=seen))
-    g._order_rows = [{"key": "production replace", "result": r, "turn": 5 + i, "id": "unit:slinger",
-                      "by": "building:granary", "city": "Beijing", "date": f"T{5 + i}"}
-                     for i, r in enumerate(["overridden", "overridden", "overridden", "completed"])]
+    earlier_run(setup, *(("order_outcome", {"key": "production replace", "result": r, "turn": 5 + i, "id": "unit:slinger",
+                                            "by": "building:granary", "city": "Beijing", "date": f"T{5 + i}"})
+                         for i, r in enumerate(["overridden", "overridden", "overridden", "completed"])))
     g.run(max_decisions=1)
     assert "does not stick here" in seen[0]
     assert "The AI replaced most production orders that replaced its own choice: buy what must exist now" in seen[0]
@@ -1266,13 +1287,13 @@ def test_the_backfill_script_reads_only_until_asked_and_writes_once(tmp_path, ca
     rows = Telemetry(db).campaign_events("civ6/kublai", "order_outcome")
     assert [r["result"] for r in rows] == ["refused", "lost", "completed", "unknown", "refused", "refused", "completed"]
     assert mod.main(["--db", str(db), "--campaign", "civ6/kublai", "--write"]) == 1, "never twice"
-    # run folders are named by their start time and the dashboard shows the newest first (its idle
-    # feed shows runs[0]): the backfill run sorts at its earliest decision, behind every later real run
+    # runs are named by their start time and the dashboard shows the newest first (its idle feed shows
+    # runs[0]): the backfill run sorts at its earliest decision, behind every later real run
     from pilot.dashboard import RUN_ID, list_runs
-    real = tmp_path / "20260927-080000"
-    real.mkdir()
-    (real / "events.jsonl").write_text("", encoding="utf-8")
-    listed = [r["id"] for r in list_runs(tmp_path)]
+    tel = Telemetry(db)
+    tel.record("20260927-080000", {"t": time.time(), "kind": "run_start", "game": "civ6", "model": "m"})
+    listed = [r["id"] for r in list_runs(tel) if r["id"] != "r1"]     # r1: the decisions read above
+    tel.close()
     assert len(listed) == 2 and listed[0] == "20260927-080000", listed
     assert listed[1] == time.strftime("%Y%m%d-%H%M%S", time.localtime(2.0 + 1)) + "-backfill", "its first row: T51"
     assert RUN_ID.match(listed[1])
@@ -2148,9 +2169,9 @@ def test_a_city_with_nothing_to_buy_says_so_with_each_reason():
 # ---- postmortem-fixes design, rulings 21-23: the run ends when our civilization is gone ----------
 
 def _telemetry_log(setup, tmp_path, run="civ1"):
-    from pilot.telemetry import Telemetry
+    """A run's log on the data directory's store (as `pilot run` makes it), and that store."""
     s, _ = setup
-    tel = Telemetry(tmp_path / "t.sqlite")
+    tel = open_store(s.runs_dir)
     return tel, EventLog(s.runs_dir, run, s.model, telemetry=tel)
 
 

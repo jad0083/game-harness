@@ -11,7 +11,7 @@ from pathlib import Path
 from aiohttp import web
 
 from pilot.events import EventLog
-from pilot.telemetry import Telemetry
+from pilot.store import open_store
 
 UI_KEY = "ui-test-dashboard-key-0123456789abcdef"
 PHONE_UA = ("Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -76,7 +76,7 @@ def _trace(log: EventLog, n: int, **fields) -> None:
 def seed_runs(runs: Path) -> dict:
     """runs/ with a finished Stellaris campaign and a live Civ VI run (its EventLog, playing at T57).
     Used by the browser tests' fixtures and by scratch scripts that serve the same data."""
-    tel = Telemetry(runs / "telemetry.sqlite")
+    tel = open_store(runs)              # the data directory's store, where the viewer finds the live run
     old = EventLog(runs, "20260926-090000", "google:gemini-3.8-flash", telemetry=tel)
     old.emit("run_start", game="stellaris", model="google:gemini-3.8-flash", speed="fast")
     old.set_campaign("stellaris", "theia", "Theian Union")

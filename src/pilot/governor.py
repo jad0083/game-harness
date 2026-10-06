@@ -1148,7 +1148,7 @@ class Governor:
         `info.deciding` (which model, which attempt, a retry wait; ruling 11), anything else ends it."""
         info = self.log.state.info
         if status != "needs_attention":
-            info.pop("attention", None)
+            self._drop_card()
         if status == "deciding":
             info["deciding"] = {"since": round(time.time(), 1), "trigger": trigger, "model": "", "attempt": 0,
                                 "max_attempts": 0, "retry_at": None, "retries": 0, "after": []}
@@ -1188,14 +1188,23 @@ class Governor:
         # show the previous stop's reason and age
         card = attention(why, category, list(self.log.recent), date=self.log.state.game_date,
                          auto_recover=auto_recover, next_probe_at=round(self._next_probe, 1) if auto_recover else None)
+        self._drop_card()
         self.log.state.info["attention"] = card
         self.log.emit("needs_attention", reason=why[:500], category=category)
         try:
             shot = self.game.screenshot()
             if getattr(shot, "image", None):
-                card["frame"] = self.log.frame(shot.image)
+                card["frame"] = self.log.frame(shot.image, keep=True)     # kept while the card is open
+                if self.log.state.info.get("attention") is not card:      # the card closed meanwhile
+                    self.log.release(card["frame"])
         except Exception:  # noqa: BLE001, S110 - the frame is only a convenience here
             pass
+
+    def _drop_card(self) -> None:
+        """The needs-you card closes; its frame falls under the frames' retention again."""
+        card = self.log.state.info.pop("attention", None)
+        if isinstance(card, dict) and card.get("frame"):
+            self.log.release(card["frame"])
 
     def _probe_recovered(self) -> bool:
         """While waiting after a transient failure: try to pause the game; if the agent answers, the
@@ -2029,6 +2038,7 @@ class Governor:
                + ": the agent may be away (the PC asleep, the network down, the agent reinstalled) or the save "
                "unreadable. Nothing was sent to the game, which runs on without the governor. The run carries "
                "on by itself as soon as a save of this campaign reads again; Resume also works.")
+        self._drop_card()
         self.log.state.info["attention"] = attention(why, "unreachable", list(self.log.recent), auto_recover=True,
                                                      date=self.log.state.game_date)
         self.log.emit("needs_attention", reason=why, category="unreachable")
@@ -2829,7 +2839,7 @@ class Governor:
                 new = new.model_copy(update={"identity": r.identity})
             accepted = bool(r.change and new is not None and not errs)
 
-            # Negative, strictly decreasing "episode" (file traces/-0001.json, ...): it can never collide with a
+            # Negative, strictly decreasing "episode" (decision:<run_id>:-1, ...): it can never collide with a
             # real decision's own (positive) episode number in the same run. Readers that mean "directive
             # decisions" (past_outcomes, score, the dashboard's campaign/decisions APIs) filter this row out by
             # `decision == 'strategy_review'`; only a lookup by exact (run_id, episode) is expected to see it.

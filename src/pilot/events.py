@@ -1,5 +1,6 @@
-"""Run log and live state: every event goes to runs/<id>/events.jsonl and to live subscribers
-(the dashboard's server-sent events). Frames are saved as JPEG files next to the log."""
+"""Run log and live state: every event goes to the store's events table (pilot.db) and to live
+subscribers (the dashboard's server-sent events); the run's state is kept in run_state; frames are
+JPEG files under <data>/frames/<run_id>/."""
 
 from __future__ import annotations
 
@@ -13,6 +14,8 @@ from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+from .store import open_store
 
 # Who asked for what is running now (a device named by the viewer, or "the controller"): events
 # emitted while a dashboard control runs carry it as `by` (and `by_id`).
@@ -59,29 +62,49 @@ class RunState:
 
 
 class EventLog:
-    def __init__(self, runs_dir: Path, run_id: str, model: str, telemetry=None):
-        self.dir = runs_dir / run_id
-        (self.dir / "frames").mkdir(parents=True, exist_ok=True)
+    def __init__(self, runs_dir: Path, run_id: str, model: str, telemetry=None, frames_keep: int = 200):
+        """`runs_dir` is the data directory; `telemetry` is its store (default: `open_store(runs_dir)`)."""
+        self.store = telemetry if telemetry is not None else open_store(runs_dir)
+        self.telemetry = self.store         # the name the governors read
+        self.dir = runs_dir / "frames" / run_id
+        self.dir.mkdir(parents=True, exist_ok=True)
+        self.frames_keep = frames_keep
+        self._kept: set[str] = set()        # frames exempt from retention until released (a needs-you card's)
         self.state = RunState(run_id=run_id, model=model)
         self.recent: deque[dict] = deque(maxlen=300)
         self._lock = threading.Lock()
         self._subscribers: list[tuple[asyncio.AbstractEventLoop, asyncio.Queue]] = []
         self._frame_n = 0
-        self._file = open(self.dir / "events.jsonl", "a", encoding="utf-8")  # noqa: SIM115 - lives for the run
-        self.telemetry = telemetry          # optional Telemetry: every event is also written there
         self.campaign_id: str | None = None
 
-    def frame(self, jpeg: bytes | None) -> str:
-        """Save a frame; returns its path relative to the run dir ('' if none)."""
+    def frame(self, jpeg: bytes | None, keep: bool = False) -> str:
+        """Save a frame as NNNNN.jpg and latest.jpg in the run's frames directory; returns its name ('' if
+        none). The newest `frames_keep` numbered frames stay, and those saved with `keep` until released."""
         if not jpeg:
             return ""
         with self._lock:
             self._frame_n += 1
-            rel = f"frames/{self._frame_n:05d}.jpg"
-        (self.dir / rel).write_bytes(jpeg)
+            name = f"{self._frame_n:05d}.jpg"
+            if keep:
+                self._kept.add(name)
+        (self.dir / name).write_bytes(jpeg)
         (self.dir / "latest.jpg").write_bytes(jpeg)
-        self.state.frame_path = rel
-        return rel
+        self._prune()
+        self.state.frame_path = name
+        return name
+
+    def release(self, name: str) -> None:
+        """A frame saved with `keep` falls under retention again (deleted by a later frame's pruning)."""
+        with self._lock:
+            self._kept.discard(name)
+
+    def _prune(self) -> None:
+        """Delete the oldest numbered frames beyond `frames_keep`, kept ones aside."""
+        with self._lock:
+            kept = set(self._kept)
+        frames = [p for p in sorted(self.dir.glob("[0-9]*.jpg")) if p.name not in kept]
+        for p in frames[:max(0, len(frames) - self.frames_keep)]:
+            p.unlink(missing_ok=True)       # another thread's pruning may have taken it first
 
     def emit(self, kind: str, _trace: dict | None = None, **data: Any) -> dict:
         actor = ACTOR.get()
@@ -91,32 +114,30 @@ class EventLog:
                 data["by_id"] = actor[1]
         ev = {"t": round(time.time(), 3), "kind": kind, **data}
         with self._lock:
-            self._file.write(json.dumps(ev, ensure_ascii=False, default=str) + "\n")
-            self._file.flush()
             self.recent.append(ev)
             subs = list(self._subscribers)
-        if self.telemetry is not None:
-            try:
-                self.telemetry.record(self.state.run_id, ev, _trace)
-            except Exception as e:  # noqa: BLE001 - telemetry must never stop play; JSONL is the record
-                print(f"telemetry write failed: {e}", flush=True)
-        (self.dir / "status.json").write_text(json.dumps(self.state.as_dict(), default=str))
+        try:
+            self.store.record(self.state.run_id, ev, _trace)
+            self.store._exec("INSERT INTO run_state(run_id, data, updated) VALUES (?,?,?) ON CONFLICT(run_id)"
+                             " DO UPDATE SET data=excluded.data, updated=excluded.updated",
+                             (self.state.run_id, json.dumps(self.state.as_dict(), default=str), time.time()))
+        except Exception as e:  # noqa: BLE001 - a store write must never stop play
+            print(f"store write failed: {e}", flush=True)
         for loop, q in subs:
             loop.call_soon_threadsafe(q.put_nowait, ev)
         return ev
 
     def save_trace(self, episode: int, trace: dict) -> str:
-        """Write one decision's full trace (prompt, thinking, tool calls, answer) to traces/NNNN.json."""
-        (self.dir / "traces").mkdir(exist_ok=True)
-        rel = f"traces/{episode:04d}.json"
-        (self.dir / rel).write_text(json.dumps(trace, ensure_ascii=False, default=str, indent=1), encoding="utf-8")
+        """Record one decision's full trace (prompt, thinking, tool calls, answer): its `trace` event
+        carries it into decisions.trace. Returns its reference, 'decision:<run_id>:<episode>'."""
+        ref = f"decision:{self.state.run_id}:{episode}"
         summary = {k: trace.get(k) for k in ("date", "trigger", "decision", "reason", "situation", "outcome",
                                               "current", "seconds", "tokens_in", "tokens_out", "model",
                                               "model_version", "thinking_level", "off_frame", "serves")}
         thinking = sum(1 for st in trace.get("steps", []) if st.get("type") == "thinking")
         tools = sum(1 for st in trace.get("steps", []) if st.get("type") == "tool_call")
-        self.emit("trace", _trace=trace, episode=episode, file=rel, thinking=thinking, tools=tools, **summary)
-        return rel
+        self.emit("trace", _trace=trace, episode=episode, file=ref, thinking=thinking, tools=tools, **summary)
+        return ref
 
     def set_campaign(self, game: str, name: str, title: str = "") -> None:
         """Name the campaign (save/playthrough) this run belongs to; `title` is for people (empire name)."""
@@ -135,4 +156,4 @@ class EventLog:
             self._subscribers = [(lp, s) for lp, s in self._subscribers if s is not q]
 
     def close(self) -> None:
-        self._file.close()
+        """Nothing to close: the store outlives the run (kept for callers)."""

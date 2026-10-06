@@ -14,6 +14,7 @@ from pilot import coords
 from pilot.agent import IMAGE_STUB, trim_images
 from pilot.config import REPO, Settings
 from pilot.controller import Pilot
+from pilot.dashboard import read_events
 from pilot.events import EventLog
 from pilot.game import FakeGame, TurnReport, classify_report
 from pilot.learning import Journal, LearnedStore, LearningRejected, ScreenAction
@@ -207,7 +208,7 @@ def test_pilot_loop_resolves_a_blocker_and_records_it(corpus, tmp_path):
     assert log.state.episodes == 1 and log.state.turns_advanced == 2 and log.state.game_date == "Jul 1, 2333"
     assert "Protected the space creatures" in (tmp_path / "journal.md").read_text()
     assert LearnedStore(corpus, "m", "r").recall("space creature")
-    assert (log.dir / "events.jsonl").exists() and (log.dir / "latest.jpg").exists()
+    assert read_events(log.store, "run1", {"episode"}) and (log.dir / "latest.jpg").exists()
 
 
 def test_dashboard_status_and_control(corpus, tmp_path):

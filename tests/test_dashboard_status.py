@@ -49,6 +49,26 @@ def test_capture_stores_the_game_screen_as_the_runs_frame_and_says_who(tmp_path)
     log.close()
 
 
+def test_a_capture_on_an_open_card_is_kept_until_a_newer_one_replaces_it(tmp_path):
+    """Ruling 9: the frame on an open needs-you card outlives frame retention; a newer capture takes its
+    place on the card and the older one falls under retention again."""
+    runs = tmp_path / "runs"
+    log = EventLog(runs, "20260927-100000", "m", frames_keep=1)
+    log.state.info["attention"] = {"reason": "autoplay did not start", "category": "transient", "frame": ""}
+    app = make_app(LivePilot(log), runs, key=KEY)
+
+    async def go():
+        async with TestClient(TestServer(app), headers={"X-Pilot-Key": KEY}) as c:
+            first = (await (await c.post("/api/capture", json={})).json())["frame"]
+            log.frame(b"\xff\xd8 a"), log.frame(b"\xff\xd8 b")
+            assert (log.dir / first).exists(), "kept while it is the card's"
+            second = (await (await c.post("/api/capture", json={})).json())["frame"]
+            log.frame(b"\xff\xd8 c")
+            assert not (log.dir / first).exists() and (log.dir / second).exists()
+            assert log.state.info["attention"]["frame"] == second
+    asyncio.run(go())
+
+
 def test_a_capture_that_gets_no_image_says_so(tmp_path):
     runs = tmp_path / "runs"
     log = EventLog(runs, "20260927-100000", "m")
@@ -92,6 +112,7 @@ def _events(log, kinds_and_fields):
 def test_health_counts_calls_that_fell_back_or_failed(tmp_path):
     runs = tmp_path / "runs"
     log = EventLog(runs, "20260927-100000", "m")
+    log.emit("run_start", model="m")         # the run's row in the store, as a real run records it
     for n in range(1, 6):
         if n in (2, 3, 5):
             log.emit("model_fallback", role="decisions", model="google:gemini-3.8-flash",
@@ -115,6 +136,7 @@ def test_health_counts_calls_that_fell_back_or_failed(tmp_path):
 def test_health_of_a_quiet_run_is_calm(tmp_path):
     runs = tmp_path / "runs"
     log = EventLog(runs, "20260927-100000", "m")
+    log.emit("run_start", model="m")         # the run's row in the store, as a real run records it
     log.save_trace(1, {"episode": 1, "model": "google:gemini-3.8-flash", "date": "T50", "outcome": "stuck", "steps": []})
 
     async def go():

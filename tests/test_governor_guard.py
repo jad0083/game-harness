@@ -68,7 +68,8 @@ def test_the_decision_record_names_the_model_that_answered_after_a_failover(setu
     assert fallback["model"] != "google:gemini-3.8-flash"
     ev = [e for e in log.recent if e["kind"] == "trace" and e.get("decision") == "expand"][-1]
     assert (ev["model"], ev["thinking_level"]) == (fallback["model"], "high")
-    saved = json.loads((log.dir / ev["file"]).read_text(encoding="utf-8"))
+    row = log.store.query("SELECT trace FROM decisions WHERE run_id=? AND episode=?", (log.state.run_id, ev["episode"]))
+    saved = json.loads(row[0]["trace"])
     assert (saved["model"], saved["thinking_level"], saved["decision"]) == (fallback["model"], "high", "expand")
 
 

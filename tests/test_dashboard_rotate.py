@@ -204,12 +204,12 @@ def fake_live_pilot(runs_dir, status: dict):
 
     srv = HTTPServer(("127.0.0.1", 0), H)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
-    run = runs_dir / "20260927-100000"
-    run.mkdir()
-    (run / "events.jsonl").write_text("")
-    (run / "status.json").write_text(json.dumps({"status": "playing", "run_id": run.name,
-                                                 "info": {"port": srv.server_address[1]}}))
-    status["run_id"] = run.name
+    log = EventLog(runs_dir, "20260927-100000", "m")        # its run and run state in the store
+    log.emit("run_start", model="m")
+    log.state.status = "playing"
+    log.state.info["port"] = srv.server_address[1]
+    log.emit("status", status="playing")
+    status["run_id"] = log.state.run_id
     return srv
 
 

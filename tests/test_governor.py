@@ -74,6 +74,13 @@ def setup(tmp_path):
     return s, EventLog(s.runs_dir, "run1", s.model)
 
 
+def trace_of(log, episode: int) -> dict:
+    """One decision's full trace, from its decisions row."""
+    import json
+    rows = log.store.query("SELECT trace FROM decisions WHERE run_id=? AND episode=?", (log.state.run_id, episode))
+    return json.loads(rows[0]["trace"])
+
+
 def test_helpers():
     assert months("2201.01.01") - months("2200.01.01") == 12
     assert current_directive({"flags": ["x", "governor_directive_defend"]}) == "defend"
@@ -158,15 +165,14 @@ def test_traces_capture_tool_calls_and_answer(setup):
     s, log = setup
     game = FakeStellaris([briefing("2200.01.01")])
     Governor(s, game, log, model=decisions("expand", consult_first=True)).run(max_decisions=1)
-    import json
-    t = json.loads((log.dir / "traces/0001.json").read_text())
+    t = trace_of(log, 1)
     assert t["decision"] == "expand" and t["outcome"] == "applied" and t["date"] == "2200.01.01"
     kinds = [st["type"] for st in t["steps"]]
     assert kinds[0] == "prompt" and "Decision point: start of run" in t["steps"][0]["text"]
     assert {"tool_call", "tool_result", "output", "usage"} <= set(kinds)
     call = next(st for st in t["steps"] if st["type"] == "tool_call")
     assert call["tool"] == "consult" and call["args"] == {"query": "diplomatic stance"}
-    assert any(e["kind"] == "trace" and e["file"] == "traces/0001.json" for e in log.recent)
+    assert any(e["kind"] == "trace" and e["file"] == "decision:run1:1" for e in log.recent)
     m = [e for e in log.recent if e["kind"] == "metrics"]
     assert m and m[0]["date"] == "2200.01.01" and "net" in m[0]
     assert log.state.info["directive"] == "expand" and log.state.info["speed"] == "fastest"
@@ -395,8 +401,7 @@ def test_decide_now_and_override_run_between_scheduled_decisions(setup):
     assert eps[1]["situation"] == "human request: We need more alloys"
     assert any("HUMAN INSTRUCTIONS (follow these): We need more alloys" in p for p in seen)
     assert eps[2]["situation"] == "human override" and ("directive", "defend") in game.actions
-    import json
-    t = json.loads((log.dir / "traces/0003.json").read_text())
+    t = trace_of(log, 3)
     assert t["model"] == "human" and t["decision"] == "defend"
     with pytest.raises(ValueError):
         gov.override("nuke")
@@ -439,7 +444,7 @@ def test_viewer_ignores_non_run_folders(setup, tmp_path):
     s, log = setup
     Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep")).run(max_decisions=1)
     (s.runs_dir / "orders").mkdir(exist_ok=True)
-    assert [r["id"] for r in list_runs(s.runs_dir)] == ["run1"]
+    assert [r["id"] for r in list_runs(log.store)] == ["run1"]
 
 
 def test_viewer_forwards_live_controls_to_the_running_pilot(setup):
@@ -450,13 +455,14 @@ def test_viewer_forwards_live_controls_to_the_running_pilot(setup):
     from pilot.dashboard import make_app
     s, log = setup
     gov = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+    log.emit("run_start", game="stellaris", model=s.model)     # the run's row, as Governor.run records it
 
     async def go():
         live = TestServer(make_app(gov))
         await live.start_server()
         log.state.info["port"] = live.port
         log.state.status = "playing"
-        log.emit("status", status="playing")           # writes status.json with the port
+        log.emit("status", status="playing")           # writes the run state with the port
         async with TestClient(TestServer(make_app(None, s.runs_dir))) as viewer:
             st = await (await viewer.get("/status")).json()
             assert st["live"] is True and st["run_id"] == "run1"
@@ -1547,10 +1553,7 @@ def test_strategy_review_updates_bookkeeping_and_saves_a_trace(setup):
     assert log.state.tokens_in > before[0]
     assert log.state.requests > before[1]
     assert log.state.learned["rules"] == before[2] + 1
-    trace_files = sorted((log.dir / "traces").glob("*.json"))
-    assert trace_files, "a trace file was saved for the review"
-    import json as _json
-    tr = _json.loads(trace_files[0].read_text())
+    tr = trace_of(log, -1)          # a review's trace: the first negative episode
     assert tr["decision"] == "strategy_review" and tr["trigger"] == "start of run"
     assert any(e["kind"] == "journal" or e["kind"] == "trace" for e in log.recent)
 
@@ -4158,7 +4161,7 @@ def test_the_fake_directive_replies_in_the_controllers_words_and_keeps_other_fla
 
 
 def test_a_directive_the_ai_reverts_is_overridden_in_the_next_prompt_and_the_events(setup):
-    import json
+    from pilot.dashboard import read_events
     s, log = setup
     seen: list[str] = []
     game = FakeStellaris([briefing("2271.12.01"), briefing("2272.01.01"), briefing("2272.02.01")],
@@ -4170,7 +4173,7 @@ def test_a_directive_the_ai_reverts_is_overridden_in_the_next_prompt_and_the_eve
     assert ("- directive tech_rush: 1 judged; 1 overridden by the AI (last: economic_policy → "
             "economic_policy_balanced on 2272.02.01)") in seen[2]
     assert seen[2].index("Action record in this campaign") > seen[2].index("Briefing from the latest autosave")
-    events = [json.loads(line) for line in (s.runs_dir / "run1" / "events.jsonl").read_text().splitlines()]
+    events = read_events(log.store, "run1", {"order_outcome"})
     out = [(e["key"], e["result"], e["by"], e["turn"]) for e in events if e["kind"] == "order_outcome"]
     assert out == [("directive tech_rush", "overridden", "economic_policy_balanced", months("2272.02.01"))]
     assert log.state.info["order_record"]["directive tech_rush"]["overridden"] == 1
@@ -4794,10 +4797,15 @@ def test_the_crisis_alloys_order_takes_the_market_slot_from_a_declared_order(set
     s, log = setup
     _alloys_measured(s)
     food = {"side": "buy", "resource": "food", "amount": 10}
+    earlier = EventLog(s.runs_dir, "run0", s.model)            # the campaign's strategy, from an earlier run
+    earlier.emit("run_start", game="stellaris", model=s.model)
+    earlier.set_campaign("stellaris", "unknown")
+    earlier.emit("strategy", strategy=_strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"],
+                                                                    market=[food])).model_dump(), reason="earlier")
     game = FakeStellaris([_war_save("2256.01.01"), _war_save("2256.02.01", occupied=True)])
     g = Governor(s, game, log, model=decisions("expand", "keep"), role_models={"strategy": _review_prompts([])})
-    g.strategy = _strategy_with(economy=Pillar(priority=2, stance="s", goals=["g"], market=[food]))
     g.run(max_decisions=2)
+    assert log.campaign_id == "stellaris/unknown"
     syncs = [a for a in game.actions if a[0] == "market_sync"]
     assert syncs == [("market_sync", [food]), ("market_sync", [{"side": "buy", "resource": "alloys", "amount": 25}])], syncs
     assert "skipped buy food 10: the war crisis alloys order takes the slot" in _market_log(log)
@@ -5210,7 +5218,27 @@ def test_a_stop_is_on_the_card_before_the_screenshot_is_taken(setup):
     assert seen["attention"]["reason"] == "the agent does not answer" and seen["attention"]["category"] == "unreachable"
     assert seen["attention"]["since"] > 1.0 and seen["attention"].get("frame", "") == ""
     assert [e["reason"] for e in seen["event"]] == ["the agent does not answer"]
-    assert log.state.info["attention"]["frame"].startswith("frames/")
+    assert (log.dir / log.state.info["attention"]["frame"]).read_bytes() == b"\xff\xd8jpeg"
+
+
+def test_a_stop_cards_frame_is_kept_until_the_card_closes(setup):
+    """Ruling 9: frame retention spares the frame of an open needs-attention card; once the card closes
+    (the run leaves needs attention) the frame falls under retention again."""
+    s, log = setup
+    log.frames_keep = 1
+
+    class Shooting(FakeStellaris):
+        def screenshot(self):
+            return type("Shot", (), {"image": b"\xff\xd8 at the stop"})()
+
+    g = Governor(s, Shooting([briefing("2256.01.01")]), log, model=decisions("keep"))
+    g._needs_attention("the agent does not answer", category="unreachable")
+    card = log.state.info["attention"]["frame"]
+    log.frame(b"\xff\xd8 later"), log.frame(b"\xff\xd8 later still")
+    assert (log.dir / card).exists(), "kept while the card is open"
+    g._status("playing")
+    log.frame(b"\xff\xd8 after")
+    assert not (log.dir / card).exists() and "attention" not in log.state.info
 
 
 def test_a_chat_or_review_retry_says_its_role(setup):

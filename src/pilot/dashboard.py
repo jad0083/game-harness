@@ -69,11 +69,13 @@ from .auth import (
     page_policy,
 )
 from .events import acting
+from .store import open_store
 from .telemetry import month_index
 from .view import Names, Views
 
 if TYPE_CHECKING:
     from .pillars import PillarSpec
+    from .telemetry import Telemetry
 
 STATIC = Path(__file__).parent / "static"
 log_ = logging.getLogger(__name__)
@@ -133,7 +135,7 @@ def live_status(status: str | None) -> bool:
 
 
 class LiveProxy:
-    """Finds the live pilot run (newest run whose status.json names a dashboard port that answers)
+    """Finds the live pilot run (newest run whose run state names a dashboard port that answers)
     and talks to it with the service key over loopback. K is read on every call; after a 401 it is
     re-read once (a rotation) and the call retried."""
 
@@ -141,7 +143,7 @@ class LiveProxy:
         self.runs_dir = runs_dir
         self.keys = keys if isinstance(keys, KeySource) else KeySource(fixed=keys)
         self._url: str | None = None
-        self.run: dict | None = None       # the live run (list_runs row, with its status.json) once found
+        self.run: dict | None = None       # the live run (list_runs row, with its run state) once found
         self._checked = 0.0
         self._session: ClientSession | None = None
 
@@ -176,7 +178,7 @@ class LiveProxy:
         if now - self._checked < 5:
             return self._url
         self._checked, self._url, self.run = now, None, None
-        for run in list_runs(self.runs_dir):
+        for run in await asyncio.to_thread(lambda: list_runs(open_store(self.runs_dir))):
             st = run.get("_status") or {}
             port = (st.get("info") or {}).get("port")
             if not port or not live_status(st.get("status")):
@@ -238,22 +240,32 @@ def pc_status() -> dict:
             "game_in_front": front is not None, "front_game": front}
 
 
-def list_runs(runs_dir: Path, live_id: str | None = None) -> list[dict]:
+def list_runs(store: Telemetry, live_id: str | None = None) -> list[dict]:
+    """The recorded runs, newest first, each with its last run state (`_status`, run_state's RunState)."""
+    frames = store.path.parent / "frames"
     out = []
-    dirs = [p for p in runs_dir.iterdir() if (p / "events.jsonl").exists()] if runs_dir.exists() else []
-    for d in sorted(dirs, reverse=True):
-        st = {}
-        if (d / "status.json").exists():
-            try:
-                st = json.loads((d / "status.json").read_text())
-            except ValueError:
-                st = {}
-        out.append({"id": d.name, "live": d.name == live_id, "model": st.get("model", ""), "_status": st,
-                    "game": (st.get("info") or {}).get("game", ""), "decisions": st.get("episodes", 0),
-                    "date": st.get("game_date", ""), "status": st.get("status", ""),
-                    "frame": (d / "latest.jpg").exists(),
-                    "backfill": d.name.endswith("-backfill")})      # scripts/civ6-backfill-orders.py; no run to show
+    for r in store.query("SELECT r.id, r.model, r.game, s.data FROM runs r LEFT JOIN run_state s ON s.run_id = r.id"
+                         " ORDER BY r.id DESC"):
+        try:
+            st = json.loads(r["data"] or "{}")
+        except ValueError:
+            st = {}
+        out.append({"id": r["id"], "live": r["id"] == live_id, "model": st.get("model") or r["model"] or "",
+                    "_status": st, "game": (st.get("info") or {}).get("game") or r["game"] or "",
+                    "decisions": st.get("episodes", 0), "date": st.get("game_date", ""), "status": st.get("status", ""),
+                    "frame": (frames / r["id"] / "latest.jpg").exists(),
+                    "backfill": r["id"].endswith("-backfill")})     # scripts/civ6-backfill-orders.py; no run to show
     return out
+
+
+def read_events(store: Telemetry, run_id: str, kinds: set[str]) -> list[dict]:
+    """A run's recorded events (only `kinds`, when any): the newest 5000, oldest first."""
+    where, args = "run_id=?", (run_id,)
+    if kinds:
+        where += f" AND kind IN ({','.join('?' * len(kinds))})"
+        args += tuple(sorted(kinds))
+    rows = store.query(f"SELECT t, kind, data FROM events WHERE {where} ORDER BY t DESC, rowid DESC LIMIT 5000", args)
+    return [{"t": r["t"], "kind": r["kind"], **json.loads(r["data"])} for r in reversed(rows)]
 
 
 HEALTH_WINDOW_S = 3600       # model health looks at the decisions of the last hour...
@@ -297,14 +309,15 @@ def model_health(events: list[dict], now: float | None = None) -> dict:
 
 def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path | None = None,
              key: str | None = None, auth: Auth | None = None, keepalive_s: float = KEEPALIVE_S) -> web.Application:
-    """Dashboard for a live `pilot` (Pilot or Governor), or read-only over `runs_dir` when pilot is None.
+    """Dashboard for a live `pilot` (Pilot or Governor), or read-only over the data directory `runs_dir`
+    when pilot is None. `telemetry` is the store (default: the live run's, else `open_store(runs_dir)`).
     `corpora` is where each game's pillars file is read (default: the repo's corpora/). `key` fixes
     the service key (default: `PILOT_DASHBOARD_KEY` or runs/dashboard.key, re-read when it changes);
     `auth` is the viewer's sign-in state (default: `Auth.from_env`)."""
     from .config import REPO
     log = pilot.log if pilot else None
-    runs_dir = runs_dir or (log.dir.parent if log else Path("runs"))
-    tel = telemetry or (log.telemetry if log else None)
+    runs_dir = runs_dir or (log.dir.parent.parent if log else Path("runs"))     # log.dir: <data>/frames/<run_id>
+    tel = telemetry or (log.store if log else open_store(runs_dir))
     corpora = corpora or (REPO / "corpora")
     live_url = None                  # set for the viewer: finds a live run to refuse a second start
     live_run = None                  # set for the viewer: (campaign, status) of the live run, if any
@@ -782,56 +795,44 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
            web.get("/api/plans", api_plans), web.get("/api/strategy", api_strategy),
            web.get("/api/decision", api_decision), web.get("/api/metrics", api_metrics)]
 
-    def run_dir(request) -> Path:
-        rid = request.match_info["run"]
-        if not RUN_ID.match(rid) or not (runs_dir / rid / "events.jsonl").exists():
+    async def recorded(rid: str) -> str:
+        """`rid` when it is a valid run id the store has recorded, else 404."""
+        if not RUN_ID.match(rid) or not await q("SELECT 1 FROM runs WHERE id=?", (rid,)):
             raise web.HTTPNotFound()
-        return runs_dir / rid
+        return rid
+
+    async def run_id(request) -> str:
+        return await recorded(request.match_info["run"])
 
     async def runs(_):
-        rows = list_runs(runs_dir, log.state.run_id if log else None)
+        rows = await asyncio.to_thread(list_runs, need_tel(), log.state.run_id if log else None)
         return web.json_response([{k: v for k, v in r.items() if k != "_status"} for r in rows])
 
-    def read_events(path: Path, kinds: set[str]) -> list[dict]:
-        out = []
-        with open(path, encoding="utf-8") as f:
-            for line in f:
-                try:
-                    ev = json.loads(line)
-                except ValueError:
-                    continue
-                if not kinds or ev.get("kind") in kinds:
-                    out.append(ev)
-        return out[-5000:]
-
     async def run_events(request):
-        d = run_dir(request)
+        rid = await run_id(request)
         kinds = set(filter(None, request.query.get("kind", "").split(",")))
-        out = await asyncio.to_thread(read_events, d / "events.jsonl", kinds)
-        return web.json_response(out)
+        return web.json_response(await asyncio.to_thread(read_events, need_tel(), rid, kinds))
 
     async def run_trace(request):
-        d = run_dir(request)
+        rid = await run_id(request)
         n = request.match_info["n"]
         if not n.isdigit():
             raise web.HTTPNotFound()
-        p = d / "traces" / f"{int(n):04d}.json"
-        if not p.exists():
+        rows = await q("SELECT trace FROM decisions WHERE run_id=? AND episode=?", (rid, int(n)))
+        if not rows or not rows[0]["trace"]:
             raise web.HTTPNotFound()
-        return web.FileResponse(p, headers={"Content-Type": "application/json"})
+        return web.Response(text=rows[0]["trace"], content_type="application/json")
 
     async def run_frame(request):
-        p = run_dir(request) / "latest.jpg"
+        p = runs_dir / "frames" / await run_id(request) / "latest.jpg"
         if not p.exists():
             raise web.HTTPNotFound()
         return web.FileResponse(p, headers={"Cache-Control": "no-store"})
 
     async def api_health(request):
         """Model health of a run (live or recorded), from its events (ruling 9)."""
-        rid = request.query.get("run", "") or (log.state.run_id if log else "")
-        if not RUN_ID.match(rid) or not (runs_dir / rid / "events.jsonl").exists():
-            raise web.HTTPNotFound()
-        evs = await asyncio.to_thread(read_events, runs_dir / rid / "events.jsonl",
+        rid = await recorded(request.query.get("run", "") or (log.state.run_id if log else ""))
+        evs = await asyncio.to_thread(read_events, need_tel(), rid,
                                       {"trace", "model_fallback", "model_retry", "episode_error"})
         live = log is not None and log.state.run_id == rid
         return web.json_response(model_health(evs, now=time.time() if live else None))
@@ -1003,9 +1004,12 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
             return web.json_response({"error": "capture_failed", "reason": "The game screen could not be captured"
                                       + (f": {cause(why)}." if why else "."), "fix": "Check the PC and its agent."},
                                      status=502)
-        frame = log.frame(image)
-        if isinstance(log.state.info.get("attention"), dict):
-            log.state.info["attention"]["frame"] = frame
+        card = log.state.info.get("attention")
+        frame = log.frame(image, keep=isinstance(card, dict))     # the card's frame stays while the card is open
+        if isinstance(card, dict):
+            if card.get("frame"):
+                log.release(card["frame"])
+            card["frame"] = frame
         with acting(by, by_id):
             log.emit("capture", frame=frame)
         return web.json_response({"ok": True, "frame": frame})
