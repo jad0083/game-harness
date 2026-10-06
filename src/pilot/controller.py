@@ -4,15 +4,13 @@ journal updates, CI-gated commits of what was learned, and pause/resume/stop con
 from __future__ import annotations
 
 import re
-import subprocess
-import threading
 import time
 from dataclasses import dataclass, replace
 
 from pydantic_ai import ModelSettings
 
 from .agent import Deps, HumanChannel, build_agent, model_settings, run_episode
-from .config import REPO, Settings
+from .config import Settings
 from .events import EventLog
 from .game import Game
 from .learning import Journal, LearnedStore
@@ -57,8 +55,6 @@ class Pilot:
         self._model_obj, self._fallback_obj = model, fallback
         self.pool: PoolModel | None = None
         self.agent = self._make_agent()
-        self._learned_since_commit = 0
-        self._commit_lock = threading.Lock()
 
     def _on_breaker(self, model: str, snap: dict) -> None:
         emit_breaker(self.log.emit, model, snap)
@@ -179,7 +175,6 @@ class Pilot:
                 if max_episodes is not None and self.log.state.episodes >= max_episodes:
                     break
         finally:
-            self._commit("chore(learned): end of pilot run", force=True)
             self._status("stopped")
             self.log.emit("run_end", turns=self.log.state.turns_advanced, episodes=self.log.state.episodes)
 
@@ -218,9 +213,7 @@ class Pilot:
         self.journal.note(f"{result.situation} → {result.decision}", result.game_date)
         learned_now = sum(1 for e in list(self.log.recent)[-40:] if e["kind"] == "learned" and e["t"] >= started)
         if learned_now:
-            self._learned_since_commit += learned_now
             self.game.reload()          # newly learned screens take effect on the next turn
-            self._commit(f"feat(learned): {result.situation[:60]}")
         self._status("playing")
         return result.resolved
 
@@ -242,24 +235,3 @@ class Pilot:
         self.log.emit("needs_attention", reason=why, category=category)
         self.log.state.status = "needs_attention"
         self.control.paused = True
-
-    def _commit(self, message: str, force: bool = False) -> None:
-        """Commit the corpus's learned overlay through the CI gate, in the background."""
-        if not self.s.commit_learnings or (self._learned_since_commit == 0 and not force):
-            return
-        self._learned_since_commit = 0
-        paths = [str(self.s.corpus_dir.relative_to(REPO) / "learned")]
-
-        def work() -> None:
-            with self._commit_lock:
-                subprocess.run(["git", "add", "--", *paths], cwd=REPO, check=False, capture_output=True)
-                if subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=REPO, check=False).returncode == 0:
-                    return
-                body = f"Learned during pilot run {self.log.state.run_id}."
-                r = subprocess.run(["scripts/ci-commit.sh", message, body], cwd=REPO, capture_output=True, text=True, check=False)
-                self.log.emit("commit", ok=r.returncode == 0, output=(r.stdout + r.stderr)[-400:])
-
-        t = threading.Thread(target=work, daemon=not force)
-        t.start()
-        if force:
-            t.join(timeout=900)

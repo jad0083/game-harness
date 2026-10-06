@@ -206,7 +206,7 @@ def scripted_model():
 
 def test_pilot_loop_resolves_a_blocker_and_records_it(corpus, tmp_path):
     s = Settings(model="google:gemini-3.8-flash", runs_dir=tmp_path / "runs",
-                 commit_learnings=False, game="x")
+                 game="x")
     s.__class__ = type("S", (Settings,), {"corpus_dir": property(lambda self: corpus)})
     game = FakeGame([TurnReport(2, "dialog", "Advanced 2 turn(s), then stopped at turn 3: a dialog is up", jpeg("Event")),
                      TurnReport(5, "limit", "Advanced 5 turn(s); each verified.\nDismissed on advanced turns: gnn_news.", jpeg(None))],
@@ -233,7 +233,7 @@ def test_dashboard_status_and_control(corpus, tmp_path):
 
     from pilot.dashboard import make_app
 
-    s = Settings(runs_dir=tmp_path / "runs", commit_learnings=False)
+    s = Settings(runs_dir=tmp_path / "runs")
     s.__class__ = type("S", (Settings,), {"corpus_dir": property(lambda self: corpus)})
     log = EventLog(s.runs_dir, "run2", s.model)
     pilot = Pilot(s, FakeGame([]), log, model=scripted_model())
@@ -320,7 +320,7 @@ def test_the_controller_gets_the_hosts_resolution(monkeypatch, tmp_path):
 def test_deciding_says_since_when(corpus, tmp_path):
     """The GalCiv pilot publishes info.deciding when it starts deciding (the page's Deciding timer counts
     from it) and drops it after; before, the timer restarted at every render."""
-    s = Settings(runs_dir=tmp_path / "runs", commit_learnings=False)
+    s = Settings(runs_dir=tmp_path / "runs")
     s.__class__ = type("S", (Settings,), {"corpus_dir": property(lambda self: corpus)})
     log = EventLog(s.runs_dir, "run3", s.model)
     pilot = Pilot(s, FakeGame([]), log, model=scripted_model())

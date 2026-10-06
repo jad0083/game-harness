@@ -49,7 +49,7 @@ it prints "not restarted: the running civ6 pilot is unaffected; the change appli
 | `PILOT_THINKING`, `PILOT_GOVERNOR_THINKING` | thinking level for GC4 episodes / Stellaris decisions (default `medium`) |
 | `PILOT_MODEL_GUARD`, `PILOT_MIN_CALL_INTERVAL`, `PILOT_MODEL_LIMITS`, `PILOT_MODEL_FAMILIES` | the governors' model guard (default `1`; `0` runs the whole-run retries), the gap between requests per provider, per-model limits and families (JSON objects); see [Model calls](#model-calls-pacing-retries-and-failover) |
 | `PILOT_RETRO_EVERY` | strategy review every N decisions (default 5) |
-| `PILOT_PORT`, `PILOT_RUNS_DIR`, `PILOT_CAMPAIGN`, `PILOT_COMMIT`, `PILOT_JOURNAL` | live dashboard port, run folder, campaign id, commit learned knowledge, journal file |
+| `PILOT_PORT`, `PILOT_RUNS_DIR`, `PILOT_CAMPAIGN` | live dashboard port, run folder, campaign id |
 | `PILOT_DASHBOARD_KEY` | the dashboard's service key (default: generated once into `runs/dashboard.key`); a header from the controller only |
 | `PILOT_LIVE_HOST`, `PILOT_VIEW_HOST` | bind addresses of the live pilot's dashboard (default `127.0.0.1`) and of the viewer (default `0.0.0.0`; `view --host`) |
 | `PILOT_PUBLIC_URL`, `PILOT_DASHBOARD_HOSTS` | the viewer's canonical address for links and QR codes (page loads on other names are redirected there), and extra host names it answers to (comma list) |

@@ -69,7 +69,7 @@ def setup(tmp_path):
         shutil.copy(REPO / "corpora/civ6" / f, corpus / f)
     shutil.copytree(REPO / "corpora/civ6/data", corpus / "data")
     s = Settings(model="google:gemini-3.8-flash", runs_dir=tmp_path / "runs",
-                 commit_learnings=False, game="civ6", decide_every_turns=3, poll_s=0, retro_every=0,
+                 game="civ6", decide_every_turns=3, poll_s=0, retro_every=0,
                  ask_human_timeout_s=0.05, fallback_model=None, autoplay_chunk=1)
     s.__class__ = type("S", (Settings,), {"corpus_dir": property(lambda self: corpus)})
     return s, EventLog(s.runs_dir, "civ1", s.model)

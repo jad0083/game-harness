@@ -1,7 +1,7 @@
 """`python -m pilot` — run the autonomous LLM pilot, or check the setup.
 
     python -m pilot check                     # key, model, agent, corpus
-    python -m pilot run [--model M] [--port P] [--turns N] [--no-commit] [--episodes K]
+    python -m pilot run [--model M] [--port P] [--turns N] [--episodes K]
     python -m pilot run --game stellaris [--speed fast|fastest|...] [--months N]
     python -m pilot run --game civ6 [--decide-turns N]  # the game's AI plays N turns between decisions
     python -m pilot view [--port P] [--host H]   # the dashboard over recorded runs (and the live one)
@@ -140,8 +140,20 @@ def run(s: Settings, episodes: int | None) -> int:
     finally:
         done.set()
         game.close()
+        _export_at_end(log, s)
         log.close()
     return 0
+
+
+def _export_at_end(log, s: Settings) -> None:
+    """Write the learned files and journals to PILOT_EXPORT_DIR when set; a failure never fails the run."""
+    if not s.export_dir:
+        return
+    from .export import export
+    try:
+        export(log.store, s.export_dir, game=s.game)
+    except Exception as e:  # noqa: BLE001 - a failed export never fails the run
+        log.emit("briefing_error", error=f"export failed: {e}"[:300])
 
 
 STOP_GRACE_S = 20.0
@@ -512,11 +524,14 @@ def main(argv: list[str] | None = None) -> int:
     tok_sub.add_parser("list")
     r = tok_sub.add_parser("revoke")
     r.add_argument("id")
+    r = sub.add_parser("export", help="write the store's learned files and journals to a directory")
+    r.add_argument("--to", required=True)
+    r.add_argument("--game")
+    r.add_argument("--campaign")
     run_p = sub.choices["run"]
     run_p.add_argument("--port", type=int)
     run_p.add_argument("--turns", type=int, help="turns per autopilot call")
     run_p.add_argument("--episodes", type=int, help="stop after this many decisions (testing)")
-    run_p.add_argument("--no-commit", action="store_true", help="don't commit learnings")
     run_p.add_argument("--speed", choices=["slowest", "slow", "normal", "fast", "faster", "fastest"],
                        help="Stellaris game speed while the AI plays ('faster' = fastest)")
     run_p.add_argument("--months", type=int, help="Stellaris: in-game months between scheduled decisions")
@@ -527,6 +542,12 @@ def main(argv: list[str] | None = None) -> int:
         from .models import load_prefs
         v = load_prefs(s.runs_dir).get(a.get, "")
         print(v if isinstance(v, str) else json.dumps(v))
+        return 0
+    if a.cmd == "export":
+        from .export import export
+        from .store import open_store
+        n = len(export(open_store(s.runs_dir), Path(a.to), a.game, a.campaign))
+        print(f"exported {n} files to {a.to}")
         return 0
     if a.cmd == "view":
         return view(s, a.port, a.host)
@@ -564,7 +585,6 @@ def main(argv: list[str] | None = None) -> int:
         return check(s)
     s.dashboard_port = a.port or s.dashboard_port
     s.turns_per_autopilot = a.turns or s.turns_per_autopilot
-    s.commit_learnings = s.commit_learnings and not a.no_commit
     if a.speed:
         s.speed = "fastest" if a.speed == "faster" else a.speed
     else:

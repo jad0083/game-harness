@@ -94,7 +94,6 @@ class Settings:
     # The live pilot's dashboard answers only the viewer and scripts on this machine (ruling 36 of the
     # dashboard v2 design): loopback unless PILOT_LIVE_HOST says otherwise.
     live_host: str = "127.0.0.1"
-    commit_learnings: bool = True
     ask_human_timeout_s: float = 45.0
     # Stellaris governor: game speed while the AI plays (slowest | slow | normal | fast | fastest;
     # the game is paused while the model decides), in-game months between scheduled decisions,
@@ -189,7 +188,6 @@ class Settings:
         s.live_host = env.get("PILOT_LIVE_HOST", s.live_host).strip() or s.live_host
         s.dashboard_host = env.get("PILOT_VIEW_HOST", s.dashboard_host).strip() or s.dashboard_host
         s.turns_per_autopilot = int(env.get("PILOT_TURNS", s.turns_per_autopilot))
-        s.commit_learnings = env.get("PILOT_COMMIT", "1") not in ("0", "false", "no")
         s.game = env.get("PILOT_GAME", s.game)
         s.speed = env.get("PILOT_SPEED", s.speed)
         s.decide_every_months = int(env.get("PILOT_DECIDE_MONTHS", s.decide_every_months))

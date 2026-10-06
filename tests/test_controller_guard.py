@@ -34,7 +34,7 @@ def finisher():
 
 def make(corpus, tmp_path, **kw):  # noqa: F811
     s = Settings(model="google:gemini-3.8-flash", runs_dir=tmp_path / "runs",
-                 commit_learnings=False, game="x", fallback_model=None, **kw)
+                 game="x", fallback_model=None, **kw)
     s.__class__ = type("S", (Settings,), {"corpus_dir": property(lambda self: corpus)})
     return s, EventLog(s.runs_dir, "run1", s.model)
 

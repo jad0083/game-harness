@@ -69,7 +69,7 @@ def setup(tmp_path):
     for f in ("manifest.toml", "pilot.md", "strategy.md", "directives.toml", "pillars.toml"):
         shutil.copy(REPO / "corpora/stellaris" / f, corpus / f)
     s = Settings(model="google:gemini-3.8-flash", runs_dir=tmp_path / "runs",
-                 commit_learnings=False, game="stellaris", speed="fastest", decide_every_months=12, poll_s=0,
+                 game="stellaris", speed="fastest", decide_every_months=12, poll_s=0,
                  ask_human_timeout_s=0.05, fallback_model=None)      # tests never reach a real provider
     s.__class__ = type("S", (Settings,), {"corpus_dir": property(lambda self: corpus)})
     return s, EventLog(s.runs_dir, "run1", s.model)
@@ -2830,7 +2830,7 @@ def test_market_actions_are_skipped_when_the_game_has_no_market_action(tmp_path)
     (corpus / "pillars.toml").write_text(text, encoding="utf-8")
 
     s = Settings(model="google:gemini-3.8-flash", runs_dir=tmp_path / "runs",
-                 commit_learnings=False, game="stellaris", speed="fastest", decide_every_months=12, poll_s=0,
+                 game="stellaris", speed="fastest", decide_every_months=12, poll_s=0,
                  ask_human_timeout_s=0.05, fallback_model=None)
     s.__class__ = type("S", (Settings,), {"corpus_dir": property(lambda self: corpus)})
     log = EventLog(s.runs_dir, "run_nomarket", s.model)
