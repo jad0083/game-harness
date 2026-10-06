@@ -45,6 +45,9 @@ def _auth_db(tmp_path, monkeypatch):
     for var in ("PILOT_PUBLIC_URL", "PILOT_DASHBOARD_HOSTS", "PILOT_KEY_SIGNIN", "PILOT_ADD_DEVICE",
                 "PILOT_DATA_DIR", "PILOT_RUNS_DIR"):
         monkeypatch.delenv(var, raising=False)
+    # model clients need a key to be built; tests never see the developer's real ones (and the CI runner has none)
+    monkeypatch.setenv("GEMINI_API_KEY", "test-gemini-key")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
     from pilot import config
     real_load_dotenv = config.load_dotenv
     monkeypatch.setattr(config, "load_dotenv", lambda path=None: None if path is None else real_load_dotenv(path))

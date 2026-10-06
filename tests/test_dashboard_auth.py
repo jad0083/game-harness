@@ -262,6 +262,7 @@ def test_dashboard_hosts_and_public_url_extend_the_list(tmp_path, clock, monkeyp
 
 def test_public_url_redirects_page_navigations_to_the_canonical_host(tmp_path, clock, monkeypatch):
     monkeypatch.setenv("PILOT_PUBLIC_URL", "http://192.168.1.76:8780")
+    monkeypatch.setenv("PILOT_DASHBOARD_HOSTS", "deb-mini2")   # an allowed name on any machine
     app, auth = viewer(tmp_path, clock)
 
     async def go():
