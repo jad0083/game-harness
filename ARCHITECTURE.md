@@ -378,7 +378,9 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
 - `learned_files.py`: renders `<data>/learned/<game>/` (`manifest.toml`, `strategy.md`, `controls.md`,
   `templates/`) from the store's learned rows; an unrenderable screen row is skipped and named in a
   manifest comment. The controller reads it with `--learned <dir>`, so nothing writes into `corpora/`
-  at run time.
+  at run time. Without `--learned` it reads `<corpus>/learned/`; a template path there resolves in that
+  folder when the file is there (an exported `templates/<name>.png`), else against the corpus (the older
+  committed `learned/templates/<name>.png`).
 - `export.py`: `pilot export --to DIR [--game G] [--campaign ID]` writes the same files to
   `DIR/<game>/learned/` (the generated files only; episodes and the ledger stay in the store) and the journals to `DIR/journals/<campaign>.md`; with `PILOT_EXPORT_DIR` set a
   run exports there when it ends. Committing the output is a person's step.

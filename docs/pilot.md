@@ -1121,7 +1121,10 @@ is its `run_state` row. The pilot stops at start, naming the directory, when it 
 **The learned overlay.** The pilot writes what it learns (rules, controls, known screens with their
 templates) into the store and renders `learned/<game>/` from it; the controller reads that folder
 with `--learned <dir>` on top of the corpus. A fresh install renders an empty overlay. A screen row
-that cannot be rendered is skipped and named in a comment of `manifest.toml`.
+that cannot be rendered is skipped and named in a comment of `manifest.toml`. A controller started
+without `--learned` (`scripts/play/*.sh`, the MCP server of `.mcp.json`, `game-controller autopilot`)
+reads `corpora/<game>/learned/` instead, where an exported overlay's `templates/<name>.png` paths
+resolve inside that folder.
 
 **Export.** `pilot export --to DIR [--game G] [--campaign ID]` writes `DIR/<game>/learned/...` (the
 generated files: `manifest.toml`, `strategy.md`, `controls.md`, `templates/`) and

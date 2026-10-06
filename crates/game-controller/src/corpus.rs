@@ -271,8 +271,10 @@ impl GameManifest {
 
     /// Merge the learned overlay (written by the pilot app) into this manifest. Hand-verified
     /// entries win: an overlay screen or hotkey with the same name as a main one is ignored.
-    /// Overlay template paths are relative to the corpus directory (e.g. `learned/templates/x.png`);
-    /// with an explicit learned directory they are relative to it and become absolute paths.
+    /// With an explicit learned directory, overlay template paths are relative to it. In
+    /// `<corpus>/learned` a path is relative to that folder when the file is there (the generated
+    /// form, `templates/x.png`, as `pilot export` writes it), else to the corpus directory (the older
+    /// committed form, `learned/templates/x.png`). Paths resolved in the learned folder become absolute.
     fn merge_learned(&mut self, dir: &Path, explicit: bool) -> Result<()> {
         let path = &dir.join("manifest.toml");
         if !path.exists() {
@@ -282,10 +284,13 @@ impl GameManifest {
         let overlay: LearnedOverlay =
             toml::from_str(&content).with_context(|| format!("parsing learned overlay {:?}", path))?;
         for (name, mut screen) in overlay.screens {
-            if explicit {
-                if let Some(rel) = screen.template.take() {
-                    screen.template = Some(dir.join(rel).to_string_lossy().into_owned());
-                }
+            if let Some(rel) = screen.template.take() {
+                let in_dir = dir.join(&rel);
+                screen.template = Some(if explicit || in_dir.exists() {
+                    absolute(in_dir).to_string_lossy().into_owned()
+                } else {
+                    rel
+                });
             }
             self.screens.entry(name).or_insert(screen);
         }
@@ -951,6 +956,33 @@ dismiss_key = "esc"
         );
         let m = GameManifest::load_with_learned(f.0.join("manifest.toml"), None, None).unwrap();
         assert_eq!(m.screens["stale"].template.as_deref(), Some("learned/templates/stale.png"));
+    }
+
+    #[test]
+    fn an_exported_overlay_copied_into_the_corpus_loads_its_templates_without_a_learned_dir() {
+        // `pilot export` writes paths relative to the learned folder (`templates/x.png`); a person copies
+        // that folder over `<corpus>/learned/` and runs the controller without `--learned`.
+        let f = Fixture::new("learned_exported");
+        std::fs::create_dir_all(f.0.join("learned/templates")).unwrap();
+        image::RgbImage::from_pixel(8, 4, image::Rgb([200, 10, 10])).save(f.0.join("learned/templates/x.png")).unwrap();
+        image::RgbImage::from_pixel(6, 3, image::Rgb([10, 200, 10])).save(f.0.join("learned/templates/old.png")).unwrap();
+        f.write(
+            "learned/manifest.toml",
+            "[screens.x]\ndescription = \"exported\"\ntemplate = \"templates/x.png\"\n\
+             template_roi = [0.1, 0.1, 0.1, 0.1]\nauto_dismiss = true\ndismiss_key = \"esc\"\n\
+             [screens.old]\ndescription = \"committed before\"\ntemplate = \"learned/templates/old.png\"\n\
+             template_roi = [0.2, 0.2, 0.1, 0.1]\nauto_dismiss = true\ndismiss_key = \"esc\"\n",
+        );
+        let m = GameManifest::load_with_learned(f.0.join("manifest.toml"), None, None).unwrap();
+        let loaded = crate::autopilot::load_known_screens(&m);
+        let size = |name: &str| {
+            let (_, _, tpl) = loaded.iter().find(|(n, _, _)| n == name).unwrap_or_else(|| panic!("{name} lost its template"));
+            (tpl.width(), tpl.height())
+        };
+        assert_eq!(size("x"), (8, 4), "the exported form resolves in the learned folder");
+        assert_eq!(size("old"), (6, 3), "the older committed form still resolves against the corpus");
+        assert_eq!(PathBuf::from(m.screens["x"].template.clone().unwrap()), absolute(f.0.join("learned/templates/x.png")));
+        assert_eq!(m.screens["old"].template.as_deref(), Some("learned/templates/old.png"));
     }
 
     #[test]
