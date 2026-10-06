@@ -35,6 +35,7 @@ def test_civ6_window_is_a_known_game():
 
 def test_pc_status_names_civ6_in_front(monkeypatch):
     monkeypatch.setenv("GAME_AGENT_TOKEN", "t")
+    monkeypatch.setenv("GAME_AGENT_URL", "http://127.0.0.1:8765")
 
     def urlopen(req, timeout=None):
         if req.full_url.endswith("/health"):

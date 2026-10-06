@@ -3135,9 +3135,9 @@ async function loadPc() {
   if (!p.online) {
     const recentTurn = S.live && S.last.turn && Date.now() / 1000 - S.last.turn.t < 60;
     const word = { offline: "offline", timeout: recentTurn ? "busy" : "not answering", refused: "refuses our token",
-                   unknown: "status unknown" }[p.state] || "not answering";
+                   unknown: "status unknown", not_configured: "Agent not configured (set GAME_AGENT_URL)" }[p.state] || "not answering";
     el.className = "pc " + (word === "busy" ? "busy" : "off");
-    el.textContent = $("menu-pc").textContent = `${host} ${word}`;
+    el.textContent = $("menu-pc").textContent = p.state === "not_configured" ? word : `${host} ${word}`;
     el.title = p.error ? `The gaming PC's agent: ${p.error}` : "The gaming PC and what is open on it";
     return;
   }

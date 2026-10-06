@@ -245,6 +245,7 @@ def fake_agent(foreground: str, titles: list[str], calls: list):
 def test_pc_status_does_not_expose_the_window_title(monkeypatch):
     calls: list = []
     monkeypatch.setenv("GAME_AGENT_TOKEN", "t")
+    monkeypatch.setenv("GAME_AGENT_URL", "http://127.0.0.1:8765")
     monkeypatch.setattr("urllib.request.urlopen", fake_agent("Inbox - private mail", ["Stellaris", "Inbox - private mail"], calls))
     st = dashboard.pc_status()
     assert "Inbox" not in json.dumps(st)
@@ -256,7 +257,6 @@ def test_pc_status_does_not_expose_the_window_title(monkeypatch):
 
 
 def test_pc_status_uses_the_configured_agent_url(monkeypatch):
-    from pilot.config import Settings
     calls: list = []
     monkeypatch.setenv("GAME_AGENT_TOKEN", "t")
     monkeypatch.setattr("urllib.request.urlopen", fake_agent("", [], calls))
@@ -265,8 +265,7 @@ def test_pc_status_uses_the_configured_agent_url(monkeypatch):
     assert calls[0] == "http://10.9.9.9:1234/health"
     monkeypatch.delenv("GAME_AGENT_URL")
     calls.clear()
-    dashboard.pc_status()
-    assert calls[0] == Settings().agent_url.rstrip("/") + "/health"
+    assert dashboard.pc_status()["state"] == "not_configured" and calls == []     # no URL: no call at all
 
 
 # ---------- run ids ----------

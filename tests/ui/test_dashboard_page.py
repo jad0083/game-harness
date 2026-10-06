@@ -44,6 +44,15 @@ def test_civ6_readout_speaks_turns(browser, live_servers):
     w.context.close()
 
 
+def test_pc_chip_says_the_agent_is_not_configured(browser, live_servers):
+    w = open_context(browser, "desktop-light", live_servers)
+    body = '{"online": false, "state": "not_configured", "host": "", "error": "set GAME_AGENT_URL"}'
+    w.page.route("**/api/pc", lambda route: route.fulfill(status=200, content_type="application/json", body=body))
+    load(w)
+    assert w.page.text_content("#pc") == "Agent not configured (set GAME_AGENT_URL)"
+    w.context.close()
+
+
 def test_error_decision_reads_as_no_decision(browser, live_servers):
     w = open_context(browser, "desktop-light", live_servers)
     load(w)

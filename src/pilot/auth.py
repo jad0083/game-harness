@@ -78,7 +78,7 @@ NAME_MAX = 60
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 # public routes (POST /pair/key is answered only when PILOT_KEY_SIGNIN is on; otherwise it is a 404)
 PUBLIC_PATHS = {("GET", "/pair"), ("POST", "/pair"), ("POST", "/pair/key"), ("GET", "/static/signin.js"),
-                ("GET", "/favicon.svg")}
+                ("GET", "/favicon.svg"), ("GET", "/healthz")}
 STATIC = Path(__file__).parent / "static"
 WORDS_FILE = Path(__file__).with_name("pair_words.txt")
 MAX_BROWSER_GRANTS = 3

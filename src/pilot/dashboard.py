@@ -211,13 +211,15 @@ def pc_status() -> dict:
     here: the answer only says which known games are open and whether one is in front. `state`
     tells the chip's cases apart (ruling 10): on, offline (the connection was refused), timeout (no
     answer in 3 s: the page shows "busy" when the live run just finished a turn, else "not
-    answering"), refused (the agent refused our token), error."""
+    answering"), refused (the agent refused our token), not_configured (GAME_AGENT_URL unset), error."""
     import socket
     import urllib.error
     import urllib.request
     from urllib.parse import urlparse
 
     from .config import REPO, Settings
+    if not os.environ.get("GAME_AGENT_URL", "").strip():
+        return {"online": False, "state": "not_configured", "host": "", "error": "set GAME_AGENT_URL"}
     url = Settings().agent_url.rstrip("/")
     host = urlparse(url).hostname or url
     try:
@@ -845,7 +847,12 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
         live = log is not None and log.state.run_id == rid
         return web.json_response(model_health(evs, now=time.time() if live else None))
 
-    history = [web.get("/runs", runs), web.get("/runs/{run}/events", run_events), web.get("/api/health", api_health),
+    async def healthz(_):
+        """Liveness for a container's healthcheck: public, and says nothing else."""
+        return web.Response(text="ok")
+
+    history = [web.get("/healthz", healthz), web.get("/runs", runs), web.get("/runs/{run}/events", run_events),
+               web.get("/api/health", api_health),
                web.get("/runs/{run}/trace/{n}", run_trace), web.get("/runs/{run}/frame.jpg", run_frame)]
 
     async def index(_):
