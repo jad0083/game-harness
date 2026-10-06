@@ -104,3 +104,29 @@ def test_a_successful_store_write_resets_the_failure_count(tmp_path):
         log.emit("status", status="playing")
     with pytest.raises(sqlite3.OperationalError):
         log.emit("status", status="playing")
+
+
+@pytest.mark.parametrize("bad", ["{not json", "[1, 2]", "7", "null", b"\xff\xfe", 5])
+def test_a_damaged_event_or_run_state_row_is_skipped_not_fatal(tmp_path, bad):
+    """One events.data or run_state.data row that is not JSON, or JSON but not an object, is skipped; the
+    endpoint still answers with every other row."""
+    log = EventLog(tmp_path, "20261005-120000", "m")
+    log.emit("run_start", game="civ6", model="m")
+    st = open_store(tmp_path)
+    st._exec("INSERT INTO events(run_id, t, kind, data) VALUES (?,?,?,?)", ("20261005-120000", 1.0, "status", bad))
+    log.emit("status", status="playing")
+    assert [e["kind"] for e in read_events(st, "20261005-120000", set())] == ["run_start", "status"]
+    assert [e["kind"] for e in read_events(st, "20261005-120000", {"status"})] == ["status"]
+    EventLog(tmp_path, "20261005-130000", "m").emit("run_start", game="civ6", model="m")
+    st._exec("UPDATE run_state SET data=? WHERE run_id=?", (bad, "20261005-120000"))
+    rows = {r["id"]: r for r in list_runs(st)}
+    assert set(rows) == {"20261005-120000", "20261005-130000"}
+    assert rows["20261005-120000"]["_status"] == {} and rows["20261005-120000"]["status"] == ""
+    assert rows["20261005-130000"]["status"] == "starting"
+
+
+def test_a_run_state_whose_info_is_not_an_object_still_lists(tmp_path):
+    EventLog(tmp_path, "20261005-120000", "m").emit("run_start", game="civ6", model="m")
+    st = open_store(tmp_path)
+    st._exec("UPDATE run_state SET data=? WHERE run_id=?", ('{"status": "playing", "info": [1]}', "20261005-120000"))
+    assert list_runs(st)[0]["status"] == "playing"

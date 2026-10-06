@@ -240,18 +240,26 @@ def pc_status() -> dict:
             "game_in_front": front is not None, "front_game": front}
 
 
+def row_object(raw) -> dict | None:
+    """The JSON object a row holds (events.data, run_state.data), or None for a damaged one (not JSON, or
+    JSON that is no object): such a row is skipped, never fatal to the endpoint that reads it."""
+    try:
+        value = json.loads(raw)
+    except (TypeError, ValueError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
 def list_runs(store: Telemetry, live_id: str | None = None) -> list[dict]:
     """The recorded runs, newest first, each with its last run state (`_status`, run_state's RunState)."""
     frames = store.path.parent / "frames"
     out = []
     for r in store.query("SELECT r.id, r.model, r.game, s.data FROM runs r LEFT JOIN run_state s ON s.run_id = r.id"
                          " ORDER BY r.id DESC"):
-        try:
-            st = json.loads(r["data"] or "{}")
-        except ValueError:
-            st = {}
+        st = row_object(r["data"] or "{}") or {}
+        info = st.get("info") if isinstance(st.get("info"), dict) else {}
         out.append({"id": r["id"], "live": r["id"] == live_id, "model": st.get("model") or r["model"] or "",
-                    "_status": st, "game": (st.get("info") or {}).get("game") or r["game"] or "",
+                    "_status": st, "game": info.get("game") or r["game"] or "",
                     "decisions": st.get("episodes", 0), "date": st.get("game_date", ""), "status": st.get("status", ""),
                     "frame": (frames / r["id"] / "latest.jpg").exists(),
                     "backfill": r["id"].endswith("-backfill")})     # scripts/civ6-backfill-orders.py; no run to show
@@ -265,7 +273,7 @@ def read_events(store: Telemetry, run_id: str, kinds: set[str]) -> list[dict]:
         where += f" AND kind IN ({','.join('?' * len(kinds))})"
         args += tuple(sorted(kinds))
     rows = store.query(f"SELECT t, kind, data FROM events WHERE {where} ORDER BY t DESC, rowid DESC LIMIT 5000", args)
-    return [{"t": r["t"], "kind": r["kind"], **json.loads(r["data"])} for r in reversed(rows)]
+    return [{"t": r["t"], "kind": r["kind"], **data} for r in reversed(rows) if (data := row_object(r["data"])) is not None]
 
 
 HEALTH_WINDOW_S = 3600       # model health looks at the decisions of the last hour...
