@@ -5,6 +5,7 @@ import time
 import tomllib
 
 import pytest
+from conftest import journal_text
 from PIL import Image, ImageDraw
 from pydantic_ai import BinaryContent
 from pydantic_ai.messages import ModelRequest, ModelResponse, ToolCallPart, UserPromptPart
@@ -18,6 +19,7 @@ from pilot.dashboard import read_events
 from pilot.events import EventLog
 from pilot.game import FakeGame, TurnReport, classify_report
 from pilot.learning import Journal, LearnedStore, LearningRejected, ScreenAction
+from pilot.store import open_store
 
 
 def jpeg(title: str | None, seed: int = 0) -> bytes:
@@ -85,8 +87,14 @@ def test_autopilot_report_classification():
 
 # -- learning store ------------------------------------------------------------------------------
 
+def learned_store(corpus, model: str = "m", run_id: str = "r") -> LearnedStore:
+    """A LearnedStore on a data directory beside the corpus."""
+    data = corpus.parent / "data"
+    return LearnedStore(open_store(data), "galciv4", corpus, data / "learned/galciv4", model, run_id)
+
+
 def test_learn_screen_validates_distinctness_and_writes_overlay(corpus):
-    store = LearnedStore(corpus, "test-model", "run1")
+    store = learned_store(corpus, "test-model", "run1")
     shown = jpeg("Colonize Planet")
     with pytest.raises(LearningRejected, match="no frames without"):
         store.add_screen("colony_prompt", shown, (576, 290, 992, 330), ScreenAction(click=(895, 525)), "d", "e")
@@ -94,17 +102,19 @@ def test_learn_screen_validates_distinctness_and_writes_overlay(corpus):
     store.remember_frame(jpeg(None, seed=2))
     msg = store.add_screen("colony_prompt", shown, (576, 290, 992, 330), ScreenAction(click=(895, 525)), "desc", "ev")
     assert "active from the next turn" in msg
-    m = tomllib.loads((corpus / "learned/manifest.toml").read_text())
+    m = tomllib.loads((store.learned_dir / "manifest.toml").read_text())
     s = m["screens"]["colony_prompt"]
-    assert s["auto_dismiss"] is True and s["template"] == "learned/templates/colony_prompt.png"
+    assert s["auto_dismiss"] is True and s["template"] == "templates/colony_prompt.png"
     assert s["dismiss_click"] == [0.5708, 0.5952] and s["learned_by"] == "test-model"
-    assert (corpus / "learned/templates/colony_prompt.png").exists()
-    ledger = [json.loads(line) for line in (corpus / "learned/ledger.jsonl").read_text().splitlines()]
+    assert (store.learned_dir / "templates/colony_prompt.png").exists()
+    ledger = [{"kind": r["kind"], **json.loads(r["data"])}
+              for r in store.store.query("SELECT kind, data FROM ledger WHERE game='galciv4' ORDER BY rowid")]
     assert ledger[-1]["kind"] == "screen" and ledger[-1]["min_negative_distance"] >= 0.10
+    assert not (corpus / "learned").exists(), "nothing is written into the corpus"
 
 
 def test_learn_screen_rejects_bad_inputs(corpus):
-    store = LearnedStore(corpus, "m", "r")
+    store = learned_store(corpus)
     store.remember_frame(jpeg(None, seed=1))
     f = jpeg("Title")
     with pytest.raises(LearningRejected, match="snake_case"):
@@ -122,7 +132,7 @@ def test_learn_screen_rejects_bad_inputs(corpus):
 
 
 def test_failing_learned_screen_is_disabled(corpus):
-    store = LearnedStore(corpus, "m", "r")
+    store = learned_store(corpus)
     store.remember_frame(jpeg(None, seed=3))
     store.add_screen("pesky", jpeg("Pesky"), (576, 290, 992, 330), ScreenAction(key="c"), "d", "e")
     assert store.record_dismissals(["pesky"], advanced=False) == []
@@ -132,29 +142,34 @@ def test_failing_learned_screen_is_disabled(corpus):
     assert s["auto_dismiss"] is False and "without the turn advancing" in s["disabled_reason"]
 
 
-def test_rules_controls_episodes_and_recall(corpus, tmp_path):
-    store = LearnedStore(corpus, "m", "r")
+def test_rules_controls_episodes_and_recall(corpus):
+    store = learned_store(corpus)
     with pytest.raises(LearningRejected):
         store.add_rule("short", "x")
     store.add_rule("When offered an artifact or 200 credits, take the artifact while rich.", "recurring")
     store.add_control("Key n puts a warship on Sentry.", "tooltip")
-    assert "take the artifact" in (corpus / "learned/strategy.md").read_text()
+    assert "take the artifact" in store.rules_markdown()
     store.add_episode("Event: Space Creature Migration", "Protected the creatures", "resolved", "Jul 2333")
     store.add_episode("Event: Space Creature Migration", "Protected the creatures", "resolved", "Jul 2334")
     store.add_episode("Research complete", "Chose Hyperwave Radio", "resolved")
     assert store.recall("space creature")[0]["decision"] == "Protected the creatures"
     assert store.repeated("Event: Space Creature Migration") == 2
-    j = Journal(tmp_path / "j.md", "m")
+    campaign = None
+    j = Journal(store.store, "galciv4", "m", campaign=lambda: campaign)
+    j.note("Before the campaign is named")
+    campaign = "galciv4/terran-2329"
     j.note("Colonised Artemis", "Aug 2330")
     j.note("Second line")
-    text = (tmp_path / "j.md").read_text()
-    assert "## Pilot log" in text and "**Aug 2330**: Colonised Artemis" in text and text.count("## Pilot log") == 1
+    rows = store.store.query("SELECT campaign_id, date, text FROM journal ORDER BY t")
+    assert rows == [{"campaign_id": "galciv4/no-campaign", "date": "", "text": "Before the campaign is named"},
+                    {"campaign_id": "galciv4/terran-2329", "date": "Aug 2330", "text": "Colonised Artemis"},
+                    {"campaign_id": "galciv4/terran-2329", "date": "", "text": "Second line"}]
 
 
 # -- history trimming ----------------------------------------------------------------------------
 
 def test_undecodable_frame_is_ignored(corpus):
-    store = LearnedStore(corpus, "m", "r")
+    store = learned_store(corpus)
     store.remember_frame(b"not a jpeg")
     store.remember_frame(jpeg(None))
     assert len(store.negatives) == 1
@@ -190,7 +205,7 @@ def scripted_model():
 
 
 def test_pilot_loop_resolves_a_blocker_and_records_it(corpus, tmp_path):
-    s = Settings(model="google:gemini-3.8-flash", runs_dir=tmp_path / "runs", journal=tmp_path / "journal.md",
+    s = Settings(model="google:gemini-3.8-flash", runs_dir=tmp_path / "runs",
                  commit_learnings=False, game="x")
     s.__class__ = type("S", (Settings,), {"corpus_dir": property(lambda self: corpus)})
     game = FakeGame([TurnReport(2, "dialog", "Advanced 2 turn(s), then stopped at turn 3: a dialog is up", jpeg("Event")),
@@ -206,8 +221,8 @@ def test_pilot_loop_resolves_a_blocker_and_records_it(corpus, tmp_path):
     ep = next(e for e in log.recent if e["kind"] == "episode")
     assert ep["resolved"] is True and ep["situation"] == "Event: Space Creature Migration"
     assert log.state.episodes == 1 and log.state.turns_advanced == 2 and log.state.game_date == "Jul 1, 2333"
-    assert "Protected the space creatures" in (tmp_path / "journal.md").read_text()
-    assert LearnedStore(corpus, "m", "r").recall("space creature")
+    assert "Protected the space creatures" in journal_text(s.runs_dir)
+    assert LearnedStore(log.store, s.game, corpus, s.learned_dir, "m", "r").recall("space creature")
     assert read_events(log.store, "run1", {"episode"}) and (log.dir / "latest.jpg").exists()
 
 
@@ -218,7 +233,7 @@ def test_dashboard_status_and_control(corpus, tmp_path):
 
     from pilot.dashboard import make_app
 
-    s = Settings(runs_dir=tmp_path / "runs", journal=tmp_path / "j.md", commit_learnings=False)
+    s = Settings(runs_dir=tmp_path / "runs", commit_learnings=False)
     s.__class__ = type("S", (Settings,), {"corpus_dir": property(lambda self: corpus)})
     log = EventLog(s.runs_dir, "run2", s.model)
     pilot = Pilot(s, FakeGame([]), log, model=scripted_model())
@@ -305,7 +320,7 @@ def test_the_controller_gets_the_hosts_resolution(monkeypatch, tmp_path):
 def test_deciding_says_since_when(corpus, tmp_path):
     """The GalCiv pilot publishes info.deciding when it starts deciding (the page's Deciding timer counts
     from it) and drops it after; before, the timer restarted at every render."""
-    s = Settings(runs_dir=tmp_path / "runs", journal=tmp_path / "j.md", commit_learnings=False)
+    s = Settings(runs_dir=tmp_path / "runs", commit_learnings=False)
     s.__class__ = type("S", (Settings,), {"corpus_dir": property(lambda self: corpus)})
     log = EventLog(s.runs_dir, "run3", s.model)
     pilot = Pilot(s, FakeGame([]), log, model=scripted_model())

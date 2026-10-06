@@ -1,6 +1,7 @@
 import shutil
 
 import pytest
+from conftest import journal_text
 from pydantic_ai.messages import ModelResponse, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
@@ -67,7 +68,7 @@ def setup(tmp_path):
     corpus.mkdir()
     for f in ("manifest.toml", "pilot.md", "strategy.md", "directives.toml", "pillars.toml"):
         shutil.copy(REPO / "corpora/stellaris" / f, corpus / f)
-    s = Settings(model="google:gemini-3.8-flash", runs_dir=tmp_path / "runs", journal=tmp_path / "journal.md",
+    s = Settings(model="google:gemini-3.8-flash", runs_dir=tmp_path / "runs",
                  commit_learnings=False, game="stellaris", speed="fastest", decide_every_months=12, poll_s=0,
                  ask_human_timeout_s=0.05, fallback_model=None)      # tests never reach a real provider
     s.__class__ = type("S", (Settings,), {"corpus_dir": property(lambda self: corpus)})
@@ -131,7 +132,7 @@ def test_governor_decides_on_schedule_and_pauses_while_deciding(setup):
     eps = [e for e in log.recent if e["kind"] == "episode"]
     assert eps[0]["situation"] == "start of run" and eps[1]["situation"].startswith("scheduled")
     assert ("corpus", "corpus_search", {"query": "diplomatic stance", "limit": 5}) in game.actions
-    assert "expand (applied)" in (s.journal).read_text()
+    assert "expand (applied)" in journal_text(s.runs_dir)
 
 
 def test_governor_decides_early_on_a_new_war(setup):
@@ -283,14 +284,18 @@ def test_telemetry_records_campaign_decisions_and_scores_outcomes(setup, tmp_pat
     assert "2200.01.01 | expand (from none) | start of run | " in text and "planets +1" in text
 
 
-def test_telemetry_failure_never_stops_play(setup):
+def test_telemetry_failure_never_stops_play(setup, monkeypatch):
+    """An event the store cannot record never stops play (learned knowledge and the journal, in the same
+    store, are written as usual)."""
+    from pilot.store import open_store
     s, _ = setup
+    store = open_store(s.runs_dir)
 
-    class Broken:
-        def record(self, *a, **k):
-            raise RuntimeError("disk full")
+    def broken(*a, **k):
+        raise RuntimeError("disk full")
 
-    log = EventLog(s.runs_dir, "run8", s.model, telemetry=Broken())
+    monkeypatch.setattr(store, "record", broken)
+    log = EventLog(s.runs_dir, "run8", s.model, telemetry=store)
     Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("expand")).run(max_decisions=1)
     assert log.state.episodes == 1
 
@@ -508,13 +513,13 @@ def test_default_model_is_gemini_flash_with_medium_thinking():
     assert s.model == "google:gemini-3.8-flash" and s.thinking == "medium" and s.governor_thinking == "medium"
 
 
-def test_explicit_journal_survives_game_switch(monkeypatch, tmp_path):
+def test_the_game_option_switches_the_game_and_no_journal_file_remains(monkeypatch):
+    """Journals are rows in the store (data platform design, ruling 4): no journal path to switch with the game."""
     from pilot import cli
     captured = {}
-    monkeypatch.setenv("PILOT_JOURNAL", str(tmp_path / "j.md"))
     monkeypatch.setattr(cli, "check", lambda s: captured.setdefault("s", s) and 0)
     cli.main(["check", "--game", "stellaris"])
-    assert captured["s"].game == "stellaris" and captured["s"].journal == tmp_path / "j.md"
+    assert captured["s"].game == "stellaris" and not hasattr(captured["s"], "journal")
 
 
 def test_governor_thinks_more_than_episodes():
@@ -711,8 +716,12 @@ def test_the_strategy_frame_persists_and_the_strategist_reviews_on_schedule(setu
     hist = tel.strategy_history("stellaris/emp_1")
     assert [h["trigger"] for h in hist] == ["scheduled after 3 decisions", "start of run"]
     assert hist[0]["strategy"]["focus"] == "Survey before expanding"
-    rules = (s.corpus_dir / "learned" / "strategy.md")
-    assert rules.exists() and "Survey before expanding" in rules.read_text()
+    assert "Survey before expanding" in gov.store.rules_markdown()
+    assert "Survey before expanding" in (s.learned_dir / "strategy.md").read_text(), "the controller's overlay"
+    again = Governor(s, FakeStellaris([briefing("2210.01.01")]), EventLog(s.runs_dir, "run5r", s.model, telemetry=tel),
+                     model=decisions("keep"))
+    assert "## Rules learned in play" in again._text and "Survey before expanding" in again._text, \
+        "a restarted governor's prompt carries the learned rules"
 
 
 def test_a_plan_can_still_be_set_directly_and_persists_across_governors(setup, tmp_path):
@@ -748,10 +757,11 @@ def test_remember_rule_tool_records_a_rule(setup):
                 "why": "influence 800 unused while systems 4 vs median 15"})])
         return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"directive": "keep", "reason": "r"})])
 
-    Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=FunctionModel(respond)).run(max_decisions=1)
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=FunctionModel(respond))
+    g.run(max_decisions=1)
     ev = [e for e in log.recent if e["kind"] == "learned"]
     assert ev and ev[0]["category"] == "rules"
-    assert "keep expand and check surveying" in (s.corpus_dir / "learned/strategy.md").read_text()
+    assert "keep expand and check surveying" in g.store.rules_markdown()
     assert not any(e["kind"] == "episode_error" for e in log.recent)
 
 
@@ -2786,7 +2796,7 @@ def test_market_actions_are_skipped_when_the_game_has_no_market_action(tmp_path)
     text = re.sub(r"\[actions\.market(\.buy)?\][\s\S]*?(?=\n#|\n\[)", "", text)  # and the limits tables are gone
     (corpus / "pillars.toml").write_text(text, encoding="utf-8")
 
-    s = Settings(model="google:gemini-3.8-flash", runs_dir=tmp_path / "runs", journal=tmp_path / "journal.md",
+    s = Settings(model="google:gemini-3.8-flash", runs_dir=tmp_path / "runs",
                  commit_learnings=False, game="stellaris", speed="fastest", decide_every_months=12, poll_s=0,
                  ask_human_timeout_s=0.05, fallback_model=None)
     s.__class__ = type("S", (Settings,), {"corpus_dir": property(lambda self: corpus)})

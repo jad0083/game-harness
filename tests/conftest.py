@@ -55,6 +55,12 @@ def _fresh_stores():
         store._OPEN.clear()
 
 
+def journal_text(data_dir) -> str:
+    """The pilot journal's lines in a test's data directory (the store's journal table), oldest first."""
+    from pilot.store import open_store
+    return "\n".join(r["text"] for r in open_store(data_dir).query("SELECT text FROM journal ORDER BY t, rowid"))
+
+
 @pytest.fixture(autouse=True)
 def _dashboard_key(monkeypatch):
     """Dashboards in tests use a fixed access key (never runs/dashboard.key), and aiohttp test

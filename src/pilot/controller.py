@@ -24,6 +24,7 @@ DISMISSED_RE = re.compile(r"Dismissed on advanced turns: (.+)\.")
 ALREADY_RE = re.compile(r"already dismissed: ([^)]+)\)")
 MAX_UNRESOLVED = 3          # consecutive unresolved episodes before pausing for a human
 MAX_PROCESSING = 3          # consecutive "still processing" stops (each up to 180 s) before alerting
+GC4_CAMPAIGN = "terran-2329"   # the campaign's name without PILOT_CAMPAIGN (its journal: games/terran-2329/)
 
 
 @dataclass
@@ -39,12 +40,13 @@ class Pilot:
         self.log = log
         self.control = Control()
         self.human = HumanChannel()
-        self.store = LearnedStore(settings.corpus_dir, settings.model, log.state.run_id)
-        self.journal = Journal(settings.journal, settings.model)
+        self.store = LearnedStore(log.store, settings.game, settings.corpus_dir, settings.learned_dir, settings.model,
+                                  log.state.run_id)
+        self.journal = Journal(log.store, settings.game, settings.model, campaign=lambda: self.log.campaign_id)
         briefing = (settings.corpus_dir / "pilot.md").read_text(encoding="utf-8")
-        learned_rules = settings.corpus_dir / "learned" / "strategy.md"
-        if learned_rules.exists():
-            briefing += "\n\n## Rules learned in play\n" + learned_rules.read_text(encoding="utf-8")
+        rules = self.store.rules_markdown()
+        if rules:
+            briefing += "\n\n## Rules learned in play\n" + rules
         self._briefing = briefing
         # the model guard (docs/design/2026-10-02-model-guard-design.md): with PILOT_MODEL_GUARD=0 its usage
         # file is neither read nor written and no model health is published
@@ -140,7 +142,7 @@ class Pilot:
         self._status("playing")
         self.log.state.info.update(game=self.s.game, controls=["instruct", "set_model"], thinking=self.s.thinking)
         self.log.emit("run_start", model=self.s.model, game=self.s.game, coords=self.s.coord_space)
-        self.log.set_campaign(self.s.game, self.s.campaign or self.s.journal.parent.name)
+        self.log.set_campaign(self.s.game, self.s.campaign or GC4_CAMPAIGN)
         unresolved = processing = 0
         try:
             while not self.control.stopping:
@@ -242,11 +244,11 @@ class Pilot:
         self.control.paused = True
 
     def _commit(self, message: str, force: bool = False) -> None:
-        """Commit learned overlay + journal through the CI gate, in the background."""
+        """Commit the corpus's learned overlay through the CI gate, in the background."""
         if not self.s.commit_learnings or (self._learned_since_commit == 0 and not force):
             return
         self._learned_since_commit = 0
-        paths = [str(self.s.corpus_dir.relative_to(REPO) / "learned"), str(self.s.journal.relative_to(REPO))]
+        paths = [str(self.s.corpus_dir.relative_to(REPO) / "learned")]
 
         def work() -> None:
             with self._commit_lock:

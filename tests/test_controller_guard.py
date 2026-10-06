@@ -3,6 +3,7 @@ whose model is overloaded mid-run continues on the fallback model without repeat
 
 from __future__ import annotations
 
+from conftest import journal_text
 from pydantic_ai.exceptions import ModelHTTPError
 from pydantic_ai.messages import ModelResponse, ToolCallPart
 from pydantic_ai.models.function import FunctionModel
@@ -31,7 +32,7 @@ def finisher():
 
 
 def make(corpus, tmp_path, **kw):  # noqa: F811
-    s = Settings(model="google:gemini-3.8-flash", runs_dir=tmp_path / "runs", journal=tmp_path / "journal.md",
+    s = Settings(model="google:gemini-3.8-flash", runs_dir=tmp_path / "runs",
                  commit_learnings=False, game="x", fallback_model=None, **kw)
     s.__class__ = type("S", (Settings,), {"corpus_dir": property(lambda self: corpus)})
     return s, EventLog(s.runs_dir, "run1", s.model)
@@ -41,7 +42,7 @@ def test_an_episode_continues_on_the_fallback_and_notes_once(corpus, tmp_path): 
     s, log = make(corpus, tmp_path)
     pilot = Pilot(s, FakeGame([]), log, model=note_then_503(), fallback=finisher())
     pilot._episode("a dialog is up", None)
-    assert (tmp_path / "journal.md").read_text().count("Saw the event") == 1, "the note tool ran once"
+    assert journal_text(s.runs_dir).count("Saw the event") == 1, "the note tool ran once"
     fb = [e for e in log.recent if e["kind"] == "model_fallback"][-1]
     assert fb["role"] == "episodes" and fb["failure"] == "overloaded" and fb["request"] == 2
     assert pilot.health.status("google:gemini-3.8-flash") == "open"
@@ -87,7 +88,7 @@ def test_without_the_guard_the_episode_replays_as_before(corpus, tmp_path):  # n
     s, log = make(corpus, tmp_path, model_guard=False, retry_delays=(0,))
     pilot = Pilot(s, FakeGame([]), log, model=note_then_503(), fallback=finisher())
     pilot._episode("a dialog is up", None)
-    assert (tmp_path / "journal.md").read_text().count("Saw the event") == 2, "the whole run was retried"
+    assert journal_text(s.runs_dir).count("Saw the event") == 2, "the whole run was retried"
     assert not any(e["kind"] == "model_breaker" for e in log.recent)
     assert pilot.pool is None and "model_health" not in log.state.info
     assert not (tmp_path / "runs" / "model-usage.json").exists()

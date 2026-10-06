@@ -7,6 +7,7 @@ import shutil
 import time
 
 import pytest
+from conftest import journal_text
 from pydantic_ai.messages import ModelResponse, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
@@ -67,7 +68,7 @@ def setup(tmp_path):
     for f in ("manifest.toml", "pilot.md", "strategy.md", "pillars.toml"):
         shutil.copy(REPO / "corpora/civ6" / f, corpus / f)
     shutil.copytree(REPO / "corpora/civ6/data", corpus / "data")
-    s = Settings(model="google:gemini-3.8-flash", runs_dir=tmp_path / "runs", journal=tmp_path / "journal.md",
+    s = Settings(model="google:gemini-3.8-flash", runs_dir=tmp_path / "runs",
                  commit_learnings=False, game="civ6", decide_every_turns=3, poll_s=0, retro_every=0,
                  ask_human_timeout_s=0.05, fallback_model=None, autoplay_chunk=1)
     s.__class__ = type("S", (Settings,), {"corpus_dir": property(lambda self: corpus)})
@@ -1536,7 +1537,7 @@ def test_a_falling_city_gets_its_stand_between_the_urgent_decision_and_a_one_tur
     assert set(stand["actions"][0]) == set(STAND_ACTION) and "incoming" not in stand
     assert sum(1 for a in game.actions if a[0] == "stand") == 2, "one stand: the city recovered at T0+2"
     s, _ = setup
-    assert "Last stand for Beijing (stand 1 in a row): ranged_attack took" in s.journal.read_text()
+    assert "Last stand for Beijing (stand 1 in a row): ranged_attack took" in journal_text(s.runs_dir)
 
 
 def test_without_the_setting_a_falling_city_only_autoplays(setup):
@@ -1574,7 +1575,7 @@ def test_two_ignored_first_actions_turn_the_stand_off_for_the_run(setup):
     off = [e for e in _events(setup) if e["kind"] == "last_stand_off"]
     assert len(off) == 1 and off[0]["reason"].startswith("the first action of 2 stands did not take")
     s, _ = setup
-    assert "Last stand turned off for this run" in s.journal.read_text()
+    assert "Last stand turned off for this run" in journal_text(s.runs_dir)
     autoplays = [a for a in game.actions if a[0] == "autoplay"]
     assert len(autoplays) == 5 and all(a == ("autoplay", 1, False) for a in autoplays)
 
@@ -1599,7 +1600,7 @@ def test_after_three_stands_in_a_row_the_ai_defends_alone(setup):
     assert never_while_autoplay_runs(game)
     assert [a[2] for a in game.actions if a[0] == "stand"] == ["done"] * 3
     s, _ = setup
-    journal = s.journal.read_text()
+    journal = journal_text(s.runs_dir)
     assert journal.count("has had 3 stands in a row (the limit)") == 1
     assert game.state["turn"] == T0 + 6, "T0+1..T0+3 with a stand, T0+4 and T0+5 without"
 
@@ -1615,7 +1616,7 @@ def test_stands_that_never_reached_the_game_do_not_use_up_the_limit(setup):
     steps = [(a[1], a[2]) for a in game.actions if a[0] == "stand"]
     assert steps == [(FIXTURE["cities"][0]["id"], "done")] * 2, "T0+4 and T0+5 still get their stands"
     s, _ = setup
-    journal = s.journal.read_text()
+    journal = journal_text(s.runs_dir)
     assert "stands in a row (the limit)" not in journal
     assert journal.count("(not counted toward the limit: nothing ran)") == 3
     assert "Last stand for Beijing (stand 2 in a row)" in journal
@@ -1751,7 +1752,7 @@ def test_a_pinned_unit_the_hand_back_moved_is_noted(setup):
     check = next(e for e in _events(setup) if e["kind"] == "last_stand_check")
     assert check["pins"][0]["result"] == "moved" and check["pins"][0]["now"] == {"x": 20, "y": 22}
     s, _ = setup
-    assert "the hand-back moved pinned unit(s) 5 (22,22 → 20,22): pins do not hold" in s.journal.read_text()
+    assert "the hand-back moved pinned unit(s) 5 (22,22 → 20,22): pins do not hold" in journal_text(s.runs_dir)
 
 
 def test_the_controller_wrapper_runs_the_last_stand_subcommands(tmp_path):
@@ -2207,7 +2208,7 @@ def test_zero_cities_and_settlers_read_twice_ends_the_run_with_no_model_call(set
     assert end[0]["report"]["after"] == {"decisions": 0, "reviews": 0}
     assert log.state.status == "ended" and log.state.info["end"]["result"] == "lost"
     assert tel.query("SELECT status FROM runs WHERE id='civ1'")[0]["status"] == "lost", "run_end keeps it"
-    assert "Campaign lost: China (Kublai Khan (China)) was eliminated in T12, seen at T13" in s.journal.read_text()
+    assert "Campaign lost: China (Kublai Khan (China)) was eliminated in T12, seen at T13" in journal_text(s.runs_dir)
     assert ("autoplay_stop",) in game.actions
 
 
@@ -2552,7 +2553,7 @@ def test_before_a_three_turn_stretch_the_governor_buys_one_faith_modern_at(setup
     assert ev["orders"][0]["by"] == "governor" and ev["orders"][0]["outcome"] == "stuck"
     s, _ = setup
     assert "The governor, bought before autoplay (military weakness: last, low, outgunned): purchase unit:modern_at in " \
-           "Rockhampton with faith (filled by the governor): stuck" in s.journal.read_text()
+           "Rockhampton with faith (filled by the governor): stuck" in journal_text(s.runs_dir)
     assert not any(a[0] == "order" and a[1]["kind"] == "purchase" for a in game.actions[first_autoplay:]), \
         "at most one purchase per stretch"
 
@@ -2954,7 +2955,7 @@ def test_a_lost_purchase_that_spent_nothing_is_sent_once_more_before_autoplay(se
     ev = next(e for e in g.log.recent if e["kind"] == "order_resend")
     assert ev["orders"][0]["outcome"] == "stuck" and ev["turn"] == 570
     s, _ = setup
-    assert "sent again after a lost reply (nothing spent, proved)" in s.journal.read_text()
+    assert "sent again after a lost reply (nothing spent, proved)" in journal_text(s.runs_dir)
 
 
 @pytest.mark.parametrize("kw, why", [
@@ -3063,7 +3064,7 @@ def test_t525_a_failed_decision_retries_on_the_strategy_model_then_buys_by_rule_
     assert first["outcome"] == "error" and first["orders"][0]["by"] == "governor"
     assert "no answer from the model: the governor acted by rule" in g.log.state.last_decision
     s, _ = setup
-    assert "the governor acted by rule" in s.journal.read_text()
+    assert "the governor acted by rule" in journal_text(s.runs_dir)
 
 
 def test_a_retry_that_answers_is_the_decision(setup):
@@ -3346,7 +3347,7 @@ def test_known_false_learned_rules_are_refused_with_their_reason(tmp_path):
     """S6: four learned rules codified the defender-list misreading and one codified the cap as a saving
     rule, which the model then followed (T556)."""
     from pilot.learning import LearnedStore, LearningRejected
-    store = LearnedStore(tmp_path / "civ6", "m", "r")
+    store = LearnedStore(open_store(tmp_path / "data"), "civ6", tmp_path / "civ6", tmp_path / "data/learned/civ6", "m", "r")
     store.refuse = SPEC.learned_refuse
     for rule in LIVE_FALSE_RULES:
         with pytest.raises(LearningRejected, match="^refused:"):
@@ -3361,18 +3362,17 @@ def test_known_false_learned_rules_are_refused_with_their_reason(tmp_path):
 
 def test_a_refused_phrase_in_the_why_is_refused_too(tmp_path):
     """The why is written to learned/strategy.md beside the rule, so a false premise there reaches the
-    file the model reads (and the phrase test below then fails every commit on main)."""
+    rules the model reads (and the phrase test below then fails every commit on main)."""
     import re
 
     from pilot.learning import LearnedStore, LearningRejected
-    store = LearnedStore(tmp_path / "civ6", "m", "r")
+    store = LearnedStore(open_store(tmp_path / "data"), "civ6", tmp_path / "civ6", tmp_path / "data/learned/civ6", "m", "r")
     store.refuse = SPEC.learned_refuse
     for why in ("at T563 the briefing said Infantry was 'not allowed' in danger cities",
                 "save faith until the balance is double the unit cost"):
         with pytest.raises(LearningRejected, match="^refused:"):
             store.add_rule("When a city is in danger, buy the cheapest allowed defender at once", why)
-    learned = tmp_path / "civ6" / "learned" / "strategy.md"
-    text = learned.read_text(encoding="utf-8") if learned.exists() else ""
+    text = store.rules_markdown() + (tmp_path / "data/learned/civ6/strategy.md").read_text(encoding="utf-8")
     assert not [p for p, _ in SPEC.learned_refuse if re.search(p, text, re.IGNORECASE)]
 
 

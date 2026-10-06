@@ -549,11 +549,8 @@ def main(argv: list[str] | None = None) -> int:
     if game_for_roles(a, prefs) == "galciv4" and episodes and not a.model:   # GC4 blockers: their own model
         s.model, s.thinking = episodes[0]["model"], episodes[0]["thinking"]
     game = a.game or (prefs.get("game") if a.cmd == "run" else None)
-    if game and game != s.game:
-        from .config import default_journal
+    if game:
         s.game = game
-        if "PILOT_JOURNAL" not in os.environ:      # an explicit journal path wins over the game default
-            s.journal = default_journal(game)
     if a.cmd == "check":
         return check(s)
     s.dashboard_port = a.port or s.dashboard_port

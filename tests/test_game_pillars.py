@@ -51,7 +51,7 @@ def synth(tmp_path):
     for f in ("pilot.md", "strategy.md", "directives.toml"):
         shutil.copy(REPO / "corpora/stellaris" / f, corpus / f)
     (corpus / "pillars.toml").write_text(SYNTH, encoding="utf-8")
-    s = Settings(model="google:gemini-3.8-flash", runs_dir=tmp_path / "runs", journal=tmp_path / "journal.md",
+    s = Settings(model="google:gemini-3.8-flash", runs_dir=tmp_path / "runs",
                  commit_learnings=False, game="synth", speed="fastest", decide_every_months=12, poll_s=0,
                  ask_human_timeout_s=0.05, fallback_model=None)      # tests never reach a real provider
     s.__class__ = type("S", (Settings,), {"corpus_dir": property(lambda self: corpus)})

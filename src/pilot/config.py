@@ -22,11 +22,6 @@ def load_dotenv(path: Path = REPO / ".env") -> None:
         os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
 
 
-def default_journal(game: str) -> Path:
-    return {"stellaris": REPO / "games/stellaris/journal.md",
-            "civ6": REPO / "games/civ6/journal.md"}.get(game, REPO / "games/terran-2329/journal.md")
-
-
 def _json_map(env, name: str, default: dict) -> dict:
     """A JSON object from the environment (the model guard's maps); anything else is an error naming it.
     Its values are checked by modelguard.check_guard_settings."""
@@ -88,7 +83,6 @@ class Settings:
     max_requests_per_episode: int = 30 # loop guard, not a cost limit
     turns_per_autopilot: int = 20
     game: str = "galciv4"
-    journal: Path = REPO / "games/terran-2329/journal.md"
     runs_dir: Path = REPO / "runs"          # the data directory (PILOT_DATA_DIR; PILOT_RUNS_DIR is its alias)
     corpora_dir: Path = REPO / "corpora"
     controller_path: Path = REPO / "target/release/game-controller"
@@ -106,7 +100,7 @@ class Settings:
     # the game is paused while the model decides), in-game months between scheduled decisions,
     # and seconds between autosave polls.
     speed: str = "normal"
-    campaign: str = ""                 # campaign name for telemetry; default: save folder / journal dir
+    campaign: str = ""                 # campaign name for telemetry; default: from the save (GalCiv IV: terran-2329)
     decide_every_months: int = 12
     poll_s: float = 2.0
     # Civilization VI governor: turns the game's AI plays between decisions (one autoplay stretch)
@@ -227,7 +221,4 @@ class Settings:
         s.frames_keep = max(1, int(env.get("PILOT_FRAMES_KEEP", s.frames_keep)))
         if env.get("PILOT_EXPORT_DIR"):
             s.export_dir = Path(env["PILOT_EXPORT_DIR"])
-        s.journal = default_journal(s.game)
-        if "PILOT_JOURNAL" in env:
-            s.journal = Path(env["PILOT_JOURNAL"])
         return s

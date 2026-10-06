@@ -1,11 +1,17 @@
-"""The corpus overlay the pilot learns into: corpora/<game>/learned/.
+"""Learned knowledge in the store (docs/design/2026-10-05-data-platform-design.md, rulings 4 and 7).
 
-    learned/manifest.toml   known screens (and hotkeys) - merged by the Rust loader, main wins
-    learned/templates/*.png templates for those screens
-    learned/strategy.md     decision rules found in play
-    learned/controls.md     UI behaviour / hotkeys verified in play
-    learned/episodes.jsonl  every resolved blocker: situation, decision, outcome (retrieval memory)
-    learned/ledger.jsonl    provenance of every learned item (model, run, evidence, status)
+    learned_notes    decision rules found in play (kind 'rule') and UI behaviour / hotkeys verified
+                     in play (kind 'control'), in the order added
+    learned_screens  known screens: description, template region and threshold, dismiss action and
+                     the template image (png)
+    episodes         every resolved blocker: situation, decision, outcome (retrieval memory)
+    ledger           provenance of every learned item (model, run, evidence, status)
+    journal          the pilot's journal lines, per campaign (Journal)
+
+When a LearnedStore starts, and after every change to a game's screens or notes, the overlay the
+controller reads is generated from the store into <data>/learned/<game>/ (learned_files.py):
+manifest.toml (known screens, merged by the Rust loader, main wins), templates/*.png, strategy.md
+and controls.md. Nothing is written into the corpora.
 
 Learned items are active immediately. A learned screen that is dismissed repeatedly without the
 turn advancing is disabled automatically. Promotion into the main corpus is a human/maintainer step.
@@ -16,15 +22,17 @@ from __future__ import annotations
 import io
 import json
 import re
-import threading
+import sqlite3
 import time
 import tomllib
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
 from PIL import Image, ImageChops, ImageStat
 
 from .coords import IMAGE_H, IMAGE_W, to_norm
+from .learned_files import manifest_toml, notes_markdown, write_learned_dir
 
 NAME_RE = re.compile(r"^[a-z][a-z0-9_]{2,40}$")
 # Keys the pilot must never press: any combo with the Windows key (win+r opens Run, win+x the admin
@@ -53,8 +61,11 @@ def _diff(a: Image.Image, b: Image.Image) -> float:
     return sum(ImageStat.Stat(ImageChops.difference(a, b)).mean) / 3 / 255
 
 
-def _toml_str(s: str) -> str:
-    return json.dumps(s, ensure_ascii=False)  # JSON string syntax is valid TOML basic string
+def _stamp(micro: bool = False) -> str:
+    """Local time, ISO 8601 to the second (to the microsecond with `micro`)."""
+    now = time.time()
+    s = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(now))
+    return f"{s}.{int(now % 1 * 1_000_000):06d}" if micro else s
 
 
 @dataclass
@@ -62,30 +73,35 @@ class ScreenAction:
     click: tuple[int, int] | None = None     # image pixels
     key: str | None = None
 
-    def toml(self) -> str:
+    def stored(self) -> dict:
+        """The action as learned_screens.action holds it: a click in normalized coordinates, or a key."""
         if self.click:
-            nx, ny = to_norm(*self.click)
-            return f"dismiss_click = [{nx}, {ny}]"
-        return f"dismiss_key = {_toml_str(self.key or '')}"
+            return {"click": list(to_norm(*self.click))}
+        return {"key": self.key or ""}
 
 
 class LearnedStore:
-    def __init__(self, corpus_dir: Path, model: str, run_id: str):
-        self.dir = corpus_dir / "learned"
-        (self.dir / "templates").mkdir(parents=True, exist_ok=True)
-        self.corpus_dir = corpus_dir
+    """One game's learned knowledge in the store (`store`, a Store), with its generated overlay in
+    `learned_dir` (<data>/learned/<game>). `corpus_dir` is only read (the main manifest's screen names)."""
+
+    def __init__(self, store, game: str, corpus_dir: Path, learned_dir: Path, model: str, run_id: str):
+        self.store, self.game = store, game
+        self.corpus_dir, self.learned_dir = Path(corpus_dir), Path(learned_dir)
         self.model, self.run_id = model, run_id
-        self._lock = threading.Lock()
         self.failures: dict[str, int] = {}
         self.negatives: list[Image.Image] = []   # recent frames, used to test distinctness
+        self._write_files()                      # the controller always reads the current overlay
+
+    def _write_files(self) -> None:
+        """Regenerate the learned directory from the store (after every change to screens or notes)."""
+        write_learned_dir(self.store, self.game, self.learned_dir)
 
     # -- provenance -------------------------------------------------------------------------
 
     def _ledger(self, kind: str, name: str, **data) -> None:
-        rec = {"t": time.strftime("%Y-%m-%dT%H:%M:%S"), "kind": kind, "name": name,
-               "model": self.model, "run": self.run_id, **data}
-        with open(self.dir / "ledger.jsonl", "a", encoding="utf-8") as f:
-            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+        rec = {"name": name, "model": self.model, "run": self.run_id, **data}
+        self.store._exec("INSERT INTO ledger(game, t, kind, data) VALUES (?,?,?,?)",
+                         (self.game, _stamp(), kind, json.dumps(rec, ensure_ascii=False)))
 
     def remember_frame(self, jpeg: bytes | None) -> None:
         """Keep a few recent frames as negatives for template validation."""
@@ -101,10 +117,8 @@ class LearnedStore:
     # -- screens ----------------------------------------------------------------------------
 
     def screens(self) -> dict:
-        path = self.dir / "manifest.toml"
-        if not path.exists():
-            return {}
-        return tomllib.loads(path.read_text(encoding="utf-8")).get("screens", {})
+        """The learned screens as the controller reads them: the generated manifest's [screens.*] tables."""
+        return tomllib.loads(manifest_toml(self.store, self.game)).get("screens", {})
 
     def main_screen_names(self) -> set[str]:
         for f in ("manifest.toml", "game.toml"):
@@ -115,7 +129,7 @@ class LearnedStore:
 
     def add_screen(self, name: str, frame_jpeg: bytes, box: tuple[int, int, int, int], action: ScreenAction,
                    description: str, evidence: str) -> str:
-        """Validate and write a learned known screen. `box` and `action.click` are image pixels."""
+        """Validate and store a learned known screen. `box` and `action.click` are image pixels."""
         if not NAME_RE.match(name):
             raise LearningRejected("name must be snake_case, 3-41 chars, starting with a letter")
         if name in self.main_screen_names() or name in self.screens():
@@ -140,25 +154,19 @@ class LearnedStore:
         if worst < MIN_DISTINCTNESS:
             raise LearningRejected(f"template is not distinctive enough (distance {worst:.3f} on another frame, "
                                    f"need >= {MIN_DISTINCTNESS}); choose a box around a unique title or icon")
-        rel = f"learned/templates/{name}.png"
-        with self._lock:
-            tpl.save(self.corpus_dir / rel)
-            nx, ny = to_norm(x0, y0)
-            nw, nh = round((x1 - x0) / IMAGE_W, 4), round((y1 - y0) / IMAGE_H, 4)
-            block = (f"\n[screens.{name}]\n"
-                     f"description = {_toml_str(description)}\n"
-                     f"template = {_toml_str(rel)}\n"
-                     f"template_roi = [{nx}, {ny}, {nw}, {nh}]\n"
-                     f"template_threshold = {MATCH_THRESHOLD}\n"
-                     f"auto_dismiss = true\n{action.toml()}\n"
-                     f"learned_by = {_toml_str(self.model)}\n"
-                     f"learned_run = {_toml_str(self.run_id)}\n")
-            path = self.dir / "manifest.toml"
-            if not path.exists():
-                path.write_text("# Known screens learned during play (pilot app). Main manifest wins on name clashes.\n")
-            with open(path, "a", encoding="utf-8") as f:
-                f.write(block)
-            tomllib.loads(path.read_text(encoding="utf-8"))  # never leave an unparsable overlay
+        png = io.BytesIO()
+        tpl.save(png, "PNG")
+        nx, ny = to_norm(x0, y0)
+        nw, nh = round((x1 - x0) / IMAGE_W, 4), round((y1 - y0) / IMAGE_H, 4)
+        try:
+            self.store._exec(
+                "INSERT INTO learned_screens(game, name, description, roi, threshold, auto_dismiss, action, png,"
+                " learned_by, run_id, t, disabled_reason) VALUES (?,?,?,?,?,1,?,?,?,?,?,NULL)",
+                (self.game, name, description, f"[{nx}, {ny}, {nw}, {nh}]", MATCH_THRESHOLD,
+                 json.dumps(action.stored()), png.getvalue(), self.model, self.run_id, _stamp()))
+        except sqlite3.IntegrityError:      # stored meanwhile (another thread or run of the same game)
+            raise LearningRejected(f"a screen named {name!r} already exists; pick another name") from None
+        self._write_files()
         self._ledger("screen", name, description=description, evidence=evidence,
                      min_negative_distance=round(worst, 3), negatives=len(dists))
         return f"learned screen {name!r} (min distance on other frames {worst:.3f}); active from the next turn"
@@ -180,27 +188,19 @@ class LearnedStore:
         return disabled
 
     def _disable(self, name: str, reason: str) -> None:
-        path = self.dir / "manifest.toml"
-        with self._lock:
-            text = path.read_text(encoding="utf-8")
-            head = f"[screens.{name}]\n"
-            i = text.index(head)
-            j = text.find("\n[", i + len(head))
-            block = text[i: j if j != -1 else len(text)]
-            new = block.replace("auto_dismiss = true", f"auto_dismiss = false\ndisabled_reason = {_toml_str(reason)}")
-            path.write_text(text.replace(block, new))
-            tomllib.loads(path.read_text(encoding="utf-8"))
+        self.store._exec("UPDATE learned_screens SET auto_dismiss=0, disabled_reason=? WHERE game=? AND name=?",
+                         (reason, self.game, name))
+        self._write_files()
         self._ledger("screen_disabled", name, reason=reason)
 
     # -- notes ------------------------------------------------------------------------------
 
-    def _append_note(self, file: str, title: str, text: str, why: str) -> None:
-        path = self.dir / file
-        with self._lock:
-            if not path.exists():
-                path.write_text(f"# {title}\n\nWritten by the pilot app during play; promote proven items into the main corpus.\n")
-            with open(path, "a", encoding="utf-8") as f:
-                f.write(f"\n- {text.strip()}  \n  _why:_ {why.strip()} _({self.model}, {time.strftime('%Y-%m-%d')})_\n")
+    def _add_note(self, kind: str, text: str, why: str) -> None:
+        """A rule or control, once per text (the same text again is kept as first written)."""
+        self.store._exec("INSERT OR IGNORE INTO learned_notes(game, kind, text, why, model, run_id, t)"
+                         " VALUES (?,?,?,?,?,?,?)",
+                         (self.game, kind, text.strip(), why.strip(), self.model, self.run_id, _stamp()))
+        self._write_files()
 
     # known-false rules of this game (pillars.toml [learned] refuse: (regex, why); set by the governor)
     refuse: tuple[tuple[str, str], ...] = ()
@@ -212,35 +212,36 @@ class LearnedStore:
             # the why is written beside the rule, so a false premise there is refused too
             if re.search(pattern, f"{rule}\n{why}", re.IGNORECASE):
                 raise LearningRejected(f"refused: {reason}")
-        self._append_note("strategy.md", "Learned strategy rules", rule, why)
+        self._add_note("rule", rule, why)
         self._ledger("rule", rule[:60], why=why)
-        return "rule recorded in learned/strategy.md"
+        return "rule recorded"
 
     def add_control(self, control: str, how_verified: str) -> str:
-        self._append_note("controls.md", "Learned controls (verified in play)", control, how_verified)
+        self._add_note("control", control, how_verified)
         self._ledger("control", control[:60], verified=how_verified)
-        return "control recorded in learned/controls.md"
+        return "control recorded"
+
+    def rules_markdown(self) -> str:
+        """The learned rules as strategy.md holds them; '' while the game has none."""
+        if not self.store.query("SELECT 1 FROM learned_notes WHERE game=? AND kind='rule' LIMIT 1", (self.game,)):
+            return ""
+        return notes_markdown(self.store, self.game, "rule")
 
     # -- episode memory ---------------------------------------------------------------------
 
     def add_episode(self, situation: str, decision: str, outcome: str, game_date: str = "") -> None:
-        rec = {"t": time.strftime("%Y-%m-%dT%H:%M:%S"), "date": game_date, "situation": situation,
-               "decision": decision, "outcome": outcome, "model": self.model, "run": self.run_id}
-        with open(self.dir / "episodes.jsonl", "a", encoding="utf-8") as f:
-            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+        # microseconds: the same situation resolved twice within a second is two episodes (t is in their key)
+        self.store._exec("INSERT OR IGNORE INTO episodes(game, t, date, situation, decision, outcome, model, run_id)"
+                         " VALUES (?,?,?,?,?,?,?,?)",
+                         (self.game, _stamp(micro=True), game_date, situation, decision, outcome, self.model,
+                          self.run_id))
 
     def recall(self, query: str, limit: int = 5) -> list[dict]:
-        path = self.dir / "episodes.jsonl"
-        if not path.exists():
-            return []
         words = [w for w in re.findall(r"[a-z0-9]+", query.lower()) if len(w) > 2]
         scored = []
-        for line in path.read_text(encoding="utf-8").splitlines():
-            try:
-                e = json.loads(line)
-            except ValueError:
-                continue
-            hay = f"{e.get('situation', '')} {e.get('decision', '')}".lower()
+        for e in self.store.query("SELECT situation, decision, outcome, date, model, run_id AS run, t FROM episodes"
+                                  " WHERE game=? ORDER BY rowid", (self.game,)):
+            hay = f"{e['situation'] or ''} {e['decision'] or ''}".lower()
             score = sum(w in hay for w in words)
             if score:
                 scored.append((score, e))
@@ -249,22 +250,17 @@ class LearnedStore:
 
     def repeated(self, situation: str) -> int:
         """How many past episodes had this exact situation."""
-        return sum(1 for e in self.recall(situation, limit=100) if e.get("situation", "").lower() == situation.lower())
+        return sum(1 for e in self.recall(situation, limit=100) if (e["situation"] or "").lower() == situation.lower())
 
 
 class Journal:
-    """Appends to the game journal under a pilot section, dated by in-game month when known."""
+    """The pilot's journal: one row per line in the store's journal table, under the run's campaign
+    (`campaign()`, '<game>/no-campaign' until the run has named it), dated by in-game date when known."""
 
-    def __init__(self, path: Path, model: str):
-        self.path, self.model = path, model
+    def __init__(self, store, game: str, model: str, campaign: Callable[[], str | None]):
+        self.store, self.game, self.model, self.campaign = store, game, model, campaign
 
     def note(self, text: str, game_date: str = "") -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        existing = self.path.read_text(encoding="utf-8") if self.path.exists() else "# Journal\n"
-        header = "\n## Pilot log\n"
-        if header.strip() not in existing:
-            with open(self.path, "a", encoding="utf-8") as f:
-                f.write(header + f"Entries written by the pilot app ({self.model}).\n")
-        stamp = f"**{game_date}**: " if game_date else ""
-        with open(self.path, "a", encoding="utf-8") as f:
-            f.write(f"- {stamp}{text.strip()}\n")
+        self.store._exec("INSERT OR IGNORE INTO journal(campaign_id, game, t, date, text) VALUES (?,?,?,?,?)",
+                         (self.campaign() or f"{self.game}/no-campaign", self.game, time.time(), game_date,
+                          text.strip()))

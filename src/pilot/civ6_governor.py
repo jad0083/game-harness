@@ -245,9 +245,9 @@ class Civ6Governor(Governor):
         self._wonders = frozenset(self.index.key_of[i] for i in self.index.ids("wonder"))
         text = (settings.corpus_dir / "pilot.md").read_text(encoding="utf-8")
         text += "\n\n" + (settings.corpus_dir / "strategy.md").read_text(encoding="utf-8")
-        learned = settings.corpus_dir / "learned" / "strategy.md"
-        if learned.exists():
-            text += "\n\n## Rules learned in play\n" + learned.read_text(encoding="utf-8")
+        rules = self.store.rules_markdown()
+        if rules:
+            text += "\n\n## Rules learned in play\n" + rules
         self._text = text
         self.__dict__.pop("_agents", None)
         self._reset_pools()

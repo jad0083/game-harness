@@ -564,8 +564,9 @@ class Governor:
                                   on_note=lambda text: log.emit("briefing_error", error=f"model guard: {text}"[:300]))
         self.control = Control()
         self.human = HumanChannel()
-        self.store = LearnedStore(settings.corpus_dir, settings.model, log.state.run_id)
-        self.journal = Journal(settings.journal, settings.model)
+        self.store = LearnedStore(log.store, settings.game, settings.corpus_dir, settings.learned_dir, settings.model,
+                                  log.state.run_id)
+        self.journal = Journal(log.store, settings.game, settings.model, campaign=lambda: self.log.campaign_id)
         # the game's strategy guardrails; a missing or invalid file turns the strategy layer off
         # (decisions as before the layer) with one clear error naming the file and key
         self.pillars: PillarSpec | None = None
@@ -582,9 +583,9 @@ class Governor:
         self._unsupported: set[str] = set()       # action kinds already logged as "not supported"
         text = (settings.corpus_dir / "pilot.md").read_text(encoding="utf-8")
         text += "\n\n" + strategy_core((settings.corpus_dir / "strategy.md").read_text(encoding="utf-8"))
-        learned = settings.corpus_dir / "learned" / "strategy.md"
-        if learned.exists():
-            text += "\n\n## Rules learned in play\n" + learned.read_text(encoding="utf-8")
+        rules = self.store.rules_markdown()
+        if rules:
+            text += "\n\n## Rules learned in play\n" + rules
         self._text = text
         self._model_obj = model                  # a Model instance (tests); None = settings.model
         self._build_agents()
