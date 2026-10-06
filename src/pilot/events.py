@@ -105,10 +105,13 @@ class EventLog:
             self._kept.discard(name)
 
     def _prune(self) -> None:
-        """Delete the oldest numbered frames beyond `frames_keep`, kept ones aside."""
+        """Delete the oldest numbered frames beyond `frames_keep`, kept ones aside. Oldest by number, not by
+        name: 100000.jpg sorts before 99999.jpg. A name that is not a number (latest.jpg) is never pruned."""
         with self._lock:
             kept = set(self._kept)
-        frames = [p for p in sorted(self.dir.glob("[0-9]*.jpg")) if p.name not in kept]
+        numbered = [(int(p.stem), p) for p in self.dir.glob("[0-9]*.jpg")
+                    if p.stem.isascii() and p.stem.isdigit() and p.name not in kept]
+        frames = [p for _, p in sorted(numbered)]
         for p in frames[:max(0, len(frames) - self.frames_keep)]:
             p.unlink(missing_ok=True)       # another thread's pruning may have taken it first
 

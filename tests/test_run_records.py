@@ -49,6 +49,19 @@ def test_frames_keep_the_newest_n_latest_and_kept_ones(tmp_path):
     assert kept not in {p.name for p in d.glob("[0-9]*.jpg")}
 
 
+def test_frames_are_pruned_by_number_past_99999(tmp_path):
+    """Past 99,999 frames the names grow a digit: 100000.jpg sorts before 99999.jpg by name, which deleted
+    the newest frames. Pruning goes by number; names that are not a number (latest.jpg) are never pruned."""
+    log = EventLog(tmp_path, "r1", "m", frames_keep=2)
+    d = tmp_path / "frames" / "r1"
+    (d / "5-note.jpg").write_bytes(b"not a frame of the run")
+    log._frame_n = 99_997
+    names = [log.frame(b"\xff\xd8 %d" % i) for i in range(4)]
+    assert names == ["99998.jpg", "99999.jpg", "100000.jpg", "100001.jpg"]
+    assert sorted(p.name for p in d.glob("*.jpg")) == ["100000.jpg", "100001.jpg", "5-note.jpg", "latest.jpg"]
+    assert (d / "latest.jpg").read_bytes() == b"\xff\xd8 3"
+
+
 def test_list_runs_reads_the_store(tmp_path):
     log = EventLog(tmp_path, "20261005-120000", "m")
     log.emit("run_start", game="civ6", model="m")
