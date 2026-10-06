@@ -357,17 +357,36 @@ A record whose name matches the query scores 100, above any prose chunk, so `dra
 
 ```
 pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-controller MCP ──► agent
-   │ EventLog: runs/<id>/events.jsonl + traces/NNNN.json + latest.jpg
-   │     └─ write-through ─► Telemetry: runs/telemetry.sqlite (campaigns, runs, events, decisions, metrics)
+   │ EventLog: frames/<run_id>/NNNNN.jpg + latest.jpg in the data directory
+   │     └─ events, traces, run state ─► Store: <data>/pilot.db (campaigns, runs, events, decisions, metrics, learned, journal)
    └ dashboard 127.0.0.1:8790 (live)  pilot view :8780 (always on) ──► forwards /status /events /control
 ```
 - `trace.py` turns a model run's messages into steps (prompt, thinking, text, tool call, tool
   result, retry, answer, usage); images become placeholders; a prompt is kept whole up to 100,000
   chars (the briefing's per-city danger lines; postmortem-fixes design, ruling 27), other texts are
   cut at 6,000 chars.
-- `telemetry.py`: SQLite (WAL) with a lock; `record()` maps events to rows; `score()` joins each
-  decision to the metric point 12 months later; `past_outcomes()` renders them for the model;
-  `rebuild()` replays every `events.jsonl`. Write failures are logged and never stop play.
+- `store.py`: the one SQLite database, `<data>/pilot.db` (data directory: `PILOT_DATA_DIR`, default
+  `runs/`). `Store` holds one connection under a lock (WAL, `synchronous=NORMAL`, busy timeout 5 s) and
+  runs forward migrations keyed by `meta.schema_version` when it opens; `open_store(data_dir)` returns
+  the process's one `Telemetry` for a directory, and nothing else opens the file. It holds events,
+  decisions with their traces (`decisions.trace`), metrics, strategies, a live run's state
+  (`run_state`), learned notes and screens, journal lines, standing orders, prefs and model usage.
+  A data directory it cannot write stops the start with its name (`DataDirError`).
+- `telemetry.py`: `Telemetry`, a `Store` subclass; `record()` maps events to rows; `score()` joins each
+  decision to the metric point 12 months later; `past_outcomes()` renders them for the model. Write
+  failures are logged and never stop play.
+- `learned_files.py`: renders `<data>/learned/<game>/` (`manifest.toml`, `strategy.md`, `controls.md`,
+  `templates/`) from the store's learned rows; an unrenderable screen row is skipped and named in a
+  manifest comment. The controller reads it with `--learned <dir>`, so nothing writes into `corpora/`
+  at run time.
+- `export.py`: `pilot export --to DIR [--game G] [--campaign ID]` writes the same files to
+  `DIR/<game>/learned/` and the journals to `DIR/journals/<campaign>.md`; with `PILOT_EXPORT_DIR` set a
+  run exports there when it ends. Committing the output is a person's step.
+- `dataimport.py`: `pilot data import --from ROOT` copies an older install (its telemetry database, run
+  folders, settings and usage files, standing orders, dashboard key, learned files and journal entries)
+  into the store and data directory, idempotently; `check` lists what was not imported in full;
+  `--prune-source` deletes the old runtime files only when check is empty and the files are unchanged
+  since, and never tracked files, unknown files or symlinks.
 - `governor.py` controls from the dashboard: `chat` (separate read-only agent, answers in a
   thread), `order_add`/`order_remove` (standing orders in every prompt, saved in
   the store's `standing_orders` table), `decide_now` and `override` (queued requests the loop handles
@@ -419,7 +438,7 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   again from the next model; `_call_unguarded` is the path before the guard (`PILOT_MODEL_GUARD=0`).
 - `dashboard.py` API: `/api/campaigns`, `/api/decisions`, `/api/decision`, `/api/metrics`,
   `/runs/*`; the viewer's `LiveProxy` finds the live run by the dashboard port recorded in its
-  `status.json` and checks that it answers with the same run id. The live pilot's own app binds
+  `run_state` row and checks that it answers with the same run id. The live pilot's own app binds
   `live_host` (127.0.0.1) and uses `auth.ServiceAuth`: K as a header from loopback only, no
   cookies or sign-in routes, `info.auth_version`; `control()` runs each action inside
   `events.acting(by, by_id)` (a contextvar the `EventLog` adds as `by` to the events emitted then,

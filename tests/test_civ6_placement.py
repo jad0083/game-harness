@@ -3,7 +3,6 @@ against the committed rules (corpora/civ6/data/_adjacency.json) on a small hex m
 script on a saved reply."""
 
 import json
-import sqlite3
 import subprocess
 import sys
 
@@ -195,17 +194,15 @@ def test_the_script_reads_a_saved_reply_and_the_campaigns_weights_read_only(tmp_
     city, plots = _campus_and_holy_site_city({})
     saved = tmp_path / "plots.json"
     saved.write_text(json.dumps({"turn": 171, "player": 0, "cities": [city], "plots": plots}))
-    db = tmp_path / "t.sqlite"
-    con = sqlite3.connect(db)
-    con.execute("CREATE TABLE strategies (campaign_id TEXT, run_id TEXT, t REAL, date TEXT, trigger TEXT, model TEXT, "
-                "data TEXT)")
-    con.execute("INSERT INTO strategies VALUES ('civ6/x', 'r', 1, 'T170', 'x', 'm', ?)",
+    from pilot.store import open_store
+    store = open_store(tmp_path)
+    store.record("r", {"t": 1.0, "kind": "run_start", "game": "civ6", "model": "m"})
+    store.record("r", {"t": 1.0, "kind": "campaign", "game": "civ6", "name": "x"})
+    store._exec("INSERT INTO strategies (campaign_id, run_id, t, date, trigger, model, data) VALUES ('civ6/x', 'r', 1, 'T170', 'x', 'm', ?)",
                 (json.dumps({"pillars": {"science": {"weight": 10}, "faith": {"weight": 30}}}),))
-    con.commit()
-    con.close()
-    before = db.read_bytes()
+    before = store.query("SELECT COUNT(*) AS n FROM strategies")
     out = subprocess.run([sys.executable, str(REPO / "scripts/civ6-placement.py"), "--json", str(saved), "--campaign",
-                          "civ6/x", "--telemetry", str(db)], capture_output=True, text=True, check=True).stdout
+                          "civ6/x", "--data-dir", str(tmp_path)], capture_output=True, text=True, check=True).stdout
     assert "- Beijing: district:campus at 8,5" in out and "district:holy_site at 5,5" in out, "faith is heavier"
     assert "Verdict: wait" in out
-    assert db.read_bytes() == before
+    assert store.query("SELECT COUNT(*) AS n FROM strategies") == before

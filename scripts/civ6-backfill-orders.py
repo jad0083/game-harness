@@ -10,16 +10,14 @@ backfilled.
     scripts/civ6-backfill-orders.py --write               # add them as order_outcome events of a new run
 
 --write adds the rows as a new run named <time>-backfill, in the campaign, where <time> is the
-earliest backfilled decision's (so the run sorts among the real runs by time): its log
-runs/<time>-backfill/events.jsonl (the raw record, so `python -m pilot rebuild-telemetry` recreates
-them) and the telemetry database. It refuses when the campaign already has backfilled rows. Run it
-once, with the governor stopped or paused, when deploying the order record."""
+earliest backfilled decision's (so the run sorts among the real runs by time), to the store in the
+data directory (--data-dir; default PILOT_DATA_DIR, else runs/). It refuses when the campaign already
+has backfilled rows. Run it once, with the governor stopped or paused, when deploying the order record."""
 
 from __future__ import annotations
 
 import argparse
 import json
-import sqlite3
 import sys
 import time
 from collections import Counter
@@ -29,21 +27,18 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
 from pilot.civ6 import backfill_rows
-from pilot.telemetry import Telemetry
+from pilot.config import Settings
+from pilot.store import open_store
 
 CAMPAIGN = "civ6/kublai_khan_china_702403662"
 
 
-def decisions(db: Path, campaign: str) -> list[dict]:
-    con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
-    con.row_factory = sqlite3.Row
-    try:
-        rows = con.execute("SELECT date, t, trace FROM decisions WHERE campaign_id=? AND decision IS NOT NULL"
-                           " AND decision != 'strategy_review' ORDER BY t", (campaign,)).fetchall()
-        done = con.execute("SELECT COUNT(*) FROM events e JOIN runs r ON r.id = e.run_id WHERE r.campaign_id=?"
-                           " AND e.kind='order_outcome' AND e.data LIKE '%\"backfilled\": true%'", (campaign,)).fetchone()[0]
-    finally:
-        con.close()
+def decisions(data_dir: Path, campaign: str) -> list[dict]:
+    store = open_store(data_dir)
+    rows = store.query("SELECT date, t, trace FROM decisions WHERE campaign_id=? AND decision IS NOT NULL"
+                       " AND decision != 'strategy_review' ORDER BY t", (campaign,))
+    done = store.query("SELECT COUNT(*) AS n FROM events e JOIN runs r ON r.id = e.run_id WHERE r.campaign_id=?"
+                       " AND e.kind='order_outcome' AND e.data LIKE '%\"backfilled\": true%'", (campaign,))[0]["n"]
     out = []
     for r in rows:
         trace = json.loads(r["trace"]) if r["trace"] else {}
@@ -53,13 +48,12 @@ def decisions(db: Path, campaign: str) -> list[dict]:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--db", type=Path, default=ROOT / "runs" / "telemetry.sqlite")
+    ap.add_argument("--data-dir", type=Path, default=None, help="the pilot's data directory (default: PILOT_DATA_DIR, else runs/)")
     ap.add_argument("--campaign", default=CAMPAIGN)
     ap.add_argument("--write", action="store_true", help="add the rows as order_outcome events of a new run")
-    ap.add_argument("--runs-dir", type=Path, default=None,
-                    help="where the new run's events.jsonl goes (default: the database's folder, runs/)")
     args = ap.parse_args(argv)
-    found = decisions(args.db, args.campaign)
+    data_dir = args.data_dir or Settings.from_env().runs_dir
+    found = decisions(data_dir, args.campaign)
     if found and "already" in found[0]:
         print(f"{args.campaign} already has {found[0]['already']} backfilled rows; nothing to do")
         return 1 if args.write else 0
@@ -81,15 +75,10 @@ def main(argv: list[str] | None = None) -> int:
               {"t": now, "kind": "campaign", "game": game, "name": name},
               *({"t": times.get(r["date"]) or now, "kind": "order_outcome", **r} for r in rows),
               {"t": now, "kind": "run_end", "decisions": 0}]
-    # the run log first: it is the raw record the database is rebuilt from (telemetry.py)
-    log = (args.runs_dir or args.db.parent) / run / "events.jsonl"
-    log.parent.mkdir(parents=True, exist_ok=False)
-    log.write_text("".join(json.dumps(ev, ensure_ascii=False, default=str) + "\n" for ev in events), encoding="utf-8")
-    tel = Telemetry(args.db)
+    store = open_store(data_dir)
     for ev in events:
-        tel.record(run, ev)
-    tel.close()
-    print(f"written as run {run} ({log})")
+        store.record(run, ev)
+    print(f"written as run {run} ({store.path})")
     return 0
 
 

@@ -20,7 +20,7 @@ Everything below was verified in live play on 2026-09-25 unless marked **unverif
 | Stellaris | `corpora/stellaris/`, `crates/game-controller/src/stellaris.rs`, `src/pilot/governor.py` | Governor over the native AI: autosave briefing, console directives, speed and pause. See §10. |
 | Civilization VI | `corpora/civ6/` (with `lua/harness.lua`), `crates/game-controller/src/civ6.rs`, `src/pilot/civ6_governor.py` | Governor over the native AI: Lua snapshot and structured orders through the tuner, autoplay stretches. See §11. |
 | Pilot app | `src/pilot/` (`python -m pilot`) | Autonomous player with any LLM API key (README → "Pilot app"). |
-| Dashboard | `https://gamepilot.saczone.com` (nginx-proxy-manager host 54 on truenas, Authelia two-factor; port 8780 on this host answers only NPM and localhost, so scripts here use `http://127.0.0.1:8780`) (`deploy/game-pilot-view.service`; proxy settings in its drop-in, secret at `secret/apps/game-pilot/PROXY_SECRET`) | Decision traces (thinking, tool calls), campaign charts, and talking to / directing the live model. Telemetry in `runs/telemetry.sqlite`. Each game's words, figures, chart views and recovery steps: `corpora/<game>/dashboard.toml`. To sign the user in, run `python -m pilot dashboard-link`; never print `runs/secrets/dashboard.key`. An ntfy notice when a stop lasts is opt-in (`PILOT_NOTIFY_URL`, off). |
+| Dashboard | `https://gamepilot.saczone.com` (nginx-proxy-manager host 54 on truenas, Authelia two-factor; port 8780 on this host answers only NPM and localhost, so scripts here use `http://127.0.0.1:8780`) (`deploy/game-pilot-view.service`; proxy settings in its drop-in, secret at `secret/apps/game-pilot/PROXY_SECRET`) | Decision traces (thinking, tool calls), campaign charts, and talking to / directing the live model. Telemetry is in the store `runs/pilot.db`. Each game's words, figures, chart views and recovery steps: `corpora/<game>/dashboard.toml`. To sign the user in, run `python -m pilot dashboard-link`; never print the key `runs/secrets/dashboard.key`. An ntfy notice when a stop lasts is opt-in (`PILOT_NOTIFY_URL`, off). |
 
 Hard facts:
 - Screen 3840×2160 (DPI-aware agent). All screenshots and all coordinates you pass are in
@@ -204,6 +204,10 @@ The user is hands-off. Every solved problem goes into the repo, CI-checked, comm
 | A bug or limitation | `issues.md` (`- [ ]` open; `- [x]` only when fixed **and** deployed) |
 | A feature planned / done | `plan.md` (same checkbox rules) |
 | Code behaviour changes | `README.md`, `ARCHITECTURE.md` |
+
+The pilot app's own learned knowledge (rules, controls, known screens) lives in its store, `runs/pilot.db`, and
+reaches the repo only through `pilot export --to corpora`, whose result a person reviews and commits
+(docs/pilot.md, "Data directory"); it never writes into the repo while it runs.
 
 Commit through the CI gate — it runs `scripts/ci.sh` and commits only if everything passes:
 ```bash

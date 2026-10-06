@@ -60,6 +60,20 @@ echo 'GAME_AGENT_URL=http://<pc-address>:8765' >> .env   # the PC's agent; .env 
 .venv/bin/python -m pilot view                  # dashboard on port 8780
 ```
 
+Settings that move paths (environment or `.env`):
+
+| Variable | Meaning |
+|---|---|
+| `PILOT_DATA_DIR` | where the pilot keeps everything it records: the store `pilot.db`, frames, the learned overlay, secrets (default `runs/`; alias `PILOT_RUNS_DIR`) |
+| `PILOT_CORPORA_DIR` | the corpora directory (default `corpora/`) |
+| `PILOT_CONTROLLER_BIN` | the controller binary (default `target/release/game-controller`) |
+| `PILOT_FRAMES_KEEP` | frames kept per run (default 200) |
+| `PILOT_EXPORT_DIR` | when set, a run's learned files and journals are exported there when it ends (unset: only `pilot export` writes them) |
+
+Learned knowledge stays in the store until `pilot export --to corpora` writes it out for a person to commit;
+`pilot data import --from <repo>` brings an older install's files into the store
+([docs/pilot.md](docs/pilot.md#data-directory)).
+
 Model keys go in `.env` (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`), or use the
 Claude Code CLI with a Claude subscription (no key). MCP clients (Claude Code, Gemini CLI) can use
 the controller directly: `.mcp.json`, `.gemini/settings.json`.
@@ -70,7 +84,7 @@ the controller directly: `.mcp.json`, `.gemini/settings.json`.
 |---|---|
 | [AGENTS.md](AGENTS.md) | The operating guide for any model working here: play loop, decisions, recoveries, how to record what it learns |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Components, turn verification, known screens, coordinate scaling, agent API |
-| [docs/pilot.md](docs/pilot.md) | The pilot app: models, model calls (pacing, retries, failover; `PILOT_MODEL_GUARD`, `PILOT_MIN_CALL_INTERVAL`, `PILOT_MODEL_LIMITS`, `PILOT_MODEL_FAMILIES`), the Stellaris and Civilization VI governors, the strategy layer, dashboard, telemetry |
+| [docs/pilot.md](docs/pilot.md) | The pilot app: models, model calls (pacing, retries, failover; `PILOT_MODEL_GUARD`, `PILOT_MIN_CALL_INTERVAL`, `PILOT_MODEL_LIMITS`, `PILOT_MODEL_FAMILIES`), the Stellaris and Civilization VI governors, the strategy layer, dashboard, the data directory (store, export, import) |
 | [docs/cli.md](docs/cli.md) | Controller CLI and MCP tools |
 | [docs/corpus.md](docs/corpus.md) | Game corpora, generated records, other screen sizes |
 | [PLAYING.md](PLAYING.md) | Verified controls for Galactic Civilizations IV |
@@ -119,7 +133,7 @@ This is a tool for a home network, not the internet.
 - The optional ntfy notice when a stop lasts (`PILOT_NOTIFY_URL`, off by default) carries no
   credential: the game, what stopped, for how long and the dashboard's plain address. Anyone who
   knows the topic can read that, so use a self-hosted server or a long random topic.
-- API keys belong in `.env` (gitignored); never commit `runs/`, `play/` or `incoming/`.
+- API keys belong in `.env` (gitignored); never commit `runs/` (the data directory), `play/` or `incoming/`.
 
 ## Development
 

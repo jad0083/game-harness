@@ -1269,32 +1269,28 @@ def test_the_backfill_recovers_apply_time_outcomes_only():
 def test_the_backfill_script_reads_only_until_asked_and_writes_once(tmp_path, capsys):
     import importlib.util
 
-    from pilot.telemetry import Telemetry
-    db = tmp_path / "t.sqlite"
-    tel = Telemetry(db)
+    from pilot.store import open_store
+    tel = open_store(tmp_path)
     tel.record("r1", {"t": 1.0, "kind": "run_start", "game": "civ6", "model": "m"})
     tel.record("r1", {"t": 1.0, "kind": "campaign", "game": "civ6", "name": "kublai"})
     for i, d in enumerate(LIVE_TRACE_ORDERS):
         tel.record("r1", {"t": 2.0 + i, "kind": "trace", "episode": i + 1, "date": d["date"], "decision": "orders"},
                    {"orders": d["orders"], "decision": "orders"})
-    tel.close()
     spec = importlib.util.spec_from_file_location("backfill", REPO / "scripts/civ6-backfill-orders.py")
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    assert mod.main(["--db", str(db), "--campaign", "civ6/kublai"]) == 0
+    assert mod.main(["--data-dir", str(tmp_path), "--campaign", "civ6/kublai"]) == 0
     assert "7 rows from 8 decisions" in capsys.readouterr().out
-    assert Telemetry(db).campaign_events("civ6/kublai", "order_outcome") == [], "read-only by default"
-    assert mod.main(["--db", str(db), "--campaign", "civ6/kublai", "--write"]) == 0
-    rows = Telemetry(db).campaign_events("civ6/kublai", "order_outcome")
+    assert tel.campaign_events("civ6/kublai", "order_outcome") == [], "read-only by default"
+    assert mod.main(["--data-dir", str(tmp_path), "--campaign", "civ6/kublai", "--write"]) == 0
+    rows = tel.campaign_events("civ6/kublai", "order_outcome")
     assert [r["result"] for r in rows] == ["refused", "lost", "completed", "unknown", "refused", "refused", "completed"]
-    assert mod.main(["--db", str(db), "--campaign", "civ6/kublai", "--write"]) == 1, "never twice"
+    assert mod.main(["--data-dir", str(tmp_path), "--campaign", "civ6/kublai", "--write"]) == 1, "never twice"
     # runs are named by their start time and the dashboard shows the newest first (its idle feed shows
     # runs[0]): the backfill run sorts at its earliest decision, behind every later real run
     from pilot.dashboard import RUN_ID, list_runs
-    tel = Telemetry(db)
     tel.record("20260927-080000", {"t": time.time(), "kind": "run_start", "game": "civ6", "model": "m"})
     listed = [r["id"] for r in list_runs(tel) if r["id"] != "r1"]     # r1: the decisions read above
-    tel.close()
     assert len(listed) == 2 and listed[0] == "20260927-080000", listed
     assert listed[1] == time.strftime("%Y%m%d-%H%M%S", time.localtime(2.0 + 1)) + "-backfill", "its first row: T51"
     assert RUN_ID.match(listed[1])

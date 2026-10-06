@@ -49,7 +49,11 @@ it prints "not restarted: the running civ6 pilot is unaffected; the change appli
 | `PILOT_THINKING`, `PILOT_GOVERNOR_THINKING` | thinking level for GC4 episodes / Stellaris decisions (default `medium`) |
 | `PILOT_MODEL_GUARD`, `PILOT_MIN_CALL_INTERVAL`, `PILOT_MODEL_LIMITS`, `PILOT_MODEL_FAMILIES` | the governors' model guard (default `1`; `0` runs the whole-run retries), the gap between requests per provider, per-model limits and families (JSON objects); see [Model calls](#model-calls-pacing-retries-and-failover) |
 | `PILOT_RETRO_EVERY` | strategy review every N decisions (default 5) |
-| `PILOT_PORT`, `PILOT_RUNS_DIR`, `PILOT_CAMPAIGN` | live dashboard port, run folder, campaign id |
+| `PILOT_PORT`, `PILOT_CAMPAIGN` | live dashboard port, campaign id |
+| `PILOT_DATA_DIR` | the data directory ([Data directory](#data-directory); default `runs/` in the repo; `PILOT_RUNS_DIR` is an alias, and `PILOT_DATA_DIR` wins when both are set; a relative value becomes absolute) |
+| `PILOT_CORPORA_DIR`, `PILOT_CONTROLLER_BIN` | the corpora directory (default `corpora/`) and the controller binary (default `target/release/game-controller`) |
+| `PILOT_FRAMES_KEEP` | frames kept per run (default 200; frames saved with "keep" are exempt) |
+| `PILOT_EXPORT_DIR` | unset by default; when set, a run's learned files and journals are exported there when it ends |
 | `PILOT_DASHBOARD_KEY` | the dashboard's service key (default: generated once into `runs/secrets/dashboard.key`); a header from the controller only |
 | `PILOT_LIVE_HOST`, `PILOT_VIEW_HOST` | bind addresses of the live pilot's dashboard (default `127.0.0.1`) and of the viewer (default `0.0.0.0`; `view --host`) |
 | `PILOT_PUBLIC_URL`, `PILOT_DASHBOARD_HOSTS` | the viewer's canonical address for links and QR codes (page loads on other names are redirected there), and extra host names it answers to (comma list) |
@@ -424,8 +428,8 @@ tutorial advisor off for the session: its popups wait for a click and hold the t
   (`cap`, `reserve`, `stacking`, `cooldown`, `skip`, `defence_first`, `quota`, `other`; the game's own:
   `resource` naming the resource, `stacking`, `game`) and `refused_by` (harness or game). `scripts/civ6-backfill-orders.py` recovers the apply-time outcomes (refused,
   lost, purchases) of traces written before the record: read-only by default, `--write` once when
-  deploying (a run of its own, `runs/<time>-backfill/events.jsonl` named by the earliest backfilled
-  decision so it sorts among the runs by time, and the database, so `rebuild-telemetry` keeps the rows).
+  deploying (a run of its own in the store, named `<time>-backfill` by the earliest backfilled
+  decision so it sorts among the runs by time; `--data-dir` picks the data directory).
 - **Buy-outs** (rulings 17-21): a city is *in danger* (not merely threatened) when it is under siege,
   its garrison is damaged, two enemies that can capture it stand next to it, or two enemies are
   near an empty city tile; one-turn autoplay chunks follow it (with war against a major and a city
@@ -673,9 +677,9 @@ text print the unit ("within 5 turns of the last event review"). An
 answer is validated; an invalid one gets one corrective retry with its errors and the rejected
 answer, then the strategy stays. Reviews started at the beginning of a run or by you must name the
 species traits the strategy builds on. A review may add up to 3 rules to
-`corpora/stellaris/learned/strategy.md`, read by later decisions. A rule (from a review or the
+the store, which renders them into `<data>/learned/stellaris/strategy.md` for later decisions (`pilot export` writes them out for the repo). A rule (from a review or the
 `remember_rule` tool) whose text or why matches a pattern of `[learned] refuse` in the game's `pillars.toml`
-(both are written to the file) is refused and the model gets the reason (postmortem-fixes design, ruling 29). Civ VI refuses the false
+(both are stored) is refused and the model gets the reason (postmortem-fixes design, ruling 29). Civ VI refuses the false
 rules the Kublai campaign learned: saving until the balance is double the unit cost (a defender may
 spend down to the reserve), "cannot buy land units with faith", and "not allowed" in cities in danger
 (the refusals were Oil units; a Modern AT or Machine Gun was buyable). The rules already in the live
@@ -1088,15 +1092,73 @@ The dashboard listens on the LAN, so every request needs a principal (design:
 - `/api/pc` reports only whether the agent is online, its version, which known games are open and
   whether one is in front, never window titles.
 
-## Telemetry
+## Data directory
 
-`runs/telemetry.sqlite` (local, gitignored) holds every event, decision with its full trace, and
-monthly metric point, grouped by **campaign** (the Stellaris save folder or the GC4 journal
-directory; `PILOT_CAMPAIGN` overrides). Each decision is scored against the empire `[time]
-score_horizon` steps later (12 months in Stellaris, 12 turns in Civ VI). A run whose campaign ended
-(`campaign_end`) keeps the status `lost` in `runs` after it stops. The JSONL logs in `runs/<id>/` are the raw record; `python -m pilot
-rebuild-telemetry` recreates the database. Curated knowledge (`learned/`, strategy, journals) is
-committed.
+Everything the pilot records at run time is in one data directory: `PILOT_DATA_DIR`, default `runs/`
+in the repo (gitignored). Nothing writes into `corpora/` or `games/` while it runs, and the pilot
+does not run `git`.
+
+| Path | Holds |
+|---|---|
+| `pilot.db` | the store: campaigns, runs, events, decisions with their traces, metrics, strategies, learned notes and screens, journal lines, standing orders, saved prefs, model usage, and each live run's state |
+| `auth.sqlite` | the sign-in store (devices and grants; [Signing in](#signing-in)) |
+| `frames/<run_id>/NNNNN.jpg`, `latest.jpg` | the screenshots of a run and its newest frame |
+| `learned/<game>/` | the learned overlay the controller reads: `manifest.toml`, `strategy.md`, `controls.md`, `templates/`; generated from the store |
+| `secrets/dashboard.key`, `secrets/dashboard.carryover` | the dashboard's service key and its carry-over record (mode 0600, in a 0700 directory) |
+
+**The store.** `pilot.db` is SQLite in WAL mode (`synchronous=NORMAL`, busy timeout 5 s), so the viewer
+and a run can write it at the same time. Its schema version is in the `meta` table; a newer build
+migrates it forward when it opens it. Only `store.py` and its subclass `Telemetry` open it. Campaigns
+group runs (the Stellaris save folder or the GC4 journal directory; `PILOT_CAMPAIGN` overrides). Each
+decision is scored against the empire `[time] score_horizon` steps later (12 months in Stellaris, 12
+turns in Civ VI). A run whose campaign ended (`campaign_end`) keeps the status `lost` in `runs` after it
+stops. Events are the `events` table, traces are the `decisions.trace` column and a live run's state
+is its `run_state` row. The pilot stops at start, naming the directory, when it cannot write it.
+
+**Frames.** Each run keeps its newest `PILOT_FRAMES_KEEP` frames (default 200); frames saved with
+"keep" are exempt, and `latest.jpg` is always the newest.
+
+**The learned overlay.** The pilot writes what it learns (rules, controls, known screens with their
+templates) into the store and renders `learned/<game>/` from it; the controller reads that folder
+with `--learned <dir>` on top of the corpus. A fresh install renders an empty overlay. A screen row
+that cannot be rendered is skipped and named in a comment of `manifest.toml`.
+
+**Export.** `pilot export --to DIR [--game G] [--campaign ID]` writes `DIR/<game>/learned/...` (the
+same files as the overlay) and `DIR/journals/<campaign>.md`. `pilot export --to corpora` refreshes the
+`learned/` folders of the repo's corpora; a person reviews and commits the result (the journals go to
+wherever the person files them). With `PILOT_EXPORT_DIR` set, every run exports there when it ends.
+The hand-written campaign journals under `games/` stay in git and are not touched.
+
+**Importing an older install.** `pilot data import --from ROOT` copies an older install's telemetry
+database, run folders (event logs, traces, status, frames), settings and usage files, standing orders,
+dashboard key, `corpora/*/learned/` files and the pilot-log entries of the journals into the data
+directory. ROOT is a repo checkout; the data directory can be its `runs/` (imported in place) or another
+one (`PILOT_DATA_DIR`). It can be run again: what the store holds is skipped, so it adds nothing twice
+and loses nothing recorded since. A damaged item (a truncated log line, an unparseable file) is
+reported and skipped, never fatal. Pilot-log lines in a journal carry no campaign, so they are filed
+under the campaign `<game>/imported-journal`.
+
+`pilot data check --from ROOT` lists whatever the data directory lacks of the old install; an empty
+list means everything came across. `pilot data import --from ROOT --prune-source` deletes the old
+runtime files (the old database and its logs, run folders, settings, usage and standing-order files,
+the old key) only when check is empty, and keeps anything changed since check. It never deletes
+tracked files (so `corpora/*/learned/` and `games/*/journal.md` stay as the last committed copy),
+unknown files or symlinks.
+
+**Upgrading an existing install.**
+
+1. Stop `game-pilot.service` and `game-pilot-view.service`.
+2. `git pull`.
+3. `cargo build --release -p game-controller`.
+4. `.venv/bin/python -m pilot data import --from <repo>`.
+5. `.venv/bin/python -m pilot data check --from <repo>` (it should list nothing).
+6. Start `game-pilot-view.service`.
+7. `scripts/deploy-pilot.sh <from> <to>`.
+8. Later, once the dashboard shows the history, `.venv/bin/python -m pilot data import --from <repo> --prune-source`.
+
+Curated knowledge reaches the repo only through `pilot export`. A damaged or lost `pilot.db` is not
+recreated from run folders any more: the way back is `pilot data import` from an older install (or a
+copy of its files kept aside).
 
 ## Galactic Civilizations IV episodes
 

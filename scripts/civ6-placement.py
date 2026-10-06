@@ -10,7 +10,8 @@ of effort of its pillar - the tile given up - plots a heavier pillar's district 
 districts the AI placed the same way; prints the go / no-go of stage B (our best plot beats the AI's
 by at least +1 adjacency on average over at least 4 districts that have at least 3 other plots to
 compare with). Shares come from --shares, else the
-campaign's latest strategy weights (runs/telemetry.sqlite, opened read-only), else an even split.
+campaign's latest strategy weights (read from the store in the data directory, PILOT_DATA_DIR, default
+runs/), else an even split.
 Nothing is sent to the game but the one read-only query; nothing is placed."""
 
 from __future__ import annotations
@@ -18,7 +19,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import sqlite3
 import subprocess
 import sys
 from pathlib import Path
@@ -28,6 +28,8 @@ sys.path.insert(0, str(REPO / "src"))
 
 from pilot.civ6 import CorpusIndex
 from pilot.civ6_placement import Rules, report, report_text
+from pilot.config import Settings
+from pilot.store import open_store
 
 
 def shares_from(text: str) -> dict[str, float]:
@@ -38,16 +40,12 @@ def shares_from(text: str) -> dict[str, float]:
     return out
 
 
-def campaign_weights(db: Path, campaign: str) -> dict[str, float]:
-    """The pillar weights of the campaign's latest strategy (read-only)."""
-    con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
-    try:
-        row = con.execute("SELECT data FROM strategies WHERE campaign_id=? ORDER BY t DESC LIMIT 1", (campaign,)).fetchone()
-    finally:
-        con.close()
-    if not row:
+def campaign_weights(data_dir: Path, campaign: str) -> dict[str, float]:
+    """The pillar weights of the campaign's latest strategy (a read of the store in `data_dir`)."""
+    rows = open_store(data_dir).query("SELECT data FROM strategies WHERE campaign_id=? ORDER BY t DESC LIMIT 1", (campaign,))
+    if not rows:
         return {}
-    return {name: float(p.get("weight") or 0) for name, p in (json.loads(row[0]).get("pillars") or {}).items()}
+    return {name: float(p.get("weight") or 0) for name, p in (json.loads(rows[0]["data"]).get("pillars") or {}).items()}
 
 
 def read_live(city: str | None) -> dict:
@@ -72,14 +70,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--save", type=Path, help="also write the live reply here")
     ap.add_argument("--shares", default="", help="pillar=weight,... (e.g. science=30,faith=10); overrides --campaign")
     ap.add_argument("--campaign", default="", help="take the shares from this campaign's latest strategy")
-    ap.add_argument("--telemetry", type=Path, default=REPO / "runs/telemetry.sqlite")
+    ap.add_argument("--data-dir", type=Path, default=None, help="the pilot's data directory (default: PILOT_DATA_DIR, else runs/)")
     ap.add_argument("--corpus", type=Path, default=REPO / "corpora/civ6")
     ap.add_argument("--out-json", action="store_true", help="print the report as JSON")
     a = ap.parse_args(argv)
     data = json.loads(a.json.read_text(encoding="utf-8")) if a.json else read_live(a.city)
     if a.save and not a.json:
         a.save.write_text(json.dumps(data), encoding="utf-8")
-    shares = shares_from(a.shares) if a.shares else (campaign_weights(a.telemetry, a.campaign) if a.campaign else {})
+    shares = shares_from(a.shares) if a.shares else (campaign_weights(a.data_dir or Settings.from_env().runs_dir, a.campaign) if a.campaign else {})
     r = report(data, Rules.load(a.corpus), shares, CorpusIndex.load(a.corpus).cid)
     r["shares"] = shares or "even"
     print(json.dumps(r, indent=1) if a.out_json else report_text(r))

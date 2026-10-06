@@ -12,8 +12,11 @@ corpora/<game>/
   directives.toml governor directives (Stellaris)
   data/           GENERATED records, one <kind>.json each — never edit by hand
   docs/*.md       reference prose with Source:/License: headers, chunked for search
-  learned/        rules and episodes the pilot learned (committed)
+  learned/        the last exported copy of what the pilot learned (`pilot export`; not written at run time)
 ```
+
+The live learned overlay is `<data>/learned/<game>/`, generated from the pilot's store; the controller
+reads it in place of `learned/` (`--learned`).
 
 `corpus search` returns ids and snippets; `corpus get <id>` returns one record or chunk (see
 [cli.md](cli.md)). Records are generated from the game's own definition files, not the wiki, so
