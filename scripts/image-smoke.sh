@@ -22,7 +22,11 @@ BASE="http://127.0.0.1:$PORT"
 
 # the data folder belongs to uid 10010 (the image's user), as a host folder would be set up
 docker run --rm -u 0 -v "$DATA:/d" --entrypoint chown "$IMAGE" 10010:10010 /d || fail "could not own the data dir"
-docker run -d --name "$NAME" -p "127.0.0.1:$PORT:8780" -v "$DATA:/data" "$IMAGE" >/dev/null || fail "container did not start"
+# requests from the host arrive from the bridge gateway: trust it as the proxy, with a test secret
+GATEWAY="$(docker network inspect bridge -f '{{(index .IPAM.Config 0).Gateway}}')" || fail "no bridge gateway"
+SECRET="smoke-proxy-secret-$$-$RANDOM"
+docker run -d --name "$NAME" -p "127.0.0.1:$PORT:8780" -v "$DATA:/data" \
+  -e "PILOT_TRUSTED_PROXIES=$GATEWAY" -e "PILOT_PROXY_SECRET=$SECRET" "$IMAGE" >/dev/null || fail "container did not start"
 
 for _ in $(seq 60); do
   [ "$(docker inspect -f '{{.State.Health.Status}}' "$NAME")" = healthy ] && break
@@ -39,12 +43,17 @@ read -r code loc < <(curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' "$
 [[ "$code" =~ ^30[23]$ && "$loc" == "$BASE/pair"* ]] || fail "GET / -> $code $loc (want 302/303 to /pair)"
 ok "GET / -> $code to /pair"
 
-# an X-Forwarded-For request carrying Remote-User and a made-up proxy secret, from an address the
-# image was not told to trust, is an ordinary unsigned request
+# Remote-User with a made-up proxy secret, even from the trusted proxy address, is an ordinary unsigned request
 code="$(curl -s -o /dev/null -w '%{http_code}' -H 'Accept: application/json' -H 'X-Forwarded-For: 10.0.0.9' \
   -H 'X-Forwarded-Proto: https' -H 'X-Pilot-Proxy: not-a-secret' -H 'Remote-User: intruder' "$BASE/api/auth/me")"
 [ "$code" = 401 ] || fail "forged proxy headers -> $code (want 401)"
 ok "forged proxy headers are not trusted (401)"
+
+# the right secret and Remote-User from the trusted address is the proxy's signed-in user
+me="$(curl -s -H 'Accept: application/json' -H 'X-Forwarded-Proto: https' -H "X-Pilot-Proxy: $SECRET" \
+  -H 'Remote-User: smoke-user' "$BASE/api/auth/me")"
+[[ "$me" == *\"via\":\ \"proxy\"* ]] || fail "proxy secret + Remote-User not accepted: $me"
+ok "proxy secret + Remote-User accepted (via proxy)"
 
 # a root with no old install (an empty folder; /app itself holds the shipped learned rules, which
 # `data check` would count as old-install files the store lacks)

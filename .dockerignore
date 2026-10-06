@@ -1,6 +1,9 @@
 .env
 .env.*
 .agent_token*
+**/.env
+**/.env.*
+**/.agent_token*
 runs/
 play/
 incoming/

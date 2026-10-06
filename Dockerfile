@@ -26,7 +26,7 @@ ARG LITESTREAM_SHA256=cfb371176d164437ae869f8351cfde49bd1804ae71c61923f75c9cba9c
 RUN apt-get update && apt-get install -y --no-install-recommends tini ca-certificates curl \
  && curl -fsSL -o /tmp/ls.tar.gz "https://github.com/benbjohnson/litestream/releases/download/v${LITESTREAM_VERSION}/litestream-${LITESTREAM_VERSION}-linux-x86_64.tar.gz" \
  && echo "${LITESTREAM_SHA256}  /tmp/ls.tar.gz" | sha256sum -c - \
- && tar -xzf /tmp/ls.tar.gz -C /usr/local/bin litestream && rm /tmp/ls.tar.gz \
+ && tar -xzf /tmp/ls.tar.gz --no-same-owner -C /usr/local/bin litestream && rm /tmp/ls.tar.gz \
  && apt-get purge -y curl && apt-get autoremove -y && rm -rf /var/lib/apt/lists/* \
  && groupadd -g 10010 pilot && useradd -u 10010 -g 10010 -M -d /data -s /usr/sbin/nologin pilot
 COPY --from=py /opt/venv /opt/venv

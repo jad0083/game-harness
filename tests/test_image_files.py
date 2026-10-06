@@ -69,5 +69,5 @@ def test_unwritable_data_dir_names_the_fix(tmp_path):
 
 def test_dockerignore_excludes_secrets_and_data():
     lines = {line.strip() for line in (ROOT / ".dockerignore").read_text().splitlines() if line.strip()}
-    for must in (".env", ".agent_token*", "runs/", "play/", ".git", ".venv", "target/", "incoming/", ".claude/"):
+    for must in (".env", ".env.*", ".agent_token*", "**/.env", "**/.env.*", "**/.agent_token*", "runs/", "play/", ".git", ".venv", "target/", "incoming/", ".claude/"):
         assert must in lines, must
