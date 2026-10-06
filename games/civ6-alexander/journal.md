@@ -36,3 +36,19 @@ speed, Continents, Small map; the leader was random). First campaign with the mo
 - Stopped at T174 at the user's request (pilot stopped through its control; the game exited through
   `OnExitGame`). State at T174: 4 cities, population 19, science 15.2, culture 14.3, military 93,
   score 168, 3 wars; 3rd of the met majors in score (median 402).
+
+## T174-T221 (2026-10-06): the first run on the data platform
+
+- Resumed hands-off on mini-rig2 (one-off task launched the game; esc, Single Player, Resume Game,
+  Continue Game about 2.5 minutes after the load started). Run `20261006-063027`, the first on
+  `runs/pilot.db`: events, 18 decision traces, journal lines, two learned rules (T181 review) and model
+  usage all landed in the store; the learned overlay was rebuilt at start and after the new rules;
+  nothing under `corpora/` or `games/` changed at run time.
+- Gemini was overloaded for most of the hour: 9 strategy reviews and 7 decisions were lost when
+  gemini-pro-latest and gemini-3.8-flash answered 503/504 in the same minute (`pool_exhausted`); the
+  game's AI played on between them. A dashboard question asked while the decision held the only open
+  model's trial was refused at once; asked again it was answered (issues.md).
+- Stopped at T221 when the user moved on to the next sub-project (pilot stopped, game exited through
+  `OnExitGame`). State at T221: Industrial era, 4 cities, population 26, science 30.1, culture 19.4,
+  gold per turn -0.8, military 92, score 213, 3 wars (Germany at 278 military, 10 cities); 3rd of the met
+  majors in score (median 536.5), 2nd in military.
