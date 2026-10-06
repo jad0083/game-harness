@@ -13,6 +13,7 @@ from pydantic_ai.models.function import FunctionModel
 from test_governor import FakeStellaris, _is_strategy_review, _quiet_no_change, briefing, decisions, setup  # noqa: F401
 
 from pilot.governor import Governor
+from pilot.store import open_store
 
 E503 = ModelHTTPError(503, "gemini-3.8-flash", {"error": {"code": 503, "status": "UNAVAILABLE"}})
 
@@ -117,9 +118,6 @@ def test_the_kill_switch_keeps_whole_run_retries(setup):  # noqa: F811
     s, log = setup
     s = replace(s, model_guard=False, retry_delays=(0,))
     s.__class__ = setup[0].__class__
-    usage = s.runs_dir / "model-usage.json"
-    usage.parent.mkdir(parents=True, exist_ok=True)
-    usage.write_text("not json", encoding="utf-8")
     first, _ = consult_then_503()
     g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=first, fallback=decisions("expand"))
     g.run(max_decisions=1)
@@ -127,7 +125,7 @@ def test_the_kill_switch_keeps_whole_run_retries(setup):  # noqa: F811
     assert sum(e["kind"] == "consult" for e in log.recent) == 2, "the old path replays the run"
     assert not any(e["kind"] == "model_breaker" for e in log.recent)
     assert "model_health" not in log.state.info, "nothing of the guard is published"
-    assert usage.read_text(encoding="utf-8") == "not json", "the usage file is neither read nor written"
+    assert open_store(s.runs_dir).query("SELECT * FROM model_usage") == [], "usage is neither read nor written"
     assert not any("model guard" in str(e.get("error", "")) for e in log.recent)
 
 

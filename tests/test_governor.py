@@ -377,6 +377,13 @@ def recording_model(choice: str = "keep"):
     return FunctionModel(respond), seen
 
 
+def _seed_prefs(runs_dir, value) -> None:
+    """Seed a legacy or malformed settings row the way an older install left it (save_prefs refuses these)."""
+    from pilot.store import open_store
+    open_store(runs_dir)._exec("INSERT OR REPLACE INTO settings(key, value, changed_by, t) VALUES ('prefs', ?, NULL, 0)",
+                               (value if isinstance(value, str) else __import__("json").dumps(value),))
+
+
 def test_standing_orders_reach_every_decision_and_persist(setup):
     s, log = setup
     model, seen = recording_model()
@@ -387,7 +394,10 @@ def test_standing_orders_reach_every_decision_and_persist(setup):
     gov.order_remove(1)
     gov.run(max_decisions=1)
     assert any("STANDING ORDERS" in p and "1. Never declare war." in p and "research" not in p for p in seen)
-    assert (s.runs_dir / "orders" / "stellaris_c1.json").exists()
+    assert not (s.runs_dir / "orders").exists()
+    from pilot.store import open_store
+    rows = open_store(s.runs_dir).query("SELECT campaign_id, position, text FROM standing_orders")
+    assert [(r["campaign_id"], r["position"], r["text"]) for r in rows] == [("stellaris/c1", 0, "Never declare war.")]
     gov2 = Governor(s, FakeStellaris([briefing("2200.01.01")]), EventLog(s.runs_dir, "run2", s.model), model=model)
     gov2._set_campaign({"source": "save games/c1/x.sav"})
     assert gov2.orders == ["Never declare war."]
@@ -1221,7 +1231,6 @@ def test_fallback_model_is_saved_and_switchable_live(setup, tmp_path):
 # ---- model pool: providers, per-model thinking, taking turns ----------------------------------
 
 def test_model_pool_prefs_roundtrip_and_old_settings(tmp_path):
-    import json as _json
 
     from pilot.models import load_prefs, save_prefs
     pool = [{"model": "google:gemini-3.1-pro-preview", "thinking": "medium"},
@@ -1235,8 +1244,8 @@ def test_model_pool_prefs_roundtrip_and_old_settings(tmp_path):
         with pytest.raises(ValueError):
             save_prefs(tmp_path, models=bad)
     # settings saved before the pool existed: model + thinking + fallback
-    (tmp_path / "pilot-settings.json").write_text(_json.dumps(
-        {"model": "google:gemini-3.6-flash", "thinking": "high", "fallback": "google:gemini-3.1-pro-preview"}))
+    _seed_prefs(tmp_path, {"model": "google:gemini-3.6-flash", "thinking": "high",
+                           "fallback": "google:gemini-3.1-pro-preview"})
     assert load_prefs(tmp_path)["models"] == [{"model": "google:gemini-3.6-flash", "thinking": "high"},
                                               {"model": "google:gemini-3.1-pro-preview", "thinking": "high"}]
 
@@ -1473,12 +1482,11 @@ def test_an_invalid_strategy_is_retried_once_then_dropped(setup):
 
 
 def test_saved_retrospective_models_move_to_the_strategy_role(tmp_path):
-    import json as _json
 
     from pilot.models import ROLE_IDS, load_prefs
     assert "strategy" in ROLE_IDS and "retrospective" not in ROLE_IDS
-    (tmp_path / "pilot-settings.json").write_text(_json.dumps({"roles": {"retrospective": {
-        "models": [{"model": "google:gemini-3.1-pro-preview", "thinking": "high"}], "rotate": False}}}))
+    _seed_prefs(tmp_path, {"roles": {"retrospective": {
+        "models": [{"model": "google:gemini-3.1-pro-preview", "thinking": "high"}], "rotate": False}}})
     assert load_prefs(tmp_path)["roles"]["strategy"]["models"][0]["model"] == "google:gemini-3.1-pro-preview"
 
 
@@ -1633,10 +1641,9 @@ def test_a_rejected_then_retried_review_emits_one_strategy_review_per_answer(set
 
 def test_load_prefs_ignores_a_malformed_roles_value(tmp_path):
     """Item 6: a non-dict `roles` in a saved settings file is ignored, not a crash."""
-    import json as _json
 
     from pilot.models import load_prefs
-    (tmp_path / "pilot-settings.json").write_text(_json.dumps({"roles": 5}))
+    _seed_prefs(tmp_path, {"roles": 5})
     assert load_prefs(tmp_path).get("roles", {}) == {}
 
 

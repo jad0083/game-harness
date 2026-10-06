@@ -370,7 +370,7 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   `rebuild()` replays every `events.jsonl`. Write failures are logged and never stop play.
 - `governor.py` controls from the dashboard: `chat` (separate read-only agent, answers in a
   thread), `order_add`/`order_remove` (standing orders in every prompt, saved in
-  `runs/orders/<campaign>.json`), `decide_now` and `override` (queued requests the loop handles
+  the store's `standing_orders` table), `decide_now` and `override` (queued requests the loop handles
   with the game paused), `instruct` (one-time note, also answers questions).
 - `governor.py` date-stall watchdog (Stellaris; `Civ6Governor` has its own wait loop): while the
   governor waits with the game meant to run, `_stalled` compares the time since the autosave date
@@ -404,7 +404,7 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   game-specific): `ModelHealth`, one per pilot process and shared by every role and thread under one
   lock, keeps each model's circuit breaker (closed, open for a doubling window, half-open for its one
   trial, broken), its family's caution, the pacing slots and the daily request counts
-  (`runs/model-usage.json`); `classify` turns an exception (or the SDK error that caused it) into a
+  (the store's `model_usage` table); `classify` turns an exception (or the SDK error that caused it) into a
   failure kind; `check_guard_settings` stops the start on a malformed `PILOT_MIN_CALL_INTERVAL`,
   `PILOT_MODEL_LIMITS` or `PILOT_MODEL_FAMILIES` (from `Settings.from_env` and
   `GuardConfig.from_settings`). `GuardedModel` (a pydantic-ai `WrapperModel`, built when a run enters

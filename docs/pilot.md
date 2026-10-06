@@ -22,7 +22,7 @@ first deploy of the sign-in change, install `segno` into the `.venv` the units r
 (`.venv/bin/pip install segno`; it is in `pyproject.toml`): without it Add a device shows no QR code
 (the pages then never mention one), and `view` and `install-services.sh` say so. A drop-in
 (`systemctl --user edit game-pilot.service`) sets `GAME_AGENT_URL` and `GAME_RESOLUTION` for the
-PC in use. One pilot unit runs whichever game `runs/pilot-settings.json` names, so a deploy goes through
+PC in use. One pilot unit runs whichever game the store's saved prefs name, so a deploy goes through
 `scripts/deploy-pilot.sh <from> <to>` (`--dry-run` to preview; postmortem-fixes design, ruling 28):
 `scripts/pilot-affected.py` classifies each changed path (civ6: `src/pilot/civ6*.py` and
 `corpora/civ6/**`; stellaris and galciv4 alike, galciv4 with `src/pilot/controller.py`; view:
@@ -167,7 +167,7 @@ not a number above 0, or a `daily_requests` that is not a whole number above 0; 
 a family that is not a non-empty string.
 
 **Daily counts.** Requests per model per Pacific date are counted before each request is sent and
-written to `runs/model-usage.json` (atomically; 7 days kept), so a daily budget holds across restarts.
+written to the store's `model_usage` table (7 days kept), so a daily budget holds across restarts.
 A missing or unreadable file starts the day's counts at 0, and one that cannot be written leaves the
 counts in memory; either problem puts one `briefing_error` "model guard: ..." in the feed.
 
@@ -195,7 +195,7 @@ opening or found unusable is listed under Problems; all of them are under Model.
 **The kill switch.** `PILOT_MODEL_GUARD=0` runs the calls as before the guard: whole runs retried on
 the first model after 5, 15 and 45 s (`retry_delays`), any other failure moving the whole run to the
 next model, and a model that failed going behind the others for 10 minutes (`model_cooldown_s`).
-`runs/model-usage.json` is then neither read nor written and `info.model_health` is not published. It is
+The `model_usage` table is then neither read nor written and `info.model_health` is not published. It is
 kept for one campaign; after a campaign on the guard meets the design's success criteria, it is
 removed with those settings.
 

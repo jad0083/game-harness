@@ -51,7 +51,7 @@ class Pilot:
         # the model guard (docs/design/2026-10-02-model-guard-design.md): with PILOT_MODEL_GUARD=0 its usage
         # file is neither read nor written and no model health is published
         guard = GuardConfig.from_settings(settings)
-        self.health = ModelHealth(guard if settings.model_guard else replace(guard, usage_file=None),
+        self.health = ModelHealth(guard if settings.model_guard else replace(guard, usage_store=None),
                                   on_change=self._on_breaker,
                                   on_note=lambda text: log.emit("briefing_error", error=f"model guard: {text}"[:300]))
         self._model_obj, self._fallback_obj = model, fallback

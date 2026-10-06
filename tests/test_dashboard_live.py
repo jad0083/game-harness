@@ -21,6 +21,7 @@ from pilot import cli
 from pilot.config import Settings
 from pilot.dashboard import make_app, read_events
 from pilot.events import EventLog
+from pilot.store import open_store
 
 
 class FakePilot:
@@ -408,7 +409,7 @@ def test_what_a_device_changes_is_in_the_sign_in_log(tmp_path, clock, monkeypatc
     assert all(r["device_id"] == dev and r["ip"] == "127.0.0.1" for r in rows)
     text = " | ".join(e["text"] for e in A.audit_sentences(auth.store))
     assert "Pixel phone" in text and "paused the run" in text.lower() and "started a run" in text.lower()
-    assert json.loads((runs / "pilot-settings.json").read_text())["changed_by"] == "Pixel phone"
+    assert open_store(runs).query("SELECT changed_by FROM settings WHERE key='prefs'") == [{"changed_by": "Pixel phone"}]
     log.close()
 
 

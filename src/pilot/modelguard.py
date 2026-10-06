@@ -10,14 +10,14 @@ import math
 import os
 import random
 import re
+import sqlite3
 import threading
 import time
 from collections.abc import Callable, Iterable, Mapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from zoneinfo import ZoneInfo
 
 import anyio
@@ -28,6 +28,9 @@ from pydantic_ai.models.fallback import FallbackModel
 from pydantic_ai.models.wrapper import WrapperModel
 from pydantic_ai.settings import merge_model_settings
 
+if TYPE_CHECKING:
+    from .store import Store
+
 PACIFIC = ZoneInfo("America/Los_Angeles")        # Gemini daily quotas reset at midnight Pacific
 
 OVERLOADED, TIMEOUT, RATE_LIMITED, DAILY_QUOTA = "overloaded", "timeout", "rate_limited", "daily_quota"
@@ -35,7 +38,7 @@ BROKEN, REJECTED, OTHER = "broken", "rejected", "other"
 CAUTION = frozenset({OVERLOADED, TIMEOUT})       # kinds that put the model's family behind the others (ruling 9)
 LABEL = {OVERLOADED: "overloaded", TIMEOUT: "timed out", RATE_LIMITED: "rate limited", DAILY_QUOTA: "daily quota",
          BROKEN: "unusable", REJECTED: "request rejected", OTHER: "failed"}
-USAGE_DAYS = 7                                   # days of request counts kept in the usage file (ruling 14)
+USAGE_DAYS = 7                                   # days of request counts kept in model_usage (ruling 14)
 # a claude-code CLI error saying the subscription's usage limit was reached ("Claude AI usage limit
 # reached|<epoch>"; newer CLIs: "You've hit your limit", "5-hour limit reached"): rate limited for an hour
 USAGE_LIMIT = re.compile(r"usage limit|hit your (?:usage )?limit|(?:5-hour|weekly|session) limit", re.IGNORECASE)
@@ -209,15 +212,16 @@ class GuardConfig:
     min_call_interval_s: dict = field(default_factory=lambda: {"google": 0.5})
     model_limits: dict = field(default_factory=dict)
     model_families: dict = field(default_factory=dict)
-    usage_file: Path | None = None
+    usage_store: Store | None = None          # the store holding the daily counts; None = not kept
 
     @classmethod
     def from_settings(cls, s) -> GuardConfig:
+        from .store import open_store
         check_guard_settings(s.min_call_interval_s, s.model_limits, s.model_families)
         return cls(overload_retry_s=tuple(s.overload_retry_s), rate_retry_max_s=s.rate_retry_max_s,
                    breaker_open_s=s.breaker_open_s, breaker_max_s=s.breaker_max_s, pool_max_wait_s=s.pool_max_wait_s,
                    min_call_interval_s=dict(s.min_call_interval_s), model_limits=dict(s.model_limits),
-                   model_families=dict(s.model_families), usage_file=Path(s.runs_dir) / "model-usage.json")
+                   model_families=dict(s.model_families), usage_store=open_store(s.runs_dir))
 
 
 def retry_delay(f: Failure, trial: bool, cfg: GuardConfig, uniform=random.uniform) -> float | None:
@@ -399,32 +403,34 @@ class ModelHealth:
         self._day = pacific_day(now)
 
     def _load(self) -> None:
-        p = self.cfg.usage_file
-        if p is None or not p.exists():
+        st = self.cfg.usage_store
+        if st is None:
             return
         try:
-            data = json.loads(p.read_text(encoding="utf-8"))
-            self._days = {str(d): {str(m): int(n) for m, n in c.items()} for d, c in data.items()}
-        except (OSError, ValueError, TypeError, AttributeError) as e:
+            days: dict[str, dict[str, int]] = {}
+            for r in st.query("SELECT day, model, count FROM model_usage"):
+                days.setdefault(str(r["day"]), {})[str(r["model"])] = int(r["count"])
+            self._days = days
+        except (sqlite3.Error, ValueError, TypeError) as e:
             self._days = {}
-            self._note(f"model usage file {p.name} unreadable ({type(e).__name__}); today's counts start at 0")
+            self._note(f"model usage unreadable ({type(e).__name__}); today's counts start at 0")
 
     def _save(self) -> list[str]:
         """Write the counts (under the lock); returns a note to give after releasing it."""
-        p = self.cfg.usage_file
-        if p is None:
+        st = self.cfg.usage_store
+        if st is None:
             return []
         oldest = (datetime.fromisoformat(self._day) - timedelta(days=USAGE_DAYS - 1)).date().isoformat()
         self._days = {d: c for d, c in self._days.items() if d >= oldest}
         try:
-            p.parent.mkdir(parents=True, exist_ok=True)
-            tmp = p.with_name(p.name + ".tmp")
-            tmp.write_text(json.dumps(self._days, sort_keys=True), encoding="utf-8")
-            os.replace(tmp, p)
-        except OSError as e:
+            with st.transaction():
+                st._exec("DELETE FROM model_usage WHERE day = ? OR day < ?", (self._day, oldest))
+                for model, n in self._days.get(self._day, {}).items():
+                    st._exec("INSERT INTO model_usage(day, model, count) VALUES (?, ?, ?)", (self._day, model, n))
+        except sqlite3.Error as e:
             if not self._save_failed:
                 self._save_failed = True
-                return [f"model usage file {p.name} not written ({type(e).__name__}); counts kept in memory"]
+                return [f"model usage not saved ({type(e).__name__}); counts kept in memory"]
         return []
 
     # ---- what the dashboard reads (ruling 23) --------------------------------------------------

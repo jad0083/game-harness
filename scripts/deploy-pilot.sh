@@ -6,7 +6,7 @@
 #   scripts/deploy-pilot.sh <from> <to> --dry-run   print what it would do; change nothing
 # scripts/pilot-affected.py classifies the changed paths. The running pilot's game comes from its own
 # dashboard's /status (info.game; PILOT_PORT, the key from PILOT_DASHBOARD_KEY or runs/dashboard.key), or
-# from runs/pilot-settings.json when no pilot runs. A Rust change pauses the pilot through its dashboard,
+# from the store's prefs when no pilot runs. A Rust change pauses the pilot through its dashboard,
 # builds the controller and resumes a Civ VI pilot (each call runs the binary afresh; a pilot the human had
 # paused stays paused); a Stellaris or GalCiv IV pilot keeps one `game-controller mcp` child for the run,
 # so it is restarted instead. game-pilot.service restarts when its game's files or shared code changed;
@@ -42,7 +42,7 @@ if [ "$running" -eq 1 ]; then
   # a pilot paused by the human or waiting for one is left as it is: never paused or resumed here
   case "${run_status:-}" in paused|needs_attention) held=yes ;; esac
 else
-  game="$("$py" -c "import json; print(json.load(open('runs/pilot-settings.json')).get('game') or '')" 2>/dev/null || true)"
+  game="$("$py" -m pilot prefs --get game 2>/dev/null || true)"
 fi
 game="${game:-unknown}"
 

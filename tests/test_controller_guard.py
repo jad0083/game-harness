@@ -12,6 +12,7 @@ from test_pilot import FakeGame, corpus  # noqa: F401
 from pilot.config import Settings
 from pilot.controller import Pilot
 from pilot.events import EventLog
+from pilot.store import open_store
 
 E503 = ModelHTTPError(503, "gemini-3.8-flash", {"error": {"code": 503, "status": "UNAVAILABLE"}})
 
@@ -91,6 +92,6 @@ def test_without_the_guard_the_episode_replays_as_before(corpus, tmp_path):  # n
     assert journal_text(s.runs_dir).count("Saw the event") == 2, "the whole run was retried"
     assert not any(e["kind"] == "model_breaker" for e in log.recent)
     assert pilot.pool is None and "model_health" not in log.state.info
-    assert not (tmp_path / "runs" / "model-usage.json").exists()
+    assert open_store(s.runs_dir).query("SELECT * FROM model_usage") == []
     pilot.set_model("google:gemini-3.7-flash")
     assert pilot.pool is None and "model_health" not in log.state.info, "a model change publishes nothing either"

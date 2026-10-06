@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Which services a change affects (docs/design/2026-09-27-postmortem-fixes-design.md, ruling 28): a
 Stellaris-only merge restarted the live Civ VI run at T462, because one unit (game-pilot.service) runs
-whichever game runs/pilot-settings.json names. scripts/deploy-pilot.sh acts on this.
+whichever game the store's prefs (`pilot prefs --get game`) names. scripts/deploy-pilot.sh acts on this.
 
     scripts/pilot-affected.py <from> <to> [--game civ6] [--running 1] [--format json|env]
     scripts/pilot-affected.py --paths src/pilot/governor.py docs/x.md --game civ6

@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 from pathlib import Path
 
 from .config import Settings
@@ -117,14 +118,19 @@ def available_models(s: Settings) -> list[str]:
     return sorted(models)
 
 
-PREFS_FILE = "pilot-settings.json"
-
-
 def load_prefs(runs_dir: Path) -> dict:
-    """The model and thinking level chosen on the dashboard (used by the next `pilot run`)."""
+    """The model and thinking level chosen on the dashboard (used by the next `pilot run`), from the store's
+    `settings` row 'prefs'. A row that is not a JSON object counts as no prefs; a store that cannot be
+    opened is an error (an unwritable data directory must stop the app with its name)."""
+    from .store import open_store
+    rows = open_store(runs_dir).query("SELECT value FROM settings WHERE key='prefs'")
+    if not rows:
+        return {}
     try:
-        d = json.loads((runs_dir / PREFS_FILE).read_text(encoding="utf-8"))
-    except (OSError, ValueError):
+        d = json.loads(rows[0]["value"])
+    except (TypeError, ValueError):
+        return {}
+    if not isinstance(d, dict):
         return {}
     out = {}
     if isinstance(d.get("model"), str) and valid_model(d["model"]):
@@ -253,6 +259,9 @@ def save_prefs(runs_dir: Path, model: str | None = None, thinking: str | None = 
         prefs["months"] = m
     if run.get("by"):                   # who saved them (the dashboard's device), for the record
         prefs["changed_by"] = str(run["by"])[:60]
-    runs_dir.mkdir(parents=True, exist_ok=True)
-    (runs_dir / PREFS_FILE).write_text(json.dumps(prefs, indent=1), encoding="utf-8")
+    from .store import open_store
+    open_store(runs_dir)._exec(
+        "INSERT INTO settings(key, value, changed_by, t) VALUES ('prefs', ?, ?, ?) "
+        "ON CONFLICT(key) DO UPDATE SET value=excluded.value, changed_by=excluded.changed_by, t=excluded.t",
+        (json.dumps(prefs), prefs.get("changed_by"), time.time()))
     return prefs

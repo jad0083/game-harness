@@ -4,7 +4,6 @@ requests are paced and counted per Pacific day."""
 
 from __future__ import annotations
 
-import json
 import threading
 from datetime import datetime
 
@@ -14,6 +13,7 @@ from pydantic_ai.exceptions import ModelHTTPError
 
 from pilot import modelguard as G
 from pilot.config import Settings
+from pilot.store import open_store
 
 
 class Clock:
@@ -25,7 +25,7 @@ class Clock:
 
 
 def health(tmp_path=None, clock=None, **kw):
-    cfg = G.GuardConfig(usage_file=(tmp_path / "model-usage.json") if tmp_path else None, **kw)
+    cfg = G.GuardConfig(usage_store=open_store(tmp_path) if tmp_path else None, **kw)
     changes, notes = [], []
     h = G.ModelHealth(cfg, clock=clock or Clock(), on_change=lambda m, s: changes.append((m, s)),
                       on_note=notes.append)
@@ -293,29 +293,36 @@ def test_daily_counts_persist_roll_over_and_budget(tmp_path):
     assert again.today(m) == 2, "the counts survive a restart"
     clock.t += 120                                   # past midnight Pacific
     assert again.today(m) == 0 and again.count(m) is None
-    data = json.loads((tmp_path / "model-usage.json").read_text())
-    assert data == {"2026-10-02": {m: 2}, "2026-10-03": {m: 1}}
+    assert _usage(tmp_path) == {"2026-10-02": {m: 2}, "2026-10-03": {m: 1}}
     clock.t += 9 * 86400
     again.count(m)
-    assert list(json.loads((tmp_path / "model-usage.json").read_text())) == ["2026-10-12"], "7 days kept"
+    assert list(_usage(tmp_path)) == ["2026-10-12"], "7 days kept"
 
 
-def test_an_unreadable_usage_file_starts_at_zero_with_one_note(tmp_path):
-    (tmp_path / "model-usage.json").write_text('{"2026-10-02": {"google:gemini-3.8-fla')
+def _usage(tmp_path) -> dict:
+    out: dict = {}
+    for r in open_store(tmp_path).query("SELECT day, model, count FROM model_usage"):
+        out.setdefault(r["day"], {})[r["model"]] = r["count"]
+    return out
+
+
+def test_a_store_without_the_usage_table_starts_at_zero_with_one_note(tmp_path):
+    open_store(tmp_path)._exec("DROP TABLE model_usage")
     h, _, notes = health(tmp_path)
     assert h.today("google:gemini-3.8-flash") == 0 and len(notes) == 1 and "unreadable" in notes[0]
-    assert h.count("google:gemini-3.8-flash") is None, "a new file is written"
-    json.loads((tmp_path / "model-usage.json").read_text())
+    assert h.count("google:gemini-3.8-flash") is None, "counting goes on in memory"
+    assert h.today("google:gemini-3.8-flash") == 1 and len(notes) == 2 and "not saved" in notes[1]
+    h.count("google:gemini-3.8-flash")
+    assert len(notes) == 2, "the save failure is noted once"
 
 
-def test_an_unwritable_usage_file_keeps_counting_with_one_note(tmp_path):
-    blocker = tmp_path / "file"
-    blocker.write_text("")
-    h, _, notes = health()
-    h.cfg.usage_file = blocker / "model-usage.json"       # its parent is a file
+def test_an_unsaveable_usage_store_keeps_counting_with_one_note(tmp_path):
+    st = open_store(tmp_path)
+    h, _, notes = health(tmp_path)
+    st.close()                                            # every later write raises
     for _ in range(3):
         assert h.count("google:gemini-3.8-flash") is None
-    assert h.today("google:gemini-3.8-flash") == 3 and len(notes) == 1 and "not written" in notes[0]
+    assert h.today("google:gemini-3.8-flash") == 3 and len(notes) == 1 and "not saved" in notes[0]
 
 
 def test_snapshot_lists_states_counts_and_caution():
@@ -346,7 +353,7 @@ def test_settings_and_environment(monkeypatch, tmp_path):
     with pytest.raises(ValueError, match="PILOT_MODEL_LIMITS"):
         Settings.from_env()
     cfg = G.GuardConfig.from_settings(Settings(runs_dir=tmp_path))
-    assert cfg.usage_file == tmp_path / "model-usage.json" and cfg.breaker_max_s == 600.0
+    assert cfg.usage_store is open_store(tmp_path) and cfg.breaker_max_s == 600.0
 
 
 @pytest.mark.parametrize("var,value,words", [

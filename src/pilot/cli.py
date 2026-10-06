@@ -470,6 +470,8 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument("--model", help="pydantic-ai model string, e.g. google:gemini-3.8-flash")
         p.add_argument("--coords", choices=["auto", "norm1000", "pixels"])
         p.add_argument("--thinking", choices=["off", "low", "medium", "high"])
+    prefs_p = sub.add_parser("prefs", help="print one saved dashboard setting (for scripts)")
+    prefs_p.add_argument("--get", required=True, metavar="KEY", help="e.g. game")
     view_p = sub.add_parser("view", help="read-only dashboard over recorded runs")
     view_p.add_argument("--port", type=int, default=8780)
     view_p.add_argument("--host", help="bind address (default PILOT_VIEW_HOST or 0.0.0.0)")
@@ -520,6 +522,10 @@ def main(argv: list[str] | None = None) -> int:
     run_p.add_argument("--decide-turns", type=int, help="Civilization VI: turns the game's AI plays between decisions")
     a = ap.parse_args(argv)
     s = Settings.from_env()
+    if a.cmd == "prefs":
+        from .models import load_prefs
+        print(load_prefs(s.runs_dir).get(a.get, ""))
+        return 0
     if a.cmd == "view":
         return view(s, a.port, a.host)
     if a.cmd == "control":

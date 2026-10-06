@@ -557,9 +557,9 @@ class Governor:
         self.game = game
         self.log = log
         # the model guard (docs/design/2026-10-02-model-guard-design.md): one per process, every role;
-        # with PILOT_MODEL_GUARD=0 it is never asked, and its usage file is neither read nor written
+        # with PILOT_MODEL_GUARD=0 it is never asked, and its usage counts are neither read nor written
         guard = GuardConfig.from_settings(settings)
-        self.health = ModelHealth(guard if settings.model_guard else replace(guard, usage_file=None),
+        self.health = ModelHealth(guard if settings.model_guard else replace(guard, usage_store=None),
                                   on_change=self._on_breaker,
                                   on_note=lambda text: log.emit("briefing_error", error=f"model guard: {text}"[:300]))
         self.control = Control()
@@ -1002,14 +1002,13 @@ class Governor:
 
     # -- directing the model (dashboard) ------------------------------------------------------
 
-    def _orders_file(self):
-        cid = self.log.campaign_id or "no-campaign"
-        return self.s.runs_dir / "orders" / (re.sub(r"[^A-Za-z0-9_.-]", "_", cid) + ".json")
-
     def _save_orders(self) -> None:
-        f = self._orders_file()
-        f.parent.mkdir(parents=True, exist_ok=True)
-        f.write_text(json.dumps(self.orders, ensure_ascii=False, indent=1), encoding="utf-8")
+        cid = self.log.campaign_id or "no-campaign"
+        store = self.log.store
+        with store.transaction():
+            store._exec("DELETE FROM standing_orders WHERE campaign_id=?", (cid,))
+            for i, text in enumerate(self.orders):
+                store._exec("INSERT INTO standing_orders(campaign_id, position, text) VALUES (?, ?, ?)", (cid, i, text))
         self.log.state.info["orders"] = list(self.orders)
         self.log.emit("orders", orders=list(self.orders))
 
@@ -1410,12 +1409,10 @@ class Governor:
 
     def _load_campaign_state(self) -> None:
         """Standing orders, plan and strategy saved for the campaign just named."""
-        f = self._orders_file()
-        if f.exists():
-            try:
-                self.orders = [str(x) for x in json.loads(f.read_text(encoding="utf-8"))]
-            except ValueError:
-                self.orders = []
+        rows = self.log.store.query("SELECT text FROM standing_orders WHERE campaign_id=? ORDER BY position",
+                                    (self.log.campaign_id or "no-campaign",))
+        if rows:
+            self.orders = [str(r["text"]) for r in rows]
         self.log.state.info["orders"] = list(self.orders)
         if self.log.telemetry is not None:
             try:
