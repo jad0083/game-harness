@@ -22,11 +22,17 @@ py=.venv/bin/python
 run() { if [ "$dry" -eq 1 ]; then echo "would run: $*"; else echo "+ $*"; "$@"; fi; }
 
 port="${PILOT_PORT:-8790}"
-# the data directory as config.py finds it: PILOT_DATA_DIR from the environment, else its first line in .env,
-# else PILOT_RUNS_DIR, else runs/. Only that one key is read from .env, which holds secrets (never cat or source it).
-dotenv_data="$(sed -n 's/^[[:space:]]*PILOT_DATA_DIR[[:space:]]*=[[:space:]]*//p' .env 2>/dev/null | head -n 1 \
-  | sed -e 's/[[:space:]]*$//' -e 's/^["'\'']*//' -e 's/["'\'']*$//' || true)"
-data="${PILOT_DATA_DIR:-${dotenv_data:-${PILOT_RUNS_DIR:-runs}}}"
+# one key's first value in .env, trimmed of spaces and quotes as config.py's load_dotenv does; sed reads only
+# that key (.env holds secrets: never cat or source it)
+dotenv_value() {
+  sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" .env 2>/dev/null | head -n 1 \
+    | sed -e 's/[[:space:]]*$//' -e 's/^["'\'']*//' -e 's/["'\'']*$//' || true
+}
+# the data directory as config.py finds it: each key from the environment, else from .env; PILOT_DATA_DIR
+# before its alias PILOT_RUNS_DIR; else runs/
+data_dir="${PILOT_DATA_DIR:-$(dotenv_value PILOT_DATA_DIR)}"
+runs_dir="${PILOT_RUNS_DIR:-$(dotenv_value PILOT_RUNS_DIR)}"
+data="${data_dir:-${runs_dir:-runs}}"
 key="${PILOT_DASHBOARD_KEY:-$(cat "$data/secrets/dashboard.key" 2>/dev/null || cat "$data/dashboard.key" 2>/dev/null || true)}"
 status() { curl -fsS -m 3 -H "X-Pilot-Key: $key" "http://127.0.0.1:$port/status" 2>/dev/null || true; }
 control() {

@@ -202,6 +202,22 @@ def test_the_script_reads_the_data_directory_from_dotenv_as_config_does(tmp_path
     assert all("X-Pilot-Key: from-environment" in c for c in calls if c.startswith("curl") and c.endswith("/status"))
 
 
+@pytest.mark.parametrize(("dotenv", "environment", "used"), [
+    ("PILOT_RUNS_DIR=store\n", {}, "store"),                                       # .env's alias, nothing else
+    ("PILOT_RUNS_DIR=elsewhere\nPILOT_DATA_DIR=store\n", {}, "store"),             # PILOT_DATA_DIR wins
+    ("PILOT_DATA_DIR=store\n", {"PILOT_RUNS_DIR": "elsewhere"}, "store"),          # even over the env's alias
+    ("PILOT_RUNS_DIR=store\n", {"PILOT_RUNS_DIR": "elsewhere"}, "elsewhere"),      # the environment wins its key
+])
+def test_the_script_finds_the_data_directory_in_the_order_config_does(tmp_path, dotenv, environment, used):
+    """config.py: load_dotenv fills keys the environment lacks, then PILOT_DATA_DIR beats PILOT_RUNS_DIR."""
+    files = {"store/secrets/dashboard.key": "store", "elsewhere/secrets/dashboard.key": "elsewhere",
+             "runs/secrets/dashboard.key": "runs"}
+    _, calls = deploy(tmp_path, "crates/game-controller/src/civ6.rs", CIV6, dry=False, key_files=files,
+                      dotenv=dotenv, extra_env=environment)
+    status = [c for c in calls if c.startswith("curl") and c.endswith("/status")]
+    assert status and all(f"X-Pilot-Key: {used} " in c for c in status), calls
+
+
 def test_the_script_finds_cargo_in_the_users_toolchain():
     """First live deploy (2026-09-27): a service shell has no ~/.cargo/bin on PATH, so a Rust change
     failed with "cargo: command not found"; ci.sh adds it, and so must the deploy script."""
