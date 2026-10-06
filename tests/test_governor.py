@@ -404,6 +404,32 @@ def test_standing_orders_reach_every_decision_and_persist(setup):
     assert any(e["kind"] == "orders" for e in log.recent)
 
 
+def test_a_failed_standing_orders_save_keeps_the_previous_rows(setup):
+    s, log = setup
+    gov = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=recording_model()[0])
+    gov.log.set_campaign("stellaris", "c1")
+    gov.order_add("Never declare war.")
+    gov.order_add("Prioritise research.")
+    store = log.store
+    real = store._exec
+    n = []
+
+    def flaky(sql, args=()):
+        if sql.startswith("INSERT INTO standing_orders"):
+            n.append(1)
+            if len(n) == 2:
+                raise RuntimeError("disk trouble")
+        return real(sql, args)
+    store._exec = flaky
+    try:
+        with pytest.raises(RuntimeError, match="disk trouble"):
+            gov.order_add("A third order.")
+    finally:
+        store._exec = real
+    rows = store.query("SELECT text FROM standing_orders WHERE campaign_id='stellaris/c1' ORDER BY position")
+    assert [r["text"] for r in rows] == ["Never declare war.", "Prioritise research."]
+
+
 def test_decide_now_and_override_run_between_scheduled_decisions(setup):
     s, log = setup
     model, seen = recording_model("tech_rush")

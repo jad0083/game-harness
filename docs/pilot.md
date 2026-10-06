@@ -28,7 +28,7 @@ PC in use. One pilot unit runs whichever game the store's saved prefs name, so a
 `corpora/civ6/**`; stellaris and galciv4 alike, galciv4 with `src/pilot/controller.py`; view:
 `src/pilot/static/**`; rust: `crates/**`, `Cargo.*`; none: docs, games, tests, other `.md` files,
 `corpora/*/learned/**`, `scripts/ci*`; shared: every other `src/pilot/*.py` and `pyproject.toml`, and any
-path not listed). The running pilot (its game read from its own `/status`, else the settings file)
+path not listed). The running pilot (its game read from its own `/status`, else the store's prefs, `pilot prefs --get game`)
 restarts only when its game's class or shared changed; the viewer restarts for view, shared and any
 `src/pilot/*.py` of a game's class (it imports game modules too, such as `stellaris_record` and `civ6`); a Rust change pauses the pilot through its dashboard, builds the
 controller and resumes a Civ VI pilot, which runs the binary afresh for each call (a pilot paused by the
@@ -168,8 +168,8 @@ a family that is not a non-empty string.
 
 **Daily counts.** Requests per model per Pacific date are counted before each request is sent and
 written to the store's `model_usage` table (7 days kept), so a daily budget holds across restarts.
-A missing or unreadable file starts the day's counts at 0, and one that cannot be written leaves the
-counts in memory; either problem puts one `briefing_error` "model guard: ..." in the feed.
+A `model_usage` table that cannot be read starts the day's counts at 0, and counts that cannot be saved
+stay in memory; either problem puts one `briefing_error` "model guard: ..." in the feed.
 
 **What it reports.** `model_retry` and `model_fallback` keep their fields (`error`, `delay`, `attempt`,
 `role`, `model`, `fallback`) and add `failure` (the kind above; `answer` for a run that ended without a

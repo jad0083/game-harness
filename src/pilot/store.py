@@ -209,10 +209,11 @@ class Store:
             self.db.execute("BEGIN IMMEDIATE")
             try:
                 yield self
+                self.db.execute("COMMIT")
             except BaseException:
-                self.db.execute("ROLLBACK")
+                if self.db.in_transaction:      # SQLite may have rolled back already (disk full, I/O error)
+                    self.db.execute("ROLLBACK")
                 raise
-            self.db.execute("COMMIT")
 
 
 _OPEN: dict[Path, Store] = {}

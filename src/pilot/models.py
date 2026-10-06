@@ -221,6 +221,13 @@ SPEEDS = ("slowest", "slow", "normal", "fast", "fastest")
 
 def save_prefs(runs_dir: Path, model: str | None = None, thinking: str | None = None, **run: object) -> dict:
     """Merge into the saved choices: model, thinking, and run settings (game, speed, months)."""
+    from .store import open_store
+    store = open_store(runs_dir)
+    with store.transaction():       # read, change and write as one step: two savers cannot lose each other's change
+        return _save_prefs(store, runs_dir, model, thinking, run)
+
+
+def _save_prefs(store, runs_dir: Path, model: str | None, thinking: str | None, run: dict) -> dict:
     prefs = load_prefs(runs_dir)
     if model is not None:
         if not valid_model(model):
@@ -259,8 +266,7 @@ def save_prefs(runs_dir: Path, model: str | None = None, thinking: str | None = 
         prefs["months"] = m
     if run.get("by"):                   # who saved them (the dashboard's device), for the record
         prefs["changed_by"] = str(run["by"])[:60]
-    from .store import open_store
-    open_store(runs_dir)._exec(
+    store._exec(
         "INSERT INTO settings(key, value, changed_by, t) VALUES ('prefs', ?, ?, ?) "
         "ON CONFLICT(key) DO UPDATE SET value=excluded.value, changed_by=excluded.changed_by, t=excluded.t",
         (json.dumps(prefs), prefs.get("changed_by"), time.time()))

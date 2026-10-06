@@ -212,3 +212,40 @@ def test_a_relative_data_dir_becomes_absolute(monkeypatch, tmp_path):
     s = Settings.from_env()
     assert s.runs_dir.is_absolute() and s.runs_dir == (tmp_path / "runs").resolve()
     assert s.learned_dir.is_absolute()
+
+
+class _FailingCommit:
+    """The store's connection, except that COMMIT fails (a full disk, an I/O error)."""
+
+    def __init__(self, db):
+        self._db = db
+
+    def execute(self, sql, *a):
+        if sql == "COMMIT":
+            raise sqlite3.OperationalError("database or disk is full")
+        return self._db.execute(sql, *a)
+
+    def __getattr__(self, name):
+        return getattr(self._db, name)
+
+
+def test_an_error_after_sqlite_rolled_back_by_itself_surfaces_as_the_original(tmp_path):
+    st = S.open_store(tmp_path)
+    with pytest.raises(ValueError, match="boom"), st.transaction():
+        st._exec("INSERT INTO settings(key, value, changed_by, t) VALUES ('k', 'v', NULL, 0)")
+        st.db.execute("ROLLBACK")          # what SQLite does itself on SQLITE_FULL or an I/O error
+        raise ValueError("boom")
+    assert not st.db.in_transaction and st.query("SELECT * FROM settings") == []
+
+
+def test_a_failed_commit_rolls_back_and_releases_the_write_lock(tmp_path):
+    st = S.open_store(tmp_path)
+    real = st.db
+    st.db = _FailingCommit(real)
+    try:
+        with pytest.raises(sqlite3.OperationalError, match="disk is full"), st.transaction():
+            st._exec("INSERT INTO settings(key, value, changed_by, t) VALUES ('k', 'v', NULL, 0)")
+        assert not real.in_transaction
+    finally:
+        st.db = real
+    assert st.query("SELECT * FROM settings") == []

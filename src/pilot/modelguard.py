@@ -382,8 +382,7 @@ class ModelHealth:
             self._roll(self.clock())
             today = self._days.setdefault(self._day, {})
             if not budget or today.get(model, 0) < int(budget):
-                today[model] = today.get(model, 0) + 1
-                notes = self._save()
+                notes = self._increment(model, today)
                 over = None
             else:
                 notes = []
@@ -415,23 +414,30 @@ class ModelHealth:
             self._days = {}
             self._note(f"model usage unreadable ({type(e).__name__}); today's counts start at 0")
 
-    def _save(self) -> list[str]:
-        """Write the counts (under the lock); returns a note to give after releasing it."""
+    def _increment(self, model: str, today: dict[str, int]) -> list[str]:
+        """Count one request (under the lock). The store adds one atomically, so processes sharing it do
+        not overwrite each other's counts, and its value becomes ours; without a store, or when it fails,
+        the count stays in memory. Returns a note to give after releasing the lock."""
         st = self.cfg.usage_store
-        if st is None:
-            return []
-        oldest = (datetime.fromisoformat(self._day) - timedelta(days=USAGE_DAYS - 1)).date().isoformat()
-        self._days = {d: c for d, c in self._days.items() if d >= oldest}
-        try:
-            with st.transaction():
-                st._exec("DELETE FROM model_usage WHERE day = ? OR day < ?", (self._day, oldest))
-                for model, n in self._days.get(self._day, {}).items():
-                    st._exec("INSERT INTO model_usage(day, model, count) VALUES (?, ?, ?)", (self._day, model, n))
-        except sqlite3.Error as e:
-            if not self._save_failed:
-                self._save_failed = True
-                return [f"model usage not saved ({type(e).__name__}); counts kept in memory"]
-        return []
+        notes: list[str] = []
+        if st is not None:
+            oldest = (datetime.fromisoformat(self._day) - timedelta(days=USAGE_DAYS - 1)).date().isoformat()
+            self._days = {d: c for d, c in self._days.items() if d >= oldest}
+            today = self._days.setdefault(self._day, today)
+            try:
+                with st.transaction():
+                    st._exec("DELETE FROM model_usage WHERE day < ?", (oldest,))
+                    rows = st.query(
+                        "INSERT INTO model_usage(day, model, count) VALUES (?, ?, 1) "
+                        "ON CONFLICT(day, model) DO UPDATE SET count = count + 1 RETURNING count", (self._day, model))
+                today[model] = int(rows[0]["count"])
+                return notes
+            except sqlite3.Error as e:
+                if not self._save_failed:
+                    self._save_failed = True
+                    notes.append(f"model usage not saved ({type(e).__name__}); counts kept in memory")
+        today[model] = today.get(model, 0) + 1
+        return notes
 
     # ---- what the dashboard reads (ruling 23) --------------------------------------------------
 

@@ -5,6 +5,7 @@
     python -m pilot run --game stellaris [--speed fast|fastest|...] [--months N]
     python -m pilot run --game civ6 [--decide-turns N]  # the game's AI plays N turns between decisions
     python -m pilot view [--port P] [--host H]   # the dashboard over recorded runs (and the live one)
+    python -m pilot prefs --get KEY            # one saved dashboard setting: the bare value, or JSON
     python -m pilot control ACTION [--text T] [--index N] [--port P]   # pause|resume|stop|instruct|… as a script
     python -m pilot dashboard-link [--port P] [--no-qr] [--wait]   # sign a browser in: a one-time link,
                                               # three words and a QR code (never the key)
@@ -524,7 +525,8 @@ def main(argv: list[str] | None = None) -> int:
     s = Settings.from_env()
     if a.cmd == "prefs":
         from .models import load_prefs
-        print(load_prefs(s.runs_dir).get(a.get, ""))
+        v = load_prefs(s.runs_dir).get(a.get, "")
+        print(v if isinstance(v, str) else json.dumps(v))
         return 0
     if a.cmd == "view":
         return view(s, a.port, a.host)

@@ -53,3 +53,40 @@ def test_usage_older_than_seven_days_is_dropped(tmp_path):
     st._exec("INSERT INTO model_usage(day, model, count) VALUES ('2020-01-01', 'm', 5)")
     G.ModelHealth(G.GuardConfig(usage_store=st), clock=time.time).count("m")
     assert st.query("SELECT count(*) AS n FROM model_usage WHERE day='2020-01-01'")[0]["n"] == 0
+
+
+def test_two_processes_counting_the_same_model_keep_both_counts(tmp_path):
+    st = open_store(tmp_path)
+    a = G.ModelHealth(G.GuardConfig(usage_store=st))
+    b = G.ModelHealth(G.GuardConfig(usage_store=st))      # a second process: its own memory, the same table
+    for _ in range(5):
+        a.count("x")
+    b.count("y")
+    b.count("x")
+    rows = {r["model"]: r["count"] for r in st.query("SELECT model, count FROM model_usage")}
+    assert rows == {"x": 6, "y": 1}
+    assert b.today("x") == 6, "the store's value becomes the in-memory count"
+
+
+def test_prefs_get_prints_json_for_values_that_are_not_strings(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("PILOT_DATA_DIR", str(tmp_path))
+    monkeypatch.delenv("PILOT_RUNS_DIR", raising=False)
+    save_prefs(tmp_path, months=12, rotate=True)
+    assert main(["prefs", "--get", "months"]) == 0
+    assert capsys.readouterr().out == "12\n"
+    assert main(["prefs", "--get", "rotate"]) == 0
+    assert capsys.readouterr().out == "true\n"
+
+
+def test_save_prefs_reads_and_writes_in_one_transaction(tmp_path):
+    save_prefs(tmp_path, game="civ6")
+    st = open_store(tmp_path)
+    seen = []
+    real = st.transaction
+
+    def spy():
+        seen.append(1)
+        return real()
+    st.transaction = spy
+    save_prefs(tmp_path, speed="fast")
+    assert seen and load_prefs(tmp_path)["game"] == "civ6" and load_prefs(tmp_path)["speed"] == "fast"

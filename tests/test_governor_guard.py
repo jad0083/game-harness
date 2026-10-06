@@ -118,6 +118,7 @@ def test_the_kill_switch_keeps_whole_run_retries(setup):  # noqa: F811
     s, log = setup
     s = replace(s, model_guard=False, retry_delays=(0,))
     s.__class__ = setup[0].__class__
+    open_store(s.runs_dir)._exec("DROP TABLE model_usage")     # a guard that read it would note the failure
     first, _ = consult_then_503()
     g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=first, fallback=decisions("expand"))
     g.run(max_decisions=1)
@@ -125,7 +126,6 @@ def test_the_kill_switch_keeps_whole_run_retries(setup):  # noqa: F811
     assert sum(e["kind"] == "consult" for e in log.recent) == 2, "the old path replays the run"
     assert not any(e["kind"] == "model_breaker" for e in log.recent)
     assert "model_health" not in log.state.info, "nothing of the guard is published"
-    assert open_store(s.runs_dir).query("SELECT * FROM model_usage") == [], "usage is neither read nor written"
     assert not any("model guard" in str(e.get("error", "")) for e in log.recent)
 
 
