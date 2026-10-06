@@ -368,18 +368,15 @@ def test_what_a_device_changes_is_in_the_sign_in_log(tmp_path, clock, monkeypatc
     """Rulings 49.6 and 50: /control, /api/settings, /api/run and /api/capture through the viewer each
     leave a `control` audit row naming the action and the device, so a revoked session's doings show
     in dashboard-devices log and Recent sign-in activity; saved settings name who saved them."""
-    from pilot import dashboard
+    import sys
     live, log = live_app(tmp_path)
     runs = tmp_path / "runs"
-
-    class Proc:
-        returncode = 0
-
-        async def communicate(self):
-            return b"", b""
-
-    async def fake_exec(*a, **kw):
-        return Proc()
+    child = tmp_path / "child.py"                       # stands in for `pilot run`, the supervisor's child
+    child.write_text("import time\nwhile True:\n    time.sleep(0.05)\n")
+    monkeypatch.setenv("PILOT_SUPERVISOR_ARGV", f"{sys.executable} {child}")
+    for var, value in (("GAME_AGENT_URL", "http://127.0.0.1:9"), ("GAME_AGENT_TOKEN", "t" * 40), ("GEMINI_API_KEY", "x")):
+        monkeypatch.setenv(var, value)
+    monkeypatch.delenv("PILOT_MODEL", raising=False)
 
     async def go():
         server = TestServer(live)
@@ -397,7 +394,6 @@ def test_what_a_device_changes_is_in_the_sign_in_log(tmp_path, clock, monkeypatc
         await server.close()
         log.state.status = "stopped"
         log.emit("status")
-        monkeypatch.setattr(dashboard.asyncio, "create_subprocess_exec", fake_exec)
         app, auth = viewer(tmp_path, clock)                 # a fresh viewer: no live run cached
         async with client(app, cookie) as c:
             assert (await c.post("/api/run", json={"game": "civ6"}, headers=origin(c))).status == 200

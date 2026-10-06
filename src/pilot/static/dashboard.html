@@ -122,6 +122,8 @@
   .gov-raw { margin: 0 0 0 auto; }
   .gov-raw pre { max-width: min(80ch, 88vw); }
   .gov-raw p { margin: 6px 0 0; font-size: 13.5px; }
+  .gov-exit-more { margin-top: 4px; }
+  .gov-exit-more pre { max-width: min(80ch, 88vw); }
   .gov-frame { display: block; margin-top: 12px; width: min(560px, 100%); border-radius: 4px; background: #000; aspect-ratio: 1568 / 882; object-fit: contain; }
   .gov-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
   .gov-actions:empty { display: none; }
@@ -621,7 +623,7 @@
     body:not([data-view="decisions"]) #p-dec { display: none; }
     body:not([data-reading]):is([data-view="decisions"], [data-view="now"]:not([data-activity])) #p-tabs { display: none; }
     body:not([data-view="now"]):not([data-gov="needs"]):not([data-gov="question"]):not([data-gov="stand"]) .gov { display: none; }
-    body:not([data-view="now"]) .gov :is(.gov-card, .gov-facts, .gov-health, .gov-age) { display: none; }   /* off Now: the line only */
+    body:not([data-view="now"]) .gov :is(.gov-card, .gov-facts, .gov-health, .gov-exit, .gov-age) { display: none; }   /* off Now: the line only */
     body:not([data-view="now"]):not([data-gov="question"]) .gov .gov-actions { display: none; }
     .camp-dot { display: none; }                      /* the state dot says it */
     #p-last .decisions button { padding-left: 0; padding-right: 0; }
@@ -792,6 +794,10 @@
   </div>
   <p class="gov-facts" id="gov-facts"></p>
   <p class="gov-health" id="gov-health" hidden></p>
+  <div class="gov-exit" id="gov-exit" hidden>
+    <p class="gov-health" id="gov-exit-line"></p>
+    <details class="gov-exit-more" id="gov-exit-more"><summary>Its last lines</summary><pre id="gov-exit-lines"></pre></details>
+  </div>
   <div class="gov-card" id="gov-card" hidden>
     <p class="gov-cost" id="gov-cost"></p>
     <p class="gov-retry" id="gov-retry" hidden></p>
@@ -1777,6 +1783,7 @@ function renderGovernor() {
     facts.push(ls.off_reason ? `<span class="bad-text">Last stand off for this run: ${esc(ls.off_reason)}.</span>`
                              : ls.on ? `Last stand armed (at most ${ls.max} in a row).` : "Last stand: off.");
   if (!S.ok) { line = "The dashboard does not answer."; facts = ["Reconnecting…"]; }
+  renderLastExit();
   renderGameHealth(); renderModelHealth();
   renderLeversTab();
   const gov = $("gov");
@@ -1804,6 +1811,20 @@ function renderGovernor() {
   if (!S.feedFilter && S.feedStop !== (state === "needs")) { S.feedStop = state === "needs"; renderFeedSoon(); }
 }
 const GOV = { key: "" };
+// With no run live: how the last run the dashboard started ended, when it failed (its exit code; the
+// supervisor's record, which a run that died before it started has too). Not while the supervisor
+// starts or resumes one (its row says live before the run answers).
+function renderLastExit() {
+  const sup = S.status.supervisor || {};
+  const ex = S.ok && !S.live && !sup.live ? sup.last_exit : null;
+  const failed = !!ex && typeof ex.code === "number" && ex.code !== 0;
+  $("gov-exit").hidden = !failed;
+  if (!failed) return;
+  const tail = (ex.lines || []).slice(-3);
+  $("gov-exit-line").textContent = `The last run stopped with exit code ${ex.code}.`;
+  $("gov-exit-more").hidden = !tail.length;
+  $("gov-exit-lines").textContent = tail.join("\n");
+}
 // A stop's reason without exception names: "game control failed: RuntimeError: the tuner is off. Fix
 // the game, then Resume." -> "Game control failed: the tuner is off. Fix the game, then Resume."
 function stopReason(r) {

@@ -215,6 +215,42 @@ def test_with_no_run_live_the_page_says_so_and_offers_start(browser, live_server
     w.context.close()
 
 
+@pytest.mark.parametrize("scenario", ["norun"])
+@pytest.mark.parametrize("name", ["desktop-light", "phone-dark"])
+def test_a_run_that_stopped_with_an_error_says_so(browser, live_servers, name):
+    """The supervisor's exit record (appliance image design, ruling P3): with no run live, a run that
+    exited non-zero is one line, its last 3 lines one disclosure away (as text: HTML in them stays
+    text); a clean exit, or a run the supervisor is starting, shows nothing."""
+    import json
+    tel = live_servers["tel"]
+
+    def row(code: int, live: bool = False) -> None:
+        lines = [f"line {i}" for i in range(1, 6)] + ["<b>model key refused</b>"]
+        tel._exec("INSERT INTO settings(key, value, changed_by, t) VALUES ('supervisor', ?, NULL, 0) ON CONFLICT(key)"
+                  " DO UPDATE SET value=excluded.value", (json.dumps({"live": live, "since": 1.0, "by": "Pixel phone",
+                                                                      "last_exit": {"code": code, "t": 2.0, "lines": lines}}),))
+    row(3)
+    w = open_context(browser, name, live_servers)
+    load(w)
+    page = w.page
+    page.wait_for_function("() => document.getElementById('gov').dataset.state === 'none'", timeout=5000)
+    assert page.is_visible("#gov-exit")
+    assert page.text_content("#gov-exit-line") == "The last run stopped with exit code 3."
+    assert page.is_hidden("#gov-exit-lines")                          # folded away
+    page.click("#gov-exit-more summary")
+    assert page.text_content("#gov-exit-lines") == "line 4\nline 5\n<b>model key refused</b>"
+    assert page.eval_on_selector_all("#gov-exit-lines b", "bs => bs.length") == 0
+    hidden, shown = ("() => document.getElementById('gov-exit').hidden", "() => !document.getElementById('gov-exit').hidden")
+    row(3, live=True)                                                 # a run starting: the old exit is not news
+    page.wait_for_function(hidden, timeout=10000)
+    row(3)
+    page.wait_for_function(shown, timeout=10000)
+    row(0)                                                            # a clean exit
+    page.wait_for_function(hidden, timeout=10000)
+    assert w.errors == []
+    w.context.close()
+
+
 @pytest.mark.parametrize("scenario", ["deciding_old"])
 def test_deciding_counts_from_when_it_started_without_info_deciding(browser, live_servers):
     """A pilot without info.deciding: the timer counts from the deciding status event, not from each

@@ -185,7 +185,7 @@ def test_a_device_carried_over_while_the_prompt_waits_is_signed_out_too(runs, mo
 def test_rotate_refuses_while_the_key_comes_from_the_environment(runs, monkeypatch):
     monkeypatch.setenv("PILOT_DASHBOARD_KEY", OLD)
     code, out = run_cli("dashboard-key", "--rotate", "--keep", "all")
-    assert code != 0 and "PILOT_DASHBOARD_KEY" in out and "restart both services" in out
+    assert code != 0 and "PILOT_DASHBOARD_KEY" in out and "restart the dashboard" in out
     assert (runs["dir"] / "secrets/dashboard.key").read_text().strip() == OLD
 
 

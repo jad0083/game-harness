@@ -1,7 +1,8 @@
 """Live dashboard and monitoring API (aiohttp), run in a background thread.
 
     GET  /            dashboard page
-    GET  /status      run state as JSON (for humans and other agents)
+    GET  /status      run state as JSON (for humans and other agents); with no run live the viewer's
+                      carries `supervisor`: whether it started one, and how the last one ended
     GET  /events      server-sent events (live feed); /events.json?n=100 for the recent list
     GET  /frame.jpg   latest frame
     POST /control     {"action": "pause"|"resume"|"stop"|"instruct", "text": "..."}
@@ -27,7 +28,8 @@ Telemetry (pilot.db in the data directory, across runs and models):
     GET  /api/orders?campaign=<id>&kind=&fate=&limit=   Civ VI: the order record, every order with its fate, purchases, last stands
     POST /api/capture  {}                       the game screen now, stored as the run's frame (live run)
     POST /api/settings  {"models": [{"model", "thinking"}, ...], "rotate"}   the model list (live too); older {"model", "thinking", "fallback"}
-    POST /api/run  {"game", "speed", "months"}   start a pilot run (game-pilot.service); viewer only
+    POST /api/run  {"game", "speed", "months"}   start a pilot run, the viewer's child process (supervisor.py);
+                                                 400 names the settings a run lacks; viewer only
 
 Sign-in (auth.py; docs/design/2026-09-27-dashboard-v2-design.md rulings 34-52), viewer:
     GET  /api/auth/me                   who is asking: {via, device, notices, add_device}
@@ -42,6 +44,7 @@ dashboard still takes the key (`key_guard`) and is reached through the viewer.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import os
@@ -70,6 +73,7 @@ from .auth import (
 )
 from .events import acting
 from .store import open_store
+from .supervisor import MissingSettings, Supervisor, SupervisorBusy, resume_enabled, run_requirements
 from .telemetry import month_index
 from .view import Names, Views
 
@@ -124,7 +128,7 @@ OWN_EVENT = {"instruct", "chat", "answer", "order_add", "order_remove", "decide_
              "set_speed", "set_months", "set_model", "set_models", "set_roles", "set_fallback",  # models, roles
              "edit_pillar", "unpin_pillar"}                                                     # strategy
 ACTION_KEY = web.RequestKey("pilot_action", str)
-SERVICE = "game-pilot.service"      # deploy/game-pilot.service, started by the dashboard's Start run
+SUPERVISOR = web.AppKey("supervisor", Supervisor)     # the viewer's supervisor of the pilot run (Start run)
 LIVE_STATES = {"starting", "playing", "deciding", "paused", "needs_attention", "last stand"}   # known ones
 
 
@@ -331,6 +335,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
     corpora = corpora or (REPO / "corpora")
     live_url = None                  # set for the viewer: finds a live run to refuse a second start
     live_run = None                  # set for the viewer: (campaign, status) of the live run, if any
+    sup: Supervisor | None = None    # set for the viewer: starts, stops and resumes the pilot run
     views, names = Views(corpora), Names(corpora)
 
     def game_of_campaign(cid: str) -> str:
@@ -764,9 +769,10 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
         return web.json_response({"ok": True, **prefs, "applied_live": pilot is not None})
 
     async def api_run(request):
-        """Start a pilot run as the game-pilot user service (settings saved for it first)."""
+        """Start a pilot run as this viewer's child process (settings saved for it first); refused, naming
+        them, while settings a run needs are missing (supervisor.run_requirements)."""
         from .models import load_prefs, save_prefs
-        if log is not None:
+        if log is not None or sup is None:
             raise web.HTTPConflict(text="this dashboard belongs to a running pilot")
         body = await request.json()
         try:
@@ -775,16 +781,17 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
                        months=int(months) if months not in (None, "") else None, by=actor_name(request))
         except (ValueError, TypeError) as e:
             raise web.HTTPBadRequest(text=str(e)) from e
-        proxy_url = await live_url() if live_url else None
-        if proxy_url:
-            raise web.HTTPConflict(text="a pilot run is already live")
-        proc = await asyncio.create_subprocess_exec(
-            "systemctl", "--user", "start", SERVICE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT)
-        out, _ = await proc.communicate()
-        if proc.returncode != 0:
-            raise web.HTTPInternalServerError(text=f"could not start {SERVICE}: {out.decode(errors='replace')[:300]}")
+        missing = run_requirements(os.environ, load_prefs(runs_dir))
+        if missing:
+            raise web.HTTPBadRequest(text=str(MissingSettings(missing)))
+        try:
+            await sup.start(actor_name(request) or "the dashboard", live_elsewhere=bool(await live_url()))
+        except SupervisorBusy as e:
+            raise web.HTTPConflict(text="a pilot run is already live") from e
+        except OSError as e:
+            raise web.HTTPInternalServerError(text=f"could not start the pilot run: {e}") from e
         await audit_control(request, "run")
-        return web.json_response({"ok": True, "started": SERVICE, **load_prefs(runs_dir)})
+        return web.json_response({"ok": True, "started": "pilot run", **load_prefs(runs_dir)})
 
     pc_cache: dict = {}
 
@@ -860,8 +867,8 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
         return web.Response(text=text, content_type="text/html", headers={"Content-Security-Policy": csp})
 
     async def status(_):
-        if not log:
-            return web.json_response({"status": "viewer", "live": False})
+        if not log:      # the viewer: no run answers; the supervisor's row says how the last one ended
+            return web.json_response({"status": "viewer", "live": False, "supervisor": await asyncio.to_thread(sup.state)})
         return web.json_response({**log.state.as_dict(), "live": True}, dumps=lambda o: json.dumps(o, default=str))
 
     if not log:
@@ -879,7 +886,7 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
         def refused_key() -> web.Response:
             # the live pilot's 401 is about the service key, never this browser's sign-in
             return web.json_response({"error": "live_pilot_refused_key", "reason": "The live pilot refused the "
-                                      "dashboard's service key.", "fix": "Restart game-pilot.service after a key "
+                                      "dashboard's service key.", "fix": "Restart the dashboard after a key "
                                       "rotation."}, status=502)
 
         async def v_status(request):
@@ -955,8 +962,39 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
                     pending.cancel()
             return resp
 
+        def run_exit(code: int, lines: list[str]) -> None:
+            """Ruling P3: a run's own exit (not a stop asked of the supervisor) on the newest run that started
+            since the supervisor started it; a child that died before its run_start has none."""
+            rows = tel.query("SELECT id FROM runs WHERE started >= ? AND id NOT LIKE '%-backfill'"
+                             " ORDER BY started DESC LIMIT 1", (sup.state()["since"],))
+            if rows:
+                tel.record(rows[0]["id"], {"t": time.time(), "kind": "run_exit", "code": code, "lines": lines})
+
+        sup = Supervisor(tel, emit_exit=run_exit)
+        resume: dict[str, asyncio.Task] = {}
+
+        async def resume_run(_app) -> None:
+            """A run that was live when the dashboard last stopped resumes once, RESUME_DELAY_S after the start."""
+            async def elsewhere() -> bool:
+                return bool(await proxy.url())
+            resume["task"] = asyncio.create_task(sup.resume_if_wanted(enabled=resume_enabled(os.environ),
+                                                                      live_elsewhere=elsewhere))
+
+        async def stop_run(_app) -> None:
+            """A dashboard stop (container or service) stops the run and keeps it live, to resume at the next start."""
+            task = resume.get("task")
+            if task is not None and not task.done():
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
+            if sup.running:
+                await sup.stop(keep_live=True)
+
         app = web.Application(middlewares=[auth.middleware])
         auth.install(app)
+        app[SUPERVISOR] = sup
+        app.on_startup.append(resume_run)
+        app.on_shutdown.append(stop_run)
         app.on_cleanup.append(lambda _: proxy.close())
         app.add_routes([web.get("/", index), web.get("/status", v_status), web.get("/events", v_events),
                         web.get("/events.json", v_forward), web.get("/frame.jpg", v_forward),

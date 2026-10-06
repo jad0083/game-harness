@@ -989,40 +989,37 @@ def test_model_choice_is_saved_for_the_next_run_without_a_live_pilot(setup, monk
     assert seen["s"].model == "google:gemini-3.8-flash"
 
 
-def test_start_run_from_the_dashboard_saves_settings_and_starts_the_service(setup, monkeypatch):
+def test_start_run_from_the_dashboard_saves_settings_and_starts_the_run(setup, monkeypatch, tmp_path):
     import asyncio
+    import sys
 
     from aiohttp.test_utils import TestClient, TestServer
 
     from pilot import cli, dashboard, models
     s, _ = setup
-    calls = []
-
-    class Proc:
-        returncode = 0
-        async def communicate(self):
-            return b"", b""
-
-    async def fake_exec(*args, **kw):
-        calls.append(args)
-        return Proc()
-
-    monkeypatch.setattr(dashboard.asyncio, "create_subprocess_exec", fake_exec)
+    child = tmp_path / "child.py"                       # stands in for `pilot run`, the supervisor's child
+    child.write_text("import time\nwhile True:\n    time.sleep(0.05)\n")
+    monkeypatch.setenv("PILOT_SUPERVISOR_ARGV", f"{sys.executable} {child}")
+    for var, value in (("GAME_AGENT_URL", "http://127.0.0.1:9"), ("GAME_AGENT_TOKEN", "t" * 40), ("GEMINI_API_KEY", "x")):
+        monkeypatch.setenv(var, value)
+    monkeypatch.delenv("PILOT_MODEL", raising=False)
+    app = dashboard.make_app(None, s.runs_dir)
 
     async def go():
-        async with TestClient(TestServer(dashboard.make_app(None, s.runs_dir))) as c:
+        async with TestClient(TestServer(app)) as c:
             r = await c.post("/api/run", json={"game": "stellaris", "speed": "fast", "months": 6})
             assert r.status == 200, await r.text()
+            assert app[dashboard.SUPERVISOR].running
             assert (await c.post("/api/run", json={"game": "chess"})).status == 400
             assert (await c.post("/api/run", json={"months": 500})).status == 400
 
     asyncio.run(go())
-    assert calls == [("systemctl", "--user", "start", "game-pilot.service")]
+    assert not app[dashboard.SUPERVISOR].running        # the dashboard's shutdown stopped it
     assert models.load_prefs(s.runs_dir) == {"game": "stellaris", "speed": "fast", "months": 6}
     seen = {}
     monkeypatch.setenv("PILOT_RUNS_DIR", str(s.runs_dir))
     monkeypatch.setattr(cli, "run", lambda st, ep: seen.setdefault("s", st) and 0)
-    cli.main(["run"])                                   # what the service runs
+    cli.main(["run"])                                   # what the supervisor runs
     assert (seen["s"].game, seen["s"].speed, seen["s"].decide_every_months) == ("stellaris", "fast", 6)
 
 

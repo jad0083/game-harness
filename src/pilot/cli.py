@@ -324,8 +324,8 @@ def dashboard_key_cmd(s: Settings, a) -> int:
         return 2
     keys = KeySource(s.runs_dir)
     if keys.from_env:
-        print(f"The key comes from {KEY_ENV}: change that variable (in .env or the service files), then restart "
-              "both services (game-pilot-view.service and game-pilot.service).")
+        print(f"The key comes from {KEY_ENV}: change that variable (in .env, the service's drop-in or the "
+              "container's environment), then restart the dashboard; a live run stops and resumes with it.")
         return 1
     if not a.force:
         old = [run for run, version in live_pilots(s, keys.get()) if not version or version < 1]

@@ -360,7 +360,16 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
    │ EventLog: frames/<run_id>/NNNNN.jpg + latest.jpg in the data directory
    │     └─ events, traces, run state ─► Store: <data>/pilot.db (campaigns, runs, events, decisions, metrics, learned, journal)
    └ dashboard 127.0.0.1:8790 (live)  pilot view :8780 (always on) ──► forwards /status /events /control
+pilot view ── Supervisor ──► pilot run (its child; Start run, resume after a dashboard restart)
 ```
+- `supervisor.py`: the viewer runs one `pilot run` as its child process (appliance image design,
+  ruling 5). The store's settings row `supervisor` (`live`, `since`, `by`, `last_exit`) says whether a
+  run was live: a dashboard stop (SIGTERM; `stop(keep_live=True)`) stops the child (SIGTERM, then
+  SIGKILL after `STOP_GRACE_S + 5`) and keeps it live, and the next start resumes it once after
+  `RESUME_DELAY_S` (`PILOT_RESUME`); any other exit writes live false and `last_exit` (code, last 20
+  lines), plus a `run_exit` event on the run it started, if any. `run_requirements` names the settings a
+  run lacks, so Start run is refused with them. The child runs in its own session with its output
+  prefixed `pilot: ` on the dashboard's.
 - `trace.py` turns a model run's messages into steps (prompt, thinking, text, tool call, tool
   result, retry, answer, usage); images become placeholders; a prompt is kept whole up to 100,000
   chars (the briefing's per-city danger lines; postmortem-fixes design, ruling 27), other texts are
