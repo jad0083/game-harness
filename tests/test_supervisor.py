@@ -433,3 +433,25 @@ def test_a_failed_resume_is_said(tmp_path, monkeypatch, capsys):
     seen = asyncio.run(go())
     assert "the pilot run was not resumed" in seen and "soon" in seen, seen
     assert not sup.running
+
+
+def test_a_store_error_declining_the_resume_does_not_stop_the_viewer(tmp_path, monkeypatch, capsys):
+    """PILOT_RESUME off and the store raising on the decline write: one line, the viewer still serves."""
+    from aiohttp.test_utils import TestClient, TestServer
+
+    from pilot.supervisor import Supervisor
+
+    app, _sup = viewer_with_a_live_row(tmp_path, monkeypatch, PILOT_RESUME="0")
+
+    def boom(self):
+        raise OSError("database is locked")
+    monkeypatch.setattr(Supervisor, "decline_resume", boom)
+
+    async def go():
+        async with TestClient(TestServer(app)) as c:
+            await asyncio.sleep(0.3)
+            r = await c.get("/healthz")
+            assert r.status == 200 and await r.text() == "ok"
+    asyncio.run(go())
+    out = capsys.readouterr().out
+    assert "could not mark the pilot run not live" in out and "database is locked" in out

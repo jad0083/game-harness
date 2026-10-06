@@ -926,7 +926,10 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
                     except (ValueError, AttributeError):
                         pass
                 if request.path == "/control" and action == "stop" and 200 <= code < 300:
-                    sup.note_stop()              # a stopped run is not live: never resumed, never signalled again
+                    try:                         # a stopped run is not live: never resumed, never signalled again
+                        await asyncio.to_thread(sup.note_stop)
+                    except Exception as e:  # noqa: BLE001 - the pilot accepted the stop; say this one and go on
+                        print(f"the stop was accepted but not recorded: {type(e).__name__}: {e}", flush=True)
                 await audit_control(request, action)
             return web.Response(body=data, status=code, content_type=ctype)
 
@@ -980,7 +983,12 @@ def make_app(pilot, runs_dir: Path | None = None, telemetry=None, corpora: Path 
             """A run that was live when the dashboard last stopped resumes once, RESUME_DELAY_S after the start;
             with PILOT_RESUME off it is marked not live, and said."""
             if not resume_enabled(os.environ):
-                if sup.decline_resume():
+                try:
+                    declined = sup.decline_resume()
+                except Exception as e:  # noqa: BLE001 - a store error must not stop the viewer starting (restart loop)
+                    print(f"could not mark the pilot run not live: {type(e).__name__}: {e}", flush=True)
+                    return
+                if declined:
                     print("a pilot run was live when the dashboard stopped; not resumed: PILOT_RESUME is off",
                           flush=True)
                 return

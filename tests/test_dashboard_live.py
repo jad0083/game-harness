@@ -399,6 +399,40 @@ def test_a_stop_the_live_pilot_accepts_is_noted_by_the_supervisor(tmp_path, cloc
     log.close()
 
 
+def test_a_stop_whose_note_fails_still_answers_the_pilots_2xx(tmp_path, clock, monkeypatch, capsys):
+    """The pilot accepted the stop: a failing supervisor write is said in one line, never a 500, and the
+    control is still audited."""
+    from pilot import dashboard
+    live, log = live_app(tmp_path)
+    audited = []
+
+    def boom():
+        raise OSError("database is locked")
+
+    async def go():
+        server = TestServer(live)
+        await server.start_server()
+        log.state.info["port"] = server.port
+        log.state.status = "playing"
+        log.emit("status")
+        app, auth = viewer(tmp_path, clock)
+        monkeypatch.setattr(app[dashboard.SUPERVISOR], "note_stop", boom)
+        real = dashboard.audit_control
+
+        async def spy(request, action):
+            audited.append(action)
+            await real(request, action)
+        monkeypatch.setattr(dashboard, "audit_control", spy)
+        _, cookie = browser_cookie(auth, name="Pixel phone")
+        async with client(app, cookie) as c:
+            assert (await c.post("/control", json={"action": "stop"}, headers=origin(c))).status == 200
+        await server.close()
+    asyncio.run(go())
+    assert "not recorded" in capsys.readouterr().out
+    assert audited == ["stop"]
+    log.close()
+
+
 def test_what_a_device_changes_is_in_the_sign_in_log(tmp_path, clock, monkeypatch):
     """Rulings 49.6 and 50: /control, /api/settings, /api/run and /api/capture through the viewer each
     leave a `control` audit row naming the action and the device, so a revoked session's doings show
