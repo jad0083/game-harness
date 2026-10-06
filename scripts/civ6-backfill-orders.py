@@ -53,6 +53,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--write", action="store_true", help="add the rows as order_outcome events of a new run")
     args = ap.parse_args(argv)
     data_dir = args.data_dir or Settings.from_env().runs_dir
+    if not (data_dir / "pilot.db").is_file():
+        print(f"no store at {data_dir / 'pilot.db'}: pass --data-dir (or set PILOT_DATA_DIR) to the data directory",
+              file=sys.stderr)
+        return 2
     found = decisions(data_dir, args.campaign)
     if found and "already" in found[0]:
         print(f"{args.campaign} already has {found[0]['already']} backfilled rows; nothing to do")

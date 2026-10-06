@@ -40,6 +40,14 @@ def shares_from(text: str) -> dict[str, float]:
     return out
 
 
+def data_dir_of(given: Path | None) -> Path:
+    """The data directory to read, which must hold a store (a mistyped one would read as an empty campaign)."""
+    d = given or Settings.from_env().runs_dir
+    if not (d / "pilot.db").is_file():
+        raise SystemExit(f"no store at {d / 'pilot.db'}: pass --data-dir (or set PILOT_DATA_DIR) to the data directory")
+    return d
+
+
 def campaign_weights(data_dir: Path, campaign: str) -> dict[str, float]:
     """The pillar weights of the campaign's latest strategy (a read of the store in `data_dir`)."""
     rows = open_store(data_dir).query("SELECT data FROM strategies WHERE campaign_id=? ORDER BY t DESC LIMIT 1", (campaign,))
@@ -74,10 +82,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--corpus", type=Path, default=REPO / "corpora/civ6")
     ap.add_argument("--out-json", action="store_true", help="print the report as JSON")
     a = ap.parse_args(argv)
+    shares = shares_from(a.shares) if a.shares else (campaign_weights(data_dir_of(a.data_dir), a.campaign) if a.campaign else {})
     data = json.loads(a.json.read_text(encoding="utf-8")) if a.json else read_live(a.city)
     if a.save and not a.json:
         a.save.write_text(json.dumps(data), encoding="utf-8")
-    shares = shares_from(a.shares) if a.shares else (campaign_weights(a.data_dir or Settings.from_env().runs_dir, a.campaign) if a.campaign else {})
     r = report(data, Rules.load(a.corpus), shares, CorpusIndex.load(a.corpus).cid)
     r["shares"] = shares or "even"
     print(json.dumps(r, indent=1) if a.out_json else report_text(r))

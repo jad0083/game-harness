@@ -12,7 +12,7 @@ corpora/<game>/
   directives.toml governor directives (Stellaris)
   data/           GENERATED records, one <kind>.json each — never edit by hand
   docs/*.md       reference prose with Source:/License: headers, chunked for search
-  learned/        the last exported copy of what the pilot learned (`pilot export`; not written at run time)
+  learned/        the last exported copy of the generated learned files (`pilot export`; not written at run time; episodes and the ledger stay in the store)
 ```
 
 The live learned overlay is `<data>/learned/<game>/`, generated from the pilot's store; the controller

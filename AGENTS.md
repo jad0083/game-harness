@@ -206,8 +206,8 @@ The user is hands-off. Every solved problem goes into the repo, CI-checked, comm
 | Code behaviour changes | `README.md`, `ARCHITECTURE.md` |
 
 The pilot app's own learned knowledge (rules, controls, known screens) lives in its store, `runs/pilot.db`, and
-reaches the repo only through `pilot export --to corpora`, whose result a person reviews and commits
-(docs/pilot.md, "Data directory"); it never writes into the repo while it runs.
+reaches the repo only through `pilot export --to <tmp>`: a person copies `<tmp>/<game>/learned/` over
+`corpora/<game>/learned/`, reviews and commits it (docs/pilot.md, "Data directory"); it never writes into the repo while it runs.
 
 Commit through the CI gate — it runs `scripts/ci.sh` and commits only if everything passes:
 ```bash

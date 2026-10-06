@@ -70,7 +70,8 @@ Settings that move paths (environment or `.env`):
 | `PILOT_FRAMES_KEEP` | frames kept per run (default 200) |
 | `PILOT_EXPORT_DIR` | when set, a run's learned files and journals are exported there when it ends (unset: only `pilot export` writes them) |
 
-Learned knowledge stays in the store until `pilot export --to corpora` writes it out for a person to commit;
+Learned knowledge stays in the store until `pilot export --to <tmp>` writes it out; a person copies
+`<tmp>/<game>/learned/` over `corpora/<game>/learned/` and commits it;
 `pilot data import --from <repo>` brings an older install's files into the store
 ([docs/pilot.md](docs/pilot.md#data-directory)).
 

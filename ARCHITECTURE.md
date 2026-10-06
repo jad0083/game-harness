@@ -380,13 +380,14 @@ pilot run ──► Pilot (GC4 episodes) or Governor (Stellaris) ──► game-
   manifest comment. The controller reads it with `--learned <dir>`, so nothing writes into `corpora/`
   at run time.
 - `export.py`: `pilot export --to DIR [--game G] [--campaign ID]` writes the same files to
-  `DIR/<game>/learned/` and the journals to `DIR/journals/<campaign>.md`; with `PILOT_EXPORT_DIR` set a
+  `DIR/<game>/learned/` (the generated files only; episodes and the ledger stay in the store) and the journals to `DIR/journals/<campaign>.md`; with `PILOT_EXPORT_DIR` set a
   run exports there when it ends. Committing the output is a person's step.
 - `dataimport.py`: `pilot data import --from ROOT` copies an older install (its telemetry database, run
   folders, settings and usage files, standing orders, dashboard key, learned files and journal entries)
   into the store and data directory, idempotently; `check` lists what was not imported in full;
   `--prune-source` deletes the old runtime files only when check is empty and the files are unchanged
-  since, and never tracked files, unknown files or symlinks.
+  since; it refuses to prune at all when git tracks a file it would delete, and never touches
+  `corpora/`, `games/`, unknown files or symlinks.
 - `governor.py` controls from the dashboard: `chat` (separate read-only agent, answers in a
   thread), `order_add`/`order_remove` (standing orders in every prompt, saved in
   the store's `standing_orders` table), `decide_now` and `override` (queued requests the loop handles

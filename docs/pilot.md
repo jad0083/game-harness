@@ -1101,7 +1101,7 @@ does not run `git`.
 | Path | Holds |
 |---|---|
 | `pilot.db` | the store: campaigns, runs, events, decisions with their traces, metrics, strategies, learned notes and screens, journal lines, standing orders, saved prefs, model usage, and each live run's state |
-| `auth.sqlite` | the sign-in store (devices and grants; [Signing in](#signing-in)) |
+| `auth.sqlite` (or `PILOT_AUTH_DB`) | the sign-in store (devices and grants; [Signing in](#signing-in)) |
 | `frames/<run_id>/NNNNN.jpg`, `latest.jpg` | the screenshots of a run and its newest frame |
 | `learned/<game>/` | the learned overlay the controller reads: `manifest.toml`, `strategy.md`, `controls.md`, `templates/`; generated from the store |
 | `secrets/dashboard.key`, `secrets/dashboard.carryover` | the dashboard's service key and its carry-over record (mode 0600, in a 0700 directory) |
@@ -1124,10 +1124,14 @@ with `--learned <dir>` on top of the corpus. A fresh install renders an empty ov
 that cannot be rendered is skipped and named in a comment of `manifest.toml`.
 
 **Export.** `pilot export --to DIR [--game G] [--campaign ID]` writes `DIR/<game>/learned/...` (the
-same files as the overlay) and `DIR/journals/<campaign>.md`. `pilot export --to corpora` refreshes the
-`learned/` folders of the repo's corpora; a person reviews and commits the result (the journals go to
-wherever the person files them). With `PILOT_EXPORT_DIR` set, every run exports there when it ends.
-The hand-written campaign journals under `games/` stay in git and are not touched.
+generated files: `manifest.toml`, `strategy.md`, `controls.md`, `templates/`) and
+`DIR/journals/<campaign>.md`. To keep knowledge in the repo, run `pilot export --to <tmp>` into an empty
+folder, then copy `<tmp>/<game>/learned/` over `corpora/<game>/learned/`, review and commit it; the
+journals in `<tmp>/journals/` are for reading or filing under `games/` by hand. (`--to corpora` also
+works for the learned files but creates `corpora/journals/`, which must be moved or deleted before
+committing.) Episodes and the ledger stay in the store and are not exported. With `PILOT_EXPORT_DIR`
+set, every run exports there when it ends. The hand-written campaign journals under `games/` stay in
+git and are not touched.
 
 **Importing an older install.** `pilot data import --from ROOT` copies an older install's telemetry
 database, run folders (event logs, traces, status, frames), settings and usage files, standing orders,
@@ -1141,20 +1145,25 @@ under the campaign `<game>/imported-journal`.
 `pilot data check --from ROOT` lists whatever the data directory lacks of the old install; an empty
 list means everything came across. `pilot data import --from ROOT --prune-source` deletes the old
 runtime files (the old database and its logs, run folders, settings, usage and standing-order files,
-the old key) only when check is empty, and keeps anything changed since check. It never deletes
-tracked files (so `corpora/*/learned/` and `games/*/journal.md` stay as the last committed copy),
-unknown files or symlinks.
+the old key) only when check is empty, and keeps anything changed since check. It refuses to prune
+at all when git tracks any file it would delete. It never touches `corpora/` or `games/` (so
+`corpora/*/learned/` and `games/*/journal.md` stay as the last committed copy), unknown files or
+symlinks.
 
 **Upgrading an existing install.**
 
 1. Stop `game-pilot.service` and `game-pilot-view.service`.
-2. `git pull`.
-3. `cargo build --release -p game-controller`.
-4. `.venv/bin/python -m pilot data import --from <repo>`.
-5. `.venv/bin/python -m pilot data check --from <repo>` (it should list nothing).
-6. Start `game-pilot-view.service`.
-7. `scripts/deploy-pilot.sh <from> <to>`.
-8. Later, once the dashboard shows the history, `.venv/bin/python -m pilot data import --from <repo> --prune-source`.
+2. Note the deployed commit: `git rev-parse HEAD` (this is `<from>`).
+3. `git pull`.
+4. `cargo build --release -p game-controller`. This comes before the deploy script because `data import`
+   and `data check` run first and need the current controller binary.
+5. `.venv/bin/python -m pilot data import --from <repo>`.
+6. `.venv/bin/python -m pilot data check --from <repo>` (it should list nothing).
+7. Start `game-pilot-view.service`.
+8. `scripts/deploy-pilot.sh <from> HEAD`. With the pilot stopped it builds the controller if Rust
+   changed (nothing is paused) and restarts the viewer when its files changed; it starts no pilot.
+9. `systemctl --user start game-pilot.service`, only if a run should continue.
+10. Later, once the dashboard shows the history, `.venv/bin/python -m pilot data import --from <repo> --prune-source`.
 
 Curated knowledge reaches the repo only through `pilot export`. A damaged or lost `pilot.db` is not
 recreated from run folders any more: the way back is `pilot data import` from an older install (or a

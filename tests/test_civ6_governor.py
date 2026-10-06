@@ -1296,6 +1296,17 @@ def test_the_backfill_script_reads_only_until_asked_and_writes_once(tmp_path, ca
     assert RUN_ID.match(listed[1])
 
 
+def test_the_backfill_script_refuses_a_data_directory_without_a_store(tmp_path, capsys):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("backfill2", REPO / "scripts/civ6-backfill-orders.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    for extra in ([], ["--write"]):
+        assert mod.main(["--data-dir", str(tmp_path / "typo"), "--campaign", "civ6/kublai", *extra]) == 2
+        assert "no store at" in capsys.readouterr().err
+    assert not (tmp_path / "typo").exists(), "nothing created"
+
+
 # ---- review fixes ------------------------------------------------------------------------------
 
 def test_a_city_that_cannot_get_a_defender_now_does_not_block_other_purchases():

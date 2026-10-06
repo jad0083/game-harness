@@ -198,11 +198,19 @@ def test_the_script_reads_a_saved_reply_and_the_campaigns_weights_read_only(tmp_
     store = open_store(tmp_path)
     store.record("r", {"t": 1.0, "kind": "run_start", "game": "civ6", "model": "m"})
     store.record("r", {"t": 1.0, "kind": "campaign", "game": "civ6", "name": "x"})
-    store._exec("INSERT INTO strategies (campaign_id, run_id, t, date, trigger, model, data) VALUES ('civ6/x', 'r', 1, 'T170', 'x', 'm', ?)",
-                (json.dumps({"pillars": {"science": {"weight": 10}, "faith": {"weight": 30}}}),))
-    before = store.query("SELECT COUNT(*) AS n FROM strategies")
+    store.record("r", {"t": 1.0, "kind": "strategy", "date": "T170", "trigger": "x", "model": "m",
+                       "strategy": {"pillars": {"science": {"weight": 10}, "faith": {"weight": 30}}}})
+    tables = ("strategies", "events", "meta")
+    before = {t: store.query(f"SELECT * FROM {t} ORDER BY rowid") for t in tables}
     out = subprocess.run([sys.executable, str(REPO / "scripts/civ6-placement.py"), "--json", str(saved), "--campaign",
                           "civ6/x", "--data-dir", str(tmp_path)], capture_output=True, text=True, check=True).stdout
     assert "- Beijing: district:campus at 8,5" in out and "district:holy_site at 5,5" in out, "faith is heavier"
     assert "Verdict: wait" in out
-    assert store.query("SELECT COUNT(*) AS n FROM strategies") == before
+    assert {t: store.query(f"SELECT * FROM {t} ORDER BY rowid") for t in tables} == before, "read-only"
+
+
+def test_the_script_refuses_a_data_directory_without_a_store(tmp_path):
+    r = subprocess.run([sys.executable, str(REPO / "scripts/civ6-placement.py"), "--campaign", "civ6/x",
+                        "--data-dir", str(tmp_path / "typo")], capture_output=True, text=True, check=False)
+    assert r.returncode != 0 and "no store at" in r.stderr
+    assert not (tmp_path / "typo").exists(), "nothing created"
