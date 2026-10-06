@@ -86,16 +86,17 @@ def test_the_journal_is_rows_per_campaign(tmp_path):
     assert rows == [{"campaign_id": "civ6/alexander_1", "game": "civ6", "date": "T5", "text": "Settled Pella"}]
 
 
-def test_the_learned_dir_is_replaced_whole(tmp_path):
+def test_the_learned_dir_holds_only_what_the_store_has(tmp_path):
     """A regenerated learned directory holds only what the store has: a stale file goes, and no temporary
-    directory is left beside it (ruling 7)."""
+    temporary file is left behind (ruling 7)."""
     _st, ls = make(tmp_path)
     out = tmp_path / "data/learned/galciv4"
     (out / "templates").mkdir(exist_ok=True)
     (out / "templates/stale.png").write_bytes(b"x")
     ls.add_control("Key n puts a warship on Sentry.", "tooltip")
     assert not (out / "templates/stale.png").exists() and "Sentry" in (out / "controls.md").read_text()
-    assert [p.name for p in out.parent.iterdir()] == ["galciv4"]
+    assert sorted(p.name for p in out.parent.iterdir()) == [".lock", "galciv4"]
+    assert not list(out.rglob("*.tmp"))
 
 
 def test_rules_learned_from_several_threads_all_reach_the_overlay(tmp_path):
@@ -118,4 +119,64 @@ def test_rules_learned_from_several_threads_all_reach_the_overlay(tmp_path):
     out = tmp_path / "data/learned/galciv4"
     text = (out / "strategy.md").read_text()
     assert errors == [] and all(f"Rule number {i}:" in text for i in range(8))
-    assert [p.name for p in out.parent.iterdir()] == ["galciv4"]
+    assert sorted(p.name for p in out.parent.iterdir()) == [".lock", "galciv4"]
+    assert not list(out.rglob("*.tmp"))
+
+
+def test_a_reader_never_sees_a_missing_or_dangling_manifest_during_rewrites(tmp_path):
+    """The controller reads the directory while the pilot rewrites it (controller ruling R4)."""
+    _st, ls = make(tmp_path)
+    ls.remember_frame(jpeg((10, 20, 30)))
+    out = tmp_path / "data/learned/galciv4"
+    problems: list[str] = []
+    stop = threading.Event()
+
+    def reader() -> None:
+        while not stop.is_set():
+            try:
+                man = tomllib.loads((out / "manifest.toml").read_text())
+            except FileNotFoundError:
+                problems.append("manifest missing")
+                continue
+            except tomllib.TOMLDecodeError as e:
+                problems.append(f"manifest unparseable: {e}")
+                continue
+            for name, sc in man.get("screens", {}).items():
+                if not (out / sc["template"]).is_file():
+                    problems.append(f"{name}: template missing")
+
+    t = threading.Thread(target=reader)
+    t.start()
+    try:
+        ls.add_screen("colony_prompt", jpeg(title="x"), (576, 290, 992, 330), ScreenAction(key="c"), "d", "e")
+        for i in range(50):
+            ls.add_rule(f"Rule number {i}: when this happens, do that.", "poll")
+    finally:
+        stop.set()
+        t.join()
+    assert problems == []
+
+
+def test_a_malformed_row_keeps_the_previous_manifest_and_names_the_game(tmp_path):
+    import pytest
+    st, ls = make(tmp_path)
+    ls.add_control("Key n puts a warship on Sentry.", "tooltip")
+    ls.remember_frame(jpeg((10, 20, 30)))
+    ls.add_screen("colony_prompt", jpeg(title="x"), (576, 290, 992, 330), ScreenAction(key="c"), "d", "e")
+    out = tmp_path / "data/learned/galciv4"
+    before = (out / "manifest.toml").read_bytes()
+    st._exec("UPDATE learned_screens SET threshold=NULL WHERE game='galciv4'")
+    with pytest.raises(ValueError, match="galciv4"):
+        write_learned_dir(st, "galciv4", out)
+    assert (out / "manifest.toml").read_bytes() == before
+    assert "Sentry" in (out / "controls.md").read_text() and (out / "templates/colony_prompt.png").exists()
+
+
+def test_files_the_render_no_longer_produces_are_removed_and_others_left_alone(tmp_path):
+    st, _ls = make(tmp_path)
+    out = tmp_path / "data/learned/galciv4"
+    (out / "templates").mkdir(parents=True, exist_ok=True)
+    (out / "templates/gone.png").write_bytes(b"x")
+    (out / "notes.txt").write_text("mine")
+    write_learned_dir(st, "galciv4", out)
+    assert not (out / "templates/gone.png").exists() and (out / "notes.txt").read_text() == "mine"

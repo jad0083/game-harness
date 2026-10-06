@@ -3,16 +3,18 @@ its templates and the notes, in the formats the Rust controller and the old lear
 
 from __future__ import annotations
 
+import fcntl
 import json
 import os
-import shutil
 import tempfile
 import threading
+import tomllib
 from pathlib import Path
 
 NOTE_FILES = {"rule": ("strategy.md", "Learned strategy rules"),
               "control": ("controls.md", "Learned controls (verified in play)")}
-_WRITE_LOCK = threading.Lock()      # one swap of a learned directory at a time in this process
+PRODUCED = ("manifest.toml", "strategy.md", "controls.md")   # top-level names a render can produce
+_WRITE_LOCK = threading.Lock()      # one write of a learned directory at a time in this process
 
 
 def _toml_str(s: str) -> str:
@@ -59,25 +61,40 @@ def render(store, game: str) -> dict[str, bytes]:
     return files
 
 
+def _put(path: Path, data: bytes) -> None:
+    """Replace `path` with `data` in one step: a reader sees the old file or the new one, never half."""
+    fd, tmp = tempfile.mkstemp(prefix=f".{path.name}-", suffix=".tmp", dir=path.parent)
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(data)
+        os.replace(tmp, path)
+    except BaseException:
+        Path(tmp).unlink(missing_ok=True)
+        raise
+
+
 def write_learned_dir(store, game: str, out_dir: Path) -> None:
-    """Write the generated files into `out_dir`, replacing it whole: a reader never sees a half-written one.
+    """Write the generated files into `out_dir` in place, so that every state a running controller can
+    read is consistent (ruling 7): templates first, `manifest.toml` last (it names the templates), then
+    files the render no longer produces are removed. The directory itself is never removed or renamed.
+    A manifest that is not valid TOML is never written: the previous files stay and ValueError names the
+    game. Writers are serialised across processes by an exclusive lock on `<data>/learned/.lock`.
     Each write renders the store as it is then, so the last of several writers leaves the latest state."""
     out_dir = Path(out_dir)
-    with _WRITE_LOCK:
-        out_dir.parent.mkdir(parents=True, exist_ok=True)
-        tmp = Path(tempfile.mkdtemp(prefix=f".{out_dir.name}-", dir=out_dir.parent))
+    out_dir.parent.mkdir(parents=True, exist_ok=True)
+    with _WRITE_LOCK, open(out_dir.parent / ".lock", "a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        files = render(store, game)
         try:
-            for rel, data in render(store, game).items():
-                (tmp / rel).parent.mkdir(parents=True, exist_ok=True)
-                (tmp / rel).write_bytes(data)
-        except BaseException:
-            shutil.rmtree(tmp, ignore_errors=True)       # no half-written temporary directory is left behind
-            raise
-        old = out_dir.with_name(f".{out_dir.name}-old")
-        if out_dir.exists():
-            if old.exists():
-                shutil.rmtree(old)
-            os.rename(out_dir, old)
-        os.rename(tmp, out_dir)
-        if old.exists():
-            shutil.rmtree(old, ignore_errors=True)
+            tomllib.loads(files["manifest.toml"].decode())
+        except tomllib.TOMLDecodeError as e:
+            raise ValueError(f"learned manifest for {game} is not valid TOML ({e}); "
+                             f"the previous files in {out_dir} are kept") from e
+        (out_dir / "templates").mkdir(parents=True, exist_ok=True)
+        order = [r for r in files if r.startswith("templates/")] + [r for r in files if r != "manifest.toml"
+                                                                    and not r.startswith("templates/")]
+        for rel in order + ["manifest.toml"]:
+            _put(out_dir / rel, files[rel])
+        for stale in [*(out_dir / "templates").glob("*.png"), *(out_dir / n for n in PRODUCED)]:
+            if stale.is_file() and stale.relative_to(out_dir).as_posix() not in files:
+                stale.unlink(missing_ok=True)

@@ -64,8 +64,9 @@ class McpGame:
     """Synchronous JSON-RPC client for `game-controller mcp` (line-delimited over stdio)."""
 
     def __init__(self, controller: Path, corpus: Path, agent_url: str, cwd: Path, token: str | None = None,
-                 title: str = "Galactic Civilizations"):
-        self.cmd = [str(controller), "--corpus", str(corpus), "mcp"]
+                 title: str = "Galactic Civilizations", learned: Path | None = None):
+        # `learned` is the data directory's learned/<game>; without it the controller reads <corpus>/learned
+        self.cmd = [str(controller), "--corpus", str(corpus), *(["--learned", str(learned)] if learned else []), "mcp"]
         self.env = {"GAME_AGENT_URL": agent_url, "PATH": "/usr/bin:/bin"}
         token = token or os.environ.get("GAME_AGENT_TOKEN", "").strip() or None   # the PC's own token first
         if token:

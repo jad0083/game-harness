@@ -60,8 +60,9 @@ class ControllerCiv6:
     A reply `{"ok": false}` or a failed call raises, except for `order`, whose reply says why."""
 
     def __init__(self, controller: Path, corpus: Path, agent_url: str, cwd: Path, token: str | None = None,
-                 timeout_s: float = 90.0):
-        self.base = [str(controller), "--corpus", str(corpus)]
+                 timeout_s: float = 90.0, learned: Path | None = None):
+        # `learned` is the data directory's learned/<game>; without it the controller reads <corpus>/learned
+        self.base = [str(controller), "--corpus", str(corpus), *(["--learned", str(learned)] if learned else [])]
         self.env = {"GAME_AGENT_URL": agent_url, "PATH": "/usr/bin:/bin"}
         tok = token or os.environ.get("GAME_AGENT_TOKEN")
         if tok:

@@ -94,9 +94,10 @@ def run(s: Settings, episodes: int | None) -> int:
     log = EventLog(s.runs_dir, run_id, s.model, telemetry=open_store(s.runs_dir), frames_keep=s.frames_keep)
     if s.game == "civ6":
         from .civ6 import ControllerCiv6
-        game = ControllerCiv6(s.controller_bin, s.corpus_dir, s.agent_url, REPO)
+        game = ControllerCiv6(s.controller_bin, s.corpus_dir, s.agent_url, REPO, learned=s.learned_dir)
     else:
-        game = McpGame(s.controller_bin, s.corpus_dir, s.agent_url, REPO, title=s.window_title)
+        game = McpGame(s.controller_bin, s.corpus_dir, s.agent_url, REPO, title=s.window_title,
+                      learned=s.learned_dir)
     if s.game == "civ6":
         from .civ6_governor import Civ6Governor
         pilot = Civ6Governor(s, game, log)

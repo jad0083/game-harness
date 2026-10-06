@@ -26,6 +26,11 @@ struct Cli {
     #[arg(long)]
     corpus: Option<PathBuf>,
 
+    /// Read the learned overlay (manifest, templates, notes) from this directory instead of
+    /// `<corpus>/learned`
+    #[arg(long, global = true)]
+    learned: Option<PathBuf>,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -291,6 +296,9 @@ enum CorpusAction {
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
+    if let Some(d) = &cli.learned {
+        corpus::set_learned_dir(d.clone());
+    }
     // Corpus commands work offline: they never contact the agent, so they must not need its token.
     let offline = matches!(
         cli.command,

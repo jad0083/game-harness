@@ -19,6 +19,23 @@ use std::path::{Path, PathBuf};
 /// Subdirectory holding knowledge learned during play (overlay manifest, templates, notes).
 pub const LEARNED_DIR: &str = "learned";
 
+static LEARNED: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
+
+/// Read the learned overlay (manifest, templates, notes) from `dir` instead of `<corpus>/learned`
+/// (the pilot's data directory, `--learned`). Set once at start; later calls are ignored.
+pub fn set_learned_dir(dir: PathBuf) {
+    let _ = LEARNED.set(dir);
+}
+
+/// The learned directory for a corpus: the explicit one (argument, else the one set at start) with
+/// `true`, or `<corpus>/learned` with `false`.
+fn learned_dir(corpus_dir: &Path, explicit: Option<&Path>) -> (PathBuf, bool) {
+    match explicit.map(Path::to_path_buf).or_else(|| LEARNED.get().cloned()) {
+        Some(d) => (d, true),
+        None => (corpus_dir.join(LEARNED_DIR), false),
+    }
+}
+
 #[derive(Debug, Default, Deserialize)]
 struct LearnedOverlay {
     #[serde(default)]
@@ -193,15 +210,26 @@ impl GameManifest {
     /// overlay (`res/<resolution>.toml` next to it; see [`Self::load_for_resolution`]).
     pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
         let res = std::env::var("GAME_RESOLUTION").ok().filter(|r| !r.trim().is_empty());
-        Self::load_for_resolution(path, res.as_deref())
+        Self::load_with_learned(path, res.as_deref(), None)
     }
 
     /// Load the manifest, then merge `res/<resolution>.toml` from the corpus directory when it
     /// exists: screen positions and templates are measured on one screen size, and a host with a
     /// different size (the UI scales differently) needs its own. Overlay screens replace the
     /// manifest's; overlay `[ui.*]` keys replace the manifest's keys one by one.
+    #[cfg(test)]
     pub fn load_for_resolution<P: AsRef<Path>>(path: P, resolution: Option<&str>) -> Result<Self> {
-        let mut manifest = Self::load_base(path.as_ref())?;
+        Self::load_with_learned(path, resolution, None)
+    }
+
+    /// As [`Self::load_for_resolution`], with the learned overlay read from `learned` when given
+    /// (else the directory set by [`set_learned_dir`], else `<corpus>/learned`).
+    pub fn load_with_learned<P: AsRef<Path>>(
+        path: P,
+        resolution: Option<&str>,
+        learned: Option<&Path>,
+    ) -> Result<Self> {
+        let mut manifest = Self::load_base(path.as_ref(), learned)?;
         if let (Some(res), Some(dir)) = (resolution, manifest.base_dir.clone()) {
             let file = dir.join("res").join(format!("{}.toml", res.trim()));
             if file.exists() {
@@ -222,29 +250,37 @@ impl GameManifest {
         Ok(manifest)
     }
 
-    fn load_base(path: &Path) -> Result<Self> {
+    fn load_base(path: &Path, learned: Option<&Path>) -> Result<Self> {
         let content = std::fs::read_to_string(path)
             .with_context(|| format!("Failed to read game corpus manifest at {:?}", path))?;
         let mut manifest: Self = toml::from_str(&content)
             .with_context(|| format!("Failed to parse game corpus TOML at {:?}", path))?;
         manifest.base_dir = path.parent().map(Path::to_path_buf);
         if let Some(dir) = manifest.base_dir.clone() {
-            manifest.merge_learned(&dir.join(LEARNED_DIR).join("manifest.toml"))?;
+            let (ldir, explicit) = learned_dir(&dir, learned);
+            manifest.merge_learned(&ldir, explicit)?;
         }
         Ok(manifest)
     }
 
     /// Merge the learned overlay (written by the pilot app) into this manifest. Hand-verified
     /// entries win: an overlay screen or hotkey with the same name as a main one is ignored.
-    /// Overlay template paths are relative to the corpus directory (e.g. `learned/templates/x.png`).
-    fn merge_learned(&mut self, path: &Path) -> Result<()> {
+    /// Overlay template paths are relative to the corpus directory (e.g. `learned/templates/x.png`);
+    /// with an explicit learned directory they are relative to it and become absolute paths.
+    fn merge_learned(&mut self, dir: &Path, explicit: bool) -> Result<()> {
+        let path = &dir.join("manifest.toml");
         if !path.exists() {
             return Ok(());
         }
         let content = std::fs::read_to_string(path).with_context(|| format!("reading {:?}", path))?;
         let overlay: LearnedOverlay =
             toml::from_str(&content).with_context(|| format!("parsing learned overlay {:?}", path))?;
-        for (name, screen) in overlay.screens {
+        for (name, mut screen) in overlay.screens {
+            if explicit {
+                if let Some(rel) = screen.template.take() {
+                    screen.template = Some(dir.join(rel).to_string_lossy().into_owned());
+                }
+            }
             self.screens.entry(name).or_insert(screen);
         }
         for (name, key) in overlay.hotkeys {
@@ -432,10 +468,16 @@ impl GameCorpus {
     }
 
     pub fn load_from_dir<P: AsRef<Path>>(dir: P) -> Result<Self> {
+        Self::load_from_dir_with_learned(dir, None)
+    }
+
+    /// As [`Self::load_from_dir`], reading the learned overlay and notes from `learned` when given.
+    pub fn load_from_dir_with_learned<P: AsRef<Path>>(dir: P, learned: Option<&Path>) -> Result<Self> {
         let dir = dir.as_ref();
         let manifest_path = GameManifest::locate(dir)
             .ok_or_else(|| anyhow::anyhow!("No {} in {:?}", MANIFEST_FILES.join(" or "), dir))?;
-        let manifest = GameManifest::load_from_file(manifest_path)?;
+        let res = std::env::var("GAME_RESOLUTION").ok().filter(|r| !r.trim().is_empty());
+        let manifest = GameManifest::load_with_learned(manifest_path, res.as_deref(), learned)?;
 
         let strategy = std::fs::read_to_string(dir.join("strategy.md")).unwrap_or_default();
 
@@ -473,7 +515,7 @@ impl GameCorpus {
             corpus.add_doc(&stem, &format!("doc:{}", stem), &raw.replace('\u{00a0}', " "));
         }
         // Notes learned during play (rules, verified controls) are searchable like docs.
-        for path in sorted_files(&dir.join(LEARNED_DIR), "md") {
+        for path in sorted_files(&learned_dir(dir, learned).0, "md") {
             let stem = file_stem(&path);
             let raw = std::fs::read_to_string(&path).with_context(|| format!("reading {:?}", path))?;
             corpus.add_doc(&format!("learned_{}", stem), &format!("learned:{}", stem), &raw);
@@ -850,6 +892,42 @@ dismiss_key = "esc"
         let s = &c.manifest.screens["new_popup"];
         assert!(s.auto_dismiss && s.template.as_deref() == Some("learned/templates/new_popup.png"));
         assert!(c.search("store artifacts", 5).iter().any(|h| h.id.starts_with("learned:strategy#")));
+    }
+
+    #[test]
+    fn an_explicit_learned_dir_supplies_screens_and_absolute_templates() {
+        let f = Fixture::new("learned_explicit");
+        let learned = f.0.join("data_dir/learned/galciv4");
+        std::fs::create_dir_all(f.0.join("learned")).unwrap();
+        std::fs::create_dir_all(learned.join("templates")).unwrap();
+        f.write(
+            "learned/manifest.toml",
+            "[screens.stale]\ndescription = \"old\"\ntemplate = \"learned/templates/stale.png\"\n",
+        );
+        std::fs::write(
+            learned.join("manifest.toml"),
+            "[screens.fresh]\ndescription = \"new\"\ntemplate = \"templates/fresh.png\"\n",
+        )
+        .unwrap();
+        std::fs::write(learned.join("strategy.md"), "# Learned strategy rules\n\n- take the artifact\n").unwrap();
+        let c = GameCorpus::load_from_dir_with_learned(&f.0, Some(&learned)).unwrap();
+        assert!(c.manifest.screens.contains_key("fresh"));
+        assert!(!c.manifest.screens.contains_key("stale"), "the corpus learned folder is ignored");
+        let tpl = c.manifest.screens["fresh"].template.clone().unwrap();
+        assert_eq!(PathBuf::from(&tpl), learned.join("templates/fresh.png"));
+        assert!(c.search("artifact", 5).iter().any(|h| h.id.starts_with("learned:strategy#")));
+    }
+
+    #[test]
+    fn without_a_learned_dir_the_corpus_folder_is_used_as_before() {
+        let f = Fixture::new("learned_default");
+        std::fs::create_dir_all(f.0.join("learned")).unwrap();
+        f.write(
+            "learned/manifest.toml",
+            "[screens.stale]\ndescription = \"old\"\ntemplate = \"learned/templates/stale.png\"\n",
+        );
+        let m = GameManifest::load_with_learned(f.0.join("manifest.toml"), None, None).unwrap();
+        assert_eq!(m.screens["stale"].template.as_deref(), Some("learned/templates/stale.png"));
     }
 
     #[test]
