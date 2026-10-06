@@ -38,10 +38,16 @@ def clock():
 
 @pytest.fixture(autouse=True)
 def _auth_db(tmp_path, monkeypatch):
-    """Every dashboard's sign-in store lives in the test's temp dir (never runs/auth.sqlite)."""
+    """Every dashboard's sign-in store lives in the test's temp dir (never runs/auth.sqlite), and no data
+    directory comes from the shell or the repo's .env: Settings.from_env() would load <repo>/.env with
+    setdefault after these variables were cleared, so a call without a path reads no file in tests."""
     monkeypatch.setenv("PILOT_AUTH_DB", str(tmp_path / "auth-store" / "auth.sqlite"))
-    for var in ("PILOT_PUBLIC_URL", "PILOT_DASHBOARD_HOSTS", "PILOT_KEY_SIGNIN", "PILOT_ADD_DEVICE"):
+    for var in ("PILOT_PUBLIC_URL", "PILOT_DASHBOARD_HOSTS", "PILOT_KEY_SIGNIN", "PILOT_ADD_DEVICE",
+                "PILOT_DATA_DIR", "PILOT_RUNS_DIR"):
         monkeypatch.delenv(var, raising=False)
+    from pilot import config
+    real_load_dotenv = config.load_dotenv
+    monkeypatch.setattr(config, "load_dotenv", lambda path=None: None if path is None else real_load_dotenv(path))
 
 
 @pytest.fixture(autouse=True)

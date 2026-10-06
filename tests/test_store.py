@@ -5,12 +5,15 @@ from __future__ import annotations
 
 import os
 import sqlite3
+import subprocess
+import sys
 import threading
+from pathlib import Path
 
 import pytest
 
 from pilot import store as S
-from pilot.config import Settings
+from pilot.config import REPO, Settings
 
 
 def test_a_new_store_has_every_table_wal_and_the_current_version(tmp_path):
@@ -193,6 +196,38 @@ def test_paths_come_from_the_environment(monkeypatch, tmp_path):
     assert s.db_path == tmp_path / "data/pilot.db" and s.frames_dir == tmp_path / "data/frames"
     assert s.learned_dir == tmp_path / "data/learned/civ6" and s.secrets_dir == tmp_path / "data/secrets"
     assert s.frames_keep == 50 and s.export_dir == tmp_path / "export"
+
+
+def test_no_data_directory_reaches_a_test_from_the_environment():
+    """conftest clears PILOT_DATA_DIR and PILOT_RUNS_DIR for every test (the next test runs this one with
+    both exported)."""
+    assert "PILOT_DATA_DIR" not in os.environ and "PILOT_RUNS_DIR" not in os.environ
+    assert Settings.from_env().runs_dir == REPO / "runs"
+
+
+def test_a_data_directory_exported_in_the_shell_never_reaches_a_test(tmp_path):
+    """Seven tests failed with PILOT_DATA_DIR exported in the shell that ran pytest."""
+    env = {**os.environ, "PILOT_DATA_DIR": str(tmp_path / "exported"), "PILOT_RUNS_DIR": str(tmp_path / "alias")}
+    r = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
+                        "tests/test_store.py::test_no_data_directory_reaches_a_test_from_the_environment"],
+                       cwd=REPO, env=env, capture_output=True, text=True, timeout=120, check=False)
+    assert r.returncode == 0 and "1 passed" in r.stdout, r.stdout[-3000:] + r.stderr[-1000:]
+    assert not (tmp_path / "exported").exists() and not (tmp_path / "alias").exists()
+
+
+def test_a_data_directory_in_the_repos_dotenv_never_reaches_a_test(monkeypatch):
+    """Settings.from_env() loads <repo>/.env with setdefault, after the fixture cleared the variables: conftest
+    keeps that file out of the tests, so a PILOT_DATA_DIR set there cannot come back (simulated here: every
+    `.env` exists and sets both variables)."""
+    real_exists, real_read = Path.exists, Path.read_text
+    dotenv = "PILOT_DATA_DIR=/from/dotenv\nPILOT_RUNS_DIR=/alias/from/dotenv\n"
+    monkeypatch.setattr(Path, "exists", lambda self, *a, **k: self.name == ".env" or real_exists(self, *a, **k))
+    monkeypatch.setattr(Path, "read_text", lambda self, *a, **k: dotenv if self.name == ".env" else real_read(self, *a, **k))
+    try:
+        s = Settings.from_env()
+    finally:
+        leaked = {v: os.environ.pop(v, None) for v in ("PILOT_DATA_DIR", "PILOT_RUNS_DIR")}   # never into another test
+    assert s.runs_dir == REPO / "runs" and leaked == {"PILOT_DATA_DIR": None, "PILOT_RUNS_DIR": None}
 
 
 def test_unwritable_data_dir_fails_at_start_with_its_name(tmp_path):

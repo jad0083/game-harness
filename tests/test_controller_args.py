@@ -68,3 +68,57 @@ def test_the_first_controller_of_a_run_starts_on_the_current_overlay(monkeypatch
     assert seen["learned"] == s.learned_dir
     assert seen["manifest"], "the overlay manifest exists before the controller starts"
     assert "Take the artifact" in seen["strategy"] and "stale" not in seen["strategy"]
+
+
+CONTROLLER = Path(__file__).resolve().parents[1] / "target/release/game-controller"
+
+
+@pytest.mark.skipif(not CONTROLLER.exists(), reason="controller not built: cargo build --release -p game-controller")
+def test_the_built_controller_reads_an_overlay_the_pilot_wrote(tmp_path):
+    """The overlay learned_files writes is read by the real controller with --learned: its TOML parses (a
+    description with a quote and U+007F), its rule is a searchable note, and its screen joins the manifest."""
+    import io
+    import json
+    import os
+    import re
+    import shutil
+    import subprocess
+
+    from PIL import Image
+
+    from pilot.config import REPO
+    from pilot.learned_files import write_learned_dir
+    from pilot.learning import MATCH_THRESHOLD, ScreenAction
+    from pilot.store import open_store
+
+    corpus = tmp_path / "galciv4"
+    shutil.copytree(REPO / "corpora/galciv4", corpus, ignore=shutil.ignore_patterns("learned"))
+    st = open_store(tmp_path / "data")
+    png = io.BytesIO()
+    Image.new("RGB", (40, 12), (200, 30, 30)).save(png, "PNG")
+    st._exec("INSERT INTO learned_screens(game, name, description, roi, threshold, auto_dismiss, action, png,"
+             " learned_by, run_id, t, disabled_reason) VALUES (?,?,?,?,?,1,?,?,?,?,?,NULL)",
+             ("galciv4", "quoted_popup", 'The "Zorblax" popup\x7f closes with c', "[0.4, 0.3, 0.0255, 0.0136]",
+              MATCH_THRESHOLD, json.dumps(ScreenAction(key="c").stored()), png.getvalue(), "google:m", "r1",
+              "2026-10-05T12:00:00"))
+    st._exec("INSERT INTO learned_notes(game, kind, text, why, model, run_id, t) VALUES (?,?,?,?,?,?,?)",
+             ("galciv4", "rule", "Sell the zorblax crystals before the quasar storm reaches the colony.",
+              "recurring", "google:m", "r1", "2026-10-05"))
+    learned = tmp_path / "data/learned/galciv4"
+    write_learned_dir(st, "galciv4", learned)
+    assert "\\u007f" in (learned / "manifest.toml").read_text() and (learned / "templates/quoted_popup.png").exists()
+    env = {k: v for k, v in os.environ.items() if k != "GAME_RESOLUTION"}
+
+    def controller(*args: str) -> subprocess.CompletedProcess:
+        return subprocess.run([str(CONTROLLER), "--corpus", str(corpus), *args], env=env, capture_output=True,
+                              text=True, timeout=60, check=False)
+
+    found = controller("--learned", str(learned), "corpus", "search", "zorblax quasar storm")
+    assert found.returncode == 0, found.stderr
+    assert re.search(r"^learned:strategy#\d+ .*zorblax", found.stdout, re.MULTILINE | re.IGNORECASE), found.stdout
+    with_overlay, without = controller("--learned", str(learned), "corpus"), controller("corpus")
+    assert with_overlay.returncode == 0 and without.returncode == 0, with_overlay.stderr + without.stderr
+
+    def screens(out: str) -> int:
+        return int(re.search(r"(\d+) screens", out).group(1))
+    assert screens(with_overlay.stdout) == screens(without.stdout) + 1, with_overlay.stdout
