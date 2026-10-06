@@ -105,7 +105,7 @@
 
 ## Pilot app: observability and control
 - [x] Portability 1, data platform (design docs/design/2026-10-05-data-platform-design.md): one SQLite store (`pilot.db`) in a data directory, code and corpora read-only, learned knowledge, journals, traces and settings in the store, `pilot export` instead of runtime git, frame retention, `pilot data import`/`check` (deployed 8c06d08 on deb-mini2 2026-10-06: live install imported in place, check clean; `--prune-source` left for the user)
-- [ ] Portability 2, appliance image and estate stack: one multi-stage image, the dashboard supervising the pilot, Litestream when configured, a Komodo stack with OpenBao secrets
+- [ ] Portability 2, appliance image and estate stack (design docs/design/2026-10-06-appliance-image-design.md): one multi-stage image, the dashboard supervising the pilot with resume after a restart, Litestream when configured, a portable compose and a Komodo stack on deb-dock1 with OpenBao secrets
 - [ ] Portability 3, agent release and pairing: a versioned Windows installer, a pairing code, PCs registered in the store
 - [ ] Portability 4, public distribution: CI-built multi-arch images, releases, compose and .env template, setup docs for a server and for one PC
 - [x] Model guard (design docs/design/2026-10-02-model-guard-design.md): every model request paced and classified (503, 429 RetryInfo, daily quota, timeout, 4xx), one 1-2 s jittered retry, a circuit breaker per model, failover to another family that continues the same run (no tool runs twice), optional rpm/tpm/daily limits, SDK retries off, model health on the dashboard — deployed 3236765 (2026-10-02): viewer restarted; the pilot applies it at its next start
