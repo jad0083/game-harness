@@ -82,7 +82,8 @@ exit 0
 
 
 def deploy(tmp_path: Path, changed: str, status: dict | None, dry: bool = True,
-           key_files: dict[str, str] | None = None) -> tuple[str, list[str]]:
+           key_files: dict[str, str] | None = None, dotenv: str | None = None,
+           extra_env: dict[str, str] | None = None) -> tuple[str, list[str]]:
     """Run the script in a new repository whose last commit changes `changed`; the pilot runs when
     `status` is given (its /status JSON). With `key_files` (path in the repo -> key) the dashboard key
     comes from those files instead of PILOT_DASHBOARD_KEY."""
@@ -91,7 +92,9 @@ def deploy(tmp_path: Path, changed: str, status: dict | None, dry: bool = True,
     for f in ("deploy-pilot.sh", "pilot-affected.py"):
         shutil.copy(REPO / "scripts" / f, repo / "scripts" / f)
     (repo / ".venv").symlink_to(REPO / ".venv")
-    (repo / ".gitignore").write_text(".venv\nruns/\n")
+    (repo / ".gitignore").write_text(".venv\nruns/\nstore/\nelsewhere/\n.env\n")
+    if dotenv is not None:
+        (repo / ".env").write_text(dotenv)
     for rel, key in (key_files or {}).items():
         (repo / rel).parent.mkdir(parents=True, exist_ok=True)
         (repo / rel).write_text(key + "\n")
@@ -119,7 +122,7 @@ def deploy(tmp_path: Path, changed: str, status: dict | None, dry: bool = True,
         del env["PILOT_DASHBOARD_KEY"]
         base.pop("PILOT_DASHBOARD_KEY", None)
     r = subprocess.run(["bash", str(repo / "scripts/deploy-pilot.sh"), "HEAD~1", "HEAD", *(["--dry-run"] if dry else [])],
-                       capture_output=True, text=True, env={**base, **env}, timeout=60, check=False)
+                       capture_output=True, text=True, env={**base, **env, **(extra_env or {})}, timeout=60, check=False)
     assert r.returncode == 0, r.stderr
     return r.stdout, log.read_text().splitlines() if log.exists() else []
 
@@ -180,6 +183,23 @@ def test_the_script_reads_the_key_from_secrets_then_the_old_place(tmp_path, file
     _out, calls = deploy(tmp_path, "crates/game-controller/src/civ6.rs", CIV6, dry=False, key_files=files)
     status = [c for c in calls if c.startswith("curl") and c.endswith("/status")]
     assert status and all(f"X-Pilot-Key: {used}" in c for c in status), calls
+
+
+def test_the_script_reads_the_data_directory_from_dotenv_as_config_does(tmp_path):
+    """PILOT_DATA_DIR set only in .env (config.py loads it from there): the key is read under it. Only that
+    key is read from .env, which holds secrets; the environment wins over it."""
+    secret = "AIza-never-printed-0123456789"
+    dotenv = f'GEMINI_API_KEY={secret}\n PILOT_DATA_DIR = "store"\nPILOT_DATA_DIR=ignored-second\n'
+    files = {"store/secrets/dashboard.key": "from-dotenv-dir", "runs/secrets/dashboard.key": "default-dir",
+             "elsewhere/secrets/dashboard.key": "from-environment"}
+    out, calls = deploy(tmp_path / "a", "crates/game-controller/src/civ6.rs", CIV6, dry=False, key_files=files,
+                        dotenv=dotenv)
+    status = [c for c in calls if c.startswith("curl") and c.endswith("/status")]
+    assert status and all("X-Pilot-Key: from-dotenv-dir" in c for c in status), calls
+    assert secret not in out and not [c for c in calls if secret in c]
+    _, calls = deploy(tmp_path / "b", "crates/game-controller/src/civ6.rs", CIV6, dry=False, key_files=files,
+                      dotenv=dotenv, extra_env={"PILOT_DATA_DIR": "elsewhere"})
+    assert all("X-Pilot-Key: from-environment" in c for c in calls if c.startswith("curl") and c.endswith("/status"))
 
 
 def test_the_script_finds_cargo_in_the_users_toolchain():

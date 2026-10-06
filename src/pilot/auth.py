@@ -353,8 +353,11 @@ def _secret_path(runs_dir: Path, name: str) -> Path:
 
 
 def _private_dir(path: Path) -> None:
-    """Make a secrets directory (0700) and its parents."""
+    """Make the secrets directory (0700) and its parents; one that exists with looser permissions is
+    tightened to 0700."""
     path.mkdir(mode=0o700, parents=True, exist_ok=True)
+    if path.stat().st_mode & 0o077:
+        path.chmod(0o700)
 
 
 def _write_private(path: Path, text: str) -> None:
@@ -375,7 +378,8 @@ def dashboard_key(runs_dir: Path) -> str:
     if env:
         return env
     path = _secret_path(runs_dir, KEY_FILE)
-    _private_dir(path.parent)
+    if not path.exists():               # made in secrets/ (an old-place key is only read)
+        _private_dir(path.parent)
     try:
         fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     except FileExistsError:
@@ -402,8 +406,11 @@ def carry_over_record(runs_dir: Path | None) -> dict | None:
 
 
 def write_carry_over(runs_dir: Path | None, fp: str, until: float) -> None:
+    """The carry-over record into secrets/; a record left at the old place (an install from before the data
+    platform) goes once the new one is written (rotation writes it too)."""
     if runs_dir is not None:
         _write_private(Path(runs_dir) / SECRETS_DIR / CARRY_FILE, json.dumps({"fp": fp, "until": until}) + "\n")
+        (Path(runs_dir) / CARRY_FILE).unlink(missing_ok=True)
 
 
 class KeySource:

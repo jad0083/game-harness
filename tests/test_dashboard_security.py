@@ -83,6 +83,29 @@ def test_the_carry_over_record_is_read_from_the_old_place_and_written_to_secrets
     new = runs / "secrets" / "dashboard.carryover"
     assert stat.S_IMODE(new.stat().st_mode) == 0o600 and stat.S_IMODE(new.parent.stat().st_mode) == 0o700
     assert A.carry_over_record(runs) == {"fp": "def", "until": 7.0}
+    assert not (runs / "dashboard.carryover").exists(), "the old record goes once secrets/ holds the new one"
+
+
+def test_a_looser_secrets_directory_is_tightened_when_a_secret_is_written(tmp_path, monkeypatch):
+    monkeypatch.delenv("PILOT_DASHBOARD_KEY", raising=False)
+    runs = tmp_path / "runs"
+    (runs / "secrets").mkdir(parents=True)
+    (runs / "secrets").chmod(0o755)
+    A.write_carry_over(runs, "abc", 5.0)
+    assert stat.S_IMODE((runs / "secrets").stat().st_mode) == 0o700
+    (runs / "secrets").chmod(0o755)
+    A.KeySource(runs).rotate()
+    assert stat.S_IMODE((runs / "secrets").stat().st_mode) == 0o700
+
+
+def test_reading_a_key_at_the_old_place_leaves_the_data_directory_mode_alone(tmp_path, monkeypatch):
+    monkeypatch.delenv("PILOT_DASHBOARD_KEY", raising=False)
+    runs = tmp_path / "runs"
+    runs.mkdir()
+    runs.chmod(0o755)
+    (runs / "dashboard.key").write_text("old-key\n")
+    assert dashboard.dashboard_key(runs) == "old-key" and A.KeySource(runs).get() == "old-key"
+    assert stat.S_IMODE(runs.stat().st_mode) == 0o755
 
 
 def test_dashboard_link_cli_prints_the_link(tmp_path, monkeypatch):

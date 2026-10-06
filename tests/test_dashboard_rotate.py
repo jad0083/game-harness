@@ -247,6 +247,7 @@ def test_rotate_moves_a_key_from_before_the_data_platform_into_secrets(runs):
     assert stat.S_IMODE(key.stat().st_mode) == 0o600 and stat.S_IMODE(key.parent.stat().st_mode) == 0o700
     assert not (runs["dir"] / "dashboard.key").exists()
     assert (runs["dir"] / "secrets/dashboard.carryover").exists()
+    assert not (runs["dir"] / "dashboard.carryover").exists(), "an import would report it as differing"
 
 
 def test_dashboard_key_without_rotate_explains_itself(runs):
