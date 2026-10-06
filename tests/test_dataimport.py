@@ -1014,3 +1014,145 @@ def test_damage_that_cannot_be_stored_never_stops_the_import(old_install, tmp_pa
     assert "corpora/civ6/learned/episodes.jsonl line 3: holds text that cannot be stored" in text
     assert "runs/orders/civ6_kublai.json: holds text that cannot be stored" in text
     assert (data / "secrets/dashboard.key").exists() and report.added["episodes"] == 2
+
+
+
+# ---------------------------------------------------------------- fix round 3: one database unit; links never followed
+
+def test_the_database_and_its_wal_are_one_target(old_install, tmp_path, monkeypatch):
+    """An old pilot still running commits after check: its row is only in the WAL. The database file must
+    not go while the WAL stays (the row could never be imported): all three files are kept together."""
+    runs = old_install / "runs"
+    data = tmp_path / "data"
+    store, _ = do_import(old_install, data)
+    writer = sqlite3.connect(runs / "telemetry.sqlite")
+    writer.execute("PRAGMA journal_mode=WAL")
+    writer.execute("PRAGMA wal_autocheckpoint=0")
+    writer.execute("SELECT 1 FROM runs").fetchall()
+    real = dataimport.check
+
+    def check_then_commit(root, st, data_dir):
+        out = real(root, st, data_dir)
+        writer.execute("INSERT INTO runs(id, game, status) VALUES ('20261009-000000', 'civ6', 'running')")
+        writer.commit()
+        return out
+    monkeypatch.setattr(dataimport, "check", check_then_commit)
+    try:
+        with pytest.raises(dataimport.PruneIncomplete) as e:
+            dataimport.prune_source(old_install, store)
+    finally:
+        writer.close()
+    assert (runs / "telemetry.sqlite").exists()
+    assert [f for f in e.value.failed if f.startswith(f"{runs / 'telemetry.sqlite'}: changed since check")]
+    assert runs / "pilot-settings.json" in e.value.deleted and not (runs / "pilot-settings.json").exists()
+    monkeypatch.setattr(dataimport, "check", real)
+    assert "run 20261009-000000 missing" in dataimport.check(old_install, store, data), "the row is still readable"
+
+
+def test_shm_replaced_by_a_directory_after_check_keeps_the_database(old_install, tmp_path, monkeypatch):
+    runs = old_install / "runs"
+    data = tmp_path / "data"
+    store, _ = do_import(old_install, data)
+    real = dataimport.check
+    shm = runs / "telemetry.sqlite-shm"
+
+    def check_then_swap(root, st, data_dir):
+        out = real(root, st, data_dir)
+        shm.unlink(missing_ok=True)
+        shm.mkdir()
+        (shm / "unexamined.txt").write_text("x")
+        return out
+    monkeypatch.setattr(dataimport, "check", check_then_swap)
+    with pytest.raises(dataimport.PruneIncomplete):
+        dataimport.prune_source(old_install, store)
+    assert (shm / "unexamined.txt").exists() and (runs / "telemetry.sqlite").exists()
+
+
+def test_a_target_stamped_as_a_file_is_never_removed_as_a_directory(old_install, tmp_path, monkeypatch):
+    """The file becomes a directory right after its second stamp: prune deletes by the stamped type."""
+    data = tmp_path / "data"
+    store, _ = do_import(old_install, data)
+    real_stamp = dataimport._stamp
+    usage = old_install / "runs/model-usage.json"
+    seen = {"n": 0}
+
+    def stamp(q):
+        out = real_stamp(q)
+        if q == usage:
+            seen["n"] += 1
+            if seen["n"] == 2:
+                q.unlink()
+                q.mkdir()
+                (q / "inner.txt").write_text("unexamined")
+        return out
+    monkeypatch.setattr(dataimport, "_stamp", stamp)
+    with pytest.raises(dataimport.PruneIncomplete) as e:
+        dataimport.prune_source(old_install, store)
+    assert (usage / "inner.txt").exists()
+    assert [f for f in e.value.failed if f.startswith(str(usage))]
+
+
+def _link_outside(root: Path, name: str, outside: Path) -> Path:
+    """Move runs/<name> outside the install and leave a symbolic link in its place; returns the moved path."""
+    src = root / "runs" / name
+    moved = outside / name
+    moved.parent.mkdir(parents=True, exist_ok=True)
+    src.rename(moved)
+    src.symlink_to(moved, target_is_directory=moved.is_dir())
+    return moved
+
+
+@pytest.mark.parametrize("name", ["orders", "telemetry.sqlite", "pilot-settings.json", "model-usage.json",
+                                  "dashboard.key"])
+def test_a_symlinked_fixed_source_is_never_followed(old_install, tmp_path, monkeypatch, capsys, name):
+    """A symbolic link where the old pilot kept a file or orders/ is a check problem: import does not follow
+    it, and prune never deletes through it (nor the link)."""
+    outside = tmp_path / "outside"
+    moved = _link_outside(old_install, name, outside)
+    before = sorted(p.relative_to(outside).as_posix() for p in outside.rglob("*"))
+    data = tmp_path / "data"
+    monkeypatch.setenv("PILOT_DATA_DIR", str(data))
+    assert cli.main(["data", "import", "--from", str(old_install), "--prune-source"]) == 1
+    out = capsys.readouterr().out
+    assert f"runs/{name}: a symbolic link, not followed; {HINT}" in out, out
+    store = open_store(data)
+    with pytest.raises(dataimport.PruneRefused):
+        dataimport.prune_source(old_install, store)
+    assert (old_install / "runs" / name).is_symlink() and moved.exists()
+    assert sorted(p.relative_to(outside).as_posix() for p in outside.rglob("*")) == before
+
+
+def test_the_orders_directory_message_matches_why_it_stays(old_install, tmp_path, monkeypatch):
+    data = tmp_path / "data"
+    store, _ = do_import(old_install, data)
+    real = dataimport.check
+    orders = old_install / "runs/orders"
+
+    def check_then_change(root, st, data_dir):
+        out = real(root, st, data_dir)
+        (orders / "civ6_kublai.json").write_text('["changed after check"]')
+        return out
+    monkeypatch.setattr(dataimport, "check", check_then_change)
+    with pytest.raises(dataimport.PruneIncomplete) as e:
+        dataimport.prune_source(old_install, store)
+    assert [f for f in e.value.failed if f.startswith(f"{orders / 'civ6_kublai.json'}: changed since check")]
+    line = next(f for f in e.value.failed if f.startswith(f"{orders}:"))
+    assert "changed since check" in line and "never examined" not in line, line
+
+
+def test_the_orders_directory_names_files_that_arrived_after_check(old_install, tmp_path, monkeypatch):
+    data = tmp_path / "data"
+    store, _ = do_import(old_install, data)
+    real = dataimport.check
+    orders = old_install / "runs/orders"
+
+    def check_then_new(root, st, data_dir):
+        out = real(root, st, data_dir)
+        (orders / "civ6_new.json").write_text('["late"]')
+        return out
+    monkeypatch.setattr(dataimport, "check", check_then_new)
+    with pytest.raises(dataimport.PruneIncomplete) as e:
+        dataimport.prune_source(old_install, store)
+    assert (orders / "civ6_new.json").exists() and not (orders / "civ6_kublai.json").exists()
+    line = next(f for f in e.value.failed if f.startswith(f"{orders}:"))
+    assert "civ6_new.json" in line and "arrived after check" in line, line

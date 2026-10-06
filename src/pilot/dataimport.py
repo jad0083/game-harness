@@ -47,11 +47,15 @@ from .learned_files import NOTE_FILES, _screen_block, write_learned_dir
 
 PLATFORM_DIRS = frozenset({"frames", "learned", "secrets"})   # the data directory's own (when it is <root>/runs)
 OLD_DIRS = frozenset({"orders"})                               # old runs/ directories that are not runs
-RUN_TOP_FILES = frozenset({"events.jsonl", "status.json", "latest.jpg"})   # what the old EventLog wrote,
-TRACE_NAME = re.compile(r"-?[0-9]+\.json")      # with frames/*.jpg and traces/{episode:04d}.json (ASCII)
+# The run directory as the old EventLog wrote it: the one table of its layout (see _kind). Import and check
+# read only these files, and prune deletes a run directory only when it holds nothing else.
+RUN_FILES = {"events.jsonl": "log", "status.json": "status", "latest.jpg": "latest"}   # at the top, by kind
+RUN_SUBDIRS = {"frames": "frame", "traces": "trace"}      # the two subdirectories, by the kind each holds
+TRACE_NAME = re.compile(r"-?[0-9]+\.json")                # traces/{episode:04d}.json, ASCII digits
 JOURNALS = {"stellaris": "stellaris", "civ6": "civ6", "terran-2329": "galciv4"}   # games/<dir> -> its game
 SECRET_FILES = (KEY_FILE, CARRY_FILE)
-OLD_DB_FILES = ("telemetry.sqlite", "telemetry.sqlite-wal", "telemetry.sqlite-shm")
+OLD_DB_UNIT = ("telemetry.sqlite-wal", "telemetry.sqlite-shm", "telemetry.sqlite")   # one prune target, deleted
+                                                                                     # in this order
 OLD_SETTINGS = ("pilot-settings.json", "model-usage.json")
 TABLES = ("campaigns", "runs", "events", "decisions", "metrics", "plans", "strategies", "run_state", "learned_notes",
           "learned_screens", "episodes", "ledger", "journal", "settings", "model_usage", "standing_orders")
@@ -79,6 +83,7 @@ STAMP = re.compile(r"\*\*(.+?)\*\*: ")
 BATCH = 500
 FILL_TRACE = "UPDATE decisions SET trace=? WHERE run_id=? AND episode=? AND trace IS NULL"
 HINT = "fix or remove it by hand, then prune"
+LINK = "a symbolic link, not followed"     # a fixed source (file or orders/) is never read or deleted through one
 OLD_DB = "runs/telemetry.sqlite"
 
 
@@ -204,7 +209,9 @@ def _old_db(root: Path, skipped: list[str]):
     """runs/telemetry.sqlite opened read-only (never written; SQLite may leave empty -wal/-shm files
     beside a WAL file), or None when there is none or it cannot be read."""
     path = root / OLD_DB
-    if not path.is_file():
+    links = [q for q in (root / "runs" / n for n in OLD_DB_UNIT) if q.is_symlink()]
+    skipped += [f"{_rel(root, q)}: {LINK}" for q in links]
+    if links or not path.is_file():
         yield None
         return
     db = None
@@ -297,69 +304,88 @@ def _trace_episode(name: str) -> int | None:
     return episode if name == f"{episode:04d}.json" else None
 
 
-def _foreign(d: Path, root: Path, skipped: list[str]) -> list[tuple[str, str]]:
-    """(path in the run directory, why) for what the old pilot never wrote there: anything but events.jsonl,
-    status.json and latest.jpg at the top, frames/*.jpg and traces/{episode:04d}.json, all regular files.
-    A directory that cannot be listed is named in `skipped` and returned with an empty why."""
-    out: list[tuple[str, str]] = []
+def _kind(parts: tuple[str, ...]) -> str | None:
+    """What the old EventLog wrote at this path of a run directory ('log', 'status', 'latest', 'frame',
+    'trace'), or None for anything else: RUN_FILES at the top, frames/*.jpg, traces/{episode:04d}.json."""
+    if len(parts) == 1:
+        return RUN_FILES.get(parts[0])
+    if len(parts) == 2 and parts[0] == "frames" and parts[1].endswith(".jpg"):
+        return "frame"
+    if len(parts) == 2 and parts[0] == "traces" and _trace_episode(parts[1]) is not None:
+        return "trace"
+    return None
 
-    def walk(sub: Path, prefix: str) -> None:
+
+@dataclass
+class _Layout:
+    """A run directory walked once: `files` by kind (in name order) are what import and check read; `foreign`
+    is everything else as (path in the directory, why), why '' for a directory that cannot be listed (named
+    in the walk's `skipped`). Prune deletes the directory only when `foreign` is empty."""
+    files: dict[str, list[Path]]
+    foreign: list[tuple[str, str]]
+
+    def one(self, kind: str) -> Path | None:
+        return (self.files.get(kind) or [None])[0]
+
+
+def _layout(d: Path, root: Path, skipped: list[str]) -> _Layout:
+    files: dict[str, list[Path]] = {}
+    foreign: list[tuple[str, str]] = []
+
+    def walk(sub: Path, parts: tuple[str, ...]) -> None:
         entries = _scan(sub, root, skipped)
         if entries is None:
-            out.append((prefix.rstrip("/") or ".", ""))
+            foreign.append(("/".join(parts) or ".", ""))
             return
         for e in entries:
-            rel = prefix + e.name
+            where = (*parts, e.name)
+            rel = "/".join(where)
             if e.is_symlink():
-                out.append((rel, "a symbolic link the old pilot did not write"))
+                foreign.append((rel, "a symbolic link the old pilot did not write"))
             elif e.is_dir(follow_symlinks=False):
-                if not prefix and e.name in ("frames", "traces"):
-                    walk(Path(e.path), rel + "/")
+                if not parts and e.name in RUN_SUBDIRS:
+                    walk(Path(e.path), where)
                 else:
-                    out.append((rel, "a directory the old pilot did not write"))
-            elif not (e.is_file(follow_symlinks=False) and (
-                    (not prefix and e.name in RUN_TOP_FILES) or (prefix == "frames/" and e.name.endswith(".jpg"))
-                    or (prefix == "traces/" and _trace_episode(e.name) is not None))):
-                out.append((rel, "a file the old pilot did not write"))
-    walk(d, "")
-    return out
+                    foreign.append((rel, "a directory the old pilot did not write"))
+            elif e.is_file(follow_symlinks=False) and (kind := _kind(where)):
+                files.setdefault(kind, []).append(Path(e.path))
+            else:
+                foreign.append((rel, "a file the old pilot did not write"))
+    walk(d, ())
+    return _Layout(files, foreign)
 
 
-def _run_events(d: Path, root: Path, skipped: list[str]) -> list[tuple[int, dict]]:
+def _run_events(lay: _Layout, root: Path, skipped: list[str]) -> list[tuple[int, dict]]:
     """(line number, event) of the run log's events that can be recorded."""
     out = []
-    for n, ev in _jsonl(d / "events.jsonl", root, skipped):
+    log = lay.one("log")
+    for n, ev in _jsonl(log, root, skipped) if log else ():
         if not _number(ev.get("t")) or not isinstance(ev.get("kind"), str):
-            skipped.append(f"{_rel(root, d / 'events.jsonl')} line {n}: no t or kind")
+            skipped.append(f"{_rel(root, log)} line {n}: no t or kind")
         elif ev["kind"] == "trace" and not (isinstance(ev.get("episode"), int) and not isinstance(ev["episode"], bool)):
-            skipped.append(f"{_rel(root, d / 'events.jsonl')} line {n}: a trace event without an episode")
+            skipped.append(f"{_rel(root, log)} line {n}: a trace event without an episode")
         else:
             out.append((n, ev))
     return out
 
 
-def _run_traces(d: Path, root: Path, skipped: list[str]) -> dict[int, dict]:
-    """traces/{episode:04d}.json by episode (a strategy review's is negative: -001.json). Other names are
-    left to _foreign, which names them."""
+def _run_traces(lay: _Layout, root: Path, skipped: list[str]) -> dict[int, dict]:
+    """traces/{episode:04d}.json by episode (a strategy review's is negative: -001.json)."""
     out = {}
-    for e in _scan(d / "traces", root, skipped) or []:
-        episode = _trace_episode(e.name)
-        if episode is None or not e.is_file(follow_symlinks=False):
-            continue
-        p = Path(e.path)
+    for p in lay.files.get("trace", []):
         tr = _load_json(p, root, skipped)
         if tr is None:
             continue
         if not isinstance(tr, dict):
             skipped.append(f"{_rel(root, p)}: not a JSON object")
             continue
-        out[episode] = tr
+        out[_trace_episode(p.name)] = tr
     return out
 
 
-def _run_status(d: Path, root: Path, skipped: list[str]) -> dict | None:
-    path = d / "status.json"
-    if not path.is_file():
+def _run_status(lay: _Layout, root: Path, skipped: list[str]) -> dict | None:
+    path = lay.one("status")
+    if path is None:
         return None
     st = _load_json(path, root, skipped)
     if st is not None and not isinstance(st, dict):
@@ -381,19 +407,14 @@ def _same(a: Path, b: Path) -> bool:
                 return True
 
 
-def _run_frames(d: Path, root: Path, skipped: list[str]) -> list[tuple[str, Path]]:
+def _run_frames(lay: _Layout, root: Path, skipped: list[str]) -> list[tuple[str, Path]]:
     """(name, file) of the run's frames: latest.jpg beside the log (as the old EventLog wrote it) first, then
     frames/*.jpg, frames/latest.jpg included. The first file of a name is the one copied; a frames/latest.jpg
     that differs from the latest.jpg beside the log cannot be copied too, and is named."""
-    out = []
-    top = d / "latest.jpg"
-    if top.is_file() and not top.is_symlink():
-        out.append(("latest.jpg", top))
-    for e in _scan(d / "frames", root, skipped) or []:
-        if e.is_file(follow_symlinks=False) and e.name.endswith(".jpg"):
-            out.append((e.name, Path(e.path)))
-    inner = d / "frames/latest.jpg"
-    if out and out[0][1] == top and ("latest.jpg", inner) in out:
+    top = lay.one("latest")
+    out = ([("latest.jpg", top)] if top else []) + [(q.name, q) for q in lay.files.get("frame", [])]
+    inner = next((q for name, q in out[1:] if name == "latest.jpg"), None) if top else None
+    if top and inner:
         try:
             if not _same(top, inner):
                 skipped.append(f"{_rel(root, inner)}: differs from {_rel(root, top)} (only that one is copied)")
@@ -573,9 +594,17 @@ def _journals(root: Path, skipped: list[str]) -> list[tuple]:
     return rows
 
 
+def _fixed_link(path: Path, root: Path, skipped: list[str]) -> bool:
+    """Whether a fixed source (a settings file, orders/) is a symbolic link: named, never followed."""
+    if path.is_symlink():
+        skipped.append(f"{_rel(root, path)}: {LINK}")
+        return True
+    return False
+
+
 def _prefs(root: Path, skipped: list[str]) -> dict | None:
     path = root / "runs/pilot-settings.json"
-    if not path.is_file():
+    if _fixed_link(path, root, skipped) or not path.is_file():
         return None
     d = _load_json(path, root, skipped)
     if d is not None and not isinstance(d, dict):
@@ -586,7 +615,7 @@ def _prefs(root: Path, skipped: list[str]) -> dict | None:
 
 def _usage(root: Path, skipped: list[str]) -> list[tuple[str, str, int]]:
     path = root / "runs/model-usage.json"
-    if not path.is_file():
+    if _fixed_link(path, root, skipped) or not path.is_file():
         return []
     d = _load_json(path, root, skipped)
     if d is None:
@@ -608,8 +637,11 @@ def _usage(root: Path, skipped: list[str]) -> list[tuple[str, str, int]]:
 
 
 def _orders_files(root: Path, skipped: list[str]) -> list[Path]:
-    """The regular runs/orders/*.json files; anything else there is named (prune never deletes it unread)."""
-    files = []
+    """The regular runs/orders/*.json files; anything else there is named (prune never deletes it unread),
+    and a symbolic link in place of orders/ is never followed."""
+    files: list[Path] = []
+    if _fixed_link(root / "runs/orders", root, skipped):
+        return files
     for e in _scan(root / "runs/orders", root, skipped) or []:
         if e.is_file(follow_symlinks=False) and e.name.endswith(".json"):
             files.append(Path(e.path))
@@ -765,10 +797,11 @@ def _runs(root: Path, store, data_dir: Path, report: Report) -> None:
 
 def _run(root: Path, store, data_dir: Path, report: Report, d: Path) -> None:
     rid, log = d.name, _rel(root, d / "events.jsonl")
-    report.skipped += [f"{_rel(root, d)}/{f}: {why}" for f, why in _foreign(d, root, report.skipped) if why]
-    events = _run_events(d, root, report.skipped)
-    traces = _run_traces(d, root, report.skipped)
-    status = _run_status(d, root, report.skipped)
+    lay = _layout(d, root, report.skipped)
+    report.skipped += [f"{_rel(root, d)}/{f}: {why}" for f, why in lay.foreign if why]
+    events = _run_events(lay, root, report.skipped)
+    traces = _run_traces(lay, root, report.skipped)
+    status = _run_status(lay, root, report.skipped)
     with store.transaction():
         have, seen = _event_counts(store, rid), Counter()     # loaded once per run
         for n, ev in events:
@@ -791,8 +824,8 @@ def _run(root: Path, store, data_dir: Path, report: Report, d: Path) -> None:
             store._exec(FILL_TRACE, (json.dumps(tr, ensure_ascii=False, default=str), rid, episode))
         if status is not None:
             store._exec("INSERT OR IGNORE INTO run_state(run_id, data, updated) VALUES (?,?,?)",
-                        (rid, json.dumps(status, default=str), (d / "status.json").stat().st_mtime))
-    for name, src in _run_frames(d, root, report.skipped):
+                        (rid, json.dumps(status, default=str), lay.one("status").stat().st_mtime))
+    for name, src in _run_frames(lay, root, report.skipped):
         try:
             report.frames += _copy(src, data_dir / "frames" / rid / name)
         except OSError as e:
@@ -848,31 +881,49 @@ def _settings(root: Path, store, report: Report) -> None:
                                   [(cid, i, t) for i, t in enumerate(texts)])
 
 
+def _secret_state(root: Path, data_dir: Path, name: str) -> str:
+    """runs/<name> against <data>/secrets/<name>, for import, check and prune alike: 'absent' (no old file),
+    'link' (a symbolic link: never followed), 'missing' (not in secrets/ yet), 'same', 'differs', or
+    'unreadable: <why>'."""
+    old, new = root / "runs" / name, data_dir / SECRETS_DIR / name
+    if old.is_symlink():
+        return "link"
+    if not old.is_file() or old.resolve() == new.resolve():
+        return "absent"
+    if not new.exists():
+        return "missing"
+    try:
+        return "same" if old.read_bytes() == new.read_bytes() else "differs"
+    except OSError as e:
+        return f"unreadable: {e.strerror or e}"
+
+
 def _secrets(root: Path, data_dir: Path, report: Report) -> int:
     """runs/dashboard.key and runs/dashboard.carryover into <data>/secrets/ (0600, the directory 0700); a
     file already there is kept (said in the report when it differs). Returns the files copied."""
     copied = 0
     for name in SECRET_FILES:
-        src, dst = root / "runs" / name, data_dir / SECRETS_DIR / name
-        if not src.is_file():
-            continue
-        try:
-            data = src.read_bytes()
-            if dst.exists():
-                if dst.read_bytes() != data:
-                    report.skipped.append(f"runs/{name}: {SECRETS_DIR}/{name} exists and differs; the one in "
-                                          f"{SECRETS_DIR}/ is kept and the old file stays")
-                continue
-            _private_dir(dst.parent)
-            fd, tmp = tempfile.mkstemp(prefix=f".{name}-", suffix=".tmp", dir=dst.parent)   # mode 0600
+        state, src, dst = _secret_state(root, data_dir, name), root / "runs" / name, data_dir / SECRETS_DIR / name
+        if state == "link":
+            report.skipped.append(f"runs/{name}: {LINK}")
+        elif state == "differs":
+            report.skipped.append(f"runs/{name}: {SECRETS_DIR}/{name} exists and differs; the one in "
+                                  f"{SECRETS_DIR}/ is kept and the old file stays")
+        elif state.startswith("unreadable"):
+            report.skipped.append(f"runs/{name}: cannot be read ({state.split(': ', 1)[1]})")
+        elif state == "missing":
             try:
-                with os.fdopen(fd, "wb") as f:
-                    f.write(data)
-                copied += _place(tmp, dst)
-            finally:
-                Path(tmp).unlink(missing_ok=True)
-        except OSError as e:
-            report.skipped.append(f"runs/{name}: cannot be copied ({e})")
+                data = src.read_bytes()
+                _private_dir(dst.parent)
+                fd, tmp = tempfile.mkstemp(prefix=f".{name}-", suffix=".tmp", dir=dst.parent)   # mode 0600
+                try:
+                    with os.fdopen(fd, "wb") as f:
+                        f.write(data)
+                    copied += _place(tmp, dst)
+                finally:
+                    Path(tmp).unlink(missing_ok=True)
+            except OSError as e:
+                report.skipped.append(f"runs/{name}: cannot be copied ({e})")
     return copied
 
 
@@ -960,24 +1011,26 @@ def check(root: Path, store, data_dir: Path) -> list[str]:
     logged: dict[str, dict[tuple, list[int]]] = {}
     want_states, frames = set(), []
     runs = root / "runs"
-    if not (runs / "telemetry.sqlite").exists() and (runs / "telemetry.sqlite-wal").exists():
+    main = runs / "telemetry.sqlite"
+    if not main.is_symlink() and not main.exists() and (runs / "telemetry.sqlite-wal").exists():
         problems.append(f"{OLD_DB}-wal: a WAL file without its database")
     _scan(runs, root, problems)                    # runs/ itself must be listable; what is not a run never blocks
     for d in _run_dirs(root, data_dir, ignored):
         rid = d.name
-        events = _run_events(d, root, problems)
+        lay = _layout(d, root, problems)
+        problems += [f"{_rel(root, d)}/{f}: {why}" for f, why in lay.foreign if why]
+        events = _run_events(lay, root, problems)
         for n, ev in events:
             logged.setdefault(rid, {}).setdefault((ev["t"], ev["kind"]), []).append(n)
         want_decisions |= {(rid, ev["episode"]) for _, ev in events if ev["kind"] == "trace"}
-        for episode in _run_traces(d, root, problems):
+        for episode in _run_traces(lay, root, problems):
             if (rid, episode) in want_decisions:
                 want_traces.add((rid, episode))
             else:
                 problems.append(f"{_rel(root, d)}/traces/{episode:04d}.json: no decision {episode} in the run's records")
-        if _run_status(d, root, problems) is not None:
+        if _run_status(lay, root, problems) is not None:
             want_states.add(rid)
-        frames += [(rid, name, src) for name, src in _run_frames(d, root, problems)]
-        problems += [f"{_rel(root, d)}/{f}: {why}" for f, why in _foreign(d, root, problems) if why]
+        frames += [(rid, name, src) for name, src in _run_frames(lay, root, problems)]
     for rid in sorted(old_events.keys() | logged.keys()):
         line = _missing_events(rid, old_events.get(rid, Counter()), logged.get(rid, {}), _event_counts(store, rid))
         if line:
@@ -1028,16 +1081,13 @@ def check(root: Path, store, data_dir: Path) -> list[str]:
     diffs += [f"standing orders {cid} missing" for cid, texts in _orders(root, store, problems).items()
               if texts and cid not in have_o]
     for name in SECRET_FILES:
-        src, dst = runs / name, data_dir / SECRETS_DIR / name
-        if not src.is_file():
-            continue
-        if not dst.exists():
+        state = _secret_state(root, data_dir, name)
+        if state == "missing":
             diffs.append(f"secret {name} missing")
-            continue
-        try:                                        # prune compares them before deleting the old one
-            src.read_bytes(), dst.read_bytes()
-        except OSError as e:
-            problems.append(f"runs/{name}: cannot be read ({e.strerror or e})")
+        elif state == "link":
+            problems.append(f"runs/{name}: {LINK}")
+        elif state.startswith("unreadable"):           # prune compares the two before deleting the old one
+            problems.append(f"runs/{name}: cannot be read ({state.split(': ', 1)[1]})")
     return list(dict.fromkeys(diffs)) + [f"{p}; {HINT}" for p in dict.fromkeys(problems)]
 
 
@@ -1065,63 +1115,93 @@ def _tracked(root: Path, paths: list[Path]) -> list[str]:
 
 
 def _stamp(p: Path):
-    """What a prune target looked like: a file's mode, size, modification time and inode; a directory's
-    every entry the same way. A target that cannot be read is never equal to an earlier stamp. SQLite's
-    -shm file is an index readers rewrite (no data of its own), so only its name counts."""
-    if p.name.endswith("-shm"):
-        return "shm"
+    """What a prune target looked like, its type first: a file's mode, size, modification time and inode; a
+    directory's every entry the same way; None when it is absent. One that cannot be read is never equal to
+    an earlier stamp. SQLite's -shm index is stamped without its modification time: every reader (check's
+    own read-only open too) rewrites its read marks; a writer's commit shows in the -wal."""
     try:
         st = os.lstat(p)
-        if not stat.S_ISDIR(st.st_mode):
-            return (st.st_mode, st.st_size, st.st_mtime_ns, st.st_ino)
-        entries = []
+    except FileNotFoundError:
+        return None
+    except OSError:
+        return object()
+    kind = ("dir" if stat.S_ISDIR(st.st_mode) else "file" if stat.S_ISREG(st.st_mode)
+            else "link" if stat.S_ISLNK(st.st_mode) else "other")
+    if kind != "dir":
+        return (kind, st.st_mode, st.st_size, st.st_ino, None if p.name.endswith("-shm") else st.st_mtime_ns)
+    entries = []
 
-        def fail(e: OSError) -> None:
-            raise e
+    def fail(e: OSError) -> None:
+        raise e
+    try:
         for dirpath, dirnames, filenames in os.walk(p, onerror=fail):
             for n in dirnames + filenames:
                 q = os.path.join(dirpath, n)
                 s = os.lstat(q)
                 entries.append((os.path.relpath(q, p), s.st_mode, s.st_size, s.st_mtime_ns, s.st_ino))
-        return (st.st_mode, tuple(sorted(entries)))
     except OSError:
         return object()
+    return ("dir", st.st_mode, tuple(sorted(entries)))
 
 
-def _targets(root: Path, store, data_dir: Path, kept: list[str]) -> list[Path]:
-    """What prune may delete (plan ruling P5): the telemetry file (with its -wal and -shm, never without
-    it), the two settings files, each regular runs/orders/*.json, each run directory the store holds a run
-    for and that holds only what the old pilot wrote, and an old secret once secrets/ holds the same bytes."""
+def _delete(p: Path, stamp) -> None:
+    """Delete a target as the type it was stamped with: a file is never removed as a directory (it would be
+    one nobody examined), a directory never through a link; anything else is never deleted."""
+    if stamp[0] == "file":
+        p.unlink()                          # a directory there now: IsADirectoryError
+    elif stamp[0] == "dir":
+        try:
+            shutil.rmtree(p)                # a file or a link there now: an error, nothing removed
+        except OSError as e:
+            raise OSError(e.errno, f"stopped at {e.filename} ({e.strerror or e}); files before it are gone") from e
+    else:
+        raise OSError(f"not a regular file or directory ({stamp[0]})")
+
+
+def _targets(root: Path, store, data_dir: Path, kept: list[str]) -> list[tuple[Path, ...]]:
+    """What prune may delete (plan ruling P5), as units judged and deleted together: the telemetry database
+    with its -wal and -shm (one unit: a row committed to the WAL after check must not lose its database),
+    the two settings files, each regular runs/orders/*.json, each run directory the store holds a run for and
+    whose layout holds nothing foreign, and an old secret once secrets/ holds the same bytes. A symbolic link
+    at any of these places is never a target."""
     runs = root / "runs"
-    targets = []
-    if (runs / OLD_DB_FILES[0]).is_file():
-        targets += [runs / n for n in OLD_DB_FILES if (runs / n).is_file()]
-    targets += [runs / n for n in OLD_SETTINGS if (runs / n).is_file()]
-    targets += _orders_files(root, [])
+    units: list[tuple[Path, ...]] = []
+    db = tuple(runs / n for n in OLD_DB_UNIT)
+    if not any(q.is_symlink() for q in db) and db[-1].is_file():
+        units.append(db)
+    units += [(runs / n,) for n in OLD_SETTINGS if not (runs / n).is_symlink() and (runs / n).is_file()]
+    units += [(q,) for q in _orders_files(root, [])]
     known = {r["id"] for r in store.query("SELECT id FROM runs")}
     for d in _run_dirs(root, data_dir, []):
-        foreign = [f for f, _ in _foreign(d, root, [])]
+        foreign = [f for f, _ in _layout(d, root, []).foreign]
         if d.name not in known:
             kept.append(f"{_rel(root, d)}: no run of that id in the store")
         elif foreign:
             kept.append(f"{_rel(root, d)}: holds {', '.join(foreign[:5])}, which the old pilot did not write")
         else:
-            targets.append(d)
+            units.append((d,))
     for name in SECRET_FILES:
-        old, new = runs / name, data_dir / SECRETS_DIR / name
-        if not old.is_file() or old.resolve() == new.resolve():
-            continue
-        try:
-            same = new.is_file() and old.read_bytes() == new.read_bytes()
-        except OSError as e:
-            kept.append(f"{_rel(root, old)}: cannot be read ({e.strerror or e})")
-            continue
-        if same:
-            targets.append(old)
-        else:
-            kept.append(f"{_rel(root, old)}: {SECRETS_DIR}/{name} does not hold the same bytes")
+        state = _secret_state(root, data_dir, name)
+        if state == "same":
+            units.append((runs / name,))
+        elif state != "absent":
+            kept.append(f"runs/{name}: {SECRETS_DIR}/{name} does not hold the same bytes ({state})")
     data = data_dir.resolve()
-    return [p for p in targets if not data.is_relative_to(p.resolve())]     # never the data directory itself
+    return [u for u in units if not any(data.is_relative_to(q.resolve()) for q in u)]   # never the data directory
+
+
+def _orders_left(orders: Path, outcome: dict[Path, str], e: OSError) -> str:
+    """Why runs/orders/ is still there after its files were deleted: which of them stayed and why, and which
+    arrived after check (never examined)."""
+    try:
+        left = sorted(q.name for q in orders.iterdir())
+    except OSError:
+        return e.strerror or str(e)
+    parts = [f"{n} {outcome[orders / n]}" for n in left if orders / n in outcome]
+    late = [n for n in left if orders / n not in outcome]
+    if late:
+        parts.append(f"{', '.join(late[:5])} arrived after check (never examined)")
+    return "; ".join(parts) or (e.strerror or str(e))
 
 
 def prune_source(root: Path, store, kept: list[str] | None = None) -> list[Path]:
@@ -1141,40 +1221,40 @@ def prune_source(root: Path, store, kept: list[str] | None = None) -> list[Path]
         return []
     with _old_db(root, []):         # a read-only open may create -wal and -shm: before the stamps, not after
         pass
-    targets = _targets(root, store, data_dir, kept)
-    stamps = {p: _stamp(p) for p in targets}
+    units = _targets(root, store, data_dir, kept)
+    targets = [q for u in units for q in u]
+    stamps = {q: _stamp(q) for q in targets}
     diffs = check(root, store, data_dir)
     if diffs:
         raise PruneRefused(f"check lists {len(diffs)} item{'s' if len(diffs) != 1 else ''} not in the data "
                            f"directory or not imported in full (pilot data check); nothing was deleted")
-    tracked = _tracked(root, targets)
+    tracked = _tracked(root, [q for q in targets if stamps[q] is not None])
     if tracked:
         raise PruneRefused(f"refused: git tracks {', '.join(tracked[:5])}{' ...' if len(tracked) > 5 else ''} "
                            f"in {root}; nothing was deleted")
-    deleted, failed = [], []
-    for p in targets:
-        if _stamp(p) != stamps[p]:
-            failed.append(f"{p}: changed since check, kept (import and prune again)")
+    deleted, failed, outcome = [], [], {}
+    for unit in units:
+        if any(_stamp(q) != stamps[q] for q in unit):          # one unit: all of it stays
+            with_wal = " with its -wal and -shm" if len(unit) > 1 else ""
+            failed.append(f"{unit[-1]}: changed since check, kept{with_wal} (import and prune again)")
+            outcome.update(dict.fromkeys(unit, "changed since check"))
             continue
-        try:
-            if p.is_dir() and not p.is_symlink():
-                try:
-                    shutil.rmtree(p)
-                except OSError as e:
-                    failed.append(f"{p}: stopped at {e.filename} ({e.strerror or e}); files before it are gone")
-                    continue
-            else:
-                p.unlink(missing_ok=True)
-            deleted.append(p)
-        except OSError as e:
-            failed.append(f"{p}: {e.strerror or e}")
+        for q in unit:
+            if stamps[q] is None:
+                continue                        # absent when stamped and still absent
+            try:
+                _delete(q, stamps[q])
+                deleted.append(q)
+            except OSError as e:
+                failed.append(f"{q}: {e.strerror or e}")
+                outcome[q] = "could not be deleted"
     orders = runs / "orders"
     if orders.is_dir() and not orders.is_symlink():
         try:
             orders.rmdir()
             deleted.append(orders)
         except OSError as e:
-            failed.append(f"{orders}: not removed ({e.strerror or e}); its other files were never examined")
+            failed.append(f"{orders}: not removed; {_orders_left(orders, outcome, e)}")
     if failed:
         raise PruneIncomplete(deleted, failed)
     return deleted
