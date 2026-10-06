@@ -675,3 +675,27 @@ pilot view ── Supervisor ──► pilot run (its child; Start run, resume a
   "Saved" or why not next to itself; no `alert()`. Sections are separated by hairlines with an amber
   rule at each heading (no uniform cards). No capitalised eyebrow labels or arrow glyphs.
 
+## 9. Image and supervisor
+
+The pilot ships as one container image, `ghcr.io/jad0083/game-pilot` (amd64), built by
+`.github/workflows/image.yml` on every push to `main` that changes more than docs. The workflow runs
+the controller's `cargo test`, `ruff` and the non-UI pytest, builds the image, runs
+`scripts/image-smoke.sh` on it, then pushes `:sha-<short>`, `:latest` and `:<pyproject version>` (the
+version tag is pushed only when not yet published, so it never moves).
+
+- **Three stages** (`Dockerfile`): `rust` builds `game-controller`; `py` builds a venv of the runtime
+  dependencies from `pyproject.toml` (pip removed afterwards); `runtime` (python slim) adds tini, a
+  Litestream pinned by sha256, the controller at `/app/bin`, `corpora`, `src` and `docker`, and runs as
+  uid and gid 10010. No `claude` CLI, git, Rust toolchain or systemd is in it.
+- **Entrypoint** (`docker/entrypoint.sh`, under tini): checks that `/data` is writable (else one line
+  naming the `chown`), restores `pilot.db` from the replica into an empty `/data` when
+  `LITESTREAM_REPLICA_URL` is set, then runs `pilot view --port 8780`, wrapped in `litestream replicate
+  -exec` when a replica is configured.
+- **Supervisor**: the dashboard is the container's main process and runs the pilot as its child; see
+  the `supervisor.py` bullet in section 8 for the store row, stop and resume rules. A container stop
+  during a run leaves it live and the next start resumes it once; a human Stop or an end does not.
+- **Resume**: 10 s after the dashboard starts (`PILOT_RESUME`, on by default).
+- **Two installs**: the container (data in the `/data` volume, settings from the environment, compose
+  `stop_grace_period: 40s`) and the systemd user unit `deploy/game-pilot-view.service` installed by
+  `scripts/install-services.sh`; both run the same `pilot view`, so the supervisor is the only way a
+  run starts.

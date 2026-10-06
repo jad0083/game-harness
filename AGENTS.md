@@ -21,6 +21,7 @@ Everything below was verified in live play on 2026-09-25 unless marked **unverif
 | Civilization VI | `corpora/civ6/` (with `lua/harness.lua`), `crates/game-controller/src/civ6.rs`, `src/pilot/civ6_governor.py` | Governor over the native AI: Lua snapshot and structured orders through the tuner, autoplay stretches. See §11. |
 | Pilot app | `src/pilot/` (`python -m pilot`) | Autonomous player with any LLM API key (README → "Pilot app"). |
 | Dashboard | `https://gamepilot.saczone.com` (nginx-proxy-manager host 54 on truenas, Authelia two-factor; port 8780 on this host answers only NPM and localhost, so scripts here use `http://127.0.0.1:8780`) (`deploy/game-pilot-view.service`; proxy settings in its drop-in, secret at `secret/apps/game-pilot/PROXY_SECRET`) | Decision traces (thinking, tool calls), campaign charts, and talking to / directing the live model. Telemetry is in the store `runs/pilot.db`. Each game's words, figures, chart views and recovery steps: `corpora/<game>/dashboard.toml`. To sign the user in, run `python -m pilot dashboard-link`; never print the key `runs/secrets/dashboard.key`. An ntfy notice when a stop lasts is opt-in (`PILOT_NOTIFY_URL`, off). |
+| Image | `ghcr.io/jad0083/game-pilot` (tags `:<version>`, `:sha-<short>`, `:latest`) | The dashboard and its supervised pilot as one container; built, smoke-tested (`scripts/image-smoke.sh`) and pushed by `.github/workflows/image.yml`. See ARCHITECTURE.md "Image and supervisor". |
 
 Hard facts:
 - Screen 3840×2160 (DPI-aware agent). All screenshots and all coordinates you pass are in
