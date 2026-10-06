@@ -9,12 +9,12 @@ RUN cargo build --release -p game-controller && strip target/release/game-contro
 FROM python:3.13-slim-bookworm AS py
 ENV PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
 RUN python -m venv /opt/venv
-COPY pyproject.toml /tmp/pyproject.toml
-# runtime dependencies only, from pyproject (the package itself runs from /app/src)
+COPY pyproject.toml constraints.txt /tmp/
+# runtime dependencies only, from pyproject, at the versions the tests ran against (constraints.txt) (the package itself runs from /app/src)
 RUN /opt/venv/bin/python - <<'PY'
 import subprocess, tomllib
 deps = tomllib.load(open("/tmp/pyproject.toml", "rb"))["project"]["dependencies"]
-subprocess.check_call(["/opt/venv/bin/pip", "install", *deps])
+subprocess.check_call(["/opt/venv/bin/pip", "install", "-c", "/tmp/constraints.txt", *deps])
 PY
 # the runtime never installs anything: drop pip and its scripts
 RUN /opt/venv/bin/pip uninstall -y pip >/dev/null 2>&1; rm -rf /opt/venv/lib/python3.13/site-packages/pip* /opt/venv/bin/pip* \

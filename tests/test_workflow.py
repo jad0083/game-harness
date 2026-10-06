@@ -38,3 +38,11 @@ def test_workflow_least_privilege_and_main_only_push():
     assert text.index("permissions:\n  contents: read") < text.index("jobs:")
     assert text.count("if: github.ref == 'refs/heads/main'") == 2
     assert "scripts/image-version-published.sh" in text
+
+
+def test_image_and_ci_install_under_the_tested_versions():
+    constraints = (ROOT / "constraints.txt").read_text()
+    for pkg in ("pydantic-ai-slim==", "anthropic==", "google-genai=="):
+        assert pkg in constraints, pkg
+    assert '"-c", "/tmp/constraints.txt"' in (ROOT / "Dockerfile").read_text()
+    assert "pip install -c constraints.txt" in (ROOT / ".github/workflows/image.yml").read_text()

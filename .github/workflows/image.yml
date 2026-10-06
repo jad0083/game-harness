@@ -47,7 +47,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m venv .venv
-          .venv/bin/pip install -e '.[dev]'
+          .venv/bin/pip install -c constraints.txt -e '.[dev]'
 
       - name: Lint
         run: .venv/bin/ruff check .
