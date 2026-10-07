@@ -730,7 +730,8 @@ class Governor:
 
         With the model guard (docs/design/2026-10-02-model-guard-design.md, ruling 17) the role's one agent
         runs on its pool: a request that cannot reach a model moves to the next model inside the same run,
-        so no tool runs twice, and PoolExhausted (no model could be reached) is raised at once. A run that
+        so no tool runs twice; when no model can be reached the pool waits for one to come back, up to
+        `pool_max_wait_s`, then raises PoolExhausted (pool-wait design; a Stop ends the wait). A run that
         ends without a usable answer (the request cap, an invalid output) runs again from the next model,
         as before the guard (plan ruling P1). PILOT_MODEL_GUARD=0: `_call_unguarded`."""
         if not self.s.model_guard:
@@ -787,7 +788,12 @@ class Governor:
         def retried(name, failure, delay, attempt, request):
             if deciding is not None:
                 deciding.update(retry_at=round(time.time() + delay, 1), retries=attempt, waiting=describe(failure))
-        return event_hooks(self.log.emit, role, self.health.family, Hooks(on_try=tried, on_retry=retried))
+        return self._guard_hooks(role, Hooks(on_try=tried, on_retry=retried))
+
+    def _guard_hooks(self, role: str, extra: Hooks | None = None) -> Hooks:
+        """The pool's events for `role` and the run's stop flag, which ends a wait for the pool's models
+        (pool-wait design, ruling 3)."""
+        return event_hooks(self.log.emit, role, self.health.family, extra, stopping=lambda: self.control.stopping)
 
     def _guarded(self, entry: dict) -> GuardedModel:
         """One pool entry with its own thinking settings (ruling 4)."""
@@ -891,20 +897,23 @@ class Governor:
         `ask(agent)` with the decisions agent on each `_retry_models` entry in turn, each run once.
         With the model guard each entry is a pool of its own, and only entries whose breaker is closed or
         due for its trial are tried (an open one is passed over, not waited for): a request gets the guard's
-        one retry on overload; a model that fails during the retry opens, and its pool waits once for that
-        window when it ends within `pool_max_wait_s`, then sends the trial; the pool's events say what
-        failed (role "decisions retry") and a pool that gives up logs `pool_exhausted`; with PILOT_MODEL_GUARD=0
+        one retry on overload; a model that fails during the retry opens, and its pool waits for it to come
+        back, up to `pool_max_wait_s` (pool-wait design); the pool's events say what failed (role
+        "decisions retry") and a pool that gives up logs `pool_exhausted`. A run that is stopping retries
+        nothing: another model call would hold the stop (pool-wait ruling 3). With PILOT_MODEL_GUARD=0
         there are no overload waits and each failure is a `model_fallback`. (result, entry), or None
         when none answered. T512, T522 and T525 failed on 503s and the request limit, and nothing
         retried: a retry on another model tells a provider outage from a model that spends its budget
         on tool calls."""
+        if self.control.stopping:
+            return None
         failed = self.__dict__.setdefault("_failed_at", {})
         for entry in self._retry_models():
             agent = None
             try:
                 agent = self._agent_for(entry, "decisions")
                 if self.s.model_guard and isinstance(getattr(agent, "model", None), PoolModel):
-                    agent.model.begin_run(0, event_hooks(self.log.emit, "decisions retry", self.health.family))
+                    agent.model.begin_run(0, self._guard_hooks("decisions retry"))
                 result = ask(agent)
             except Exception as e:  # noqa: BLE001 - the next model, then the caller's rules
                 failed[entry["model"]] = time.time()

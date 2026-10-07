@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -34,6 +35,20 @@ def _json_map(env, name: str, default: dict) -> dict:
         raise ValueError(f"{name} is not valid JSON: {e}") from None
     if not isinstance(value, dict):
         raise ValueError(f"{name} must be a JSON object, got {type(value).__name__}")  # noqa: TRY004
+    return value
+
+
+def _seconds_env(env, name: str, default: float) -> float:
+    """A number of seconds, 0 or more, from the environment; anything else is an error naming it."""
+    raw = env.get(name)
+    if raw is None or not raw.strip():
+        return default
+    try:
+        value = float(raw)
+    except ValueError:
+        value = math.nan
+    if not math.isfinite(value) or value < 0:
+        raise ValueError(f"{name} must be a number of seconds, 0 or more, got {raw.strip()!r}")
     return value
 
 
@@ -73,7 +88,7 @@ class Settings:
     rate_retry_max_s: float = 10.0
     breaker_open_s: float = 60.0
     breaker_max_s: float = 600.0
-    pool_max_wait_s: float = 60.0
+    pool_max_wait_s: float = 120.0                   # a request's total wait for its pool's models (PILOT_POOL_WAIT_S)
     min_call_interval_s: dict = field(default_factory=lambda: {"google": 0.5})
     model_limits: dict = field(default_factory=dict)          # model -> {rpm, tpm, daily_requests}
     model_families: dict = field(default_factory=dict)        # model -> family, over the name rule
@@ -203,6 +218,7 @@ class Settings:
         s.min_call_interval_s = _json_map(env, "PILOT_MIN_CALL_INTERVAL", s.min_call_interval_s)
         s.model_limits = _json_map(env, "PILOT_MODEL_LIMITS", s.model_limits)
         s.model_families = _json_map(env, "PILOT_MODEL_FAMILIES", s.model_families)
+        s.pool_max_wait_s = _seconds_env(env, "PILOT_POOL_WAIT_S", s.pool_max_wait_s)
         # their values are checked only when one is set (the defaults are valid), so the CLI's other
         # commands, which read the settings too, do not import the model guard
         if any(env.get(v) for v in ("PILOT_MIN_CALL_INTERVAL", "PILOT_MODEL_LIMITS", "PILOT_MODEL_FAMILIES")):

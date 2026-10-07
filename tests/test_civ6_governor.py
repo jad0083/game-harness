@@ -3125,6 +3125,34 @@ def test_t525_on_the_model_guard_the_pool_gives_up_then_the_retry_and_the_rule_b
     assert traces(setup)[0]["orders"][0]["by"] == "governor"
 
 
+def test_a_stop_during_the_pool_wait_skips_the_retry_on_the_strategy_models(setup, monkeypatch):
+    """Pool-wait ruling 3: a Stop while the decision's pool waits ends the wait at once; the failed decision
+    then starts no retry on the Strategy models (a model call would hold the stop), and the governor acts by
+    rule as after any failed decision."""
+    from pilot import modelguard as G
+    decide, strat = [], []
+    game = FakeCiv6(_t525(), index=INDEX, prices={("Guangzhou", "unit:machine_gun", "faith"): 1080})
+    g = _resilience_governor(setup, game, decide, _strategist_model(strat, None))
+
+    async def sleep(seconds):
+        if g.health.status(setup[0].model) == "open":
+            g.stop()
+    monkeypatch.setattr(G, "_sleep", sleep)
+    g.run(max_decisions=1)
+    ex = [e for e in g.log.recent if e["kind"] == "pool_exhausted"]
+    assert [e["role"] for e in ex] == ["decisions"] and ex[0]["causes"][-1]["error"] == "stopped while waiting"
+    assert decide == ["decide"] * 2 and not [c for c in strat if c.startswith("retry")]
+    assert any(e["kind"] == "model_wait" and e["role"] == "decisions" for e in g.log.recent)
+
+
+def test_the_pool_hooks_read_the_stop_flag(setup):
+    g = governor(setup, FakeCiv6(_t496(), index=INDEX), orders_model([]))
+    hooks = [g._hooks("decisions", g._pool("decisions"), None, [], {}), g._guard_hooks("decisions retry")]
+    assert [h.stopping() for h in hooks] == [False, False]
+    g.stop()
+    assert [h.stopping() for h in hooks] == [True, True]
+
+
 # ---- governor fills stay production orders (post-mortem fixes review) ----------------------------------
 
 AT_WAR = [{"id": 3, "civ": "CIVILIZATION_AUSTRALIA", "major": True}]

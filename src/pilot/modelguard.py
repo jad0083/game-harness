@@ -46,6 +46,10 @@ CLAUDE_CODE_LIMIT_S = 3600.0
 
 _sleep = anyio.sleep                             # the guard's waits; tests replace both (tests/conftest.py)
 _uniform = random.uniform
+# a pool whose models are all down waits for one to come back (docs/design/2026-10-06-pool-wait-design.md)
+POOL_POLL_S = 2.0                                # while another request holds a model's trial, look again this often
+POOL_STOP_STEP_S = 1.0                           # the longest single sleep between stop checks (rulings 1 and 3)
+STOPPED_WAITING = "stopped while waiting"        # the PoolExhausted cause when a stop ended the wait
 
 
 @dataclass(frozen=True)
@@ -208,7 +212,7 @@ class GuardConfig:
     rate_retry_max_s: float = 10.0
     breaker_open_s: float = 60.0
     breaker_max_s: float = 600.0
-    pool_max_wait_s: float = 60.0
+    pool_max_wait_s: float = 120.0               # a request's total wait for its pool to come back (pool-wait ruling 2)
     min_call_interval_s: dict = field(default_factory=lambda: {"google": 0.5})
     model_limits: dict = field(default_factory=dict)
     model_families: dict = field(default_factory=dict)
@@ -341,6 +345,11 @@ class ModelHealth:
         with self._lock:
             ends = [self._b[m].until for m in models if m in self._b and self._b[m].state == "open"]
         return min(ends) if ends else None
+
+    def open_kinds(self, models: Iterable[str]) -> set[str]:
+        """The failure kinds that opened these models' open breakers (a pool's wait says why it waits)."""
+        with self._lock:
+            return {self._b[m].kind for m in models if m in self._b and self._b[m].state == "open"}
 
     def clear_broken(self, models: Iterable[str]) -> None:
         """Plan ruling P2: a pool rebuild lets its broken models be tried again; each one's change carries
@@ -476,40 +485,54 @@ class ModelUnavailable(Exception):
 
 
 class PoolExhausted(Exception):
-    """No model of a pool could answer a request (ruling 11)."""
+    """No model of a pool could answer a request (ruling 11): its wait for one to come back reached its budget,
+    nothing would come back, or a stop ended the wait (`stopped`; pool-wait ruling 3)."""
 
-    def __init__(self, role: str, tried: list[ModelUnavailable], skipped: list[str]):
-        self.role, self.tried, self.skipped = role, list(tried), list(skipped)
+    def __init__(self, role: str, tried: list[ModelUnavailable], skipped: list[str], stopped: bool = False):
+        self.role, self.tried, self.skipped, self.stopped = role, list(tried), list(skipped), stopped
 
         def part(u: ModelUnavailable) -> str:    # a failure without an HTTP status adds its own text
             f = u.failure
             return f"{u.model} {describe(f)}" + (f": {f.cause}" if f.cause and not f.status else "")
         super().__init__(f"no model could answer ({role}): " + "; ".join(
-            [part(u) for u in self.tried] + [f"{m} skipped" for m in self.skipped]))
+            [part(u) for u in self.tried] + [f"{m} skipped" for m in self.skipped]
+            + ([STOPPED_WAITING] if stopped else [])))
 
     def causes(self) -> list[dict]:
         return ([{"model": u.model, "error": describe(u.failure)} for u in self.tried]
-                + [{"model": m, "error": "skipped"} for m in self.skipped])
+                + [{"model": m, "error": "skipped"} for m in self.skipped]
+                + ([{"model": "-", "error": STOPPED_WAITING}] if self.stopped else []))
 
 
 def _noop(**_kw) -> None:
     return None
 
 
+def _never() -> bool:
+    return False
+
+
 @dataclass
 class Hooks:
-    """What a pool reports to its owner, which writes the events (rulings 17, 21-22). All take keyword
-    arguments: on_try(name, attempt, of, after=[(name, Failure)], skipped=[name]); on_retry(name, failure,
-    delay, attempt, request); on_fallback(name, failure, next, request); on_pace(name, waited)."""
+    """What a pool reports to its owner, which writes the events (rulings 17, 21-22), and the owner's stop
+    flag. The reports take keyword arguments: on_try(name, attempt, of, after=[(name, Failure)],
+    skipped=[name]); on_retry(name, failure, delay, attempt, request); on_fallback(name, failure, next,
+    request); on_pace(name, waited); on_wait(models, seconds, waited, budget, reason) before each sleep of a
+    pool whose models are all down (pool-wait ruling 4). stopping() is true once the owner is stopping: it
+    ends such a wait (pool-wait ruling 3)."""
     on_try: Callable[..., None] = _noop
     on_retry: Callable[..., None] = _noop
     on_fallback: Callable[..., None] = _noop
     on_pace: Callable[..., None] = _noop
+    on_wait: Callable[..., None] = _noop
+    stopping: Callable[[], bool] = _never
 
 
-def event_hooks(emit, role: str, family: Callable[[str], str], extra: Hooks | None = None) -> Hooks:
-    """Hooks that write model_retry, model_fallback and model_pace through `emit(kind, **data)` (rulings
-    21-22), after calling `extra`'s."""
+def event_hooks(emit, role: str, family: Callable[[str], str], extra: Hooks | None = None,
+                stopping: Callable[[], bool] | None = None) -> Hooks:
+    """Hooks that write model_retry, model_fallback, model_pace and model_wait through `emit(kind, **data)`
+    (rulings 21-22; pool-wait ruling 4), after calling `extra`'s; their stop flag is `stopping`, else
+    `extra`'s."""
     x = extra or Hooks()
 
     def on_retry(name, failure, delay, attempt, request):
@@ -525,7 +548,13 @@ def event_hooks(emit, role: str, family: Callable[[str], str], extra: Hooks | No
     def on_pace(name, waited):
         x.on_pace(name=name, waited=waited)
         emit("model_pace", model=name, waited_s=waited, role=role)
-    return Hooks(on_try=x.on_try, on_retry=on_retry, on_fallback=on_fallback, on_pace=on_pace)
+
+    def on_wait(models, seconds, waited, budget, reason):
+        x.on_wait(models=models, seconds=seconds, waited=waited, budget=budget, reason=reason)
+        emit("model_wait", role=role, models=list(models), seconds=seconds, waited_s=waited, budget_s=budget,
+             reason=reason)
+    return Hooks(on_try=x.on_try, on_retry=on_retry, on_fallback=on_fallback, on_pace=on_pace, on_wait=on_wait,
+                 stopping=stopping or x.stopping)
 
 
 def emit_breaker(emit, model: str, snap: dict) -> None:
@@ -672,7 +701,8 @@ class GuardedModel(WrapperModel):
 class PoolModel(FallbackModel):
     """Ruling 5: a role's models. Each request goes to the first model that can take it, in ruling 10's
     order; a ModelUnavailable moves the same messages (the run's history so far) to the next model, so
-    the run continues and tools that already ran are not run again."""
+    the run continues and tools that already ran are not run again. When none can take it, the pool waits
+    for one to come back, up to `pool_max_wait_s` per request (docs/design/2026-10-06-pool-wait-design.md)."""
 
     def __init__(self, role: str, models: list[GuardedModel], health: ModelHealth):
         super().__init__(models[0], *models[1:], fallback_on=(ModelUnavailable,))
@@ -710,22 +740,62 @@ class PoolModel(FallbackModel):
                 first.append(i)
         return first + later, skipped
 
+    def _next_wait(self, waited_s: float, rejected: set[str]) -> tuple[float, list[str], str] | None:
+        """Pool-wait rulings 1-2 (amending ruling 11): when no model can take the request, how long to sleep
+        before looking again, the models waited for and why; None when nothing comes back within the
+        request's budget (every model broken or rejecting the request, a budget of 0 or spent, nothing
+        open or on trial). The sleep lasts until the earliest open window ends, or one poll step while
+        another request holds a model's trial, and never past the budget."""
+        budget = self.health.cfg.pool_max_wait_s
+        names = list(dict.fromkeys(gm.name for gm in self.guarded))
+        states = {n: self.health.status(n) for n in names}
+        live = [n for n in names if states[n] != "broken" and n not in rejected]
+        if not live or budget <= 0 or waited_s >= budget:
+            return None
+        now = self.health.clock()
+        reopen = self.health.earliest_reopen(live)
+        running = [n for n in live if states[n] == "half_open"]
+        due = ([max(0.0, reopen - now)] if reopen is not None else []) + ([POOL_POLL_S] if running else [])
+        if not due:
+            return None
+        if running and (reopen is None or reopen - now > POOL_POLL_S):
+            reason = f"a trial is running on {running[0]}"
+        elif self.health.open_kinds(live) == {OVERLOADED}:
+            reason = "every model is overloaded"
+        else:
+            reason = "no model is available"
+        return min(min(due), budget - waited_s), live, reason
+
     async def request(self, messages, model_settings, model_request_parameters):
         self.requests += 1
         tried: list[ModelUnavailable] = []
         done: set[int] = set()
-        waited = False
+        rejected: set[str] = set()       # models that rejected this request: a wait does not send it to them again
+        waited_s = 0.0
         while True:
             order, skipped = self.ordered(done)     # again after every failure: a failed family moves back (ruling 9)
             if not order:
                 rest = [self.guarded[i].name for i in self._order if i not in done]
-                reopen = self.health.earliest_reopen(rest + [u.model for u in tried])
-                now = self.health.clock()
-                if waited or reopen is None or reopen - now > self.health.cfg.pool_max_wait_s:
+                wait = self._next_wait(waited_s, rejected)
+                if wait is None:
                     raise PoolExhausted(self.role, tried, rest)
-                waited = True                       # ruling 11: wait for the earliest window, once
-                await _sleep(max(0.0, reopen - now))
-                done = {i for i in done if self.health.status(self.guarded[i].name) != "trial"}
+                step, models, reason = wait
+                if step > 0:
+                    self.hooks.on_wait(models=models, seconds=round(step, 1), waited=round(waited_s, 1),
+                                       budget=float(self.health.cfg.pool_max_wait_s), reason=reason)
+                    left = step
+                    while True:                     # in steps, so a stop ends the wait at once (pool-wait ruling 3)
+                        if self.hooks.stopping():
+                            raise PoolExhausted(self.role, tried, rest, stopped=True)
+                        if left <= 0:
+                            break
+                        chunk = min(POOL_STOP_STEP_S, left)
+                        await _sleep(chunk)
+                        left -= chunk
+                    waited_s += step
+                # a model whose window ended (trial) or whose trial another request won (closed) is tried again
+                done = {i for i in done if self.guarded[i].name in rejected
+                        or self.health.status(self.guarded[i].name) not in ("trial", "closed")}
                 continue
             i = order[0]
             gm = self.guarded[i]
@@ -739,6 +809,8 @@ class PoolModel(FallbackModel):
                 response = await gm.request(prepared, model_settings, model_request_parameters)
             except ModelUnavailable as u:
                 tried.append(u)
+                if u.failure.kind == REJECTED:
+                    rejected.add(gm.name)
                 nxt, _ = self.ordered(done)
                 self.hooks.on_fallback(name=gm.name, failure=u.failure,
                                        next=self.guarded[nxt[0]].name if nxt else None, request=self.requests)

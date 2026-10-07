@@ -2832,6 +2832,11 @@ const dur = (x) => { const s = Math.round(+x || 0); return s < 60 ? `${s} s` : s
 const clip = (x, n = 180) => { const t = String(x ?? ""); return t.length > n ? t.slice(0, n - 1) + "…" : t; };
 const byWho = (ev) => ev.by && ev.by !== "the controller" ? `, from ${ev.by}` : "";
 const modelName = (m) => shortModel({ model: m || "" }) || "the model";
+// a pool's models as one name: "Gemini" when every one is a Gemini model, else each model's short name
+const poolName = (ms) => {
+  const all = [...new Set(ms || [])];
+  return all.length && all.every((m) => /^(google[\w-]*:)?gemini/.test(m)) ? "Gemini" : all.map(modelName).join(", ") || "the models";
+};
 // "autoplay at T57: Error: …" -> "Autoplay at T57 failed: the game's tuner did not answer (timed out)"
 function failedStep(err, what = "failed") {
   const e = String(err || ""), m = /^([a-z][\w .\-/]{1,40}?): (?=\S)/i.exec(e);
@@ -2877,6 +2882,7 @@ function describe(ev) {
     case "model_retry": return `${sentence(errorCause(ev.error))}; trying again in ${ev.delay} s${ev.role && ev.role !== "decisions" ? ` (${human(ev.role)})` : ""}`;
     case "model_breaker": return breakerSentence(ev);
     case "model_pace": return `Waited ${dur(ev.waited_s)} before calling ${modelName(ev.model)}, to keep requests apart`;
+    case "model_wait": return `Waiting up to ${dur(Math.max(0, (+ev.budget_s || 0) - (+ev.waited_s || 0)))} more for ${poolName(ev.models)} to recover (${ev.reason || "no model is available"}), ${dur(ev.waited_s)} so far${ev.role && ev.role !== "decisions" ? ` (${human(ev.role)})` : ""}`;
     case "pool_exhausted": return `No model could answer${ev.role && ev.role !== "decisions" ? ` (${human(ev.role)})` : ""}: ${(ev.causes || []).map((c) => `${modelName(c.model)} ${c.error}`).join("; ")}`;
     case "model": return `Now using ${modelName(ev.model)}${ev.thinking ? ` (${ev.thinking} thinking)` : ""}${byWho(ev)}`;
     case "models": return `Models changed${ev.by && ev.by !== "the controller" ? ` by ${ev.by}` : ""}: ${(ev.models || []).map((m) => modelName(m.model)).join(", ")}${ev.rotate ? ", taking turns" : ""}`;

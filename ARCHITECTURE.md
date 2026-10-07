@@ -451,8 +451,12 @@ pilot view ── Supervisor ──► pilot run (its child; Start run, resume a
   once where the kind allows and raises `ModelUnavailable` (also when another request holds its trial,
   or its slot or count cannot be taken). `PoolModel` (after `FallbackModel`) holds a role's entries
   and sends each request of a run to the first that can take it; a failed request moves with the run's
-  history to the next, so tools are not run again, and `PoolExhausted` names each model's cause when
-  none can answer. `Governor._call` runs each role's one agent on its pool under a per-role lock, with
+  history to the next, so tools are not run again. When none can take it, the pool waits for one to come
+  back (until the earliest open window ends, or 2 s while another request holds a model's trial), again
+  and again up to `pool_max_wait_s` per request (`PILOT_POOL_WAIT_S`, checked by `Settings.from_env`),
+  reporting each sleep through `Hooks.on_wait` (`model_wait`) and sleeping in steps of at most 1 s that
+  end at once when `Hooks.stopping()` says the run is stopping; then `PoolExhausted` names each model's
+  cause ("stopped while waiting" after a stop). `Governor._call` runs each role's one agent on its pool under a per-role lock, with
   the run's rotation, publishes `info.model_health`, and runs a run that ended without a usable answer
   again from the next model; `_call_unguarded` is the path before the guard (`PILOT_MODEL_GUARD=0`).
 - `dashboard.py` API: `/api/campaigns`, `/api/decisions`, `/api/decision`, `/api/metrics`,

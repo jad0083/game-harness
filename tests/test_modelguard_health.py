@@ -340,7 +340,8 @@ def test_snapshot_lists_states_counts_and_caution():
 def test_settings_and_environment(monkeypatch, tmp_path):
     s = Settings()
     assert s.model_guard is True and s.overload_retry_s == (1.0, 2.0) and s.min_call_interval_s == {"google": 0.5}
-    assert (s.rate_retry_max_s, s.breaker_open_s, s.breaker_max_s, s.pool_max_wait_s) == (10.0, 60.0, 600.0, 60.0)
+    assert (s.rate_retry_max_s, s.breaker_open_s, s.breaker_max_s, s.pool_max_wait_s) == (10.0, 60.0, 600.0, 120.0)
+    assert G.GuardConfig().pool_max_wait_s == 120.0
     monkeypatch.setenv("PILOT_MODEL_GUARD", "0")
     monkeypatch.setenv("PILOT_MIN_CALL_INTERVAL", '{"google": 1.5, "anthropic": 0.2}')
     monkeypatch.setenv("PILOT_MODEL_LIMITS", '{"google:gemini-3.1-pro-preview": {"rpm": 25, "daily_requests": 1000}}')
@@ -377,6 +378,26 @@ def test_malformed_guard_settings_stop_the_start_with_the_variable(monkeypatch, 
     with pytest.raises(ValueError, match=f"^{var}") as e:
         Settings.from_env()
     assert words in str(e.value)
+
+
+def test_the_pool_wait_budget_from_the_environment(monkeypatch, tmp_path):
+    """Pool-wait ruling 2: PILOT_POOL_WAIT_S, seconds (a number, 0 or more; 0 gives up at once)."""
+    monkeypatch.delenv("PILOT_POOL_WAIT_S", raising=False)
+    assert Settings.from_env().pool_max_wait_s == 120.0
+    monkeypatch.setenv("PILOT_POOL_WAIT_S", "45")
+    assert Settings.from_env().pool_max_wait_s == 45.0
+    monkeypatch.setenv("PILOT_POOL_WAIT_S", "0")
+    assert Settings.from_env().pool_max_wait_s == 0.0
+    monkeypatch.setenv("PILOT_POOL_WAIT_S", "90.5")
+    s = Settings.from_env()
+    assert G.GuardConfig.from_settings(Settings(runs_dir=tmp_path, pool_max_wait_s=s.pool_max_wait_s)).pool_max_wait_s == 90.5
+
+
+@pytest.mark.parametrize("value", ["-1", "abc", "nan", "inf"])
+def test_a_malformed_pool_wait_stops_the_start_with_the_variable(monkeypatch, value):
+    monkeypatch.setenv("PILOT_POOL_WAIT_S", value)
+    with pytest.raises(ValueError, match="^PILOT_POOL_WAIT_S"):
+        Settings.from_env()
 
 
 def test_guard_settings_built_in_code_are_checked_too(monkeypatch, tmp_path):

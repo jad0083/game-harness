@@ -68,6 +68,28 @@ def test_each_episode_publishes_todays_counts(corpus, tmp_path):  # noqa: F811
     assert log.state.info["model_health"]["models"]["google:gemini-3.8-flash"]["today"] == 2
 
 
+def test_a_stop_ends_the_wait_for_an_episodes_models(corpus, tmp_path, monkeypatch):  # noqa: F811
+    """Pool-wait ruling 3 for GalCiv: the episode's pool reads the pilot's stop flag."""
+    from pilot import modelguard as G
+    s, log = make(corpus, tmp_path)
+
+    def down(messages, info):
+        raise E503
+    pilot = Pilot(s, FakeGame([]), log, model=FunctionModel(down, model_name="gemini-3.8-flash"))
+    waited = []
+
+    async def sleep(seconds):
+        if pilot.health.status("google:gemini-3.8-flash") == "open":
+            waited.append(seconds)
+            pilot.stop()
+    monkeypatch.setattr(G, "_sleep", sleep)
+    pilot._episode("a dialog is up", None)
+    ex = [e for e in log.recent if e["kind"] == "pool_exhausted"][-1]
+    assert ex["role"] == "episodes" and ex["causes"][-1] == {"model": "-", "error": "stopped while waiting"}
+    assert sum(waited) <= G.POOL_STOP_STEP_S and any(e["kind"] == "episode_error" for e in log.recent)
+    assert [e["role"] for e in log.recent if e["kind"] == "model_wait"] == ["episodes"]
+
+
 def test_changing_the_model_clears_its_broken_mark(corpus, tmp_path):  # noqa: F811
     """Plan ruling P2 for GalCiv: a pool rebuild lets the new pool's broken models be tried again."""
     from pilot.modelguard import BROKEN, Failure

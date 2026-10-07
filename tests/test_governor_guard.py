@@ -98,6 +98,42 @@ def test_no_model_answers_then_pool_exhausted_and_the_directive_stays(setup):  #
     assert any(e["kind"] == "episode_error" for e in log.recent)
 
 
+def test_a_stop_ends_the_wait_for_the_decisions_models(setup, monkeypatch):  # noqa: F811
+    """Pool-wait ruling 3: a page Stop while the decision's pool waits for its model ends the wait within a
+    step; the pool gives up with "stopped while waiting", and the wait was reported as model_wait."""
+    from pilot import modelguard as G
+    s, log = setup
+
+    def down(messages, info):
+        if _is_strategy_review(info):
+            return _quiet_no_change(info)
+        raise E503
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=FunctionModel(down))
+    waited = []
+
+    async def sleep(seconds):          # the pool's wait starts once the model is open: the Stop comes then
+        if g.health.status(s.model) == "open":
+            waited.append(seconds)
+            g.stop()
+    monkeypatch.setattr(G, "_sleep", sleep)
+    g.run(max_decisions=1)
+    ex = [e for e in log.recent if e["kind"] == "pool_exhausted"][-1]
+    assert ex["role"] == "decisions" and ex["causes"][-1] == {"model": "-", "error": "stopped while waiting"}
+    assert sum(waited) <= G.POOL_STOP_STEP_S
+    wait = next(e for e in log.recent if e["kind"] == "model_wait")
+    assert (wait["role"], wait["models"], wait["budget_s"], wait["reason"]) == (
+        "decisions", [s.model], 120.0, "every model is overloaded")
+
+
+def test_the_pool_hooks_read_the_stop_flag(setup):  # noqa: F811
+    s, log = setup
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+    hooks = [g._hooks("chat", g._pool("chat"), None, [], {}), g._guard_hooks("decisions retry")]
+    assert [h.stopping() for h in hooks] == [False, False]
+    g.control.stopping = True
+    assert [h.stopping() for h in hooks] == [True, True]
+
+
 def test_an_unusable_answer_runs_again_on_the_next_model(setup):  # noqa: F811
     """Plan ruling P1: the request cap is not a model failure, but the run is tried from the next model."""
     s, log = setup

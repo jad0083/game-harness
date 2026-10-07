@@ -1,6 +1,7 @@
 """Guarded models and pools (docs/design/2026-10-02-model-guard-design.md, rulings 4-5, 7, 10-11, 16): a
 failed request moves to the next model inside the same run, so a tool runs once; each failure kind gets
-its retry rule; the order skips open and broken models and puts a failed family last."""
+its retry rule; the order skips open and broken models and puts a failed family last. A pool whose models
+are all down waits for one to come back, up to a budget (docs/design/2026-10-06-pool-wait-design.md)."""
 
 from __future__ import annotations
 
@@ -54,16 +55,25 @@ def pool_of(health, *pairs, role="decisions"):
 
 
 class Recorder:
-    def __init__(self):
-        self.events = []
+    """The pool's reports; `waits` records on_wait too, and `stopping` is the hooks' stop flag."""
+
+    def __init__(self, waits=False, stopping=None):
+        self.events, self.waits, self.stopping = [], waits, stopping
 
     def hooks(self):
         def rec(kind):
             return lambda **kw: self.events.append((kind, kw))
-        return G.Hooks(on_try=rec("try"), on_retry=rec("retry"), on_fallback=rec("fallback"), on_pace=rec("pace"))
+        extra = {"on_wait": rec("wait")} if self.waits else {}
+        if self.stopping is not None:
+            extra["stopping"] = self.stopping
+        return G.Hooks(on_try=rec("try"), on_retry=rec("retry"), on_fallback=rec("fallback"), on_pace=rec("pace"),
+                       **extra)
 
     def kinds(self):
         return [k for k, _ in self.events]
+
+    def of(self, kind):
+        return [kw for k, kw in self.events if k == kind]
 
 
 def run(pool, recorder=None, start=0, limit=10):
@@ -80,6 +90,23 @@ def run(pool, recorder=None, start=0, limit=10):
 
 
 E503 = ModelHTTPError(503, "gemini-3.8-flash", {"error": {"code": 503, "status": "UNAVAILABLE"}})
+PRO, FLASH = "google:gemini-pro-latest", "google:gemini-3.8-flash"
+
+
+@pytest.fixture
+def ticking(monkeypatch):
+    """The guard's sleeps advance a fake clock: `clock`, `slept` (each sleep), and `on_sleep(state)`, called
+    after each sleep."""
+    from types import SimpleNamespace
+    state = SimpleNamespace(clock=Clock(), slept=[], on_sleep=None)
+
+    async def sleep(seconds):
+        state.slept.append(seconds)
+        state.clock.t += seconds
+        if state.on_sleep:
+            state.on_sleep(state)
+    monkeypatch.setattr(G, "_sleep", sleep)
+    return state
 
 
 def test_a_503_on_the_second_request_fails_over_and_the_tool_runs_once():
@@ -186,26 +213,176 @@ def test_duplicate_entries_share_a_breaker_and_one_family_pools_keep_every_model
     assert flash.ordered() == ([0, 1], []), "caution reorders, never drops"
 
 
-def test_everything_open_waits_up_to_the_limit_then_gives_up(monkeypatch):
-    clock, waits = Clock(), []
-
-    async def sleep(seconds):
-        waits.append(seconds)
-        clock.t += seconds
-    monkeypatch.setattr(G, "_sleep", sleep)
-    h, _ = make_health(clock)
+def test_everything_open_waits_up_to_the_limit_then_gives_up(ticking):
+    h, _ = make_health(ticking.clock)
     a = Script(E503)
     with pytest.raises(G.PoolExhausted) as e:
         run(pool_of(h, ("google:gemini-3.8-flash", a)))
-    # the 503 and its retry open the breaker for 60 s; the pool waits once; the trial fails (no retry)
-    assert waits == [1.0, 60.0] and a.calls == 3
+    # the 503 and its 1 s retry open the breaker for 60 s; the pool waits 60 s; the trial fails (no retry) and
+    # opens it for 120 s; the pool waits the 60 s left of its 120 s budget and gives up
+    assert ticking.slept[0] == 1.0 and sum(ticking.slept) == 121.0 and a.calls == 3
     assert e.value.causes() == [{"model": "google:gemini-3.8-flash", "error": "overloaded (503)"}] * 2
-    waits.clear()
-    h2, _ = make_health(clock, pool_max_wait_s=30)
+    ticking.slept.clear()
+    h2, _ = make_health(ticking.clock, pool_max_wait_s=30)
     b = Script(E503)
     with pytest.raises(G.PoolExhausted):
         run(pool_of(h2, ("google:gemini-3.8-flash", b)))
-    assert waits == [1.0] and b.calls == 2, "a 60 s window is over the 30 s limit: no wait"
+    assert sum(ticking.slept) == 31.0 and b.calls == 2, "a 60 s window is past the 30 s budget: no trial"
+
+
+def test_the_pool_waits_for_the_earliest_window_and_answers(ticking):
+    """Pool-wait ruling 1: both models open, their windows ending in 40 s and 70 s; the pool sleeps until the
+    first ends (in steps of at most POOL_STOP_STEP_S), then sends that model its trial, which answers."""
+    clock = ticking.clock
+    h, _ = make_health(clock, pool_max_wait_s=120)
+    clock.t -= 20
+    h.failed(PRO, G.Failure(G.OVERLOADED, 503))        # a 60 s window: 40 s left
+    clock.t += 30
+    h.failed(FLASH, G.Failure(G.OVERLOADED, 503))      # 70 s left
+    clock.t -= 10
+    a, b = Script("pro answered"), Script("flash answered")
+    rec = Recorder(waits=True)
+    result, _ = run(pool_of(h, (PRO, a), (FLASH, b)), rec)
+    assert result.output == "pro answered" and (a.calls, b.calls) == (1, 0)
+    assert sum(ticking.slept) == pytest.approx(40.0) and max(ticking.slept) <= G.POOL_STOP_STEP_S
+    assert rec.of("wait") == [{"models": [PRO, FLASH], "seconds": 40.0, "waited": 0.0, "budget": 120.0,
+                               "reason": "every model is overloaded"}]
+    assert h.status(PRO) == "closed" and h.status(FLASH) == "open"
+
+
+def test_the_wait_ends_at_the_budget_however_windows_move(ticking):
+    """Each failed trial doubles the window (60 s, then 120 s); the request's waiting still ends at the budget."""
+    h, _ = make_health(ticking.clock, pool_max_wait_s=120)
+    a = Script(E503)
+    rec = Recorder(waits=True)
+    with pytest.raises(G.PoolExhausted) as e:
+        run(pool_of(h, (FLASH, a)), rec)
+    waits = rec.of("wait")
+    assert a.calls == 3, "the 503, its retry, then the trial after the first window"
+    assert [(w["seconds"], w["waited"]) for w in waits] == [(60.0, 0.0), (60.0, 60.0)]
+    assert {w["reason"] for w in waits} == {"every model is overloaded"} and {w["budget"] for w in waits} == {120.0}
+    assert sum(ticking.slept) <= 1.0 + 120 + G.POOL_POLL_S, "the guard's 1 s retry, then at most the budget"
+    assert [c["error"] for c in e.value.causes()] == ["overloaded (503)"] * 2 and not e.value.stopped
+
+
+def test_a_second_request_waits_for_a_running_trial(ticking):
+    """Ruling 5: chat finds the decision holding the model's trial (half-open); it looks again every POOL_POLL_S
+    and is answered once that trial succeeds, instead of failing at once."""
+    clock = ticking.clock
+    h, _ = make_health(clock)
+    h.failed(PRO, G.Failure(G.OVERLOADED, 503))
+    clock.t += 60
+    assert h.begin_trial(PRO)                           # the decision's request holds the trial
+
+    def trial_answers(state):                           # after two poll steps
+        if sum(state.slept) >= 2 * G.POOL_POLL_S and h.status(PRO) == "half_open":
+            h.succeeded(PRO)
+    ticking.on_sleep = trial_answers
+    a = Script("chat answered")
+    rec = Recorder(waits=True)
+    result, _ = run(pool_of(h, (PRO, a), role="chat"), rec)
+    assert result.output == "chat answered" and a.calls == 1
+    assert [(w["seconds"], w["reason"]) for w in rec.of("wait")] == [(G.POOL_POLL_S, f"a trial is running on {PRO}")] * 2
+    assert sum(ticking.slept) == pytest.approx(2 * G.POOL_POLL_S)
+
+
+def test_a_model_whose_trial_succeeded_elsewhere_is_tried_again(ticking):
+    """The request lost the model's trial to another request (its first try failed over); once that trial
+    succeeds the model is closed, and the waiting request sends it the request."""
+    clock = ticking.clock
+    h, _ = make_health(clock)
+    h.failed(PRO, G.Failure(G.OVERLOADED, 503))
+    clock.t += 60
+    a = Script("answered after the other trial")
+    pool = pool_of(h, (PRO, a))
+    real_ordered, taken = pool.ordered, []
+
+    def ordered(exclude=frozenset()):
+        out = real_ordered(exclude)
+        if not taken:                       # another role takes the trial between this order and the send
+            taken.append(h.begin_trial(PRO))
+        return out
+    pool.ordered = ordered
+    ticking.on_sleep = lambda state: h.succeeded(PRO) if h.status(PRO) == "half_open" else None
+    rec = Recorder(waits=True)
+    result, _ = run(pool, rec)
+    assert taken == [True] and result.output == "answered after the other trial" and a.calls == 1
+    assert rec.of("fallback")[0]["failure"].cause == "its trial is running" and len(rec.of("wait")) == 1
+
+
+def test_a_rejected_model_is_not_sent_the_request_again_after_a_wait(ticking):
+    """A rejected request (400) leaves the breaker closed; the wait for another model does not send the same
+    request to the model that rejected it again."""
+    clock = ticking.clock
+    h, _ = make_health(clock, min_call_interval_s={})       # no pacing wait: every sleep is the pool's
+    clock.t -= 20
+    h.failed(PRO, G.Failure(G.OVERLOADED, 503))        # 40 s left
+    clock.t += 20
+    a, b = Script(ModelHTTPError(400, "gemini-3.8-flash")), Script("pro answered")
+    result, _ = run(pool_of(h, (FLASH, a), (PRO, b)))
+    assert result.output == "pro answered" and (a.calls, b.calls) == (1, 1)
+    assert sum(ticking.slept) == pytest.approx(40.0)
+    ticking.slept.clear()
+    c = Script(ModelHTTPError(400, "gemini-3.8-flash"))
+    with pytest.raises(G.PoolExhausted):
+        run(pool_of(h, (FLASH, c)))
+    assert ticking.slept == [] and c.calls == 1, "nothing else to wait for: at once"
+
+
+def test_all_broken_fails_at_once(ticking):
+    h, _ = make_health(ticking.clock, min_call_interval_s={})       # no pacing wait: every sleep is the pool's
+    e404 = ModelHTTPError(404, "m")
+    rec = Recorder(waits=True)
+    with pytest.raises(G.PoolExhausted) as e:
+        run(pool_of(h, (PRO, Script(e404)), (FLASH, Script(e404))), rec)
+    assert ticking.slept == [] and rec.of("wait") == []
+    assert [c["error"] for c in e.value.causes()] == ["unusable (404)"] * 2
+
+
+def test_a_stop_ends_the_wait(ticking):
+    """Ruling 3: `stopping()` turns true after the first 1 s step of a 60 s wait; the pool gives up at once."""
+    h, _ = make_health(ticking.clock)
+    h.failed(PRO, G.Failure(G.OVERLOADED, 503))
+    a = Script("never sent")
+    rec = Recorder(waits=True, stopping=lambda: len(ticking.slept) >= 1)
+    with pytest.raises(G.PoolExhausted) as e:
+        run(pool_of(h, (PRO, a)), rec)
+    assert sum(ticking.slept) <= 2 * G.POOL_STOP_STEP_S and a.calls == 0
+    assert e.value.stopped and e.value.causes()[-1] == {"model": "-", "error": "stopped while waiting"}
+    assert str(e.value).endswith("stopped while waiting")
+    assert rec.of("wait")[0]["seconds"] == 60.0
+
+
+def test_no_budget_fails_at_once(ticking):
+    """PILOT_POOL_WAIT_S=0: an open pool raises at once, as before ruling 11, and so does a running trial."""
+    clock = ticking.clock
+    h, _ = make_health(clock, pool_max_wait_s=0)
+    h.failed(PRO, G.Failure(G.OVERLOADED, 503))
+    rec = Recorder(waits=True)
+    with pytest.raises(G.PoolExhausted):
+        run(pool_of(h, (PRO, Script("x"))), rec)
+    clock.t += 60
+    assert h.begin_trial(PRO)
+    with pytest.raises(G.PoolExhausted):
+        run(pool_of(h, (PRO, Script("x"))), rec)
+    assert ticking.slept == [] and rec.of("wait") == []
+
+
+def test_event_hooks_emit_model_wait():
+    events, seen = [], []
+    extra = G.Hooks(on_wait=lambda **kw: seen.append(kw), stopping=lambda: True)
+    hooks = G.event_hooks(lambda kind, **d: events.append((kind, d)), "chat", G.family, extra)
+    hooks.on_wait(models=[PRO, FLASH], seconds=40.0, waited=45.0, budget=120.0, reason="every model is overloaded")
+    assert events == [("model_wait", {"role": "chat", "models": [PRO, FLASH], "seconds": 40.0, "waited_s": 45.0,
+                                      "budget_s": 120.0, "reason": "every model is overloaded"})]
+    assert len(seen) == 1 and hooks.stopping() is True, "the extra hooks' own, when no stop flag is given"
+    flag = {"stop": False}
+    own = G.event_hooks(lambda kind, **d: None, "chat", G.family, extra, stopping=lambda: flag["stop"])
+    assert own.stopping() is False
+    flag["stop"] = True
+    assert own.stopping() is True
+    assert G.event_hooks(lambda kind, **d: None, "chat", G.family).stopping() is False
+    assert G.Hooks().stopping() is False
 
 
 def test_after_an_overload_the_request_goes_to_another_family_first():

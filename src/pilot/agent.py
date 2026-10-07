@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 import httpx
@@ -75,6 +76,7 @@ class Deps:
     frame: bytes | None = None
     actions: int = 0
     notes: list[str] = field(default_factory=list)
+    stopping: Callable[[], bool] | None = None   # the pilot's stop flag: it ends a pool's wait for its models
 
 
 class HumanChannel:
@@ -336,7 +338,7 @@ def run_episode(agent: Agent[Deps, EpisodeResult], deps: Deps, stop_text: str, f
     pool = getattr(agent, "model", None)
     if deps.settings.model_guard and isinstance(pool, PoolModel):
         # the model guard (docs/design/2026-10-02-model-guard-design.md, ruling 18): failover inside the run
-        pool.begin_run(0, event_hooks(deps.log.emit, "episodes", pool.health.family))
+        pool.begin_run(0, event_hooks(deps.log.emit, "episodes", pool.health.family, stopping=deps.stopping))
         try:
             result = agent.run_sync(content, deps=deps, usage_limits=limits)
         except PoolExhausted as e:

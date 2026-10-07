@@ -182,7 +182,8 @@ class Pilot:
     def _episode(self, stop_text: str, frame: bytes | None) -> bool:
         self._status("deciding")
         self.log.state.episodes += 1
-        deps = Deps(self.game, self.store, self.journal, self.log, self.s, self.human)
+        deps = Deps(self.game, self.store, self.journal, self.log, self.s, self.human,
+                    stopping=lambda: self.control.stopping)
         extra = self.human.take_all()
         started = time.time()
         try:
