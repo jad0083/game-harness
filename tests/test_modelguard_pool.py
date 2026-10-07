@@ -265,13 +265,13 @@ def test_the_wait_ends_at_the_budget_however_windows_move(ticking):
     assert sum(ticking.slept) == 61.0, "the guard's 1 s retry, then the one window"
     assert [c["error"] for c in e.value.causes()] == ["overloaded (503)"] * 2 and not e.value.stopped
     ticking.slept.clear()
-    h2, _ = make_health(ticking.clock, pool_max_wait_s=200)        # above 180 s: the second trial too
+    h2, _ = make_health(ticking.clock, pool_max_wait_s=180)        # 180 s or more: the second trial too
     b = Script(E503)
     rec2 = Recorder(waits=True)
     with pytest.raises(G.PoolExhausted):
         run(pool_of(h2, (FLASH, b)), rec2)
     assert [(w["seconds"], w["waited"]) for w in rec2.of("wait")] == [(60.0, 0.0), (120.0, 60.0)]
-    assert b.calls == 4 and sum(ticking.slept) == 181.0, "a 240 s window is past the 20 s left: no third wait"
+    assert b.calls == 4 and sum(ticking.slept) == 181.0, "the 120 s window ends exactly at the budget; then it is spent"
 
 
 def test_a_daily_quota_is_not_waited_for(ticking):

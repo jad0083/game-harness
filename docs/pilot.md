@@ -197,14 +197,17 @@ running elsewhere and every open window ends later (a daily quota until midnight
 doubled by a failed trial), it gives up at once (`pool_exhausted`) instead of sleeping the budget out.
 So the wait covers outages that end within about the first breaker window: a fresh outage opens each
 model for 60 s, its trial comes at about 60 s inside the 120 s budget, and a failed trial reopens it for
-120 s, past the 60 s left. A `PILOT_POOL_WAIT_S` above 180 s also covers the second trial (60 + 120 s).
+120 s, past the 60 s left. A `PILOT_POOL_WAIT_S` of 180 s or more also covers the second trial (60 + 120 s).
 A pool whose models are all broken (or have rejected the request) gives up at once, and so does every
 pool with `PILOT_POOL_WAIT_S=0`. The pool sleeps in steps of at most 1 s and gives up at once when its run
 is stopping (a page Stop, a container stop), without reporting a wait it will not make. A stop is not a
 failure: the call ends quietly with one Activity line, "Stopped while waiting for the models: ..." (no
 `pool_exhausted`, no `episode_error`, no error trace); Civilization VI then starts no retry on the
 Strategy models and gives no orders by rule, and a GalCiv blocker left that way does not count as
-unresolved. Failover between models stays immediate; only a pool with every model down waits.
+unresolved. Once a run is stopping, no further model call starts within its decision point: not the
+decision after a strategy review, not a review after the decision, not Civilization VI's corrective
+retry. The stop gets one line in all ("Stopped: no decision this time ..." when it came before any
+wait). Failover between models stays immediate; only a pool with every model down waits.
 
 **Family caution.** Models that share capacity fail together (Gemini 3.8 Flash and 3.7 Flash were
 overloaded together in 31 of 45 fallbacks, while 3.1 Pro answered 58 of 60), so each model has a

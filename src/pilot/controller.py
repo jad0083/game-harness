@@ -195,6 +195,7 @@ class Pilot:
         except Exception as e:  # noqa: BLE001 - a failed episode must not end the run
             if stopped_waiting(e):
                 self.log.emit("journal", text="Stopped while waiting for the models: the blocker is left as it is")
+                self._status("playing")         # the episode is over, as after an error; run() then stops
                 return None
             self.log.emit("episode_error", error=f"{type(e).__name__}: {e}"[:500])
             self._status("playing")

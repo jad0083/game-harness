@@ -1655,6 +1655,9 @@ class Civ6Governor(Governor):
                                   usage_limits=UsageLimits(request_limit=self.s.governor_max_requests))
         retried: dict = {}
         retry_entry: dict | None = None           # the strategy model that answered a failed decision's retry
+        if self._bail_if_stopping("no decision this time, no orders given"):
+            self._resolved = pending + self._resolved
+            return
         try:
             result, _ = self._call("decisions", ask,
                                    on_try=lambda e: base.update(model=e["model"], thinking_level=e["thinking"]))
@@ -1690,7 +1693,7 @@ class Civ6Governor(Governor):
         tokens_in, tokens_out = usage.input_tokens or 0, usage.output_tokens or 0
 
         idle = self._idle_without_order(b, d)
-        if idle:        # ruling 16: one corrective retry, as for the Strategist's validation
+        if idle and not self.control.stopping:     # ruling 16: one corrective retry (no model call once stopping)
             opts = b.get("options") or {}
             ask_again = "; ".join(
                 f"nothing is being {'researched' if k == 'research' else 'progressed'} and your answer gives no valid "

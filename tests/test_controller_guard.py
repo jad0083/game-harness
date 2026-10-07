@@ -92,6 +92,7 @@ def test_a_stop_ends_the_wait_for_an_episodes_models(corpus, tmp_path, monkeypat
     from pilot import modelguard as G
     pilot, log, waited = _down_pilot(corpus, tmp_path, monkeypatch)
     assert pilot._episode("a dialog is up", None) is None, "neither resolved nor failed"
+    assert log.state.status == "playing" and "deciding" not in log.state.info, "the episode is over, as after an error"
     kinds = [e["kind"] for e in log.recent]
     assert sum(waited) <= G.POOL_STOP_STEP_S
     assert "episode_error" not in kinds and "pool_exhausted" not in kinds

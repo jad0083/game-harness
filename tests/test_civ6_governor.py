@@ -3169,6 +3169,34 @@ def test_a_stop_during_the_retry_gives_no_orders_by_rule(setup):
     assert traces(setup)[0]["outcome"] == "error" and "orders" not in traces(setup)[0]
 
 
+def test_a_stop_during_the_review_wait_starts_no_decision_call(setup, monkeypatch):
+    """Final review, finding 1 in Civ VI: the start-of-run review's pool is down, the decisions pool answers; a
+    Stop during the review's wait starts no decision call and sends no orders; one plain line."""
+    from pydantic_ai.exceptions import ModelHTTPError
+
+    from pilot import modelguard as G
+    seen: list = []
+    s, log = setup
+
+    def strategist(messages, info):
+        raise ModelHTTPError(503, "gemini-pro-latest", "high demand")
+    game = FakeCiv6(_t496(), index=INDEX)
+    g = Civ6Governor(s, game, log, model=orders_model([], seen=seen),
+                     role_models={"strategy": FunctionModel(strategist, model_name="gemini-pro-latest")})
+    g.status_poll_s, g.start_grace_s, g.turn_deadline_s, g.recover_every_s, g.end_watch_s = 0, 0.05, 0.5, 0, 0
+
+    async def sleep(seconds):
+        if g.health.status("gemini-pro-latest") == "open":
+            g.stop()
+    monkeypatch.setattr(G, "_sleep", sleep)
+    g.run(max_decisions=1)
+    assert seen == [], "no decision call after the stop"
+    assert not any(a[0] == "order" for a in game.actions)
+    assert [e["text"] for e in log.recent if e["kind"] == "journal" and e["text"].startswith("Stopped")] == [
+        "Stopped while waiting for the models: no strategy review this time"]
+    assert not any(e["kind"] in ("episode_error", "pool_exhausted") for e in log.recent)
+
+
 def test_the_pool_hooks_read_the_stop_flag(setup):
     g = governor(setup, FakeCiv6(_t496(), index=INDEX), orders_model([]))
     hooks = [g._hooks("decisions", g._pool("decisions"), None, [], {}), g._guard_hooks("decisions retry")]

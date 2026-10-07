@@ -150,8 +150,70 @@ def test_a_stop_during_a_strategy_review_wait_ends_quietly(setup, monkeypatch): 
     g.run(max_decisions=1)
     kinds = [e["kind"] for e in log.recent]
     assert "episode_error" not in kinds and "pool_exhausted" not in kinds
-    assert _stop_lines(log) == ["Stopped while waiting for the models: no strategy review this time",
-                                "Stopped while waiting for the models: no decision this time; the directive stays"]
+    assert _stop_lines(log) == ["Stopped while waiting for the models: no strategy review this time"], \
+        "one line per stop: the decision after the review is not called"
+
+
+def _decider(asked: list):
+    """A decisions model that records each call and answers "expand"."""
+    def respond(messages, info):
+        asked.append("decide")
+        return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, {"directive": "expand", "reason": "test"})])
+    return FunctionModel(respond)
+
+
+def test_a_stop_during_the_review_wait_starts_no_decision_call(setup, monkeypatch):  # noqa: F811
+    """Final review, finding 1: the start-of-run review's pool is down and the decisions pool answers; a Stop
+    during the review's wait starts no decision call afterwards, and the stop gets its one plain line."""
+    s, log = setup
+    asked: list = []
+
+    def strategist(messages, info):
+        raise E503
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=_decider(asked),
+                 role_models={"strategy": FunctionModel(strategist, model_name="gemini-pro-latest")})
+    _stop_in_the_wait(monkeypatch, lambda: g.health, "gemini-pro-latest", g.stop)
+    g.run(max_decisions=1)
+    assert asked == [], "no decision call after the stop"
+    assert _stop_lines(log) == ["Stopped while waiting for the models: no strategy review this time"]
+    assert not any(e["kind"] in ("episode_error", "pool_exhausted") for e in log.recent)
+
+
+def test_a_stop_during_the_review_call_starts_no_decision_call(setup):  # noqa: F811
+    """The Stop comes while the review's model answers (no wait): the decision is not called, and its gate
+    gives the stop's one line."""
+    s, log = setup
+    asked: list = []
+    holder: dict = {}
+
+    def strategist(messages, info):
+        holder["g"].stop()
+        return _quiet_no_change(info)
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=_decider(asked),
+                 role_models={"strategy": FunctionModel(strategist, model_name="gemini-pro-latest")})
+    holder["g"] = g
+    g.run(max_decisions=1)
+    assert asked == []
+    assert _stop_lines(log) == [] and [e["text"] for e in log.recent if e["kind"] == "journal"
+                                       and e["text"].startswith("Stopped")] == [
+        "Stopped: no decision this time; the directive stays"]
+
+
+def test_a_stopping_run_starts_no_strategy_review(setup):  # noqa: F811
+    """The event review after a decision and a scheduled one are gated too; the stop's line is given once."""
+    s, log = setup
+    asked: list = []
+
+    def strategist(messages, info):
+        asked.append("review")
+        return _quiet_no_change(info)
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"),
+                 role_models={"strategy": FunctionModel(strategist, model_name="gemini-pro-latest")})
+    g.stop()
+    assert g._maybe_event_review({"date": "2200.01.01"}, "new war", retry=True) is False
+    g._review_strategy({"date": "2200.01.01"}, "scheduled after 5 decisions")
+    assert asked == []
+    assert [e["text"] for e in log.recent if e["kind"] == "journal"] == ["Stopped: no strategy review this time"]
 
 
 def test_a_stop_during_the_retry_starts_no_further_model(setup):  # noqa: F811

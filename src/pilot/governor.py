@@ -543,6 +543,7 @@ class Governor:
     event_triggers: ClassVar[tuple[str, ...]] = STELLARIS_TRIGGERS    # urgent reasons that start a strategy review
     rows_months: ClassVar[int] = 24                # metrics rows kept in memory (planet check, war crisis)
     human_paused: bool = False       # paused from the dashboard: only the human's Resume ends it
+    _stop_noted: bool = False        # the stop's one plain Activity line was given (pool-wait ruling 3)
     # date-stall watchdog (Stellaris; levers design ruling 23): the autosave date unchanged for
     # max(stall_floor_s, 10 x the median real seconds per month of this run's last stall_months)
     # while running means a stall: a screenshot and needs attention, with no input to the game
@@ -797,10 +798,23 @@ class Governor:
         (pool-wait design, ruling 3)."""
         return event_hooks(self.log.emit, role, self.health.family, extra, stopping=lambda: self.control.stopping)
 
-    def _stopped_note(self, what: str) -> None:
-        """The one plain line for a call that a stop ended while its pool waited for the models (pool-wait
-        ruling 3): a stop is not a failure, so no episode_error, pool_exhausted or error trace."""
-        self.log.emit("journal", text=f"Stopped while waiting for the models: {what}")
+    def _stopped_note(self, what: str, waiting: bool = True) -> None:
+        """The one plain line for a decision point a stop ended (pool-wait ruling 3): a stop is not a failure,
+        so no episode_error, pool_exhausted or error trace. Given once per stop: it says what the first call
+        the stop reached skipped, and the calls after it end without another line. `waiting`: the stop ended
+        a pool's wait for its models (else it came before the call started)."""
+        if self._stop_noted:
+            return
+        self._stop_noted = True
+        self.log.emit("journal", text=f"Stopped{' while waiting for the models' if waiting else ''}: {what}")
+
+    def _bail_if_stopping(self, what: str) -> bool:
+        """True once the run is stopping, after the stop's one plain line: no further model call starts
+        within a decision point (a review, then the decision, then a pending review)."""
+        if not self.control.stopping:
+            return False
+        self._stopped_note(what, waiting=False)
+        return True
 
     def _guarded(self, entry: dict) -> GuardedModel:
         """One pool entry with its own thinking settings (ruling 4)."""
@@ -1630,6 +1644,7 @@ class Governor:
             return
         ran = self._maybe_event_review(b, trigger)
         self._crisis_row("review", "done" if ran else "no_op", "strategy review ran" if ran
+                         else "skipped: the run is stopping" if self.control.stopping
                          else f"skipped: {self._review_cap_text()}", b["date"])
 
     def _crisis_boost_row(self, b: dict) -> None:
@@ -2149,6 +2164,8 @@ class Governor:
         def ask(agent):
             return agent.run_sync("\n".join(prompt), deps=deps,
                                   usage_limits=UsageLimits(request_limit=self.s.governor_max_requests))
+        if self._bail_if_stopping("no decision this time; the directive stays"):
+            return
         try:
             result, _ = self._call("decisions", ask,
                                    on_try=lambda e: base.update(model=e["model"], thinking_level=e["thinking"]))
@@ -2632,7 +2649,9 @@ class Governor:
         trigger in `[time] review_exempt` ("new war"; Civ VI also "city lost") always reviews and does
         restart the cap's clock. A refused request is logged and, if it was a pending one (off-frame),
         dropped (review_requested cleared) so it does not keep re-firing every decision until the cap
-        opens."""
+        opens. A run that is stopping starts no review."""
+        if self._bail_if_stopping("no strategy review this time"):
+            return False
         t = self._time()
         bypass = retry or self.strategy is None
         exempt = not bypass and t.exempt(trigger)
@@ -2774,7 +2793,9 @@ class Governor:
         answer (including change=true with no strategy) is retried once with the reasons; still invalid →
         no change. Never raises and never pauses the game: any failure (reading the game for the prompt,
         the model call, or after it) is logged, the current strategy stays, and the review is retried
-        at the next decision."""
+        at the next decision. A run that is stopping starts no review (pool-wait ruling 3)."""
+        if self._bail_if_stopping("no strategy review this time"):
+            return
         if self.pillars is None:
             self.log.emit("strategy_review_skipped", trigger=trigger, reason=f"strategy layer off: {self.pillars_error}"[:300])
             return
