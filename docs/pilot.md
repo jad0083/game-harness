@@ -155,8 +155,8 @@ far, goes to the next model, and the run continues there. A tool that already ra
 order, a purchase) is not run again. With "take turns" a run starts one model further on and keeps
 that order for all its requests. A run that ends without a usable answer (the request cap spent on
 tool calls, an answer that does not validate) is not a model failure: it runs again from the next
-model, as before the guard. When no model of the pool can be reached the pool waits for one to come
-back, up to `pool_max_wait_s` (see Breaker windows); when that wait ends without one, the call fails
+model, as before the guard. When no model of the pool can be reached the pool waits for one that can
+come back within `pool_max_wait_s` (see Breaker windows); when none does, the call fails
 (`pool_exhausted`) and the governor carries on as after any failed decision: Stellaris keeps the
 current directive; Civilization VI retries once on the Strategy models (through the same guard: those
 whose breaker is closed or due for its trial), then acts by rule.
@@ -191,13 +191,20 @@ and clears the broken marks of their models, so re-saving the same list after fi
 model again. When no model of a pool can take a request, the pool waits for one to come back
 ([design](design/2026-10-06-pool-wait-design.md)): it sleeps until the earliest open window ends, or 2 s
 (`POOL_POLL_S`) while another request holds a model's trial (a chat answer waits for the trial the
-decision holds), then tries again, and repeats until the request has waited `pool_max_wait_s` in all
-(120 s, `PILOT_POOL_WAIT_S`), when it gives up (`pool_exhausted`). Each failed trial doubles its window,
-but the wait still ends at the budget. A pool whose models are all broken (or have rejected the request)
-gives up at once, and so does every pool with `PILOT_POOL_WAIT_S=0`. The pool sleeps in steps of at most
-1 s and gives up at once when its run is stopping (a page Stop, a container stop): the cause reads
-"stopped while waiting", and Civilization VI then starts no retry on the Strategy models. Failover
-between models stays immediate; only a pool with every model down waits.
+decision holds), then tries again. A request waits at most `pool_max_wait_s` in all (120 s,
+`PILOT_POOL_WAIT_S`), and only for a model that can come back within the budget left: when no trial is
+running elsewhere and every open window ends later (a daily quota until midnight Pacific, a window
+doubled by a failed trial), it gives up at once (`pool_exhausted`) instead of sleeping the budget out.
+So the wait covers outages that end within about the first breaker window: a fresh outage opens each
+model for 60 s, its trial comes at about 60 s inside the 120 s budget, and a failed trial reopens it for
+120 s, past the 60 s left. A `PILOT_POOL_WAIT_S` above 180 s also covers the second trial (60 + 120 s).
+A pool whose models are all broken (or have rejected the request) gives up at once, and so does every
+pool with `PILOT_POOL_WAIT_S=0`. The pool sleeps in steps of at most 1 s and gives up at once when its run
+is stopping (a page Stop, a container stop), without reporting a wait it will not make. A stop is not a
+failure: the call ends quietly with one Activity line, "Stopped while waiting for the models: ..." (no
+`pool_exhausted`, no `episode_error`, no error trace); Civilization VI then starts no retry on the
+Strategy models and gives no orders by rule, and a GalCiv blocker left that way does not count as
+unresolved. Failover between models stays immediate; only a pool with every model down waits.
 
 **Family caution.** Models that share capacity fail together (Gemini 3.8 Flash and 3.7 Flash were
 overloaded together in 31 of 45 fallbacks, while 3.1 Pro answered 58 of 60), so each model has a
@@ -250,8 +257,8 @@ usable answer), `family` and `request` (the request's number in its run). `model
 every breaker change (state, until, reason, openings), `model_pace` for waits of 1 s or more,
 `model_wait` before each sleep of a pool waiting for its models (role, `models`, `seconds` of this sleep,
 `waited_s` so far in the request, `budget_s`, and `reason`: "every model is overloaded", "no model is
-available" or "a trial is running on <model>") and `pool_exhausted` (role, each model's cause; a stop
-adds the cause "stopped while waiting") when a pool gives up; Civilization VI's retry on a Strategy
+available" or "a trial is running on <model>") and `pool_exhausted` (role, each model's cause) when a
+pool gives up (not on a stop: a `journal` line says it then); Civilization VI's retry on a Strategy
 model logs these with the role "decisions retry". Deciding on Now follows the pool: the
 model being tried, the attempt, the models already tried and why, those skipped, a retry's countdown.
 `info.model_health` in `/status` holds every model's breaker, its family's caution and today's request

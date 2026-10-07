@@ -47,6 +47,7 @@ from .modelguard import (
     describe,
     emit_breaker,
     event_hooks,
+    stopped_waiting,
 )
 from .pillars import ACTION_KINDS, OrdersSpec, PillarsError, PillarSpec, TimeSpec, load_pillars, load_postures
 from .stellaris_crisis import CRISIS_PACE, POSTURE_GAP_MONTHS, boost_pressures, crisis_alloys, crisis_step, status_quo
@@ -750,7 +751,8 @@ class Governor:
                     try:
                         result = ask(agent)
                     except PoolExhausted as e:
-                        self.log.emit("pool_exhausted", role=role, causes=e.causes())
+                        if not e.stopped:           # a stop is not a pool failure: its caller says it plainly
+                            self.log.emit("pool_exhausted", role=role, causes=e.causes())
                         raise
                     except Exception as e:      # an unusable answer: the next model runs it again
                         used = configured[pool.last_answered if pool.last_answered is not None else first]["model"]
@@ -794,6 +796,11 @@ class Governor:
         """The pool's events for `role` and the run's stop flag, which ends a wait for the pool's models
         (pool-wait design, ruling 3)."""
         return event_hooks(self.log.emit, role, self.health.family, extra, stopping=lambda: self.control.stopping)
+
+    def _stopped_note(self, what: str) -> None:
+        """The one plain line for a call that a stop ended while its pool waited for the models (pool-wait
+        ruling 3): a stop is not a failure, so no episode_error, pool_exhausted or error trace."""
+        self.log.emit("journal", text=f"Stopped while waiting for the models: {what}")
 
     def _guarded(self, entry: dict) -> GuardedModel:
         """One pool entry with its own thinking settings (ruling 4)."""
@@ -899,16 +906,16 @@ class Governor:
         due for its trial are tried (an open one is passed over, not waited for): a request gets the guard's
         one retry on overload; a model that fails during the retry opens, and its pool waits for it to come
         back, up to `pool_max_wait_s` (pool-wait design); the pool's events say what failed (role
-        "decisions retry") and a pool that gives up logs `pool_exhausted`. A run that is stopping retries
-        nothing: another model call would hold the stop (pool-wait ruling 3). With PILOT_MODEL_GUARD=0
+        "decisions retry") and a pool that gives up logs `pool_exhausted`. A run that is stopping starts no
+        further entry: another model call would hold the stop (pool-wait ruling 3). With PILOT_MODEL_GUARD=0
         there are no overload waits and each failure is a `model_fallback`. (result, entry), or None
         when none answered. T512, T522 and T525 failed on 503s and the request limit, and nothing
         retried: a retry on another model tells a provider outage from a model that spends its budget
         on tool calls."""
-        if self.control.stopping:
-            return None
         failed = self.__dict__.setdefault("_failed_at", {})
         for entry in self._retry_models():
+            if self.control.stopping:
+                return None
             agent = None
             try:
                 agent = self._agent_for(entry, "decisions")
@@ -916,6 +923,8 @@ class Governor:
                     agent.model.begin_run(0, self._guard_hooks("decisions retry"))
                 result = ask(agent)
             except Exception as e:  # noqa: BLE001 - the next model, then the caller's rules
+                if stopped_waiting(e):          # a stop, not this model's failure: the check above ends the retry
+                    continue
                 failed[entry["model"]] = time.time()
                 if not self.s.model_guard:
                     self.log.emit("model_fallback", role="decisions retry", model=entry["model"],
@@ -2144,6 +2153,9 @@ class Governor:
             result, _ = self._call("decisions", ask,
                                    on_try=lambda e: base.update(model=e["model"], thinking_level=e["thinking"]))
         except Exception as e:  # noqa: BLE001 - keep playing with the current directive
+            if stopped_waiting(e):
+                self._stopped_note("no decision this time; the directive stays")
+                return
             if isinstance(e, UsageLimitExceeded):
                 e = RuntimeError(f"no answer within {self.s.governor_max_requests} model calls; "
                                  f"the current directive ({current or 'none'}) stays")
@@ -2881,7 +2893,10 @@ class Governor:
             self._review_retry = True
             # the no-op tech syncs go back to the count, so the retry lists the offers (ruling 6)
             self._tech_noops, self._review_noops = self._tech_noops + noops, 0
-            self.log.emit("episode_error", error=f"strategy review: {type(e).__name__}: {e}"[:500])
+            if stopped_waiting(e):
+                self._stopped_note("no strategy review this time")
+            else:
+                self.log.emit("episode_error", error=f"strategy review: {type(e).__name__}: {e}"[:500])
             return
         if retry_errors is not None:
             self._review_strategy(b, trigger, retried=True, errors=retry_errors, rejected=retry_rejected)

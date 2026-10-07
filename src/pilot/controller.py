@@ -15,7 +15,7 @@ from .config import Settings
 from .events import EventLog
 from .game import Game
 from .learning import Journal, LearnedStore
-from .modelguard import GuardConfig, GuardedModel, ModelHealth, PoolModel, emit_breaker
+from .modelguard import GuardConfig, GuardedModel, ModelHealth, PoolModel, emit_breaker, stopped_waiting
 from .trace import serialize
 from .wording import attention
 
@@ -169,6 +169,8 @@ class Pilot:
                 processing = 0
 
                 resolved = self._episode(report.text, report.frame)
+                if resolved is None:            # a stop ended the wait for the models: neither resolved nor failed
+                    continue
                 unresolved = 0 if resolved else unresolved + 1
                 if unresolved >= MAX_UNRESOLVED:
                     self._needs_attention(f"{MAX_UNRESOLVED} blockers in a row were not resolved", category="screen")
@@ -179,7 +181,9 @@ class Pilot:
             self._status("stopped")
             self.log.emit("run_end", turns=self.log.state.turns_advanced, episodes=self.log.state.episodes)
 
-    def _episode(self, stop_text: str, frame: bytes | None) -> bool:
+    def _episode(self, stop_text: str, frame: bytes | None) -> bool | None:
+        """Resolve one blocker with the model: True when resolved, False when not, None when a stop ended
+        the wait for the models (pool-wait ruling 3: quiet, and not counted toward MAX_UNRESOLVED)."""
         self._status("deciding")
         self.log.state.episodes += 1
         deps = Deps(self.game, self.store, self.journal, self.log, self.s, self.human,
@@ -189,6 +193,9 @@ class Pilot:
         try:
             result, usage, messages = run_episode(self.agent, deps, stop_text, frame, extra)
         except Exception as e:  # noqa: BLE001 - a failed episode must not end the run
+            if stopped_waiting(e):
+                self.log.emit("journal", text="Stopped while waiting for the models: the blocker is left as it is")
+                return None
             self.log.emit("episode_error", error=f"{type(e).__name__}: {e}"[:500])
             self._status("playing")
             return False

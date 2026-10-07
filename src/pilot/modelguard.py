@@ -504,6 +504,12 @@ class PoolExhausted(Exception):
                 + ([{"model": "-", "error": STOPPED_WAITING}] if self.stopped else []))
 
 
+def stopped_waiting(e: BaseException) -> bool:
+    """A PoolExhausted raised because the run is stopping while its pool waited (pool-wait ruling 3): not a
+    model failure, so its owner ends quietly (no pool_exhausted, no episode_error, nothing done by rule)."""
+    return isinstance(e, PoolExhausted) and e.stopped
+
+
 def _noop(**_kw) -> None:
     return None
 
@@ -742,10 +748,11 @@ class PoolModel(FallbackModel):
 
     def _next_wait(self, waited_s: float, rejected: set[str]) -> tuple[float, list[str], str] | None:
         """Pool-wait rulings 1-2 (amending ruling 11): when no model can take the request, how long to sleep
-        before looking again, the models waited for and why; None when nothing comes back within the
-        request's budget (every model broken or rejecting the request, a budget of 0 or spent, nothing
-        open or on trial). The sleep lasts until the earliest open window ends, or one poll step while
-        another request holds a model's trial, and never past the budget."""
+        before looking again, the models waited for and why; None when nothing can come back within the
+        request's budget (every model broken or rejecting the request, a budget of 0 or spent, or no trial
+        running elsewhere and no open window ending within the budget left: a daily quota until midnight,
+        a window doubled by a failed trial; ruling W3). The sleep lasts until the earliest open window ends,
+        or one poll step while another request holds a model's trial, and never past the budget."""
         budget = self.health.cfg.pool_max_wait_s
         names = list(dict.fromkeys(gm.name for gm in self.guarded))
         states = {n: self.health.status(n) for n in names}
@@ -755,9 +762,9 @@ class PoolModel(FallbackModel):
         now = self.health.clock()
         reopen = self.health.earliest_reopen(live)
         running = [n for n in live if states[n] == "half_open"]
-        due = ([max(0.0, reopen - now)] if reopen is not None else []) + ([POOL_POLL_S] if running else [])
-        if not due:
+        if not running and (reopen is None or reopen - now > budget - waited_s):
             return None
+        due = ([max(0.0, reopen - now)] if reopen is not None else []) + ([POOL_POLL_S] if running else [])
         if running and (reopen is None or reopen - now > POOL_POLL_S):
             reason = f"a trial is running on {running[0]}"
         elif self.health.open_kinds(live) == {OVERLOADED}:
@@ -781,17 +788,18 @@ class PoolModel(FallbackModel):
                     raise PoolExhausted(self.role, tried, rest)
                 step, models, reason = wait
                 if step > 0:
+                    # a run already stopping waits for nothing and reports no wait (pool-wait ruling 3)
+                    if self.hooks.stopping():
+                        raise PoolExhausted(self.role, tried, rest, stopped=True)
                     self.hooks.on_wait(models=models, seconds=round(step, 1), waited=round(waited_s, 1),
                                        budget=float(self.health.cfg.pool_max_wait_s), reason=reason)
                     left = step
-                    while True:                     # in steps, so a stop ends the wait at once (pool-wait ruling 3)
-                        if self.hooks.stopping():
-                            raise PoolExhausted(self.role, tried, rest, stopped=True)
-                        if left <= 0:
-                            break
+                    while left > 0:                 # in steps, so a stop ends the wait at once
                         chunk = min(POOL_STOP_STEP_S, left)
                         await _sleep(chunk)
                         left -= chunk
+                        if self.hooks.stopping():
+                            raise PoolExhausted(self.role, tried, rest, stopped=True)
                     waited_s += step
                 # a model whose window ended (trial) or whose trial another request won (closed) is tried again
                 done = {i for i in done if self.guarded[i].name in rejected

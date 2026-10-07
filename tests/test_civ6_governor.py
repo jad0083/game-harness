@@ -3126,9 +3126,9 @@ def test_t525_on_the_model_guard_the_pool_gives_up_then_the_retry_and_the_rule_b
 
 
 def test_a_stop_during_the_pool_wait_skips_the_retry_on_the_strategy_models(setup, monkeypatch):
-    """Pool-wait ruling 3: a Stop while the decision's pool waits ends the wait at once; the failed decision
-    then starts no retry on the Strategy models (a model call would hold the stop), and the governor acts by
-    rule as after any failed decision."""
+    """Pool-wait ruling 3: a Stop while the decision's pool waits ends the wait at once, and the decision ends
+    quietly: no retry on the Strategy models (a model call would hold the stop), no orders by rule (no tuner
+    orders during a stop), no error and no error trace; one plain line says why."""
     from pilot import modelguard as G
     decide, strat = [], []
     game = FakeCiv6(_t525(), index=INDEX, prices={("Guangzhou", "unit:machine_gun", "faith"): 1080})
@@ -3139,10 +3139,34 @@ def test_a_stop_during_the_pool_wait_skips_the_retry_on_the_strategy_models(setu
             g.stop()
     monkeypatch.setattr(G, "_sleep", sleep)
     g.run(max_decisions=1)
-    ex = [e for e in g.log.recent if e["kind"] == "pool_exhausted"]
-    assert [e["role"] for e in ex] == ["decisions"] and ex[0]["causes"][-1]["error"] == "stopped while waiting"
+    kinds = [e["kind"] for e in g.log.recent]
+    assert "episode_error" not in kinds and "pool_exhausted" not in kinds
     assert decide == ["decide"] * 2 and not [c for c in strat if c.startswith("retry")]
+    assert not _sent(game, "purchase") and not _sent(game, "research") and traces(setup) == []
+    assert [e["text"] for e in g.log.recent if e["kind"] == "journal"] == [
+        "Stopped while waiting for the models: no decision this time, no orders given"]
     assert any(e["kind"] == "model_wait" and e["role"] == "decisions" for e in g.log.recent)
+
+
+def test_a_stop_during_the_retry_gives_no_orders_by_rule(setup):
+    """A decision that failed (no wait: budget 0), then a Stop during ruling 20's retry: the governor sends no
+    tuner orders by rule while stopping; the decision's error and its trace stay."""
+    setup[0].pool_max_wait_s = 0
+    decide, strat, holder = [], [], {}
+    game = FakeCiv6(_t525(), index=INDEX, prices={("Guangzhou", "unit:machine_gun", "faith"): 1080})
+    inner = _strategist_model(strat, None)
+
+    def strategist(messages, info):
+        if not is_review(info):
+            holder["g"].stop()                          # the Stop arrives while the retry runs
+        return inner.function(messages, info)
+    g = _resilience_governor(setup, game, decide, FunctionModel(strategist))
+    holder["g"] = g
+    g.run(max_decisions=1)
+    assert [c for c in strat if c.startswith("retry")], "the retry ran"
+    assert not _sent(game, "purchase"), "no rule buy while stopping"
+    assert any(e["kind"] == "episode_error" for e in g.log.recent)
+    assert traces(setup)[0]["outcome"] == "error" and "orders" not in traces(setup)[0]
 
 
 def test_the_pool_hooks_read_the_stop_flag(setup):

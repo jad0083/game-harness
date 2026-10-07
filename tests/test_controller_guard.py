@@ -68,14 +68,14 @@ def test_each_episode_publishes_todays_counts(corpus, tmp_path):  # noqa: F811
     assert log.state.info["model_health"]["models"]["google:gemini-3.8-flash"]["today"] == 2
 
 
-def test_a_stop_ends_the_wait_for_an_episodes_models(corpus, tmp_path, monkeypatch):  # noqa: F811
-    """Pool-wait ruling 3 for GalCiv: the episode's pool reads the pilot's stop flag."""
+def _down_pilot(corpus, tmp_path, monkeypatch, reports=()):  # noqa: F811
+    """A pilot whose one model always answers 503, stopped once the pool waits for it; (pilot, log, waited)."""
     from pilot import modelguard as G
     s, log = make(corpus, tmp_path)
 
     def down(messages, info):
         raise E503
-    pilot = Pilot(s, FakeGame([]), log, model=FunctionModel(down, model_name="gemini-3.8-flash"))
+    pilot = Pilot(s, FakeGame(list(reports)), log, model=FunctionModel(down, model_name="gemini-3.8-flash"))
     waited = []
 
     async def sleep(seconds):
@@ -83,11 +83,33 @@ def test_a_stop_ends_the_wait_for_an_episodes_models(corpus, tmp_path, monkeypat
             waited.append(seconds)
             pilot.stop()
     monkeypatch.setattr(G, "_sleep", sleep)
-    pilot._episode("a dialog is up", None)
-    ex = [e for e in log.recent if e["kind"] == "pool_exhausted"][-1]
-    assert ex["role"] == "episodes" and ex["causes"][-1] == {"model": "-", "error": "stopped while waiting"}
-    assert sum(waited) <= G.POOL_STOP_STEP_S and any(e["kind"] == "episode_error" for e in log.recent)
+    return pilot, log, waited
+
+
+def test_a_stop_ends_the_wait_for_an_episodes_models(corpus, tmp_path, monkeypatch):  # noqa: F811
+    """Pool-wait ruling 3 for GalCiv: the episode's pool reads the pilot's stop flag, and the episode ends
+    quietly (no episode_error, no pool_exhausted; one plain line)."""
+    from pilot import modelguard as G
+    pilot, log, waited = _down_pilot(corpus, tmp_path, monkeypatch)
+    assert pilot._episode("a dialog is up", None) is None, "neither resolved nor failed"
+    kinds = [e["kind"] for e in log.recent]
+    assert sum(waited) <= G.POOL_STOP_STEP_S
+    assert "episode_error" not in kinds and "pool_exhausted" not in kinds
+    assert [e["text"] for e in log.recent if e["kind"] == "journal"] == [
+        "Stopped while waiting for the models: the blocker is left as it is"]
     assert [e["role"] for e in log.recent if e["kind"] == "model_wait"] == ["episodes"]
+
+
+def test_a_stopped_episode_does_not_count_as_unresolved(corpus, tmp_path, monkeypatch):  # noqa: F811
+    from pilot import controller
+    from pilot.game import TurnReport
+    monkeypatch.setattr(controller, "MAX_UNRESOLVED", 1)    # one counted failure would ask for a human
+    pilot, log, _ = _down_pilot(corpus, tmp_path, monkeypatch,
+                                [TurnReport(2, "dialog", "Advanced 2 turn(s), then stopped at turn 3: a dialog is up",
+                                            b"\xff\xd8x")])
+    pilot.run(max_episodes=3)
+    kinds = [e["kind"] for e in log.recent]
+    assert "needs_attention" not in kinds and "episode_error" not in kinds and kinds[-1] == "run_end"
 
 
 def test_changing_the_model_clears_its_broken_mark(corpus, tmp_path):  # noqa: F811

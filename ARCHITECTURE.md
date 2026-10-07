@@ -454,9 +454,11 @@ pilot view ── Supervisor ──► pilot run (its child; Start run, resume a
   history to the next, so tools are not run again. When none can take it, the pool waits for one to come
   back (until the earliest open window ends, or 2 s while another request holds a model's trial), again
   and again up to `pool_max_wait_s` per request (`PILOT_POOL_WAIT_S`, checked by `Settings.from_env`),
-  reporting each sleep through `Hooks.on_wait` (`model_wait`) and sleeping in steps of at most 1 s that
-  end at once when `Hooks.stopping()` says the run is stopping; then `PoolExhausted` names each model's
-  cause ("stopped while waiting" after a stop). `Governor._call` runs each role's one agent on its pool under a per-role lock, with
+  but only while a trial runs elsewhere or an open window ends within the budget left; it reports each
+  sleep through `Hooks.on_wait` (`model_wait`) and sleeps in steps of at most 1 s that end at once when
+  `Hooks.stopping()` says the run is stopping. Then `PoolExhausted` names each model's cause; after a stop
+  it is `stopped` ("stopped while waiting"), and `stopped_waiting(e)` lets each game end that call quietly
+  with one `journal` line instead of an error. `Governor._call` runs each role's one agent on its pool under a per-role lock, with
   the run's rotation, publishes `info.model_health`, and runs a run that ended without a usable answer
   again from the next model; `_call_unguarded` is the path before the guard (`PILOT_MODEL_GUARD=0`).
 - `dashboard.py` API: `/api/campaigns`, `/api/decisions`, `/api/decision`, `/api/metrics`,

@@ -102,6 +102,7 @@ from .governor import (
     remember_rule,
     served_model,
 )
+from .modelguard import stopped_waiting
 from .threat import (
     behind,
     behind_text,
@@ -1658,6 +1659,10 @@ class Civ6Governor(Governor):
             result, _ = self._call("decisions", ask,
                                    on_try=lambda e: base.update(model=e["model"], thinking_level=e["thinking"]))
         except Exception as e:  # noqa: BLE001 - keep playing: a retry, then the governor acts by rule
+            if stopped_waiting(e):     # a stop, not a failure: no retry, no tuner orders by rule, no error trace
+                self._resolved = pending + self._resolved
+                self._stopped_note("no decision this time, no orders given")
+                return
             if isinstance(e, UsageLimitExceeded):
                 e = RuntimeError(f"no answer within {self.s.governor_max_requests} model calls; no orders given")
             error = f"{type(e).__name__}: {e}"
@@ -1665,7 +1670,8 @@ class Civ6Governor(Governor):
             got = self._retry_decision(lambda agent: ask(agent, RETRY_NOTE))       # ruling 20
             if got is None:
                 self._resolved = pending + self._resolved
-                filled = self._fill_without_answer(b, error)
+                # no tuner orders by rule once the run is stopping (pool-wait ruling 3)
+                filled = [] if self.control.stopping else self._fill_without_answer(b, error)
                 self.log.save_trace(n, {**base, "outcome": "error", "error": error[:2000],
                                         "seconds": round(time.time() - started, 1),
                                         **({"orders": filled} if filled else {}),

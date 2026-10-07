@@ -342,7 +342,8 @@ def run_episode(agent: Agent[Deps, EpisodeResult], deps: Deps, stop_text: str, f
         try:
             result = agent.run_sync(content, deps=deps, usage_limits=limits)
         except PoolExhausted as e:
-            deps.log.emit("pool_exhausted", role="episodes", causes=e.causes())
+            if not e.stopped:               # a stop is not a pool failure: the pilot says it plainly
+                deps.log.emit("pool_exhausted", role="episodes", causes=e.causes())
             raise
     else:
         result = run_with_retry(lambda: agent.run_sync(content, deps=deps, usage_limits=limits),

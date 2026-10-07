@@ -98,9 +98,26 @@ def test_no_model_answers_then_pool_exhausted_and_the_directive_stays(setup):  #
     assert any(e["kind"] == "episode_error" for e in log.recent)
 
 
+def _stop_in_the_wait(monkeypatch, health, model: str, stop) -> list[float]:
+    """The guard's sleeps: once `model` is open (the pool's wait), the run is stopped. Returns those sleeps."""
+    from pilot import modelguard as G
+    waited: list[float] = []
+
+    async def sleep(seconds):
+        if health().status(model) == "open":
+            waited.append(seconds)
+            stop()
+    monkeypatch.setattr(G, "_sleep", sleep)
+    return waited
+
+
+def _stop_lines(log) -> list[str]:
+    return [e["text"] for e in log.recent if e["kind"] == "journal" and e["text"].startswith("Stopped while waiting")]
+
+
 def test_a_stop_ends_the_wait_for_the_decisions_models(setup, monkeypatch):  # noqa: F811
     """Pool-wait ruling 3: a page Stop while the decision's pool waits for its model ends the wait within a
-    step; the pool gives up with "stopped while waiting", and the wait was reported as model_wait."""
+    step, and the decision ends quietly: one plain line, no error, no error trace, no crisis ladder by rule."""
     from pilot import modelguard as G
     s, log = setup
 
@@ -109,20 +126,52 @@ def test_a_stop_ends_the_wait_for_the_decisions_models(setup, monkeypatch):  # n
             return _quiet_no_change(info)
         raise E503
     g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=FunctionModel(down))
-    waited = []
-
-    async def sleep(seconds):          # the pool's wait starts once the model is open: the Stop comes then
-        if g.health.status(s.model) == "open":
-            waited.append(seconds)
-            g.stop()
-    monkeypatch.setattr(G, "_sleep", sleep)
+    crisis = []
+    g._crisis_without_answer = lambda *a: crisis.append(a)
+    waited = _stop_in_the_wait(monkeypatch, lambda: g.health, s.model, g.stop)
     g.run(max_decisions=1)
-    ex = [e for e in log.recent if e["kind"] == "pool_exhausted"][-1]
-    assert ex["role"] == "decisions" and ex["causes"][-1] == {"model": "-", "error": "stopped while waiting"}
+    kinds = [e["kind"] for e in log.recent]
     assert sum(waited) <= G.POOL_STOP_STEP_S
+    assert "episode_error" not in kinds and "pool_exhausted" not in kinds and crisis == []
+    assert _stop_lines(log) == ["Stopped while waiting for the models: no decision this time; the directive stays"]
+    assert not log.store.query("SELECT 1 FROM decisions WHERE run_id=? AND episode > 0", (log.state.run_id,))
     wait = next(e for e in log.recent if e["kind"] == "model_wait")
     assert (wait["role"], wait["models"], wait["budget_s"], wait["reason"]) == (
         "decisions", [s.model], 120.0, "every model is overloaded")
+
+
+def test_a_stop_during_a_strategy_review_wait_ends_quietly(setup, monkeypatch):  # noqa: F811
+    s, log = setup
+
+    def down(messages, info):
+        raise E503
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=FunctionModel(down))
+    _stop_in_the_wait(monkeypatch, lambda: g.health, s.model, g.stop)
+    g.run(max_decisions=1)
+    kinds = [e["kind"] for e in log.recent]
+    assert "episode_error" not in kinds and "pool_exhausted" not in kinds
+    assert _stop_lines(log) == ["Stopped while waiting for the models: no strategy review this time",
+                                "Stopped while waiting for the models: no decision this time; the directive stays"]
+
+
+def test_a_stop_during_the_retry_starts_no_further_model(setup):  # noqa: F811
+    """Ruling 20's retry: a stop that ended one entry's pool wait starts no call on the next entry."""
+    from pilot.modelguard import PoolExhausted
+    s, log = setup
+    g = Governor(s, FakeStellaris([briefing("2200.01.01")]), log, model=decisions("keep"))
+    entries = [{"model": "google:gemini-pro-latest", "thinking": "low"},
+               {"model": "google:gemini-3.8-flash", "thinking": "low"}]
+    g._retry_models = lambda: entries
+    g._agent_for = lambda entry, role: entry
+    asked = []
+
+    def ask(agent):
+        asked.append(agent["model"])
+        g.stop()                                       # the Stop arrives during this entry's pool wait
+        raise PoolExhausted("decisions retry", [], [agent["model"]], stopped=True)
+    assert g._retry_decision(ask) is None
+    assert asked == ["google:gemini-pro-latest"]
+    assert not any(e["kind"] == "pool_exhausted" for e in log.recent), "a stop is not a pool failure"
 
 
 def test_the_pool_hooks_read_the_stop_flag(setup):  # noqa: F811

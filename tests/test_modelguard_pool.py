@@ -219,15 +219,15 @@ def test_everything_open_waits_up_to_the_limit_then_gives_up(ticking):
     with pytest.raises(G.PoolExhausted) as e:
         run(pool_of(h, ("google:gemini-3.8-flash", a)))
     # the 503 and its 1 s retry open the breaker for 60 s; the pool waits 60 s; the trial fails (no retry) and
-    # opens it for 120 s; the pool waits the 60 s left of its 120 s budget and gives up
-    assert ticking.slept[0] == 1.0 and sum(ticking.slept) == 121.0 and a.calls == 3
+    # opens it for 120 s, past the 60 s left of the 120 s budget: the pool gives up at once
+    assert ticking.slept[0] == 1.0 and sum(ticking.slept) == 61.0 and a.calls == 3
     assert e.value.causes() == [{"model": "google:gemini-3.8-flash", "error": "overloaded (503)"}] * 2
     ticking.slept.clear()
     h2, _ = make_health(ticking.clock, pool_max_wait_s=30)
     b = Script(E503)
     with pytest.raises(G.PoolExhausted):
         run(pool_of(h2, ("google:gemini-3.8-flash", b)))
-    assert sum(ticking.slept) == 31.0 and b.calls == 2, "a 60 s window is past the 30 s budget: no trial"
+    assert ticking.slept == [1.0] and b.calls == 2, "a 60 s window is past the 30 s budget: no wait, only the retry"
 
 
 def test_the_pool_waits_for_the_earliest_window_and_answers(ticking):
@@ -251,7 +251,8 @@ def test_the_pool_waits_for_the_earliest_window_and_answers(ticking):
 
 
 def test_the_wait_ends_at_the_budget_however_windows_move(ticking):
-    """Each failed trial doubles the window (60 s, then 120 s); the request's waiting still ends at the budget."""
+    """Each failed trial doubles the window (60 s, then 120 s, then 240 s); the pool waits only for a window that
+    ends within the budget left, so its waiting never passes the budget (ruling W3)."""
     h, _ = make_health(ticking.clock, pool_max_wait_s=120)
     a = Script(E503)
     rec = Recorder(waits=True)
@@ -259,10 +260,31 @@ def test_the_wait_ends_at_the_budget_however_windows_move(ticking):
         run(pool_of(h, (FLASH, a)), rec)
     waits = rec.of("wait")
     assert a.calls == 3, "the 503, its retry, then the trial after the first window"
-    assert [(w["seconds"], w["waited"]) for w in waits] == [(60.0, 0.0), (60.0, 60.0)]
-    assert {w["reason"] for w in waits} == {"every model is overloaded"} and {w["budget"] for w in waits} == {120.0}
-    assert sum(ticking.slept) <= 1.0 + 120 + G.POOL_POLL_S, "the guard's 1 s retry, then at most the budget"
+    assert [(w["seconds"], w["waited"]) for w in waits] == [(60.0, 0.0)], "the 120 s window ends past the 60 s left"
+    assert waits[0]["reason"] == "every model is overloaded" and waits[0]["budget"] == 120.0
+    assert sum(ticking.slept) == 61.0, "the guard's 1 s retry, then the one window"
     assert [c["error"] for c in e.value.causes()] == ["overloaded (503)"] * 2 and not e.value.stopped
+    ticking.slept.clear()
+    h2, _ = make_health(ticking.clock, pool_max_wait_s=200)        # above 180 s: the second trial too
+    b = Script(E503)
+    rec2 = Recorder(waits=True)
+    with pytest.raises(G.PoolExhausted):
+        run(pool_of(h2, (FLASH, b)), rec2)
+    assert [(w["seconds"], w["waited"]) for w in rec2.of("wait")] == [(60.0, 0.0), (120.0, 60.0)]
+    assert b.calls == 4 and sum(ticking.slept) == 181.0, "a 240 s window is past the 20 s left: no third wait"
+
+
+def test_a_daily_quota_is_not_waited_for(ticking):
+    """Ruling W3: every model on its daily quota (open until midnight Pacific) cannot come back within the
+    budget, so the pool gives up at once instead of sleeping the budget out."""
+    h, _ = make_health(ticking.clock)
+    for name in (PRO, FLASH):
+        h.failed(name, G.Failure(G.DAILY_QUOTA, 429))
+    rec = Recorder(waits=True)
+    with pytest.raises(G.PoolExhausted) as e:
+        run(pool_of(h, (PRO, Script("x")), (FLASH, Script("y"))), rec)
+    assert ticking.slept == [] and rec.of("wait") == []
+    assert [c["error"] for c in e.value.causes()] == ["skipped", "skipped"]
 
 
 def test_a_second_request_waits_for_a_running_trial(ticking):
@@ -284,6 +306,27 @@ def test_a_second_request_waits_for_a_running_trial(ticking):
     assert result.output == "chat answered" and a.calls == 1
     assert [(w["seconds"], w["reason"]) for w in rec.of("wait")] == [(G.POOL_POLL_S, f"a trial is running on {PRO}")] * 2
     assert sum(ticking.slept) == pytest.approx(2 * G.POOL_POLL_S)
+
+
+def test_an_abandoned_trial_is_picked_up_by_the_waiting_request(ticking):
+    """Another request holds the model's trial, then abandons it (cancelled, no verdict): the model is due for
+    its trial again, and the waiting request takes it and is answered."""
+    clock = ticking.clock
+    h, _ = make_health(clock)
+    h.failed(PRO, G.Failure(G.OVERLOADED, 503))
+    clock.t += 60
+    assert h.begin_trial(PRO)                           # the other request's trial
+
+    def abandoned(state):                               # during the first poll step
+        if h.status(PRO) == "half_open":
+            h.abandon_trial(PRO)
+    ticking.on_sleep = abandoned
+    a = Script("answered on the abandoned trial")
+    rec = Recorder(waits=True)
+    result, _ = run(pool_of(h, (PRO, a), role="chat"), rec)
+    assert result.output == "answered on the abandoned trial" and a.calls == 1
+    assert [w["reason"] for w in rec.of("wait")] == [f"a trial is running on {PRO}"]
+    assert sum(ticking.slept) == pytest.approx(G.POOL_POLL_S) and h.status(PRO) == "closed"
 
 
 def test_a_model_whose_trial_succeeded_elsewhere_is_tried_again(ticking):
@@ -351,6 +394,11 @@ def test_a_stop_ends_the_wait(ticking):
     assert e.value.stopped and e.value.causes()[-1] == {"model": "-", "error": "stopped while waiting"}
     assert str(e.value).endswith("stopped while waiting")
     assert rec.of("wait")[0]["seconds"] == 60.0
+    ticking.slept.clear()
+    already = Recorder(waits=True, stopping=lambda: True)  # a run already stopping: no wait, and no model_wait
+    with pytest.raises(G.PoolExhausted) as e2:
+        run(pool_of(h, (PRO, Script("never sent"))), already)
+    assert e2.value.stopped and ticking.slept == [] and already.of("wait") == []
 
 
 def test_no_budget_fails_at_once(ticking):
