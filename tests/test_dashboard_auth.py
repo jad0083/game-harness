@@ -303,6 +303,52 @@ def test_a_corrupt_store_is_moved_aside_and_an_empty_one_starts(tmp_path, clock,
     assert "corrupt" in caplog.text
 
 
+def test_two_first_opens_of_a_new_store_do_not_race(tmp_path, clock):
+    import threading
+    errors = []
+    for i in range(200):
+        path = tmp_path / f"s{i}" / "auth.sqlite"
+        path.parent.mkdir()
+        barrier = threading.Barrier(2)
+
+        def opener(i=i, path=path, barrier=barrier):
+            try:
+                barrier.wait()
+                A.AuthStore(path, clock=clock).grants()
+            except BaseException as e:      # noqa: BLE001 - reported below
+                errors.append(f"{i}: {type(e).__name__}: {e}")
+
+        threads = [threading.Thread(target=opener) for _ in range(2)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+    assert not errors, errors[:5]
+    assert not list(tmp_path.glob("**/*.corrupt-*"))
+
+
+def test_a_busy_store_is_retried_not_moved_aside(tmp_path, clock, monkeypatch):
+    import sqlite3
+    path = tmp_path / "auth.sqlite"
+    A.AuthStore(path, clock=clock).set_meta("k", "v")
+    real = A.AuthStore._open
+    calls = []
+
+    def flaky(self):
+        calls.append(1)
+        if len(calls) == 1:
+            raise sqlite3.OperationalError("database is locked")
+        return real(self)
+
+    monkeypatch.setattr(A.AuthStore, "_open", flaky)
+    monkeypatch.setattr(A.time, "sleep", lambda s: None)
+    store = A.AuthStore(path, clock=clock)
+    assert len(calls) == 2
+    assert store.meta("k") == "v"
+    assert not store.recreated
+    assert not list(tmp_path.glob("*.corrupt-*"))
+
+
 def test_a_revoke_by_the_cli_applies_on_the_next_request(tmp_path, clock):
     app, auth = viewer(tmp_path, clock)
     dev, cookie = browser_cookie(auth)

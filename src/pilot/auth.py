@@ -491,7 +491,9 @@ class AuthStore:
         self._lock = threading.RLock()
         self.recreated = False            # moved aside as corrupt: an empty store started
         try:
-            self.db = self._open()
+            self.db = self._open_patiently()
+        except sqlite3.OperationalError:
+            raise                          # busy or locked is not damage: never move a live store aside
         except sqlite3.DatabaseError as e:
             self.recreated = True
             stamp = time.strftime("%Y%m%d-%H%M%S")
@@ -504,16 +506,35 @@ class AuthStore:
                     os.replace(p, Path(str(self.path) + f".corrupt-{stamp}" + suffix))
             self.db = self._open()
 
+    OPEN_ATTEMPTS = 10
+    OPEN_BACKOFF_S = 0.1
+
+    def _open_patiently(self) -> sqlite3.Connection:
+        """_open, retried while SQLite reports the file busy ("database is locked", "locking protocol",
+        e.g. during another connection's WAL setup); the last such error is raised."""
+        for attempt in range(self.OPEN_ATTEMPTS):
+            try:
+                return self._open()
+            except sqlite3.OperationalError as e:
+                if attempt == self.OPEN_ATTEMPTS - 1:
+                    raise
+                log.warning("auth store %s is busy (%s): retrying", self.path, e)
+                time.sleep(self.OPEN_BACKOFF_S)
+        raise AssertionError("unreachable")
+
     def _open(self) -> sqlite3.Connection:
         if not self.path.exists():      # created 0600 before SQLite opens it, so -wal and -shm get the same mode
-            os.close(os.open(self.path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600))
+            try:
+                os.close(os.open(self.path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600))
+            except FileExistsError:     # another opener created it first, with the same mode
+                pass
         db = sqlite3.connect(self.path, isolation_level=None, check_same_thread=False, timeout=2)
         try:
             db.row_factory = sqlite3.Row
             db.execute("PRAGMA busy_timeout=2000")
             db.execute("PRAGMA journal_mode=WAL")
             if db.execute("PRAGMA quick_check").fetchone()[0] != "ok":
-                raise sqlite3.DatabaseError("quick_check failed")
+                raise sqlite3.DatabaseError("quick_check failed")   # not an OperationalError: real damage
             db.executescript(SCHEMA)
             db.execute("INSERT OR IGNORE INTO meta (key, value) VALUES ('schema_version', ?)", (SCHEMA_VERSION,))
         except sqlite3.DatabaseError:
