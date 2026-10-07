@@ -1725,8 +1725,10 @@ function renderGovernor() {
     announce = `Deciding ${date}.`;
     if (d.model) {
       const after = (d.after || []).map((a) => `after ${shortModel({ model: a.model })} was ${a.error}`).join(", ");
-      facts.push(`${esc(shortModel({ model: d.model }))}${d.max_attempts > 1 ? `, call ${d.attempt} of ${d.max_attempts}` : ""}${after ? `, ${esc(after)}` : ""}.`);
+      facts.push(`${esc(shortModel({ model: d.model }))}${d.max_attempts > 1 ? `, call ${d.attempt}${d.attempt <= d.max_attempts ? ` of ${d.max_attempts}` : ""}` : ""}${after ? `, ${esc(after)}` : ""}.`);
     }
+    const mw = S.last.model_wait;
+    if (mw) facts.push(`Waiting for ${esc(poolName(mw.models))} to recover (${esc(waitReason(mw.reason))}), ${dur(mw.waited_s)} so far, up to ${dur(Math.max(0, (+mw.budget_s || 0) - (+mw.waited_s || 0)))} more.`);
     if (d.retry_at && d.retry_at > Date.now() / 1000) facts.push(`Retrying in <span class="tick" data-until="${d.retry_at}" aria-hidden="true"></span>${d.waiting ? ` (${esc(d.waiting)})` : ""}.`);
     if (d.trigger) facts.push(`Trigger: ${esc(tidy(d.trigger))}.`);
   } else if (state === "needs") {
@@ -2837,6 +2839,10 @@ const poolName = (ms) => {
   const all = [...new Set(ms || [])];
   return all.length && all.every((m) => /^(google[\w-]*:)?gemini/.test(m)) ? "Gemini" : all.map(modelName).join(", ") || "the models";
 };
+// a wait's reason with the raw model id in "a trial is running on <id>" shown as its display name
+const waitReason = (r) => String(r || "no model is available").replace(/(a trial is running on )(\S+)/, (_, a, m) => a + modelName(m));
+// the roles whose wait belongs on the Deciding card (chat waits are only in Activity)
+const waitsDecision = (ev) => ev && (ev.role || "decisions") !== "chat";
 // "autoplay at T57: Error: …" -> "Autoplay at T57 failed: the game's tuner did not answer (timed out)"
 function failedStep(err, what = "failed") {
   const e = String(err || ""), m = /^([a-z][\w .\-/]{1,40}?): (?=\S)/i.exec(e);
@@ -2882,8 +2888,8 @@ function describe(ev) {
     case "model_retry": return `${sentence(errorCause(ev.error))}; trying again in ${ev.delay} s${ev.role && ev.role !== "decisions" ? ` (${human(ev.role)})` : ""}`;
     case "model_breaker": return breakerSentence(ev);
     case "model_pace": return `Waited ${dur(ev.waited_s)} before calling ${modelName(ev.model)}, to keep requests apart`;
-    case "model_wait": return `Waiting up to ${dur(Math.max(0, (+ev.budget_s || 0) - (+ev.waited_s || 0)))} more for ${poolName(ev.models)} to recover (${ev.reason || "no model is available"}), ${dur(ev.waited_s)} so far${ev.role && ev.role !== "decisions" ? ` (${human(ev.role)})` : ""}`;
-    case "pool_exhausted": return `No model could answer${ev.role && ev.role !== "decisions" ? ` (${human(ev.role)})` : ""}: ${(ev.causes || []).map((c) => `${modelName(c.model)} ${c.error}`).join("; ")}`;
+    case "model_wait": return `Waiting up to ${dur(Math.max(0, (+ev.budget_s || 0) - (+ev.waited_s || 0)))} more for ${poolName(ev.models)} to recover (${waitReason(ev.reason)}), ${dur(ev.waited_s)} so far${ev.role && ev.role !== "decisions" ? ` (${human(ev.role)})` : ""}`;
+    case "pool_exhausted": return `No model could answer${ev.role && ev.role !== "decisions" ? ` (${human(ev.role)})` : ""}: ${(ev.causes || []).map((c) => (c.model === "-" ? c.error : `${modelName(c.model)} ${c.error}`)).join("; ")}`;
     case "model": return `Now using ${modelName(ev.model)}${ev.thinking ? ` (${ev.thinking} thinking)` : ""}${byWho(ev)}`;
     case "models": return `Models changed${ev.by && ev.by !== "the controller" ? ` by ${ev.by}` : ""}: ${(ev.models || []).map((m) => modelName(m.model)).join(", ")}${ev.rotate ? ", taking turns" : ""}`;
     case "roles": return `Models per role changed${ev.by && ev.by !== "the controller" ? ` by ${ev.by}` : ""}`;
@@ -2962,7 +2968,7 @@ const PROBLEM_KINDS = new Set(["briefing_error", "episode_error", "needs_attenti
                                "stall", "self_paused", "learn_rejected", "strategy_rejected", "strategy_mismatch", "strategy_disabled", "last_stand_off",
                                "pool_exhausted"]);
 const ORDER_KINDS = new Set(["episode", "strategy_action", "last_stand", "last_stand_check", "autopilot", "action", "turn", "popups_quieted", "capture"]);
-const MODEL_KINDS = new Set(["model", "models", "roles", "model_retry", "model_fallback", "model_breaker", "model_pace", "pool_exhausted", "episode_error", "consult", "learned", "learn_rejected",
+const MODEL_KINDS = new Set(["model", "models", "roles", "model_retry", "model_fallback", "model_breaker", "model_pace", "model_wait", "pool_exhausted", "episode_error", "consult", "learned", "learn_rejected",
                              "learned_disabled", "strategy", "strategy_review", "strategy_review_skipped", "strategy_rejected", "journal", "question"]);
 function feedCats(ev) {
   const c = new Set();
@@ -2984,6 +2990,10 @@ function remember(ev) {
   if (ev.kind === "autopilot") (S.autopilot = S.autopilot || []).push(ev);
   if (["order_outcome", "order_followed", "last_stand", "last_stand_off", "popups_quieted"].includes(ev.kind)) { if (S.tab === "levers") flag("levers"); ordersSoon(); }
   if (ev.kind === "control" && ev.action === "pause") S.last.pause = ev;
+  // a decision's wait for its models holds until the decision moves on (its next try, trace or failure)
+  if (ev.kind === "model_wait") { if (waitsDecision(ev)) S.last.model_wait = ev; }
+  else if (["trace", "episode_error"].includes(ev.kind) || (["model_fallback", "pool_exhausted"].includes(ev.kind) && waitsDecision(ev))
+           || (ev.kind === "status" && ev.status === "deciding")) delete S.last.model_wait;
   if (ev.kind === "model_fallback" || ev.kind === "episode_error") { clearTimeout(S.healthT); S.healthT = setTimeout(loadHealth, 1500); }
 }
 // The feed of the campaign on screen: its events oldest first (at most 600), each once.

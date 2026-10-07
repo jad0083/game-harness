@@ -270,3 +270,35 @@ def test_deciding_counts_from_when_it_started_without_info_deciding(browser, liv
     assert first.startswith("Deciding T57: ") and secs(first) >= 29, first
     assert secs(later) >= secs(first) + 3, (first, later)
     w.context.close()
+
+
+@pytest.mark.parametrize("scenario", ["deciding"])
+def test_deciding_says_it_waits_for_the_models_until_the_decision_moves_on(browser, live_servers):
+    w = open_context(browser, "desktop-light", live_servers)
+    load(w)
+    page, log, live = w.page, live_servers["log"], live_servers["live"]
+    wait = {"role": "decisions", "models": ["google:gemini-pro-latest", "google:gemini-3.8-flash"], "seconds": 40,
+            "waited_s": 45, "budget_s": 120, "reason": "a trial is running on google:gemini-pro-latest"}
+    live.call(log.emit, "model_wait", **{**wait, "role": "chat"})      # another role's wait is not this card's
+    page.wait_for_timeout(1500)
+    assert "Waiting for" not in page.text_content("#gov-facts")
+    live.call(log.emit, "model_wait", **wait)
+    page.wait_for_function("() => document.getElementById('gov-facts').textContent.includes('Waiting for Gemini to recover')", timeout=5000)
+    facts = page.text_content("#gov-facts")
+    assert "Waiting for Gemini to recover (a trial is running on gemini-pro-latest), 45 s so far, up to 1 min 15 s more." in facts and "google:" not in facts, facts
+    live.call(log.emit, "model_fallback", model="google:gemini-pro-latest", error="overloaded (503)", fallback=None,
+              role="decisions")
+    page.wait_for_function("() => !document.getElementById('gov-facts').textContent.includes('Waiting for')", timeout=5000)
+    w.context.close()
+
+
+@pytest.mark.parametrize("scenario", ["deciding"])
+def test_deciding_attempt_drops_of_n_once_waits_pushed_it_past_the_models(browser, live_servers):
+    w = open_context(browser, "desktop-light", live_servers)
+    load(w)
+    page, live = w.page, live_servers["log"]
+    live_servers["live"].call(live.state.info["deciding"].update, {"attempt": 3, "max_attempts": 2})
+    page.wait_for_function("() => document.getElementById('gov-facts').textContent.includes('call 3')", timeout=8000)
+    facts = page.text_content("#gov-facts")
+    assert ", call 3" in facts and "of 2" not in facts, facts
+    w.context.close()

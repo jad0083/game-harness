@@ -112,3 +112,32 @@ def test_long_strings_wrap_in_the_feed(browser, live_servers, name):
     assert page.evaluate("document.documentElement.scrollWidth <= document.documentElement.clientWidth")
     assert w.errors == []
     w.context.close()
+
+
+WAIT = {"role": "decisions", "models": ["google:gemini-pro-latest", "google:gemini-3.8-flash"], "seconds": 40,
+        "waited_s": 45, "budget_s": 120, "reason": "every model is overloaded"}
+
+
+def test_a_model_wait_reads_in_activity_and_counts_as_model_not_problem(browser, live_servers):
+    w = open_context(browser, "desktop-light", live_servers)
+    load(w)
+    page, log, live = w.page, live_servers["log"], live_servers["live"]
+    page.click('#feed-filters [data-filter="all"]')
+    live.call(log.emit, "model_wait", **WAIT)
+    live.call(log.emit, "model_wait", **{**WAIT, "role": "chat", "waited_s": 5, "reason": "a trial is running on google:gemini-pro-latest"})
+    live.call(log.emit, "pool_exhausted", role="chat", causes=[{"model": "google:gemini-3.8-flash", "error": "overloaded (503)"},
+                                                              {"model": "-", "error": "stopped while waiting"}])
+    page.wait_for_function("() => document.getElementById('feed').textContent.includes('stopped while waiting')", timeout=5000)
+    texts = rows(page)
+    assert any(t.startswith("Waiting up to 1 min 15 s more for Gemini to recover (every model is overloaded), 45 s so far") for t in texts), texts
+    chat = [t for t in texts if "so far (chat)" in t]
+    assert chat and "a trial is running on gemini-pro-latest" in chat[0] and "google:" not in chat[0], texts
+    stopped = [t for t in texts if t.startswith("No model could answer")]
+    assert stopped and stopped[0].endswith("; stopped while waiting") and "- stopped" not in stopped[0], texts
+    w.page.click('#feed-filters [data-filter="problems"]')
+    page.wait_for_timeout(200)
+    assert not [t for t in rows(page) if t.startswith("Waiting up to")]
+    page.click('#feed-filters [data-filter="model"]')
+    page.wait_for_timeout(200)
+    assert [t for t in rows(page) if t.startswith("Waiting up to")]
+    w.context.close()
